@@ -52,7 +52,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .describe("Number of groups partition. "
               "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
               "apply convolution and concat instead to achieve the same need.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
+    DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
     .describe("Tmp workspace for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
@@ -388,13 +388,16 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect dilate size: " << param_.dilate;
       CHECK(ksize_d < dshape[2] && ksize_y <= dshape[3] && ksize_x <= dshape[4])
           << "kernel size exceed input";
+      if (param_.dilate.Size() != 1) {
+        LOG(INFO) << "Dilate is not supported in 3d convolution";
+      }
       (*out_shape)[conv::kOut][1] = param_.num_filter;
       (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
-          (param_.dilate[0] * (ksize_d - 1) + 1)) / param_.stride[0] + 1;
+          (1 * (ksize_d - 1) + 1)) / param_.stride[0] + 1;
       (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
-          (param_.dilate[1] * (ksize_y - 1) + 1)) / param_.stride[1] + 1;
+          (1 * (ksize_y - 1) + 1)) / param_.stride[1] + 1;
       (*out_shape)[conv::kOut][4] = (dshape[4] + 2 * param_.pad[2] -
-          (param_.dilate[2] * (ksize_x - 1) + 1)) / param_.stride[2] + 1;
+          (1 * (ksize_x - 1) + 1)) / param_.stride[2] + 1;
       return true;
     } else {
       LOG(FATAL) << "Unknown convolution type";
