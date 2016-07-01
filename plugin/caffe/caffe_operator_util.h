@@ -93,16 +93,8 @@ class CaffeOpInitEntry {
   CaffeOpInitEntry(std::string name,
                    pFunc f) :
                    name_(std::string(name)),
-                   gen_f_(f),
-                   in_num_(1),
-                   out_num_(1) {}
-
-  CaffeOpInitEntry& SetInNum(int in_num);
-  CaffeOpInitEntry& SetOutNum(int out_num);
-
+                   gen_f_(f) {}
   pFunc GetInNum();
-
-  int in_num_, out_num_;
   pFunc gen_f_;
   std::string name_;
 };

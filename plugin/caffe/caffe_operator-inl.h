@@ -43,12 +43,17 @@ struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   std::string op_type_string;
   std::vector<int> in_dims, w_dims, out_dims;
   caffe::Layer<float> *caffe_op;
+  int in_num, out_num;
 
   DMLC_DECLARE_PARAMETER(CaffeOperatorParam) {
-    DMLC_DECLARE_FIELD(prototxt)
+    DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
     DMLC_DECLARE_FIELD(op_type_string)
     .describe("Operator type name");
+    DMLC_DECLARE_FIELD(in_num).set_range(0, 100).set_default(1)
+    .describe("Operator input number");
+    DMLC_DECLARE_FIELD(out_num).set_range(0, 100).set_default(1)
+    .describe("Operator output number");
   }
 };
 
@@ -332,8 +337,8 @@ class CaffeOperatorProp : public OperatorProperty {
     param_.Init(kwargs);
     CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.op_type_string);
     param_.caffe_op = e->gen_f_(this->param_.prototxt);
-    param_.in_dims.resize(e->in_num_);
-    param_.out_dims.resize(e->out_num_);
+    param_.in_dims.resize(param_.in_num);
+    param_.out_dims.resize(param_.out_num);
   }
 
   std::map<std::string, std::string> GetParams() const override {

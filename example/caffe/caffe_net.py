@@ -12,9 +12,9 @@ def get_mlp():
     """
     data = mx.symbol.Variable('data')
     fc1  = mx.symbol.CaffeOperator(data_0 = data, name='fc1', prototxt="layer{ inner_product_param{num_output: 128}}", op_type_string="InnerProduct")
-    act1 = mx.symbol.CaffeOperator(data_0 = fc1, prototxt="layer{}", op_type_string="Tanh")
+    act1 = mx.symbol.CaffeOperator(data_0 = fc1, op_type_string="Tanh")
     fc2  = mx.symbol.CaffeOperator(data_0 = act1, name='fc2', prototxt="layer{ inner_product_param{num_output: 64}}", op_type_string="InnerProduct")
-    act2 = mx.symbol.CaffeOperator(data_0 = fc2, prototxt="layer{}", op_type_string="Tanh")
+    act2 = mx.symbol.CaffeOperator(data_0 = fc2, op_type_string="Tanh")
     fc3 = mx.symbol.CaffeOperator(data_0 = act2, name='fc3', prototxt="layer{ inner_product_param{num_output: 10}}", op_type_string="InnerProduct")
     mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
     return mlp
@@ -29,21 +29,21 @@ def get_lenet():
 
     # first conv
     conv1 = mx.symbol.CaffeOperator(data_0=data, prototxt="layer { convolution_param { num_output: 20 kernel_size: 5 stride: 1} }", op_type_string="Conv")
-    act1 = mx.symbol.CaffeOperator(data_0=conv1, prototxt="layer{}", op_type_string="Tanh")
+    act1 = mx.symbol.CaffeOperator(data_0=conv1, op_type_string="Tanh")
     pool1 = mx.symbol.CaffeOperator(data_0=act1, prototxt="layer { pooling_param { pool: MAX kernel_size: 2 stride: 2}}", op_type_string="Pool")
 
     # second conv
     conv2 = mx.symbol.CaffeOperator(data_0=pool1, prototxt="layer { convolution_param { num_output: 50 kernel_size: 5 stride: 1} }", op_type_string="Conv")
-    act2 = mx.symbol.CaffeOperator(data_0=conv2, prototxt="layer{}", op_type_string="Tanh")
+    act2 = mx.symbol.CaffeOperator(data_0=conv2, op_type_string="Tanh")
     pool2 = mx.symbol.CaffeOperator(data_0=act2, prototxt="layer { pooling_param { pool: MAX kernel_size: 2 stride: 2}}", op_type_string="Pool")
 
     # first fullc
     flatten = mx.symbol.Flatten(data=pool2)
-    fc1 = mx.symbol.CaffeOperator(data_0=flatten, prototxt="layer{ inner_product_param{num_output: 500} }", op_type_string="InnerProduct")
-    act3 = mx.symbol.CaffeOperator(data_0=fc1, prototxt="layer{}", op_type_string="Tanh")
+    fc1 = mx.symbol.CaffeOperator(data_0=flatten, prototxt="layer { inner_product_param{num_output: 500} }", op_type_string="InnerProduct")
+    act3 = mx.symbol.CaffeOperator(data_0=fc1, op_type_string="Tanh")
 
     # second fullc
-    fc2 = mx.symbol.CaffeOperator(data_0=act3, prototxt="layer{ inner_product_param{num_output: 10} }", op_type_string="InnerProduct")
+    fc2 = mx.symbol.CaffeOperator(data_0=act3, prototxt="layer { inner_product_param{num_output: 10} }", op_type_string="InnerProduct")
     lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
     return lenet
 

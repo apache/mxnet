@@ -9,16 +9,6 @@
 namespace mxnet {
 namespace op {
 
-CaffeOpInitEntry& CaffeOpInitEntry::SetInNum(int in_num) {
-  in_num_ = in_num;
-  return *this;
-}
-
-CaffeOpInitEntry& CaffeOpInitEntry::SetOutNum(int out_num) {
-  out_num_ = out_num;
-  return *this;
-}
-
 CaffeOpInitEntry& CaffeOpInitRegistry::__REGISTER__(const char* name_str,
                                                     pFunc f) {
   std::string name(name_str);
