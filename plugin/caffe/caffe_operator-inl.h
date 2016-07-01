@@ -115,7 +115,7 @@ class CaffeOperator : public Operator {
       vector<Blob<float>*> w_blobs;
       this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.w_dims,
                                false, w_blobs, param_.in_dims.size(), in_data, empty_tblobs);
-      caffeOp_->SetLearnableWeights(w_blobs);
+      caffeOp_->SetBlobs(w_blobs);
     } else {
       // TODO(Haoran): Delete this chekcer
       // pointer of weights should align with the weights passed in
@@ -178,7 +178,7 @@ class CaffeOperator : public Operator {
       for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
         weightDeltaList_->push_back(in_grad[i].dptr_);
 
-      vector<Blob<float>*> w_blobs = caffeOp_->GetLearnableWeights();
+      vector<Blob<float>*> w_blobs = caffeOp_->GetBlobs();
       this->BuildOrModifyBlobs(s, caffeEnum::GradOnly, param_.w_dims,
                                true, w_blobs, param_.in_dims.size(), in_grad, empty_tblobs);
     } else {
@@ -321,10 +321,26 @@ class CaffeOperatorProp : public OperatorProperty {
     for (size_t i = 0; i < param_.in_dims.size(); ++i)
       res.push_back(std::string("data_") + static_cast<char>('0' + i));
 
-    // TODO(Haoran): Replace by param_.w_dims.size()
-    int blob_cnt = param_.caffe_op->GetWeightsNumber();
+    int blob_cnt = 0;
+    if (!param_.op_type_string.compare("InnerProduct")) {
+      if (param_.prototxt.inner_product_param().bias_term())
+        blob_cnt = 2;
+      else
+        blob_cnt = 1;
+    } else if (!param_.op_type_string.compare("Conv")) {
+      if (param_.prototxt.convolution_param().bias_term())
+        blob_cnt = 2;
+      else
+        blob_cnt = 1;
+    }
+    std::cout << blob_cnt << std::endl;
+
+    /*
+     * \brief the assumption is: first blob is weight, second is bias.
+     * \brief However, some types of caffe-layers might not follow this
+     * \brief Customization is then required.
+     */
     for (int i = 0; i < blob_cnt; ++i) {
-      // TODO(Haoran): needs to assign by name
       if (i == 0)
         res.push_back("caffe_" + std::to_string(i) + "_weight");
       else
