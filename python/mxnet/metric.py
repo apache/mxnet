@@ -351,7 +351,7 @@ class CustomMetric(EvalMetric):
                 self.num_inst += 1
 
 # pylint: disable=invalid-name
-def np(numpy_feval, name=None, allow_extra_outputs=False):
+def np(numpy_feval, name=None, allow_extra_outputs=False, use_ignore=False, ignore_label=-1):
     """Create a customized metric from numpy function.
 
     Parameters
@@ -367,7 +367,10 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
     """
     def feval(label, pred):
         """Internal eval function."""
-        return numpy_feval(label, pred)
+        if use_ignore:
+            return numpy_feval(label, pred, ignore_label)
+        else:
+            return numpy_feval(label, pred)
     feval.__name__ = numpy_feval.__name__
     return CustomMetric(feval, name, allow_extra_outputs)
 # pylint: enable=invalid-name
