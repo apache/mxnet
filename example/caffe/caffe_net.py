@@ -37,9 +37,7 @@ def get_lenet():
     act2 = mx.symbol.CaffeOperator(data_0=conv2, op_type_string="Tanh")
     pool2 = mx.symbol.CaffeOperator(data_0=act2, prototxt="layer { pooling_param { pool: MAX kernel_size: 2 stride: 2}}", op_type_string="Pool")
 
-    # first fullc
-    flatten = mx.symbol.Flatten(data=pool2)
-    fc1 = mx.symbol.CaffeOperator(data_0=flatten, prototxt="layer { inner_product_param{num_output: 500} }", op_type_string="InnerProduct")
+    fc1 = mx.symbol.CaffeOperator(data_0=pool2, prototxt="layer { inner_product_param{num_output: 500} }", op_type_string="InnerProduct")
     act3 = mx.symbol.CaffeOperator(data_0=fc1, op_type_string="Tanh")
 
     # second fullc
