@@ -748,8 +748,13 @@ class FeedForward(BASE_ESTIMATOR):
             self._check_arguments()
         self.kwargs["sym"] = self.symbol
 
+        # lstm comaptible solution
+        in_types = None
+        if hasattr(data, 'provide_data_type'):
+            in_types = dict(data.provide_data_type+data.provide_label_type)
+            
         arg_names, param_names, aux_names = \
-                self._init_params(dict(data.provide_data+data.provide_label))
+            self._init_params(dict(data.provide_data+data.provide_label), in_types)
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
