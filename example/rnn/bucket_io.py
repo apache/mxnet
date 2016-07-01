@@ -92,6 +92,14 @@ class SimpleBatch(object):
     def provide_label(self):
         return [(n, x.shape) for n, x in zip(self.label_names, self.label)]
 
+    @property
+    def provide_data_type(self):
+        return [(n, x.dtype) for n, x in zip(self.data_names, self.data)]
+
+    @property
+    def provide_label_type(self):
+        return [(n, x.dtype) for n, x in zip(self.label_names, self.label)]
+
 class DummyIter(mx.io.DataIter):
     "A dummy iterator that always return the same batch, used for speed testing"
     def __init__(self, real_iter):
@@ -114,7 +122,8 @@ class DummyIter(mx.io.DataIter):
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
                  init_states, data_name='data', label_name='label',
-                 seperate_char=' <eos> ', text2id=None, read_content=None, model_parallel=False):
+                 seperate_char=' <eos> ', text2id=None, read_content=None,
+                 model_parallel=False, state_type=np.float32):
         super(BucketSentenceIter, self).__init__()
 
         if text2id == None:
@@ -174,10 +183,13 @@ class BucketSentenceIter(mx.io.DataIter):
         self.make_data_iter_plan()
 
         self.init_states = init_states
-        self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
+        self.init_state_arrays = [mx.nd.zeros(x[1], state_type) for x in init_states]
 
         self.provide_data = [('data', (batch_size, self.default_bucket_key))] + init_states
         self.provide_label = [('softmax_label', (self.batch_size, self.default_bucket_key))]
+
+        self.provide_data = [('data', np.float32)] + [(i[0], state_type) for i in init_states]
+        self.provide_label = [('softmax_label', np.float32)]
 
     def make_data_iter_plan(self):
         "make a random data iteration plan"
