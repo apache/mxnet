@@ -11,7 +11,7 @@ def get_mlp():
     multi-layer perceptron
     """
     data = mx.symbol.Variable('data')
-    fc1  = mx.symbol.CaffeOperator(data_0 = data, name='fc1', prototxt="layer{ inner_product_param{num_output: 128} }", op_type_string="InnerProduct")
+    fc1  = mx.symbol.CaffeOperator(data_0 = data, in_num=1, name='fc1', prototxt="layer{ inner_product_param{num_output: 128} }", op_type_string="InnerProduct")
     act1 = mx.symbol.CaffeOperator(data_0 = fc1, op_type_string="Tanh")
     fc2  = mx.symbol.CaffeOperator(data_0 = act1, name='fc2', prototxt="layer{ inner_product_param{num_output: 64} }", op_type_string="InnerProduct")
     act2 = mx.symbol.CaffeOperator(data_0 = fc2, op_type_string="Tanh")
@@ -28,7 +28,7 @@ def get_lenet():
     data = mx.symbol.Variable('data')
 
     # first conv
-    conv1 = mx.symbol.CaffeOperator(data_0=data, prototxt="layer { convolution_param { num_output: 20 kernel_size: 5 stride: 1} }", op_type_string="Conv")
+    conv1 = mx.symbol.CaffeOperator(data_0=data, in_num = 1, prototxt="layer { convolution_param { num_output: 20 kernel_size: 5 stride: 1} }", op_type_string="Conv")
     act1 = mx.symbol.CaffeOperator(data_0=conv1, op_type_string="Tanh")
     pool1 = mx.symbol.CaffeOperator(data_0=act1, prototxt="layer { pooling_param { pool: MAX kernel_size: 2 stride: 2}}", op_type_string="Pool")
 
