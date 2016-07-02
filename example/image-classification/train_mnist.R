@@ -90,7 +90,7 @@ parse_args <- function() {
     parser$add_argument('--data-dir', type='character', default='mnist/',
                         help='the input data directory')
     parser$add_argument('--gpus', type='character',
-                        help='the gpus will be used, e.g "0,1,2,3"')
+                        help='the gpus will be used, e.g "0,1,2,3" or "None" to use cpu')
     parser$add_argument('--batch-size', type='integer', default=128,
                         help='the batch size')
     parser$add_argument('--lr', type='double', default=.1,

@@ -50,7 +50,7 @@ parser = argparse.ArgumentParser(description='train an image classifer on cifar1
 parser.add_argument('--data-dir', type=str, default='cifar10/',
                     help='the input data directory')
 parser.add_argument('--gpus', type=str, default='0',
-                    help='the gpus will be used, e.g "0,1,2,3"')
+                    help='the gpus will be used, e.g "0,1,2,3" or "None" to use cpu')
 parser.add_argument('--num-examples', type=int, default=50000,
                     help='the number of training examples')
 parser.add_argument('--batch-size', type=int, default=128,
@@ -330,7 +330,7 @@ def fit(args, network, data_loader, batch_end_callback=None):
     (train, val) = data_loader(args, kv)
 
     # train
-    devs = mx.cpu() if args.gpus is None else [
+    devs = mx.cpu() if args.gpus == 'None' else [
         mx.gpu(int(i)) for i in args.gpus.split(',')]
 
     epoch_size = args.num_examples / args.batch_size
@@ -344,7 +344,7 @@ def fit(args, network, data_loader, batch_end_callback=None):
 
     # disable kvstore for single device
     if 'local' in kv.type and (
-            args.gpus is None or len(args.gpus.split(',')) is 1):
+            args.gpus == 'None' or len(args.gpus.split(',')) is 1):
         kv = None
 
     model = mx.model.FeedForward(
