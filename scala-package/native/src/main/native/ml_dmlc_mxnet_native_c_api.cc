@@ -596,6 +596,16 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetRank
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetDeadNodeNum
+  (JNIEnv * env, jobject obj, jlong kvStorePtr, jint nodeId, jobject numberRef) {
+  int number;
+  int ret = MXKVStoreGetDeadNodeNum(reinterpret_cast<KVStoreHandle>(kvStorePtr),
+                                    static_cast<const int>(nodeId),
+                                    &number);
+  SetIntField(env, numberRef, number);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreFree
   (JNIEnv * env, jobject obj, jlong ptr) {
   return MXKVStoreFree(reinterpret_cast<KVStoreHandle>(ptr));

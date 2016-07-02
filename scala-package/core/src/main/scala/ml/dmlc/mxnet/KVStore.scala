@@ -8,6 +8,12 @@ import org.slf4j.{LoggerFactory, Logger}
  * @author Yizhi Liu
  */
 object KVStore {
+
+  // group id of scheduler/server/worker
+  val GROUP_NODE_SCHEDULER = 1
+  val GROUP_NODE_SERVER = 2
+  val GROUP_NODE_WORKER = 4
+
   /**
    * Create a new KVStore. <br />
    * <b>
@@ -210,6 +216,12 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    */
   def barrier() {
     checkCall(_LIB.mxKVStoreBarrier(handle))
+  }
+
+  def numDeadNode(nodeId: Int): Int = {
+    val number = new RefInt
+    checkCall(_LIB.mxKVStoreGetDeadNodeNum(handle, nodeId, number))
+    number.value
   }
 
   /**

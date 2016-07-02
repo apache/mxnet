@@ -33,14 +33,57 @@ class KVStoreServer(private val kvStore: KVStore) {
 }
 
 object KVStoreServer {
-  // Start server/scheduler according to env variables
-  def start(): Unit = {
+  private val logger: Logger = LoggerFactory.getLogger(classOf[KVStoreServer])
+  /**
+   * Start server/scheduler according to env variables
+   * @param dieIfOthersGoOut When this argument is set to true,
+   *                         a daemon thread will start to periodically check
+   *                         whether scheduler (server side) or servers (scheduler side)
+   *                         are dead. If so, die itself.
+   *                         This could be useful for running mxnet on distributed data platform,
+   *                         where you do not know which node your application runs on
+   *                         and in such situation
+   *                         you want others die automatically once some of the nodes goes out.
+   */
+  def start(dieIfOthersGoOut: Boolean = false): Unit = {
     val isWorker = new RefInt
     checkCall(_LIB.mxKVStoreIsWorkerNode(isWorker))
     require(isWorker.value == 0, "cannot start kv-store server on worker node")
     val kvStore = KVStore.create("dist")
+    val daemonThread: Option[Thread] =
+      if (dieIfOthersGoOut) {
+        val daemon = new Runnable {
+          override def run(): Unit = {
+            var running = true
+            while (running) {
+              try {
+                Thread.sleep(10000L)
+                val numDeadService = kvStore.numDeadNode(
+                  KVStore.GROUP_NODE_SCHEDULER + KVStore.GROUP_NODE_SERVER)
+                if (numDeadService > 0) {
+                  logger.error(s"Detect $numDeadService dead node(s). Shutdown now.")
+                  System.exit(1)
+                }
+              } catch {
+                case e: InterruptedException => running = false
+              }
+            }
+          }
+        }
+        val t = new Thread(daemon)
+        t.setDaemon(true)
+        t.start()
+        Option(t)
+      } else {
+        None
+      }
     val server = new KVStoreServer(kvStore)
     server.run()
+    daemonThread.foreach(t => {
+      t.interrupt()
+      t.join()
+    })
+    kvStore.dispose()
   }
 
   def init(env: Map[String, String]): Unit = {

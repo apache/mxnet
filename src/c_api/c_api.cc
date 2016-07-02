@@ -1351,6 +1351,15 @@ int MXKVStoreGetType(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStoreGetDeadNodeNum(KVStoreHandle handle,
+                            const int node_id,
+                            int *number,
+                            const int timeout_sec) {
+  API_BEGIN();
+  *number = static_cast<KVStore*>(handle)->get_dead_num(node_id, timeout_sec);
+  API_END();
+}
+
 struct MXRecordIOContext {
   dmlc::RecordIOWriter *writer;
   dmlc::RecordIOReader *reader;

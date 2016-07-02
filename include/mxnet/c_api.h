@@ -1103,6 +1103,8 @@ MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
 MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
                           const char **keys,
                           const char **vals);
+
+
 /*!
  * \brief Create a kvstore
  * \param type the type of KVStore
@@ -1278,6 +1280,21 @@ MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
 MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
                                              int cmd_id,
                                              const char* cmd_body);
+
+/**
+ * \brief Get the number of ps dead node(s) specified by {node_id}
+ *
+ * \param handle handle to the KVStore
+ * \param node_id Can be a node group or a single node.
+ *                kScheduler = 1, kServerGroup = 2, kWorkerGroup = 4
+ * \param number Ouptut number of dead nodes
+ * \param timeout_sec A node fails to send heartbeart in {timeout_sec} seconds
+ *                    will be presumed as 'dead'
+ */
+MXNET_DLL int MXKVStoreGetDeadNodeNum(KVStoreHandle handle,
+                                      const int node_id,
+                                      int *number,
+                                      const int timeout_sec = 60);
 
 /**
  * \brief Create a RecordIO writer object

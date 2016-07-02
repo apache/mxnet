@@ -78,6 +78,7 @@ class LibInfo {
   // KVStore Server
   @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int
   @native def mxKVStoreRunServer(handle: KVStoreHandle, controller: KVServerControllerCallback): Int
+  @native def mxKVStoreGetDeadNodeNum(handle: KVStoreHandle, nodeId: Int, number: RefInt): Int
 
   // KVStore
   @native def mxKVStoreCreate(name: String, handle: KVStoreHandleRef): Int
