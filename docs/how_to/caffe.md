@@ -12,7 +12,7 @@ This tutorial demonstrates how to use MXNet as front-end to Caffe's operators:
 * Download Caffe repo [BVLC/Caffe](https://github.com/BVLC/caffe), apply patch for mxnet (TODO: add patch link) and compile.
 
 ## Compile MXNet with Caffe plugin
-* In mxnet folder, open `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) and uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk`. Modify CAFFE_PATH to your caffe package if necessary. 
+* In mxnet folder, open `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) and uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk`. Modify CAFFE_PATH to your caffe package. 
 * Run `make clean && make` to build with caffe support.
 
 ## Caffe Operators(Layers)
