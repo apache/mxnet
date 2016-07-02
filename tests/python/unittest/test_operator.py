@@ -1217,7 +1217,6 @@ def test_support_vector_machine_l2_svm():
     x = mx.nd.empty(shape, ctx = xpu)
     l = mx.nd.empty((shape[0],), ctx = xpu)
     x_np = np.random.rand(*shape)
-    x_np = x_np.astype(np.float32)
     l_np = np.random.randint(0, shape[1], (shape[0],))
     x[:] = x_np
     l[:] = l_np
