@@ -333,8 +333,6 @@ class CaffeOperatorProp : public OperatorProperty {
       else
         blob_cnt = 1;
     }
-    std::cout << blob_cnt << std::endl;
-
     /*
      * \brief the assumption is: first blob is weight, second is bias.
      * \brief However, some types of caffe-layers might not follow this
@@ -342,9 +340,9 @@ class CaffeOperatorProp : public OperatorProperty {
      */
     for (int i = 0; i < blob_cnt; ++i) {
       if (i == 0)
-        res.push_back("caffe_" + std::to_string(i) + "_weight");
+        res.push_back(std::to_string(i) + "_weight");
       else
-        res.push_back("caffe_" + std::to_string(i) + "_bias");
+        res.push_back(std::to_string(i) + "_bias");
     }
     return res;
   }
