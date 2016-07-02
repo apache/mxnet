@@ -6,35 +6,36 @@ This tutorial demonstrates how to use MXNet as front-end to Caffe's operators:
 
 * 2) Embed Caffe's neural network layers into MXNet's symbolic graph.
 
-## Compile with Caffe
-* First download DMLC's forked Caffe [DMLC/Caffe](http://github.com/dmlc/caffe).
-* Then, in `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk`. Modify CAFFE_PATH to your caffe package if necessary. 
+
+## Build Caffe
+* ~~Download DMLC's forked Caffe [DMLC/Caffe](http://github.com/dmlc/caffe).~~
+* Download Caffe repo [BVLC/Caffe](https://github.com/BVLC/caffe), apply patch for mxnet (TODO: add patch link) and compile.
+
+## Compile MXNet with Caffe plugin
+* In mxnet folder, open `config.mk` (if you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into MXNet root folder as `config.mk`) and uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk`. Modify CAFFE_PATH to your caffe package if necessary. 
 * Run `make clean && make` to build with caffe support.
 
 ## Caffe Operators(Layers)
 Caffe's neural network layers are supported by MXNet through `mxnet.symbol.CaffeOperator` symbol.
-For example, the following code defines a 3 layer DNN for classifying MNIST digits ([full code](https://github.com/HrWangChengdu/mxnet/blob/master/example/image-classification/train_mnist_caffe.py)):
+For example, the following code shows multi-layer perception network and lenet for classifying MNIST digits ([full code](https://github.com/HrWangChengdu/mxnet/blob/master/example/caffe/caffe_net.py)):
 ```Python
 data = mx.symbol.Variable('data')
-fc1  = mx.symbol.CaffeOperator(data = data, name='fc1', para="layer{ inner_product_param{num_output: 128}}", op_type_name="fullyconnected")
-act1 = mx.symbol.CaffeOperator(data = fc1, name='act1', para="layer{}", op_type_name="relu")
-fc2  = mx.symbol.CaffeOperator(data = act1, name='fc2', para="layer{ inner_product_param{num_output: 64}}", op_type_name="fullyconnected")
-act2 = mx.symbol.CaffeOperator(data = fc2, name='act2', para="layer{}", op_type_name="relu")
-fc3  = mx.symbol.CaffeOperator(data = act2, name='fc3', para="layer{ inner_product_param{num_output: 10}}", op_type_name="fullyconnected")
-mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
+fc1  = mx.symbol.CaffeOperator(data_0=data, in_num=1, name='fc1', prototxt="layer{ inner_product_param{num_output: 128} }", op_type_string="InnerProduct")
+act1 = mx.symbol.CaffeOperator(data_0=fc1, op_type_string="Tanh")
+fc2  = mx.symbol.CaffeOperator(data_0=act1, name='fc2', prototxt="layer{ inner_product_param{num_output: 64} }", op_type_string="InnerProduct")
+act2 = mx.symbol.CaffeOperator(data_0=fc2, op_type_string="Tanh")
+fc3 = mx.symbol.CaffeOperator(data_0=act2, name='fc3', prototxt="layer{ inner_product_param{num_output: 10}}", op_type_string="InnerProduct")
 ```
 Let's break it down. First `data = mx.symbol.Variable('data')` defines a Variable as placeholder for input.
-Then it's fed through Caffe's operators with `fc1  = mx.symbol.CaffeOperator(data = data, name='fc1', para="layer{ inner_product_param{num_output: 128}}", op_type_name="fullyconnected")
-`.
+Then it's fed through Caffe's operators with `fc1  = mx.symbol.CaffeOperator(data_0=data, in_num=1, name='fc1', prototxt="layer{ inner_product_param{num_output: 128} }", op_type_string="InnerProduct")`.
 
-Argument `para` is the prototxt, i.e. configuration string, and used to initialize Caffe::LayerParameter. For Caffe's built-in layer, the symbol definition simply creates an instance through `caffe::layer_name<float_type>(layerparameter)`.
+Argument `prototxt` is the configuration string for caffe layer. `in_num` specifies number of input and its default value is 1.
+
+`op_type_string` specifies layer type. You can find type-string for rest layers in [link](https://github.com/HrWangChengdu/mxnet/blob/master/plugin/caffe/caffe_operator.cc). Currently, we don't support caffe's data and loss layer.
 
 ## Add customized operators
-TODO: How to look for layers (Add network example, i.e. alex-net, vgg-net)
 Follow steps below to add new or customized caffe operators:
 
-* 1) Add new enum element to `CaffeEnum::CaffeOpType` in file `caffe_operatoer-inl.h`.
+* 1) Add the layer class into `mxnet/plugin/caffe/caffe_operator.cc` through macro `MXNET_REGISTER_PLUGIN_CAFFE_INIT`.  with header file of class. 
 
-* 2) Then add the layer generation function into `caffe_operator.cc` through macro `DEFINE_CAFFE_LAYER_FN`, also add extra header file of new layer if necessary.
-
-* 3) Under the same `.cc` file, add key-value pairs <op_name_string, gen_func> & <op_name_string, enum_ele> in function `CaffeTypeNameMap::DoInit()`. `op_name_string` corresponds to argument `op_type_name` in symbol initialization.
+* 2) If new layer contains blobs (weights), add the blob number in function `ListArguments()` of `mxnet/plugin/caffe/caffe_operator-inl.h` .
