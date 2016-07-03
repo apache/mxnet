@@ -8,10 +8,6 @@ fi
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew update
     brew tap homebrew/science
-    cd /usr/local/Library/Taps/homebrew/homebrew-science/
-    rm -rf opencv.rb
-    wget https://raw.githubusercontent.com/Homebrew/homebrew-science/abe8cf1b964b8aa43dc20dd59f5a4bf755f50216/opencv.rb
-    cd /Users/travis/build/dmlc/mxnet
     brew install opencv
     brew install python3
     brew install fftw
