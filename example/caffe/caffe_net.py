@@ -11,12 +11,12 @@ def get_mlp():
     multi-layer perceptron
     """
     data = mx.symbol.Variable('data')
-    fc1  = mx.symbol.CaffeOperator(data_0 = data, in_num=1, name='fc1', prototxt="layer{ inner_product_param{num_output: 128} }", op_type_string="InnerProduct")
-    act1 = mx.symbol.CaffeOperator(data_0 = fc1, op_type_string="Tanh")
-    fc2  = mx.symbol.CaffeOperator(data_0 = act1, name='fc2', prototxt="layer{ inner_product_param{num_output: 64} }", op_type_string="InnerProduct")
-    act2 = mx.symbol.CaffeOperator(data_0 = fc2, op_type_string="Tanh")
-    fc3 = mx.symbol.CaffeOperator(data_0 = act2, name='fc3', prototxt="layer{ inner_product_param{num_output: 10}}", op_type_string="InnerProduct")
-    mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
+    fc1  = mx.symbol.CaffeOperator(data_0=data, in_num=1, name='fc1', prototxt="layer{ inner_product_param{num_output: 128} }", op_type_string="InnerProduct")
+    act1 = mx.symbol.CaffeOperator(data_0=fc1, op_type_string="Tanh")
+    fc2  = mx.symbol.CaffeOperator(data_0=act1, name='fc2', prototxt="layer{ inner_product_param{num_output: 64} }", op_type_string="InnerProduct")
+    act2 = mx.symbol.CaffeOperator(data_0=fc2, op_type_string="Tanh")
+    fc3 = mx.symbol.CaffeOperator(data_0=act2, name='fc3', prototxt="layer{ inner_product_param{num_output: 10}}", op_type_string="InnerProduct")
+    mlp  = mx.symbol.SoftmaxOutput(data=fc3, name = 'softmax')
     return mlp
 
 def get_lenet():
