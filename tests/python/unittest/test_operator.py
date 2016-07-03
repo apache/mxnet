@@ -1136,8 +1136,6 @@ def test_flip():
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
 
-<<<<<<< HEAD
-=======
 def test_stn():
     import pdb
     np.set_printoptions(threshold=np.nan)
@@ -1181,7 +1179,6 @@ def test_stn():
 
 
 
->>>>>>> svm_cpu
 def test_support_vector_machine_l1_svm():
     xpu = mx.cpu()
     shape = (20, 10)
@@ -1239,10 +1236,7 @@ def test_support_vector_machine_l2_svm():
     grad_np = grad_np.astype(np.float32)
     assert_allclose(grad_np, grad.asnumpy())
 
-<<<<<<< HEAD
-=======
 
->>>>>>> svm_cpu
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
