@@ -7,6 +7,47 @@
 #include "./svm_output-inl.h"
 #include "./mshadow_op.h"
 
+namespace mshadow{
+  template<typename DType>
+  inline void L1_SVM(const DType & margin,
+                     const DType & reg_coef,
+                     Tensor<cpu, 2, DType> dst,
+                     const Tensor<cpu, 1, DType> & label,
+                     const Tensor<cpu, 2, DType> & src) {
+    for (index_t y = 0; y < dst.size(0); y++) {
+      const index_t k = static_cast<int>(label[y]);
+      for (index_t x = 0; x < dst.size(1); x++) {
+        if (x == k) {
+          dst[y][k] = -DType(margin > src[y][k]) * reg_coef;
+        } else {
+          dst[y][x] = DType(margin > -src[y][x]) * reg_coef;
+        }
+      }
+    }
+  }
+
+
+  template<typename DType>
+  inline void L2_SVM(const DType & margin,
+                     const DType & reg_coef,
+                     Tensor<cpu, 2, DType> dst,
+                     const Tensor<cpu, 1, DType> & label,
+                     const Tensor<cpu, 2, DType> & src) {
+    for (index_t y = 0; y < dst.size(0); y++) {
+      const index_t k = static_cast<int>(label[y]);
+      for (index_t x = 0; x < dst.size(1); x++) {
+        if (x == k) {
+          dst[y][k] = margin > src[y][k] ?  2*(margin - src[y][k]) : DType(0.0f);
+          dst[y][k] *= -reg_coef;
+        } else {
+          dst[y][x] = margin > -src[y][x] ? (-2)*(margin + src[y][x]) : DType(0.0f);
+          dst[y][x] *= -reg_coef;
+        }
+      }
+    }
+  }
+}
+
 namespace mxnet {
 namespace op {
 template<>

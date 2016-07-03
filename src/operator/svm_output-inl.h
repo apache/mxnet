@@ -84,37 +84,12 @@ class SVMOutputOp : public Operator {
         Shape1(label_shape.ProdShape(0, label_shape.ndim())), s);
     Tensor<xpu, 2, DType> out = out_data[svm_enum::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> grad = in_grad[svm_enum::kData].FlatTo2D<xpu, DType>(s);
+    CHECK_EQ(grad.shape_, out.shape_) << "SVMOutputs: shape mismatch";
 
     if (param_.use_linear) {
-      CHECK_EQ(grad.shape_, out.shape_) << "L1_SVM: shape mismatch";
-      for (index_t y = 0; y < grad.size(0); y++) {
-        const index_t k = static_cast<int>(label[y]);
-        for (index_t x = 0; x < grad.size(1); x++) {
-          if (x == k) {
-            grad[y][k] = -DType(DType(param_.margin) > out[y][k])
-            * DType(param_.regularization_coefficient);
-          } else {
-            grad[y][x] = DType(DType(param_.margin) > -out[y][x])
-            * DType(param_.regularization_coefficient);
-          }
-        }
-      }
+      L1_SVM(DType(param_.margin), DType(param_.regularization_coefficient), grad, label, out);
     } else {
-      CHECK_EQ(grad.shape_, out.shape_) << "L2_SVM: shape mismatch";
-      for (index_t y = 0; y < grad.size(0); y++) {
-        const index_t k = static_cast<int>(label[y]);
-        for (index_t x = 0; x < grad.size(1); x++) {
-          if (x == k) {
-            grad[y][k] = DType(param_.margin) > out[y][k] ?
-            2*(DType(param_.margin) - out[y][k]) : DType(0.0f);
-            grad[y][k] *= -DType(param_.regularization_coefficient);
-          } else {
-            grad[y][x] = DType(param_.margin) > -out[y][x] ?
-            (-2)*(DType(param_.margin) + out[y][x]) : DType(0.0f);
-            grad[y][x] *= -DType(param_.regularization_coefficient);
-          }
-        }
-      }
+      L2_SVM(DType(param_.margin), DType(param_.regularization_coefficient), grad, label, out);
     }
   }
 
