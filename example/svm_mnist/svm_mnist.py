@@ -7,7 +7,7 @@ import mxnet as mx
 import numpy as np
 from sklearn.datasets import fetch_mldata
 from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import logging
 
 logger = logging.getLogger()
@@ -27,7 +27,7 @@ fc3  = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
 mlp = mx.symbol.SVMOutput(data=fc3, name='svm')
 
 # To use L1-SVM objective, comment the line above and uncomment the line below
-# mlp = mx.symbol.SupportVectorMachine(data=fc3, name='svm', use_linear=True)
+# mlp = mx.symbol.SVMOutput(data=fc3, name='svm', use_linear=True)
 
 # Now we fetch MNIST dataset, add some noise, as the article suggests,
 # permutate and assign the examples to be used on our network
