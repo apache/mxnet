@@ -16,6 +16,7 @@
 #include <vector>
 #include <utility>
 #include "./operator_common.h"
+#include "./mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -60,8 +61,7 @@ class SVMOutputOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> data = in_data[svm_enum::kData].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[svm_enum::kOut].FlatTo2D<xpu, DType>(s);
-    out = DType(0.0f);
-    out += data;
+    Assign(out, req[svm_enum::kOut], F<mshadow_op::identity>(data));
   }
 
   virtual void Backward(const OpContext &ctx,
