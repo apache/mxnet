@@ -47,7 +47,7 @@ def fit(args, network, data_loader, batch_end_callback=None):
     (train, val) = data_loader(args, kv)
 
     # train
-    devs = mx.cpu() if args.gpus is None else [
+    devs = mx.cpu() if args.gpus == 'None' else [
         mx.gpu(int(i)) for i in args.gpus.split(',')]
 
     epoch_size = args.num_examples / args.batch_size
@@ -66,7 +66,7 @@ def fit(args, network, data_loader, batch_end_callback=None):
 
     # disable kvstore for single device
     if 'local' in kv.type and (
-            args.gpus is None or len(args.gpus.split(',')) is 1):
+            args.gpus == 'None' or len(args.gpus.split(',')) is 1):
         kv = None
 
     model = mx.model.FeedForward(

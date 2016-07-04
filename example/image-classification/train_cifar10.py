@@ -10,7 +10,7 @@ parser.add_argument('--network', type=str, default='inception-bn-28-small',
 parser.add_argument('--data-dir', type=str, default='cifar10/',
                     help='the input data directory')
 parser.add_argument('--gpus', type=str, default='0',
-                    help='the gpus will be used, e.g "0,1,2,3"')
+                    help='the gpus will be used, e.g "0,1,2,3" or "None" to use cpu')
 parser.add_argument('--num-examples', type=int, default=60000,
                     help='the number of training examples')
 parser.add_argument('--batch-size', type=int, default=128,
