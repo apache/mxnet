@@ -140,7 +140,7 @@ class KVStoreLocal : public KVStore {
     if (buf.merged.is_none()) {
       buf.ctx = Context::CPUPinned(val[0].ctx().dev_id);
       if (MXNET_USE_CUDA == 0) buf.ctx = Context::CPU();
-      buf.merged = NDArray(val[0].shape(), buf.ctx);
+      buf.merged = NDArray(val[0].shape(), buf.ctx, false, val[0].dtype());
     }
 
     CopyFromTo(val[0], &(buf.merged), priority);
