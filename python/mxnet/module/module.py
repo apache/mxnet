@@ -256,7 +256,6 @@ class Module(BaseModule):
                                                      label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger)
-
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
@@ -451,3 +450,8 @@ class Module(BaseModule):
         latest parameters from `self._arg_params` and `self._aux_params`.
         """
         self._exec_group.get_params(self._arg_params, self._aux_params)
+
+    def install_monitor(self, mon):
+        """ Install monitor on all executors """
+        assert self.binded
+        self._exec_group.install_monitor(mon)

@@ -325,3 +325,9 @@ class BucketingModule(BaseModule):
         """The symbol of the current bucket being used."""
         assert self.binded
         return self._curr_module.symbol
+
+    def install_monitor(self, mon):
+        """ Install monitor on all executors """
+        assert self.binded
+        for mod in self._buckets.values():
+            mod.install_monitor(mon)

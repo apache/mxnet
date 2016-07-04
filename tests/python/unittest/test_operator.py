@@ -730,12 +730,6 @@ def test_batchnorm_training():
 
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
-        # Gamma needs to be fixed at one when fix_gamma is true,
-        gamma = np.ones(s)
-
-        test = mx.symbol.BatchNorm(data, fix_gamma=True)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
-
 def test_convolution_grouping():
     num_filter = 4
     num_group = 2
