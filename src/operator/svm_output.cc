@@ -7,7 +7,7 @@
 #include "./svm_output-inl.h"
 #include "./mshadow_op.h"
 
-namespace mshadow{
+namespace mshadow {
   template<typename DType>
   inline void L1_SVM(const DType & margin,
                      const DType & reg_coef,
@@ -46,7 +46,7 @@ namespace mshadow{
       }
     }
   }
-}
+}  // namespace mshadow
 
 namespace mxnet {
 namespace op {
