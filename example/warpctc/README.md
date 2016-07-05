@@ -19,7 +19,7 @@ Baidu-warpctc is a CTC implement by Baidu which support GPU. CTC can be used wit
 
 ```
   comment out following lines in make/config.mk
-  WARPCTC_PATH = $(HOME)/warpctc
+  WARPCTC_PATH = $(HOME)/warp-ctc
   MXNET_PLUGINS += plugin/warpctc/warpctc.mk
   
   rebuild mxnet by
