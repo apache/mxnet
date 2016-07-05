@@ -29,7 +29,6 @@ else
 end
 
 function __init__()
-  _import_ndarray_functions()
   _import_atomic_symbol_creators()
   _import_io_iterators()
 

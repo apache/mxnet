@@ -18,6 +18,7 @@ import Base: round, ceil, floor, cos, sin, abs, sign, exp, sqrt, exp, log, norm,
 
 include("base.jl")
 include("context.jl")
+include("util.jl")
 
 include("ndarray.jl")
 include("random.jl")
@@ -36,7 +37,6 @@ include("kvstore.jl")
 include("callback.jl")
 include("model.jl")
 
-include("util.jl")
 include("visualize.jl")
 
 include("nn-factory.jl")

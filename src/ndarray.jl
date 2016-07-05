@@ -999,6 +999,13 @@ function _get_ndarray_functions()
   return funcs
 end
 
+function _get_function(name :: String)
+  handle = Ref{MX_handle}(0)
+
+  @mxcall(:MXGetFunction, (Cstring, Ref{MX_handle}), name, handle)
+  return handle[]
+end
+
 function _get_function_description(handle :: MX_handle)
   # get function information (human readable)
   ref_name = Ref{char_p}(0)
@@ -1061,8 +1068,10 @@ function _get_function_expressions(handle :: MX_handle, name)
   if name == :dot
     _use_vars.args[2:end] = flipdim(_use_vars.args[2:end], 1)
   end
-
-  stmt_call = Expr(:call, :_invoke_mxfunction, handle, _use_vars, _scalars, _mut_vars)
+  stmt_call = quote
+    local handle = _get_function($(string(name)))
+    _invoke_mxfunction(handle, $_use_vars, $_scalars, $_mut_vars)
+  end
   if n_mutate_vars == 1
     stmt_ret = :(return out1)
   else
@@ -1089,7 +1098,7 @@ function _get_function_expressions(handle :: MX_handle, name)
   return exprs
 end
 
-function _import_ndarray_functions()
+macro _import_ndarray_functions()
   funcs = _get_ndarray_functions()
   func_exprs = Expr[]
 
@@ -1103,7 +1112,13 @@ function _import_ndarray_functions()
       $(exprs...)
       @doc $desc $name
     end
-    eval(expr)
+
+    push!(func_exprs, expr)
   end
+
+  esc(quote
+    $(func_exprs...)
+  end)
 end
 
+@_import_ndarray_functions()
