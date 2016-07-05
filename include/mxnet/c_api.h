@@ -479,6 +479,14 @@ MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
  */
 MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                                AtomicSymbolCreator **out_array);
+
+/*!
+ * \brief Get the name of an atomic symbol.
+ * \param creator the AtomicSymbolCreator.
+ * \param name The returned name of the creator.
+ */
+MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
+                                          const char **name);
 /*!
  * \brief Get the detailed information about atomic symbol.
  * \param creator the AtomicSymbolCreator.
