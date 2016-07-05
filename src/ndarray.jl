@@ -1089,31 +1089,21 @@ function _get_function_expressions(handle :: MX_handle, name)
   return exprs
 end
 
-function _import_ndarray_functions(;gen_docs=false)
+function _import_ndarray_functions()
   funcs = _get_ndarray_functions()
-
-  if gen_docs
-    docs = Dict{Symbol, String}()
-  end
+  func_exprs = Expr[]
 
   for i = 1:length(funcs)
     handle = funcs[i]
 
     name, desc = _get_function_description(handle)
+    exprs = _get_function_expressions(handle, name)
 
-    if gen_docs
-      # generate document only
-      docs[name] = desc
-    else
-      exprs = _get_function_expressions(handle, name)
-      for expr in exprs
-        eval(expr)
-      end
+    expr = quote
+      $(exprs...)
+      @doc $desc $name
     end
-  end
-
-  if gen_docs
-    return docs
+    eval(expr)
   end
 end
 
