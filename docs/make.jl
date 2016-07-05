@@ -1,3 +1,5 @@
 using Documenter, MXNet
 
-makedocs()
+makedocs(
+  modules = [MXNet]
+)
