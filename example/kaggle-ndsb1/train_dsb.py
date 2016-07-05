@@ -27,7 +27,7 @@ parser.add_argument('--load-epoch', type=int,
                     help="load the model on an epoch using the model-prefix")
 parser.add_argument('--batch-size', type=int, default=64,
                     help='the batch size')
-parser.add_argument('--gpus', type=str, default='0',
+parser.add_argument('--gpus', type=str,
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
