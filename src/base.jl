@@ -29,7 +29,7 @@ else
 end
 
 function __init__()
-  _import_atomic_symbol_creators()
+  _populate_symbol_creator_cache!()
   _import_io_iterators()
 
   atexit() do

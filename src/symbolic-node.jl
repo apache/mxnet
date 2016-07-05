@@ -580,7 +580,7 @@ libmxnet APIs
 ################################################################################
 # Atomic SymbolicNode functions dynamically imported from libmxnet
 ################################################################################
-function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
+function _define_atomic_symbol_creator(hdr :: MX_handle)
   ref_name      = Ref{char_p}(0)
   ref_desc      = Ref{char_p}(0)
   ref_kv_nargs  = Ref{char_p}(0)
@@ -596,22 +596,19 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
           hdr, ref_name, ref_desc, ref_nargs, ref_arg_names, ref_arg_types, ref_arg_descs,
           ref_kv_nargs, ref_ret_type)
 
-  func_name_s= @compat String(ref_name[])
-  func_name  = Symbol(func_name_s)
-  kv_nargs_s = @compat String(ref_kv_nargs[])
-  kv_nargs   = Symbol(kv_nargs_s)
+  func_name_s = unsafe_wrap(String, ref_name[])
+  func_name   = Symbol(func_name_s)
+  kv_nargs_s  = unsafe_wrap(String, ref_kv_nargs[])
+  kv_nargs    = Symbol(kv_nargs_s)
 
-  if gen_docs
-    f_desc = @compat String(ref_desc[]) * "\n\n"
-    if !isempty(kv_nargs_s)
-      f_desc *= "This function support variable length positional :class:`SymbolicNode` inputs.\n\n"
-    end
-    f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-    f_desc *= ":param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
-    f_desc *= ":param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.\n\n"
-    f_desc *= ":return: $(_format_typestring(@compat String(ref_ret_type[]))).\n\n"
-    return (func_name, f_desc)
+  f_desc = unsafe_wrap(String, ref_desc[]) * "\n\n"
+  if !isempty(kv_nargs_s)
+    f_desc *= "This function support variable length positional :class:`SymbolicNode` inputs.\n\n"
   end
+  f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
+  f_desc *= ":param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
+  f_desc *= ":param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.\n\n"
+  f_desc *= ":return: $(_format_typestring(unsafe_wrap(String, ref_ret_type[]))).\n\n"
 
   # function $func_name(args...; kwargs...)
   func_head = Expr(:call, func_name, Expr(:parameters, Expr(:..., :kwargs)), Expr(:..., :args))
@@ -623,10 +620,10 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
       name = ""
     end
 
-    param_keys = AbstractString[]
-    param_vals = AbstractString[]
+    param_keys = String[]
+    param_vals = String[]
     symbol_kws = Dict{Symbol, SymbolicNode}()
-    attrs = Dict{Symbol, AbstractString}()
+    attrs = Dict{Symbol, String}()
 
     $(if kv_nargs != Symbol("")
       quote
@@ -665,11 +662,13 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
       end
     end)
 
+    local hdr = _get_symbol_creator($(QuoteNode(func_name)))
+
     # create the SymbolicNode
     ref_sym_hdr = Ref{MX_handle}()
     @mxcall(:MXSymbolCreateAtomicSymbol,
             (MX_handle, MX_uint, Ptr{char_p}, Ptr{char_p}, Ref{MX_handle}),
-            $hdr, length(param_keys), param_keys, param_vals, ref_sym_hdr)
+            hdr, length(param_keys), param_keys, param_vals, ref_sym_hdr)
     sym_hdr = ref_sym_hdr[]
 
     node = SymbolicNode(MX_SymbolHandle(sym_hdr))
@@ -691,33 +690,53 @@ function _define_atomic_symbol_creator(hdr :: MX_handle; gen_docs=false)
   end
 
   func_def = Expr(:function, func_head, Expr(:block, func_body))
-  eval(func_def)
+  quote
+    $func_def
+    @doc $f_desc $func_name
+  end
 end
 
-function _import_atomic_symbol_creators(;gen_docs=false)
+function _get_atomic_symbol_creators()
   n_ref = Ref{MX_uint}(0)
   h_ref = Ref{Ptr{MX_handle}}(0)
   @mxcall(:MXSymbolListAtomicSymbolCreators, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
 
-  n_creators = n_ref[]
-  h_creators = pointer_to_array(h_ref[], n_creators)
+  return unsafe_wrap(Array, h_ref[], n_ref[])
+end
 
-  if gen_docs
-    docs = Dict{Base.Symbol, AbstractString}()
-  end
+function _get_atomic_symbol_name(handle :: MX_handle)
+  name_r = Ref{char_p}(0)
+  @mxcall(:MXSymbolGetAtomicSymbolName, (MX_handle, Ref{char_p}), handle, name_r)
+  return unsafe_wrap(String, name_r[])
+end
 
-  for i = 1:n_creators
-    creator_hdr = h_creators[i]
-    ret = _define_atomic_symbol_creator(creator_hdr, gen_docs=gen_docs)
-    if gen_docs
-      docs[ret[1]] = ret[2]
-    end
-  end
-
-  if gen_docs
-    return docs
+const _symbol_creator_cache = Dict{Symbol, MX_handle}()
+function _populate_symbol_creator_cache!()
+  empty!(_symbol_creator_cache)
+  h_creators = _get_atomic_symbol_creators()
+  for handle in h_creators
+    name = Symbol(_get_atomic_symbol_name(handle))
+    _symbol_creator_cache[name] = handle
   end
 end
+
+_get_symbol_creator(name :: Symbol) = _symbol_creator_cache[name]
+
+macro _import_atomic_symbol_creators()
+  h_creators = _get_atomic_symbol_creators()
+
+  exprs = Expr[]
+  for creator_hdr in h_creators
+    expr = _define_atomic_symbol_creator(creator_hdr)
+    push!(exprs, expr)
+  end
+
+  esc(quote
+    $(exprs...)
+  end)
+end
+
+@_import_atomic_symbol_creators()
 
 ################################################################################
 # Utility macros to chain up symbols
