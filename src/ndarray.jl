@@ -988,110 +988,126 @@ object (:class:`NDArray`) is returned. Otherwise, a tuple containing all the out
 
 **autogen:EMBED:ndarray:EMBED:autogen**
 =#
-function _import_ndarray_functions(;gen_docs=false)
-  n_ref = Ref{MX_uint}(0)
-  h_ref = Ref{Ptr{MX_handle}}(0)
-  @mxcall(:MXListFunctions, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
 
-  n_funcs = n_ref[]
-  h_funcs = pointer_to_array(h_ref[], n_funcs)
+function _get_ndarray_functions()
+  n = Ref{MX_uint}(0)
+  handles = Ref{Ptr{MX_handle}}(0)
 
-  if gen_docs
-    docs = Dict{Base.Symbol, AbstractString}()
+  @mxcall(:MXListFunctions, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n, handles)
+
+  funcs = unsafe_wrap(Array, handles[], n[])
+  return funcs
+end
+
+function _get_function_description(handle :: MX_handle)
+  # get function information (human readable)
+  ref_name = Ref{char_p}(0)
+  ref_desc = Ref{char_p}(0)
+  ref_narg = Ref{MX_uint}(0)
+
+  ref_arg_names = Ref{char_pp}(0)
+  ref_arg_types = Ref{char_pp}(0)
+  ref_arg_descs = Ref{char_pp}(0)
+
+  ref_ret_type  = Ref{char_p}(0)
+
+  @mxcall(:MXFuncGetInfo,
+         (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp},
+          Ref{char_pp}, Ref{char_pp}, Ref{char_p}),
+          handle, ref_name, ref_desc, ref_narg, ref_arg_names,
+          ref_arg_types, ref_arg_descs, ref_ret_type)
+
+  name = Symbol(unsafe_wrap(String, ref_name[]))
+
+  desc = unsafe_wrap(String, ref_desc[]) * "\n\n"
+  desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
+  return name, desc
+end
+
+function _get_function_expressions(handle :: MX_handle, name)
+  # get function specification
+  ref_n_use_vars = Ref{MX_uint}(0)
+  ref_n_scalars  = Ref{MX_uint}(0)
+  ref_n_mut_vars = Ref{MX_uint}(0)
+  ref_type_mask  = Ref{Cint}(0)
+  @mxcall(:MXFuncDescribe,
+         (MX_handle, Ref{MX_uint}, Ref{MX_uint}, Ref{MX_uint}, Ref{Cint}),
+          handle, ref_n_use_vars, ref_n_scalars, ref_n_mut_vars, ref_type_mask)
+
+  n_used_vars   = ref_n_use_vars[]
+  n_scalars     = ref_n_scalars[]
+  n_mutate_vars = ref_n_mut_vars[]
+  type_mask     = ref_type_mask[]
+  accept_empty_mutate = (type_mask & convert(Cint,ACCEPT_EMPTY_MUTATE_TARGET)) != 0
+  arg_before_scalar   = (type_mask & convert(Cint,NDARRAY_ARG_BEFORE_SCALAR)) != 0
+
+  # general ndarray function
+  if arg_before_scalar
+    args = vcat([Expr(:(::), Symbol("in$i"), NDArray) for i=1:n_used_vars],
+                [Expr(:(::), Symbol("sca$i"), Real) for i=1:n_scalars],
+                [Expr(:(::), Symbol("out$i"), NDArray) for i=1:n_mutate_vars])
+  else
+    args = vcat([Expr(:(::), Symbol("sca$i"), Real) for i=1:n_scalars],
+                [Expr(:(::), Symbol("in$i"), NDArray) for i=1:n_used_vars],
+                [Expr(:(::), Symbol("out$i"), NDArray) for i=1:n_mutate_vars])
   end
 
-  for i = 1:n_funcs
-    func_handle = h_funcs[i]
+  _use_vars = Expr(:ref, :MX_handle, [Symbol("in$i") for i=1:n_used_vars]...)
+  _scalars  = Expr(:ref, :MX_float, [Symbol("sca$i") for i=1:n_scalars]...)
+  _mut_vars = Expr(:ref, :MX_handle, [Symbol("out$i") for i=1:n_mutate_vars]...)
 
-    #----------------------------------------
-    # get function information (human readable)
-    ref_name = Ref{char_p}(0)
-    ref_desc = Ref{char_p}(0)
-    ref_narg = Ref{MX_uint}(0)
+  # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
+  # See https://github.com/dmlc/MXNet.jl/issues/55
+  if name == :dot
+    _use_vars.args[2:end] = flipdim(_use_vars.args[2:end], 1)
+  end
 
-    ref_arg_names = Ref{char_pp}(0)
-    ref_arg_types = Ref{char_pp}(0)
-    ref_arg_descs = Ref{char_pp}(0)
+  stmt_call = Expr(:call, :_invoke_mxfunction, handle, _use_vars, _scalars, _mut_vars)
+  if n_mutate_vars == 1
+    stmt_ret = :(return out1)
+  else
+    stmt_ret = Expr(:return, Expr(:tuple, [Symbol("out$i") for i=1:n_mutate_vars]...))
+  end
 
-    ref_ret_type  = Ref{char_p}(0)
+  func_body = Expr(:block, stmt_call, stmt_ret)
+  func_head = Expr(:call, name, args...)
 
-    @mxcall(:MXFuncGetInfo,
-            (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp},
-             Ref{char_pp}, Ref{char_pp}, Ref{char_p}),
-            func_handle, ref_name, ref_desc, ref_narg, ref_arg_names,
-            ref_arg_types, ref_arg_descs, ref_ret_type)
+  func_def  = Expr(:function, func_head, func_body)
+  exprs = Expr[func_def]
 
-    func_name = Symbol(@compat String(ref_name[]))
+  if accept_empty_mutate
+    args0      = args[1:n_used_vars+n_scalars]
+    func_head0 = Expr(:call, name, args0...)
+    _mut_vars0 = [:(NDArray(_ndarray_alloc())) for i=1:n_mutate_vars]
+    stmt_call0 = Expr(:call, name, args0..., _mut_vars0...)
+    func_body0 = Expr(:block, stmt_call0)
+    func_head0 = Expr(:call, name, args0...)
+
+    func_def0  = Expr(:function, func_head0, func_body0)
+    push!(exprs, func_def0)
+  end
+  return exprs
+end
+
+function _import_ndarray_functions(;gen_docs=false)
+  funcs = _get_ndarray_functions()
+
+  if gen_docs
+    docs = Dict{Symbol, String}()
+  end
+
+  for i = 1:length(funcs)
+    handle = funcs[i]
+
+    name, desc = _get_function_description(handle)
 
     if gen_docs
       # generate document only
-      f_desc = @compat String(ref_desc[]) * "\n\n"
-      f_desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-      docs[func_name] = f_desc
+      docs[name] = desc
     else
-      #----------------------------------------
-      # get function specification
-      ref_n_use_vars = Ref{MX_uint}(0)
-      ref_n_scalars  = Ref{MX_uint}(0)
-      ref_n_mut_vars = Ref{MX_uint}(0)
-      ref_type_mask  = Ref{Cint}(0)
-      @mxcall(:MXFuncDescribe,
-              (MX_handle, Ref{MX_uint}, Ref{MX_uint}, Ref{MX_uint}, Ref{Cint}),
-              func_handle, ref_n_use_vars, ref_n_scalars, ref_n_mut_vars, ref_type_mask)
-
-      #----------------------------------------
-      # prepare function definition
-      n_used_vars   = ref_n_use_vars[]
-      n_scalars     = ref_n_scalars[]
-      n_mutate_vars = ref_n_mut_vars[]
-      type_mask     = ref_type_mask[]
-      accept_empty_mutate = (type_mask & convert(Cint,ACCEPT_EMPTY_MUTATE_TARGET)) != 0
-      arg_before_scalar   = (type_mask & convert(Cint,NDARRAY_ARG_BEFORE_SCALAR)) != 0
-
-      # general ndarray function
-      if arg_before_scalar
-        args = vcat([Expr(:(::), Symbol("in$i"), NDArray) for i=1:n_used_vars],
-                    [Expr(:(::), Symbol("sca$i"), Real) for i=1:n_scalars],
-                    [Expr(:(::), Symbol("out$i"), NDArray) for i=1:n_mutate_vars])
-      else
-        args = vcat([Expr(:(::), Symbol("sca$i"), Real) for i=1:n_scalars],
-                    [Expr(:(::), Symbol("in$i"), NDArray) for i=1:n_used_vars],
-                    [Expr(:(::), Symbol("out$i"), NDArray) for i=1:n_mutate_vars])
-      end
-
-      _use_vars = Expr(:ref, :MX_handle, [Symbol("in$i") for i=1:n_used_vars]...)
-      _scalars  = Expr(:ref, :MX_float, [Symbol("sca$i") for i=1:n_scalars]...)
-      _mut_vars = Expr(:ref, :MX_handle, [Symbol("out$i") for i=1:n_mutate_vars]...)
-
-      # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
-      # See https://github.com/dmlc/MXNet.jl/issues/55
-      if func_name == :dot
-        _use_vars.args[2:end] = flipdim(_use_vars.args[2:end], 1)
-      end
-
-      stmt_call = Expr(:call, :_invoke_mxfunction, func_handle, _use_vars, _scalars, _mut_vars)
-      if n_mutate_vars == 1
-        stmt_ret = :(return out1)
-      else
-        stmt_ret = Expr(:return, Expr(:tuple, [Symbol("out$i") for i=1:n_mutate_vars]...))
-      end
-
-      func_body = Expr(:block, stmt_call, stmt_ret)
-      func_head = Expr(:call, func_name, args...)
-
-      func_def  = Expr(:function, func_head, func_body)
-      eval(func_def)
-
-      if accept_empty_mutate
-        args0      = args[1:n_used_vars+n_scalars]
-        func_head0 = Expr(:call, func_name, args0...)
-        _mut_vars0 = [:(NDArray(_ndarray_alloc())) for i=1:n_mutate_vars]
-        stmt_call0 = Expr(:call, func_name, args0..., _mut_vars0...)
-        func_body0 = Expr(:block, stmt_call0)
-        func_head0 = Expr(:call, func_name, args0...)
-
-        func_def0  = Expr(:function, func_head0, func_body0)
-        eval(func_def0)
+      exprs = _get_function_expressions(handle, name)
+      for expr in exprs
+        eval(expr)
       end
     end
   end
