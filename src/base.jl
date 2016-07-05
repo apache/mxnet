@@ -24,6 +24,8 @@ if isempty(MXNET_LIB)
   # MXNet.ji will be re-compiled to get MXNET_LIB properly.
   touch(@__FILE__)
   error("Cannot find or load libmxnet.so. Please see the document on how to build it.")
+else
+  include_dependency(MXNET_LIB)
 end
 
 function __init__()
