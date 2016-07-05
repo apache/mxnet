@@ -999,11 +999,17 @@ function _get_ndarray_functions()
   return funcs
 end
 
-function _get_function(name :: String)
-  handle = Ref{MX_handle}(0)
+const _function_cache = Dict{Symbol, MX_handle}()
+function _get_function(name :: Symbol)
+  if !haskey(_function_cache, name)
+    handle = Ref{MX_handle}(0)
 
-  @mxcall(:MXGetFunction, (Cstring, Ref{MX_handle}), name, handle)
-  return handle[]
+    @mxcall(:MXGetFunction, (Cstring, Ref{MX_handle}), name, handle)
+    _function_cache[name] = handle[]
+    return handle[]
+  else
+    return _function_cache[name]
+  end
 end
 
 function _get_function_description(handle :: MX_handle)
@@ -1069,7 +1075,7 @@ function _get_function_expressions(handle :: MX_handle, name)
     _use_vars.args[2:end] = flipdim(_use_vars.args[2:end], 1)
   end
   stmt_call = quote
-    local handle = _get_function($(string(name)))
+    local handle = _get_function($(QuoteNode(name)))
     _invoke_mxfunction(handle, $_use_vars, $_scalars, $_mut_vars)
   end
   if n_mutate_vars == 1
