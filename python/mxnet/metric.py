@@ -142,6 +142,18 @@ class Accuracy(EvalMetric):
             self.sum_metric += (pred_label.flat == label.flat).sum()
             self.num_inst += len(pred_label.flat)
 
+class MultiBinaryAccuracy(EvalMetric):
+    """Calculate multi-binary (+1 vs -1) accuracy"""
+
+    def __init__(self):
+        super(MultiBinaryAccuracy, self).__init__('multi_binary_accuracy')
+
+    def update(self, labels, preds):
+        check_label_shapes(labels, preds)
+        for i in range(len(labels)):
+            self.sum_metric += ((labels[i].asnumpy() >= 0) == (preds[i].asnumpy() >= 0)).sum()
+            self.num_inst += numpy.prod(labels[i].asnumpy().shape)
+
 class TopKAccuracy(EvalMetric):
     """Calculate top k predictions accuracy"""
 
@@ -314,26 +326,20 @@ class CustomMetric(EvalMetric):
     ----------
     feval : callable(label, pred)
         Customized evaluation function.
+
     name : str, optional
         The name of the metric
-    allow_extra_outputs : bool
-        If true, the prediction outputs can have extra outputs.
-        This is useful in RNN, where the states are also produced
-        in outputs for forwarding.
     """
-    def __init__(self, feval, name=None, allow_extra_outputs=False):
+    def __init__(self, feval, name=None):
         if name is None:
             name = feval.__name__
             if name.find('<') != -1:
                 name = 'custom(%s)' % name
         super(CustomMetric, self).__init__(name)
         self._feval = feval
-        self._allow_extra_outputs = allow_extra_outputs
 
     def update(self, labels, preds):
-        if not self._allow_extra_outputs:
-            check_label_shapes(labels, preds)
-
+        check_label_shapes(labels, preds)
         for pred, label in zip(preds, labels):
             label = label.asnumpy()
             pred = pred.asnumpy()
@@ -351,25 +357,22 @@ class CustomMetric(EvalMetric):
                 self.num_inst += 1
 
 # pylint: disable=invalid-name
-def np(numpy_feval, name=None, allow_extra_outputs=False):
+def np(numpy_feval, name=None):
     """Create a customized metric from numpy function.
 
     Parameters
     ----------
     numpy_feval : callable(label, pred)
         Customized evaluation function.
+
     name : str, optional
         The name of the metric.
-    allow_extra_outputs : bool
-        If true, the prediction outputs can have extra outputs.
-        This is useful in RNN, where the states are also produced
-        in outputs for forwarding.
     """
     def feval(label, pred):
         """Internal eval function."""
         return numpy_feval(label, pred)
     feval.__name__ = numpy_feval.__name__
-    return CustomMetric(feval, name, allow_extra_outputs)
+    return CustomMetric(feval, name)
 # pylint: enable=invalid-name
 
 def create(metric, **kwargs):
@@ -395,6 +398,7 @@ def create(metric, **kwargs):
     metrics = {
         'acc': Accuracy,
         'accuracy': Accuracy,
+        'multi_binary_acc': MultiBinaryAccuracy,
         'ce': CrossEntropy,
         'f1': F1,
         'mae': MAE,

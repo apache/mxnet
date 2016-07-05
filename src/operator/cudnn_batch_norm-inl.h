@@ -89,6 +89,7 @@ class CuDNNBatchNormOp : public Operator {
     Tensor<gpu, 4> x = in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
     Tensor<gpu, 1> gamma =
       in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
+    if (param_.fix_gamma) gamma = 1.0f;
     Tensor<gpu, 1> beta =
       in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
     Tensor<gpu, 4> y = out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, real_t>(shape_, s);
