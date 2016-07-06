@@ -5,7 +5,7 @@ import ctypes
 from .base import _LIB, check_call
 from .base import c_array, mx_uint, mx_float, c_str
 from .base import OptimizerHandle, OptimizerCreator
-from .ndarray import NDArray, zeros, clip, sqrt
+from .ndarray import NDArray, zeros, clip, sqrt, square
 from .random import normal
 
 
@@ -586,14 +586,17 @@ class Adam(Optimizer):
         if self.clip_gradient is not None:
             clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
 
-        mean[:] = self.beta1 * mean + (1. - self.beta1) * grad
-        variance[:] = self.beta2 * variance + (1. - self.beta2) * grad * grad
+        mean *= self.beta1
+        mean += grad * (1. - self.beta1)
+
+        variance *= self.beta2
+        variance += (1 - self.beta2) * square(grad, out=grad)
 
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
 
-        weight[:] -= lr*mean/(sqrt(variance) + self.epsilon)
+        weight -= lr*mean/(sqrt(variance) + self.epsilon)
 
         wd = self._get_wd(index)
         if wd > 0.:
