@@ -85,7 +85,7 @@ class KVStoreDevice : public KVStoreLocal {
 
     for (size_t i = 1; i < val.size(); ++i) {
       NDArray *copy_buf = buf.AllocCopyBuf(
-          i, buf.ctx, val[0].shape());
+          i, buf.ctx, val[0].shape(), val[0].dtype());
       CopyFromTo(val[i], copy_buf, priority);
       reduce[i] = *copy_buf;
     }
