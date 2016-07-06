@@ -1,14 +1,14 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file cuda_utils.h
- * \brief CUDA debugging utilities.
+ * \file gpu_util.h
+ * \brief atomic op utilities.
  */
 
 #ifndef MXNET_UTIL_GPU_UTIL_H_
 #define MXNET_UTIL_GPU_UTIL_H_
 
 
-#if MXNET_USE_CUDA
+#if defined(__CUDACC__)
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -45,6 +45,6 @@ double mxnet_gpu_atomic_add(const double val, double* address) {
 
 
 
-
+#endif  // __CUDACC__ 
 #endif  // mxnet_UTIL_GPU_UTIL_H_
-#endif  // MXNET_USE_CUDNN
+
