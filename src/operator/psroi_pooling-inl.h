@@ -4,8 +4,8 @@
  * \brief psroi pooling operator and symbol
  * \author Yi Li, Tairui Chen
 */
-#ifndef MXNET_OPERATOR_ROI_POOLING_INL_H_
-#define MXNET_OPERATOR_ROI_POOLING_INL_H_
+#ifndef MXNET_OPERATOR_PSROI_POOLING_INL_H_
+#define MXNET_OPERATOR_PSROI_POOLING_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -164,9 +164,9 @@ class PSROIPoolingProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    PSROIPoolingProp* roi_pooling_sym = new PSROIPoolingProp();
-    roi_pooling_sym->param_ = this->param_;
-    return roi_pooling_sym;
+    PSROIPoolingProp* psroi_pooling_sym = new PSROIPoolingProp();
+    psroi_pooling_sym->param_ = this->param_;
+    return psroi_pooling_sym;
   }
 
   std::string TypeString() const override {
@@ -189,4 +189,4 @@ class PSROIPoolingProp : public OperatorProperty {
 #endif
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_ROI_POOLING_INL_H_
+#endif  // MXNET_OPERATOR_PSROI_POOLING_INL_H_
