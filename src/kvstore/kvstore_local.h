@@ -89,10 +89,10 @@ class KVStoreLocal : public KVStore {
     /// \brief the cpu buffer for gpu data
     std::vector<NDArray> copy_buf;
     // allocate copy buffer, if it has not been allocated
-    inline NDArray *AllocCopyBuf(size_t index, Context ctx, const TShape& shape) {
+    inline NDArray *AllocCopyBuf(size_t index, Context ctx, const TShape& shape, int dtype) {
       if (index >= copy_buf.size()) copy_buf.resize(index + 1);
       if (copy_buf[index].is_none()) {
-        copy_buf[index] = NDArray(shape, ctx);
+        copy_buf[index] = NDArray(shape, ctx, false, dtype);
       }
       return &copy_buf[index];
     }
@@ -121,7 +121,7 @@ class KVStoreLocal : public KVStore {
       if (i.first != pre_key) {
         uniq_keys->push_back(i.first);
         grouped_vals->push_back({values[i.second]});
-        pre_key = i.first;;
+        pre_key = i.first;
       } else {
         grouped_vals->back().push_back(values[i.second]);
       }
@@ -153,17 +153,19 @@ class KVStoreLocal : public KVStore {
         reduce[i] = val[i];
       } else {
         NDArray *copy_buf = buf.AllocCopyBuf(
-            i, Context::CPUPinned(ctx.dev_id), val[0].shape());
+            i, Context::CPUPinned(ctx.dev_id), val[0].shape(), val[0].dtype());
         CopyFromTo(val[i], copy_buf, priority);
         reduce[i] = *copy_buf;
       }
       const_vars[i - 1] = reduce[i].var();
     }
-
-    Engine::Get()->PushSync([reduce, this](RunContext rctx) {
-        ReduceSumCPU(reduce);
-      }, Context::CPU(), const_vars, {reduce[0].var()},
-      FnProperty::kCPUPrioritized, priority);
+ 
+    MSHADOW_REAL_TYPE_SWITCH(val[0].dtype(), DType, {
+     Engine::Get()->PushSync([reduce, this](RunContext rctx) {
+         ReduceSumCPU<DType>(reduce);
+       }, Context::CPU(), const_vars, {reduce[0].var()},
+       FnProperty::kCPUPrioritized, priority);
+    }); 
     return buf.merged;
   }
 
@@ -185,32 +187,33 @@ class KVStoreLocal : public KVStore {
   size_t bigarray_bound_;
 
  private:
-  inline static void ReduceSumCPU(const std::vector<real_t*> &dptr,
+  template<typename DType>
+  inline static void ReduceSumCPU(const std::vector<DType*> &dptr,
                                   size_t offset, index_t size) {
     using namespace mshadow;  // NOLINT(*)
-    Tensor<cpu, 1> in_0(dptr[0] + offset, Shape1(size));
+    Tensor<cpu, 1, DType> in_0(dptr[0] + offset, Shape1(size));
     switch (dptr.size()) {
       case 2: {
-        Tensor<cpu, 1> in_1(dptr[1] + offset, Shape1(size));
+        Tensor<cpu, 1, DType> in_1(dptr[1] + offset, Shape1(size));
         in_0 += in_1;
         break;
       }
       case 3: {
-        Tensor<cpu, 1> in_1(dptr[1] + offset, Shape1(size));
-        Tensor<cpu, 1> in_2(dptr[2] + offset, Shape1(size));
+        Tensor<cpu, 1, DType> in_1(dptr[1] + offset, Shape1(size));
+        Tensor<cpu, 1, DType> in_2(dptr[2] + offset, Shape1(size));
         in_0 += in_1 + in_2;
         break;
       }
       case 4: {
-        Tensor<cpu, 1> in_1(dptr[1] + offset, Shape1(size));
-        Tensor<cpu, 1> in_2(dptr[2] + offset, Shape1(size));
-        Tensor<cpu, 1> in_3(dptr[3] + offset, Shape1(size));
+        Tensor<cpu, 1, DType> in_1(dptr[1] + offset, Shape1(size));
+        Tensor<cpu, 1, DType> in_2(dptr[2] + offset, Shape1(size));
+        Tensor<cpu, 1, DType> in_3(dptr[3] + offset, Shape1(size));
         in_0 += in_1 + in_2 + in_3;
         break;
       }
       default: {
         for (size_t i = 1; i < dptr.size(); ++i) {
-          Tensor<cpu, 1> in_k(dptr[i] + offset, Shape1(size));
+          Tensor<cpu, 1, DType> in_k(dptr[i] + offset, Shape1(size));
           in_0 += in_k;
         }
       }
@@ -218,19 +221,20 @@ class KVStoreLocal : public KVStore {
   }
   // reduce sum into val[0]
   // this is performance critical
+  template<typename DType>
   inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
     const size_t step = std::min(bigarray_bound_, static_cast<size_t>(4 << 10));
     // ge ptr out
-    std::vector<real_t*> dptr(in_data.size());
+    std::vector<DType*> dptr(in_data.size());
     for (size_t i = 0; i < in_data.size(); ++i) {
       TBlob data = in_data[i].data();
       CHECK(data.CheckContiguous());
-      dptr[i] = data.FlatTo2D<cpu, real_t>().dptr_;
+      dptr[i] = data.FlatTo2D<cpu, DType>().dptr_;
     }
     size_t total = in_data[0].shape().Size();
     long ntask = (total + step - 1) / step; // NOLINT(*)
     if (total < bigarray_bound_ || nthread_reduction_ <= 1) {
-      ReduceSumCPU(dptr, 0, total);
+      ReduceSumCPU<DType>(dptr, 0, total);
     } else {
       #pragma omp parallel for schedule(static) num_threads(nthread_reduction_)
       for (long j = 0; j < ntask; ++j) { // NOLINT(*)
