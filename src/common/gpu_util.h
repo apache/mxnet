@@ -45,6 +45,6 @@ double mxnet_gpu_atomic_add(const double val, double* address) {
 
 
 
-#endif  // __CUDACC__ 
+#endif  // __CUDACC__
 #endif  // mxnet_UTIL_GPU_UTIL_H_
 

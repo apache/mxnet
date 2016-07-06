@@ -23,7 +23,7 @@ inline void PSROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
                            const Tensor<cpu, 2, Dtype> &bbox,
                            const Tensor<cpu, 4, Dtype> &mapping_channel,
                            const float spatial_scale_,
-                           const int output_dim_, 
+                           const int output_dim_,
                            const int group_size_) {
   // NOT_IMPLEMENTED;
   return;

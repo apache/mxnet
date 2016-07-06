@@ -55,7 +55,7 @@ __global__ void PSROIPoolForwardKernel(
     Dtype roi_width = max(roi_end_w - roi_start_w, 0.1); //avoid 0
     Dtype roi_height = max(roi_end_h - roi_start_h, 0.1);
 
-    // Compute w and h at bottom 
+    // Compute w and h at bottom
     Dtype bin_size_h = roi_height / static_cast<Dtype>(pooled_height);
     Dtype bin_size_w = roi_width / static_cast<Dtype>(pooled_width);
 
@@ -99,7 +99,7 @@ inline void PSROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
                            const Tensor<gpu, 2, Dtype> &bbox,
                            const Tensor<gpu, 4, Dtype> &mapping_channel,
                            const float spatial_scale,
-                           const int output_dim_, 
+                           const int output_dim_,
                            const int group_size_) {
   const Dtype *bottom_data = data.dptr_;
   const Dtype *bottom_rois = bbox.dptr_;
@@ -133,7 +133,7 @@ __global__ void PSROIPoolBackwardKernel(
   const int channels,
   const int height, const int width,
   const int pooled_height, const int pooled_width,
-  const int output_dim, 
+  const int output_dim,
   Dtype* bottom_diff,
   const Dtype* bottom_rois) {
   for (int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
@@ -156,7 +156,7 @@ __global__ void PSROIPoolBackwardKernel(
     Dtype roi_width = max(roi_end_w - roi_start_w, 0.1); //avoid 0
     Dtype roi_height = max(roi_end_h - roi_start_h, 0.1);
 
-    // Compute w and h at bottom 
+    // Compute w and h at bottom
     Dtype bin_size_h = roi_height / static_cast<Dtype>(pooled_height);
     Dtype bin_size_w = roi_width / static_cast<Dtype>(pooled_width);
 
@@ -227,7 +227,7 @@ inline void PSROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
                            const Tensor<gpu, 2, Dtype> &bbox,
                            const Tensor<gpu, 4, Dtype> &mapping_channel,
                            const float spatial_scale,
-                           const int output_dim_, 
+                           const int output_dim_,
                            const int group_size_) {
   cuda::PSROIPoolForward(out, data, bbox, mapping_channel, spatial_scale, output_dim_, group_size_);
 }
