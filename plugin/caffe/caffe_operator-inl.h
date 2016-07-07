@@ -40,7 +40,6 @@ enum FetchType {DataOnly, GradOnly, DataWithGrad};
 
 struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   caffe::LayerParameter prototxt;
-  std::string op_type_string;
   std::vector<int> in_dims, w_dims, out_dims;
   caffe::Layer<float> *caffe_op;
   int in_num, out_num;
@@ -48,8 +47,6 @@ struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   DMLC_DECLARE_PARAMETER(CaffeOperatorParam) {
     DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
-    DMLC_DECLARE_FIELD(op_type_string)
-    .describe("Operator type name");
     DMLC_DECLARE_FIELD(in_num).set_range(0, 100).set_default(1)
     .describe("Operator input number");
     DMLC_DECLARE_FIELD(out_num).set_range(0, 100).set_default(1)
@@ -94,7 +91,7 @@ class CaffeOperator : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     // TODO(Haoran): when need cublas handle in stream?
-    if (!param_.op_type_string.compare("fullyConnected"))
+    if (!param_.prototxt.type().compare("InnerProduct"))
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
@@ -160,7 +157,7 @@ class CaffeOperator : public Operator {
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
-    if (!param_.op_type_string.compare("fullyConnected"))
+    if (!param_.prototxt.type().compare("InnerProduct"))
       CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
@@ -322,12 +319,12 @@ class CaffeOperatorProp : public OperatorProperty {
       res.push_back(std::string("data_") + static_cast<char>('0' + i));
 
     int blob_cnt = 0;
-    if (!param_.op_type_string.compare("InnerProduct")) {
+    if (!param_.prototxt.type().compare("InnerProduct")) {
       if (param_.prototxt.inner_product_param().bias_term())
         blob_cnt = 2;
       else
         blob_cnt = 1;
-    } else if (!param_.op_type_string.compare("Conv")) {
+    } else if (!param_.prototxt.type().compare("Convolution")) {
       if (param_.prototxt.convolution_param().bias_term())
         blob_cnt = 2;
       else
@@ -349,7 +346,7 @@ class CaffeOperatorProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.op_type_string);
+    CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
     param_.caffe_op = e->gen_f_(this->param_.prototxt);
     param_.in_dims.resize(param_.in_num);
     param_.out_dims.resize(param_.out_num);

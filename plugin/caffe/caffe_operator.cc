@@ -38,13 +38,13 @@ MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
 
 // Wrap caffe's layer_class to layer-generator function
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(InnerProduct, ::caffe::InnerProductLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(Tanh, ::caffe::TanHLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(Relu, ::caffe::ReLULayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(Conv, ::caffe::ConvolutionLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(TanH, ::caffe::TanHLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(ReLU, ::caffe::ReLULayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(Convolution, ::caffe::ConvolutionLayer<float>);
 
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(AbsVal, ::caffe::AbsValLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Accuracy, ::caffe::AccuracyLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(BatchNormLayer, ::caffe::BatchNormLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(BatchNorm, ::caffe::BatchNormLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(BatchReindex, ::caffe::BatchReindexLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Bias, ::caffe::BiasLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(BNLL, ::caffe::BNLLLayer<float>);
@@ -54,12 +54,12 @@ MXNET_REGISTER_PLUGIN_CAFFE_INIT(ContrastiveLoss, ::caffe::ContrastiveLossLayer<
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Crop, ::caffe::CropLayer<float>);
 /*
  * /brief: (TODO) Haoran: support cudnn compilation
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNConv, ::caffe::CuDNNConvolutionLayer<float>);
+ * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNConvolution, ::caffe::CuDNNConvolutionLayer<float>);
  * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLCN, ::caffe::CuDNNLCNLayer<float>);
  * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLRN, ::caffe::CuDNNLRNLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNPool, ::caffe::CuDNNPoolingLayer<float>);
+ * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNPooling, ::caffe::CuDNNPoolingLayer<float>);
  * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLCN, ::caffe::CuDNNLCNLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNReLULayer, ::caffe::CuDNNReLULayer<float>);
+ * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNReLU, ::caffe::CuDNNReLULayer<float>);
  * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNSigmoid, ::caffe::CuDNNSigmoidLayer<float>);
  * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNSoftmax, ::caffe::CuDNNSoftmaxLayer<float>);
  * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNTanH, ::caffe::CuDNNTanHLayer<float>);
@@ -93,7 +93,7 @@ MXNET_REGISTER_PLUGIN_CAFFE_INIT(MultinomialLogisticLoss,
                                  ::caffe::MultinomialLogisticLossLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(MVN, ::caffe::MVNLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Parameter, ::caffe::ParameterLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(Pool, ::caffe::PoolingLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(Pooling, ::caffe::PoolingLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Power, ::caffe::PowerLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(PReLU, ::caffe::PReLULayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Reduction, ::caffe::ReductionLayer<float>);
