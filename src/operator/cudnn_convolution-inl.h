@@ -484,9 +484,9 @@ class CuDNNConvolutionOp : public Operator {
       backward_workspace_ = backward_workspace_byte_ / sizeof(DType) + 1;
       // ugly fix CUDNN algorithm selection
       // safe to remove after CuDNN fix 3D conv selection
-      if (param_.kernel.ndim() == 3) {
-        back_algo_w_ = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0;
-      }
+      // if (param_.kernel.ndim() == 3) {
+      //   back_algo_w_ = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0;
+      // }
     }
   }
 
