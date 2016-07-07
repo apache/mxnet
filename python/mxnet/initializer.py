@@ -92,6 +92,7 @@ class Initializer(object):
         raise ValueError('Unknown initialization pattern for %s' % name)
     # pylint: enable=no-self-use, missing-docstring, invalid-name
 
+
 class Load(object):
     """Initialize by loading pretrained param from file or dict
 
@@ -133,6 +134,7 @@ class Load(object):
             self.default_init(name, arr)
             if self.verbose:
                 logging.info('Initialized %s by default', name)
+
 
 class Mixed(object):
     """Initialize with mixed Initializer
@@ -185,6 +187,7 @@ class Normal(Initializer):
 
     def _init_weight(self, _, arr):
         random.normal(0, self.sigma, out=arr)
+
 
 class Orthogonal(Initializer):
     """Intialize weight as Orthogonal matrix
@@ -265,3 +268,37 @@ class Xavier(Initializer):
             random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
+
+
+class MSRAPrelu(Initializer):
+    """Initialize the weight with initialization scheme from
+        Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+    Parameters
+    ----------
+    factor_type: str, optional
+        Use ```avg```, ```in```, or ```out``` to init
+    slope: float, optional
+        initial slope of any PReLU (or similar) nonlinearities.
+    """
+    def __init__(self, factor_type="avg", slope=0.25):
+        self.factor_type = factor_type
+        self.slope = slope
+
+    def _init_weight(self, _, arr):
+        shape = arr.shape
+        hw_scale = 1.
+        if len(shape) > 2:
+            hw_scale = np.prod(shape[2:])
+        fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
+        factor = 1.
+        if self.factor_type == "avg":
+            factor = (fan_in + fan_out) / 2.0
+        elif self.factor_type == "in":
+            factor = fan_in
+        elif self.factor_type == "out":
+            factor = fan_out
+        else:
+            raise ValueError("Incorrect factor type")
+        factor *= (1 + self.slope * self.slope)
+        scale = np.sqrt(2 / factor)
+        random.normal(0, scale, out=arr)
