@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <vector>
 #include "./convolution-inl.h"
+#include "../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -213,7 +214,8 @@ class CuDNNConvolutionOp : public Operator {
                filter_desc_,
                gwmat_ptr + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
       #elif CUDNN_MAJOR == 5
-      CHECK_EQ(cudnnConvolutionBackwardFilter(s->dnn_handle_,
+      back_algo_w_ = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0;
+      CUDNN_CALL(cudnnConvolutionBackwardFilter(s->dnn_handle_,
                &alpha,
                in_desc_,
                data_ptr + data_offset_ * g,
@@ -225,7 +227,7 @@ class CuDNNConvolutionOp : public Operator {
                backward_workspace_byte_,
                req[conv::kWeight] == kWriteTo? &beta : &beta_add,
                filter_desc_,
-               gwmat_ptr + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
+               gwmat_ptr + weight_offset_ * g));
       #endif
       #if CUDNN_MAJOR <= 4
       CHECK_EQ(cudnnConvolutionBackwardData_v3(s->dnn_handle_,
@@ -480,6 +482,11 @@ class CuDNNConvolutionOp : public Operator {
       }
       forward_workspace_ = forward_workspace_byte_ / sizeof(DType) + 1;
       backward_workspace_ = backward_workspace_byte_ / sizeof(DType) + 1;
+      // ugly fix CUDNN algorithm selection
+      // safe to remove after CuDNN fix 3D conv selection
+      if (param_.kernel.ndim() == 3) {
+        back_algo_w_ = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0;
+      }
     }
   }
 
