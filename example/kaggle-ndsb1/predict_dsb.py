@@ -10,7 +10,7 @@ parser.add_argument('--batch-size', type=int, default=100,
                     help='the batch size')
 parser.add_argument('--data-dir', type=str, default="data48/",
                     help='the input data directory')
-parser.add_argument('--gpus', type=str, default='0',
+parser.add_argument('--gpus', type=str,
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--model-prefix', type=str,default= "./models/sample_net-0",
                     help='the prefix of the model to load')

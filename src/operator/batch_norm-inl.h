@@ -88,6 +88,9 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> bias = in_data[batchnorm::kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+
+    if (ctx.is_train && param_.fix_gamma) slope = 1.f;
+
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
       Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
@@ -98,16 +101,10 @@ class BatchNormOp : public Operator {
       mean = scale * sumall_except_dim<1>(data);
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
-      if (param_.fix_gamma) {
-        Assign(out, req[batchnorm::kOut], (data - broadcast<1>(mean, data.shape_)) /
-               F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
-               broadcast<1>(bias, out.shape_));
-      } else {
-        Assign(out, req[batchnorm::kOut], broadcast<1>(slope, out.shape_) *
-               (data - broadcast<1>(mean, data.shape_)) /
-               F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
-               broadcast<1>(bias, out.shape_));
-      }
+      Assign(out, req[batchnorm::kOut], broadcast<1>(slope, out.shape_) *
+             (data - broadcast<1>(mean, data.shape_)) /
+             F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
+             broadcast<1>(bias, out.shape_));
     } else {
       Assign(out, req[batchnorm::kOut], broadcast<1>(slope /
                                           F<mshadow_op::square_root>(moving_var + param_.eps),
@@ -183,19 +180,15 @@ class BatchNormOp : public Operator {
                sumall_except_dim<1>(
                    grad * (data - broadcast<1>(mean, data.shape_)) /
                    F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_))));
-        Assign(grad_in, req[batchnorm::kData],
-               (grad * broadcast<1>(slope, data.shape_)) *
-               broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
-               broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
-                                                                                     data.shape_)) +
-               broadcast<1>(gmean, data.shape_) * scale);
       } else {
-        Assign(grad_in, req[batchnorm::kData], grad *
-               broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
-               broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
-                                                                                     data.shape_)) +
-               broadcast<1>(gmean, data.shape_) * scale);
+        Assign(gslope, req[batchnorm::kGamma], 0.0f);
       }
+      Assign(grad_in, req[batchnorm::kData],
+             (grad * broadcast<1>(slope, data.shape_)) *
+             broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
+             broadcast<1>(gvar, data.shape_) * scale * 2.0f * (data - broadcast<1>(mean,
+                                                                                   data.shape_)) +
+             broadcast<1>(gmean, data.shape_) * scale);
       Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
     } else {
       // use global statistics with freeze moving mean and var.
@@ -204,14 +197,12 @@ class BatchNormOp : public Operator {
                sumall_except_dim<1>(
                    grad * (data - broadcast<1>(moving_mean, data.shape_)) /
                    F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_))));
-        Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
-               broadcast<1>(
-                   1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
       } else {
-        Assign(grad_in, req[batchnorm::kData], grad *
-               broadcast<1>(
-                   1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
+        Assign(gslope, req[batchnorm::kGamma], 0.0f);
       }
+      Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
+             broadcast<1>(
+                 1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
     }
   }
 

@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file ndarray_op.cc
+ * \file custom.cc
  * \brief
  * \author Junyuan Xie
 */
