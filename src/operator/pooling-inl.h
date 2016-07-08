@@ -60,7 +60,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   }
 };
 
-template<typename xpu, typename Reducer>
+template<typename xpu, typename Reducer, typename DType>
 class PoolingOp : public Operator {
  public:
   explicit PoolingOp(PoolingParam p) {
@@ -77,8 +77,8 @@ class PoolingOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> out = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> out = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     if (param_.pool_type == pool_enum::kMaxPooling || param_.pool_type == pool_enum::kSumPooling) {
       Assign(out,
@@ -92,9 +92,9 @@ class PoolingOp : public Operator {
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(out,
              req[pool_enum::kOut],
-             (1.0f / (param_.global_pool ?
-                      data.shape_[2] * data.shape_[3] :
-                      param_.kernel[0] * param_.kernel[1])) * \
+             scalar<DType>(1.0f / (param_.global_pool ?
+                           data.shape_[2] * data.shape_[3] :
+                           param_.kernel[0] * param_.kernel[1])) * \
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                            out_shape,
                            param_.global_pool ? data.shape_[2] : param_.kernel[0],
@@ -120,10 +120,10 @@ class PoolingOp : public Operator {
     CHECK_EQ(in_grad.size(), 1);
     // TODO(bing): remove pad (0,0)
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad = out_grad[pool_enum::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> output_data = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> input_grad = in_grad[pool_enum::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> grad = out_grad[pool_enum::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> output_data = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> input_grad = in_grad[pool_enum::kData].get<xpu, 4, DType>(s);
 
     mshadow::Shape<2> in_shape = Shape2(data.shape_[2], data.shape_[3]);
 
@@ -141,7 +141,7 @@ class PoolingOp : public Operator {
                   param_.pad[1]));
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(input_grad, req[pool_enum::kData],
-             (1.0f / param_.kernel[0] / param_.kernel[1]) *\
+             scalar<DType>(1.0f / param_.kernel[0] / param_.kernel[1]) *\
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
@@ -160,7 +160,7 @@ class PoolingOp : public Operator {
 };  // class PoolingOp
 
 template<typename xpu>
-Operator* CreateOp(PoolingParam param);
+Operator* CreateOp(PoolingParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -198,6 +198,22 @@ class PoolingProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1);
+    int dtype = in_type->at(0);
+
+    if (dtype == -1) {
+      LOG(FATAL) << "input type to pooling is not specified.";
+      return false;
+    }
+
+    out_type->clear();
+    out_type->push_back(dtype);
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     PoolingProp *prop_sym = new PoolingProp();
     prop_sym->param_ = this->param_;
@@ -227,7 +243,13 @@ class PoolingProp : public OperatorProperty {
 #endif
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   PoolingParam param_;
