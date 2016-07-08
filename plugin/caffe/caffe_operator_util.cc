@@ -9,6 +9,11 @@
 namespace mxnet {
 namespace op {
 
+CaffeOpInitEntry& CaffeOpInitEntry::SetWeightNum(int w_num) {
+  w_num_ = w_num;
+  return *this;
+}
+
 CaffeOpInitEntry& CaffeOpInitRegistry::__REGISTER__(const char* name_str,
                                                     pFunc f) {
   std::string name(name_str);

@@ -317,25 +317,12 @@ class CaffeOperatorProp : public OperatorProperty {
     std::vector<std::string> res;
     for (size_t i = 0; i < param_.in_dims.size(); ++i)
       res.push_back(std::string("data_") + static_cast<char>('0' + i));
-
-    int blob_cnt = 0;
-    if (!param_.prototxt.type().compare("InnerProduct")) {
-      if (param_.prototxt.inner_product_param().bias_term())
-        blob_cnt = 2;
-      else
-        blob_cnt = 1;
-    } else if (!param_.prototxt.type().compare("Convolution")) {
-      if (param_.prototxt.convolution_param().bias_term())
-        blob_cnt = 2;
-      else
-        blob_cnt = 1;
-    }
     /*
      * \brief the assumption is: first blob is weight, second is bias.
      * \brief However, some types of caffe-layers might not follow this
      * \brief Customization is then required.
      */
-    for (int i = 0; i < blob_cnt; ++i) {
+    for (int i = 0; i < GetBlobNum(); ++i) {
       if (i == 0)
         res.push_back(std::to_string(i) + "_weight");
       else
@@ -344,10 +331,26 @@ class CaffeOperatorProp : public OperatorProperty {
     return res;
   }
 
+  int GetBlobNum() const {
+    int blob_num = 0;
+    std::string type = param_.prototxt.type();
+    entry_ = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
+    /* if weight num is specified in registered */
+    if (entry_->w_num_ >= 0)
+      return  entry_->w_num_;
+    /* otherwise, calculate blob num in runtime */
+    if (!type.compare("InnerProduct"))
+      blob_num = (param_.prototxt.inner_product_param().bias_term())?2:1;
+    else if (!type.compare("Convolution"))
+      blob_num = (param_.prototxt.convolution_param().bias_term())?2:1;
+
+    return blob_num;
+  }
+
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    CaffeOpInitEntry* e = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
-    param_.caffe_op = e->gen_f_(this->param_.prototxt);
+    entry_ = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
+    param_.caffe_op = entry_->gen_f_(this->param_.prototxt);
     param_.in_dims.resize(param_.in_num);
     param_.out_dims.resize(param_.out_num);
   }
@@ -440,6 +443,7 @@ class CaffeOperatorProp : public OperatorProperty {
 
  private:
   mutable CaffeOperatorParam param_;
+  mutable CaffeOpInitEntry* entry_;
 };  // class FullyConnectedSymbol
 #endif
 
