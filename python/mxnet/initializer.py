@@ -269,36 +269,18 @@ class Xavier(Initializer):
         else:
             raise ValueError("Unknown random type")
 
-
-class MSRAPrelu(Initializer):
+class MSRAPrelu(Xavier):
     """Initialize the weight with initialization scheme from
         Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+
     Parameters
     ----------
     factor_type: str, optional
         Use ```avg```, ```in```, or ```out``` to init
+
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
     """
     def __init__(self, factor_type="avg", slope=0.25):
-        self.factor_type = factor_type
-        self.slope = slope
-
-    def _init_weight(self, _, arr):
-        shape = arr.shape
-        hw_scale = 1.
-        if len(shape) > 2:
-            hw_scale = np.prod(shape[2:])
-        fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
-        factor = 1.
-        if self.factor_type == "avg":
-            factor = (fan_in + fan_out) / 2.0
-        elif self.factor_type == "in":
-            factor = fan_in
-        elif self.factor_type == "out":
-            factor = fan_out
-        else:
-            raise ValueError("Incorrect factor type")
-        factor *= (1 + self.slope * self.slope)
-        scale = np.sqrt(2 / factor)
-        random.normal(0, scale, out=arr)
+        magnitude = 2. / (1 + slope ** 2)
+        super(MSRAPrelu, self)__.init__("gaussian", factor_type, magnitude)
