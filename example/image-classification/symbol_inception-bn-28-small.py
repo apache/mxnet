@@ -17,7 +17,7 @@ def DownsampleFactory(data, ch_3x3, mirror_attr):
     # conv 3x3
     conv = ConvFactory(data=data, kernel=(3, 3), stride=(2, 2), num_filter=ch_3x3, pad=(1, 1), mirror_attr=mirror_attr)
     # pool
-    pool = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pool_type='max', attr=mirror_attr)
+    pool = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pad=(1, 1), pool_type='max', attr=mirror_attr)
     # concat
     concat = mx.symbol.Concat(*[conv, pool])
     return concat

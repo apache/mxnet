@@ -8,7 +8,7 @@
 # documentation could be expected when this feature is mature.
 #
 # When mirroring is turned on and set properly, we could expect smaller memory
-# consumption with slightly slower computation speed (due to extra forward 
+# consumption with slightly slower computation speed (due to extra forward
 # steps). We are not including a sample running log here, as this test case
 # is only a functionality test. The using of pycuda GPU memory query is also
 # not very good way of measuring the memory usage here.
@@ -55,7 +55,7 @@ def _download(data_dir):
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')) :
-        os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip")
+        os.system("wget http://data.dmlc.ml/mxnet/data/data/cifar10.zip")
         os.system("unzip -u cifar10.zip")
         os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
     os.chdir("..")
