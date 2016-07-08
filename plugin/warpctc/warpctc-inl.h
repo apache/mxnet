@@ -80,6 +80,33 @@ class WarpCTCOp : public Operator {
     Softmax(out_tensor, data_tensor);
   }
 
+  std::vector<int> labelLengths(const int * flat_labels, int minibatch,
+                                int size, int blank, int * total_length) {
+    CHECK_EQ(param_.label_length * minibatch, size)
+        << "label size should = label_length * minibatch";
+    std::vector<int> ret(minibatch, 0);
+    for (int i = 0; i < size; i++) {
+      if (flat_labels[i] == blank) {
+        continue;
+      }
+      int b = i / param_.label_length;
+      ret[b]++;
+      (*total_length)++;
+    }
+    return ret;
+  }
+
+  void removeBlank(const int * flat_labels, int * cpu_labels,
+                   int size, int blank) {
+    int k = 0;
+    for (int i = 0; i < size; i++) {
+      if (flat_labels[i] != blank) {
+        cpu_labels[k] = flat_labels[i];
+        k += 1;
+      }
+    }
+  }
+
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -111,10 +138,36 @@ class WarpCTCOp : public Operator {
     for (int i = 0; i < minibatch; i++) {
       input_lengths.push_back(T);
     }
-    std::vector<int> label_lengths;
-    for (int i = 0; i < minibatch; i++) {
-      label_lengths.push_back(param_.label_length);
+
+#if MXNET_USE_CUDA
+    cudaError_t cuda_status;
+#endif
+    float* activations = static_cast<float*>(data.dptr_);
+    int* flat_labels = static_cast<int*>(label.dptr_);
+    int* cpu_raw_labels = flat_labels;
+    float* grads = static_cast<float*>(in_grad[warpctc_enum::kData].dptr_);
+    if (data.dev_mask_ == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+      cpu_raw_labels = reinterpret_cast<int*>(malloc(sizeof(int) * label.Size()));
+      cuda_status = cudaMemcpyAsync(cpu_raw_labels, flat_labels,
+                                    label.Size()*sizeof(int),
+                                    cudaMemcpyDeviceToHost,
+                                    ctx.get_stream<gpu>()->stream_);
+      CHECK_EQ(cuda_status, cudaSuccess) << "cuda memcpy label error";
+#endif
+    } else {
+      LOG(FATAL) << "Unknown device type " << data.dev_mask_;
     }
+
+    int total_label_length = 0;
+    std::vector<int> label_lengths = labelLengths(cpu_raw_labels,
+                                                  minibatch,
+                                                  label.Size(),
+                                                  0, &total_label_length);
+    int* cpu_labels = reinterpret_cast<int*>(
+        malloc(sizeof(int) * total_label_length));
+    removeBlank(cpu_raw_labels, cpu_labels, label.Size(), 0);
+    free(cpu_raw_labels);
 
     size_t alloc_bytes;
     throw_on_error(get_workspace_size(label_lengths.data(),
@@ -125,32 +178,14 @@ class WarpCTCOp : public Operator {
                    "Error: get_workspace_size in inf_test");
     void* ctc_workspace;
 
-#if MXNET_USE_CUDA
-    cudaError_t cuda_status;
-#endif
-    float* activations = static_cast<float*>(data.dptr_);
-    int* flat_labels = static_cast<int*>(label.dptr_);
-    int* cpu_labels = flat_labels;
-    float* grads = static_cast<float*>(in_grad[warpctc_enum::kData].dptr_);
-
     if (data.dev_mask_ == cpu::kDevMask) {
       ctc_workspace = malloc(alloc_bytes);
     } else if (data.dev_mask_ == gpu::kDevMask) {
 #if MXNET_USE_CUDA
-      cpu_labels = reinterpret_cast<int*>(malloc(sizeof(int) * label.Size()));
-      cuda_status = cudaMemcpyAsync(cpu_labels, flat_labels,
-                                    label.Size()*sizeof(int),
-                                    cudaMemcpyDeviceToHost,
-                                    ctx.get_stream<gpu>()->stream_);
-      CHECK_EQ(cuda_status, cudaSuccess) << "cuda memcpy label error";
-
       cuda_status = cudaMalloc(&ctc_workspace, alloc_bytes);
       CHECK_EQ(cuda_status, cudaSuccess) << "cuda malloc worksapce fail";
 #endif
-    } else {
-      LOG(FATAL) << "Unknown device type " << data.dev_mask_;
     }
-
     std::vector<float> costs(minibatch);
     throw_on_error(compute_ctc_loss(activations,
                                     grads,
@@ -163,12 +198,14 @@ class WarpCTCOp : public Operator {
                                     ctc_workspace,
                                     info),
                    "Error: compute_ctc_loss");
+
     if (data.dev_mask_ == cpu::kDevMask) {
       free(ctc_workspace);
     } else if (data.dev_mask_ == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       cuda_status = cudaFree(ctc_workspace);
       CHECK_EQ(cuda_status, cudaSuccess) << "cuda free workspace fail";
+      free(cpu_labels);
 #endif
     }
   }
@@ -207,7 +244,6 @@ class WarpCTCProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     TShape label_shape(dshape.ndim() - 1);
     label_shape[0] = param_.label_length * (dshape[0] / param_.input_length);
-    std::cout << "infer label shape: " << label_shape[0] << std::endl;
     SHAPE_ASSIGN_CHECK(*in_shape, warpctc_enum::kLabel, label_shape);
 
     out_shape->clear();
