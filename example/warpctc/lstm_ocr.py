@@ -30,16 +30,18 @@ class SimpleBatch(object):
         return [(n, x.shape) for n, x in zip(self.label_names, self.label)]
 
 def gen_rand():
-    num = random.randint(0, 9999)
-    buf = str(num)
-    while len(buf) < 4:
-        buf = "0" + buf
+    buf = ""
+    max_len = random.randint(3,4)
+    for i in range(max_len):
+        buf += str(random.randint(0,9))
     return buf
 
 def get_label(buf):
     ret = np.zeros(4)
-    for i in range(4):
+    for i in range(len(buf)):
         ret[i] = 1 + int(buf[i])
+    if len(buf) == 3:
+        ret[3] = 0
     return ret
 
 class OCRIter(mx.io.DataIter):
@@ -96,7 +98,15 @@ def ctc_label(p):
         if c2 == 0 or c2 == c1:
             continue
         ret.append(c2)
-    return ret        
+    return ret
+
+def remove_blank(l):
+    ret = []
+    for i in range(len(l)):
+        if l[i] == 0:
+            break
+        ret.append(l[i])
+    return ret
 
 def Accuracy(label, pred):
     global BATCH_SIZE
@@ -104,7 +114,7 @@ def Accuracy(label, pred):
     hit = 0.
     total = 0.
     for i in range(BATCH_SIZE):
-        l = label[i]
+        l = remove_blank(label[i])
         p = []
         for k in range(SEQ_LENGTH):
             p.append(np.argmax(pred[k * BATCH_SIZE + i]))
