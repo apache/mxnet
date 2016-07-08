@@ -40,21 +40,21 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   int cudnn_tune;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
-    DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x)");
+    DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x) or (d, y, x)");
     DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
-    .describe("convolution stride: (y, x)");
+    .describe("convolution stride: (y, x) or (d, y, x)");
     DMLC_DECLARE_FIELD(dilate).set_default(TShape(shape, shape + 2))
     .describe("convolution dilate: (y, x)");
     shape[0] = shape[1] = 0;
     DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
-    .describe("pad for convolution: (y, x)");
+    .describe("pad for convolution: (y, x) or (d, y, x)");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
     .describe("Number of groups partition. "
               "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
               "apply convolution and concat instead to achieve the same need.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
+    DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
     .describe("Tmp workspace for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
@@ -89,6 +89,9 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (param_.kernel.ndim() > 2) {
+      LOG(FATAL) << "Volume convolution is not implmented in mshadow";
+    }
     Tensor<xpu, 4, DType> data = in_data[conv::kData].get<xpu, 4, DType>(s);
     Shape<3> wmat_shape =
         Shape3(param_.num_group,
@@ -163,6 +166,9 @@ class ConvolutionOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
+    if (param_.kernel.ndim() > 2) {
+      LOG(FATAL) << "Volume convolution is not implmented in mshadow";
+    }
     CHECK_EQ(out_grad.size(), 1);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
@@ -333,37 +339,82 @@ class ConvolutionProp : public OperatorProperty {
     }
     const TShape &dshape = (*in_shape)[conv::kData];
     if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 4) \
-        << "Input data should be 4D in batch-num_filter-y-x";
-    SHAPE_ASSIGN_CHECK(*in_shape,
-                       conv::kWeight,
-                       Shape4(param_.num_filter, dshape[1] / param_.num_group,
-                              param_.kernel[0], param_.kernel[1]));
-    if (!param_.no_bias) {
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
-    }
-    out_shape->clear();
-    out_shape->push_back(dshape);
-    const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
-    const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-    CHECK_EQ(dshape[1] % param_.num_group, 0) \
+    if (param_.kernel.ndim() == 2) {
+      // 2d conv
+      CHECK_EQ(dshape.ndim(), 4) \
+          << "Input data should be 4D in batch-num_filter-y-x";
+      SHAPE_ASSIGN_CHECK(*in_shape,
+                         conv::kWeight,
+                         Shape4(param_.num_filter, dshape[1] / param_.num_group,
+                                param_.kernel[0], param_.kernel[1]));
+      if (!param_.no_bias) {
+        SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
+      }
+      out_shape->clear();
+      out_shape->push_back(dshape);
+      const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
+      const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
+      CHECK_EQ(dshape[1] % param_.num_group, 0) \
+          << "input num_filter must divide group size";
+      CHECK_EQ(param_.num_filter % param_.num_group, 0) \
+          << "output num_filter must divide group size";
+      CHECK_GT(param_.kernel.Size(), 0) \
+          << "incorrect kernel size: " << param_.kernel;
+      CHECK_GT(param_.stride.Size(), 0) \
+          << "incorrect stride size: " << param_.stride;
+      CHECK_GT(param_.dilate.Size(), 0) \
+          << "incorrect dilate size: " << param_.dilate;
+      CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
+          << "kernel size exceed input";
+      (*out_shape)[conv::kOut][1] = param_.num_filter;
+      (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
+          (param_.dilate[0] * (ksize_y - 1) + 1)) / param_.stride[0] + 1;
+      (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
+          (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
+      return true;
+    } else if (param_.kernel.ndim() == 3) {
+      // 3d conv
+      CHECK_EQ(dshape.ndim(), 5) \
+        << "Input data should be 5D in batch-num_filter-depth-y-x";
+      SHAPE_ASSIGN_CHECK(*in_shape,
+                         conv::kWeight,
+                         Shape5(param_.num_filter, dshape[1] / param_.num_group,
+                                param_.kernel[0], param_.kernel[1], param_.kernel[2]));
+      if (!param_.no_bias) {
+        SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
+      }
+      out_shape->clear();
+      out_shape->push_back(dshape);
+      const index_t ksize_d = static_cast<index_t>(param_.kernel[0]);
+      const index_t ksize_y = static_cast<index_t>(param_.kernel[1]);
+      const index_t ksize_x = static_cast<index_t>(param_.kernel[2]);
+      CHECK_EQ(dshape[1] % param_.num_group, 0) \
         << "input num_filter must divide group size";
-    CHECK_EQ(param_.num_filter % param_.num_group, 0) \
-        << "output num_filter must divide group size";
-    CHECK_GT(param_.kernel.Size(), 0) \
-        << "incorrect kernel size: " << param_.kernel;
-    CHECK_GT(param_.stride.Size(), 0) \
-        << "incorrect stride size: " << param_.stride;
-    CHECK_GT(param_.dilate.Size(), 0) \
-        << "incorrect dilate size: " << param_.dilate;
-    CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
-        << "kernel size exceed input";
-    (*out_shape)[conv::kOut][1] = param_.num_filter;
-    (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
-        (param_.dilate[0] * (ksize_y - 1) + 1)) / param_.stride[0] + 1;
-    (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
-        (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
-    return true;
+      CHECK_EQ(param_.num_filter % param_.num_group, 0) \
+          << "output num_filter must divide group size";
+      CHECK_GT(param_.kernel.Size(), 0) \
+          << "incorrect kernel size: " << param_.kernel;
+      CHECK_GT(param_.stride.Size(), 0) \
+          << "incorrect stride size: " << param_.stride;
+      CHECK_GT(param_.dilate.Size(), 0) \
+          << "incorrect dilate size: " << param_.dilate;
+      CHECK(ksize_d < dshape[2] && ksize_y <= dshape[3] && ksize_x <= dshape[4])
+          << "kernel size exceed input";
+      if (param_.dilate.Size() != 1) {
+        LOG(INFO) << "Dilate is not supported in 3d convolution";
+      }
+      (*out_shape)[conv::kOut][1] = param_.num_filter;
+      (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
+          (1 * (ksize_d - 1) + 1)) / param_.stride[0] + 1;
+      (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
+          (1 * (ksize_y - 1) + 1)) / param_.stride[1] + 1;
+      (*out_shape)[conv::kOut][4] = (dshape[4] + 2 * param_.pad[2] -
+          (1 * (ksize_x - 1) + 1)) / param_.stride[2] + 1;
+      return true;
+    } else {
+      LOG(FATAL) << "Unknown convolution type";
+      return false;
+    }
   }
 
   bool InferType(std::vector<int> *in_type,
