@@ -85,8 +85,8 @@ class WarpCTCOp : public Operator {
     CHECK_EQ(param_.label_length * minibatch, size)
         << "label size should = label_length * minibatch";
     std::vector<int> ret(minibatch, 0);
-    for(int i = 0; i < size; i++) {
-      if(flat_labels[i] == blank) {
+    for (int i = 0; i < size; i++) {
+      if (flat_labels[i] == blank) {
         continue;
       }
       int b = i / param_.label_length;
@@ -99,8 +99,8 @@ class WarpCTCOp : public Operator {
   void removeBlank(const int * flat_labels, int * cpu_labels,
                    int size, int blank) {
     int k = 0;
-    for(int i = 0; i < size; i++) {
-      if(flat_labels[i] != blank) {
+    for (int i = 0; i < size; i++) {
+      if (flat_labels[i] != blank) {
         cpu_labels[k] = flat_labels[i];
         k += 1;
       }
@@ -168,7 +168,7 @@ class WarpCTCOp : public Operator {
         malloc(sizeof(int) * total_label_length));
     removeBlank(cpu_raw_labels, cpu_labels, label.Size(), 0);
     free(cpu_raw_labels);
-    
+
     size_t alloc_bytes;
     throw_on_error(get_workspace_size(label_lengths.data(),
                                       input_lengths.data(),
@@ -198,7 +198,7 @@ class WarpCTCOp : public Operator {
                                     ctc_workspace,
                                     info),
                    "Error: compute_ctc_loss");
-   
+
     if (data.dev_mask_ == cpu::kDevMask) {
       free(ctc_workspace);
     } else if (data.dev_mask_ == gpu::kDevMask) {
