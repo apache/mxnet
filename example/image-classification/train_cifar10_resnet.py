@@ -49,7 +49,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='train an image classifer on cifar10')
 parser.add_argument('--data-dir', type=str, default='cifar10/',
                     help='the input data directory')
-parser.add_argument('--gpus', type=str, default='0',
+parser.add_argument('--gpus', type=str,
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--num-examples', type=int, default=50000,
                     help='the number of training examples')
