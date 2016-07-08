@@ -45,9 +45,9 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
     # initialize params
     arg_shape, _, _ = sym.infer_shape(data=(1, 3, 224, 224), rois=(1, 5))
     arg_shape_dict = dict(zip(sym.list_arguments(), arg_shape))
-    args['cls_score_weight'] = mx.random.normal(mean=0, stdvar=0.01, shape=arg_shape_dict['cls_score_weight'], ctx=ctx)
+    args['cls_score_weight'] = mx.random.normal(loc=0, scale=0.01, shape=arg_shape_dict['cls_score_weight'], ctx=ctx)
     args['cls_score_bias'] = mx.nd.zeros(shape=arg_shape_dict['cls_score_bias'], ctx=ctx)
-    args['bbox_pred_weight'] = mx.random.normal(mean=0, stdvar=0.001, shape=arg_shape_dict['bbox_pred_weight'], ctx=ctx)
+    args['bbox_pred_weight'] = mx.random.normal(loc=0, scale=0.001, shape=arg_shape_dict['bbox_pred_weight'], ctx=ctx)
     args['bbox_pred_bias'] = mx.nd.zeros(shape=arg_shape_dict['bbox_pred_bias'], ctx=ctx)
 
     # train
