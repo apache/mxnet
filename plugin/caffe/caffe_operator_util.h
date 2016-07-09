@@ -22,14 +22,6 @@
 #include <caffe/layers/contrastive_loss_layer.hpp>
 #include <caffe/layers/conv_layer.hpp>
 #include <caffe/layers/crop_layer.hpp>
-#include <caffe/layers/cudnn_conv_layer.hpp>
-#include <caffe/layers/cudnn_lcn_layer.hpp>
-#include <caffe/layers/cudnn_lrn_layer.hpp>
-#include <caffe/layers/cudnn_pooling_layer.hpp>
-#include <caffe/layers/cudnn_relu_layer.hpp>
-#include <caffe/layers/cudnn_sigmoid_layer.hpp>
-#include <caffe/layers/cudnn_softmax_layer.hpp>
-#include <caffe/layers/cudnn_tanh_layer.hpp>
 #include <caffe/layers/data_layer.hpp>
 #include <caffe/layers/deconv_layer.hpp>
 #include <caffe/layers/dropout_layer.hpp>
@@ -77,6 +69,16 @@
 #include <caffe/layers/tile_layer.hpp>
 #include <caffe/layers/window_data_layer.hpp>
 
+#if MSHADOW_USE_CUDNN == 1
+#include "caffe/layers/cudnn_conv_layer.hpp"
+#include "caffe/layers/cudnn_lcn_layer.hpp"
+#include "caffe/layers/cudnn_lrn_layer.hpp"
+#include "caffe/layers/cudnn_pooling_layer.hpp"
+#include "caffe/layers/cudnn_relu_layer.hpp"
+#include "caffe/layers/cudnn_sigmoid_layer.hpp"
+#include "caffe/layers/cudnn_softmax_layer.hpp"
+#include "caffe/layers/cudnn_tanh_layer.hpp"
+#endif
 
 #include <string>
 #include <map>
@@ -115,7 +117,22 @@ class CaffeOpInitRegistry {
    * \return the corresponding function, can be NULL
    */
   static CaffeOpInitEntry* Find(const std::string &name) {
-    CHECK(Get()->fmap_.count(name) != 0) << "No caffe type named" << name;
+
+#if MSHADOW_USE_CUDNN == 1
+    if (!((name.compare("Convolution"))&&
+        (name.compare("LCN"))&&
+        (name.compare("LRN"))&&
+        (name.compare("Pooling"))&&
+        (name.compare("ReLU"))&&
+        (name.compare("Sigmoid"))&&
+        (name.compare("Softmax"))&&
+        (name.compare("TanH")))) {
+      std::string cudnn_name = "CuDNN"+name;
+      CHECK(Get()->fmap_.count(cudnn_name) != 0) << "Not found caffe layer:" << cudnn_name;
+      return Get()->fmap_.at(cudnn_name);
+    }
+#endif
+    CHECK(Get()->fmap_.count(name) != 0) << "Not found caffe layer:" << name;
     return Get()->fmap_.at(name);
   }
 

@@ -54,18 +54,16 @@ MXNET_REGISTER_PLUGIN_CAFFE_INIT(Concat, ::caffe::ConcatLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(ContrastiveLoss, ::caffe::ContrastiveLossLayer<float>);
 
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Crop, ::caffe::CropLayer<float>);
-/*
- * /brief: (TODO) Haoran: support cudnn compilation
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNConvolution, ::caffe::CuDNNConvolutionLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLCN, ::caffe::CuDNNLCNLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLRN, ::caffe::CuDNNLRNLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNPooling, ::caffe::CuDNNPoolingLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLCN, ::caffe::CuDNNLCNLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNReLU, ::caffe::CuDNNReLULayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNSigmoid, ::caffe::CuDNNSigmoidLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNSoftmax, ::caffe::CuDNNSoftmaxLayer<float>);
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNTanH, ::caffe::CuDNNTanHLayer<float>);
-*/
+#if MSHADOW_USE_CUDNN == 1
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNConvolution, ::caffe::CuDNNConvolutionLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLCN, ::caffe::CuDNNLCNLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNLRN, ::caffe::CuDNNLRNLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNPooling, ::caffe::CuDNNPoolingLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNReLU, ::caffe::CuDNNReLULayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNSigmoid, ::caffe::CuDNNSigmoidLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNSoftmax, ::caffe::CuDNNSoftmaxLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(CuDNNTanH, ::caffe::CuDNNTanHLayer<float>);
+#endif
 
 /*
  * /brief: Data layer hasn't been supported yet
