@@ -38,16 +38,17 @@ MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
 
 // Wrap caffe's layer_class to layer-generator function
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(InnerProduct, ::caffe::InnerProductLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(TanH, ::caffe::TanHLayer<float>).
-SetWeightNum(0);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(TanH, ::caffe::TanHLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(ReLU, ::caffe::ReLULayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Convolution, ::caffe::ConvolutionLayer<float>);
 
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(AbsVal, ::caffe::AbsValLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Accuracy, ::caffe::AccuracyLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(BatchNorm, ::caffe::BatchNormLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(BatchNorm, ::caffe::BatchNormLayer<float>).
+SetWeightNum(3);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(BatchReindex, ::caffe::BatchReindexLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(Bias, ::caffe::BiasLayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(Bias, ::caffe::BiasLayer<float>).
+SetWeightNum(1);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(BNLL, ::caffe::BNLLLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Concat, ::caffe::ConcatLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(ContrastiveLoss, ::caffe::ContrastiveLossLayer<float>);
@@ -96,7 +97,8 @@ MXNET_REGISTER_PLUGIN_CAFFE_INIT(MVN, ::caffe::MVNLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Parameter, ::caffe::ParameterLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Pooling, ::caffe::PoolingLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Power, ::caffe::PowerLayer<float>);
-MXNET_REGISTER_PLUGIN_CAFFE_INIT(PReLU, ::caffe::PReLULayer<float>);
+MXNET_REGISTER_PLUGIN_CAFFE_INIT(PReLU, ::caffe::PReLULayer<float>).
+SetWeightNum(1);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Reduction, ::caffe::ReductionLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Reshape, ::caffe::ReshapeLayer<float>);
 MXNET_REGISTER_PLUGIN_CAFFE_INIT(Scale, ::caffe::ScaleLayer<float>);

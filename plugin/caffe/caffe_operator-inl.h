@@ -332,18 +332,24 @@ class CaffeOperatorProp : public OperatorProperty {
   }
 
   int GetBlobNum() const {
-    int blob_num = 0;
     std::string type = param_.prototxt.type();
     entry_ = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
-    /* if weight num is specified in registered */
-    if (entry_->w_num_ >= 0)
-      return  entry_->w_num_;
+    /* get weight value in registery */
+    int blob_num = entry_->w_num_;
     /* otherwise, calculate blob num in runtime */
     if (!type.compare("InnerProduct"))
       blob_num = (param_.prototxt.inner_product_param().bias_term())?2:1;
-    else if (!type.compare("Convolution"))
+    else if (!type.compare("Convolution")||
+             !type.compare("CuDNNConvolution")||
+             !type.compare("Deconvolution"))
       blob_num = (param_.prototxt.convolution_param().bias_term())?2:1;
+    else if (!type.compare("Scale"))
+      blob_num = (param_.prototxt.scale_param().bias_term())?2:1;
+    else if (!type.compare("Embed"))
+      blob_num = (param_.prototxt.embed_param().bias_term())?2:1;
 
+
+    CHECK(blob_num>=0);
     return blob_num;
   }
 

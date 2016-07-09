@@ -94,7 +94,7 @@ class CaffeOpInitEntry {
                    pFunc f) :
                    name_(std::string(name)),
                    gen_f_(f),
-                   w_num_(-1) {}
+                   w_num_(0) {}
   int w_num_;
   CaffeOpInitEntry& SetWeightNum(int);
   pFunc gen_f_;
