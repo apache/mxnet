@@ -335,7 +335,7 @@ class CaffeOperatorProp : public OperatorProperty {
     std::string type = param_.prototxt.type();
     entry_ = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
     /* get weight value in registery */
-    int blob_num = entry_->w_num_;
+    int blob_num = entry_->b_num_;
     /* otherwise, calculate blob num in runtime */
     if (!type.compare("InnerProduct"))
       blob_num = (param_.prototxt.inner_product_param().bias_term())?2:1;
