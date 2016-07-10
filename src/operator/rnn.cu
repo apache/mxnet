@@ -21,10 +21,7 @@ Operator* CreateOp<gpu>(RNNParam param, int dtype) {
     op = new CuDNNRNNOp<DType>(param);
   })
 #else
-	1;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-  op = new SpatialTransformerOp<gpu, DType>(param);
-  })
+   LOG(FATAL) << "RNN is only available for cuDNN at the moment.";
 #endif  // MXNET_USE_CUDNN && CUDNN_MAJOR
   return op;
 }

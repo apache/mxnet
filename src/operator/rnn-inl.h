@@ -21,16 +21,16 @@ namespace mxnet {
 namespace op {
 
 namespace rnn_enum {
-  enum RNNOpInputs {kData, kWeight, kStateIn, kCellStateIn};
+  enum RNNOpInputs {kData, kParams, kStateIn, kCellStateIn};
   enum RNNOpOutputs {kOut, kStateOut, kCellStateOut};
-  enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};  
+  enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
   enum RNNDirectionType {kUnidirectional, kBidirectional};
   enum RNNOpResource {kTempSpace};
 }
 
 // A utility function to calculate input size
 inline int rnn_single_param_size(int inputSize,
-                                int hiddenSize, 
+                                int hiddenSize,
                                 int mode){
   int size = hiddenSize * (hiddenSize + inputSize + 2);
   // Different RNN's have different num weights
@@ -52,10 +52,10 @@ inline int rnn_single_param_size(int inputSize,
   return size;
 }
 
-inline int rnn_param_size(int layerNum, 
+inline int rnn_param_size(int layerNum,
                           int inputSize,
-                          int hiddenSize, 
-                          int direction, 
+                          int hiddenSize,
+                          int direction,
                           int mode){
   // get size of first layer
   int size = rnn_single_param_size(inputSize, hiddenSize, mode);
@@ -194,26 +194,26 @@ class RNNProp : public OperatorProperty {
                         Shape3(total_layers, batchSize, param_.state_size));
     }
     // infer weight size
-    int weight_size = rnn_param_size(param_.num_layers, 
-                                    inputSize, 
-                                    param_.state_size, 
-                                    param_.direction, 
+    int weight_size = rnn_param_size(param_.num_layers,
+                                    inputSize,
+                                    param_.state_size,
+                                    param_.direction,
                                     param_.mode);
-    SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kWeight, Shape1(weight_size));
+    SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(weight_size));
     // infer output size
     TShape oshape = dshape;
     oshape[2] = numDirections * param_.state_size;
-    // infer output state size   
+    // infer output state size
     TShape outStateShape = dshape;
     outStateShape[0] = total_layers;
     outStateShape[1] = batchSize;
     outStateShape[2] = param_.state_size;
 
-    out_shape->clear();   
+    out_shape->clear();
     out_shape->push_back(oshape);
     out_shape->push_back(outStateShape);
     // Deal with lstm cell state
-    if (param_.mode == rnn_enum::kLstm) 
+    if (param_.mode == rnn_enum::kLstm)
       out_shape->push_back(outStateShape);
     return true;
   }
@@ -236,7 +236,7 @@ class RNNProp : public OperatorProperty {
     out_type->clear();
     out_type->push_back(dtype);
     out_type->push_back(dtype);
-    if (param_.mode == rnn_enum::kLstm) 
+    if (param_.mode == rnn_enum::kLstm)
       out_type->push_back(dtype);
     return true;
   }
@@ -256,9 +256,9 @@ class RNNProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     if (param_.mode == rnn_enum::kLstm)
-      return {out_grad[rnn_enum::kOut], in_data[rnn_enum::kData], in_data[rnn_enum::kWeight]};
+      return {out_grad[rnn_enum::kOut], in_data[rnn_enum::kData], in_data[rnn_enum::kParams]};
     else
-      return {out_grad[rnn_enum::kOut], in_data[rnn_enum::kData], in_data[rnn_enum::kWeight]};
+      return {out_grad[rnn_enum::kOut], in_data[rnn_enum::kData], in_data[rnn_enum::kParams]};
   }
 
   std::vector<ResourceRequest> ForwardResource(
