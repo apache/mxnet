@@ -90,7 +90,7 @@ class Optimizer(object):
 
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
-                 lr_scheduler=None, sym=None):
+                 lr_scheduler=None, sym=None, begin_num_update=0):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -100,7 +100,8 @@ class Optimizer(object):
         self.wd = wd
         self.lr_mult = {}
         self.wd_mult = {}
-        self.num_update = 0
+        self.begin_num_update = begin_num_update
+        self.num_update = begin_num_update
         self._index_update_count = {}
         self.clip_gradient = clip_gradient
 
@@ -176,7 +177,7 @@ class Optimizer(object):
             The index will be updated
         """
         if index not in self._index_update_count:
-            self._index_update_count[index] = 0
+            self._index_update_count[index] = self.begin_num_update
         self._index_update_count[index] += 1
         self.num_update = max(self._index_update_count[index], self.num_update)
 

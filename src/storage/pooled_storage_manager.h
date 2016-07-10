@@ -60,6 +60,7 @@ void* PooledStorageManager<DeviceStorage>::Alloc(size_t size) {
       }
     }
     LOG(FATAL) << "Memory allocation failed.";
+    return NULL;
   } else {
     auto&& reuse_pool = reuse_it->second;
     auto ret = reuse_pool.back();
