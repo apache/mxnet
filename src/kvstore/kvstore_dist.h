@@ -32,14 +32,18 @@ class KVStoreDist : public KVStoreDevice {
         ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
-      ps::Start("mxnet\0");
+      ps::StartAsync("mxnet\0");
+      if (!ps::Postoffice::Get()->is_recovery()) {
+        ps::Postoffice::Get()->Barrier(
+          ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+      }
     }
   }
 
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
     if (IsWorkerNode()) {
-      ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
+      Barrier();
       if (get_rank() == 0) {
         // stop the executor at servers
         SendCommandToServers(kStopServer, "");
@@ -59,12 +63,14 @@ class KVStoreDist : public KVStoreDevice {
     } else {
       // do nothing
     }
-    Barrier();
+    if (!ps::Postoffice::Get()->is_recovery()) {
+      Barrier();
+    }
   }
 
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
-              int priority) override {
+            int priority) override {
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
@@ -182,10 +188,14 @@ class KVStoreDist : public KVStoreDevice {
       server_->set_controller(controller);
     }
 
-    ps::Start("mxnet_server\0");
+    ps::StartAsync("mxnet_server\0");
+    if (!ps::Postoffice::Get()->is_recovery()) {
+      ps::Postoffice::Get()->Barrier(
+        ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+    }
     if (server_) server_->Run();
     ps::Finalize();
-    delete server_; server_ = nullptr;
+    if (server_) delete server_; server_ = nullptr;
   }
 
  private:
