@@ -1,6 +1,6 @@
-# Context
+# NDArray API
 
 ```@autodocs
 Modules = [MXNet.mx]
-Pages = ["context.jl"]
+Pages = ["ndarray.jl"]
 ```

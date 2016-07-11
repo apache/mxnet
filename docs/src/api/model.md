@@ -1,6 +1,6 @@
-# Context
+# Model
 
 ```@autodocs
 Modules = [MXNet.mx]
-Pages = ["context.jl"]
+Pages = ["model.jl"]
 ```

@@ -1,6 +1,6 @@
-# Context
+# Random
 
 ```@autodocs
 Modules = [MXNet.mx]
-Pages = ["context.jl"]
+Pages = ["random.jl"]
 ```
