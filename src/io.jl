@@ -1,31 +1,21 @@
-#=doc
-Data Providers
-==============
-Interface
----------
+"""
+    AbstractDataProvider
 
-Data providers are wrappers that load external data, be it images, text, or general tensors,
-and split it into mini-batches so that the model can consume the data in a uniformed way.
-=#
+The root type for all data provider. A data provider should implement the following interfaces:
 
-#=doc
-.. class:: AbstractDataProvider
-
-   The root type for all data provider. A data provider should implement the following interfaces:
-
-   .. function:: get_batch_size(provider) -> Int
+       get_batch_size(provider) -> Int
 
       :param AbstractDataProvider provider: the data provider.
       :return: the mini-batch size of the provided data. All the provided data should have the
                same mini-batch size (i.e. the last dimension).
 
-   .. function:: provide_data(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
+       provide_data(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
 
       :param AbstractDataProvider provider: the data provider.
       :return: a vector of (name, shape) pairs describing the names of the data it provides, and
                the corresponding shapes.
 
-   .. function:: provide_label(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
+       provide_label(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
 
       :param AbstractDataProvider provider: the data provider.
       :return: a vector of (name, shape) pairs describing the names of the labels it provides, and
@@ -65,25 +55,25 @@ and split it into mini-batches so that the model can consume the data in a unifo
 
 The detailed interface functions for the iterator API is listed below:
 
-.. function:: Base.eltype(provider) -> AbstractDataBatch
+    Base.eltype(provider) -> AbstractDataBatch
 
    :param AbstractDataProvider provider: the data provider.
    :return: the specific subtype representing a data batch. See :class:`AbstractDataBatch`.
 
-.. function:: Base.start(provider) -> AbstractDataProviderState
+    Base.start(provider) -> AbstractDataProviderState
 
    :param AbstractDataProvider provider: the data provider.
 
    This function is always called before iterating into the dataset. It should initialize
    the iterator, reset the index, and do data shuffling if needed.
 
-.. function:: Base.done(provider, state) -> Bool
+    Base.done(provider, state) -> Bool
 
    :param AbstractDataProvider provider: the data provider.
    :param AbstractDataProviderState state: the state returned by :func:`Base.start` :func:`Base.next`.
    :return: true if there is no more data to iterate in this dataset.
 
-.. function:: Base.next(provider) -> (AbstractDataBatch, AbstractDataProviderState)
+    Base.next(provider) -> (AbstractDataBatch, AbstractDataProviderState)
 
    :param AbstractDataProvider provider: the data provider.
    :return: the current data batch, and the state for the next iteration.
@@ -118,29 +108,29 @@ of the built-in :class:`MXDataProvider` for example.
           # ...
         end
       end
-=#
+"""
 abstract AbstractDataProvider
 
-#=doc
-.. class:: AbstractDataProviderState
+"""
+    AbstractDataProviderState
 
    Base type for data provider states.
-=#
+"""
 abstract AbstractDataProviderState
 
-#=doc
-.. class:: AbstractDataBatch
+"""
+    AbstractDataBatch
 
    Base type for a data mini-batch. It should implement the following interfaces:
 
-   .. function:: count_samples(provider, batch) -> Int
+       count_samples(provider, batch) -> Int
 
       :param AbstractDataBatch batch: the data batch object.
       :return: the number of samples in this batch. This number should be greater than 0, but
                less than or equal to the batch size. This is used to indicate at the end of
                the data set, there might not be enough samples for a whole mini-batch.
 
-   .. function:: get_data(provider, batch) -> Vector{NDArray}
+       get_data(provider, batch) -> Vector{NDArray}
 
       :param AbstractDataProvider provider: the data provider.
       :param AbstractDataBatch batch: the data batch object.
@@ -151,7 +141,7 @@ abstract AbstractDataProviderState
                :func:`count_samples` returns a value less than the batch size. In this case,
                the data provider is free to pad the remaining contents with any value.
 
-   .. function:: get_label(provider, batch) -> Vector{NDArray}
+       get_label(provider, batch) -> Vector{NDArray}
 
       :param AbstractDataProvider provider: the data provider.
       :param AbstractDataBatch batch: the data batch object.
@@ -160,7 +150,7 @@ abstract AbstractDataProviderState
 
    The following utility functions will be automatically defined.
 
-   .. function:: get(provider, batch, name) -> NDArray
+       get(provider, batch, name) -> NDArray
 
       :param AbstractDataProvider provider: the data provider.
       :param AbstractDataBatch batch: the data batch object.
@@ -169,7 +159,7 @@ abstract AbstractDataProviderState
              or :func:`provide_label() <AbstractDataProvider.provide_label>`.
       :return: the corresponding data array corresponding to that name.
 
-   .. function:: load_data!(provider, batch, targets)
+       load_data!(provider, batch, targets)
 
       :param AbstractDataProvider provider: the data provider.
       :param AbstractDataBatch batch: the data batch object.
@@ -185,7 +175,7 @@ abstract AbstractDataProviderState
       This utility function is used in data parallelization, where a mini-batch is splited
       and computed on several different devices.
 
-   .. function:: load_label!(provider, batch, targets)
+       load_label!(provider, batch, targets)
 
       :param AbstractDataProvider provider: the data provider.
       :param AbstractDataBatch batch: the data batch object.
@@ -193,15 +183,15 @@ abstract AbstractDataProviderState
       :type targets: Vector{Vector{SlicedNDArray}}
 
       The same as :func:`load_data!`, except that this is for loading labels.
-=#
+"""
 abstract AbstractDataBatch
 
-#=doc
-.. class:: DataBatch
+"""
+    DataBatch
 
    A basic subclass of :class:`AbstractDataBatch`, that implement the interface by
    accessing member fields.
-=#
+"""
 type DataBatch <: AbstractDataBatch
   data  :: Vector{NDArray}
   label :: Vector{NDArray}
@@ -211,11 +201,11 @@ count_samples(batch :: DataBatch) = batch.count
 get_data{Provider<:AbstractDataProvider}(::Provider, batch :: DataBatch) = batch.data
 get_label{Provider<:AbstractDataProvider}(::Provider, batch :: DataBatch) = batch.label
 
-#=doc
-.. class:: SlicedNDArray
+"""
+    SlicedNDArray
 
    A alias type of ``Tuple{UnitRange{Int},NDArray}``.
-=#
+"""
 typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
 
 function _load_general!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
@@ -264,17 +254,11 @@ end
 
 eachbatch(provider :: AbstractDataProvider) = provider
 
-#=doc
-Built-in data providers
------------------------
-=#
-
-################################################################################
-#=doc
-.. class:: ArrayDataProvider
+"""
+    ArrayDataProvider
 
    A convenient tool to iterate :class:`NDArray` or Julia ``Array``.
-=#
+"""
 type ArrayDataProvider <: AbstractDataProvider
   data_arrays   :: Vector{Array{MX_float}}
   data_names    :: Vector{Base.Symbol}
@@ -290,8 +274,8 @@ type ArrayDataProvider <: AbstractDataProvider
   label_batch   :: Vector{NDArray}
 end
 
-#=doc
-.. function:: ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
+"""
+    ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
 
    Construct a data provider from :class:`NDArray` or Julia Arrays.
 
@@ -314,7 +298,7 @@ end
 
    TODO: remove ``data_padding`` and ``label_padding``, and implement rollover that copies
    the last or first several training samples to feed the padding.
-=#
+"""
 # Julia's type system is sometimes very frustrating. You cannot specify a function
 # with argument Vector{Pair} to expect to be matched when calling with the parameter
 # [:foo => zeros(2,3), :bar => zeros(3)] because the type inference gives very specific
@@ -463,18 +447,12 @@ function get_label(provider :: ArrayDataProvider, batch :: ArrayDataBatch)
 end
 
 
-#=doc
-libmxnet data providers
------------------------
-=#
+"""
+    MXDataProvider
 
-################################################################################
-#=doc
-.. class:: MXDataProvider
-
-   A data provider that wrap built-in data iterators from libmxnet. See below for
-   a list of built-in data iterators.
-=#
+A data provider that wrap built-in data iterators from libmxnet. See below for
+a list of built-in data iterators.
+"""
 type MXDataProvider <: AbstractDataProvider
   handle     :: MX_DataIterHandle
   data_shape :: Vector{Tuple{Base.Symbol, Tuple}}
@@ -569,9 +547,6 @@ function count_samples(provider :: MXDataProvider, batch :: MXDataBatch)
   return provider.batch_size - Int(ref_pad[])
 end
 
-#=doc
-**autogen:EMBED:io:EMBED:autogen**
-=#
 function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
   ref_name      = Ref{char_p}(0)
   ref_desc      = Ref{char_p}(0)

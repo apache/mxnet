@@ -1,27 +1,22 @@
-#=doc
-Callbacks in training
-=====================
-=#
+"""
+    AbstractCallback
 
-#=doc
-.. class:: AbstractCallback
-
-   Abstract type of callback functions used in training.
-=#
+Abstract type of callback functions used in training.
+"""
 abstract AbstractCallback
 
-#=doc
-.. class:: AbstractBatchCallback
+"""
+    AbstractBatchCallback
 
-   Abstract type of callbacks to be called every mini-batch.
-=#
+Abstract type of callbacks to be called every mini-batch.
+"""
 abstract AbstractBatchCallback <: AbstractCallback
 
-#=doc
-.. class:: AbstractEpochCallback
+"""
+    AbstractEpochCallback
 
-   Abstract type of callbacks to be called every epoch.
-=#
+Abstract type of callbacks to be called every epoch.
+"""
 abstract AbstractEpochCallback <: AbstractCallback
 
 type BatchCallback <: AbstractBatchCallback
@@ -30,15 +25,16 @@ type BatchCallback <: AbstractBatchCallback
   callback  :: Function
 end
 
-#=doc
-.. function:: every_n_batch(callback :: Function, n :: Int; call_on_0 = false)
+"""
+    every_n_batch(callback :: Function, n :: Int; call_on_0 = false)
 
-   A convenient function to construct a callback that runs every ``n`` mini-batches.
+A convenient function to construct a callback that runs every ``n`` mini-batches.
 
-   :param Int call_on_0: keyword argument, default false. Unless set, the callback
+# Arguments
+* `call_on_0::Bool`: keyword argument, default false. Unless set, the callback
           will **not** be run on batch 0.
 
-   For example, the :func:`speedometer` callback is defined as
+For example, the :func:`speedometer` callback is defined as
 
    .. code-block:: julia
 
@@ -51,7 +47,7 @@ end
       end
 
    :seealso: :func:`every_n_epoch`, :func:`speedometer`.
-=#
+"""
 function every_n_batch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   BatchCallback(n, call_on_0, callback)
 end
@@ -65,15 +61,16 @@ function Base.call(cb :: BatchCallback, state :: OptimizationState)
   end
 end
 
-#=doc
-.. function:: speedometer(; frequency=50)
+"""
+    speedometer(; frequency=50)
 
-   Create an :class:`AbstractBatchCallback` that measure the training speed
+Create an :class:`AbstractBatchCallback` that measure the training speed
    (number of samples processed per second) every k mini-batches.
 
-   :param Int frequency: keyword argument, default 50. The frequency (number of
+# Arguments
+* Int frequency: keyword argument, default 50. The frequency (number of
           min-batches) to measure and report the speed.
-=#
+"""
 function speedometer(;frequency::Int=50)
   cl_tic = 0
   every_n_batch(frequency, call_on_0=true) do state :: OptimizationState
@@ -95,18 +92,18 @@ type EpochCallback <: AbstractEpochCallback
   callback  :: Function
 end
 
-#=doc
-.. function:: every_n_epoch(callback :: Function, n :: Int; call_on_0 = false)
+"""
+    every_n_epoch(callback :: Function, n :: Int; call_on_0 = false)
 
-   A convenient function to construct a callback that runs every ``n`` full data-passes.
+A convenient function to construct a callback that runs every ``n`` full data-passes.
 
-   :param Int call_on_0: keyword argument, default false. Unless set, the callback
+* Int call_on_0: keyword argument, default false. Unless set, the callback
           will **not** be run on epoch 0. Epoch 0 means no training has been performed
           yet. This is useful if you want to inspect the randomly initialized model
           that has not seen any data yet.
 
    :seealso: :func:`every_n_iter`.
-=#
+"""
 function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
 end
@@ -120,20 +117,21 @@ function Base.call{T<:Real}(cb :: EpochCallback, model :: Any, state :: Optimiza
   end
 end
 
-#=doc
-.. function:: do_checkpoint(prefix; frequency=1, save_epoch_0=false)
+"""
+    do_checkpoint(prefix; frequency=1, save_epoch_0=false)
 
-   Create an :class:`AbstractEpochCallback` that save checkpoints of the model to disk.
-   The checkpoints can be loaded back later on.
+Create an :class:`AbstractEpochCallback` that save checkpoints of the model to disk.
+The checkpoints can be loaded back later on.
 
-   :param AbstractString prefix: the prefix of the filenames to save the model. The model
+# Arguments
+* `prefix::AbstractString`: the prefix of the filenames to save the model. The model
           architecture will be saved to prefix-symbol.json, while the weights will be saved
           to prefix-0012.params, for example, for the 12-th epoch.
-   :param Int frequency: keyword argument, default 1. The frequency (measured in epochs) to
+* Int frequency: keyword argument, default 1. The frequency (measured in epochs) to
           save checkpoints.
-   :param Bool save_epoch_0: keyword argument, default false. Whether we should save a
+* Bool save_epoch_0: keyword argument, default false. Whether we should save a
           checkpoint for epoch 0 (model initialized but not seen any data yet).
-=#
+"""
 function do_checkpoint(prefix::AbstractString; frequency::Int=1, save_epoch_0=false)
   mkpath(dirname(prefix))
   every_n_epoch(frequency, call_on_0=save_epoch_0) do model, state, metric

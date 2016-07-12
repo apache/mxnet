@@ -1,17 +1,8 @@
-#=doc
-Evaluation Metrics
-==================
+"""
+    AbstractEvalMetric
 
-Evaluation metrics provide a way to evaluate the performance of a learned model.
-This is typically used during training to monitor performance on the validation
-set.
-=#
-
-#=doc
-.. class:: AbstractEvalMetric
-
-   The base class for all evaluation metrics. The sub-types should implement the following
-   interfaces.
+The base class for all evaluation metrics. The sub-types should implement the following
+interfaces.
 
    .. function:: update!(metric, labels, preds)
 
@@ -33,7 +24,7 @@ set.
 
       :return: ``Vector{Tuple{Base.Symbol, Real}}``, a list of name-value pairs. For
                example, ``[(:accuracy, 0.9)]``.
-=#
+"""
 abstract AbstractEvalMetric
 
 # Generic update! version
@@ -49,14 +40,14 @@ function update!{T <: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}
 end
 
 
-#=doc
-.. class:: Accuracy
+"""
+    Accuracy
 
-   Multiclass classification accuracy.
+Multiclass classification accuracy.
 
-   Calculates the mean accuracy per sample for softmax in one dimension.
-   For a multi-dimensional softmax the mean accuracy over all dimensions is calculated.
-=#
+Calculates the mean accuracy per sample for softmax in one dimension.
+For a multi-dimensional softmax the mean accuracy over all dimensions is calculated.
+"""
 type Accuracy <: AbstractEvalMetric
   acc_sum  :: Float64
   n_sample :: Int
@@ -108,13 +99,13 @@ function reset!(metric :: Accuracy)
   metric.n_sample = 0
 end
 
-#=doc
-.. class:: MSE
+"""
+    MSE
 
-   Mean Squared Error. TODO: add support for multi-dimensional outputs.
+Mean Squared Error. TODO: add support for multi-dimensional outputs.
 
-   Calculates the mean squared error regression loss in one dimension.
-=#
+Calculates the mean squared error regression loss in one dimension.
+"""
 
 type MSE <: AbstractEvalMetric
   mse_sum  :: Float64
@@ -144,13 +135,13 @@ function reset!(metric :: MSE)
   metric.n_sample = 0
 end
 
-#=doc
-.. class:: ACE
+"""
+    ACE
 
-   Averaged cross-entropy for classification. This also know als logloss.
+Averaged cross-entropy for classification. This also know als logloss.
 
-   Calculated the averaged cross entropy for multi-dimentions output.
-=#
+Calculated the averaged cross entropy for multi-dimentions output.
+"""
 type ACE <: AbstractEvalMetric
   ace_sum  :: Float64
   n_sample :: Int
@@ -192,14 +183,14 @@ function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
   end
 end
 
-#=doc
-.. class:: MultiACE
+"""
+    MultiACE
 
-   Averaged cross-entropy for classification. This also know als logloss.
-   This variant keeps track of the different losses per class.
+Averaged cross-entropy for classification. This also know als logloss.
+This variant keeps track of the different losses per class.
 
-   Calculated the averaged cross entropy for multi-dimentions output.
-=#
+Calculated the averaged cross entropy for multi-dimentions output.
+"""
 type MultiACE <: AbstractEvalMetric
   aces  :: Vector{Float64}
   counts :: Vector{Int}

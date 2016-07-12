@@ -1,27 +1,20 @@
-#=doc
-Initializers
-============
-Interface
----------
-=#
+"""
+    AbstractInitializer
 
-#=doc
-.. class:: AbstractInitializer
-
-   The abstract base class for all initializers.
+The abstract base class for all initializers.
 
 To define a new initializer, it is
 enough to derive a new type, and implement one or more of the following methods:
 
-.. function:: _init_weight(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
-.. function:: _init_bias(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
-.. function:: _init_gamma(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
-.. function:: _init_beta(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+    _init_weight(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+    _init_bias(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+    _init_gamma(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+    _init_beta(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
 
 Or, if full behavior customization is needed, override the following function
 
-.. function:: init(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
-=#
+    init(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+"""
 abstract AbstractInitializer
 
 function init{T<:AbstractInitializer}(self :: T, name :: Base.Symbol, array :: NDArray)
@@ -60,67 +53,63 @@ function _init_default(self :: AbstractInitializer, name :: Base.Symbol, array :
   error("Do not know how to init $name")
 end
 
-#=doc
-Built-in initializers
----------------------
-=#
-#=doc
-.. class:: UniformInitializer
+"""
+    UniformInitializer
 
-   Initialize weights according to a uniform distribution within the provided scale.
-=#
+Initialize weights according to a uniform distribution within the provided scale.
+"""
 immutable UniformInitializer <: AbstractInitializer
   scale :: AbstractFloat
 end
-#=doc
-.. function UniformInitializer(scale=0.07)
+"""
+    UniformInitializer(scale=0.07)
 
-   Construct a :class:`UniformInitializer` with the specified scale.
-=#
+Construct a :class:`UniformInitializer` with the specified scale.
+"""
 UniformInitializer() = UniformInitializer(0.07)
 
 function _init_weight(self :: UniformInitializer, name :: Base.Symbol, array :: NDArray)
   rand!(-self.scale, self.scale, array)
 end
 
-#=doc
-.. class:: NormalInitializer
+"""
+    NormalInitializer
 
-   Initialize weights according to a univariate Gaussian distribution.
-=#
+Initialize weights according to a univariate Gaussian distribution.
+"""
 immutable NormalInitializer <: AbstractInitializer
   μ :: AbstractFloat
   σ :: AbstractFloat
 end
-#=doc
-.. function:: NormalIninitializer(; mu=0, sigma=0.01)
+"""
+    NormalIninitializer(; mu=0, sigma=0.01)
 
-   Construct a :class:`NormalInitializer` with mean ``mu`` and variance ``sigma``.
-=#
+Construct a :class:`NormalInitializer` with mean ``mu`` and variance ``sigma``.
+"""
 NormalInitializer(; mu=0, sigma=0.01) = NormalInitializer(mu, sigma)
 
 function _init_weight(self :: NormalInitializer, name :: Base.Symbol, array :: NDArray)
   randn!(self.μ, self.σ, array)
 end
 
-#=doc
-.. class:: XavierInitializer
+"""
+    XavierInitializer
 
-   The initializer documented in the paper [Bengio and Glorot 2010]: *Understanding
-   the difficulty of training deep feedforward neuralnetworks*.
+The initializer documented in the paper [Bengio and Glorot 2010]: *Understanding
+the difficulty of training deep feedforward neuralnetworks*.
 
-   There are several different version of the XavierInitializer used in the wild.
-   The general idea is that the variance of the initialization distribution is controlled
-   by the dimensionality of the input and output. As a distribution one can either choose
-   a normal distribution with μ = 0 and σ² or a uniform distribution from -σ to σ.
+There are several different version of the XavierInitializer used in the wild.
+The general idea is that the variance of the initialization distribution is controlled
+by the dimensionality of the input and output. As a distribution one can either choose
+a normal distribution with μ = 0 and σ² or a uniform distribution from -σ to σ.
 
-   Several different ways of calculating the variance are given in the literature or are
-   used by various libraries.
+Several different ways of calculating the variance are given in the literature or are
+used by various libraries.
 
-   - [Bengio and Glorot 2010]: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 1)``
-   - [K. He, X. Zhang, S. Ren, and J. Sun 2015]: ``mx.XavierInitializer(distribution = mx.xv_gaussian, regularization = mx.xv_in, magnitude = 2)``
-   - caffe_avg: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 3)``
-=#
+* [Bengio and Glorot 2010]: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 1)``
+* [K. He, X. Zhang, S. Ren, and J. Sun 2015]: ``mx.XavierInitializer(distribution = mx.xv_gaussian, regularization = mx.xv_in, magnitude = 2)``
+* caffe_avg: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 3)``
+"""
 
 @enum XavierDistribution xv_uniform xv_normal
 @enum XavierRegularization xv_avg xv_in xv_out

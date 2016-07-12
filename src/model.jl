@@ -1,27 +1,19 @@
-#=doc
-Models
-======
+"""
+    AbstractModel
 
-The model API provides convenient high-level interface to do training and predicting on
-a network described using the symbolic API.
-=#
-
-#=doc
-.. class:: AbstractModel
-
-   The abstract super type of all models in MXNet.jl.
-=#
+The abstract super type of all models in MXNet.jl.
+"""
 abstract AbstractModel
 
-#=doc
-.. class:: FeedForward
+"""
+    FeedForward
 
-   The feedforward model provides convenient interface to train and predict on
-   feedforward architectures like multi-layer MLP, ConvNets, etc. There is no
-   explicitly handling of *time index*, but it is relatively easy to implement
-   unrolled RNN / LSTM under this framework (**TODO**: add example). For models
-   that handles sequential data explicitly, please use **TODO**...
-=#
+The feedforward model provides convenient interface to train and predict on
+feedforward architectures like multi-layer MLP, ConvNets, etc. There is no
+explicitly handling of *time index*, but it is relatively easy to implement
+unrolled RNN / LSTM under this framework (**TODO**: add example). For models
+that handles sequential data explicitly, please use **TODO**...
+"""
 type FeedForward <: AbstractModel
   arch        :: SymbolicNode
   ctx         :: Vector{Context}
@@ -35,9 +27,10 @@ type FeedForward <: AbstractModel
   FeedForward(arch :: SymbolicNode, ctx :: Vector{Context}) = new(arch, ctx)
 end
 
-"""Get a split of `batch_size` into `n_split` pieces for data parallelization. Returns a vector
-    of length `n_split`, with each entry a `UnitRange{Int}` indicating the slice index for that
-    piece.
+"""
+Get a split of `batch_size` into `n_split` pieces for data parallelization. Returns a vector
+of length `n_split`, with each entry a `UnitRange{Int}` indicating the slice index for that
+piece.
 """
 function _split_inputs(batch_size :: Int, n_split :: Int)
   @assert(batch_size >= n_split)
@@ -51,14 +44,14 @@ function _split_inputs(batch_size :: Int, n_split :: Int)
   return idx
 end
 
-#=doc
-.. function:: FeedForward(arch :: SymbolicNode, ctx)
+"""
+    FeedForward(arch :: SymbolicNode, ctx)
 
-   :param arch: the architecture of the network constructed using the symbolic API.
-   :param ctx: the devices on which this model should do computation. It could be a single :class:`Context`
+* arch: the architecture of the network constructed using the symbolic API.
+* ctx: the devices on which this model should do computation. It could be a single :class:`Context`
                or a list of :class:`Context` objects. In the latter case, data parallelization will be used
                for training. If no context is provided, the default context ``cpu()`` will be used.
-=#
+"""
 function FeedForward(arch :: SymbolicNode; context :: Union{Context, Vector{Context}, Void} = nothing)
   if isa(context, Void)
     context = [Context(CPU)]
@@ -68,8 +61,8 @@ function FeedForward(arch :: SymbolicNode; context :: Union{Context, Vector{Cont
   FeedForward(arch, context)
 end
 
-#=doc
-.. function:: init_model(self, initializer; overwrite=false, input_shapes...)
+"""
+    init_model(self, initializer; overwrite=false, input_shapes...)
 
    Initialize the weights in the model.
 
@@ -77,12 +70,12 @@ end
    need to call this method unless one needs to inspect a model with only randomly initialized
    weights.
 
-   :param FeedForward self: the model to be initialized.
-   :param AbstractInitializer initializer: an initializer describing how the weights should be initialized.
-   :param Bool overwrite: keyword argument, force initialization even when weights already exists.
-   :param input_shapes: the shape of all data and label inputs to this model, given as keyword arguments.
+* FeedForward self: the model to be initialized.
+* AbstractInitializer initializer: an initializer describing how the weights should be initialized.
+* Bool overwrite: keyword argument, force initialization even when weights already exists.
+* input_shapes: the shape of all data and label inputs to this model, given as keyword arguments.
                         For example, ``data=(28,28,1,100), label=(100,)``.
-=#
+"""
 function init_model(self :: FeedForward, initializer :: AbstractInitializer; overwrite::Bool=false, input_shapes...)
   # all arg names, including data, label, and parameters
   arg_names    = list_arguments(self.arch)
@@ -168,7 +161,7 @@ function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_sha
   end
 end
 
-#=doc
+"""
 .. function::
    predict(self, data; overwrite=false, callback=nothing)
 
@@ -182,9 +175,9 @@ end
         # consume or write batch_output to file
       end
 
-   :param FeedForward self: the model.
-   :param AbstractDataProvider data: the data to perform prediction on.
-   :param Bool overwrite: an :class:`Executor` is initialized the first time predict is called. The memory
+* FeedForward self: the model.
+* AbstractDataProvider data: the data to perform prediction on.
+* Bool overwrite: an :class:`Executor` is initialized the first time predict is called. The memory
                           allocation of the :class:`Executor` depends on the mini-batch size of the test
                           data provider. If you call predict twice with data provider of the same batch-size,
                           then the executor can be potentially be re-used. So, if ``overwrite`` is false,
@@ -209,7 +202,7 @@ end
       predict and synchronize the weights again.
 
    :seealso: :func:`train`, :func:`fit`, :func:`init_model`, :func:`load_checkpoint`
-=#
+"""
 function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider; overwrite :: Bool = true)
   predict(self, data; overwrite = overwrite, callback=callback)
 end
@@ -314,41 +307,41 @@ function _invoke_callbacks{T<:Real}(self::FeedForward, callbacks::Vector{Abstrac
   end
 end
 
-#=doc
-.. function:: train(model :: FeedForward, ...)
+"""
+    train(model :: FeedForward, ...)
 
-   Alias to :func:`fit`.
-=#
+Alias to :func:`fit`.
+"""
 function train(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   fit(self, optimizer, data; kwargs...)
 end
 
-#=doc
-.. function:: fit(model :: FeedForward, optimizer, data; kwargs...)
+"""
+    fit(model :: FeedForward, optimizer, data; kwargs...)
 
-   Train the ``model`` on ``data`` with the ``optimizer``.
+Train the ``model`` on ``data`` with the ``optimizer``.
 
-   :param FeedForward model: the model to be trained.
-   :param AbstractOptimizer optimizer: the optimization algorithm to use.
-   :param AbstractDataProvider data: the training data provider.
-   :param Int n_epoch: default 10, the number of full data-passes to run.
-   :param AbstractDataProvider eval_data: keyword argument, default ``nothing``. The data provider for
+* FeedForward model: the model to be trained.
+* AbstractOptimizer optimizer: the optimization algorithm to use.
+* AbstractDataProvider data: the training data provider.
+* Int n_epoch: default 10, the number of full data-passes to run.
+* AbstractDataProvider eval_data: keyword argument, default ``nothing``. The data provider for
           the validation set.
-   :param AbstractEvalMetric eval_metric: keyword argument, default ``Accuracy()``. The metric used
+* AbstractEvalMetric eval_metric: keyword argument, default ``Accuracy()``. The metric used
           to evaluate the training performance. If ``eval_data`` is provided, the same metric is also
           calculated on the validation set.
-   :param kvstore: keyword argument, default ``:local``. The key-value store used to synchronize gradients
+* kvstore: keyword argument, default ``:local``. The key-value store used to synchronize gradients
           and parameters when multiple devices are used for training.
    :type kvstore: :class:`KVStore` or ``Base.Symbol``
-   :param AbstractInitializer initializer: keyword argument, default ``UniformInitializer(0.01)``.
-   :param Bool force_init: keyword argument, default false. By default, the random initialization using the
+* AbstractInitializer initializer: keyword argument, default ``UniformInitializer(0.01)``.
+* Bool force_init: keyword argument, default false. By default, the random initialization using the
           provided ``initializer`` will be skipped if the model weights already exists, maybe from a previous
           call to :func:`train` or an explicit call to :func:`init_model` or :func:`load_checkpoint`. When
           this option is set, it will always do random initialization at the begining of training.
-   :param callbacks: keyword argument, default ``[]``. Callbacks to be invoked at each epoch or mini-batch,
+* callbacks: keyword argument, default ``[]``. Callbacks to be invoked at each epoch or mini-batch,
           see :class:`AbstractCallback`.
    :type callbacks: ``Vector{AbstractCallback}``
-=#
+"""
 function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   opts = TrainingOptions(; kwargs...)
 

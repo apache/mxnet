@@ -1,13 +1,8 @@
-#=doc
-Symbolic API
-============
-=#
+"""
+    SymbolicNode
 
-#=doc
-.. class:: SymbolicNode
-
-   SymbolicNode is the basic building block of the symbolic graph in MXNet.jl.
-=#
+SymbolicNode is the basic building block of the symbolic graph in MXNet.jl.
+"""
 type SymbolicNode
   handle :: MX_SymbolHandle
 end
@@ -17,34 +12,33 @@ end
 Base.convert(t::Type{MX_handle}, obj::SymbolicNode) = Base.unsafe_convert(t, obj)
 Base.cconvert(t::Type{MX_handle}, obj::SymbolicNode) = Base.unsafe_convert(t, obj)
 
-#=doc
-.. function:: deepcopy(self :: SymbolicNode)
+"""
+    deepcopy(self :: SymbolicNode)
 
-   Make a deep copy of a SymbolicNode.
-=#
+Make a deep copy of a SymbolicNode.
+"""
 function Base.deepcopy(self :: SymbolicNode)
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCopy, (MX_handle, Ref{MX_handle}), self, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-#=doc
-.. function:: copy(self :: SymbolicNode)
+"""
+    copy(self :: SymbolicNode)
 
-   Make a copy of a SymbolicNode. The same as making a deep copy.
-=#
+Make a copy of a SymbolicNode. The same as making a deep copy.
+"""
 function Base.copy(self :: SymbolicNode)
   Base.deepcopy(self)
 end
 
-#=doc
-.. function::
-   call(self :: SymbolicNode, args :: SymbolicNode...)
-   call(self :: SymbolicNode; kwargs...)
+"""
+    call(self :: SymbolicNode, args :: SymbolicNode...)
+    call(self :: SymbolicNode; kwargs...)
 
-   Make a new node by composing ``self`` with ``args``. Or the arguments
-   can be specified using keyword arguments.
-=#
+Make a new node by composing ``self`` with ``args``. Or the arguments
+can be specified using keyword arguments.
+"""
 function Base.call(self :: SymbolicNode, args :: SymbolicNode...)
   s = deepcopy(self)
   _compose!(s, args...)
@@ -67,67 +61,67 @@ macro _list_symbol_info(self, func_name)
   end
 end
 
-#=doc
-.. function:: list_arguments(self :: SymbolicNode)
+"""
+    list_arguments(self :: SymbolicNode)
 
-   List all the arguments of this node. The argument for a node contains both
-   the inputs and parameters. For example, a :class:`FullyConnected` node will
-   have both data and weights in its arguments. A composed node (e.g. a MLP) will
-   list all the arguments for intermediate nodes.
+List all the arguments of this node. The argument for a node contains both
+the inputs and parameters. For example, a :class:`FullyConnected` node will
+have both data and weights in its arguments. A composed node (e.g. a MLP) will
+list all the arguments for intermediate nodes.
 
    :return: A list of symbols indicating the names of the arguments.
-=#
+"""
 function list_arguments(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListArguments)
 end
 
-#=doc
-.. function:: list_outputs(self :: SymbolicNode)
+"""
+    list_outputs(self :: SymbolicNode)
 
-   List all the outputs of this node.
+List all the outputs of this node.
 
    :return: A list of symbols indicating the names of the outputs.
-=#
+"""
 function list_outputs(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListOutputs)
 end
 
 
-#=doc
-.. function:: list_auxiliary_states(self :: SymbolicNode)
+"""
+    list_auxiliary_states(self :: SymbolicNode)
 
 
-   List all auxiliary states in the symbool.
+List all auxiliary states in the symbool.
 
-   Auxiliary states are special states of symbols that do not corresponds to an argument,
-   and do not have gradient. But still be useful for the specific operations.
-   A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
-   Most operators do not have Auxiliary states.
+Auxiliary states are special states of symbols that do not corresponds to an argument,
+and do not have gradient. But still be useful for the specific operations.
+A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+Most operators do not have Auxiliary states.
 
    :return: A list of symbols indicating the names of the auxiliary states.
-=#
+"""
 function list_auxiliary_states(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListAuxiliaryStates)
 end
 
-#=doc
-.. function:: get_internals(self :: SymbolicNode)
+"""
+    get_internals(self :: SymbolicNode)
 
-   Get a new grouped :class:`SymbolicNode` whose output contains all the internal outputs of
-   this :class:`SymbolicNode`.
-=#
+Get a new grouped :class:`SymbolicNode` whose output contains all the internal outputs of
+this :class:`SymbolicNode`.
+"""
 function get_internals(self :: SymbolicNode)
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolGetInternals, (MX_handle, Ref{MX_handle}), self, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-#=doc
-.. function:: get_attr(self :: SymbolicNode, key :: Symbol)
+"""
+    get_attr(self :: SymbolicNode, key :: Symbol)
 
-   Get attribute attached to this :class:`SymbolicNode` belonging to key.
-   :return: The value belonging to key as a :class:`Nullable`.
-=#
+Get attribute attached to this :class:`SymbolicNode` belonging to key.
+:return: The value belonging to key as a :class:`Nullable`.
+"""
 function get_attr(self :: SymbolicNode, key :: Symbol)
   key_s = @compat String(string(key))
   ref_out = Ref{Cstring}()
@@ -141,12 +135,12 @@ function get_attr(self :: SymbolicNode, key :: Symbol)
   end
 end
 
-#=doc
-.. function: list_attr(self :: SymbolicNode)
+"""
+    list_attr(self :: SymbolicNode)
 
-   Get all attributes from a symbol.
-   :return: Dictionary of attributes.
-=#
+Get all attributes from a symbol.
+:return: Dictionary of attributes.
+"""
 function list_attr(self :: SymbolicNode)
   ref_sz    = Ref{MX_uint}(0)
   ref_strings = Ref{char_pp}(0)
@@ -163,12 +157,12 @@ function list_attr(self :: SymbolicNode)
   return out
 end
 
-#=doc
-.. function: list_all_attr(self :: SymbolicNode)
+"""
+    list_all_attr(self :: SymbolicNode)
 
-   Get all attributes from the symbol graph.
-   :return: Dictionary of attributes.
-=#
+Get all attributes from the symbol graph.
+:return: Dictionary of attributes.
+"""
 function list_all_attr(self :: SymbolicNode)
   ref_sz    = Ref{MX_uint}(0)
   ref_strings = Ref{char_pp}(0)
@@ -185,18 +179,17 @@ function list_all_attr(self :: SymbolicNode)
   return out
 end
 
-#=doc
-.. function:: set_attr(self:: SymbolicNode, key :: Symbol, value :: AbstractString)
+"""
+    set_attr(self:: SymbolicNode, key :: Symbol, value :: AbstractString)
 
-   Set the attribute key to value for this :class:`SymbolicNode`.
+Set the attribute key to value for this :class:`SymbolicNode`.
 
-   .. warning::
-
-      It is encouraged not to call this function directly, unless you know exactly what you are doing. The
-      recommended way of setting attributes is when creating the :class:`SymbolicNode`. Changing
-      the attributes of a :class:`SymbolicNode` that is already been used somewhere else might
-      cause unexpected behavior and inconsistency.
-=#
+# Warning
+It is encouraged not to call this function directly, unless you know exactly what you are doing. The
+recommended way of setting attributes is when creating the :class:`SymbolicNode`. Changing
+the attributes of a :class:`SymbolicNode` that is already been used somewhere else might
+cause unexpected behavior and inconsistency.
+"""
 function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
   key_s = @compat String(string(key))
   value_s = @compat String(value)
@@ -204,14 +197,15 @@ function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
   @mxcall(:MXSymbolSetAttr, (MX_handle, Cstring, Cstring), self, key_s, value_s)
 end
 
-#=doc
-.. function:: Variable(name :: Union{Symbol, AbstractString})
+"""
+    Variable(name :: Union{Symbol, AbstractString})
 
-   Create a symbolic variable with the given name. This is typically used as a placeholder.
-   For example, the data node, acting as the starting point of a network architecture.
+Create a symbolic variable with the given name. This is typically used as a placeholder.
+For example, the data node, acting as the starting point of a network architecture.
 
-   :param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`Variable`.
-=#
+# Arguments
+* Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`Variable`.
+"""
 function Variable(name :: Union{Symbol, AbstractString}; attrs = Dict())
   attrs = convert(Dict{Symbol, AbstractString}, attrs)
   hdr_ref = Ref{MX_handle}(0)
@@ -223,11 +217,11 @@ function Variable(name :: Union{Symbol, AbstractString}; attrs = Dict())
   node
 end
 
-#=doc
-.. function:: Group(nodes :: SymbolicNode...)
+"""
+    Group(nodes :: SymbolicNode...)
 
-   Create a :class:`SymbolicNode` by grouping nodes together.
-=#
+Create a :class:`SymbolicNode` by grouping nodes together.
+"""
 function Group(nodes :: SymbolicNode...)
   handles = MX_handle[nodes...]
   ref_hdr = Ref{MX_handle}(0)
@@ -279,20 +273,19 @@ function _infer_shape(self, keys, indptr, sdata)
   end
 end
 
-#=doc
-.. function::
-   infer_shape(self :: SymbolicNode, args...)
-   infer_shape(self :: SymbolicNode; kwargs...)
+"""
+    infer_shape(self :: SymbolicNode, args...)
+    infer_shape(self :: SymbolicNode; kwargs...)
 
-   Do shape inference according to the input shapes. The input shapes could be provided
-   as a list of shapes, which should specify the shapes of inputs in the same order as
-   the arguments returned by :func:`list_arguments`. Alternatively, the shape information
-   could be specified via keyword arguments.
+Do shape inference according to the input shapes. The input shapes could be provided
+as a list of shapes, which should specify the shapes of inputs in the same order as
+the arguments returned by :func:`list_arguments`. Alternatively, the shape information
+could be specified via keyword arguments.
 
-   :return: A 3-tuple containing shapes of all the arguments, shapes of all the outputs and
-            shapes of all the auxiliary variables. If shape inference failed due to incomplete
-            or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
-=#
+:return: A 3-tuple containing shapes of all the arguments, shapes of all the outputs and
+         shapes of all the auxiliary variables. If shape inference failed due to incomplete
+         or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+"""
 function infer_shape(self :: SymbolicNode; kwargs...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
@@ -348,20 +341,19 @@ function _infer_type(self, keys, arg_type_data)
   end
 end
 
-#=doc
-.. function::
-   infer_type(self :: SymbolicNode; kwargs...)
-   infer_type(self :: SymbolicNode, args...)
+"""
+    infer_type(self :: SymbolicNode; kwargs...)
+    infer_type(self :: SymbolicNode, args...)
 
-   Do type inference according to the input types. The input types could be provided
-   as a list of types, which should specify the types of inputs in the same order as
-   the arguments returned by :func:`list_arguments`. Alternatively, the type information
-   could be specified via keyword arguments.
+Do type inference according to the input types. The input types could be provided
+as a list of types, which should specify the types of inputs in the same order as
+the arguments returned by :func:`list_arguments`. Alternatively, the type information
+could be specified via keyword arguments.
 
-   :return: A 3-tuple containing types of all the arguments, types of all the outputs and
-            types of all the auxiliary variables. If type inference failed due to incomplete
-            or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
-=#
+:return: A 3-tuple containing types of all the arguments, types of all the outputs and
+         types of all the auxiliary variables. If type inference failed due to incomplete
+         or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+"""
 function infer_type(self :: SymbolicNode; kwargs...)
   types = Cint[toTypeFlag(x[2]) for x in kwargs]
   keys = AbstractString[string(x[1]) for x in kwargs]
@@ -379,14 +371,13 @@ function infer_type(self :: SymbolicNode, args :: Union{Tuple, Void}...)
   _infer_type(self, keys, types)
 end
 
-#=doc
-.. function::
-   getindex(self :: SymbolicNode, idx :: Union{Int, Base.Symbol, AbstractString})
+"""
+    getindex(self :: SymbolicNode, idx :: Union{Int, Base.Symbol, AbstractString})
 
-   Get a node representing the specified output of this node. The index could be
-   a symbol or string indicating the name of the output, or a 1-based integer
-   indicating the index, as in the list of :func:`list_outputs`.
-=#
+Get a node representing the specified output of this node. The index could be
+a symbol or string indicating the name of the output, or a 1-based integer
+indicating the index, as in the list of :func:`list_outputs`.
+"""
 function Base.getindex(self :: SymbolicNode, idx :: Union{Base.Symbol, AbstractString})
   idx   = Symbol(idx)
   i_idx = find(idx .== list_outputs(self))
@@ -529,54 +520,48 @@ function _compose!(node :: SymbolicNode, name :: Union{Base.Symbol, char_p}, arg
   return node
 end
 
-#=doc
-.. function:: to_json(self :: SymbolicNode)
+"""
+    to_json(self :: SymbolicNode)
 
-   Convert a :class:`SymbolicNode` into a JSON string.
-=#
+Convert a :class:`SymbolicNode` into a JSON string.
+"""
 function to_json(self :: SymbolicNode)
   ref_json = Ref{char_p}(0)
   @mxcall(:MXSymbolSaveToJSON, (MX_handle, Ref{char_p}), self, ref_json)
   return @compat String(ref_json[])
 end
 
-#=doc
-.. function:: from_json(repr :: AbstractString, ::Type{SymbolicNode})
+"""
+    from_json(repr :: AbstractString, ::Type{SymbolicNode})
 
-   Load a :class:`SymbolicNode` from a JSON string representation.
-=#
+Load a :class:`SymbolicNode` from a JSON string representation.
+"""
 function from_json(repr :: AbstractString, ::Type{SymbolicNode})
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateFromJSON, (char_p, Ref{MX_handle}), repr, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-#=doc
-.. function:: load(filename :: AbstractString, ::Type{SymbolicNode})
+"""
+    load(filename :: AbstractString, ::Type{SymbolicNode})
 
-   Load a :class:`SymbolicNode` from a JSON file.
-=#
+Load a :class:`SymbolicNode` from a JSON file.
+"""
 function load(filename :: AbstractString, ::Type{SymbolicNode})
   ref_hdr = Ref{MX_handle}(0)
   @mxcall(:MXSymbolCreateFromFile, (char_p, Ref{MX_handle}), filename, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
-#=doc
-.. function:: save(filename :: AbstractString, node :: SymbolicNode)
+"""
+    save(filename :: AbstractString, node :: SymbolicNode)
 
-   Save a :class:`SymbolicNode` to a JSON file.
-=#
+Save a :class:`SymbolicNode` to a JSON file.
+"""
 function save(filename :: AbstractString, node :: SymbolicNode)
   @mxcall(:MXSymbolSaveToFile, (MX_handle, char_p), node, filename)
 end
 
-#=doc
-libmxnet APIs
--------------
-
-**autogen:EMBED:symbolic-node:EMBED:autogen**
-=#
 ################################################################################
 # Atomic SymbolicNode functions dynamically imported from libmxnet
 ################################################################################

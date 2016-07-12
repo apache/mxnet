@@ -1,4 +1,7 @@
-# Neural Network Factory
+# Neural Network Factora
+
+Neural network factory provide convenient helper functions to define
+common neural networks.
 
 ```@autodocs
 Modules = [MXNet.mx]
