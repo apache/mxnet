@@ -70,8 +70,7 @@ void* PooledStorageManager<DeviceStorage>::Alloc(size_t size) {
 }
 
 template <class DeviceStorage>
-void PooledStorageManager<DeviceStorage>::Free(void* ptr,
-                                                           size_t size) {
+void PooledStorageManager<DeviceStorage>::Free(void* ptr, size_t size) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(ptr);

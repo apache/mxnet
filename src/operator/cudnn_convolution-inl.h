@@ -134,7 +134,7 @@ class CuDNNConvolutionOp : public Operator {
                                 bias.dptr_ + bias_offset_ * g,
                                 &beta,
                                 out_desc_,
-                                out.dptr_ + out_offset_ * g), CUDNN_STATUS_SUCCESS);
+                                out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
         #endif
       }
     }
