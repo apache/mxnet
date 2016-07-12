@@ -8,7 +8,6 @@ fi
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew update
     brew tap homebrew/science
-    brew info opencv
     brew install opencv
     brew install python3
     brew install fftw
