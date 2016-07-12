@@ -304,6 +304,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             name_value = eval_metric.get_name_value()
             for name, value in name_value:
                 logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+            eval_data.reset()
     # end of all epochs
     return
 
