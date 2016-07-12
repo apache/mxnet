@@ -1,8 +1,8 @@
 # MXNet Documentation
 
-[`MXNet.jl`](https://github.com/dmlc/MXNet.jl>) is the
-[`Julia`](http://julialang.org/) package of
-[`dmlc/mxnet`](https://github.com/dmlc/mxnet). `MXNet.jl` brings flexible and efficient GPU
+[MXNet.jl](https://github.com/dmlc/MXNet.jl>) is the
+[Julia](http://julialang.org/) package of
+[dmlc/mxnet](https://github.com/dmlc/mxnet). `MXNet.jl` brings flexible and efficient GPU
 computing and state-of-art deep learning to Julia. Some highlight of features
 include:
 
@@ -12,7 +12,22 @@ include:
 For more details, see documentation below. Please also checkout the
 [examples](https://github.com/dmlc/MXNet.jl/tree/master/examples) directory.
 
+## Tutorials
+
 ```@contents
-Pages = ["tutorial.md", "user-guide.md", "api.md"]
+Pages = ["tutorial/mnist.md", "tutorial/char-lstm.md"]
 Depth = 2
+```
+
+## User's Guide
+
+```@contents
+Pages = ["user-guide/install.md", "user-guide/overview.md", "user-guide/faq.md"]
+Depth = 2
+```
+
+## API Documentation
+
+```@contents
+Pages = ["api/context.md", "api/model.md", "api/initializers.md", "api/optimizers.md", "api/callbacks.md", "api/metric.md", "api/io.md", "api/ndarray.md", "api/symbolic-node.md", "api/nn-factory.md", "api/executor.md", "api/visualize.md"]
 ```
