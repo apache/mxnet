@@ -61,8 +61,8 @@ class KVStoreDevice : public KVStoreLocal {
         }
       }
 
-      tm_buf.merged = NDArray(s, Context::CPUPinned(tm_buf.ctx.dev_id));
-      tm_buf.merged_device = NDArray(s, tm_buf.ctx);
+      tm_buf.merged = NDArray(s, Context::CPUPinned(tm_buf.ctx.dev_id), false, val[0].dtype());
+      tm_buf.merged_device = NDArray(s, tm_buf.ctx, false, val[0].dtype());
       ctx_info[tm_buf.ctx.dev_id].second += s.Size();
     }
   }
@@ -85,7 +85,7 @@ class KVStoreDevice : public KVStoreLocal {
 
     for (size_t i = 1; i < val.size(); ++i) {
       NDArray *copy_buf = buf.AllocCopyBuf(
-          i, buf.ctx, val[0].shape());
+          i, buf.ctx, val[0].shape(), val[0].dtype());
       CopyFromTo(val[i], copy_buf, priority);
       reduce[i] = *copy_buf;
     }

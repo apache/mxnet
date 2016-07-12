@@ -3,6 +3,7 @@
 """Random Number interface of mxnet."""
 from __future__ import absolute_import
 
+import numpy as np
 import ctypes
 from .base import _LIB, check_call
 from .ndarray import NDArray, empty
@@ -38,7 +39,13 @@ def uniform(low, high, shape=None, ctx=None, out=None):
         if isinstance(shape, int):
             shape = (shape,)
         out = empty(shape, ctx)
-    return NDArray._sample_uniform(low=low, high=high, shape=out.shape, out=out)
+    if out.dtype == np.float32:
+        return NDArray._sample_uniform(low=low, high=high, shape=out.shape, out=out)
+    else:
+        tmp = empty(out.shape, out.ctx)
+        tmp = NDArray._sample_uniform(low=low, high=high, shape=out.shape, out=tmp)
+        out[:] = tmp
+        return out
 
 
 def normal(loc, scale, shape=None, ctx=None, out=None):
@@ -71,8 +78,13 @@ def normal(loc, scale, shape=None, ctx=None, out=None):
         if isinstance(shape, int):
             shape = (shape,)
         out = empty(shape, ctx)
-    return NDArray._sample_normal(loc=loc, scale=scale, shape=out.shape, out=out)
-
+    if out.dtype == np.float32:
+        return NDArray._sample_normal(loc=loc, scale=scale, shape=out.shape, out=out)
+    else:
+        tmp = empty(out.shape, out.ctx)
+        tmp = NDArray._sample_normal(loc=loc, scale=scale, shape=out.shape, out=tmp)
+        out[:] = tmp
+        return out
 
 def seed(seed_state):
     """Seed the random number generators in mxnet.
