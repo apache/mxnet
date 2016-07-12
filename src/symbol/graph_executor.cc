@@ -847,7 +847,6 @@ void GraphExecutor::InitOpSegs() {
   cached_seg_opr_.resize(topo_order_.size(), p);
 
   if (!prefer_bulk_execution_) return;
-  if (monitor_callback_) return;
   if (num_forward_nodes_ == topo_order_.size()) {
     cached_seg_opr_[0] = this->CreateCachedSegOpr(0, topo_order_.size());
     return;
@@ -902,11 +901,13 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   }
 
   for (size_t i = topo_start; i < topo_end; ++i) {
-    auto seg_op = cached_seg_opr_[i];
-    if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
-      Engine::Get()->Push(seg_op.opr, seg_op.ctx);
-      i = seg_op.topo_end - 1;
-      continue;
+    if (!monitor_callback_) {
+      auto seg_op = cached_seg_opr_[i];
+      if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
+        Engine::Get()->Push(seg_op.opr, seg_op.ctx);
+        i = seg_op.topo_end - 1;
+        continue;
+      }
     }
 
     uint32_t nid = topo_order_[i];
