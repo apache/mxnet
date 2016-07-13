@@ -208,30 +208,25 @@ class CaffeOperator : public Operator {
       delete top_blobs[i];
   }
 
-  template<size_t dim>
   void ConvertTBlob2Blob(mshadow::Stream<xpu>* s,
                     int fetch_type,
                     ::caffe::Blob<float>* blob_ptr,
-                    const TBlob *tblob_0,
-                    const TBlob *tblob_1 = NULL) {
+                    TBlob *tblob_0,
+                    TBlob *tblob_1 = NULL) {
     using mshadow::Tensor;
     switch (fetch_type) {
       case caffeEnum::DataOnly: {
-        Tensor<xpu, dim> data = tblob_0->get<xpu, dim, real_t>(s);
-        TensorToBlob<xpu, dim>(blob_ptr, caffememtype::Data, &data);
+        TensorToBlob<xpu>(blob_ptr, caffememtype::Data, tblob_0);
         break;
       }
       case caffeEnum::GradOnly: {
-        Tensor<xpu, dim> grad = tblob_0->get<xpu, dim, real_t>(s);
-        TensorToBlob<xpu, dim>(blob_ptr, caffememtype::Grad, &grad);
+        TensorToBlob<xpu>(blob_ptr, caffememtype::Grad, tblob_0);
         break;
       }
       case caffeEnum::DataWithGrad: {
         CHECK(tblob_1 != NULL);
-        Tensor<xpu, dim> data = tblob_0->get<xpu, dim, real_t>(s);
-        Tensor<xpu, dim> grad = tblob_1->get<xpu, dim, real_t>(s);
-        TensorToBlob<xpu, dim>(blob_ptr, caffememtype::Data, \
-          &data, caffememtype::Grad, &grad);
+        TensorToBlob<xpu>(blob_ptr, caffememtype::Data, \
+          tblob_0, caffememtype::Grad, tblob_1);
         break;
       }
       default: {
@@ -246,37 +241,20 @@ class CaffeOperator : public Operator {
                           const std::vector<TBlob>& tblobs_1) {
     for (size_t i = 0; i < dims.size(); ++i) {
       int dim = dims[i];
-      const TBlob* tblob_0 = &tblobs_0[tblob_start_dim + i];
-      const TBlob* tblob_1 = NULL;
-      if (fetch_type == caffeEnum::DataWithGrad)
-        tblob_1 = &tblobs_1[tblob_start_dim + i];
+      TBlob tblob_0(tblobs_0[tblob_start_dim + i]);
+      TBlob tblob_1;
+
       ::caffe::Blob<float>* blob_ptr;
       if (blobs_inited)
         blob_ptr = blobs[i];
       else
-        blob_ptr = new ::caffe::Blob<float>();
-      switch (dim) {
-        case 1: {
-          ConvertTBlob2Blob<1>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
-          break;
-        }
-        case 2: {
-          ConvertTBlob2Blob<2>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
-          break;
-        }
-        case 3: {
-          ConvertTBlob2Blob<3>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
-          break;
-        }
-        case 4: {
-          ConvertTBlob2Blob<4>(s, fetch_type, blob_ptr, tblob_0, tblob_1);
-          break;
-        }
-        default: {
-          LOG(FATAL) << "unexpected dim " << dim;
-          break;
-        }
-      }
+        blob_ptr = new caffe::Blob<float>();
+      if (fetch_type == caffeEnum::DataWithGrad) {
+        tblob_1 = TBlob(tblobs_1[tblob_start_dim + i]);
+        ConvertTBlob2Blob(s, fetch_type, blob_ptr, &tblob_0, &tblob_1);
+      } else
+        ConvertTBlob2Blob(s, fetch_type, blob_ptr, &tblob_0, NULL);
+
       if (!blobs_inited)
         blobs.push_back(blob_ptr);
     }
@@ -365,22 +343,6 @@ class CaffeOperatorProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  std::vector<int> TShape2Vector(const TShape &tshape) const {
-    std::vector<int> s;
-    for (unsigned int i =0 ; i < tshape.ndim(); ++i)
-      s.push_back(tshape[i]);
-    return s;
-  }
-
-  TShape Vector2TShape(const std::vector<int> &vec_int) const {
-    TShape shp;
-    std::vector<index_t> vec_indx;
-    for (size_t i = 0; i < vec_int.size(); ++i)
-      vec_indx.push_back(vec_int[i]);
-    shp = vec_indx;
-    return shp;
-  }
-
   /*
    * \brief Set up caffe_op to infer weights & output shape
    * \brief Initialize param_'s in & out dims
@@ -402,7 +364,7 @@ class CaffeOperatorProp : public OperatorProperty {
       if (tshape.ndim() == 0) return false;
       param_.in_dims.push_back(tshape.ndim());
       auto blob_ptr = new Blob<float>();
-      blob_ptr->Reshape(this->TShape2Vector(tshape));
+      blob_ptr->Reshape(TShape2Vector(tshape));
       bot_blobs.push_back(blob_ptr);
     }
     // Set caffe op output blobs
@@ -415,7 +377,7 @@ class CaffeOperatorProp : public OperatorProperty {
     // Set weight shape
     param_.w_dims.clear();
     for (size_t i = 0; i < param_.caffe_op->blobs().size(); ++i) {
-      auto tshape = this->Vector2TShape(param_.caffe_op->blobs()[i]->shape());
+      TShape tshape = Vector2TShape(param_.caffe_op->blobs()[i]->shape());
       param_.w_dims.push_back(tshape.ndim());
       SHAPE_ASSIGN_CHECK(*in_shape, i + param_.in_dims.size(), tshape);
     }
@@ -423,7 +385,7 @@ class CaffeOperatorProp : public OperatorProperty {
     param_.out_dims.clear();
     out_shape->clear();
     for (auto blob : top_blobs) {
-      auto tshape = this->Vector2TShape(blob->shape());
+      TShape tshape = Vector2TShape(blob->shape());
       param_.out_dims.push_back(tshape.ndim());
       out_shape->push_back(tshape);
     }

@@ -13,10 +13,10 @@ using ::mshadow::gpu;
 
 
 template<>
-void SetDataGradToBlob<gpu, 1>(Blob<float> *blob,
+void SetDataGradToBlob<gpu>(Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<gpu, 1> *tensor) {
-  float *data_ptr = tensor->dptr_;
+                       TBlob *tblob) {
+  float *data_ptr = (float*)tblob->dptr_;
   if (memType == caffememtype::Data)
     blob->set_gpu_data(data_ptr);
   else
@@ -24,80 +24,30 @@ void SetDataGradToBlob<gpu, 1>(Blob<float> *blob,
 }
 
 template<>
-void SetDataGradToBlob<gpu, 2>(::caffe::Blob<float> *blob,
+void SetDataGradToBlob<cpu>(::caffe::Blob<float> *blob,
                        caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<gpu, 2> *tensor) {
-  float *data_ptr = tensor->dptr_;
-  if (memType == caffememtype::Data)
-    blob->set_gpu_data(data_ptr);
-  else
-    blob->set_gpu_diff(data_ptr);
-}
-
-template<>
-void SetDataGradToBlob<gpu, 3>(Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<gpu, 3> *tensor) {
-  float *data_ptr = tensor->dptr_;
-  if (memType == caffememtype::Data)
-    blob->set_gpu_data(data_ptr);
-  else
-    blob->set_gpu_diff(data_ptr);
-}
-
-template<>
-void SetDataGradToBlob<gpu, 4>(::caffe::Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<gpu, 4> *tensor) {
-  float *data_ptr = tensor->dptr_;
-  if (memType == caffememtype::Data)
-    blob->set_gpu_data(data_ptr);
-  else
-    blob->set_gpu_diff(data_ptr);
-}
-
-template<>
-void SetDataGradToBlob<cpu, 1>(::caffe::Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<cpu, 1> *tensor) {
-  float *data_ptr = tensor->dptr_;
+                       TBlob *tblob) {
+  float *data_ptr = (float*)tblob->dptr_;
   if (memType == caffememtype::Data)
     blob->set_cpu_data(data_ptr);
   else
     blob->set_cpu_diff(data_ptr);
 }
 
-template<>
-void SetDataGradToBlob<cpu, 2>(::caffe::Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<cpu, 2> *tensor) {
-  float *data_ptr = tensor->dptr_;
-  if (memType == caffememtype::Data)
-    blob->set_cpu_data(data_ptr);
-  else
-    blob->set_cpu_diff(data_ptr);
+TShape Vector2TShape(const std::vector<int> &vec_int) {
+  TShape res;
+  std::vector<index_t> vec_indx;
+  for (size_t i = 0; i < vec_int.size(); ++i)
+    vec_indx.push_back(vec_int[i]);
+  res = vec_indx;
+  return res;
 }
 
-template<>
-void SetDataGradToBlob<cpu, 3>(::caffe::Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<cpu, 3> *tensor) {
-  float *data_ptr = tensor->dptr_;
-  if (memType == caffememtype::Data)
-    blob->set_cpu_data(data_ptr);
-  else
-    blob->set_cpu_diff(data_ptr);
-}
-
-template<>
-void SetDataGradToBlob<cpu, 4>(::caffe::Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       ::mshadow::Tensor<cpu, 4> *tensor) {
-  float *data_ptr = tensor->dptr_;
-  if (memType == caffememtype::Data)
-    blob->set_cpu_data(data_ptr);
-  else
-    blob->set_cpu_diff(data_ptr);
+std::vector<int> TShape2Vector(const TShape &tshape) {
+  std::vector<int> s;
+  for (unsigned int i =0 ; i < tshape.ndim(); ++i)
+    s.push_back(tshape[i]);
+  return s;
 }
 
 }  // namespace op
