@@ -89,8 +89,7 @@ class CaffeOperator : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     // TODO(Haoran): when need cublas handle in stream?
-    if (!param_.prototxt.type().compare("InnerProduct"))
-      CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
@@ -101,22 +100,14 @@ class CaffeOperator : public Operator {
     this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.out_num,
                              false, top_blobs, 0, out_data, empty_tblobs);
 
+    // Init caffe's weight pointer
     if (!initWeight_) {
-      // Init caffe's weight pointer
       initWeight_ = true;
-      weightDataList_ = new std::vector<void*>();
-      for (int i = param_.in_num; i < expected_in_num; ++i)
-        weightDataList_->push_back(in_data[i].dptr_);
       vector<Blob<float>*> w_blobs;
       this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.w_num,
                                false, w_blobs, param_.in_num, in_data, empty_tblobs);
       caffeOp_->SetBlobs(w_blobs);
-    } else {
-      // TODO(Haoran): Delete this chekcer
-      // pointer of weights should align with the weights passed in
-      for (int i = param_.in_num; i < expected_in_num; ++i)
-        CHECK_EQ(weightDataList_->at(i-param_.in_num), in_data[i].dptr_);
-    }
+    }    
 
     // Set caffe's input & output blobs and forward
     this->CaffeForward(bot_blobs, top_blobs);
@@ -155,8 +146,8 @@ class CaffeOperator : public Operator {
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
-    if (!param_.prototxt.type().compare("InnerProduct"))
-      CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+    // TODO(Haoran): when need cublas handle in stream?
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
     vector<Blob<float>*> top_blobs, bot_blobs;
@@ -166,23 +157,12 @@ class CaffeOperator : public Operator {
     this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.out_num,
                              false, top_blobs, 0, out_data, out_grad);
 
+    // Init caffe's gradient pointer
     if (!initWeightDelta_) {
-      // Init caffe's gradient pointer
       initWeightDelta_ = true;
-      weightDeltaList_ = new vector<void*>();
-      for (int i = param_.in_num; i < expected_in_num; ++i)
-        weightDeltaList_->push_back(in_grad[i].dptr_);
-
       vector<Blob<float>*> w_blobs = caffeOp_->GetBlobs();
       this->BuildOrModifyBlobs(s, caffeEnum::GradOnly, param_.w_num,
                                true, w_blobs, param_.in_num, in_grad, empty_tblobs);
-    } else {
-      // TODO(Haoran): Delete this chekcer
-      // pointer of gradient should align with the gradient passed in
-      for (int i = param_.in_num; i < expected_in_num; ++i) {
-        CHECK_EQ(weightDeltaList_->at(i-param_.in_num), in_grad[i].dptr_);
-        CHECK_EQ(weightDataList_->at(i-param_.in_num), in_data[i].dptr_);
-      }
     }
 
     // Set grad to zero
@@ -285,7 +265,6 @@ class CaffeOperator : public Operator {
  private:
   CaffeOperatorParam param_;
   ::caffe::Layer<float> *caffeOp_;
-  ::std::vector<void*> *weightDataList_, *weightDeltaList_;
   bool initWeight_, initWeightDelta_;
 };  // class CaffeOperator
 
