@@ -40,12 +40,10 @@ enum FetchType {DataOnly, GradOnly, DataWithGrad};
 
 struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   caffe::LayerParameter prototxt;
-  std::vector<int> in_dims, w_dims, out_dims;
+  int in_num, w_num, out_num;
   caffe::Layer<float> *caffe_op;
-  int in_num, out_num;
 
-  DMLC_DECLARE_PARAMETER(CaffeOperatorParam) {
-    DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
+  DMLC_DECLARE_PARAMETER(CaffeOperatorParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
     DMLC_DECLARE_FIELD(in_num).set_range(0, 100).set_default(1)
     .describe("Operator input number");
@@ -82,9 +80,9 @@ class CaffeOperator : public Operator {
     using namespace mshadow::expr;
     for (size_t i = 0; i < req.size(); ++i)
       CHECK_EQ(req[i], kWriteTo);
-    size_t expected_in_num = param_.w_dims.size() + param_.in_dims.size();
+    size_t expected_in_num = param_.w_num + param_.in_num;
     CHECK_EQ(in_data.size(), expected_in_num);
-    CHECK_EQ(out_data.size(), param_.out_dims.size());
+    CHECK_EQ(out_data.size(), param_.out_num);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
@@ -98,26 +96,26 @@ class CaffeOperator : public Operator {
 
     vector<Blob<float> *> bot_blobs, top_blobs;
     vector<TBlob> empty_tblobs;
-    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.in_dims,
+    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.in_num,
                              false, bot_blobs, 0, in_data, empty_tblobs);
-    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.out_dims,
+    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.out_num,
                              false, top_blobs, 0, out_data, empty_tblobs);
 
     if (!initWeight_) {
       // Init caffe's weight pointer
       initWeight_ = true;
       weightDataList_ = new std::vector<void*>();
-      for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
+      for (int i = param_.in_num; i < expected_in_num; ++i)
         weightDataList_->push_back(in_data[i].dptr_);
       vector<Blob<float>*> w_blobs;
-      this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.w_dims,
-                               false, w_blobs, param_.in_dims.size(), in_data, empty_tblobs);
+      this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.w_num,
+                               false, w_blobs, param_.in_num, in_data, empty_tblobs);
       caffeOp_->SetBlobs(w_blobs);
     } else {
       // TODO(Haoran): Delete this chekcer
       // pointer of weights should align with the weights passed in
-      for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
-        CHECK_EQ(weightDataList_->at(i-param_.in_dims.size()), in_data[i].dptr_);
+      for (int i = param_.in_num; i < expected_in_num; ++i)
+        CHECK_EQ(weightDataList_->at(i-param_.in_num), in_data[i].dptr_);
     }
 
     // Set caffe's input & output blobs and forward
@@ -146,11 +144,11 @@ class CaffeOperator : public Operator {
     using ::caffe::Blob;
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), param_.out_dims.size());
-    for (size_t i = 0; i < param_.in_dims.size(); ++i)
+    CHECK_EQ(out_grad.size(), param_.out_num);
+    for (size_t i = 0; i < param_.in_num; ++i)
       CHECK(req[i] != kAddTo) << "caffe not support write as kAddTo";
 
-    size_t expected_in_num = param_.w_dims.size() + param_.in_dims.size();
+    size_t expected_in_num = param_.w_num + param_.in_num;
     CHECK(in_data.size() == expected_in_num && in_grad.size() == expected_in_num);
     CHECK_EQ(req.size(), expected_in_num);
     // TODO(bing): check the BLAS Handle, be careful
@@ -163,39 +161,37 @@ class CaffeOperator : public Operator {
 #endif  // __CUDACC__
     vector<Blob<float>*> top_blobs, bot_blobs;
     vector<TBlob> empty_tblobs;
-    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.in_dims,
+    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.in_num,
                              false, bot_blobs, 0, in_data, in_grad);
-    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.out_dims,
+    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.out_num,
                              false, top_blobs, 0, out_data, out_grad);
 
     if (!initWeightDelta_) {
       // Init caffe's gradient pointer
       initWeightDelta_ = true;
       weightDeltaList_ = new vector<void*>();
-      for (int i = param_.in_dims.size(); i < expected_in_num; ++i)
+      for (int i = param_.in_num; i < expected_in_num; ++i)
         weightDeltaList_->push_back(in_grad[i].dptr_);
 
       vector<Blob<float>*> w_blobs = caffeOp_->GetBlobs();
-      this->BuildOrModifyBlobs(s, caffeEnum::GradOnly, param_.w_dims,
-                               true, w_blobs, param_.in_dims.size(), in_grad, empty_tblobs);
+      this->BuildOrModifyBlobs(s, caffeEnum::GradOnly, param_.w_num,
+                               true, w_blobs, param_.in_num, in_grad, empty_tblobs);
     } else {
       // TODO(Haoran): Delete this chekcer
       // pointer of gradient should align with the gradient passed in
-      for (int i = param_.in_dims.size(); i < expected_in_num; ++i) {
-        CHECK_EQ(weightDeltaList_->at(i-param_.in_dims.size()), in_grad[i].dptr_);
-        CHECK_EQ(weightDataList_->at(i-param_.in_dims.size()), in_data[i].dptr_);
+      for (int i = param_.in_num; i < expected_in_num; ++i) {
+        CHECK_EQ(weightDeltaList_->at(i-param_.in_num), in_grad[i].dptr_);
+        CHECK_EQ(weightDataList_->at(i-param_.in_num), in_data[i].dptr_);
       }
     }
 
     // Set grad to zero
-    for (size_t i = param_.in_dims.size(); i < expected_in_num; ++i) {
-        int dim = param_.w_dims[i - param_.in_dims.size()];
-        this->HandleOpReqType(s, req[i], dim, &in_grad[i]);
-    }
+    for (size_t i = param_.in_num; i < expected_in_num; ++i)
+        this->HandleOpReqType(s, req[i], &in_grad[i]);
 
     std::vector<bool> flags;
     // deal with OpReqType
-    for (size_t i = 0; i < param_.in_dims.size(); ++i)
+    for (size_t i = 0; i < param_.in_num; ++i)
       flags.push_back(req[i] != kNullOp);
 
     // Set caffe's data and gradient blobs of input/output and do backward
@@ -235,12 +231,11 @@ class CaffeOperator : public Operator {
     }
   }
 
-  void BuildOrModifyBlobs(mshadow::Stream<xpu> *s, int fetch_type, const std::vector<int>& dims,
+  void BuildOrModifyBlobs(mshadow::Stream<xpu> *s, int fetch_type, int num,
                           bool blobs_inited, std::vector<caffe::Blob<float> *>& blobs,
                           int tblob_start_dim, const std::vector<TBlob>& tblobs_0,
                           const std::vector<TBlob>& tblobs_1) {
-    for (size_t i = 0; i < dims.size(); ++i) {
-      int dim = dims[i];
+    for (size_t i = 0; i < num; ++i) {
       TBlob tblob_0(tblobs_0[tblob_start_dim + i]);
       TBlob tblob_1;
 
@@ -260,13 +255,23 @@ class CaffeOperator : public Operator {
     }
   }
 
-  void HandleOpReqType(mshadow::Stream<xpu>*s, OpReqType req, int shape_dim, const TBlob* in_g) {
-    switch (shape_dim) {
-      case 1: this->HandleOpReq<1>(s, req, in_g); break;
-      case 2: this->HandleOpReq<2>(s, req, in_g); break;
-      case 3: this->HandleOpReq<3>(s, req, in_g); break;
-      case 4: this->HandleOpReq<4>(s, req, in_g); break;
-      default: LOG(FATAL) << "unknown expected weight dim" << shape_dim; break;
+  void HandleOpReqType(mshadow::Stream<xpu>*s, OpReqType req, const TBlob* in_g) {
+    switch (in_g->shape_.ndim()) {
+      case 1: 
+        this->HandleOpReq<1>(s, req, in_g);
+        break;
+      case 2:
+        this->HandleOpReq<2>(s, req, in_g);
+        break;
+      case 3:
+        this->HandleOpReq<3>(s, req, in_g);
+        break;
+      case 4:
+        this->HandleOpReq<4>(s, req, in_g);
+        break;
+      default:
+        LOG(FATAL) << "unknown expected weight dim" << in_g->shape_.ndim();
+        break;
     }
   }
 
@@ -293,7 +298,7 @@ class CaffeOperatorProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> res;
-    for (size_t i = 0; i < param_.in_dims.size(); ++i)
+    for (size_t i = 0; i < param_.in_num; ++i)
       res.push_back(std::string("data_") + static_cast<char>('0' + i));
     /*
      * \brief the assumption is: first blob is weight, second is bias.
@@ -335,8 +340,6 @@ class CaffeOperatorProp : public OperatorProperty {
     param_.Init(kwargs);
     entry_ = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
     param_.caffe_op = entry_->gen_f_(this->param_.prototxt);
-    param_.in_dims.resize(param_.in_num);
-    param_.out_dims.resize(param_.out_num);
   }
 
   std::map<std::string, std::string> GetParams() const override {
@@ -353,40 +356,33 @@ class CaffeOperatorProp : public OperatorProperty {
     using namespace mshadow;
     using caffe::Blob;
     using std::vector;
-    CHECK_GE(in_shape->size(), param_.in_dims.size());
+    CHECK_GE(in_shape->size(), param_.in_num);
     // Initialize bottom & top blobs for caffe_op setup
-    size_t in_dims_cnt = param_.in_dims.size();
-    param_.in_dims.clear();
     vector<Blob<float> *> bot_blobs, top_blobs;
     // Set OperatorParam input dims & caffe op input blobs
-    for (size_t i = 0; i < in_dims_cnt; ++i) {
+    for (size_t i = 0; i < param_.in_num; ++i) {
       TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
-      param_.in_dims.push_back(tshape.ndim());
       auto blob_ptr = new Blob<float>();
       blob_ptr->Reshape(TShape2Vector(tshape));
       bot_blobs.push_back(blob_ptr);
     }
     // Set caffe op output blobs
-    for (size_t i = 0; i < param_.out_dims.size(); ++i) {
+    for (size_t i = 0; i < param_.out_num; ++i)
       top_blobs.push_back(new Blob<float>());
-    }
 
     param_.caffe_op->SetUp(bot_blobs, top_blobs);
-    CHECK_EQ(in_shape->size(), param_.caffe_op->blobs().size() + param_.in_dims.size());
+    CHECK_EQ(in_shape->size(), param_.caffe_op->blobs().size() + param_.in_num);
     // Set weight shape
-    param_.w_dims.clear();
-    for (size_t i = 0; i < param_.caffe_op->blobs().size(); ++i) {
+    param_.w_num = param_.caffe_op->blobs().size();
+    for (size_t i = 0; i < param_.w_num ; ++i) {
       TShape tshape = Vector2TShape(param_.caffe_op->blobs()[i]->shape());
-      param_.w_dims.push_back(tshape.ndim());
-      SHAPE_ASSIGN_CHECK(*in_shape, i + param_.in_dims.size(), tshape);
+      SHAPE_ASSIGN_CHECK(*in_shape, i + param_.in_num, tshape);
     }
     // Initialize out dims & out shapes
-    param_.out_dims.clear();
     out_shape->clear();
     for (auto blob : top_blobs) {
       TShape tshape = Vector2TShape(blob->shape());
-      param_.out_dims.push_back(tshape.ndim());
       out_shape->push_back(tshape);
     }
     // Free caffe in & out blobs
