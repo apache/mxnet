@@ -283,4 +283,4 @@ class MSRAPrelu(Xavier):
     """
     def __init__(self, factor_type="avg", slope=0.25):
         magnitude = 2. / (1 + slope ** 2)
-        super(MSRAPrelu, self)__.init__("gaussian", factor_type, magnitude)
+        super(MSRAPrelu, self).__init__("gaussian", factor_type, magnitude)
