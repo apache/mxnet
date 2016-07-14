@@ -264,7 +264,11 @@ class Module(BaseModule):
         if self.params_initialized:
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
-            self._exec_group.set_params(self._arg_params, self._aux_params)
+            if shared_module is None:
+                # in case of a shared module, we assume all the parameter
+                # arrays are shared on device, so there is no need to copy
+                # again to the device
+                self._exec_group.set_params(self._arg_params, self._aux_params)
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
