@@ -74,8 +74,6 @@ class CaffeOperator : public Operator {
     DelCaffeBlobs(top_, param_.out_num);
     DelCaffeBlobs(wei_, param_.w_num);
   }
-
-  void CaffeForward(std::vector<caffe::Blob<float>*> bottom, std::vector<caffe::Blob<float>*> top);
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -83,7 +81,6 @@ class CaffeOperator : public Operator {
                        const std::vector<TBlob> &aux_args) {
     // Set mode before forward
     ::mxnet::CaffeMode::SetMode<xpu>();
-
     using ::caffe::Blob;
     using std::vector;
     using namespace mshadow;
@@ -91,9 +88,7 @@ class CaffeOperator : public Operator {
     for (size_t i = 0; i < req.size(); ++i)
       CHECK_EQ(req[i], kWriteTo); size_t expected_in_num = param_.w_num + param_.in_num; CHECK_EQ(in_data.size(), expected_in_num);
     CHECK_EQ(out_data.size(), param_.out_num);
-    // TODO(bing): check the BLAS Handle, be careful
-    // maybe need blas handle from context
-    // TODO(bing): judge shape to remove flatten op
+
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     // TODO(Haoran): when need cublas handle in stream?
@@ -115,12 +110,8 @@ class CaffeOperator : public Operator {
     }    
 
     // Set caffe's input & output blobs and forward
-    this->CaffeForward(bot_, top_);
-
+    caffeOp_->Forward(bot_, top_);
   }
-
-  void CaffeBackward(std::vector<caffe::Blob<float>*> top, \
-      std::vector<bool> bp_flags, std::vector<caffe::Blob<float>*> bottom);
 
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
@@ -138,12 +129,10 @@ class CaffeOperator : public Operator {
     CHECK_EQ(out_grad.size(), param_.out_num);
     for (size_t i = 0; i < param_.in_num; ++i)
       CHECK(req[i] != kAddTo) << "caffe not support write as kAddTo";
-
     size_t expected_in_num = param_.w_num + param_.in_num;
     CHECK(in_data.size() == expected_in_num && in_grad.size() == expected_in_num);
     CHECK_EQ(req.size(), expected_in_num);
-    // TODO(bing): check the BLAS Handle, be careful
-    //  maybe need blas handle from context
+
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     // TODO(Haoran): when need cublas handle in stream?
@@ -172,7 +161,7 @@ class CaffeOperator : public Operator {
       flags.push_back(req[i] != kNullOp);
 
     // Set caffe's data and gradient blobs of input/output and do backward
-    CaffeBackward(top_, flags, bot_);
+    caffeOp_->Backward(top_, flags, bot_);
   }
 
   void HandleOpReqType(mshadow::Stream<xpu>*s, OpReqType req, const TBlob* in_g) {
