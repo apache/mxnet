@@ -25,13 +25,12 @@ class StorageImpl : public Storage {
   virtual ~StorageImpl() = default;
 
  private:
-  static constexpr size_t kPoolThreshold = 4096 * 1024 * 1024ul;
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
 
   template <class DeviceStorage>
   using CurrentStorageManager =
-      storage::PooledStorageManager<DeviceStorage, kPoolThreshold>;
+      storage::PooledStorageManager<DeviceStorage>;
 
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {

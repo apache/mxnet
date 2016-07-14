@@ -50,6 +50,24 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
             except Exception, e:
                 print e
 
+    #forward predict
+    for exe in exe_list:
+        exe.forward(is_train=False)
+
+    outputs = [exe.outputs[0].asnumpy() for exe in exe_list]
+    dtypes = [arr.dtype for arr in outputs]
+    max_idx = np.argmax(dtypes)
+
+    for i, exe in enumerate(exe_list):
+        if i == max_idx:
+            continue
+        for arr1, arr2 in zip([outputs[i]], [outputs[max_idx]]):
+            arr2 = arr2.astype(dtypes[i])
+            try:
+                assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+            except Exception, e:
+                print e
+
 def check_speed(sym, ctx, scale=1.0, N=100, grad_req='write'):
     exe = sym.simple_bind(grad_req=grad_req, **ctx)
     init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe.arg_arrays]
@@ -67,6 +85,15 @@ def check_speed(sym, ctx, scale=1.0, N=100, grad_req='write'):
         exe.backward(exe.outputs[0])
         exe.outputs[0].wait_to_read()
     return (time.time() - tic)*1.0/N
+
+def test_batchnorm_with_type():
+    sym = mx.sym.BatchNorm(name='norm', fix_gamma=False)
+    ctx_list = [{'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+                {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}}]
+    check_consistency(sym, ctx_list)
+
+    sym = mx.sym.BatchNorm(name='norm', fix_gamma=True)
+    check_consistency(sym, ctx_list)
 
 def test_convolution_with_type():
     sym = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
@@ -181,6 +208,7 @@ def test_embedding_with_type():
     check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'})
 
 if __name__ == '__main__':
+    test_batchnorm_with_type()
     test_convolution_with_type()
     test_deconvolution_with_type()
     test_upsampling_with_type()

@@ -4,11 +4,11 @@ require(mxnet)
 download_ <- function(data_dir) {
     dir.create(data_dir, showWarnings = FALSE)
     setwd(data_dir)
-    if ((!file.exists('train-images-idx3-ubyte')) || 
+    if ((!file.exists('train-images-idx3-ubyte')) ||
         (!file.exists('train-labels-idx1-ubyte')) ||
         (!file.exists('t10k-images-idx3-ubyte')) ||
         (!file.exists('t10k-labels-idx1-ubyte'))) {
-        download.file(url='http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip',
+        download.file(url='http://data.dmlc.ml/mxnet/data/mnist.zip',
                       destfile='mnist.zip', method='wget')
         unzip("mnist.zip")
         file.remove("mnist.zip")
@@ -83,7 +83,7 @@ get_iterator <- function(data_shape) {
 }
 
 parse_args <- function() {
-    parser <- ArgumentParser(description='train an image classifer on mnist')  
+    parser <- ArgumentParser(description='train an image classifer on mnist')
     parser$add_argument('--network', type='character', default='mlp',
                         choices = c('mlp', 'lenet'),
                         help = 'the cnn to use')

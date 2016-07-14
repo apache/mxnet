@@ -49,7 +49,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='train an image classifer on cifar10')
 parser.add_argument('--data-dir', type=str, default='cifar10/',
                     help='the input data directory')
-parser.add_argument('--gpus', type=str, default='0',
+parser.add_argument('--gpus', type=str,
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--num-examples', type=int, default=50000,
                     help='the number of training examples')
@@ -79,7 +79,7 @@ def _download(data_dir):
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')):
-        os.system('wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip')
+        os.system('wget http://data.dmlc.ml/mxnet/data/cifar10.zip')
         os.system('unzip -u cifar10.zip')
         os.system('mv cifar/* .; rm -rf cifar; rm cifar10.zip')
     os.chdir('..')
