@@ -24,7 +24,7 @@ namespace mshadow {
                const Tensor<gpu, 2, DType> & src) {
     LOG(FATAL) << "Not Implemented.";
   }
-} // namespace mshadow
+}  // namespace mshadow
 
 namespace mxnet {
 namespace op {
