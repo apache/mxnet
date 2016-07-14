@@ -62,9 +62,19 @@ class CaffeOperator : public Operator {
  public:
   explicit CaffeOperator(CaffeOperatorParam p):param_(p),
                                                caffeOp_(p.caffe_op),
-                                               initWeight_(false),
-                                               initWeightDelta_(false) {
+                                               init_w_(false),
+                                               init_wd_(false) {
+    InitCaffeBlobs(bot_, param_.in_num);
+    InitCaffeBlobs(top_, param_.out_num);
+    InitCaffeBlobs(wei_, param_.w_num);
   }
+
+  ~CaffeOperator() {
+    DelCaffeBlobs(bot_, param_.in_num);
+    DelCaffeBlobs(top_, param_.out_num);
+    DelCaffeBlobs(wei_, param_.w_num);
+  }
+
   void CaffeForward(std::vector<caffe::Blob<float>*> bottom, std::vector<caffe::Blob<float>*> top);
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -79,9 +89,7 @@ class CaffeOperator : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     for (size_t i = 0; i < req.size(); ++i)
-      CHECK_EQ(req[i], kWriteTo);
-    size_t expected_in_num = param_.w_num + param_.in_num;
-    CHECK_EQ(in_data.size(), expected_in_num);
+      CHECK_EQ(req[i], kWriteTo); size_t expected_in_num = param_.w_num + param_.in_num; CHECK_EQ(in_data.size(), expected_in_num);
     CHECK_EQ(out_data.size(), param_.out_num);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
@@ -93,30 +101,22 @@ class CaffeOperator : public Operator {
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
-    vector<Blob<float> *> bot_blobs, top_blobs;
-    vector<TBlob> empty_tblobs;
-    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.in_num,
-                             false, bot_blobs, 0, in_data, empty_tblobs);
-    this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.out_num,
-                             false, top_blobs, 0, out_data, empty_tblobs);
+    TBlob2CaffeBlob<xpu>(caffememtype::Data, bot_.begin(), in_data.begin(), param_.in_num);
+    TBlob2CaffeBlob<xpu>(caffememtype::Data, top_.begin(), out_data.begin(), param_.out_num);
 
     // Init caffe's weight pointer
-    if (!initWeight_) {
-      initWeight_ = true;
-      vector<Blob<float>*> w_blobs;
-      this->BuildOrModifyBlobs(s, caffeEnum::DataOnly, param_.w_num,
-                               false, w_blobs, param_.in_num, in_data, empty_tblobs);
-      caffeOp_->SetBlobs(w_blobs);
+    if (!init_w_) {
+      init_w_ = true;
+      TBlob2CaffeBlob<xpu>(caffememtype::Data,
+                      wei_.begin(),
+                      in_data.begin() + param_.in_num,
+                      param_.w_num);
+      caffeOp_->SetBlobs(wei_);
     }    
 
     // Set caffe's input & output blobs and forward
-    this->CaffeForward(bot_blobs, top_blobs);
+    this->CaffeForward(bot_, top_);
 
-    // Free caffe in & out blobs
-    for (size_t i = 0; i < bot_blobs.size(); ++i)
-      delete bot_blobs[i];
-    for (size_t i = 0; i < top_blobs.size(); ++i)
-      delete top_blobs[i];
   }
 
   void CaffeBackward(std::vector<caffe::Blob<float>*> top, \
@@ -150,19 +150,16 @@ class CaffeOperator : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-    vector<Blob<float>*> top_blobs, bot_blobs;
-    vector<TBlob> empty_tblobs;
-    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.in_num,
-                             false, bot_blobs, 0, in_data, in_grad);
-    this->BuildOrModifyBlobs(s, caffeEnum::DataWithGrad, param_.out_num,
-                             false, top_blobs, 0, out_data, out_grad);
+    TBlob2CaffeBlob<xpu>(caffememtype::Grad, bot_.begin(), in_grad.begin(), param_.in_num);
+    TBlob2CaffeBlob<xpu>(caffememtype::Grad, top_.begin(), out_grad.begin(), param_.out_num);
 
     // Init caffe's gradient pointer
-    if (!initWeightDelta_) {
-      initWeightDelta_ = true;
-      vector<Blob<float>*> w_blobs = caffeOp_->GetBlobs();
-      this->BuildOrModifyBlobs(s, caffeEnum::GradOnly, param_.w_num,
-                               true, w_blobs, param_.in_num, in_grad, empty_tblobs);
+    if (!init_wd_) {
+      init_wd_ = true;
+      TBlob2CaffeBlob<xpu>(caffememtype::Grad,
+                            wei_.begin(),
+                            in_grad.begin() + param_.in_num,
+                            param_.w_num);
     }
 
     // Set grad to zero
@@ -175,80 +172,15 @@ class CaffeOperator : public Operator {
       flags.push_back(req[i] != kNullOp);
 
     // Set caffe's data and gradient blobs of input/output and do backward
-    CaffeBackward(top_blobs, flags, bot_blobs);
-
-    // Free caffe in & out blobs
-    for (size_t i = 0; i < bot_blobs.size(); ++i)
-      delete bot_blobs[i];
-    for (size_t i = 0; i < top_blobs.size(); ++i)
-      delete top_blobs[i];
-  }
-
-  void ConvertTBlob2Blob(mshadow::Stream<xpu>* s,
-                    int fetch_type,
-                    ::caffe::Blob<float>* blob_ptr,
-                    TBlob *tblob_0,
-                    TBlob *tblob_1 = NULL) {
-    using mshadow::Tensor;
-    switch (fetch_type) {
-      case caffeEnum::DataOnly: {
-        TensorToBlob<xpu>(blob_ptr, caffememtype::Data, tblob_0);
-        break;
-      }
-      case caffeEnum::GradOnly: {
-        TensorToBlob<xpu>(blob_ptr, caffememtype::Grad, tblob_0);
-        break;
-      }
-      case caffeEnum::DataWithGrad: {
-        CHECK(tblob_1 != NULL);
-        TensorToBlob<xpu>(blob_ptr, caffememtype::Data, \
-          tblob_0, caffememtype::Grad, tblob_1);
-        break;
-      }
-      default: {
-        LOG(FATAL) << "unexpected fetch type " << fetch_type;
-      }
-    }
-  }
-
-  void BuildOrModifyBlobs(mshadow::Stream<xpu> *s, int fetch_type, int num,
-                          bool blobs_inited, std::vector<caffe::Blob<float> *>& blobs,
-                          int tblob_start_dim, const std::vector<TBlob>& tblobs_0,
-                          const std::vector<TBlob>& tblobs_1) {
-    for (size_t i = 0; i < num; ++i) {
-      TBlob tblob_0(tblobs_0[tblob_start_dim + i]);
-      TBlob tblob_1;
-
-      ::caffe::Blob<float>* blob_ptr;
-      if (blobs_inited)
-        blob_ptr = blobs[i];
-      else
-        blob_ptr = new caffe::Blob<float>();
-      if (fetch_type == caffeEnum::DataWithGrad) {
-        tblob_1 = TBlob(tblobs_1[tblob_start_dim + i]);
-        ConvertTBlob2Blob(s, fetch_type, blob_ptr, &tblob_0, &tblob_1);
-      } else
-        ConvertTBlob2Blob(s, fetch_type, blob_ptr, &tblob_0, NULL);
-
-      if (!blobs_inited)
-        blobs.push_back(blob_ptr);
-    }
+    CaffeBackward(top_, flags, bot_);
   }
 
   void HandleOpReqType(mshadow::Stream<xpu>*s, OpReqType req, const TBlob* in_g) {
     switch (in_g->shape_.ndim()) {
-      case 1: 
-        this->HandleOpReq<1>(s, req, in_g);
-        break;
-      case 2:
-        this->HandleOpReq<2>(s, req, in_g);
-        break;
-      case 3:
-        this->HandleOpReq<3>(s, req, in_g);
-        break;
-      case 4:
-        this->HandleOpReq<4>(s, req, in_g);
-        break;
+      case 1: this->HandleOpReq<1>(s, req, in_g); break;
+      case 2: this->HandleOpReq<2>(s, req, in_g); break;
+      case 3: this->HandleOpReq<3>(s, req, in_g); break;
+      case 4: this->HandleOpReq<4>(s, req, in_g); break;
       default:
         LOG(FATAL) << "unknown expected weight dim" << in_g->shape_.ndim();
         break;
@@ -264,8 +196,9 @@ class CaffeOperator : public Operator {
 
  private:
   CaffeOperatorParam param_;
-  ::caffe::Layer<float> *caffeOp_;
-  bool initWeight_, initWeightDelta_;
+  caffe::Layer<float> *caffeOp_;
+  std::vector<caffe::Blob<float> *> bot_, top_, wei_;
+  bool init_w_, init_wd_;
 };  // class CaffeOperator
 
 // Decalre Factory function, used for dispatch specialization
@@ -387,7 +320,7 @@ class CaffeOperatorProp : public OperatorProperty {
  private:
   mutable CaffeOperatorParam param_;
   mutable CaffeOpInitEntry* entry_;
-};  // class FullyConnectedSymbol
+};  // class CaffeOperatorSymbol
 #endif
 
 }  // namespace op

@@ -11,27 +11,26 @@ namespace op {
 using ::mshadow::cpu;
 using ::mshadow::gpu;
 
-
 template<>
-void SetDataGradToBlob<gpu>(Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       TBlob *tblob) {
-  float *data_ptr = (float*)tblob->dptr_;
+void SetDataGradToBlob<gpu>(caffememtype::caffeMemoryTypes memType,
+                            std::vector<Blob<float>*>::iterator blob,
+                            std::vector<TBlob>::const_iterator itr) {
+  float *data_ptr = (float*)(*itr).dptr_;
   if (memType == caffememtype::Data)
-    blob->set_gpu_data(data_ptr);
+    (*blob)->set_gpu_data(data_ptr);
   else
-    blob->set_gpu_diff(data_ptr);
+    (*blob)->set_gpu_diff(data_ptr);
 }
 
 template<>
-void SetDataGradToBlob<cpu>(::caffe::Blob<float> *blob,
-                       caffememtype::caffeMemoryTypes memType,
-                       TBlob *tblob) {
-  float *data_ptr = (float*)tblob->dptr_;
+void SetDataGradToBlob<cpu>(caffememtype::caffeMemoryTypes memType,
+                            std::vector<Blob<float>*>::iterator blob,
+                            std::vector<TBlob>::const_iterator itr) {
+  float *data_ptr = (float*)(*itr).dptr_;
   if (memType == caffememtype::Data)
-    blob->set_cpu_data(data_ptr);
+    (*blob)->set_cpu_data(data_ptr);
   else
-    blob->set_cpu_diff(data_ptr);
+    (*blob)->set_cpu_diff(data_ptr);
 }
 
 TShape Vector2TShape(const std::vector<int> &vec_int) {
@@ -48,6 +47,16 @@ std::vector<int> TShape2Vector(const TShape &tshape) {
   for (unsigned int i =0 ; i < tshape.ndim(); ++i)
     s.push_back(tshape[i]);
   return s;
+}
+
+void InitCaffeBlobs(std::vector<Blob<float>*>& v, size_t n_num) {
+  for (size_t i=0; i<n_num; ++i)
+    v.push_back(new Blob<float>());
+}
+
+void DelCaffeBlobs(std::vector<Blob<float>*>& v, size_t n_num) {
+  for (size_t i=0; i<n_num; ++i)
+    delete v[i];
 }
 
 }  // namespace op
