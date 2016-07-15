@@ -15,7 +15,7 @@ Operator *CreateOp<cpu>(DropoutParam param, int dtype) {
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new DropoutOp<cpu, DType>(param);
   });
-  return op;  
+  return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
