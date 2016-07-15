@@ -13,7 +13,7 @@ template<>
 Operator *CreateOp<gpu>(DropoutParam param, int dtype) {
   Operator *op = NULL;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new DropoutOp<gpu,  DType>();
+    op = new DropoutOp<gpu, DType>(param);
   });
   return op;
 }
