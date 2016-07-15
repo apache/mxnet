@@ -15,7 +15,7 @@ Operator *CreateOp<gpu>(DropoutParam param, int dtype) {
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new DropoutOp<gpu,  DType>();
   });
-  return op;  
+  return op;
 }
 }  // namespace op
 }  // namespace mxnet
