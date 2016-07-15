@@ -59,7 +59,8 @@ class DropoutOp : public Operator {
     if (ctx.is_train) {
       Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
       Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, DType>(s);
-      mask = tcast<DType>(F<mshadow_op::threshold>(prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_));
+      mask = tcast<DType>(F<mshadow_op::threshold>(
+             prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_));
       Assign(out, req[dropout::kOut], data * mask);
     } else {
       Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
@@ -115,7 +116,7 @@ class DropoutProp : public OperatorProperty {
     out_shape->push_back(dshape);
     return true;
   }
-  
+
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
