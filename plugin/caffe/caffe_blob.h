@@ -15,7 +15,6 @@
 namespace mxnet {
 namespace op {
 
-
 using mshadow::TBlob;
 using mshadow::TShape;
 using mshadow::index_t;
@@ -49,10 +48,6 @@ void TBlob2CaffeBlob(caffememtype::caffeMemoryTypes memType,
     SetDataGradToBlob<Device>(memType, blob, tblob);
   }
 }
-
-void InitCaffeBlobs(std::vector<Blob<float>*>& v, size_t n_num);
-
-void DelCaffeBlobs(std::vector<Blob<float>*>& v, size_t n_num);
 
 }  // namespace op
 }  // namespace mxnet

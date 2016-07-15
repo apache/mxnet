@@ -49,15 +49,5 @@ std::vector<int> TShape2Vector(const TShape &tshape) {
   return s;
 }
 
-void InitCaffeBlobs(std::vector<Blob<float>*>& v, size_t n_num) {
-  for (size_t i=0; i<n_num; ++i)
-    v.push_back(new Blob<float>());
-}
-
-void DelCaffeBlobs(std::vector<Blob<float>*>& v, size_t n_num) {
-  for (size_t i=0; i<n_num; ++i)
-    delete v[i];
-}
-
 }  // namespace op
 }  // namespace mxnet

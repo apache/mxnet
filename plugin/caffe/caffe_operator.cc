@@ -10,12 +10,12 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator* CreateOp<cpu>(CaffeOperatorParam param) {
+Operator *CreateOp<cpu>(CaffeOperatorParam param) {
   return new CaffeOperator<cpu>(param);
 }
 
 // DO_BIND_DISPATCH comes from static_operator_common.h
-Operator* CaffeOperatorProp::CreateOperator(Context ctx) const {
+Operator *CaffeOperatorProp::CreateOperator(Context ctx) const {
   DO_BIND_DISPATCH(CreateOp, param_);
 }
 
