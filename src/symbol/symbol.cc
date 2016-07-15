@@ -63,6 +63,39 @@ struct Symbol::Node {
       attr.reset(new std::map<std::string, std::string>(*(other.attr)));
     }
   }
+  ~Node() {
+    if (inputs.size() != 0 || backward_source_node.get() != nullptr) {
+      // explicit destructor to resolve problem of hell
+      // of stack overflow caused by recursive deletion chain
+      // run a DFS to explicit store to be deleted node on to_delete
+      std::vector<std::shared_ptr<Symbol::Node> > to_delete;
+      std::vector<Symbol::Node*> stack{this};
+
+      while (!stack.empty()) {
+        Node *n = stack.back();
+        stack.pop_back();
+
+        for (DataEntry& e : n->inputs) {
+          // if the ref is the only reference
+          // the target node need to be deleted
+          if (e.source.unique()) {
+            stack.push_back(e.source.get());
+            to_delete.emplace_back(std::move(e.source));
+          } else {
+            // otherwise, reset the shared_ptr won't trigger destructor.
+            e.source.reset();
+          }
+        }
+        if (n->backward_source_node.unique()) {
+          stack.push_back(n->backward_source_node.get());
+          to_delete.emplace_back(std::move(n->backward_source_node));
+        } else {
+          n->backward_source_node.reset();
+        }
+        n->inputs.clear();
+      }
+    }
+  }
   /*! \return Whether the symbol is atomic */
   inline bool is_atomic() const {
     return inputs.size() == 0 && op != nullptr;

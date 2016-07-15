@@ -19,7 +19,7 @@ Baidu-warpctc is a CTC implement by Baidu which support GPU. CTC can be used wit
 
 ```
   comment out following lines in make/config.mk
-  WARPCTC_PATH = $(HOME)/warpctc
+  WARPCTC_PATH = $(HOME)/warp-ctc
   MXNET_PLUGINS += plugin/warpctc/warpctc.mk
   
   rebuild mxnet by
@@ -84,3 +84,8 @@ Following code show detail construction of the net:
     return sm
 ```
   
+## Support multi label length
+
+If you label length is smalled than or equal to b. You should provide labels with length b, and for those samples which label length is smaller than b, you should append 0 to label data to make it have length b.
+
+Here, 0 is reserved for blank label.

@@ -108,3 +108,4 @@ List of Contributors
 * [Depeng Liang](https://github.com/Ldpe2G)
 * [Kiko Qiu](https://github.com/kikoqiu)
 * [Yang Bo](https://github.com/Atry)
+* [Jonas Amaro](https://github.com/jonasrla)
