@@ -260,8 +260,7 @@ class Module(BaseModule):
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
             self._aux_params = shared_module._aux_params
-
-        if self.params_initialized:
+        elif self.params_initialized:
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
             self._exec_group.set_params(self._arg_params, self._aux_params)
