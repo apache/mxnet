@@ -11,7 +11,11 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(DropoutParam param) {
-  return new DropoutOp<gpu>(param);
+  Operator *op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new DropoutOp<gpu,  DType>();
+  });
+  return op;  
 }
 }  // namespace op
 }  // namespace mxnet
