@@ -74,7 +74,9 @@ object Executor {
                                       targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
     for ((src, dTargets) <- data zip targets) {
       for ((start, end, dst) <- dTargets) {
-        src.slice(start, end).copyTo(dst)
+        val sliced = src.slice(start, end)
+        sliced.copyTo(dst)
+        sliced.dispose()
       }
     }
   }

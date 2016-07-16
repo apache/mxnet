@@ -139,6 +139,54 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvoke
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvokeEx
+  (JNIEnv *env, jobject obj, jlong funcPtr, jlongArray useVars,
+    jfloatArray scalarArgs, jlongArray mutateVars,
+    jint numParams, jobjectArray paramKeys, jobjectArray paramVals) {
+  jlong *cUseVars = env->GetLongArrayElements(useVars, NULL);
+  jfloat *cScalarArgs = env->GetFloatArrayElements(scalarArgs, NULL);
+  jlong *cMutateVars = env->GetLongArrayElements(mutateVars, NULL);
+  jbyte **cParamKeys = NULL;
+  jbyte **cParamVals = NULL;
+  if (numParams > 0) {
+    cParamKeys = new jbyte *[numParams];
+    cParamVals = new jbyte *[numParams];
+    for (size_t i = 0; i < numParams; i++) {
+      jbyteArray jkey = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(paramKeys, i));
+      jbyte *cParamKey = env->GetByteArrayElements(jkey, NULL);
+      cParamKeys[i] = cParamKey;
+      env->DeleteLocalRef(jkey);
+      jbyteArray jval = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(paramVals, i));
+      jbyte *cParamVal = env->GetByteArrayElements(jval, NULL);
+      cParamVals[i] = cParamVal;
+      env->DeleteLocalRef(jval);
+    }
+  }
+  int ret = MXFuncInvokeEx(reinterpret_cast<FunctionHandle>(funcPtr),
+                           reinterpret_cast<NDArrayHandle *>(cUseVars),
+                           reinterpret_cast<mx_float *>(cScalarArgs),
+                           reinterpret_cast<NDArrayHandle *>(cMutateVars),
+                           static_cast<int>(numParams),
+                           reinterpret_cast<char **>(cParamKeys),
+                           reinterpret_cast<char **>(cParamVals));
+  env->ReleaseLongArrayElements(useVars, cUseVars, 0);
+  env->ReleaseFloatArrayElements(scalarArgs, cScalarArgs, 0);
+  env->ReleaseLongArrayElements(mutateVars, cMutateVars, 0);
+  if (numParams > 0) {
+    for (size_t i = 0; i < numParams; i++) {
+      jbyteArray jkey = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(paramKeys, i));
+      env->ReleaseByteArrayElements(jkey, cParamKeys[i], 0);
+      env->DeleteLocalRef(jkey);
+      jbyteArray jval = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(paramVals, i));
+      env->ReleaseByteArrayElements(jval, cParamVals[i], 0);
+      env->DeleteLocalRef(jval);
+    }
+    delete[] cParamKeys;
+    delete[] cParamVals;
+  }
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySaveRawBytes
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject dataBuf) {
   size_t length;

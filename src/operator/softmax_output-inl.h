@@ -215,8 +215,24 @@ class SoftmaxOutputProp : public OperatorProperty {
     // label.shape == data.shape: use probability as label
     if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
       if (param_.multi_output) {
-        SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel,
-                           Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]));
+        TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
+        TShape lshape2(dshape.ndim() - 1);
+        lshape2[0] = dshape[0];
+        for (index_t i = 2; i < dshape.ndim(); ++i)
+          lshape2[i-1] = dshape[i];
+        TShape lshape3 = dshape;
+        lshape3[1] = 1;
+        if (in_shape->at(softmaxout_enum::kLabel).ndim() == 0) {
+          in_shape->at(softmaxout_enum::kLabel) = lshape1;
+        } else if (in_shape->at(softmaxout_enum::kLabel) == lshape1) {
+        } else if (in_shape->at(softmaxout_enum::kLabel) == lshape2) {
+        } else if (in_shape->at(softmaxout_enum::kLabel) == lshape3) {
+        } else {
+          std::ostringstream os;
+          os << "Expecting " << lshape1 << " or " << lshape2
+             << ". But got " << in_shape->at(softmaxout_enum::kLabel);
+          throw InferShapeError(os.str(), softmaxout_enum::kLabel);
+        }
       } else {
         TShape label_shape(dshape.ndim() - 1);
         for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
