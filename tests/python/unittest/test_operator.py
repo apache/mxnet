@@ -1387,10 +1387,10 @@ def test_dot(ctx=mx.cpu()):
                 c = mx.sym.dot(a, b)
                 exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                 outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
+                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
                 exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
-                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
+                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
+                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
 
 
 def test_batch_dot(ctx=mx.cpu()):
@@ -1413,10 +1413,10 @@ def test_batch_dot(ctx=mx.cpu()):
                     c = mx.sym.batch_dot(a, b)
                     exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
+                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
                     exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
-                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
+                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
+                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
 
 
 def test_support_vector_machine_l1_svm():
