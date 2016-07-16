@@ -1,6 +1,4 @@
 import os, sys
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../image-classification/"))
 import mxnet as mx
 from data import get_iterator 
 import argparse
@@ -16,7 +14,11 @@ def get_mlp():
     fc2  = mx.symbol.CaffeOperator(data_0=act1, name='fc2', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 64} }")
     act2 = mx.symbol.CaffeOperator(data_0=fc2, prototxt="layer{type:\"TanH\"}")
     fc3 = mx.symbol.CaffeOperator(data_0=act2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
-    mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
+    if use_caffe_loss:
+        label = mx.symbol.Variable('softmax_label')
+        mlp = mx.symbol.CaffeLoss(data = fc3, label = label, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+    else:
+        mlp = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
     return mlp
 
 def get_lenet():
@@ -42,7 +44,11 @@ def get_lenet():
 
     # second fullc
     fc2 = mx.symbol.CaffeOperator(data_0=act3, prototxt="layer{type:\"InnerProduct\"inner_product_param{num_output: 10} }")
-    lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
+    if use_caffe_loss:
+        label = mx.symbol.Variable('softmax_label')
+        lenet = mx.symbol.CaffeLoss(data = fc2, label = label, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+    else:
+        lenet = mx.symbol.SoftmaxOutput(data = fc2, name = 'softmax')
     return lenet
 
 def parse_args():
@@ -50,6 +56,8 @@ def parse_args():
     parser.add_argument('--network', type=str, default='lenet',
                         choices = ['mlp', 'lenet'],
                         help = 'the cnn to use')
+    parser.add_argument('--caffe-loss', type=bool, default=False,
+                        help='Use CaffeLoss symbol')
     parser.add_argument('--data-dir', type=str, default='mnist/',
                         help='the input data directory')
     parser.add_argument('--gpus', type=str,
@@ -79,6 +87,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    use_caffe_loss = args.caffe_loss
 
     if args.network == 'mlp':
         data_shape = (784, )
@@ -88,4 +97,4 @@ if __name__ == '__main__':
         net = get_lenet()
 
     # train
-    train_model.fit(args, net, get_iterator(data_shape))
+    train_model.fit(args, net, get_iterator(data_shape), use_caffe_loss)

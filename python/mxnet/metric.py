@@ -307,6 +307,16 @@ class Torch(EvalMetric):
             self.sum_metric += pred.asnumpy().mean()
         self.num_inst += 1
 
+class Caffe(EvalMetric):
+    """Dummy metric for torch criterions"""
+    def __init__(self):
+        super(Caffe, self).__init__('caffe')
+
+    def update(self, _, preds):
+        for pred in preds:
+            self.sum_metric += pred.asnumpy().mean()
+        self.num_inst += 1
+
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
 

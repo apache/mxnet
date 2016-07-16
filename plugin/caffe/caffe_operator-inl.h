@@ -33,11 +33,6 @@
 namespace mxnet {
 namespace op {
 
-// Enumeration for inputs, outputs
-namespace caffeEnum {
-enum FetchType {DataOnly, GradOnly, DataWithGrad};
-}  // namespace caffeEnum
-
 struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   caffe::LayerParameter prototxt;
   int in_num, w_num, out_num;

@@ -60,7 +60,7 @@ template<typename xpu>
 class CaffeLoss : public Operator {
  public:
   explicit CaffeLoss(CaffeLossParam p):param_(p),
-                                           caffeOp_(p.caffe_op) {
+                                       caffeOp_(p.caffe_op) {
     InitCaffeBlobs(bot_, param_.in_num);
     InitCaffeBlobs(top_, param_.out_num);
     flags_.resize(param_.in_num);
@@ -70,6 +70,7 @@ class CaffeLoss : public Operator {
     DelCaffeBlobs(bot_, param_.in_num);
     DelCaffeBlobs(top_, param_.out_num);
   }
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -97,6 +98,7 @@ class CaffeLoss : public Operator {
     TBlob2CaffeBlob<xpu>(caffememtype::Data, bot_.begin(), in_data.begin(), param_.in_num);
     TBlob2CaffeBlob<xpu>(caffememtype::Data, top_.begin(), out_data.begin(), param_.out_num);
 
+    caffeOp_->SetUp(bot_, top_);
     caffeOp_->Forward(bot_, top_);
   }
 
@@ -124,7 +126,8 @@ class CaffeLoss : public Operator {
 #endif  // __CUDACC__
 
     TBlob2CaffeBlob<xpu>(caffememtype::Grad, bot_.begin(), in_grad.begin(), param_.in_num);
-    TBlob2CaffeBlob<xpu>(caffememtype::Grad, top_.begin(), out_grad.begin(), param_.out_num);
+    //TBlob2CaffeBlob<xpu>(caffememtype::Grad, top_.begin(), out_grad.begin(), param_.out_num);
+    top_[0]->set_cpu_diff(&param_.grad_scale);
 
     // Set BP flag 
     for (size_t i = 0; i < param_.in_num; ++i)
@@ -148,27 +151,17 @@ Operator* CreateOp(CaffeLossParam param);
 class CaffeLossProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
-    std::vector<std::string> res;
-    for (size_t i = 0; i < param_.in_num-1; ++i)
-      res.push_back(std::string("data_") + static_cast<char>('0' + i));
-    /*
-     * \brief the assumption is: first blob is weight, second is bias.
-     * \brief However, some types of caffe-layers might not follow this
-     * \brief Customization is then required.
-     */
-    res.push_back("target");
-    return res;
+    return {"data", "label"};
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
     CHECK_EQ(param_.out_num, 1);
-    CHECK_GE(param_.in_num, 2);
+    CHECK_EQ(param_.in_num, 2);
 
-    // Pass grad_scale to caffe layer by prototxt 
-    if (param_.prototxt.loss_weight_size() == 0)
-      for (size_t i = 0; i < param_.out_num; ++i)
-        param_.prototxt.add_loss_weight(param_.grad_scale);
+    // Fetch grad_scale from prototxt
+    if ((param_.prototxt.loss_weight_size() > 0))
+      param_.grad_scale = param_.prototxt.loss_weight(0);
 
     entry_ = CaffeOpInitRegistry::Get()->Find(param_.prototxt.type());
     param_.caffe_op = entry_->gen_f_(this->param_.prototxt);
@@ -196,23 +189,28 @@ class CaffeLossProp : public OperatorProperty {
       blob_ptr->Reshape(TShape2Vector(tshape));
       bot_blobs.push_back(blob_ptr);
     }
+
     // Set caffe op output blobs
     for (size_t i = 0; i < param_.out_num; ++i)
       top_blobs.push_back(new Blob<float>());
-    
+
     param_.caffe_op->SetUp(bot_blobs, top_blobs);
     CHECK_EQ(in_shape->size(), param_.caffe_op->blobs().size() + param_.in_num);
     // Initialize out dims & out shapes
     out_shape->clear();
     for (auto blob : top_blobs) {
-      TShape tshape = Vector2TShape(blob->shape());
+      vector<int> myshape(1, 1);
+      //TShape tshape = Vector2TShape(blob->shape());
+      TShape tshape = Vector2TShape(myshape);
       out_shape->push_back(tshape);
     }
+
     // Free caffe in & out blobs
     for (auto blob_ptr : bot_blobs)
       delete blob_ptr;
     for (auto blob_ptr : top_blobs)
       delete blob_ptr;
+
     return true;
   }
 
@@ -224,6 +222,16 @@ class CaffeLossProp : public OperatorProperty {
 
   std::string TypeString() const override {
     return "CaffeLoss";
+  }
+
+  std::vector<int> DeclareBackwardDependency(
+    const std::vector<int> &out_grad,
+    const std::vector<int> &in_data,
+    const std::vector<int> &out_data) const override {
+    std::vector<int> dep;
+    dep.insert(dep.end(), in_data.begin(), in_data.end());
+    dep.insert(dep.end(), out_data.begin(), out_data.end());
+    return dep;
   }
 
   Operator* CreateOperator(Context ctx) const override;
