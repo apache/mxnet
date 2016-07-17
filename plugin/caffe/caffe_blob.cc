@@ -36,15 +36,18 @@ void SetDataGradToBlob<cpu>(caffememtype::caffeMemoryTypes memType,
 TShape Vector2TShape(const std::vector<int> &vec_int) {
   TShape res;
   std::vector<index_t> vec_indx;
-  for (size_t i = 0; i < vec_int.size(); ++i)
+  for (index_t i = 0; i < vec_int.size(); ++i)
     vec_indx.push_back(vec_int[i]);
+  // 0-dim represents scalar in caffe
+  if (vec_int.size() == 0)
+    vec_indx.push_back(1);
   res = vec_indx;
   return res;
 }
 
 std::vector<int> TShape2Vector(const TShape &tshape) {
   std::vector<int> s;
-  for (unsigned int i =0 ; i < tshape.ndim(); ++i)
+  for (index_t i =0 ; i < tshape.ndim(); ++i)
     s.push_back(tshape[i]);
   return s;
 }

@@ -199,9 +199,7 @@ class CaffeLossProp : public OperatorProperty {
     // Initialize out dims & out shapes
     out_shape->clear();
     for (auto blob : top_blobs) {
-      vector<int> myshape(1, 1);
-      //TShape tshape = Vector2TShape(blob->shape());
-      TShape tshape = Vector2TShape(myshape);
+      TShape tshape = Vector2TShape(blob->shape());
       out_shape->push_back(tshape);
     }
 
