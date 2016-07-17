@@ -74,6 +74,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   bool batch_first;
   int direction;
   int mode;
+  float p;
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
     DMLC_DECLARE_FIELD(state_size)
@@ -96,6 +97,10 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     .add_enum("lstm", rnn_enum::kLstm)
     .add_enum("gru", rnn_enum::kGru)
     .describe("the type of RNN to compute");
+    
+    DMLC_DECLARE_FIELD(p).set_default(0.)
+    .set_range(0, 1)
+    .describe("Fraction of the input that gets dropped out at training time");
   }
 };
 
