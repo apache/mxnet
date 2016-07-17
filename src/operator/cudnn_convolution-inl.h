@@ -214,7 +214,6 @@ class CuDNNConvolutionOp : public Operator {
                filter_desc_,
                gwmat_ptr + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
       #elif CUDNN_MAJOR == 5
-      back_algo_w_ = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0;
       CUDNN_CALL(cudnnConvolutionBackwardFilter(s->dnn_handle_,
                &alpha,
                in_desc_,
