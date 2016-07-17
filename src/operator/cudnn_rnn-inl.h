@@ -20,6 +20,8 @@ class CuDNNRNNOp : public Operator {
     this->param_ = param;
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
+    // Defaults
+    input_mode_ = CUDNN_LINEAR_INPUT; 
     // RNN Mode
     switch (param_.mode) {
       case rnn_enum::kRnnRelu:
@@ -72,9 +74,48 @@ class CuDNNRNNOp : public Operator {
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
- //    CHECK_EQ(in_data.size(), 2);
- //    CHECK_EQ(out_data.size(), 3);
- //    Stream<gpu> *s = ctx.get_stream<gpu>();
+    Stream<gpu> *s = ctx.get_stream<gpu>();
+    if(!init_cudnn_){
+      Init(s, in_data, out_data);
+    }
+    // get input + output tensors
+    Tensor<gpu, 3, DType> data = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
+    Tensor<gpu, 1, DType> params = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
+    Tensor<gpu, 3, DType> state = in_data[rnn_enum::kStateIn].get<gpu, 3, DType>(s);
+
+    Tensor<gpu, 3, DType> out = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> out_state = out_data[rnn_enum::kStateOut].get<gpu, 3, DType>(s);
+
+    if (param_.mode == rnn_enum::kLstm){
+      Tensor<gpu, 3, DType> cell_state = 
+        in_data[rnn_enum::kCellStateIn].get<gpu, 3, DType>(s);
+      Tensor<gpu, 3, DType> out_cell_state = 
+        in_data[rnn_enum::kCellStateOut].get<gpu, 3, DType>(s);
+    }
+    // if (param_.mode == rnn_enum::kLstm){
+    //   CHECK_EQ(in_data.size(), 4);
+    //   CHECK_EQ(out_data.size(), 3);
+    // }
+    // else{
+    //   CHECK_EQ(in_data.size(), 3);
+    //   CHECK_EQ(out_data.size(), 2);
+    // }
+    // // Get tensors
+    // 
+    // Tensor<gpu, 3, DType> data = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
+    // Tensor<gpu, 1, DType> params = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
+    // Tensor<gpu, 3, DType> state = in_data[rnn_enum::kStateIn].get<gpu, 3, DType>(s);
+
+    // Tensor<gpu, 3, DType> out = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
+    // Tensor<gpu, 3, DType> out_state = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
+
+    // if (param_.mode == rnn_enum::kLstm){
+    //   Tensor<gpu, 3, DType> cell_state = 
+    //     in_data[rnn_enum::kCellStateIn].get<gpu, 3, DType>(s);
+    //   Tensor<gpu, 3, DType> out_cell_state = 
+    //     in_data[rnn_enum::kCellStateOut].get<gpu, 3, DType>(s);
+    // }
+ //    
  //    Tensor<gpu, 4, DType> data = in_data[st::kData].get<gpu, 4, DType>(s);
  //    Tensor<gpu, 4, DType> out = out_data[st::kOut].get<gpu, 4, DType>(s);
  //    Shape<3> loc_shape = Shape3(data.size(0), 2, 3);
@@ -162,8 +203,7 @@ class CuDNNRNNOp : public Operator {
     #if CUDNN_MAJOR == 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
-
-    if (param_.mode == rnn_enum::kLstm){
+    if(param_.mode == rnn_enum::kLstm){
       CHECK_EQ(in_data.size(), 4);
       CHECK_EQ(out_data.size(), 3);
     }
@@ -171,64 +211,118 @@ class CuDNNRNNOp : public Operator {
       CHECK_EQ(in_data.size(), 3);
       CHECK_EQ(out_data.size(), 2);
     }
-    
     if (!init_cudnn_) {
       init_cudnn_ = true;
-
+      // get input + output tensors
       Tensor<gpu, 3, DType> data = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
       Tensor<gpu, 1, DType> params = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
       Tensor<gpu, 3, DType> state = in_data[rnn_enum::kStateIn].get<gpu, 3, DType>(s);
 
       Tensor<gpu, 3, DType> out = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
-      Tensor<gpu, 3, DType> out_state = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
+      Tensor<gpu, 3, DType> out_state = out_data[rnn_enum::kStateOut].get<gpu, 3, DType>(s);
 
-      if (param_.mode == rnn_enum::kLstm){
+      if(param_.mode == rnn_enum::kLstm){
         Tensor<gpu, 3, DType> cell_state = 
           in_data[rnn_enum::kCellStateIn].get<gpu, 3, DType>(s);
         Tensor<gpu, 3, DType> out_cell_state = 
           in_data[rnn_enum::kCellStateOut].get<gpu, 3, DType>(s);
       }
 
+      // Create descriptors
       CHECK_EQ(cudnnCreateRNNDescriptor(&rnn_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateDropoutDescriptor(&dropout_desc_), CUDNN_STATUS_SUCCESS);
 
-      // Create tensors
       CHECK_EQ(cudnnCreateFilterDescriptor(&w_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&x_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&hx_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&y_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateTensorDescriptor(&hy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&y_desc_), CUDNN_STATUS_SUCCESS);
+
       if (param_.mode == rnn_enum::kLstm){
         CHECK_EQ(cudnnCreateTensorDescriptor(&cx_desc_), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnCreateTensorDescriptor(&cy_desc_), CUDNN_STATUS_SUCCESS);
       }     
+      // set dropout 
+      // cudnnSetDropoutDescriptor(dropout_desc_,
+      //                           s->dnn_handle_,
+      //                           param_.p,
+      //                           void * states,
+      //                           size_t stateSizeInBytes,
+      //                           unsigned long long seed)
+      // set RNN 
+      CHECK_EQ(cudnnSetRNNDescriptor(rnn_desc_,
+                                    param_.state_size,
+                                    param_.num_layers,
+                                    dropout_desc_,
+                                    input_mode_,
+                                    direction_,
+                                    mode_,
+                                    dtype_), CUDNN_STATUS_SUCCESS);
+      // Set params
+      int dim_params[3] = {params.shape_[0], 1, 1};
+      CHECK_EQ(cudnnSetFilterNdDescriptor(w_desc_,
+                                          dtype_,
+                                          format_,
+                                          3,
+                                          dim_params
+                                         ), CUDNN_STATUS_SUCCESS);
+      // Get strides
+      int stride_data[3] = {data.shape_[2]*data.shape_[1], data.shape_[2], 1};
+      int stride_state[3] = {state.shape_[2]*state.shape_[1], state.shape_[2], 1};
+      int stride_out[3] = {out.shape_[2]*out.shape_[1], out.shape_[2], 1};   
+      int stride_out_state[3] = 
+        {out_state.shape_[2]*out_state.shape_[1], out_state.shape_[2], 1};
+ 
+      // cuDNN needs int arrays for dim, not index_t array used in Shape
+      int dim_data[3];
+      int dim_state[3];
+      int dim_out[3];
+      int dim_out_state[3];
+      std::copy(std::begin(data.shape_.shape_), std::end(data.shape_.shape_), std::begin(dim_data));
+      std::copy(std::begin(state.shape_.shape_), std::end(state.shape_.shape_), std::begin(dim_state));
+      std::copy(std::begin(out.shape_.shape_), std::end(out.shape_.shape_), std::begin(dim_out));
+      std::copy(std::begin(out_state.shape_.shape_), std::end(out_state.shape_.shape_), std::begin(dim_out_state));
 
-      // CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
-      // CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
-      // CHECK_EQ(cudnnSetTensor4dDescriptor(in_desc_,
-      //                                     format_,
-      //                                     dtype_,
-      //                                     data.size(0),
-      //                                     data.size(1),
-      //                                     data.size(2),
-      //                                     data.size(3)), CUDNN_STATUS_SUCCESS);
-      // CHECK_EQ(cudnnSetTensor4dDescriptor(out_desc_,
-      //                                     format_,
-      //                                     dtype_,
-      //                                     out.size(0),
-      //                                     out.size(1),
-      //                                     out.size(2),
-      //                                     out.size(3)), CUDNN_STATUS_SUCCESS);
-      // if (param_.sampler_type == st::kBilinear) {
-      //   int dim[] = {static_cast<int>(out.size(0)), static_cast<int>(out.size(1)),
-      //                static_cast<int>(out.size(2)), static_cast<int>(out.size(3))};
-      //   CHECK_EQ(cudnnSetSpatialTransformerNdDescriptor(st_desc_,
-      //                                                   sampler_,
-      //                                                   dtype_,
-      //                                                   4,
-      //                                                   dim) , CUDNN_STATUS_SUCCESS);
-      // }
+      // set the tensor descriptors
+      CHECK_EQ(cudnnSetTensorNdDescriptor(x_desc_,
+                                          dtype_,
+                                          3,
+                                          dim_data,
+                                          stride_data
+                                         ), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetTensorNdDescriptor(hx_desc_,
+                                          dtype_,
+                                          3,
+                                          dim_state,
+                                          stride_state
+                                         ), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetTensorNdDescriptor(y_desc_,
+                                          dtype_,
+                                          3,
+                                          dim_out,
+                                          stride_out
+                                         ), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetTensorNdDescriptor(hy_desc_,
+                                          dtype_,
+                                          3,
+                                          dim_out_state,
+                                          stride_out_state
+                                         ), CUDNN_STATUS_SUCCESS);
+      // LSTM has two extra descriptors
+      if (param_.mode == rnn_enum::kLstm){
+        CHECK_EQ(cudnnSetTensorNdDescriptor(cx_desc_,
+                                            dtype_,
+                                            3,
+                                            dim_state,
+                                            stride_state
+                                          ), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensorNdDescriptor(cy_desc_,
+                                            dtype_,
+                                            3,
+                                            dim_out_state,
+                                            stride_out_state
+                                          ), CUDNN_STATUS_SUCCESS);
+      }   
     }
   }
 
