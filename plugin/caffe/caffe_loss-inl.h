@@ -60,7 +60,8 @@ template<typename xpu>
 class CaffeLoss : public Operator {
  public:
   explicit CaffeLoss(CaffeLossParam p):param_(p),
-                                       caffeOp_(p.caffe_op) {
+                                       caffeOp_(p.caffe_op),
+                                       setup_(false) {
     InitCaffeBlobs(bot_, param_.in_num);
     InitCaffeBlobs(top_, param_.out_num);
     flags_.resize(param_.in_num);
@@ -98,7 +99,16 @@ class CaffeLoss : public Operator {
     TBlob2CaffeBlob<xpu>(caffememtype::Data, bot_.begin(), in_data.begin(), param_.in_num);
     TBlob2CaffeBlob<xpu>(caffememtype::Data, top_.begin(), out_data.begin(), param_.out_num);
 
-    caffeOp_->SetUp(bot_, top_);
+    /*
+     * Caffe::SoftmaxLossLayer requires setup() with real data
+     * If in_data.dptr_ changes over iteration,
+     * doing setup() is required for single every forward
+     */
+    if (!setup_) {
+      setup_ = true;
+      caffeOp_->SetUp(bot_, top_);
+    }
+
     caffeOp_->Forward(bot_, top_);
   }
 
@@ -141,6 +151,7 @@ class CaffeLoss : public Operator {
   caffe::Layer<float> *caffeOp_;
   std::vector<caffe::Blob<float> *> bot_, top_;
   std::vector<bool> flags_;
+  bool setup_;
 };  // class CaffeLoss 
 
 // Decalre Factory function, used for dispatch specialization

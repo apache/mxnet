@@ -2,7 +2,7 @@ import mxnet as mx
 import logging
 import os
 
-def fit(args, network, data_loader, eval_metrics, batch_end_callback=None):
+def fit(args, network, data_loader, eval_metrics=None, batch_end_callback=None):
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
 

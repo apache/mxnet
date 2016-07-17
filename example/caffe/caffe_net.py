@@ -96,7 +96,8 @@ if __name__ == '__main__':
         data_shape = (1, 28, 28)
         net = get_lenet()
 
-    if use_caffe_loss:
-        eval_metric = mx.metric.Caffe()
     # train
-    train_model.fit(args, net, get_iterator(data_shape), eval_metric)
+    if use_caffe_loss:
+        train_model.fit(args, net, get_iterator(data_shape), mx.metric.Caffe())
+    else:
+        train_model.fit(args, net, get_iterator(data_shape))
