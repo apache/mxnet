@@ -424,3 +424,8 @@ class DataParallelExecutorGroup(object):
         """
         return [(k, tuple([self.slices[i].stop-self.slices[i].start] + list(v[1:])))
                 for k, v in shapes]
+
+    def install_monitor(self, mon):
+        """Install monitor on all executors"""
+        for exe in self.execs:
+            mon.install(exe)

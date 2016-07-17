@@ -8,6 +8,7 @@
 
 #include <dmlc/logging.h>
 #include <cstdlib>
+#include <new>
 #include "mxnet/base.h"
 
 namespace mxnet {
@@ -38,16 +39,15 @@ class CPUDeviceStorage {
 };  // class CPUDeviceStorage
 
 inline void* CPUDeviceStorage::Alloc(size_t size) {
+  void* ptr;
 #if _MSC_VER
-  void* ptr;
   ptr = _aligned_malloc(size, alignment_);
-  return CHECK_NOTNULL(ptr);
+  if (ptr == NULL) throw std::bad_alloc();
 #else
-  void* ptr;
   int ret = posix_memalign(&ptr, alignment_, size);
-  CHECK_EQ(ret, 0) << "Allocation failed";
-  return ptr;
+  if (ret != 0) throw std::bad_alloc();
 #endif
+  return ptr;
 }
 
 inline void CPUDeviceStorage::Free(void* ptr) {

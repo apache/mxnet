@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=too-many-branches
 """Initialization helper for mxnet"""
 from __future__ import absolute_import
 
@@ -29,6 +30,10 @@ class Initializer(object):
             raise TypeError('arr must be NDArray')
         if name.startswith('upsampling'):
             self._init_bilinear(name, arr)
+        elif name.startswith('stn_loc') and name.endswith('weight'):
+            self._init_zero(name, arr)
+        elif name.startswith('stn_loc') and name.endswith('bias'):
+            self._init_loc_bias(name, arr)
         elif name.endswith('bias'):
             self._init_bias(name, arr)
         elif name.endswith('gamma'):
@@ -58,6 +63,11 @@ class Initializer(object):
             y = (i / shape[3]) % shape[2]
             weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
         arr[:] = weight.reshape(shape)
+
+    def _init_loc_bias(self, _, arr):
+        shape = arr.shape
+        assert(shape[0] == 6)
+        arr[:] = np.array([1.0, 0, 0, 0, 1.0, 0])
 
     def _init_zero(self, _, arr):
         arr[:] = 0.0

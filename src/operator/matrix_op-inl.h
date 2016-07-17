@@ -264,7 +264,6 @@ void DotBackward_(const OutputGrad& out_grad,
   }
 }
 
-
 inline TShape DotShape(const TShape& lshape,
                        const TShape& rshape,
                        const EnvArguments& env) {
@@ -278,6 +277,74 @@ inline TShape DotShape(const TShape& lshape,
     return TShape(target_shape, target_shape + 1);
   } else {
     LOG(FATAL) << "dot currently only support 2D 2D array or 1D 1D array"
+               << lshape << " v.s. " << rshape;
+    return TShape();
+  }
+}
+
+template<typename xpu>
+void BatchDotForward_(const TBlob& lhs,
+                        const TBlob& rhs,
+                        const EnvArguments& env,
+                        TBlob *ret,
+                        OpReqType req,
+                        RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(ret->type_flag_, lhs.type_flag_)
+      << "Binary function only support input/output with the same type";
+  CHECK_EQ(ret->type_flag_, rhs.type_flag_)
+      << "Binary function only support input/output with the same type";
+  CHECK_EQ(ret->type_flag_, mshadow::kFloat32)
+      << "dot only support 32 bit float so far";
+
+  if (lhs.shape_.ndim() == 3 && rhs.shape_.ndim() == 3) {
+    mshadow::Tensor<xpu, 3, real_t> out = ret->get<xpu, 3, real_t>(s);
+    ASSIGN_DISPATCH(out, req, (batch_dot<false, false>(lhs.get<xpu, 3, real_t>(s),
+                                                       rhs.get<xpu, 3, real_t>(s))));
+  } else {
+    LOG(FATAL) << "not reached";
+  }
+}
+
+template<typename xpu>
+void BatchDotBackward_(const OutputGrad& out_grad,
+                         const Input0& lhs,
+                         const Input1& rhs,
+                         const EnvArguments& env,
+                         TBlob* lhs_grad,
+                         TBlob* rhs_grad,
+                         OpReqType req_lhs_grad,
+                         OpReqType req_rhs_grad,
+                         RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_NE(req_rhs_grad, kWriteInplace);
+  CHECK_NE(req_lhs_grad, kWriteInplace);
+
+  if (lhs.data.shape_.ndim() == 3 && rhs.data.shape_.ndim() == 3) {
+    mshadow::Tensor<xpu, 3, real_t> mout_grad = out_grad.data.get<xpu, 3, real_t>(s);
+    mshadow::Tensor<xpu, 3, real_t> mlhs_data = lhs.data.get<xpu, 3, real_t>(s);
+    mshadow::Tensor<xpu, 3, real_t> mrhs_data = rhs.data.get<xpu, 3, real_t>(s);
+    mshadow::Tensor<xpu, 3, real_t> mlhs_grad = lhs_grad->get<xpu, 3, real_t>(s);
+    mshadow::Tensor<xpu, 3, real_t> mrhs_grad = rhs_grad->get<xpu, 3, real_t>(s);
+    ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, (batch_dot<true, false>(mlhs_data, mout_grad)));
+    ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, (batch_dot<false, true>(mout_grad, mrhs_data)));
+  } else {
+    LOG(FATAL) << "not reached";
+  }
+}
+
+inline TShape BatchDotShape(const TShape& lshape,
+                              const TShape& rshape,
+                              const EnvArguments& env) {
+  if (lshape.ndim() == 3 && rshape.ndim() == 3) {
+    CHECK(lshape[0] == rshape[0] && lshape[2] == rshape[1])
+      << "batch_dot shape error: " << lshape << " X " << rshape;
+    size_t target_shape[] = {lshape[0], lshape[1], rshape[2]};
+    return TShape(target_shape, target_shape + 3);
+  } else {
+    LOG(FATAL) << "batch_dot currently only support 3D dot 3D array"
                << lshape << " v.s. " << rshape;
     return TShape();
   }
@@ -599,6 +666,14 @@ MXNET_REGISTER_SIMPLE_OP(dot, XPU)
 .set_shape_function(DotShape)
 .set_gradient(XPU::kDevMask, DotBackward_<XPU>, kNoInplace)
 .describe("Calculate dot product of two matrices or two vectors");
+
+// batched_dot
+MXNET_REGISTER_SIMPLE_OP(batch_dot, XPU)
+.set_function(XPU::kDevMask, BatchDotForward_<XPU>, kNoInplace, kRegisterSymbolic)
+.set_shape_function(BatchDotShape)
+.set_gradient(XPU::kDevMask, BatchDotBackward_<XPU>, kNoInplace)
+.describe("Calculate batched dot product of two matrices."
+          " (batch, M, K) batch_dot (batch, K, N) --> (batch, M, N)");
 }  // namespace op
 }  // namespace mxnet
 
