@@ -21,14 +21,4 @@ void CaffeMode::SetMode<mshadow::gpu>() {
   ::caffe::Caffe::set_mode(::caffe::Caffe::GPU);
 }
 
-void InitCaffeBlobs(std::vector<Blob<float>*>& v, int n_num) {
-  for (index_t i=0; i<n_num; ++i)
-    v.push_back(new Blob<float>());
-}
-
-void DelCaffeBlobs(std::vector<Blob<float>*>& v, int n_num) {
-  for (index_t i=0; i<n_num; ++i)
-    delete v[i];
-}
-
 }  // namespace mxnet

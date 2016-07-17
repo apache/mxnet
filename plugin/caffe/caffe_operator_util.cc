@@ -80,102 +80,78 @@
 namespace mxnet {
 namespace op {
 
-CaffeOpInitEntry& CaffeOpInitEntry::SetBlobNum(int b_num) {
-  b_num_ = b_num;
-  return *this;
-}
 
-CaffeOpInitEntry& CaffeOpInitRegistry::__REGISTER__(const char* name_str,
-                                                    pFunc f) {
-  std::string name(name_str);
-  CHECK(fmap_.count(name) == 0) << "Caffe initial param of " << name << " already existed";
-  CaffeOpInitEntry *e = new CaffeOpInitEntry(name, f);
-  fmap_[name] = e;
-  return *e;
-}
+MXNET_REGISTER_CAFFE_LAYER(InnerProduct, caffe::InnerProductLayer);
+MXNET_REGISTER_CAFFE_LAYER(TanH, caffe::TanHLayer);
+MXNET_REGISTER_CAFFE_LAYER(ReLU, caffe::ReLULayer);
+MXNET_REGISTER_CAFFE_LAYER(Convolution, caffe::ConvolutionLayer);
 
-CaffeOpInitRegistry* CaffeOpInitRegistry::Get() {
-  static CaffeOpInitRegistry inst;
-  return &inst;
-}
-
-CaffeOpInitRegistry::~CaffeOpInitRegistry() {
-  for (auto kv : fmap_) {
-    delete kv.second;
-  }
-}
-
-MXNET_REGISTER_CAFFE_LAYER(InnerProduct, caffe::InnerProductLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(TanH, caffe::TanHLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(ReLU, caffe::ReLULayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Convolution, caffe::ConvolutionLayer<float>);
-
-MXNET_REGISTER_CAFFE_LAYER(AbsVal, caffe::AbsValLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Accuracy, caffe::AccuracyLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(BatchNorm, caffe::BatchNormLayer<float>).
+MXNET_REGISTER_CAFFE_LAYER(AbsVal, caffe::AbsValLayer);
+MXNET_REGISTER_CAFFE_LAYER(Accuracy, caffe::AccuracyLayer);
+MXNET_REGISTER_CAFFE_LAYER(BatchNorm, caffe::BatchNormLayer).
 SetBlobNum(3);
-MXNET_REGISTER_CAFFE_LAYER(BatchReindex, caffe::BatchReindexLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Bias, caffe::BiasLayer<float>).
+MXNET_REGISTER_CAFFE_LAYER(BatchReindex, caffe::BatchReindexLayer);
+MXNET_REGISTER_CAFFE_LAYER(Bias, caffe::BiasLayer).
 SetBlobNum(1);
-MXNET_REGISTER_CAFFE_LAYER(BNLL, caffe::BNLLLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Concat, caffe::ConcatLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(ContrastiveLoss, caffe::ContrastiveLossLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Crop, caffe::CropLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Deconvolution, caffe::DeconvolutionLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Dropout, caffe::DropoutLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Eltwise, caffe::EltwiseLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(ELULayer, caffe::ELULayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(EmbedLayer, caffe::EmbedLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(EuclideanLoss, caffe::EuclideanLossLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Exp, caffe::ExpLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Filter, caffe::FilterLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Flatten, caffe::FlattenLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(HingeLoss, caffe::HingeLossLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Im2col, caffe::Im2colLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(InfogainLoss, caffe::InfogainLossLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Input, caffe::InputLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Log, caffe::LogLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(LRN, caffe::LRNLayer<float>);
+MXNET_REGISTER_CAFFE_LAYER(BNLL, caffe::BNLLLayer);
+MXNET_REGISTER_CAFFE_LAYER(Concat, caffe::ConcatLayer);
+MXNET_REGISTER_CAFFE_LAYER(ContrastiveLoss, caffe::ContrastiveLossLayer);
+MXNET_REGISTER_CAFFE_LAYER(Crop, caffe::CropLayer);
+MXNET_REGISTER_CAFFE_LAYER(Deconvolution, caffe::DeconvolutionLayer);
+MXNET_REGISTER_CAFFE_LAYER(Dropout, caffe::DropoutLayer);
+MXNET_REGISTER_CAFFE_LAYER(Eltwise, caffe::EltwiseLayer);
+MXNET_REGISTER_CAFFE_LAYER(ELULayer, caffe::ELULayer);
+MXNET_REGISTER_CAFFE_LAYER(EmbedLayer, caffe::EmbedLayer);
+MXNET_REGISTER_CAFFE_LAYER(EuclideanLoss, caffe::EuclideanLossLayer);
+MXNET_REGISTER_CAFFE_LAYER(Exp, caffe::ExpLayer);
+MXNET_REGISTER_CAFFE_LAYER(Filter, caffe::FilterLayer);
+MXNET_REGISTER_CAFFE_LAYER(Flatten, caffe::FlattenLayer);
+MXNET_REGISTER_CAFFE_LAYER(HingeLoss, caffe::HingeLossLayer);
+MXNET_REGISTER_CAFFE_LAYER(Im2col, caffe::Im2colLayer);
+MXNET_REGISTER_CAFFE_LAYER(InfogainLoss, caffe::InfogainLossLayer);
+MXNET_REGISTER_CAFFE_LAYER(Input, caffe::InputLayer);
+MXNET_REGISTER_CAFFE_LAYER(Log, caffe::LogLayer);
+MXNET_REGISTER_CAFFE_LAYER(LRN, caffe::LRNLayer);
 MXNET_REGISTER_CAFFE_LAYER(MultinomialLogisticLoss,
-                                 caffe::MultinomialLogisticLossLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(MVN, caffe::MVNLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Parameter, caffe::ParameterLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Pooling, caffe::PoolingLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Power, caffe::PowerLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(PReLU, caffe::PReLULayer<float>).
+                                 caffe::MultinomialLogisticLossLayer);
+MXNET_REGISTER_CAFFE_LAYER(MVN, caffe::MVNLayer);
+MXNET_REGISTER_CAFFE_LAYER(Parameter, caffe::ParameterLayer);
+MXNET_REGISTER_CAFFE_LAYER(Pooling, caffe::PoolingLayer);
+MXNET_REGISTER_CAFFE_LAYER(Power, caffe::PowerLayer);
+MXNET_REGISTER_CAFFE_LAYER(PReLU, caffe::PReLULayer).
 SetBlobNum(1);
-MXNET_REGISTER_CAFFE_LAYER(Reduction, caffe::ReductionLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Reshape, caffe::ReshapeLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Scale, caffe::ScaleLayer<float>);
+MXNET_REGISTER_CAFFE_LAYER(Reduction, caffe::ReductionLayer);
+MXNET_REGISTER_CAFFE_LAYER(Reshape, caffe::ReshapeLayer);
+MXNET_REGISTER_CAFFE_LAYER(Scale, caffe::ScaleLayer);
 MXNET_REGISTER_CAFFE_LAYER(SigmoidCrossEntropyLoss,
-                                 caffe::SigmoidCrossEntropyLossLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Sigmoid, caffe::SigmoidLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Silence, caffe::SilenceLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Slice, caffe::SliceLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Softmax, caffe::SoftmaxLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(SoftmaxWithLoss, caffe::SoftmaxWithLossLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Split, caffe::SplitLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(SPP, caffe::SPPLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Threshold, caffe::ThresholdLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(Tile, caffe::TileLayer<float>);
+                                 caffe::SigmoidCrossEntropyLossLayer);
+MXNET_REGISTER_CAFFE_LAYER(Sigmoid, caffe::SigmoidLayer);
+MXNET_REGISTER_CAFFE_LAYER(Silence, caffe::SilenceLayer);
+MXNET_REGISTER_CAFFE_LAYER(Slice, caffe::SliceLayer);
+MXNET_REGISTER_CAFFE_LAYER(Softmax, caffe::SoftmaxLayer);
+MXNET_REGISTER_CAFFE_LAYER(SoftmaxWithLoss, caffe::SoftmaxWithLossLayer);
+MXNET_REGISTER_CAFFE_LAYER(Split, caffe::SplitLayer);
+MXNET_REGISTER_CAFFE_LAYER(SPP, caffe::SPPLayer);
+MXNET_REGISTER_CAFFE_LAYER(Threshold, caffe::ThresholdLayer);
+MXNET_REGISTER_CAFFE_LAYER(Tile, caffe::TileLayer);
 
 #if MSHADOW_USE_CUDNN == 1
-MXNET_REGISTER_CAFFE_LAYER(CuDNNConvolution, caffe::CuDNNConvolutionLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(CuDNNLCN, caffe::CuDNNLCNLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(CuDNNLRN, caffe::CuDNNLRNLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(CuDNNPooling, caffe::CuDNNPoolingLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(CuDNNReLU, caffe::CuDNNReLULayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(CuDNNSigmoid, caffe::CuDNNSigmoidLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(CuDNNSoftmax, caffe::CuDNNSoftmaxLayer<float>);
-MXNET_REGISTER_CAFFE_LAYER(CuDNNTanH, caffe::CuDNNTanHLayer<float>);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNConvolution, caffe::CuDNNConvolutionLayer);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNLCN, caffe::CuDNNLCNLayer);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNLRN, caffe::CuDNNLRNLayer);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNPooling, caffe::CuDNNPoolingLayer);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNReLU, caffe::CuDNNReLULayer);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNSigmoid, caffe::CuDNNSigmoidLayer);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNSoftmax, caffe::CuDNNSoftmaxLayer);
+MXNET_REGISTER_CAFFE_LAYER(CuDNNTanH, caffe::CuDNNTanHLayer);
 #endif
 /*
  * /brief: Data layer hasn't been supported yet
- * MXNET_REGISTER_CAFFE_LAYER(Data, caffe::DataLayer<float>);
- * MXNET_REGISTER_CAFFE_LAYER(DummyData, caffe::DummyDataLayer<float>);
- * MXNET_REGISTER_CAFFE_LAYER(ImageData, caffe::ImageDataLayer<float>);
- * MXNET_REGISTER_CAFFE_LAYER(MemoryData, caffe::MemoryDataLayer<float>);
- * MXNET_REGISTER_CAFFE_LAYER(WindowData, caffe::WindowDataLayer<float>);
+ * MXNET_REGISTER_CAFFE_LAYER(Data, caffe::DataLayer);
+ * MXNET_REGISTER_CAFFE_LAYER(DummyData, caffe::DummyDataLayer);
+ * MXNET_REGISTER_CAFFE_LAYER(ImageData, caffe::ImageDataLayer);
+ * MXNET_REGISTER_CAFFE_LAYER(MemoryData, caffe::MemoryDataLayer);
+ * MXNET_REGISTER_CAFFE_LAYER(WindowData, caffe::WindowDataLayer);
 */
 
 }  // namespace op

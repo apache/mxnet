@@ -28,22 +28,23 @@ TShape Vector2TShape(const std::vector<int> &vec_int);
 std::vector<int> TShape2Vector(const TShape &tshape);
 
 // implementation of tensor to blob, called by TensorToBlob
-template<typename Device>
+template<typename Device, typename Dtype>
 void SetDataGradToBlob(caffememtype::caffeMemoryTypes memType,
-                       std::vector<Blob<float>*>::iterator blob,
-                       std::vector<TBlob>::const_iterator itr);
+                       typename std::vector<Blob<Dtype>*>::iterator blob,
+                       typename std::vector<TBlob>::const_iterator itr);
 
 /**
  * \brief The interface to convert mxnet's tensor to caffe's blob
  * \brief called in caffe_operator_inl.h
  */
-template<typename Device>
+template<typename Device, typename Dtype>
 void TBlob2CaffeBlob(caffememtype::caffeMemoryTypes memType,
-                     std::vector<Blob<float>*>::iterator blob,
-                     std::vector<TBlob>::const_iterator tblob,
+                     typename std::vector<Blob<Dtype>*>::iterator blob,
+                     typename std::vector<TBlob>::const_iterator tblob,
                      int n=1) {
   for (index_t i = 0; i < n; ++i, ++blob, ++tblob) {
-    (*blob)->Reshape(TShape2Vector((*tblob).shape_)); SetDataGradToBlob<Device>(memType, blob, tblob);
+    (*blob)->Reshape(TShape2Vector((*tblob).shape_));
+    SetDataGradToBlob<Device, Dtype>(memType, blob, tblob);
   }
 }
 

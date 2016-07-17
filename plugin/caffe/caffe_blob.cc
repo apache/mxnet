@@ -12,7 +12,29 @@ using ::mshadow::cpu;
 using ::mshadow::gpu;
 
 template<>
-void SetDataGradToBlob<gpu>(caffememtype::caffeMemoryTypes memType,
+void SetDataGradToBlob<cpu, float>(caffememtype::caffeMemoryTypes memType,
+                            std::vector<Blob<float>*>::iterator blob,
+                            std::vector<TBlob>::const_iterator itr) {
+  float *data_ptr = (float*)(*itr).dptr_;
+  if (memType == caffememtype::Data)
+    (*blob)->set_cpu_data(data_ptr);
+  else
+    (*blob)->set_cpu_diff(data_ptr);
+}
+
+template<>
+void SetDataGradToBlob<cpu, double>(caffememtype::caffeMemoryTypes memType,
+                            std::vector<Blob<double>*>::iterator blob,
+                            std::vector<TBlob>::const_iterator itr) {
+  double *data_ptr = (double*)(*itr).dptr_;
+  if (memType == caffememtype::Data)
+    (*blob)->set_cpu_data(data_ptr);
+  else
+    (*blob)->set_cpu_diff(data_ptr);
+}
+
+template<>
+void SetDataGradToBlob<gpu, float>(caffememtype::caffeMemoryTypes memType,
                             std::vector<Blob<float>*>::iterator blob,
                             std::vector<TBlob>::const_iterator itr) {
   float *data_ptr = (float*)(*itr).dptr_;
@@ -23,14 +45,14 @@ void SetDataGradToBlob<gpu>(caffememtype::caffeMemoryTypes memType,
 }
 
 template<>
-void SetDataGradToBlob<cpu>(caffememtype::caffeMemoryTypes memType,
-                            std::vector<Blob<float>*>::iterator blob,
+void SetDataGradToBlob<gpu, double>(caffememtype::caffeMemoryTypes memType,
+                            std::vector<Blob<double>*>::iterator blob,
                             std::vector<TBlob>::const_iterator itr) {
-  float *data_ptr = (float*)(*itr).dptr_;
+  double *data_ptr = (double*)(*itr).dptr_;
   if (memType == caffememtype::Data)
-    (*blob)->set_cpu_data(data_ptr);
+    (*blob)->set_gpu_data(data_ptr);
   else
-    (*blob)->set_cpu_diff(data_ptr);
+    (*blob)->set_gpu_diff(data_ptr);
 }
 
 TShape Vector2TShape(const std::vector<int> &vec_int) {
