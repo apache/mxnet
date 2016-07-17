@@ -398,7 +398,9 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_d < dshape[2] && ksize_y <= dshape[3] && ksize_x <= dshape[4])
+      CHECK(ksize_d < dshape[2] + 2 * param_.pad[0]
+            && ksize_y <= dshape[3] + 2 * param_.pad[1]
+            && ksize_x <= dshape[4] + 2 * param_.pad[2])
           << "kernel size exceed input";
       if (param_.dilate.Size() != 1) {
         LOG(INFO) << "Dilate is not supported in 3d convolution";
