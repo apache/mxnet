@@ -110,16 +110,16 @@ class CaffeOpInitRegistry {
  *
  * \code
  * // example of registering tanh layer (from caffe_operator_util.cc)
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(TanH, caffe::TanHLayer<float>);
+ * MXNET_REGISTER_CAFFE_LAYER(TanH, caffe::TanHLayer<float>);
  *
  * // example of registering batch norm layer which uses 3 blobs
- * MXNET_REGISTER_PLUGIN_CAFFE_INIT(BatchNorm, caffe::BatchNormLayer<float>).
+ * MXNET_REGISTER_CAFFE_LAYER(BatchNorm, caffe::BatchNormLayer<float>).
  * SetBlobNum(3);
  * \endcode
  *
  *
  */
-#define MXNET_REGISTER_PLUGIN_CAFFE_INIT(Name, LayerClass) \
+#define MXNET_REGISTER_CAFFE_LAYER(Name, LayerClass) \
   static ::caffe::Layer<float>* __make_ ## CaffeOpGenFunc ## _ ## Name ##__\
                             (::caffe::LayerParameter layer_para) {\
     return new LayerClass(layer_para);\

@@ -16,7 +16,7 @@ def get_mlp():
     fc3 = mx.symbol.CaffeOperator(data_0=act2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
     if use_caffe_loss:
         label = mx.symbol.Variable('softmax_label')
-        mlp = mx.symbol.CaffeLoss(data = fc3, label = label, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+        mlp = mx.symbol.CaffeLoss(data = fc3, label = label, grad_scale = 1, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
     else:
         mlp = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
     return mlp
@@ -46,7 +46,7 @@ def get_lenet():
     fc2 = mx.symbol.CaffeOperator(data_0=act3, prototxt="layer{type:\"InnerProduct\"inner_product_param{num_output: 10} }")
     if use_caffe_loss:
         label = mx.symbol.Variable('softmax_label')
-        lenet = mx.symbol.CaffeLoss(data = fc2, label = label, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+        lenet = mx.symbol.CaffeLoss(data = fc2, label = label, grad_scale = 1, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
     else:
         lenet = mx.symbol.SoftmaxOutput(data = fc2, name = 'softmax')
     return lenet

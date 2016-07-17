@@ -83,7 +83,7 @@ class CaffeLoss : public Operator {
     using std::vector;
     using namespace mshadow;
     using namespace mshadow::expr;
-    for (size_t i = 0; i < req.size(); ++i)
+    for (index_t i = 0; i < req.size(); ++i)
       CHECK_EQ(req[i], kWriteTo);
 
     CHECK_EQ(in_data.size(), param_.in_num);
@@ -129,7 +129,7 @@ class CaffeLoss : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), param_.out_num);
-    for (size_t i = 0; i < param_.in_num; ++i)
+    for (index_t i = 0; i < param_.in_num; ++i)
       CHECK(req[i] != kAddTo) << "caffe doesn't accm diff on bottom data";
     CHECK(in_data.size() == param_.in_num);
 
@@ -141,11 +141,11 @@ class CaffeLoss : public Operator {
 #endif  // __CUDACC__
 
     TBlob2CaffeBlob<xpu>(caffememtype::Grad, bot_.begin(), in_grad.begin(), param_.in_num);
-    //TBlob2CaffeBlob<xpu>(caffememtype::Grad, top_.begin(), out_grad.begin(), param_.out_num);
+    // Pass grad scale to caffe blob
     top_[0]->set_cpu_diff(&param_.grad_scale);
 
     // Set BP flag 
-    for (size_t i = 0; i < param_.in_num; ++i)
+    for (index_t i = 0; i < param_.in_num; ++i)
       flags_[i] = req[i] != kNullOp;
 
     caffeOp_->Backward(top_, flags_, bot_);
@@ -195,10 +195,10 @@ class CaffeLossProp : public OperatorProperty {
     using caffe::Blob;
     using std::vector;
     CHECK_GE(in_shape->size(), param_.in_num);
-    // Initialize bottom & top blobs for caffe_op setup
+    // Initialize empty bottom & top blobs for caffe_op setup
     vector<Blob<float> *> bot_blobs, top_blobs;
-    // Set OperatorParam input dims & caffe op input blobs
-    for (size_t i = 0; i < param_.in_num; ++i) {
+
+    for (index_t i = 0; i < param_.in_num; ++i) {
       TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
       auto blob_ptr = new Blob<float>();
@@ -206,20 +206,18 @@ class CaffeLossProp : public OperatorProperty {
       bot_blobs.push_back(blob_ptr);
     }
 
-    // Set caffe op output blobs
-    for (size_t i = 0; i < param_.out_num; ++i)
+    for (index_t i = 0; i < param_.out_num; ++i)
       top_blobs.push_back(new Blob<float>());
 
     param_.caffe_op->SetUp(bot_blobs, top_blobs);
     CHECK_EQ(in_shape->size(), param_.caffe_op->blobs().size() + param_.in_num);
-    // Initialize out dims & out shapes
+    // Initialize out shapes
     out_shape->clear();
     for (auto blob : top_blobs) {
       TShape tshape = Vector2TShape(blob->shape());
       out_shape->push_back(tshape);
     }
 
-    // Free caffe in & out blobs
     for (auto blob_ptr : bot_blobs)
       delete blob_ptr;
     for (auto blob_ptr : top_blobs)
