@@ -99,17 +99,22 @@ class CaffeLoss : public Operator {
     TBlob2CaffeBlob<xpu>(caffememtype::Data, bot_.begin(), in_data.begin(), param_.in_num);
     TBlob2CaffeBlob<xpu>(caffememtype::Data, top_.begin(), out_data.begin(), param_.out_num);
 
+    SpecialLayerSetup();
+    caffeOp_->Forward(bot_, top_);
+  }
+
+  // Hackings for specific caffe layers
+  void SpecialLayerSetup() {
     /*
-     * Caffe::SoftmaxLossLayer requires setup() with real data
-     * If in_data.dptr_ changes over iteration,
-     * doing setup() is required for single every forward
+     * \brief Caffe::SoftmaxLossLayer requires setup() with real data
+     *
+     * \note If in_data.dptr_ changes over iteration,
+     * \note then Doing setup() is required for single every forward
      */
-    if (!setup_) {
+    if (!setup_ && !param_.prototxt.type().compare("SoftmaxWithLoss")) {
       setup_ = true;
       caffeOp_->SetUp(bot_, top_);
     }
-
-    caffeOp_->Forward(bot_, top_);
   }
 
   virtual void Backward(const OpContext &ctx,
