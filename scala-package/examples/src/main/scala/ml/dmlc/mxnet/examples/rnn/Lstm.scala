@@ -10,11 +10,11 @@ object Lstm {
 
   final case class LSTMState(c: Symbol, h: Symbol)
   final case class LSTMParam(i2hWeight: Symbol, i2hBias: Symbol,
-                                                         h2hWeight: Symbol, h2hBias: Symbol)
+                             h2hWeight: Symbol, h2hBias: Symbol)
 
   // LSTM Cell symbol
   def lstm(numHidden: Int, inData: Symbol, prevState: LSTMState,
-                   param: LSTMParam, seqIdx: Int, layerIdx: Int, dropout: Float = 0f): LSTMState = {
+           param: LSTMParam, seqIdx: Int, layerIdx: Int, dropout: Float = 0f): LSTMState = {
     val inDataa = {
       if (dropout > 0f) Symbol.Dropout()(Map("data" -> inData, "p" -> dropout))
       else inData
@@ -45,7 +45,7 @@ object Lstm {
   // I think the existing data-parallelization code need some modification
   // to allow this situation to work properly
   def lstmUnroll(numLstmLayer: Int, seqLen: Int, inputSize: Int, numHidden: Int,
-                              numEmbed: Int, numLabel: Int, dropout: Float = 0f): Symbol = {
+                 numEmbed: Int, numLabel: Int, dropout: Float = 0f): Symbol = {
     val embedWeight = Symbol.Variable("embed_weight")
     val clsWeight = Symbol.Variable("cls_weight")
     val clsBias = Symbol.Variable("cls_bias")
@@ -58,7 +58,7 @@ object Lstm {
                                            h2hWeight = Symbol.Variable(s"l${i}_h2h_weight"),
                                            h2hBias = Symbol.Variable(s"l${i}_h2h_bias"))
       lastStates = lastStates :+ LSTMState(c = Symbol.Variable(s"l${i}_init_c"),
-                                                  h = Symbol.Variable(s"l${i}_init_h"))
+                                           h = Symbol.Variable(s"l${i}_init_h"))
     }
     assert(lastStates.length == numLstmLayer)
 
@@ -79,9 +79,9 @@ object Lstm {
       for (i <- 0 until numLstmLayer) {
         if (i == 0) dpRatio = 0f else dpRatio = dropout
         val nextState = lstm(numHidden, inData = hidden,
-                                prevState = lastStates(i),
-                                param = paramCells(i),
-                                seqIdx = seqIdx, layerIdx = i, dropout = dpRatio)
+                             prevState = lastStates(i),
+                             param = paramCells(i),
+                             seqIdx = seqIdx, layerIdx = i, dropout = dpRatio)
         hidden = nextState.h
         lastStates(i) = nextState
       }
@@ -99,7 +99,7 @@ object Lstm {
   }
 
   def lstmInferenceSymbol(numLstmLayer: Int, inputSize: Int, numHidden: Int,
-                              numEmbed: Int, numLabel: Int, dropout: Float = 0f): Symbol = {
+                          numEmbed: Int, numLabel: Int, dropout: Float = 0f): Symbol = {
     val seqIdx = 0
     val embedWeight = Symbol.Variable("embed_weight")
     val clsWeight = Symbol.Variable("cls_weight")
@@ -113,7 +113,7 @@ object Lstm {
                                            h2hWeight = Symbol.Variable(s"l${i}_h2h_weight"),
                                            h2hBias = Symbol.Variable(s"l${i}_h2h_bias"))
       lastStates = lastStates :+ LSTMState(c = Symbol.Variable(s"l${i}_init_c"),
-                                            h = Symbol.Variable(s"l${i}_init_h"))
+                                           h = Symbol.Variable(s"l${i}_init_h"))
     }
     assert(lastStates.length == numLstmLayer)
 
@@ -127,9 +127,9 @@ object Lstm {
     for (i <- 0 until numLstmLayer) {
       if (i == 0) dpRatio = 0f else dpRatio = dropout
       val nextState = lstm(numHidden, inData = hidden,
-                              prevState = lastStates(i),
-                              param = paramCells(i),
-                              seqIdx = seqIdx, layerIdx = i, dropout = dpRatio)
+                           prevState = lastStates(i),
+                           param = paramCells(i),
+                           seqIdx = seqIdx, layerIdx = i, dropout = dpRatio)
       hidden = nextState.h
       lastStates(i) = nextState
     }
