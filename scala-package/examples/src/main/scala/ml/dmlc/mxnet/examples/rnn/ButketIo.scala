@@ -15,8 +15,8 @@ object ButketIo {
 
   def defaultReadContent(path: String): String = {
     val content = Source.fromFile(path).mkString
-                                        .replaceAll("\n", " <eos> ")
-                                        .replaceAll(". ", " <eos> ")
+                        .replaceAll("\n", " <eos> ")
+                        .replaceAll(". ", " <eos> ")
     content
   }
 
@@ -29,7 +29,7 @@ object ButketIo {
   }
 
   def defaultGenBuckets(sentences: Array[String], batchSize: Int,
-      theVocab: Map[String, Int]): List[Int] = {
+                        theVocab: Map[String, Int]): List[Int] = {
     val lenDict = scala.collection.mutable.Map[Int, Int]()
     var maxLen = -1
     for (sentence <- sentences) {
@@ -59,7 +59,8 @@ object ButketIo {
     buckets
   }
 
-  class BucketSentenceIter(path: String, vocab: Map[String, Int], var buckets: List[Int],
+  class BucketSentenceIter(
+      path: String, vocab: Map[String, Int], var buckets: List[Int],
       _batchSize: Int, initStates: IndexedSeq[(String, (Int, Int))],
       seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
       readContent: ReadContent = defaultReadContent) extends DataIter {
@@ -151,9 +152,9 @@ object ButketIo {
 
       iBucket += 1
       new DataBatch(IndexedSeq(dataBuf),
-                                   IndexedSeq(labelBuf),
-                                   getIndex(),
-                                   getPad())
+                    IndexedSeq(labelBuf),
+                    getIndex(),
+                    getPad())
     }
 
     /**

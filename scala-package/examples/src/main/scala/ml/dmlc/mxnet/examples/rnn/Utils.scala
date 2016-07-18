@@ -64,8 +64,8 @@ object Utils {
 
   def doCheckpoint(prefix: String): EpochEndCallback = new EpochEndCallback {
     override def invoke(epoch: Int, symbol: Symbol,
-                    argParams: Map[String, NDArray],
-                    auxStates: Map[String, NDArray]): Unit = {
+                        argParams: Map[String, NDArray],
+                        auxStates: Map[String, NDArray]): Unit = {
       Model.saveCheckpoint(prefix, epoch + 1, symbol, argParams, auxStates)
     }
   }
@@ -116,7 +116,7 @@ object Utils {
 
   // we can use random output or fixed output by choosing largest probability
   def makeOutput(prob: Array[Float], vocab: Map[Int, String],
-      sample: Boolean = false, temperature: Float = 1f): String = {
+                 sample: Boolean = false, temperature: Float = 1f): String = {
     var idx = -1
     val char = if (sample == false) {
       idx = ((-1f, -1) /: prob.zipWithIndex) { (max, elem) =>

@@ -7,14 +7,14 @@ import ml.dmlc.mxnet.Symbol
 
 object RnnModel {
   class LSTMInferenceModel(numLstmLayer: Int, inputSize: Int, numHidden: Int,
-                              numEmbed: Int, numLabel: Int, argParams: Map[String, NDArray],
-                              ctx: Context = Context.cpu(), dropout: Float = 0f) {
+                           numEmbed: Int, numLabel: Int, argParams: Map[String, NDArray],
+                           ctx: Context = Context.cpu(), dropout: Float = 0f) {
     private val sym = Lstm.lstmInferenceSymbol(numLstmLayer,
-                                                              inputSize,
-                                                              numHidden,
-                                                              numEmbed,
-                                                              numLabel,
-                                                              dropout)
+                                               inputSize,
+                                               numHidden,
+                                               numEmbed,
+                                               numLabel,
+                                               dropout)
     private val batchSize = 1
     private val initC = (for (l <- 0 until numLstmLayer)
                           yield (s"l${l}_init_c" -> Shape(batchSize, numHidden))).toMap
