@@ -16,7 +16,7 @@ We will be using fixed-length input sequence for training. The code is
 adapted from the [char-rnn example for MXNet's Python
 binding](https://github.com/dmlc/mxnet/blob/master/example/rnn/char_lstm.ipynb),
 which demonstrates how to use low-level
-symbolic APIs &lt;/api/symbolic-node&gt; to build customized neural
+[Symbolic API](@ref) to build customized neural
 network models directly.
 
 The most important code snippets of this example is shown and explained
@@ -30,8 +30,7 @@ example.
 LSTM Cells
 ----------
 
-Christopher Olah has a [great blog post about
-LSTM](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) with
+Christopher Olah has a [great blog post about LSTM](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) with
 beautiful and clear illustrations. So we will not repeat the definition
 and explanation of what an LSTM cell is here. Basically, an LSTM cell
 takes input `x`, as well as previous states (including `c` and `h`), and
@@ -116,8 +115,7 @@ character is then encoded as a vector of 0s on all coordinates, and 1 on
 the coordinate corresponding to that character. The
 character-to-coordinate mapping is giving by the vocabulary.
 
-The text sequence data provider implement the data provider API
-&lt;/api/io&gt;. We define the `CharSeqProvider` as below:
+The text sequence data provider implements the [Data Providers](@ref) api. We define the `CharSeqProvider` as below:
 
 The provided data and labels follow the naming convention of inputs used
 when unrolling the LSTM. Note in the code below, apart from
@@ -128,7 +126,7 @@ we will feed the initial states for each sequence from the data
 provider. Since the initial states is always zero, we just need to
 always provide constant zero blobs.
 
-Next we implement the AbstractDataProvider.eachbatch interface for the
+Next we implement the `eachbatch` method from the [`mx.AbstractDataProvider`](@ref) interface for the
 provider. We start by defining the data and label arrays, and the
 `DataBatch` object we will provide in each iteration.
 
@@ -163,7 +161,7 @@ Note we are also using a customized `NLL` evaluation metric, which
 calculate the negative log-likelihood during training. Here is an output
 sample at the end of the training process.
 
-``` {.sourceCode .text}
+```
 ...
 INFO: Speed: 357.72 samples/sec
 INFO: == Epoch 020 ==========
@@ -227,7 +225,7 @@ trained for around half an hour on the Shakespeare dataset. Note all the
 line-breaks, punctuations and upper-lower case letters are produced by
 the sampler itself. I did not do any post-processing.
 
-``` {.sourceCode .text}
+```
 ## Sample 1
 all have sir,
 Away will fill'd in His time, I'll keep her, do not madam, if they here? Some more ha?

@@ -6,14 +6,14 @@ Automatic Installation
 
 To install MXNet.jl, simply type
 
-``` {.sourceCode .julia}
+```julia
 Pkg.add("MXNet")
 ```
 
 in the Julia REPL. Or to use the latest git version of MXNet.jl, use the
 following command instead
 
-``` {.sourceCode .julia}
+```julia
 Pkg.checkout("MXNet")
 ```
 

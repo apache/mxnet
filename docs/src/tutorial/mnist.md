@@ -14,7 +14,7 @@ Simple 3-layer MLP
 This is a tiny 3-layer MLP that could be easily trained on CPU. The
 script starts with
 
-``` {.sourceCode .julia}
+```julia
 using MXNet
 ```
 
@@ -22,7 +22,7 @@ to load the `MXNet` module. Then we are ready to define the network
 architecture via the symbolic API &lt;/user-guide/overview&gt;. We start
 with a placeholder `data` symbol,
 
-``` {.sourceCode .julia}
+```julia
 data = mx.Variable(:data)
 ```
 
@@ -39,16 +39,16 @@ fc3  = mx.FullyConnected(data = act2, name=:fc3, num_hidden=10)
 Note each composition we take the previous symbol as the data argument,
 forming a feedforward chain. The architecture looks like
 
-``` {.sourceCode .julia}
+```
 Input --> 128 units (ReLU) --> 64 units (ReLU) --> 10 units
 ```
 
 where the last 10 units correspond to the 10 output classes (digits
-0,...,9). We then add a final SoftmaxOutput operation to turn the
+0,...,9). We then add a final `SoftmaxOutput` operation to turn the
 10-dimensional prediction to proper probability values for the 10
 classes:
 
-``` {.sourceCode .julia}
+```julia
 mlp  = mx.SoftmaxOutput(data = fc3, name=:softmax)
 ```
 
@@ -56,7 +56,7 @@ As we can see, the MLP is just a chain of layers. For this case, we can
 also use the `mx.chain` macro. The same architecture above can be
 defined as
 
-``` {.sourceCode .julia}
+```julia
 mlp = @mx.chain mx.Variable(:data)             =>
   mx.FullyConnected(name=:fc1, num_hidden=128) =>
   mx.Activation(name=:relu1, act_type=:relu)   =>
@@ -73,14 +73,14 @@ could automatically download the dataset into
 construct the data provider into `mnist-data.jl` so that it could be
 shared by both the MLP example and the LeNet ConvNets example.
 
-``` {.sourceCode .julia}
+```julia
 batch_size = 100
 include("mnist-data.jl")
 train_provider, eval_provider = get_mnist_providers(batch_size)
 ```
 
 If you need to write your own data providers for customized data format,
-please refer to AbstractDataProvider.
+please refer to [`mx.AbstractDataProvider`](@ref).
 
 Given the architecture and data, we can instantiate an *model* to do the
 actual training. `mx.FeedForward` is the built-in model that is suitable
@@ -89,7 +89,7 @@ also specify the *context* on which the computation should be carried
 out. Because this is a really tiny MLP, we will just run on a single CPU
 device.
 
-``` {.sourceCode .julia}
+```julia
 model = mx.FeedForward(mlp, context=mx.cpu())
 ```
 
@@ -102,7 +102,7 @@ The last thing we need to specify is the optimization algorithm (a.k.a.
 *optimizer*) to use. We use the basic SGD with a fixed learning rate 0.1
 and momentum 0.9:
 
-``` {.sourceCode .julia}
+```julia
 optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
 ```
 
@@ -110,13 +110,13 @@ Now we can do the training. Here the `n_epoch` parameter specifies that
 we want to train for 20 epochs. We also supply a `eval_data` to monitor
 validation accuracy on the validation set.
 
-``` {.sourceCode .julia}
+```julia
 mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 ```
 
 Here is a sample output
 
-``` {.sourceCode .text}
+```
 INFO: Start training on [CPU0]
 INFO: Initializing parameters...
 INFO: Creating KVStore...
@@ -143,7 +143,7 @@ that involves convolution and pooling. This architecture for the MNIST
 is usually called the \[LeNet\]\_. The first part of the architecture is
 listed below:
 
-``` {.sourceCode .julia}
+```julia
 # input
 data = mx.Variable(:data)
 
@@ -168,7 +168,7 @@ a tensor of shape `(28,28,1,100)`. The convolution and pooling operates
 in the spatial axis, so `kernel=(5,5)` indicate a square region of
 5-width and 5-height. The rest of the architecture follows as:
 
-``` {.sourceCode .julia}
+```ulia
 # first fully-connected
 fc1   = @mx.chain mx.Flatten(data=conv2) =>
                   mx.FullyConnected(num_hidden=500) =>
@@ -189,7 +189,7 @@ before connecting it to the `FullyConnected` operator.
 The rest of the network is the same as the previous MLP example. As
 before, we can now load the MNIST dataset:
 
-``` {.sourceCode .julia}
+```julia
 batch_size = 100
 include("mnist-data.jl")
 train_provider, eval_provider = get_mnist_providers(batch_size; flat=false)
@@ -200,8 +200,7 @@ tensors instead of 2D matrices because the convolution operators needs
 correct spatial shape information. We then construct a feedforward model
 on GPU, and train it.
 
-``` {.sourceCode .julia}
-#--------------------------------------------------------------------------------
+```julia
 # fit model
 model = mx.FeedForward(lenet, context=mx.gpu())
 
@@ -214,7 +213,7 @@ mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 
 And here is a sample of running outputs:
 
-``` {.sourceCode .text}
+```
 INFO: == Epoch 001 ==========
 INFO: ## Training summary
 INFO:       :accuracy = 0.6750
@@ -237,14 +236,14 @@ Predicting with a trained model is very simple. By calling `mx.predict`
 with the model and a data provider, we get the model output as a Julia
 Array:
 
-``` {.sourceCode .julia}
+```julia
 probs = mx.predict(model, eval_provider)
 ```
 
 The following code shows a stupid way of getting all the labels from the
 data provider, and compute the prediction accuracy manually:
 
-``` {.sourceCode .julia}
+```julia
 # collect all labels from eval data
 labels = Array[]
 for batch in eval_provider

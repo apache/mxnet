@@ -10,7 +10,7 @@ names in the Julia Base module, we wrap them all in a `mx` module. The
 convention of accessing the MXNet.jl interface is the to use the `mx.`
 prefix explicitly:
 
-``` {.sourceCode .julia}
+```julia
 using MXNet
 
 x = mx.zeros(2,3)              # MXNet NDArray
@@ -69,7 +69,7 @@ Most of the convenient functions like `size`, `length`, `ndims`,
 `eltype` on array objects should work out-of-the-box. Although indexing
 is not supported, it is possible to take *slices*:
 
-``` {.sourceCode .julia}
+```julia
 a = mx.ones(2,3)
 b = mx.slice(a, 1:2)
 b[:] = 2
@@ -84,7 +84,7 @@ NDArray object. A slice is always a contiguous piece of memory, so only
 slicing on the *last* dimension is supported. The example above also
 shows a way to set the contents of an NDArray.
 
-``` {.sourceCode .julia}
+```julia
 a = mx.empty(2,3)
 a[:] = 0.5              # set all elements to a scalar
 a[:] = rand(size(a))    # set contents with a Julia Array
@@ -96,7 +96,7 @@ b[:] = a                # copying and assignment between NDArrays
 Note due to the intrinsic design of the Julia language, a normal
 assignment
 
-``` {.sourceCode .julia}
+```julia
 a = b
 ```
 
@@ -104,7 +104,7 @@ does **not** mean copying the contents of `b` to `a`. Instead, it just
 make the variable `a` pointing to a new object, which is `b`. Similarly,
 inplace arithmetics does not work as expected:
 
-``` {.sourceCode .julia}
+```julia
 a = mx.ones(2)
 r = a           # keep a reference to a
 b = mx.ones(2)
@@ -124,7 +124,7 @@ operators like `+=` to get customized behavior.
 Instead, you will need to write `a[:] = a+b`, or if you want *real*
 inplace `+=` operation, MXNet.jl provides a simple macro `@mx.inplace`:
 
-``` {.sourceCode .julia}
+```julia
 @mx.inplace a += b
 macroexpand(:(@mx.inplace a += b))
 # => :(MXNet.mx.add_to!(a,b))
@@ -135,7 +135,7 @@ function call, which invokes into libmxnet to add the contents of `b`
 into `a` directly. For example, the following is the update rule in the
 SGD `Optimizer` (both `grad` and `weight` are NDArray objects):
 
-``` {.sourceCode .julia}
+```julia
 @inplace weight += -lr * (grad_scale * grad + self.weight_decay * weight)
 ```
 
@@ -147,7 +147,7 @@ customized memory allocator designed specifically to handle this kind of
 situations. The following snippet does a simple benchmark on allocating
 temp NDArray vs. pre-allocating:
 
-``` {.sourceCode .julia}
+```julia
 using Benchmark
 using MXNet
 
@@ -210,7 +210,7 @@ push.
 The following example shows how to create a local `KVStore`, initialize
 a value and then pull it back.
 
-``` {.sourceCode .julia}
+```julia
 kv    = mx.KVStore(:local)
 shape = (2,3)
 key   = 3
@@ -241,7 +241,7 @@ design and trade-off of the MXNet symbolic composition system.
 The basic type is `mx.Symbol`. The following is a trivial example of
 composing two symbols with the `+` operation.
 
-``` {.sourceCode .julia}
+```julia
 A = mx.Variable(:A)
 B = mx.Variable(:B)
 C = A + B
@@ -253,7 +253,7 @@ be realized by recursive composition. For example, the following code
 snippet shows a simple 2-layer MLP construction, using a hidden layer of
 128 units and a ReLU activation function.
 
-``` {.sourceCode .julia}
+```julia
 net = mx.Variable(:data)
 net = mx.FullyConnected(data=net, name=:fc1, num_hidden=128)
 net = mx.Activation(data=net, name=:relu1, act_type=:relu)
@@ -284,7 +284,7 @@ the networks, while *parameters* are typically trainable *weights*,
 When composing symbols, their arguments accumulates. We can list all the
 arguments by
 
-``` {.sourceCode .julia}
+```julia
 julia> mx.list_arguments(net)
 6-element Array{Symbol,1}:
  :data         # Input data, name from the first data variable
@@ -298,7 +298,7 @@ julia> mx.list_arguments(net)
 Note the names of the arguments are generated according to the provided
 name for each layer. We can also specify those names explicitly:
 
-``` {.sourceCode .julia}
+```julia
 net = mx.Variable(:data)
 w   = mx.Variable(:myweight)
 net = mx.FullyConnected(data=data, weight=w, name=:fc1, num_hidden=128)
@@ -313,7 +313,7 @@ mx.list_arguments(net)
 The simple fact is that a `Variable` is just a placeholder `mx.Symbol`.
 In composition, we can use arbitrary symbols for arguments. For example:
 
-``` {.sourceCode .julia}
+```julia
 net  = mx.Variable(:data)
 net  = mx.FullyConnected(data=net, name=:fc1, num_hidden=128)
 net2 = mx.Variable(:data2)
@@ -347,7 +347,7 @@ symbol could be inferred automatically. For example, given the input
 shape, and some hyper-parameters like `num_hidden`, the shapes for the
 weights and bias in a neural network could be inferred.
 
-``` {.sourceCode .julia}
+```julia
 net = mx.Variable(:data)
 net = mx.FullyConnected(data=net, name=:fc1, num_hidden=10)
 arg_shapes, out_shapes, aux_shapes = mx.infer_shape(net, data=(10, 64))
@@ -357,7 +357,7 @@ The returned shapes corresponds to arguments with the same order as
 returned by `mx.list_arguments`. The `out_shapes` are shapes for
 outputs, and `aux_shapes` can be safely ignored for now.
 
-``` {.sourceCode .julia}
+```julia
 for (n,s) in zip(mx.list_arguments(net), arg_shapes)
   println("$n => $s")
 end
@@ -381,7 +381,7 @@ A context describes the computation devices (CPUs, GPUs, etc.) and an
 executor will carry out the computation (forward/backward) specified in
 the corresponding symbolic composition.
 
-``` {.sourceCode .julia}
+```julia
 A = mx.Variable(:A)
 B = mx.Variable(:B)
 C = A .* B
