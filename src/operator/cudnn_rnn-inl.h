@@ -150,7 +150,7 @@ class CuDNNRNNOp : public Operator {
                                       ), CUDNN_STATUS_SUCCESS); 
     }
   }
- //
+ 
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -182,6 +182,9 @@ class CuDNNRNNOp : public Operator {
       // get input + output tensors
       Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
       Tensor<gpu, 1, DType> w = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
+
+      param_.seq_length_ = x.shape_[1];
+
       // Tensor Descriptors
       std::vector<cudnnTensorDescriptor_t> x_vec(param_.seq_length_);
       std::vector<cudnnTensorDescriptor_t> y_vec(param_.seq_length_);
@@ -305,38 +308,6 @@ class CuDNNRNNOp : public Operator {
                                           strideA
                                          ), CUDNN_STATUS_SUCCESS);
 
-      // Get temp space sizes
-      CHECK_EQ(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
-                                        rnn_desc_,
-                                        param_.seq_length_,
-                                        x_desc_vec_.data(),
-                                        &workspace_byte_
-                                        ), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnGetRNNTrainingReserveSize(s->dnn_handle_,
-                                        rnn_desc_,
-                                        param_.seq_length_,
-                                        x_desc_vec_.data(),
-                                        &reserve_space_byte_
-                                        ), CUDNN_STATUS_SUCCESS);
-      workspace_size_ = workspace_byte_ / sizeof(DType) + 1;
-      reserve_space_size_ = reserve_space_byte_ / sizeof(DType) + 1;
-
-      // Set param descriptors
-      CHECK_EQ(cudnnCreateFilterDescriptor(&w_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateFilterDescriptor(&dw_desc_), CUDNN_STATUS_SUCCESS);
-      int dim_w[3] = {w.shape_[0], 1, 1};
-      CHECK_EQ(cudnnSetFilterNdDescriptor(w_desc_,
-                                          dtype_,
-                                          format_,
-                                          3,
-                                          dim_w
-                                         ), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetFilterNdDescriptor(dw_desc_,
-                                          dtype_,
-                                          format_,
-                                          3,
-                                          dim_w
-                                         ), CUDNN_STATUS_SUCCESS);
       // Create Dropout descriptors
       CHECK_EQ(cudnnCreateDropoutDescriptor(&dropout_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDropoutGetStatesSize(s->dnn_handle_, 
@@ -359,6 +330,47 @@ class CuDNNRNNOp : public Operator {
                                     direction_,
                                     mode_,
                                     dtype_), CUDNN_STATUS_SUCCESS);
+      // Get temp space sizes     
+      CHECK_EQ(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
+                                        rnn_desc_,
+                                        param_.seq_length_,
+                                        x_desc_vec_.data(),
+                                        &workspace_byte_
+                                        ), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnGetRNNTrainingReserveSize(s->dnn_handle_,
+                                        rnn_desc_,
+                                        param_.seq_length_,
+                                        x_desc_vec_.data(),
+                                        &reserve_space_byte_
+                                        ), CUDNN_STATUS_SUCCESS);
+      workspace_size_ = workspace_byte_ / sizeof(DType);
+      reserve_space_size_ = reserve_space_byte_ / sizeof(DType);
+
+      // check that number of params are correct
+      size_t cudnn_param_size;
+      CHECK_EQ(cudnnGetRNNParamsSize(s->dnn_handle_,
+                                    rnn_desc_,
+                                    x_desc_vec_[0],
+                                    &cudnn_param_size,
+                                    dtype_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
+
+      // Set param descriptors
+      CHECK_EQ(cudnnCreateFilterDescriptor(&w_desc_), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnCreateFilterDescriptor(&dw_desc_), CUDNN_STATUS_SUCCESS);
+      int dim_w[3] = {w.shape_[0], 1, 1};
+      CHECK_EQ(cudnnSetFilterNdDescriptor(w_desc_,
+                                          dtype_,
+                                          format_,
+                                          3,
+                                          dim_w
+                                         ), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnSetFilterNdDescriptor(dw_desc_,
+                                          dtype_,
+                                          format_,
+                                          3,
+                                          dim_w
+                                         ), CUDNN_STATUS_SUCCESS);
 
     }
   }
