@@ -8,7 +8,6 @@
 
 namespace mxnet {
 namespace op {
-
 template<>
 Operator *CreateOp<cpu>(CaffeLossParam param, int dtype) {
   Operator *op = NULL;

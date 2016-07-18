@@ -7,10 +7,7 @@
 #ifndef PLUGIN_CAFFE_CAFFE_LOSS_INL_H_
 #define PLUGIN_CAFFE_CAFFE_LOSS_INL_H_
 
-#include <caffe/layer.hpp>
 #include <caffe/proto/caffe.pb.h>
-#include <caffe/blob.hpp>
-
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -22,8 +19,9 @@
 #include <iostream>
 #include <exception>
 
+#include <caffe/layer.hpp>
+#include <caffe/blob.hpp>
 #include "../../src/operator/operator_common.h"
-
 #include "caffe_common.h"
 #include "caffe_operator_util.h"
 #include "caffe_stream.h"
@@ -34,7 +32,7 @@ namespace mxnet {
 namespace op {
 
 struct CaffeLossParam : public dmlc::Parameter<CaffeLossParam> {
-  caffe::LayerParameter prototxt;
+  ::caffe::LayerParameter prototxt;
   int in_num, out_num;
   float grad_scale;
 
@@ -60,18 +58,18 @@ class CaffeLoss : public Operator {
   explicit CaffeLoss(CaffeLossParam p):param_(p),
                                        setup_(false) {
     std::string type = param_.prototxt.type();
-    CaffeOpInitEntry<Dtype>* e = CaffeOpInitRegistry<Dtype>::Get()->Find(type);
+    caffe::OpInitEntry<Dtype>* e = caffe::OpInitRegistry<Dtype>::Get()->Find(type);
     caffeOp_ = e->gen_f_(param_.prototxt);
     grad_scale_ = (Dtype)param_.grad_scale;
 
-    InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
-    InitCaffeBlobs<Dtype>(&top_, param_.out_num);
+    caffe::InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
+    caffe::InitCaffeBlobs<Dtype>(&top_, param_.out_num);
     flags_.resize(param_.in_num);
   }
 
   ~CaffeLoss() {
-    DelCaffeBlobs(&bot_, param_.in_num);
-    DelCaffeBlobs(&top_, param_.out_num);
+    caffe::DelCaffeBlobs(&bot_, param_.in_num);
+    caffe::DelCaffeBlobs(&top_, param_.out_num);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -80,7 +78,7 @@ class CaffeLoss : public Operator {
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
     // Set mode before forward
-    ::mxnet::CaffeMode::SetMode<xpu>();
+    caffe::CaffeMode::SetMode<xpu>();
     using ::caffe::Blob;
     using std::vector;
     using namespace mshadow;
@@ -98,9 +96,14 @@ class CaffeLoss : public Operator {
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
-    TBlob2CaffeBlob<xpu, Dtype>(caffememtype::Data, bot_.begin(), in_data.begin(), param_.in_num);
-    TBlob2CaffeBlob<xpu, Dtype>(caffememtype::Data, top_.begin(), out_data.begin(), param_.out_num);
-
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
+                                      bot_.begin(),
+                                      in_data.begin(),
+                                      param_.in_num);
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
+                                      top_.begin(),
+                                      out_data.begin(),
+                                      param_.out_num);
     CaffeOpSetup();
     caffeOp_->Forward(bot_, top_);
   }
@@ -121,7 +124,7 @@ class CaffeLoss : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
     // Set mode before backward
-    ::mxnet::CaffeMode::SetMode<xpu>();
+    caffe::CaffeMode::SetMode<xpu>();
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), param_.out_num);
@@ -136,7 +139,10 @@ class CaffeLoss : public Operator {
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
-    TBlob2CaffeBlob<xpu, Dtype>(caffememtype::Grad, bot_.begin(), in_grad.begin(), param_.in_num);
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
+                                      bot_.begin(),
+                                      in_grad.begin(),
+                                      param_.in_num);
     // Pass grad scale to caffe blob
     top_[0]->set_cpu_diff(&grad_scale_);
 
@@ -149,9 +155,9 @@ class CaffeLoss : public Operator {
 
  private:
   CaffeLossParam param_;
-  caffe::Layer<Dtype> *caffeOp_;
+  ::caffe::Layer<Dtype> *caffeOp_;
   Dtype grad_scale_;
-  std::vector<caffe::Blob<Dtype> *> bot_, top_;
+  std::vector< ::caffe::Blob<Dtype> *> bot_, top_;
   std::vector<bool> flags_;
   bool setup_;
 };  // class CaffeLoss
@@ -186,10 +192,10 @@ class CaffeLossProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    using caffe::Blob;
+    using ::caffe::Blob;
     using std::vector;
     if (caffeOp_ == NULL) {
-      entry_ = CaffeOpInitRegistry<float>::Get()->Find(param_.prototxt.type());
+      entry_ = caffe::OpInitRegistry<float>::Get()->Find(param_.prototxt.type());
       caffeOp_ = entry_->gen_f_(this->param_.prototxt);
     }
 
@@ -201,7 +207,7 @@ class CaffeLossProp : public OperatorProperty {
       TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
       auto blob_ptr = new Blob<float>();
-      blob_ptr->Reshape(TShape2Vector(tshape));
+      blob_ptr->Reshape(caffe::TShape2Vector(tshape));
       bot_blobs.push_back(blob_ptr);
     }
 
@@ -213,7 +219,7 @@ class CaffeLossProp : public OperatorProperty {
     // Initialize out shapes
     out_shape->clear();
     for (auto blob : top_blobs) {
-      TShape tshape = Vector2TShape(blob->shape());
+      TShape tshape = caffe::Vector2TShape(blob->shape());
       out_shape->push_back(tshape);
     }
 
@@ -256,8 +262,8 @@ class CaffeLossProp : public OperatorProperty {
 
  private:
   mutable CaffeLossParam param_;
-  mutable CaffeOpInitEntry<float>* entry_;
-  mutable caffe::Layer<float> *caffeOp_;
+  mutable caffe::OpInitEntry<float>* entry_;
+  mutable ::caffe::Layer<float> *caffeOp_;
 };  // class CaffeLossSymbol
 #endif
 

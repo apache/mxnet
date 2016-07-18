@@ -7,29 +7,29 @@
 
 #include <dmlc/logging.h>
 #include <caffe/proto/caffe.pb.h>
-#include <caffe/layer.hpp>
 
 #include <string>
 #include <map>
+#include <caffe/layer.hpp>
 
 #ifndef PLUGIN_CAFFE_CAFFE_OPERATOR_UTIL_H_
 #define PLUGIN_CAFFE_CAFFE_OPERATOR_UTIL_H_
 namespace mxnet {
 namespace op {
-
+namespace caffe {
 
 template<typename Dtype>
-class CaffeOpInitEntry {
+class OpInitEntry {
  public:
-  typedef caffe::Layer<Dtype>* (*pFunc) (caffe::LayerParameter);
+  typedef ::caffe::Layer<Dtype>* (*pFunc) (::caffe::LayerParameter);
 
-  CaffeOpInitEntry(std::string name,
+  OpInitEntry(std::string name,
                    pFunc f) :
                    name_(std::string(name)),
                    gen_f_(f),
                    b_num_(0) {}
 
-  CaffeOpInitEntry<Dtype>& SetBlobNum(int b_num) {
+  OpInitEntry<Dtype>& SetBlobNum(int b_num) {
     b_num_ = b_num;
     return *this;
   }
@@ -40,23 +40,23 @@ class CaffeOpInitEntry {
 };
 
 template<typename Dtype>
-class CaffeOpInitRegistry {
+class OpInitRegistry {
  public:
-  ~CaffeOpInitRegistry() {
-    typename std::map<std::string, CaffeOpInitEntry<Dtype>*>::iterator kv;
+  ~OpInitRegistry() {
+    typename std::map<std::string, OpInitEntry<Dtype>*>::iterator kv;
     for (kv = fmap_.begin(); kv != fmap_.end(); ++kv)
       delete kv->second;
   }
-  typedef caffe::Layer<Dtype>* (*pFunc) (caffe::LayerParameter);
+  typedef ::caffe::Layer<Dtype>* (*pFunc) (::caffe::LayerParameter);
   /*!
    * \brief Internal function to register the required initial params for caffe operator under name.
    * \param name name of the operator 
    * \return ref to the registered entry, used to set properties
    */
-  CaffeOpInitEntry<Dtype>& __REGISTER__(const char* name_str, pFunc f) {
+  OpInitEntry<Dtype>& __REGISTER__(const char* name_str, pFunc f) {
     std::string name(name_str);
     CHECK(fmap_.count(name) == 0) << "Caffe initial param of " << name << " already existed";
-    CaffeOpInitEntry<Dtype> *e = new CaffeOpInitEntry<Dtype>(name, f);
+    OpInitEntry<Dtype> *e = new OpInitEntry<Dtype>(name, f);
     fmap_[name] = e;
     return *e;
   }
@@ -65,7 +65,7 @@ class CaffeOpInitRegistry {
    * \param name name of the operator 
    * \return the corresponding function, can be NULL
    */
-  static CaffeOpInitEntry<Dtype>* Find(const std::string &name) {
+  static OpInitEntry<Dtype>* Find(const std::string &name) {
 #if MSHADOW_USE_CUDNN == 1
     if (!((name.compare("Convolution")) &&
         (name.compare("LCN")) &&
@@ -84,19 +84,19 @@ class CaffeOpInitRegistry {
     return Get()->fmap_.at(name);
   }
 
-  static CaffeOpInitEntry<Dtype>* Find(const char* name_str) {
+  static OpInitEntry<Dtype>* Find(const char* name_str) {
     std::string name(name_str);
-    return CaffeOpInitRegistry::Find(name);
+    return OpInitRegistry::Find(name);
   }
   /*! \return global singleton of the registry */
-  static CaffeOpInitRegistry<Dtype>* Get() {
-    static CaffeOpInitRegistry<Dtype> inst;
+  static OpInitRegistry<Dtype>* Get() {
+    static OpInitRegistry<Dtype> inst;
     return &inst;
   }
 
  private:
   /*! \brief internal registry map */
-  std::map<std::string, CaffeOpInitEntry<Dtype>*> fmap_;
+  std::map<std::string, OpInitEntry<Dtype>*> fmap_;
 };
 
 //--------------------------------------------------------------
@@ -146,9 +146,9 @@ class CaffeOpInitRegistry {
     return new LayerClass<float>(layer_para);\
   }\
 \
-  static ::mxnet::op::CaffeOpInitEntry<float> & \
-  __make_ ## CaffeOpInitEntry ## _ ## Name ##__float__ = \
-      ::mxnet::op::CaffeOpInitRegistry<float>::Get()->__REGISTER__(#Name, \
+  static ::mxnet::op::caffe::OpInitEntry<float> & \
+  __make_ ## OpInitEntry ## _ ## Name ##__float__ = \
+      ::mxnet::op::caffe::OpInitRegistry<float>::Get()->__REGISTER__(#Name, \
                         __make_ ## CaffeOpGenFunc ## _ ## Name ##__float__);\
 \
   static ::caffe::Layer<double>* __make_ ## CaffeOpGenFunc ## _ ## Name ##__double__\
@@ -156,12 +156,13 @@ class CaffeOpInitRegistry {
     return new LayerClass<double>(layer_para);\
   }\
 \
-  static ::mxnet::op::CaffeOpInitEntry<double> & \
-  __make_ ## CaffeOpInitEntry ## _ ## Name ##__double__ = \
-      ::mxnet::op::CaffeOpInitRegistry<double>::Get()->__REGISTER__(#Name, \
+  static ::mxnet::op::caffe::OpInitEntry<double> & \
+  __make_ ## OpInitEntry ## _ ## Name ##__double__ = \
+      ::mxnet::op::caffe::OpInitRegistry<double>::Get()->__REGISTER__(#Name, \
                         __make_ ## CaffeOpGenFunc ## _ ## Name ##__double__)\
 
 
+}  // namespace caffe
 }  // namespace op
 }  // namespace mxnet
 #endif  // PLUGIN_CAFFE_CAFFE_OPERATOR_UTIL_H_

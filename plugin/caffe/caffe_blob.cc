@@ -7,58 +7,56 @@
 #include "caffe_blob.h"
 namespace mxnet {
 namespace op {
-
-using ::mshadow::cpu;
-using ::mshadow::gpu;
+namespace caffe {
 
 template<>
-void SetDataGradToBlob<cpu, float>(caffememtype::caffeMemoryTypes memType,
-                            std::vector<Blob<float>*>::iterator blob,
-                            std::vector<TBlob>::const_iterator itr) {
+void SetDataGradToBlob<mshadow::cpu, float>(caffeMemoryTypes memType,
+                            std::vector<::caffe::Blob<float>*>::iterator blob,
+                            std::vector<mshadow::TBlob>::const_iterator itr) {
   float *data_ptr = reinterpret_cast<float*>((*itr).dptr_);
-  if (memType == caffememtype::Data)
+  if (memType == Data)
     (*blob)->set_cpu_data(data_ptr);
   else
     (*blob)->set_cpu_diff(data_ptr);
 }
 
 template<>
-void SetDataGradToBlob<cpu, double>(caffememtype::caffeMemoryTypes memType,
-                            std::vector<Blob<double>*>::iterator blob,
-                            std::vector<TBlob>::const_iterator itr) {
+void SetDataGradToBlob<mshadow::cpu, double>(caffeMemoryTypes memType,
+                            std::vector<::caffe::Blob<double>*>::iterator blob,
+                            std::vector<mshadow::TBlob>::const_iterator itr) {
   double *data_ptr = reinterpret_cast<double*>((*itr).dptr_);
-  if (memType == caffememtype::Data)
+  if (memType == Data)
     (*blob)->set_cpu_data(data_ptr);
   else
     (*blob)->set_cpu_diff(data_ptr);
 }
 
 template<>
-void SetDataGradToBlob<gpu, float>(caffememtype::caffeMemoryTypes memType,
-                            std::vector<Blob<float>*>::iterator blob,
-                            std::vector<TBlob>::const_iterator itr) {
+void SetDataGradToBlob<mshadow::gpu, float>(caffeMemoryTypes memType,
+                            std::vector<::caffe::Blob<float>*>::iterator blob,
+                            std::vector<mshadow::TBlob>::const_iterator itr) {
   float *data_ptr = reinterpret_cast<float*>((*itr).dptr_);
-  if (memType == caffememtype::Data)
+  if (memType == Data)
     (*blob)->set_gpu_data(data_ptr);
   else
     (*blob)->set_gpu_diff(data_ptr);
 }
 
 template<>
-void SetDataGradToBlob<gpu, double>(caffememtype::caffeMemoryTypes memType,
-                            std::vector<Blob<double>*>::iterator blob,
-                            std::vector<TBlob>::const_iterator itr) {
+void SetDataGradToBlob<mshadow::gpu, double>(caffeMemoryTypes memType,
+                            std::vector<::caffe::Blob<double>*>::iterator blob,
+                            std::vector<mshadow::TBlob>::const_iterator itr) {
   double *data_ptr = reinterpret_cast<double*>((*itr).dptr_);
-  if (memType == caffememtype::Data)
+  if (memType == Data)
     (*blob)->set_gpu_data(data_ptr);
   else
     (*blob)->set_gpu_diff(data_ptr);
 }
 
-TShape Vector2TShape(const std::vector<int> &vec_int) {
-  TShape res;
-  std::vector<index_t> vec_indx;
-  for (index_t i = 0; i < vec_int.size(); ++i)
+mshadow::TShape Vector2TShape(const std::vector<int> &vec_int) {
+  mshadow::TShape res;
+  std::vector<mshadow::index_t> vec_indx;
+  for (int i = 0; i < vec_int.size(); ++i)
     vec_indx.push_back(vec_int[i]);
   // 0-dim represents scalar in caffe
   if (vec_int.size() == 0)
@@ -67,12 +65,13 @@ TShape Vector2TShape(const std::vector<int> &vec_int) {
   return res;
 }
 
-std::vector<int> TShape2Vector(const TShape &tshape) {
+std::vector<int> TShape2Vector(const mshadow::TShape &tshape) {
   std::vector<int> s;
-  for (index_t i =0 ; i < tshape.ndim(); ++i)
+  for (int i =0 ; i < tshape.ndim(); ++i)
     s.push_back(tshape[i]);
   return s;
 }
 
+}  // namespace caffe
 }  // namespace op
 }  // namespace mxnet

@@ -8,13 +8,13 @@
 #ifndef PLUGIN_CAFFE_CAFFE_COMMON_H_
 #define PLUGIN_CAFFE_CAFFE_COMMON_H_
 
-#include <mxnet/operator.h>
-#include<caffe/blob.hpp>
+#include<mxnet/operator.h>
 #include<vector>
+#include<caffe/blob.hpp>
 
 namespace mxnet {
-
-using caffe::Blob;
+namespace op {
+namespace caffe {
 
 /**
  * \brief The class sets caffe's mode before doing forward/backward
@@ -27,16 +27,18 @@ class CaffeMode {
 
 // Initialization funciton called by caffeOp & caffeLoss
 template<typename Dtype>
-void InitCaffeBlobs(std::vector<Blob<Dtype>*>* v, int n_num) {
+void InitCaffeBlobs(std::vector< ::caffe::Blob<Dtype>*>* v, int n_num) {
   for (index_t i=0; i < n_num; ++i)
-    v->push_back(new Blob<Dtype>());
+    v->push_back(new ::caffe::Blob<Dtype>());
 }
 
 template<typename Dtype>
-void DelCaffeBlobs(std::vector<Blob<Dtype>*>* v, int n_num) {
+void DelCaffeBlobs(std::vector< ::caffe::Blob<Dtype>*>* v, int n_num) {
   for (index_t i=0; i < n_num; ++i)
     delete v->at(i);
 }
 
+}  // namespace caffe
+}  // namespace op
 }  // namespace mxnet
 #endif  // PLUGIN_CAFFE_CAFFE_COMMON_H_

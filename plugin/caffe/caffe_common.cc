@@ -9,6 +9,9 @@
 #include"caffe_common.h"
 
 namespace mxnet {
+namespace op {
+namespace caffe {
+
 // Cpu implementation of set_mode
 template<>
 void CaffeMode::SetMode<mshadow::cpu>() {
@@ -21,4 +24,6 @@ void CaffeMode::SetMode<mshadow::gpu>() {
   ::caffe::Caffe::set_mode(::caffe::Caffe::GPU);
 }
 
+}  // namespace caffe
+}  // namespace op
 }  // namespace mxnet

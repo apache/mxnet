@@ -5,11 +5,11 @@
  * \author Haoran Wang 
 */
 #include "./caffe_loss-inl.h"
+
 namespace mxnet {
 namespace op {
-
 template<>
-Operator* CreateOp<gpu>(CaffeLossParam param, int dtype){
+Operator* CreateOp<gpu>(CaffeLossParam param, int dtype) {
   Operator *op = NULL;
   switch (dtype) {
   case mshadow::kFloat32:
