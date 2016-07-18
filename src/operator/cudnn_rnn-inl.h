@@ -92,15 +92,24 @@ class CuDNNRNNOp : public Operator {
       cy_ptr = (in_data[rnn_enum::kCellStateOut].get<gpu, 3, DType>(s)).dptr_;
     }
 
+    CHECK_EQ(x.CheckContiguous(), true);
+    CHECK_EQ(w.CheckContiguous(), true);
+    CHECK_EQ(hx.CheckContiguous(), true);
+    CHECK_EQ(y.CheckContiguous(), true);
+    CHECK_EQ(hy.CheckContiguous(), true);
+
     if(!init_cudnn_){
       Init(s, in_data, out_data);
     } 
 
+    // Get temp space
+    int temp_size = workspace_size_;
+    temp_size += ctx.is_train ? reserve_space_size_ : 0;
+    Tensor<gpu, 1, DType> temp_space =
+      ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
+                              mshadow::Shape1(temp_size), s);
+    
     if (ctx.is_train) { 
-      // training mode
-      Tensor<gpu, 1, DType> temp_space =
-        ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
-                                mshadow::Shape1(workspace_size_ + reserve_space_size_), s);
       CHECK_EQ(cudnnRNNForwardTraining(s->dnn_handle_,
                                       rnn_desc_,
                                       param_.seq_length_,
@@ -125,9 +134,6 @@ class CuDNNRNNOp : public Operator {
                                       ), CUDNN_STATUS_SUCCESS);
     } else {
       // inference mode
-      Tensor<gpu, 1, DType> temp_space =
-          ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
-                                  mshadow::Shape1(workspace_size_), s);
       CHECK_EQ(cudnnRNNForwardInference(s->dnn_handle_,
                                       rnn_desc_,
                                       param_.seq_length_,
@@ -182,8 +188,9 @@ class CuDNNRNNOp : public Operator {
       // get input + output tensors
       Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
       Tensor<gpu, 1, DType> w = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
-
-      param_.seq_length_ = x.shape_[1];
+      param_.seq_length_ = x.shape_[0];
+      param_.batch_size_ = x.shape_[1];
+      param_.input_size_ = x.shape_[2];
 
       // Tensor Descriptors
       std::vector<cudnnTensorDescriptor_t> x_vec(param_.seq_length_);
@@ -193,49 +200,51 @@ class CuDNNRNNOp : public Operator {
       int dimA[3];
       int strideA[3];
       for (int i = 0; i < param_.seq_length_; i++) {
-          CHECK_EQ(cudnnCreateTensorDescriptor(&x_vec[i]), CUDNN_STATUS_SUCCESS);
-          CHECK_EQ(cudnnCreateTensorDescriptor(&y_vec[i]), CUDNN_STATUS_SUCCESS);
-          CHECK_EQ(cudnnCreateTensorDescriptor(&dx_vec[i]), CUDNN_STATUS_SUCCESS);
-          CHECK_EQ(cudnnCreateTensorDescriptor(&dy_vec[i]), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnCreateTensorDescriptor(&x_vec[i]), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnCreateTensorDescriptor(&y_vec[i]), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnCreateTensorDescriptor(&dx_vec[i]), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnCreateTensorDescriptor(&dy_vec[i]), CUDNN_STATUS_SUCCESS);
+        
+        dimA[0] = param_.batch_size_;
+        dimA[1] = param_.input_size_;
+        dimA[2] = 1;
+        dimA[0] = param_.batch_size_;
+        dimA[1] = param_.input_size_;
+        strideA[0] = dimA[2] * dimA[1];
+        strideA[1] = dimA[2];
+        strideA[2] = 1; 
 
-          dimA[0] = x.shape_[0];
-          dimA[1] = x.shape_[2];
-          dimA[2] = 1;
-          strideA[0] = dimA[2] * dimA[1];
-          strideA[1] = dimA[2];
-          strideA[2] = 1; 
+        CHECK_EQ(cudnnSetTensorNdDescriptor(x_vec[i],
+                                  dtype_,
+                                  3,
+                                  dimA,
+                                  strideA
+                                  ), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensorNdDescriptor(dx_vec[i],
+                                  dtype_,
+                                  3,
+                                  dimA,
+                                  strideA
+                                  ), CUDNN_STATUS_SUCCESS);
+        dimA[0] = param_.batch_size_;                        
+        dimA[1] = param_.bidirectional ? param_.state_size_ * 2 : param_.state_size_;
+        dimA[2] = 1;
+        strideA[0] = dimA[2] * dimA[1];
+        strideA[1] = dimA[2];
+        strideA[2] = 1;
 
-          CHECK_EQ(cudnnSetTensorNdDescriptor(x_vec[i],
-                                    dtype_,
-                                    3,
-                                    dimA,
-                                    strideA
-                                    ), CUDNN_STATUS_SUCCESS);
-          CHECK_EQ(cudnnSetTensorNdDescriptor(dx_vec[i],
-                                    dtype_,
-                                    3,
-                                    dimA,
-                                    strideA
-                                    ), CUDNN_STATUS_SUCCESS);
-          dimA[0] = x.shape_[0];                           
-          dimA[1] = param_.bidirectional ? param_.state_size * 2 : param_.state_size;
-          dimA[2] = 1;
-          strideA[0] = dimA[2] * dimA[1];
-          strideA[1] = dimA[2];
-          strideA[2] = 1;
-
-          CHECK_EQ(cudnnSetTensorNdDescriptor(y_vec[i],
-                                    dtype_,
-                                    3,
-                                    dimA,
-                                    strideA
-                                    ), CUDNN_STATUS_SUCCESS);
-          CHECK_EQ(cudnnSetTensorNdDescriptor(dy_vec[i],
-                                    dtype_,
-                                    3,
-                                    dimA,
-                                    strideA
-                                    ), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensorNdDescriptor(y_vec[i],
+                                  dtype_,
+                                  3,
+                                  dimA,
+                                  strideA
+                                  ), CUDNN_STATUS_SUCCESS);
+        CHECK_EQ(cudnnSetTensorNdDescriptor(dy_vec[i],
+                                  dtype_,
+                                  3,
+                                  dimA,
+                                  strideA
+                                  ), CUDNN_STATUS_SUCCESS);
       }
       x_desc_vec_ = x_vec;
       y_desc_vec_ = y_vec;
@@ -243,9 +252,9 @@ class CuDNNRNNOp : public Operator {
       dy_desc_vec_ = dy_vec;
 
       // set the state tensors                       
-      dimA[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
-      dimA[1] = x.shape_[0]; //minibatch
-      dimA[2] = param_.state_size;
+      dimA[0] = param_.num_layers_ * (param_.bidirectional ? 2 : 1);
+      dimA[1] = param_.batch_size_;
+      dimA[2] = param_.state_size_;
       strideA[0] = dimA[2] * dimA[1];
       strideA[1] = dimA[2];
       strideA[2] = 1;
@@ -323,8 +332,8 @@ class CuDNNRNNOp : public Operator {
       // RNN descriptors       
       CHECK_EQ(cudnnCreateRNNDescriptor(&rnn_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetRNNDescriptor(rnn_desc_,
-                                    param_.state_size,
-                                    param_.num_layers,
+                                    param_.state_size_,
+                                    param_.num_layers_,
                                     dropout_desc_,
                                     input_mode_,
                                     direction_,
