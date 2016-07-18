@@ -46,7 +46,7 @@ def write_list(path_out, image_list):
 
 def make_list(args):
     image_list = list_image(args.root, args.recursive, args.exts)
-    if args.shuffle is True:
+    if args.shuffle == "True":
         random.seed(100)
         random.shuffle(image_list)
     N = len(image_list)
