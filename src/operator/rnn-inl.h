@@ -67,20 +67,19 @@ inline int rnn_param_size(int layerNum,
 }
 
 struct RNNParam : public dmlc::Parameter<RNNParam> {
-  uint32_t state_size;
-  uint32_t num_layers;
-  bool batch_first;
+  uint32_t state_size_;
+  uint32_t num_layers_;
   bool bidirectional;
   int mode;
   float p, pkeep_;
-  int seq_length_;
+  int seq_length_, batch_size_, input_size_;
   bool lstm_q_; // whether type is lstm 
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
-    DMLC_DECLARE_FIELD(state_size)
+    DMLC_DECLARE_FIELD(state_size_)
     .describe("size of the state for each layer");
 
-    DMLC_DECLARE_FIELD(num_layers)
+    DMLC_DECLARE_FIELD(num_layers_)
     .describe("number of stacked layers");
 
     DMLC_DECLARE_FIELD(bidirectional).set_default(false)
@@ -179,35 +178,35 @@ class RNNProp : public OperatorProperty {
     const TShape &dshape = (*in_shape)[rnn_enum::kData];
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 3) \
-        << "Input data should be rank-3 tensor of dim (seqLength, batch, inputDim).";
-    // Infer hidden state + cell state
-    int batchSize = dshape[0];
-    int inputSize = dshape[2];
+        << "Input data should be rank-3 tensor of dim (sequence length, batch size, input size)";
+    // Get input sizes
+    int batch_size = dshape[1];
+    int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
-    int total_layers = numDirections * param_.num_layers; // double for bidirectional
+    int total_layers = numDirections * param_.num_layers_; // double for bidirectional
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kStateIn,
-                       Shape3(total_layers, batchSize, param_.state_size));
+                       Shape3(total_layers, batch_size, param_.state_size_));
     if (param_.mode == rnn_enum::kLstm){
       SHAPE_ASSIGN_CHECK(*in_shape,
                         rnn_enum::kCellStateIn,
-                        Shape3(total_layers, batchSize, param_.state_size));
+                        Shape3(total_layers, batch_size, param_.state_size_));
     }
     // infer weight size
-    int weight_size = rnn_param_size(param_.num_layers,
-                                    inputSize,
-                                    param_.state_size,
+    int weight_size = rnn_param_size(param_.num_layers_,
+                                    input_size,
+                                    param_.state_size_,
                                     param_.bidirectional,
                                     param_.mode);
     SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(weight_size));
     // infer output size
     TShape oshape = dshape;
-    oshape[2] = numDirections * param_.state_size;
+    oshape[2] = numDirections * param_.state_size_;
     // infer output state size
     TShape outStateShape = dshape;
     outStateShape[0] = total_layers;
-    outStateShape[1] = batchSize;
-    outStateShape[2] = param_.state_size;
+    outStateShape[1] = batch_size;
+    outStateShape[2] = param_.state_size_;
 
     out_shape->clear();
     out_shape->push_back(oshape);
