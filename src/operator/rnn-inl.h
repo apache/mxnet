@@ -24,7 +24,6 @@ namespace rnn_enum {
   enum RNNOpInputs {kData, kParams, kStateIn, kCellStateIn};
   enum RNNOpOutputs {kOut, kStateOut, kCellStateOut};
   enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
-  enum RNNDirectionType {kUnidirectional, kBidirectional};
   enum RNNOpResource {kTempSpace};
 }
 
@@ -55,26 +54,27 @@ inline int rnn_single_param_size(int inputSize,
 inline int rnn_param_size(int layerNum,
                           int inputSize,
                           int hiddenSize,
-                          int direction,
+                          bool bidirectional,
                           int mode){
   // get size of first layer
   int size = rnn_single_param_size(inputSize, hiddenSize, mode);
   // get size of remaining layers
-  if(direction == rnn_enum::kUnidirectional)
-    size += (layerNum - 1) * rnn_single_param_size(hiddenSize, hiddenSize, mode);
-  else // bidirectional case: input size increases by 2
+  if(bidirectional)
     size += (layerNum - 1) * rnn_single_param_size(2 * hiddenSize, hiddenSize, mode);
+  else 
+    size += (layerNum - 1) * rnn_single_param_size(hiddenSize, hiddenSize, mode);  
   return size;
 }
 
 struct RNNParam : public dmlc::Parameter<RNNParam> {
   uint32_t state_size;
   uint32_t num_layers;
-  uint64_t workspace;
   bool batch_first;
-  int direction;
+  bool bidirectional;
   int mode;
-  float p;
+  float p, pkeep_;
+  int seq_length_;
+  bool lstm_q_; // whether type is lstm 
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
     DMLC_DECLARE_FIELD(state_size)
@@ -83,13 +83,8 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     DMLC_DECLARE_FIELD(num_layers)
     .describe("number of stacked layers");
 
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
-    .describe("Tmp workspace for RNN (MB)");
-
-    DMLC_DECLARE_FIELD(direction)
-    .add_enum("unidirectional", rnn_enum::kUnidirectional)
-    .add_enum("bidirectional", rnn_enum::kBidirectional)
-    .describe("specifies the recurrence pattern");
+    DMLC_DECLARE_FIELD(bidirectional).set_default(false)
+    .describe("whether to use bidirectional recurrent layers");
 
     DMLC_DECLARE_FIELD(mode)
     .add_enum("rnn_relu", rnn_enum::kRnnRelu)
@@ -108,9 +103,12 @@ template<typename xpu, typename DType>
 class RNNOp : public Operator {
  public:
   explicit RNNOp(RNNParam p) {
-    this->param_ = p;
     // convert MBytes first to Bytes and then to elements.
-    param_.workspace = (param_.workspace << 20) / sizeof(real_t);
+    param_.pkeep_ = 1.0f - param_.p;
+    if(param_.mode == rnn_enum::kLstm)
+      param_.lstm_q_ = true;
+    else
+      param_.lstm_q_ = false;
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -185,10 +183,7 @@ class RNNProp : public OperatorProperty {
     // Infer hidden state + cell state
     int batchSize = dshape[0];
     int inputSize = dshape[2];
-    int numDirections = 1;
-    if(param_.direction == rnn_enum::kBidirectional){
-      numDirections = 2;
-    }
+    int numDirections = param_.bidirectional ? 2 : 1;
     int total_layers = numDirections * param_.num_layers; // double for bidirectional
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kStateIn,
@@ -202,7 +197,7 @@ class RNNProp : public OperatorProperty {
     int weight_size = rnn_param_size(param_.num_layers,
                                     inputSize,
                                     param_.state_size,
-                                    param_.direction,
+                                    param_.bidirectional,
                                     param_.mode);
     SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(weight_size));
     // infer output size
