@@ -194,8 +194,10 @@ class PoolingProp : public OperatorProperty {
         oshape[2] = 1;
         oshape[3] = 1;
       } else {
-        int64_t oshape_2 = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
-        int64_t oshape_3 = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
+        int64_t oshape_2 = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0])
+                           / param_.stride[0];
+        int64_t oshape_3 = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1])
+                           / param_.stride[1];
         CHECK(oshape_2 > 0 && oshape_3 > 0) << "Pooling: kernel size exceed input";
         oshape[2] = oshape_2;
         oshape[3] = oshape_3;
@@ -209,9 +211,12 @@ class PoolingProp : public OperatorProperty {
         oshape[3] = 1;
         oshape[4] = 1;
       } else {
-        int64_t oshape_2 = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
-        int64_t oshape_3 = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
-        int64_t oshape_4 = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) / param_.stride[2];
+        int64_t oshape_2 = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0])
+                           / param_.stride[0];
+        int64_t oshape_3 = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1])
+                           / param_.stride[1];
+        int64_t oshape_4 = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2])
+                           / param_.stride[2];
         CHECK(oshape_2 > 0 && oshape_3 > 0 && oshape_4 > 0) << "Pooling: kernel size exceed input";
         oshape[2] = oshape_2;
         oshape[3] = oshape_3;
