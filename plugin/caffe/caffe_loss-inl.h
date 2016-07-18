@@ -64,14 +64,14 @@ class CaffeLoss : public Operator {
     caffeOp_ = e->gen_f_(param_.prototxt);
     grad_scale_ = (Dtype)param_.grad_scale;
 
-    InitCaffeBlobs<Dtype>(bot_, param_.in_num);
-    InitCaffeBlobs<Dtype>(top_, param_.out_num);
+    InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
+    InitCaffeBlobs<Dtype>(&top_, param_.out_num);
     flags_.resize(param_.in_num);
   }
 
   ~CaffeLoss() {
-    DelCaffeBlobs(bot_, param_.in_num);
-    DelCaffeBlobs(top_, param_.out_num);
+    DelCaffeBlobs(&bot_, param_.in_num);
+    DelCaffeBlobs(&top_, param_.out_num);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -107,7 +107,7 @@ class CaffeLoss : public Operator {
 
   // Set up caffe op with real data
   void CaffeOpSetup() {
-    if (!setup_ ) {
+    if (!setup_) {
       setup_ = true;
       caffeOp_->SetUp(bot_, top_);
     }
@@ -140,7 +140,7 @@ class CaffeLoss : public Operator {
     // Pass grad scale to caffe blob
     top_[0]->set_cpu_diff(&grad_scale_);
 
-    // Set BP flag 
+    // Set BP flag
     for (index_t i = 0; i < param_.in_num; ++i)
       flags_[i] = req[i] != kNullOp;
 
@@ -154,7 +154,7 @@ class CaffeLoss : public Operator {
   std::vector<caffe::Blob<Dtype> *> bot_, top_;
   std::vector<bool> flags_;
   bool setup_;
-};  // class CaffeLoss 
+};  // class CaffeLoss
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
@@ -263,4 +263,4 @@ class CaffeLossProp : public OperatorProperty {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // PLUGIN_CAFFE_CAFFE_OPERATOR_INL_H_
+#endif  // PLUGIN_CAFFE_CAFFE_LOSS_INL_H_

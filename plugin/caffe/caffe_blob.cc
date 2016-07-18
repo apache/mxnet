@@ -15,7 +15,7 @@ template<>
 void SetDataGradToBlob<cpu, float>(caffememtype::caffeMemoryTypes memType,
                             std::vector<Blob<float>*>::iterator blob,
                             std::vector<TBlob>::const_iterator itr) {
-  float *data_ptr = (float*)(*itr).dptr_;
+  float *data_ptr = reinterpret_cast<float*>((*itr).dptr_);
   if (memType == caffememtype::Data)
     (*blob)->set_cpu_data(data_ptr);
   else
@@ -26,7 +26,7 @@ template<>
 void SetDataGradToBlob<cpu, double>(caffememtype::caffeMemoryTypes memType,
                             std::vector<Blob<double>*>::iterator blob,
                             std::vector<TBlob>::const_iterator itr) {
-  double *data_ptr = (double*)(*itr).dptr_;
+  double *data_ptr = reinterpret_cast<double*>((*itr).dptr_);
   if (memType == caffememtype::Data)
     (*blob)->set_cpu_data(data_ptr);
   else
@@ -37,7 +37,7 @@ template<>
 void SetDataGradToBlob<gpu, float>(caffememtype::caffeMemoryTypes memType,
                             std::vector<Blob<float>*>::iterator blob,
                             std::vector<TBlob>::const_iterator itr) {
-  float *data_ptr = (float*)(*itr).dptr_;
+  float *data_ptr = reinterpret_cast<float*>((*itr).dptr_);
   if (memType == caffememtype::Data)
     (*blob)->set_gpu_data(data_ptr);
   else
@@ -48,7 +48,7 @@ template<>
 void SetDataGradToBlob<gpu, double>(caffememtype::caffeMemoryTypes memType,
                             std::vector<Blob<double>*>::iterator blob,
                             std::vector<TBlob>::const_iterator itr) {
-  double *data_ptr = (double*)(*itr).dptr_;
+  double *data_ptr = reinterpret_cast<double*>((*itr).dptr_);
   if (memType == caffememtype::Data)
     (*blob)->set_gpu_data(data_ptr);
   else

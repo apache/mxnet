@@ -62,16 +62,16 @@ class CaffeOperator : public Operator {
     CaffeOpInitEntry<Dtype>* e = CaffeOpInitRegistry<Dtype>::Get()->Find(type);
     caffeOp_ = e->gen_f_(param_.prototxt);
 
-    InitCaffeBlobs<Dtype>(bot_, param_.in_num);
-    InitCaffeBlobs<Dtype>(top_, param_.out_num);
-    InitCaffeBlobs<Dtype>(wei_, param_.w_num);
+    InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
+    InitCaffeBlobs<Dtype>(&top_, param_.out_num);
+    InitCaffeBlobs<Dtype>(&wei_, param_.w_num);
     flags_.resize(param_.in_num);
   }
 
   ~CaffeOperator() {
-    DelCaffeBlobs(bot_, param_.in_num);
-    DelCaffeBlobs(top_, param_.out_num);
-    DelCaffeBlobs(wei_, param_.w_num);
+    DelCaffeBlobs(&bot_, param_.in_num);
+    DelCaffeBlobs(&top_, param_.out_num);
+    DelCaffeBlobs(&wei_, param_.w_num);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -111,14 +111,14 @@ class CaffeOperator : public Operator {
                       in_data.begin() + param_.in_num,
                       param_.w_num);
       caffeOp_->SetBlobs(wei_);
-    }    
+    }
 
     caffeOp_->Forward(bot_, top_);
   }
 
   // Set up caffe op with real data
   void CaffeOpSetup() {
-    if (!setup_ ) {
+    if (!setup_) {
       setup_ = true;
       caffeOp_->SetUp(bot_, top_);
     }
@@ -174,7 +174,7 @@ class CaffeOperator : public Operator {
   }
 
   void HandleOpReq(mshadow::Stream<xpu>*s, OpReqType req, const TBlob* in_g) {
-    if ((req == kWriteInplace) || (req == kWriteTo))
+    if ((req == kWriteInplace) || (req == kWriteTo)) {
       switch (in_g->shape_.ndim()) {
         case 1: CleanTBlob<1>(s, req, in_g); break;
         case 2: CleanTBlob<2>(s, req, in_g); break;
@@ -184,6 +184,7 @@ class CaffeOperator : public Operator {
           LOG(FATAL) << "unknown expected weight dim" << in_g->shape_.ndim();
           break;
       }
+    }
   }
 
   template<index_t dim>
@@ -238,7 +239,7 @@ class CaffeOperatorProp : public OperatorProperty {
     else if (!type.compare("Embed"))
       blob_num = (param_.prototxt.embed_param().bias_term())?2:1;
 
-    CHECK(blob_num>=0);
+    CHECK_GE(blob_num, 0);
     return blob_num;
   }
 

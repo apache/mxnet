@@ -27,16 +27,16 @@ class CaffeMode {
 
 // Initialization funciton called by caffeOp & caffeLoss
 template<typename Dtype>
-void InitCaffeBlobs(std::vector<Blob<Dtype>*>& v, int n_num) {
-  for (index_t i=0; i<n_num; ++i)
-    v.push_back(new Blob<Dtype>());
+void InitCaffeBlobs(std::vector<Blob<Dtype>*>* v, int n_num) {
+  for (index_t i=0; i < n_num; ++i)
+    v->push_back(new Blob<Dtype>());
 }
 
 template<typename Dtype>
-void DelCaffeBlobs(std::vector<Blob<Dtype>*>& v, int n_num) {
-  for (index_t i=0; i<n_num; ++i)
-    delete v[i];
+void DelCaffeBlobs(std::vector<Blob<Dtype>*>* v, int n_num) {
+  for (index_t i=0; i < n_num; ++i)
+    delete v->at(i);
 }
 
 }  // namespace mxnet
-#endif  // PLUGIN_CAFFE_CAFFE_BASE_H_
+#endif  // PLUGIN_CAFFE_CAFFE_COMMON_H_

@@ -42,10 +42,9 @@ class CaffeOpInitEntry {
 template<typename Dtype>
 class CaffeOpInitRegistry {
  public:
-
   ~CaffeOpInitRegistry() {
     typename std::map<std::string, CaffeOpInitEntry<Dtype>*>::iterator kv;
-    for (kv = fmap_.begin(); kv != fmap_.end(); ++ kv)
+    for (kv = fmap_.begin(); kv != fmap_.end(); ++kv)
       delete kv->second;
   }
   typedef caffe::Layer<Dtype>* (*pFunc) (caffe::LayerParameter);
@@ -67,15 +66,14 @@ class CaffeOpInitRegistry {
    * \return the corresponding function, can be NULL
    */
   static CaffeOpInitEntry<Dtype>* Find(const std::string &name) {
-
 #if MSHADOW_USE_CUDNN == 1
-    if (!((name.compare("Convolution"))&&
-        (name.compare("LCN"))&&
-        (name.compare("LRN"))&&
-        (name.compare("Pooling"))&&
-        (name.compare("ReLU"))&&
-        (name.compare("Sigmoid"))&&
-        (name.compare("Softmax"))&&
+    if (!((name.compare("Convolution")) &&
+        (name.compare("LCN")) &&
+        (name.compare("LRN")) &&
+        (name.compare("Pooling")) &&
+        (name.compare("ReLU")) &&
+        (name.compare("Sigmoid")) &&
+        (name.compare("Softmax")) &&
         (name.compare("TanH")))) {
       std::string cudnn_name = "CuDNN"+name;
       CHECK(Get()->fmap_.count(cudnn_name) != 0) << "Not found caffe layer:" << cudnn_name;

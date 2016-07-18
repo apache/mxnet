@@ -41,7 +41,7 @@ template<typename Device, typename Dtype>
 void TBlob2CaffeBlob(caffememtype::caffeMemoryTypes memType,
                      typename std::vector<Blob<Dtype>*>::iterator blob,
                      typename std::vector<TBlob>::const_iterator tblob,
-                     int n=1) {
+                     int n = 1) {
   for (index_t i = 0; i < n; ++i, ++blob, ++tblob) {
     (*blob)->Reshape(TShape2Vector((*tblob).shape_));
     SetDataGradToBlob<Device, Dtype>(memType, blob, tblob);
