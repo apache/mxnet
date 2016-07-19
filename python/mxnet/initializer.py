@@ -92,6 +92,7 @@ class Initializer(object):
         raise ValueError('Unknown initialization pattern for %s' % name)
     # pylint: enable=no-self-use, missing-docstring, invalid-name
 
+
 class Load(object):
     """Initialize by loading pretrained param from file or dict
 
@@ -133,6 +134,7 @@ class Load(object):
             self.default_init(name, arr)
             if self.verbose:
                 logging.info('Initialized %s by default', name)
+
 
 class Mixed(object):
     """Initialize with mixed Initializer
@@ -185,6 +187,7 @@ class Normal(Initializer):
 
     def _init_weight(self, _, arr):
         random.normal(0, self.sigma, out=arr)
+
 
 class Orthogonal(Initializer):
     """Intialize weight as Orthogonal matrix
@@ -265,3 +268,19 @@ class Xavier(Initializer):
             random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
+
+class MSRAPrelu(Xavier):
+    """Initialize the weight with initialization scheme from
+        Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+
+    Parameters
+    ----------
+    factor_type: str, optional
+        Use ```avg```, ```in```, or ```out``` to init
+
+    slope: float, optional
+        initial slope of any PReLU (or similar) nonlinearities.
+    """
+    def __init__(self, factor_type="avg", slope=0.25):
+        magnitude = 2. / (1 + slope ** 2)
+        super(MSRAPrelu, self).__init__("gaussian", factor_type, magnitude)
