@@ -144,18 +144,28 @@ class RNNProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     if (param_.mode == rnn_enum::kLstm) {
-      return {"data", "weight", "state", "cell_state"};
+      return {"data", "parameters", "state", "cell_state"};
     } else {
-      return {"data", "weight", "state"};
+      return {"data", "parameters", "state"};
     }
   }
 
   std::vector<std::string> ListOutputs() const override {
-    if (param_.mode == rnn_enum::kLstm) {
-      return {"output", "final_state", "final_state_cell"};
-    } else {
-      return {"output", "final_state"};
-    }
+    if (param_.mode == rnn_enum::kLstm)
+      return {"output", "state", "state_cell"};
+    else 
+      return {"output", "state"};
+  }
+
+  int NumOutputs() const override {
+    if (param_.mode == rnn_enum::kLstm)
+      return 3;
+    else 
+      return 2;
+  }
+
+  int NumVisibleOutputs() const override {
+    return 1;
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -171,15 +181,15 @@ class RNNProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (param_.mode == rnn_enum::kLstm) {
-      CHECK_EQ(in_shape->size(), 4) << "Input:[data, weight, state, cell_state]";
+      CHECK_EQ(in_shape->size(), 4) << "Input:[data, parameters, state, cell_state]";
     } else {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, state]";
+      CHECK_EQ(in_shape->size(), 3) << "Input:[data, parameters, state]";
     }
     const TShape &dshape = (*in_shape)[rnn_enum::kData];
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 3) \
-        << "Input data should be rank-3 tensor of dim (sequence length, batch size, input size)";
-    // Get input sizes
+        << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
+    // data: [sequence len, batch, input dimension]
     int batch_size = dshape[1];
     int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
@@ -192,17 +202,16 @@ class RNNProp : public OperatorProperty {
                         rnn_enum::kCellStateIn,
                         Shape3(total_layers, batch_size, param_.state_size_));
     }
-    // infer weight size
-    int weight_size = rnn_param_size(param_.num_layers_,
+    // calculate parameter vector length
+    int param_size = rnn_param_size(param_.num_layers_,
                                     input_size,
                                     param_.state_size_,
                                     param_.bidirectional,
                                     param_.mode);
-    SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(weight_size));
-    // infer output size
+    SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
+    // output: [sequence len, batch, output size]
     TShape oshape = dshape;
     oshape[2] = numDirections * param_.state_size_;
-    // infer output state size
     TShape outStateShape = dshape;
     outStateShape[0] = total_layers;
     outStateShape[1] = batch_size;
