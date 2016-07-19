@@ -406,7 +406,7 @@ class DataParallelExecutorManager(symbol: Symbol,
   private val trainExecs =
     ctx.zipWithIndex.map { case (context, i) =>
       val dataShapes =
-        trainData.provideData.map { case (name: String, shape: Shape) =>
+        (trainData.provideData ++ trainData.provideLabel).map { case (name: String, shape: Shape) =>
           (name, Shape(slices(i)._2 - slices(i)._1) ++ shape.drop(1))
         }
       symbol.simpleBind(context, "write", shapeDict = dataShapes)
