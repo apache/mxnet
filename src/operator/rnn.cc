@@ -20,7 +20,7 @@ Operator *CreateOp<cpu>(RNNParam param, int dtype) {
 }
 
 Operator *RNNProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                                     std::vector<int> *in_type) const {
+                                     std::vector<int> *in_type) const {                                 
   std::vector<TShape> out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
@@ -34,7 +34,7 @@ MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
 .describe("Apply a recurrent layer to input.")
 .add_argument("data", "Symbol", "Input data to RNN")
 .add_argument("parameters", "Symbol", "Vector of all RNN trainable parameters")
-.add_argument("hidden_state", "Symbol", "initial hidden state of the RNN")
+.add_argument("state", "Symbol", "initial hidden state of the RNN")
 .add_argument("cell_state", "Symbol", "initial cell state for LSTM networks (only for LSTM)")
 .add_arguments(RNNParam::__FIELDS__());
 }  // namespace op
