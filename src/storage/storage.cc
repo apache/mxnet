@@ -86,13 +86,13 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
 void StorageImpl::Free(Storage::Handle handle) {
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
-  storage::StorageManager *maneger = device.Get(
+  storage::StorageManager *manager = device.Get(
       ctx.dev_id, []() {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
   this->ActivateDevice(ctx);
-  maneger->Free(handle.dptr, handle.size);
+  manager->Free(handle.dptr, handle.size);
 }
 
 std::shared_ptr<Storage> Storage::_GetSharedRef() {
