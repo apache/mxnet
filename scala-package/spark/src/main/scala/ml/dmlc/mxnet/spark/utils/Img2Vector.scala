@@ -12,7 +12,7 @@ import org.apache.spark.input._
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 
 /**
- * Convert image directory into Vectorized RDD 
+ * Convert image directory into Vectorized RDD
  * @author Yuance.Li
  */
 object Img2Vector{
