@@ -21,8 +21,8 @@ namespace mxnet {
 namespace op {
 
 namespace rnn_enum {
-  enum RNNOpInputs {kData, kParams, kStateIn, kCellStateIn};
-  enum RNNOpOutputs {kOut, kStateOut, kCellStateOut};
+  enum RNNOpInputs {kData, kParams, kState, kStateCell};
+  enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
   enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
   enum RNNOpResource {kTempSpace};
 }
@@ -195,11 +195,11 @@ class RNNProp : public OperatorProperty {
     int numDirections = param_.bidirectional ? 2 : 1;
     int total_layers = numDirections * param_.num_layers_; // double for bidirectional
     SHAPE_ASSIGN_CHECK(*in_shape,
-                       rnn_enum::kStateIn,
+                       rnn_enum::kState,
                        Shape3(total_layers, batch_size, param_.state_size_));
     if (param_.mode == rnn_enum::kLstm){
       SHAPE_ASSIGN_CHECK(*in_shape,
-                        rnn_enum::kCellStateIn,
+                        rnn_enum::kStateCell,
                         Shape3(total_layers, batch_size, param_.state_size_));
     }
     // calculate parameter vector length
