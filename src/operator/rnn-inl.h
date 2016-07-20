@@ -144,7 +144,7 @@ class RNNProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     if (param_.mode == rnn_enum::kLstm) {
-      return {"data", "parameters", "state", "cell_state"};
+      return {"data", "parameters", "state", "state_cell"};
     } else {
       return {"data", "parameters", "state"};
     }
@@ -164,9 +164,9 @@ class RNNProp : public OperatorProperty {
       return 2;
   }
 
-  int NumVisibleOutputs() const override {
-    return 1;
-  }
+  // int NumVisibleOutputs() const override {
+  //   return 1;
+  // }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
