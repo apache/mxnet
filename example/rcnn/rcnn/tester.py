@@ -19,7 +19,7 @@ def pred_eval(detector, test_data, imdb, vis=False):
     """
     assert not test_data.shuffle
 
-    thresh = 0.1
+    thresh = 0.05
     # limit detections to max_per_image over all classes
     max_per_image = 100
 
@@ -35,15 +35,17 @@ def pred_eval(detector, test_data, imdb, vis=False):
         if i % 10 == 0:
             print 'testing {}/{}'.format(i, imdb.num_images)
 
-        scores, boxes = detector.im_detect(databatch.data['data'], databatch.data['rois'])
-
-        # we used scaled image & roi to train, so it is necessary to transform them back
-        # visualization should also be from the original size
-        im_path = imdb.image_path_from_index(imdb.image_set_index[i])
-        im = cv2.imread(im_path)
-        im_height = im.shape[0]
-        scale = float(databatch.data['data'].shape[2]) / float(im_height)
-        im = image_processing.transform(im, config.PIXEL_MEANS)
+        if config.TEST.HAS_RPN:
+            scores, boxes = detector.im_detect(databatch.data['data'], im_info=databatch.data['im_info'])
+            scale = databatch.data['im_info'][0, 2]
+        else:
+            scores, boxes = detector.im_detect(databatch.data['data'], roi_array=databatch.data['rois'])
+            # we used scaled image & roi to train, so it is necessary to transform them back
+            # visualization should also be from the original size
+            im_path = imdb.image_path_from_index(imdb.image_set_index[i])
+            im = cv2.imread(im_path)
+            im_height = im.shape[0]
+            scale = float(databatch.data['data'].shape[2]) / float(im_height)
 
         for j in range(1, imdb.num_classes):
             indexes = np.where(scores[:, j] > thresh)[0]
@@ -64,7 +66,11 @@ def pred_eval(detector, test_data, imdb, vis=False):
 
         boxes_this_image = [[]] + [all_boxes[j][i] for j in range(1, imdb.num_classes)]
         if vis:
-            vis_all_detection(im, boxes_this_image,
+            # visualize the testing scale
+            for box in boxes_this_image:
+                if isinstance(box, np.ndarray):
+                    box *= scale
+            vis_all_detection(databatch.data['data'], boxes_this_image,
                               imdb_classes=imdb.classes)
         i += 1
 
@@ -78,7 +84,7 @@ def pred_eval(detector, test_data, imdb, vis=False):
     imdb.evaluate_detections(all_boxes)
 
 
-def vis_all_detection(im_array, detections, imdb_classes=None, thresh=0.):
+def vis_all_detection(im_array, detections, imdb_classes=None, thresh=0.7):
     """
     visualize all detections in one image
     :param im_array: [b=1 c h w] in rgb
@@ -101,8 +107,9 @@ def vis_all_detection(im_array, detections, imdb_classes=None, thresh=0.):
                 rect = plt.Rectangle((bbox[0], bbox[1]),
                                      bbox[2] - bbox[0],
                                      bbox[3] - bbox[1], fill=False,
-                                     edgecolor=color, linewidth=2)
+                                     edgecolor=color, linewidth=3.5)
                 plt.gca().add_patch(rect)
-                plt.gca().annotate('{} {:.3f}'.format(imdb_classes[j], score),
-                                   rect.get_xy(), color='w')
+                plt.gca().text(bbox[0], bbox[1] - 2,
+                               '{:s} {:.3f}'.format(imdb_classes[j], score),
+                               bbox=dict(facecolor=color, alpha=0.5), fontsize=12, color='white')
     plt.show()
