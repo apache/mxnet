@@ -41,6 +41,12 @@ class CuDNNRNNOp : public Operator {
     }
     // RNN Direction
     direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
+    // Other
+    param_.pkeep_ = 1.0f - param_.p;
+    if(param_.mode == rnn_enum::kLstm)
+      param_.lstm_q_ = true;
+    else
+      param_.lstm_q_ = false;
   }
 
   ~CuDNNRNNOp() {
@@ -212,7 +218,6 @@ class CuDNNRNNOp : public Operator {
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
-    
     CHECK_EQ(cudnnRNNBackwardData(s->dnn_handle_,
                                 rnn_desc_,
                                 param_.seq_length_,

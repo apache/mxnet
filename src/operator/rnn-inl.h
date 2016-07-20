@@ -59,8 +59,10 @@ inline int rnn_param_size(int layerNum,
   // get size of first layer
   int size = rnn_single_param_size(inputSize, hiddenSize, mode);
   // get size of remaining layers
-  if(bidirectional)
+  if(bidirectional){
     size += (layerNum - 1) * rnn_single_param_size(2 * hiddenSize, hiddenSize, mode);
+    size *= 2;
+  }
   else 
     size += (layerNum - 1) * rnn_single_param_size(hiddenSize, hiddenSize, mode);  
   return size;
@@ -102,12 +104,6 @@ template<typename xpu, typename DType>
 class RNNOp : public Operator {
  public:
   explicit RNNOp(RNNParam p) {
-    // convert MBytes first to Bytes and then to elements.
-    param_.pkeep_ = 1.0f - param_.p;
-    if(param_.mode == rnn_enum::kLstm)
-      param_.lstm_q_ = true;
-    else
-      param_.lstm_q_ = false;
   }
 
   virtual void Forward(const OpContext &ctx,
