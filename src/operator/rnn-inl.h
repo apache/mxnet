@@ -67,8 +67,8 @@ inline int rnn_param_size(int layerNum,
 }
 
 struct RNNParam : public dmlc::Parameter<RNNParam> {
-  uint32_t state_size_;
-  uint32_t num_layers_;
+  uint32_t state_size;
+  uint32_t num_layers;
   bool bidirectional;
   int mode;
   float p, pkeep_;
@@ -76,10 +76,10 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   bool lstm_q_; // whether type is lstm 
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
-    DMLC_DECLARE_FIELD(state_size_)
+    DMLC_DECLARE_FIELD(state_size)
     .describe("size of the state for each layer");
 
-    DMLC_DECLARE_FIELD(num_layers_)
+    DMLC_DECLARE_FIELD(num_layers)
     .describe("number of stacked layers");
 
     DMLC_DECLARE_FIELD(bidirectional).set_default(false)
@@ -193,29 +193,29 @@ class RNNProp : public OperatorProperty {
     int batch_size = dshape[1];
     int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
-    int total_layers = numDirections * param_.num_layers_; // double for bidirectional
+    int total_layers = numDirections * param_.num_layers; // double for bidirectional
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kState,
-                       Shape3(total_layers, batch_size, param_.state_size_));
+                       Shape3(total_layers, batch_size, param_.state_size));
     if (param_.mode == rnn_enum::kLstm){
       SHAPE_ASSIGN_CHECK(*in_shape,
                         rnn_enum::kStateCell,
-                        Shape3(total_layers, batch_size, param_.state_size_));
+                        Shape3(total_layers, batch_size, param_.state_size));
     }
     // calculate parameter vector length
-    int param_size = rnn_param_size(param_.num_layers_,
+    int param_size = rnn_param_size(param_.num_layers,
                                     input_size,
-                                    param_.state_size_,
+                                    param_.state_size,
                                     param_.bidirectional,
                                     param_.mode);
     SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
     // output: [sequence len, batch, output size]
     TShape oshape = dshape;
-    oshape[2] = numDirections * param_.state_size_;
+    oshape[2] = numDirections * param_.state_size;
     TShape outStateShape = dshape;
     outStateShape[0] = total_layers;
     outStateShape[1] = batch_size;
-    outStateShape[2] = param_.state_size_;
+    outStateShape[2] = param_.state_size;
 
     out_shape->clear();
     out_shape->push_back(oshape);

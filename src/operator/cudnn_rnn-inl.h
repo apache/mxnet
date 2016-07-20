@@ -314,7 +314,7 @@ class CuDNNRNNOp : public Operator {
                                   strideA
                                   ), CUDNN_STATUS_SUCCESS);
         dimA[0] = param_.batch_size_;                        
-        dimA[1] = param_.bidirectional ? param_.state_size_ * 2 : param_.state_size_;
+        dimA[1] = param_.bidirectional ? param_.state_size * 2 : param_.state_size;
         dimA[2] = 1;
         strideA[0] = dimA[2] * dimA[1];
         strideA[1] = dimA[2];
@@ -339,9 +339,9 @@ class CuDNNRNNOp : public Operator {
       dy_desc_vec_ = dy_vec;
 
       // set the state tensors                       
-      dimA[0] = param_.num_layers_ * (param_.bidirectional ? 2 : 1);
+      dimA[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
       dimA[1] = param_.batch_size_;
-      dimA[2] = param_.state_size_;
+      dimA[2] = param_.state_size;
       strideA[0] = dimA[2] * dimA[1];
       strideA[1] = dimA[2];
       strideA[2] = 1;
@@ -419,8 +419,8 @@ class CuDNNRNNOp : public Operator {
       // RNN descriptors       
       CHECK_EQ(cudnnCreateRNNDescriptor(&rnn_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetRNNDescriptor(rnn_desc_,
-                                    param_.state_size_,
-                                    param_.num_layers_,
+                                    param_.state_size,
+                                    param_.num_layers,
                                     dropout_desc_,
                                     input_mode_,
                                     direction_,
