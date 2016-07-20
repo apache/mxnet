@@ -80,7 +80,7 @@ class CuDNNRNNOp : public Operator {
     // get input + output tensors
     Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
     Tensor<gpu, 1, DType> w = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
-    Tensor<gpu, 3, DType> hx = in_data[rnn_enum::kStateIn].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> hx = in_data[rnn_enum::kState].get<gpu, 3, DType>(s);
 
     Tensor<gpu, 3, DType> y = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
     Tensor<gpu, 3, DType> hy = out_data[rnn_enum::kStateOut].get<gpu, 3, DType>(s);
@@ -88,8 +88,8 @@ class CuDNNRNNOp : public Operator {
     DType * cx_ptr = NULL;
     DType * cy_ptr = NULL;
     if (param_.mode == rnn_enum::kLstm){
-      cx_ptr = (in_data[rnn_enum::kCellStateIn].get<gpu, 3, DType>(s)).dptr_;
-      cy_ptr = (in_data[rnn_enum::kCellStateOut].get<gpu, 3, DType>(s)).dptr_;
+      cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+      cy_ptr = (in_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
     }
 
     CHECK_EQ(x.CheckContiguous(), true);
@@ -169,7 +169,94 @@ class CuDNNRNNOp : public Operator {
     size_t out_expected = param_.lstm_q_ ? 3 : 2;
     CHECK_EQ(in_data.size(), in_expected);
     CHECK_EQ(out_data.size(), out_expected);
-    CHECK_EQ(out_data.size(), out_expected);
+    CHECK_EQ(in_grad.size(), in_expected);
+    CHECK_EQ(out_grad.size(), out_expected);
+
+    Stream<gpu> *s = ctx.get_stream<gpu>();
+    // get input + output tensors
+    Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> dx = in_grad[rnn_enum::kData].get<gpu, 3, DType>(s);
+    Tensor<gpu, 1, DType> w = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
+    Tensor<gpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<gpu, 1, DType>(s);
+    Tensor<gpu, 3, DType> hx = in_data[rnn_enum::kState].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> hy = in_data[rnn_enum::kStateOut].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> dhy = out_grad[rnn_enum::kStateOut].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> y = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
+    Tensor<gpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<gpu, 3, DType>(s);
+
+    DType * cx_ptr = NULL;
+    // DType * cy_ptr = NULL;
+    DType * dcx_ptr = NULL;
+    DType * dcy_ptr = NULL;
+    if (param_.mode == rnn_enum::kLstm){
+      cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+      // cy_ptr = (in_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
+      dcx_ptr = (in_grad[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+      dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
+    }
+
+    CHECK_EQ(x.CheckContiguous(), true);
+    CHECK_EQ(w.CheckContiguous(), true);
+    CHECK_EQ(hx.CheckContiguous(), true);
+    CHECK_EQ(y.CheckContiguous(), true);
+    CHECK_EQ(hy.CheckContiguous(), true);
+
+    if(!init_cudnn_){
+      Init(s, in_data, out_data);
+    } 
+
+    // Get temp space
+    int temp_size = workspace_size_;
+    temp_size += ctx.is_train ? reserve_space_size_ : 0;
+    Tensor<gpu, 1, DType> temp_space =
+      ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
+                              mshadow::Shape1(temp_size), s);
+    
+    CHECK_EQ(cudnnRNNBackwardData(s->dnn_handle_,
+                                rnn_desc_,
+                                param_.seq_length_,
+                                y_desc_vec_.data(),
+                                y.dptr_,
+                                dy_desc_vec_.data(),
+                                dy.dptr_,
+                                dhy_desc_,
+                                dhy.dptr_,
+                                dcy_desc_,
+                                dcy_ptr,
+                                w_desc_,
+                                w.dptr_,
+                                hx_desc_,
+                                hx.dptr_,
+                                cx_desc_,
+                                cx_ptr,
+                                dx_desc_vec_.data(),
+                                dx.dptr_,
+                                dhx_desc_,
+                                dhx.dptr_,
+                                dcx_desc_,
+                                dcx_ptr,
+                                temp_space.dptr_,
+                                workspace_byte_,
+                                temp_space.dptr_ + workspace_size_,
+                                reserve_space_byte_
+                                ), CUDNN_STATUS_SUCCESS);
+    CHECK_EQ(cudnnRNNBackwardWeights(s->dnn_handle_, 
+                                    rnn_desc_, 
+                                    param_.seq_length_, 
+                                    x_desc_vec_.data(), 
+                                    x.dptr_, 
+                                    hx_desc_,
+                                    hx.dptr_,                                                
+                                    y_desc_vec_.data(), 
+                                    y.dptr_,
+                                    temp_space.dptr_, 
+                                    workspace_byte_, 
+                                    dw_desc_, 
+                                    dw.dptr_,
+                                    temp_space.dptr_ + workspace_size_, 
+                                    reserve_space_byte_ 
+                                    ), CUDNN_STATUS_SUCCESS);
   }
  private:
   inline void Init(mshadow::Stream<gpu> *s,
