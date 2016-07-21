@@ -264,10 +264,22 @@ class RNNProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    if (param_.mode == rnn_enum::kLstm)
-      return {out_grad[rnn_enum::kOut], in_data[rnn_enum::kData], in_data[rnn_enum::kParams]};
-    else
-      return {out_grad[rnn_enum::kOut], in_data[rnn_enum::kData], in_data[rnn_enum::kParams]};
+    std::vector<int> dep = {in_data[rnn_enum::kData], in_data[rnn_enum::kParams],
+        in_data[rnn_enum::kState], out_data[rnn_enum::kOut], out_grad[rnn_enum::kOut]};
+
+    if (param_.state_outputs) {
+      dep.push_back(out_data[rnn_enum::kStateOut]);
+      dep.push_back(out_grad[rnn_enum::kStateOut]);
+    }
+
+    if (param_.mode == rnn_enum::kLstm) {
+      dep.push_back(in_data[rnn_enum::kStateCell]);
+      if(param_.state_outputs) {
+        dep.push_back(out_data[rnn_enum::kStateCellOut]);
+        dep.push_back(out_grad[rnn_enum::kStateCellOut]);
+      }
+    }
+    return dep;
   }
 
   std::vector<ResourceRequest> ForwardResource(

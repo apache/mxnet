@@ -187,27 +187,30 @@ class CuDNNRNNOp : public Operator {
     Tensor<gpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<gpu, 1, DType>(s);
     Tensor<gpu, 3, DType> hx = in_data[rnn_enum::kState].get<gpu, 3, DType>(s);
     Tensor<gpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<gpu, 3, DType>(s);
-    Tensor<gpu, 3, DType> hy = in_data[rnn_enum::kStateOut].get<gpu, 3, DType>(s);
-    Tensor<gpu, 3, DType> dhy = out_grad[rnn_enum::kStateOut].get<gpu, 3, DType>(s);
     Tensor<gpu, 3, DType> y = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
     Tensor<gpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<gpu, 3, DType>(s);
 
-    DType * cx_ptr = NULL;
-    // DType * cy_ptr = NULL;
-    DType * dcx_ptr = NULL;
-    DType * dcy_ptr = NULL;
-    if (param_.mode == rnn_enum::kLstm) {
-      cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
-      // cy_ptr = (in_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
-      dcx_ptr = (in_grad[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
-      dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
-    }
+    // only need kStateOut grad output_states is true
+    void * dhy_ptr = NULL;
+    if (param_.state_outputs)
+      dhy_ptr = out_grad[rnn_enum::kStateOut].get<gpu, 3, DType>(s).dptr_;
 
+    // Deal with lstm
+    void * dcx_ptr = NULL;
+    void * dcy_ptr = NULL;  
+    void * cx_ptr = NULL;
+
+    if(param_.mode == rnn_enum::kLstm) {
+      cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+      dcx_ptr = (in_grad[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+    }
+    if ((param_.mode == rnn_enum::kLstm) && param_.state_outputs)
+        dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
+    
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
     CHECK_EQ(hx.CheckContiguous(), true);
     CHECK_EQ(y.CheckContiguous(), true);
-    CHECK_EQ(hy.CheckContiguous(), true);
 
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
@@ -227,7 +230,7 @@ class CuDNNRNNOp : public Operator {
                                 dy_desc_vec_.data(),
                                 dy.dptr_,
                                 dhy_desc_,
-                                dhy.dptr_,
+                                dhy_ptr,
                                 dcy_desc_,
                                 dcy_ptr,
                                 w_desc_,
