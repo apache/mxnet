@@ -155,8 +155,6 @@ class WarpCTCOp : public Operator {
                                     ctx.get_stream<gpu>()->stream_);
       CHECK_EQ(cuda_status, cudaSuccess) << "cuda memcpy label error";
 #endif
-    } else {
-      LOG(FATAL) << "Unknown device type " << data.dev_mask_;
     }
 
     int total_label_length = 0;
