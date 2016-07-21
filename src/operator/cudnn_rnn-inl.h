@@ -197,16 +197,16 @@ class CuDNNRNNOp : public Operator {
 
     // Deal with lstm
     void * dcx_ptr = NULL;
-    void * dcy_ptr = NULL;  
+    void * dcy_ptr = NULL;
     void * cx_ptr = NULL;
 
-    if(param_.mode == rnn_enum::kLstm) {
+    if (param_.mode == rnn_enum::kLstm) {
       cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
       dcx_ptr = (in_grad[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
     }
     if ((param_.mode == rnn_enum::kLstm) && param_.state_outputs)
         dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
-    
+
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
     CHECK_EQ(hx.CheckContiguous(), true);
