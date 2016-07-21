@@ -62,11 +62,11 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .add_enum("off", conv::kOff)
     .add_enum("limited_workspace", conv::kLimited)
     .add_enum("fastest", conv::kFastest)
-    .set_default(dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", 1))
+    .set_default(dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", 0))
     .describe("Whether to find convolution algo by running performance test."
               "Leads to higher startup time but may give better speed."
-              "auto tune is turned on by default but can vastly slow down models with bucketing."
-              "Set environment varialbe MXNET_CUDNN_AUTOTUNE_DEFAULT=0 to turn off by default.");
+              "auto tune is turned off by default."
+              "Set environment varialbe MXNET_CUDNN_AUTOTUNE_DEFAULT=1 to turn on by default.");
   }
 };
 
