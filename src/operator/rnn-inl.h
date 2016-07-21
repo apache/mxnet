@@ -274,7 +274,7 @@ class RNNProp : public OperatorProperty {
 
     if (param_.mode == rnn_enum::kLstm) {
       dep.push_back(in_data[rnn_enum::kStateCell]);
-      if(param_.state_outputs) {
+      if (param_.state_outputs) {
         dep.push_back(out_data[rnn_enum::kStateCellOut]);
         dep.push_back(out_grad[rnn_enum::kStateCellOut]);
       }
