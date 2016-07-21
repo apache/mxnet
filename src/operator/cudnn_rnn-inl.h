@@ -447,7 +447,8 @@ class CuDNNRNNOp : public Operator {
       // Set param descriptors
       CHECK_EQ(cudnnCreateFilterDescriptor(&w_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnCreateFilterDescriptor(&dw_desc_), CUDNN_STATUS_SUCCESS);
-      int dim_w[3] = {w.shape_[0], 1, 1};
+      int dim_w[3] = {1, 1, 1};
+      dim_w[0] = w.shape_[0];
       CHECK_EQ(cudnnSetFilterNdDescriptor(w_desc_,
                                           dtype_,
                                           format_,
