@@ -165,7 +165,6 @@ class WarpCTCOp : public Operator {
     int* cpu_labels = reinterpret_cast<int*>(
         malloc(sizeof(int) * total_label_length));
     removeBlank(cpu_raw_labels, cpu_labels, label.Size(), 0);
-    free(cpu_raw_labels);
 
     size_t alloc_bytes;
     throw_on_error(get_workspace_size(label_lengths.data(),
@@ -199,10 +198,12 @@ class WarpCTCOp : public Operator {
 
     if (data.dev_mask_ == cpu::kDevMask) {
       free(ctc_workspace);
+      free(cpu_labels)
     } else if (data.dev_mask_ == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       cuda_status = cudaFree(ctc_workspace);
       CHECK_EQ(cuda_status, cudaSuccess) << "cuda free workspace fail";
+      free(cpu_raw_labels);
       free(cpu_labels);
 #endif
     }
