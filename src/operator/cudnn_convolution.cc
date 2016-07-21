@@ -5,24 +5,24 @@
  * \author Junyuan Xie
 */
 #include "./cudnn_convolution-inl.h"
+#include <mxnet/base.h>
+#include <mxnet/ndarray.h>
+
 #include <sstream>
 #include <mutex>
 #include <unordered_map>
-#include <mxnet/base.h>
-#include <mxnet/ndarray.h>
 
 namespace mxnet {
 namespace op {
 #if MXNET_USE_CUDNN == 1
 namespace conv {
-struct CudnnAlgorithms
-{
+struct CudnnAlgorithms {
   cudnnConvolutionFwdAlgo_t fwd;
   cudnnConvolutionBwdDataAlgo_t bwd;
   cudnnConvolutionBwdFilterAlgo_t flt;
 };
 
-std::unordered_map<std::string,CudnnAlgorithms> g_cudnn_algo_reg;
+std::unordered_map<std::string, CudnnAlgorithms> g_cudnn_algo_reg;
 std::mutex g_reg_mutex;
 }  // namespace conv
 // TODO(xxx): Refactor with Init CuDNN function, remove redandent code in initalization
@@ -49,7 +49,8 @@ void TuneCudnnConvolution(ConvolutionParam param,
   std::ostringstream oss;
   oss << x_shape << ";" << y_shape << ";" << w_shape << ";" << param.workspace;
   std::string key = oss.str();
-  std::unordered_map<std::string,conv::CudnnAlgorithms>::const_iterator iter = conv::g_cudnn_algo_reg.find(key);
+  std::unordered_map<std::string, conv::CudnnAlgorithms>::const_iterator iter =
+    conv::g_cudnn_algo_reg.find(key);
   if (iter != conv::g_cudnn_algo_reg.end()) {
     *algo = iter->second.fwd;
     *back_algo = iter->second.bwd;
