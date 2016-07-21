@@ -71,7 +71,7 @@ inline int rnn_param_size(int layerNum,
 struct RNNParam : public dmlc::Parameter<RNNParam> {
   uint32_t state_size;
   uint32_t num_layers;
-  bool bidirectional;
+  bool bidirectional, state_outputs;
   int mode;
   float p, pkeep_;
   int seq_length_, batch_size_, input_size_;
@@ -97,6 +97,10 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     DMLC_DECLARE_FIELD(p).set_default(0.)
     .set_range(0, 1)
     .describe("Fraction of the input that gets dropped out at training time");
+
+    DMLC_DECLARE_FIELD(state_outputs).set_default(false)
+    .describe("Whether to have the states as symbol outputs.");
+
   }
 };
 
@@ -160,9 +164,11 @@ class RNNProp : public OperatorProperty {
       return 2;
   }
 
-  // int NumVisibleOutputs() const override {
-  //   return 1;
-  // }
+  int NumVisibleOutputs() const override {
+    int mode_num = (param_.mode == rnn_enum::kLstm) ? 2 : 1;
+    int num_outputs = param_.state_outputs ? (mode_num + 1) : 1;
+    return num_outputs;
+  }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -193,11 +199,11 @@ class RNNProp : public OperatorProperty {
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kState,
                        Shape3(total_layers, batch_size, param_.state_size));
-    if (param_.mode == rnn_enum::kLstm){
+    if (param_.mode == rnn_enum::kLstm)
       SHAPE_ASSIGN_CHECK(*in_shape,
                         rnn_enum::kStateCell,
                         Shape3(total_layers, batch_size, param_.state_size));
-    }
+
     // calculate parameter vector length
     int param_size = rnn_param_size(param_.num_layers,
                                     input_size,
@@ -217,7 +223,7 @@ class RNNProp : public OperatorProperty {
     out_shape->push_back(oshape);
     out_shape->push_back(outStateShape);
     // Deal with lstm cell state
-    if (param_.mode == rnn_enum::kLstm)
+    if(param_.mode == rnn_enum::kLstm)
       out_shape->push_back(outStateShape);
     return true;
   }
@@ -240,6 +246,7 @@ class RNNProp : public OperatorProperty {
     out_type->clear();
     out_type->push_back(dtype);
     out_type->push_back(dtype);
+    // Deal with lstm cell state
     if (param_.mode == rnn_enum::kLstm)
       out_type->push_back(dtype);
     return true;
