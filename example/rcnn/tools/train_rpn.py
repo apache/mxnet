@@ -66,12 +66,10 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
         args['rpn_bbox_pred_bias'] = mx.nd.zeros(shape=arg_shape_dict['rpn_bbox_pred_bias'])
 
     # prepare training
-    fixed_params_names = []
-    for name in args.keys():
-        if config.TRAIN.FINETUNE and name.startswith('conv'):
-            fixed_params_names.append(name)
-        elif name.startswith('conv1') or name.startswith('conv2'):
-            fixed_params_names.append(name)
+    if config.TRAIN.FINETUNE:
+        fixed_param_prefix = ['conv']
+    else:
+        fixed_param_prefix = ['conv1', 'conv2']
     data_names = [k[0] for k in train_data.provide_data]
     label_names = [k[0] for k in train_data.provide_label]
     batch_end_callback = Speedometer(train_data.batch_size, frequent=frequent)
@@ -95,7 +93,8 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
     # train
     mod = MutableModule(sym, data_names=data_names, label_names=label_names,
                         logger=logger, context=ctx, work_load_list=work_load_list,
-                        max_data_shapes=max_data_shape, max_label_shapes=max_label_shape)
+                        max_data_shapes=max_data_shape, max_label_shapes=max_label_shape,
+                        fixed_param_prefix=fixed_param_prefix)
     mod.fit(train_data, eval_metric=eval_metrics, epoch_end_callback=epoch_end_callback,
             batch_end_callback=batch_end_callback, kvstore=kv_store,
             optimizer='sgd', optimizer_params=optimizer_params,
