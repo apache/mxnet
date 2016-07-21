@@ -198,7 +198,7 @@ class WarpCTCOp : public Operator {
 
     if (data.dev_mask_ == cpu::kDevMask) {
       free(ctc_workspace);
-      free(cpu_labels)
+      free(cpu_labels);
     } else if (data.dev_mask_ == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       cuda_status = cudaFree(ctc_workspace);
