@@ -30,13 +30,12 @@ namespace rnn_enum {
 // A utility function to calculate input size
 inline int rnn_single_param_size(int inputSize,
                                 int hiddenSize,
-                                int mode){
+                                int mode) {
   int size = hiddenSize * (hiddenSize + inputSize + 2);
   // Different RNN's have different num weights
-  switch(mode)
-  {
+  switch (mode) {
     case rnn_enum::kRnnRelu:
-      size *= 1 ;
+      size *= 1;
       break;
     case rnn_enum::kRnnTanh:
       size *= 1;
@@ -55,16 +54,16 @@ inline int rnn_param_size(int layerNum,
                           int inputSize,
                           int hiddenSize,
                           bool bidirectional,
-                          int mode){
+                          int mode) {
   // get size of first layer
   int size = rnn_single_param_size(inputSize, hiddenSize, mode);
   // get size of remaining layers
-  if(bidirectional){
+  if (bidirectional) {
     size += (layerNum - 1) * rnn_single_param_size(2 * hiddenSize, hiddenSize, mode);
     size *= 2;
+  } else {
+    size += (layerNum - 1) * rnn_single_param_size(hiddenSize, hiddenSize, mode);
   }
-  else 
-    size += (layerNum - 1) * rnn_single_param_size(hiddenSize, hiddenSize, mode);  
   return size;
 }
 
@@ -75,7 +74,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   int mode;
   float p, pkeep_;
   int seq_length_, batch_size_, input_size_;
-  bool lstm_q_; // whether type is lstm 
+  bool lstm_q_;  // whether type is lstm
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
     DMLC_DECLARE_FIELD(state_size)
@@ -93,14 +92,13 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     .add_enum("lstm", rnn_enum::kLstm)
     .add_enum("gru", rnn_enum::kGru)
     .describe("the type of RNN to compute");
-    
+
     DMLC_DECLARE_FIELD(p).set_default(0.)
     .set_range(0, 1)
     .describe("Fraction of the input that gets dropped out at training time");
 
     DMLC_DECLARE_FIELD(state_outputs).set_default(false)
     .describe("Whether to have the states as symbol outputs.");
-
   }
 };
 
@@ -117,7 +115,7 @@ class RNNOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    // TODO: add MShadow implementation
+    // TODO(sbodenstein): add MShadow implementation
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -129,7 +127,7 @@ class RNNOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    // TODO: add MShadow implementation
+    // TODO(sbodenstein): add MShadow implementation
   }
 
  private:
@@ -153,14 +151,14 @@ class RNNProp : public OperatorProperty {
   std::vector<std::string> ListOutputs() const override {
     if (param_.mode == rnn_enum::kLstm)
       return {"output", "state", "state_cell"};
-    else 
+    else
       return {"output", "state"};
   }
 
   int NumOutputs() const override {
     if (param_.mode == rnn_enum::kLstm)
       return 3;
-    else 
+    else
       return 2;
   }
 
@@ -195,7 +193,7 @@ class RNNProp : public OperatorProperty {
     int batch_size = dshape[1];
     int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
-    int total_layers = numDirections * param_.num_layers; // double for bidirectional
+    int total_layers = numDirections * param_.num_layers;  // double for bidirectional
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kState,
                        Shape3(total_layers, batch_size, param_.state_size));
@@ -223,7 +221,7 @@ class RNNProp : public OperatorProperty {
     out_shape->push_back(oshape);
     out_shape->push_back(outStateShape);
     // Deal with lstm cell state
-    if(param_.mode == rnn_enum::kLstm)
+    if (param_.mode == rnn_enum::kLstm)
       out_shape->push_back(outStateShape);
     return true;
   }

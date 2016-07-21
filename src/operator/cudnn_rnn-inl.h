@@ -24,7 +24,7 @@ class CuDNNRNNOp : public Operator {
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
     // Defaults
-    input_mode_ = CUDNN_LINEAR_INPUT; // Don't support this yet
+    input_mode_ = CUDNN_LINEAR_INPUT;  // Don't support this yet
     // RNN Mode
     switch (param_.mode) {
       case rnn_enum::kRnnRelu:
@@ -46,7 +46,7 @@ class CuDNNRNNOp : public Operator {
     direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
     // Other
     param_.pkeep_ = 1.0f - param_.p;
-    if(param_.mode == rnn_enum::kLstm)
+    if (param_.mode == rnn_enum::kLstm)
       param_.lstm_q_ = true;
     else
       param_.lstm_q_ = false;
@@ -54,7 +54,7 @@ class CuDNNRNNOp : public Operator {
 
   ~CuDNNRNNOp() {
     if (init_cudnn_) {
-      for(int i = 0; i < x_desc_vec_.size(); ++i){
+      for (int i = 0; i < x_desc_vec_.size(); ++i) {
         CHECK_EQ(cudnnDestroyTensorDescriptor(x_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnDestroyTensorDescriptor(y_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
@@ -63,18 +63,18 @@ class CuDNNRNNOp : public Operator {
       CHECK_EQ(cudnnDestroyTensorDescriptor(hx_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyTensorDescriptor(cx_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyTensorDescriptor(hy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(cy_desc_), CUDNN_STATUS_SUCCESS);   
+      CHECK_EQ(cudnnDestroyTensorDescriptor(cy_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyTensorDescriptor(dhx_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyTensorDescriptor(dcx_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyTensorDescriptor(dhy_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(dcy_desc_), CUDNN_STATUS_SUCCESS);   
+      CHECK_EQ(cudnnDestroyTensorDescriptor(dcy_desc_), CUDNN_STATUS_SUCCESS);
 
       CHECK_EQ(cudnnDestroyFilterDescriptor(w_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyRNNDescriptor(rnn_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyDropoutDescriptor(dropout_desc_), CUDNN_STATUS_SUCCESS);
     }
   }
- 
+
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -96,7 +96,7 @@ class CuDNNRNNOp : public Operator {
 
     DType * cx_ptr = NULL;
     DType * cy_ptr = NULL;
-    if (param_.mode == rnn_enum::kLstm){
+    if (param_.mode == rnn_enum::kLstm) {
       cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
       cy_ptr = (in_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
     }
@@ -107,9 +107,9 @@ class CuDNNRNNOp : public Operator {
     CHECK_EQ(y.CheckContiguous(), true);
     CHECK_EQ(hy.CheckContiguous(), true);
 
-    if(!init_cudnn_){
+    if (!init_cudnn_) {
       Init(s, in_data, out_data);
-    } 
+    }
 
     // Get temp space
     int temp_size = workspace_size_;
@@ -117,8 +117,8 @@ class CuDNNRNNOp : public Operator {
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
-    
-    if (ctx.is_train) { 
+
+    if (ctx.is_train) {
       CHECK_EQ(cudnnRNNForwardTraining(s->dnn_handle_,
                                       rnn_desc_,
                                       param_.seq_length_,
@@ -139,8 +139,7 @@ class CuDNNRNNOp : public Operator {
                                       temp_space.dptr_,
                                       workspace_byte_,
                                       temp_space.dptr_ + workspace_size_,
-                                      reserve_space_byte_
-                                      ), CUDNN_STATUS_SUCCESS);
+                                      reserve_space_byte_), CUDNN_STATUS_SUCCESS);
     } else {
       // inference mode
       CHECK_EQ(cudnnRNNForwardInference(s->dnn_handle_,
@@ -161,11 +160,10 @@ class CuDNNRNNOp : public Operator {
                                       cy_desc_,
                                       cy_ptr,
                                       temp_space.dptr_,
-                                      workspace_byte_
-                                      ), CUDNN_STATUS_SUCCESS); 
+                                      workspace_byte_), CUDNN_STATUS_SUCCESS);
     }
   }
- 
+
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -198,7 +196,7 @@ class CuDNNRNNOp : public Operator {
     // DType * cy_ptr = NULL;
     DType * dcx_ptr = NULL;
     DType * dcy_ptr = NULL;
-    if (param_.mode == rnn_enum::kLstm){
+    if (param_.mode == rnn_enum::kLstm) {
       cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
       // cy_ptr = (in_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
       dcx_ptr = (in_grad[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
@@ -211,9 +209,9 @@ class CuDNNRNNOp : public Operator {
     CHECK_EQ(y.CheckContiguous(), true);
     CHECK_EQ(hy.CheckContiguous(), true);
 
-    if(!init_cudnn_){
+    if (!init_cudnn_) {
       Init(s, in_data, out_data);
-    } 
+    }
 
     // Get temp space
     int temp_size = workspace_size_;
@@ -247,25 +245,24 @@ class CuDNNRNNOp : public Operator {
                                 temp_space.dptr_,
                                 workspace_byte_,
                                 temp_space.dptr_ + workspace_size_,
-                                reserve_space_byte_
-                                ), CUDNN_STATUS_SUCCESS);
-    CHECK_EQ(cudnnRNNBackwardWeights(s->dnn_handle_, 
-                                    rnn_desc_, 
-                                    param_.seq_length_, 
-                                    x_desc_vec_.data(), 
-                                    x.dptr_, 
+                                reserve_space_byte_), CUDNN_STATUS_SUCCESS);
+    CHECK_EQ(cudnnRNNBackwardWeights(s->dnn_handle_,
+                                    rnn_desc_,
+                                    param_.seq_length_,
+                                    x_desc_vec_.data(),
+                                    x.dptr_,
                                     hx_desc_,
-                                    hx.dptr_,                                                
-                                    y_desc_vec_.data(), 
+                                    hx.dptr_,
+                                    y_desc_vec_.data(),
                                     y.dptr_,
-                                    temp_space.dptr_, 
-                                    workspace_byte_, 
-                                    dw_desc_, 
+                                    temp_space.dptr_,
+                                    workspace_byte_,
+                                    dw_desc_,
                                     dw.dptr_,
-                                    temp_space.dptr_ + workspace_size_, 
-                                    reserve_space_byte_ 
-                                    ), CUDNN_STATUS_SUCCESS);
+                                    temp_space.dptr_ + workspace_size_,
+                                    reserve_space_byte_), CUDNN_STATUS_SUCCESS);
   }
+
  private:
   inline void Init(mshadow::Stream<gpu> *s,
                    const std::vector<TBlob> &in_data,
@@ -299,7 +296,7 @@ class CuDNNRNNOp : public Operator {
         CHECK_EQ(cudnnCreateTensorDescriptor(&y_vec[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnCreateTensorDescriptor(&dx_vec[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnCreateTensorDescriptor(&dy_vec[i]), CUDNN_STATUS_SUCCESS);
-        
+
         dimA[0] = param_.batch_size_;
         dimA[1] = param_.input_size_;
         dimA[2] = 1;
@@ -307,21 +304,19 @@ class CuDNNRNNOp : public Operator {
         dimA[1] = param_.input_size_;
         strideA[0] = dimA[2] * dimA[1];
         strideA[1] = dimA[2];
-        strideA[2] = 1; 
+        strideA[2] = 1;
 
         CHECK_EQ(cudnnSetTensorNdDescriptor(x_vec[i],
                                   dtype_,
                                   3,
                                   dimA,
-                                  strideA
-                                  ), CUDNN_STATUS_SUCCESS);
+                                  strideA), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnSetTensorNdDescriptor(dx_vec[i],
                                   dtype_,
                                   3,
                                   dimA,
-                                  strideA
-                                  ), CUDNN_STATUS_SUCCESS);
-        dimA[0] = param_.batch_size_;                        
+                                  strideA), CUDNN_STATUS_SUCCESS);
+        dimA[0] = param_.batch_size_;
         dimA[1] = param_.bidirectional ? param_.state_size * 2 : param_.state_size;
         dimA[2] = 1;
         strideA[0] = dimA[2] * dimA[1];
@@ -332,21 +327,19 @@ class CuDNNRNNOp : public Operator {
                                   dtype_,
                                   3,
                                   dimA,
-                                  strideA
-                                  ), CUDNN_STATUS_SUCCESS);
+                                  strideA), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnSetTensorNdDescriptor(dy_vec[i],
                                   dtype_,
                                   3,
                                   dimA,
-                                  strideA
-                                  ), CUDNN_STATUS_SUCCESS);
+                                  strideA), CUDNN_STATUS_SUCCESS);
       }
       x_desc_vec_ = x_vec;
       y_desc_vec_ = y_vec;
       dx_desc_vec_ = dx_vec;
       dy_desc_vec_ = dy_vec;
 
-      // set the state tensors                       
+      // set the state tensors
       dimA[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
       dimA[1] = param_.batch_size_;
       dimA[2] = param_.state_size;
@@ -367,64 +360,55 @@ class CuDNNRNNOp : public Operator {
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensorNdDescriptor(cx_desc_,
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensorNdDescriptor(hy_desc_,
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensorNdDescriptor(cy_desc_,
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensorNdDescriptor(dhx_desc_,
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensorNdDescriptor(dcx_desc_,
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensorNdDescriptor(dhy_desc_,
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetTensorNdDescriptor(dcy_desc_,
                                           dtype_,
                                           3,
                                           dimA,
-                                          strideA
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          strideA), CUDNN_STATUS_SUCCESS);
 
       // Create Dropout descriptors
       CHECK_EQ(cudnnCreateDropoutDescriptor(&dropout_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDropoutGetStatesSize(s->dnn_handle_, 
-                                          &dropout_byte_
-                                          ), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnDropoutGetStatesSize(s->dnn_handle_,
+                                        &dropout_byte_), CUDNN_STATUS_SUCCESS);
       dropout_size_ = dropout_byte_ / sizeof(DType);
       CHECK_EQ(cudnnSetDropoutDescriptor(dropout_desc_,
                                         s->dnn_handle_,
-                                        param_.pkeep_,  // keep probability 
+                                        param_.pkeep_,  // keep probability
                                         NULL,
                                         dropout_byte_,
                                         seed_), CUDNN_STATUS_SUCCESS);
-      // RNN descriptors       
+      // RNN descriptors
       CHECK_EQ(cudnnCreateRNNDescriptor(&rnn_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetRNNDescriptor(rnn_desc_,
                                     param_.state_size,
@@ -434,19 +418,17 @@ class CuDNNRNNOp : public Operator {
                                     direction_,
                                     mode_,
                                     dtype_), CUDNN_STATUS_SUCCESS);
-      // Get temp space sizes     
+      // Get temp space sizes
       CHECK_EQ(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
                                         rnn_desc_,
                                         param_.seq_length_,
                                         x_desc_vec_.data(),
-                                        &workspace_byte_
-                                        ), CUDNN_STATUS_SUCCESS);
+                                        &workspace_byte_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnGetRNNTrainingReserveSize(s->dnn_handle_,
                                         rnn_desc_,
                                         param_.seq_length_,
                                         x_desc_vec_.data(),
-                                        &reserve_space_byte_
-                                        ), CUDNN_STATUS_SUCCESS);
+                                        &reserve_space_byte_), CUDNN_STATUS_SUCCESS);
       workspace_size_ = workspace_byte_ / sizeof(DType);
       reserve_space_size_ = reserve_space_byte_ / sizeof(DType);
 
@@ -467,15 +449,12 @@ class CuDNNRNNOp : public Operator {
                                           dtype_,
                                           format_,
                                           3,
-                                          dim_w
-                                         ), CUDNN_STATUS_SUCCESS);
+                                          dim_w), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetFilterNdDescriptor(dw_desc_,
                                           dtype_,
                                           format_,
                                           3,
-                                          dim_w
-                                         ), CUDNN_STATUS_SUCCESS);
-
+                                          dim_w), CUDNN_STATUS_SUCCESS);
     }
   }
 
@@ -486,7 +465,7 @@ class CuDNNRNNOp : public Operator {
   cudnnDirectionMode_t direction_;
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  unsigned long long seed_ = 4553;
+  unsigned long long seed_ = 1337ull;
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, reserve_space_size_, dropout_size_;
 
@@ -496,7 +475,7 @@ class CuDNNRNNOp : public Operator {
   cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
   cudnnTensorDescriptor_t dhy_desc_, dcy_desc_;
 
-  cudnnFilterDescriptor_t w_desc_, dw_desc_;  
+  cudnnFilterDescriptor_t w_desc_, dw_desc_;
 
   #if CUDNN_MAJOR == 5
   cudnnTensorFormat_t format_;
