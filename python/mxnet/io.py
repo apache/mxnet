@@ -309,9 +309,9 @@ def _init_data(data, allow_empty, default_name):
                 "a list of them or dict with them as values")
     for k, v in data.items():
         if not isinstance(v, NDArray):
-            try:
-                data[k] = array(v)
-            except:
+			try:
+				data[k] = array(v)
+			except:
                 raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                     "should be NDArray or numpy.ndarray")
 
