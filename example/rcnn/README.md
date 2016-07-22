@@ -21,7 +21,7 @@ and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 * Install MXNet with version no later than Commit 8a3424e, preferably the latest master.
   Follow the instructions at http://mxnet.readthedocs.io/en/latest/how_to/build.html. Install the python interface.
 * Try out detection result by running `python demo.py --prefix final --epoch 0 --image myimage.jpg --gpu 0`.
-  Suppose you have downloaded pretrained network and place the extracted file `final-0000.params` in this folder and there is .
+  Suppose you have downloaded pretrained network and place the extracted file `final-0000.params` in this folder and there is an image named `myimage.jpg`.
 
 ## Training and Testing Faster R-CNN
 * Install additional python package `scipy`.
@@ -49,7 +49,7 @@ and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 
 ## Information
 * Download link to trained model
-  Baidu Yun: http://pan.baidu.com/s/1boRhGvH (ixiw)
+  Baidu Yun: http://pan.baidu.com/s/1boRhGvH (ixiw) or Dropbox: https://www.dropbox.com/s/jrr83q0ai2ckltq/final-0000.params.tar.gz?dl=0
 * Download link to Pascal VOC and precomputed selective search proposals
 
   ```

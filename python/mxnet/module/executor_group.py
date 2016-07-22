@@ -58,7 +58,7 @@ class DataParallelExecutorGroup(object):
     logger : Logger
         Default is `logging`.
     fixed_param_names: list of str
-        Indicate parameters to be fixed during training. Parameters in this list will not allocate 
+        Indicate parameters to be fixed during training. Parameters in this list will not allocate
         space for gradient, nor do gradient calculation.
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
