@@ -190,18 +190,25 @@ class PoolingProp : public OperatorProperty {
     if (dshape.ndim() ==  0) return false;
     if (param_.kernel.ndim() == 2) {
       CHECK_EQ(dshape.ndim(), 4) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
+
       if (param_.global_pool) {
         oshape[2] = 1;
         oshape[3] = 1;
       } else {
+        CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0]
+              && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
+            << "kernel size exceed input";
         oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
         oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
       }
-      CHECK(oshape[2] > 0 && oshape[3] > 0) << "Pooling: kernel size exceed input";
       out_shape->clear();
       out_shape->push_back(oshape);
     } else if (param_.kernel.ndim() == 3) {
       CHECK_EQ(dshape.ndim(), 5) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
+      CHECK(param_.kernel[0] < dshape[2] + 2 * param_.pad[0]
+            && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1]
+            && param_.kernel[2] <= dshape[4] + 2 * param_.pad[2])
+          << "kernel size exceed input";
       if (param_.global_pool) {
         oshape[2] = 1;
         oshape[3] = 1;
@@ -211,7 +218,6 @@ class PoolingProp : public OperatorProperty {
         oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
         oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) / param_.stride[2];
       }
-      CHECK(oshape[2] > 0 && oshape[3] > 0 && oshape[4] > 0) << "Pooling: kernel size exceed input";
       out_shape->clear();
       out_shape->push_back(oshape);
     }
