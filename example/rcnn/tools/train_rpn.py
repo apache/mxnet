@@ -13,12 +13,12 @@ from rcnn.symbol import get_vgg_rpn
 from utils.load_data import load_gt_roidb
 from utils.load_model import load_param
 
+# rpn config
 config.TRAIN.HAS_RPN = True
 config.TRAIN.BATCH_SIZE = 1
-config.TRAIN.ASPECT_GROUPING = False
 
 
-def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
+def train_rpn(image_set, year, root_path, devkit_path, pretrained, epoch,
               prefix, ctx, begin_epoch, end_epoch, frequent, kv_store, work_load_list=None, resume=False):
     # set up logger
     logger = logging.getLogger()
@@ -139,6 +139,6 @@ if __name__ == '__main__':
     ctx = [mx.gpu(int(i)) for i in args.gpu_ids.split(',')]
     if args.finetune:
         config.TRAIN.FINETUNE = True
-    train_net(args.image_set, args.year, args.root_path, args.devkit_path, args.pretrained, args.epoch,
+    train_rpn(args.image_set, args.year, args.root_path, args.devkit_path, args.pretrained, args.epoch,
               args.prefix, ctx, args.begin_epoch, args.end_epoch, args.frequent,
               args.kv_store, args.work_load_list, args.resume)
