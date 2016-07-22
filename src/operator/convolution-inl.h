@@ -366,7 +366,8 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
+      CHECK(ksize_y <= dshape[2] + 2 * param_.pad[0]
+            && ksize_x <= dshape[3] + 2 * param_.pad[1])
           << "kernel size exceed input";
       (*out_shape)[conv::kOut][1] = param_.num_filter;
       (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
