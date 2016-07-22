@@ -308,8 +308,11 @@ def _init_data(data, allow_empty, default_name):
         raise TypeError("Input must be NDArray, numpy.ndarray, " + \
                 "a list of them or dict with them as values")
     for k, v in data.items():
-        if not isinstance(v, (NDArray, np.ndarray)):
-            raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
+        if not isinstance(v, NDArray):
+            try:
+                data[k] = array(v)
+            except:
+                raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                     "should be NDArray or numpy.ndarray")
 
     return list(data.items())
@@ -409,17 +412,10 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only"""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            if isinstance(data_source[0][1], NDArray):
-                return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
-            else:
-                return [array(x[1][self.cursor:self.cursor+self.batch_size]) for x in data_source]
+            [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            if isinstance(data_source[0][1], NDArray):
-                return [concatenate([x[1][self.cursor:], x[1][:pad]]) for x in data_source]
-            else:
-                return [array(np.concatenate((x[1][self.cursor:], x[1][:pad]),
-                                         axis=0)) for x in data_source]
+            return [concatenate([x[1][self.cursor:], x[1][:pad]]) for x in data_source]
 
     def getdata(self):
         return self._getdata(self.data)
