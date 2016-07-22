@@ -39,8 +39,8 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
               "This is useful for input with different shape");
 
     DMLC_DECLARE_FIELD(kernel)
-    .set_expect_ndim(2).enforce_nonzero()
-    .describe("pooling kernel size: (y, x)");
+    .enforce_nonzero()
+    .describe("pooling kernel size: (y, x) or (d, y, x)");
 
     DMLC_DECLARE_FIELD(pool_type)
     .add_enum("max", pool_enum::kMaxPooling)
@@ -50,13 +50,12 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
 
     int stride_shape[] = {1, 1};
     DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
-    .set_expect_ndim(2).enforce_nonzero()
-    .describe("stride: for pooling (y, x)");
+    .enforce_nonzero()
+    .describe("stride: for pooling (y, x) or (d, y, x)");
 
     int pad_shape[] = {0, 0};
     DMLC_DECLARE_FIELD(pad).set_default(TShape(pad_shape, pad_shape + 2))
-    .set_expect_ndim(2)
-    .describe("pad for pooling: (y, x)");
+    .describe("pad for pooling: (y, x) or (d, y, x)");
   }
 };
 
@@ -77,6 +76,9 @@ class PoolingOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (param_.kernel.ndim() == 3) {
+      LOG(FATAL) << "Not implmented";
+    }
     Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> out = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
@@ -119,6 +121,9 @@ class PoolingOp : public Operator {
     CHECK_EQ(req.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     // TODO(bing): remove pad (0,0)
+    if (param_.kernel.ndim() == 3) {
+      LOG(FATAL) << "Not implmented";
+    }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> grad = out_grad[pool_enum::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
@@ -179,22 +184,37 @@ class PoolingProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1);
     const TShape &dshape = (*in_shape)[0];
-    CHECK_EQ(dshape.ndim(), 4) << \
-                               "Pooling: Input data should be 4D in (batch, channel, y, x)";
+    CHECK_GE(dshape.ndim(), 4) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
+                               << "Or 5D in (batch, channel, d, y, x)";
     TShape oshape = dshape;
     if (dshape.ndim() ==  0) return false;
-    if (param_.global_pool) {
-      oshape[2] = 1;
-      oshape[3] = 1;
-    } else {
-      oshape[2] = std::min(dshape[2] + 2 * param_.pad[0] - param_.kernel[0] + param_.stride[0] - 1,
-                          dshape[2] + 2 * param_.pad[0] - 1) / param_.stride[0] + 1;
-      oshape[3] = std::min(dshape[3] + 2 * param_.pad[1] - param_.kernel[1] + param_.stride[1] - 1,
-                          dshape[3] + 2 * param_.pad[1] - 1) / param_.stride[1] + 1;
+    if (param_.kernel.ndim() == 2) {
+      CHECK_EQ(dshape.ndim(), 4) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
+      if (param_.global_pool) {
+        oshape[2] = 1;
+        oshape[3] = 1;
+      } else {
+        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
+        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
+      }
+      CHECK(oshape[2] > 0 && oshape[3] > 0) << "Pooling: kernel size exceed input";
+      out_shape->clear();
+      out_shape->push_back(oshape);
+    } else if (param_.kernel.ndim() == 3) {
+      CHECK_EQ(dshape.ndim(), 5) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
+      if (param_.global_pool) {
+        oshape[2] = 1;
+        oshape[3] = 1;
+        oshape[4] = 1;
+      } else {
+        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
+        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
+        oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) / param_.stride[2];
+      }
+      CHECK(oshape[2] > 0 && oshape[3] > 0 && oshape[4] > 0) << "Pooling: kernel size exceed input";
+      out_shape->clear();
+      out_shape->push_back(oshape);
     }
-    CHECK(oshape[2] > 0 && oshape[3] > 0) << "Pooling: kernel size exceed input";
-    out_shape->clear();
-    out_shape->push_back(oshape);
     return true;
   }
 

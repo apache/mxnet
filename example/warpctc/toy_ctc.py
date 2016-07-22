@@ -67,7 +67,7 @@ class DataIter(mx.io.DataIter):
                 num, img = gen_rand()
                 data.append(img)
                 label.append(get_label(num))
-
+                
             data_all = [mx.nd.array(data)] + self.init_state_arrays
             label_all = [mx.nd.array(label)]
             data_names = ['data'] + init_state_names

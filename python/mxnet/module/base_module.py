@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments, too-many-locals, too-many-public-methods
+# pylint: disable=too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
 """`BaseModule` defines an API for modules."""
 
 import logging
@@ -276,7 +276,7 @@ class BaseModule(object):
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
             force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
-            validation_metric=None):
+            validation_metric=None, monitor=None):
         """Train the module parameters.
 
         Parameters
@@ -327,11 +327,12 @@ class BaseModule(object):
         num_epoch : int
             Number of epochs to run training.
         """
-
         assert num_epoch is not None, 'please specify number of epochs'
 
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
                   for_training=True, force_rebind=force_rebind)
+        if monitor is not None:
+            self.install_monitor(monitor)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=allow_missing, force_init=force_init)
         self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
@@ -349,9 +350,14 @@ class BaseModule(object):
             tic = time.time()
             eval_metric.reset()
             for nbatch, data_batch in enumerate(train_data):
+                if monitor is not None:
+                    monitor.tic()
                 self.forward_backward(data_batch)
                 self.update()
                 self.update_metric(eval_metric, data_batch.label)
+
+                if monitor is not None:
+                    monitor.toc_print()
 
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
@@ -504,6 +510,10 @@ class BaseModule(object):
             else:
                 raise ValueError("Invalid param file " + fname)
         self.set_params(arg_params, aux_params)
+
+    def install_monitor(self, mon):
+        """Install monitor on all executors"""
+        raise NotImplementedError()
 
     ################################################################################
     # Computations

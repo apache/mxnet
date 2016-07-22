@@ -730,12 +730,6 @@ def test_batchnorm_training():
 
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
-        # Gamma needs to be fixed at one when fix_gamma is true,
-        gamma = np.ones(s)
-
-        test = mx.symbol.BatchNorm(data, fix_gamma=True)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
-
 def test_convolution_grouping():
     num_filter = 4
     num_group = 2
@@ -767,9 +761,9 @@ def test_convolution_grouping():
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
 
 def _gen_broadcast_data():
-    # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+    # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
     ndim = np.random.randint(1, 8)
-    shape = np.random.randint(1, 11, size=(ndim,))
+    shape = np.random.randint(1, 6, size=(ndim,))
     l_same_dim = np.random.randint(0, 5)
     r_same_dim = np.random.randint(0, 5)
     l_axis_flags = np.random.randint(0, 2, size=ndim)
@@ -848,10 +842,17 @@ def test_broadcast_binary_op():
         _check_broadcast_op_forward(c, lambda a, b: a / b)
         _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)))
 
+    def test_bpow(a, b):
+        c = mx.sym.broadcast_power(a, b)
+        _check_broadcast_op_forward(c, lambda a, b: a ** b)
+        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
+                                                             g_out * a ** b * np.log(a)))
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
+    test_bpow(a, b)
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     # Input for spike response
@@ -969,9 +970,9 @@ def test_reduce():
     sample_num = 200
     def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym):
         for i in range(sample_num):
-            # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+            # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
             ndim = np.random.randint(1, 8)
-            shape = np.random.randint(1, 11, size=(ndim,))
+            shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
             axis_flags = np.random.randint(0, 2, size=ndim)
             axes = []
@@ -1015,9 +1016,9 @@ def test_reduce():
 def test_broadcast():
     sample_num = 200
     for i in range(sample_num):
-        # Generate random data that has ndim between 1-7 and all the shape dims between 1-10
+        # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
         ndim = np.random.randint(1, 8)
-        target_shape = np.random.randint(1, 11, size=(ndim,))
+        target_shape = np.random.randint(1, 6, size=(ndim,))
         axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
         shape = target_shape.copy()
         size = tuple([shape[ele] for ele in axis])
@@ -1035,8 +1036,6 @@ def test_broadcast():
                                           numpy_reduce_func=np.sum)
             net = sym_bcast.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
                                                  args_grad={'a': grad_nd})
-            net_bcast_to = sym_bcast_to.bind(mx.cpu(), args={'a': mx.nd.array(dat_npy)},
-                                             args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
             err_forward = reldiff(net.outputs[0].asnumpy(), groundtruth)
@@ -1130,6 +1129,354 @@ def test_flip():
             y = mx.nd.flip(x, axis=axis)
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
+
+def test_stn():
+    import pdb
+    np.set_printoptions(threshold=np.nan)
+    num_filter = 2  # conv of loc net
+    kernel = (3, 3)  # conv of loc net
+    num_hidden = 6  # fc of loc net
+    for n in [1, 2, 3, 4]:
+        for c in [1, 2, 3, 4]:
+            for h in [5, 9, 13, 17]:  # for convenience test, this third and forth input dim should be 4x + 1
+                for w in [5, 9, 13, 17]:
+                    data_shape = (n, c, h, w)
+                    target_shape = (int((data_shape[2]+1)/2), int((data_shape[3]+1)/2))
+                    data = mx.sym.Variable(name="data")
+                    loc = mx.sym.Convolution(data=data, kernel=kernel, pad=(1, 1), num_filter=num_filter, name="loc_conv")
+                    loc = mx.sym.Flatten(data=loc)
+                    loc = mx.sym.FullyConnected(data=loc, num_hidden=num_hidden, name="loc_fc")
+                    stn = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=target_shape,
+                                                    transform_type="affine", sampler_type="bilinear")
+                    arg_names = stn.list_arguments()
+                    arg_shapes, out_shapes, _ = stn.infer_shape(data=data_shape)
+                    # check shape
+                    assert out_shapes[0] == (data_shape[0], data_shape[1], target_shape[0], target_shape[1])
+                    dev = mx.cpu()
+                    #dev = mx.gpu(0)
+                    args = {}
+                    args['data'] = mx.random.normal(0, 1, data_shape, dev)
+                    args['loc_conv_weight'] = mx.nd.zeros((num_filter, data_shape[1], kernel[0], kernel[1]), ctx=dev)
+                    args['loc_conv_bias'] = mx.nd.zeros((num_filter,), ctx=dev)
+                    args['loc_fc_weight'] = mx.nd.zeros((6, num_filter*data_shape[2]*data_shape[3]), ctx=dev)
+                    args['loc_fc_bias'] = mx.nd.array([0.5, 0, 0, 0, 0.5, 0], ctx=dev)
+                    grad_grad = [mx.nd.zeros(shape, ctx=dev) for shape in arg_shapes]
+                    exe = stn.bind(dev, args=args, args_grad=grad_grad)
+                    exe.forward(is_train=True)
+                    out = exe.outputs[0].asnumpy()
+                    # check forward
+                    reldiff(out, args['data'].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+                    out_grad = mx.nd.ones(out.shape, ctx=dev)
+                    exe.backward([out_grad])
+                    # check backward
+                    reldiff(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+
+
+def test_dot(ctx=mx.cpu()):
+    for m in range(1, 5):
+        for k in range(1, 5):
+            for n in range(1, 5):
+                a_npy = np.random.normal(0, 1, (m, k))
+                b_npy = np.random.normal(0, 1, (k, n))
+                c_npy = np.empty((m, n))
+                ograd_npy = np.random.normal(0, 1, (m, n))
+                agrad_npy = np.empty((m, k))
+                bgrad_npy = np.empty((k, n))
+                c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
+                bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
+                agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
+                a = mx.sym.Variable('a')
+                b = mx.sym.Variable('b')
+                c = mx.sym.dot(a, b)
+                exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
+                outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
+                exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
+                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
+
+
+def test_batch_dot(ctx=mx.cpu()):
+    for batch_size in range(1, 5):
+        for m in range(1, 5):
+            for k in range(1, 5):
+                for n in range(1, 5):
+                    a_npy = np.random.normal(0, 1, (batch_size, m, k))
+                    b_npy = np.random.normal(0, 1, (batch_size, k, n))
+                    c_npy = np.empty((batch_size, m, n))
+                    ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
+                    agrad_npy = np.empty((batch_size, m, k))
+                    bgrad_npy = np.empty((batch_size, k, n))
+                    for i in range(batch_size):
+                        c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
+                        bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
+                        agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
+                    a = mx.sym.Variable('a')
+                    b = mx.sym.Variable('b')
+                    c = mx.sym.batch_dot(a, b)
+                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
+                    outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
+                    exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
+                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
+
+
+def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
+    
+    img1 = mx.sym.Variable('img1')
+    img2 = mx.sym.Variable('img2')
+    return mx.sym.Correlation(data1=img1,data2=img2,kernel_size =kernel_size,max_displacement = max_displacement,
+                              stride1 = stride1,stride2 = stride2,pad_size= pad_size,is_multiply = is_multiply)
+
+def correlation_forward(data1,data2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply):
+    
+    # compute output's dimension
+    paddedbottomheight = data1.shape[2] + 2 * pad_size
+    paddedbottomwidth = data1.shape[3] + 2 * pad_size
+    kernel_radius = (kernel_size - 1) // 2
+    border_size = max_displacement + kernel_radius
+    top_width = (paddedbottomwidth - border_size * 2) // stride1
+    top_height = (paddedbottomheight - border_size  * 2) // stride1
+    neighborhood_grid_radius = max_displacement // stride2
+    neighborhood_grid_width = neighborhood_grid_radius * 2 + 1
+    top_channels = neighborhood_grid_width * neighborhood_grid_width
+    
+    out = np.zeros((data1.shape[0], top_channels, top_height, top_width))
+    tmp1 = np.zeros((data1.shape[0],data1.shape[1],paddedbottomheight, paddedbottomwidth))
+    tmp2 = np.zeros((data1.shape[0],data1.shape[1],paddedbottomheight, paddedbottomwidth))
+    
+    tmp1[:, :, pad_size:pad_size + data1.shape[2], pad_size:pad_size + data1.shape[3]] = data1[:,:,:,:]
+    tmp2[:, :, pad_size:pad_size + data2.shape[2], pad_size:pad_size + data2.shape[3]] = data2[:,:,:,:]
+    
+    for i in range(top_height):
+        for j in range(top_width):
+            for nbatch in range(data1.shape[0]):
+                
+                # x1,y1 is the location in data1 , i,j is the location in output
+                x1 = j * stride1 + max_displacement
+                y1 = i * stride1 + max_displacement
+                
+                for top_channel in range(top_channels):
+                    
+                    s2o = (top_channel % neighborhood_grid_width - neighborhood_grid_radius) * stride2
+                    s2p = (top_channel // neighborhood_grid_width - neighborhood_grid_radius) * stride2
+                    
+                    # location in data2 
+                    x2 = x1 + s2o
+                    y2 = y1 + s2p
+                    
+                    for h in range(kernel_size):
+                        for w in range(kernel_size):
+                            for channel in range(data1.shape[1]):
+                                if is_multiply:
+                                    out[nbatch, top_channel, i, j] += tmp1[nbatch, channel,y1 + h, x1 + w] * tmp2[nbatch, channel, y2 + h,x2 + w]
+                                else:
+                                    out[nbatch, top_channel, i, j] += abs(tmp1[nbatch, channel, y1 + h, x1 + w] - tmp2[nbatch, channel, y2 + h, x2 + w])
+    out /= float(kernel_size**2*data1.shape[1])
+    return out,tmp1,tmp2
+
+def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply):
+    
+    # compute output's dimension 
+    paddedbottomheight = data1.shape[2] + 2 * pad_size
+    paddedbottomwidth = data1.shape[3] + 2 * pad_size
+    kernel_radius = (kernel_size - 1) // 2
+    border_size = max_displacement + kernel_radius
+    top_width = (paddedbottomwidth - border_size * 2) // stride1
+    top_height = (paddedbottomheight - border_size  * 2) // stride1
+    neighborhood_grid_radius = max_displacement // stride2
+    neighborhood_grid_width = neighborhood_grid_radius * 2 + 1
+    top_channels = neighborhood_grid_width * neighborhood_grid_width
+    
+    out = np.zeros((data1.shape[0], top_channels, top_height, top_width))
+    tmp1_grad = np.zeros(tmp1.shape)
+    tmp2_grad = np.zeros(tmp2.shape)
+    
+    for i in range(top_height):
+        for j in range(top_width):
+            for nbatch in range(data1.shape[0]):
+                
+                # x1,y1 is the location in data1 , i,j is the location in output
+                x1 = j * stride1 + max_displacement
+                y1 = i * stride1 + max_displacement
+                
+                for top_channel in range(top_channels):
+                    
+                    s2o = (top_channel % neighborhood_grid_width - neighborhood_grid_radius) * stride2
+                    s2p = (top_channel // neighborhood_grid_width - neighborhood_grid_radius) * stride2
+                    
+                    # location in data2 
+                    x2 = x1 + s2o
+                    y2 = y1 + s2p
+                    
+                    for h in range(kernel_size):
+                        for w in range(kernel_size):
+                            for channel in range(data1.shape[1]):
+                                if is_multiply:
+                                    tmp1_grad[nbatch,channel,y1+h,x1+w]+= out_grad[nbatch,top_channel,i,j]*tmp2[nbatch, channel, y2 + h,x2 + w]
+                                    tmp2_grad[nbatch,channel,y2+h,x2+w]+= out_grad[nbatch,top_channel,i,j]*tmp1[nbatch, channel, y1 + h,x1 + w]
+                                else:
+                                    sgn = 1 if (tmp1[nbatch, channel, y1 + h,x1 + w]>=tmp2[nbatch, channel, y2 + h,x2 + w]) else -1
+                                    tmp1_grad[nbatch,channel,y1+h,x1+w]+= out_grad[nbatch,top_channel,i,j]*sgn
+                                    tmp2_grad[nbatch,channel,y2+h,x2+w]+= out_grad[nbatch,top_channel,i,j]*(-sgn)
+    
+    tmp1_grad = tmp1_grad / float(kernel_size**2*data1.shape[1])
+    tmp2_grad = tmp2_grad / float(kernel_size**2*data1.shape[1])
+    return tmp1_grad[:,:,pad_size:pad_size+data1.shape[2],pad_size:pad_size+data1.shape[3]],tmp2_grad[:,:,pad_size:pad_size+data1.shape[2],pad_size:pad_size+data1.shape[3]],
+
+def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
+    
+    img1 = np.random.random(data_shape)
+    img2 = np.random.random(data_shape)
+
+    net1 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply)
+    net2 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply )
+
+    exe1 = net1.simple_bind(mx.cpu(),img1=img1.shape,img2=img1.shape)
+    exe1.arg_dict['img1'][:] = img1
+    exe1.arg_dict['img2'][:] = img2
+
+    #cpu forward
+    exe1.forward()  
+    # python forward
+    forward_result,tmp1,tmp2 = correlation_forward(img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
+
+    # forward error
+    assert np.abs(exe1.outputs[0].asnumpy()-forward_result).mean()<1e-4
+    
+    # out_grad 
+    a = np.ones(forward_result.shape)
+    out_grad1 = mx.nd.array(a,mx.cpu())
+    # cpu backward
+    exe1.backward(out_grads=out_grad1)
+    # python backward
+    grad1,grad2 = correlation_backward(a,tmp1,tmp2,img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
+
+    # backward error 
+    assert np.abs(exe1.grad_dict['img1'].asnumpy() - grad1).mean() < 1e-4
+    assert np.abs(exe1.grad_dict['img2'].asnumpy() - grad2).mean() < 1e-4
+
+def test_correlation():
+    
+    unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 1,stride2 = 1,pad_size = 4,is_multiply = False)
+    unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = False)
+    unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = True)
+    unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 10,stride1 = 1,stride2 = 2,pad_size = 10,is_multiply = True)
+    unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = True)
+    unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = True)
+    unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False)
+    unittest_correlation((5,1,6,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False)
+    unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False)
+    
+def test_dot(ctx=mx.cpu()):
+    for m in range(1, 5):
+        for k in range(1, 5):
+            for n in range(1, 5):
+                a_npy = np.random.normal(0, 1, (m, k))
+                b_npy = np.random.normal(0, 1, (k, n))
+                c_npy = np.empty((m, n))
+                ograd_npy = np.random.normal(0, 1, (m, n))
+                agrad_npy = np.empty((m, k))
+                bgrad_npy = np.empty((k, n))
+                c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
+                bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
+                agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
+                a = mx.sym.Variable('a')
+                b = mx.sym.Variable('b')
+                c = mx.sym.dot(a, b)
+                exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
+                outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
+                exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
+                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
+
+
+def test_batch_dot(ctx=mx.cpu()):
+    for batch_size in range(1, 5):
+        for m in range(1, 5):
+            for k in range(1, 5):
+                for n in range(1, 5):
+                    a_npy = np.random.normal(0, 1, (batch_size, m, k))
+                    b_npy = np.random.normal(0, 1, (batch_size, k, n))
+                    c_npy = np.empty((batch_size, m, n))
+                    ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
+                    agrad_npy = np.empty((batch_size, m, k))
+                    bgrad_npy = np.empty((batch_size, k, n))
+                    for i in range(batch_size):
+                        c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
+                        bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
+                        agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
+                    a = mx.sym.Variable('a')
+                    b = mx.sym.Variable('b')
+                    c = mx.sym.batch_dot(a, b)
+                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
+                    outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
+                    exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
+                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
+
+
+def test_support_vector_machine_l1_svm():
+    xpu = mx.cpu()
+    shape = (20, 10)
+
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.SVMOutput(data=X, label=L, use_linear=True)
+    x = mx.nd.empty(shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    x_np = np.random.rand(*shape)
+    l_np = np.random.randint(0, shape[1], (shape[0],))
+    x[:] = x_np
+    l[:] = l_np
+
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    exec1.forward()
+
+    assert_allclose(x_np, exec1.outputs[0].asnumpy())
+    
+    exec1.backward()
+
+    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
+    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
+    grad_np = (-1) * l_mask * np.greater(1 - l_mask * x_np, 0)
+
+    assert_allclose(grad_np, grad.asnumpy())
+
+def test_support_vector_machine_l2_svm():
+    xpu = mx.cpu()
+    shape = (20, 10)
+
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.SVMOutput(data=X, label=L)
+    x = mx.nd.empty(shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    x_np = np.random.rand(*shape)
+    x_np = x_np.astype(np.float32)
+    l_np = np.random.randint(0, shape[1], (shape[0],))
+    x[:] = x_np
+    l[:] = l_np
+
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    exec1.forward()
+
+    assert_allclose(x_np, exec1.outputs[0].asnumpy())
+    
+    exec1.backward()
+    
+    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
+    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
+    grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
+    grad_np = grad_np.astype(np.float32)
+    assert_allclose(grad_np, grad.asnumpy())
+
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1164,3 +1511,9 @@ if __name__ == '__main__':
     test_reshape()
     test_reduce()
     test_broadcast()
+    test_stn()
+    test_dot()
+    test_batch_dot()
+    test_correlation()
+    test_support_vector_machine_l1_svm()
+    test_support_vector_machine_l2_svm()

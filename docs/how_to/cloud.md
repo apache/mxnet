@@ -29,7 +29,7 @@ There are several ways to upload local data to S3. One simple way is using
 [s3cmd](http://s3tools.org/s3cmd). For example:
 
 ```bash
-wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip
+wget http://data.dmlc.ml/mxnet/data/mnist.zip
 unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ```
 
