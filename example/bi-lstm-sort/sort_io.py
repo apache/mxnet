@@ -181,9 +181,10 @@ class BucketSentenceIter(mx.io.DataIter):
     def make_data_iter_plan(self):
         "make a random data iteration plan"
         # truncate each bucket into multiple of batch-size
+        import math
         bucket_n_batches = []
         for i in range(len(self.data)):
-            bucket_n_batches.append(len(self.data[i]) / self.batch_size)
+            bucket_n_batches.append(math.ceil(len(self.data[i]) / float(self.batch_size)))
             self.data[i] = self.data[i][:int(bucket_n_batches[i]*self.batch_size)]
 
         bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
@@ -213,7 +214,7 @@ class BucketSentenceIter(mx.io.DataIter):
             i_idx = self.bucket_curr_idx[i_bucket]
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
             self.bucket_curr_idx[i_bucket] += self.batch_size
-            data[:] = self.data[i_bucket][idx]
+            data[:len(self.data[i_bucket][idx])] = self.data[i_bucket][idx]
             
             for k in range(len(data)):
                 label[k] = sorted(data[k])

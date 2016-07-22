@@ -28,7 +28,9 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
                                 bias=param.h2h_bias,
                                 num_hidden=num_hidden * 4,
                                 name="t%d_l%d_h2h" % (seqidx, layeridx))
-    gates = i2h + h2h
+    i2h_bn = mx.sym.BatchNorm(data=i2h,fix_gamma=False,name="t%d_l%d_i2h_bn" % (seqidx, layeridx))
+    h2h_bn = mx.sym.BatchNorm(data=h2h,fix_gamma=False,name="t%d_l%d_h2h_bn" % (seqidx, layeridx))
+    gates = i2h_bn + h2h_bn
     slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
                                       name="t%d_l%d_slice" % (seqidx, layeridx))
     in_gate = mx.sym.Activation(slice_gates[0], act_type="sigmoid")
@@ -94,13 +96,13 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
     pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
-
+    pred.testtest = 'hi~'
     ################################################################################
     # Make label the same shape as our produced data path
     # I did not observe big speed difference between the following two ways
 
     label = mx.sym.transpose(data=label)
-    label = mx.sym.Reshape(data=label, target_shape=(0,))
+    label = mx.sym.Reshape(data=label, shape=(-1,))
 
     #label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
     #label = [label_slice[t] for t in range(seq_len)]
