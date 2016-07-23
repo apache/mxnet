@@ -1,7 +1,7 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
-sys.path.insert(0, "../../python")
+#sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     learning_rate = 0.1
     momentum = 0.9
 
-    contexts = [mx.context.gpu(i) for i in range(1)]
+    contexts = [mx.context.cpu(i) for i in range(1)]
 
     vocab = default_build_vocab("./data/sort.train.txt")
 

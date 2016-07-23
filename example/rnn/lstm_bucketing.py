@@ -67,7 +67,6 @@ if __name__ == '__main__':
                                  wd=0.00001,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
                                  allow_extra_params=False)
-
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)

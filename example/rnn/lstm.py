@@ -36,7 +36,12 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
                                 gamma=param.bn_gamma,beta=param.bn_beta,
                                 #moving_mean=param.bn_moving_mean,moving_var=param.bn_moving_var,
                                 name="t%d_l%d_h2h_bn" % (seqidx, layeridx))
-    slice_gates = mx.sym.SliceChannel(gates_bn, num_outputs=4,
+    slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
+                                      name="t%d_l%d_slice" % (seqidx, layeridx))
+    i2h_bn = mx.sym.BatchNorm(data=i2h,fix_gamma=False,name="t%d_l%d_i2h_bn" % (seqidx, layeridx))
+    h2h_bn = mx.sym.BatchNorm(data=h2h,fix_gamma=False,name="t%d_l%d_h2h_bn" % (seqidx, layeridx))
+    gates = i2h_bn + h2h_bn
+    slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
                                       name="t%d_l%d_slice" % (seqidx, layeridx))
     in_gate = mx.sym.Activation(slice_gates[0], act_type="sigmoid")
     in_transform = mx.sym.Activation(slice_gates[1], act_type="tanh")
