@@ -52,7 +52,7 @@ def train_rcnn(image_set, year, root_path, devkit_path, pretrained, epoch,
 
     # prepare training
     if config.TRAIN.FINETUNE:
-        fixed_param_prefix = ['conv']
+        fixed_param_prefix = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
     else:
         fixed_param_prefix = ['conv1', 'conv2']
     data_names = [k[0] for k in train_data.provide_data]
