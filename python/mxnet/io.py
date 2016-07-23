@@ -349,8 +349,8 @@ class NDArrayIter(DataIter):
         if shuffle:
             idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
-            self.data = [(k, v[idx]) for k, v in self.data]
-            self.label = [(k, v[idx]) for k, v in self.label]
+            self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
+            self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
 
         self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
         self.num_source = len(self.data_list)
@@ -412,7 +412,7 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only"""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
+            return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
             return [concatenate([x[1][self.cursor:], x[1][:pad]]) for x in data_source]
