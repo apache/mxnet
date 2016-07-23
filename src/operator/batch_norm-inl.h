@@ -21,9 +21,9 @@ namespace mxnet {
 namespace op {
 
 namespace batchnorm {
-enum BatchNormOpInputs { kData, kGamma, kBeta};
+enum BatchNormOpInputs { kData, kGamma, kBeta, kMovingMean, kMovingVar };
 enum BatchNormOpOutputs {kOut, kMean, kVar};
-enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
+//enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
 enum BatchNormBackResource {kTempSpace};
 }  // namespace batchnorm
 
@@ -35,7 +35,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
-    DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
+    DMLC_DECLARE_FIELD(momentum).set_default(0.99f)
     .describe("Momentum for moving average");
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
     .describe("Fix gamma while training");
@@ -59,8 +59,8 @@ class BatchNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(aux_states.size(), 2);
+    CHECK_EQ(in_data.size(), 5);
+    CHECK_EQ(aux_states.size(), 0);
     if (ctx.is_train) {
       CHECK_EQ(out_data.size(), 3);
       CHECK_EQ(req.size(), 3);
@@ -86,8 +86,8 @@ class BatchNormOp : public Operator {
     }
     Tensor<xpu, 1> slope = in_data[batchnorm::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> bias = in_data[batchnorm::kBeta].get<xpu, 1, real_t>(s);
-	Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
-	Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> moving_mean = in_data[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> moving_var = in_data[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
     if (ctx.is_train && param_.fix_gamma) slope = 1.f;
 
@@ -136,9 +136,9 @@ class BatchNormOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 3);
+    CHECK_EQ(in_data.size(), 5);
     CHECK_EQ(out_data.size(), 3);
-    CHECK_EQ(in_grad.size(), 3);
+    CHECK_EQ(in_grad.size(), 5);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
     const real_t scale = static_cast<real_t>(out_grad[batchnorm::kOut].shape_[1]) /
@@ -162,10 +162,10 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> gslope = in_grad[batchnorm::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbias = in_grad[batchnorm::kBeta].get<xpu, 1, real_t>(s);
     // update moving avg
-	Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
-	Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> moving_mean = in_data[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> moving_var = in_data[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
-	if (ctx.is_train /*&& !param_.use_global_stats*/) {
+	if (ctx.is_train && !param_.use_global_stats) {
 		// get requested temp space
 		Tensor<xpu, 2> workspace = ctx.requested[batchnorm::kTempSpace].get_space<xpu>(
 			mshadow::Shape2(3, mean.shape_[0]), s);
@@ -204,7 +204,7 @@ class BatchNormOp : public Operator {
 			broadcast<1>(gmean, data.shape_) * scale);
 		Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
     } else {
-	  // use the global statistics with freeze moving mean and var.
+	  // use the global statistics with moving mean and var.
       if (!param_.fix_gamma) {
         Assign(gslope, req[batchnorm::kGamma],
                sumall_except_dim<1>(
@@ -216,6 +216,12 @@ class BatchNormOp : public Operator {
       Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
              broadcast<1>(
                  1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
+	  if (ctx.is_train){
+		  Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
+		  //go into layer normalization
+		  moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
+		  moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
+	  }
     }
   }
 
@@ -242,21 +248,21 @@ class BatchNormProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-	CHECK_EQ(in_shape->size(), 3) << "Input:[data, gamma, beta]";
+	CHECK_EQ(in_shape->size(), 5) << "Input:[data, gamma, beta, moving_mean, moving_var]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     in_shape->at(1) = TShape(Shape1(dshape[1]));
     in_shape->at(2) = TShape(Shape1(dshape[1]));
-	//in_shape->at(3) = TShape(Shape1(dshape[1]));
-	//in_shape->at(4) = TShape(Shape1(dshape[1]));
+	in_shape->at(3) = TShape(Shape1(dshape[1]));
+	in_shape->at(4) = TShape(Shape1(dshape[1]));
     out_shape->clear();
     out_shape->push_back(dshape);
     out_shape->push_back(Shape1(dshape[1]));
     out_shape->push_back(Shape1(dshape[1]));
 
-    aux_shape->clear();
-    aux_shape->push_back(Shape1(dshape[1]));
-    aux_shape->push_back(Shape1(dshape[1]));
+    //aux_shape->clear();
+    //aux_shape->push_back(Shape1(dshape[1]));
+    //aux_shape->push_back(Shape1(dshape[1]));
     return true;
   }
 
@@ -279,7 +285,9 @@ class BatchNormProp : public OperatorProperty {
             out_data[batchnorm::kVar],
             in_data[batchnorm::kData],
             in_data[batchnorm::kGamma],
-            in_data[batchnorm::kBeta]
+            in_data[batchnorm::kBeta],
+			in_data[batchnorm::kMovingMean],
+			in_data[batchnorm::kMovingVar]
            };
   }
 
@@ -297,16 +305,16 @@ class BatchNormProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListArguments() const override {
-    return{ "data", "gamma", "beta"};
+	  return{ "data", "gamma", "beta", "moving_mean", "moving_var" };
   }
 
   std::vector<std::string> ListOutputs() const override {
     return {"output", "mean", "var"};
   }
 
-  std::vector<std::string> ListAuxiliaryStates() const override {
-    return {"moving_mean", "moving_var"};
-  }
+  //std::vector<std::string> ListAuxiliaryStates() const override {
+  //  return {"moving_mean", "moving_var"};
+  //}
 
   Operator* CreateOperator(Context ctx) const override;
 

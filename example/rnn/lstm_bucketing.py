@@ -59,6 +59,22 @@ if __name__ == '__main__':
     else:
         symbol = sym_gen
 
+    gates_bn_hidden = 4*num_hidden
+    gates_bn_gamma,gates_bn_beta = [],[]
+    gates_bn_moving_mean,gates_bn_moving_var = [],[]
+
+    for layeridx in range(num_lstm_layer):
+        gates_bn_gamma.append(mx.nd.ones((gates_bn_hidden), contexts[0])*0.1)
+        gates_bn_beta.append(mx.nd.zeros((gates_bn_hidden), contexts[0]))
+        gates_bn_moving_var.append(mx.nd.ones((gates_bn_hidden), contexts[0]))
+        gates_bn_moving_mean.append(mx.nd.zeros((gates_bn_hidden), contexts[0]))
+    arg_params={}
+    for layeridx in range(num_lstm_layer):
+        arg_params["l%d_gates_bn_gamma" % layeridx] = gates_bn_gamma[layeridx]
+        arg_params["l%d_gates_bn_beta" % layeridx] = gates_bn_beta[layeridx]
+        arg_params["l%d_gates_bn_moving_mean" % layeridx] = gates_bn_moving_mean[layeridx]
+        arg_params["l%d_gates_bn_moving_var" % layeridx] = gates_bn_moving_var[layeridx]
+
     model = mx.model.FeedForward(ctx=contexts,
                                  symbol=symbol,
                                  num_epoch=num_epoch,
@@ -66,6 +82,7 @@ if __name__ == '__main__':
                                  momentum=momentum,
                                  wd=0.00001,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
+                                 arg_params=arg_params,
                                  allow_extra_params=False)
     import logging
     head = '%(asctime)-15s %(message)s'

@@ -10,8 +10,8 @@ import math
 LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
                                      "h2h_weight", "h2h_bias",
-                                     "bn_gamma","bn_beta"])
-                                     #"bn_moving_mean","bn_moving_var"])
+                                     "gates_bn_gamma","gates_bn_beta",
+                                     "gates_bn_moving_mean","gates_bn_moving_var"])
 LSTMModel = namedtuple("LSTMModel", ["rnn_exec", "symbol",
                                      "init_states", "last_states",
                                      "seq_data", "seq_labels", "seq_outputs",
@@ -33,22 +33,17 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
                                 name="t%d_l%d_h2h" % (seqidx, layeridx))
     gates = i2h + h2h
     gates_bn = mx.sym.BatchNorm(data=gates,fix_gamma=False,
-                                gamma=param.bn_gamma,beta=param.bn_beta,
-                                #moving_mean=param.bn_moving_mean,moving_var=param.bn_moving_var,
-                                name="t%d_l%d_h2h_bn" % (seqidx, layeridx))
-    slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
-                                      name="t%d_l%d_slice" % (seqidx, layeridx))
-    i2h_bn = mx.sym.BatchNorm(data=i2h,fix_gamma=False,name="t%d_l%d_i2h_bn" % (seqidx, layeridx))
-    h2h_bn = mx.sym.BatchNorm(data=h2h,fix_gamma=False,name="t%d_l%d_h2h_bn" % (seqidx, layeridx))
-    gates = i2h_bn + h2h_bn
-    slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
+                                gamma=param.gates_bn_gamma,beta=param.gates_bn_beta,
+                                moving_mean=param.gates_bn_moving_mean,moving_var=param.gates_bn_moving_var,
+                                name="t%d_l%d_gates_bn" % (seqidx, layeridx))
+    slice_gates = mx.sym.SliceChannel(gates_bn, num_outputs=4,
                                       name="t%d_l%d_slice" % (seqidx, layeridx))
     in_gate = mx.sym.Activation(slice_gates[0], act_type="sigmoid")
     in_transform = mx.sym.Activation(slice_gates[1], act_type="tanh")
     forget_gate = mx.sym.Activation(slice_gates[2], act_type="sigmoid")
     out_gate = mx.sym.Activation(slice_gates[3], act_type="sigmoid")
     next_c = (forget_gate * prev_state.c) + (in_gate * in_transform)
-    next_h = out_gate * mx.sym.Activation(next_c, act_type="tanh")
+    next_h = out_gate * mx.sym.Activation(next_c, act_type="relu")
     return LSTMState(c=next_c, h=next_h)
 
 
@@ -70,10 +65,10 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                      i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
                                      h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
                                      h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i),
-                                     bn_gamma=mx.sym.Variable("l%d_bn_gamma" % i),
-                                     bn_beta=mx.sym.Variable("l%d_bn_beta" % i),))
-                                     #bn_moving_mean=mx.sym.Variable("l%d_bn_moving_mean" % i),
-                                     #bn_moving_var=mx.sym.Variable("l%d_bn_moving_var" % i)))
+                                     gates_bn_gamma=mx.sym.Variable("l%d_gates_bn_gamma" % i),
+                                     gates_bn_beta=mx.sym.Variable("l%d_gates_bn_beta" % i),
+                                     gates_bn_moving_mean=mx.sym.Variable("l%d_gates_bn_moving_mean" % i),
+                                     gates_bn_moving_var=mx.sym.Variable("l%d_gates_bn_moving_var" % i)))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
