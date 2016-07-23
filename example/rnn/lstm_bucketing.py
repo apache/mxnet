@@ -1,7 +1,7 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
-sys.path.insert(0, "../../python")
+#sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 
@@ -16,7 +16,7 @@ def Perplexity(label, pred):
     return np.exp(loss / label.size)
 
 if __name__ == '__main__':
-    batch_size = 32
+    batch_size = 20
     #buckets = [10, 20, 30, 40, 50, 60]
     #buckets = [32]
     buckets = []
@@ -25,13 +25,13 @@ if __name__ == '__main__':
     num_lstm_layer = 2
 
     num_epoch = 25
-    learning_rate = 0.01
-    momentum = 0.0
+    learning_rate = 0.005
+    momentum = 0.9
 
     # dummy data is used to test speed without IO
     dummy_data = False
 
-    contexts = [mx.context.gpu(i) for i in range(1)]
+    contexts = [mx.context.cpu(i) for i in range(1)]
 
     vocab = default_build_vocab("./data/ptb.train.txt")
 
@@ -65,13 +65,32 @@ if __name__ == '__main__':
                                  learning_rate=learning_rate,
                                  momentum=momentum,
                                  wd=0.00001,
-                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
+                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
+                                 allow_extra_params=False)
 
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
+    def batch_end_callback(batch_size,frequent):
+            call_back = mx.callback.Speedometer(batch_size, frequent)
+            def AverageL2Norm(d):
+                """The statistics you want to see.
+                We compute the L2 norm here but you can change it to anything you like."""
+                return (mx.nd.norm(d)/np.sqrt(d.size)).asnumpy()[0]
+            def PrintAverageL2Norm(d):
+                for key,value in sorted(d):
+                    print key,'AverageL2Norm:',AverageL2Norm(value[0])
+            def decorator(parameter):
+                call_back(parameter)
+                if parameter.locals['nbatch'] % frequent == 0:
+                    executor_manager = parameter.locals['executor_manager']
+                    PrintAverageL2Norm(zip(executor_manager.param_names,executor_manager.param_arrays))
+                    PrintAverageL2Norm(zip(executor_manager.aux_names,executor_manager.aux_arrays))
+                return False
+            return decorator
+
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Perplexity),
-              batch_end_callback=mx.callback.Speedometer(batch_size, 50),)
+              batch_end_callback=batch_end_callback(batch_size, 40))
 

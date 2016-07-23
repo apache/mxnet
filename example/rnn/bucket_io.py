@@ -5,6 +5,7 @@ sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 
+np.random.seed(2345)
 # The interface of a data iter that works for bucketing
 #
 # DataIter

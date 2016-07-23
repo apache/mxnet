@@ -1,14 +1,17 @@
 # pylint:skip-file
 import sys
-sys.path.insert(0, "../../python")
+#sys.path.insert(0, "../../python")
 import mxnet as mx
 import numpy as np
 from collections import namedtuple
 import time
 import math
+
 LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
-                                     "h2h_weight", "h2h_bias"])
+                                     "h2h_weight", "h2h_bias",
+                                     "bn_gamma","bn_beta"])
+                                     #"bn_moving_mean","bn_moving_var"])
 LSTMModel = namedtuple("LSTMModel", ["rnn_exec", "symbol",
                                      "init_states", "last_states",
                                      "seq_data", "seq_labels", "seq_outputs",
@@ -29,7 +32,11 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
                                 num_hidden=num_hidden * 4,
                                 name="t%d_l%d_h2h" % (seqidx, layeridx))
     gates = i2h + h2h
-    slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
+    gates_bn = mx.sym.BatchNorm(data=gates,fix_gamma=False,
+                                gamma=param.bn_gamma,beta=param.bn_beta,
+                                #moving_mean=param.bn_moving_mean,moving_var=param.bn_moving_var,
+                                name="t%d_l%d_h2h_bn" % (seqidx, layeridx))
+    slice_gates = mx.sym.SliceChannel(gates_bn, num_outputs=4,
                                       name="t%d_l%d_slice" % (seqidx, layeridx))
     in_gate = mx.sym.Activation(slice_gates[0], act_type="sigmoid")
     in_transform = mx.sym.Activation(slice_gates[1], act_type="tanh")
@@ -57,7 +64,11 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
         param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
                                      i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
                                      h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
-                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i)))
+                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i),
+                                     bn_gamma=mx.sym.Variable("l%d_bn_gamma" % i),
+                                     bn_beta=mx.sym.Variable("l%d_bn_beta" % i),))
+                                     #bn_moving_mean=mx.sym.Variable("l%d_bn_moving_mean" % i),
+                                     #bn_moving_var=mx.sym.Variable("l%d_bn_moving_var" % i)))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)
@@ -94,13 +105,13 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
     pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=num_label,
                                  weight=cls_weight, bias=cls_bias, name='pred')
-
+    pred.testtest = 'hi~'
     ################################################################################
     # Make label the same shape as our produced data path
     # I did not observe big speed difference between the following two ways
 
     label = mx.sym.transpose(data=label)
-    label = mx.sym.Reshape(data=label, target_shape=(0,))
+    label = mx.sym.Reshape(data=label, shape=(-1,))
 
     #label_slice = mx.sym.SliceChannel(data=label, num_outputs=seq_len)
     #label = [label_slice[t] for t in range(seq_len)]

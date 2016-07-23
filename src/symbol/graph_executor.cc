@@ -855,6 +855,8 @@ void GraphExecutor::InitOpSegs() {
   // normal procedure
   for (size_t i = 0; i < topo_order_.size(); ++i) {
     size_t j = i;
+	if (i == 585)
+		i = 585;
     int hit_count = 0;
     for (; j < topo_order_.size(); ++j) {
       if (j == num_forward_nodes_) break;
