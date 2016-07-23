@@ -164,6 +164,11 @@ class BatchNormOp : public Operator {
     // update moving avg
 	Tensor<xpu, 1> moving_mean = in_data[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
 	Tensor<xpu, 1> moving_var = in_data[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+	
+	Tensor<xpu, 1> gmoving_mean = in_grad[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> gmoving_var = in_grad[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+	Assign(gmoving_mean, req[batchnorm::kMovingMean], 0.0f);
+	Assign(gmoving_var, req[batchnorm::kMovingVar], 0.0f);
 
 	if (ctx.is_train && !param_.use_global_stats) {
 		// get requested temp space

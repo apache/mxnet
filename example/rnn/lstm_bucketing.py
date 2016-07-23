@@ -78,8 +78,9 @@ if __name__ == '__main__':
     model = mx.model.FeedForward(ctx=contexts,
                                  symbol=symbol,
                                  num_epoch=num_epoch,
+                                 optimizer='adagrad',
                                  learning_rate=learning_rate,
-                                 momentum=momentum,
+                                 #momentum=momentum,
                                  wd=0.00001,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
                                  arg_params=arg_params,
@@ -91,18 +92,14 @@ if __name__ == '__main__':
     def batch_end_callback(batch_size,frequent):
             call_back = mx.callback.Speedometer(batch_size, frequent)
             def AverageL2Norm(d):
-                """The statistics you want to see.
-                We compute the L2 norm here but you can change it to anything you like."""
                 return (mx.nd.norm(d)/np.sqrt(d.size)).asnumpy()[0]
-            def PrintAverageL2Norm(d):
-                for key,value in sorted(d):
-                    print key,'AverageL2Norm:',AverageL2Norm(value[0])
             def decorator(parameter):
                 call_back(parameter)
                 if parameter.locals['nbatch'] % frequent == 0:
                     executor_manager = parameter.locals['executor_manager']
-                    PrintAverageL2Norm(zip(executor_manager.param_names,executor_manager.param_arrays))
-                    PrintAverageL2Norm(zip(executor_manager.aux_names,executor_manager.aux_arrays))
+                    for (index,value) in enumerate(executor_manager.param_names):
+                        print value,'AverageL2Norm(param,grad):',(AverageL2Norm(executor_manager.param_arrays[index][0]),
+                                                                  AverageL2Norm(executor_manager.grad_arrays[index][0]))
                 return False
             return decorator
 

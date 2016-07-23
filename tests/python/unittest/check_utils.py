@@ -87,7 +87,7 @@ def numeric_grad(executor, location, eps=1e-4):
 
 rng = np.random.RandomState(1234)
 
-def check_numeric_gradient(sym, location, aux_states=[], numeric_eps=1e-4, check_eps=1e-2):
+def check_numeric_gradient(sym, location, location_check_flags=None, aux_states=[], numeric_eps=1e-4, check_eps=1e-2):
     """
     Verify an operation by checking backwards pass via
     finite difference method.
@@ -116,7 +116,7 @@ def check_numeric_gradient(sym, location, aux_states=[], numeric_eps=1e-4, check
         plain = rng.rand(*shape) + 0.1
         #plain = np.ones(shape)
         return plain
-
+    if location_check_flags:assert(len(location_check_flags) == len(location))
     kwargs = {name:array.shape for name, array in zip(sym.list_arguments(), location)}
     arg_shape, out_shape, aux_shape = sym.infer_shape(**kwargs)
 
@@ -156,9 +156,13 @@ def check_numeric_gradient(sym, location, aux_states=[], numeric_eps=1e-4, check
     # refactor forward out of here as this no longer computes correct forward pass
     numeric_gradients = numeric_grad(executor, location, eps=numeric_eps)
 
-    for name, numeric, symbolic in zip(out.list_arguments(), numeric_gradients, symbolic_grad):
+    for index, name, numeric, symbolic in zip(range(len(out.list_arguments())),out.list_arguments(), numeric_gradients, symbolic_grad):
+        if location_check_flags:
+            if not location_check_flags[index]: continue
         rel = reldiff(numeric, symbolic)
         if rel > check_eps:
+            print('numeric,symbolic')
+            print(zip(numeric,symbolic))
             raise Exception("Numeric check failed for %s. relative error of %f expected <= %f"%(name, rel, check_eps))
 
 def check_symbolic_forward(sym, location, expected, check_eps=1e-5):
