@@ -100,7 +100,7 @@ def write_record(args, image_list, fname):
                 img = img[:, margin:margin + img.shape[0]]
         if args.resize:
             if img.shape[0] > img.shape[1]:
-                newsize = (args.resize, img.shape[0] * args.resize / img.shape[1]
+                newsize = (args.resize, img.shape[0] * args.resize / img.shape[1])
             else:
                 newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
             img = cv2.resize(img, newsize)
