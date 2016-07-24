@@ -4,11 +4,11 @@ export OPENBLAS_ROOT=${MXNET_ROOT}/../OpenBLAS
 
 # Whether use minimum build without blas and SSE, this will make the library super slow
 ifndef MIN
-	export MIN= 0
+	export MIN=0
 endif
 
 ifndef ANDROID
-        export ANDROID=0
+    export ANDROID=0
 endif
 
 
@@ -17,8 +17,8 @@ endif
 
 CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall
 ifneq ($(MIN), 1)
-	CFLAGS+= -I${OPENBLAS_ROOT}
-	LDFLAGS+=-L${OPENBLAS_ROOT} -lopenblas
+	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
+	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib -lopenblas
 endif
 
 
