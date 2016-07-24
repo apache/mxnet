@@ -11,6 +11,7 @@
 #include <map>
 #include <string>
 #include <utility>
+#include <cstdint>
 #include "./rnn-inl.h"
 
 namespace mxnet {
@@ -479,7 +480,7 @@ class CuDNNRNNOp : public Operator {
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
   void *dropout_states_;
-  unsigned long long seed_ = 1337ull;
+  uint64_t seed_ = 1337ull;
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, reserve_space_size_, dropout_size_;
 
