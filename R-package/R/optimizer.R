@@ -149,6 +149,109 @@ mx.opt.rmsprop <- function(learning.rate=0.002,
   return(list(create.state=create.state, update=update))
 }
 
+#' Create an Adam optimizer with respective parameters.
+#' Adam optimizer as described in [King2014].
+#'
+#' [King2014] Diederik Kingma, Jimmy Ba,
+#' Adam: A Method for Stochastic Optimization,
+#' http://arxiv.org/abs/1412.6980
+#'
+#' @param learning.rate float, default=0.001
+#'      Step size.
+#' @param beta1 float, default=0.9
+#'      Exponential decay rate for the first moment estimates.
+#' @param beta2 float, default=0.999
+#'      Exponential decay rate for the second moment estimates.
+#' @param epsilon float, default=1e-8
+#' @param wd float, default=0.0
+#'      L2 regularization coefficient add to all the weights.
+#' @param rescale.grad float, default=1.0
+#'      rescaling factor of gradient.
+#' @param clip_gradient float, optional
+#'      clip gradient in range [-clip_gradient, clip_gradient].
+#' @param lr_scheduler function, optional
+#'      The learning rate scheduler.
+#'
+mx.opt.adam <- function(learning.rate=0.001,
+                        beta1=0.9,
+                        beta2=0.999,
+                        epsilon=1e-8,
+                        wd=0,
+                        rescale.grad=1,
+                        clip_gradient = NULL,
+                        lr_scheduler = NULL) {
+  # use lr as short for learing rate.
+  lr <- learning.rate
+  count       <- 0
+  num_update  <- 0
+
+  adam <- new.env()
+  adam$lr <- lr
+  adam$count <- 0
+  adam$num_update <- 0
+
+  create.state <- function(index, weight) {
+      return (list(mean=mx.nd.zeros(dim(weight), ctx(weight)),
+                   variance=mx.nd.zeros(dim(weight), ctx(weight))))
+  }
+
+  update <- function(index, weight, grad, state) {
+    if (!is.null(lr_scheduler)){
+      lr_scheduler(adam) ## changing lr
+      lr <- adam$lr
+      ## update count
+      indexKey <- paste0('ik', index)
+      if (!exists(envir = adam, x = indexKey)){
+        assign(x = indexKey, value = 0, envir = adam)
+      } else {
+        indexValue <- get(envir = adam, x = indexKey)
+        assign(x = indexKey, value = indexValue + 1, envir = adam)
+        adam$num_update <- max(adam$num_update, get(envir = adam, x = indexKey))
+      }
+    }
+
+    # increment time
+    time.key <- paste0('t', index)
+    if (!exists(envir = adam, x = time.key)){
+      assign(x = time.key, value = 0, envir = adam)
+    }
+    t <- get(envir = adam, x = time.key)
+    t <- t + 1
+    assign(x = time.key, value = t, envir = adam)
+
+    mean <- state$mean
+    variance <- state$variance
+
+    grad <- grad * rescale.grad
+    if (!is.null(clip_gradient)){
+      if(clip_gradient >= 0){
+          grad_ctx <- ctx(grad)
+          grad <- as.array(grad)
+          grad <- pmax(grad, -1 * clip_gradient)
+          grad <- pmin(grad, clip_gradient)
+          grad <- mx.nd.array(grad, grad_ctx)
+      } else {
+        stop("Error: clip_gradient should be positive number.")
+      }
+    }
+
+    mean <- beta1 * mean + (1 - beta1) * grad
+    variance <- beta2 * variance + (1 - beta2) * (grad * grad)
+
+    coef1 <- 1 - beta1^t
+    coef2 <- 1 - beta2^t
+    lr <- lr * sqrt(coef2)/coef1
+
+    weight <- weight - lr * mean / (mx.nd.sqrt(variance) + epsilon)
+    weight <- weight - lr * wd * weight
+
+    state <- list(mean=mean, variance=variance)
+
+    return(list(weight=weight, state=state))
+  }
+  return(list(create.state=create.state, update=update))
+}
+
 #' Create an optimizer by name and parameters
 #'
 #' @param name The name of the optimizer
@@ -161,6 +264,9 @@ mx.opt.create <- function(name, ...) {
   }
   else if (name == "rmsprop") {
     return (mx.opt.rmsprop(...))
+  }
+  else if (name == "adam") {
+    return (mx.opt.adam(...))
   }
   stop(paste("Unknown optimizer ", name))
 }
