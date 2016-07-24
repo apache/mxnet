@@ -149,20 +149,17 @@ class RNNProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListOutputs() const override {
-    if (param_.mode == rnn_enum::kLstm)
-      return {"output", "state", "state_cell"};
+    std::vector<std::string> outputs = {"output"};
+    if (!param_.state_outputs)
+      return outputs;
     else
-      return {"output", "state"};
+      outputs.push_back("state");
+    if (param_.mode == rnn_enum::kLstm)
+      outputs.push_back("state_cell");
+    return outputs;
   }
 
   int NumOutputs() const override {
-    if (param_.mode == rnn_enum::kLstm)
-      return 3;
-    else
-      return 2;
-  }
-
-  int NumVisibleOutputs() const override {
     int mode_num = (param_.mode == rnn_enum::kLstm) ? 2 : 1;
     int num_outputs = param_.state_outputs ? (mode_num + 1) : 1;
     return num_outputs;
@@ -209,21 +206,26 @@ class RNNProp : public OperatorProperty {
                                     param_.bidirectional,
                                     param_.mode);
     SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
+
+    out_shape->clear();
     // output: [sequence len, batch, output size]
     TShape oshape = dshape;
     oshape[2] = numDirections * param_.state_size;
-    TShape outStateShape = dshape;
-    outStateShape[0] = total_layers;
-    outStateShape[1] = batch_size;
-    outStateShape[2] = param_.state_size;
-
-    out_shape->clear();
     out_shape->push_back(oshape);
-    out_shape->push_back(outStateShape);
-    // Deal with lstm cell state
-    if (param_.mode == rnn_enum::kLstm)
+    if (!param_.state_outputs) {
+      return true;
+    } else {
+      // outStateShape: [layer_num, batch, state size]
+      TShape outStateShape = dshape;
+      outStateShape[0] = total_layers;
+      outStateShape[1] = batch_size;
+      outStateShape[2] = param_.state_size;
       out_shape->push_back(outStateShape);
-    return true;
+      // Deal with lstm cell state
+      if (param_.mode == rnn_enum::kLstm)
+        out_shape->push_back(outStateShape);
+      return true;
+    }
   }
 
   bool InferType(std::vector<int> *in_type,
@@ -243,11 +245,15 @@ class RNNProp : public OperatorProperty {
     }
     out_type->clear();
     out_type->push_back(dtype);
-    out_type->push_back(dtype);
-    // Deal with lstm cell state
-    if (param_.mode == rnn_enum::kLstm)
+    if (!param_.state_outputs) {
+      return true;
+    } else {
       out_type->push_back(dtype);
-    return true;
+      // Deal with lstm cell state
+      if (param_.mode == rnn_enum::kLstm)
+        out_type->push_back(dtype);
+      return true;
+    }
   }
 
   OperatorProperty* Copy() const override {
