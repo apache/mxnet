@@ -214,14 +214,23 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    * pulling, we can place a barrier to guarantee that the initialization is
    * finished.
    */
-  def barrier() {
+  def barrier(): Unit = {
     checkCall(_LIB.mxKVStoreBarrier(handle))
   }
 
   def numDeadNode(nodeId: Int): Int = {
     val number = new RefInt
-    checkCall(_LIB.mxKVStoreGetDeadNodeNum(handle, nodeId, number))
+    checkCall(_LIB.mxKVStoreGetNumDeadNode(handle, nodeId, number))
     number.value
+  }
+
+  /**
+   * Whether to do barrier when the kvstore finalizes
+   * @param barrierBeforeExit
+   */
+  def setBarrierBeforeExit(barrierBeforeExit: Boolean): Unit = {
+    val flag: Int = if (barrierBeforeExit) 1 else 0
+    checkCall(_LIB.mxKVStoreSetBarrierBeforeExit(handle, flag))
   }
 
   /**

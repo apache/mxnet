@@ -63,7 +63,7 @@ class MXNet extends Serializable {
   /**
    * The application (including parameter scheduler & servers)
    * will exist if it hasn't received heart beat for over timeout seconds
-   * @param timeout timeout in seconds
+   * @param timeout timeout in seconds (default 300)
    */
   def setTimeout(timeout: Int): this.type = {
     params.timeout = timeout
@@ -142,11 +142,14 @@ class MXNet extends Serializable {
 
       logger.info("Launching worker ...")
       logger.info("Batch {}", params.batchSize)
+      // give enough time for ps-lite to detect the dead nodes
+      Thread.sleep(20000)
       KVStoreServer.init(ParameterServer.buildEnv(role = "worker",
         rootUri = schedulerIP, rootPort = schedulerPort,
         numServer = params.numServer,
         numWorker = params.numWorker))
       val kv = KVStore.create("dist_async")
+      kv.setBarrierBeforeExit(false)
 
       val optimizer: Optimizer = new SGD(learningRate = 0.01f,
         momentum = 0.9f, wd = 0.00001f)
@@ -169,7 +172,7 @@ class MXNet extends Serializable {
 
       logger.info("Training finished, waiting for other workers ...")
       dataIter.dispose()
-      kv.barrier()
+      kv.setBarrierBeforeExit(true)
       kv.dispose()
       Iterator(new MXNetModel(
         model, params.dimension, params.batchSize,

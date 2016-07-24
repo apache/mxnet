@@ -43,12 +43,14 @@ class KVStoreDist : public KVStoreDevice {
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
     if (IsWorkerNode()) {
-      Barrier();
-      if (get_rank() == 0) {
-        // stop the executor at servers
-        SendCommandToServers(kStopServer, "");
+      if (barrier_before_exit_) {
+        Barrier();
+        if (get_rank() == 0) {
+          // stop the executor at servers
+          SendCommandToServers(kStopServer, "");
+        }
       }
-      ps::Finalize();
+      ps::Finalize(barrier_before_exit_);
       delete ps_worker_;
     }
   }
@@ -170,7 +172,7 @@ class KVStoreDist : public KVStoreDevice {
 
   int get_rank() const override { return ps::MyRank(); }
 
-  int get_dead_num(int node_id, int timeout) const override {
+  int get_num_dead_node(int node_id, int timeout) const override {
     int number = 0;
     auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(timeout);
     const auto& watch_nodes = ps::Postoffice::Get()->GetNodeIDs(node_id);

@@ -1248,6 +1248,16 @@ MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
 MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
 
 /**
+ * \brief whether to do barrier when finalize
+ *
+ * \param handle handle to the KVStore
+ * \param barrier_before_exit whether to do barrier when kvstore finalize
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetBarrierBeforeExit(KVStoreHandle handle,
+                                            const int barrier_before_exit);
+
+/**
  * \brief the prototype of a server controller
  * \param head the head of the command
  * \param body the body of the command
@@ -1291,7 +1301,7 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
  * \param timeout_sec A node fails to send heartbeart in {timeout_sec} seconds
  *                    will be presumed as 'dead'
  */
-MXNET_DLL int MXKVStoreGetDeadNodeNum(KVStoreHandle handle,
+MXNET_DLL int MXKVStoreGetNumDeadNode(KVStoreHandle handle,
                                       const int node_id,
                                       int *number,
                                       const int timeout_sec = 60);
