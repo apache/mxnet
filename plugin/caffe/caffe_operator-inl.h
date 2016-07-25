@@ -159,7 +159,7 @@ class CaffeOperator : public Operator {
 
     // Handle OpReqType of weights
     for (index_t i = param_.in_num; i < expected_in_num; ++i)
-      HandleOpReq(s, req[i], &in_grad[i]);
+      HandleOpReq(s, req[i], in_grad[i]);
 
     // Set BP flag
     for (index_t i = 0; i < param_.in_num; ++i)
@@ -168,24 +168,11 @@ class CaffeOperator : public Operator {
     caffeOp_->Backward(top_, flags_, bot_);
   }
 
-  void HandleOpReq(mshadow::Stream<xpu>*s, OpReqType req, const TBlob* in_g) {
+  void HandleOpReq(mshadow::Stream<xpu>*s, OpReqType req, const TBlob& in_g) {
     if ((req == kWriteInplace) || (req == kWriteTo)) {
-      switch (in_g->shape_.ndim()) {
-        case 1: CleanTBlob<1>(s, req, in_g); break;
-        case 2: CleanTBlob<2>(s, req, in_g); break;
-        case 3: CleanTBlob<3>(s, req, in_g); break;
-        case 4: CleanTBlob<4>(s, req, in_g); break;
-        default:
-          LOG(FATAL) << "unknown expected weight dim" << in_g->shape_.ndim();
-          break;
-      }
+      mshadow::Tensor<xpu, 2, Dtype> grad = in_g.FlatTo2D<xpu, Dtype>(s);
+      grad = 0;
     }
-  }
-
-  template<index_t dim>
-  void CleanTBlob(mshadow::Stream<xpu>*s, OpReqType req, const TBlob* in_grad) {
-    mshadow::Tensor<xpu, dim> t = in_grad->get<xpu, dim, real_t>(s);
-    t = 0;
   }
 
  private:
