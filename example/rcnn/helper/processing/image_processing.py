@@ -12,7 +12,7 @@ def resize(im, target_size, max_size):
     """
     im_shape = im.shape
     im_size_min = np.min(im_shape[0:2])
-    im_size_max = np.min(im_shape[0:2])
+    im_size_max = np.max(im_shape[0:2])
     im_scale = float(target_size) / float(im_size_min)
     # prevent bigger axis from being more than max_size:
     if np.round(im_scale * im_size_max) > max_size:
@@ -60,17 +60,23 @@ def transform_inverse(im_tensor, pixel_means):
     return im
 
 
-def tensor_vstack(im_list):
+def tensor_vstack(tensor_list, pad=0):
     """
-    stack input image (usually 2 image) to obtain input to CNN
-    extra regions are padded with zero
-    :param im_list: list of image to be stacked vertically
-    :return: im_tensor [batch, channel, height, width]
+    vertically stack tensors
+    :param tensor_list: list of tensor to be stacked vertically
+    :param pad: label to pad with
+    :return: tensor with max shape
     """
-    max_channel = max([im_tensor.shape[1] for im_tensor in im_list])
-    max_height = max([im_tensor.shape[2] for im_tensor in im_list])
-    max_width = max([im_tensor.shape[3] for im_tensor in im_list])
-    im_tensor = np.zeros((len(im_list), max_channel, max_height, max_width))
-    for ind, im in enumerate(im_list):
-        im_tensor[ind, :im.shape[1], :im.shape[2], :im.shape[3]] = im
-    return im_tensor
+    ndim = len(tensor_list[0].shape)
+    if ndim == 1:
+        return np.hstack(tensor_list)
+    dimensions = [0]
+    for dim in range(1, ndim):
+        dimensions.append(max([tensor.shape[dim] for tensor in tensor_list]))
+    for ind, tensor in enumerate(tensor_list):
+        pad_shape = [(0, 0)]
+        for dim in range(1, ndim):
+            pad_shape.append((0, dimensions[dim] - tensor.shape[dim]))
+        tensor_list[ind] = np.lib.pad(tensor, pad_shape, 'constant', constant_values=pad)
+    all_tensor = np.vstack(tensor_list)
+    return all_tensor

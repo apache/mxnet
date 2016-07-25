@@ -1190,10 +1190,10 @@ def test_dot(ctx=mx.cpu()):
                 c = mx.sym.dot(a, b)
                 exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                 outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
+                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
                 exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
-                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
+                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
+                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
 
 
 def test_batch_dot(ctx=mx.cpu()):
@@ -1214,13 +1214,23 @@ def test_batch_dot(ctx=mx.cpu()):
                     a = mx.sym.Variable('a')
                     b = mx.sym.Variable('b')
                     c = mx.sym.batch_dot(a, b)
-                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
+                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape, grad_req='write')
+                    exe_add = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape, grad_req='add')
+                    a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
+                    b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
+                    exe_add.grad_dict['a'][:] = a_init_grad_npy
+                    exe_add.grad_dict['b'][:] = b_init_grad_npy
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
+                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
                     exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
-                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
-
+                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
+                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
+                    exe_add.forward(is_train=True, a=a_npy, b=b_npy)
+                    exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                    assert reldiff(exe_add.grad_dict['a'].asnumpy(),
+                                   agrad_npy + a_init_grad_npy) < 1E-3
+                    assert reldiff(exe_add.grad_dict['b'].asnumpy(),
+                                   bgrad_npy + b_init_grad_npy) < 1E-3
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
     
@@ -1368,55 +1378,64 @@ def test_correlation():
     unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False)
     unittest_correlation((5,1,6,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False)
     unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False)
+
+
+def test_support_vector_machine_l1_svm():
+    xpu = mx.cpu()
+    shape = (20, 10)
+
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.SVMOutput(data=X, label=L, use_linear=True)
+    x = mx.nd.empty(shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    x_np = np.random.rand(*shape)
+    l_np = np.random.randint(0, shape[1], (shape[0],))
+    x[:] = x_np
+    l[:] = l_np
+
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    exec1.forward()
+
+    assert_allclose(x_np, exec1.outputs[0].asnumpy())
     
-def test_dot(ctx=mx.cpu()):
-    for m in range(1, 5):
-        for k in range(1, 5):
-            for n in range(1, 5):
-                a_npy = np.random.normal(0, 1, (m, k))
-                b_npy = np.random.normal(0, 1, (k, n))
-                c_npy = np.empty((m, n))
-                ograd_npy = np.random.normal(0, 1, (m, n))
-                agrad_npy = np.empty((m, k))
-                bgrad_npy = np.empty((k, n))
-                c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
-                bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
-                agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
-                a = mx.sym.Variable('a')
-                b = mx.sym.Variable('b')
-                c = mx.sym.dot(a, b)
-                exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
-                outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
-                exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
-                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
+    exec1.backward()
 
+    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
+    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
+    grad_np = (-1) * l_mask * np.greater(1 - l_mask * x_np, 0)
 
-def test_batch_dot(ctx=mx.cpu()):
-    for batch_size in range(1, 5):
-        for m in range(1, 5):
-            for k in range(1, 5):
-                for n in range(1, 5):
-                    a_npy = np.random.normal(0, 1, (batch_size, m, k))
-                    b_npy = np.random.normal(0, 1, (batch_size, k, n))
-                    c_npy = np.empty((batch_size, m, n))
-                    ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
-                    agrad_npy = np.empty((batch_size, m, k))
-                    bgrad_npy = np.empty((batch_size, k, n))
-                    for i in range(batch_size):
-                        c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
-                        bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
-                        agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
-                    a = mx.sym.Variable('a')
-                    b = mx.sym.Variable('b')
-                    c = mx.sym.batch_dot(a, b)
-                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
-                    outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-5
-                    exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-5
-                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-5
+    assert_allclose(grad_np, grad.asnumpy())
+
+def test_support_vector_machine_l2_svm():
+    xpu = mx.cpu()
+    shape = (20, 10)
+
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L')
+    Y = mx.symbol.SVMOutput(data=X, label=L)
+    x = mx.nd.empty(shape, ctx = xpu)
+    l = mx.nd.empty((shape[0],), ctx = xpu)
+    x_np = np.random.rand(*shape)
+    x_np = x_np.astype(np.float32)
+    l_np = np.random.randint(0, shape[1], (shape[0],))
+    x[:] = x_np
+    l[:] = l_np
+
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
+    exec1.forward()
+
+    assert_allclose(x_np, exec1.outputs[0].asnumpy())
+    
+    exec1.backward()
+    
+    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
+    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
+    grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
+    grad_np = grad_np.astype(np.float32)
+    assert_allclose(grad_np, grad.asnumpy())
 
 
 if __name__ == '__main__':
@@ -1457,3 +1476,5 @@ if __name__ == '__main__':
     test_dot()
     test_batch_dot()
     test_correlation()
+    test_support_vector_machine_l1_svm()
+    test_support_vector_machine_l2_svm()

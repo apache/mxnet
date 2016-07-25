@@ -1,10 +1,26 @@
+import argparse
+import os
 import numpy as np
 import cv2
 import scipy.io as sio
+
+import mxnet as mx
+
 from helper.processing.image_processing import resize, transform
-from rcnn.config import config
 from helper.processing.nms import nms
+from rcnn.config import config
+from rcnn.detector import Detector
+from rcnn.symbol import get_vgg_rcnn_test
 from rcnn.tester import vis_all_detection
+from utils.load_model import load_param
+
+
+def get_net(prefix, epoch, ctx):
+    args, auxs = load_param(prefix, epoch, convert=True, ctx=ctx)
+    sym = get_vgg_rcnn_test()
+    detector = Detector(sym, ctx, args, auxs)
+    return detector
+
 
 CLASSES = ('__background__',
            'aeroplane', 'bicycle', 'bird', 'boat',
@@ -43,8 +59,27 @@ def demo_net(detector, image_name):
         cls_boxes = cls_boxes[keep, :]
         cls_scores = cls_scores[keep]
         dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])).astype(np.float32)
-        keep = nms(dets, NMS_THRESH)
+        keep = nms(dets.astype(np.float32), NMS_THRESH)
         all_boxes[cls_ind] = dets[keep, :]
 
     boxes_this_image = [[]] + [all_boxes[j] for j in range(1, len(CLASSES))]
     vis_all_detection(im_array, boxes_this_image, CLASSES, 0)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Demonstrate a Fast R-CNN network')
+    parser.add_argument('--prefix', dest='prefix', help='new model prefix',
+                        default=os.path.join(os.getcwd(), 'model', 'frcnn'), type=str)
+    parser.add_argument('--epoch', dest='epoch', help='epoch of pretrained model',
+                        default=9, type=int)
+    parser.add_argument('--gpu', dest='gpu_id', help='GPU device to test with',
+                        default=0, type=int)
+    args = parser.parse_args()
+    return args
+
+if __name__ == '__main__':
+    args = parse_args()
+    ctx = mx.gpu(args.gpu_id)
+    detector = get_net(args.prefix, args.epoch, ctx)
+    demo_net(detector, os.path.join(os.getcwd(), 'data', 'demo', '000004'))
+    demo_net(detector, os.path.join(os.getcwd(), 'data', 'demo', '001551'))
