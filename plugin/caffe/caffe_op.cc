@@ -1,22 +1,22 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file caffe_operator.cc
+ * \file caffe_op.cc
  * \brief caffe operator
  * \author Haoran Wang 
 */
-#include "./caffe_operator-inl.h"
+#include "./caffe_op-inl.h"
 namespace mxnet {
 namespace op {
 
 template<>
-Operator* CreateOp<cpu>(CaffeOperatorParam param, int dtype) {
+Operator* CreateOp<cpu>(CaffeOpParam param, int dtype) {
   Operator *op = NULL;
   switch (dtype) {
   case mshadow::kFloat32:
-    op = new CaffeOperator<cpu, float>(param);
+    op = new CaffeOp<cpu, float>(param);
     break;
   case mshadow::kFloat64:
-    op = new CaffeOperator<cpu, double>(param);
+    op = new CaffeOp<cpu, double>(param);
     break;
   case mshadow::kFloat16:
     LOG(FATAL) << "float16 layer is not supported by caffe";
@@ -28,7 +28,7 @@ Operator* CreateOp<cpu>(CaffeOperatorParam param, int dtype) {
 }
 
 // DO_BIND_DISPATCH comes from static_operator_common.h
-Operator *CaffeOperatorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *CaffeOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
   std::vector<int> out_type, aux_type;
   std::vector<TShape> out_shape, aux_shape;
@@ -41,12 +41,12 @@ Operator *CaffeOperatorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
-DMLC_REGISTER_PARAMETER(CaffeOperatorParam);
+DMLC_REGISTER_PARAMETER(CaffeOpParam);
 
-MXNET_REGISTER_OP_PROPERTY(CaffeOperator, CaffeOperatorProp)
+MXNET_REGISTER_OP_PROPERTY(CaffeOp, CaffeOpProp)
 .describe("Apply caffe operator")
 .add_argument("data", "Symbol[]", "List of tensors")
-.add_arguments(CaffeOperatorParam::__FIELDS__());
+.add_arguments(CaffeOpParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

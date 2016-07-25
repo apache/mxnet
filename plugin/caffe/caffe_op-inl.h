@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file caffe_operator-inl.h
+ * \file caffe_op-inl.h
  * \brief Caffe Operator
  * \author Haoran Wang 
 */
-#ifndef PLUGIN_CAFFE_CAFFE_OPERATOR_INL_H_
-#define PLUGIN_CAFFE_CAFFE_OPERATOR_INL_H_
+#ifndef PLUGIN_CAFFE_CAFFE_OP_INL_H_
+#define PLUGIN_CAFFE_CAFFE_OP_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -21,11 +21,11 @@
 namespace mxnet {
 namespace op {
 
-struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
+struct CaffeOpParam : public dmlc::Parameter<CaffeOpParam> {
   ::caffe::LayerParameter prototxt;
   int data_num, w_num, out_num;
 
-  DMLC_DECLARE_PARAMETER(CaffeOperatorParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
+  DMLC_DECLARE_PARAMETER(CaffeOpParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
     DMLC_DECLARE_FIELD(data_num).set_range(0, 100).set_default(1)
     .describe("Operator input number");
@@ -42,9 +42,9 @@ struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
  * \tparam xpu the device that the op will be executed on.
  */
 template<typename xpu, typename Dtype>
-class CaffeOperator : public Operator {
+class CaffeOp : public Operator {
  public:
-  explicit CaffeOperator(CaffeOperatorParam p):param_(p),
+  explicit CaffeOp(CaffeOpParam p):param_(p),
                                                setup_(false),
                                                init_w_(false),
                                                init_wd_(false) {
@@ -57,7 +57,7 @@ class CaffeOperator : public Operator {
     flags_.resize(param_.data_num);
   }
 
-  ~CaffeOperator() {
+  ~CaffeOp() {
     caffe::DelCaffeBlobs(&bot_, param_.data_num);
     caffe::DelCaffeBlobs(&top_, param_.out_num);
     caffe::DelCaffeBlobs(&wei_, param_.w_num);
@@ -176,19 +176,19 @@ class CaffeOperator : public Operator {
   }
 
  private:
-  CaffeOperatorParam param_;
+  CaffeOpParam param_;
   ::caffe::Layer<Dtype> *caffeOp_;
   std::vector< ::caffe::Blob<Dtype> *> bot_, top_, wei_;
   std::vector<bool> flags_;
   bool init_w_, init_wd_, setup_;
-};  // class CaffeOperator
+};  // class CaffeOp
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(CaffeOperatorParam param, int);
+Operator* CreateOp(CaffeOpParam param, int);
 
 #if DMLC_USE_CXX11
-class CaffeOperatorProp : public OperatorProperty {
+class CaffeOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> res;
@@ -262,13 +262,13 @@ class CaffeOperatorProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto copy_prop = new CaffeOperatorProp();
+    auto copy_prop = new CaffeOpProp();
     copy_prop->param_ = this->param_;
     return copy_prop;
   }
 
   std::string TypeString() const override {
-    return "CaffeOperator";
+    return "CaffeOp";
   }
 
   Operator* CreateOperator(Context ctx) const override {
@@ -280,11 +280,11 @@ class CaffeOperatorProp : public OperatorProperty {
                              std::vector<int> *in_type) const override;
 
  private:
-  mutable CaffeOperatorParam param_;
+  mutable CaffeOpParam param_;
   mutable ::caffe::Layer<float> *caffeOp_;
-};  // class CaffeOperatorSymbol
+};  // class CaffeOpSymbol
 #endif
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // PLUGIN_CAFFE_CAFFE_OPERATOR_INL_H_
+#endif  // PLUGIN_CAFFE_CAFFE_OP_INL_H_

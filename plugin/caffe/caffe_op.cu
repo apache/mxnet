@@ -4,19 +4,19 @@
  * \brief caffe operator
  * \author Haoran Wang
 */
-#include "./caffe_operator-inl.h"
+#include "./caffe_op-inl.h"
 namespace mxnet {
 namespace op {
 
 template<>
-Operator *CreateOp<gpu>(CaffeOperatorParam param, int dtype) {
+Operator *CreateOp<gpu>(CaffeOpParam param, int dtype) {
   Operator *op = NULL;
   switch (dtype) {
   case mshadow::kFloat32:
-    op = new CaffeOperator<gpu, float>(param);
+    op = new CaffeOp<gpu, float>(param);
     break;
   case mshadow::kFloat64:
-    op = new CaffeOperator<gpu, double>(param);
+    op = new CaffeOp<gpu, double>(param);
     break;
   case mshadow::kFloat16:
     LOG(FATAL) << "float16 layer is not supported by caffe";
