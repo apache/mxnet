@@ -12,6 +12,11 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 
+#include <map>
+#include <vector>
+#include <string>
+#include <utility>
+
 #include "../../src/operator/operator_common.h"
 #include "caffe_common.h"
 #include "caffe_stream.h"
