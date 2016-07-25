@@ -14,13 +14,14 @@
 namespace mxnet {
 namespace op {
 
+template<typename DType>
 class CuDNNPoolingOp : public Operator {
  public:
   explicit CuDNNPoolingOp(PoolingParam p) {
     param_ = p;
     init_cudnn_ = false;
     // TODO(xxx): fp16
-    dtype_ = CUDNN_DATA_FLOAT;
+    dtype_ = mshadow::DataType<DType>::kCudnnFlag;
     switch (param_.pool_type) {
       case pool_enum::kMaxPooling:
         mode_ = CUDNN_POOLING_MAX;
@@ -52,12 +53,12 @@ class CuDNNPoolingOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    float alpha = 1.0f;
-    float beta = 0.0f;
+    typename DataType<DType>::ScaleType alpha = 1.0f;
+    typename DataType<DType>::ScaleType beta = 0.0f;
     if (param_.kernel.ndim() == 2) {
       // 2d pool
-      Tensor<gpu, 4> data = in_data[pool_enum::kData].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> out = out_data[pool_enum::kOut].get<gpu, 4, real_t>(s);
+      Tensor<gpu, 4, DType> data = in_data[pool_enum::kData].get<gpu, 4, DType>(s);
+      Tensor<gpu, 4, DType> out = out_data[pool_enum::kOut].get<gpu, 4, DType>(s);
       if (!init_cudnn_) {
         this->Init(s, in_data, out_data);
       }
@@ -73,8 +74,8 @@ class CuDNNPoolingOp : public Operator {
                                    out.dptr_), CUDNN_STATUS_SUCCESS);
     } else if (param_.kernel.ndim() == 3) {
       // 3d pool
-      Tensor<gpu, 5> data = in_data[pool_enum::kData].get<gpu, 5, real_t>(s);
-      Tensor<gpu, 5> out = out_data[pool_enum::kOut].get<gpu, 5, real_t>(s);
+      Tensor<gpu, 5, DType> data = in_data[pool_enum::kData].get<gpu, 5, DType>(s);
+      Tensor<gpu, 5, DType> out = out_data[pool_enum::kOut].get<gpu, 5, DType>(s);
       if (!init_cudnn_) {
         this->Init(s, in_data, out_data);
       }
@@ -110,14 +111,14 @@ class CuDNNPoolingOp : public Operator {
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    float alpha = 1.0f;
-    float beta = 0.0f;
+    typename DataType<DType>::ScaleType alpha = 1.0f;
+    typename DataType<DType>::ScaleType beta = 0.0f;
     if (param_.kernel.ndim() == 2) {
       // 2d pool
-      Tensor<gpu, 4> m_out_grad = out_grad[pool_enum::kOut].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> m_in_data = in_data[pool_enum::kData].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> m_out_data = out_data[pool_enum::kOut].get<gpu, 4, real_t>(s);
-      Tensor<gpu, 4> m_in_grad = in_grad[pool_enum::kData].get<gpu, 4, real_t>(s);
+      Tensor<gpu, 4, DType> m_out_grad = out_grad[pool_enum::kOut].get<gpu, 4, DType>(s);
+      Tensor<gpu, 4, DType> m_in_data = in_data[pool_enum::kData].get<gpu, 4, DType>(s);
+      Tensor<gpu, 4, DType> m_out_data = out_data[pool_enum::kOut].get<gpu, 4, DType>(s);
+      Tensor<gpu, 4, DType> m_in_grad = in_grad[pool_enum::kData].get<gpu, 4, DType>(s);
       CHECK_EQ(cudnnPoolingBackward(s->dnn_handle_,
                                   pooling_desc_,
                                   &alpha,
@@ -132,10 +133,10 @@ class CuDNNPoolingOp : public Operator {
                                   m_in_grad.dptr_), CUDNN_STATUS_SUCCESS);
     } else if (param_.kernel.ndim() == 3) {
       // 3d pool
-      Tensor<gpu, 5> m_out_grad = out_grad[pool_enum::kOut].get<gpu, 5, real_t>(s);
-      Tensor<gpu, 5> m_in_data = in_data[pool_enum::kData].get<gpu, 5, real_t>(s);
-      Tensor<gpu, 5> m_out_data = out_data[pool_enum::kOut].get<gpu, 5, real_t>(s);
-      Tensor<gpu, 5> m_in_grad = in_grad[pool_enum::kData].get<gpu, 5, real_t>(s);
+      Tensor<gpu, 5, DType> m_out_grad = out_grad[pool_enum::kOut].get<gpu, 5, DType>(s);
+      Tensor<gpu, 5, DType> m_in_data = in_data[pool_enum::kData].get<gpu, 5, DType>(s);
+      Tensor<gpu, 5, DType> m_out_data = out_data[pool_enum::kOut].get<gpu, 5, DType>(s);
+      Tensor<gpu, 5, DType> m_in_grad = in_grad[pool_enum::kData].get<gpu, 5, DType>(s);
       CHECK_EQ(cudnnPoolingBackward(s->dnn_handle_,
                                   pooling_desc_,
                                   &alpha,
@@ -167,8 +168,8 @@ class CuDNNPoolingOp : public Operator {
       init_cudnn_ = true;
       if (param_.kernel.ndim() == 2) {
         // 2d conv
-        Tensor<gpu, 4> data = in_data[pool_enum::kData].get<gpu, 4, real_t>(s);
-        Tensor<gpu, 4> out = out_data[pool_enum::kOut].get<gpu, 4, real_t>(s);
+        Tensor<gpu, 4, DType> data = in_data[pool_enum::kData].get<gpu, 4, DType>(s);
+        Tensor<gpu, 4, DType> out = out_data[pool_enum::kOut].get<gpu, 4, DType>(s);
         mshadow::Shape<4> dshape = data.shape_;
         CHECK_EQ(cudnnCreatePoolingDescriptor(&pooling_desc_), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
@@ -210,8 +211,8 @@ class CuDNNPoolingOp : public Operator {
                                                CUDNN_STATUS_SUCCESS);
         #endif
       } else {
-        Tensor<gpu, 5> data = in_data[pool_enum::kData].get<gpu, 5, real_t>(s);
-        Tensor<gpu, 5> out = out_data[pool_enum::kOut].get<gpu, 5, real_t>(s);
+        Tensor<gpu, 5, DType> data = in_data[pool_enum::kData].get<gpu, 5, DType>(s);
+        Tensor<gpu, 5, DType> out = out_data[pool_enum::kOut].get<gpu, 5, DType>(s);
         CHECK_EQ(cudnnCreatePoolingDescriptor(&pooling_desc_), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
