@@ -15,9 +15,9 @@
 namespace mxnet {
 namespace op {
 
-// Declare Memory Type for Caffe blob
 namespace caffe {
 
+// Declare Memory Type for Caffe blob
 enum caffeMemoryTypes {Data, Grad, Non};
 
 mshadow::TShape Vector2TShape(const std::vector<int> &vec_int);

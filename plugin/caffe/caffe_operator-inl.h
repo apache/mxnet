@@ -12,18 +12,8 @@
 #include <mxnet/operator.h>
 #include <caffe/proto/caffe.pb.h>
 
-#include <map>
-#include <vector>
-#include <string>
-#include <utility>
-#include <iostream>
-#include <exception>
-
-#include <caffe/layer.hpp>
-#include <caffe/blob.hpp>
 #include "../../src/operator/operator_common.h"
 #include "caffe_common.h"
-#include "caffe_operator_util.h"
 #include "caffe_stream.h"
 #include "caffe_fieldentry.h"
 #include "caffe_blob.h"
@@ -39,6 +29,8 @@ struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
     .describe("Caffe's layer parameter");
     DMLC_DECLARE_FIELD(in_num).set_range(0, 100).set_default(1)
     .describe("Operator input number");
+    DMLC_DECLARE_FIELD(w_num).set_range(0, 100).set_default(0)
+    .describe("Weight number");
     DMLC_DECLARE_FIELD(out_num).set_range(0, 100).set_default(1)
     .describe("Operator output number");
   }
@@ -57,8 +49,7 @@ class CaffeOperator : public Operator {
                                                init_w_(false),
                                                init_wd_(false) {
     std::string type = param_.prototxt.type();
-    caffe::OpInitEntry<Dtype>* e = caffe::OpInitRegistry<Dtype>::Get()->Find(type);
-    caffeOp_ = e->gen_f_(param_.prototxt);
+    caffeOp_ = caffe::LayerRegistry<Dtype>::CreateLayer(param_.prototxt);
 
     caffe::InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
     caffe::InitCaffeBlobs<Dtype>(&top_, param_.out_num);
@@ -217,34 +208,13 @@ class CaffeOperatorProp : public OperatorProperty {
     for (index_t i = 0; i < param_.in_num; ++i)
       res.push_back(std::string("data_") + static_cast<char>('0' + i));
 
-    for (index_t i = 0; i < GetBlobNum(); ++i) {
+    for (index_t i = 0; i < param_.w_num; ++i) {
       if (i == 0)
         res.push_back(std::to_string(i) + "_weight");
       else
         res.push_back(std::to_string(i) + "_bias");
     }
     return res;
-  }
-
-  int GetBlobNum() const {
-    std::string type = param_.prototxt.type();
-    entry_ = caffe::OpInitRegistry<float>::Get()->Find(param_.prototxt.type());
-    /* get weight value in registery */
-    int blob_num = entry_->b_num_;
-    /* otherwise, calculate blob num in runtime */
-    if (!type.compare("InnerProduct"))
-      blob_num = (param_.prototxt.inner_product_param().bias_term())?2:1;
-    else if (!type.compare("Convolution")||
-             !type.compare("CuDNNConvolution")||
-             !type.compare("Deconvolution"))
-      blob_num = (param_.prototxt.convolution_param().bias_term())?2:1;
-    else if (!type.compare("Scale"))
-      blob_num = (param_.prototxt.scale_param().bias_term())?2:1;
-    else if (!type.compare("Embed"))
-      blob_num = (param_.prototxt.embed_param().bias_term())?2:1;
-
-    CHECK_GE(blob_num, 0);
-    return blob_num;
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -262,10 +232,8 @@ class CaffeOperatorProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    if (caffeOp_ == NULL) {
-      entry_ = caffe::OpInitRegistry<float>::Get()->Find(param_.prototxt.type());
-      caffeOp_ = entry_->gen_f_(this->param_.prototxt);
-    }
+    if (caffeOp_ == NULL)
+      caffeOp_ = caffe::LayerRegistry<float>::CreateLayer(param_.prototxt);
     using namespace mshadow;
     using ::caffe::Blob;
     using std::vector;
@@ -287,7 +255,7 @@ class CaffeOperatorProp : public OperatorProperty {
     caffeOp_->SetUp(bot_blobs, top_blobs);
     CHECK_EQ(in_shape->size(), caffeOp_->blobs().size() + param_.in_num);
     // Set weight shape
-    param_.w_num = caffeOp_->blobs().size();
+    CHECK_EQ(param_.w_num, caffeOp_->blobs().size());
     for (index_t i = 0; i < param_.w_num ; ++i) {
       TShape tshape = caffe::Vector2TShape(caffeOp_->blobs()[i]->shape());
       SHAPE_ASSIGN_CHECK(*in_shape, i + param_.in_num, tshape);
@@ -326,8 +294,7 @@ class CaffeOperatorProp : public OperatorProperty {
 
  private:
   mutable CaffeOperatorParam param_;
-  mutable caffe::OpInitEntry<float>* entry_;
-  mutable ::caffe::Layer<float>* caffeOp_;
+  mutable ::caffe::Layer<float> *caffeOp_;
 };  // class CaffeOperatorSymbol
 #endif
 

@@ -12,18 +12,8 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 
-#include <map>
-#include <vector>
-#include <string>
-#include <utility>
-#include <iostream>
-#include <exception>
-
-#include <caffe/layer.hpp>
-#include <caffe/blob.hpp>
 #include "../../src/operator/operator_common.h"
 #include "caffe_common.h"
-#include "caffe_operator_util.h"
 #include "caffe_stream.h"
 #include "caffe_fieldentry.h"
 #include "caffe_blob.h"
@@ -58,8 +48,7 @@ class CaffeLoss : public Operator {
   explicit CaffeLoss(CaffeLossParam p):param_(p),
                                        setup_(false) {
     std::string type = param_.prototxt.type();
-    caffe::OpInitEntry<Dtype>* e = caffe::OpInitRegistry<Dtype>::Get()->Find(type);
-    caffeOp_ = e->gen_f_(param_.prototxt);
+    caffeOp_ = caffe::LayerRegistry<Dtype>::CreateLayer(param_.prototxt);
     grad_scale_ = (Dtype)param_.grad_scale;
 
     caffe::InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
@@ -194,10 +183,8 @@ class CaffeLossProp : public OperatorProperty {
     using namespace mshadow;
     using ::caffe::Blob;
     using std::vector;
-    if (caffeOp_ == NULL) {
-      entry_ = caffe::OpInitRegistry<float>::Get()->Find(param_.prototxt.type());
-      caffeOp_ = entry_->gen_f_(this->param_.prototxt);
-    }
+    if (caffeOp_ == NULL)
+      caffeOp_ = caffe::LayerRegistry<float>::CreateLayer(param_.prototxt);
 
     CHECK_GE(in_shape->size(), param_.in_num);
     // Initialize empty bottom & top blobs for caffeOp setup
@@ -262,7 +249,6 @@ class CaffeLossProp : public OperatorProperty {
 
  private:
   mutable CaffeLossParam param_;
-  mutable caffe::OpInitEntry<float>* entry_;
   mutable ::caffe::Layer<float> *caffeOp_;
 };  // class CaffeLossSymbol
 #endif

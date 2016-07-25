@@ -8,9 +8,18 @@
 #ifndef PLUGIN_CAFFE_CAFFE_COMMON_H_
 #define PLUGIN_CAFFE_CAFFE_COMMON_H_
 
-#include<mxnet/operator.h>
-#include<vector>
-#include<caffe/blob.hpp>
+#include <mxnet/operator.h>
+#include <vector>
+#include <map>
+#include <vector>
+#include <string>
+#include <utility>
+#include <iostream>
+#include <exception>
+
+#include <caffe/layer.hpp>
+#include <caffe/blob.hpp>
+#include <caffe/layer_factory.hpp>
 
 namespace mxnet {
 namespace op {
@@ -37,6 +46,24 @@ void DelCaffeBlobs(std::vector< ::caffe::Blob<Dtype>*>* v, int n_num) {
   for (index_t i=0; i < n_num; ++i)
     delete v->at(i);
 }
+
+
+struct NULLDeleter {template<typename T> void operator()(T*){}};
+
+template <typename Dtype>
+void Deleter(::caffe::Layer<Dtype> *ptr) {
+}
+
+template <typename Dtype>
+class LayerRegistry {
+ public:
+  static ::caffe::Layer<Dtype> * CreateLayer(const ::caffe::LayerParameter& param) {
+    ::caffe::shared_ptr< ::caffe::Layer<Dtype> > ptr =
+      ::caffe::LayerRegistry<Dtype>::CreateLayer(param);
+    new ::caffe::shared_ptr< ::caffe::Layer<Dtype> >(ptr);
+    return ptr.get();
+  }
+};
 
 }  // namespace caffe
 }  // namespace op
