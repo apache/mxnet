@@ -23,11 +23,11 @@ namespace op {
 
 struct CaffeOperatorParam : public dmlc::Parameter<CaffeOperatorParam> {
   ::caffe::LayerParameter prototxt;
-  int in_num, w_num, out_num;
+  int data_num, w_num, out_num;
 
   DMLC_DECLARE_PARAMETER(CaffeOperatorParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
-    DMLC_DECLARE_FIELD(in_num).set_range(0, 100).set_default(1)
+    DMLC_DECLARE_FIELD(data_num).set_range(0, 100).set_default(1)
     .describe("Operator input number");
     DMLC_DECLARE_FIELD(w_num).set_range(0, 100).set_default(0)
     .describe("Weight number");
@@ -51,14 +51,14 @@ class CaffeOperator : public Operator {
     std::string type = param_.prototxt.type();
     caffeOp_ = caffe::LayerRegistry<Dtype>::CreateLayer(param_.prototxt);
 
-    caffe::InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
+    caffe::InitCaffeBlobs<Dtype>(&bot_, param_.data_num);
     caffe::InitCaffeBlobs<Dtype>(&top_, param_.out_num);
     caffe::InitCaffeBlobs<Dtype>(&wei_, param_.w_num);
-    flags_.resize(param_.in_num);
+    flags_.resize(param_.data_num);
   }
 
   ~CaffeOperator() {
-    caffe::DelCaffeBlobs(&bot_, param_.in_num);
+    caffe::DelCaffeBlobs(&bot_, param_.data_num);
     caffe::DelCaffeBlobs(&top_, param_.out_num);
     caffe::DelCaffeBlobs(&wei_, param_.w_num);
   }
@@ -76,8 +76,8 @@ class CaffeOperator : public Operator {
     using namespace mshadow::expr;
     for (index_t i = 0; i < req.size(); ++i)
       CHECK_EQ(req[i], kWriteTo);
-    index_t expected_in_num = param_.w_num + param_.in_num;
-    CHECK_EQ(in_data.size(), expected_in_num);
+    index_t expected_data_num = param_.w_num + param_.data_num;
+    CHECK_EQ(in_data.size(), expected_data_num);
     CHECK_EQ(out_data.size(), param_.out_num);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -90,7 +90,7 @@ class CaffeOperator : public Operator {
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
                                       bot_.begin(),
                                       in_data.begin(),
-                                      param_.in_num);
+                                      param_.data_num);
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
                                       top_.begin(),
                                       out_data.begin(),
@@ -103,7 +103,7 @@ class CaffeOperator : public Operator {
       init_w_ = true;
       caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
                       wei_.begin(),
-                      in_data.begin() + param_.in_num,
+                      in_data.begin() + param_.data_num,
                       param_.w_num);
       caffeOp_->SetBlobs(wei_);
     }
@@ -131,12 +131,12 @@ class CaffeOperator : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), param_.out_num);
-    for (index_t i = 0; i < param_.in_num; ++i)
+    for (index_t i = 0; i < param_.data_num; ++i)
       CHECK(req[i] != kAddTo) << "caffe doesn't accm diff on bottom data";
 
-    index_t expected_in_num = param_.w_num + param_.in_num;
-    CHECK(in_data.size() == expected_in_num && in_grad.size() == expected_in_num);
-    CHECK_EQ(req.size(), expected_in_num);
+    index_t expected_data_num = param_.w_num + param_.data_num;
+    CHECK(in_data.size() == expected_data_num && in_grad.size() == expected_data_num);
+    CHECK_EQ(req.size(), expected_data_num);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
@@ -145,7 +145,7 @@ class CaffeOperator : public Operator {
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
-    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad, bot_.begin(), in_grad.begin(), param_.in_num);
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad, bot_.begin(), in_grad.begin(), param_.data_num);
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad, top_.begin(), out_grad.begin(), param_.out_num);
 
     // Init caffe's gradient pointer
@@ -153,16 +153,16 @@ class CaffeOperator : public Operator {
       init_wd_ = true;
       caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
                             wei_.begin(),
-                            in_grad.begin() + param_.in_num,
+                            in_grad.begin() + param_.data_num,
                             param_.w_num);
     }
 
     // Handle OpReqType of weights
-    for (index_t i = param_.in_num; i < expected_in_num; ++i)
+    for (index_t i = param_.data_num; i < expected_data_num; ++i)
       HandleOpReq(s, req[i], in_grad[i]);
 
     // Set BP flag
-    for (index_t i = 0; i < param_.in_num; ++i)
+    for (index_t i = 0; i < param_.data_num; ++i)
       flags_[i] = req[i] != kNullOp;
 
     caffeOp_->Backward(top_, flags_, bot_);
@@ -192,7 +192,7 @@ class CaffeOperatorProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> res;
-    for (index_t i = 0; i < param_.in_num; ++i)
+    for (index_t i = 0; i < param_.data_num; ++i)
       res.push_back(std::string("data_") + static_cast<char>('0' + i));
 
     for (index_t i = 0; i < param_.w_num; ++i) {
@@ -224,11 +224,11 @@ class CaffeOperatorProp : public OperatorProperty {
     using namespace mshadow;
     using ::caffe::Blob;
     using std::vector;
-    CHECK_GE(in_shape->size(), param_.in_num);
+    CHECK_GE(in_shape->size(), param_.data_num);
     // Initialize emtryp bottom & top blobs for caffeop
     vector<Blob<float> *> bot_blobs, top_blobs;
 
-    for (index_t i = 0; i < param_.in_num; ++i) {
+    for (index_t i = 0; i < param_.data_num; ++i) {
       TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
       auto blob_ptr = new Blob<float>();
@@ -240,12 +240,12 @@ class CaffeOperatorProp : public OperatorProperty {
       top_blobs.push_back(new Blob<float>());
 
     caffeOp_->SetUp(bot_blobs, top_blobs);
-    CHECK_EQ(in_shape->size(), caffeOp_->blobs().size() + param_.in_num);
+    CHECK_EQ(in_shape->size(), caffeOp_->blobs().size() + param_.data_num);
     // Set weight shape
     CHECK_EQ(param_.w_num, caffeOp_->blobs().size());
     for (index_t i = 0; i < param_.w_num ; ++i) {
       TShape tshape = caffe::Vector2TShape(caffeOp_->blobs()[i]->shape());
-      SHAPE_ASSIGN_CHECK(*in_shape, i + param_.in_num, tshape);
+      SHAPE_ASSIGN_CHECK(*in_shape, i + param_.data_num, tshape);
     }
     // Initialize out shapes
     out_shape->clear();
