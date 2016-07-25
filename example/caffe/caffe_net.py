@@ -56,7 +56,7 @@ def parse_args():
     parser.add_argument('--network', type=str, default='lenet',
                         choices = ['mlp', 'lenet'],
                         help = 'the cnn to use')
-    parser.add_argument('--caffe-loss', type=bool, default=False,
+    parser.add_argument('--caffe-loss', type=int, default=0,
                         help='Use CaffeLoss symbol')
     parser.add_argument('--data-dir', type=str, default='mnist/',
                         help='the input data directory')
