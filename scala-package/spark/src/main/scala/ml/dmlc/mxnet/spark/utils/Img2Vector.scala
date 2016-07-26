@@ -1,7 +1,6 @@
 package ml.dmlc.mxnet.spark.utils
 
 import javax.imageio.ImageIO
-import java.awt.image.BufferedImage
 
 import scala.collection.mutable.ArrayBuffer
 
