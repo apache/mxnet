@@ -10,13 +10,13 @@ from rcnn.symbol import get_vgg_rpn_test
 from utils.load_data import load_gt_roidb
 from utils.load_model import load_param
 
+# rpn generate proposal config
+config.TEST.HAS_RPN = True
+config.TEST.RPN_PRE_NMS_TOP_N = -1
+config.TEST.RPN_POST_NMS_TOP_N = 2000
 
-def test_rpn(image_set, year, root_path, devkit_path, prefix, epoch, ctx, vis):
-    # set config
-    config.TEST.HAS_RPN = True
-    config.TEST.RPN_PRE_NMS_TOP_N = -1
-    config.TEST.RPN_POST_NMS_TOP_N = 2000
 
+def test_rpn(image_set, year, root_path, devkit_path, prefix, epoch, ctx, vis=False):
     # load symbol
     sym = get_vgg_rpn_test()
 
