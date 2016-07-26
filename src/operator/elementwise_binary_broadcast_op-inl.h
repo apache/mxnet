@@ -55,7 +55,7 @@ namespace op {
 inline bool IsBroadcastNeeded_(const TShape& lhs,
                               const TShape& rhs) {
   // force ndim to be equal. do not smartly padding dims with 1s, which may confuse users
-  CHECK_EQ(lhs.ndim(), rhs.ndim());
+  CHECK_EQ(lhs.ndim(), rhs.ndim()) << "lhs:" << lhs << " rhs:" << rhs;
   for (index_t i = 0; i < lhs.ndim(); ++i) {
     if (lhs[i] != rhs[i]) return true;
   }

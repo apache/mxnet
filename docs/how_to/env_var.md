@@ -31,6 +31,9 @@ Usually you do not need to change these settings, but they are listed here for r
 * MXNET_KVSTORE_BIGARRAY_BOUND (default=1e6)
 	- The minimum size of "big array".
 	- When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads will be used for reduction.
+* MXNET_CUDNN_AUTOTUNE_DEFAULT (default=0)
+    - The default value of cudnn_tune for convolution layers.
+    - Auto tuning is turn off by default. Set to 1 to turn on by default for benchmarking.
 
 Settings for Minimum Memory Usage
 ---------------------------------

@@ -62,9 +62,11 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .add_enum("off", conv::kOff)
     .add_enum("limited_workspace", conv::kLimited)
     .add_enum("fastest", conv::kFastest)
-    .set_default(conv::kLimited)
+    .set_default(dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", 0))
     .describe("Whether to find convolution algo by running performance test."
-              "Leads to higher startup time but may give better speed");
+              "Leads to higher startup time but may give better speed."
+              "auto tune is turned off by default."
+              "Set environment varialbe MXNET_CUDNN_AUTOTUNE_DEFAULT=1 to turn on by default.");
   }
 };
 
@@ -364,7 +366,8 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_x <= dshape[3] && ksize_y <= dshape[2])
+      CHECK(ksize_y <= dshape[2] + 2 * param_.pad[0]
+            && ksize_x <= dshape[3] + 2 * param_.pad[1])
           << "kernel size exceed input";
       (*out_shape)[conv::kOut][1] = param_.num_filter;
       (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
@@ -398,7 +401,9 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_d < dshape[2] && ksize_y <= dshape[3] && ksize_x <= dshape[4])
+      CHECK(ksize_d < dshape[2] + 2 * param_.pad[0]
+            && ksize_y <= dshape[3] + 2 * param_.pad[1]
+            && ksize_x <= dshape[4] + 2 * param_.pad[2])
           << "kernel size exceed input";
       if (param_.dilate.Size() != 1) {
         LOG(INFO) << "Dilate is not supported in 3d convolution";
