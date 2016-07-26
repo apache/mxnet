@@ -1,6 +1,5 @@
 package ml.dmlc.mxnet.spark.utils
 
-import java.io.IOException
 import scala.collection.Iterator
 
 /**
@@ -27,11 +26,7 @@ class RepIterator[T](iteratorInternal: Iterator[T], repetition: Int = 1) extends
       backupIter = iterTuple._2
       currentIter.next()
     } else {
-      throw new IOException("No element in this collection")
+      throw new NoSuchElementException("No element in this collection")
     }
   }
-}
-
-object RepIterator {
-  def apply[T](iteratorInternal: Iterator[T], repetition: Int = 1) = new RepIterator(iteratorInternal, repetition)
 }
