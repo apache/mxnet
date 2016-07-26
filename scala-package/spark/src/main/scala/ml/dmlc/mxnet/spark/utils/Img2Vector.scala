@@ -11,7 +11,11 @@ import org.apache.spark.input._
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 
 /**
- * Convert image directory into Vectorized RDD
+ * Img2Vector tools could convert imgae directory into Vectorized RDD,for example:
+ * Images stored in hdfs://namenode:9000/user/xxx/images/
+ * val sc = new SparkContext(conf)
+ * val imagesArrayRDD = Img2Vector.getRGBArray(sc, "hdfs://namenode:9000/user/xxx/images/")
+ * val imagesVectorRDD = Img2Vector.getRGBVector(sc, "hdfs://namenode:9000/user/xxx/images/")
  * @author Yuance.Li
  */
 object Img2Vector{
@@ -56,7 +60,7 @@ object Img2Vector{
     rgbArray
   }
 
-  def getRGBvector(sc: SparkContext, path: String, fullcolor: Boolean = true): RDD[Vector] = {
+  def getRGBVector(sc: SparkContext, path: String, fullcolor: Boolean = true): RDD[Vector] = {
     val rgbArray = sc.binaryFiles(path).map(_._2).map(getImgRGB(_, fullcolor))
     val rgbVector = rgbArray.map(x => Vectors.dense(x))
     rgbVector
