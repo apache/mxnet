@@ -24,7 +24,7 @@ This module is created by [Jack Deng](https://github.com/jdeng).
 
 Android
 ---------------
-Setup NDK and build your standalone toolchain. [Instructions](http://developer.android.com/ndk/guides/standalone_toolchain.html#itc) Use the Advanced Method!!! In particular set PATH, CC and CXX.
+Setup NDK and build your standalone toolchain. [Instructions](http://developer.android.com/ndk/guides/standalone_toolchain.html#itc) Use the Advanced Method!!! In particular set PATH, CC and CXX. The minimum API level required is 16.
 
 Example:
 ```
@@ -33,7 +33,7 @@ export CC=arm-linux-androideabi-gcc   # or export CC=arm-linux-androideabi-clang
 export CXX=arm-linux-androideabi-g++  # or export CXX=arm-linux-androideabi-clang++
 ```
 
-Build OpenBlas for Android: [Build OpenBlas](https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android)
+Build OpenBLAS for Android: [Build OpenBLAS](https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android) Please put OpenBLAS source code outside mxnet directory.
 Modify OPENBLAS_ROOT in Makefile
 Type ```make ANDROID=1```
 

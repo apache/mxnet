@@ -110,3 +110,8 @@ scala-package/*/*/target/
 !scala-package/*/bin
 *.bak
 */node_modules/
+
+# Eclipse project config
+.project
+.cproject
+.pydevproject

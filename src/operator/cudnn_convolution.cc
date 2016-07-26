@@ -8,9 +8,23 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 
+#include <sstream>
+#include <mutex>
+#include <unordered_map>
+
 namespace mxnet {
 namespace op {
 #if MXNET_USE_CUDNN == 1
+namespace conv {
+struct CudnnAlgorithms {
+  cudnnConvolutionFwdAlgo_t fwd;
+  cudnnConvolutionBwdDataAlgo_t bwd;
+  cudnnConvolutionBwdFilterAlgo_t flt;
+};
+
+std::unordered_map<std::string, CudnnAlgorithms> g_cudnn_algo_reg;
+std::mutex g_reg_mutex;
+}  // namespace conv
 // TODO(xxx): Refactor with Init CuDNN function, remove redandent code in initalization
 void TuneCudnnConvolution(ConvolutionParam param,
                           std::vector<TShape> *in_shape,
@@ -19,9 +33,7 @@ void TuneCudnnConvolution(ConvolutionParam param,
                           cudnnDataType_t dtype,
                           cudnnConvolutionFwdAlgo_t *algo,
                           cudnnConvolutionBwdDataAlgo_t *back_algo,
-                          cudnnConvolutionBwdFilterAlgo_t *back_algo_w,
-                          size_t *forward_workspace_byte,
-                          size_t *backward_workspace_byte) {
+                          cudnnConvolutionBwdFilterAlgo_t *back_algo_w) {
   using namespace mshadow;
   // convert MB to bytes
 
@@ -32,8 +44,19 @@ void TuneCudnnConvolution(ConvolutionParam param,
   CHECK_EQ(in_shape->size(), expected);
   CHECK_EQ(out_shape->size(), 1);
   TShape &x_shape = (*in_shape)[conv::kData];
+  TShape &w_shape = (*in_shape)[conv::kWeight];
   TShape &y_shape = (*out_shape)[conv::kOut];
-
+  std::ostringstream oss;
+  oss << x_shape << ";" << y_shape << ";" << w_shape << ";" << param.workspace;
+  std::string key = oss.str();
+  std::unordered_map<std::string, conv::CudnnAlgorithms>::const_iterator iter =
+    conv::g_cudnn_algo_reg.find(key);
+  if (iter != conv::g_cudnn_algo_reg.end()) {
+    *algo = iter->second.fwd;
+    *back_algo = iter->second.bwd;
+    *back_algo_w = iter->second.flt;
+    return;
+  }
 
   size_t workspace_byte = param.workspace << 20;
   cudnnTensorDescriptor_t in_desc;
@@ -208,7 +231,6 @@ void TuneCudnnConvolution(ConvolutionParam param,
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
-      *forward_workspace_byte = fwd_algo[i].memory;
       *algo = fwd_algo[i].algo;
     }
 
@@ -229,7 +251,6 @@ void TuneCudnnConvolution(ConvolutionParam param,
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
-      *backward_workspace_byte = bwd_filter_algo[i].memory;
       *back_algo_w = bwd_filter_algo[i].algo;
     }
 
@@ -250,12 +271,18 @@ void TuneCudnnConvolution(ConvolutionParam param,
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
-      *backward_workspace_byte = std::max(*backward_workspace_byte, bwd_data_algo[i].memory);
       *back_algo = bwd_data_algo[i].algo;
     }
   }, ctx, {}, {var});
   Engine::Get()->WaitForVar(var);
   Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
+
+  conv::CudnnAlgorithms algs;
+  algs.fwd = *algo;
+  algs.bwd = *back_algo;
+  algs.flt = *back_algo_w;
+  std::lock_guard<std::mutex> guard(conv::g_reg_mutex);
+  conv::g_cudnn_algo_reg[key] = algs;
 
   CHECK_EQ(cudnnDestroyTensorDescriptor(in_desc), CUDNN_STATUS_SUCCESS);
   CHECK_EQ(cudnnDestroyTensorDescriptor(out_desc), CUDNN_STATUS_SUCCESS);

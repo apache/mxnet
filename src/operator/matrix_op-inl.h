@@ -300,8 +300,15 @@ void BatchDotForward_(const TBlob& lhs,
 
   if (lhs.shape_.ndim() == 3 && rhs.shape_.ndim() == 3) {
     mshadow::Tensor<xpu, 3, real_t> out = ret->get<xpu, 3, real_t>(s);
-    ASSIGN_DISPATCH(out, req, (batch_dot<false, false>(lhs.get<xpu, 3, real_t>(s),
-                                                       rhs.get<xpu, 3, real_t>(s))));
+    mshadow::Tensor<xpu, 3, real_t> mlhs = lhs.get<xpu, 3, real_t>(s);
+    mshadow::Tensor<xpu, 3, real_t> mrhs = rhs.get<xpu, 3, real_t>(s);
+    mshadow::Tensor<xpu, 1, real_t*> workspace =
+      env.resource[0].get_space_typed<xpu, 1, real_t*>(mshadow::Shape1(3 * out.size(0)), s);
+    if (kNullOp != req) {
+      mshadow::BatchGEMM<false, false>(out, mlhs, mrhs, 1.0f,
+                                       (kAddTo == req) ? 1.0f : 0.0f,
+                                       workspace);
+    }
   } else {
     LOG(FATAL) << "not reached";
   }
@@ -328,8 +335,21 @@ void BatchDotBackward_(const OutputGrad& out_grad,
     mshadow::Tensor<xpu, 3, real_t> mrhs_data = rhs.data.get<xpu, 3, real_t>(s);
     mshadow::Tensor<xpu, 3, real_t> mlhs_grad = lhs_grad->get<xpu, 3, real_t>(s);
     mshadow::Tensor<xpu, 3, real_t> mrhs_grad = rhs_grad->get<xpu, 3, real_t>(s);
-    ASSIGN_DISPATCH(mrhs_grad, req_rhs_grad, (batch_dot<true, false>(mlhs_data, mout_grad)));
-    ASSIGN_DISPATCH(mlhs_grad, req_lhs_grad, (batch_dot<false, true>(mout_grad, mrhs_data)));
+    mshadow::Tensor<xpu, 2, real_t*> workspace =
+      env.resource[0].get_space_typed<xpu, 2, real_t*>(
+        mshadow::Shape2(2, 3 * mout_grad.size(0)), s);
+    mshadow::Tensor<xpu, 1, real_t*> rhs_workspace = workspace[0];
+    mshadow::Tensor<xpu, 1, real_t*> lhs_workspace = workspace[1];
+    if (kNullOp != req_rhs_grad) {
+      mshadow::BatchGEMM<true, false>(mrhs_grad, mlhs_data, mout_grad, 1.0f,
+                                      (kAddTo == req_rhs_grad) ? 1.0f : 0.0f,
+                                      rhs_workspace);
+    }
+    if (kNullOp != req_lhs_grad) {
+      mshadow::BatchGEMM<false, true>(mlhs_grad, mout_grad, mrhs_data, 1.0f,
+                                      (kAddTo == req_lhs_grad) ? 1.0f : 0.0f,
+                                      lhs_workspace);
+    }
   } else {
     LOG(FATAL) << "not reached";
   }
@@ -672,6 +692,7 @@ MXNET_REGISTER_SIMPLE_OP(batch_dot, XPU)
 .set_function(XPU::kDevMask, BatchDotForward_<XPU>, kNoInplace, kRegisterSymbolic)
 .set_shape_function(BatchDotShape)
 .set_gradient(XPU::kDevMask, BatchDotBackward_<XPU>, kNoInplace)
+.set_resource_request(ResourceRequest::kTempSpace)
 .describe("Calculate batched dot product of two matrices."
           " (batch, M, K) batch_dot (batch, K, N) --> (batch, M, N)");
 }  // namespace op
