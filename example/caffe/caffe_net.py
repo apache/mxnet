@@ -9,11 +9,11 @@ def get_mlp():
     multi-layer perceptron
     """
     data = mx.symbol.Variable('data')
-    fc1  = mx.symbol.CaffeOp(data=[data], w_num=2, name='fc1', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")
-    act1 = mx.symbol.CaffeOp(data=[fc1], prototxt="layer{type:\"TanH\"}")
-    fc2  = mx.symbol.CaffeOp(data=[act1], w_num=2, name='fc2', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 64} }")
-    act2 = mx.symbol.CaffeOp(data=[fc2], prototxt="layer{type:\"TanH\"}")
-    fc3 = mx.symbol.CaffeOp(data=[act2], w_num=2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
+    fc1  = mx.symbol.CaffeOp(data_0=data, num_weight=2, name='fc1', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")
+    act1 = mx.symbol.CaffeOp(data_0=fc1, prototxt="layer{type:\"TanH\"}")
+    fc2  = mx.symbol.CaffeOp(data_0=act1, num_weight=2, name='fc2', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 64} }")
+    act2 = mx.symbol.CaffeOp(data_0=fc2, prototxt="layer{type:\"TanH\"}")
+    fc3 = mx.symbol.CaffeOp(data_0=act2, num_weight=2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
     if use_caffe_loss:
         label = mx.symbol.Variable('softmax_label')
         mlp = mx.symbol.CaffeLoss(data = fc3, label = label, grad_scale = 1, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
@@ -30,20 +30,20 @@ def get_lenet():
     data = mx.symbol.Variable('data')
 
     # first conv
-    conv1 = mx.symbol.CaffeOp(data=[data], w_num=2, prototxt="layer{type:\"Convolution\" convolution_param { num_output: 20 kernel_size: 5 stride: 1} }")
-    act1 = mx.symbol.CaffeOp(data=[conv1], prototxt="layer{type:\"TanH\"}")
-    pool1 = mx.symbol.CaffeOp(data=[act1], prototxt="layer{type:\"Pooling\" pooling_param { pool: MAX kernel_size: 2 stride: 2}}")
+    conv1 = mx.symbol.CaffeOp(data_0=data, num_weight=2, prototxt="layer{type:\"Convolution\" convolution_param { num_output: 20 kernel_size: 5 stride: 1} }")
+    act1 = mx.symbol.CaffeOp(data_0=conv1, prototxt="layer{type:\"TanH\"}")
+    pool1 = mx.symbol.CaffeOp(data_0=act1, prototxt="layer{type:\"Pooling\" pooling_param { pool: MAX kernel_size: 2 stride: 2}}")
 
     # second conv
-    conv2 = mx.symbol.CaffeOp(data=[pool1], w_num=2, prototxt="layer{type:\"Convolution\" convolution_param { num_output: 50 kernel_size: 5 stride: 1} }")
-    act2 = mx.symbol.CaffeOp(data=[conv2], prototxt="layer{type:\"TanH\"}")
-    pool2 = mx.symbol.CaffeOp(data=[act2], prototxt="layer{type:\"Pooling\" pooling_param { pool: MAX kernel_size: 2 stride: 2}}")
+    conv2 = mx.symbol.CaffeOp(data_0=pool1, num_weight=2, prototxt="layer{type:\"Convolution\" convolution_param { num_output: 50 kernel_size: 5 stride: 1} }")
+    act2 = mx.symbol.CaffeOp(data_0=conv2, prototxt="layer{type:\"TanH\"}")
+    pool2 = mx.symbol.CaffeOp(data_0=act2, prototxt="layer{type:\"Pooling\" pooling_param { pool: MAX kernel_size: 2 stride: 2}}")
 
-    fc1 = mx.symbol.CaffeOp(data=[pool2], w_num=2, prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 500} }")
-    act3 = mx.symbol.CaffeOp(data=[fc1], prototxt="layer{type:\"TanH\"}")
+    fc1 = mx.symbol.CaffeOp(data_0=pool2, num_weight=2, prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 500} }")
+    act3 = mx.symbol.CaffeOp(data_0=fc1, prototxt="layer{type:\"TanH\"}")
 
     # second fullc
-    fc2 = mx.symbol.CaffeOp(data=[act3], w_num=2, prototxt="layer{type:\"InnerProduct\"inner_product_param{num_output: 10} }")
+    fc2 = mx.symbol.CaffeOp(data_0=act3, num_weight=2, prototxt="layer{type:\"InnerProduct\"inner_product_param{num_output: 10} }")
     if use_caffe_loss:
         label = mx.symbol.Variable('softmax_label')
         lenet = mx.symbol.CaffeLoss(data = fc2, label = label, grad_scale = 1, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")

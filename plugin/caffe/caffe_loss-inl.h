@@ -28,14 +28,14 @@ namespace op {
 
 struct CaffeLossParam : public dmlc::Parameter<CaffeLossParam> {
   ::caffe::LayerParameter prototxt;
-  int in_num, out_num;
+  int num_data, num_out;
   float grad_scale;
 
   DMLC_DECLARE_PARAMETER(CaffeLossParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
-    DMLC_DECLARE_FIELD(in_num).set_range(0, 100).set_default(2)
+    DMLC_DECLARE_FIELD(num_data).set_range(0, 100).set_default(2)
     .describe("Operator input number");
-    DMLC_DECLARE_FIELD(out_num).set_range(0, 100).set_default(1)
+    DMLC_DECLARE_FIELD(num_out).set_range(0, 100).set_default(1)
     .describe("Operator output number");
     DMLC_DECLARE_FIELD(grad_scale)
     .set_default(1.0f)
@@ -56,14 +56,14 @@ class CaffeLoss : public Operator {
     caffeOp_ = caffe::LayerRegistry<Dtype>::CreateLayer(param_.prototxt);
     grad_scale_ = (Dtype)param_.grad_scale;
 
-    caffe::InitCaffeBlobs<Dtype>(&bot_, param_.in_num);
-    caffe::InitCaffeBlobs<Dtype>(&top_, param_.out_num);
-    flags_.resize(param_.in_num);
+    caffe::InitCaffeBlobs<Dtype>(&bot_, param_.num_data);
+    caffe::InitCaffeBlobs<Dtype>(&top_, param_.num_out);
+    flags_.resize(param_.num_data);
   }
 
   ~CaffeLoss() {
-    caffe::DelCaffeBlobs(&bot_, param_.in_num);
-    caffe::DelCaffeBlobs(&top_, param_.out_num);
+    caffe::DelCaffeBlobs(&bot_, param_.num_data);
+    caffe::DelCaffeBlobs(&top_, param_.num_out);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -80,8 +80,8 @@ class CaffeLoss : public Operator {
     for (index_t i = 0; i < req.size(); ++i)
       CHECK_EQ(req[i], kWriteTo);
 
-    CHECK_EQ(in_data.size(), param_.in_num);
-    CHECK_EQ(out_data.size(), param_.out_num);
+    CHECK_EQ(in_data.size(), param_.num_data);
+    CHECK_EQ(out_data.size(), param_.num_out);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
@@ -93,11 +93,11 @@ class CaffeLoss : public Operator {
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
                                       bot_.begin(),
                                       in_data.begin(),
-                                      param_.in_num);
+                                      param_.num_data);
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
                                       top_.begin(),
                                       out_data.begin(),
-                                      param_.out_num);
+                                      param_.num_out);
     CaffeOpSetup();
     caffeOp_->Forward(bot_, top_);
   }
@@ -121,10 +121,10 @@ class CaffeLoss : public Operator {
     caffe::CaffeMode::SetMode<xpu>();
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), param_.out_num);
-    for (index_t i = 0; i < param_.in_num; ++i)
+    CHECK_EQ(out_grad.size(), param_.num_out);
+    for (index_t i = 0; i < param_.num_data; ++i)
       CHECK(req[i] != kAddTo) << "caffe doesn't accm diff on bottom data";
-    CHECK(in_data.size() == param_.in_num);
+    CHECK(in_data.size() == param_.num_data);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
@@ -136,12 +136,12 @@ class CaffeLoss : public Operator {
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
                                       bot_.begin(),
                                       in_grad.begin(),
-                                      param_.in_num);
+                                      param_.num_data);
     // Pass grad scale to caffe blob
     top_[0]->set_cpu_diff(&grad_scale_);
 
     // Set BP flag
-    for (index_t i = 0; i < param_.in_num; ++i)
+    for (index_t i = 0; i < param_.num_data; ++i)
       flags_[i] = req[i] != kNullOp;
 
     caffeOp_->Backward(top_, flags_, bot_);
@@ -169,8 +169,8 @@ class CaffeLossProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    CHECK_EQ(param_.out_num, 1);
-    CHECK_EQ(param_.in_num, 2);
+    CHECK_EQ(param_.num_out, 1);
+    CHECK_EQ(param_.num_data, 2);
 
     // Fetch grad_scale from prototxt
     if ((param_.prototxt.loss_weight_size() > 0))
@@ -191,11 +191,11 @@ class CaffeLossProp : public OperatorProperty {
     if (caffeOp_ == NULL)
       caffeOp_ = caffe::LayerRegistry<float>::CreateLayer(param_.prototxt);
 
-    CHECK_GE(in_shape->size(), param_.in_num);
+    CHECK_GE(in_shape->size(), param_.num_data);
     // Initialize empty bottom & top blobs for caffeOp setup
     vector<Blob<float> *> bot_blobs, top_blobs;
 
-    for (index_t i = 0; i < param_.in_num; ++i) {
+    for (index_t i = 0; i < param_.num_data; ++i) {
       TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
       auto blob_ptr = new Blob<float>();
@@ -203,11 +203,11 @@ class CaffeLossProp : public OperatorProperty {
       bot_blobs.push_back(blob_ptr);
     }
 
-    for (index_t i = 0; i < param_.out_num; ++i)
+    for (index_t i = 0; i < param_.num_out; ++i)
       top_blobs.push_back(new Blob<float>());
 
     caffeOp_->SetUp(bot_blobs, top_blobs);
-    CHECK_EQ(in_shape->size(), caffeOp_->blobs().size() + param_.in_num);
+    CHECK_EQ(in_shape->size(), caffeOp_->blobs().size() + param_.num_data);
     // Initialize out shapes
     out_shape->clear();
     for (auto blob : top_blobs) {

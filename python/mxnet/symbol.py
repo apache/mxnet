@@ -1048,12 +1048,6 @@ def _make_atomic_symbol_function(handle):
         for k, v in kwargs.items():
             if isinstance(v, Symbol):
                 symbol_kwargs[k] = v
-            elif isinstance(v, list):
-                for idx, val in enumerate(v):
-                    assert(isinstance(val, Symbol))
-                    symbol_kwargs[k+"_"+str(idx)] = val
-                param_keys.append(k+"_num")
-                param_vals.append(c_str(str(len(v))))
             else:
                 param_keys.append(c_str(k))
                 param_vals.append(c_str(str(v)))
