@@ -8,9 +8,24 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 
+#include <sstream>
+#include <mutex>
+#include <unordered_map>
+
 namespace mxnet {
 namespace op {
 #if MXNET_USE_CUDNN == 1
+namespace conv {
+struct CudnnAlgorithms {
+  cudnnConvolutionFwdAlgo_t fwd;
+  cudnnConvolutionBwdDataAlgo_t bwd;
+  cudnnConvolutionBwdFilterAlgo_t flt;
+};
+
+std::unordered_map<std::string, CudnnAlgorithms> g_cudnn_algo_reg;
+std::mutex g_reg_mutex;
+}  // namespace conv
+// TODO(xxx): Refactor with Init CuDNN function, remove redandent code in initalization
 void TuneCudnnConvolution(ConvolutionParam param,
                           std::vector<TShape> *in_shape,
                           std::vector<TShape> *out_shape,
@@ -18,9 +33,7 @@ void TuneCudnnConvolution(ConvolutionParam param,
                           cudnnDataType_t dtype,
                           cudnnConvolutionFwdAlgo_t *algo,
                           cudnnConvolutionBwdDataAlgo_t *back_algo,
-                          cudnnConvolutionBwdFilterAlgo_t *back_algo_w,
-                          size_t *forward_workspace_byte,
-                          size_t *backward_workspace_byte) {
+                          cudnnConvolutionBwdFilterAlgo_t *back_algo_w) {
   using namespace mshadow;
   // convert MB to bytes
 
@@ -31,8 +44,19 @@ void TuneCudnnConvolution(ConvolutionParam param,
   CHECK_EQ(in_shape->size(), expected);
   CHECK_EQ(out_shape->size(), 1);
   TShape &x_shape = (*in_shape)[conv::kData];
+  TShape &w_shape = (*in_shape)[conv::kWeight];
   TShape &y_shape = (*out_shape)[conv::kOut];
-
+  std::ostringstream oss;
+  oss << x_shape << ";" << y_shape << ";" << w_shape << ";" << param.workspace;
+  std::string key = oss.str();
+  std::unordered_map<std::string, conv::CudnnAlgorithms>::const_iterator iter =
+    conv::g_cudnn_algo_reg.find(key);
+  if (iter != conv::g_cudnn_algo_reg.end()) {
+    *algo = iter->second.fwd;
+    *back_algo = iter->second.bwd;
+    *back_algo_w = iter->second.flt;
+    return;
+  }
 
   size_t workspace_byte = param.workspace << 20;
   cudnnTensorDescriptor_t in_desc;
@@ -46,13 +70,45 @@ void TuneCudnnConvolution(ConvolutionParam param,
   CHECK_EQ(cudnnCreateFilterDescriptor(&filter_desc), CUDNN_STATUS_SUCCESS);
   CHECK_EQ(cudnnCreateConvolutionDescriptor(&conv_desc), CUDNN_STATUS_SUCCESS);
 #if CUDNN_MAJOR == 5
-  CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc,
-                                      dtype,
-                                      format,
-                                      param.num_filter / param.num_group,
-                                      x_shape[1] / param.num_group,
-                                      param.kernel[0],
-                                      param.kernel[1]), CUDNN_STATUS_SUCCESS);
+  if (in_shape->at(0).ndim() == 4) {
+    // 2d conv
+    CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc,
+                                        dtype,
+                                        format,
+                                        param.num_filter / param.num_group,
+                                        x_shape[1] / param.num_group,
+                                        param.kernel[0],
+                                        param.kernel[1]), CUDNN_STATUS_SUCCESS);
+  } else {
+    // 3d conv, only support CUDNN v5
+    std::vector<int> filter_vec = {static_cast<int>(param.num_filter / param.num_group),
+                                   static_cast<int>(x_shape[1] / param.num_group),
+                                   static_cast<int>(param.kernel[0]),
+                                   static_cast<int>(param.kernel[1]),
+                                   static_cast<int>(param.kernel[2])};
+
+    std::vector<int> pad_vec = {static_cast<int>(param.pad[0]),
+                                static_cast<int>(param.pad[1]),
+                                static_cast<int>(param.pad[2])};
+
+    std::vector<int> stride_vec = {static_cast<int>(param.stride[0]),
+                                   static_cast<int>(param.stride[1]),
+                                   static_cast<int>(param.stride[2])};
+
+    std::vector<int> upscale_vec = {1, 1, 1};
+    CHECK_EQ(cudnnSetConvolutionNdDescriptor(conv_desc,
+                                             3,
+                                             &pad_vec[0],
+                                             &stride_vec[0],
+                                             &upscale_vec[0],
+                                             CUDNN_CROSS_CORRELATION,
+                                             dtype), CUDNN_STATUS_SUCCESS);
+    CHECK_EQ(cudnnSetFilterNdDescriptor(filter_desc,
+                                        dtype,
+                                        format,
+                                        static_cast<int>(filter_vec.size()),
+                                        &filter_vec[0]), CUDNN_STATUS_SUCCESS);
+  }
 #else
   CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc,
                                       dtype,
@@ -61,43 +117,93 @@ void TuneCudnnConvolution(ConvolutionParam param,
                                       param.kernel[0],
                                       param.kernel[1]), CUDNN_STATUS_SUCCESS);
 #endif
-  CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc,
-                                           param.pad[0],
-                                           param.pad[1],
-                                           param.stride[0],
-                                           param.stride[1],
-                                           1,
-                                           1,
-                                           CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
-  CHECK_EQ(cudnnSetTensor4dDescriptorEx(in_desc,
+  if (param.kernel.ndim() == 2) {
+    // 2d conv
+    CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc,
+                                             param.pad[0],
+                                             param.pad[1],
+                                             param.stride[0],
+                                             param.stride[1],
+                                             1,
+                                             1,
+                                             CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
+    CHECK_EQ(cudnnSetTensor4dDescriptorEx(in_desc,
+                                          dtype,
+                                          x_shape[0],
+                                          x_shape[1] / param.num_group,
+                                          x_shape[2],
+                                          x_shape[3],
+                                          x_shape[1] * x_shape[2] * x_shape[3],
+                                          x_shape[2] * x_shape[3],
+                                          x_shape[3],
+                                          1), CUDNN_STATUS_SUCCESS);
+    CHECK_EQ(cudnnSetTensor4dDescriptorEx(out_desc,
+                                          dtype,
+                                          y_shape[0],
+                                          y_shape[1] / param.num_group,
+                                          y_shape[2],
+                                          y_shape[3],
+                                          y_shape[1] * y_shape[2] * y_shape[3],
+                                          y_shape[2] * y_shape[3],
+                                          y_shape[3],
+                                          1), CUDNN_STATUS_SUCCESS);
+    if (!param.no_bias) {
+      TShape bias_shape = (*in_shape)[conv::kBias];
+      CHECK_EQ(cudnnSetTensor4dDescriptor(bias_desc,
+                                          CUDNN_TENSOR_NCHW,
+                                          dtype,
+                                          1,
+                                          bias_shape[0] / param.num_group,
+                                          1,
+                                          1), CUDNN_STATUS_SUCCESS);
+    }
+  } else {
+    // 3d conv
+    std::vector<int> ishape = {static_cast<int>(in_shape->at(conv::kData)[0]),
+                               static_cast<int>(in_shape->at(conv::kData)[1]),
+                               static_cast<int>(in_shape->at(conv::kData)[2]),
+                               static_cast<int>(in_shape->at(conv::kData)[3]),
+                               static_cast<int>(in_shape->at(conv::kData)[4])};
+
+    std::vector<int> istride = {static_cast<int>(ishape[1] * ishape[2] * ishape[3] * ishape[4]),
+                                static_cast<int>(ishape[2] * ishape[3] * ishape[4]),
+                                static_cast<int>(ishape[3] * ishape[4]),
+                                static_cast<int>(ishape[4]),
+                                1};
+
+    std::vector<int> oshape = {static_cast<int>(out_shape->at(conv::kOut)[0]),
+                               static_cast<int>(out_shape->at(conv::kOut)[1]),
+                               static_cast<int>(out_shape->at(conv::kOut)[2]),
+                               static_cast<int>(out_shape->at(conv::kOut)[3]),
+                               static_cast<int>(out_shape->at(conv::kOut)[4])};
+
+    std::vector<int> ostride = {static_cast<int>(oshape[1] * oshape[2] * oshape[3] * oshape[4]),
+                                static_cast<int>(oshape[2] * oshape[3] * oshape[4]),
+                                static_cast<int>(oshape[3] * oshape[4]),
+                                static_cast<int>(oshape[4]),
+                                1};
+    CHECK_EQ(cudnnSetTensorNdDescriptor(in_desc,
                                         dtype,
-                                        x_shape[0],
-                                        x_shape[1] / param.num_group,
-                                        x_shape[2],
-                                        x_shape[3],
-                                        x_shape[1] * x_shape[2] * x_shape[3],
-                                        x_shape[2] * x_shape[3],
-                                        x_shape[3],
-                                        1), CUDNN_STATUS_SUCCESS);
-  CHECK_EQ(cudnnSetTensor4dDescriptorEx(out_desc,
+                                        static_cast<int>(ishape.size()),
+                                        &ishape[0],
+                                        &istride[0]), CUDNN_STATUS_SUCCESS);
+    CHECK_EQ(cudnnSetTensorNdDescriptor(out_desc,
                                         dtype,
-                                        y_shape[0],
-                                        y_shape[1] / param.num_group,
-                                        y_shape[2],
-                                        y_shape[3],
-                                        y_shape[1] * y_shape[2] * y_shape[3],
-                                        y_shape[2] * y_shape[3],
-                                        y_shape[3],
-                                        1), CUDNN_STATUS_SUCCESS);
-  if (!param.no_bias) {
-    TShape bias_shape = (*in_shape)[conv::kBias];
-    CHECK_EQ(cudnnSetTensor4dDescriptor(bias_desc,
-                                        CUDNN_TENSOR_NCHW,
-                                        dtype,
-                                        1,
-                                        bias_shape[0] / param.num_group,
-                                        1,
-                                        1), CUDNN_STATUS_SUCCESS);
+                                        static_cast<int>(oshape.size()),
+                                        &oshape[0],
+                                        &ostride[0]), CUDNN_STATUS_SUCCESS);
+    if (!param.no_bias) {
+      TShape bias_shape = (*in_shape)[conv::kBias];
+      index_t bias_offset = bias_shape[0] / param.num_group;
+      std::vector<int> bshape = {1, static_cast<int>(bias_shape[0] / param.num_group),
+                                     1, 1, 1};
+      std::vector<int> bias_stride = {static_cast<int>(bias_offset), 1, 1, 1, 1};
+      CHECK_EQ(cudnnSetTensorNdDescriptor(bias_desc,
+                                          dtype,
+                                          static_cast<int>(bshape.size()),
+                                          &bshape[0],
+                                          &bias_stride[0]), CUDNN_STATUS_SUCCESS);
+    }
   }
 
   Engine::VarHandle var = Engine::Get()->NewVariable();
@@ -125,7 +231,6 @@ void TuneCudnnConvolution(ConvolutionParam param,
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
-      *forward_workspace_byte = fwd_algo[i].memory;
       *algo = fwd_algo[i].algo;
     }
 
@@ -146,7 +251,6 @@ void TuneCudnnConvolution(ConvolutionParam param,
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
-      *backward_workspace_byte = bwd_filter_algo[i].memory;
       *back_algo_w = bwd_filter_algo[i].algo;
     }
 
@@ -167,12 +271,18 @@ void TuneCudnnConvolution(ConvolutionParam param,
     if (i == nalgo) {
       LOG(FATAL) << "Failed to find an convolution algorithm.";
     } else {
-      *backward_workspace_byte = std::max(*backward_workspace_byte, bwd_data_algo[i].memory);
       *back_algo = bwd_data_algo[i].algo;
     }
   }, ctx, {}, {var});
   Engine::Get()->WaitForVar(var);
   Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
+
+  conv::CudnnAlgorithms algs;
+  algs.fwd = *algo;
+  algs.bwd = *back_algo;
+  algs.flt = *back_algo_w;
+  std::lock_guard<std::mutex> guard(conv::g_reg_mutex);
+  conv::g_cudnn_algo_reg[key] = algs;
 
   CHECK_EQ(cudnnDestroyTensorDescriptor(in_desc), CUDNN_STATUS_SUCCESS);
   CHECK_EQ(cudnnDestroyTensorDescriptor(out_desc), CUDNN_STATUS_SUCCESS);
