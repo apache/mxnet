@@ -197,7 +197,10 @@ class KVStoreDist : public KVStoreDevice {
     }
     if (server_) server_->Run();
     ps::Finalize();
-    if (server_) delete server_; server_ = nullptr;
+    if (server_) {
+      delete server_;
+    }
+    server_ = nullptr;
   }
 
  private:
