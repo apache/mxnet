@@ -10,16 +10,14 @@ from rcnn.loader import ROIIter
 from rcnn.metric import AccuracyMetric, LogLossMetric, SmoothL1LossMetric
 from rcnn.module import MutableModule
 from rcnn.symbol import get_vgg_rcnn
-from utils.load_data import load_rpn_roidb
+from utils.load_data import load_ss_roidb, load_rpn_roidb
 from utils.load_model import load_checkpoint, load_param
 from utils.save_model import save_checkpoint
 
-config.TRAIN.BG_THRESH_LO = 0.0
-config.TRAIN.ASPECT_GROUPING = False
 
-
-def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
-              prefix, ctx, begin_epoch, end_epoch, frequent, kv_store, work_load_list=None, resume=False):
+def train_rcnn(image_set, year, root_path, devkit_path, pretrained, epoch,
+               prefix, ctx, begin_epoch, end_epoch, frequent, kv_store,
+               work_load_list=None, resume=False, proposal='rpn'):
     # set up logger
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -32,7 +30,7 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
     config.TRAIN.BATCH_SIZE *= len(ctx)
 
     # load training data
-    voc, roidb, means, stds = load_rpn_roidb(image_set, year, root_path, devkit_path, flip=True)
+    voc, roidb, means, stds = eval('load_' + proposal + '_roidb')(image_set, year, root_path, devkit_path, flip=True)
     train_data = ROIIter(roidb, batch_size=config.TRAIN.BATCH_IMAGES, shuffle=True, mode='train',
                          ctx=ctx, work_load_list=work_load_list)
 
@@ -53,12 +51,10 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
         args['bbox_pred_bias'] = mx.nd.zeros(shape=arg_shape_dict['bbox_pred_bias'])
 
     # prepare training
-    fixed_params_names = []
-    for name in args.keys():
-        if config.TRAIN.FINETUNE and name.startswith('conv'):
-            fixed_params_names.append(name)
-        elif name.startswith('conv1') or name.startswith('conv2'):
-            fixed_params_names.append(name)
+    if config.TRAIN.FINETUNE:
+        fixed_param_prefix = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
+    else:
+        fixed_param_prefix = ['conv1', 'conv2']
     data_names = [k[0] for k in train_data.provide_data]
     label_names = [k[0] for k in train_data.provide_label]
     batch_end_callback = Speedometer(train_data.batch_size, frequent=frequent)
@@ -82,7 +78,7 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
     # train
     mod = MutableModule(sym, data_names=data_names, label_names=label_names,
                         logger=logger, context=ctx, work_load_list=work_load_list,
-                        max_data_shapes=max_data_shape)
+                        max_data_shapes=max_data_shape, fixed_param_prefix=fixed_param_prefix)
     mod.fit(train_data, eval_metric=eval_metrics, epoch_end_callback=epoch_end_callback,
             batch_end_callback=batch_end_callback, kvstore=kv_store,
             optimizer='sgd', optimizer_params=optimizer_params,
@@ -98,7 +94,7 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Train a Region Proposal Network')
+    parser = argparse.ArgumentParser(description='Train a Fast R-CNN Network')
     parser.add_argument('--image_set', dest='image_set', help='can be trainval or train',
                         default='trainval', type=str)
     parser.add_argument('--year', dest='year', help='can be 2007, 2010, 2012',
@@ -127,6 +123,8 @@ def parse_args():
                         default=None, type=list)
     parser.add_argument('--finetune', dest='finetune', help='second round finetune', action='store_true')
     parser.add_argument('--resume', dest='resume', help='continue training', action='store_true')
+    parser.add_argument('--proposal', dest='proposal', help='can be ss for selective search or rpn',
+                        default='rpn', type=str)
     args = parser.parse_args()
     return args
 
@@ -135,6 +133,6 @@ if __name__ == '__main__':
     ctx = [mx.gpu(int(i)) for i in args.gpu_ids.split(',')]
     if args.finetune:
         config.TRAIN.FINETUNE = True
-    train_net(args.image_set, args.year, args.root_path, args.devkit_path, args.pretrained, args.epoch,
-              args.prefix, ctx, args.begin_epoch, args.end_epoch, args.frequent,
-              args.kv_store, args.work_load_list, args.resume)
+    train_rcnn(args.image_set, args.year, args.root_path, args.devkit_path, args.pretrained, args.epoch,
+               args.prefix, ctx, args.begin_epoch, args.end_epoch, args.frequent,
+               args.kv_store, args.work_load_list, args.resume, args.proposal)

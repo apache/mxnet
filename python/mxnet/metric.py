@@ -299,13 +299,18 @@ class CrossEntropy(EvalMetric):
 
 class Torch(EvalMetric):
     """Dummy metric for torch criterions"""
-    def __init__(self):
-        super(Torch, self).__init__('torch')
+    def __init__(self, name='torch'):
+        super(Torch, self).__init__(name)
 
     def update(self, _, preds):
         for pred in preds:
             self.sum_metric += pred.asnumpy().mean()
         self.num_inst += 1
+
+class Caffe(Torch):
+    """Dummy metric for caffe criterions"""
+    def __init__(self):
+        super(Caffe, self).__init__('caffe')
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.

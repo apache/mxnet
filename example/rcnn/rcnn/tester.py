@@ -69,7 +69,7 @@ def pred_eval(detector, test_data, imdb, vis=False):
             # visualize the testing scale
             for box in boxes_this_image:
                 if isinstance(box, np.ndarray):
-                    box *= scale
+                    box[:, :4] *= scale
             vis_all_detection(databatch.data['data'], boxes_this_image,
                               imdb_classes=imdb.classes)
         i += 1
