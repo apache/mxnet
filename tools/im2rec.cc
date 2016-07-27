@@ -48,6 +48,8 @@ int main(int argc, char *argv[]) {
            "Possible additional parameters:\n"\
            "\tcolor=USE_COLOR[default=1] Force color (1), gray image (0) or keep source unchanged (-1).\n"\
            "\tresize=newsize resize the shorter edge of image to the newsize, original images will be packed by default\n"\
+           "\tmin_size=minsize resize the shorter edge of image randomly with minimum size, original images will be packed by default\n"\
+           "\tmax_size=maxsize resize the shorter edge of image randomly with maximum size, original images will be packed by default\n"\
            "\tlabel_width=WIDTH[default=1] specify the label_width in the list, by default set to 1\n"\
            "\tnsplit=NSPLIT[default=1] used for part generation, logically split the image.list to NSPLIT parts by position\n"\
            "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n"\
@@ -60,6 +62,8 @@ int main(int argc, char *argv[]) {
   }
   int label_width = 1;
   int new_size = -1;
+  int min_size = -1;
+  int max_size = -1;
   int nsplit = 1;
   int partid = 0;
   int center_crop = 0;
@@ -72,6 +76,8 @@ int main(int argc, char *argv[]) {
     char key[128], val[128];
     if (sscanf(argv[i], "%[^=]=%s", key, val) == 2) {
       if (!strcmp(key, "resize")) new_size = atoi(val);
+      if (!strcmp(key, "min_size")) min_size = atoi(val);
+      if (!strcmp(key, "max_size")) max_size = atoi(val);
       if (!strcmp(key, "label_width")) label_width = atoi(val);
       if (!strcmp(key, "nsplit")) nsplit = atoi(val);
       if (!strcmp(key, "part")) partid = atoi(val);
@@ -94,6 +100,11 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "New Image Size: Short Edge " << new_size;
   } else {
     LOG(INFO) << "Keep origin image size";
+  }
+  if (min_size > 0 && max_size > 0 && min_size < max_size) {
+	  LOG(INFO) << "Using ramdom short edge beteween [" << min_size << ", " << max_size << "]";
+  } else {
+	  LOG(INFO) << "Keep origin image size or using resize for short edge instead";
   }
   if (center_crop) {
     LOG(INFO) << "Center cropping to square";
@@ -136,6 +147,7 @@ int main(int argc, char *argv[]) {
   }
   std::random_device rd;
   std::mt19937 prnd(rd());
+  std::uniform_int_distribution<size_t> rand_size(min_size, max_size);  // need to define rand_size global
   using namespace dmlc;
   const static size_t kBufferSize = 1 << 20UL;
   std::string root = argv[2];
@@ -205,6 +217,9 @@ int main(int argc, char *argv[]) {
       cv::Mat img = cv::imdecode(decode_buf, color_mode);
       CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
       cv::Mat res = img;
+	  if (min_size > 0 && max_size > 0 && min_size < max_size) {
+		  new_size = rand_size(prnd);
+	  }
       if (new_size > 0) {
         if (center_crop) {
           if (img.rows > img.cols) {
