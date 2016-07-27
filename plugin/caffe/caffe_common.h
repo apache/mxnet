@@ -56,6 +56,7 @@ class LayerRegistry {
   static ::caffe::Layer<Dtype> * CreateLayer(const ::caffe::LayerParameter& param) {
     ::caffe::shared_ptr< ::caffe::Layer<Dtype> > ptr =
       ::caffe::LayerRegistry<Dtype>::CreateLayer(param);
+    // avoid caffe::layer destructor, which deletes the weights layer owns
     new ::caffe::shared_ptr< ::caffe::Layer<Dtype> >(ptr);
     return ptr.get();
   }
