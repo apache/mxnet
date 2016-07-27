@@ -16,9 +16,9 @@ def get_mlp():
     fc3 = mx.symbol.CaffeOp(data_0=act2, num_weight=2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
     if use_caffe_loss:
         label = mx.symbol.Variable('softmax_label')
-        mlp = mx.symbol.CaffeLoss(data = fc3, label = label, grad_scale = 1, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+        mlp = mx.symbol.CaffeLoss(data=fc3, label=label, grad_scale=1, name='softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
     else:
-        mlp = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
+        mlp = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
     return mlp
 
 def get_lenet():
@@ -46,16 +46,16 @@ def get_lenet():
     fc2 = mx.symbol.CaffeOp(data_0=act3, num_weight=2, prototxt="layer{type:\"InnerProduct\"inner_product_param{num_output: 10} }")
     if use_caffe_loss:
         label = mx.symbol.Variable('softmax_label')
-        lenet = mx.symbol.CaffeLoss(data = fc2, label = label, grad_scale = 1, name = 'softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+        lenet = mx.symbol.CaffeLoss(data=fc2, label=label, grad_scale=1, name='softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
     else:
-        lenet = mx.symbol.SoftmaxOutput(data = fc2, name = 'softmax')
+        lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
     return lenet
 
 def parse_args():
     parser = argparse.ArgumentParser(description='train an image classifer on mnist')
     parser.add_argument('--network', type=str, default='lenet',
                         choices = ['mlp', 'lenet'],
-                        help = 'the cnn to use')
+                        help='the cnn to use')
     parser.add_argument('--caffe-loss', type=int, default=0,
                         help='Use CaffeLoss symbol')
     parser.add_argument('--data-dir', type=str, default='mnist/',
