@@ -77,6 +77,31 @@ class ParameterServer(private val classpath: String,
   private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   private val trackerProcess: AtomicReference[Process] = new AtomicReference[Process]
 
+  /**
+   * A utility class to redirect the child process's stdout or stderr.
+   */
+  private class RedirectThread(
+      in: InputStream,
+      out: OutputStream,
+      name: String,
+      propagateEof: Boolean = false)
+    extends Thread(name) {
+
+    setDaemon(true)
+    override def run() {
+      val buf = new Array[Byte](1024)
+      var len = in.read(buf)
+      while (len != -1) {
+        out.write(buf, 0, len)
+        out.flush()
+        len = in.read(buf)
+      }
+      if (propagateEof) {
+        out.close()
+      }
+    }
+  }
+
   def startProcess(): Boolean = {
     val cp = if (classpath == null) "" else s"-cp $classpath"
     val cmd = s"$java $jvmOpts $cp $runningClass " +
@@ -85,6 +110,12 @@ class ParameterServer(private val classpath: String,
     logger.info(s"Start process: $cmd")
     try {
       trackerProcess.set(Runtime.getRuntime.exec(cmd))
+      val inputStream = schedulerProcess.getInputStream
+      val errorStream = schedulerProcess.getErrorStream
+      logger.info("Starting InputStream-Redirecter Thread")
+      new RedirectThread(inputStream, System.out, "InputStream-Redirecter", true).start()
+      logger.info("Starting ErrorStream-Redirecter Thread")
+      new RedirectThread(errorStream, System.err, "ErrorStream-Redirecter", true).start()
       true
     } catch {
       case ioe: IOException =>
