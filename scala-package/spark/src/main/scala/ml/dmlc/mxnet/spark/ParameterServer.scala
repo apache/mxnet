@@ -109,9 +109,10 @@ class ParameterServer(private val classpath: String,
       s"--num-server=$numServer --num-worker=$numWorker"
     logger.info(s"Start process: $cmd")
     try {
-      trackerProcess.set(Runtime.getRuntime.exec(cmd))
-      val inputStream = schedulerProcess.getInputStream
-      val errorStream = schedulerProcess.getErrorStream
+      val childProcess = Runtime.getRuntime.exec(cmd)
+      trackerProcess.set(childProcess)
+      val inputStream = childProcess.getInputStream
+      val errorStream = childProcess.getErrorStream
       logger.info("Starting InputStream-Redirecter Thread")
       new RedirectThread(inputStream, System.out, "InputStream-Redirecter", true).start()
       logger.info("Starting ErrorStream-Redirecter Thread")
