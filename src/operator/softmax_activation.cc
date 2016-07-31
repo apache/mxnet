@@ -11,8 +11,6 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(SoftmaxActivationParam param) {
-  LOG(FATAL) << "Softmax Activation for internal layers is only supported "
-                "on GPU with cuDNN. Use SoftmaxOutput for loss layer.";
   return new SoftmaxActivationOp<cpu>(param);
 }
 

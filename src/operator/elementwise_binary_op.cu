@@ -4,12 +4,3 @@
  * \brief elementwise binary operator
 */
 #include "./elementwise_binary_op-inl.h"
-
-namespace mxnet {
-namespace op {
-template<>
-Operator* CreateElementWiseBinaryOp<gpu>(elembinary::ElementWiseBinaryOpType type) {
-  return CreateElementWiseBinaryOp_<gpu>(type);
-}
-}  // namespace op
-}  // namespace mxnet

@@ -38,7 +38,8 @@ class NaiveEngine final : public Engine {
 
   // new variables
   VarHandle NewVariable() override {
-    return nullptr;
+    size_t v = ++counter_;
+    return reinterpret_cast<VarHandle>(v);
   }
   OprHandle NewOperator(AsyncFn fn,
                         std::vector<VarHandle> const& const_vars,
@@ -115,6 +116,8 @@ class NaiveEngine final : public Engine {
   RunContext ctx_;
   // whether action is completed
   bool req_completed_;
+  // counter
+  std::atomic<size_t> counter_{0};
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};
   // CPU stream

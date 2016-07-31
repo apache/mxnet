@@ -64,7 +64,7 @@ def test_mnist():
     py = np.argmax(prob, axis=1)
     acc1 = float(np.sum(py == y)) / len(y)
     logging.info('final accuracy = %f', acc1)
-    assert(acc1 > 0.96)
+    assert(acc1 > 0.94)
 
 
 if __name__ == "__main__":

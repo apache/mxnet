@@ -9,44 +9,30 @@
 #include <queue>
 #include <map>
 #include "./static_graph.h"
+#include "./graph_algorithm.h"
 #include "../operator/operator_common.h"
 
 namespace mxnet {
 
-std::vector<uint32_t> StaticGraph::PostDFSOrder(const std::vector<uint32_t>& head_nodes,
-                                                const std::unordered_set<uint32_t>& banned) const {
+std::vector<uint32_t> StaticGraph::PostDFSOrder(
+    const std::vector<uint32_t>& head_nodes) const {
   std::vector<uint32_t> ret;
-  std::unordered_set<uint32_t> visited;
   ret.reserve(nodes.size() / 2);
-  std::vector<std::pair<uint32_t, uint32_t> > stack;
-  // heads
-  for (auto head : head_nodes) {
-    if (visited.count(head) != 0) continue;
-    stack.push_back(std::make_pair(head, 0));
-    CHECK_EQ(banned.count(head), 0);
-    // bugfix
-    visited.insert(head);
-    while (!stack.empty()) {
-      std::pair<uint32_t, uint32_t>& back = stack.back();
-      const Node& n = nodes[back.first];
-      if (back.second == n.inputs.size() + (n.is_backward() ? 1 : 0)) {
-        ret.push_back(back.first);
-        visited.insert(back.first);
-        stack.pop_back();
-      } else {
-        uint32_t input;
-        if (back.second == n.inputs.size() && n.is_backward()) {
-          input = n.backward_source_id;
-          back.second++;
+  graph::PostOrderDFSVisit<uint32_t, uint32_t>(
+      head_nodes,
+      [&](uint32_t n) { ret.push_back(n); },  // FVisit
+      [](uint32_t n)->uint32_t { return n; },  // HashFunc
+      [&](uint32_t n)->uint32_t {  // InDegree
+        return nodes[n].inputs.size() + static_cast<uint32_t>(nodes[n].is_backward());
+      },
+      [&](uint32_t n, uint32_t index)->uint32_t {  // GetInput
+        const Node& node = nodes[n];
+        if (index < node.inputs.size()) {
+          return node.inputs.at(index).source_id;
         } else {
-          input = n.inputs[back.second++].source_id;
+          return node.backward_source_id;
         }
-        if (visited.count(input) == 0 && banned.count(input) == 0) {
-          stack.push_back(std::make_pair(input, 0));
-        }
-      }
-    }
-  }
+      });
   return ret;
 }
 
@@ -67,7 +53,7 @@ std::vector<uint32_t> StaticGraph::TopoSort() const {
       head_nodes.push_back(static_cast<uint32_t>(i));
     }
   }
-  return PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
+  return PostDFSOrder(head_nodes);
 }
 
 bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
@@ -137,7 +123,7 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
       // use BackwardInputs to select entries corresponding to node.inputs
       auto in_shape = forward.op->BackwardInputs(
           out_data_shapes, in_grad_shapes, out_data_shapes);
-      for (size_t i = 0; i < node.inputs.size(); ++i) {
+      for (size_t i = 0; i < node.inputs.size() - node.addto_index.size(); ++i) {
         const DataEntry& e = node.inputs[i];
         try {
           SHAPE_ASSIGN_CHECK((*node_out_shapes)[e.source_id], e.index, in_shape[i]);
@@ -233,7 +219,7 @@ bool StaticGraph::InferNodeTypes(const std::vector<uint32_t> &topo_order,
       // use BackwardInputs to select entries corresponding to node.inputs
       auto in_type = forward.op->BackwardInputs(
           out_data_types, in_grad_types, out_data_types);
-      for (size_t i = 0; i < node.inputs.size(); ++i) {
+      for (size_t i = 0; i < node.inputs.size() - node.addto_index.size(); ++i) {
         const DataEntry& e = node.inputs[i];
         try {
           TYPE_ASSIGN_CHECK((*node_out_types)[e.source_id], e.index, in_type[i]);
@@ -306,7 +292,7 @@ bool StaticGraph::InferShape(std::vector<TShape> *in_shape,
   for (const auto& head : heads) {
     head_nodes.push_back(head.source_id);
   }
-  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
+  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes);
   uint32_t counter = 0;
   for (uint32_t nid : fwd_nodes) {
     // backward consistentcy check.
@@ -357,7 +343,7 @@ bool StaticGraph::InferType(std::vector<int> *in_type,
   for (const auto& head : heads) {
     head_nodes.push_back(head.source_id);
   }
-  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes, std::unordered_set<uint32_t>());
+  std::vector<uint32_t> fwd_nodes = PostDFSOrder(head_nodes);
   uint32_t counter = 0;
   for (uint32_t nid : fwd_nodes) {
     // backward consistentcy check.
@@ -371,15 +357,30 @@ bool StaticGraph::InferType(std::vector<int> *in_type,
   return true;
 }
 
-StaticGraph::Node StaticGraph::CreateSumNode(
+StaticGraph::Node StaticGraph::CreateGradSumNode(
     const std::vector<DataEntry> &grad_source) {
+  // start to use inplace gradient sum when it is greater than cap.
+  static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 8);
   // find multiple gradients, need aggregate
+  std::vector<DataEntry> gsource;
+  if (grad_source.size() < inplace_sum_cap) {
+    gsource = grad_source;
+  } else {
+    for (size_t i = 1; i < grad_source.size(); ++i) {
+      nodes[grad_source[i].source_id]
+          .addto_index.push_back(grad_source[i].index);
+      nodes[grad_source[i].source_id]
+          .inputs.push_back(grad_source[i - 1]);
+    }
+    gsource.push_back(grad_source.back());
+  }
+
   std::ostringstream os_size;
   Node agg_node;
   agg_node.op.reset(OperatorProperty::Create("ElementWiseSum"));
-  os_size << grad_source.size();
+  os_size << gsource.size();
   agg_node.op->Init({{"num_args", os_size.str()}});
-  agg_node.inputs = grad_source;
+  agg_node.inputs = gsource;
   return agg_node;
 }
 
@@ -406,12 +407,14 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
   int *pcounter = &counter;
 
   auto need_mirror = [this, do_mirror, pcounter, mirror_step](uint32_t nid) {
-    if (do_mirror == 0) return false;
+    if (nodes[nid].is_variable()) return false;
     if (!nodes[nid].is_forward()) return false;
     std::string type = nodes[nid].op->TypeString();
+    if (type == "Dropout") return false;
+    if (nodes[nid].get_attr("force_mirroring", false)) return true;
+    if (do_mirror == 0) return false;
     if (type == "Convolution") return false;
     if (type == "FullyConnected") return false;
-    if (type == "Dropout") return false;
     if (type == "Concat") return false;
     if (type == "SoftmaxOutput") return false;
     if (type == "CuDNNBatchNorm") return false;
@@ -482,13 +485,14 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
       if (i >= nvisible) continue;
       // get out_grad
       auto it = grad_map.find(okey);
-      CHECK(it != grad_map.end()) << "bad graph";
+      CHECK(it != grad_map.end()) << "bad graph: Cannot find node "
+                                  << nodes[nid].name << "'s " << i << "-th output";
       std::vector<DataEntry> &gnodes = it->second;
       if (gnodes.size() == 1) {
         out_grad.push_back(gnodes[0]);
       } else {
         std::ostringstream os_name;
-        Node agg_node = StaticGraph::CreateSumNode(gnodes);
+        Node agg_node = this->CreateGradSumNode(gnodes);
         os_name << nodes[nid].name << '_' << i << "_out_grad_agg";
         agg_node.name = os_name.str();
         uint32_t agg_node_id = static_cast<uint32_t>(nodes.size());
@@ -534,7 +538,7 @@ void StaticGraph::MakeBackwardPass(std::vector<uint32_t> *head_grad_nodes,
       arg_grads->at(i) = it->second[0];
     } else {
       std::ostringstream os_name;
-      Node agg_node = StaticGraph::CreateSumNode(it->second);
+      Node agg_node = this->CreateGradSumNode(it->second);
       os_name << nodes[arg_nodes[i]].name << "_grad_agg";
       agg_node.name = os_name.str();
       uint32_t agg_node_id = static_cast<uint32_t>(nodes.size());
@@ -560,6 +564,8 @@ void StaticGraph::Node::Save(dmlc::JSONWriter *writer) const {
   writer->WriteObjectKeyValue("inputs", inputs);
   writer->WriteObjectKeyValue("backward_source_id", backward_source_id);
   if (attr.size() != 0) writer->WriteObjectKeyValue("attr", attr);
+  CHECK_EQ(addto_index.size(), 0)
+      << "Not support serializing addto_index for now";
   writer->EndObject();
 }
 

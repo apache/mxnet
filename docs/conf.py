@@ -36,16 +36,9 @@ for mod_name in MOCK_MODULES:
 # If your documentation needs a minimal Sphinx version, state it here.
 needs_sphinx = '1.2'
 
-if os.environ.get('READTHEDOCS', None) == 'True':
-  subprocess.call('doxygen')
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.ifconfig', 'breathe']
-
-# breathe_default_project = "format"
-breathe_domain_by_extension = {"h" : "cpp"}
-
+extensions = ['sphinx.ext.ifconfig']
 
 # General information about the project.
 project = u'mxnet'
@@ -62,6 +55,8 @@ source_parsers = {
 }
 os.environ['MXNET_BUILD_DOC'] = '1'
 # Version information.
+version = '0.7.0'
+release = '0.7.0'
 # import mxnet
 # version = mxnet.__version__
 # release = mxnet.__version__
@@ -138,9 +133,6 @@ exclude_patterns = ['virtualenv']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
-highlight_language = 'c++'
-
-primary_domain = 'cpp'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
@@ -315,15 +307,14 @@ def run_doxygen(folder):
 
 
 def generate_doxygen_xml(app):
-    """Run the doxygen make commands if we're on the ReadTheDocs server"""
+    """Run the doxygen make commands"""
     run_doxygen('..')
-    sys.stderr.write('The Lib path: %s\n' % str(os.listdir('../lib')))
 
 def setup(app):
     # Add hook for building doxygen xml when needed
     # no c++ API for now
     app.connect("builder-inited", generate_doxygen_xml)
     app.add_config_value('recommonmark_config', {
-            'url_resolver': lambda url: doc_root + url,
+            'url_resolver': lambda url: github_doc_root + url,
             }, True)
     app.add_transform(AutoStructify)

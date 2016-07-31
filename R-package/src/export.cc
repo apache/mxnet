@@ -93,6 +93,7 @@ void Exporter::Export(const std::string& path) {
     std::string fname = Rcpp::as<std::string>(func_names[i]);
     // skip internal functions
     if (fname.find("internal.") != std::string::npos) continue;
+    if (fname == "mx.varg.symbol.Concat") continue;
     Rcpp::List func_info(scope->get_function(fname));
     std::string docstr = Rcpp::as<std::string>(func_info[2]);
     if (docstr.find("@export") == std::string::npos) continue;

@@ -21,8 +21,9 @@ def check_label_shapes(labels, preds, shape=0):
 class EvalMetric(object):
     """Base class of all evaluation metrics."""
 
-    def __init__(self, name):
+    def __init__(self, name, num=None):
         self.name = name
+        self.num = num
         self.reset()
 
     def update(self, label, pred):
@@ -40,8 +41,12 @@ class EvalMetric(object):
 
     def reset(self):
         """Clear the internal statistics to initial state."""
-        self.num_inst = 0
-        self.sum_metric = 0.0
+        if self.num == None:
+            self.num_inst = 0
+            self.sum_metric = 0.0
+        else:
+            self.num_inst = [0] * self.num
+            self.sum_metric = [0.0] * self.num
 
     def get(self):
         """Get the current evaluation result.
@@ -53,10 +58,16 @@ class EvalMetric(object):
         value : float
            Value of the evaluation.
         """
-        if self.num_inst == 0:
-            return (self.name, float('nan'))
+        if self.num == None:
+            if self.num_inst == 0:
+                return (self.name, float('nan'))
+            else:
+                return (self.name, self.sum_metric / self.num_inst)
         else:
-            return (self.name, self.sum_metric / self.num_inst)
+            names = ['%s_%d'%(self.name, i) for i in range(self.num)]
+            values = [x / y if y != 0 else float('nan') \
+                for x, y in zip(self.sum_metric, self.num_inst)]
+            return (names, values)
 
     def get_name_value(self):
         """Get zipped name and value pairs"""
@@ -288,13 +299,18 @@ class CrossEntropy(EvalMetric):
 
 class Torch(EvalMetric):
     """Dummy metric for torch criterions"""
-    def __init__(self):
-        super(Torch, self).__init__('torch')
+    def __init__(self, name='torch'):
+        super(Torch, self).__init__(name)
 
     def update(self, _, preds):
         for pred in preds:
             self.sum_metric += pred.asnumpy().mean()
         self.num_inst += 1
+
+class Caffe(Torch):
+    """Dummy metric for caffe criterions"""
+    def __init__(self):
+        super(Caffe, self).__init__('caffe')
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
@@ -303,20 +319,26 @@ class CustomMetric(EvalMetric):
     ----------
     feval : callable(label, pred)
         Customized evaluation function.
-
     name : str, optional
         The name of the metric
+    allow_extra_outputs : bool
+        If true, the prediction outputs can have extra outputs.
+        This is useful in RNN, where the states are also produced
+        in outputs for forwarding.
     """
-    def __init__(self, feval, name=None):
+    def __init__(self, feval, name=None, allow_extra_outputs=False):
         if name is None:
             name = feval.__name__
             if name.find('<') != -1:
                 name = 'custom(%s)' % name
         super(CustomMetric, self).__init__(name)
         self._feval = feval
+        self._allow_extra_outputs = allow_extra_outputs
 
     def update(self, labels, preds):
-        check_label_shapes(labels, preds)
+        if not self._allow_extra_outputs:
+            check_label_shapes(labels, preds)
+
         for pred, label in zip(preds, labels):
             label = label.asnumpy()
             pred = pred.asnumpy()
@@ -324,26 +346,35 @@ class CustomMetric(EvalMetric):
             if pred.shape[1] == 2:
                 pred = pred[:, 1]
 
-            self.sum_metric += self._feval(label, pred)
-            self.num_inst += 1
+            reval = self._feval(label, pred)
+            if isinstance(reval, tuple):
+                (sum_metric, num_inst) = reval
+                self.sum_metric += sum_metric
+                self.num_inst += num_inst
+            else:
+                self.sum_metric += reval
+                self.num_inst += 1
 
 # pylint: disable=invalid-name
-def np(numpy_feval, name=None):
+def np(numpy_feval, name=None, allow_extra_outputs=False):
     """Create a customized metric from numpy function.
 
     Parameters
     ----------
     numpy_feval : callable(label, pred)
         Customized evaluation function.
-
     name : str, optional
         The name of the metric.
+    allow_extra_outputs : bool
+        If true, the prediction outputs can have extra outputs.
+        This is useful in RNN, where the states are also produced
+        in outputs for forwarding.
     """
     def feval(label, pred):
         """Internal eval function."""
         return numpy_feval(label, pred)
     feval.__name__ = numpy_feval.__name__
-    return CustomMetric(feval, name)
+    return CustomMetric(feval, name, allow_extra_outputs)
 # pylint: enable=invalid-name
 
 def create(metric, **kwargs):

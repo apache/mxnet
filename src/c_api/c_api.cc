@@ -26,6 +26,7 @@
 #include <utility>
 #include "./c_api_error.h"
 #include "../common/thread_local.h"
+#include "../operator/custom-inl.h"
 
 using namespace mxnet;
 
@@ -277,6 +278,16 @@ int MXNDArraySlice(NDArrayHandle handle,
   API_BEGIN();
   *ptr = static_cast<NDArray*>(handle)->Slice(
       slice_begin, slice_end);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXNDArrayAt(NDArrayHandle handle,
+                mx_uint idx,
+                NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  *ptr = static_cast<NDArray*>(handle)->At(idx);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }
@@ -602,6 +613,22 @@ int MXSymbolPrint(SymbolHandle symbol, const char **out_str) {
   API_END();
 }
 
+int MXSymbolGetName(SymbolHandle symbol,
+                    const char** out,
+                    int* success) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  if (s->GetName(&(ret->ret_str))) {
+    *out = (ret->ret_str).c_str();
+    *success = 1;
+  } else {
+    *out = nullptr;
+    *success = 0;
+  }
+  API_END();
+}
+
 int MXSymbolGetAttr(SymbolHandle symbol,
                     const char* key,
                     const char** out,
@@ -626,6 +653,44 @@ int MXSymbolSetAttr(SymbolHandle symbol,
   API_BEGIN();
   s->SetAttr(key, value);
   API_END();
+}
+
+int _MXSymbolListAttrImpl(SymbolHandle symbol,
+                          bool shalow,
+                          mx_uint *out_size,
+                          const char*** out) {
+  Symbol *s = static_cast<Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::map<std::string, std::string> attr =
+      std::move(shalow ? s->ListAttrShallow() : s->ListAttr());
+  std::vector<std::string> attrList;
+  *out_size = 0;
+  for (auto it : attr) {
+    attrList.push_back(it.first);
+    attrList.push_back(it.second);
+    (*out_size)++;
+  }
+
+  ret->ret_vec_str = std::move(attrList);
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
+    ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
+  }
+  *out = dmlc::BeginPtr(ret->ret_vec_charp);
+  API_END();
+}
+
+int MXSymbolListAttr(SymbolHandle symbol,
+                     mx_uint *out_size,
+                     const char*** out) {
+  return _MXSymbolListAttrImpl(symbol, false, out_size, out);
+}
+
+int MXSymbolListAttrShallow(SymbolHandle symbol,
+                            mx_uint *out_size,
+                            const char*** out) {
+  return _MXSymbolListAttrImpl(symbol, true, out_size, out);
 }
 
 int MXSymbolListArguments(SymbolHandle symbol,
@@ -979,7 +1044,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
                      mx_uint *grad_req_type,
                      mx_uint aux_states_len,
                      NDArrayHandle *aux_states,
-                     ExecutorHandle *shared_exec,
+                     ExecutorHandle shared_exec,
                      ExecutorHandle *out) {
   API_BEGIN();
   Symbol *symb = static_cast<Symbol*>(symbol_handle);
@@ -1227,6 +1292,17 @@ int MXKVStoreBarrier(KVStoreHandle handle) {
   API_END();
 }
 
+int MXInitPSEnv(mx_uint num_vars,
+                const char **keys,
+                const char **vals) {
+  API_BEGIN();
+  std::unordered_map<std::string, std::string> kwargs;
+  for (mx_uint i = 0; i < num_vars; ++i) {
+    kwargs[std::string(keys[i])] = std::string(vals[i]);
+  }
+  KVStore::InitPSEnv(kwargs);
+  API_END();
+}
 
 int MXKVStoreIsWorkerNode(int *ret) {
   API_BEGIN();
@@ -1247,11 +1323,13 @@ int MXKVStoreIsSchedulerNode(int *ret) {
 }
 
 int MXKVStoreRunServer(KVStoreHandle handle,
-                       MXKVStoreServerController controller) {
+                       MXKVStoreServerController controller,
+                       void *controller_handle) {
   API_BEGIN();
   MXKVStoreServerController *controller_temp = controller;
-  auto ctrl = [controller_temp](int head, const std::string& body) {
-      controller_temp(head, body.c_str());
+  void *controller_handle_temp = controller_handle;
+  auto ctrl = [controller_temp, controller_handle_temp](int head, const std::string& body) {
+      controller_temp(head, body.c_str(), controller_handle_temp);
   };
   static_cast<KVStore*>(handle)->RunServer(ctrl);
   API_END();
@@ -1455,5 +1533,11 @@ int MXOptimizerUpdate(OptimizerHandle handle,
               static_cast<NDArray*>(weight),
               static_cast<NDArray*>(grad),
               lr, wd);
+  API_END();
+}
+
+int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator) {
+  API_BEGIN();
+  mxnet::op::CustomOpProp::Register(op_type, creator);
   API_END();
 }

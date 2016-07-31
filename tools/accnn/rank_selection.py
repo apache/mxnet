@@ -58,7 +58,7 @@ def get_ranksel(model, ratio):
   for i in xrange(n):
     dp[nxt] = {}    
     sys.stdout.flush()
-    for now_c, now_v in dp[now].iteritems():
+    for now_c, now_v in dp[now].items():
       for d in xrange(min(len(S[i]), D[i])):
         nxt_c = now_c + (d+1)*C[i][0]
         if nxt_c > EC:
@@ -74,7 +74,7 @@ def get_ranksel(model, ratio):
     now, nxt = nxt, now    
   maxv = -1e9
   target_c = 0
-  for c,v in dp[now].iteritems():
+  for c,v in dp[now].items():
     assert c <= EC, 'False'    
     if v > maxv:
       maxv = v

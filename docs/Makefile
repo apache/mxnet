@@ -51,6 +51,9 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 
+livehtml:
+	sphinx-autobuild --ignore "web-data/*" -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo

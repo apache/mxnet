@@ -1,7 +1,7 @@
 Package: mxnet
 Type: Package
 Title: MXNet
-Version: 0.5
+Version: 0.7
 Date: 2015-12-23
 Author: Tianqi Chen, Qiang Kou, Tong He
 Maintainer: Qiang Kou <qkou@umail.iu.edu>

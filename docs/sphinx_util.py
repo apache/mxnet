@@ -11,8 +11,8 @@ def run_build_mxnet(folder):
     """Run the doxygen make command in the designated folder."""
     try:
         if READTHEDOCS_BUILD:
-            subprocess.call('cp make/readthedocs.mk config.mk', shell = True)
-            subprocess.call('rm -rf build', shell = True)
+            subprocess.call('cd %s; cp make/readthedocs.mk config.mk' % folder, shell = True)
+            subprocess.call('cd %s; rm -rf build' % folder, shell = True)
         retcode = subprocess.call("cd %s; make" % folder, shell = True)
         if retcode < 0:
             sys.stderr.write("build terminated by signal %s" % (-retcode))
@@ -25,18 +25,21 @@ if not os.path.exists('../recommonmark'):
 else:
     subprocess.call('cd ../recommonmark/; git pull', shell=True)
 
-# if not os.path.exists('web-data'):
-#     subprocess.call('rm -rf web-data;' +
-#                     'git clone https://github.com/dmlc/web-data', shell = True)
-# else:
-#     subprocess.call('cd web-data; git pull', shell=True)
+if not os.path.exists('web-data'):
+     subprocess.call('rm -rf web-data;' +
+                     'git clone https://github.com/dmlc/web-data', shell = True)
+else:
+     subprocess.call('cd web-data; git pull', shell=True)
 
 
-run_build_mxnet("..")
-sys.path.insert(0, os.path.abspath('../recommonmark/'))
-
-
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+root_path = os.path.join(curr_path, '..')
+run_build_mxnet(root_path)
 sys.stderr.write('READTHEDOCS=%s\n' % (READTHEDOCS_BUILD))
+
+
+
+sys.path.insert(0, os.path.abspath('../recommonmark/'))
 
 from recommonmark import parser, transform
 

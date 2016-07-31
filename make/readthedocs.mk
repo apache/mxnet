@@ -43,7 +43,7 @@ USE_INTEL_PATH = NONE
 ADD_LDFLAGS = -lgomp
 
 # the additional compile flags you want to add
-ADD_CFLAGS = -DMSHADOW_STAND_ALONE=1
+ADD_CFLAGS = -DMSHADOW_STAND_ALONE=1 -DMSHADOW_USE_SSE=0
 #
 # If use MKL, choose static link automatically to fix python wrapper
 #

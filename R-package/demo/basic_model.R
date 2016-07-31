@@ -81,3 +81,34 @@ accuracy <- function(label, pred) {
 print(paste0("Finish prediction... accuracy=", accuracy(label, pred)))
 print(paste0("Finish prediction... accuracy2=", accuracy(label, pred2)))
 
+
+
+# load the model
+model <- mx.model.load("chkpt", 1)
+
+#continue training with some new arguments
+model <- mx.model.FeedForward.create(model$symbol, X=dtrain, eval.data=dtest,
+                                     ctx=devices, num.round=5,
+                                     learning.rate=0.1, momentum=0.9,
+                                     epoch.end.callback=mx.callback.save.checkpoint("reload_chkpt"),
+                                     batch.end.callback=mx.callback.log.train.metric(100),
+                                     arg.params=model$arg.params, aux.params=model$aux.params)
+
+# do prediction
+pred <- predict(model, dtest)
+label <- mx.io.extract(dtest, "label")
+dataX <- mx.io.extract(dtest, "data")
+# Predict with R's array
+pred2 <- predict(model, X=dataX)
+
+accuracy <- function(label, pred) {
+  ypred = max.col(t(as.array(pred)))
+  return(sum((as.array(label) + 1) == ypred) / length(label))
+}
+
+print(paste0("Finish prediction... accuracy=", accuracy(label, pred)))
+print(paste0("Finish prediction... accuracy2=", accuracy(label, pred2)))
+
+
+
+

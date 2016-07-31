@@ -29,11 +29,14 @@ enum SliceChannelOpOutputs {kOut0, kOut1, kOut2, kOut3, kOut4};
 struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
   int num_outputs;
   int axis;
+  bool squeeze_axis;
   DMLC_DECLARE_PARAMETER(SliceChannelParam) {
     DMLC_DECLARE_FIELD(num_outputs).set_lower_bound(1)
     .describe("Number of outputs to be sliced.");
     DMLC_DECLARE_FIELD(axis).set_default(1)
     .describe("Dimension along which to slice.");
+    DMLC_DECLARE_FIELD(squeeze_axis).set_default(0)
+    .describe("If true AND the sliced dimension becomes 1, squeeze that dimension.");
   }
 };  // struct SliceChannelParam
 
@@ -149,6 +152,12 @@ class SliceChannelProp : public OperatorProperty {
       << ") does not divide input dimension "
       << param_.axis << " (" << dshape[param_.axis] << ").";
     dshape[param_.axis] /= param_.num_outputs;
+    if (param_.squeeze_axis && dshape[param_.axis] == 1) {
+      for (int d = param_.axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
+        dshape[d] = dshape[d+1];
+      }
+      dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
+    }
     out_shape->clear();
     for (int i = 0; i < param_.num_outputs; ++i) {
       out_shape->push_back(dshape);

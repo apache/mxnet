@@ -44,7 +44,7 @@ struct CastParam : public dmlc::Parameter<CastParam> {
  * \brief This is the implementation of cast operator.
  * \tparam xpu The device that the op will be executed on.
  */
-template<typename xpu>
+template<typename xpu, typename SrcDType, typename DstDType>
 class CastOp : public Operator {
  public:
   virtual void Forward(const OpContext &ctx,
@@ -57,13 +57,9 @@ class CastOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(in_data[cast::kData].type_flag_, SrcDType, {
-      MSHADOW_TYPE_SWITCH(out_data[cast::kOut].type_flag_, DstDType, {
-        Tensor<xpu, 2, SrcDType> data = in_data[cast::kData].FlatTo2D<xpu, SrcDType>(s);
-        Tensor<xpu, 2, DstDType> out = out_data[cast::kOut].FlatTo2D<xpu, DstDType>(s);
-        Assign(out, req[cast::kOut], tcast<DstDType>(data));
-      })
-    })
+    Tensor<xpu, 2, SrcDType> data = in_data[cast::kData].FlatTo2D<xpu, SrcDType>(s);
+    Tensor<xpu, 2, DstDType> out = out_data[cast::kOut].FlatTo2D<xpu, DstDType>(s);
+    Assign(out, req[cast::kOut], tcast<DstDType>(data));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -79,19 +75,15 @@ class CastOp : public Operator {
     CHECK_EQ(in_grad.size(), 1);
     CHECK_EQ(req.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(in_grad[cast::kData].type_flag_, SrcDType, {
-      MSHADOW_TYPE_SWITCH(out_grad[cast::kOut].type_flag_, DstDType, {
-        Tensor<xpu, 2, DstDType> m_out_grad = out_grad[cast::kOut].FlatTo2D<xpu, DstDType>(s);
-        Tensor<xpu, 2, SrcDType> m_in_grad = in_grad[cast::kData].FlatTo2D<xpu, SrcDType>(s);
-        Assign(m_in_grad, req[cast::kData], tcast<SrcDType>(m_out_grad));
-      })
-    })
+    Tensor<xpu, 2, DstDType> m_out_grad = out_grad[cast::kOut].FlatTo2D<xpu, DstDType>(s);
+    Tensor<xpu, 2, SrcDType> m_in_grad = in_grad[cast::kData].FlatTo2D<xpu, SrcDType>(s);
+    Assign(m_in_grad, req[cast::kData], tcast<SrcDType>(m_out_grad));
   }
 };  // class CastOp
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(CastParam param);
+Operator* CreateOp(CastParam param, std::vector<int> *in_type);
 
 #if DMLC_USE_CXX11
 class CastProp : public OperatorProperty {
@@ -118,7 +110,7 @@ class CastProp : public OperatorProperty {
 
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
-                 std::vector<int> *aux_type) {
+                 std::vector<int> *aux_type) const override {
     CHECK_EQ(in_type->size(), 1);
     out_type->clear();
     out_type->push_back(param_.dtype);
@@ -143,7 +135,13 @@ class CastProp : public OperatorProperty {
     return {out_grad[cast::kOut]};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   CastParam param_;

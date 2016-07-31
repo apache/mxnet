@@ -1,19 +1,24 @@
-# How To
+# MXNet How To
 
-## Develope with MXNet
-### [Create New Operators](./new_op.html)
+This page contains guidelines to use and develop mxnets.
 
-### [Use Torch](./torch.html)
+## Installation
+- [How to Install MXNet](build.md)
 
-### [Make a Contribution](./contribute.html)
+## Use MXNet on Specific Tasks
+- [Train with multiple CPU/GPUs in data parallelism](multi_devices.md)
+- [Train LSTM with multiple GPUs in model parallelism](model_parallel_lstm.md)
+- [Run MXNet on smart devices](smart_device.md)
+- [Run MXNet on cloud](cloud.md)
+- [Use pretrained models](pretrained.md)
+- [Use mxnet on variable input length/size (bucketing)](bucketing.md)
+- [Improve performance tips](perf.md)
 
-### [Buckeing](./bucketing.html)
+## Develop and Hack MXNet
+- [Create new operators](new_op.md)
+- [Use Torch from MXNet](torch.md)
+- [Contribute to MXNet](contribute.md)
+- [Set environment variables of MXNet](env_var.md)
 
-## Run MXNet
-
-### [Runtime Environment Variables](./env_var.html)
-
-### [Runs on Smart Devices](./smart_device.html)
-### [Distributed Training](./distributed_training.html)
-
-### [Setup an Amazon EC2 Cluster](./aws.html)
+## Frequently Ask Questions
+- [FAQ](faq.md)

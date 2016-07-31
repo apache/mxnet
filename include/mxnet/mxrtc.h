@@ -18,8 +18,6 @@
 #include <unordered_map>
 #include "./ndarray.h"
 
-
-
 namespace mxnet {
 
 /*!
@@ -29,7 +27,7 @@ class MXRtc {
  public:
   /*!
    * \brief Build a new kernel.
-   * 
+   *
    * If the same kernel has been compiled before it will be load from
    * cache instead of compile again.
    * \param name name of the kernel function.
@@ -62,7 +60,7 @@ class MXRtc {
             unsigned int  block_dim_Z);
 
  private:
-  static const std::string str_type;
+  static const char str_type[];
   static std::unordered_map<std::string, char*> kernel_registry;
 
   std::string name_;

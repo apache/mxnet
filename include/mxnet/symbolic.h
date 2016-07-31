@@ -88,6 +88,13 @@ class Symbol {
   void Compose(const std::unordered_map<std::string, Symbol>& kwargs,
                const std::string& name);
   /*!
+   * \brief Get name from the symbol.
+   *  This only works for symbol with outputs from single operators.
+   *  For grouped sybmbol, an error will be raised.
+   * \param out the output value of the name.
+   */
+  bool GetName(std::string* out);
+  /*!
    * \brief set additional attributes of the symbol,
    *  This only works for symbol with outputs from single operators.
    *  For grouped sybmbol, an error will be raised.
@@ -104,6 +111,20 @@ class Symbol {
    * \return true if the attribute exists, false if the attribute do not exist.
    */
   bool GetAttr(const std::string& key, std::string* out);
+  /*!
+   * \brief Get attribute dictionary from the symbol and all children. Each
+   *  attribute name is pre-pended with the symbol name.
+   *  For grouped sybmbol, an error will be raised.
+   * \return a dictionary.
+   */
+  std::map<std::string, std::string> ListAttr();
+  /*!
+   * \brief Get attribute dictionary from the symbol.
+   *  This only works for symbol with outputs from single operators.
+   *  For grouped sybmbol, an error will be raised.
+   * \return a dictionary.
+   */
+  std::map<std::string, std::string> ListAttrShallow();
   /*!
    * \brief Apply the symbol as a function, compose with arguments
    * \param args positional arguments for the symbol
@@ -239,7 +260,7 @@ class Symbol {
   static Symbol CreateVariable(const std::string &name);
 
  protected:
-  // Decalre node, internal data structure.
+  // Declare node, internal data structure.
   struct Node;
   /*! \brief an entry that represents output data from a node */
   struct DataEntry {

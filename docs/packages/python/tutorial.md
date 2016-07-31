@@ -21,12 +21,12 @@ You can find more information at the [Python Package Overview Page](index.md)
 computations. It is similar to `numpy.ndarray`, but with two additional
 features:
 
-1. **multiple devices**: all operations can be run on various devices including
+1. **multiple device support**: all operations can be run on various devices including
 CPU and GPU
 2. **automatic parallelization**: all operations are automatically executed in
    parallel with each other
 
-### Create and Initialization
+### Creation and Initialization
 
 We can create an `NDArray` on either CPU or GPU:
 
@@ -179,7 +179,7 @@ hope to run them in parallel with other computations as well.
 
 However, finding statements by eye that can be executed in parallel is hard. In the
 following example, `a+=1` and `c*=3` can be executed in parallel, but `a+=1` and
-`b*=3` have to be sequential.
+`b*=3` have to be sequentially executed.
 
 ```python
 a = mx.nd.ones((2,3))
@@ -192,7 +192,7 @@ c *= 3
 
 Luckily, MXNet can automatically resolve the dependencies and
 execute operations in parallel with correctness guaranteed. In other words, we
-can write a program as if it were only a single thread, and MXNet will
+can write a program as if it is using only a single thread, and MXNet will
 automatically dispatch it to multiple devices such as multiple GPU cards or multiple
 machines.
 
@@ -343,7 +343,7 @@ to get the gradient.
 >>> texec.forward()
 >>> texec.backward()
 ```
-The [model API](../../python/mxnet/model.py) is a thin wrapper around the symbolic executors to support neural net training.
+The [model API](model.md) is a thin wrapper around the symbolic executors to support neural net training.
 
 You are also strongly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md),
 which provides a detailed explanation of the concepts in pictures.

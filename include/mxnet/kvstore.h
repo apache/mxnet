@@ -7,9 +7,13 @@
 #define MXNET_KVSTORE_H_
 #include <dmlc/io.h>
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <functional>
 #include "./ndarray.h"
+#if MXNET_USE_DIST_KVSTORE
+#include "ps/ps.h"
+#endif  // MXNET_USE_DIST_KVSTORE
 
 namespace mxnet {
 /*!
@@ -147,13 +151,29 @@ class KVStore {
    ******************************************************/
 
   /**
+   * \brief initalize ps-lite environment variables
+   * \param envs key-value environment variables
+   */
+  static void InitPSEnv(const std::unordered_map<std::string, std::string>& envs) {
+#if MXNET_USE_DIST_KVSTORE
+    ps::Environment::Init(envs);
+#else
+    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to init parameter server's environment";
+#endif  // MXNET_USE_DIST_KVSTORE
+  }
+
+  /**
    * \return whether or not this process is a worker node.
    *
    * Always returns true when type == "local"
    */
   static bool IsWorkerNode() {
-    char* role_str = getenv("DMLC_ROLE");
+#if MXNET_USE_DIST_KVSTORE
+    const char* role_str = ps::Environment::Get()->find("DMLC_ROLE");
     return (role_str == nullptr) || (!strcmp(role_str, "worker"));
+#else
+    return true;
+#endif  // MXNET_USE_DIST_KVSTORE
   }
 
   /**
@@ -162,8 +182,12 @@ class KVStore {
    * Always returns false when type == "local"
    */
   static bool IsServerNode() {
-    char* role_str = getenv("DMLC_ROLE");
+#if MXNET_USE_DIST_KVSTORE
+    const char* role_str = ps::Environment::Get()->find("DMLC_ROLE");
     return (role_str != nullptr) && (!strcmp(role_str, "server"));
+#else
+    return false;
+#endif  // MXNET_USE_DIST_KVSTORE
   }
 
 
@@ -173,8 +197,12 @@ class KVStore {
    * Always returns false when type == "local"
    */
   static bool IsSchedulerNode() {
-    char* role_str = getenv("DMLC_ROLE");
+#if MXNET_USE_DIST_KVSTORE
+    const char* role_str = ps::Environment::Get()->find("DMLC_ROLE");
     return (role_str != nullptr) && (!strcmp(role_str, "scheduler"));
+#else
+    return false;
+#endif  // MXNET_USE_DIST_KVSTORE
   }
 
   /*!

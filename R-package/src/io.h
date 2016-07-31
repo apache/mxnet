@@ -132,11 +132,14 @@ class ArrayDataIter : public DataIter {
   size_t counter_;
   /*! \brief number of pad instances*/
   size_t num_pad_;
+  /*! \brief number of data */
+  size_t num_data;
   /*! \brief The data list of each batch */
   std::vector<NDArray> data_;
   /*! \brief The data list of each batch */
   std::vector<NDArray> label_;
 };
+
 
 /*! \brief The DataIterCreate functions to be invoked */
 class DataIterCreateFunction : public ::Rcpp::CppFunction {
@@ -177,6 +180,8 @@ class DataIterCreateFunction : public ::Rcpp::CppFunction {
   // name of the function
   std::string name_;
 };
+
+
 }  // namespace R
 }  // namespace mxnet
 

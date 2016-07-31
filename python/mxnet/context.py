@@ -50,6 +50,17 @@ class Context(object):
         """
         return Context.devtype2str[self.device_typeid]
 
+    def __eq__(self, other):
+        """Compare two contexts. Two contexts are equal if they
+        have the same device type and device id.
+        """
+        if not isinstance(other, Context):
+            return False
+        if self.device_typeid == other.device_typeid and \
+                self.device_id == other.device_id:
+            return True
+        return False
+
     def __str__(self):
         return '%s(%d)' % (self.device_type, self.device_id)
 

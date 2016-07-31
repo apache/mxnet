@@ -9,7 +9,7 @@ parser.add_argument('--network', type=str, default='inception-bn-28-small',
                     help = 'the cnn to use')
 parser.add_argument('--data-dir', type=str, default='cifar10/',
                     help='the input data directory')
-parser.add_argument('--gpus', type=str, default='0',
+parser.add_argument('--gpus', type=str,
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--num-examples', type=int, default=60000,
                     help='the number of training examples')
@@ -22,7 +22,9 @@ parser.add_argument('--lr-factor', type=float, default=1,
 parser.add_argument('--lr-factor-epoch', type=float, default=1,
                     help='the number of epoch to factor the lr, could be .5')
 parser.add_argument('--model-prefix', type=str,
-                    help='the prefix of the model to load/save')
+                    help='the prefix of the model to load')
+parser.add_argument('--save-model-prefix', type=str,
+                    help='the prefix of the model to save')
 parser.add_argument('--num-epochs', type=int, default=20,
                     help='the number of training epochs')
 parser.add_argument('--load-epoch', type=int,
@@ -38,7 +40,7 @@ def _download(data_dir):
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')) :
-        os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip")
+        os.system("wget http://data.dmlc.ml/mxnet/data/cifar10.zip")
         os.system("unzip -u cifar10.zip")
         os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
     os.chdir("..")

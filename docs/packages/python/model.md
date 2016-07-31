@@ -39,7 +39,7 @@ model = mx.model.FeedForward(
      num_epoch=num_epoch,
      learning_rate=0.01)
 
-mode.fit(X=data_set)
+model.fit(X=data_set)
 ```
 For more information, you can refer to [Model API Reference](#model-api-reference).
 
@@ -92,12 +92,23 @@ model = mx.model.FeedForward.create(
 ```
 The training will be done in a data parallel way on the GPUs you specified.
 
+```eval_rst
+.. raw:: html
+
+    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+```
+
+
 Initializer API Reference
 -------------------------
 
 ```eval_rst
 .. automodule:: mxnet.initializer
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.initializer");</script>
 ```
 
 Evaluation Metric API Reference
@@ -106,6 +117,10 @@ Evaluation Metric API Reference
 ```eval_rst
 .. automodule:: mxnet.metric
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.metric");</script>
 ```
 
 Optimizer API Reference
@@ -114,6 +129,10 @@ Optimizer API Reference
 ```eval_rst
 .. automodule:: mxnet.optimizer
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.optimizer");</script>
 ```
 
 Model API Reference
@@ -122,4 +141,8 @@ Model API Reference
 ```eval_rst
 .. automodule:: mxnet.model
     :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.model");</script>
 ```

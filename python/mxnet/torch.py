@@ -14,7 +14,7 @@ from .ndarray import NDArray, _new_empty_handle
 try:
     _LUAJIT = ctypes.CDLL("libluajit.so", mode=ctypes.RTLD_GLOBAL)
 except OSError:
-    pass
+    _LUAJIT = None
 
 # pylint: disable=too-many-locals, invalid-name
 def _make_torch_function(handle):
