@@ -189,11 +189,15 @@ lib/libmxnet.so: $(ALL_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
-$(PS_PATH)/build/libps.a:
+$(PS_PATH)/build/libps.a: PSLITE
+
+PSLITE:
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
 	ln -fs $(PS_PATH)/tracker .
 
-$(DMLC_CORE)/libdmlc.a:
+$(DMLC_CORE)/libdmlc.a: DMLCCORE
+
+DMLCCORE:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALL_DEP)
