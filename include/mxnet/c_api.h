@@ -1305,6 +1305,14 @@ MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
                                           const char *buf, size_t size);
 
 /**
+ * \brief Get the current writer pointer position
+ * \param handle handle to RecordIO object
+ * \param pos handle to output position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos);
+
+/**
  * \brief Create a RecordIO reader object
  * \param uri path to file
  * \param out handle pointer to the created object
@@ -1328,6 +1336,14 @@ MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
 */
 MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
                                         char const **buf, size_t *size);
+
+/**
+ * \brief Set the current reader pointer position
+ * \param handle handle to RecordIO object
+ * \param pos target position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos);
 
 /**
  * \brief Create a MXRtc object

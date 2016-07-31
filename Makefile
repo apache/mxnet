@@ -193,7 +193,6 @@ $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
 	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
-	ln -fs $(PS_PATH)/tracker .
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
