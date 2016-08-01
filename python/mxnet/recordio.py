@@ -71,12 +71,12 @@ class MXRecordIO(object):
 
         Parameters
         ----------
-        buf : string
+        buf : string (python2), bytes (python3)
             buffer to write.
         """
         assert self.writable
         check_call(_LIB.MXRecordIOWriterWriteRecord(self.handle,
-                                                    c_str(buf),
+                                                    ctypes.c_char_p(buf),
                                                     ctypes.c_size_t(len(buf))))
 
     def read(self):

@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 import sys
 import ctypes
-from builtins import bytes
 import numpy as np
 import atexit
 from . import libinfo
@@ -89,7 +88,7 @@ def c_str(string):
     str : c_char_p
         A char pointer that can be passed to C API
     """
-    return ctypes.c_char_p(bytes(string, 'utf-8'))
+    return ctypes.c_char_p(string.encode('utf-8'))
 
 
 def c_array(ctype, values):
