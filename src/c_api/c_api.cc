@@ -1389,6 +1389,14 @@ int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
   API_END();
 }
 
+int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos) {
+  API_BEGIN();
+  MXRecordIOContext *context =
+    reinterpret_cast<MXRecordIOContext*>(handle);
+  *pos = context->writer->Tell();
+  API_END();
+}
+
 int MXRecordIOReaderCreate(const char *uri,
                            RecordIOHandle *out) {
   API_BEGIN();
@@ -1424,6 +1432,14 @@ int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
     *buf = NULL;
     *size = 0;
   }
+  API_END();
+}
+
+int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos) {
+  API_BEGIN();
+  MXRecordIOContext *context =
+    reinterpret_cast<MXRecordIOContext*>(handle);
+  context->reader->Seek(pos);
   API_END();
 }
 
