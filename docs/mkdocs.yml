@@ -1,7 +1,12 @@
 site_name: MXNet.jl
 repo_url:  https://github.com/dmlc/MXNet.jl
 
-theme: readthedocs
+theme: material
+
+extra:
+  palette:
+    primary: 'indigo'
+    accent: 'blue'
 
 extra_css:
   - assets/Documenter.css
@@ -14,6 +19,8 @@ markdown_extensions:
   - extra
   - tables
   - fenced_code
+  - mdx_math
+  - admonition
 
 docs_dir: 'build'
 
