@@ -14,6 +14,10 @@ ifndef DMLC_CORE
 	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
 
+ifndef NNVM_PATH
+	NNVM_PATH = $(ROOTDIR)/nnvm
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -130,8 +134,9 @@ else
 endif
 
 # all dep
-LIB_DEP += $(DMLC_CORE)/libdmlc.a
+LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
+
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda
@@ -187,7 +192,8 @@ lib/libmxnet.a: $(ALL_DEP)
 
 lib/libmxnet.so: $(ALL_DEP)
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o, $^) $(LDFLAGS) \
+	-Wl,--whole-archive $(filter %.a, $^) -Wl,--no-whole-archive
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -198,6 +204,9 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
 DMLCCORE:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+
+$(NNVM_PATH)/lib/libnnvm.a:
+	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALL_DEP)
 
