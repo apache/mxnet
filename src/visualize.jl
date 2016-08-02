@@ -1,21 +1,16 @@
 import JSON
 
-#=doc
-Network Visualization
-=====================
-=#
+"""
+    to_graphviz(network)
 
-#=doc
-.. function:: to_graphviz(network)
-
-   :param SymbolicNode network: the network to visualize.
-   :param AbstractString title: keyword argument, default "Network Visualization",
+* SymbolicNode network: the network to visualize.
+* AbstractString title: keyword argument, default "Network Visualization",
           the title of the GraphViz graph.
-   :param input_shapes: keyword argument, default ``nothing``. If provided,
+* input_shapes: keyword argument, default ``nothing``. If provided,
           will run shape inference and plot with the shape information. Should
           be either a dictionary of name-shape mapping or an array of shapes.
    :return: the graph description in GraphViz ``dot`` language.
-=#
+"""
 function to_graphviz(network :: SymbolicNode; title="Network Visualization", input_shapes=nothing)
   if !isa(input_shapes, Void)
     internals = get_internals(network)

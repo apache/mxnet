@@ -67,12 +67,12 @@ function _format_typestring(typestr :: AbstractString)
   replace(typestr, r"\bSymbol\b", "SymbolicNode")
 end
 function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{char_pp}, arg_descs::Ref{char_pp}, remove_dup::Bool=true)
-  param_keys = Set{AbstractString}()
+  param_keys = Set{String}()
 
   arg_names  = pointer_to_array(arg_names[], narg)
   arg_types  = pointer_to_array(arg_types[], narg)
   arg_descs  = pointer_to_array(arg_descs[], narg)
-  docstrings = AbstractString[]
+  docstrings = String[]
 
   for i = 1:narg
     arg_name = @compat String(arg_names[i])
@@ -83,7 +83,7 @@ function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{ch
 
     arg_type = _format_typestring(@compat String(arg_types[i]))
     arg_desc = @compat String(arg_descs[i])
-    push!(docstrings, ":param $arg_name: $arg_desc\n:type $arg_name: $arg_type\n\n")
+    push!(docstrings, "* `$arg_name::$arg_type`: $arg_desc\n")
   end
   return join(docstrings, "\n")
 end

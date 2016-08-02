@@ -37,3 +37,6 @@ script:
 
 after_success:
   - source $TRAVIS/run_coverage.sh
+  - julia -e 'Pkg.add("Documenter")'
+  - julia -e 'cd(Pkg.dir("PACKAGE_NAME")); include(joinpath("docs", "make.jl"))'
+
