@@ -1292,6 +1292,13 @@ int MXKVStoreBarrier(KVStoreHandle handle) {
   API_END();
 }
 
+int MXKVStoreSetBarrierBeforeExit(KVStoreHandle handle,
+                                  const int barrier_before_exit) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->set_barrier_before_exit(barrier_before_exit);
+  API_END();
+}
+
 int MXInitPSEnv(mx_uint num_vars,
                 const char **keys,
                 const char **vals) {
@@ -1348,6 +1355,15 @@ int MXKVStoreGetType(KVStoreHandle handle,
                      const char** type) {
   API_BEGIN();
   *CHECK_NOTNULL(type) = static_cast<KVStore*>(handle)->type().c_str();
+  API_END();
+}
+
+int MXKVStoreGetNumDeadNode(KVStoreHandle handle,
+                            const int node_id,
+                            int *number,
+                            const int timeout_sec) {
+  API_BEGIN();
+  *number = static_cast<KVStore*>(handle)->get_num_dead_node(node_id, timeout_sec);
   API_END();
 }
 

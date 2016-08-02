@@ -78,6 +78,7 @@ class LibInfo {
   // KVStore Server
   @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int
   @native def mxKVStoreRunServer(handle: KVStoreHandle, controller: KVServerControllerCallback): Int
+  @native def mxKVStoreGetNumDeadNode(handle: KVStoreHandle, nodeId: Int, number: RefInt): Int
 
   // KVStore
   @native def mxKVStoreCreate(name: String, handle: KVStoreHandleRef): Int
@@ -103,6 +104,7 @@ class LibInfo {
   @native def mxKVStoreBarrier(handle: KVStoreHandle): Int
   @native def mxKVStoreGetGroupSize(handle: KVStoreHandle, size: RefInt): Int
   @native def mxKVStoreGetRank(handle: KVStoreHandle, size: RefInt): Int
+  @native def mxKVStoreSetBarrierBeforeExit(handle: KVStoreHandle, doBarrier: Int): Int
   @native def mxKVStoreFree(handle: KVStoreHandle): Int
 
   // DataIter Funcs

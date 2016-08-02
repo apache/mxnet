@@ -25,7 +25,7 @@ object ParameterServer {
       KVStoreServer.init(buildEnv(
         cmdLine.role, cmdLine.rootUri, cmdLine.rootPort,
         cmdLine.numServer, cmdLine.numWorker))
-      KVStoreServer.start()
+      KVStoreServer.start(dieIfOthersGoOutTimeout = cmdLine.timeout)
     } catch {
       case e: Throwable =>
         logger.error(e.getMessage, e)
@@ -55,6 +55,8 @@ object ParameterServer {
     val numServer: Int = 1
     @Option(name = "--num-worker", usage = "PS worker number")
     val numWorker: Int = 1
+    @Option(name = "--timeout", usage = "PS go out timeout")
+    val timeout: Int = 0
 
     def checkArguments(): Unit = {
       require(role != null, "Undefined role")
@@ -72,6 +74,7 @@ class ParameterServer(private val classpath: String,
                       private val rootPort: Int,
                       private val numServer: Int = 1,
                       private val numWorker: Int = 1,
+                      private val timeout: Int = 0,
                       private val java: String = "java",
                       private val jvmOpts: String = "") {
   private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
@@ -106,7 +109,7 @@ class ParameterServer(private val classpath: String,
     val cp = if (classpath == null) "" else s"-cp $classpath"
     val cmd = s"$java $jvmOpts $cp $runningClass " +
       s"--role=$role --root-uri=$rootUri --root-port=$rootPort " +
-      s"--num-server=$numServer --num-worker=$numWorker"
+      s"--num-server=$numServer --num-worker=$numWorker --timeout=$timeout"
     logger.info(s"Start process: $cmd")
     try {
       val childProcess = Runtime.getRuntime.exec(cmd)
