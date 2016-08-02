@@ -24,7 +24,7 @@ if !libmxnet_detected
   @windows_only begin
     info("Please follow the libmxnet documentation on how to build manually")
     info("or to install pre-build packages:")
-    info("http://mxnet.readthedocs.org/en/latest/build.html#building-on-windows")
+    info("http://mxnet.readthedocs.io/en/latest/how_to/build.html#building-on-windows")
     error("Automatic building libxmnet on Windows is currently not supported yet.")
   end
 
