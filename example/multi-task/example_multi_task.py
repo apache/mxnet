@@ -83,7 +83,7 @@ class Multi_Accuracy(mx.metric.EvalMetric):
 
 batch_size=100
 num_epochs=100
-device = mx.gpu(0)
+device = mx.cpu(0)
 lr = 0.01
 
 network = build_network()

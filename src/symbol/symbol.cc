@@ -282,7 +282,8 @@ std::vector<std::string> Symbol::ListAuxiliaryStates() const {
           if (aux_args.size() > 0) {
             auto &hname = node->name;
             for (auto const &aux : aux_args) {
-              ret.push_back(hname + '_' + aux);
+              //ret.push_back(hname + '_' + aux);// new comment
+				ret.push_back(aux);//new add
             }
           }
         }
@@ -413,6 +414,8 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
   if (this->is_atomic()) {
     // atomic symbol do not have place holder for all the arguments
     std::vector<std::string> req_args = heads_[0].source->op->ListArguments();
+	//auto aux_states = heads_[0].source->op->ListAuxiliaryStates();
+	//req_args.insert(req_args.end(), aux_states.begin(), aux_states.end());
     heads_[0].source->inputs.resize(req_args.size());
     for (size_t i = 0; i < req_args.size(); ++i) {
       auto iter = kwargs.find(req_args[i]);

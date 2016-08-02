@@ -24,9 +24,7 @@ MXNET_REGISTER_OP_PROPERTY(BatchNorm, BatchNormProp)
 .describe("Apply batch normalization to input.")
 .add_argument("data", "Symbol", "Input data to batch normalization")
 .add_argument("gamma", "Symbol", "Scale factors for normalized data")
-.add_argument("bias", "Symbol", "Shift bias for normalized data")
-//.add_argument("moving_mean", "Symbol", "Moving average of input data")
-//.add_argument("moving_var", "Symbol", "Moving variance of input data")
+.add_argument("beta", "Symbol", "Shift bias for normalized data")
 .add_arguments(BatchNormParam::__FIELDS__());
 
 }  // namespace op

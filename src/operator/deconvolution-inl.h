@@ -17,6 +17,7 @@
 #include <utility>
 #include "./operator_common.h"
 
+#include <iostream>
 
 namespace mxnet {
 namespace op {
@@ -94,6 +95,8 @@ class DeconvolutionOp : public Operator {
  public:
   explicit DeconvolutionOp(DeconvolutionParam p) {
     this->param_ = p;
+	std::cout << "adj:" << param_.adj[0] << ',' << param_.adj[1] << std::endl;
+	std::cout << "target_shape:" << param_.target_shape[0] << ',' << param_.target_shape[1] << std::endl;
     // convert MBytes first to Bytes and then to elements.
     param_.workspace = (param_.workspace << 20) / sizeof(real_t);
   }

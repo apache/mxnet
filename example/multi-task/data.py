@@ -11,7 +11,7 @@ import mxnet as mx
 def mnist_iterator(batch_size, input_shape):
     """return train and val iterators for mnist"""
     # download data
-    get_data.GetMNIST_ubyte()
+    #get_data.GetMNIST_ubyte()
     flat = False if len(input_shape) == 3 else True
 
     train_dataiter = mx.io.MNISTIter(

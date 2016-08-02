@@ -21,9 +21,9 @@ namespace mxnet {
 namespace op {
 
 namespace batchnorm {
-enum BatchNormOpInputs { kData, kGamma, kBeta, kMovingMean, kMovingVar };
+enum BatchNormOpInputs { kData, kGamma, kBeta};
 enum BatchNormOpOutputs {kOut, kMean, kVar};
-//enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
+enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
 enum BatchNormBackResource {kTempSpace};
 }  // namespace batchnorm
 
@@ -32,7 +32,13 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float momentum;
   bool fix_gamma;
   bool use_global_stats;
+  std::string moving_mean;
+  std::string moving_var;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
+	DMLC_DECLARE_FIELD(moving_mean)
+	.describe("Moving average of input data");
+	DMLC_DECLARE_FIELD(moving_var)
+	.describe("Moving variance of input data");
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
     DMLC_DECLARE_FIELD(momentum).set_default(0.99f)
@@ -59,8 +65,8 @@ class BatchNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 5);
-    CHECK_EQ(aux_states.size(), 0);
+    CHECK_EQ(in_data.size(), 3);
+    CHECK_EQ(aux_states.size(), 2);
     if (ctx.is_train) {
       CHECK_EQ(out_data.size(), 3);
       CHECK_EQ(req.size(), 3);
@@ -86,8 +92,8 @@ class BatchNormOp : public Operator {
     }
     Tensor<xpu, 1> slope = in_data[batchnorm::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> bias = in_data[batchnorm::kBeta].get<xpu, 1, real_t>(s);
-	Tensor<xpu, 1> moving_mean = in_data[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
-	Tensor<xpu, 1> moving_var = in_data[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
     if (ctx.is_train && param_.fix_gamma) slope = 1.f;
 
@@ -136,9 +142,10 @@ class BatchNormOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 5);
+    CHECK_EQ(in_data.size(), 3);
+	CHECK_EQ(aux_states.size(), 2);
     CHECK_EQ(out_data.size(), 3);
-    CHECK_EQ(in_grad.size(), 5);
+    CHECK_EQ(in_grad.size(), 3);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
     const real_t scale = static_cast<real_t>(out_grad[batchnorm::kOut].shape_[1]) /
@@ -162,13 +169,8 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> gslope = in_grad[batchnorm::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbias = in_grad[batchnorm::kBeta].get<xpu, 1, real_t>(s);
     // update moving avg
-	Tensor<xpu, 1> moving_mean = in_data[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
-	Tensor<xpu, 1> moving_var = in_data[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
-	
-	Tensor<xpu, 1> gmoving_mean = in_grad[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
-	Tensor<xpu, 1> gmoving_var = in_grad[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
-	Assign(gmoving_mean, req[batchnorm::kMovingMean], 0.0f);
-	Assign(gmoving_var, req[batchnorm::kMovingVar], 0.0f);
+	Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
+	Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
 	if (ctx.is_train && !param_.use_global_stats) {
 		// get requested temp space
@@ -253,21 +255,19 @@ class BatchNormProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-	CHECK_EQ(in_shape->size(), 5) << "Input:[data, gamma, beta, moving_mean, moving_var]";
+	CHECK_EQ(in_shape->size(), 3) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     in_shape->at(1) = TShape(Shape1(dshape[1]));
     in_shape->at(2) = TShape(Shape1(dshape[1]));
-	in_shape->at(3) = TShape(Shape1(dshape[1]));
-	in_shape->at(4) = TShape(Shape1(dshape[1]));
     out_shape->clear();
     out_shape->push_back(dshape);
     out_shape->push_back(Shape1(dshape[1]));
     out_shape->push_back(Shape1(dshape[1]));
 
-    //aux_shape->clear();
-    //aux_shape->push_back(Shape1(dshape[1]));
-    //aux_shape->push_back(Shape1(dshape[1]));
+    aux_shape->clear();
+    aux_shape->push_back(Shape1(dshape[1]));
+    aux_shape->push_back(Shape1(dshape[1]));
     return true;
   }
 
@@ -291,8 +291,6 @@ class BatchNormProp : public OperatorProperty {
             in_data[batchnorm::kData],
             in_data[batchnorm::kGamma],
             in_data[batchnorm::kBeta],
-			in_data[batchnorm::kMovingMean],
-			in_data[batchnorm::kMovingVar]
            };
   }
 
@@ -310,16 +308,16 @@ class BatchNormProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListArguments() const override {
-	  return{ "data", "gamma", "beta", "moving_mean", "moving_var" };
+	  return{ "data", "gamma", "beta" };
   }
 
   std::vector<std::string> ListOutputs() const override {
     return {"output", "mean", "var"};
   }
 
-  //std::vector<std::string> ListAuxiliaryStates() const override {
-  //  return {"moving_mean", "moving_var"};
-  //}
+  std::vector<std::string> ListAuxiliaryStates() const override {
+	  return{ param_.moving_mean, param_.moving_var };
+  }
 
   Operator* CreateOperator(Context ctx) const override;
 
