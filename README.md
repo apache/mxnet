@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/dmlc/MXNet.jl.svg?branch=master)](https://travis-ci.org/dmlc/MXNet.jl)
 [![codecov.io](https://codecov.io/github/dmlc/MXNet.jl/coverage.svg?branch=master)](https://codecov.io/github/dmlc/MXNet.jl?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/mxnetjl/badge/?version=latest)](http://mxnetjl.readthedocs.org/en/latest/?badge=latest)
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://dmlc.github.io/MXNet.jl/latest)
 [![MXNet](http://pkg.julialang.org/badges/MXNet_0.4.svg)](http://pkg.julialang.org/?pkg=MXNet)
 [![License](http://dmlc.github.io/img/apache2.svg)](LICENSE.md)
 [![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
