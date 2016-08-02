@@ -11,7 +11,7 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
-#include "./c_api_error.h"
+#include "./c_api_common.h"
 
 using namespace mxnet;
 

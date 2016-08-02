@@ -145,6 +145,13 @@ else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
 
+# For quick compile test, used smaller subset
+ALLX_DEP = $(filter-out build/src/operator/%, $(ALL_DEP))
+ALLX_DEP+= build/src/operator/fully_connected.o
+ALLX_DEP+= build/src/operator/fully_connected_gpu.o
+ALLX_DEP+= build/src/operator/operator.o
+ALLX_DEP+= build/src/operator/custom.o
+
 ifeq ($(USE_NVRTC), 1)
 	LDFLAGS += -lnvrtc
 	CFLAGS += -DMXNET_USE_NVRTC=1
@@ -186,11 +193,11 @@ build/plugin/%.o: plugin/%.cc
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
-lib/libmxnet.a: $(ALL_DEP)
+lib/libmxnet.a: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
 
-lib/libmxnet.so: $(ALL_DEP)
+lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o, $^) $(LDFLAGS) \
 	-Wl,--whole-archive $(filter %.a, $^) -Wl,--no-whole-archive
@@ -208,7 +215,7 @@ DMLCCORE:
 $(NNVM_PATH)/lib/libnnvm.a:
 	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
 
-bin/im2rec: tools/im2rec.cc $(ALL_DEP)
+bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)

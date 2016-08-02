@@ -24,46 +24,10 @@
 #include <memory>
 #include <functional>
 #include <utility>
-#include "./c_api_error.h"
-#include "../common/thread_local.h"
+#include "./c_api_common.h"
 #include "../operator/custom-inl.h"
 
 using namespace mxnet;
-
-/*! \brief entry to to easily hold returning information */
-struct MXAPIThreadLocalEntry {
-  /*! \brief result holder for returning string */
-  std::string ret_str;
-  /*! \brief result holder for returning strings */
-  std::vector<std::string> ret_vec_str;
-  /*! \brief result holder for returning string pointers */
-  std::vector<const char *> ret_vec_charp;
-  /*! \brief result holder for returning handles */
-  std::vector<void *> ret_handles;
-  /*! \brief result holder for returning shapes */
-  std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
-  /*! \brief result holder for returning type flags */
-  std::vector<int> arg_types, out_types, aux_types;
-  /*! \brief result holder for returning shape dimensions */
-  std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
-  /*! \brief result holder for returning shape pointer */
-  std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
-  // helper function to setup return value of shape array
-  inline static void SetupShapeArrayReturn(
-      const std::vector<TShape> &shapes,
-      std::vector<mx_uint> *ndim,
-      std::vector<const mx_uint*> *data) {
-    ndim->resize(shapes.size());
-    data->resize(shapes.size());
-    for (size_t i = 0; i < shapes.size(); ++i) {
-      ndim->at(i) = shapes[i].ndim();
-      data->at(i) = shapes[i].data();
-    }
-  }
-};
-
-// define the threadlocal store.
-typedef mxnet::common::ThreadLocalStore<MXAPIThreadLocalEntry> MXAPIThreadLocalStore;
 
 // Internal function to get the information
 // from function registry
