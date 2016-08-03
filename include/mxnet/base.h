@@ -11,6 +11,7 @@
 #include <dmlc/type_traits.h>
 #include <dmlc/parameter.h>
 #include <mshadow/tensor.h>
+#include <nnvm/tuple.h>
 #include <string>
 
 /*!
@@ -80,6 +81,8 @@ typedef mshadow::gpu gpu;
 typedef mshadow::index_t index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
+/*! \brief Shape data structure used to record shape information */
+using TShape = nnvm::TShape;
 
 /*! \brief Context information about the execution enviroment */
 struct Context {
