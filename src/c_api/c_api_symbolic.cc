@@ -5,10 +5,17 @@
 #include <mxnet/symbolic.h>
 #include "./c_api_common.h"
 
+namespace mxnet {
+namespace op {
+void RegisterLegacyOpProp();
+}
+}
+
 // symbolic configuration generation API.
 // Redirect to NNVM's C API
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
+  mxnet::op::RegisterLegacyOpProp();
   return NNSymbolListAtomicSymbolCreators(out_size, out_array);
 }
 
