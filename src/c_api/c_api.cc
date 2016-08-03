@@ -555,14 +555,13 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
 
 int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
   Symbol *s = new Symbol();
-  //API_BEGIN();
+  API_BEGIN();
   std::string buf(json);
   std::istringstream is(buf);
   dmlc::JSONReader reader(&is);
   s->Load(&reader);
   *out = s;
-  //API_END_HANDLE_ERROR(delete s);
-  return 0;
+  API_END_HANDLE_ERROR(delete s);
 }
 
 int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname) {
