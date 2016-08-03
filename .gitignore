@@ -115,3 +115,4 @@ scala-package/*/*/target/
 .project
 .cproject
 .pydevproject
+nnvm
