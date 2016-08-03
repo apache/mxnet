@@ -65,4 +65,4 @@ accuracy = 100correct/length(labels)
 println(mx.format("Accuracy on eval set: {1:.2f}%", accuracy))
 ```
 
-For more details, please refer to the [documentation](http://mxnetjl.readthedocs.org/) and [examples](examples).
+For more details, please refer to the [documentation](https://dmlc.github.io/MXNet.jl/latest) and [examples](examples).
