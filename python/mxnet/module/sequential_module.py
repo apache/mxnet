@@ -383,9 +383,3 @@ class SequentialModule(BaseModule):
             if meta.has_key(SequentialModule.META_TAKE_LABELS) and \
                     meta[SequentialModule.META_TAKE_LABELS]:
                 module.update_metric(eval_metric, labels)
-
-    def install_monitor(self, mon):
-        """ Install monitor on all executors """
-        assert self.binded
-        for module in self._modules:
-            module.install_monitor(mon)

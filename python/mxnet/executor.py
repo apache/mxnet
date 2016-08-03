@@ -61,11 +61,17 @@ class Executor(object):
     def _get_dict(names, ndarrays):
         """Get the dictionary given name and ndarray pairs."""
         nset = set()
-        for nm in names:
-            if nm in nset:
-                raise ValueError('Duplicate names detected, %s' % str(names))
-            nset.add(nm)
-        return dict(zip(names, ndarrays))
+        ret = {}
+        for index,nm in enumerate(names):
+            if nm not in ret.keys():
+                ret[nm] = ndarrays[index]
+        return ret
+
+        #for nm in names:
+        #    if nm in nset:
+        #        raise ValueError('Duplicate names detected, %s' % str(names))
+        #    nset.add(nm)
+        #return dict(zip(names, ndarrays))
 
     def _get_outputs(self):
         """list all the output ndarray
@@ -98,26 +104,19 @@ class Executor(object):
         >>> # doing forward by not specifying things, but copy to the executor before hand
         >>> mydata.copyto(texec.arg_dict['data'])
         >>> texec.forward(is_train=True)
-        >>> # doing forward by specifying data and get outputs
-        >>> outputs = texec.forward(is_train=True, data=mydata)
-        >>> print(outputs[0].asnumpy())
         """
         if len(kwargs) != 0:
             arg_dict = self.arg_dict
             for name, array in kwargs.items():
-                if not isinstance(array, (NDArray, np.ndarray)):
-                    raise ValueError('only accept keyword argument of NDArrays and numpy.ndarray')
+                if not isinstance(array, NDArray):
+                    raise ValueError('only accept keyword argument of NDArrays')
                 if name not in arg_dict:
                     raise TypeError('Unknown argument %s' % name)
-                if arg_dict[name].shape != array.shape:
-                    raise ValueError('Shape not match! Argument %s, need: %s, received: %s'
-                                     %(name, str(arg_dict[name].shape), str(array.shape)))
-                arg_dict[name][:] = array
+                array.copyto(arg_dict[name])
 
         check_call(_LIB.MXExecutorForward(
             self.handle,
             ctypes.c_int(int(is_train))))
-        return self.outputs
 
     def backward(self, out_grads=None):
         """Do backward pass to get the gradient of arguments.

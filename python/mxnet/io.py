@@ -343,7 +343,6 @@ class NDArrayIter(DataIter):
 
         self.data = _init_data(data, allow_empty=False, default_name='data')
         self.label = _init_data(label, allow_empty=True, default_name='softmax_label')
-
         # shuffle data
         if shuffle:
             idx = np.arange(self.data[0][1].shape[0])

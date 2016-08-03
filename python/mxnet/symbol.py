@@ -19,7 +19,7 @@ from .context import Context
 from .ndarray import NDArray, zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
 from .symbol_doc import SymbolDoc
-from . import _symbol_internal as _internal
+
 
 class Symbol(object):
     """Symbol is symbolic graph of the mxnet."""
@@ -37,9 +37,9 @@ class Symbol(object):
 
     def __add__(self, other):
         if isinstance(other, Symbol):
-            return _internal._Plus(self, other)
+            return Symbol._Plus(self, other)
         if isinstance(other, Number):
-            return _internal._PlusScalar(self, scalar=other)
+            return Symbol._PlusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -48,23 +48,23 @@ class Symbol(object):
 
     def __sub__(self, other):
         if isinstance(other, Symbol):
-            return _internal._Minus(self, other)
+            return Symbol._Minus(self, other)
         if isinstance(other, Number):
-            return _internal._MinusScalar(self, scalar=other)
+            return Symbol._MinusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
         if isinstance(other, Number):
-            return _internal._RMinusScalar(self, scalar=other)
+            return Symbol._RMinusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
         if isinstance(other, Symbol):
-            return _internal._Mul(self, other)
+            return Symbol._Mul(self, other)
         if isinstance(other, Number):
-            return _internal._MulScalar(self, scalar=other)
+            return Symbol._MulScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -73,15 +73,15 @@ class Symbol(object):
 
     def __div__(self, other):
         if isinstance(other, Symbol):
-            return _internal._Div(self, other)
+            return Symbol._Div(self, other)
         if isinstance(other, Number):
-            return _internal._DivScalar(self, scalar=other)
+            return Symbol._DivScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rdiv__(self, other):
         if isinstance(other, Number):
-            return _internal._RDivScalar(self, scalar=other)
+            return Symbol._RDivScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -93,9 +93,9 @@ class Symbol(object):
 
     def __pow__(self, other):
         if isinstance(other, Symbol):
-            return _internal._Power(self, other)
+            return Symbol._Power(self, other)
         if isinstance(other, Number):
-            return _internal._PowerScalar(self, scalar=other)
+            return Symbol._PowerScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
@@ -627,8 +627,8 @@ class Symbol(object):
             raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
-    def simple_bind(self, ctx,
-                    grad_req='write',
+    def simple_bind(self, ctx,args={}, args_grad={}, grad_req='write',
+                    aux_states={},
                     type_dict=None,
                     group2ctx=None,
                     **kwargs):
@@ -666,6 +666,17 @@ class Symbol(object):
             The generated Executor
         """
         # pylint: disable=too-many-locals
+
+        #new add begin
+        assert(len(args)==len(args_grad))
+        args_names = self.list_arguments()
+        for name in args.keys():
+            assert(name in args_names)
+        aux_names = self.list_arguments()
+        for name in aux_states.keys():
+            assert(name in aux_names)
+        #new add end
+
         if type_dict is None:
             type_dict = {k: mx_real_t for k in self.list_arguments()}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
@@ -673,7 +684,6 @@ class Symbol(object):
 
         if arg_shapes is None or arg_types is None:
             raise ValueError("Input node is not complete")
-
         if group2ctx is not None:
             attr_dict = {
                 k : group2ctx.get(v, ctx)
@@ -689,20 +699,32 @@ class Symbol(object):
             aux_ctx = [ctx] * len(aux_shapes)
 
         # alloc space
-        arg_ndarrays = [
-            zeros(shape, dev, dtype=dtype)
-            for dtype, dev, shape in zip(arg_types, arg_ctx, arg_shapes)]
+        arg_ndarrays = []
+        for name, dtype, dev, shape in zip(self.list_arguments(), arg_types, arg_ctx, arg_shapes):
+            if name not in args.keys():
+                arg_ndarrays.append(zeros(shape, dev, dtype=dtype))
+            else:
+                arg_ndarrays.append(args[name])
+
         if grad_req != 'null':
             grad_ndarrays = {}
             for name, shape, dev, dtype in zip(
                     self.list_arguments(), arg_shapes, arg_ctx, arg_types):
                 if not isinstance(grad_req, dict) or grad_req[name] != 'null':
-                    grad_ndarrays[name] = zeros(shape, dev, dtype=dtype)
+                    if name not in args_grad.keys():
+                        grad_ndarrays[name] = zeros(shape, dev, dtype=dtype)
+                    else:
+                        grad_ndarrays[name] = args_grad[name]
         else:
             grad_ndarrays = None
 
-        aux_ndarrays = [zeros(shape, dev, dtype=dtype)
-                        for shape, dev, dtype in zip(aux_shapes, aux_ctx, aux_types)]
+        aux_ndarrays = []
+        for name, shape, dev, dtype in zip(self.list_auxiliary_states(), aux_shapes, aux_ctx, aux_types):
+            if name not in aux_states.keys():
+                aux_ndarrays.append(zeros(shape, dev, dtype=dtype))
+            else:
+                aux_ndarrays.append(aux_states[name])
+
         executor = self.bind(ctx, arg_ndarrays,
                              grad_ndarrays, grad_req, aux_ndarrays,
                              group2ctx=group2ctx)
@@ -790,6 +812,18 @@ class Symbol(object):
 
         if aux_states is None:
             aux_states = []
+
+        #new add
+        #aux_names = self.list_auxiliary_states()
+        #deduplicate_aux_names,deduplicate_aux_states = [],[]
+        #for index,value in enumerate(aux_names):
+        #    if aux_names[index] not in deduplicate_aux_names:
+        #        deduplicate_aux_names.append(aux_names[index])
+        #        deduplicate_aux_states.append(aux_states[index])
+        #aux_names = deduplicate_aux_names
+        #aux_states = deduplicate_aux_states
+        #new add
+
         aux_args_handle, aux_states = self._get_ndarray_inputs(
             'aux_states', aux_states, self.list_auxiliary_states(), False)
 
@@ -955,7 +989,9 @@ def load(fname):
     if not isinstance(fname, string_types):
         raise TypeError('fname need to be string')
     handle = SymbolHandle()
-    check_call(_LIB.MXSymbolCreateFromFile(c_str(fname), ctypes.byref(handle)))
+    with open(fname) as f:
+        str_json = f.read()
+        check_call(_LIB.MXSymbolCreateFromJSON(c_str(str_json), ctypes.byref(handle)))
     return Symbol(handle)
 
 
@@ -1091,12 +1127,11 @@ def _init_symbol_module():
     check_call(_LIB.MXSymbolListAtomicSymbolCreators(ctypes.byref(size),
                                                      ctypes.byref(plist)))
     module_obj = sys.modules[__name__]
-    module_internal = sys.modules["mxnet._symbol_internal"]
     for i in range(size.value):
         hdl = SymbolHandle(plist[i])
         function = _make_atomic_symbol_function(hdl)
         if function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
+            setattr(Symbol, function.__name__, staticmethod(function))
         else:
             setattr(module_obj, function.__name__, function)
 
@@ -1119,11 +1154,11 @@ def pow(base, exp):
     result: Symbol or Number
     """
     if isinstance(base, Symbol) and isinstance(exp, Symbol):
-        return _internal._Power(base, exp)
+        return Symbol._Power(base, exp)
     if isinstance(base, Symbol) and isinstance(exp, Number):
-        return _internal._PowerScalar(base, scalar=exp)
+        return Symbol._PowerScalar(base, scalar=exp)
     if isinstance(base, Number) and isinstance(exp, Symbol):
-        return _internal._RPowerScalar(exp, scalar=base)
+        return Symbol._RPowerScalar(exp, scalar=base)
     if isinstance(base, Number) and isinstance(exp, Number):
         return base**exp
     else:
@@ -1145,11 +1180,11 @@ def maximum(left, right):
     result: Symbol or Number
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
-        return _internal._Maximum(left, right)
+        return Symbol._Maximum(left, right)
     if isinstance(left, Symbol) and isinstance(right, Number):
-        return _internal._MaximumScalar(left, scalar=right)
+        return Symbol._MaximumScalar(left, scalar=right)
     if isinstance(left, Number) and isinstance(right, Symbol):
-        return _internal._MaximumScalar(right, scalar=left)
+        return Symbol._MaximumScalar(right, scalar=left)
     if isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:
@@ -1171,11 +1206,11 @@ def minimum(left, right):
     result: Symbol or Number
     """
     if isinstance(left, Symbol) and isinstance(right, Symbol):
-        return _internal._Minimum(left, right)
+        return Symbol._Minimum(left, right)
     if isinstance(left, Symbol) and isinstance(right, Number):
-        return _internal._MinimumScalar(left, scalar=right)
+        return Symbol._MinimumScalar(left, scalar=right)
     if isinstance(left, Number) and isinstance(right, Symbol):
-        return _internal._MinimumScalar(right, scalar=left)
+        return Symbol._MinimumScalar(right, scalar=left)
     if isinstance(left, Number) and isinstance(right, Number):
         return left if left > right else right
     else:

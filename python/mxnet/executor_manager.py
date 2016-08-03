@@ -56,21 +56,21 @@ def _check_arguments(symbol):
     arg_set = set()
     arg_names = symbol.list_arguments()
     for name in arg_names:
-        if name in arg_set:
-            raise ValueError(('Find duplicated argument name \"%s\", ' +
-                              'please make the weight name non-duplicated(using name arguments), ' +
-                              'arguments are %s') % (name, str(arg_names)))
+        #if name in arg_set:
+        #    raise ValueError(('Find duplicated argument name \"%s\", ' +
+        #                      'please make the weight name non-duplicated(using name arguments), ' +
+        #                      'arguments are %s') % (name, str(arg_names)))
         arg_set.add(name)
 
     aux_set = set()
     aux_names = symbol.list_auxiliary_states()
     for name in aux_names:
-        if name in aux_set:
-            raise ValueError(
-                ('Find duplicated auxiliary param name \"%s\", ' +
-                 'please make the weight name non-duplicated(using name arguments), ' +
-                 'arguments are %s, auxiliary params are %s'
-                ) % (name, str(arg_names), str(aux_names)))
+        #if name in aux_set:
+            #raise ValueError(
+            #    ('Find duplicated auxiliary param name \"%s\", ' +
+            #     'please make the weight name non-duplicated(using name arguments), ' +
+            #     'arguments are %s, auxiliary params are %s'
+            #    ) % (name, str(arg_names), str(aux_names)))
         aux_set.add(name)
 
 def _load_general(data, targets):
@@ -103,8 +103,10 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
     arg_arrays = []
     grad_arrays = {} if need_grad != False else None
+    aux_arrays = []#new add
 
     arg_names = sym.list_arguments()
+    aux_names = sym.list_auxiliary_states()#new add
 
     if need_grad == False:
         need_grad = set()
@@ -163,14 +165,22 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
             arg_arrays.append(arg_arr)
 
     # create or borrow aux variables
-    if base_exec is None:
-        aux_arrays = [nd.zeros(s, ctx, dtype=t) for s, t in zip(aux_shape, aux_types)]
-    else:
-        for i, a in enumerate(base_exec.aux_arrays):
-            assert aux_shape[i] == a.shape
-            assert aux_types[i] == a.dtype
-
-        aux_arrays = [a for a in base_exec.aux_arrays]
+    aux_dict = {}
+    for i in range(len(aux_names)):#new add
+        name = aux_names[i]#new add
+        if base_exec is None:
+            if name not in aux_dict:
+                aux_arr = nd.zeros(aux_shape[i], ctx, dtype=aux_types[i])
+                aux_dict[name] = aux_arr
+            else:
+                aux_arr = aux_dict[name]
+        else:
+            aux_arr = base_exec.aux_dict[name]
+            #for i, a in enumerate(base_exec.aux_arrays):#new comment
+            assert aux_shape[i] == aux_arr.shape
+            assert aux_types[i] == aux_arr.dtype
+        aux_arrays.append(aux_arr)
+        #aux_arrays = [a for a in base_exec.aux_arrays]#new comment
 
     executor = sym.bind(ctx=ctx, args=arg_arrays, args_grad=grad_arrays,
                         aux_states=aux_arrays,
@@ -381,6 +391,7 @@ class DataParallelExecutorManager(object):
             if key not in self.execgrp_bucket:
                 # create new bucket entry
                 symbol = self.sym_gen(key)
+                self.arg_names = symbol.list_arguments()
                 execgrp = DataParallelExecutorGroup(symbol, self.arg_names,
                                                     self.param_names, self.ctx,
                                                     self.slices, data_batch,

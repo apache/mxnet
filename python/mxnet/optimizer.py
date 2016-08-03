@@ -5,7 +5,7 @@ import ctypes
 from .base import _LIB, check_call
 from .base import c_array, mx_uint, mx_float, c_str
 from .base import OptimizerHandle, OptimizerCreator
-from .ndarray import NDArray, zeros, clip, sqrt, square
+from .ndarray import NDArray, zeros, clip, sqrt
 from .random import normal
 
 
@@ -90,7 +90,7 @@ class Optimizer(object):
 
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
-                 lr_scheduler=None, sym=None, begin_num_update=0):
+                 lr_scheduler=None, sym=None):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -100,8 +100,7 @@ class Optimizer(object):
         self.wd = wd
         self.lr_mult = {}
         self.wd_mult = {}
-        self.begin_num_update = begin_num_update
-        self.num_update = begin_num_update
+        self.num_update = 0
         self._index_update_count = {}
         self.clip_gradient = clip_gradient
 
@@ -177,7 +176,7 @@ class Optimizer(object):
             The index will be updated
         """
         if index not in self._index_update_count:
-            self._index_update_count[index] = self.begin_num_update
+            self._index_update_count[index] = 0
         self._index_update_count[index] += 1
         self.num_update = max(self._index_update_count[index], self.num_update)
 
@@ -306,7 +305,7 @@ class SGD(Optimizer):
             weight[:] += mom
         else:
             assert self.momentum == 0.0
-            weight[:] += -lr * (grad + wd * weight)
+            weight[:] += -lr * (grad + self.wd * weight)
 
 
 @register
@@ -354,7 +353,7 @@ class NAG(SGD):
             weight[:] += -lr * grad
         else:
             assert self.momentum == 0.0
-            weight[:] += -lr * (grad + wd * weight)
+            weight[:] += -lr * (grad + self.wd * weight)
 
 
 @register
@@ -444,16 +443,14 @@ class ccSGD(Optimizer):
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, momentum=0.0, rescale_grad=1., clip_gradient=-1., **kwargs):
-        super(ccSGD, self).__init__(rescale_grad=rescale_grad,
-                                    clip_gradient=clip_gradient,
-                                    **kwargs)
+    def __init__(self, momentum=0.0, **kwargs):
+        super(ccSGD, self).__init__(**kwargs)
         self.momentum = momentum
 
         self.handle = Optimizer._init_cc_optimizer(
             'ccsgd',
             ['momentum', 'rescale_grad', 'clip_gradient'],
-            [momentum, rescale_grad, clip_gradient])
+            [momentum, kwargs['rescale_grad'], kwargs['clip_gradient']])
 
     def __getstate__(self):
         this = self.__dict__.copy()
@@ -587,17 +584,14 @@ class Adam(Optimizer):
         if self.clip_gradient is not None:
             clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
 
-        mean *= self.beta1
-        mean += grad * (1. - self.beta1)
-
-        variance *= self.beta2
-        variance += (1 - self.beta2) * square(grad, out=grad)
+        mean[:] = self.beta1 * mean + (1. - self.beta1) * grad
+        variance[:] = self.beta2 * variance + (1. - self.beta2) * grad * grad
 
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
 
-        weight -= lr*mean/(sqrt(variance) + self.epsilon)
+        weight[:] -= lr*mean/(sqrt(variance) + self.epsilon)
 
         wd = self._get_wd(index)
         if wd > 0.:
@@ -642,7 +636,6 @@ class AdaGrad(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
-        wd = self._get_wd(index)
         self._update_count(index)
 
         grad = grad * self.rescale_grad
@@ -650,7 +643,7 @@ class AdaGrad(Optimizer):
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
         history[:] += (grad * grad)
-        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + wd * weight)
+        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + self.wd * weight)
 
 
 @register

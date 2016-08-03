@@ -326,7 +326,3 @@ class PythonLossModule(PythonModule):
         """
         assert merge_multi_context == True
         return [self._scores_grad]
-
-    def install_monitor(self, mon):
-        """Install monitor on all executors"""
-        raise NotImplementedError()

@@ -67,8 +67,8 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                      h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i),
                                      gates_bn_gamma=mx.sym.Variable("l%d_gates_bn_gamma" % i),
                                      gates_bn_beta=mx.sym.Variable("l%d_gates_bn_beta" % i),
-                                     gates_bn_moving_mean=mx.sym.Variable("l%d_gates_bn_moving_mean" % i),
-                                     gates_bn_moving_var=mx.sym.Variable("l%d_gates_bn_moving_var" % i)))
+                                     gates_bn_moving_mean="l%d_gates_bn_moving_mean" % i,
+                                     gates_bn_moving_var="l%d_gates_bn_moving_var" % i))
         state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
                           h=mx.sym.Variable("l%d_init_h" % i))
         last_states.append(state)

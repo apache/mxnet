@@ -218,6 +218,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         # Iterate over training data.
         while True:
             do_reset = True
+            need_stop = False
             for data_batch in train_data:
                 executor_manager.load_data_batch(data_batch)
 
@@ -253,14 +254,19 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                                                      locals=locals())
                     if isinstance(batch_end_callback, list):
                         for call in batch_end_callback:
-                            call(batch_end_params)
+                            if call(batch_end_params):
+                                need_stop = True
+                                break
                     else:
-                        batch_end_callback(batch_end_params)
+                        if batch_end_callback(batch_end_params):
+                            need_stop = True
+                            break
 
                 # this epoch is done possibly earlier
                 if epoch_size is not None and nbatch >= epoch_size:
                     do_reset = False
                     break
+            if need_stop: break
 
             if do_reset == True:
                 logger.info('Epoch[%d] Resetting Data Iterator', epoch)
@@ -282,6 +288,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     call(epoch, symbol, arg_params, aux_params)
             else:
                 epoch_end_callback(epoch, symbol, arg_params, aux_params)
+        if need_stop: break #If need_stop then stop training after save network parameters
 
         # evaluation
         if eval_data:
@@ -304,7 +311,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             name_value = eval_metric.get_name_value()
             for name, value in name_value:
                 logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
-            eval_data.reset()
     # end of all epochs
     return
 
@@ -361,7 +367,7 @@ def load_checkpoint(prefix, epoch):
     - symbol will be loaded from ``prefix-symbol.json``.
     - parameters will be loaded from ``prefix-epoch.params``.
     """
-    symbol = sym.load('%s-symbol.json' % prefix)
+    #symbol = sym.load('%s-symbol.json' % prefix)
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
     arg_params = {}
     aux_params = {}
@@ -371,7 +377,7 @@ def load_checkpoint(prefix, epoch):
             arg_params[name] = v
         if tp == 'aux':
             aux_params[name] = v
-    return (symbol, arg_params, aux_params)
+    return (arg_params, aux_params)#(symbol, arg_params, aux_params)
 
 
 class FeedForward(BASE_ESTIMATOR):
@@ -608,6 +614,9 @@ class FeedForward(BASE_ESTIMATOR):
 
         i = 0
         for batch in X:
+            if num_batch is not None and i == num_batch:
+                break
+            i += 1
 
             _load_data(batch, data_arrays)
             self._pred_exec.forward(is_train=False)
@@ -622,9 +631,6 @@ class FeedForward(BASE_ESTIMATOR):
                     data_list[j].append(x[0:real_size].asnumpy())
                 for j, x in enumerate(batch.label):
                     label_list[j].append(x[0:real_size].asnumpy())
-            i += 1
-            if num_batch is not None and i == num_batch:
-                break
 
         outputs = [np.concatenate(x) for x in output_list]
         if len(outputs) == 1:
@@ -744,6 +750,11 @@ class FeedForward(BASE_ESTIMATOR):
 
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
+        param_idx2name = {}
+        for i, n in enumerate(param_names):
+            for k in range(len(self.ctx)):
+                param_idx2name[i*len(self.ctx)+k] = n
+        self.kwargs["param_idx2name"] = param_idx2name
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
@@ -752,15 +763,6 @@ class FeedForward(BASE_ESTIMATOR):
         # create kvstore
         (kvstore, update_on_kvstore) = _create_kvstore(
             kvstore, len(self.ctx), self.arg_params)
-
-        param_idx2name = {}
-        if update_on_kvstore:
-            param_idx2name.update(enumerate(param_names))
-        else:
-            for i, n in enumerate(param_names):
-                for k in range(len(self.ctx)):
-                    param_idx2name[i*len(self.ctx)+k] = n
-        self.kwargs["param_idx2name"] = param_idx2name
 
         # init optmizer
         if isinstance(self.optimizer, str):
@@ -836,12 +838,12 @@ class FeedForward(BASE_ESTIMATOR):
         - ``prefix-symbol.json`` will be saved for symbol.
         - ``prefix-epoch.params`` will be saved for parameters.
         """
-        symbol, arg_params, aux_params = load_checkpoint(prefix, epoch)
-        return FeedForward(symbol, ctx=ctx,
-                           arg_params=arg_params, aux_params=aux_params,
-                           begin_epoch=epoch,
-                           **kwargs)
-
+        #symbol, arg_params, aux_params = load_checkpoint(prefix, epoch)
+        return load_checkpoint(prefix,epoch)
+        #return FeedForward(symbol, ctx=ctx,
+        #                   arg_params=arg_params, aux_params=aux_params,
+        #                   begin_epoch=epoch,
+        #                   **kwargs)
     @staticmethod
     def create(symbol, X, y=None, ctx=None,
                num_epoch=None, epoch_size=None, optimizer='sgd', initializer=Uniform(0.01),

@@ -216,8 +216,8 @@ class BucketSentenceIter(mx.io.DataIter):
                 self.data[i] = np.transpose(bucket_data)
 
     def __iter__(self):
-
         for i_bucket in self.bucket_plan:
+            #print(self.buckets[i_bucket])
             data = self.data_buffer[i_bucket]
             i_idx = self.bucket_curr_idx[i_bucket]
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]

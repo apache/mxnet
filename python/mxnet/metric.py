@@ -134,13 +134,24 @@ class Accuracy(EvalMetric):
         check_label_shapes(labels, preds)
 
         for i in range(len(labels)):
-            pred_label = ndarray.argmax_channel(preds[i]).asnumpy().astype('int32')
-            label = labels[i].asnumpy().astype('int32')
+            if len(labels[i].shape)==3:
+                pred_label = ndarray.argmax_channel(preds[i]).asnumpy().astype('int32')
+                label = labels[i].asnumpy().astype('int32')
+                check_label_shapes(label, pred_label)
+                self.sum_metric += (pred_label.flat == label.flat).sum()
+                self.num_inst += pred_label.size
+            else:
+                pred_label = preds[i].asnumpy()>0.5
+                label = labels[i].asnumpy()>0.5
+                check_label_shapes(label, pred_label)
+                for batch in range(pred_label.shape[0]):
+                    for y in range(pred_label.shape[2]):
+                        for x in range(pred_label.shape[3]):
+                            if (pred_label[batch,:,y,x]==label[batch,:,y,x]).all():
+                                self.sum_metric += 1
+                self.num_inst += pred_label.size//pred_label.shape[1]
 
-            check_label_shapes(label, pred_label)
 
-            self.sum_metric += (pred_label.flat == label.flat).sum()
-            self.num_inst += len(pred_label.flat)
 
 class TopKAccuracy(EvalMetric):
     """Calculate top k predictions accuracy"""
