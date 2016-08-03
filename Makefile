@@ -150,6 +150,8 @@ ALLX_DEP = $(filter-out build/src/operator/%, $(ALL_DEP))
 ALLX_DEP+= build/src/operator/fully_connected.o
 ALLX_DEP+= build/src/operator/fully_connected_gpu.o
 ALLX_DEP+= build/src/operator/operator.o
+ALLX_DEP+= build/src/operator/operator_util.o
+ALLX_DEP+= build/src/operator/elementwise_unary_op.o
 ALLX_DEP+= build/src/operator/custom.o
 
 ifeq ($(USE_NVRTC), 1)
