@@ -45,33 +45,7 @@ def _split_input_slice(batch_size, work_load_list):
     return slices
 
 def _check_arguments(symbol):
-    """Check the argument names of symbol.
-    This function checks the duplication of arguments in Symbol.
-    The check is done for feedforward net for now.
-    Parameters
-    ----------
-    symbol : Symbol
-        The network configuration
-    """
-    arg_set = set()
-    arg_names = symbol.list_arguments()
-    for name in arg_names:
-        #if name in arg_set:
-        #    raise ValueError(('Find duplicated argument name \"%s\", ' +
-        #                      'please make the weight name non-duplicated(using name arguments), ' +
-        #                      'arguments are %s') % (name, str(arg_names)))
-        arg_set.add(name)
-
-    aux_set = set()
-    aux_names = symbol.list_auxiliary_states()
-    for name in aux_names:
-        #if name in aux_set:
-            #raise ValueError(
-            #    ('Find duplicated auxiliary param name \"%s\", ' +
-            #     'please make the weight name non-duplicated(using name arguments), ' +
-            #     'arguments are %s, auxiliary params are %s'
-            #    ) % (name, str(arg_names), str(aux_names)))
-        aux_set.add(name)
+    pass
 
 def _load_general(data, targets):
     """Load a list of arrays into a list of arrays specified by slices"""

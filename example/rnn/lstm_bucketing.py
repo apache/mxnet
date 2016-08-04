@@ -6,7 +6,7 @@ import numpy as np
 import mxnet as mx
 
 from lstm import lstm_unroll
-from bucket_io import BucketSentenceIter, default_build_vocab
+from bucket_io import BucketSentenceIter, default_build_vocab, DummyIter
 
 def Perplexity(label, pred):
     label = label.T.reshape((-1,))
@@ -60,27 +60,19 @@ if __name__ == '__main__':
         symbol = sym_gen
 
     gates_bn_hidden = 4*num_hidden
-    gates_bn_gamma,gates_bn_beta = [],[]
-    gates_bn_moving_mean,gates_bn_moving_var = [],[]
-
+    gates_bn_gamma = []
     for layeridx in range(num_lstm_layer):
         gates_bn_gamma.append(mx.nd.ones((gates_bn_hidden), contexts[0])*0.1)
-        gates_bn_beta.append(mx.nd.zeros((gates_bn_hidden), contexts[0]))
-        gates_bn_moving_var.append(mx.nd.ones((gates_bn_hidden), contexts[0]))
-        gates_bn_moving_mean.append(mx.nd.zeros((gates_bn_hidden), contexts[0]))
+
     arg_params={}
     for layeridx in range(num_lstm_layer):
-        arg_params["l%d_gates_bn_gamma" % layeridx] = gates_bn_gamma[layeridx]
-        arg_params["l%d_gates_bn_beta" % layeridx] = gates_bn_beta[layeridx]
-        arg_params["l%d_gates_bn_moving_mean" % layeridx] = gates_bn_moving_mean[layeridx]
-        arg_params["l%d_gates_bn_moving_var" % layeridx] = gates_bn_moving_var[layeridx]
+        arg_params["lstm%d_gates_bn_gamma" % layeridx] = gates_bn_gamma[layeridx]
 
     model = mx.model.FeedForward(ctx=contexts,
                                  symbol=symbol,
                                  num_epoch=num_epoch,
                                  optimizer='adagrad',
                                  learning_rate=learning_rate,
-                                 #momentum=momentum,
                                  wd=0.00001,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
                                  arg_params=arg_params,
@@ -89,6 +81,7 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
+    from mxnet.executor import Executor
     def batch_end_callback(batch_size,frequent):
             call_back = mx.callback.Speedometer(batch_size, frequent)
             def AverageL2Norm(d):
@@ -97,13 +90,16 @@ if __name__ == '__main__':
                 call_back(parameter)
                 if parameter.locals['nbatch'] % frequent == 0:
                     executor_manager = parameter.locals['executor_manager']
+                    d= Executor._get_dict(executor_manager.aux_names, executor_manager.aux_arrays)
+                    for key,value in sorted(list(zip(d.keys(),d.values()))):
+                        print key,'AverageL2Norm(aux):',AverageL2Norm(value[0])
                     for (index,value) in enumerate(executor_manager.param_names):
                         print value,'AverageL2Norm(param,grad):',(AverageL2Norm(executor_manager.param_arrays[index][0]),
                                                                   AverageL2Norm(executor_manager.grad_arrays[index][0]))
-                return False
+                return False #Not to stop training
             return decorator
 
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Perplexity),
-              batch_end_callback=batch_end_callback(batch_size, 40))
+              batch_end_callback=batch_end_callback(batch_size, 2))
 
