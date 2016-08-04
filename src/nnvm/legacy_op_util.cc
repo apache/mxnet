@@ -33,20 +33,19 @@ bool OpPropInferAttr(const NodeAttrs& attrs,
   for (size_t i = 0; i < iattr.size(); ++i) {
     in_attr[i] = *iattr[i];
   }
-
-  bool ret = finfer(prop.get(), &in_attr, &out_attr, &aux_attr);
+  if (!finfer(prop.get(), &in_attr, &out_attr, &aux_attr)) return false;
 
   for (size_t i = 0; i < iattr.size(); ++i) {
     *iattr[i] = in_attr[i];
   }
 
   CHECK_EQ(oattr.size(), out_attr.size());
-  for (size_t i = 0; i < out_attr.size(); ++i) {
+  for (size_t i = 0; i < oattr.size(); ++i) {
     *oattr[i] = out_attr[i];
   }
   CHECK_EQ(aux_attr.size(), 0)
       << "not implemented adapter with aux state";
-  return ret;
+  return true;
 }
 
 bool OpPropInferShape(const NodeAttrs& attrs,
@@ -116,6 +115,9 @@ void RegisterLegacyOpProp() {
     op.attr<FListOutputNames>("FListOutputNames", OpPropListOutputNames);
     op.attr<FInferShape>("FInferShape", OpPropInferShape);
     op.attr<FInferType>("FInferType", OpPropInferType);
+    if (reg->key_var_num_args.length() != 0) {
+      op.attr<std::string>("key_var_num_args", reg->key_var_num_args);
+    }
   }
 }
 

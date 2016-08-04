@@ -154,6 +154,8 @@ ALLX_DEP+= build/src/operator/operator_util.o
 ALLX_DEP+= build/src/operator/elementwise_unary_op.o
 ALLX_DEP+= build/src/operator/custom.o
 
+ALLX_DEP= $(ALL_DEP)
+
 ifeq ($(USE_NVRTC), 1)
 	LDFLAGS += -lnvrtc
 	CFLAGS += -DMXNET_USE_NVRTC=1
