@@ -21,6 +21,7 @@ class StorageImpl : public Storage {
  public:
   Handle Alloc(size_t size, Context ctx) override;
   void Free(Handle handle) override;
+  void DirectFree(Handle handle) override;
   StorageImpl() {}
   virtual ~StorageImpl() = default;
 
@@ -93,6 +94,19 @@ void StorageImpl::Free(Storage::Handle handle) {
       });
   this->ActivateDevice(ctx);
   manager->Free(handle.dptr, handle.size);
+}
+
+void StorageImpl::DirectFree(Storage::Handle handle) {
+  const Context &ctx = handle.ctx;
+  auto&& device = storage_managers_.at(ctx.dev_type);
+  storage::StorageManager *manager = device.Get(
+      ctx.dev_id, []() {
+        LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
+        return nullptr;
+      });
+  this->ActivateDevice(ctx);
+  // directly free ths data.
+  manager->DirectFree(handle.dptr, handle.size);
 }
 
 std::shared_ptr<Storage> Storage::_GetSharedRef() {
