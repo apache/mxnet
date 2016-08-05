@@ -39,7 +39,7 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .set_range(1, 1000)
     .describe("Up sampling scale");
     DMLC_DECLARE_FIELD(num_filter)
-    .describe("Input filter. Only used by nearest sample_type.")
+    .describe("Input filter. Only used by bilinear sample_type.")
     .set_default(0);
     DMLC_DECLARE_FIELD(sample_type)
     .add_enum("nearest", up_enum::kNearest)
@@ -205,7 +205,7 @@ class UpSamplingProp : public OperatorProperty {
         CHECK_EQ(oh%shape[2], 0) << "UpSamplingNearest: input height of " << shape[2] << \
           "does not divide output height of " << oh;
         CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input weight of " << shape[3] << \
-          "does not divide output weight of " << ow;
+          "does not divide output width of " << ow;
         if (param_.multi_input_mode == up_enum::kSum) {
           CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
             "Number of channels must be the same when multi_input_mode==sum";
@@ -217,7 +217,7 @@ class UpSamplingProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
       CHECK_EQ(dshape.ndim(), 4) << \
-        "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
+        "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
       if (dshape.ndim() ==  0) return false;
       int kernel = 2 * param_.scale - param_.scale % 2;
       SHAPE_ASSIGN_CHECK(*in_shape,
