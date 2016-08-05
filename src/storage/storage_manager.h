@@ -29,6 +29,12 @@ class StorageManager {
    */
   virtual void Free(void* ptr, size_t size) = 0;
   /*!
+   * \brief Direct de-allocation.
+   * \param ptr Pointer to deallocate.
+   * \param size Size of the storage.
+   */
+  virtual void DirectFree(void* ptr, size_t size) = 0;
+  /*!
    * \brief Destructor.
    */
   virtual ~StorageManager() = default;

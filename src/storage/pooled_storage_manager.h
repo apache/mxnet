@@ -35,6 +35,11 @@ class PooledStorageManager final : public StorageManager {
   void* Alloc(size_t size) override;
   void Free(void* ptr, size_t size) override;
 
+  void DirectFree(void* ptr, size_t size) override {
+    DeviceStorage::Free(ptr);
+    used_memory_ -= size;
+  }
+
  private:
   void ReleaseAll();
   // internal mutex
@@ -80,8 +85,7 @@ template <class DeviceStorage>
 void PooledStorageManager<DeviceStorage>::ReleaseAll() {
   for (auto&& i : memory_pool_) {
     for (auto&& j : i.second) {
-      DeviceStorage::Free(j);
-      used_memory_ -= i.first;
+      DirectFree(j, i.first);
     }
   }
   memory_pool_.clear();
