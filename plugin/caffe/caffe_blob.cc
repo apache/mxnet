@@ -12,7 +12,7 @@ namespace caffe {
 template<>
 void SetDataGradToBlob<mshadow::cpu, float>(caffeMemoryTypes memType,
                             std::vector<::caffe::Blob<float>*>::iterator blob,
-                            std::vector<mshadow::TBlob>::const_iterator itr) {
+                            std::vector<TBlob>::const_iterator itr) {
   float *data_ptr = reinterpret_cast<float*>((*itr).dptr_);
   if (memType == Data)
     (*blob)->set_cpu_data(data_ptr);
@@ -23,7 +23,7 @@ void SetDataGradToBlob<mshadow::cpu, float>(caffeMemoryTypes memType,
 template<>
 void SetDataGradToBlob<mshadow::cpu, double>(caffeMemoryTypes memType,
                             std::vector<::caffe::Blob<double>*>::iterator blob,
-                            std::vector<mshadow::TBlob>::const_iterator itr) {
+                            std::vector<TBlob>::const_iterator itr) {
   double *data_ptr = reinterpret_cast<double*>((*itr).dptr_);
   if (memType == Data)
     (*blob)->set_cpu_data(data_ptr);
@@ -34,7 +34,7 @@ void SetDataGradToBlob<mshadow::cpu, double>(caffeMemoryTypes memType,
 template<>
 void SetDataGradToBlob<mshadow::gpu, float>(caffeMemoryTypes memType,
                             std::vector<::caffe::Blob<float>*>::iterator blob,
-                            std::vector<mshadow::TBlob>::const_iterator itr) {
+                            std::vector<TBlob>::const_iterator itr) {
   float *data_ptr = reinterpret_cast<float*>((*itr).dptr_);
   if (memType == Data)
     (*blob)->set_gpu_data(data_ptr);
@@ -45,7 +45,7 @@ void SetDataGradToBlob<mshadow::gpu, float>(caffeMemoryTypes memType,
 template<>
 void SetDataGradToBlob<mshadow::gpu, double>(caffeMemoryTypes memType,
                             std::vector<::caffe::Blob<double>*>::iterator blob,
-                            std::vector<mshadow::TBlob>::const_iterator itr) {
+                            std::vector<TBlob>::const_iterator itr) {
   double *data_ptr = reinterpret_cast<double*>((*itr).dptr_);
   if (memType == Data)
     (*blob)->set_gpu_data(data_ptr);
@@ -53,19 +53,17 @@ void SetDataGradToBlob<mshadow::gpu, double>(caffeMemoryTypes memType,
     (*blob)->set_gpu_diff(data_ptr);
 }
 
-mshadow::TShape Vector2TShape(const std::vector<int> &vec_int) {
-  mshadow::TShape res;
-  std::vector<mshadow::index_t> vec_indx;
+TShape Vector2TShape(const std::vector<int> &vec_int) {
+  std::vector<mshadow::index_t> vec;
   for (int i = 0; i < vec_int.size(); ++i)
-    vec_indx.push_back(vec_int[i]);
+    vec.push_back(vec_int[i]);
   // 0-dim represents scalar in caffe
   if (vec_int.size() == 0)
-    vec_indx.push_back(1);
-  res = vec_indx;
-  return res;
+    vec.push_back(1);
+  return {vec.begin(), vec.end()};
 }
 
-std::vector<int> TShape2Vector(const mshadow::TShape &tshape) {
+std::vector<int> TShape2Vector(const TShape &tshape) {
   std::vector<int> s;
   for (int i =0 ; i < tshape.ndim(); ++i)
     s.push_back(tshape[i]);
