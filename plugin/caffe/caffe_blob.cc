@@ -54,14 +54,13 @@ void SetDataGradToBlob<mshadow::gpu, double>(caffeMemoryTypes memType,
 }
 
 TShape Vector2TShape(const std::vector<int> &vec_int) {
-  std::vector<mshadow::index_t> vec_indx;
+  std::vector<mshadow::index_t> vec;
   for (int i = 0; i < vec_int.size(); ++i)
-    vec_indx.push_back(vec_int[i]);
+    vec.push_back(vec_int[i]);
   // 0-dim represents scalar in caffe
   if (vec_int.size() == 0)
-    vec_indx.push_back(1);
-  Tuple<mshadow::index_t> t(vec_indx.begin(), vec_indx.end());
-  return t;
+    vec.push_back(1);
+  return {vec.begin(), vec.end()};
 }
 
 std::vector<int> TShape2Vector(const TShape &tshape) {
