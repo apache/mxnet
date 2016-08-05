@@ -110,7 +110,7 @@ class CaffeOp : public Operator {
                       wei_.begin(),
                       in_data.begin() + param_.num_data,
                       param_.num_weight);
-      caffeOp_->SetBlobs(wei_);
+      caffe::SetOpBlobs(caffeOp_, wei_);
     }
 
     caffeOp_->Forward(bot_, top_);
