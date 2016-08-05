@@ -48,7 +48,7 @@ inline void MoonBackward(const Tensor<gpu, 2, DType> &grad_data,
 	dim3 threads_per_block(CU2DBLOCK_X, CU2DBLOCK_Y);
 	dim3 num_blocks((out_data.size(1) + threads_per_block.x - 1) / threads_per_block.x, 
 					(out_data.size(0) + threads_per_block.y - 1) / threads_per_block.y);
-	CheckLaunchParam(threads_per_block, num_blocks, "Moon Backward");
+	CheckLaunchParam(num_blocks, threads_per_block, "Moon Backward");
 	cudaStream_t stream = Stream<gpu>::GetStream(grad_data.stream_);
 	// maybe these is a better solutive to construct a Tensor<gpu> with a std::vector
 	float *dist;
