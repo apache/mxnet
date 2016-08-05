@@ -165,6 +165,7 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   dmlc::istream is(fi.get());
   s->outputs = nnvm::pass::LoadJSON(
       std::string(std::istreambuf_iterator<char>(is), {})).outputs;
+  *out = s;
   is.set_stream(nullptr);
   API_END_HANDLE_ERROR(delete s);
 }
@@ -373,7 +374,7 @@ int MXSymbolInferType(SymbolHandle sym,
   } else {
     std::unordered_map<std::string, int> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] =  arg_type_data[i];
+      kwargs[keys[i]] = arg_type_data[i];
     }
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
   }

@@ -74,7 +74,7 @@ bool OpPropInferType(const NodeAttrs& attrs,
 
 inline uint32_t OpPropNumInputs(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<std::shared_ptr<OperatorProperty> >(attrs.parsed);
-  return prop->ListArguments().size() + prop->ListAuxiliaryStates().size();
+  return prop->ListArguments().size();
 }
 
 inline uint32_t OpPropNumOutputs(const NodeAttrs& attrs) {
