@@ -111,8 +111,9 @@ EXTRA_OPERATORS =
 # plugins
 #----------------------------
 
-# whether to use caffe integration. This requires including caffe submodule.
-# CAFFE_PATH = caffe-lite 
+# whether to use caffe integration. This requires installing caffe.
+# You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
+# CAFFE_PATH = $(HOME)/caffe
 # MXNET_PLUGINS += plugin/caffe/caffe.mk
 
 # whether to use torch integration. This requires installing torch.
