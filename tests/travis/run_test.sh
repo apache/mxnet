@@ -74,7 +74,7 @@ if [ ${TASK} == "r_test" ]; then
 
     Rscript tests/travis/r_vignettes.R
 
-    wget http://webdocs.cs.ualberta.ca/~bx3/data/Inception.zip
+    wget http://data.dmlc.ml/mxnet/data/Inception.zip
     unzip Inception.zip && rm -rf Inception.zip
     wget https://s3-us-west-2.amazonaws.com/mxnet/train.csv -O train.csv
     wget https://s3-us-west-2.amazonaws.com/mxnet/test.csv -O test.csv

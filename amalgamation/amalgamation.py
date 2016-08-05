@@ -30,14 +30,15 @@ def get_sources(def_file):
     sources = []
     files = []
     visited = set()
+    mxnet_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))
     for line in open(def_file):
         files = files + line.strip().split(' ')
 
     for f in files:
         f = f.strip()
-        if not f or f.endswith('.o') or f == '\\': continue
+        if not f or f.endswith('.o:') or f == '\\': continue
         fn = os.path.relpath(f)
-        if fn.find('/usr/') < 0 and fn not in visited:
+        if os.path.abspath(f).startswith(mxnet_path) and fn not in visited:
             sources.append(fn)
             visited.add(fn)
     return sources

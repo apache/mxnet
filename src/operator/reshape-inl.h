@@ -118,7 +118,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
               "in which case it will be inferred from the rest of dims");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
     .describe("(Deprecated! Use shape instead.) Whether keep the highest dim unchanged."
-              "If set to yes, than the first dim in target_shape is ignored,"
+              "If set to true, then the first dim in target_shape is ignored,"
               "and always fixed as input");
     DMLC_DECLARE_FIELD(shape)
     .set_default(ShapeInfo())
@@ -217,12 +217,12 @@ class ReshapeProp : public OperatorProperty {
           new_size /= tmp.back();
         } else if (proposed_dim < 0) {
           // infer
-          CHECK_LT(neg_idx, 0) << "One and only one dim can be inferenced";
+          CHECK_LT(neg_idx, 0) << "One and only one dim can be inferred";
           neg_idx = i;
           tmp.push_back(0);
           src_idx++;
         } else {
-          // great than 0, new shape
+          // greater than 0, new shape
           CHECK_EQ(new_size % proposed_dim, 0) << "Illegal dim setting, can't be divided.";
           tmp.push_back(proposed_dim);
           new_size /= proposed_dim;

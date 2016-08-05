@@ -22,6 +22,7 @@ namespace op {
 namespace embedding {
 enum EmbeddingOpInputs {kData, kWeight};
 enum EmbeddingOpOutputs {kOut};
+enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
@@ -94,11 +95,28 @@ class EmbeddingOp : public Operator {
     Tensor<xpu, 2, DType> grad_out = out_grad[embedding::kOut].get_with_shape<xpu, 2, DType>(
          Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
     Tensor<xpu, 2, DType> grad_in = in_grad[embedding::kWeight].get<xpu, 2, DType>(s);
-    if (req[embedding::kWeight] == kWriteTo) {
-      grad_in = scalar<DType>(0.0f);
-      AddTakeGrad(grad_in, data, grad_out);
-    } else if (req[embedding::kWeight] == kAddTo) {
-      AddTakeGrad(grad_in, data, grad_out);
+    if (req[embedding::kWeight] == kWriteTo || req[embedding::kWeight] == kAddTo) {
+      if (req[embedding::kWeight] == kWriteTo) {
+#ifdef __CUDACC__
+        cudaMemsetAsync(grad_in.dptr_, 0, grad_in.MSize() * sizeof(DType),
+                        Stream<gpu>::GetStream(s));
+#else
+        grad_in = scalar<DType>(0.0f);
+#endif
+      }
+      if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
+        AddTakeGrad(grad_in, data, grad_out);
+      } else {
+        Tensor<xpu, 2, int> workspace =
+          ctx.requested[embedding::kTempSpace].get_space_typed<xpu, 2, int>(
+          mshadow::Shape2(2, data.shape_.Size()), s);
+        Tensor<xpu, 1, int> sorted_data = workspace[0];
+        Tensor<xpu, 1, int> original_index = workspace[1];
+        sorted_data = tcast<int>(data);
+        original_index = range<int>(0, data.shape_.Size());
+        SortByKey(sorted_data, original_index, true);
+        AddTakeGradLargeBatch(grad_in, sorted_data, original_index, grad_out);
+      }
     } else {
       LOG(FATAL) << "wrong req";
     }
@@ -181,6 +199,11 @@ class EmbeddingProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     return {out_grad[embedding::kOut], in_data[embedding::kData]};
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+    const std::vector<TShape> &in_shape) const override {
+    return{ ResourceRequest::kTempSpace};
   }
 
   Operator* CreateOperator(Context ctx) const override {

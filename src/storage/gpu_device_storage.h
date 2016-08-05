@@ -11,6 +11,7 @@
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
 #endif  // MXNET_USE_CUDA
+#include <new>
 
 namespace mxnet {
 namespace storage {
@@ -36,7 +37,9 @@ class GPUDeviceStorage {
 inline void* GPUDeviceStorage::Alloc(size_t size) {
   void* ret = nullptr;
 #if MXNET_USE_CUDA
-  CUDA_CALL(cudaMalloc(&ret, size));
+  cudaError_t e = cudaMalloc(&ret, size);
+  if (e != cudaSuccess && e != cudaErrorCudartUnloading)
+    throw std::bad_alloc();
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA

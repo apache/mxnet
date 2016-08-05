@@ -199,7 +199,7 @@ class BucketingModule(BaseModule):
             Typically `data_batch.provide_label`.
         """
         assert self.binded, 'call bind before switching bucket'
-        if not self._buckets.has_key(bucket_key):
+        if not bucket_key in self._buckets:
             symbol, data_names, label_names = self._sym_gen(bucket_key)
             module = Module(symbol, data_names, label_names,
                             logger=self.logger, context=self._context,
@@ -236,7 +236,7 @@ class BucketingModule(BaseModule):
 
         self._curr_module.init_optimizer(kvstore, optimizer, optimizer_params,
                                          force_init=force_init)
-        for mod in self._buckets.itervalues():
+        for mod in self._buckets.values():
             if mod is not self._curr_module:
                 mod.borrow_optimizer(self._curr_module)
 

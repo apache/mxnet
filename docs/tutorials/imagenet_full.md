@@ -68,7 +68,7 @@ We should note that this result is by no means optimal, as we did not carefully 
 ## The Code and Model
 The code and step guide is publically available at [https://github.com/dmlc/mxnet/tree/master/example/image-classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)
 
-We also release a pretrained model under [https://github.com/dmlc/mxnet-model-gallery/tree/master/imagenet-21k-inception](https://github.com/dmlc/mxnet-model-gallery/tree/master/imagenet-21k-inception)
+We also release a pretrained model under [https://github.com/dmlc/mxnet-model-gallery/tree/master/imagenet-21k-inception](https://github.com/dmlc/mxnet-model-gallery/tree/master/imagenet-21k-inception.md)
 
 ## How to Use The Model
 We should point out it 21k classes is much more challenging than 1k. Directly use the raw prediction is not a reasonable way.

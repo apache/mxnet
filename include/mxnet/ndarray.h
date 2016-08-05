@@ -65,11 +65,12 @@ class NDArray {
    * \return the data TBlob
    */
   inline TBlob data() const {
+    TBlob res;
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      return TBlob(static_cast<DType*>(ptr_->shandle.dptr)
+      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
         + offset_, shape_, ptr_->shandle.ctx.dev_mask());
     });
-    return TBlob();
+    return res;
   }
   /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty

@@ -4,9 +4,6 @@ a, abbr, acronym, address, applet, big, blockquote, body, caption, cite, code, d
     padding: 0;
     border: 0;
     outline: 0;
-    font-weight: inherit;
-    font-style: inherit;
-    font-family: inherit;
     font-size: 100 %;
     vertical-align: baseline
 }

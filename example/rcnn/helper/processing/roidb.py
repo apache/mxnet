@@ -4,6 +4,7 @@ basic format [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
 extended ['image', 'max_classes', 'max_overlaps', 'bbox_targets']
 """
 
+import cv2
 import numpy as np
 
 from bbox_regression import compute_bbox_regression_targets
@@ -17,8 +18,13 @@ def prepare_roidb(imdb, roidb):
     :param roidb: roidb
     :return: None
     """
+    print 'prepare roidb'
     for i in range(len(roidb)):  # image_index
         roidb[i]['image'] = imdb.image_path_from_index(imdb.image_set_index[i])
+        if config.TRAIN.ASPECT_GROUPING:
+            size = cv2.imread(roidb[i]['image']).shape
+            roidb[i]['height'] = size[0]
+            roidb[i]['width'] = size[1]
         gt_overlaps = roidb[i]['gt_overlaps'].toarray()
         max_overlaps = gt_overlaps.max(axis=1)
         max_classes = gt_overlaps.argmax(axis=1)
@@ -51,22 +57,27 @@ def add_bbox_regression_targets(roidb):
         max_classes = roidb[im_i]['max_classes']
         roidb[im_i]['bbox_targets'] = compute_bbox_regression_targets(rois, max_overlaps, max_classes)
 
-    # compute mean, std values
-    class_counts = np.zeros((num_classes, 1)) + config.EPS
-    sums = np.zeros((num_classes, 4))
-    squared_sums = np.zeros((num_classes, 4))
-    for im_i in range(num_images):
-        targets = roidb[im_i]['bbox_targets']
-        for cls in range(1, num_classes):
-            cls_indexes = np.where(targets[:, 0] == cls)[0]
-            if cls_indexes.size > 0:
-                class_counts[cls] += cls_indexes.size
-                sums[cls, :] += targets[cls_indexes, 1:].sum(axis=0)
-                squared_sums[cls, :] += (targets[cls_indexes, 1:] ** 2).sum(axis=0)
+    if config.TRAIN.BBOX_NORMALIZATION_PRECOMPUTED:
+        # use fixed / precomputed means and stds instead of empirical values
+        means = np.tile(np.array(config.TRAIN.BBOX_MEANS), (num_classes, 1))
+        stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (num_classes, 1))
+    else:
+        # compute mean, std values
+        class_counts = np.zeros((num_classes, 1)) + config.EPS
+        sums = np.zeros((num_classes, 4))
+        squared_sums = np.zeros((num_classes, 4))
+        for im_i in range(num_images):
+            targets = roidb[im_i]['bbox_targets']
+            for cls in range(1, num_classes):
+                cls_indexes = np.where(targets[:, 0] == cls)[0]
+                if cls_indexes.size > 0:
+                    class_counts[cls] += cls_indexes.size
+                    sums[cls, :] += targets[cls_indexes, 1:].sum(axis=0)
+                    squared_sums[cls, :] += (targets[cls_indexes, 1:] ** 2).sum(axis=0)
 
-    means = sums / class_counts
-    # var(x) = E(x^2) - E(x)^2
-    stds = np.sqrt(squared_sums / class_counts - means ** 2)
+        means = sums / class_counts
+        # var(x) = E(x^2) - E(x)^2
+        stds = np.sqrt(squared_sums / class_counts - means ** 2)
 
     # normalized targets
     for im_i in range(num_images):

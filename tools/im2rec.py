@@ -100,9 +100,9 @@ def write_record(args, image_list, fname):
                 img = img[:, margin:margin + img.shape[0]]
         if args.resize:
             if img.shape[0] > img.shape[1]:
-                newsize = (img.shape[0] * args.resize / img.shape[1], args.resize)
+                newsize = (args.resize, img.shape[0] * args.resize / img.shape[1])
             else:
-                newsize = (args.resize, img.shape[1] * args.resize / img.shape[0])
+                newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
             img = cv2.resize(img, newsize)
         header = mx.recordio.IRHeader(0, item[2], item[0], 0)
 

@@ -6,9 +6,11 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 import ctypes
+import os
 from .base import _LIB
 from .base import RecordIOHandle
 from .base import check_call
+from .base import c_str
 import struct
 import numpy as np
 try:
@@ -28,7 +30,7 @@ class MXRecordIO(object):
         "r" for reading or "w" writing.
     """
     def __init__(self, uri, flag):
-        self.uri = ctypes.c_char_p(uri)
+        self.uri = c_str(uri)
         self.handle = RecordIOHandle()
         self.flag = flag
         self.is_open = False
@@ -69,7 +71,7 @@ class MXRecordIO(object):
 
         Parameters
         ----------
-        buf : string
+        buf : string (python2), bytes (python3)
             buffer to write.
         """
         assert self.writable
@@ -96,6 +98,77 @@ class MXRecordIO(object):
             return buf.contents.raw
         else:
             return None
+
+class MXIndexedRecordIO(MXRecordIO):
+    """Python interface for read/write RecordIO data formmat with index.
+    Support random access.
+
+    Parameters
+    ----------
+    idx_path : str
+        Path to index file
+    uri : str
+        Path to record file. Only support file types that are seekable.
+    flag : str
+        'w' for write or 'r' for read
+    key_type : type
+        data type for keys
+    """
+    def __init__(self, idx_path, uri, flag, key_type=int):
+        super(MXIndexedRecordIO, self).__init__(uri, flag)
+        self.idx_path = idx_path
+        self.idx = {}
+        self.key_type = key_type
+        if not self.writable and os.path.isfile(idx_path):
+            with open(idx_path) as fin:
+                for line in fin.readlines():
+                    line = line.strip().split('\t')
+                    self.idx[key_type(line[0])] = int(line[1])
+
+    def close(self):
+        if self.writable:
+            with open(self.idx_path, 'w') as fout:
+                for k, v in self.idx.items():
+                    fout.write(str(k)+'\t'+str(v)+'\n')
+        super(MXIndexedRecordIO, self).close()
+
+    def reset(self):
+        if self.writable:
+            self.idx = {}
+            super(MXIndexedRecordIO, self).close()
+            super(MXIndexedRecordIO, self).open()
+
+    def seek(self, idx):
+        """Query current read head position"""
+        assert not self.writable
+        pos = ctypes.c_size_t(self.idx[idx])
+        check_call(_LIB.MXRecordIOReaderSeek(self.handle, pos))
+
+    def tell(self):
+        """Query current write head position"""
+        assert self.writable
+        pos = ctypes.c_size_t()
+        check_call(_LIB.MXRecordIOWriterTell(self.handle, ctypes.byref(pos)))
+        return pos.value
+
+    def read_idx(self, idx=None):
+        """Read record with index"""
+        if idx is not None:
+            self.seek(idx)
+        return self.read()
+
+    def write_idx(self, idx, buf):
+        """Write record with index"""
+        pos = self.tell()
+        self.idx[self.key_type(idx)] = pos
+        self.write(buf)
+
+    def keys(self):
+        """List all keys from index"""
+        return list(self.idx.keys())
+
+
+
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
 _IRFormat = 'IfQQ'

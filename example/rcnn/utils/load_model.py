@@ -47,7 +47,8 @@ def load_param(prefix, epoch, convert=False, ctx=None):
     """
     arg_params, aux_params = load_checkpoint(prefix, epoch)
     if convert:
-        assert ctx is not None
+        if ctx is None:
+            ctx = mx.cpu()
         arg_params = convert_context(arg_params, ctx)
         aux_params = convert_context(aux_params, ctx)
     return arg_params, aux_params
