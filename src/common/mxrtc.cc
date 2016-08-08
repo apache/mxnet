@@ -5,7 +5,7 @@
  * \author Junyuan Xie
  */
 #include <mxnet/mxrtc.h>
-#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
+#if (MXNET_USE_CUDA)
 namespace mxnet {
 const char MXRtc::str_type[] = "float";
 std::unordered_map<std::string, char*> MXRtc::kernel_registry;
@@ -14,6 +14,7 @@ MXRtc::MXRtc(const std::string& name,
              std::vector<std::pair<std::string, NDArray> > const& input,
              std::vector<std::pair<std::string, NDArray> > const& output,
              const std::string& kernel) {
+#if (MXNET_USE_NVRTC)
     name_ = name;
     num_input_ = input.size();
     num_output_ = output.size();
@@ -23,6 +24,19 @@ MXRtc::MXRtc(const std::string& name,
     } else {
         ptx_ = compile(name, code_);
     }
+#else
+    LOG(FATAL) << "Need to compile with USE_NVRTC=1 for MXRtc";
+#endif // (MXNET_USE_NVRTC)
+}
+
+MXRtc::MXRtc(const std::string& name,
+             std::vector<std::pair<std::string, NDArray> > const& input,
+             std::vector<std::pair<std::string, NDArray> > const& output,
+             char* ptx) {
+    name_ = name;
+    num_input_ = input.size();
+    num_output_ = output.size();
+    ptx_ = ptx;
 }
 
 void MXRtc::push(std::vector<NDArray> const& input,
@@ -113,6 +127,7 @@ std::string MXRtc::decorate(const std::string& name,
 }
 
 char* MXRtc::compile(const std::string& name, const std::string& code) {
+#if (MXNET_USE_NVRTC)
     nvrtcProgram prog;
     CHECK_EQ(nvrtcCreateProgram(&prog,
                                 code.c_str(),
@@ -133,8 +148,11 @@ char* MXRtc::compile(const std::string& name, const std::string& code) {
     CHECK_EQ(nvrtcGetPTX(prog, ptx), NVRTC_SUCCESS);
     CHECK_EQ(nvrtcDestroyProgram(&prog), NVRTC_SUCCESS);
     return ptx;
+#else
+    return NULL;
+#endif // (MXNET_USE_NVRTC)
 }
 
 }  // namespace mxnet
 
-#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
+#endif // (MXNET_USE_CUDA)
