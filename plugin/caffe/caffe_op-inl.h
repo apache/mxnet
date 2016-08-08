@@ -32,11 +32,11 @@ struct CaffeOpParam : public dmlc::Parameter<CaffeOpParam> {
 
   DMLC_DECLARE_PARAMETER(CaffeOpParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
-    DMLC_DECLARE_FIELD(num_data).set_range(0, 100).set_default(1)
+    DMLC_DECLARE_FIELD(num_data).set_default(1)
     .describe("Operator input number");
-    DMLC_DECLARE_FIELD(num_weight).set_range(0, 100).set_default(0)
+    DMLC_DECLARE_FIELD(num_weight).set_default(0)
     .describe("Weight number");
-    DMLC_DECLARE_FIELD(num_out).set_range(0, 100).set_default(1)
+    DMLC_DECLARE_FIELD(num_out).set_default(1)
     .describe("Operator output number");
   }
 };
@@ -93,13 +93,13 @@ class CaffeOp : public Operator {
 #endif  // __CUDACC__
 
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
-                                      bot_.begin(),
-                                      in_data.begin(),
-                                      param_.num_data);
+                                       bot_.begin(),
+                                       in_data.begin(),
+                                       param_.num_data);
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
-                                      top_.begin(),
-                                      out_data.begin(),
-                                      param_.num_out);
+                                       top_.begin(),
+                                       out_data.begin(),
+                                       param_.num_out);
 
     CaffeOpSetup();
 
@@ -107,9 +107,9 @@ class CaffeOp : public Operator {
     if (!init_w_) {
       init_w_ = true;
       caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
-                      wei_.begin(),
-                      in_data.begin() + param_.num_data,
-                      param_.num_weight);
+                                         wei_.begin(),
+                                         in_data.begin() + param_.num_data,
+                                         param_.num_weight);
       caffe::SetOpBlobs(caffeOp_, wei_);
     }
 
@@ -150,16 +150,22 @@ class CaffeOp : public Operator {
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
-    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad, bot_.begin(), in_grad.begin(), param_.num_data);
-    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad, top_.begin(), out_grad.begin(), param_.num_out);
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
+                                       bot_.begin(),
+                                       in_grad.begin(),
+                                       param_.num_data);
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
+                                       top_.begin(),
+                                       out_grad.begin(),
+                                       param_.num_out);
 
     // Init caffe's gradient pointer
     if (!init_wd_) {
       init_wd_ = true;
       caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
-                            wei_.begin(),
-                            in_grad.begin() + param_.num_data,
-                            param_.num_weight);
+                                         wei_.begin(),
+                                         in_grad.begin() + param_.num_data,
+                                         param_.num_weight);
     }
 
     // Handle OpReqType of weights
@@ -207,6 +213,16 @@ class CaffeOpProp : public OperatorProperty {
         res.push_back(std::to_string(i) + "_bias");
     }
     return res;
+  }
+
+  std::vector<std::string> ListOutputs() const override {
+    if (param_.num_out > 1) {
+      std::vector<std::string> ret;
+      for (uint32_t i = 0; i < param_.num_out; ++i)
+        ret.push_back("output" + std::to_string(i));
+      return ret;
+    } else
+      return {"output"};
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
