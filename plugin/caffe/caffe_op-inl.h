@@ -7,10 +7,11 @@
 #ifndef PLUGIN_CAFFE_CAFFE_OP_INL_H_
 #define PLUGIN_CAFFE_CAFFE_OP_INL_H_
 
+#include <caffe/proto/caffe.pb.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
-#include <caffe/proto/caffe.pb.h>
+
 
 #include <map>
 #include <vector>
@@ -311,7 +312,7 @@ class CaffeOpProp : public OperatorProperty {
 
  private:
   mutable CaffeOpParam param_;
-  mutable ::caffe::Layer<float> *caffeOp_;
+  mutable ::caffe::Layer<float> *caffeOp_ = NULL;
 };  // class CaffeOpSymbol
 #endif
 
