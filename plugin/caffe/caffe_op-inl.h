@@ -32,11 +32,11 @@ struct CaffeOpParam : public dmlc::Parameter<CaffeOpParam> {
 
   DMLC_DECLARE_PARAMETER(CaffeOpParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
-    DMLC_DECLARE_FIELD(num_data).set_range(0, 100).set_default(1)
+    DMLC_DECLARE_FIELD(num_data).set_default(1)
     .describe("Operator input number");
-    DMLC_DECLARE_FIELD(num_weight).set_range(0, 100).set_default(0)
+    DMLC_DECLARE_FIELD(num_weight).set_default(0)
     .describe("Weight number");
-    DMLC_DECLARE_FIELD(num_out).set_range(0, 100).set_default(1)
+    DMLC_DECLARE_FIELD(num_out).set_default(1)
     .describe("Operator output number");
   }
 };
@@ -50,9 +50,9 @@ template<typename xpu, typename Dtype>
 class CaffeOp : public Operator {
  public:
   explicit CaffeOp(CaffeOpParam p):param_(p),
-                                               setup_(false),
-                                               init_w_(false),
-                                               init_wd_(false) {
+                                   init_w_(false),
+                                   init_wd_(false),
+                                   setup_(false) {
     std::string type = param_.prototxt.type();
     caffeOp_ = caffe::LayerRegistry<Dtype>::CreateLayer(param_.prototxt);
 
@@ -85,21 +85,21 @@ class CaffeOp : public Operator {
     CHECK_EQ(in_data.size(), expected_num_data);
     CHECK_EQ(out_data.size(), param_.num_out);
 
-    Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     // TODO(Haoran): when need cublas handle in stream?
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
-                                      bot_.begin(),
-                                      in_data.begin(),
-                                      param_.num_data);
+                                       bot_.begin(),
+                                       in_data.begin(),
+                                       param_.num_data);
     caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
-                                      top_.begin(),
-                                      out_data.begin(),
-                                      param_.num_out);
+                                       top_.begin(),
+                                       out_data.begin(),
+                                       param_.num_out);
 
     CaffeOpSetup();
 
@@ -107,9 +107,9 @@ class CaffeOp : public Operator {
     if (!init_w_) {
       init_w_ = true;
       caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Data,
-                      wei_.begin(),
-                      in_data.begin() + param_.num_data,
-                      param_.num_weight);
+                                         wei_.begin(),
+                                         in_data.begin() + param_.num_data,
+                                         param_.num_weight);
       caffe::SetOpBlobs(caffeOp_, wei_);
     }
 
@@ -150,16 +150,22 @@ class CaffeOp : public Operator {
           << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
 
-    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad, bot_.begin(), in_grad.begin(), param_.num_data);
-    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad, top_.begin(), out_grad.begin(), param_.num_out);
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
+                                       bot_.begin(),
+                                       in_grad.begin(),
+                                       param_.num_data);
+    caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
+                                       top_.begin(),
+                                       out_grad.begin(),
+                                       param_.num_out);
 
     // Init caffe's gradient pointer
     if (!init_wd_) {
       init_wd_ = true;
       caffe::TBlob2CaffeBlob<xpu, Dtype>(caffe::Grad,
-                            wei_.begin(),
-                            in_grad.begin() + param_.num_data,
-                            param_.num_weight);
+                                         wei_.begin(),
+                                         in_grad.begin() + param_.num_data,
+                                         param_.num_weight);
     }
 
     // Handle OpReqType of weights
@@ -197,16 +203,27 @@ class CaffeOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> res;
-    for (index_t i = 0; i < param_.num_data; ++i)
+    for (int i = 0; i < param_.num_data; ++i)
       res.push_back(std::string("data_") + static_cast<char>('0' + i));
 
-    for (index_t i = 0; i < param_.num_weight; ++i) {
+    for (int i = 0; i < param_.num_weight; ++i) {
       if (i == 0)
         res.push_back(std::to_string(i) + "_weight");
       else
         res.push_back(std::to_string(i) + "_bias");
     }
     return res;
+  }
+
+  std::vector<std::string> ListOutputs() const override {
+    if (param_.num_out > 1) {
+      std::vector<std::string> ret;
+      for (int i = 0; i < param_.num_out; ++i)
+        ret.push_back("output" + std::to_string(i));
+      return ret;
+    } else {
+      return {"output"};
+    }
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -233,7 +250,7 @@ class CaffeOpProp : public OperatorProperty {
     // Initialize emtryp bottom & top blobs for caffeop
     vector<Blob<float> *> bot_blobs, top_blobs;
 
-    for (index_t i = 0; i < param_.num_data; ++i) {
+    for (int i = 0; i < param_.num_data; ++i) {
       TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
       auto blob_ptr = new Blob<float>();
@@ -241,14 +258,14 @@ class CaffeOpProp : public OperatorProperty {
       bot_blobs.push_back(blob_ptr);
     }
 
-    for (index_t i = 0; i < param_.num_out; ++i)
+    for (int i = 0; i < param_.num_out; ++i)
       top_blobs.push_back(new Blob<float>());
 
     caffeOp_->SetUp(bot_blobs, top_blobs);
     CHECK_EQ(in_shape->size(), caffeOp_->blobs().size() + param_.num_data);
     // Set weight shape
     CHECK_EQ(param_.num_weight, caffeOp_->blobs().size());
-    for (index_t i = 0; i < param_.num_weight ; ++i) {
+    for (int i = 0; i < param_.num_weight ; ++i) {
       TShape tshape = caffe::Vector2TShape(caffeOp_->blobs()[i]->shape());
       SHAPE_ASSIGN_CHECK(*in_shape, i + param_.num_data, tshape);
     }

@@ -77,14 +77,14 @@ class CaffeLoss : public Operator {
     using std::vector;
     using namespace mshadow;
     using namespace mshadow::expr;
-    for (index_t i = 0; i < req.size(); ++i)
+    for (uint32_t i = 0; i < req.size(); ++i)
       CHECK_EQ(req[i], kWriteTo);
 
     CHECK_EQ(in_data.size(), param_.num_data);
     CHECK_EQ(out_data.size(), param_.num_out);
 
-    Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     // TODO(Haoran): when need cublas handle in stream?
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
@@ -122,12 +122,12 @@ class CaffeLoss : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), param_.num_out);
-    for (index_t i = 0; i < param_.num_data; ++i)
+    for (int i = 0; i < param_.num_data; ++i)
       CHECK(req[i] != kAddTo) << "caffe doesn't accm diff on bottom data";
     CHECK(in_data.size() == param_.num_data);
 
-    Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     // TODO(Haoran): when need cublas handle in stream?
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
           << "Must init CuBLAS handle in stream";
@@ -141,7 +141,7 @@ class CaffeLoss : public Operator {
     top_[0]->set_cpu_diff(&grad_scale_);
 
     // Set BP flag
-    for (index_t i = 0; i < param_.num_data; ++i)
+    for (int i = 0; i < param_.num_data; ++i)
       flags_[i] = req[i] != kNullOp;
 
     caffeOp_->Backward(top_, flags_, bot_);
@@ -195,7 +195,7 @@ class CaffeLossProp : public OperatorProperty {
     // Initialize empty bottom & top blobs for caffeOp setup
     vector<Blob<float> *> bot_blobs, top_blobs;
 
-    for (index_t i = 0; i < param_.num_data; ++i) {
+    for (int i = 0; i < param_.num_data; ++i) {
       TShape tshape = (*in_shape)[i];
       if (tshape.ndim() == 0) return false;
       auto blob_ptr = new Blob<float>();
@@ -203,7 +203,7 @@ class CaffeLossProp : public OperatorProperty {
       bot_blobs.push_back(blob_ptr);
     }
 
-    for (index_t i = 0; i < param_.num_out; ++i)
+    for (int i = 0; i < param_.num_out; ++i)
       top_blobs.push_back(new Blob<float>());
 
     caffeOp_->SetUp(bot_blobs, top_blobs);
