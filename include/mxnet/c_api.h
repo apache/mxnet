@@ -1381,6 +1381,14 @@ MXNET_DLL int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
                           char* kernel, RtcHandle *out);
 
 /**
+ * \brief Create a MXRtc oject from a pointer to a CuModule
+ */
+MXNET_DLL int MXRtcCreateEx(char* name, mx_uint num_input, mx_uint num_output,
+                            char** input_names, char** output_names,
+                            NDArrayHandle* inputs, NDArrayHandle* outputs,
+                            char* ptx, RtcHandle *out);
+
+/**
  * \brief Run cuda kernel
 */
 MXNET_DLL int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,

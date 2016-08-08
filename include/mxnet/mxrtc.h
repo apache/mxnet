@@ -46,11 +46,12 @@ class MXRtc {
    * \param input list input ndarrays and their name.
    * \param output list of output ndarrays and their name.
    * \param ptx cuda module.
+   * \param not_used for overload resolution.
    */
   MXRtc(const std::string& name,
         std::vector<std::pair<std::string, NDArray> > const& input,
         std::vector<std::pair<std::string, NDArray> > const& output,
-        char* ptx);
+        char* ptx, int /*not_used*/);
   /*!
    * \brief launch a kernel with the engine.
    * \param input list of input ndarray.

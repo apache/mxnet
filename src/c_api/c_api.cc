@@ -1482,6 +1482,28 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
   API_END();
 }
 
+int MXRtcCreateEx(char* name, mx_uint num_input, mx_uint num_output,
+                  char** input_names, char** output_names,
+                  NDArrayHandle* inputs, NDArrayHandle* outputs,
+                  char* ptx, RtcHandle *out) {
+  API_BEGIN();
+#if (MXNET_USE_CUDA)
+  std::vector<std::pair<std::string, NDArray> > input, output;
+  for (mx_uint i = 0; i < num_input; ++i) {
+    input.push_back(std::pair<std::string, NDArray>(input_names[i],
+                                                    *reinterpret_cast<NDArray*>(inputs[i])));
+  }
+  for (mx_uint i = 0; i < num_output; ++i) {
+    output.push_back(std::pair<std::string, NDArray>(output_names[i],
+                                                     *reinterpret_cast<NDArray*>(outputs[i])));
+  }
+  MXRtc *rtc = new MXRtc(name, input, output, ptx, 0);
+  *out = reinterpret_cast<RtcHandle>(rtc);
+#else
+  LOG(FATAL) << "Need to compile with USE_CUDA=1 for MXRtc.";
+#endif  // (MXNET_USE_CUDA)
+  API_END();
+}
 int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
               NDArrayHandle* inputs, NDArrayHandle* outputs,
               mx_uint gridDimX,

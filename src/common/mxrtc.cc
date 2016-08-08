@@ -32,7 +32,7 @@ MXRtc::MXRtc(const std::string& name,
 MXRtc::MXRtc(const std::string& name,
              std::vector<std::pair<std::string, NDArray> > const& input,
              std::vector<std::pair<std::string, NDArray> > const& output,
-             char* ptx) {
+             char* ptx, int /*not used*/) {
     name_ = name;
     num_input_ = input.size();
     num_output_ = output.size();
