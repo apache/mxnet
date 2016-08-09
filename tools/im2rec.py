@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 
@@ -8,7 +10,6 @@ import random
 import argparse
 import cv2
 import time
-import multiprocessing
 
 def list_image(root, recursive, exts):
     image_list = []
@@ -120,13 +121,16 @@ def read_worker(args, q_in, q_out):
 def write_worker(q_out, fname, saving_folder):
     pre_time = time.time()
     sink = []
-    os.chdir(saving_folder)
     fname_rec = fname[:fname.rfind('.')]
-    record = mx.recordio.MXRecordIO(fname_rec + '.rec', 'w')
+    rec_file = os.path.join(saving_folder, fname_rec + '.rec')
+    record = mx.recordio.MXRecordIO(rec_file, 'w')
     while True:
         stat, s, item = q_out.get()
         if stat == 'finish':
-            write_list(fname_rec + '.lst', sink)
+            # .lst file is already exists so this action is not needed
+
+            # lst_file = os.path.join(saving_folder, fname_rec + '.lst')
+            # write_list(lst_file, sink)
             break
         record.write(s)
         sink.append(item)
@@ -204,6 +208,8 @@ if __name__ == '__main__':
     source = image_list
     tic = [time.time()]
     try:
+        import multiprocessing
+        
         multiprocessing.freeze_support()
         q_in = [multiprocessing.Queue() for i in range(args.num_thread)]
         q_out = multiprocessing.Queue(1024)
@@ -223,9 +229,9 @@ if __name__ == '__main__':
         print('multiprocessing not available, fall back to single threaded encoding')
         import Queue
         q_out = Queue.Queue()
-        # os.chdir(args.saving_folder)
         fname_rec = fname[:fname.rfind('.')]
-        record = mx.recordio.MXRecordIO(fname_rec + '.rec', 'w')
+        saving_file = os.path.join(args.saving_folder, fname_rec + '.rec')
+        record = mx.recordio.MXRecordIO(saving_file, 'w')
         cnt = 0
         pre_time = time.time()
         for item in image_list:
@@ -239,4 +245,4 @@ if __name__ == '__main__':
                 cur_time = time.time()
                 print 'time:', cur_time - pre_time, ' count:', cnt
                 pre_time = cur_time
-    total = len(source)
+    print 'total: ', len(source)
