@@ -121,16 +121,10 @@ int MXSymbolListAttrShallow(SymbolHandle symbol,
   return NNSymbolListAttrs(symbol, 0, out_size, out);
 }
 
-int MXSymbolListArguments(SymbolHandle symbol,
-                          mx_uint *out_size,
-                          const char ***out_str_array) {
-  return NNSymbolListArguments(symbol, out_size, out_str_array);
-}
-
 int MXSymbolListOutputs(SymbolHandle symbol,
                         mx_uint *out_size,
                         const char ***out_str_array) {
-  return NNSymbolListOutputs(symbol, out_size, out_str_array);
+  return NNSymbolListOutputNames(symbol, out_size, out_str_array);
 }
 
 int MXSymbolCompose(SymbolHandle sym,
@@ -142,14 +136,18 @@ int MXSymbolCompose(SymbolHandle sym,
 }
 
 // adapter functions that re-implements the functions.
+int MXSymbolListArguments(SymbolHandle symbol,
+                          mx_uint *out_size,
+                          const char ***out_str_array) {
+  return NNSymbolListInputNames(symbol, 1, out_size, out_str_array);
+}
+
 int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
                                 mx_uint *out_size,
                                 const char ***out_str_array) {
-  // TODO(tqchen)
-  API_BEGIN();
-  LOG(FATAL) << "not implemented";
-  API_END();
+  return NNSymbolListInputNames(symbol, 2, out_size, out_str_array);
 }
+
 int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                 const char **out) {
   API_BEGIN();
