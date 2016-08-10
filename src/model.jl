@@ -385,8 +385,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   train_execs = Array(Executor, num_dev)
   for i = 1:num_dev
-    data_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_data(data)]
-    label_shapes = [k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_label(data)]
+    data_shapes = Dict([k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_data(data)])
+    label_shapes = Dict([k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_label(data)])
     train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=grad_req, data_shapes..., label_shapes...)
     dbg_str = mx.debug_str(train_execs[i])
     info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
