@@ -997,8 +997,10 @@ function _get_function_description(handle :: MX_handle)
           ref_arg_types, ref_arg_descs, ref_ret_type)
 
   name = Symbol(unsafe_wrap(String, ref_name[]))
-
-  desc = unsafe_wrap(String, ref_desc[]) * "\n\n"
+  signature = _format_signature(Int(ref_narg[]), ref_arg_names)
+  desc = "    " * string(name) * "(" * signature * ")\n\n"
+  desc *= unsafe_wrap(String, ref_desc[]) * "\n\n"
+  desc *= "# Arguments\n"
   desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
   return name, desc
 end

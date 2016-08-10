@@ -87,3 +87,10 @@ function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{ch
   end
   return join(docstrings, "\n")
 end
+
+function _format_signature(narg::Int, arg_names::Ref{char_pp})
+  arg_names  = unsafe_wrap(Array, arg_names[], narg)
+
+  return join([unsafe_string(name) for name in arg_names] , ", ")
+end
+
