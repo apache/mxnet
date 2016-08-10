@@ -7,7 +7,7 @@
 #define MXNET_KVSTORE_KVSTORE_DIST_H_
 #include <string>
 #include <vector>
-#include "./kvstore_device.h"
+#include "./kvstore_local.h"
 #include "mxnet/engine.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
@@ -25,11 +25,9 @@ namespace kvstore {
  * it's the server node's job to control the data consistency among all
  * workers. see details on \ref ServerHandle::Start
  */
-class KVStoreDist : public KVStoreDevice {
+class KVStoreDist : public KVStoreLocal {
  public:
-  explicit KVStoreDist(bool device_mode)
-      : KVStoreDevice(device_mode),
-        ps_worker_(nullptr), server_(nullptr) {
+  KVStoreDist() : ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
       ps::StartAsync("mxnet\0");
@@ -123,11 +121,11 @@ class KVStoreDist : public KVStoreDevice {
       if (buf.is_none()) {
         buf = NDArray(vals[0]->shape(), pinned_ctx_);
       }
+      real_t* data = static_cast<real_t*>(buf.data().dptr_);
+      size_t size = buf.shape().Size();
 
-      auto pull_from_servers = [this, key, buf] (
+      auto pull_from_servers = [this, key, data, size](
           RunContext rctx, Engine::CallbackOnComplete cb) {
-        real_t* data = static_cast<real_t*>(buf.data().dptr_);
-        size_t size = buf.shape().Size();
         // convert to ps keys
         PSKV& pskv = EncodeKey(key, size);
 
@@ -144,7 +142,10 @@ class KVStoreDist : public KVStoreDevice {
           {buf.var()},
           FnProperty::kNormal, priority);
 
-      ScatterPullValue(key, buf, vals, priority);
+      // copy data from buffer to vals
+      for (auto v : vals) {
+        CopyFromTo(buf, v);
+      }
     }
   }
 
@@ -293,8 +294,6 @@ class KVStoreDist : public KVStoreDevice {
     return pskv;
   }
 
-  // whether use device distributed local sync.
-  bool device_mode_;
   /**
    * \brief for worker to push and pull data
    */
