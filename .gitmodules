@@ -1,6 +1,7 @@
 [submodule "mshadow"]
 	path = mshadow
-	url = https://github.com/dmlc/mshadow.git
+	url = https://github.com/bosondata/mshadow.git
+	branch = centos-fix
 [submodule "dmlc-core"]
 	path = dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git
