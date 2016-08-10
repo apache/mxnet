@@ -51,7 +51,7 @@ For example, the :func:`speedometer` callback is defined as
 function every_n_batch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   BatchCallback(n, call_on_0, callback)
 end
-function Base.call(cb :: BatchCallback, state :: OptimizationState)
+@compat function (cb :: BatchCallback)(state :: OptimizationState)
   if state.curr_batch == 0
     if cb.call_on_0
       cb.callback(state)
@@ -107,7 +107,7 @@ A convenient function to construct a callback that runs every ``n`` full data-pa
 function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
 end
-function Base.call{T<:Real}(cb :: EpochCallback, model :: Any, state :: OptimizationState, metric :: Vector{Tuple{Base.Symbol, T}})
+@compat function (cb :: EpochCallback){T<:Real}(model :: Any, state :: OptimizationState, metric :: Vector{Tuple{Base.Symbol, T}})
   if state.curr_epoch == 0
     if cb.call_on_0
       cb.callback(model, state, metric)
