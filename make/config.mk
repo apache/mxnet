@@ -54,7 +54,7 @@ USE_NVRTC = 0
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
-USE_OPENCV = 1
+USE_OPENCV = 0
 
 # use openmp for parallelization
 USE_OPENMP = 1
