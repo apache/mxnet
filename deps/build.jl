@@ -1,3 +1,4 @@
+using Compat
 ################################################################################
 # First try to detect and load existing libmxnet
 ################################################################################
@@ -21,7 +22,7 @@ if !libmxnet_detected
   ################################################################################
   # If not found, try to build automatically using BinDeps
   ################################################################################
-  @windows_only begin
+  if is_windows()
     info("Please follow the libmxnet documentation on how to build manually")
     info("or to install pre-build packages:")
     info("http://mxnet.readthedocs.io/en/latest/how_to/build.html#building-on-windows")
@@ -60,7 +61,9 @@ if !libmxnet_detected
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
           ChangeDirectory("$_mxdir")
           `cp make/config.mk config.mk`
-          @osx_only `cp make/osx.mk config.mk`
+          if is_apple()
+            `cp make/osx.mk config.mk`
+          end
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
           `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
           `cp ../../cblas.h include/cblas.h`
