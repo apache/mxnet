@@ -559,7 +559,7 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
           (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
           hdr, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
 
-  iter_name = Symbol(String(ref_name[]))
+  iter_name = Symbol(unsafe_wrap(String, ref_name[]))
 
   if gen_docs
     if endswith(string(iter_name), "Iter")
@@ -567,7 +567,7 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
     else
       f_desc = ""
     end
-    f_desc *= String(ref_desc[]) * "\n\n"
+    f_desc *= unsafe_string(ref_desc[]) * "\n\n"
     f_desc *= ":param Base.Symbol data_name: keyword argument, default ``:data``. The name of the data.\n"
     f_desc *= ":param Base.Symbol label_name: keyword argument, default ``:softmax_label``. " *
               "The name of the label. Could be ``nothing`` if no label is presented in this dataset.\n\n"
@@ -578,8 +578,8 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
 
   defun = quote
     function $iter_name(; kwargs...)
-      arg_keys = AbstractString[string(k) for (k,v) in kwargs]
-      arg_vals = AbstractString[dump_mx_param(v) for (k,v) in kwargs]
+      arg_keys = String[string(k) for (k,v) in kwargs]
+      arg_vals = String[dump_mx_param(v) for (k,v) in kwargs]
       ref_hdr  = Ref{MX_handle}(0)
 
       @mxcall(:MXDataIterCreateIter, (MX_handle, MX_uint, char_pp, char_pp, Ref{MX_handle}),
@@ -603,7 +603,7 @@ function _import_io_iterators(;gen_docs::Bool=false)
   @mxcall(:MXListDataIters, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
 
   n_creators = n_ref[]
-  h_creators = pointer_to_array(h_ref[], n_creators)
+  h_creators = unsafe_wrap(Array, h_ref[], n_creators)
 
   if gen_docs
     docs = Dict{Base.Symbol, AbstractString}()

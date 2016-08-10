@@ -55,8 +55,8 @@ macro _list_symbol_info(self, func_name)
     @mxcall($func_name, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
             $self, ref_sz, ref_names)
     narg = ref_sz[]
-    names = pointer_to_array(ref_names[], narg)
-    names = [Symbol(@compat String(x)) for x in names]
+    names = unsafe_wrap(Array, ref_names[], narg)
+    names = [Symbol(unsafe_wrap(String, x)) for x in names]
     return names
   end
 end
@@ -123,13 +123,13 @@ Get attribute attached to this :class:`SymbolicNode` belonging to key.
 :return: The value belonging to key as a :class:`Nullable`.
 """
 function get_attr(self :: SymbolicNode, key :: Symbol)
-  key_s = @compat String(string(key))
+  key_s = string(key)
   ref_out = Ref{Cstring}()
   ref_success = Ref{Cint}(-1)
   @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}),
           self, key_s, ref_out, ref_success)
   if ref_success[] == 1
-    return Nullable{String}(@compat String(ref_out[]))
+    return Nullable{String}(unsafe_string(ref_out[]))
   else
     return Nullable{String}()
   end
@@ -147,11 +147,11 @@ function list_attr(self :: SymbolicNode)
   @mxcall(:MXSymbolListAttrShallow, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
             self, ref_sz, ref_strings)
   narg = 2*ref_sz[]
-  strings = pointer_to_array(ref_strings[], narg)
+  strings = unsafe_wrap(Array, ref_strings[], narg)
   out = Dict{Symbol, String}()
   for i in 1:2:narg
-    key = Symbol(@compat String(strings[i]))
-    value = @compat String(strings[i+1])
+    key = Symbol(unsafe_wrap(String, strings[i]))
+    value = unsafe_string(strings[i+1]) # Creates a copy of string
     out[key] = value
   end
   return out
@@ -169,11 +169,11 @@ function list_all_attr(self :: SymbolicNode)
   @mxcall(:MXSymbolListAttr, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
             self, ref_sz, ref_strings)
   narg = 2*ref_sz[]
-  strings = pointer_to_array(ref_strings[], narg)
+  strings = unsafe_wrap(Array, ref_strings[], narg)
   out = Dict{Symbol, String}()
   for i in 1:2:narg
-    key = Symbol(@compat String(strings[i]))
-    value = @compat String(strings[i+1])
+    key = Symbol(unsafe_wrap(String, strings[i]))
+    value = unsafe_string(strings[i+1])
     out[key] = value
   end
   return out
@@ -191,8 +191,8 @@ the attributes of a :class:`SymbolicNode` that is already been used somewhere el
 cause unexpected behavior and inconsistency.
 """
 function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
-  key_s = @compat String(string(key))
-  value_s = @compat String(value)
+  key_s = string(key)
+  value_s = String(value)
 
   @mxcall(:MXSymbolSetAttr, (MX_handle, Cstring, Cstring), self, key_s, value_s)
 end
@@ -231,10 +231,10 @@ function Group(nodes :: SymbolicNode...)
 end
 
 function _build_shapes(shape_size::MX_uint, shape_ndim::Ptr{MX_uint}, shape_data::Ptr{Ptr{MX_uint}})
-  shape_ndim = pointer_to_array(shape_ndim, shape_size)
-  shape_data = pointer_to_array(shape_data, shape_size)
+  shape_ndim = unsafe_wrap(Array, shape_ndim, shape_size)
+  shape_data = unsafe_wrap(Array, shape_data, shape_size)
   shapes = map(1:shape_size) do i
-    my_shape = pointer_to_array(shape_data[i], shape_ndim[i])
+    my_shape = unsafe_wrap(Array, shape_data[i], shape_ndim[i])
     tuple(flipdim(Int[my_shape...],1)...)
   end
   convert(Vector{Tuple}, shapes)
@@ -332,9 +332,9 @@ function _infer_type(self, keys, arg_type_data)
   if ref_complete[] == 0
     return (nothing, nothing, nothing)
   else
-    in_type = pointer_to_array(ref_in_type_data[], ref_in_type_size[])
-    out_type = pointer_to_array(ref_out_type_data[], ref_out_type_size[])
-    aux_type = pointer_to_array(ref_aux_type_data[], ref_aux_type_size[])
+    in_type = unsafe_wrap(Array, ref_in_type_data[], ref_in_type_size[])
+    out_type = unsafe_wrap(Array, ref_out_type_data[], ref_out_type_size[])
+    aux_type = unsafe_wrap(Array, ref_aux_type_data[], ref_aux_type_size[])
     return ([fromTypeFlag(TypeFlag(t)) for t in in_type],
             [fromTypeFlag(TypeFlag(t)) for t in out_type],
             [fromTypeFlag(TypeFlag(t)) for t in aux_type])
@@ -528,7 +528,7 @@ Convert a :class:`SymbolicNode` into a JSON string.
 function to_json(self :: SymbolicNode)
   ref_json = Ref{char_p}(0)
   @mxcall(:MXSymbolSaveToJSON, (MX_handle, Ref{char_p}), self, ref_json)
-  return @compat String(ref_json[])
+  return unsafe_string(ref_json[])
 end
 
 """
