@@ -21,10 +21,6 @@ namespace kvstore {
  * \brief Device implementation of KVStore that do reduction on GPU reduction.
  */
 class KVStoreDevice : public KVStoreLocal {
- public:
-  explicit KVStoreDevice(bool device_mode)
-      : device_mode_(device_mode) {}
-
  protected:
   using KeyShape = std::pair<int, TShape>;
   void Init(const std::vector<int>& keys,
@@ -61,27 +57,27 @@ class KVStoreDevice : public KVStoreLocal {
         }
       }
 
-      tm_buf.merged = NDArray(s, Context::CPUPinned(tm_buf.ctx.dev_id));
-      tm_buf.merged_device = NDArray(s, tm_buf.ctx);
+      tm_buf.merged = NDArray(s, tm_buf.ctx);
       ctx_info[tm_buf.ctx.dev_id].second += s.Size();
     }
   }
 
   const NDArray& MergePushValue(
       int key, const std::vector<NDArray>& val, int priority) override {
-    if (!device_mode_) {
+    if (updater_ != nullptr) {
+      // fall back to CPU based update if updater presents
       return KVStoreLocal::MergePushValue(key, val, priority);
     }
-    if (!buf_initialized_) {
+
+    if (merge_buf_.empty()) {
       InitMergeBuffers(val);
-      buf_initialized_ = true;
     }
 
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(val.size());
-    CHECK(!buf.merged_device.is_none());
-    CopyFromTo(val[0], &(buf.merged_device), priority);
-    reduce[0] = buf.merged_device;
+    CHECK(!buf.merged.is_none());
+    CopyFromTo(val[0], &(buf.merged), priority);
+    reduce[0] = buf.merged;
 
     for (size_t i = 1; i < val.size(); ++i) {
       NDArray *copy_buf = buf.AllocCopyBuf(
@@ -89,45 +85,11 @@ class KVStoreDevice : public KVStoreLocal {
       CopyFromTo(val[i], copy_buf, priority);
       reduce[i] = *copy_buf;
     }
-    ElementwiseSum(reduce, &buf.merged_device);
-
-    if (updater_ != nullptr) {
-      CopyFromTo(buf.merged_device, &(buf.merged));
-      return buf.merged;
-    } else {
-      return buf.merged_device;
-    }
-  }
-
-  void ScatterPullValue(
-      int key,
-      const NDArray& src,
-      const std::vector<NDArray*>& vals,
-      int priority) override {
-    if (!device_mode_) {
-      KVStoreLocal::ScatterPullValue(key, src, vals, priority);
-      return;
-    }
-    auto it = merge_buf_.find(key);
-    if (it != merge_buf_.end() && it->first == key) {
-      auto& buf = it->second;
-      if (!buf.merged_device.is_none()) {
-        CopyFromTo(src, &(buf.merged_device));
-        for (auto* vptr : vals) {
-          CopyFromTo(buf.merged_device, vptr, priority);
-        }
-        return;
-      }
-    }
-    // default, copy back
-    for (auto* vptr : vals) {
-      CopyFromTo(src, vptr, priority);
-    }
+    ElementwiseSum(reduce, &buf.merged);
+    return buf.merged;
   }
 
  private:
-  bool device_mode_;
-  bool buf_initialized_{false};
   std::vector<KeyShape> sorted_key_shape_;
 };
 }  // namespace kvstore
