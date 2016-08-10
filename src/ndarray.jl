@@ -1082,9 +1082,17 @@ macro _import_ndarray_functions()
     name, desc = _get_function_description(handle)
     exprs = _get_function_expressions(handle, name)
 
-    expr = quote
-      $(exprs...)
-      @doc $desc $name
+    # TODO(vchuravy): Fix this in a more elegant way once we only support
+    # v0.5
+    if isdefined(Base, name) || isdefined(name)
+      expr = quote
+        $(exprs...)
+      end
+    else
+      expr = quote
+        $(exprs...)
+        @doc $desc $name
+      end
     end
 
     push!(func_exprs, expr)
