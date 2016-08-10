@@ -586,14 +586,17 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
   kv_nargs_s  = unsafe_wrap(String, ref_kv_nargs[])
   kv_nargs    = Symbol(kv_nargs_s)
 
+  signature = _format_signature(Int(ref_nargs[]), ref_arg_names)
+  f_desc = "    " * func_name_s * "(" * signature * ")\n\n"
   f_desc = unsafe_wrap(String, ref_desc[]) * "\n\n"
   if !isempty(kv_nargs_s)
-    f_desc *= "This function support variable length positional :class:`SymbolicNode` inputs.\n\n"
+    f_desc *= "This function support variable length positional `SymbolicNode` inputs.\n\n"
   end
+  f_desc *= "# Arguments\n"
   f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-  f_desc *= ":param Symbol name: The name of the :class:`SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
-  f_desc *= ":param Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`SymbolicNode`.\n\n"
-  f_desc *= ":return: $(_format_typestring(unsafe_wrap(String, ref_ret_type[]))).\n\n"
+  f_desc *= "* `name::Symbol`: The name of the `SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
+  f_desc *= "* `attrs::Dict{Symbol, AbstractString}`: The attributes associated with this `SymbolicNode`.\n\n"
+  f_desc *= "Returns `$(_format_typestring(unsafe_wrap(String, ref_ret_type[])))`."
 
   # function $func_name(args...; kwargs...)
   func_head = Expr(:call, func_name, Expr(:parameters, Expr(:..., :kwargs)), Expr(:..., :args))
