@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# add file encoding here
 
 import os
 import sys
@@ -75,13 +76,19 @@ def read_list(path_in):
     return image_list
 
 
+# Changed the original function write_record cause the multiprocessing must be in the __main__ process in Windows, otherwise the Pickle
+# Error would happen
+
 def image_encode(args, item, q_out):
+    # move the coler modes here
     color_modes = {-1: cv2.IMREAD_UNCHANGED,
                    0: cv2.IMREAD_GRAYSCALE,
                    1: cv2.IMREAD_COLOR}
 
+    # cause the content of make_list, here get the parient directory of data root
     pari_path = os.path.relpath(os.path.join(args.root, '..'), '.')
     try:
+        # change the file path by join pari_path and item[1]
         img = cv2.imread(os.path.join(pari_path, item[1]), color_modes[args.color])
     except:
         print 'imread error:', item[1]
@@ -111,19 +118,22 @@ def image_encode(args, item, q_out):
         print 'pack_img error:', item[1]
         return
 
-
+# the original read_worker in write_record, add argument args
 def read_worker(args, q_in, q_out):
     while not q_in.empty():
         item = q_in.get()
         image_encode(args, item, q_out)
 
-
+# the write_worker 
 def write_worker(q_out, fname, saving_folder):
     pre_time = time.time()
     sink = []
     fname_rec = fname[:fname.rfind('.')]
+    
+    # remove the change directory operation, change the write record operation controled by write function it self 
     rec_file = os.path.join(saving_folder, fname_rec + '.rec')
     record = mx.recordio.MXRecordIO(rec_file, 'w')
+    
     while True:
         stat, s, item = q_out.get()
         if stat == 'finish':
@@ -173,7 +183,7 @@ def main():
                         help='specify whether to crop the center image to make it rectangular.')
     rgroup.add_argument('--quality', type=int, default=80,
                         help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
-    rgroup.add_argument('--num_thread', type=int, default=1,
+    rgroup.add_argument('--num-thread', type=int, default=1,
                         help='number of thread to use for encoding. order of images will be different\
         from the input list if >1. the input list will be modified to match the\
         resulting order.')
@@ -190,26 +200,31 @@ def main():
         im2rec will randomize the image order in <prefix>.lst')
     args = parser.parse_args()
 
+    # add data_path here
     # data_path = os.path.abspath(args.root)
     data_path = args.root
     if args.list:
         make_list(args)
     else:
+        # f is just file name original, not a path, here changed it
         files = [f for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]
         for f in files:
             if f.startswith(args.prefix) is True and f.endswith('.lst') is True:
                 print 'Creating .rec file from', f, 'in', args.saving_folder
+                # join f with data_path
                 image_list = read_list(os.path.join(data_path, f))
+                # delete write record and moved it to the __main__ process
                 return (args, image_list, f)
 
 
 if __name__ == '__main__':
+    # here is the __main__ process, which do the write operation original in write_record 
     (args, image_list, fname) = main()
     source = image_list
     tic = [time.time()]
     try:
         import multiprocessing
-        
+        # add freeze_support
         multiprocessing.freeze_support()
         q_in = [multiprocessing.Queue() for i in range(args.num_thread)]
         q_out = multiprocessing.Queue(1024)
@@ -230,6 +245,7 @@ if __name__ == '__main__':
         import Queue
         q_out = Queue.Queue()
         fname_rec = fname[:fname.rfind('.')]
+        # remove the change directory operation, change the write record operation controled by write function it self 
         saving_file = os.path.join(args.saving_folder, fname_rec + '.rec')
         record = mx.recordio.MXRecordIO(saving_file, 'w')
         cnt = 0
@@ -245,4 +261,5 @@ if __name__ == '__main__':
                 cur_time = time.time()
                 print 'time:', cur_time - pre_time, ' count:', cnt
                 pre_time = cur_time
+    # add total print operation
     print 'total: ', len(source)
