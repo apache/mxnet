@@ -1,4 +1,4 @@
 #!/bin/bash
 
-wget -c http://webdocs.cs.ualberta.ca/~bx3/data/Inception.zip
+wget -c http://data.dmlc.ml/mxnet/data/Inception.zip
 unzip Inception.zip
