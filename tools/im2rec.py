@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # add file encoding here
 
+from __future__ import print_function
 import os
 import sys
 
@@ -91,10 +92,10 @@ def image_encode(args, item, q_out):
         # change the file path by join pari_path and item[1]
         img = cv2.imread(os.path.join(pari_path, item[1]), color_modes[args.color])
     except:
-        print 'imread error:', item[1]
+        print ('imread error:', item[1])
         return
     if img is None:
-        print 'read none error:', item[1]
+        print ('read none error:', item[1])
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
@@ -115,7 +116,7 @@ def image_encode(args, item, q_out):
         s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
         q_out.put(('data', s, item))
     except:
-        print 'pack_img error:', item[1]
+        print ('pack_img error:', item[1])
         return
 
 # the original read_worker in write_record, add argument args
@@ -146,7 +147,7 @@ def write_worker(q_out, fname, saving_folder):
         sink.append(item)
         if len(sink) % 1000 == 0:
             cur_time = time.time()
-            print 'time:', cur_time - pre_time, ' count:', len(sink)
+            print ('time:', cur_time - pre_time, ' count:', len(sink))
             pre_time = cur_time
 
 
@@ -210,7 +211,7 @@ def main():
         files = [f for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]
         for f in files:
             if f.startswith(args.prefix) is True and f.endswith('.lst') is True:
-                print 'Creating .rec file from', f, 'in', args.saving_folder
+                print ('Creating .rec file from', f, 'in', args.saving_folder)
                 # join f with data_path
                 image_list = read_list(os.path.join(data_path, f))
                 # delete write record and moved it to the __main__ process
@@ -259,7 +260,7 @@ if __name__ == '__main__':
             cnt += 1
             if cnt % 1000 == 0:
                 cur_time = time.time()
-                print 'time:', cur_time - pre_time, ' count:', cnt
+                print ('time:', cur_time - pre_time, ' count:', cnt)
                 pre_time = cur_time
     # add total print operation
-    print 'total: ', len(source)
+    print ('total: ', len(source))
