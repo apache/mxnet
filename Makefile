@@ -71,6 +71,10 @@ ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
 endif
 
+ifeq ($(CAFFE_CONV_COMPATIABLE), 1)
+	CFLAGS += -DCAFFE_CONV_COMPATIABLE
+endif
+
 ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
