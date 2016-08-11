@@ -196,7 +196,7 @@ inline void ImageRecordIOParser::Init(
       augmenters_[i].emplace_back(ImageAugmenter::Create(aug_name));
       augmenters_[i].back()->Init(kwargs);
     }
-    prnds_.emplace_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
+    prnds_.emplace_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic + time(0)));
   }
   if (param_.path_imglist.length() != 0) {
     label_map_.reset(new ImageLabelMap(param_.path_imglist.c_str(),
@@ -300,7 +300,7 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   DMLC_DECLARE_PARAMETER(ImageRecordParam) {
     DMLC_DECLARE_FIELD(shuffle).set_default(false)
         .describe("Augmentation Param: Whether to shuffle data.");
-    DMLC_DECLARE_FIELD(seed).set_default(0)
+    DMLC_DECLARE_FIELD(seed).set_default(time(0))
         .describe("Augmentation Param: Random Seed.");
     DMLC_DECLARE_FIELD(verbose).set_default(true)
         .describe("Auxiliary Param: Whether to output information.");
