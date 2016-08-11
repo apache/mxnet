@@ -114,6 +114,10 @@ class CaffeOp : public Operator {
     }
 
     caffeOp_->Forward(bot_, top_);
+
+#if defined(__CUDACC__)
+    CHECK_EQ(cudaStreamSynchronize(NULL), cudaSuccess);
+#endif  // __CUDACC__
   }
 
   // Set up caffe op with real data
@@ -177,6 +181,10 @@ class CaffeOp : public Operator {
       flags_[i] = req[i] != kNullOp;
 
     caffeOp_->Backward(top_, flags_, bot_);
+
+#if defined(__CUDACC__)
+    CHECK_EQ(cudaStreamSynchronize(NULL), cudaSuccess);
+#endif  // __CUDACC__
   }
 
   void HandleOpReq(mshadow::Stream<xpu>*s, OpReqType req, const TBlob& in_g) {
