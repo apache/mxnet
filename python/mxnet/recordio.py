@@ -151,10 +151,9 @@ class MXIndexedRecordIO(MXRecordIO):
         check_call(_LIB.MXRecordIOWriterTell(self.handle, ctypes.byref(pos)))
         return pos.value
 
-    def read_idx(self, idx=None):
+    def read_idx(self, idx):
         """Read record with index"""
-        if idx is not None:
-            self.seek(idx)
+        self.seek(idx)
         return self.read()
 
     def write_idx(self, idx, buf):
