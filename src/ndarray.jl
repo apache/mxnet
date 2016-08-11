@@ -251,7 +251,7 @@ function size(arr :: NDArray)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
           arr, ref_ndim, ref_shape)
-  tuple(map(Int, flipdim(pointer_to_array(ref_shape[], ref_ndim[]),1))...)
+  tuple(map(Int, flipdim(unsafe_wrap(Array, ref_shape[], ref_ndim[]),1))...)
 end
 function size(arr :: NDArray, dim :: Int)
   size(arr)[dim]
@@ -824,8 +824,7 @@ end
 function try_get_shared(arr :: NDArray)
   if context(arr).device_type == CPU
     # try to do data sharing
-    vec = pointer_to_array(pointer(arr), length(arr))
-    return reshape(vec, size(arr))
+    return unsafe_wrap(Array, pointer(arr), size(arr))
   else
     # impossible to share, just copying
     return copy(arr)
@@ -876,11 +875,11 @@ function load(filename::AbstractString, ::Type{NDArray})
   out_name_size = out_name_size[]
   out_size      = out_size[]
   if out_name_size == 0
-    return [NDArray(MX_NDArrayHandle(hdr)) for hdr in pointer_to_array(out_hdrs[], out_size)]
+    return [NDArray(MX_NDArrayHandle(hdr)) for hdr in unsafe_wrap(Array, out_hdrs[], out_size)]
   else
     @assert out_size == out_name_size
-    return Dict([(Symbol(@compat String(k)), NDArray(MX_NDArrayHandle(hdr))) for (k,hdr) in
-                 zip(pointer_to_array(out_names[], out_size), pointer_to_array(out_hdrs[], out_size))])
+    return Dict([(Symbol(unsafe_wrap(String, k)), NDArray(MX_NDArrayHandle(hdr))) for (k,hdr) in
+                 zip(unsafe_wrap(Array, out_names[], out_size), unsafe_wrap(Array, out_hdrs[], out_size))])
   end
 end
 
@@ -998,8 +997,10 @@ function _get_function_description(handle :: MX_handle)
           ref_arg_types, ref_arg_descs, ref_ret_type)
 
   name = Symbol(unsafe_wrap(String, ref_name[]))
-
-  desc = unsafe_wrap(String, ref_desc[]) * "\n\n"
+  signature = _format_signature(Int(ref_narg[]), ref_arg_names)
+  desc = "    " * string(name) * "(" * signature * ")\n\n"
+  desc *= unsafe_wrap(String, ref_desc[]) * "\n\n"
+  desc *= "# Arguments\n"
   desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
   return name, desc
 end
@@ -1081,9 +1082,17 @@ macro _import_ndarray_functions()
     name, desc = _get_function_description(handle)
     exprs = _get_function_expressions(handle, name)
 
-    expr = quote
-      $(exprs...)
-      @doc $desc $name
+    # TODO(vchuravy): Fix this in a more elegant way once we only support
+    # v0.5
+    if isdefined(Base, name) || isdefined(name)
+      expr = quote
+        $(exprs...)
+      end
+    else
+      expr = quote
+        $(exprs...)
+        @doc $desc $name
+      end
     end
 
     push!(func_exprs, expr)

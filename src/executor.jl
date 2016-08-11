@@ -23,7 +23,7 @@ function Executor(hdr :: MX_ExecutorHandle, symbol :: SymbolicNode,
   ref_hdrs = Ref{Ptr{MX_handle}}(0)
   @mxcall(:MXExecutorOutputs, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_handle}}),
           hdr, ref_size, ref_hdrs)
-  out_hdrs = pointer_to_array(ref_hdrs[], ref_size[])
+  out_hdrs = unsafe_wrap(Array, ref_hdrs[], ref_size[])
   out_arrays = [NDArray(MX_NDArrayHandle(x)) for x in out_hdrs]
 
   arg_names = list_arguments(symbol)
@@ -217,5 +217,5 @@ Can be used to get an estimated about the memory cost.
 function debug_str(self :: Executor)
   s_ref = Ref{Cstring}()
   @mxcall(:MXExecutorPrint, (MX_handle, Ptr{Cstring}), self.handle, s_ref)
-  @compat String(s_ref[])
+  unsafe_string(s_ref[])
 end
