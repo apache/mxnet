@@ -88,7 +88,7 @@ endif
 USE_DIST_KVSTORE = 0
 
 # whether or not to keep the conv and pooling output same as caffe's
-CAFFE_CONV_COMPATIABLE = 1
+CAFFE_CONV_COMPATIABLE = 0
 
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
 # required
