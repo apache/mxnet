@@ -1437,6 +1437,15 @@ def test_support_vector_machine_l2_svm():
     grad_np = grad_np.astype(np.float32)
     assert_allclose(grad_np, grad.asnumpy())
 
+def test_roipooling():
+    data = mx.symbol.Variable(name='data')
+    rois = mx.symbol.Variable(name='rois')
+    test = mx.symbol.ROIPooling(data=data, rois=rois, pooled_size=(6, 6), spatial_scale=1)
+
+    x1 = np.random.rand(4, 3, 12, 8)
+    x2 = np.array([[0, 1, 1, 6, 6], [2, 6, 2, 7, 11], [1, 3, 1, 5, 10], [0, 3, 3, 3, 3]])
+
+    check_numeric_gradient(test, [x1, x2], numeric_eps=1e-4, check_eps=1e-1)
 
 if __name__ == '__main__':
     test_expand_dims()
@@ -1478,3 +1487,4 @@ if __name__ == '__main__':
     test_correlation()
     test_support_vector_machine_l1_svm()
     test_support_vector_machine_l2_svm()
+    test_roipooling()
