@@ -4,7 +4,7 @@
  * \brief Utility functions and registries to help quickly build new operators.
  *
  *  Use the register functions in this file when possible to simplify operator creations.
- *  Operators registred in this file will be exposed to both NDArray API and symbolic API.
+ *  Operators registered in this file will be exposed to both NDArray API and symbolic API.
  *
  * \author Tianqi Chen
  */

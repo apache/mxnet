@@ -3,7 +3,6 @@ package ml.dmlc.mxnet.spark
 import ml.dmlc.mxnet._
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet.spark.io.LabeledPointIter
-import org.apache.spark.{SparkFiles, SparkContext}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.slf4j.{Logger, LoggerFactory}
@@ -62,6 +61,16 @@ class MXNet extends Serializable {
   }
 
   /**
+   * The application (including parameter scheduler & servers)
+   * will exist if it hasn't received heart beat for over timeout seconds
+   * @param timeout timeout in seconds (default 300)
+   */
+  def setTimeout(timeout: Int): this.type = {
+    params.timeout = timeout
+    this
+  }
+
+  /**
    * These jars are required by the KVStores at runtime.
    * They will be uploaded and distributed to each node automatically
    * @param jars jars required by the KVStore at runtime.
@@ -99,7 +108,8 @@ class MXNet extends Serializable {
     logger.info("Starting scheduler on {}:{}", schedulerIP, schedulerPort)
     val scheduler = new ParameterServer(params.runtimeClasspath, role = "scheduler",
       rootUri = schedulerIP, rootPort = schedulerPort,
-      numServer = params.numServer, numWorker = params.numWorker, java = params.javabin)
+      numServer = params.numServer, numWorker = params.numWorker,
+      timeout = params.timeout, java = params.javabin)
     require(scheduler.startProcess(), "Failed to start ps scheduler process")
 
     sc.parallelize(1 to params.numServer, params.numServer).foreachPartition { p =>
@@ -109,6 +119,7 @@ class MXNet extends Serializable {
         rootUri = schedulerIP, rootPort = schedulerPort,
         numServer = params.numServer,
         numWorker = params.numWorker,
+        timeout = params.timeout,
         java = params.javabin)
       require(server.startProcess(), "Failed to start ps server process")
     }
@@ -131,11 +142,14 @@ class MXNet extends Serializable {
 
       logger.info("Launching worker ...")
       logger.info("Batch {}", params.batchSize)
+      // give enough time for ps-lite to detect the dead nodes
+      Thread.sleep(20000)
       KVStoreServer.init(ParameterServer.buildEnv(role = "worker",
         rootUri = schedulerIP, rootPort = schedulerPort,
         numServer = params.numServer,
         numWorker = params.numWorker))
       val kv = KVStore.create("dist_async")
+      kv.setBarrierBeforeExit(false)
 
       val optimizer: Optimizer = new SGD(learningRate = 0.01f,
         momentum = 0.9f, wd = 0.00001f)
@@ -158,7 +172,7 @@ class MXNet extends Serializable {
 
       logger.info("Training finished, waiting for other workers ...")
       dataIter.dispose()
-      kv.barrier()
+      kv.setBarrierBeforeExit(true)
       kv.dispose()
       Iterator(new MXNetModel(
         model, params.dimension, params.batchSize,
