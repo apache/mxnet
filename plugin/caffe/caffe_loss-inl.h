@@ -101,6 +101,10 @@ class CaffeLoss : public Operator {
     CaffeOpSetup();
     caffeOp_->Forward(bot_, top_);
 
+    // Sync cpu data to gpu data
+    for (uint32_t i = 0; i < top_.size(); ++i)
+      top_[i]->gpu_data();
+
 #if defined(__CUDACC__)
     CHECK_EQ(cudaStreamSynchronize(NULL), cudaSuccess);
 #endif  // __CUDACC__
@@ -149,6 +153,10 @@ class CaffeLoss : public Operator {
       flags_[i] = req[i] != kNullOp;
 
     caffeOp_->Backward(top_, flags_, bot_);
+
+    // Sync cpu diff to gpu diff
+    for (uint32_t i = 0; i < top_.size(); ++i)
+      top_[i]->gpu_data();
 
 #if defined(__CUDACC__)
     CHECK_EQ(cudaStreamSynchronize(NULL), cudaSuccess);
