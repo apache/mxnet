@@ -81,7 +81,7 @@ class CaffeOp : public Operator {
     using namespace mshadow::expr;
     for (uint32_t i = 0; i < req.size(); ++i)
       CHECK_EQ(req[i], kWriteTo);
-    uint32_t expected_num_data = param_.num_weight + param_.num_data;
+    int expected_num_data = param_.num_weight + param_.num_data;
     CHECK_EQ(in_data.size(), expected_num_data);
     CHECK_EQ(out_data.size(), param_.num_out);
 
@@ -144,7 +144,7 @@ class CaffeOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), param_.num_out);
-    for (uint32_t i = 0; i < param_.num_data; ++i)
+    for (int i = 0; i < param_.num_data; ++i)
       CHECK(req[i] != kAddTo) << "caffe doesn't accm diff on bottom data";
 
     int expected_num_data = param_.num_weight + param_.num_data;
@@ -187,7 +187,7 @@ class CaffeOp : public Operator {
     caffeOp_->Backward(top_, flags_, bot_);
 
     // Sync cpu diff to gpu diff
-    for (uint32_t i = 0; i < top_.size(); ++i)
+    for (uint32_t i = 0; i < bot_.size(); ++i)
       bot_[i]->gpu_diff();
 
 #if defined(__CUDACC__)
