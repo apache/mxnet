@@ -101,11 +101,11 @@ class CaffeLoss : public Operator {
     CaffeOpSetup();
     caffeOp_->Forward(bot_, top_);
 
+#if defined(__CUDACC__)
     // Sync cpu data to gpu data
     for (uint32_t i = 0; i < top_.size(); ++i)
       top_[i]->gpu_data();
 
-#if defined(__CUDACC__)
     CHECK_EQ(cudaStreamSynchronize(NULL), cudaSuccess);
 #endif  // __CUDACC__
   }
@@ -154,11 +154,11 @@ class CaffeLoss : public Operator {
 
     caffeOp_->Backward(top_, flags_, bot_);
 
+#if defined(__CUDACC__)
     // Sync cpu diff to gpu diff
     for (uint32_t i = 0; i < bot_.size(); ++i)
       bot_[i]->gpu_diff();
 
-#if defined(__CUDACC__)
     CHECK_EQ(cudaStreamSynchronize(NULL), cudaSuccess);
 #endif  // __CUDACC__
   }
