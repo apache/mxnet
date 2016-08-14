@@ -8,12 +8,6 @@
  *  Image List Format: unique-image-index label[s] path-to-image
  * \sa dmlc/recordio.h
  */
-#ifdef _MSC_VER
-#define SSCANF sscanf_s
-#else
-#define SSCANF sscanf
-#endif
-
 #include <cctype>
 #include <cstring>
 #include <string>
@@ -78,7 +72,15 @@ int main(int argc, char *argv[]) {
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
-    if (SSCANF(argv[i], "%[^=]=%s", key, sizeof(key), val, sizeof(val)) == 2) {
+    int effct_len = 0;
+    
+    #ifdef _MSC_VER
+        effct_len = sscanf_s(argv[i], "%[^=]=%s", key, sizeof(key), val, sizeof(val));
+    #else
+        effct_len = sscanf_s(argv[i], "%[^=]=%s", key, val);
+    #endif
+    
+    if (effct_len == 2) {
       if (!strcmp(key, "resize")) new_size = atoi(val);
       if (!strcmp(key, "label_width")) label_width = atoi(val);
       if (!strcmp(key, "pack_label")) pack_label = atoi(val);
