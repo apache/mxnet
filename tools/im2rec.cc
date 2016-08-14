@@ -74,11 +74,11 @@ int main(int argc, char *argv[]) {
     char key[128], val[128];
     int effct_len = 0;
     
-    #ifdef _MSC_VER
-        effct_len = sscanf_s(argv[i], "%[^=]=%s", key, sizeof(key), val, sizeof(val));
-    #else
-        effct_len = sscanf(argv[i], "%[^=]=%s", key, val);
-    #endif
+#ifdef _MSC_VER
+    effct_len = sscanf_s(argv[i], "%[^=]=%s", key, sizeof(key), val, sizeof(val));
+#else
+    effct_len = sscanf(argv[i], "%[^=]=%s", key, val);
+#endif
     
     if (effct_len == 2) {
       if (!strcmp(key, "resize")) new_size = atoi(val);
