@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# add file encoding here
-
 from __future__ import print_function
 import os
 import sys
@@ -12,6 +10,7 @@ import random
 import argparse
 import cv2
 import time
+
 
 def list_image(root, recursive, exts):
     image_list = []
@@ -26,29 +25,26 @@ def list_image(root, recursive, exts):
                 if os.path.isfile(fpath) and (suffix in exts):
                     if path not in cat:
                         cat[path] = len(cat)
-                    image_list.append((len(image_list), os.path.relpath(fpath, root), cat[path]))
+                    yield (len(image_list), os.path.relpath(fpath, root), cat[path])
     else:
         for fname in os.listdir(root):
             fpath = os.path.join(root, fname)
             suffix = os.path.splitext(fname)[1].lower()
             if os.path.isfile(fpath) and (suffix in exts):
-                image_list.append((len(image_list), os.path.relpath(fpath, root), 0))
-    return image_list
-
+                yield (len(image_list), os.path.relpath(fpath, root), 0)
 
 def write_list(path_out, image_list):
     with open(path_out, 'w') as fout:
-        n_images = xrange(len(image_list))
-        for i in n_images:
-            line = '%d\t' % image_list[i][0]
-            for j in image_list[i][2:]:
-                line += '%d\t' % j
-            line += '%s\n' % image_list[i][1]
+        for i, item in enumerate(image_list):
+            line = '%d\t' % item[0]
+            for j in item[2:]:
+                line += '%f\t' % j
+            line += '%s\n' % item[1]
             fout.write(line)
-
 
 def make_list(args):
     image_list = list_image(args.root, args.recursive, args.exts)
+    image_list = list(image_list)
     if args.shuffle is True:
         random.seed(100)
         random.shuffle(image_list)
@@ -66,36 +62,24 @@ def make_list(args):
         write_list(args.prefix + str_chunk + '_train.lst', chunk[sep_test:sep_test + sep])
         write_list(args.prefix + str_chunk + '_val.lst', chunk[sep_test + sep:])
 
-
 def read_list(path_in):
-    image_list = []
     with open(path_in) as fin:
-        for line in fin.readlines():
+        while True:
+            line = fin.readline()
+            if not line:
+                break
             line = [i.strip() for i in line.strip().split('\t')]
-            item = [int(line[0])] + [line[-1]] + [int(i) for i in line[1:-1]]
-            image_list.append(item)
-    return image_list
-
-
-# Changed the original function write_record cause the multiprocessing must be in the __main__ process in Windows, otherwise the Pickle
-# Error would happen
+            item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
+            yield item
 
 def image_encode(args, item, q_out):
-    # move the coler modes here
-    color_modes = {-1: cv2.IMREAD_UNCHANGED,
-                   0: cv2.IMREAD_GRAYSCALE,
-                   1: cv2.IMREAD_COLOR}
-
-    # cause the content of make_list, here get the parient directory of data root
-    pari_path = os.path.relpath(os.path.join(args.root, '..'), '.')
     try:
-        # change the file path by join pari_path and item[1]
-        img = cv2.imread(os.path.join(pari_path, item[1]), color_modes[args.color])
+        img = cv2.imread(os.path.join(args.root, item[1]), args.color)
     except:
-        print ('imread error:', item[1])
+        print('imread error:', item[1])
         return
     if img is None:
-        print ('read none error:', item[1])
+        print('read none error:', item[1])
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
@@ -110,53 +94,58 @@ def image_encode(args, item, q_out):
         else:
             newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
         img = cv2.resize(img, newsize)
-    header = mx.recordio.IRHeader(0, item[2], item[0], 0)
+    if len(item) > 3 and args.pack_label:
+        header = mx.recordio.IRHeader(0, item[2:], item[0], 0)
+    else:
+        header = mx.recordio.IRHeader(0, item[2], item[0], 0)
 
     try:
         s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
-        q_out.put(('data', s, item))
-    except:
-        print ('pack_img error:', item[1])
+        q_out.put((s, item))
+    except Exception, e:
+        print('pack_img error:', item[1], e)
         return
 
-# the original read_worker in write_record, add argument args
 def read_worker(args, q_in, q_out):
-    while not q_in.empty():
+    while True:
         item = q_in.get()
+        if item is None:
+            break
         image_encode(args, item, q_out)
 
-# the write_worker 
-def write_worker(q_out, fname, saving_folder):
+def write_worker(q_out, fname, working_dir):
     pre_time = time.time()
-    sink = []
-    fname_rec = fname[:fname.rfind('.')]
-    
-    # remove the change directory operation, change the write record operation controled by write function it self 
-    rec_file = os.path.join(saving_folder, fname_rec + '.rec')
-    record = mx.recordio.MXRecordIO(rec_file, 'w')
-    
+    count = 0
+    fname_rec = os.path.basename(fname)
+    fname_rec = os.path.splitext(fname)[0] + '.rec'
+    fout = open(fname+'.tmp', 'w')
+    record = mx.recordio.MXRecordIO(os.path.join(working_dir, fname_rec), 'w')
     while True:
-        stat, s, item = q_out.get()
-        if stat == 'finish':
-            # .lst file is already exists so this action is not needed
-
-            # lst_file = os.path.join(saving_folder, fname_rec + '.lst')
-            # write_list(lst_file, sink)
+        deq = q_out.get()
+        if deq is None:
             break
+        s, item = deq
         record.write(s)
-        sink.append(item)
-        if len(sink) % 1000 == 0:
+
+        line = '%d\t' % item[0]
+        for j in item[2:]:
+            line += '%f\t' % j
+        line += '%s\n' % item[1]
+        fout.write(line)
+
+        if count % 1000 == 0:
             cur_time = time.time()
-            print ('time:', cur_time - pre_time, ' count:', len(sink))
+            print('time:', cur_time - pre_time, ' count:', count)
             pre_time = cur_time
+        count += 1
+    os.rename(fname+'.tmp', fname)
 
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description='Create an image list or \
         make a record database by reading from an image list')
-    parser.add_argument('prefix', help='prefix of input/output files.')
+    parser.add_argument('prefix', help='prefix of input/output lst and rec files.')
     parser.add_argument('root', help='path to folder containing images.')
 
     cgroup = parser.add_argument_group('Options for creating image lists')
@@ -195,72 +184,72 @@ def main():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
                         help='specify the encoding of the images.')
-    rgroup.add_argument('--saving-folder', type=str, default='.',
-                        help='folder in which .rec files will be saved.')
     rgroup.add_argument('--shuffle', default=True, help='If this is set as True, \
         im2rec will randomize the image order in <prefix>.lst')
+    rgroup.add_argument('--pack-label', default=False,
+        help='Whether to also pack multi dimensional label in the record file') 
     args = parser.parse_args()
+    args.prefix = os.path.abspath(args.prefix)
+    args.root = os.path.abspath(args.root)
+    return args
 
-    # add data_path here
-    # data_path = os.path.abspath(args.root)
-    data_path = args.root
+if __name__ == '__main__':
+    args = parse_args()
     if args.list:
         make_list(args)
     else:
-        # f is just file name original, not a path, here changed it
-        files = [f for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]
-        for f in files:
-            if f.startswith(args.prefix) is True and f.endswith('.lst') is True:
-                print ('Creating .rec file from', f, 'in', args.saving_folder)
-                # join f with data_path
-                image_list = read_list(os.path.join(data_path, f))
-                # delete write record and moved it to the __main__ process
-                return (args, image_list, f)
+        if os.path.isdir(args.prefix):
+            working_dir = args.prefix
+        else:
+            working_dir = os.path.dirname(args.prefix)
+        files = [os.path.join(working_dir, fname) for fname in os.listdir(working_dir)
+                    if os.path.isfile(os.path.join(working_dir, fname))]
+        count = 0
+        for fname in files:
+            if fname.startswith(args.prefix) and fname.endswith('.lst'):
+                print('Creating .rec file from', fname, 'in', working_dir)
+                count += 1
+                image_list = read_list(fname)
+                # -- write_record -- #
+                try:
+                    import multiprocessing
+                    q_in = [multiprocessing.Queue(1024) for i in range(args.num_thread)]
+                    q_out = multiprocessing.Queue(1024)
+                    read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out)) \
+                                    for i in range(args.num_thread)]
+                    for p in read_process:
+                        p.start()
+                    write_process = multiprocessing.Process(target=write_worker, args=(q_out, fname, working_dir))
+                    write_process.start()
 
+                    for i, item in enumerate(image_list):
+                        q_in[i % len(q_in)].put(item)
+                    for q in q_in:
+                        q.put(None)
+                    for p in read_process:
+                        p.join()
 
-if __name__ == '__main__':
-    # here is the __main__ process, which do the write operation original in write_record 
-    (args, image_list, fname) = main()
-    source = image_list
-    tic = [time.time()]
-    try:
-        import multiprocessing
-        # add freeze_support
-        multiprocessing.freeze_support()
-        q_in = [multiprocessing.Queue() for i in range(args.num_thread)]
-        q_out = multiprocessing.Queue(1024)
-        for i in range(len(image_list)):
-            q_in[i % len(q_in)].put(image_list[i])
-        read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out)) \
-                        for i in range(args.num_thread)]
-        for p in read_process:
-            p.start()
-        write_process = multiprocessing.Process(target=write_worker, args=(q_out, fname, args.saving_folder))
-        write_process.start()
-        for p in read_process:
-            p.join()
-        q_out.put(('finish', '', []))
-        write_process.join()
-    except EOFError:
-        print('multiprocessing not available, fall back to single threaded encoding')
-        import Queue
-        q_out = Queue.Queue()
-        fname_rec = fname[:fname.rfind('.')]
-        # remove the change directory operation, change the write record operation controled by write function it self 
-        saving_file = os.path.join(args.saving_folder, fname_rec + '.rec')
-        record = mx.recordio.MXRecordIO(saving_file, 'w')
-        cnt = 0
-        pre_time = time.time()
-        for item in image_list:
-            image_encode(args, item, q_out)
-            if q_out.empty():
-                continue
-            _, s, _ = q_out.get()
-            record.write(s)
-            cnt += 1
-            if cnt % 1000 == 0:
-                cur_time = time.time()
-                print ('time:', cur_time - pre_time, ' count:', cnt)
-                pre_time = cur_time
-    # add total print operation
-    print ('total: ', len(source))
+                    q_out.put(None)
+                    write_process.join()
+                except ImportError:
+                    print('multiprocessing not available, fall back to single threaded encoding')
+                    import Queue
+                    q_out = Queue.Queue()
+                    fname_rec = os.path.basename(fname)
+                    fname_rec = os.path.splitext(fname)[0] + '.rec'
+                    record = mx.recordio.MXRecordIO(os.path.join(working_dir, fname_rec), 'w')
+                    cnt = 0
+                    pre_time = time.time()
+                    for item in image_list:
+                        image_encode(args, item, q_out)
+                        if q_out.empty():
+                            continue
+                        _, s, _ = q_out.get()
+                        record.write(s)
+                        if cnt % 1000 == 0:
+                            cur_time = time.time()
+                            print('time:', cur_time - pre_time, ' count:', cnt)
+                            pre_time = cur_time
+                        cnt += 1
+        if not count:
+            print('Did not find and list file with prefix %s'%args.prefix)
