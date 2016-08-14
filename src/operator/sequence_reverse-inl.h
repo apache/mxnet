@@ -4,8 +4,9 @@
  * \brief
  * \author Sebastian Bodenstien
 */
-#ifndef MXNET_OPERATOR_SEQUENCE_LAST_INL_H_
-#define MXNET_OPERATOR_SEQUENCE_LAST_INL_H_
+
+#ifndef MXNET_OPERATOR_SEQUENCE_REVERSE_INL_H_
+#define MXNET_OPERATOR_SEQUENCE_REVERSE_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -38,21 +39,21 @@ class SequenceReverseOp : public Operator {
   }
 
   void sequence_reverse(
-                      mshadow::Tensor<xpu, 3, DType> &data, 
-                      mshadow::Tensor<xpu, 3, DType> &out, 
-                      mshadow::Tensor<xpu, 1, DType> &indices,
-                      OpReqType req) {
+                        mshadow::Tensor<xpu, 3, DType> data,
+                        mshadow::Tensor<xpu, 3, DType> out,
+                        mshadow::Tensor<xpu, 1, DType> indices,
+                        OpReqType req) {
     using namespace mshadow;
     using namespace mshadow::expr;
     index_t seq_length;
     index_t max_seq_len = data.size(0);
     index_t batch_size = data.size(1);
-    for (index_t b = 0; b < batch_size; ++b){
+    for (index_t b = 0; b < batch_size; ++b) {
       seq_length = indices[b];
       for (index_t s = 0; s < max_seq_len; ++s) {
-        if(s < seq_length)
-         Assign(out[s][b], req, F<mshadow_op::identity>(data[seq_length - s][b]))
-        else // preserve padding type
+        if (s < seq_length)
+         Assign(out[s][b], req, F<mshadow_op::identity>(data[seq_length - s - 1][b]))
+        else  // preserve padding type
           Assign(out[s][b], req, F<mshadow_op::identity>(data[s][b]))
       }
     }
@@ -72,15 +73,15 @@ class SequenceReverseOp : public Operator {
     Tensor<xpu, 1, DType> indices = in_data[seq_reverse::kSequenceLength].get<xpu, 1, DType>(s);
 
     // Get any size input + output into required form
-    int max_seq_len = in_data[seq_reverse::kData].size(0);   
+    int max_seq_len = in_data[seq_reverse::kData].size(0);
     int n = in_data[seq_reverse::kData].size(1);
-    int total_size = in_data[seq_reverse::kData].Size(); 
+    int total_size = in_data[seq_reverse::kData].Size();
     int rest_dim = static_cast<int>(total_size/n/max_seq_len);
 
     Shape<3> s3 = Shape3(max_seq_len, n, rest_dim);
     Tensor<xpu, 3, DType> data = in_data[seq_reverse::kData].get_with_shape<xpu, 3, DType>(s3, s);
     Tensor<xpu, 3, DType> out = out_data[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
-    
+
     sequence_reverse(data, out, indices, req[seq_reverse::kOut]);
   }
 
@@ -100,15 +101,17 @@ class SequenceReverseOp : public Operator {
     Tensor<xpu, 1, DType> indices = in_grad[seq_reverse::kSequenceLength].get<xpu, 1, DType>(s);
 
     // Get any size input + output into required form
-    int max_seq_len = in_grad[seq_reverse::kData].size(0);   
+    int max_seq_len = in_grad[seq_reverse::kData].size(0);
     int n = in_grad[seq_reverse::kData].size(1);
-    int total_size = in_grad[seq_reverse::kData].Size(); 
+    int total_size = in_grad[seq_reverse::kData].Size();
     int rest_dim = static_cast<int>(total_size/n/max_seq_len);
-    
+
     Shape<3> s3 = Shape3(max_seq_len, n, rest_dim);
 
-    Tensor<xpu, 3, DType> data_grad = in_grad[seq_reverse::kData].get_with_shape<xpu, 3, DType>(s3, s);
-    Tensor<xpu, 3, DType> output_grad = out_grad[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
+    Tensor<xpu, 3, DType> data_grad =
+      in_grad[seq_reverse::kData].get_with_shape<xpu, 3, DType>(s3, s);
+    Tensor<xpu, 3, DType> output_grad =
+      out_grad[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
     sequence_reverse(output_grad, data_grad, indices, req[seq_reverse::kData]);
   }
 
@@ -221,4 +224,4 @@ class SequenceReverseProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_SEQUENCE_LAST_INL_H_
+#endif  // MXNET_OPERATOR_SEQUENCE_REVERSE_INL_H_
