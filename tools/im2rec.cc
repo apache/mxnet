@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     #ifdef _MSC_VER
         effct_len = sscanf_s(argv[i], "%[^=]=%s", key, sizeof(key), val, sizeof(val));
     #else
-        effct_len = sscanf_s(argv[i], "%[^=]=%s", key, val);
+        effct_len = sscanf(argv[i], "%[^=]=%s", key, val);
     #endif
     
     if (effct_len == 2) {
