@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
-    if (sscanf(argv[i], "%[^=]=%s", key, val) == 2) {
+    if (sscanf_s(argv[i], "%[^=]=%s", key, sizeof(key), val, sizeof(val)) == 2) {
       if (!strcmp(key, "resize")) new_size = atoi(val);
       if (!strcmp(key, "label_width")) label_width = atoi(val);
       if (!strcmp(key, "pack_label")) pack_label = atoi(val);
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
   }
   LOG(INFO) << "Encoding is " << encoding;
 
-  if (encoding == std::string(".png") and quality > 9) {
+  if (encoding == std::string(".png") && quality > 9) {
       quality = 3;
   }
   if (inter_method != 1) {
