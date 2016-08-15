@@ -10,6 +10,7 @@
 namespace mxnet {
 namespace op {
 template <> Operator *CreateOp<gpu>(SequenceReverseParam param, int dtype) {
+  Operator *op = NULL;
   return op;
 }
 
