@@ -17,59 +17,63 @@ Faster R-CNN utilize an alternate optimization training process between RPN
 and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 
 ## Getting Started
+* Install python package `easydict`, `cv2`, `matplotlib`. MXNet require `numpy`.
+* Install MXNet with version no later than Commit 8a3424e, preferably the latest master.
+  Follow the instructions at http://mxnet.readthedocs.io/en/latest/how_to/build.html. Install the python interface.
+* Try out detection result by running `python demo.py --prefix final --epoch 0 --image myimage.jpg --gpu 0`.
+  Suppose you have downloaded pretrained network and place the extracted file `final-0000.params` in this folder and there is an image named `myimage.jpg`.
 
-* Install a forked MXNet at [MXNet-detection](https://github.com/precedenceguo/mxnet/tree/detection).
-Follow the instructions at http://mxnet.readthedocs.io/en/latest/how_to/build.html. Install the python interface.
-Note that the link refers to `detection` branch of the fork. Use `git clone -b detection https://github.com/precedenceguo/mxnet.git`
-to clone or `git checkout detection` if you checked out the master.
-* Download data and place them to `data` folder according to `Data Folder Structure`.
-  You might want to create a symbolic link to VOCdevkit folder
-```
-Pascal VOCdevkit
-http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
-http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar
-http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCdevkit_08-Jun-2007.tar
-```
-* Data Folder Structure (suppose root is `data`)
-```
-demo
-rpn_data (created by rpn)
-selective_search_data (can be omitted)
-cache (created by imdb)
--- name + source + roidb.pkl (create by imdb)
--- name (created by detection and evaluation)
-VOCdevkit
--- VOC + year (JPEG images and annotations)
--- results (created by evaluation)
----- VOC + year
------- main
--------- comp4_det_val_aeroplane.txt
-```
+## Training and Testing Faster R-CNN
+* Install additional python package `scipy`.
+* Download Pascal VOC data and place them to `data` folder according to `Data Folder Structure`.
+  You might want to create a symbolic link to VOCdevkit folder by `ln -s /path/to/your/VOCdevkit data/VOCdevkit`.
 * Download VGG16 pretrained model, use `mxnet/tools/caffe_converter` to convert it,
-  rename to `vgg16-symbol.json` and `vgg16-0001.params` and place it in `model` folder
+  rename to `vgg16-symbol.json` and `vgg16-0001.params` and place it in `model` folder.
+  `model` folder will be used to place model checkpoints along the training process.
+* Start training by running `python train_alternate.py` after VOCdevkit is ready.
+  A typical command would be `python train_alternate.py --gpus 0`. This will train the network on the VOC07 trainval.
+  More control of training process can be found in the argparse help accessed by `python train_alternate.py -h`.
+* Start testing by run `python test.py` after completing the training process.
+  A typical command would be `python test.py --has_rpn --prefix model/final --epoch 8`. This will test the network on the VOC07 test.
+  Adding a `--vis` will turn on visualization and `-h` will show help as in the training process.
 
-## Training
-* Start training by run `python -m tools.train_alternate`. Variable args can be found by run
-`python -m tools.train_alternate --help`.
+## Training and Testing Fast R-CNN
+* Download Pascal VOC data and place them to `data` folder according to `Data Folder Structure`.
+  You might want to create a symbolic link to VOCdevkit folder by `ln -s /path/to/your/VOCdevkit data/VOCdevkit`.
+* Download precomputed selective search data and place them to `data` folder according to `Data Folder Structure`.
+* Download VGG16 pretrained model, use `mxnet/tools/caffe_converter` to convert it,
+  rename to `vgg16-symbol.json` and `vgg16-0001.params` and place it in `model` folder.
+  `model` folder will be used to place model checkpoints along the training process.
+* Start training by running `python -m tools.train_rcnn --proposal ss` to use the selective search proposal.
+* Start testing by running `python -m tools.test_rcnn --proposal ss`.
 
-## Testing
-* Start testing by run `python -m tools.test_final`. Variable args can be found by run
-`python -m tools.test_final --help`.
+## Information
+* Download link to trained model
+  Baidu Yun: http://pan.baidu.com/s/1boRhGvH (ixiw) or Dropbox: https://www.dropbox.com/s/jrr83q0ai2ckltq/final-0000.params.tar.gz?dl=0
+* Download link to Pascal VOC and precomputed selective search proposals
 
-## Contributing Guide
-You are more than welcome to add new features to this implementation or fix any potential bugs. 
-Here are some topics to look at.
-* MXNet features superior and robust distributed training. This implementation 
-has not yet fully ultilized this power.
-* New approximate end to end training is available from Faster R-CNN python 
-implementation whose link can be found in Disclaimer. This implementation 
-does not support this feature.
-* MXNet has efficient data loading module which renders data IO irrelevant 
-in performance. This implementation has not used this module.
-* More object detection dataset is available online. The dataset module is designed 
-as simple and scalable. Welcome to add more dataset support to this implementation.
-* During inference, some operations are only conducted in cpu. Reimplement them may bring 
-better performance in testing time.
+  ```
+  Pascal VOCdevkit
+  http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
+  http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar
+  http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCdevkit_08-Jun-2007.tar
+  selective_search_data (by Ross Girshick)
+  Download link accessible at https://github.com/rbgirshick/fast-rcnn/blob/master/data/scripts/fetch_selective_search_data.sh
+  ```
+
+* Data Folder Structure (create a `data` folder if there is none)
+
+  ```
+  VOCdevkit
+  -- VOC + year (JPEG images and annotations)
+  -- results (will be created by evaluation)
+  ---- VOC + year
+  ------ main
+  -------- comp4_det_val_aeroplane.txt
+  selective_search_data
+  rpn_data (will be created by rpn)
+  cache (will be created by imdb)
+  ```
 
 ## Disclaimer
 This repository used code from [MXNet](https://github.com/dmlc/mxnet),

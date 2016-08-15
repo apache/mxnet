@@ -132,22 +132,23 @@ inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
       for (int h = 0; h < height_; ++h) {
         for (int w = 0; w < width_; ++w) {
           int offset_bottom_diff = (b * channels_ + c) * height_ * width_;
-          offset_bottom_diff += h * height_ + w;
+          offset_bottom_diff += h * width_ + w;
 
           Dtype gradient = 0;
           // Accumulate gradient over all ROIs that pooled this element
           for (int roi_n = 0; roi_n < num_rois; ++roi_n) {
-            int roi_batch_ind = bottom_rois[0];
+            const Dtype* offset_bottom_rois = bottom_rois + roi_n * 5;
+            int roi_batch_ind = offset_bottom_rois[0];
             assert(roi_batch_ind >= 0);
             assert(roi_batch_ind < batch_size_);
             if (b != roi_batch_ind) {
               continue;
             }
 
-            int roi_start_w = round(bottom_rois[1] * spatial_scale_);
-            int roi_start_h = round(bottom_rois[2] * spatial_scale_);
-            int roi_end_w = round(bottom_rois[3] * spatial_scale_);
-            int roi_end_h = round(bottom_rois[4] * spatial_scale_);
+            int roi_start_w = round(offset_bottom_rois[1] * spatial_scale_);
+            int roi_start_h = round(offset_bottom_rois[2] * spatial_scale_);
+            int roi_end_w = round(offset_bottom_rois[3] * spatial_scale_);
+            int roi_end_h = round(offset_bottom_rois[4] * spatial_scale_);
 
             bool in_roi = (w >= roi_start_w && w <= roi_end_w &&
                            h >= roi_start_h && h <= roi_end_h);
@@ -191,9 +192,6 @@ inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
                 }
               }
             }
-
-            // Increment ROI data pointer
-            bottom_rois += bbox.size(1);
           }
           bottom_diff[offset_bottom_diff] = gradient;
         }
@@ -209,13 +207,21 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator* CreateOp<cpu>(ROIPoolingParam param) {
-  return new ROIPoolingOp<cpu>(param);
+Operator *CreateOp<cpu>(ROIPoolingParam param, int dtype) {
+  Operator* op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new ROIPoolingOp<cpu, DType>(param);
+  });
+  return op;
 }
 
-// DO_BIND_DISPATCH comes from static_operator_common.h
-Operator* ROIPoolingProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp, param_);
+Operator *ROIPoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                                           std::vector<int> *in_type) const {
+  std::vector<TShape> out_shape, aux_shape;
+  std::vector<int> out_type, aux_type;
+  CHECK(InferType(in_type, &out_type, &aux_type));
+  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }
 
 DMLC_REGISTER_PARAMETER(ROIPoolingParam);

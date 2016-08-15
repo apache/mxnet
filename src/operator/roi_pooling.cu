@@ -10,13 +10,6 @@
 #include <algorithm>
 #include <vector>
 
-#define ROIPOOLING_CUDA_CHECK(condition) \
-  /* Code block avoids redefinition of cudaError_t error */ \
-  do { \
-    cudaError_t error = condition; \
-    CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
-  } while (0)
-
 namespace mshadow {
 namespace cuda {
 
@@ -117,7 +110,6 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
   ROIPoolForwardKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
       count, bottom_data, spatial_scale, channels, height, width,
       pooled_height, pooled_width, bottom_rois, top_data, argmax_data);
-  ROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
 }
 
 template<typename Dtype>
@@ -221,7 +213,6 @@ inline void ROIPoolBackward(const Tensor<gpu, 4, Dtype> &in_grad,
   ROIPoolBackwardKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
       count, top_diff, argmax_data, num_rois, spatial_scale, channels, height, width,
       pooled_height, pooled_width, bottom_diff, bottom_rois);
-  ROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
 }
 
 }  // namespace cuda
@@ -251,8 +242,13 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator* CreateOp<gpu>(ROIPoolingParam param) {
-  return new ROIPoolingOp<gpu>(param);
+Operator* CreateOp<gpu>(ROIPoolingParam param, int dtype) {
+  Operator* op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new ROIPoolingOp<gpu, DType>(param);
+  });
+  return op;
 }
+
 }  // namespace op
 }  // namespace mxnet

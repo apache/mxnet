@@ -9,7 +9,6 @@ from mxnet import context as ctx
 from mxnet.initializer import Uniform
 from mxnet.module.base_module import BaseModule
 from mxnet.module.module import Module
-# import numpy as np
 
 class MutableModule(BaseModule):
     """A mutable module is a module that supports variable input data.
@@ -24,10 +23,11 @@ class MutableModule(BaseModule):
     work_load_list : list of number
     max_data_shapes : list of (name, shape) tuple, designating inputs whose shape vary
     max_label_shapes : list of (name, shape) tuple, designating inputs whose shape vary
+    fixed_param_prefix : list of str, indicating fixed parameters
     """
     def __init__(self, symbol, data_names, label_names,
                  logger=logging, context=ctx.cpu(), work_load_list=None,
-                 max_data_shapes=None, max_label_shapes=None):
+                 max_data_shapes=None, max_label_shapes=None, fixed_param_prefix=None):
         super(MutableModule, self).__init__(logger=logger)
         self._symbol = symbol
         self._data_names = data_names
@@ -38,11 +38,21 @@ class MutableModule(BaseModule):
         self._curr_module = None
         self._max_data_shapes = max_data_shapes
         self._max_label_shapes = max_label_shapes
+        self._fixed_param_prefix = fixed_param_prefix
+
         if self._max_data_shapes is None:
             self._max_data_shapes = []
         if self._max_label_shapes is None:
             self._max_label_shapes = []
-        # self._monitor_weight = None
+        if self._fixed_param_prefix is None:
+            self._fixed_param_prefix = []
+
+        fixed_param_names = list()
+        for name in self._symbol.list_arguments():
+            for prefix in self._fixed_param_prefix:
+                if prefix in name:
+                    fixed_param_names.append(name)
+        self._fixed_param_names = fixed_param_names
 
     def _reset_bind(self):
         self.binded = False
@@ -121,7 +131,8 @@ class MutableModule(BaseModule):
                 max_label_shapes.append((name, shape))
 
         module = Module(self._symbol, self._data_names, self._label_names, logger=self.logger,
-                        context=self._context, work_load_list=self._work_load_list)
+                        context=self._context, work_load_list=self._work_load_list,
+                        fixed_param_names=self._fixed_param_names)
         module.bind(max_data_shapes, max_label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None)
         self._curr_module = module
@@ -154,17 +165,14 @@ class MutableModule(BaseModule):
         if shape_changed:
             module = Module(self._symbol, self._data_names, self._label_names,
                             logger=self.logger, context=self._context,
-                            work_load_list=self._work_load_list)
+                            work_load_list=self._work_load_list,
+                            fixed_param_names=self._fixed_param_names)
             module.bind(data_batch.provide_data, data_batch.provide_label, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad, force_rebind=False,
                         shared_module=self._curr_module)
             self._curr_module = module
 
         self._curr_module.forward(data_batch, is_train=is_train)
-
-        # arg_params = self._curr_module._arg_params
-        # if self._monitor_weight is not None:
-        #     print 'diff', np.sum(np.abs(arg_params['conv4_2_weight'].asnumpy() - self._monitor_weight))
 
     def backward(self, out_grads=None):
         assert self.binded and self.params_initialized
@@ -173,12 +181,6 @@ class MutableModule(BaseModule):
     def update(self):
         assert self.binded and self.params_initialized and self.optimizer_initialized
         self._curr_module.update()
-
-        # arg_params = self._curr_module._arg_params
-        # if self._monitor_weight is not None:
-        #     self.get_params()
-        #     print 'diff2', np.sum(np.abs(arg_params['conv4_2_weight'].asnumpy() - self._monitor_weight))
-        # self._monitor_weight = arg_params['conv4_2_weight'].asnumpy()
 
     def get_outputs(self, merge_multi_context=True):
         assert self.binded and self.params_initialized

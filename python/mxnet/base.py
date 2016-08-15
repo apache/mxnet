@@ -76,19 +76,34 @@ def check_call(ret):
     if ret != 0:
         raise MXNetError(py_str(_LIB.MXGetLastError()))
 
-def c_str(string):
-    """Create ctypes char * from a python string
-    Parameters
-    ----------
-    string : string type
-        python string
+if sys.version_info[0] < 3:
+    def c_str(string):
+        """Create ctypes char * from a python string
+        Parameters
+        ----------
+        string : string type
+            python string
 
-    Returns
-    -------
-    str : c_char_p
-        A char pointer that can be passed to C API
-    """
-    return ctypes.c_char_p(string.encode('utf-8'))
+        Returns
+        -------
+        str : c_char_p
+            A char pointer that can be passed to C API
+        """
+        return ctypes.c_char_p(string)
+else:
+    def c_str(string):
+        """Create ctypes char * from a python string
+        Parameters
+        ----------
+        string : string type
+            python string
+
+        Returns
+        -------
+        str : c_char_p
+            A char pointer that can be passed to C API
+        """
+        return ctypes.c_char_p(string.encode('utf-8'))
 
 
 def c_array(ctype, values):

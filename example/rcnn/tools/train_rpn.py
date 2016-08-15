@@ -13,12 +13,12 @@ from rcnn.symbol import get_vgg_rpn
 from utils.load_data import load_gt_roidb
 from utils.load_model import load_param
 
+# rpn config
 config.TRAIN.HAS_RPN = True
 config.TRAIN.BATCH_SIZE = 1
-config.TRAIN.ASPECT_GROUPING = False
 
 
-def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
+def train_rpn(image_set, year, root_path, devkit_path, pretrained, epoch,
               prefix, ctx, begin_epoch, end_epoch, frequent, kv_store, work_load_list=None, resume=False):
     # set up logger
     logger = logging.getLogger()
@@ -66,12 +66,10 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
         args['rpn_bbox_pred_bias'] = mx.nd.zeros(shape=arg_shape_dict['rpn_bbox_pred_bias'])
 
     # prepare training
-    fixed_params_names = []
-    for name in args.keys():
-        if config.TRAIN.FINETUNE and name.startswith('conv'):
-            fixed_params_names.append(name)
-        elif name.startswith('conv1') or name.startswith('conv2'):
-            fixed_params_names.append(name)
+    if config.TRAIN.FINETUNE:
+        fixed_param_prefix = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
+    else:
+        fixed_param_prefix = ['conv1', 'conv2']
     data_names = [k[0] for k in train_data.provide_data]
     label_names = [k[0] for k in train_data.provide_label]
     batch_end_callback = Speedometer(train_data.batch_size, frequent=frequent)
@@ -95,7 +93,8 @@ def train_net(image_set, year, root_path, devkit_path, pretrained, epoch,
     # train
     mod = MutableModule(sym, data_names=data_names, label_names=label_names,
                         logger=logger, context=ctx, work_load_list=work_load_list,
-                        max_data_shapes=max_data_shape, max_label_shapes=max_label_shape)
+                        max_data_shapes=max_data_shape, max_label_shapes=max_label_shape,
+                        fixed_param_prefix=fixed_param_prefix)
     mod.fit(train_data, eval_metric=eval_metrics, epoch_end_callback=epoch_end_callback,
             batch_end_callback=batch_end_callback, kvstore=kv_store,
             optimizer='sgd', optimizer_params=optimizer_params,
@@ -140,6 +139,6 @@ if __name__ == '__main__':
     ctx = [mx.gpu(int(i)) for i in args.gpu_ids.split(',')]
     if args.finetune:
         config.TRAIN.FINETUNE = True
-    train_net(args.image_set, args.year, args.root_path, args.devkit_path, args.pretrained, args.epoch,
+    train_rpn(args.image_set, args.year, args.root_path, args.devkit_path, args.pretrained, args.epoch,
               args.prefix, ctx, args.begin_epoch, args.end_epoch, args.frequent,
               args.kv_store, args.work_load_list, args.resume)

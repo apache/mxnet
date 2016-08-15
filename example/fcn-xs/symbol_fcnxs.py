@@ -2,8 +2,7 @@
 import mxnet as mx
 
 def filter_map(kernel=1, stride=1, pad=0):
-    # why not return (stride, (kernel-stride)/2-pad)??
-    return (stride, (kernel-1)/2-pad)
+    return (stride, (kernel-stride)/2-pad)
 
 def compose_fp(fp_first, fp_second):
     return (fp_first[0]*fp_second[0], fp_first[0]*fp_second[1]+fp_first[1])
