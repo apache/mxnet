@@ -12,7 +12,7 @@ namespace op {
 template<>
 Operator *CreateRegressionOutputOp<gpu>(reg_enum::RegressionOutputType type,
                                         RegressionOutputParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (type) {
       case reg_enum::kLinear:
