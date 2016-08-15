@@ -134,17 +134,16 @@ class RegressionOutputProp : public OperatorProperty {
                  std::vector<int> *aux_type) const override {
     CHECK_EQ(in_type->size(), 2) << "Input:[data, label]";
     int dtype = (*in_type)[0];
-
     auto nin = in_type->size();
     in_type->clear();
     in_type->push_back(dtype);
-    for (index_t i = 1; i < nin; ++i) in_type->push_back(dtype);
-
+    for (index_t i = 1; i < nin; ++i) {
+      in_type->push_back(dtype);
+    }
     if (dtype == -1) {
       LOG(FATAL) << "Input type to regression_output is not specified.";
       return false;
     }
-
     out_type->clear();
     out_type->push_back(dtype);
     return true;
@@ -188,7 +187,7 @@ class RegressionOutputProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
