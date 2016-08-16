@@ -289,7 +289,7 @@ forward composition exemplified above.
 >>> net2 = mx.symbol.FullyConnected(data=net2, name='net2', num_hidden=128)
 >>> composed_net = net(data=net2, name='compose')
 >>> composed_net.list_arguments()
-['data2', 'net2_weight', 'net2_bias', 'compose_fc1_weight', 'compose_fc1_bias']
+['data2', 'net2_weight', 'net2_bias', 'fc1_weight', 'fc1_bias']
 ```
 
 In the above example, *net* is used as a function to apply to an existing symbol

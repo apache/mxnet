@@ -391,6 +391,39 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     assert(reldiff(out.toArray, trans) < 1e-6)
   }
 
+  test("smooth_l1 & makeloss") {
+    val data = Symbol.Variable("data")
+    val smoothL1 = Symbol.SmoothL1()(Map("data" -> data, "scalar" -> 1.0f))
+    val loss = Symbol.MakeLoss()(Map("data" -> smoothL1))
+
+    val shape = Shape(2, 6)
+    val ctx = Context.cpu()
+    val input = NDArray.empty(ctx, shape.toArray: _*)
+    val grad = NDArray.empty(ctx, shape.toArray: _*)
+    val array = Array[Float](
+        -3.5f, -2.5f, -1.5f, -0.5f, -0.3f, -0.1f,
+        0.1f, 0.3f, 0.5f, 1.5f, 2.5f, 3.5f)
+    input.set(array)
+
+    val arrTmp = Array[Float](
+        3.0f, 2.0f, 1.0f, 0.125f, 0.045f, 0.005f,
+        0.005f, 0.045f, 0.125f, 1.0f, 2.0f, 3.0f)
+    val gradTmp = Array[Float](
+        -1.0f, -1.0f, -1.0f, -0.5f, -0.3f, -0.1f,
+        0.1f, 0.3f, 0.5f, 1.0f, 1.0f, 1.0f)
+
+    val exeTest =
+      loss.bind(ctx, args = Map("data" -> input), argsGrad = Map("data" -> grad))
+    exeTest.forward(isTrain = true)
+    val out = exeTest.outputs.head
+
+    assert(reldiff(out.toArray, arrTmp) < 1e-6)
+
+    exeTest.backward()
+
+    assert(reldiff(grad.toArray, gradTmp) < 1e-6)
+  }
+
   test("maximum minimum scalar") {
     val data = Symbol.Variable("data")
     val shape = Shape(3, 4)

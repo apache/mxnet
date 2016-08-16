@@ -23,16 +23,14 @@ KVStore* KVStore::Create(const char *type_name) {
       tname == "local_allreduce_cpu") {
     kv =  new kvstore::KVStoreLocal();
   } else if (tname == "device" ||
-             tname == "local_update_device" ||
              tname == "local_allreduce_device") {
-    kv = new kvstore::KVStoreDevice(true);
+    tname = "local_allreduce_device";
+    kv = new kvstore::KVStoreDevice();
   } else if (tname == "dist_async" ||
              tname == "dist_sync" ||
-             tname == "dist_sync_device" ||
              tname == "dist") {
 #if MXNET_USE_DIST_KVSTORE
-    kv = new kvstore::KVStoreDist(
-        tname.find("device") != std::string::npos);
+    kv = new kvstore::KVStoreDist();
     if (tname == "dist_sync" &&
         kv->IsWorkerNode() &&
         kv->get_rank() == 0) {

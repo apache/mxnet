@@ -7,7 +7,7 @@
 #define MXNET_KVSTORE_KVSTORE_DIST_H_
 #include <string>
 #include <vector>
-#include "./kvstore_device.h"
+#include "./kvstore_local.h"
 #include "mxnet/engine.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
@@ -25,26 +25,30 @@ namespace kvstore {
  * it's the server node's job to control the data consistency among all
  * workers. see details on \ref ServerHandle::Start
  */
-class KVStoreDist : public KVStoreDevice {
+class KVStoreDist : public KVStoreLocal {
  public:
-  explicit KVStoreDist(bool device_mode)
-      : KVStoreDevice(device_mode),
-        ps_worker_(nullptr), server_(nullptr) {
+  KVStoreDist() : ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
-      ps::Start("mxnet\0");
+      ps::StartAsync("mxnet\0");
+      if (!ps::Postoffice::Get()->is_recovery()) {
+        ps::Postoffice::Get()->Barrier(
+          ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+      }
     }
   }
 
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
     if (IsWorkerNode()) {
-      ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
-      if (get_rank() == 0) {
-        // stop the executor at servers
-        SendCommandToServers(kStopServer, "");
+      if (barrier_before_exit_) {
+        Barrier();
+        if (get_rank() == 0) {
+          // stop the executor at servers
+          SendCommandToServers(kStopServer, "");
+        }
       }
-      ps::Finalize();
+      ps::Finalize(barrier_before_exit_);
       delete ps_worker_;
     }
   }
@@ -59,12 +63,14 @@ class KVStoreDist : public KVStoreDevice {
     } else {
       // do nothing
     }
-    Barrier();
+    if (!ps::Postoffice::Get()->is_recovery()) {
+      Barrier();
+    }
   }
 
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
-              int priority) override {
+            int priority) override {
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
@@ -115,11 +121,11 @@ class KVStoreDist : public KVStoreDevice {
       if (buf.is_none()) {
         buf = NDArray(vals[0]->shape(), pinned_ctx_);
       }
+      real_t* data = static_cast<real_t*>(buf.data().dptr_);
+      size_t size = buf.shape().Size();
 
-      auto pull_from_servers = [this, key, buf] (
+      auto pull_from_servers = [this, key, data, size](
           RunContext rctx, Engine::CallbackOnComplete cb) {
-        real_t* data = static_cast<real_t*>(buf.data().dptr_);
-        size_t size = buf.shape().Size();
         // convert to ps keys
         PSKV& pskv = EncodeKey(key, size);
 
@@ -136,7 +142,10 @@ class KVStoreDist : public KVStoreDevice {
           {buf.var()},
           FnProperty::kNormal, priority);
 
-      ScatterPullValue(key, buf, vals, priority);
+      // copy data from buffer to vals
+      for (auto v : vals) {
+        CopyFromTo(buf, v);
+      }
     }
   }
 
@@ -164,6 +173,17 @@ class KVStoreDist : public KVStoreDevice {
 
   int get_rank() const override { return ps::MyRank(); }
 
+  int get_num_dead_node(int node_id, int timeout) const override {
+    int number = 0;
+    auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(timeout);
+    const auto& watch_nodes = ps::Postoffice::Get()->GetNodeIDs(node_id);
+    std::unordered_set<int> watch_set(watch_nodes.begin(), watch_nodes.end());
+    for (int r : dead_nodes) {
+      if (watch_set.find(r) != watch_set.end()) number++;
+    }
+    return number;
+  }
+
   void RunServer(const Controller& controller) override {
     CHECK(!IsWorkerNode());
     if (IsServerNode()) {
@@ -171,10 +191,17 @@ class KVStoreDist : public KVStoreDevice {
       server_->set_controller(controller);
     }
 
-    ps::Start("mxnet_server\0");
+    ps::StartAsync("mxnet_server\0");
+    if (!ps::Postoffice::Get()->is_recovery()) {
+      ps::Postoffice::Get()->Barrier(
+        ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+    }
     if (server_) server_->Run();
     ps::Finalize();
-    delete server_; server_ = nullptr;
+    if (server_) {
+      delete server_;
+    }
+    server_ = nullptr;
   }
 
  private:
@@ -267,8 +294,6 @@ class KVStoreDist : public KVStoreDevice {
     return pskv;
   }
 
-  // whether use device distributed local sync.
-  bool device_mode_;
   /**
    * \brief for worker to push and pull data
    */

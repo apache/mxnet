@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
            "\tcolor=USE_COLOR[default=1] Force color (1), gray image (0) or keep source unchanged (-1).\n"\
            "\tresize=newsize resize the shorter edge of image to the newsize, original images will be packed by default\n"\
            "\tlabel_width=WIDTH[default=1] specify the label_width in the list, by default set to 1\n"\
+           "\tpack_label=PACK_LABEL[default=0] whether to also pack multi dimenional label in the record file\n"\
            "\tnsplit=NSPLIT[default=1] used for part generation, logically split the image.list to NSPLIT parts by position\n"\
            "\tpart=PART[default=0] used for part generation, pack the images from the specific part in image.list\n"\
            "\tcenter_crop=CENTER_CROP[default=0] specify whether to crop the center image to make it square.\n"\
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
   int label_width = 1;
+  int pack_label = 0;
   int new_size = -1;
   int nsplit = 1;
   int partid = 0;
@@ -70,9 +72,18 @@ int main(int argc, char *argv[]) {
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
-    if (sscanf(argv[i], "%[^=]=%s", key, val) == 2) {
+    int effct_len = 0;
+    
+#ifdef _MSC_VER
+    effct_len = sscanf_s(argv[i], "%[^=]=%s", key, sizeof(key), val, sizeof(val));
+#else
+    effct_len = sscanf(argv[i], "%[^=]=%s", key, val);
+#endif
+    
+    if (effct_len == 2) {
       if (!strcmp(key, "resize")) new_size = atoi(val);
       if (!strcmp(key, "label_width")) label_width = atoi(val);
+      if (!strcmp(key, "pack_label")) pack_label = atoi(val);
       if (!strcmp(key, "nsplit")) nsplit = atoi(val);
       if (!strcmp(key, "part")) partid = atoi(val);
       if (!strcmp(key, "center_crop")) center_crop = atoi(val);
@@ -85,10 +96,13 @@ int main(int argc, char *argv[]) {
   }
   // Check parameters ranges
   if (color_mode != -1 && color_mode != 0 && color_mode != 1) {
-      LOG(FATAL) << "Color mode must be -1, 0 or 1.";
+    LOG(FATAL) << "Color mode must be -1, 0 or 1.";
   }
   if (encoding != std::string(".jpg") && encoding != std::string(".png")) {
-      LOG(FATAL) << "Encoding mode must be .jpg or .png.";
+    LOG(FATAL) << "Encoding mode must be .jpg or .png.";
+  }
+  if (label_width <= 1 && pack_label) {
+    LOG(FATAL) << "pack_label can only be used when label_width > 1";
   }
   if (new_size > 0) {
     LOG(INFO) << "New Image Size: Short Edge " << new_size;
@@ -106,7 +120,7 @@ int main(int argc, char *argv[]) {
   }
   LOG(INFO) << "Encoding is " << encoding;
 
-  if (encoding == std::string(".png") and quality > 9) {
+  if (encoding == std::string(".png") && quality > 9) {
       quality = 3;
   }
   if (inter_method != 1) {
@@ -168,15 +182,24 @@ int main(int argc, char *argv[]) {
       LOG(INFO) << "JPEG encoding quality: " << quality;
   }
   dmlc::InputSplit::Blob line;
+  std::vector<float> label_buf(label_width, 0.f);
 
   while (flist->NextRecord(&line)) {
     std::string sline(static_cast<char*>(line.dptr), line.size);
     std::istringstream is(sline);
     if (!(is >> rec.header.image_id[0] >> rec.header.label)) continue;
+    label_buf[0] = rec.header.label;
     for (int k = 1; k < label_width; ++k) {
-      float tmp;
-      CHECK(is >> tmp)
+      CHECK(is >> label_buf[k])
           << "Invalid ImageList, did you provide the correct label_width?";
+    }
+    if (pack_label) rec.header.flag = label_width;
+    rec.SaveHeader(&blob);
+    if (pack_label) {
+      size_t bsize = blob.size();
+      blob.resize(bsize + label_buf.size()*sizeof(float));
+      memcpy(BeginPtr(blob) + bsize,
+             BeginPtr(label_buf), label_buf.size()*sizeof(float));
     }
     CHECK(std::getline(is, fname));
     // eliminate invalid chars in the end
@@ -190,7 +213,6 @@ int main(int argc, char *argv[]) {
     path = root + p;
     // use "r" is equal to rb in dmlc::Stream
     dmlc::Stream *fi = dmlc::Stream::Create(path.c_str(), "r");
-    rec.SaveHeader(&blob);
     decode_buf.clear();
     size_t imsize = 0;
     while (true) {
@@ -201,6 +223,8 @@ int main(int argc, char *argv[]) {
       if (nread != kBufferSize) break;
     }
     delete fi;
+
+
     if (unchanged != 1) {
       cv::Mat img = cv::imdecode(decode_buf, color_mode);
       CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
@@ -234,6 +258,8 @@ int main(int argc, char *argv[]) {
       }
       encode_buf.clear();
       CHECK(cv::imencode(encoding, res, encode_buf, encode_params));
+
+      // write buffer
       size_t bsize = blob.size();
       blob.resize(bsize + encode_buf.size());
       memcpy(BeginPtr(blob) + bsize,

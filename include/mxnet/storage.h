@@ -14,7 +14,7 @@ namespace mxnet {
 /*!
  * \brief Storage manager across multiple devices.
  */
-class MXNET_API Storage {
+class Storage {
  public:
   /*!
    * \brief Storage handle.
@@ -45,6 +45,16 @@ class MXNET_API Storage {
    * \param handle Handle struect.
    */
   virtual void Free(Handle handle) = 0;
+  /*!
+   * \brief Free storage directly, without putting it into memory pool.
+   *  This can synchronization of all previous runned device functions.
+   *
+   *  This function is suitable for conatiner structure with requirement on upsizing
+   *  in the beginning phase of the iteration.
+   *
+   * \param handle Handle struct.
+   */
+  virtual void DirectFree(Handle handle) = 0;
   /*!
    * \brief Destructor.
    */

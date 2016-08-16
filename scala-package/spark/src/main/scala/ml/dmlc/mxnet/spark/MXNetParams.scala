@@ -39,6 +39,8 @@ private[mxnet] class MXNetParams extends Serializable {
   var dataName: String = "data"
   var labelName: String = "label"
 
+  var timeout: Int = 300
+
   // jars on executors for running mxnet application
   var jars: Array[String] = null
   def runtimeClasspath: String = {
