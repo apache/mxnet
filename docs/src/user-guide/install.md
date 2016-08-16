@@ -24,9 +24,8 @@ libmxnet.
 The libmxnet source is downloaded to `Pkg.dir("MXNet")/deps/src/mxnet`.
 The automatic build is using default configurations, with OpenCV, CUDA
 disabled. If the compilation failed due to unresolved dependency, or if
-you want to customize the build, it is recommended to compile and
-install libmxnet manually. Please see below &lt;manual-compilation&gt;
-for more details.
+you want to customize the build, you can compile and
+install libmxnet manually. Please see below for more details.
 
 Manual Compilation
 ------------------
@@ -38,8 +37,8 @@ to work with a seperate, maybe customized libmxnet.
 
 To build libmxnet, please refer to [the installation guide of
 libmxnet](http://mxnet.readthedocs.org/en/latest/build.html). After
-successfully installing libmxnet, set the `MXNET_HOME` environment
-variable to the location of libmxnet. In other words, the compiled
+successfully installing libmxnet, set the `MXNET_HOME` *environment
+variable* to the location of libmxnet. In other words, the compiled
 `libmxnet.so` should be found in `$MXNET_HOME/lib`.
 
 > **note**
@@ -61,7 +60,7 @@ following paths (and in that order):
 -   `Pkg.dir("MXNet")/deps/usr/lib`: automatic builds
 -   Any system wide library search path
 
-Note that MXNet.jl will not find `libmxnet.so` even if it is on one of
-the paths above if a library it depends upon is missing from the
+Note that MXNet.jl can not load `libmxnet.so` even if it is on one of
+the paths above in case a library it depends upon is missing from the
 `LD_LIBRARY_PATH`. Thus, if you are going to compile to add CUDA, the
 path to the CUDA libraries will have to be added to `LD_LIBRARY_PATH`.
