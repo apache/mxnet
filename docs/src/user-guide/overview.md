@@ -192,10 +192,10 @@ lot of temp NDArray in the loop (the performance gets worse when
 increasing `N_REP`), is only about twice slower than the pre-allocated
 one.
 
-  Row    Function        Average      Relative    Replications
-  ------ --------------- ------------ ----------- ---------------
-  1      "inplace\_op"   0.0074854    1.0         100
-  2      "normal\_op"    0.0174202    2.32723     100
+| Row    | Function        | Average      | Relative    | Replications    |
+| ------ | --------------- | ------------ | ----------- | --------------- |
+| 1      | "inplace\_op"   | 0.0074854    | 1.0         | 100             |
+| 2      | "normal\_op"    | 0.0174202    | 2.32723     | 100             |
 
 So it will usually not be a big problem unless you are at the bottleneck
 of the computation.
