@@ -19,7 +19,7 @@ using MXNet
 ```
 
 to load the `MXNet` module. Then we are ready to define the network
-architecture via the symbolic API &lt;/user-guide/overview&gt;. We start
+architecture via the [symbolic API](../user-guide/overview.md). We start
 with a placeholder `data` symbol,
 
 ```julia
