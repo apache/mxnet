@@ -146,7 +146,9 @@ class PoolingOp : public Operator {
                   param_.pad[1]));
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(input_grad, req[pool_enum::kData],
-             scalar<DType>(1.0f / param_.kernel[0] / param_.kernel[1]) *\
+             scalar<DType>(1.0f / (param_.global_pool ?
+                      data.shape_[2] * data.shape_[3] :
+                      param_.kernel[0] * param_.kernel[1])) * \
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
