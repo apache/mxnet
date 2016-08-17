@@ -33,9 +33,11 @@ class Module(BaseModule):
         Default is `cpu()`.
     work_load_list : list of number
         Default `None`, indicating uniform workload.
+    fixed_param_names: list of str
+        Default `None`, indicating no network parameters are fixed.
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
-                 logger=logging, context=ctx.cpu(), work_load_list=None):
+                 logger=logging, context=ctx.cpu(), work_load_list=None, fixed_param_names=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -54,6 +56,7 @@ class Module(BaseModule):
         arg_names = symbol.list_arguments()
         input_names = data_names + label_names
         self._param_names = [x for x in arg_names if x not in input_names]
+        self._fixed_param_names = fixed_param_names
         self._aux_names = symbol.list_auxiliary_states()
         self._data_names = data_names
         self._label_names = label_names
@@ -255,13 +258,13 @@ class Module(BaseModule):
                                                      self._work_load_list, data_shapes,
                                                      label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
-                                                     shared_group, logger=self.logger)
+                                                     shared_group, logger=self.logger,
+                                                     fixed_param_names=self._fixed_param_names)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
             self._aux_params = shared_module._aux_params
-
-        if self.params_initialized:
+        elif self.params_initialized:
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
             self._exec_group.set_params(self._arg_params, self._aux_params)

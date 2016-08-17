@@ -76,7 +76,9 @@ struct Resource {
    *
    *  This space can be shared with other calls to this->get_space.
    *  So the caller need to serialize the calls when using the conflicted space.
-   *  The temp space will remain valid until release is called.
+   *  The old space can get freed, however, this will incur a synchronization,
+   *  when running on device, so the launched kernels that depend on the temp space
+   *  can finish correctly.
    *
    * \param shape the Shape of returning tensor.
    * \param stream the stream of retruning tensor.
@@ -136,16 +138,6 @@ struct Resource {
         reinterpret_cast<DType*>(get_host_space_internal(shape.Size() * sizeof(DType))),
         shape, shape[ndim - 1], NULL);
   }
-  /*!
-   * \brief Release the all existing allocated space.
-   *  The existing allocated address will remain valdd
-   *  until release is called.
-   *
-   *  Even if user do not call release, the space occupation
-   *  of the resource will remain at most two times of maximum
-   *  requested space.
-   */
-  void release() const;
   /*!
    * \brief internal function to get space from resources.
    * \param size The size of the space.

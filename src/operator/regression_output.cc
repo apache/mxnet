@@ -11,24 +11,38 @@ namespace op {
 
 template<>
 Operator *CreateRegressionOutputOp<cpu>(reg_enum::RegressionOutputType type,
-                                        RegressionOutputParam param) {
-  switch (type) {
-    case reg_enum::kLinear:
-      return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow::op::minus>(param);
-    case reg_enum::kLogistic:
-      return new RegressionOutputOp<cpu, mshadow_op::sigmoid, mshadow::op::minus>(param);
-    case reg_enum::kMAE:
-      return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow_op::minus_sign>(param);
-    default:
-      LOG(FATAL) << "unknown activation type " << type;
-  }
-  return nullptr;
+                                        RegressionOutputParam param, int dtype) {
+  Operator *op = nullptr;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    switch (type) {
+      case reg_enum::kLinear:
+        op = new RegressionOutputOp
+          <cpu, mshadow::op::identity, mshadow::op::minus, DType>(param);
+        break;
+      case reg_enum::kLogistic:
+        op = new RegressionOutputOp
+          <cpu, mshadow_op::sigmoid, mshadow::op::minus, DType>(param);
+        break;
+      case reg_enum::kMAE:
+        op = new RegressionOutputOp
+          <cpu, mshadow::op::identity, mshadow_op::minus_sign, DType>(param);
+        break;
+      default:
+        LOG(FATAL) << "unknown RegressionOutput type " << type;
+    }
+  });
+  return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
 template<reg_enum::RegressionOutputType type>
-Operator *RegressionOutputProp<type>::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateRegressionOutputOp, type, param_);
+Operator *RegressionOutputProp<type>::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                                     std::vector<int> *in_type) const {
+  std::vector<TShape> out_shape, aux_shape;
+  std::vector<int> out_type, aux_type;
+  CHECK(InferType(in_type, &out_type, &aux_type));
+  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+  DO_BIND_DISPATCH(CreateRegressionOutputOp, type, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(RegressionOutputParam);

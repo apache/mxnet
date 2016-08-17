@@ -49,7 +49,7 @@ class SwapAxisOp : public Operator {
   }
 
   void Reshape2Five(mshadow::Shape<5> *inter_shape,
-                    const mshadow::TShape &shape,
+                    const TShape &shape,
                     uint32_t dim1, uint32_t dim2) {
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -217,5 +217,3 @@ class SwapAxisProp : public OperatorProperty {
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_SWAPAXIS_INL_H_
-
-

@@ -35,7 +35,7 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
   }
 };  // struct DropoutParam
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class DropoutOp : public Operator {
  public:
   explicit DropoutOp(DropoutParam param) {
@@ -54,12 +54,13 @@ class DropoutOp : public Operator {
       CHECK_EQ(out_data.size(), 2);
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[dropout::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[dropout::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
     if (ctx.is_train) {
-      Tensor<xpu, 2> mask = out_data[dropout::kMask].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
       Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
-      mask = F<mshadow_op::threshold>(prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_);
+      mask = tcast<DType>(F<mshadow_op::threshold>(
+             prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_));
       Assign(out, req[dropout::kOut], data * mask);
     } else {
       Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
@@ -78,9 +79,9 @@ class DropoutOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> grad = out_grad[dropout::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> mask = out_data[dropout::kMask].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> gdata = in_grad[dropout::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
     Assign(gdata, req[dropout::kData], grad * mask);
   }
 
@@ -90,7 +91,7 @@ class DropoutOp : public Operator {
 
 
 template<typename xpu>
-Operator *CreateOp(DropoutParam param);
+Operator *CreateOp(DropoutParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class DropoutProp : public OperatorProperty {
@@ -113,6 +114,23 @@ class DropoutProp : public OperatorProperty {
     out_shape->clear();
     out_shape->push_back(dshape);
     out_shape->push_back(dshape);
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1);
+    int dtype = in_type->at(0);
+
+    if (dtype == -1) {
+      LOG(FATAL) << "input type to dropout is not specified.";
+      return false;
+    }
+
+    size_t nout = this->ListOutputs().size();
+    out_type->clear();
+    for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
     return true;
   }
 
@@ -164,7 +182,13 @@ class DropoutProp : public OperatorProperty {
     return {"output", "mask"};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   DropoutParam param_;
