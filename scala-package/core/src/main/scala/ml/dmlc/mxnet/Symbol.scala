@@ -1354,6 +1354,31 @@ object Symbol {
   }
 
   /**
+   * Perform Smooth L1 on inputs.
+   *
+   * Parameters
+   * ----------
+   * data : Symbol. Input data to the smooth_l1 operator.
+   * scalar : Float, required.
+   */
+  def SmoothL1(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("smooth_l1", name, attr)
+  }
+
+  /**
+   * Special layer for propagating loss
+   *
+   * Parameters
+   * ----------
+   * data : Symbol, Input data to the MakeLossOp.
+   * grad_scale : float, optional, default=1.
+   *            Gradient scale as a supplement to unary and binary operators
+   */
+  def MakeLoss(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
+    createFromNamedSymbolsNoCheck("MakeLoss", name, attr)
+  }
+
+  /**
    * Create a symbol that groups symbols together.
    * @param symbols List of symbols to be grouped.
    * @return The created group symbol.

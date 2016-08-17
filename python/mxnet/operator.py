@@ -211,10 +211,10 @@ class NumpyOp(PythonOp):
                                  None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
-        sym = symbol.Symbol._Native(*args,
-                                    info=cb_ptr,
-                                    need_top_grad=self.need_top_grad(),
-                                    **kwargs)
+        sym = symbol._internal._Native(*args,
+                                       info=cb_ptr,
+                                       need_top_grad=self.need_top_grad(),
+                                       **kwargs)
         # keep a reference of ourself in PythonOp so we don't get garbage collected.
         PythonOp._ref_holder.append(self)
         return sym
@@ -358,9 +358,9 @@ class NDArrayOp(PythonOp):
                                    None, None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
-        sym = symbol.Symbol._NDArray(*args,
-                                     info=cb_ptr,
-                                     **kwargs)
+        sym = symbol._internal._NDArray(*args,
+                                        info=cb_ptr,
+                                        **kwargs)
         # keep a reference of ourself in PythonOp so we don't get garbage collected.
         PythonOp._ref_holder.append(self)
         return sym

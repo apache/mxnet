@@ -57,10 +57,13 @@ class DataParallelExecutorGroup(object):
         of the data/label inputs.
     logger : Logger
         Default is `logging`.
+    fixed_param_names: list of str
+        Indicate parameters to be fixed during training. Parameters in this list will not allocate
+        space for gradient, nor do gradient calculation.
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
                  for_training, inputs_need_grad, shared_group=None, input_types=None,
-                 logger=logging):
+                 logger=logging, fixed_param_names=None):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -74,6 +77,10 @@ class DataParallelExecutorGroup(object):
 
         self.input_types = input_types
         self.logger = logger
+
+        self.fixed_param_names = fixed_param_names
+        if self.fixed_param_names is None:
+            self.fixed_param_names = []
 
         if shared_group is not None:
             self.shared_data_arrays = shared_group.shared_data_arrays
@@ -335,7 +342,7 @@ class DataParallelExecutorGroup(object):
         grad_req = {}
         for name in self.arg_names:
             if self.for_training:
-                if name in self.param_names:
+                if name in self.param_names and name not in self.fixed_param_names:
                     grad_req[name] = 'write'
                 elif name in data_names:
                     grad_req[name] = 'write' if self.inputs_need_grad else 'null'

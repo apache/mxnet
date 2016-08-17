@@ -13,6 +13,7 @@ import scipy.io
 import cPickle
 from imdb import IMDB
 from voc_eval import voc_eval
+from helper.processing.bbox_process import unique_boxes, filter_small_boxes
 
 
 class PascalVOC(IMDB):
@@ -43,7 +44,8 @@ class PascalVOC(IMDB):
         self.num_images = len(self.image_set_index)
 
         self.config = {'comp_id': 'comp4',
-                       'use_diff': True}
+                       'use_diff': False,
+                       'min_size': 2}
 
     @property
     def cache_path(self):
@@ -102,17 +104,14 @@ class PascalVOC(IMDB):
         :param index: index of a specific image
         :return: record['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         """
-        import xml.dom.minidom as minidom
+        import xml.etree.ElementTree as ET
         filename = os.path.join(self.data_path, 'Annotations', index + '.xml')
 
-        # print 'Loading: {}'.format(filename)
-        def get_data_from_tag(node, tag):
-            return node.getElementsByTagName(tag)[0].childNodes[0].data
-
-        with open(filename) as f:
-            data = minidom.parseString(f.read())
-
-        objs = data.getElementsByTagName('object')
+        tree = ET.parse(filename)
+        objs = tree.findall('object')
+        if not self.config['use_diff']:
+            non_diff_objs = [obj for obj in objs if int(obj.find('difficult').text) == 0]
+            objs = non_diff_objs
         num_objs = len(objs)
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
@@ -122,13 +121,13 @@ class PascalVOC(IMDB):
         class_to_index = dict(zip(self.classes, range(self.num_classes)))
         # Load object bounding boxes into a data frame.
         for ix, obj in enumerate(objs):
+            bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = float(get_data_from_tag(obj, 'xmin')) - 1
-            y1 = float(get_data_from_tag(obj, 'ymin')) - 1
-            x2 = float(get_data_from_tag(obj, 'xmax')) - 1
-            y2 = float(get_data_from_tag(obj, 'ymax')) - 1
-            cls = class_to_index[
-                str(get_data_from_tag(obj, "name")).lower().strip()]
+            x1 = float(bbox.find('xmin').text) - 1
+            y1 = float(bbox.find('ymin').text) - 1
+            x2 = float(bbox.find('xmax').text) - 1
+            y2 = float(bbox.find('ymax').text) - 1
+            cls = class_to_index[obj.find('name').text.lower().strip()]
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
@@ -155,7 +154,12 @@ class PascalVOC(IMDB):
 
         box_list = []
         for i in range(raw_data.shape[0]):
-            box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)  # pascal voc dataset starts from 1.
+            boxes = raw_data[i][:, (1, 0, 3, 2)] - 1  # pascal voc dataset starts from 1.
+            keep = unique_boxes(boxes)
+            boxes = boxes[keep, :]
+            keep = filter_small_boxes(boxes, self.config['min_size'])
+            boxes = boxes[keep, :]
+            box_list.append(boxes)
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
@@ -181,6 +185,33 @@ class PascalVOC(IMDB):
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         print 'wrote ss roidb to {}'.format(cache_file)
 
+        return roidb
+
+    def load_rpn_roidb(self, gt_roidb):
+        """
+        turn rpn detection boxes into roidb
+        :param gt_roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
+        :return: roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
+        """
+        rpn_file = os.path.join(self.root_path, 'rpn_data', self.name + '_rpn.pkl')
+        print 'loading {}'.format(rpn_file)
+        assert os.path.exists(rpn_file), 'rpn data not found at {}'.format(rpn_file)
+        with open(rpn_file, 'rb') as f:
+            box_list = cPickle.load(f)
+        return self.create_roidb_from_box_list(box_list, gt_roidb)
+
+    def rpn_roidb(self, gt_roidb):
+        """
+        get rpn roidb and ground truth roidb
+        :param gt_roidb: ground truth roidb
+        :return: roidb of rpn (ground truth included)
+        """
+        if self.image_set != 'test':
+            rpn_roidb = self.load_rpn_roidb(gt_roidb)
+            roidb = IMDB.merge_roidbs(gt_roidb, rpn_roidb)
+        else:
+            print 'rpn database need not be used in test'
+            roidb = self.load_rpn_roidb(gt_roidb)
         return roidb
 
     def evaluate_detections(self, detections):
