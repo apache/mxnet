@@ -64,7 +64,7 @@ end
 """
     UniformInitializer(scale=0.07)
 
-Construct a :class:`UniformInitializer` with the specified scale.
+Construct a `UniformInitializer` with the specified scale.
 """
 UniformInitializer() = UniformInitializer(0.07)
 
@@ -84,7 +84,7 @@ end
 """
     NormalIninitializer(; mu=0, sigma=0.01)
 
-Construct a :class:`NormalInitializer` with mean ``mu`` and variance ``sigma``.
+Construct a `NormalInitializer` with mean `mu` and variance `sigma`.
 """
 NormalInitializer(; mu=0, sigma=0.01) = NormalInitializer(mu, sigma)
 
@@ -106,9 +106,9 @@ a normal distribution with μ = 0 and σ² or a uniform distribution from -σ to
 Several different ways of calculating the variance are given in the literature or are
 used by various libraries.
 
-* [Bengio and Glorot 2010]: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 1)``
-* [K. He, X. Zhang, S. Ren, and J. Sun 2015]: ``mx.XavierInitializer(distribution = mx.xv_gaussian, regularization = mx.xv_in, magnitude = 2)``
-* caffe_avg: ``mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 3)``
+* [Bengio and Glorot 2010]: `mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 1)`
+* [K. He, X. Zhang, S. Ren, and J. Sun 2015]: `mx.XavierInitializer(distribution = mx.xv_gaussian, regularization = mx.xv_in, magnitude = 2)`
+* caffe_avg: `mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 3)`
 """
 
 @enum XavierDistribution xv_uniform xv_normal

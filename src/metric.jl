@@ -22,8 +22,8 @@ interfaces.
 
       Get the accumulated metrics.
 
-      :return: ``Vector{Tuple{Base.Symbol, Real}}``, a list of name-value pairs. For
-               example, ``[(:accuracy, 0.9)]``.
+      :return: `Vector{Tuple{Base.Symbol, Real}}`, a list of name-value pairs. For
+               example, `[(:accuracy, 0.9)]`.
 """
 abstract AbstractEvalMetric
 

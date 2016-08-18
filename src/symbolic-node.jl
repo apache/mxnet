@@ -37,7 +37,7 @@ end
     call(self :: SymbolicNode, args :: SymbolicNode...)
     call(self :: SymbolicNode; kwargs...)
 
-Make a new node by composing ``self`` with ``args``. Or the arguments
+Make a new node by composing `self` with `args`. Or the arguments
 can be specified using keyword arguments.
 """
 @compat function (self::SymbolicNode)(args :: SymbolicNode...)
@@ -66,11 +66,11 @@ end
     list_arguments(self :: SymbolicNode)
 
 List all the arguments of this node. The argument for a node contains both
-the inputs and parameters. For example, a :class:`FullyConnected` node will
+the inputs and parameters. For example, a `FullyConnected` node will
 have both data and weights in its arguments. A composed node (e.g. a MLP) will
 list all the arguments for intermediate nodes.
 
-   :return: A list of symbols indicating the names of the arguments.
+Returns a list of symbols indicating the names of the arguments.
 """
 function list_arguments(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListArguments)
@@ -81,7 +81,7 @@ end
 
 List all the outputs of this node.
 
-   :return: A list of symbols indicating the names of the outputs.
+Returns a list of symbols indicating the names of the outputs.
 """
 function list_outputs(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListOutputs)
@@ -99,7 +99,7 @@ and do not have gradient. But still be useful for the specific operations.
 A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
 Most operators do not have Auxiliary states.
 
-   :return: A list of symbols indicating the names of the auxiliary states.
+Returns a list of symbols indicating the names of the auxiliary states.
 """
 function list_auxiliary_states(self :: SymbolicNode)
   @_list_symbol_info(self, :MXSymbolListAuxiliaryStates)
@@ -108,8 +108,8 @@ end
 """
     get_internals(self :: SymbolicNode)
 
-Get a new grouped :class:`SymbolicNode` whose output contains all the internal outputs of
-this :class:`SymbolicNode`.
+Get a new grouped `SymbolicNode` whose output contains all the internal outputs of
+this `SymbolicNode`.
 """
 function get_internals(self :: SymbolicNode)
   ref_hdr = Ref{MX_handle}(0)
@@ -120,8 +120,9 @@ end
 """
     get_attr(self :: SymbolicNode, key :: Symbol)
 
-Get attribute attached to this :class:`SymbolicNode` belonging to key.
-:return: The value belonging to key as a :class:`Nullable`.
+Get attribute attached to this `SymbolicNode` belonging to key.
+
+Returns the value belonging to key as a `Nullable`.
 """
 function get_attr(self :: SymbolicNode, key :: Symbol)
   key_s = string(key)
@@ -140,7 +141,8 @@ end
     list_attr(self :: SymbolicNode)
 
 Get all attributes from a symbol.
-:return: Dictionary of attributes.
+
+Returns a dictionary of attributes.
 """
 function list_attr(self :: SymbolicNode)
   ref_sz    = Ref{MX_uint}(0)
@@ -162,7 +164,8 @@ end
     list_all_attr(self :: SymbolicNode)
 
 Get all attributes from the symbol graph.
-:return: Dictionary of attributes.
+
+Returns a dictionary of attributes.
 """
 function list_all_attr(self :: SymbolicNode)
   ref_sz    = Ref{MX_uint}(0)
@@ -183,12 +186,12 @@ end
 """
     set_attr(self:: SymbolicNode, key :: Symbol, value :: AbstractString)
 
-Set the attribute key to value for this :class:`SymbolicNode`.
+Set the attribute key to value for this `SymbolicNode`.
 
 # Warning
 It is encouraged not to call this function directly, unless you know exactly what you are doing. The
-recommended way of setting attributes is when creating the :class:`SymbolicNode`. Changing
-the attributes of a :class:`SymbolicNode` that is already been used somewhere else might
+recommended way of setting attributes is when creating the `SymbolicNode`. Changing
+the attributes of a `SymbolicNode` that is already been used somewhere else might
 cause unexpected behavior and inconsistency.
 """
 function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
@@ -205,7 +208,7 @@ Create a symbolic variable with the given name. This is typically used as a plac
 For example, the data node, acting as the starting point of a network architecture.
 
 # Arguments
-* Dict{Symbol, AbstractString} attrs: The attributes associated with this :class:`Variable`.
+* Dict{Symbol, AbstractString} attrs: The attributes associated with this `Variable`.
 """
 function Variable(name :: Union{Symbol, AbstractString}; attrs = Dict())
   attrs = convert(Dict{Symbol, AbstractString}, attrs)
@@ -221,7 +224,7 @@ end
 """
     Group(nodes :: SymbolicNode...)
 
-Create a :class:`SymbolicNode` by grouping nodes together.
+Create a `SymbolicNode` by grouping nodes together.
 """
 function Group(nodes :: SymbolicNode...)
   handles = MX_handle[nodes...]
@@ -283,9 +286,9 @@ as a list of shapes, which should specify the shapes of inputs in the same order
 the arguments returned by :func:`list_arguments`. Alternatively, the shape information
 could be specified via keyword arguments.
 
-:return: A 3-tuple containing shapes of all the arguments, shapes of all the outputs and
-         shapes of all the auxiliary variables. If shape inference failed due to incomplete
-         or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+Returns a 3-tuple containing shapes of all the arguments, shapes of all the outputs and
+shapes of all the auxiliary variables. If shape inference failed due to incomplete
+or incompatible inputs, the return value will be `(nothing, nothing, nothing)`.
 """
 function infer_shape(self :: SymbolicNode; kwargs...)
   sdata  = MX_uint[]
@@ -351,9 +354,9 @@ as a list of types, which should specify the types of inputs in the same order a
 the arguments returned by :func:`list_arguments`. Alternatively, the type information
 could be specified via keyword arguments.
 
-:return: A 3-tuple containing types of all the arguments, types of all the outputs and
-         types of all the auxiliary variables. If type inference failed due to incomplete
-         or incompatible inputs, the return value will be ``(nothing, nothing, nothing)``.
+Returns a 3-tuple containing types of all the arguments, types of all the outputs and
+types of all the auxiliary variables. If type inference failed due to incomplete
+or incompatible inputs, the return value will be `(nothing, nothing, nothing)`.
 """
 function infer_type(self :: SymbolicNode; kwargs...)
   types = Cint[toTypeFlag(x[2]) for x in kwargs]
@@ -524,7 +527,7 @@ end
 """
     to_json(self :: SymbolicNode)
 
-Convert a :class:`SymbolicNode` into a JSON string.
+Convert a `SymbolicNode` into a JSON string.
 """
 function to_json(self :: SymbolicNode)
   ref_json = Ref{char_p}(0)
@@ -535,7 +538,7 @@ end
 """
     from_json(repr :: AbstractString, ::Type{SymbolicNode})
 
-Load a :class:`SymbolicNode` from a JSON string representation.
+Load a `SymbolicNode` from a JSON string representation.
 """
 function from_json(repr :: AbstractString, ::Type{SymbolicNode})
   ref_hdr = Ref{MX_handle}(0)
@@ -546,7 +549,7 @@ end
 """
     load(filename :: AbstractString, ::Type{SymbolicNode})
 
-Load a :class:`SymbolicNode` from a JSON file.
+Load a `SymbolicNode` from a JSON file.
 """
 function load(filename :: AbstractString, ::Type{SymbolicNode})
   ref_hdr = Ref{MX_handle}(0)
@@ -557,7 +560,7 @@ end
 """
     save(filename :: AbstractString, node :: SymbolicNode)
 
-Save a :class:`SymbolicNode` to a JSON file.
+Save a `SymbolicNode` to a JSON file.
 """
 function save(filename :: AbstractString, node :: SymbolicNode)
   @mxcall(:MXSymbolSaveToFile, (MX_handle, char_p), node, filename)

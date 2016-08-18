@@ -19,7 +19,7 @@ end
 """
     cpu(dev_id)
 
-Get a CPU context with a specific id. ``cpu()`` is usually the default context for many
+Get a CPU context with a specific id. `cpu()` is usually the default context for many
 operations when no context is specified.
 
 # Arguments
