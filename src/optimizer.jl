@@ -85,7 +85,7 @@ get_learning_rate(self :: Fixed, state :: OptimizationState) = self.learning_rat
     LearningRate.Exp
 
    :math:`\eta_t = \eta_0\gamma^t`. Here :math:`t` is the epoch count, or the iteration
-   count if ``decay_on_iteration`` is set to true.
+   count if `decay_on_iteration` is set to true.
 """
 type Exp <: AbstractLearningRateScheduler
   learning_rate :: Float64
@@ -102,7 +102,7 @@ get_learning_rate(self :: Exp, state :: OptimizationState) =
     LearningRate.Inv
 
    :math:`\eta_t = \eta_0 * (1 + \gamma * t)^(-power)`.
-   Here :math:`t` is the epoch count, or the iteration count if ``decay_on_iteration``
+   Here :math:`t` is the epoch count, or the iteration count if `decay_on_iteration`
    is set to true.
 """
 type Inv <: AbstractLearningRateScheduler
@@ -207,7 +207,7 @@ abstract AbstractOptimizerOptions
     normalized_gradient(opts, state, grad)
 
 * AbstractOptimizerOptions opts: options for the optimizer, should contain the field
-          ``grad_scale``, ``grad_clip`` and ``weight_decay``.
+          `grad_scale`, `grad_clip` and `weight_decay`.
 * OptimizationState state: the current optimization state.
 * NDArray weight: the trainable weights.
 * NDArray grad: the original gradient of the weights.

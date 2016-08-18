@@ -28,7 +28,7 @@ end
 """
     every_n_batch(callback :: Function, n :: Int; call_on_0 = false)
 
-A convenient function to construct a callback that runs every ``n`` mini-batches.
+A convenient function to construct a callback that runs every `n` mini-batches.
 
 # Arguments
 * `call_on_0::Bool`: keyword argument, default false. Unless set, the callback
@@ -64,7 +64,7 @@ end
 """
     speedometer(; frequency=50)
 
-Create an :class:`AbstractBatchCallback` that measure the training speed
+Create an `AbstractBatchCallback` that measure the training speed
    (number of samples processed per second) every k mini-batches.
 
 # Arguments
@@ -95,7 +95,7 @@ end
 """
     every_n_epoch(callback :: Function, n :: Int; call_on_0 = false)
 
-A convenient function to construct a callback that runs every ``n`` full data-passes.
+A convenient function to construct a callback that runs every `n` full data-passes.
 
 * Int call_on_0: keyword argument, default false. Unless set, the callback
           will **not** be run on epoch 0. Epoch 0 means no training has been performed
@@ -120,7 +120,7 @@ end
 """
     do_checkpoint(prefix; frequency=1, save_epoch_0=false)
 
-Create an :class:`AbstractEpochCallback` that save checkpoints of the model to disk.
+Create an `AbstractEpochCallback` that save checkpoints of the model to disk.
 The checkpoints can be loaded back later on.
 
 # Arguments

@@ -25,7 +25,7 @@ The root type for all data provider. A data provider should implement the follow
    training stage, both *data* and *label* will be feeded into the model, while during
    prediction stage, only *data* is loaded. Otherwise, they could be anything, with any names, and
    of any shapes. The provided data and label names here should match the input names in a target
-   :class:`SymbolicNode`.
+   `SymbolicNode`.
 
    A data provider should also implement the Julia iteration interface, in order to allow iterating
    through the data set. The provider will be called in the following way:
@@ -48,7 +48,7 @@ The root type for all data provider. A data provider should implement the follow
 
    By default, :func:`eachbatch` simply returns the provider itself, so the iterator interface
    is implemented on the provider type itself. But the extra layer of abstraction allows us to
-   implement a data provider easily via a Julia ``Task`` coroutine. See the
+   implement a data provider easily via a Julia `Task` coroutine. See the
    data provider defined in :doc:`the char-lstm example
    </tutorial/char-lstm>` for an example of using coroutine to define data
    providers.
@@ -58,7 +58,7 @@ The detailed interface functions for the iterator API is listed below:
     Base.eltype(provider) -> AbstractDataBatch
 
    :param AbstractDataProvider provider: the data provider.
-   :return: the specific subtype representing a data batch. See :class:`AbstractDataBatch`.
+   :return: the specific subtype representing a data batch. See `AbstractDataBatch`.
 
     Base.start(provider) -> AbstractDataProviderState
 
@@ -91,7 +91,7 @@ case, you can safely assume that
   not be called.
 
 With those assumptions, it will be relatively easy to adapt any existing iterator. See the implementation
-of the built-in :class:`MXDataProvider` for example.
+of the built-in `MXDataProvider` for example.
 
 .. caution::
 
@@ -137,7 +137,7 @@ abstract AbstractDataProviderState
       :return: a vector of data in this batch, should be in the same order as declared in
                :func:`provide_data() <AbstractDataProvider.provide_data>`.
 
-               The last dimension of each :class:`NDArray` should always match the batch_size, even when
+               The last dimension of each `NDArray` should always match the batch_size, even when
                :func:`count_samples` returns a value less than the batch size. In this case,
                the data provider is free to pad the remaining contents with any value.
 
@@ -167,7 +167,7 @@ abstract AbstractDataProviderState
       :type targets: Vector{Vector{SlicedNDArray}}
 
       The targets is a list of the same length as number of data provided by this provider.
-      Each element in the list is a list of :class:`SlicedNDArray`. This list described a
+      Each element in the list is a list of `SlicedNDArray`. This list described a
       spliting scheme of this data batch into different slices, each slice is specified by
       a slice-ndarray pair, where *slice* specify the range of samples in the mini-batch
       that should be loaded into the corresponding *ndarray*.
@@ -189,7 +189,7 @@ abstract AbstractDataBatch
 """
     DataBatch
 
-   A basic subclass of :class:`AbstractDataBatch`, that implement the interface by
+   A basic subclass of `AbstractDataBatch`, that implement the interface by
    accessing member fields.
 """
 type DataBatch <: AbstractDataBatch
@@ -204,7 +204,7 @@ get_label{Provider<:AbstractDataProvider}(::Provider, batch :: DataBatch) = batc
 """
     SlicedNDArray
 
-   A alias type of ``Tuple{UnitRange{Int},NDArray}``.
+   A alias type of `Tuple{UnitRange{Int},NDArray}`.
 """
 typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
 
@@ -257,7 +257,7 @@ eachbatch(provider :: AbstractDataProvider) = provider
 """
     ArrayDataProvider
 
-   A convenient tool to iterate :class:`NDArray` or Julia ``Array``.
+   A convenient tool to iterate `NDArray` or Julia `Array`.
 """
 type ArrayDataProvider <: AbstractDataProvider
   data_arrays   :: Vector{Array{MX_float}}
@@ -277,16 +277,16 @@ end
 """
     ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
 
-   Construct a data provider from :class:`NDArray` or Julia Arrays.
+   Construct a data provider from `NDArray` or Julia Arrays.
 
    :param data: the data, could be
 
-          - a :class:`NDArray`, or a Julia Array. This is equivalent to ``:data => data``.
-          - a name-data pair, like ``:mydata => array``, where ``:mydata`` is the name of the data
-            and ``array`` is an :class:`NDArray` or a Julia Array.
+          - a `NDArray`, or a Julia Array. This is equivalent to `:data => data`.
+          - a name-data pair, like `:mydata => array`, where `:mydata` is the name of the data
+            and `array` is an `NDArray` or a Julia Array.
           - a list of name-data pairs.
 
-   :param label: the same as the ``data`` parameter. When this argument is omitted, the constructed
+   :param label: the same as the `data` parameter. When this argument is omitted, the constructed
           provider will provide no labels.
    :param Int batch_size: the batch size, default is 0, which means treating the whole array as a
           single mini-batch.
@@ -294,9 +294,9 @@ end
    :param Real data_padding: when the mini-batch goes beyond the dataset boundary, there might
           be less samples to include than a mini-batch. This value specify a scalar to pad the
           contents of all the missing data points.
-   :param Real label_padding: the same as ``data_padding``, except for the labels.
+   :param Real label_padding: the same as `data_padding`, except for the labels.
 
-   TODO: remove ``data_padding`` and ``label_padding``, and implement rollover that copies
+   TODO: remove `data_padding` and `label_padding`, and implement rollover that copies
    the last or first several training samples to feed the padding.
 """
 # Julia's type system is sometimes very frustrating. You cannot specify a function
@@ -563,16 +563,16 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
 
   if gen_docs
     if endswith(string(iter_name), "Iter")
-      f_desc = "Can also be called with the alias ``$(string(iter_name)[1:end-4] * "Provider")``.\n"
+      f_desc = "Can also be called with the alias `$(string(iter_name)[1:end-4] * "Provider")`.\n"
     else
       f_desc = ""
     end
     f_desc *= unsafe_string(ref_desc[]) * "\n\n"
-    f_desc *= ":param Base.Symbol data_name: keyword argument, default ``:data``. The name of the data.\n"
-    f_desc *= ":param Base.Symbol label_name: keyword argument, default ``:softmax_label``. " *
-              "The name of the label. Could be ``nothing`` if no label is presented in this dataset.\n\n"
+    f_desc *= ":param Base.Symbol data_name: keyword argument, default `:data`. The name of the data.\n"
+    f_desc *= ":param Base.Symbol label_name: keyword argument, default `:softmax_label`. " *
+              "The name of the label. Could be `nothing` if no label is presented in this dataset.\n\n"
     f_desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-    f_desc *= ":return: the constructed :class:`MXDataProvider`."
+    f_desc *= ":return: the constructed `MXDataProvider`."
     return (iter_name, f_desc)
   end
 

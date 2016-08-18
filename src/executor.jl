@@ -1,7 +1,7 @@
 """
     Executor
 
-An executor is a realization of a symbolic architecture defined by a :class:`SymbolicNode`.
+An executor is a realization of a symbolic architecture defined by a `SymbolicNode`.
 The actual forward and backward computation specified by the network architecture can
 be carried out with an executor.
 """
@@ -68,12 +68,12 @@ end
 """
     bind(sym, ctx, args; args_grad=Dict(), aux_states=Dict(), grad_req=GRAD_WRITE)
 
-Create an :class:`Executor` by binding a :class:`SymbolicNode` to concrete :class:`NDArray`.
+Create an `Executor` by binding a `SymbolicNode` to concrete `NDArray`.
 
 # Arguments
 * `sym::SymbolicNode`: the network architecture describing the computation graph.
 * `ctx::Context`: the context on which the computation should run.
-* `args`: either a list of :class:`NDArray` or a dictionary of name-array pairs. Concrete
+* `args`: either a list of `NDArray` or a dictionary of name-array pairs. Concrete
           arrays for all the inputs in the network architecture. The inputs typically include
           network parameters (weights, bias, filters, etc.), data and labels. See :func:`list_arguments`
           and :func:`infer_shape`.

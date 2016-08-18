@@ -48,9 +48,9 @@ end
     FeedForward(arch :: SymbolicNode, ctx)
 
 * arch: the architecture of the network constructed using the symbolic API.
-* ctx: the devices on which this model should do computation. It could be a single :class:`Context`
-               or a list of :class:`Context` objects. In the latter case, data parallelization will be used
-               for training. If no context is provided, the default context ``cpu()`` will be used.
+* ctx: the devices on which this model should do computation. It could be a single `Context`
+               or a list of `Context` objects. In the latter case, data parallelization will be used
+               for training. If no context is provided, the default context `cpu()` will be used.
 """
 function FeedForward(arch :: SymbolicNode; context :: Union{Context, Vector{Context}, Void} = nothing)
   if isa(context, Void)
@@ -74,7 +74,7 @@ end
 * AbstractInitializer initializer: an initializer describing how the weights should be initialized.
 * Bool overwrite: keyword argument, force initialization even when weights already exists.
 * input_shapes: the shape of all data and label inputs to this model, given as keyword arguments.
-                        For example, ``data=(28,28,1,100), label=(100,)``.
+                        For example, `data=(28,28,1,100), label=(100,)`.
 """
 function init_model(self :: FeedForward, initializer :: AbstractInitializer; overwrite::Bool=false, input_shapes...)
   # all arg names, including data, label, and parameters
@@ -177,12 +177,12 @@ end
 
 * FeedForward self: the model.
 * AbstractDataProvider data: the data to perform prediction on.
-* Bool overwrite: an :class:`Executor` is initialized the first time predict is called. The memory
-                          allocation of the :class:`Executor` depends on the mini-batch size of the test
+* Bool overwrite: an `Executor` is initialized the first time predict is called. The memory
+                          allocation of the `Executor` depends on the mini-batch size of the test
                           data provider. If you call predict twice with data provider of the same batch-size,
-                          then the executor can be potentially be re-used. So, if ``overwrite`` is false,
-                          we will try to re-use, and raise an error if batch-size changed. If ``overwrite``
-                          is true (the default), a new :class:`Executor` will be created to replace the old one.
+                          then the executor can be potentially be re-used. So, if `overwrite` is false,
+                          we will try to re-use, and raise an error if batch-size changed. If `overwrite`
+                          is true (the default), a new `Executor` will be created to replace the old one.
 
    .. note::
 
@@ -196,9 +196,9 @@ end
 
    .. note::
 
-      If you perform further after prediction. The weights are not automatically synchronized if ``overwrite``
+      If you perform further after prediction. The weights are not automatically synchronized if `overwrite`
       is set to false and the old predictor is re-used. In this case
-      setting ``overwrite`` to true (the default) will re-initialize the predictor the next time you call
+      setting `overwrite` to true (the default) will re-initialize the predictor the next time you call
       predict and synchronize the weights again.
 
    :seealso: :func:`train`, :func:`fit`, :func:`init_model`, :func:`load_checkpoint`
@@ -319,28 +319,28 @@ end
 """
     fit(model :: FeedForward, optimizer, data; kwargs...)
 
-Train the ``model`` on ``data`` with the ``optimizer``.
+Train the `model` on `data` with the `optimizer`.
 
 * FeedForward model: the model to be trained.
 * AbstractOptimizer optimizer: the optimization algorithm to use.
 * AbstractDataProvider data: the training data provider.
 * Int n_epoch: default 10, the number of full data-passes to run.
-* AbstractDataProvider eval_data: keyword argument, default ``nothing``. The data provider for
+* AbstractDataProvider eval_data: keyword argument, default `nothing`. The data provider for
           the validation set.
-* AbstractEvalMetric eval_metric: keyword argument, default ``Accuracy()``. The metric used
-          to evaluate the training performance. If ``eval_data`` is provided, the same metric is also
+* AbstractEvalMetric eval_metric: keyword argument, default `Accuracy()`. The metric used
+          to evaluate the training performance. If `eval_data` is provided, the same metric is also
           calculated on the validation set.
-* kvstore: keyword argument, default ``:local``. The key-value store used to synchronize gradients
+* kvstore: keyword argument, default `:local`. The key-value store used to synchronize gradients
           and parameters when multiple devices are used for training.
-   :type kvstore: :class:`KVStore` or ``Base.Symbol``
-* AbstractInitializer initializer: keyword argument, default ``UniformInitializer(0.01)``.
+   :type kvstore: `KVStore` or `Base.Symbol`
+* AbstractInitializer initializer: keyword argument, default `UniformInitializer(0.01)`.
 * Bool force_init: keyword argument, default false. By default, the random initialization using the
-          provided ``initializer`` will be skipped if the model weights already exists, maybe from a previous
+          provided `initializer` will be skipped if the model weights already exists, maybe from a previous
           call to :func:`train` or an explicit call to :func:`init_model` or :func:`load_checkpoint`. When
           this option is set, it will always do random initialization at the begining of training.
-* callbacks: keyword argument, default ``[]``. Callbacks to be invoked at each epoch or mini-batch,
-          see :class:`AbstractCallback`.
-   :type callbacks: ``Vector{AbstractCallback}``
+* callbacks: keyword argument, default `[]`. Callbacks to be invoked at each epoch or mini-batch,
+          see `AbstractCallback`.
+   :type callbacks: `Vector{AbstractCallback}`
 """
 function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   opts = TrainingOptions(; kwargs...)

@@ -6,10 +6,10 @@ import JSON
 * SymbolicNode network: the network to visualize.
 * AbstractString title: keyword argument, default "Network Visualization",
           the title of the GraphViz graph.
-* input_shapes: keyword argument, default ``nothing``. If provided,
+* input_shapes: keyword argument, default `nothing`. If provided,
           will run shape inference and plot with the shape information. Should
           be either a dictionary of name-shape mapping or an array of shapes.
-   :return: the graph description in GraphViz ``dot`` language.
+   :return: the graph description in GraphViz `dot` language.
 """
 function to_graphviz(network :: SymbolicNode; title="Network Visualization", input_shapes=nothing)
   if !isa(input_shapes, Void)

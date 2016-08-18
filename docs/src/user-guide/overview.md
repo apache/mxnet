@@ -59,7 +59,7 @@ The followings are common ways to create NDArray objects:
 
 -   `mx.empty(shape[, context])`: create on uninitialized array of a
     given shape on a specific device. For example,
-    `` mx.empty(2,3)`, `mx.((2,3), mx.gpu(2)) ``.
+    ` mx.empty(2,3)`, `mx.((2,3), mx.gpu(2)) `.
 -   `mx.zeros(shape[, context])` and `mx.ones(shape[, context])`:
     similar to the Julia's built-in `zeros` and `ones`.
 -   `mx.copy(jl_arr, context)`: copy the contents of a Julia `Array` to
