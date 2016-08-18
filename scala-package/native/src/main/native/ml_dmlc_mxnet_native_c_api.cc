@@ -1463,3 +1463,72 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNotifyShutdown
   (JNIEnv *env, jobject obj) {
   return MXNotifyShutdown();
 }
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOWriterCreate
+  (JNIEnv *env, jobject obj, jstring juri, jobject handle) {
+  RecordIOHandle out;
+  const char *uri = env->GetStringUTFChars(juri, 0);
+  int ret = MXRecordIOWriterCreate(uri, &out);
+  env->ReleaseStringUTFChars(juri, uri);
+  SetLongField(env, handle, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOReaderCreate
+  (JNIEnv *env, jobject obj, jstring juri, jobject handle) {
+  RecordIOHandle out;
+  const char *uri = env->GetStringUTFChars(juri, 0);
+  int ret = MXRecordIOReaderCreate(uri, &out);
+  env->ReleaseStringUTFChars(juri, uri);
+  SetLongField(env, handle, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOWriterFree
+  (JNIEnv *env, jobject obj, jlong handle) {
+  RecordIOHandle recordIOHandle = reinterpret_cast<RecordIOHandle>(handle);
+  int ret = MXRecordIOWriterFree(recordIOHandle);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOReaderFree
+  (JNIEnv *env, jobject obj, jlong handle) {
+  RecordIOHandle recordIOHandle = reinterpret_cast<RecordIOHandle>(handle);
+  int ret = MXRecordIOReaderFree(&recordIOHandle);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOWriterWriteRecord
+  (JNIEnv *env, jobject obj, jlong handle, jstring jbuf, jint size) {
+  const char *buf = env->GetStringUTFChars(jbuf, 0);
+  RecordIOHandle *recordIOHandle = reinterpret_cast<RecordIOHandle *>(handle);
+  int ret = MXRecordIOWriterWriteRecord(recordIOHandle, buf, size);
+  env->ReleaseStringUTFChars(jbuf, buf);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOReaderReadRecord
+  (JNIEnv *env, jobject obj, jlong handle, jobject buf) {
+  RecordIOHandle *recordIOHandle = reinterpret_cast<RecordIOHandle *>(handle);
+  size_t size;
+  char const  *out;
+  int ret = MXRecordIOReaderReadRecord(recordIOHandle, &out, &size);
+  SetStringField(env, buf, out);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOWriterTell
+  (JNIEnv *env, jobject obj, jlong handle, jobject jpos) {
+  RecordIOHandle *recordIOHandle = reinterpret_cast<RecordIOHandle *>(handle);
+  size_t pos;
+  int ret = MXRecordIOWriterTell(recordIOHandle, &pos);
+  SetIntField(env, jpos, pos);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOReaderSeek
+  (JNIEnv *env, jobject obj, jlong handle, jint pos) {
+  RecordIOHandle *recordIOHandle = reinterpret_cast<RecordIOHandle *>(handle);
+  int ret = MXRecordIOReaderSeek(recordIOHandle, pos);
+  return ret;
+}
