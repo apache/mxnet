@@ -26,6 +26,7 @@ namespace op {
 namespace warpctc_enum {
   enum CTCOpInputs {kData, kLabel};
   enum CTCOpOutputs {kOut};
+  enum CTCTemp {kTmp};
 }  // namespace warpctc_enum
 
 struct WarpCTCParam : public dmlc::Parameter<WarpCTCParam> {
@@ -115,6 +116,7 @@ class WarpCTCOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     TBlob data = in_data[warpctc_enum::kData];
     TBlob label = in_data[warpctc_enum::kLabel];
     CHECK_EQ(data.shape_.ndim(), 2) << "input data shape should be 2 (t*n, p)";
@@ -126,8 +128,8 @@ class WarpCTCOp : public Operator {
 #if MXNET_USE_CUDA
       info.loc = CTC_GPU;
       info.stream = ctx.get_stream<gpu>()->stream_;
-#endif
     } else {
+#endif
       LOG(FATAL) << "Unknown device type " << data.dev_mask_;
     }
 
@@ -173,16 +175,10 @@ class WarpCTCOp : public Operator {
                                       input_lengths.size(), info,
                                       &alloc_bytes),
                    "Error: get_workspace_size in inf_test");
-    void* ctc_workspace;
 
-    if (data.dev_mask_ == cpu::kDevMask) {
-      ctc_workspace = malloc(alloc_bytes);
-    } else if (data.dev_mask_ == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-      cuda_status = cudaMalloc(&ctc_workspace, alloc_bytes);
-      CHECK_EQ(cuda_status, cudaSuccess) << "cuda malloc worksapce fail";
-#endif
-    }
+    Tensor<xpu, 1> ctc_workspace = ctx.requested[warpctc_enum::kTmp].get_space<xpu>(
+        mshadow::Shape1(alloc_bytes), s);
+
     std::vector<float> costs(minibatch);
     throw_on_error(compute_ctc_loss(activations,
                                     grads,
@@ -192,17 +188,14 @@ class WarpCTCOp : public Operator {
                                     alphabet_size,
                                     minibatch,
                                     costs.data(),
-                                    ctc_workspace,
+                                    ctc_workspace.dptr_,
                                     info),
                    "Error: compute_ctc_loss");
 
     if (data.dev_mask_ == cpu::kDevMask) {
-      free(ctc_workspace);
       free(cpu_labels);
     } else if (data.dev_mask_ == gpu::kDevMask) {
 #if MXNET_USE_CUDA
-      cuda_status = cudaFree(ctc_workspace);
-      CHECK_EQ(cuda_status, cudaSuccess) << "cuda free workspace fail";
       free(cpu_raw_labels);
       free(cpu_labels);
 #endif
@@ -260,6 +253,11 @@ class WarpCTCProp : public OperatorProperty {
     out_type->clear();
     out_type->push_back(mshadow::kFloat32);
     return true;
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
   }
 
   OperatorProperty* Copy() const override {

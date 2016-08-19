@@ -150,23 +150,23 @@ struct Context {
   /*!
    * \brief Create a new context.
    * \param dev_type device type.
-   * \param dev_id device id.
+   * \param dev_id device id. -1 for current device.
    */
-  inline static Context Create(DeviceType dev_type, int32_t dev_id);
+  inline static Context Create(DeviceType dev_type, int32_t dev_id = -1);
   /*! \return CPU Context */
   inline static Context CPU();
   /*!
    * Create a GPU context.
    * \param dev_id the device id.
-   * \return GPU Context.
+   * \return GPU Context. -1 for current GPU.
    */
-  inline static Context GPU(int32_t dev_id);
+  inline static Context GPU(int32_t dev_id = -1);
   /*!
    * Create a pinned CPU context.
    * \param dev_id the device id for corresponding GPU.
-   * \return Pinned CPU context.
+   * \return Pinned CPU context. -1 for current GPU.
    */
-  inline static Context CPUPinned(int32_t dev_id);
+  inline static Context CPUPinned(int32_t dev_id = -1);
 };
 
 /*!
@@ -203,7 +203,16 @@ inline bool Context::operator<(const Context &b) const {
 inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   Context ctx;
   ctx.dev_type = dev_type;
-  ctx.dev_id = dev_id;
+  if (dev_id < 0) {
+    ctx.dev_id = 0;
+#if MXNET_USE_CUDA
+    if (dev_type != kCPU) {
+      CHECK_EQ(cudaGetDevice(&ctx.dev_id), cudaSuccess);
+    }
+#endif
+  } else {
+    ctx.dev_id = dev_id;
+  }
   return ctx;
 }
 inline Context Context::CPU() {
