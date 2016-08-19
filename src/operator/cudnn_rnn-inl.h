@@ -7,12 +7,12 @@
 #ifndef MXNET_OPERATOR_CUDNN_RNN_INL_H_
 #define MXNET_OPERATOR_CUDNN_RNN_INL_H_
 
+#include <mxnet/storage.h>
 #include <vector>
 #include <map>
 #include <string>
 #include <utility>
 #include <cstdint>
-#include <mxnet/storage.h>
 #include "./rnn-inl.h"
 
 namespace mxnet {
