@@ -30,7 +30,13 @@ class StorageImpl : public Storage {
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
 
   template <class DeviceStorage>
-  using CurrentStorageManager =
+  using CPUStorageManager =
+      storage::NaiveStorageManager<DeviceStorage>;
+  template <class DeviceStorage>
+  using PinnedStorageManager =
+      storage::NaiveStorageManager<DeviceStorage>;
+  template <class DeviceStorage>
+  using GPUStorageManager =
       storage::PooledStorageManager<DeviceStorage>;
 
   static void ActivateDevice(Context ctx) {
@@ -64,15 +70,15 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
         storage::StorageManager *ptr = nullptr;
         switch (ctx.dev_type) {
           case Context::kCPU: {
-            ptr = new CurrentStorageManager<storage::CPUDeviceStorage>();
+            ptr = new CPUStorageManager<storage::CPUDeviceStorage>();
             break;
           }
           case Context::kCPUPinned: {
-            ptr = new CurrentStorageManager<storage::PinnedMemoryStorage>();
+            ptr = new PinnedStorageManager<storage::PinnedMemoryStorage>();
             break;
           }
           case Context::kGPU: {
-            ptr = new CurrentStorageManager<storage::GPUDeviceStorage>();
+            ptr = new GPUStorageManager<storage::GPUDeviceStorage>();
             break;
           }
           default: LOG(FATAL) <<  "Unimplemented device " << ctx.dev_type;
