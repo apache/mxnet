@@ -5,6 +5,7 @@
  */
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
+#include <dmlc/thread_local.h>
 #include <mxnet/base.h>
 #include <mxnet/engine.h>
 #include <mxnet/resource.h>
@@ -66,8 +67,8 @@ class ResourceManagerImpl : public ResourceManager {
  public:
   ResourceManagerImpl() noexcept(false)
       : global_seed_(0) {
-    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 16);
-    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 4);
+    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
+    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
@@ -250,7 +251,7 @@ void* Resource::get_host_space_internal(size_t size) const {
 }
 
 ResourceManager* ResourceManager::Get() {
-  static resource::ResourceManagerImpl inst;
-  return &inst;
+  typedef dmlc::ThreadLocalStore<resource::ResourceManagerImpl> inst;
+  return inst::Get();
 }
 }  // namespace mxnet
