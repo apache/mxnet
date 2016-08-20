@@ -28,6 +28,7 @@ The committers are the granted write access to the project.
   - Chuntao is the initiator and provides the initial design of engine.
 * [Chiyuan Zhang](https://github.com/pluskid)
   - Chiyuan is the creator of MXNet Julia Package.
+* [Junyuan Xie](https://github.com/piiswrong)
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he makes mxnet available for R users.
 * [Tong He](https://github.com/hetong007)
@@ -64,7 +65,6 @@ List of Contributors
 * [Shuzhe Wu](https://github.com/II-Matto)
 * [Xiaodong](https://github.com/XD-DENG)
 * [Nan Xiao](https://github.com/road2stat)
-* [Junyuan Xie](https://github.com/piiswrong)
 * [Wei Wu](https://github.com/tornadomeet)
 * [Michaël Benesty](https://github.com/pommedeterresautee)
   -Michaël contributes the R visualization module of mxnet
