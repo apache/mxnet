@@ -258,7 +258,29 @@ def test_broadcast():
             assert (ndarray_ret.shape == target_shape).all()
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-8
+    def test_broadcast_ufunc1():
+        a = mx.nd.ones((3,))
+        b = mx.nd.ones((4, 3))
+        c = a + b
+        assert c.shape == (4, 3)
+        assert np.all(c.asnumpy() == 2)
+    def test_broadcast_ufunc2():
+        a = mx.nd.ones((1, 3))
+        b = mx.nd.ones((4, 3))
+        c = a + b
+        assert c.shape == (4, 3)
+        assert np.all(c.asnumpy() == 2)
+    def test_broadcast_ufunc3():
+        a = mx.nd.ones((1, 3))
+        b = mx.nd.ones((4, 1))
+        c = a + b
+        assert c.shape == (4, 3)
+        assert np.all(c.asnumpy() == 2)
+    # Call sub test cases.
     test_broadcast_to()
+    test_broadcast_ufunc1()
+    test_broadcast_ufunc2()
+    test_broadcast_ufunc3()
 
 if __name__ == '__main__':
     test_ndarray_slice()
