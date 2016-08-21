@@ -9,6 +9,7 @@ module mx
 
 using Compat
 import Compat.String
+import Compat.view
 
 using Formatting
 
