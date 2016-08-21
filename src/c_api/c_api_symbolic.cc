@@ -1,3 +1,9 @@
+/*!
+ *  Copyright (c) 2016 by Contributors
+ * \file c_api_symbolic.cc
+ * \brief C API of mxnet
+ */
+
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
 #include <nnvm/c_api.h>
@@ -29,7 +35,7 @@ std::vector<uint32_t> ReadOnlyArgIndices(const nnvm::IndexedGraph& idx) {
   return ret;
 }
 
-}
+}  // namespace mxnet
 
 // symbolic configuration generation API.
 // Redirect to NNVM's C API
@@ -265,7 +271,7 @@ void CopyAttr(const nnvm::IndexedGraph& idx,
       aux_attr->push_back(attr_vec[idx.entry_id(nid, 0)]);
     }
   }
-  for (auto& e: idx.outputs()) {
+  for (auto& e : idx.outputs()) {
     out_attr->push_back(attr_vec[idx.entry_id(e)]);
   }
 }

@@ -5,8 +5,8 @@
  */
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
+#include <mxnet/op_attr_types.h>
 #include <nnvm/node.h>
-#include <nnvm/op_attr_types.h>
 #include <memory>
 
 namespace mxnet {
@@ -20,6 +20,7 @@ using nnvm::FInferType;
 using nnvm::FMutateInputs;
 using nnvm::FListInputNames;
 using nnvm::FListOutputNames;
+using mxnet::FCreateLayerOp;
 
 class ParsedOpProp {
  public:
@@ -130,6 +131,16 @@ std::vector<uint32_t> OpPropMutateInputs(const NodeAttrs& attrs) {
   return ret;
 }
 
+Operator* OpPropCreateLayerOp(const NodeAttrs& attrs,
+                              Context ctx,
+                              const std::vector<TShape>& ishape,
+                              const std::vector<int>& itype) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  std::vector<TShape> is = ishape;
+  std::vector<int> it = itype;
+  return prop.ptr->CreateOperatorEx(ctx, &is, &it);
+}
+
 // register the legacy operator properties under NNVM registry.
 void RegisterLegacyOpProp() {
   for (auto reg : dmlc::Registry<OperatorPropertyReg>::List()) {
@@ -153,6 +164,7 @@ void RegisterLegacyOpProp() {
     op.attr<FInferShape>("FInferShape", OpPropInferShape);
     op.attr<FInferType>("FInferType", OpPropInferType);
     op.attr<FMutateInputs>("FMutateInputs", OpPropMutateInputs);
+    op.attr<FCreateLayerOp>("FCreateLayerOp", OpPropCreateLayerOp);
     if (reg->key_var_num_args.length() != 0) {
       op.attr<std::string>("key_var_num_args", reg->key_var_num_args);
     }

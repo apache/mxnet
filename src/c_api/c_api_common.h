@@ -3,14 +3,16 @@
  * \file c_api_error.h
  * \brief Error handling for C API.
  */
-#ifndef MXNET_C_API_C_API_ERROR_H_
-#define MXNET_C_API_C_API_ERROR_H_
+#ifndef MXNET_C_API_C_API_COMMON_H_
+#define MXNET_C_API_C_API_COMMON_H_
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <mxnet/c_api.h>
 #include <mxnet/base.h>
+#include <vector>
+#include <string>
 
 /*! \brief  macro to guard beginning and end section of all functions */
 #define API_BEGIN() try {
@@ -76,4 +78,4 @@ struct MXAPIThreadLocalEntry {
 // define the threadlocal store.
 typedef dmlc::ThreadLocalStore<MXAPIThreadLocalEntry> MXAPIThreadLocalStore;
 
-#endif  // MXNET_C_API_C_API_ERROR_H_
+#endif  // MXNET_C_API_C_API_COMMON_H_
