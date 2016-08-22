@@ -114,6 +114,8 @@ class GraphExecutor : public Executor {
   std::vector<NDArray> output_arrays_;
   // number of forward nodes
   size_t num_forward_nodes_;
+  // total number of allocated temp space.
+  size_t total_allocated_temp_{0};
 };
 
 }  // namespace exec

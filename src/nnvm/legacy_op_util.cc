@@ -15,12 +15,6 @@ namespace op {
 using nnvm::Op;
 using nnvm::NodeAttrs;
 using nnvm::array_view;
-using nnvm::FInferShape;
-using nnvm::FInferType;
-using nnvm::FMutateInputs;
-using nnvm::FListInputNames;
-using nnvm::FListOutputNames;
-using mxnet::FCreateLayerOp;
 
 class ParsedOpProp {
  public:
@@ -29,6 +23,7 @@ class ParsedOpProp {
   std::vector<std::string> aux_states;
   std::vector<std::string> inputs;
   std::vector<std::string> outputs;
+  std::vector<std::pair<int, int> > forward_inplace;
   // initializer
   void Init(const NodeAttrs& attrs) {
     std::vector<std::pair<std::string, std::string> > kwargs(
@@ -40,6 +35,21 @@ class ParsedOpProp {
     inputs = arguments;
     inputs.insert(
         inputs.end(), aux_states.begin(), aux_states.end());
+
+    std::vector<int> in_data(arguments.size());
+    std::vector<int> out_data(outputs.size());
+    std::vector<void*> out_addr(outputs.size());
+    for (size_t i = 0; i < in_data.size(); ++i) {
+      in_data[i] = static_cast<int>(i);
+    }
+    for (size_t i = 0; i < out_data.size(); ++i) {
+      out_data[i] = static_cast<int>(i);
+      out_addr[i] = &out_data[i];
+    }
+    for (auto& kv : ptr->ForwardInplaceOption(in_data, out_addr)) {
+      forward_inplace.push_back(
+          std::make_pair(kv.first, *static_cast<int*>(kv.second)));
+    }
   }
 };
 
@@ -141,8 +151,21 @@ Operator* OpPropCreateLayerOp(const NodeAttrs& attrs,
   return prop.ptr->CreateOperatorEx(ctx, &is, &it);
 }
 
+std::vector<std::pair<int, int> > OpPropInplaceOption(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  return prop.forward_inplace;
+}
+
 // register the legacy operator properties under NNVM registry.
 void RegisterLegacyOpProp() {
+  using nnvm::FInferShape;
+  using nnvm::FInferType;
+  using nnvm::FMutateInputs;
+  using nnvm::FListInputNames;
+  using nnvm::FListOutputNames;
+  using nnvm::FInplaceOption;
+  using mxnet::FCreateLayerOp;
+
   for (auto reg : dmlc::Registry<OperatorPropertyReg>::List()) {
     Op& op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER_OR_GET__(reg->name);
     if (op.attr_parser != nullptr) continue;
@@ -164,6 +187,7 @@ void RegisterLegacyOpProp() {
     op.attr<FInferShape>("FInferShape", OpPropInferShape);
     op.attr<FInferType>("FInferType", OpPropInferType);
     op.attr<FMutateInputs>("FMutateInputs", OpPropMutateInputs);
+    op.attr<FInplaceOption>("FInplaceOption", OpPropInplaceOption);
     op.attr<FCreateLayerOp>("FCreateLayerOp", OpPropCreateLayerOp);
     if (reg->key_var_num_args.length() != 0) {
       op.attr<std::string>("key_var_num_args", reg->key_var_num_args);

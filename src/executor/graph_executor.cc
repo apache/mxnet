@@ -4,6 +4,7 @@
  * \brief graph executor
  */
 #include <vector>
+#include <algorithm>
 #include "./graph_executor.h"
 
 namespace mxnet {
@@ -110,7 +111,8 @@ void GraphExecutor::InitGraph(nnvm::Symbol symbol,
 }
 
 // forward executor
-class GraphExecutor::ForwardOpExecutor : public GraphExecutor::OpExecutor {
+class GraphExecutor::ForwardOpExecutor
+    : public GraphExecutor::OpExecutor {
  public:
   void Run(RunContext rctx) override {
     op_ctx.run_ctx = rctx;
@@ -118,28 +120,36 @@ class GraphExecutor::ForwardOpExecutor : public GraphExecutor::OpExecutor {
   }
 
   void Init() override {
-    // TODO(tqchen) support aux
-    in_data_.resize(in_array.size());
+    in_data_.clear(); aux_data_.clear();
+    for (size_t i = 0; i < in_array.size(); ++i) {
+      if (!std::binary_search(aux_index_.begin(), aux_index_.end(), i)) {
+        in_data_.push_back(in_array[i].data());
+      } else {
+        aux_data_.push_back(in_array[i].data());
+      }
+    }
     out_data_.resize(out_array.size());
-    std::transform(in_array.begin(), in_array.end(), in_data_.begin(), [](const NDArray& nd) {
-        return nd.data();
-      });
     std::transform(out_array.begin(), out_array.end(), out_data_.begin(), [](const NDArray& nd) {
         return nd.data();
       });
   }
-  explicit ForwardOpExecutor(Operator* op) : op_(op) {}
+  explicit ForwardOpExecutor(Operator* op, std::vector<uint32_t> aux_index)
+      : op_(op), aux_index_(aux_index) {
+    std::sort(aux_index_.begin(), aux_index_.end());
+  }
 
  private:
-  // internal operator
   std::shared_ptr<Operator> op_;
+  std::vector<uint32_t> aux_index_;
   std::vector<TBlob> in_data_, out_data_, aux_data_;
 };
 
 void GraphExecutor::InitOpExecs() {
   using nnvm::DTypeVector;
   using nnvm::ShapeVector;
-  static auto& fcreate_layer_op = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
+  using nnvm::FMutateInputs;
+  auto& fcreate_layer_op = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
+  auto& fmutate_inputs = nnvm::Op::GetAttr<FMutateInputs>("FMutateInputs");
   const auto& vdtype = graph_.GetAttr<DTypeVector>("dtype");
   const auto& vshape = graph_.GetAttr<ShapeVector>("shape");
   // get the graph
@@ -155,9 +165,13 @@ void GraphExecutor::InitOpExecs() {
         ishape.emplace_back(vshape[idx.entry_id(e)]);
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
+      std::vector<uint32_t> mutate_index;
+      if (fmutate_inputs.count(inode.source->op)) {
+        mutate_index = fmutate_inputs[inode.source->op](inode.source->attrs);
+      }
       op_nodes_[i].exec.reset(
           new ForwardOpExecutor(fcreate_layer_op[inode.source->op](
-              inode.source->attrs, op_nodes_[i].ctx, ishape, itype)));
+              inode.source->attrs, op_nodes_[i].ctx, ishape, itype), mutate_index));
     } else {
       LOG(INFO) << "FCompute not registered " << inode.source->op->name;
     }
@@ -165,7 +179,39 @@ void GraphExecutor::InitOpExecs() {
 }
 
 void GraphExecutor::InitResources() {
-  // TODO(tqchen) add resource request
+  auto& fresource =
+      nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+  auto& idx = graph_.indexed_graph();
+  // Use global resource pool for each executor for now.
+  std::map<Context, Resource> cached_temp;
+  total_allocated_temp_ = 0;
+  // Resource allocation
+  for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+    const auto& inode = idx[nid];
+    if (inode.source->is_variable()) continue;
+    if (fresource.count(inode.source->op) == 0) continue;
+    auto reqs = fresource[inode.source->op](inode.source->attrs);
+    auto& requested = op_nodes_[nid].exec->op_ctx.requested;
+    requested.clear();
+    // Get the resource of temporal space.
+    for (const ResourceRequest& req : reqs) {
+      const Context &ctx = op_nodes_[nid].ctx;
+      if (req.type == ResourceRequest::kTempSpace) {
+        if (cached_temp.count(ctx) != 0) {
+          requested.push_back(cached_temp.at(ctx));
+        } else {
+          Resource r = ResourceManager::Get()->Request(ctx, req);
+          requested.push_back(r);
+          cached_temp[ctx] = r;
+          ++total_allocated_temp_;
+        }
+      } else if (req.type == ResourceRequest::kRandom) {
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
+      } else {
+        LOG(FATAL) << "resource type not yet supported";
+      }
+    }
+  }
 }
 
 // initialize the memory of each entries
@@ -187,7 +233,6 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   using PoolEntry = std::pair<Context, size_t>;
   std::vector<PoolEntry> pool_info;
 
-
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
     size_t bytes = vshape[i].Size() * mshadow::mshadow_sizeof(vdtype[i]);
@@ -199,8 +244,7 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
     }
     PoolEntry& info = pool_info[sid];
     if (info.second == 0) {
-      // TODO(tqchen): assign context
-      info.second = bytes;
+      info = PoolEntry{data_context_[i], bytes};
     } else {
       info.second = std::max(info.second, bytes);
     }
@@ -241,8 +285,7 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
     int storage_id = vstorage[i];
     CHECK_GE(storage_id, 0) << "Do not support runtime shape op yet";
     const NDArray& src = data_pool_.at(storage_id);
-    // TODO(tqchen) support arbirtary dtype
-    data_entry_[i] = src.Reshape(vshape[i]);
+    data_entry_[i] = src.AsArray(vshape[i], vdtype[i]);
   }
 
   // initialize output arrays
@@ -254,7 +297,9 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
 void GraphExecutor::InitCachedOps() {
   // get the graph
   const auto& idx = graph_.indexed_graph();
-  // initialize the nodes
+  const auto& vstorage_inplace
+      = graph_.GetAttr<std::vector<int> >("storage_inplace_index");
+
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
@@ -264,19 +309,30 @@ void GraphExecutor::InitCachedOps() {
     for (const auto& e : inode.inputs) {
       exec->in_array.push_back(data_entry_[idx.entry_id(e)]);
     }
+    // detect inplace requirement
+    std::vector<uint32_t> inplace_inputs;
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-      exec->out_array.push_back(data_entry_[idx.entry_id(nid, index)]);
-      // TODO(tqchen) hanelde inplaccem
-      exec->req.push_back(kWriteTo);
+      uint32_t eid = idx.entry_id(nid, index);
+      exec->out_array.push_back(data_entry_[eid]);
+      if (vstorage_inplace[eid] >= 0) {
+        exec->req.push_back(kWriteInplace);
+        inplace_inputs.push_back(vstorage_inplace[eid]);
+      } else {
+        exec->req.push_back(kWriteTo);
+      }
     }
-    // TODO(tqchen) handle inplace
+    std::sort(inplace_inputs.begin(), inplace_inputs.end());
+
     bool is_async = false;
     bool is_gpu = op_nodes_[nid].ctx.dev_mask() == gpu::kDevMask;
     // the variable
     std::vector<Engine::VarHandle> use_vars, mutate_vars, all_vars;
-    for (auto& nd : exec->in_array) {
-      all_vars.push_back(nd.var());
-      use_vars.push_back(nd.var());
+    for (size_t i = 0; i < exec->in_array.size(); ++i) {
+      if (!std::binary_search(inplace_inputs.begin(), inplace_inputs.end(), i)) {
+        auto& nd = exec->in_array[i];
+        all_vars.push_back(nd.var());
+        use_vars.push_back(nd.var());
+      }
     }
     for (auto& nd : exec->out_array) {
       all_vars.push_back(nd.var());
