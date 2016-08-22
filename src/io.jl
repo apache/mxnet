@@ -3,113 +3,50 @@
 
 The root type for all data provider. A data provider should implement the following interfaces:
 
-       get_batch_size(provider) -> Int
+* [`get_batch_size`](@ref)
+* [`provide_data`](@ref)
+* [`provide_label`](@ref)
 
-      :param AbstractDataProvider provider: the data provider.
-      :return: the mini-batch size of the provided data. All the provided data should have the
-               same mini-batch size (i.e. the last dimension).
+As well as the Julia iterator interface (see [the Julia manual](http://docs.julialang.org/en/stable/manual/interfaces/)).
+Normally this involves defining:
 
-       provide_data(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
-
-      :param AbstractDataProvider provider: the data provider.
-      :return: a vector of (name, shape) pairs describing the names of the data it provides, and
-               the corresponding shapes.
-
-       provide_label(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
-
-      :param AbstractDataProvider provider: the data provider.
-      :return: a vector of (name, shape) pairs describing the names of the labels it provides, and
-               the corresponding shapes.
-
-   The difference between *data* and *label* is that during
-   training stage, both *data* and *label* will be feeded into the model, while during
-   prediction stage, only *data* is loaded. Otherwise, they could be anything, with any names, and
-   of any shapes. The provided data and label names here should match the input names in a target
-   `SymbolicNode`.
-
-   A data provider should also implement the Julia iteration interface, in order to allow iterating
-   through the data set. The provider will be called in the following way:
-
-   .. code-block:: julia
-
-      for batch in eachbatch(provider)
-        data = get_data(provider, batch)
-      end
-
-   which will be translated by Julia compiler into
-
-   .. code-block:: julia
-
-      state = Base.start(eachbatch(provider))
-      while !Base.done(provider, state)
-        (batch, state) = Base.next(provider, state)
-        data = get_data(provider, batch)
-      end
-
-   By default, :func:`eachbatch` simply returns the provider itself, so the iterator interface
-   is implemented on the provider type itself. But the extra layer of abstraction allows us to
-   implement a data provider easily via a Julia `Task` coroutine. See the
-   data provider defined in :doc:`the char-lstm example
-   </tutorial/char-lstm>` for an example of using coroutine to define data
-   providers.
-
-The detailed interface functions for the iterator API is listed below:
-
-    Base.eltype(provider) -> AbstractDataBatch
-
-   :param AbstractDataProvider provider: the data provider.
-   :return: the specific subtype representing a data batch. See `AbstractDataBatch`.
-
-    Base.start(provider) -> AbstractDataProviderState
-
-   :param AbstractDataProvider provider: the data provider.
-
-   This function is always called before iterating into the dataset. It should initialize
-   the iterator, reset the index, and do data shuffling if needed.
-
-    Base.done(provider, state) -> Bool
-
-   :param AbstractDataProvider provider: the data provider.
-   :param AbstractDataProviderState state: the state returned by :func:`Base.start` :func:`Base.next`.
-   :return: true if there is no more data to iterate in this dataset.
-
-    Base.next(provider) -> (AbstractDataBatch, AbstractDataProviderState)
-
-   :param AbstractDataProvider provider: the data provider.
-   :return: the current data batch, and the state for the next iteration.
-
-Note sometimes you are wrapping an existing data iterator (e.g. the built-in libmxnet data iterator) that
-is built with a different convention. It might be difficult to adapt to the interfaces stated here. In this
-case, you can safely assume that
-
-* :func:`Base.start` will always be called, and called only once before the iteration starts.
-* :func:`Base.done` will always be called at the beginning of every iteration and always be called once.
-* If :func:`Base.done` return true, the iteration will stop, until the next round, again, starting with
-  a call to :func:`Base.start`.
-* :func:`Base.next` will always be called only once in each iteration. It will always be called after
-  one and only one call to :func:`Base.done`; but if :func:`Base.done` returns true, :func:`Base.next` will
-  not be called.
-
-With those assumptions, it will be relatively easy to adapt any existing iterator. See the implementation
-of the built-in `MXDataProvider` for example.
-
-.. caution::
-
-   Please do not use the one data provider simultaneously in two different places, either in parallel,
-   or in a nested loop. For example, the behavior for the following code is undefined
-
-   .. code-block:: julia
-
-      for batch in data
-        # updating the parameters
-
-        # now let's test the performance on the training set
-        for b2 in data
-          # ...
-        end
-      end
+* `Base.eltype(provider) -> AbstractDataBatch`
+* `Base.start(provider) -> AbstractDataProviderState`
+* `Base.done(provider, state) -> Bool`
+* `Base.next(provider, state) -> (AbstractDataBatch, AbstractDataProvider)`
 """
 abstract AbstractDataProvider
+
+"""
+    get_batch_size(provider) -> Int
+
+# Arguments:
+* `provider::AbstractDataProvider`: the data provider.
+
+Returns the mini-batch size of the provided data. All the provided data should have the same mini-batch size (i.e. the last dimension).
+"""
+function get_batch_size end
+
+"""
+    provide_data(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
+
+# Arguments:
+* `provider::AbstractDataProvider`: the data provider.
+
+Returns a vector of (name, shape) pairs describing the names of the data it provides, and the corresponding shapes.
+
+"""
+function provide_data end
+
+"""
+    provide_label(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
+
+# Arguments:
+* `provider::AbstractDataProvider`: the data provider.
+
+Returns a vector of (name, shape) pairs describing the names of the labels it provides, and the corresponding shapes.
+"""
+function provide_label end
 
 """
     AbstractDataProviderState
@@ -123,74 +60,58 @@ abstract AbstractDataProviderState
 
    Base type for a data mini-batch. It should implement the following interfaces:
 
-       count_samples(provider, batch) -> Int
+* [`count_samples`](@ref)
+* [`get_data`](@ref)
+* [`get_label`](@ref)
 
-      :param AbstractDataBatch batch: the data batch object.
-      :return: the number of samples in this batch. This number should be greater than 0, but
-               less than or equal to the batch size. This is used to indicate at the end of
-               the data set, there might not be enough samples for a whole mini-batch.
+The following utility functions will be automatically defined:
 
-       get_data(provider, batch) -> Vector{NDArray}
-
-      :param AbstractDataProvider provider: the data provider.
-      :param AbstractDataBatch batch: the data batch object.
-      :return: a vector of data in this batch, should be in the same order as declared in
-               :func:`provide_data() <AbstractDataProvider.provide_data>`.
-
-               The last dimension of each `NDArray` should always match the batch_size, even when
-               :func:`count_samples` returns a value less than the batch size. In this case,
-               the data provider is free to pad the remaining contents with any value.
-
-       get_label(provider, batch) -> Vector{NDArray}
-
-      :param AbstractDataProvider provider: the data provider.
-      :param AbstractDataBatch batch: the data batch object.
-      :return: a vector of labels in this batch. Similar to :func:`get_data`.
-
-
-   The following utility functions will be automatically defined.
-
-       get(provider, batch, name) -> NDArray
-
-      :param AbstractDataProvider provider: the data provider.
-      :param AbstractDataBatch batch: the data batch object.
-      :param Base.Symbol name: the name of the data to get, should be one of the names
-             provided in either :func:`provide_data() <AbstractDataProvider.provide_data>`
-             or :func:`provide_label() <AbstractDataProvider.provide_label>`.
-      :return: the corresponding data array corresponding to that name.
-
-       load_data!(provider, batch, targets)
-
-      :param AbstractDataProvider provider: the data provider.
-      :param AbstractDataBatch batch: the data batch object.
-      :param targets: the targets to load data into.
-      :type targets: Vector{Vector{SlicedNDArray}}
-
-      The targets is a list of the same length as number of data provided by this provider.
-      Each element in the list is a list of `SlicedNDArray`. This list described a
-      spliting scheme of this data batch into different slices, each slice is specified by
-      a slice-ndarray pair, where *slice* specify the range of samples in the mini-batch
-      that should be loaded into the corresponding *ndarray*.
-
-      This utility function is used in data parallelization, where a mini-batch is splited
-      and computed on several different devices.
-
-       load_label!(provider, batch, targets)
-
-      :param AbstractDataProvider provider: the data provider.
-      :param AbstractDataBatch batch: the data batch object.
-      :param targets: the targets to load label into.
-      :type targets: Vector{Vector{SlicedNDArray}}
-
-      The same as :func:`load_data!`, except that this is for loading labels.
+* [`get`](@ref)
+* [`load_data!`](@ref)
+* [`load_label!`](@ref)
 """
 abstract AbstractDataBatch
 
 """
+    count_samples(provider, batch) -> Int
+
+# Arguments:
+* `batch::AbstractDataBatch`: the data batch object.
+
+Returns the number of samples in this batch. This number should be greater than 0, but less than or equal to the batch size. This is used to indicate at the end of the data set, there might not be enough samples for a whole mini-batch.
+
+"""
+function count_samples end
+
+"""
+    get_data(provider, batch) -> Vector{NDArray}
+
+# Arguments:
+* `provider::AbstractDataProvider`: the data provider.
+* `batch::AbstractDataBatch`: the data batch object.
+
+Returns a vector of data in this batch, should be in the same order as declared in `provide_data() <AbstractDataProvider.provide_data>`.
+
+The last dimension of each `NDArray` should always match the batch_size, even when `count_samples` returns a value less than the batch size. In this case,      the data provider is free to pad the remaining contents with any value.
+"""
+function get_data end
+
+"""
+    get_label(provider, batch) -> Vector{NDArray}
+
+# Arguments:
+* `provider::AbstractDataProvider`: the data provider.
+* `batch::AbstractDataBatch`: the data batch object.
+
+Returns a vector of labels in this batch. Similar to [`get_data`](@ref).
+"""
+function get_label end
+
+"""
     DataBatch
 
-   A basic subclass of `AbstractDataBatch`, that implement the interface by
-   accessing member fields.
+A basic subclass of `AbstractDataBatch`, that implement the interface by
+accessing member fields.
 """
 type DataBatch <: AbstractDataBatch
   data  :: Vector{NDArray}
@@ -204,7 +125,7 @@ get_label{Provider<:AbstractDataProvider}(::Provider, batch :: DataBatch) = batc
 """
     SlicedNDArray
 
-   A alias type of `Tuple{UnitRange{Int},NDArray}`.
+A alias type of `Tuple{UnitRange{Int},NDArray}`.
 """
 typealias SlicedNDArray Tuple{UnitRange{Int},NDArray}
 
@@ -217,10 +138,38 @@ function _load_general!(provider :: AbstractDataProvider, batch :: AbstractDataB
     end
   end
 end
+
+"""
+    load_data!(provider, batch, targets)
+
+# Arguments:
+* `provider::AbstractDataProvider`: the data provider.
+* `batch::AbstractDataBatch`: the data batch object.
+* `targets::Vector{Vector{SlicedNDArray}}`: the targets to load data into.
+
+The targets is a list of the same length as number of data provided by this provider.
+Each element in the list is a list of `SlicedNDArray`. This list described a
+spliting scheme of this data batch into different slices, each slice is specified by
+a slice-ndarray pair, where *slice* specify the range of samples in the mini-batch
+that should be loaded into the corresponding *ndarray*.
+
+This utility function is used in data parallelization, where a mini-batch is splited
+and computed on several different devices.
+"""
 function load_data!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
                     targets :: Vector{Vector{SlicedNDArray}})
   _load_general!(provider, batch, targets, get_data)
 end
+
+"""
+    load_label!(provider, batch, targets)
+
+* `provider::AbstractDataProvider provider`: the data provider.
+* `batch::AbstractDataBatch batch`: the data batch object.
+* `targets::Vector{Vector{SlicedNDArray}}`: the targets to load label into.
+
+The same as [`load_data!`](@ref), except that this is for loading labels.
+"""
 function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
                      targets :: Vector{Vector{SlicedNDArray}})
   _load_general!(provider, batch, targets, get_label)
@@ -238,6 +187,17 @@ function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatc
 end
 
 import Base.get
+"""
+    get(provider, batch, name) -> NDArray
+
+* `provider::AbstractDataProvider`: the data provider.
+* `batch::AbstractDataBatch`: the data batch object.
+* `name::Symbol`: the name of the data to get, should be one of the names
+  provided in either `provide_data() <AbstractDataProvider.provide_data>`
+  or `provide_label() <AbstractDataProvider.provide_label>`.
+
+Returns the corresponding data array corresponding to that name.
+"""
 function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name :: Base.Symbol)
   for (idx, (k, s)) in enumerate(provide_data(provider))
     if name == k
@@ -257,7 +217,29 @@ eachbatch(provider :: AbstractDataProvider) = provider
 """
     ArrayDataProvider
 
-   A convenient tool to iterate `NDArray` or Julia `Array`.
+A convenient tool to iterate `NDArray` or Julia `Array`.
+ 
+    ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
+
+Construct a data provider from `NDArray` or Julia Arrays.
+
+# Arguments:
+* `data`: the data, could be
+  * a `NDArray`, or a Julia Array. This is equivalent to `:data => data`.
+  * a name-data pair, like `:mydata => array`, where `:mydata` is the name of the data
+  * and `array` is an `NDArray` or a Julia Array.
+  * a list of name-data pairs.
+
+* `label`: the same as the `data` parameter. When this argument is omitted, the constructed provider will provide no labels.
+* `batch_size::Int`: the batch size, default is 0, which means treating the whole array as a single mini-batch.
+* `shuffle::Bool`: turn on if the data should be shuffled at every epoch.
+* `data_padding::Real`: when the mini-batch goes beyond the dataset boundary, there might
+  be less samples to include than a mini-batch. This value specify a scalar to pad the
+  contents of all the missing data points.
+* `label_padding::Real`: the same as `data_padding`, except for the labels.
+
+TODO: remove `data_padding` and `label_padding`, and implement rollover that copies
+the last or first several training samples to feed the padding.
 """
 type ArrayDataProvider <: AbstractDataProvider
   data_arrays   :: Vector{Array{MX_float}}
@@ -274,31 +256,6 @@ type ArrayDataProvider <: AbstractDataProvider
   label_batch   :: Vector{NDArray}
 end
 
-"""
-    ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
-
-   Construct a data provider from `NDArray` or Julia Arrays.
-
-   :param data: the data, could be
-
-          - a `NDArray`, or a Julia Array. This is equivalent to `:data => data`.
-          - a name-data pair, like `:mydata => array`, where `:mydata` is the name of the data
-            and `array` is an `NDArray` or a Julia Array.
-          - a list of name-data pairs.
-
-   :param label: the same as the `data` parameter. When this argument is omitted, the constructed
-          provider will provide no labels.
-   :param Int batch_size: the batch size, default is 0, which means treating the whole array as a
-          single mini-batch.
-   :param Bool shuffle: turn on if the data should be shuffled at every epoch.
-   :param Real data_padding: when the mini-batch goes beyond the dataset boundary, there might
-          be less samples to include than a mini-batch. This value specify a scalar to pad the
-          contents of all the missing data points.
-   :param Real label_padding: the same as `data_padding`, except for the labels.
-
-   TODO: remove `data_padding` and `label_padding`, and implement rollover that copies
-   the last or first several training samples to feed the padding.
-"""
 # Julia's type system is sometimes very frustrating. You cannot specify a function
 # with argument Vector{Pair} to expect to be matched when calling with the parameter
 # [:foo => zeros(2,3), :bar => zeros(3)] because the type inference gives very specific
@@ -387,9 +344,11 @@ end
 function provide_data(provider::ArrayDataProvider)
   return collect(zip(provider.data_names, map(size, provider.data_batch)))
 end
+
 function provide_label(provider::ArrayDataProvider)
   return collect(zip(provider.label_names, map(size, provider.label_batch)))
 end
+
 get_batch_size(provider::ArrayDataProvider) = provider.batch_size
 
 immutable ArrayDataProviderState <: AbstractDataProviderState
@@ -547,7 +506,42 @@ function count_samples(provider :: MXDataProvider, batch :: MXDataBatch)
   return provider.batch_size - Int(ref_pad[])
 end
 
-function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
+function _get_iter_creators()
+  n_ref = Ref{MX_uint}(0)
+  h_ref = Ref{Ptr{MX_handle}}(0)
+  @mxcall(:MXListDataIters, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
+
+  return unsafe_wrap(Array, h_ref[], n_ref[])
+end
+
+function _get_iter_name(hdr :: MX_handle)
+  ref_name      = Ref{char_p}(0)
+  ref_desc      = Ref{char_p}(0)
+  ref_narg      = Ref{MX_uint}(0)
+  ref_arg_names = Ref{char_pp}(0)
+  ref_arg_types = Ref{char_pp}(0)
+  ref_arg_descs = Ref{char_pp}(0)
+
+  @mxcall(:MXDataIterGetIterInfo,
+          (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
+          hdr, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
+
+  return Symbol(unsafe_wrap(String, ref_name[]))
+end
+
+const _iter_creator_cache = Dict{Symbol, MX_handle}()
+function _populate_iter_creator_cache!()
+  empty!(_iter_creator_cache)
+  h_creators = _get_iter_creators()
+  for handle in h_creators
+    name = _get_iter_name(handle)
+    _iter_creator_cache[name] = handle
+  end
+end
+
+_get_iter_creator(name :: Symbol) = _iter_creator_cache[name]
+
+function _define_data_iter_creator(hdr :: MX_handle)
   ref_name      = Ref{char_p}(0)
   ref_desc      = Ref{char_p}(0)
   ref_narg      = Ref{MX_uint}(0)
@@ -561,19 +555,24 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
 
   iter_name = Symbol(unsafe_wrap(String, ref_name[]))
 
-  if gen_docs
-    if endswith(string(iter_name), "Iter")
-      f_desc = "Can also be called with the alias `$(string(iter_name)[1:end-4] * "Provider")`.\n"
-    else
-      f_desc = ""
-    end
-    f_desc *= unsafe_string(ref_desc[]) * "\n\n"
-    f_desc *= ":param Base.Symbol data_name: keyword argument, default `:data`. The name of the data.\n"
-    f_desc *= ":param Base.Symbol label_name: keyword argument, default `:softmax_label`. " *
-              "The name of the label. Could be `nothing` if no label is presented in this dataset.\n\n"
-    f_desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs)
-    f_desc *= ":return: the constructed `MXDataProvider`."
-    return (iter_name, f_desc)
+  isprovider =  endswith(string(iter_name), "Iter")
+  signature = _format_signature(Int(ref_narg[]), ref_arg_names)
+  f_desc = "    " * string(iter_name) * "(" *signature * ")\n\n"
+  if isprovider 
+    f_desc *= "Can also be called with the alias `$(string(iter_name)[1:end-4] * "Provider")`.\n"
+  end
+  f_desc *= unsafe_string(ref_desc[]) * "\n\n"
+  f_desc *= "# Arguments:\n"
+  f_desc *= "* `data_name::Symbol`: keyword argument, default `:data`. The name of the data.\n"
+  f_desc *= "* `label_name::Symbol`: keyword argument, default `:softmax_label`. " *
+            "The name of the label. Could be `nothing` if no label is presented in this dataset.\n\n"
+  f_desc *= _format_docstring(Int(ref_narg[]), ref_arg_names, ref_arg_types, ref_arg_descs) * "\n"
+  f_desc *= "Returns the constructed `MXDataProvider`."
+
+  if isprovider
+    alias_name = Symbol(string(iter_name)[1:end-4] * "Provider")
+  else
+    alias_name = nothing
   end
 
   defun = quote
@@ -582,42 +581,28 @@ function _define_data_iter_creator(hdr :: MX_handle; gen_docs::Bool=false)
       arg_vals = String[dump_mx_param(v) for (k,v) in kwargs]
       ref_hdr  = Ref{MX_handle}(0)
 
+      local hdr = _get_iter_creator($(QuoteNode(iter_name)))
       @mxcall(:MXDataIterCreateIter, (MX_handle, MX_uint, char_pp, char_pp, Ref{MX_handle}),
-              $hdr, length(arg_keys), arg_keys, arg_vals, ref_hdr)
+              hdr, length(arg_keys), arg_keys, arg_vals, ref_hdr)
 
       return MXDataProvider(MX_DataIterHandle(ref_hdr[]); kwargs...)
     end
-  end
-  eval(defun)
+    $(isprovider ? :(const $alias_name = $iter_name) : :())
 
-  # add an alias XXXProvider => XXXIter
-  if endswith(string(iter_name), "Iter")
-    alias_name = Symbol(string(iter_name)[1:end-4] * "Provider")
-    eval(:($alias_name = $iter_name))
+    @doc $f_desc $iter_name
   end
+  defun
 end
 
-function _import_io_iterators(;gen_docs::Bool=false)
-  n_ref = Ref{MX_uint}(0)
-  h_ref = Ref{Ptr{MX_handle}}(0)
-  @mxcall(:MXListDataIters, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
-
-  n_creators = n_ref[]
-  h_creators = unsafe_wrap(Array, h_ref[], n_creators)
-
-  if gen_docs
-    docs = Dict{Base.Symbol, AbstractString}()
+macro _import_io_iterators()
+  creators = _get_iter_creators()
+  defs = Expr[]
+  for handle in creators
+    push!(defs, _define_data_iter_creator(handle))
   end
-
-  for i = 1:n_creators
-    creator_hdr = h_creators[i]
-    ret = _define_data_iter_creator(creator_hdr; gen_docs=gen_docs)
-    if gen_docs
-      docs[ret[1]] = ret[2]
-    end
-  end
-
-  if gen_docs
-    return docs
-  end
+  esc(quote
+    $(defs...)
+  end)
 end
+
+@_import_io_iterators()

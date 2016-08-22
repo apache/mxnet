@@ -241,7 +241,7 @@ import Base: size, length, ndims, eltype
    size(arr :: NDArray, dim :: Int)
 
 Get the shape of an `NDArray`. The shape is in Julia's column-major convention. See
-also the notes on NDArray shapes [`NDArrat`](@ref).
+also the notes on NDArray shapes [`NDArray`](@ref).
 """
 function size(arr :: NDArray)
   ref_ndim  = Ref{MX_uint}(0)
