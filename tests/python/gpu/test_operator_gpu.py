@@ -224,7 +224,7 @@ def test_pooling_with_type():
                 {'ctx': mx.cpu(0), 'pooling_data': (2, 2, 10, 10, 10), 'type_dict': {'pooling_data': np.float32}}]
     check_consistency(sym_3d, ctx_list_3d)
 
-def test_regression_with_type()
+def test_regression_with_type():
     sym_logistic = mx.sym.LogisticRegressionOutput(name = 'regression')
     sym_linear = mx.sym.LinearRegressionOutput(name = 'regression')
     ctx_list = [{'ctx': mx.gpu(0), 'regression_data': (2, 2, 10, 10), 'type_dict': {'regression_data': np.float64}},
