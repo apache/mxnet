@@ -69,7 +69,7 @@ function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDA
         for j in 1:size(labels, 2)
           for i in 1:size(labels, 1)
             label = labels[i, j, 1, sample]
-            klasses = sub(pred, i, j, :, sample)
+            klasses = view(pred, i, j, :, sample)
             klass = indmax(klasses) - 1 # Classes start at 0...k-1
 
             metric.acc_sum += klass == label
@@ -79,7 +79,7 @@ function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDA
       end
     elseif ndims(pred) == 2 # 1-dimensional case
       for sample in 1:size(label, 1)
-        klass = indmax(sub(pred, :, sample)) - 1
+        klass = indmax(view(pred, :, sample)) - 1
         metric.acc_sum += klass == label[sample]
         metric.n_sample += 1
       end
