@@ -60,9 +60,9 @@ class EvalMetric(object):
         """
         if self.num == None:
             if self.num_inst == 0:
-                return (self.name, float('nan'))
+                return ([self.name], [float('nan')])
             else:
-                return (self.name, self.sum_metric / self.num_inst)
+                return ([self.name], [self.sum_metric / self.num_inst])
         else:
             names = ['%s_%d'%(self.name, i) for i in range(self.num)]
             values = [x / y if y != 0 else float('nan') \
@@ -72,10 +72,6 @@ class EvalMetric(object):
     def get_name_value(self):
         """Get zipped name and value pairs"""
         name, value = self.get()
-        if not isinstance(name, list):
-            name = [name]
-        if not isinstance(value, list):
-            value = [value]
         return zip(name, value)
 
 class CompositeEvalMetric(EvalMetric):
@@ -116,8 +112,8 @@ class CompositeEvalMetric(EvalMetric):
         results = []
         for metric in self.metrics:
             result = metric.get()
-            names.append(result[0])
-            results.append(result[1])
+            names.extend(result[0])
+            results.extend(result[1])
         return (names, results)
 
 ########################
