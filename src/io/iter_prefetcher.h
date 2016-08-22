@@ -118,13 +118,14 @@ class PrefetcherIter : public IIterator<DataBatch> {
  private:
   /*! \brief prefetcher parameters */
   PrefetcherParam param_;
-  // output data
+  /*! \brief output data */
   DataBatch *out_;
-  // queue to be recycled
+  /*! \brief queue to be recycled */
   std::queue<DataBatch*> recycle_queue_;
-  // backend thread
+  /*! \brief backend thread */
   dmlc::ThreadedIter<DataBatch> iter_;
-  // internal batch loader
+protected:
+  /*! \brief internal batch loader */
   std::unique_ptr<IIterator<TBlobBatch> > loader_;
 };
 }  // namespace io
