@@ -33,13 +33,14 @@ function Base.copy(self :: SymbolicNode)
 end
 
 # TODO(vchuravy) How to add documentation to the v0.5 style call overloading
-"""
+@doc """
     call(self :: SymbolicNode, args :: SymbolicNode...)
     call(self :: SymbolicNode; kwargs...)
 
 Make a new node by composing `self` with `args`. Or the arguments
 can be specified using keyword arguments.
-"""
+""" SymbolicNode
+
 @compat function (self::SymbolicNode)(args :: SymbolicNode...)
   s = deepcopy(self)
   _compose!(s, args...)
