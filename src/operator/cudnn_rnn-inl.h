@@ -103,10 +103,11 @@ class CuDNNRNNOp : public Operator {
 
     DType * cx_ptr = NULL;
     DType * cy_ptr = NULL;
-    if (param_.mode == rnn_enum::kLstm) {
+
+    if (param_.lstm_q_)
       cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+    if (param_.lstm_q_ && param_.state_outputs)
       cy_ptr = (out_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
-    }
 
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
