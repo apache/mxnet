@@ -38,6 +38,7 @@ script:
 
 after_success:
   - source $TRAVIS/run_coverage.sh
+  - echo $TRAVIS_JULIA_VERSION
   - julia -e 'Pkg.add("Documenter")'
   - julia -e 'cd(Pkg.dir("MXNet")); include(joinpath("docs", "make.jl"))'
 

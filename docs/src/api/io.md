@@ -79,20 +79,20 @@ case, you can safely assume that
 With those assumptions, it will be relatively easy to adapt any existing iterator. See the implementation
 of the built-in `MXDataProvider` for example.
 
-### Note:
-Please do not use the one data provider simultaneously in two different places, either in parallel,
-or in a nested loop. For example, the behavior for the following code is undefined
+!!! note
+    Please do not use the one data provider simultaneously in two different places, either in parallel,
+    or in a nested loop. For example, the behavior for the following code is undefined
 
-```julia
-for batch in data
-    # updating the parameters
+    ```julia
+    for batch in data
+        # updating the parameters
 
-    # now let's test the performance on the training set
-    for b2 in data
-        # ...
+        # now let's test the performance on the training set
+        for b2 in data
+            # ...
+        end
     end
-end
-```
+    ```
 
 ```@docs
 mx.get_batch_size
