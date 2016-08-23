@@ -49,24 +49,28 @@ def main():
         args.num_servers = args.num_workers
 
     args = dmlc_opts(args)
-
-    if args.cluster == 'local' or args.host_file is None or args.host_file == 'None':
-        from dmlc_tracker import local
-        local.submit(args)
-    elif args.cluster == 'sge':
-        from dmlc_tracker import sge
-        sge.submit(args)
-    elif args.cluster == 'yarn':
-        from dmlc_tracker import yarn
-        yarn.submit(args)
-    elif args.cluster == 'ssh':
-        from dmlc_tracker import ssh
-        ssh.submit(args)
-    elif args.cluster == 'mpi':
-        from dmlc_tracker import mpi
-        mpi.submit(args)
+    
+    if args.host_file is None or args.host_file == 'None':
+      if args.cluster == 'yarn':
+          from dmlc_tracker import yarn
+          yarn.submit(args)
+      elif args.cluster == 'local':
+          from dmlc_tracker import local
+          local.submit(args)
+      elif args.cluster == 'sge':
+          from dmlc_tracker import sge
+          sge.submit(args)
+      else:
+          raise RuntimeError('Unknown submission cluster type %s' % args.cluster)
     else:
-        raise RuntimeError('Unknown submission cluster type %s' % args.cluster)
+      if args.cluster == 'ssh':
+          from dmlc_tracker import ssh
+          ssh.submit(args)
+      elif args.cluster == 'mpi':
+          from dmlc_tracker import mpi
+          mpi.submit(args)
+      else:
+          raise RuntimeError('Unknown submission cluster type %s' % args.cluster)
 
 def signal_handler(signal, frame):
     logging.info('Stop luancher')
