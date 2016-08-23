@@ -113,7 +113,7 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; ove
 
   for (name, shape) in zip(aux_names, aux_shapes)
     if haskey(self.aux_params, name)
-      if shape == size(self.auxg_params[name])
+      if shape == size(self.aux_params[name])
         aux_params[name] = self.aux_params[name]
         continue
       else
