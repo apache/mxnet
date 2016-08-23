@@ -16,7 +16,7 @@
 #include "caffe_blob.h"
 #include "../../src/io/inst_vector.h"
 #include "../../src/io/iter_prefetcher.h"
-#include <../../src/operator/cast-inl.h>
+#include "../../src/operator/cast-inl.h"
 
 namespace mxnet {
 namespace io {
@@ -25,7 +25,7 @@ struct CaffeDataParam : public dmlc::Parameter<CaffeDataParam> {
   /*! \brief protobuf text */
   ::caffe::LayerParameter prototxt;
   /*! \brief maximum iteration count */
-  int max_iterations;  
+  int max_iterations;
   /*! \brief data mode */
   bool flat;
 
@@ -42,7 +42,7 @@ struct CaffeDataParam : public dmlc::Parameter<CaffeDataParam> {
 struct CaffePrefetchParam : dmlc::Parameter<CaffePrefetchParam> {
     /*! \brief data type */
     int dtype;
-    
+
     DMLC_DECLARE_PARAMETER(CaffePrefetchParam) {
       DMLC_DECLARE_FIELD(dtype)
         .add_enum("float32", mshadow::kFloat32)
@@ -57,30 +57,29 @@ struct CaffePrefetchParam : dmlc::Parameter<CaffePrefetchParam> {
 
 template<typename Dtype>
 class CaffeDataIter : public IIterator<TBlobBatch> {
-
-public:
+ public:
   CaffeDataIter(void) : loc_(0), batch_size_(0), channels_(0), width_(0), height_(0) {}
   virtual ~CaffeDataIter(void) {}
-    
+
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
     param_.InitAllowUnknown(kmap);
 
     // Caffe seems to understand phase inside an "include {}" block
-    if(!param_.prototxt.has_phase()) {
+    if (!param_.prototxt.has_phase()) {
       if (param_.prototxt.include().size()) {
         if (param_.prototxt.include(0).has_phase()) {
           param_.prototxt.set_phase(param_.prototxt.include(0).phase());
         }
       }
     }
-    
+
     std::string type = param_.prototxt.type();
     caffe_data_layer_ = caffe::LayerRegistry<Dtype>::CreateLayer(param_.prototxt);
-    if(caffe_data_layer_) {
+    if (caffe_data_layer_) {
       const size_t top_size = param_.prototxt.top_size();
-      if(top_size > 0) {
+      if (top_size > 0) {
         top_.reserve(top_size);
         for (size_t x = 0; x < top_size; ++x) {
           ::caffe::Blob<Dtype> *blob = new ::caffe::Blob<Dtype>();
@@ -117,16 +116,16 @@ public:
       }
     }
   }
-    
+
   virtual void BeforeFirst(void) {
     loc_ = 0;
   }
-  
+
   enum { DATA = 0, LABEL = 1 };
-    
+
   virtual bool Next(void) {
-    if(caffe_data_layer_) {
-      // MxNet iterator is expected to return CPU-accessible memory  
+    if (caffe_data_layer_) {
+      // MxNet iterator is expected to return CPU-accessible memory
       assert(::caffe::Caffe::mode() == ::caffe::Caffe::CPU);
       caffe_data_layer_->Forward(bottom_, top_);
       assert(batch_size_ > 0);
@@ -149,23 +148,23 @@ public:
     }
     return false;
   }
-    
+
   virtual const TBlobBatch &Value(void) const {
     return out_;
   }
 
-private:
+ private:
   /*! \brief MNISTCass iter params */
   CaffeDataParam param_;
   /*! Shape scalar values */
-  size_t batch_size_, channels_, width_, height_;     
+  size_t batch_size_, channels_, width_, height_;
   /*! \brief Caffe data layer */
   boost::shared_ptr<caffe::Layer<Dtype> >  caffe_data_layer_;
   /*! \brief batch data tensor */
   mshadow::Tensor<cpu, 4, Dtype> batch_data_;
   /*! \brief batch label tensor  */
   mshadow::Tensor<cpu, 2, Dtype> batch_label_;
-  /*! \brief Output blob data for this iteration */   
+  /*! \brief Output blob data for this iteration */
   TBlobBatch out_;
   /*! \brief Bottom and top connection-point blob data */
   std::vector<::caffe::Blob<Dtype>*> bottom_, top_;
@@ -176,11 +175,11 @@ private:
 };  // class CaffeDataIter
 
 class CaffeDataPrefetcherIter : public PrefetcherIter {
-public:
+ public:
     CaffeDataPrefetcherIter() : PrefetcherIter(NULL) {}
     virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
-      switch(param_.dtype) {
+      switch (param_.dtype) {
         case mshadow::kFloat32:
           this->loader_.reset(new CaffeDataIter<float>());
           break;
@@ -196,7 +195,8 @@ public:
       }
       PrefetcherIter::Init(kwargs);
     }
-protected:
+
+ protected:
     CaffePrefetchParam param_;
 };
 
@@ -207,7 +207,7 @@ MXNET_REGISTER_IO_ITER(CaffeDataIter)
 .describe("Create MxNet iterator for a Caffe data layer.")
 .add_arguments(CaffeDataParam::__FIELDS__())
 .add_arguments(PrefetcherParam::__FIELDS__())
-.add_arguments(CaffePrefetchParam::__FIELDS__())  
+.add_arguments(CaffePrefetchParam::__FIELDS__())
 .set_body([]() {
     return new CaffeDataPrefetcherIter();
 });

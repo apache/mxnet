@@ -124,7 +124,8 @@ class PrefetcherIter : public IIterator<DataBatch> {
   std::queue<DataBatch*> recycle_queue_;
   /*! \brief backend thread */
   dmlc::ThreadedIter<DataBatch> iter_;
-protected:
+
+ protected:
   /*! \brief internal batch loader */
   std::unique_ptr<IIterator<TBlobBatch> > loader_;
 };
