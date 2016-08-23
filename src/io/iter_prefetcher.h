@@ -102,7 +102,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
     // do recycle
     if (recycle_queue_.size() == param_.prefetch_buffer) {
       DataBatch *old_batch =  recycle_queue_.front();
-      // can be more efficienct on engine
+      // can be more efficient on engine
       for (NDArray& arr : old_batch->data) {
         arr.WaitToWrite();
       }
@@ -124,8 +124,6 @@ class PrefetcherIter : public IIterator<DataBatch> {
   std::queue<DataBatch*> recycle_queue_;
   /*! \brief backend thread */
   dmlc::ThreadedIter<DataBatch> iter_;
-
- protected:
   /*! \brief internal batch loader */
   std::unique_ptr<IIterator<TBlobBatch> > loader_;
 };
