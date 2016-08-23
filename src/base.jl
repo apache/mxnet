@@ -30,7 +30,7 @@ end
 
 function __init__()
   _populate_symbol_creator_cache!()
-  _import_io_iterators()
+  _populate_iter_creator_cache!()
 
   atexit() do
     # notify libmxnet we are shutting down
