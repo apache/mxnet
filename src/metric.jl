@@ -206,23 +206,30 @@ function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
   @nd_as_jl ro=(label,pred) begin
     # Samples are stored in the last dimension
     @assert size(label, ndims(label)) == size(pred, ndims(pred))
-    @assert ndims(pred) == 4
+    if ndims(pred) == 4
+      labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
+      for sample in 1:size(labels, 4)
+        for j in 1:size(labels, 2)
+          for i in 1:size(labels, 1)
+            # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
+            # Since we can only target labels right now this is the only thing we can do.
+            target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
+            p_k = pred[i, j, target, sample]
 
-    labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
-    for sample in 1:size(labels, 4)
-      for j in 1:size(labels, 2)
-        for i in 1:size(labels, 1)
-          label = labels[i, j, 1, sample]
-
-          # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
-          # Since we can only target labels right now this is the only thing we can do.
-          target = Int(label) + 1 # klasses are 0...k-1 => julia indexing
-          p_k = pred[i, j, target, sample]
-
-          metric.ace_sum += log(p_k)
-          metric.n_sample += 1
+            metric.ace_sum += log(p_k)
+            metric.n_sample += 1
+          end
         end
       end
+    elseif ndims(pred) == 2 # 1-dimensional case
+      for sample in 1:size(labels, 1)
+        target = Int(labels[sample]) + 1
+        p_k = pred[target, sample]
+        metric.ace_sum += log(p_k)
+        metric.n_sample += 1
+      end
+    else
+      error("Can't handle prediction with dimensions $(ndims(pred)).")
     end
   end
 end
@@ -257,23 +264,31 @@ function _update_single_output(metric :: MultiACE, label :: NDArray, pred :: NDA
   @nd_as_jl ro=(label,pred) begin
     # Samples are stored in the last dimension
     @assert size(label, ndims(label)) == size(pred, ndims(pred))
-    @assert ndims(pred) == 4
 
-    labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
-    for sample in 1:size(labels, 4)
-      for j in 1:size(labels, 2)
-        for i in 1:size(labels, 1)
-          label = labels[i, j, 1, sample]
+    if ndims(pred) == 4
+      labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
+      for sample in 1:size(labels, 4)
+        for j in 1:size(labels, 2)
+          for i in 1:size(labels, 1)
+            # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
+            # Since we can only target labels right now this is the only thing we can do.
+            target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
+            p_k = pred[i, j, target, sample]
 
-          # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
-          # Since we can only target labels right now this is the only thing we can do.
-          target = Int(label) + 1 # klasses are 0...k-1 => julia indexing
-          p_k = pred[i, j, target, sample]
-
-          metric.aces[target] += log(p_k)
-          metric.counts[target] += 1
+            metric.aces[target] += log(p_k)
+            metric.counts[target] += 1
+          end
         end
       end
+    elseif ndims(pred) == 2
+      for sample in 1:size(label, 1)
+        target = Int(label[sample]) + 1
+        p_k = pred[target, sample]
+        metric.aces[target] += log(p_k)
+        metric.counts[target] += 1
+      end
+    else
+      error("Can't handle prediction with dimensions $(ndims(pred)).")
     end
   end
 end
