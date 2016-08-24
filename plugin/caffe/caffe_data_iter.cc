@@ -55,7 +55,7 @@ struct CaffeDataIterWrapperParam : dmlc::Parameter<CaffeDataIterWrapperParam> {
 template<typename Dtype>
 class CaffeDataIter : public IIterator<TBlobBatch> {
  public:
-  CaffeDataIter(void) : loc_(0), batch_size_(0), channels_(0), width_(0), height_(0) {}
+  CaffeDataIter(void) : batch_size_(0), channels_(0), width_(0), height_(0), loc_(0) {}
   virtual ~CaffeDataIter(void) {}
 
   // intialize iterator loads data in
