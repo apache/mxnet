@@ -56,7 +56,7 @@ def get_iterator(data_shape, use_caffe_data):
                 } \
             }',
             flat           = flat,
-            epoch_size     = 60000
+            num_examples   = 60000
             # float32 is the default, so left out here in order to illustrate
         )
 
@@ -80,7 +80,7 @@ def get_iterator(data_shape, use_caffe_data):
                 } \
             }',
             flat           = flat,
-            epoch_size     = 10000,
+            num_examples   = 10000,
             dtype          = "float32" # float32 is the default
         )
 

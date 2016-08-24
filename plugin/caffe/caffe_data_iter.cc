@@ -24,7 +24,7 @@ struct CaffeDataParam : public dmlc::Parameter<CaffeDataParam> {
   /*! \brief protobuf text */
   ::caffe::LayerParameter prototxt;
   /*! \brief number of iterations per epoch */
-  int epoch_size;
+  int num_examples;
   /*! \brief data mode */
   bool flat;
 
@@ -33,8 +33,8 @@ struct CaffeDataParam : public dmlc::Parameter<CaffeDataParam> {
       .describe("Caffe's layer parameter");
     DMLC_DECLARE_FIELD(flat).set_default(false)
       .describe("Augmentation Param: Whether to flat the data into 1D.");
-    DMLC_DECLARE_FIELD(epoch_size).set_lower_bound(1).set_default(10000)
-      .describe("Number of iterations for each epoch.");
+    DMLC_DECLARE_FIELD(num_examples).set_lower_bound(1).set_default(10000)
+      .describe("Number of examples in the epoch.");
   }
 };
 
@@ -133,7 +133,7 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
     CHECK_GT(batch_size_, 0) << "batch size must be greater than zero";
     CHECK_EQ(out_.batch_size, batch_size_) << "Internal Error: batch size mismatch";
 
-    if (loc_ + batch_size_ <= param_.epoch_size) {
+    if (loc_ + batch_size_ <= param_.num_examples) {
       batch_data_.dptr_ = top_[DATA]->mutable_cpu_data();
       batch_label_.dptr_ = top_[LABEL]->mutable_cpu_data();
 
