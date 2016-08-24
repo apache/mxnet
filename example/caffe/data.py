@@ -12,7 +12,7 @@ def get_iterator(data_shape, use_caffe_data):
         # download data
         get_data.GetMNIST_ubyte()
         flat = False if len(data_shape) != 1 else True
-    
+
         train           = mx.io.MNISTIter(
             image       = "data/train-images-idx3-ubyte",
             label       = "data/train-labels-idx1-ubyte",
@@ -22,7 +22,7 @@ def get_iterator(data_shape, use_caffe_data):
             flat        = flat,
             num_parts   = kv.num_workers,
             part_index  = kv.rank)
-    
+
         val = mx.io.MNISTIter(
             image       = "data/t10k-images-idx3-ubyte",
             label       = "data/t10k-labels-idx1-ubyte",
@@ -31,9 +31,9 @@ def get_iterator(data_shape, use_caffe_data):
             flat        = flat,
             num_parts   = kv.num_workers,
             part_index  = kv.rank)
-    
+
         return (train, val)
-    
+
     def get_iterator_impl_caffe(args, kv):
         flat = False if len(data_shape) != 1 else True
         train = mx.io.CaffeDataIter(
@@ -56,7 +56,7 @@ def get_iterator(data_shape, use_caffe_data):
                 } \
             }',
             flat           = flat,
-            max_iterations = 60000
+            epoch_size     = 60000
             # float32 is the default, so left out here in order to illustrate
         )
 
@@ -80,7 +80,7 @@ def get_iterator(data_shape, use_caffe_data):
                 } \
             }',
             flat           = flat,
-            max_iterations = 10000,
+            epoch_size     = 10000,
             dtype          = "float32" # float32 is the default
         )
 
