@@ -2,32 +2,24 @@
     AbstractEvalMetric
 
 The base class for all evaluation metrics. The sub-types should implement the following
-interfaces.
+interfaces:
 
-   .. function:: update!(metric, labels, preds)
-
-      Update and accumulate metrics.
-
-      :param AbstractEvalMetric metric: the metric object.
-      :param labels: the labels from the data provider.
-      :type labels: Vector{NDArray}
-      :param preds: the outputs (predictions) of the network.
-      :type preds: Vector{NDArray}
-
-   .. function:: reset!(metric)
-
-      Reset the accumulation counter.
-
-   .. function:: get(metric)
-
-      Get the accumulated metrics.
-
-      :return: `Vector{Tuple{Base.Symbol, Real}}`, a list of name-value pairs. For
-               example, `[(:accuracy, 0.9)]`.
+* [`update!`](@ref)
+* [`reset!`](@ref)
+* [`get`](@ref)
 """
 abstract AbstractEvalMetric
 
-# Generic update! version
+"""
+    update!(metric, labels, preds)
+
+Update and accumulate metrics.
+
+# Arguments:
+* `metric::AbstractEvalMetric`: the metric object.
+* `labels::Vector{NDArray}`: the labels from the data provider.
+* `preds::Vector{NDArray}`: the outputs (predictions) of the network.
+"""
 function update!{T <: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray})
   if length(labels) != length(preds)
     Base.warn_once(
@@ -39,6 +31,59 @@ function update!{T <: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}
   end
 end
 
+"""
+    reset!(metric)
+
+Reset the accumulation counter.
+"""
+function reset!(metric :: AbstractEvalMetric)
+  throw(MethodError(reset!, (typeof(metric),)))
+end
+
+
+import Base: get
+"""
+    get(metric)
+
+Get the accumulated metrics.
+
+Returns `Vector{Tuple{Base.Symbol, Real}}`, a list of name-value pairs.
+For example, `[(:accuracy, 0.9)]`.
+"""
+function get(metric :: AbstractEvalMetric)
+  throw(MethodError(get, (typeof(metric),)))
+end
+
+"""
+    MultiMetric(metrics::Vector{AbstractEvalMetric})
+
+Combine multiple metrics in one and get a result for all of them.
+
+# Usage
+To calculate both mean-squared error [`Accuracy`](@ref) and log-loss [`ACE`](@ref):
+```julia
+  mx.fit(..., eval_metric = mx.MultiMetric([mx.Accuracy(), mx.ACE()]))
+```
+"""
+type MultiMetric <: mx.AbstractEvalMetric
+    metrics :: Vector{mx.AbstractEvalMetric}
+end
+
+function update!(metric :: MultiMetric, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+    for m in metric.metrics
+        update!(m, labels, preds)
+    end
+    return nothing
+end
+
+function reset!(metric :: MultiMetric)
+    map(reset!, metric.metrics)
+    return nothing
+end
+
+function get(metric :: MultiMetric)
+    mapreduce(get, append!, metric.metrics)
+end
 
 """
     Accuracy
@@ -89,7 +134,6 @@ function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDA
   end
 end
 
-import Base: get
 function get(metric :: Accuracy)
   return [(:accuracy, metric.acc_sum / metric.n_sample)]
 end
