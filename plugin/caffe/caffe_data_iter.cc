@@ -102,14 +102,16 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
         }
       }
 
-      if (param_.flat) {
-        batch_data_.shape_ = mshadow::Shape2(batch_size_, width_ * height_);
-      } else {
-        batch_data_.shape_ = mxnet::TShape(top_[DATA]->shape().begin(), top_[DATA]->shape().end());
+      if(top_size > DATA) {
+        if (param_.flat) {
+          batch_data_.shape_ = mshadow::Shape2(batch_size_, width_ * height_);
+        } else {
+          batch_data_.shape_ = mxnet::TShape(top_[DATA]->shape().begin(), top_[DATA]->shape().end());
+        }
+        batch_data_.stride_ = batch_data_.size(batch_data_.shape_.ndim() - 1);
       }
-      batch_data_.stride_ = batch_data_.size(batch_data_.shape_.ndim() - 1);
       out_.data.clear();
-      if(top_.size() > LABEL) {
+      if(top_size > LABEL) {
         batch_label_.shape_ = mxnet::TShape(top_[LABEL]->shape().begin(), top_[LABEL]->shape().end());
         batch_label_.stride_ = 1;
       }
@@ -125,8 +127,8 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
     // MxNet iterator is expected to return CPU-accessible memory
     if(::caffe::Caffe::mode() != ::caffe::Caffe::CPU) {
       ::caffe::Caffe::set_mode(::caffe::Caffe::CPU);
+      CHECK_EQ(::caffe::Caffe::mode(), ::caffe::Caffe::CPU);
     }
-    CHECK_EQ(::caffe::Caffe::mode(), ::caffe::Caffe::CPU);
     caffe_data_layer_->Forward(bottom_, top_);
     CHECK_GT(batch_size_, 0) << "batch size must be greater than zero";
     CHECK_EQ(out_.batch_size, batch_size_) << "Internal Error: batch size mismatch";
@@ -177,16 +179,17 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
   std::atomic<size_t>  loc_;
 };  // class CaffeDataIter
 
-class CaffeDataIterWrapper : public IIterator<DataBatch> {
+class CaffeDataIterWrapper : public IIterator<DataBatch>
+{
  public:
     virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
       switch (param_.dtype) {
         case mshadow::kFloat32:
-          loader_.reset(new CaffeDataIter<float>());
+          this->loader_.reset(new CaffeDataIter<float>());
           break;
         case mshadow::kFloat64:
-          loader_.reset(new CaffeDataIter<double>());
+          this->loader_.reset(new CaffeDataIter<double>());
           break;
         case mshadow::kFloat16:
           LOG(FATAL) << "float16 layer is not supported by caffe";
@@ -206,12 +209,10 @@ class CaffeDataIterWrapper : public IIterator<DataBatch> {
     virtual bool Next(void) {
       CHECK_NOTNULL(loader_.get());
 
-      if (!loader_->Next()) {
-        return false;
-      }
-
+      if (!loader_->Next()) return false;
       const TBlobBatch& batch = loader_->Value();
       if (out_ == nullptr) {
+        // allocate databatch
         out_.reset(new DataBatch());
         out_->num_batch_padd = batch.num_batch_padd;
         out_->data.resize(batch.data.size());
@@ -220,19 +221,18 @@ class CaffeDataIterWrapper : public IIterator<DataBatch> {
           out_->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
         }
       }
-
-      // make sure batch size didn't change unexpectedly
       CHECK(batch.data.size() == out_->data.size());
-
       // copy data over
-      for (size_t i = 0, n = batch.data.size(); i < n; ++i) {
-        CHECK_EQ(out_->data[i].shape(), batch.data[i].shape_);
-        out_->data[i].data() = batch.data[i];
+      for (size_t i = 0; i < batch.data.size(); ++i) {
+        CHECK_EQ(out_->data.at(i).shape(), batch.data[i].shape_);
+        mshadow::Copy((out_->data)[i].data().FlatTo2D<cpu, real_t>(),
+                      batch.data[i].FlatTo2D<cpu, real_t>());
         out_->num_batch_padd = batch.num_batch_padd;
       }
-
       if (batch.inst_index) {
-        std::copy(batch.inst_index, batch.inst_index + batch.batch_size, out_->index.begin());
+        std::copy(batch.inst_index,
+                  batch.inst_index + batch.batch_size,
+                  out_->index.begin());
       }
       return true;
     }
