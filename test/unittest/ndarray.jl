@@ -298,6 +298,16 @@ function test_eltype()
   end
 end
 
+function test_kwargs()
+  info("NDArray::kwargs")
+  dims1 = (2,3,4)
+
+  x = mx.empty(dims1)
+  tx = mx.transpose(x, axes=(1,0,2))
+  # @test size(tx) == (3,2,4)
+  @test size(tx) == (2,4,3)
+end
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -315,5 +325,6 @@ test_sqrt()
 test_eltype()
 test_nd_as_jl()
 test_dot()
+test_kwargs()
 
 end

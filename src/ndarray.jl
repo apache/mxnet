@@ -885,17 +885,17 @@ with corresponding support (see `load`).
 * `filename::String`: path to the binary file to write to.
 * `data`: data to save to file. Data can be a`NDArray`, a `Vector{NDArray}`, or a `Dict{Base.Symbol, NDArray}`.
 """
-function save(filename::AbstractString, data::NDArray)
+function save(filename::String, data::NDArray)
   save(filename, [data])
 end
-function save(filename::AbstractString, data::Vector{NDArray})
+function save(filename::String, data::Vector{NDArray})
   @mxcall(:MXNDArraySave, (char_p, MX_uint, Ptr{MX_handle}, char_pp),
           filename, length(data), MX_handle[data...], char_pp(0))
 end
-function save(filename::AbstractString, data::Dict{Base.Symbol,NDArray})
+function save(filename::String, data::Dict{Base.Symbol,NDArray})
   names  = [k for k in keys(data)]
   arrays = MX_handle[data[k] for k in names]
-  names  = AbstractString[string(k) for k in names]
+  names  = String[string(k) for k in names]
 
   @mxcall(:MXNDArraySave, (char_p, MX_uint, Ptr{MX_handle}, char_pp),
           filename, length(names), arrays, names)
@@ -904,10 +904,12 @@ end
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
-function _invoke_mxfunction(func_handle::MX_handle, use_vars, scalars, mut_vars)
-  @mxcall(:MXFuncInvoke,
-          (MX_handle, Ptr{MX_handle}, Ptr{MX_float}, Ptr{MX_handle}),
-          func_handle, use_vars, scalars, mut_vars)
+function _invoke_mxfunction(func_handle::MX_handle, use_vars, scalars, mut_vars; kwargs...)
+  names = String[string(entry[1]) for entry in kwargs]
+  args = String[string(entry[2]) for entry in kwargs]
+  @mxcall(:MXFuncInvokeEx,
+          (MX_handle, Ptr{MX_handle}, Ptr{MX_float}, Ptr{MX_handle}, Cint, char_pp, char_pp),
+          func_handle, use_vars, scalars, mut_vars, length(names), names, args)
 end
 
 @enum(LIBMX_FUNC_TYPE_MASK,
@@ -1035,7 +1037,7 @@ function _get_function_expressions(handle :: MX_handle, name)
   end
   stmt_call = quote
     local handle = _get_function($(QuoteNode(name)))
-    _invoke_mxfunction(handle, $_use_vars, $_scalars, $_mut_vars)
+    _invoke_mxfunction(handle, $_use_vars, $_scalars, $_mut_vars; kwargs...)
   end
   if n_mutate_vars == 1
     stmt_ret = :(return out1)
@@ -1043,20 +1045,22 @@ function _get_function_expressions(handle :: MX_handle, name)
     stmt_ret = Expr(:return, Expr(:tuple, [Symbol("out$i") for i=1:n_mutate_vars]...))
   end
 
-  func_body = Expr(:block, stmt_call, stmt_ret)
-  func_head = Expr(:call, name, args...)
-
-  func_def  = Expr(:function, func_head, func_body)
+  func_def = quote
+    function $name($(args...); kwargs...)
+      $stmt_call
+      $stmt_ret
+    end
+  end
 
   if accept_empty_mutate
     args0      = args[1:n_used_vars+n_scalars]
-    func_head0 = Expr(:call, name, args0...)
     _mut_vars0 = [:(NDArray(_ndarray_alloc())) for i=1:n_mutate_vars]
-    stmt_call0 = Expr(:call, name, args0..., _mut_vars0...)
-    func_body0 = Expr(:block, stmt_call0)
-    func_head0 = Expr(:call, name, args0...)
 
-    func_def0  = Expr(:function, func_head0, func_body0)
+    func_def0 = quote
+      function $name($(args0...); kwargs...)
+        $name($(args0...), $(_mut_vars0...); kwargs...)
+      end
+    end
     return func_def, func_def0
   else
     return func_def, :()
