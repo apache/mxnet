@@ -351,3 +351,67 @@ For a guide to Docker, see the [official docs](https://docs.docker.com).
 CUDA support requires [NVIDIA Docker](https://github.com/NVIDIA/nvidia-docker).
 For more details on how to use the MXNet Docker images,
 consult the [source project](https://github.com/Kaixhin/dockerfiles).
+
+## Build Dependent Libraries from Source
+
+This section we provide instructions to build MXNet' dependent libraries from source. It is often useful in two situations:
+
+- You use a low version or server linux, there is no according packages or the package versions are low by using `yum` or `apt-get`
+- You do not have the root permission to install packages. In this case, you need to change the install directory from `/usr/local` into another one such as `${HOME}` in the following examples.
+
+### Build GCC from Source
+
+Building gcc needs 32-bit libc, you can install it by
+
+- Ubuntu:  `sudo apt-get install libc6-dev-i386`
+- Red Hat `sudo yum install glibc-devel.i686`
+- CentOS 5.8, `sudo yum install glibc-devel.i386`
+- CentOS 6 / 7, `sudo yum install glibc-devel.i686`
+
+First download 
+```bash
+wget http://mirrors.concertpass.com/gcc/releases/gcc-4.8.5/gcc-4.8.5.tar.gz
+tar -zxf gcc-4.8.5.tar.gz
+cd gcc-4.8.5
+./contrib/download_prerequisites
+```
+
+Then build
+```
+mkdir release && cd release
+../configure --prefix=/usr/local --enable-languages=c,c++
+make -j10
+sudo make install
+```
+
+Finally you may want to add lib path in your `~/.bashrc`
+```bash
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64
+```
+
+### Build Opencv from Source
+
+First download opencv 
+```bash
+wget https://codeload.github.com/opencv/opencv/zip/2.4.13
+unzip 2.4.13
+cd opencv-2.4.13
+mkdir release
+cd release/
+```
+Building opencv needs cmake, if you do not have cmake or your cmake verion is too low (e.g the one installed by default on RHEL), then 
+```bash
+wget https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz
+tar -zxvf cmake-3.6.1-Linux-x86_64.tar.gz
+alias cmake="cmake-3.6.1-Linux-x86_64/bin/cmake"
+```
+Now build opencv. We disable GPU support, which may significantly slow down to run a MXNet program on GPU. We also disable 1394 which may generate warning. 
+```bash
+cmake -D BUILD_opencv_gpu=OFF -D WITH_CUDA=OFF -D WITH_1394=OFF -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+make -j8
+sudo make install
+```
+Finally, you may want to add the following into the end of your `~/.bashrc`:
+```bash
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig/
+```
