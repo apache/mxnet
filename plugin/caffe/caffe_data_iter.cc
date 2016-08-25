@@ -5,6 +5,7 @@
 */
 #include <caffe/proto/caffe.pb.h>
 #include <atomic>
+#include <sys/time.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 
@@ -16,6 +17,14 @@
 #include "../../src/io/inst_vector.h"
 #include "../../src/io/iter_prefetcher.h"
 #include "../../src/operator/cast-inl.h"
+
+#define CHECK_NEXT_TIMING
+
+#ifdef CHECK_NEXT_TIMING
+#define IF_CHECK_TIMING(__t$) __t$
+#else
+#define IF_CHECK_TIMING(__t$)
+#endif
 
 namespace mxnet {
 namespace io {
@@ -38,24 +47,12 @@ struct CaffeDataParam : public dmlc::Parameter<CaffeDataParam> {
   }
 };
 
-struct CaffeDataIterWrapperParam : dmlc::Parameter<CaffeDataIterWrapperParam> {
-    /*! \brief data type */
-    int dtype;
-
-    DMLC_DECLARE_PARAMETER(CaffeDataIterWrapperParam) {
-      DMLC_DECLARE_FIELD(dtype)
-        .add_enum("float32", mshadow::kFloat32)
-        .add_enum("float64", mshadow::kFloat64)
-        .add_enum("float16", mshadow::kFloat16)
-        .set_default(mshadow::default_type_flag)
-        .describe("Data type.");
-    }
-};
-
 template<typename Dtype>
 class CaffeDataIter : public IIterator<TBlobBatch> {
  public:
-  CaffeDataIter(void) : batch_size_(0), channels_(0), width_(0), height_(0), loc_(0) {}
+  CaffeDataIter(int type_flag) : batch_size_(0), channels_(0), width_(1), height_(1)
+                               , type_flag_(type_flag), loc_(0)
+  {}
   virtual ~CaffeDataIter(void) {}
 
   // intialize iterator loads data in
@@ -104,16 +101,17 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
 
       if(top_size > DATA) {
         if (param_.flat) {
-          batch_data_.shape_ = mshadow::Shape2(batch_size_, width_ * height_);
+          batch_data_ = TBlob(nullptr, mshadow::Shape2(batch_size_, width_ * height_),
+                              cpu::kDevCPU, type_flag_);
         } else {
-          batch_data_.shape_ = mxnet::TShape(top_[DATA]->shape().begin(), top_[DATA]->shape().end());
+          batch_data_ = TBlob(nullptr, mxnet::TShape(top_[DATA]->shape().begin(), top_[DATA]->shape().end()),
+                              cpu::kDevCPU, type_flag_);
         }
-        batch_data_.stride_ = batch_data_.size(batch_data_.shape_.ndim() - 1);
       }
       out_.data.clear();
       if(top_size > LABEL) {
-        batch_label_.shape_ = mxnet::TShape(top_[LABEL]->shape().begin(), top_[LABEL]->shape().end());
-        batch_label_.stride_ = 1;
+          batch_label_ = TBlob(nullptr, mxnet::TShape(top_[LABEL]->shape().begin(), top_[LABEL]->shape().end()),
+                               cpu::kDevCPU, type_flag_);
       }
       out_.batch_size = batch_size_;
     }
@@ -138,11 +136,7 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
       batch_label_.dptr_ = top_[LABEL]->mutable_cpu_data();
 
       out_.data.clear();
-      if (param_.flat) {
-        out_.data.push_back(batch_data_.FlatTo2D<cpu, Dtype>());
-      } else {
-        out_.data.push_back(batch_data_);
-      }
+      out_.data.push_back(batch_data_);
       out_.data.push_back(batch_label_);
       loc_ += batch_size_;
       return true;
@@ -175,86 +169,77 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
   std::vector<::caffe::Blob<Dtype>*> bottom_, top_;
   /*! \brief Cleanup these blobs on exit */
   std::list<std::unique_ptr<::caffe::Blob<Dtype>>> cleanup_blobs_;
+  /*! \brief type flag of the tensor blob */
+  const int type_flag_;
   /*! \brief Blobs done so far */
   std::atomic<size_t>  loc_;
 };  // class CaffeDataIter
 
-class CaffeDataIterWrapper : public IIterator<DataBatch>
+class CaffeDataIterWrapper : public PrefetcherIter
 {
  public:
-    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-      param_.InitAllowUnknown(kwargs);
-      switch (param_.dtype) {
-        case mshadow::kFloat32:
-          this->loader_.reset(new CaffeDataIter<float>());
-          break;
-        case mshadow::kFloat64:
-          this->loader_.reset(new CaffeDataIter<double>());
-          break;
-        case mshadow::kFloat16:
-          LOG(FATAL) << "float16 layer is not supported by caffe";
-          return;
-        default:
-          LOG(FATAL) << "Unsupported type " << param_.dtype;
-          return;
+  CaffeDataIterWrapper() : PrefetcherIter(NULL), next_time_(0) {}
+  virtual ~CaffeDataIterWrapper() {
+    IF_CHECK_TIMING(
+      if(next_time_.load() > 0) {
+        LOG(WARNING) << "Caffe data loader was blocked for "
+                     << next_time_.load()
+                     << " ms waiting for incoming data";
       }
-      if(loader_) {
-        loader_->Init(kwargs);
-      }
+    )
+  }
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    // We need to init prefetcher args in order to get dtype
+    this->param_.InitAllowUnknown(kwargs);
+    switch (this->param_.dtype) {
+      case mshadow::kFloat32:
+        this->loader_.reset(new CaffeDataIter<float>(this->param_.dtype));
+        break;
+      case mshadow::kFloat64:
+        this->loader_.reset(new CaffeDataIter<double>(this->param_.dtype));
+        break;
+      case mshadow::kFloat16:
+        LOG(FATAL) << "float16 layer is not supported by caffe";
+        return;
+      default:
+        LOG(FATAL) << "Unsupported type " << this->param_.dtype;
+        return;
     }
-    virtual void BeforeFirst(void) {
-      CHECK_NOTNULL(loader_.get());
-      return loader_->BeforeFirst();
-    }
-    virtual bool Next(void) {
-      CHECK_NOTNULL(loader_.get());
-
-      if (!loader_->Next()) return false;
-      const TBlobBatch& batch = loader_->Value();
-      if (out_ == nullptr) {
-        // allocate databatch
-        out_.reset(new DataBatch());
-        out_->num_batch_padd = batch.num_batch_padd;
-        out_->data.resize(batch.data.size());
-        out_->index.resize(batch.batch_size);
-        for (size_t i = 0; i < batch.data.size(); ++i) {
-          out_->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
-        }
-      }
-      CHECK(batch.data.size() == out_->data.size());
-      // copy data over
-      for (size_t i = 0; i < batch.data.size(); ++i) {
-        CHECK_EQ(out_->data.at(i).shape(), batch.data[i].shape_);
-        mshadow::Copy((out_->data)[i].data().FlatTo2D<cpu, real_t>(),
-                      batch.data[i].FlatTo2D<cpu, real_t>());
-        out_->num_batch_padd = batch.num_batch_padd;
-      }
-      if (batch.inst_index) {
-        std::copy(batch.inst_index,
-                  batch.inst_index + batch.batch_size,
-                  out_->index.begin());
-      }
-      return true;
-    }
-    virtual const DataBatch &Value(void) const {
-      return *out_;
-    }
+    PrefetcherIter::Init(kwargs);
+    this->param_.prefetch_buffer = 1;
+  }
+  virtual void BeforeFirst(void) {
+    return PrefetcherIter::BeforeFirst();
+  }
+  virtual bool Next(void) {
+    IF_CHECK_TIMING(
+      const uint64_t start_time = GetTickCountMS();
+    )
+    const bool rc = PrefetcherIter::Next();
+    IF_CHECK_TIMING(
+      const uint64_t diff_time  = GetTickCountMS() - start_time;
+      next_time_.fetch_add(diff_time);
+    )
+    return rc;
+  }
  protected:
-    /*! \brief Parameters for wrapper */
-    CaffeDataIterWrapperParam param_;
-    /*! \brief Created data iterator based upon type */
-    std::unique_ptr<IIterator<TBlobBatch> > loader_;
-    /*! \brief Batch of data object */
-    std::unique_ptr<DataBatch> out_;
-};
+  IF_CHECK_TIMING(
+    static uint64_t GetTickCountMS() {
+      struct timeval tv;
+      gettimeofday(&tv, 0);
+      return uint64_t( tv.tv_sec ) * 1000 + tv.tv_usec / 1000;
+    }
+  )
+  /*! \brief milliseconds spent in Next() */
+  std::atomic<uint64_t> next_time_;
+}; // class CaffeDataIterWrapper
 
 DMLC_REGISTER_PARAMETER(CaffeDataParam);
-DMLC_REGISTER_PARAMETER(CaffeDataIterWrapperParam);
 
 MXNET_REGISTER_IO_ITER(CaffeDataIter)
 .describe("Create MxNet iterator for a Caffe data layer.")
 .add_arguments(CaffeDataParam::__FIELDS__())
-.add_arguments(CaffeDataIterWrapperParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
 .set_body([]() {
     return new CaffeDataIterWrapper();
 });
