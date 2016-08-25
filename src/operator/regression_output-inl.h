@@ -33,7 +33,7 @@ struct RegressionOutputParam : public dmlc::Parameter<RegressionOutputParam> {
 
 // Special Operator to output regression value in forward
 // And get gradient in calculation.
-template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
+template<typename xpu, typename ForwardOp, typename BackwardOp>
 class RegressionOutputOp : public Operator {
  public:
   explicit RegressionOutputOp(RegressionOutputParam param) : param_(param) {}
@@ -48,8 +48,8 @@ class RegressionOutputOp : public Operator {
     CHECK_EQ(in_data.size(), 2) << "RegressionOutputOp Input: [data, label]";
     CHECK_EQ(out_data.size(), 1) << "RegressionOutputOp Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> data = in_data[reg_enum::kData].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> out = out_data[reg_enum::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2> data = in_data[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> out = out_data[reg_enum::kOut].FlatTo2D<xpu, real_t>(s);
     Assign(out, req[reg_enum::kOut], F<ForwardOp>(data));
   }
 
@@ -69,11 +69,11 @@ class RegressionOutputOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     real_t num_output =
       in_data[reg_enum::kLabel].Size()/in_data[reg_enum::kLabel].shape_[0];
-    Tensor<xpu, 2, DType> out = out_data[reg_enum::kOut].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> label = in_data[reg_enum::kLabel]
-      .get_with_shape<xpu, 2, DType>(out.shape_, s);
-    Assign(grad, req[reg_enum::kData], scalar<DType>(param_.grad_scale/num_output)*
+    Tensor<xpu, 2> out = out_data[reg_enum::kOut].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> grad = in_grad[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2> label = in_data[reg_enum::kLabel]
+      .get_with_shape<xpu, 2, real_t>(out.shape_, s);
+    Assign(grad, req[reg_enum::kData], param_.grad_scale/num_output*
       F<BackwardOp>(out, reshape(label, grad.shape_)));
   }
 
@@ -84,7 +84,7 @@ class RegressionOutputOp : public Operator {
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
 Operator* CreateRegressionOutputOp(reg_enum::RegressionOutputType type,
-                                   RegressionOutputParam param, int dtype);
+                                   RegressionOutputParam param);
 
 #if DMLC_USE_CXX11
 template<reg_enum::RegressionOutputType type>
@@ -129,26 +129,6 @@ class RegressionOutputProp : public OperatorProperty {
     return true;
   }
 
-    bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 2) << "Input:[data, label]";
-    int dtype = (*in_type)[0];
-    auto nin = in_type->size();
-    in_type->clear();
-    in_type->push_back(dtype);
-    for (index_t i = 1; i < nin; ++i) {
-      in_type->push_back(dtype);
-    }
-    if (dtype == -1) {
-      LOG(FATAL) << "Input type to regression_output is not specified.";
-      return false;
-    }
-    out_type->clear();
-    out_type->push_back(dtype);
-    return true;
-  }
-
   OperatorProperty* Copy() const override {
     auto ptr = new RegressionOutputProp<type>();
     ptr->param_ = param_;
@@ -185,13 +165,7 @@ class RegressionOutputProp : public OperatorProperty {
     return {{in_data[reg_enum::kData], out_data[reg_enum::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "Not Implemented.";
-    return nullptr;
-  }
-
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                             std::vector<int> *in_type) const override;
+  Operator* CreateOperator(Context ctx) const override;
 
  protected:
   RegressionOutputParam param_;

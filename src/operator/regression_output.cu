@@ -11,27 +11,18 @@ namespace op {
 
 template<>
 Operator *CreateRegressionOutputOp<gpu>(reg_enum::RegressionOutputType type,
-                                        RegressionOutputParam param, int dtype) {
-  Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    switch (type) {
-      case reg_enum::kLinear:
-        op = new RegressionOutputOp
-          <gpu, mshadow::op::identity, mshadow::op::minus, DType>(param);
-        break;
-      case reg_enum::kLogistic:
-        op = new RegressionOutputOp
-          <gpu, mshadow_op::sigmoid, mshadow::op::minus, DType>(param);
-        break;
-      case reg_enum::kMAE:
-        op = new RegressionOutputOp
-          <gpu, mshadow::op::identity, mshadow_op::minus_sign, DType>(param);
-        break;
-      default:
-        LOG(FATAL) << "unknown RegressionOutput type " << type;
-    }
-  });
-  return op;
+                                        RegressionOutputParam param) {
+  switch (type) {
+    case reg_enum::kLinear:
+      return new RegressionOutputOp<gpu, mshadow::op::identity, mshadow::op::minus>(param);
+    case reg_enum::kLogistic:
+      return new RegressionOutputOp<gpu, mshadow_op::sigmoid, mshadow::op::minus>(param);
+    case reg_enum::kMAE:
+      return new RegressionOutputOp<gpu, mshadow::op::identity, mshadow_op::minus_sign>(param);
+    default:
+      LOG(FATAL) << "unknown activation type " << type;
+  }
+  return NULL;
 }
 }  // namespace op
 }  // namespace mxnet

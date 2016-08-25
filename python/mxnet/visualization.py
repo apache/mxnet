@@ -64,7 +64,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
-    heads = set([x[0] for x in conf["heads"]])  # TODO(xxx): check careful
+    heads = set(conf["heads"][0])  # TODO(xxx): check careful
     # default attributes of node
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}

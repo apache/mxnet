@@ -7,6 +7,7 @@
 #ifndef MXNET_OPERATOR_CUDNN_RNN_INL_H_
 #define MXNET_OPERATOR_CUDNN_RNN_INL_H_
 
+#include <mxnet/storage.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -72,7 +73,7 @@ class CuDNNRNNOp : public Operator {
       CHECK_EQ(cudnnDestroyFilterDescriptor(w_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyRNNDescriptor(rnn_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyDropoutDescriptor(dropout_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudaFree(dropout_states_), CUDNN_STATUS_SUCCESS);
+      Storage::Get()->Free(dropout_states_);
     }
   }
 
@@ -102,10 +103,11 @@ class CuDNNRNNOp : public Operator {
 
     DType * cx_ptr = NULL;
     DType * cy_ptr = NULL;
-    if (param_.mode == rnn_enum::kLstm) {
+
+    if (param_.lstm_q_)
       cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+    if (param_.lstm_q_ && param_.state_outputs)
       cy_ptr = (out_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
-    }
 
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
@@ -414,11 +416,11 @@ class CuDNNRNNOp : public Operator {
       CHECK_EQ(cudnnDropoutGetStatesSize(s->dnn_handle_,
                                         &dropout_byte_), CUDNN_STATUS_SUCCESS);
       dropout_size_ = dropout_byte_ / sizeof(DType);
-      CHECK_EQ(cudaMalloc(&dropout_states_, dropout_byte_), CUDNN_STATUS_SUCCESS);
+      dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU());
       CHECK_EQ(cudnnSetDropoutDescriptor(dropout_desc_,
                                         s->dnn_handle_,
                                         param_.p,  // keep probability
-                                        dropout_states_,
+                                        dropout_states_.dptr,
                                         dropout_byte_,
                                         seed_), CUDNN_STATUS_SUCCESS);
       // RNN descriptors
@@ -479,7 +481,7 @@ class CuDNNRNNOp : public Operator {
   cudnnDirectionMode_t direction_;
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  void *dropout_states_;
+  Storage::Handle dropout_states_;
   uint64_t seed_ = 1337ull;
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, reserve_space_size_, dropout_size_;
