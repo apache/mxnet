@@ -89,7 +89,7 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
-    if (ctx.is_train && param_.fix_gamma) slope = 1.f;
+    if (param_.fix_gamma) slope = 1.f;
 
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
@@ -152,6 +152,8 @@ class BatchNormOp : public Operator {
     // update moving avg
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+
+    if (param_.fix_gamma) slope = 1.f;
 
     if (ctx.is_train && !param_.use_global_stats) {
       // get requested temp space
