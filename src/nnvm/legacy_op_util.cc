@@ -56,41 +56,35 @@ class ParsedOpProp {
 // function to use operator property to infer attr
 template<typename AttrType, typename FInfer>
 bool OpPropInferAttr(const NodeAttrs& attrs,
-                     array_view<AttrType*> iattr,
-                     array_view<AttrType*> oattr,
+                     std::vector<AttrType> *iattr,
+                     std::vector<AttrType> *oattr,
                      FInfer finfer) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
-  CHECK_EQ(prop.inputs.size(), iattr.size());
+  CHECK_EQ(prop.inputs.size(), iattr->size());
   std::vector<AttrType> in_attr(prop.arguments.size());
   std::vector<AttrType> aux_attr(prop.aux_states.size());
-  std::vector<AttrType> out_attr;
 
   for (size_t i = 0; i < prop.arguments.size(); ++i) {
-    in_attr[i] = *iattr[i];
+    in_attr[i] = (*iattr)[i];
   }
   for (size_t i = 0; i < prop.aux_states.size(); ++i) {
-    aux_attr[i] = *iattr[i + prop.arguments.size()];
+    aux_attr[i] = (*iattr)[i + prop.arguments.size()];
   }
 
-  if (!finfer(prop.ptr.get(), &in_attr, &out_attr, &aux_attr)) return false;
+  if (!finfer(prop.ptr.get(), &in_attr, oattr, &aux_attr)) return false;
 
   for (size_t i = 0; i < prop.arguments.size(); ++i) {
-    *iattr[i] = in_attr[i];
+    (*iattr)[i] = in_attr[i];
   }
   for (size_t i = 0; i < prop.aux_states.size(); ++i) {
-    *iattr[i + prop.arguments.size()] = aux_attr[i];
-  }
-
-  CHECK_EQ(oattr.size(), out_attr.size());
-  for (size_t i = 0; i < oattr.size(); ++i) {
-    *oattr[i] = out_attr[i];
+    (*iattr)[i + prop.arguments.size()] = aux_attr[i];
   }
   return true;
 }
 
 bool OpPropInferShape(const NodeAttrs& attrs,
-                      array_view<TShape*> iattr,
-                      array_view<TShape*> oattr) {
+                      std::vector<TShape> *iattr,
+                      std::vector<TShape>* oattr) {
   auto finfer = [](const OperatorProperty* op,
                    std::vector<TShape> *in,
                    std::vector<TShape> *out,
@@ -101,8 +95,8 @@ bool OpPropInferShape(const NodeAttrs& attrs,
 }
 
 bool OpPropInferType(const NodeAttrs& attrs,
-                      array_view<int*> iattr,
-                      array_view<int*> oattr) {
+                     std::vector<int> *iattr,
+                     std::vector<int>* oattr) {
   auto finfer = [](const OperatorProperty* op,
                    std::vector<int> *in,
                    std::vector<int> *out,
