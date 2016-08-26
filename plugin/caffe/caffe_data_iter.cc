@@ -3,9 +3,9 @@
  * \file caffe_data_iter.cc
  * \brief register mnist iterator
 */
+#include <sys/time.h>
 #include <caffe/proto/caffe.pb.h>
 #include <atomic>
-#include <sys/time.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 
@@ -50,7 +50,7 @@ struct CaffeDataParam : public dmlc::Parameter<CaffeDataParam> {
 template<typename Dtype>
 class CaffeDataIter : public IIterator<TBlobBatch> {
  public:
-  CaffeDataIter(int type_flag) : batch_size_(0), channels_(0), width_(1), height_(1)
+  explicit CaffeDataIter(int type_flag) : batch_size_(0), channels_(0), width_(1), height_(1)
                                , type_flag_(type_flag), loc_(0)
   {}
   virtual ~CaffeDataIter(void) {}
@@ -74,8 +74,9 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
     CHECK(caffe_data_layer_ != nullptr) << "Failed creating caffe data layer";
     const size_t top_size = param_.prototxt.top_size();
     if (top_size > 0) {
-      if(top_size > NR_SUPPORTED_TOP_ITEMS) {
-        LOG(WARNING) << "Too may \"top\" items, only two (one data, one label) are currently supported";
+      if (top_size > NR_SUPPORTED_TOP_ITEMS) {
+        LOG(WARNING)
+          << "Too may \"top\" items, only two (one data, one label) are currently supported";
       }
       top_.reserve(top_size);
       for (size_t x = 0; x < top_size; ++x) {
@@ -99,18 +100,20 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
         }
       }
 
-      if(top_size > DATA) {
+      if (top_size > DATA) {
         if (param_.flat) {
           batch_data_ = TBlob(nullptr, mshadow::Shape2(batch_size_, width_ * height_),
                               cpu::kDevCPU, type_flag_);
         } else {
-          batch_data_ = TBlob(nullptr, mxnet::TShape(top_[DATA]->shape().begin(), top_[DATA]->shape().end()),
+          batch_data_ = TBlob(nullptr, mxnet::TShape(top_[DATA]->shape().begin(),
+                                                     top_[DATA]->shape().end()),
                               cpu::kDevCPU, type_flag_);
         }
       }
       out_.data.clear();
-      if(top_size > LABEL) {
-          batch_label_ = TBlob(nullptr, mxnet::TShape(top_[LABEL]->shape().begin(), top_[LABEL]->shape().end()),
+      if (top_size > LABEL) {
+          batch_label_ = TBlob(nullptr, mxnet::TShape(top_[LABEL]->shape().begin(),
+                                                      top_[LABEL]->shape().end()),
                                cpu::kDevCPU, type_flag_);
       }
       out_.batch_size = batch_size_;
@@ -123,7 +126,7 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
 
   virtual bool Next(void) {
     // MxNet iterator is expected to return CPU-accessible memory
-    if(::caffe::Caffe::mode() != ::caffe::Caffe::CPU) {
+    if (::caffe::Caffe::mode() != ::caffe::Caffe::CPU) {
       ::caffe::Caffe::set_mode(::caffe::Caffe::CPU);
       CHECK_EQ(::caffe::Caffe::mode(), ::caffe::Caffe::CPU);
     }
@@ -181,7 +184,7 @@ class CaffeDataIterWrapper : public PrefetcherIter
   CaffeDataIterWrapper() : PrefetcherIter(NULL), next_time_(0) {}
   virtual ~CaffeDataIterWrapper() {
     IF_CHECK_TIMING(
-      if(next_time_.load() > 0) {
+      if (next_time_.load() > 0) {
         LOG(WARNING) << "Caffe data loader was blocked for "
                      << next_time_.load()
                      << " ms waiting for incoming data";
@@ -230,9 +233,10 @@ class CaffeDataIterWrapper : public PrefetcherIter
       return uint64_t( tv.tv_sec ) * 1000 + tv.tv_usec / 1000;
     }
   )
+
   /*! \brief milliseconds spent in Next() */
   std::atomic<uint64_t> next_time_;
-}; // class CaffeDataIterWrapper
+};  // class CaffeDataIterWrapper
 
 DMLC_REGISTER_PARAMETER(CaffeDataParam);
 
