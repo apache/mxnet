@@ -79,7 +79,9 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->data.resize(batch.data.size());
           (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
-            (*dptr)->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU(), false, param_.dtype);
+            (*dptr)->data.at(i) = NDArray(batch.data[i].shape_,
+                                          Context::CPU(), false,
+                                          param_.dtype);
           }
         }
         CHECK(batch.data.size() == (*dptr)->data.size());
@@ -129,6 +131,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
   PrefetcherParam param_;
   /*! \brief internal batch loader */
   std::unique_ptr<IIterator<TBlobBatch> > loader_;
+
  private:
   /*! \brief output data */
   DataBatch *out_;
