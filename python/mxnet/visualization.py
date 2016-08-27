@@ -132,11 +132,11 @@ def print_summary(symbol, title="summary", shape=None, line_length=100, position
             first_connection = pre_node[0]
 
         fields = [node['name'] + '(' + op + ')', "x".join([str(x) for x in out_shape]), cur_param, first_connection]
+        print_row(fields, positions)
         if len(pre_node) > 1:
             for i in range(1, len(pre_node)):
                 fields = ['', '', '', pre_node[i]]
                 print_row(fields, positions)
-        print_row(fields, positions)
         return cur_param
 
     total_params = 0
