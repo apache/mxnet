@@ -11,6 +11,7 @@ mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_R
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
+mxnet_option(USE_PLUGINS_Caffe	"Use Caffe Plugins" OFF)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -66,7 +67,7 @@ if(USE_OPENMP)
 endif()
 
 # cudnn detection
-if(USE_CUDNN)
+if(USE_CUDNN AND USE_CUDA)
   detect_cuDNN()
   if(HAVE_CUDNN)
     add_definitions(-DUSE_CUDNN)
@@ -121,26 +122,15 @@ mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu")
 
-if(USE_PLUGINS_WARPCTC)
-	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
-	set(WARPCTC_LIB  "" CACHE FILEPATH "WARPCTC lib")
-	include_directories(SYSTEM ${WARPCTC_INCLUDE})
-	list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
-	mxnet_source_group("Include\\plugin\\warpctc"   GLOB "plugin/warpctc/*.h")
-	mxnet_source_group("Source\\plugin\\warpctc"   GLOB "plugin/warpctc/*.cc")
-	mxnet_source_group("Cuda\\plugin\\warpctc"   GLOB "plugin/warpctc/*.cu")
-	FILE(GLOB_RECURSE PLUGINS_SOURCE "plugin/warpctc/*.cc" "plugin/warpctc/*.h")
-	FILE(GLOB_RECURSE PLUGINS_CUSRC "plugin/warpctc/*.cu")
-	list(APPEND SOURCE ${PLUGINS_SOURCE})
-	list(APPEND CUDA ${PLUGINS_CUSRC})
-endif()
 
-if (NOT (EXTRA_OPERATORS STREQUAL ""))
-	mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
-	mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
-	FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
-	FILE(GLOB_RECURSE EXTRA_CUSRC "${EXTRA_OPERATORS}/*.cu")
-	list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
+if(NOT MSVC)
+  # Only add c++11 flags and definitions after cuda compiling
+  add_definitions(-DDMLC_USE_CXX11)
+  add_definitions(-DMSHADOW_IN_CXX11)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
 if(MSVC)
@@ -152,6 +142,57 @@ if(MSVC)
     endif(${flag_var} MATCHES "/MD")
   endforeach(flag_var)
 endif()
+
+
+if(USE_PLUGINS_WARPCTC)
+	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
+	set(WARPCTC_LIB  "" CACHE FILEPATH "WARPCTC lib")
+	include_directories(SYSTEM ${WARPCTC_INCLUDE})
+	list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
+	mxnet_source_group("Include\\plugin\\warpctc"   GLOB "plugin/warpctc/*.h")
+	mxnet_source_group("Source\\plugin\\warpctc"   GLOB "plugin/warpctc/*.cc")
+	mxnet_source_group("Cuda\\plugin\\warpctc"   GLOB "plugin/warpctc/*.cu")
+	FILE(GLOB_RECURSE WARPCTC_PLUGINS_SOURCE "plugin/warpctc/*.cc" "plugin/warpctc/*.h")
+	FILE(GLOB_RECURSE WARPCTC_PLUGINS_CUSRC "plugin/warpctc/*.cu")
+	list(APPEND SOURCE ${WARPCTC_PLUGINS_SOURCE})
+	list(APPEND CUDA ${WARPCTC_PLUGINS_CUSRC})
+endif()
+
+if(USE_PLUGINS_Caffe)
+	mxnet_source_group("Include\\plugin\\caffe"   GLOB "plugin/caffe/*.h")
+	mxnet_source_group("Source\\plugin\\caffe"   GLOB "plugin/caffe/*.cc")
+	mxnet_source_group("Cuda\\plugin\\caffe"   GLOB "plugin/caffe/*.cu")
+	FILE(GLOB_RECURSE CAFFE_PLUGINS_SOURCE "plugin/caffe/*.cc" "plugin/caffe/*.h")
+	FILE(GLOB_RECURSE CAFFE_PLUGINS_CUSRC "plugin/caffe/*.cu")
+
+
+	list(APPEND SOURCE ${CAFFE_PLUGINS_SOURCE})
+	list(APPEND CUDA ${CAFFE_PLUGINS_CUSRC})
+
+	add_subdirectory("plugin/caffe")
+	include_directories(SYSTEM ${Caffe_INCLUDE_DIR})
+	include_directories(SYSTEM ${PROJECT_BINARY_DIR}/plugin/caffe/include)
+	list(APPEND mxnet_LINKER_LIBS ${Caffe_LINKER_LIBS})
+	
+	if(NOT (USE_CUDNN AND USE_CUDA))
+		add_definitions(-DCPU_ONLY)
+	endif()
+	if(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
+		add_definitions(-DUSE_MKL)
+	endif()
+	add_definitions(-DGLOG_NO_ABBREVIATED_SEVERITIES)
+	
+endif()
+
+if (NOT (EXTRA_OPERATORS STREQUAL ""))
+	mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
+	mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
+	FILE(GLOB_RECURSE EXTRA_SRC "${EXTRA_OPERATORS}/*.cc")
+	FILE(GLOB_RECURSE EXTRA_CUSRC "${EXTRA_OPERATORS}/*.cu")
+	list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
+endif()
+
+
 
 if(USE_CUDA)
   # define preprocessor macro so that we will not include the generated forcelink header
@@ -167,15 +208,7 @@ if(USE_CUDA)
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
 endif()
 
-if(NOT MSVC)
-  # Only add c++11 flags and definitions after cuda compiling
-  add_definitions(-DDMLC_USE_CXX11)
-  add_definitions(-DMSHADOW_IN_CXX11)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c++0x")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
-endif()
+
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
   add_library(mxnet MODULE ${SOURCE})
@@ -184,6 +217,9 @@ else()
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
+if(USE_PLUGINS_Caffe)
+	target_link_libraries(mxnet caffe)
+endif()
 
 if(MSVC)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
