@@ -19,7 +19,7 @@
 
 namespace mxnet {
 
-using nnvm::NodeAttrs;
+using nnvm::Node;
 /*!
  * \brief Create a Layer style, forward/backward operator.
  *  This is easy to write code that contains state.
@@ -30,7 +30,7 @@ using nnvm::NodeAttrs;
  *  \note Register under "FCreateLayerOp"
  */
 using FCreateLayerOp = std::function<
-  Operator* (const NodeAttrs& attrs,
+  Operator* (const Node& n,
              Context ctx,
              const std::vector<TShape>& in_shape,
              const std::vector<int>& in_type)>;
@@ -41,7 +41,7 @@ using FCreateLayerOp = std::function<
  * \note Register under "FResourceRequest"
  */
 using FResourceRequest = std::function<
-    std::vector<ResourceRequest> (const NodeAttrs& attrs)>;
+    std::vector<ResourceRequest> (const Node& n)>;
 
 }  // namespace mxnet
 

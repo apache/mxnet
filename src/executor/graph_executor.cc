@@ -167,11 +167,11 @@ void GraphExecutor::InitOpExecs() {
       }
       std::vector<uint32_t> mutate_index;
       if (fmutate_inputs.count(inode.source->op)) {
-        mutate_index = fmutate_inputs[inode.source->op](inode.source->attrs);
+        mutate_index = fmutate_inputs[inode.source->op](*inode.source);
       }
       op_nodes_[i].exec.reset(
           new ForwardOpExecutor(fcreate_layer_op[inode.source->op](
-              inode.source->attrs, op_nodes_[i].ctx, ishape, itype), mutate_index));
+              *inode.source, op_nodes_[i].ctx, ishape, itype), mutate_index));
     } else {
       LOG(INFO) << "FCompute not registered " << inode.source->op->name;
     }
@@ -190,7 +190,7 @@ void GraphExecutor::InitResources() {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     if (fresource.count(inode.source->op) == 0) continue;
-    auto reqs = fresource[inode.source->op](inode.source->attrs);
+    auto reqs = fresource[inode.source->op](*inode.source);
     auto& requested = op_nodes_[nid].exec->op_ctx.requested;
     requested.clear();
     // Get the resource of temporal space.
