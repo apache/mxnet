@@ -26,7 +26,7 @@ def _str2tuple(string):
     return re.findall(r"\d+", string)
 
 
-def plot_network(symbol, title="plot", shape=None, node_attrs={}):
+def plot_network(symbol, title="plot", format='pdf', shape=None, node_attrs={}):
     """convert symbol to dot object for visualization
 
     Parameters
@@ -70,7 +70,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
                  "width": "1.3", "height": "0.8034", "style": "filled"}
     # merge the dict provided by user and the default one
     node_attr.update(node_attrs)
-    dot = Digraph(name=title)
+    dot = Digraph(name=title, format=format)
     # color map
     cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
           "#fdb462", "#b3de69", "#fccde5")
