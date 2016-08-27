@@ -82,42 +82,26 @@ def print_summary(symbol, title="summary", shape=None, line_length=100, position
         op = node["op"]
         pre_node = []
         pre_filter = 0
-        if op == '_Plus':
-            if op != "null":
-                inputs = node["inputs"]
-                item = inputs[0]
+        
+        if op != "null":
+            inputs = node["inputs"]
+            for item in inputs:
                 input_node = nodes[item[0]]
                 input_name = input_node["name"]
-                pre_node.append(input_name)
+                if input_node["op"] != "null":
+                    pre_node.append(input_name)
                 if input_node["op"] != "null" or item[0] in heads:
+                    # add shapes
                     if show_shape:
                         if input_node["op"] != "null":
                             key = input_name + "_output"
                             shape = shape_dict[key][1:]
-                            pre_filter = int(shape[0])
+                            pre_filter = pre_filter + int(shape[0])
                         else:
                             key = input_name
                             shape = shape_dict[key][1:]
-                            pre_filter = int(shape[0])
-        else:
-            if op != "null":
-                inputs = node["inputs"]
-                for item in inputs:
-                    input_node = nodes[item[0]]
-                    input_name = input_node["name"]
-                    if input_node["op"] != "null":
-                        pre_node.append(input_name)
-                    if input_node["op"] != "null" or item[0] in heads:
-                        # add shapes
-                        if show_shape:
-                            if input_node["op"] != "null":
-                                key = input_name + "_output"
-                                shape = shape_dict[key][1:]
-                                pre_filter = pre_filter + int(shape[0])
-                            else:
-                                key = input_name
-                                shape = shape_dict[key][1:]
-                                pre_filter = pre_filter + int(shape[0])
+                            pre_filter = pre_filter + int(shape[0])
+                            
         cur_param = 0
         if op == 'Convolution':
             cur_param =  pre_filter * int(_str2tuple(node["param"]["kernel"])[0]) * int(
