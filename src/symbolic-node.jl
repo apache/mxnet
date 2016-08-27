@@ -203,6 +203,26 @@ function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
 end
 
 """
+    grad(self :: SymbolicNode, wrt :: Vector{SymbolicNode})
+
+Get the autodiff gradient of the current `SymbolicNode`. This function can
+only be used if the current symbol is a loss function.
+
+# Arguments:
+* `self::SymbolicNode`: current node.
+* `wrt::Vector{Symbol}`: the names of the arguments to the gradient.
+
+Returns a gradient symbol of the corresponding gradient.
+"""
+function grad(self :: SymbolicNode, wrt :: Vector{Symbol})
+  hdr_ref = Ref{MX_handle}(0)
+  keys = String[string(key) for key in wrt]
+
+  @mxcall(:MXSymbolGrad, (MX_handle, MX_uint, char_pp, Ptr{MX_handle}), self, length(keys), keys, hdr_ref)
+  return SymbolicNode(MX_SymbolHandle(hdr_ref[]))
+end
+
+"""
     Variable(name :: Union{Symbol, AbstractString})
 
 Create a symbolic variable with the given name. This is typically used as a placeholder.
