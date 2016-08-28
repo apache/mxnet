@@ -40,12 +40,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         relative or absolute positions of log elements in each line
     Returns
     ------
-    dot: Diagraph
-        dot object of symbol
+        void
     """
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
-
     show_shape = False
     if shape != None:
         show_shape = True
@@ -54,7 +52,6 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         if out_shapes == None:
             raise ValueError("Input shape is incompete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
-
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
     heads = set(conf["heads"][0])
@@ -63,21 +60,42 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     # header names for the different log elements
     to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Previous Layer']
     
-    # print layer row informations
     def print_row(fields, positions):
+        """print format row
+
+        Parameters
+        ----------
+        fields: list
+            information field
+        positions: list
+            field length ratio
+        Returns
+        ------
+            void
+        """
         line = ''
         for i in range(len(fields)):
             line += str(fields[i])
             line = line[:positions[i]]
             line += ' ' * (positions[i] - len(line))
         print(line)
-
     print('_' * line_length)
     print_row(to_display, positions)
     print('=' * line_length)
     
-    # print layer summary arguments informations
     def print_layer_summary(node, out_shape):
+        """print layer information
+
+        Parameters
+        ----------
+        node: dict
+            node information
+        out_shape: dict
+            node shape information
+        Returns
+        ------
+            node total parameters
+        """
         op = node["op"]
         pre_node = []
         pre_filter = 0
@@ -111,12 +129,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             key = node["name"] + "_output"
             num_filter = shape_dict[key][1]
             cur_param = int(num_filter) * 2
-
         if not pre_node:
             first_connection = ''
         else:
             first_connection = pre_node[0]
-
         fields = [node['name'] + '(' + op + ')',
                   "x".join([str(x) for x in out_shape]),
                   cur_param,
@@ -127,7 +143,6 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                 fields = ['', '', '', pre_node[i]]
                 print_row(fields, positions)
         return cur_param
-
     total_params = 0
     for i in range(len(nodes)):
         node = nodes[i]
@@ -148,7 +163,6 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             print('=' * line_length)
         else:
             print('_' * line_length)
-
     print('Total params: %s' % total_params)
     print('_' * line_length)
 
