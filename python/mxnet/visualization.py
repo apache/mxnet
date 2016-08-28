@@ -61,7 +61,7 @@ def print_summary(symbol, shape=None, line_length=100, positions=[.33, .55, .67,
     if positions[-1] <= 1:
         positions = [int(line_length * p) for p in positions]
     # header names for the different log elements
-    to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Connected from']
+    to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Connected to']
 
     def print_row(fields, positions):
         line = ''
@@ -86,10 +86,9 @@ def print_summary(symbol, shape=None, line_length=100, positions=[.33, .55, .67,
             for item in inputs:
                 input_node = nodes[item[0]]
                 input_name = input_node["name"]
-                if input_node["op"] != "null":
-                    pre_node.append(input_name)
                 if input_node["op"] != "null" or item[0] in heads:
-                    # add shapes
+                    # add precede
+                    pre_node.append(input_name)
                     if show_shape:
                         if input_node["op"] != "null":
                             key = input_name + "_output"
