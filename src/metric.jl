@@ -182,9 +182,7 @@ end
 """
     ACE
 
-Averaged cross-entropy for classification. This also know als logloss.
-
-Calculated the averaged cross entropy for multi-dimentions output.
+Calculates the averaged cross-entropy (logloss) for classification.
 """
 type ACE <: AbstractEvalMetric
   ace_sum  :: Float64
@@ -237,10 +235,8 @@ end
 """
     MultiACE
 
-Averaged cross-entropy for classification. This also know als logloss.
-This variant keeps track of the different losses per class.
-
-Calculated the averaged cross entropy for multi-dimentions output.
+Calculates the averaged cross-entropy per class and overall (see [`ACE`](@ref)).
+This can be used to quantify the influence of different classes on the overall loss.
 """
 type MultiACE <: AbstractEvalMetric
   aces  :: Vector{Float64}
