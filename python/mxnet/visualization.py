@@ -62,7 +62,8 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         positions = [int(line_length * p) for p in positions]
     # header names for the different log elements
     to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Previous Layer']
-
+    
+    # print layer row informations
     def print_row(fields, positions):
         line = ''
         for i in range(len(fields)):
@@ -74,13 +75,12 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('_' * line_length)
     print_row(to_display, positions)
     print('=' * line_length)
-
+    
+    # print layer summary arguments informations
     def print_layer_summary(node, out_shape):
-        node_name = node['name']
         op = node["op"]
         pre_node = []
         pre_filter = 0
-        
         if op != "null":
             inputs = node["inputs"]
             for item in inputs:
@@ -98,7 +98,6 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             key = input_name
                             shape = shape_dict[key][1:]
                             pre_filter = pre_filter + int(shape[0])
-                            
         cur_param = 0
         if op == 'Convolution':
             cur_param = pre_filter \
@@ -118,7 +117,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         else:
             first_connection = pre_node[0]
 
-        fields = [node['name'] + '(' + op + ')', "x".join([str(x) for x in out_shape]), cur_param, first_connection]
+        fields = [node['name'] + '(' + op + ')',
+                  "x".join([str(x) for x in out_shape]),
+                  cur_param,
+                  first_connection]
         print_row(fields, positions)
         if len(pre_node) > 1:
             for i in range(1, len(pre_node)):
@@ -150,7 +152,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('Total params: %s' % total_params)
     print('_' * line_length)
 
-def plot_network(symbol, title="plot", format='pdf', shape=None, node_attrs={}):
+def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={}):
     """convert symbol to dot object for visualization
 
     Parameters
@@ -194,7 +196,7 @@ def plot_network(symbol, title="plot", format='pdf', shape=None, node_attrs={}):
                  "width": "1.3", "height": "0.8034", "style": "filled"}
     # merge the dict provided by user and the default one
     node_attr.update(node_attrs)
-    dot = Digraph(name=title, format=format)
+    dot = Digraph(name=title, format=save_format)
     # color map
     cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
           "#fdb462", "#b3de69", "#fccde5")
