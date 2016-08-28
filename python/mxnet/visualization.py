@@ -106,6 +106,10 @@ def print_summary(symbol, shape=None, line_length=100, positions=[.33, .55, .67,
                 node["param"]["num_filter"])
         elif op == 'FullyConnected':
             cur_param = pre_filter * (int(node["param"]["num_hidden"]) + 1)
+        elif op == 'BatchNorm':
+            key = node["name"] + "_output"
+            num_filter = shape_dict[key][1]
+            cur_param = int(num_filter) * 2
 
         if not pre_node:
             first_connection = ''
