@@ -25,7 +25,7 @@ def _str2tuple(string):
     """
     return re.findall(r"\d+", string)
 
-def print_summary(symbol, shape=None, line_length=100, positions=[.33, .55, .67, 1.]):
+def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.]):
     """convert symbol for detail information
 
     Parameters
@@ -101,9 +101,11 @@ def print_summary(symbol, shape=None, line_length=100, positions=[.33, .55, .67,
                             
         cur_param = 0
         if op == 'Convolution':
-            cur_param =  pre_filter * int(_str2tuple(node["param"]["kernel"])[0]) * int(
-                _str2tuple(node["param"]["kernel"])[1]) * int(node["param"]["num_filter"]) + int(
-                node["param"]["num_filter"])
+            cur_param = pre_filter \
+                * int(_str2tuple(node["param"]["kernel"])[0]) \
+                * int(_str2tuple(node["param"]["kernel"])[1]) \
+                * int(node["param"]["num_filter"]) \
+                + int(node["param"]["num_filter"])
         elif op == 'FullyConnected':
             cur_param = pre_filter * (int(node["param"]["num_hidden"]) + 1)
         elif op == 'BatchNorm':
