@@ -25,13 +25,11 @@ def _str2tuple(string):
     """
     return re.findall(r"\d+", string)
 
-def print_summary(symbol, title="summary", shape=None, line_length=100, positions=[.33, .55, .67, 1.]):
+def print_summary(symbol, shape=None, line_length=100, positions=[.33, .55, .67, 1.]):
     """convert symbol for detail information
 
     Parameters
     ----------
-    title: str
-        title of the dot graph
     symbol: Symbol
         symbol to be visualized
     shape: dict
