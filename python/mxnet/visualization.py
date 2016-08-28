@@ -59,7 +59,6 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         positions = [int(line_length * p) for p in positions]
     # header names for the different log elements
     to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Previous Layer']
-    
     def print_row(fields, positions):
         """print format row
 
@@ -82,7 +81,6 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('_' * line_length)
     print_row(to_display, positions)
     print('=' * line_length)
-    
     def print_layer_summary(node, out_shape):
         """print layer information
 
