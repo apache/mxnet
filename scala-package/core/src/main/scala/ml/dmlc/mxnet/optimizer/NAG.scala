@@ -4,12 +4,21 @@ import ml.dmlc.mxnet.{Optimizer, LRScheduler, NDArray}
 import ml.dmlc.mxnet.NDArrayConversions._
 
 /**
- * A very simple SGD optimizer with momentum and weight regularization.
- * @author Yizhi Liu
+ * SGD with nesterov.
+ * It is implemented according to
+ * https://github.com/torch/optim/blob/master/sgd.lua
+ *
+ * @author Depeng Liang
+ *
+ * @param learningRate Float, Step size.
+ * @param momentum Float, momentum value.
+ * @param wd Float, L2 regularization coefficient add to all the weights
+ * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
+ * @param lrScheduler The learning rate scheduler
  */
-class SGD(private val learningRate: Float = 0.01f, private val momentum: Float = 0.0f,
-          private val wd: Float = 0.0001f, private val clipGradient: Float = 0f,
-          private val lrScheduler: LRScheduler = null) extends Optimizer {
+class NAG(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
+          val wd: Float = 0.0001f, val clipGradient: Float = 0f,
+          val lrScheduler: LRScheduler = null) extends Optimizer {
 
   if (lrScheduler != null) {
     lrScheduler.baseLR = learningRate
@@ -46,14 +55,10 @@ class SGD(private val learningRate: Float = 0.01f, private val momentum: Float =
     if (state != null) {
       val mom = state.asInstanceOf[NDArray]
       mom *= momentum
-      // adder = -lr * (resdGrad + wd * weight)
-      // we write in this way to get rid of memory leak
-      val adder = wd * weight
-      adder += resdGrad
-      adder *= (-lr)
-      mom += adder
-      weight += mom
-      adder.dispose()
+      resdGrad += wd * weight
+      mom += resdGrad
+      resdGrad += momentum * mom
+      weight += -lr * resdGrad
     } else {
       require(momentum == 0f)
       // adder = -lr * (resdGrad + this.wd * weight)
