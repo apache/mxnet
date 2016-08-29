@@ -5,11 +5,9 @@
 */
 #include <sys/time.h>
 #include <caffe/proto/caffe.pb.h>
-#include <atomic>
 #include <dmlc/parameter.h>
+#include <atomic>
 
-#include "../../src/operator/operator_common.h"
-#include "../../src/operator/operator.h
 #include "caffe_common.h"
 #include "caffe_stream.h"
 #include "caffe_fieldentry.h"
@@ -224,6 +222,7 @@ class CaffeDataIterWrapper : public PrefetcherIter {
     )
     return rc;
   }
+
  protected:
   IF_CHECK_TIMING(
     static uint64_t GetTickCountMS() {
