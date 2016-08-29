@@ -5,12 +5,12 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
-    <artifactId>mxnet-parent_2.10</artifactId>
+    <artifactId>mxnet-parent_2.11</artifactId>
     <version>0.1.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-examples_2.10</artifactId>
+  <artifactId>mxnet-examples_2.11</artifactId>
   <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Examples</name>
   <packaging>pom</packaging>
@@ -152,17 +152,17 @@
     </dependency>
     <dependency>
       <groupId>com.sksamuel.scrimage</groupId>
-      <artifactId>scrimage-core_2.10</artifactId>
+      <artifactId>scrimage-core_2.11</artifactId>
       <version>2.1.5</version>
     </dependency>
     <dependency>
       <groupId>com.sksamuel.scrimage</groupId>
-      <artifactId>scrimage-io-extra_2.10</artifactId>
+      <artifactId>scrimage-io-extra_2.11</artifactId>
       <version>2.1.5</version>
     </dependency>
     <dependency>
       <groupId>com.sksamuel.scrimage</groupId>
-      <artifactId>scrimage-filters_2.10</artifactId>
+      <artifactId>scrimage-filters_2.11</artifactId>
       <version>2.1.5</version>
     </dependency>
   </dependencies>

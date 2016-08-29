@@ -766,8 +766,12 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
   }
 }
 // scalastyle:on finalize
-
+@FillDefs
 object Symbol {
+  // debug codes for macros
+  val b: Int = 10
+  def showA(a: Int): Unit = println(s"a = $a")
+
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()

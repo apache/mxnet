@@ -5,12 +5,12 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
-    <artifactId>mxnet-parent_2.10</artifactId>
+    <artifactId>mxnet-parent_2.11</artifactId>
     <version>0.1.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-spark_2.10</artifactId>
+  <artifactId>mxnet-spark_2.11</artifactId>
   <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Spark ML</name>
   <packaging>pom</packaging>
