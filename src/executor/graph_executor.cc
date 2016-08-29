@@ -158,7 +158,7 @@ void GraphExecutor::InitOpExecs() {
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
     const auto& inode = idx[i];
     if (inode.source->is_variable()) continue;
-    if (fcreate_layer_op.count(inode.source->op)) {
+    if (fcreate_layer_op.count(inode.source->op())) {
       std::vector<TShape> ishape;
       std::vector<int> itype;
       for (const auto& e : inode.inputs) {
@@ -166,14 +166,14 @@ void GraphExecutor::InitOpExecs() {
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
       std::vector<uint32_t> mutate_index;
-      if (fmutate_inputs.count(inode.source->op)) {
-        mutate_index = fmutate_inputs[inode.source->op](*inode.source);
+      if (fmutate_inputs.count(inode.source->op())) {
+        mutate_index = fmutate_inputs[inode.source->op()](inode.source->attrs);
       }
       op_nodes_[i].exec.reset(
-          new ForwardOpExecutor(fcreate_layer_op[inode.source->op](
-              *inode.source, op_nodes_[i].ctx, ishape, itype), mutate_index));
+          new ForwardOpExecutor(fcreate_layer_op[inode.source->op()](
+              inode.source->attrs, op_nodes_[i].ctx, ishape, itype), mutate_index));
     } else {
-      LOG(INFO) << "FCompute not registered " << inode.source->op->name;
+      LOG(INFO) << "FCompute not registered " << inode.source->op()->name;
     }
   }
 }
@@ -189,8 +189,8 @@ void GraphExecutor::InitResources() {
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
-    if (fresource.count(inode.source->op) == 0) continue;
-    auto reqs = fresource[inode.source->op](*inode.source);
+    if (fresource.count(inode.source->op()) == 0) continue;
+    auto reqs = fresource[inode.source->op()](inode.source->attrs);
     auto& requested = op_nodes_[nid].exec->op_ctx.requested;
     requested.clear();
     // Get the resource of temporal space.

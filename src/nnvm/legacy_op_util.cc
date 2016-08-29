@@ -55,11 +55,11 @@ class ParsedOpProp {
 
 // function to use operator property to infer attr
 template<typename AttrType, typename FInfer>
-bool OpPropInferAttr(const Node& n,
+bool OpPropInferAttr(const NodeAttrs& attrs,
                      std::vector<AttrType> *iattr,
                      std::vector<AttrType> *oattr,
                      FInfer finfer) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   CHECK_EQ(prop.inputs.size(), iattr->size());
   std::vector<AttrType> in_attr(prop.arguments.size());
   std::vector<AttrType> aux_attr(prop.aux_states.size());
@@ -82,7 +82,7 @@ bool OpPropInferAttr(const Node& n,
   return true;
 }
 
-bool OpPropInferShape(const Node& n,
+bool OpPropInferShape(const NodeAttrs& attrs,
                       std::vector<TShape> *iattr,
                       std::vector<TShape>* oattr) {
   auto finfer = [](const OperatorProperty* op,
@@ -91,10 +91,10 @@ bool OpPropInferShape(const Node& n,
                    std::vector<TShape> *aux) {
     return op->InferShape(in, out, aux);
   };
-  return OpPropInferAttr(n, iattr, oattr, finfer);
+  return OpPropInferAttr(attrs, iattr, oattr, finfer);
 }
 
-bool OpPropInferType(const Node& n,
+bool OpPropInferType(const NodeAttrs& attrs,
                      std::vector<int> *iattr,
                      std::vector<int>* oattr) {
   auto finfer = [](const OperatorProperty* op,
@@ -103,31 +103,31 @@ bool OpPropInferType(const Node& n,
                    std::vector<int> *aux) {
     return op->InferType(in, out, aux);
   };
-  return OpPropInferAttr(n, iattr, oattr, finfer);
+  return OpPropInferAttr(attrs, iattr, oattr, finfer);
 }
 
-inline uint32_t OpPropNumInputs(const Node& n) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+inline uint32_t OpPropNumInputs(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return prop.inputs.size();
 }
 
-inline uint32_t OpPropNumOutputs(const Node& n) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+inline uint32_t OpPropNumOutputs(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return prop.outputs.size();
 }
 
-std::vector<std::string> OpPropListInputNames(const Node& n) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+std::vector<std::string> OpPropListInputNames(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return prop.inputs;
 }
 
-std::vector<std::string> OpPropListOutputNames(const Node& n) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+std::vector<std::string> OpPropListOutputNames(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return prop.outputs;
 }
 
-std::vector<uint32_t> OpPropMutateInputs(const Node& n) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+std::vector<uint32_t> OpPropMutateInputs(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   std::vector<uint32_t> ret;
   for (uint32_t i = 0; i < prop.aux_states.size(); ++i) {
     ret.push_back(static_cast<uint32_t>(i + prop.arguments.size()));
@@ -135,18 +135,18 @@ std::vector<uint32_t> OpPropMutateInputs(const Node& n) {
   return ret;
 }
 
-Operator* OpPropCreateLayerOp(const Node& n,
+Operator* OpPropCreateLayerOp(const NodeAttrs& attrs,
                               Context ctx,
                               const std::vector<TShape>& ishape,
                               const std::vector<int>& itype) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   std::vector<TShape> is = ishape;
   std::vector<int> it = itype;
   return prop.ptr->CreateOperatorEx(ctx, &is, &it);
 }
 
-std::vector<std::pair<int, int> > OpPropInplaceOption(const Node& n) {
-  auto& prop = nnvm::get<ParsedOpProp>(n.attrs.parsed);
+std::vector<std::pair<int, int> > OpPropInplaceOption(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return prop.forward_inplace;
 }
 
