@@ -7,9 +7,9 @@
 #include <caffe/proto/caffe.pb.h>
 #include <atomic>
 #include <dmlc/parameter.h>
-#include <mxnet/operator.h>
 
 #include "../../src/operator/operator_common.h"
+#include "../../src/operator/operator.h
 #include "caffe_common.h"
 #include "caffe_stream.h"
 #include "caffe_fieldentry.h"
@@ -178,8 +178,7 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
   std::atomic<size_t>  loc_;
 };  // class CaffeDataIter
 
-class CaffeDataIterWrapper : public PrefetcherIter
-{
+class CaffeDataIterWrapper : public PrefetcherIter {
  public:
   CaffeDataIterWrapper() : PrefetcherIter(NULL), next_time_(0) {}
   virtual ~CaffeDataIterWrapper() {
