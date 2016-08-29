@@ -214,6 +214,21 @@ struct sign_grad {
   }
 };
 /*! \brief used for generate element of power */
+struct sign {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    if (a < 0.0f) return DType(-DType(1.0f));
+    if (a > 0.0f) return DType(DType(1.0f));
+    return DType(DType(0.0f));
+  }
+};
+struct sign_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(DType(0.0f));
+  }
+};
+/*! \brief used for generate element of power */
 struct power {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -311,6 +326,36 @@ struct minus_sign {
     return DType(a-b > DType(0.0f) ? DType(1.0f) : -DType(1.0f));
   }
 };
+
+/*!\ \brief used for generate element smooth l1 */
+struct smooth_l1 {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    real_t ret = 0.0f;
+    real_t abs_a = fabs(a);
+    if (abs_a < 1.0f) {
+      ret = 0.5f * a * a;
+    }
+    else {
+      ret = abs_a - 0.5f;
+    }
+    return ret;
+  }
+};
+
+struct smooth_l1_grad {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    real_t ret = 0.0f;
+    real_t abs_a = fabs(a);
+    if (abs_a < 1.0f) {
+      ret = a;
+    }
+    else {
+      ret = a < 0.f ? -1.5f : 0.5f;
+    }
+    return ret;
+  }
+};
+
 
 }  // namespace mshadow_op
 }  // namespace op
