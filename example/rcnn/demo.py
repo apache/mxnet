@@ -57,7 +57,7 @@ def demo_net(detector, image_name):
         cls_scores = cls_scores[keep]
         dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])).astype(np.float32)
         keep = nms(dets.astype(np.float32), NMS_THRESH)
-        all_boxes[cls_ind] = dets[keep, :]
+        all_boxes[cls_ind] = dets[keep, :] if dets.shape[0] != 0 else dets
 
     boxes_this_image = [[]] + [all_boxes[j] for j in range(1, len(CLASSES))]
     vis_all_detection(im_array, boxes_this_image, CLASSES, 0)
