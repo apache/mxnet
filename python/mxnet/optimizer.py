@@ -5,7 +5,8 @@ import ctypes
 from .base import _LIB, check_call
 from .base import c_array, mx_uint, mx_float, c_str
 from .base import OptimizerHandle, OptimizerCreator
-from .ndarray import NDArray, zeros, clip, sqrt, square
+from .ndarray import NDArray, zeros, clip, sqrt
+from .ndarray import sgd_update, sgd_mom_update, adam_update
 from .random import normal
 
 
@@ -257,6 +258,11 @@ class SGD(Optimizer):
     def __init__(self, momentum=0.0, **kwargs):
         super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
+        self.kwargs = {'rescale_grad': self.rescale_grad}
+        if self.momentum > 0:
+            self.kwargs['momentum'] = self.momentum
+        if self.clip_gradient:
+            self.kwargs['clip_gradient'] = self.clip_gradient
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -295,19 +301,12 @@ class SGD(Optimizer):
         wd = self._get_wd(index)
         self._update_count(index)
 
-        grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
-
         if state:
-            mom = state
-            mom[:] *= self.momentum
-            mom[:] += -lr * (grad + wd * weight)
-            weight[:] += mom
+            sgd_mom_update(weight, grad, state, out=weight,
+                           lr=lr, wd=wd, **self.kwargs)
         else:
-            assert self.momentum == 0.0
-            weight[:] += -lr * (grad + wd * weight)
-
+            sgd_update(weight, grad, out=weight,
+                       lr=lr, wd=wd, **self.kwargs)
 
 @register
 class NAG(SGD):
@@ -540,8 +539,10 @@ class Adam(Optimizer):
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
-        self.epsilon = epsilon
-        self.decay_factor = decay_factor
+        self.kwargs = {'beta1': beta1, 'beta2': beta2, 'epsilon': epsilon,
+                       'rescale_grad': self.rescale_grad}
+        if self.clip_gradient:
+            self.kwargs['clip_gradient'] = self.clip_gradient
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -575,30 +576,17 @@ class Adam(Optimizer):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
+        wd = self._get_wd(index)
         self._update_count(index)
 
         t = self._index_update_count[index]
-        mean, variance = state
-
-        grad *= self.rescale_grad
-        if self.clip_gradient is not None:
-            clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
-
-        mean *= self.beta1
-        mean += grad * (1. - self.beta1)
-
-        variance *= self.beta2
-        variance += (1 - self.beta2) * square(grad, out=grad)
-
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
 
-        weight -= lr*mean/(sqrt(variance) + self.epsilon)
-
-        wd = self._get_wd(index)
-        if wd > 0.:
-            weight[:] -= (lr * wd) * weight
+        mean, var = state
+        adam_update(weight, grad, mean, var, out=weight,
+                    lr=lr, wd=wd, **self.kwargs)
 
 
 @register
