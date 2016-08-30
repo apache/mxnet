@@ -205,8 +205,8 @@ class Symbol {
    * \throws dmlc::Error if the known arg_types are inconsistent.
    */
   bool InferType(std::vector<int> *arg_types,
-                  std::vector<int> *out_types,
-                  std::vector<int> *aux_types) const;
+                 std::vector<int> *out_types,
+                 std::vector<int> *aux_types) const;
   /*!
    * \brief infer the types by providing types of known arguments.
    * \param known_arg_types map of argument name to type of arguments with known types.
@@ -217,9 +217,9 @@ class Symbol {
    * \throws dmlc::Error if the known arg_types are inconsistent.
    */
   bool InferType(const std::unordered_map<std::string, int> &known_arg_types,
-                  std::vector<int> *arg_types,
-                  std::vector<int> *out_types,
-                  std::vector<int> *aux_types) const;
+                 std::vector<int> *arg_types,
+                 std::vector<int> *out_types,
+                 std::vector<int> *aux_types) const;
   /*!
    * \brief interface for json serialization.
    * \param writer the JSON writer write json.

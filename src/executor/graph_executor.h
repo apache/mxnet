@@ -80,6 +80,9 @@ class GraphExecutor : public Executor {
                  const std::vector<NDArray>& arg_grad_store,
                  const std::vector<OpReqType>& grad_req_type,
                  const std::vector<NDArray>& aux_states);
+  nnvm::Graph InitGradGraph(nnvm::Symbol symbol,
+                            const std::vector<OpReqType>& grad_req_type,
+                            const std::vector<NDArray>& arg_grad_store);
   // intitialize the operator executors on each node
   void InitOpExecs();
   // intitialize the operator executors on each node
@@ -104,6 +107,15 @@ class GraphExecutor : public Executor {
   std::vector<NDArray> data_pool_;
   // output arrays
   std::vector<NDArray> output_arrays_;
+  // gradient store
+  std::vector<std::pair<OpReqType, NDArray> > grad_store_;
+  // head gradient entry
+  std::vector<nnvm::NodeEntry> head_grad_entry_;
+  std::unordered_map<const nnvm::Node*, size_t> head_grad_map_;
+  // number of outputs.
+  size_t num_outputs_;
+  // number of inputs
+  size_t num_inputs_;
   // number of forward nodes
   size_t num_forward_nodes_;
   // total number of allocated temp space.

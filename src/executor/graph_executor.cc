@@ -8,6 +8,10 @@
 #include "./graph_executor.h"
 
 namespace mxnet {
+namespace op {
+const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
+}  // namespace op
+
 namespace exec {
 GraphExecutor::~GraphExecutor() {
   for (OpNode& n : op_nodes_) {
@@ -47,7 +51,13 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray> &head_grads) {
-  LOG(FATAL) << "not implemented";
+  const auto& idx = graph_.indexed_graph();
+  for (size_t i = num_inputs_; i < idx.input_nodes().size(); ++i) {
+    uint32_t nid = idx.input_nodes().at(i);
+    uint32_t oid = head_grad_map_.at(idx[nid].source);
+    CopyFromTo(head_grads[oid], &(data_entry_[idx.entry_id(nid, 0)]));
+  }
+  RunOps(true, num_forward_nodes_, op_nodes_.size());
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
@@ -62,6 +72,33 @@ const std::vector<NDArray>& GraphExecutor::outputs() const {
   return output_arrays_;
 }
 
+nnvm::Graph GraphExecutor::InitGradGraph(
+    nnvm::Symbol symbol,
+    const std::vector<OpReqType>& grad_req_type,
+    const std::vector<NDArray>& arg_grad_store) {
+  using nnvm::NodePtr;
+  using nnvm::NodeEntry;
+  nnvm::Graph g;
+  g.outputs = symbol.outputs;
+  for (size_t i = 0; i < g.outputs.size(); ++i) {
+    head_grad_entry_.emplace_back(NodeEntry{nnvm::Node::Create(), 0, 0});
+    head_grad_map_[head_grad_entry_.back().node.get()] = i;
+  }
+  std::vector<NodePtr> args = symbol.ListInputs(nnvm::Symbol::kReadOnlyArgs);
+  std::vector<NodeEntry> xs;
+  for (size_t i = 0; i < grad_req_type.size(); ++i) {
+    if (grad_req_type[i] != kNullOp) {
+      grad_store_.emplace_back(
+          std::make_pair(grad_req_type[i], arg_grad_store[i]));
+      xs.emplace_back(NodeEntry{args[i], 0, 0});
+    }
+  }
+  nnvm::Graph g_grad = nnvm::pass::Gradient(g, symbol.outputs, xs, head_grad_entry_);
+  CHECK_EQ(g_grad.outputs.size(), xs.size());
+  g.outputs.insert(g.outputs.end(), g_grad.outputs.begin(), g_grad.outputs.end());
+  return g;
+}
+
 void GraphExecutor::InitGraph(nnvm::Symbol symbol,
                               const Context& default_ctx,
                               const std::map<std::string, Context>& ctx_map,
@@ -69,11 +106,21 @@ void GraphExecutor::InitGraph(nnvm::Symbol symbol,
                               const std::vector<NDArray>& arg_grad_store,
                               const std::vector<OpReqType>& grad_req_type,
                               const std::vector<NDArray>& aux_states) {
+  // setup gradient
+  bool need_grad = false;
   for (OpReqType req : grad_req_type) {
-    CHECK_EQ(req, kNullOp);
+    if (req != kNullOp) need_grad = true;
   }
+  num_outputs_ = symbol.outputs.size();
+  num_inputs_ = symbol.ListInputs(nnvm::Symbol::kAll).size();
+  if (need_grad) {
+    graph_ = InitGradGraph(symbol, grad_req_type, arg_grad_store);
+  } else {
+    graph_.outputs = symbol.outputs;
+  }
+
   CHECK_EQ(ctx_map.size(), 0);
-  graph_.outputs =  symbol.outputs;
+  // other works
   const auto& idx = graph_.indexed_graph();
   // TODO(tqchen) assign context
   data_context_.resize(idx.num_node_entries(), default_ctx);
@@ -87,8 +134,10 @@ void GraphExecutor::InitGraph(nnvm::Symbol symbol,
   nnvm::ShapeVector arg_shapes;
   nnvm::DTypeVector arg_types;
 
+
   size_t arg_top = 0, aux_top = 0;
-  for (const uint32_t nid : idx.input_nodes()) {
+  for (size_t i = 0; i < num_inputs_; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
     if (mutable_nodes.count(nid)) {
       CHECK_LT(aux_top, aux_states.size());
       data_entry_[idx.entry_id(nid, 0)] = aux_states[aux_top];
@@ -103,11 +152,25 @@ void GraphExecutor::InitGraph(nnvm::Symbol symbol,
       ++arg_top;
     }
   }
+
+  arg_shapes.resize(idx.input_nodes().size(), TShape());
+  arg_types.resize(idx.input_nodes().size(), 0);
+
   // other initializations
   graph_ = nnvm::pass::InferShape(std::move(graph_), arg_shapes, "__shape__");
   graph_ = nnvm::pass::InferType(std::move(graph_), arg_types);
   graph_ = nnvm::ApplyPass(std::move(graph_), {"PlanMemory"});
-  num_forward_nodes_ = graph_.indexed_graph().num_nodes();
+
+  // setup number of nodes
+  num_forward_nodes_ = 0;
+  for (size_t i = 0; i < num_outputs_; ++i) {
+    num_forward_nodes_ = std::max(
+        num_forward_nodes_, static_cast<size_t>(idx.outputs()[i].node_id + 1));
+  }
+  // set the data entry of
+  for (size_t j = num_outputs_; j < idx.outputs().size(); ++j) {
+    data_entry_[idx.entry_id(idx.outputs()[j])] = grad_store_[j - num_outputs_].second;
+  }
 }
 
 class GraphExecutor::ForwardOpExecutor
@@ -239,7 +302,7 @@ void GraphExecutor::InitOpExecs() {
       op_nodes_[i].exec.reset(
           new BackwardOpExecutor(
               static_cast<ForwardOpExecutor*>(op_nodes_[fwd_id].exec.get())->op_,
-              nullptr,
+              op::OpPropGetOpProperty(inode.source->attrs),
               mutate_index));
     } else {
       LOG(INFO) << "FCompute not registered " << inode.source->op()->name;
@@ -294,19 +357,30 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   const auto& vdtype = graph_.GetAttr<DTypeVector>("dtype");
   const auto& vshape = graph_.GetAttr<ShapeVector>("shape");
   const auto& vstorage = graph_.GetAttr<StorageVector>("storage_id");
-  CHECK_EQ(idx.num_nodes(), vshape.size());
-  CHECK_EQ(idx.num_nodes(), vdtype.size());
-  CHECK_EQ(idx.num_nodes(), vstorage.size());
+  CHECK_EQ(idx.num_node_entries(), vshape.size());
+  CHECK_EQ(idx.num_node_entries(), vdtype.size());
+  CHECK_EQ(idx.num_node_entries(), vstorage.size());
 
   // information about the pool
   using PoolEntry = std::pair<Context, size_t>;
   std::vector<PoolEntry> pool_info;
+
+  // assign array to head gradient
+  for (size_t i = num_inputs_; i < idx.input_nodes().size(); ++i) {
+    uint32_t nid = idx.input_nodes().at(i);
+    uint32_t oid = head_grad_map_.at(idx[nid].source);
+    uint32_t eid = idx.entry_id(idx.outputs()[oid]);
+    CHECK(vshape[eid].ndim() != 0);
+    CHECK(vdtype[eid] != -1);
+    data_entry_[idx.entry_id(nid, 0)] = NDArray(vshape[eid], data_context_[eid], vdtype[eid]);
+  }
 
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
     size_t bytes = vshape[i].Size() * mshadow::mshadow_sizeof(vdtype[i]);
     int storage_id = vstorage[i];
     if (storage_id < 0) continue;
+    if (!data_entry_[i].is_none()) continue;
     size_t sid = static_cast<size_t>(storage_id);
     if (sid <= pool_info.size()) {
       pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0)});
@@ -358,7 +432,8 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   }
 
   // initialize output arrays
-  for (auto& e : idx.outputs()) {
+  for (size_t i = 0; i < num_outputs_; ++i) {
+    auto& e = idx.outputs()[i];
     output_arrays_.push_back(data_entry_[idx.entry_id(e)]);
   }
 }

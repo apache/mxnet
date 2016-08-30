@@ -39,6 +39,7 @@ class ParsedOpProp {
   }
 };
 
+
 // function to use operator property to infer attr
 // get op property from the attribute
 const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs) {
@@ -258,7 +259,7 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
       out_grad_index, in_data_index, out_data_index, in_grad_ptr);
   std::vector<std::pair<int, int> > remap(remap_index.size());
   for (size_t i = 0; i < remap_index.size(); ++i) {
-    if (args_array[remap_index[i].first] != -1) {
+    if (args_array[remap_index[i].first] == -1) {
       LOG(FATAL) << "BackwardInplaceOption not consistent with DeclareBackwardDependency";
     }
     remap[i].first = args_array[remap_index[i].first];
@@ -317,7 +318,7 @@ void RegisterLegacyOpProp() {
     back_op.attr<FBackwardOutToInIndex>(
         "FBackwardOutToInIndex", OpBackOutToInIndex);
     back_op.attr<FMutateInputs>("FMutateInputs", OpBackMutateInputs);
-    back_op.attr<FInplaceOption>("FMutateInputs", OpBackInplaceOption);
+    back_op.attr<FInplaceOption>("FInplaceOption", OpBackInplaceOption);
     back_op.attr<bool>("TIsLayerOpBackward", true);
   }
 }
