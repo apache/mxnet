@@ -312,6 +312,19 @@ struct minus_sign {
   }
 };
 
+struct clip {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType x, DType bound) {
+    if (x > bound) {
+      return bound;
+    } else if (x < -bound) {
+      return -bound;
+    } else {
+      return x;
+    }
+  }
+};
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet
