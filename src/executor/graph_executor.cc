@@ -110,7 +110,6 @@ void GraphExecutor::InitGraph(nnvm::Symbol symbol,
   num_forward_nodes_ = graph_.indexed_graph().num_nodes();
 }
 
-// forward executor
 class GraphExecutor::ForwardOpExecutor
     : public GraphExecutor::OpExecutor {
  public:
@@ -139,10 +138,70 @@ class GraphExecutor::ForwardOpExecutor
   }
 
  private:
+  friend class GraphExecutor;
   std::shared_ptr<Operator> op_;
   std::vector<uint32_t> aux_index_;
   std::vector<TBlob> in_data_, out_data_, aux_data_;
 };
+
+// backward executor
+class GraphExecutor::BackwardOpExecutor
+    : public GraphExecutor::OpExecutor {
+ public:
+  void Run(RunContext rctx) override {
+    op_ctx.run_ctx = rctx;
+    op_->Backward(op_ctx, out_grad_, in_data_, out_data_,
+                  req, in_grad_, aux_data_);
+  }
+
+  void Init() override {
+    size_t arg_top = 0, aux_top = 0;
+    for (size_t i = 0; i < in_array.size(); ++i) {
+      if (!std::binary_search(aux_index_.begin(), aux_index_.end(), i)) {
+        *arg_data_ptr_[arg_top++] = in_array[i].data();
+      } else {
+        aux_data_[aux_top++] = in_array[i].data();
+      }
+    }
+    CHECK_EQ(out_array.size(), in_grad_.size());
+    std::transform(out_array.begin(), out_array.end(),
+                   in_grad_.begin(), [](const NDArray& nd) {
+        return nd.data();
+      });
+  }
+  explicit BackwardOpExecutor(std::shared_ptr<Operator> op,
+                              const OperatorProperty* prop,
+                              std::vector<uint32_t> aux_index)
+      : op_(op), aux_index_(aux_index) {
+    std::sort(aux_index_.begin(), aux_index_.end());
+    out_grad_.resize(prop->NumVisibleOutputs());
+    in_data_.resize(prop->ListArguments().size());
+    in_grad_.resize(in_data_.size());
+    out_data_.resize(prop->NumOutputs());
+
+    std::vector<TBlob*> out_grad_ptr(out_grad_.size());
+    for (size_t i = 0; i < out_grad_.size(); ++i) {
+      out_grad_ptr[i] = &out_grad_[i];
+    }
+    std::vector<TBlob*> in_data_ptr(in_data_.size());
+    for (size_t i = 0; i < in_data_.size(); ++i) {
+      in_data_ptr[i] = &in_data_[i];
+    }
+    std::vector<TBlob*> out_data_ptr(out_data_.size());
+    for (size_t i = 0; i < out_data_.size(); ++i) {
+      out_data_ptr[i] = &out_data_[i];
+    }
+    arg_data_ptr_ = prop->BackwardInputs(
+        out_grad_ptr, in_data_ptr, out_data_ptr);
+  }
+
+ private:
+  std::shared_ptr<Operator> op_;
+  std::vector<uint32_t> aux_index_;
+  std::vector<TBlob> out_grad_, in_grad_, in_data_, out_data_, aux_data_;
+  std::vector<TBlob*> arg_data_ptr_;
+};
+
 
 void GraphExecutor::InitOpExecs() {
   using nnvm::DTypeVector;
@@ -150,6 +209,7 @@ void GraphExecutor::InitOpExecs() {
   using nnvm::FMutateInputs;
   auto& fcreate_layer_op = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
   auto& fmutate_inputs = nnvm::Op::GetAttr<FMutateInputs>("FMutateInputs");
+  auto& is_layer_backward = nnvm::Op::GetAttr<bool>("TIsLayerOpBackward");
   const auto& vdtype = graph_.GetAttr<DTypeVector>("dtype");
   const auto& vshape = graph_.GetAttr<ShapeVector>("shape");
   // get the graph
@@ -158,6 +218,10 @@ void GraphExecutor::InitOpExecs() {
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
     const auto& inode = idx[i];
     if (inode.source->is_variable()) continue;
+    std::vector<uint32_t> mutate_index;
+    if (fmutate_inputs.count(inode.source->op())) {
+      mutate_index = fmutate_inputs[inode.source->op()](inode.source->attrs);
+    }
     if (fcreate_layer_op.count(inode.source->op())) {
       std::vector<TShape> ishape;
       std::vector<int> itype;
@@ -165,13 +229,18 @@ void GraphExecutor::InitOpExecs() {
         ishape.emplace_back(vshape[idx.entry_id(e)]);
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
-      std::vector<uint32_t> mutate_index;
-      if (fmutate_inputs.count(inode.source->op())) {
-        mutate_index = fmutate_inputs[inode.source->op()](inode.source->attrs);
-      }
       op_nodes_[i].exec.reset(
           new ForwardOpExecutor(fcreate_layer_op[inode.source->op()](
               inode.source->attrs, op_nodes_[i].ctx, ishape, itype), mutate_index));
+    } else if (is_layer_backward.get(inode.source->op(), false)) {
+      CHECK_GE(inode.control_deps.size(), 1);
+      uint32_t fwd_id = inode.control_deps[0];
+      CHECK(op_nodes_[fwd_id].exec != nullptr);
+      op_nodes_[i].exec.reset(
+          new BackwardOpExecutor(
+              static_cast<ForwardOpExecutor*>(op_nodes_[fwd_id].exec.get())->op_,
+              nullptr,
+              mutate_index));
     } else {
       LOG(INFO) << "FCompute not registered " << inode.source->op()->name;
     }

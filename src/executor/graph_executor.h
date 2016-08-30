@@ -62,15 +62,7 @@ class GraphExecutor : public Executor {
     OpContext op_ctx;
   };
   class ForwardOpExecutor;
-  // all the information needed to push the op to engine
-  struct OpExecEntry {
-    // execution function for
-    Engine::AsyncFn exec_fun{nullptr};
-    // variables to read from
-    std::vector<Engine::VarHandle> use_vars;
-    // variables to mutate
-    std::vector<Engine::VarHandle> mutate_vars;
-  };
+  class BackwardOpExecutor;
   // Information about operational node
   struct OpNode {
     // the context of the node

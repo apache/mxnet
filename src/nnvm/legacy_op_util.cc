@@ -40,6 +40,11 @@ class ParsedOpProp {
 };
 
 // function to use operator property to infer attr
+// get op property from the attribute
+const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs) {
+  return nnvm::get<ParsedOpProp>(attrs.parsed).ptr.get();
+}
+
 template<typename AttrType, typename FInfer>
 bool OpPropInferAttr(const NodeAttrs& attrs,
                      std::vector<AttrType> *iattr,
@@ -157,11 +162,14 @@ inline std::vector<NodeEntry> OpPropGradient(
     const std::vector<NodeEntry>& out_grads) {
   auto& prop = nnvm::get<ParsedOpProp>(ptr->attrs.parsed);
   std::vector<NodeEntry> out_data(prop.outputs.size());
-  for (uint32_t i = 0; i < prop.outputs.size(); ++i) {
+  for (uint32_t i = 0; i < out_data.size(); ++i) {
     out_data[i] = NodeEntry{ptr, i, 0};
   }
-  std::vector<NodeEntry> inputs =
-      prop.ptr->BackwardInputs(out_grads, ptr->inputs, out_data);
+  std::vector<NodeEntry> in_data(
+      ptr->inputs.begin(), ptr->inputs.begin() + prop.arguments.size());
+  std::vector<NodeEntry> ograd(
+      out_grads.begin(), out_grads.begin() + prop.ptr->NumVisibleOutputs());
+  auto inputs = prop.ptr->BackwardInputs(ograd, in_data, out_data);
   // add all the auxiliary data
   for (uint32_t i = 0; i < prop.aux_states.size(); ++i) {
     inputs.emplace_back(ptr->inputs[i + prop.arguments.size()]);
@@ -310,6 +318,7 @@ void RegisterLegacyOpProp() {
         "FBackwardOutToInIndex", OpBackOutToInIndex);
     back_op.attr<FMutateInputs>("FMutateInputs", OpBackMutateInputs);
     back_op.attr<FInplaceOption>("FMutateInputs", OpBackInplaceOption);
+    back_op.attr<bool>("TIsLayerOpBackward", true);
   }
 }
 
