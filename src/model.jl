@@ -11,8 +11,8 @@ abstract AbstractModel
 The feedforward model provides convenient interface to train and predict on
 feedforward architectures like multi-layer MLP, ConvNets, etc. There is no
 explicitly handling of *time index*, but it is relatively easy to implement
-unrolled RNN / LSTM under this framework (**TODO**: add example). For models
-that handles sequential data explicitly, please use **TODO**...
+unrolled RNN / LSTM under this framework (*TODO*: add example). For models
+that handles sequential data explicitly, please use *TODO*...
 """
 type FeedForward <: AbstractModel
   arch        :: SymbolicNode
@@ -47,10 +47,11 @@ end
 """
     FeedForward(arch :: SymbolicNode, ctx)
 
-* arch: the architecture of the network constructed using the symbolic API.
-* ctx: the devices on which this model should do computation. It could be a single `Context`
-               or a list of `Context` objects. In the latter case, data parallelization will be used
-               for training. If no context is provided, the default context `cpu()` will be used.
+# Arguments:
+* `arch`: the architecture of the network constructed using the symbolic API.
+* `ctx`: the devices on which this model should do computation. It could be a single `Context`
+         or a list of `Context` objects. In the latter case, data parallelization will be used
+         for training. If no context is provided, the default context `cpu()` will be used.
 """
 function FeedForward(arch :: SymbolicNode; context :: Union{Context, Vector{Context}, Void} = nothing)
   if isa(context, Void)
@@ -64,17 +65,18 @@ end
 """
     init_model(self, initializer; overwrite=false, input_shapes...)
 
-   Initialize the weights in the model.
+Initialize the weights in the model.
 
-   This method will be called automatically when training a model. So there is usually no
-   need to call this method unless one needs to inspect a model with only randomly initialized
-   weights.
+This method will be called automatically when training a model. So there is usually no
+need to call this method unless one needs to inspect a model with only randomly initialized
+weights.
 
-* FeedForward self: the model to be initialized.
-* AbstractInitializer initializer: an initializer describing how the weights should be initialized.
-* Bool overwrite: keyword argument, force initialization even when weights already exists.
-* input_shapes: the shape of all data and label inputs to this model, given as keyword arguments.
-                        For example, `data=(28,28,1,100), label=(100,)`.
+# Arguments:
+* `self::FeedForward`: the model to be initialized.
+* `initializer::AbstractInitializer`: an initializer describing how the weights should be initialized.
+* `overwrite::Bool`: keyword argument, force initialization even when weights already exists.
+* `input_shapes`: the shape of all data and label inputs to this model, given as keyword arguments.
+                  For example, `data=(28,28,1,100), label=(100,)`.
 """
 function init_model(self :: FeedForward, initializer :: AbstractInitializer; overwrite::Bool=false, input_shapes...)
   # all arg names, including data, label, and parameters
@@ -162,46 +164,44 @@ function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; data_sha
 end
 
 """
-.. function::
-   predict(self, data; overwrite=false, callback=nothing)
+    predict(self, data; overwrite=false, callback=nothing)
 
-   Predict using an existing model. The model should be already initialized, or trained or loaded from
-   a checkpoint. There is an overloaded function that allows to pass the callback as the first argument,
-   so it is possible to do
+Predict using an existing model. The model should be already initialized, or trained or loaded from
+a checkpoint. There is an overloaded function that allows to pass the callback as the first argument,
+so it is possible to do
 
-   .. code-block:: julia
+```julia
+predict(model, data) do batch_output
+  # consume or write batch_output to file
+end
+```
 
-      predict(model, data) do batch_output
-        # consume or write batch_output to file
-      end
+# Arguments:
+* `self::FeedForward`:  the model.
+* `data::AbstractDataProvider`: the data to perform prediction on.
+* `overwrite::Bool`: an `Executor` is initialized the first time predict is called. The memory
+                     allocation of the `Executor` depends on the mini-batch size of the test
+                     data provider. If you call predict twice with data provider of the same batch-size,
+                     then the executor can be potentially be re-used. So, if `overwrite` is false,
+                     we will try to re-use, and raise an error if batch-size changed. If `overwrite`
+                     is true (the default), a new `Executor` will be created to replace the old one.
 
-* FeedForward self: the model.
-* AbstractDataProvider data: the data to perform prediction on.
-* Bool overwrite: an `Executor` is initialized the first time predict is called. The memory
-                          allocation of the `Executor` depends on the mini-batch size of the test
-                          data provider. If you call predict twice with data provider of the same batch-size,
-                          then the executor can be potentially be re-used. So, if `overwrite` is false,
-                          we will try to re-use, and raise an error if batch-size changed. If `overwrite`
-                          is true (the default), a new `Executor` will be created to replace the old one.
+!!! note
+    Prediction is computationally much less costly than training, so the bottleneck sometimes becomes the IO
+    for copying mini-batches of data. Since there is no concern about convergence in prediction, it is better
+    to set the mini-batch size as large as possible (limited by your device memory) if prediction speed is a
+    concern.
+    
+    For the same reason, currently prediction will only use the first device even if multiple devices are
+    provided to construct the model.
 
-   .. note::
+!!! note
+    If you perform further after prediction. The weights are not automatically synchronized if `overwrite`
+    is set to false and the old predictor is re-used. In this case
+    setting `overwrite` to true (the default) will re-initialize the predictor the next time you call
+    predict and synchronize the weights again.
 
-      Prediction is computationally much less costly than training, so the bottleneck sometimes becomes the IO
-      for copying mini-batches of data. Since there is no concern about convergence in prediction, it is better
-      to set the mini-batch size as large as possible (limited by your device memory) if prediction speed is a
-      concern.
-
-      For the same reason, currently prediction will only use the first device even if multiple devices are
-      provided to construct the model.
-
-   .. note::
-
-      If you perform further after prediction. The weights are not automatically synchronized if `overwrite`
-      is set to false and the old predictor is re-used. In this case
-      setting `overwrite` to true (the default) will re-initialize the predictor the next time you call
-      predict and synchronize the weights again.
-
-   :seealso: :func:`train`, :func:`fit`, :func:`init_model`, :func:`load_checkpoint`
+See also [`train`](@ref), [`fit`](@ref), [`init_model`](@ref), and [`load_checkpoint`](@ref)
 """
 function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider; overwrite :: Bool = true)
   predict(self, data; overwrite = overwrite, callback=callback)
@@ -310,7 +310,7 @@ end
 """
     train(model :: FeedForward, ...)
 
-Alias to :func:`fit`.
+Alias to [`fit`](@ref).
 """
 function train(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   fit(self, optimizer, data; kwargs...)
@@ -321,26 +321,25 @@ end
 
 Train the `model` on `data` with the `optimizer`.
 
-* FeedForward model: the model to be trained.
-* AbstractOptimizer optimizer: the optimization algorithm to use.
-* AbstractDataProvider data: the training data provider.
-* Int n_epoch: default 10, the number of full data-passes to run.
-* AbstractDataProvider eval_data: keyword argument, default `nothing`. The data provider for
+* `model::FeedForward`: the model to be trained.
+* `optimizer::AbstractOptimizer`: the optimization algorithm to use.
+* `data::AbstractDataProvider`: the training data provider.
+* `n_epoch::Int`: default 10, the number of full data-passes to run.
+* `eval_data::AbstractDataProvider`: keyword argument, default `nothing`. The data provider for
           the validation set.
-* AbstractEvalMetric eval_metric: keyword argument, default `Accuracy()`. The metric used
+* `eval_metric::AbstractEvalMetric`: keyword argument, default [`Accuracy()`](@ref). The metric used
           to evaluate the training performance. If `eval_data` is provided, the same metric is also
           calculated on the validation set.
-* kvstore: keyword argument, default `:local`. The key-value store used to synchronize gradients
+* `kvstore`: keyword argument, default `:local`. The key-value store used to synchronize gradients
           and parameters when multiple devices are used for training.
    :type kvstore: `KVStore` or `Base.Symbol`
-* AbstractInitializer initializer: keyword argument, default `UniformInitializer(0.01)`.
-* Bool force_init: keyword argument, default false. By default, the random initialization using the
+* `initializer::AbstractInitializer`: keyword argument, default `UniformInitializer(0.01)`.
+* `force_init::Bool`: keyword argument, default false. By default, the random initialization using the
           provided `initializer` will be skipped if the model weights already exists, maybe from a previous
-          call to :func:`train` or an explicit call to :func:`init_model` or :func:`load_checkpoint`. When
+          call to [`train`](@ref) or an explicit call to [`init_model`](@ref) or [`load_checkpoint`](@ref). When
           this option is set, it will always do random initialization at the begining of training.
-* callbacks: keyword argument, default `[]`. Callbacks to be invoked at each epoch or mini-batch,
+* `callbacks::Vector{AbstractCallback}`: keyword argument, default `[]`. Callbacks to be invoked at each epoch or mini-batch,
           see `AbstractCallback`.
-   :type callbacks: `Vector{AbstractCallback}`
 """
 function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   opts = TrainingOptions(; kwargs...)

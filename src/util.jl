@@ -62,7 +62,6 @@ end
 ################################################################################
 # Internal Utilities
 ################################################################################
-const DOC_EMBED_ANCHOR = "**autogen:EMBED:{1}:EMBED:autogen**"
 function _format_typestring(typestr :: String)
   replace(typestr, r"\bSymbol\b", "SymbolicNode")
 end

@@ -14,7 +14,7 @@ fully connected layers.
 * `hidden_activation::Symbol`: keyword argument, default `:relu`, indicating
           the default activation for hidden layers. The specification here could be overwritten
           by layer-wise specification in the `spec` argument. Also activation is not
-          applied to the last, i.e. the prediction layer. See :func:`Activation` for a
+          applied to the last, i.e. the prediction layer. See [`Activation`](@ref) for a
           list of supported activation types.
 * `prefix`: keyword argument, default `gensym()`, used as the prefix to
           name the constructed layers.

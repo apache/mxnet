@@ -24,27 +24,20 @@ abstract AbstractMomentumScheduler
 """
     OptimizationState
 
-   .. attribute:: batch_size
-
-      The size of the mini-batch used in stochastic training.
-
-   .. attribute:: curr_epoch
-
-      The current epoch count. Epoch 0 means no training yet, during the first
-      pass through the data, the epoch will be 1; during the second pass, the
-      epoch count will be 1, and so on.
-
-   .. attribute:: curr_batch
-
-      The current mini-batch count. The batch count is reset during every epoch.
-      The batch count 0 means the beginning of each epoch, with no mini-batch
-      seen yet. During the first mini-batch, the mini-batch count will be 1.
-
-   .. attribute:: curr_iter
-
-      The current iteration count. One iteration corresponds to one mini-batch,
-      but unlike the mini-batch count, the iteration count does **not** reset
-      in each epoch. So it track the *total* number of mini-batches seen so far.
+# Attributes:
+* `batch_size`: The size of the mini-batch used in stochastic training.
+* `curr_epoch`:
+  The current epoch count. Epoch 0 means no training yet, during the first
+  pass through the data, the epoch will be 1; during the second pass, the
+  epoch count will be 1, and so on.
+* `curr_batch`:
+  The current mini-batch count. The batch count is reset during every epoch.
+  The batch count 0 means the beginning of each epoch, with no mini-batch
+  seen yet. During the first mini-batch, the mini-batch count will be 1.
+* `curr_iter`:
+  The current iteration count. One iteration corresponds to one mini-batch,
+  but unlike the mini-batch count, the iteration count does **not** reset
+  in each epoch. So it track the *total* number of mini-batches seen so far.
 """
 type OptimizationState
   batch_size :: Int
@@ -59,12 +52,12 @@ OptimizationState(batch_size::Int) = OptimizationState(batch_size, 0, 0, 0)
     get_learning_rate(scheduler, state)
 
 # Arguments
-* AbstractLearningRateScheduler scheduler: a learning rate scheduler.
-* OptimizationState state: the current state about epoch, mini-batch and iteration count.
-   :return: the current learning rate.
+* `scheduler::AbstractLearningRateScheduler`: a learning rate scheduler.
+* `state::OptimizationState`: the current state about epoch, mini-batch and iteration count.
+
+Returns the current learning rate.
 """
-function get_learning_rate
-end
+function get_learning_rate end
 
 ################################################################################
 # The learning rate module
@@ -74,7 +67,7 @@ import ..mx: AbstractLearningRateScheduler, OptimizationState, get_learning_rate
 """
     LearningRate.Fixed
 
-   Fixed learning rate scheduler always return the same learning rate.
+Fixed learning rate scheduler always return the same learning rate.
 """
 type Fixed <: AbstractLearningRateScheduler
   learning_rate :: Float64
@@ -84,8 +77,8 @@ get_learning_rate(self :: Fixed, state :: OptimizationState) = self.learning_rat
 """
     LearningRate.Exp
 
-   :math:`\eta_t = \eta_0\gamma^t`. Here :math:`t` is the epoch count, or the iteration
-   count if `decay_on_iteration` is set to true.
+``\eta_t = \eta_0\gamma^t``. Here ``t`` is the epoch count, or the iteration
+count if `decay_on_iteration` is set to true.
 """
 type Exp <: AbstractLearningRateScheduler
   learning_rate :: Float64
@@ -101,9 +94,9 @@ get_learning_rate(self :: Exp, state :: OptimizationState) =
 """
     LearningRate.Inv
 
-   :math:`\eta_t = \eta_0 * (1 + \gamma * t)^(-power)`.
-   Here :math:`t` is the epoch count, or the iteration count if `decay_on_iteration`
-   is set to true.
+``\eta_t = \eta_0 * (1 + \gamma * t)^(-power)``.
+Here ``t`` is the epoch count, or the iteration count if `decay_on_iteration`
+is set to true.
 """
 type Inv <: AbstractLearningRateScheduler
   learning_rate :: Float64
@@ -132,9 +125,10 @@ end
 """
     get_momentum(scheduler, state)
 
-* AbstractMomentumScheduler scheduler: the momentum scheduler.
-* OptimizationState state: the state about current epoch, mini-batch and iteration count.
-   :return: the current momentum.
+* `scheduler::AbstractMomentumScheduler`: the momentum scheduler.
+* `state::OptimizationState`: the state about current epoch, mini-batch and iteration count.
+
+Returns the current momentum.
 """
 function get_momentum
 end
@@ -148,8 +142,8 @@ import ..mx: AbstractMomentumScheduler, OptimizationState, get_momentum
 """
     Momentum.Null
 
-   The null momentum scheduler always returns 0 for momentum. It is also used to
-   explicitly indicate momentum should not be used.
+The null momentum scheduler always returns 0 for momentum. It is also used to
+explicitly indicate momentum should not be used.
 """
 type Null <: AbstractMomentumScheduler
 end
@@ -158,7 +152,7 @@ get_momentum(self :: Null, state :: OptimizationState) = 0.0
 """
     Momentum.Fixed
 
-  Fixed momentum scheduler always returns the same value.
+Fixed momentum scheduler always returns the same value.
 """
 type Fixed <: AbstractMomentumScheduler
   momentum :: Float64
@@ -180,10 +174,10 @@ end
 """
     get_updater(optimizer)
 
-* AbstractOptimizer optimizer: the underlying optimizer.
+A utility function to create an updater function, that uses its closure to
+store all the states needed for each weights.
 
-   A utility function to create an updater function, that uses its closure to
-   store all the states needed for each weights.
+* `optimizer::AbstractOptimizer`: the underlying optimizer.
 """
 function get_updater(optimizer :: AbstractOptimizer)
   states = Dict{Int,Any}()
@@ -206,11 +200,11 @@ abstract AbstractOptimizerOptions
 """
     normalized_gradient(opts, state, grad)
 
-* AbstractOptimizerOptions opts: options for the optimizer, should contain the field
+* `opts::AbstractOptimizerOptions`: options for the optimizer, should contain the field
           `grad_scale`, `grad_clip` and `weight_decay`.
-* OptimizationState state: the current optimization state.
-* NDArray weight: the trainable weights.
-* NDArray grad: the original gradient of the weights.
+* `state::OptimizationState`: the current optimization state.
+* `weight::NDArray`: the trainable weights.
+* `grad::NDArray`: the original gradient of the weights.
 
    Get the properly normalized gradient (re-scaled and clipped if necessary).
 """
