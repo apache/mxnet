@@ -130,13 +130,13 @@ int MXSymbolSetAttr(SymbolHandle symbol,
 int MXSymbolListAttr(SymbolHandle symbol,
                      mx_uint *out_size,
                      const char*** out) {
-  return NNSymbolListAttrs(symbol, 1, out_size, out);
+  return NNSymbolListAttrs(symbol, 0, out_size, out);
 }
 
 int MXSymbolListAttrShallow(SymbolHandle symbol,
                             mx_uint *out_size,
                             const char*** out) {
-  return NNSymbolListAttrs(symbol, 0, out_size, out);
+  return NNSymbolListAttrs(symbol, 1, out_size, out);
 }
 
 int MXSymbolListOutputs(SymbolHandle symbol,
