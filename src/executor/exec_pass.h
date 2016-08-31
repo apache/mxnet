@@ -48,6 +48,8 @@ class OpExecutor {
    * \param rctx The runtime context passed in by environment.
    */
   virtual void Run(RunContext rctx) = 0;
+  /*! \return whether the op is asynchronize */
+  virtual bool IsAsync() const = 0;
 };
 
 /*!

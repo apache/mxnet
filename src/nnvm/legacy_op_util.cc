@@ -62,7 +62,6 @@ bool OpPropInferAttr(const NodeAttrs& attrs,
   for (size_t i = 0; i < prop.aux_states.size(); ++i) {
     aux_attr[i] = (*iattr)[i + prop.arguments.size()];
   }
-
   if (!finfer(prop.ptr.get(), &in_attr, oattr, &aux_attr)) return false;
 
   for (size_t i = 0; i < prop.arguments.size(); ++i) {
@@ -108,6 +107,11 @@ inline uint32_t OpPropNumOutputs(const NodeAttrs& attrs) {
   return static_cast<uint32_t>(prop.outputs.size());
 }
 
+inline uint32_t OpPropNumVisibleOutputs(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  return static_cast<uint32_t>(prop.ptr->NumVisibleOutputs());
+}
+
 std::vector<std::string> OpPropListInputNames(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return prop.inputs;
@@ -147,13 +151,25 @@ std::vector<std::pair<int, int> > OpPropInplaceOption(const NodeAttrs& attrs) {
   return forward_inplace;
 }
 
+std::vector<ResourceRequest> OpPropResourceRequest(const NodeAttrs& attrs) {
+  std::vector<TShape> ishape;
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  return prop.ptr->ForwardResource(ishape);
+}
+
+std::vector<ResourceRequest> OpBackResourceRequest(const NodeAttrs& attrs) {
+  std::vector<TShape> ishape;
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  return prop.ptr->BackwardResource(ishape);
+}
+
 Operator* OpPropCreateLayerOp(const NodeAttrs& attrs,
                               Context ctx,
                               const std::vector<TShape>& ishape,
                               const std::vector<int>& itype) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
-  std::vector<TShape> is = ishape;
-  std::vector<int> it = itype;
+  std::vector<TShape> is(ishape.begin(), ishape.begin() + prop.arguments.size());
+  std::vector<int> it(itype.begin(), itype.begin() + prop.arguments.size());
   return prop.ptr->CreateOperatorEx(ctx, &is, &it);
 }
 
@@ -180,6 +196,7 @@ inline std::vector<NodeEntry> OpPropGradient(
   gnode->control_deps.emplace_back(ptr);
   gnode->attrs = ptr->attrs;
   gnode->attrs.op = back_op;
+  gnode->attrs.name = ptr->attrs.name + "_backward";
   std::vector<NodeEntry> in_grad(prop.inputs.size());
   for (uint32_t i = 0; i < prop.arguments.size(); ++i) {
     in_grad[i] = NodeEntry{gnode, i, 0};
@@ -270,16 +287,6 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
 
 // register the legacy operator properties under NNVM registry.
 void RegisterLegacyOpProp() {
-  using nnvm::FInferShape;
-  using nnvm::FInferType;
-  using nnvm::FMutateInputs;
-  using nnvm::FListInputNames;
-  using nnvm::FListOutputNames;
-  using nnvm::FInplaceOption;
-  using nnvm::FGradient;
-  using nnvm::FBackwardOutToInIndex;
-  using mxnet::FCreateLayerOp;
-
   for (auto reg : dmlc::Registry<OperatorPropertyReg>::List()) {
     Op& op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER_OR_GET__(reg->name);
     if (op.attr_parser != nullptr) continue;
@@ -292,16 +299,20 @@ void RegisterLegacyOpProp() {
         attrs->parsed = std::move(op);
       }
     };
+    op.add_arguments(reg->arguments);
+    op.describe(reg->description);
     // attribute parser
     op.set_attr_parser(attr_parser);
     op.set_num_inputs(OpPropNumInputs);
     op.set_num_outputs(OpPropNumOutputs);
-    op.attr<FListInputNames>("FListInputNames", OpPropListInputNames);
-    op.attr<FListOutputNames>("FListOutputNames", OpPropListOutputNames);
-    op.attr<FInferShape>("FInferShape", OpPropInferShape);
-    op.attr<FInferType>("FInferType", OpPropInferType);
-    op.attr<FMutateInputs>("FMutateInputs", OpPropMutateInputs);
-    op.attr<FInplaceOption>("FInplaceOption", OpPropInplaceOption);
+    op.attr<nnvm::FListInputNames>("FListInputNames", OpPropListInputNames);
+    op.attr<nnvm::FListOutputNames>("FListOutputNames", OpPropListOutputNames);
+    op.attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", OpPropNumVisibleOutputs);
+    op.attr<nnvm::FInferShape>("FInferShape", OpPropInferShape);
+    op.attr<nnvm::FInferType>("FInferType", OpPropInferType);
+    op.attr<nnvm::FMutateInputs>("FMutateInputs", OpPropMutateInputs);
+    op.attr<nnvm::FInplaceOption>("FInplaceOption", OpPropInplaceOption);
+    op.attr<FResourceRequest>("FResourceRequest", OpPropResourceRequest);
     op.attr<FCreateLayerOp>("FCreateLayerOp", OpPropCreateLayerOp);
     if (reg->key_var_num_args.length() != 0) {
       op.attr<std::string>("key_var_num_args", reg->key_var_num_args);
@@ -309,16 +320,18 @@ void RegisterLegacyOpProp() {
     // register BackwardOps
     std::string back_op_name = "_backward_" + reg->name;
     Op& back_op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER__(back_op_name);
-    op.attr<FGradient>("FGradient", std::bind(
+    op.attr<nnvm::FGradient>("FGradient", std::bind(
         OpPropGradient, &back_op,
         std::placeholders::_1, std::placeholders::_2));
     back_op.set_attr_parser(attr_parser);
     back_op.set_num_inputs(nnvm::kVarg);
     back_op.set_num_outputs(OpBackNumOutputs);
-    back_op.attr<FBackwardOutToInIndex>(
+    back_op.attr<nnvm::FBackwardOutToInIndex>(
         "FBackwardOutToInIndex", OpBackOutToInIndex);
-    back_op.attr<FMutateInputs>("FMutateInputs", OpBackMutateInputs);
-    back_op.attr<FInplaceOption>("FInplaceOption", OpBackInplaceOption);
+    back_op.attr<nnvm::FMutateInputs>("FMutateInputs", OpBackMutateInputs);
+    back_op.attr<nnvm::FInplaceOption>("FInplaceOption", OpBackInplaceOption);
+    back_op.attr<FResourceRequest>(
+        "FResourceRequest", OpBackResourceRequest);
     back_op.attr<bool>("TIsLayerOpBackward", true);
   }
 }

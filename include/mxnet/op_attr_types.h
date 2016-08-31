@@ -41,7 +41,7 @@ using FCreateLayerOp = std::function<
  * \note Register under "FResourceRequest"
  */
 using FResourceRequest = std::function<
-    std::vector<ResourceRequest> (const NodeAttrs& n)>;
+  std::vector<ResourceRequest> (const NodeAttrs& n)>;
 
 }  // namespace mxnet
 

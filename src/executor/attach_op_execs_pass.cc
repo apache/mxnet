@@ -39,6 +39,9 @@ class ForwardOpExecutor : public OpExecutor {
         return nd.data();
       });
   }
+  bool IsAsync() const override {
+    return op_->exec_type() == Operator::kAsync;
+  }
   explicit ForwardOpExecutor(Operator* op, std::vector<uint32_t> aux_index)
       : op_(op), aux_index_(aux_index) {
     std::sort(aux_index_.begin(), aux_index_.end());
@@ -59,14 +62,15 @@ class BackwardOpExecutor : public OpExecutor {
     op_->Backward(op_ctx, out_grad_, in_data_, out_data_,
                   req, in_grad_, aux_data_);
   }
-
   void Setup() override {
     size_t arg_top = 0, aux_top = 0;
+    aux_data_.resize(aux_index_.size());
     for (size_t i = 0; i < in_array.size(); ++i) {
       if (!std::binary_search(aux_index_.begin(), aux_index_.end(), i)) {
+        CHECK_GT(arg_data_ptr_.size(), arg_top);
         *arg_data_ptr_[arg_top++] = in_array[i].data();
       } else {
-        aux_data_[aux_top++] = in_array[i].data();
+        aux_data_.at(aux_top++) = in_array[i].data();
       }
     }
     CHECK_EQ(out_array.size(), in_grad_.size());
@@ -74,6 +78,9 @@ class BackwardOpExecutor : public OpExecutor {
                    in_grad_.begin(), [](const NDArray& nd) {
         return nd.data();
       });
+  }
+  bool IsAsync() const override {
+    return op_->exec_type() == Operator::kAsync;
   }
   explicit BackwardOpExecutor(std::shared_ptr<Operator> op,
                               const OperatorProperty* prop,

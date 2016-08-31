@@ -32,7 +32,7 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
   const auto& idx = graph_.indexed_graph();
-  if (num_forward_inputs_ == idx.input_nodes().size()) {
+  if (num_forward_inputs_ != idx.input_nodes().size()) {
     for (size_t i = 0; i < head_grad_array_.size(); ++i) {
       if (!head_grad_array_[i].is_none()) {
         CHECK(i < head_grads.size() && !head_grads[i].is_none())
@@ -46,7 +46,9 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
-  LOG(FATAL) << "not implemented";
+
+  nnvm::Symbol s; s.outputs = graph_.outputs;
+  s.Print(os);
 }
 
 void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback) {
@@ -55,6 +57,44 @@ void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback) {
 
 const std::vector<NDArray>& GraphExecutor::outputs() const {
   return output_arrays_;
+}
+
+nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
+  using nnvm::Op;
+  using nnvm::Node;
+  if (v.size() == 1) {
+    return std::move(v[0]);
+  } else if (v.size() == 0) {
+    // TODO(tqchen) should be zero node
+    nnvm::NodePtr ng = Node::Create();
+    ng->attrs.op = Op::Get("_NoGradient");
+    ng->attrs.name = "NoGradient";
+    return nnvm::NodeEntry{ng, 0, 0};
+  } else {
+    nnvm::NodePtr sum_node = Node::Create();
+    sum_node->attrs.op = Op::Get("ElementWiseSum");
+    sum_node->attrs.name = "sum_grad";
+    sum_node->attrs.dict["num_args"] = std::to_string(v.size());
+    sum_node->attrs.op->attr_parser(&(sum_node->attrs));
+    sum_node->inputs = std::move(v);
+    return nnvm::NodeEntry{sum_node, 0, 0};
+  }
+}
+
+template<typename ValueType>
+inline ValueType get_node_attr(
+    const nnvm::Node& node,
+    const std::string& key, ValueType default_value) {
+  auto it = node.attrs.dict.find(key);
+  if (it == node.attrs.dict.end()) {
+    return default_value;
+  } else {
+    ValueType ret;
+    dmlc::parameter::FieldEntry<ValueType> e;
+    e.Init(key, &ret, ret);
+    e.Set(&ret, it->second);
+    return ret;
+  }
 }
 
 nnvm::Graph GraphExecutor::InitFullGraph(
@@ -87,7 +127,25 @@ nnvm::Graph GraphExecutor::InitFullGraph(
       xs.emplace_back(NodeEntry{args[i], 0, 0});
     }
   }
-  nnvm::Graph g_grad = nnvm::pass::Gradient(g, symbol.outputs, xs, head_grad_entry_);
+
+  int do_mirror = dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0);
+  auto need_mirror = [do_mirror](const nnvm::Node& node) -> int {
+    if (node.is_variable()) return 0;
+    const std::string& type = node.attrs.op->name;
+    if (type == "Dropout") return false;
+    if (get_node_attr(node, "force_mirroring", false)) return true;
+    if (do_mirror == 0) return false;
+    if (type == "Convolution") return false;
+    if (type == "FullyConnected") return false;
+    if (type == "Concat") return false;
+    if (type == "SoftmaxOutput") return false;
+    if (type == "CuDNNBatchNorm") return false;
+    return true;
+  };
+
+  nnvm::Graph g_grad = nnvm::pass::Gradient(
+      g, symbol.outputs, xs, head_grad_entry_,
+      AggregateGradient, need_mirror);
   CHECK_EQ(g_grad.outputs.size(), xs.size());
   g.outputs.insert(g.outputs.end(), g_grad.outputs.begin(), g_grad.outputs.end());
   return g;
@@ -186,9 +244,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                             grad_req_type, aux_states);
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
-
   graph_ = std::move(g);
-
   if (shared_exec != nullptr) {
     this->InitDataEntryMemory(dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_);
   } else {
@@ -202,7 +258,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       output_arrays_.push_back(data_entry_[idx.entry_id(e)]);
     }
     // initialize head gradient array
-    head_grad_array_.resize(g.outputs.size());
+    head_grad_array_.resize(symbol.outputs.size());
     for (size_t i = num_forward_inputs_; i < idx.input_nodes().size(); ++i) {
       uint32_t nid = idx.input_nodes().at(i);
       uint32_t oid = head_grad_map_.at(idx[nid].source);
@@ -284,7 +340,7 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   CHECK_EQ(idx.num_node_entries(), vshape.size());
   CHECK_EQ(idx.num_node_entries(), vdtype.size());
   CHECK_EQ(idx.num_node_entries(), vstorage.size());
-
+  CHECK_EQ(data_entry_.size(), vshape.size());
   std::vector<Context> data_context(idx.num_node_entries());
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
@@ -306,7 +362,6 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
     data_entry_[idx.entry_id(nid, 0)] =
         NDArray(vshape[eid], data_context[eid], vdtype[eid]);
   }
-
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
     size_t bytes = vshape[i].Size() * mshadow::mshadow_sizeof(vdtype[i]);
@@ -314,7 +369,7 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
     if (storage_id < 0) continue;
     if (!data_entry_[i].is_none()) continue;
     size_t sid = static_cast<size_t>(storage_id);
-    if (sid <= pool_info.size()) {
+    if (sid >= pool_info.size()) {
       pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0)});
     }
     PoolEntry& info = pool_info[sid];
@@ -415,13 +470,13 @@ void GraphExecutor::InitCachedOps() {
     std::vector<uint32_t> inplace_inputs;
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
-      if (vstorage_inplace[eid] >= 0) {
+      if (vstorage_inplace[eid] >= 0 && exec->req.at(index) == kWriteInplace) {
         inplace_inputs.push_back(vstorage_inplace[eid]);
       }
     }
     std::sort(inplace_inputs.begin(), inplace_inputs.end());
 
-    bool is_async = false;
+    bool is_async = op_nodes_[nid].exec->IsAsync();
     bool is_gpu = op_nodes_[nid].ctx.dev_mask() == gpu::kDevMask;
     // the variable
     std::vector<Engine::VarHandle> use_vars, mutate_vars, all_vars;
@@ -440,12 +495,23 @@ void GraphExecutor::InitCachedOps() {
       all_vars.push_back(nd.var());
       mutate_vars.push_back(nd.var());
     }
+    auto dedup = [] (std::vector<Engine::VarHandle>& vars) {  // NOLINT(*)
+      std::sort(vars.begin(), vars.end());
+      vars.resize(std::unique(vars.begin(), vars.end()) - vars.begin());
+    };
+    dedup(use_vars);
+    dedup(mutate_vars);
+    dedup(all_vars);
+
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
       }, Context::CPU(), {}, all_vars);
 
     auto exec_fun = [exec, is_async, is_gpu](
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      if (is_async) {
+        exec->op_ctx.async_on_complete = on_complete;
+      }
       exec->Run(ctx);
       // call on complete only if it is async op
       if (!is_async) {
