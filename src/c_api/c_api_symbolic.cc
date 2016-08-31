@@ -8,7 +8,6 @@
 #include <mxnet/c_api.h>
 #include <nnvm/c_api.h>
 #include <nnvm/pass_functions.h>
-#include <mxnet/symbolic.h>
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 
@@ -254,28 +253,6 @@ void MatchArguments(
   }
 }
 
-// copy attributes from inferred vector back to the vector of each type.
-template<typename AttrType>
-void CopyAttr(const nnvm::IndexedGraph& idx,
-              const std::vector<AttrType>& attr_vec,
-              std::vector<AttrType>* in_attr,
-              std::vector<AttrType>* out_attr,
-              std::vector<AttrType>* aux_attr) {
-  in_attr->clear();
-  out_attr->clear();
-  aux_attr->clear();
-  for (uint32_t nid : idx.input_nodes()) {
-    if (idx.mutable_input_nodes().count(nid) == 0) {
-      in_attr->push_back(attr_vec[idx.entry_id(nid, 0)]);
-    } else {
-      aux_attr->push_back(attr_vec[idx.entry_id(nid, 0)]);
-    }
-  }
-  for (auto& e : idx.outputs()) {
-    out_attr->push_back(attr_vec[idx.entry_id(e)]);
-  }
-}
-
 }  // namespace mxnet
 
 int MXSymbolInferShape(SymbolHandle sym,
@@ -417,13 +394,6 @@ int MXSymbolInferType(SymbolHandle sym,
 
 int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHandle* out) {
   API_BEGIN();
-  Symbol* s = static_cast<Symbol*>(sym);
-  std::vector<std::string> wrts(num_wrt);
-  for (mx_uint i = 0; i < num_wrt; ++i) {
-    wrts[i] = wrt[i];
-  }
-  Symbol* ret = new Symbol();
-  *ret = s->Grad(wrts);
-  *out = ret;
+  LOG(FATAL) << "not implemented";
   API_END();
 }

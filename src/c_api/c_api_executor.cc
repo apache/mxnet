@@ -5,9 +5,8 @@
  */
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
-#include <mxnet/symbolic.h>
+#include <mxnet/executor.h>
 #include "./c_api_common.h"
-#include "../executor/graph_executor.h"
 
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
@@ -119,7 +118,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
                      NDArrayHandle *aux_states,
                      ExecutorHandle shared_exec,
                      ExecutorHandle *out) {
-  exec::GraphExecutor* exec = nullptr;
+  Executor* exec = nullptr;
 
   API_BEGIN();
   nnvm::Symbol *symb = static_cast<nnvm::Symbol*>(symbol_handle);
@@ -149,12 +148,9 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
   for (mx_uint i = 0; i < aux_states_len; ++i) {
     aux_states_vec.push_back(*(aux_states_ptr[i]));
   }
-  exec = new exec::GraphExecutor();
-  exec->Init(*symb, ctx, ctx_map,
-             in_args_vec,
-             arg_grad_vec, grad_req_vec, aux_states_vec,
-             reinterpret_cast<Executor*>(shared_exec));
-  *out = exec;
+  *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
+                        arg_grad_vec, grad_req_vec, aux_states_vec,
+                        reinterpret_cast<Executor*>(shared_exec));
   API_END_HANDLE_ERROR(delete exec);
 }
 

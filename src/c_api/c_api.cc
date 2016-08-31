@@ -10,7 +10,6 @@
 #include <dmlc/recordio.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
-#include <mxnet/symbolic.h>
 #include <mxnet/operator.h>
 #include <mxnet/optimizer.h>
 #include <mxnet/io.h>

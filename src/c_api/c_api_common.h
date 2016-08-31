@@ -11,6 +11,7 @@
 #include <dmlc/thread_local.h>
 #include <mxnet/c_api.h>
 #include <mxnet/base.h>
+#include <nnvm/graph.h>
 #include <vector>
 #include <string>
 
@@ -77,5 +78,29 @@ struct MXAPIThreadLocalEntry {
 
 // define the threadlocal store.
 typedef dmlc::ThreadLocalStore<MXAPIThreadLocalEntry> MXAPIThreadLocalStore;
+
+namespace mxnet {
+// copy attributes from inferred vector back to the vector of each type.
+template<typename AttrType>
+inline void CopyAttr(const nnvm::IndexedGraph& idx,
+                     const std::vector<AttrType>& attr_vec,
+                     std::vector<AttrType>* in_attr,
+                     std::vector<AttrType>* out_attr,
+                     std::vector<AttrType>* aux_attr) {
+  in_attr->clear();
+  out_attr->clear();
+  aux_attr->clear();
+  for (uint32_t nid : idx.input_nodes()) {
+    if (idx.mutable_input_nodes().count(nid) == 0) {
+      in_attr->push_back(attr_vec[idx.entry_id(nid, 0)]);
+    } else {
+      aux_attr->push_back(attr_vec[idx.entry_id(nid, 0)]);
+    }
+  }
+  for (auto& e : idx.outputs()) {
+    out_attr->push_back(attr_vec[idx.entry_id(e)]);
+  }
+}
+}  // namespace mxnet
 
 #endif  // MXNET_C_API_C_API_COMMON_H_

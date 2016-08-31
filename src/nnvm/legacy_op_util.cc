@@ -227,6 +227,11 @@ inline uint32_t OpBackNumOutputs(const NodeAttrs& attrs) {
   return static_cast<uint32_t>(prop.arguments.size());
 }
 
+std::vector<std::string> OpBackListOutputNames(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  return prop.arguments;
+}
+
 std::vector<uint32_t> OpBackMutateInputs(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   if (prop.aux_states.size() == 0) return std::vector<uint32_t>{};
@@ -328,6 +333,7 @@ void RegisterLegacyOpProp() {
     back_op.set_num_outputs(OpBackNumOutputs);
     back_op.attr<nnvm::FBackwardOutToInIndex>(
         "FBackwardOutToInIndex", OpBackOutToInIndex);
+    back_op.attr<nnvm::FListOutputNames>("FListOutputNames", OpBackListOutputNames);
     back_op.attr<nnvm::FMutateInputs>("FMutateInputs", OpBackMutateInputs);
     back_op.attr<nnvm::FInplaceOption>("FInplaceOption", OpBackInplaceOption);
     back_op.attr<FResourceRequest>(

@@ -14,6 +14,7 @@
 // nnvm headers for symbolic construction.
 #include <nnvm/op.h>
 #include <nnvm/tuple.h>
+#include <nnvm/symbolic.h>
 #include <string>
 
 /*!

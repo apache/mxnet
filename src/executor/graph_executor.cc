@@ -27,7 +27,12 @@ void GraphExecutor::Forward(bool is_train) {
 }
 
 void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
-  LOG(FATAL) << "not implemented";
+  size_t sstep = static_cast<size_t>(step);
+  if (sstep >= num_forward_nodes_) {
+    *step_left = 0; return;
+  }
+  RunOps(is_train, sstep, sstep + 1);
+  *step_left = static_cast<int>(num_forward_nodes_ - sstep - 1);
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
@@ -46,13 +51,14 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
-
   nnvm::Symbol s; s.outputs = graph_.outputs;
   s.Print(os);
+  size_t total_bytes = graph_.GetAttr<size_t>("storage_allocated_bytes");
 }
 
 void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback) {
-  LOG(FATAL) << "not implemented";
+  CHECK(callback) << "invalid callback";
+  monitor_callback_ = callback;
 }
 
 const std::vector<NDArray>& GraphExecutor::outputs() const {
@@ -533,13 +539,15 @@ void GraphExecutor::InitCachedOps() {
 }
 
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
+  static const auto& flist_outputs =
+      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
     opnode.exec->op_ctx.is_train = is_train;
-    if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy){
+    if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy) {
       CHECK_EQ(inode.inputs.size(), 1);
       CHECK_EQ(opnode.exec->in_array.size(), 1);
       CHECK_EQ(opnode.exec->out_array.size(), 1);
@@ -547,10 +555,42 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     } else if (opnode.cached_opr != nullptr) {
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx);
     } else {
-      LOG(FATAL) << "TODO";
+      LOG(FATAL) << "Not accessed";
+    }
+
+    if (monitor_callback_) {
+      std::vector<std::string> output_names;
+      const auto& node = idx[nid].source;
+      if (flist_outputs.count(node->op())) {
+        output_names = flist_outputs[node->op()](node->attrs);
+      } else {
+        for (size_t i = 0; i < node->num_outputs(); ++i) {
+          output_names.emplace_back(std::to_string(i));
+        }
+      }
+      for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
+        NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
+        std::string name = inode.source->attrs.name + "_" + output_names[i];
+        this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+      }
     }
   }
 }
 
 }  // namespace exec
+
+Executor *Executor::Bind(nnvm::Symbol symbol,
+                         const Context& default_ctx,
+                         const std::map<std::string, Context>& group2ctx,
+                         const std::vector<NDArray> &in_args,
+                         const std::vector<NDArray> &arg_grad_store,
+                         const std::vector<OpReqType> &grad_req_type,
+                         const std::vector<NDArray> &aux_states,
+                         Executor* shared_exec) {
+  auto exec = new exec::GraphExecutor();
+  exec->Init(symbol, default_ctx, group2ctx,
+             in_args, arg_grad_store, grad_req_type, aux_states,
+             reinterpret_cast<Executor*>(shared_exec));
+  return exec;
+}
 }  // namespace mxnet
