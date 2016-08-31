@@ -122,10 +122,9 @@ end
 
 
 """
-.. function::
-   empty(DType, shape :: Tuple, ctx :: Context)
-   empty(DType, shape :: Tuple)
-   empty(DType, dim1, dim2, ...)
+    empty(DType, shape :: Tuple, ctx :: Context)
+    empty(DType, shape :: Tuple)
+    empty(DType, dim1, dim2, ...)
 
 Allocate memory for an uninitialized `NDArray` with a specified type.
 """
@@ -140,10 +139,9 @@ function empty{T<:DType}(:: Type{T}, shape :: Int...)
 end
 
 """
-.. function::
-   empty(shape :: Tuple, ctx :: Context)
-   empty(shape :: Tuple)
-   empty(dim1, dim2, ...)
+    empty(shape :: Tuple, ctx :: Context)
+    empty(shape :: Tuple)
+    empty(dim1, dim2, ...)
 
 Allocate memory for an uninitialized `NDArray` with specific shape of type Float32.
 """
@@ -236,9 +234,8 @@ end
 import Base: size, length, ndims, eltype
 
 """
-.. function::
-   size(arr :: NDArray)
-   size(arr :: NDArray, dim :: Int)
+    size(arr :: NDArray)
+    size(arr :: NDArray, dim :: Int)
 
 Get the shape of an `NDArray`. The shape is in Julia's column-major convention. See
 also the notes on NDArray shapes [`NDArray`](@ref).
@@ -390,8 +387,7 @@ end
 
 import Base: copy!, copy, convert
 """
-.. function::
-   copy!(dst :: Union{NDArray, Array}, src :: Union{NDArray, Array})
+    copy!(dst :: Union{NDArray, Array}, src :: Union{NDArray, Array})
 
 Copy contents of `src` into `dst`.
 """
@@ -467,7 +463,6 @@ end
 
 Convert an `NDArray` into a Julia `Array` of specific type. Data will be copied.
 """
-# Convert copy: NDArray -> Julia Array
 function convert{T<:Real}(t::Type{Array{T}}, arr :: NDArray)
   convert(t, copy(arr))
 end
@@ -811,10 +806,9 @@ Try to create a Julia array by sharing the data with the underlying `NDArray`.
 # Arguments:
 * `arr::NDArray`: the array to be shared.
 
-   .. warning::
-
-      The returned array does not guarantee to share data with the underlying `NDArray`.
-      In particular, data sharing is possible only when the `NDArray` lives on CPU.
+!!! note
+    The returned array does not guarantee to share data with the underlying `NDArray`.
+    In particular, data sharing is possible only when the `NDArray` lives on CPU.
 """
 function try_get_shared(arr :: NDArray)
   if context(arr).device_type == CPU
@@ -930,22 +924,21 @@ The libxmnet APIs are automatically imported from `libmxnet.so`. The functions l
 here operate on `NDArray` objects. The arguments to the functions are typically ordered
 as
 
-.. code-block:: julia
-
-   func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
+```julia
+  func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ..., arg_out1, arg_out2, ...)
+```
 
 unless `NDARRAY_ARG_BEFORE_SCALAR` is not set. In this case, the scalars are put before the input arguments:
 
-.. code-block:: julia
-
-   func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
-
+```julia
+  func_name(scalar1, scalar2, ..., arg_in1, arg_in2, ..., arg_out1, arg_out2, ...)
+```
 
 If `ACCEPT_EMPTY_MUTATE_TARGET` is set. An overloaded function without the output arguments will also be defined:
 
-.. code-block:: julia
-
-   func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
+```julia
+  func_name(arg_in1, arg_in2, ..., scalar1, scalar2, ...)
+```
 
 Upon calling, the output arguments will be automatically initialized with empty NDArrays.
 

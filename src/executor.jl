@@ -75,8 +75,8 @@ Create an `Executor` by binding a `SymbolicNode` to concrete `NDArray`.
 * `ctx::Context`: the context on which the computation should run.
 * `args`: either a list of `NDArray` or a dictionary of name-array pairs. Concrete
           arrays for all the inputs in the network architecture. The inputs typically include
-          network parameters (weights, bias, filters, etc.), data and labels. See :func:`list_arguments`
-          and :func:`infer_shape`.
+          network parameters (weights, bias, filters, etc.), data and labels. See [`list_arguments`](@ref)
+          and [`infer_shape`](@ref).
 * `args_grad`:
 * `aux_states`:
 * `grad_req`:
@@ -211,7 +211,7 @@ Can be used to get an estimated about the memory cost.
   dProvider = ... # DataProvider
   exec = mx.simple_bind(net, mx.cpu(), data=size(dProvider.data_batch[1]))
   dbg_str = mx.debug_str(exec)
-  println(split(ref, ['\n'])[end-2])
+  println(split(ref, ['\\n'])[end-2])
 ```
 """
 function debug_str(self :: Executor)

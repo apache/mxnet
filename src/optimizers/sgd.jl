@@ -7,26 +7,27 @@
   momentum_scheduler :: Any  = nothing
 )
 
-#=doc
-.. class:: SGD
+"""
+    SGD
 
-   Stochastic gradient descent optimizer.
+Stochastic gradient descent optimizer.
 
-   .. function:: SGD(; kwargs...)
+    SGD(; kwargs...)
 
-      :param Real lr: default `0.01`, learning rate.
-      :param AbstractLearningRateScheduler lr_scheduler: default `nothing`, a
-             dynamic learning rate scheduler. If set, will overwrite the `lr`
-             parameter.
-      :param Real momentum: default `0.0`, the momentum.
-      :param AbstractMomentumScheduler momentum_scheduler: default `nothing`,
-             a dynamic momentum scheduler. If set, will overwrite the `momentum`
-             parameter.
-      :param Real grad_clip: default `0`, if positive, will clip the gradient
-             into the bounded range `[-grad_clip, grad_clip]`.
-      :param Real weight_decay: default `0.0001`, weight decay is equivalent to
-             adding a global l2 regularizer to the parameters.
-=#
+# Arguments:
+* `lr::Real`: default `0.01`, learning rate.
+* `lr_scheduler::AbstractLearningRateScheduler`: default `nothing`, a
+       dynamic learning rate scheduler. If set, will overwrite the `lr`
+       parameter.
+* `momentum::Real`: default `0.0`, the momentum.
+* `momentum_scheduler::AbstractMomentumScheduler`: default `nothing`,
+       a dynamic momentum scheduler. If set, will overwrite the `momentum`
+       parameter.
+* `grad_clip::Real`: default `0`, if positive, will clip the gradient
+       into the bounded range `[-grad_clip, grad_clip]`.
+* `weight_decay::Real`: default `0.0001`, weight decay is equivalent to
+       adding a global l2 regularizer to the parameters.
+"""
 type SGD <: AbstractOptimizer
   opts  :: SGDOptions
   state :: OptimizationState

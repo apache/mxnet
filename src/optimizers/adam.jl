@@ -8,26 +8,26 @@
   lr_scheduler  :: Any  = nothing
 )
 
-#=doc
-.. class:: ADAM
+"""
+     ADAM
 
-   The solver described in Diederik Kingma, Jimmy Ba: *Adam: A Method for
-   Stochastic Optimization*. arXiv:1412.6980 [cs.LG].
+The solver described in Diederik Kingma, Jimmy Ba: *Adam: A Method for
+Stochastic Optimization*. arXiv:1412.6980 [cs.LG].
 
-   .. function:: ADAM(; kwargs...)
+    ADAM(; kwargs...)
 
-      :param Real lr: default `0.001`, learning rate.
-      :param AbstractLearningRateScheduler lr_scheduler: default `nothing`, a
-             dynamic learning rate scheduler. If set, will overwrite the `lr`
-             parameter.
-      :param Real beta1: default `0.9`.
-      :param Real beta2: default `0.999`.
-      :param Real epsilon: default `1e-8`.
-      :param Real grad_clip: default `0`, if positive, will clip the gradient
-             into the range `[-grad_clip, grad_clip]`.
-      :param Real weight_decay: default `0.00001`, weight decay is equivalent
-             to adding a global l2 regularizer for all the parameters.
-=#
+* `lr::Real`: default `0.001`, learning rate.
+* `lr_scheduler::AbstractLearningRateScheduler`: default `nothing`, a
+       dynamic learning rate scheduler. If set, will overwrite the `lr`
+       parameter.
+* `beta1::Real`: default `0.9`.
+* `beta2::Real`: default `0.999`.
+* `epsilon::Real`: default `1e-8`.
+* `grad_clip::Real`: default `0`, if positive, will clip the gradient
+       into the range `[-grad_clip, grad_clip]`.
+* `weight_decay::Real`: default `0.00001`, weight decay is equivalent
+       to adding a global l2 regularizer for all the parameters.
+"""
 type ADAM <: AbstractOptimizer
   opts  :: ADAMOptions
   state :: OptimizationState

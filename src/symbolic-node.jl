@@ -189,11 +189,11 @@ end
 
 Set the attribute key to value for this `SymbolicNode`.
 
-# Warning
-It is encouraged not to call this function directly, unless you know exactly what you are doing. The
-recommended way of setting attributes is when creating the `SymbolicNode`. Changing
-the attributes of a `SymbolicNode` that is already been used somewhere else might
-cause unexpected behavior and inconsistency.
+!!! note
+    It is encouraged not to call this function directly, unless you know exactly what you are doing. The
+    recommended way of setting attributes is when creating the `SymbolicNode`. Changing
+    the attributes of a `SymbolicNode` that is already been used somewhere else might
+    cause unexpected behavior and inconsistency.
 """
 function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
   key_s = string(key)
@@ -304,7 +304,7 @@ end
 
 Do shape inference according to the input shapes. The input shapes could be provided
 as a list of shapes, which should specify the shapes of inputs in the same order as
-the arguments returned by :func:`list_arguments`. Alternatively, the shape information
+the arguments returned by [`list_arguments`](@ref). Alternatively, the shape information
 could be specified via keyword arguments.
 
 Returns a 3-tuple containing shapes of all the arguments, shapes of all the outputs and
@@ -372,7 +372,7 @@ end
 
 Do type inference according to the input types. The input types could be provided
 as a list of types, which should specify the types of inputs in the same order as
-the arguments returned by :func:`list_arguments`. Alternatively, the type information
+the arguments returned by [`list_arguments`](@ref). Alternatively, the type information
 could be specified via keyword arguments.
 
 Returns a 3-tuple containing types of all the arguments, types of all the outputs and
@@ -401,7 +401,7 @@ end
 
 Get a node representing the specified output of this node. The index could be
 a symbol or string indicating the name of the output, or a 1-based integer
-indicating the index, as in the list of :func:`list_outputs`.
+indicating the index, as in the list of [`list_outputs`](@ref).
 """
 function Base.getindex(self :: SymbolicNode, idx :: Union{Base.Symbol, AbstractString})
   idx   = Symbol(idx)
