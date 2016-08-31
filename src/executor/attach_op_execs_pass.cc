@@ -39,8 +39,8 @@ class ForwardOpExecutor : public OpExecutor {
         return nd.data();
       });
   }
-  bool IsAsync() const override {
-    return op_->exec_type() == Operator::kAsync;
+  Operator::ExecType exec_type() const override {
+    return op_->exec_type();
   }
   explicit ForwardOpExecutor(Operator* op, std::vector<uint32_t> aux_index)
       : op_(op), aux_index_(aux_index) {
@@ -79,8 +79,8 @@ class BackwardOpExecutor : public OpExecutor {
         return nd.data();
       });
   }
-  bool IsAsync() const override {
-    return op_->exec_type() == Operator::kAsync;
+  Operator::ExecType exec_type() const override {
+    return op_->exec_type();
   }
   explicit BackwardOpExecutor(std::shared_ptr<Operator> op,
                               const OperatorProperty* prop,

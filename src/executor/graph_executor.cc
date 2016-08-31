@@ -476,7 +476,7 @@ void GraphExecutor::InitCachedOps() {
     }
     std::sort(inplace_inputs.begin(), inplace_inputs.end());
 
-    bool is_async = op_nodes_[nid].exec->IsAsync();
+    bool is_async = op_nodes_[nid].exec->exec_type() == Operator::kAsync;
     bool is_gpu = op_nodes_[nid].ctx.dev_mask() == gpu::kDevMask;
     // the variable
     std::vector<Engine::VarHandle> use_vars, mutate_vars, all_vars;
@@ -539,7 +539,12 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     if (inode.source->is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
     opnode.exec->op_ctx.is_train = is_train;
-    if (opnode.cached_opr != nullptr) {
+    if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy){
+      CHECK_EQ(inode.inputs.size(), 1);
+      CHECK_EQ(opnode.exec->in_array.size(), 1);
+      CHECK_EQ(opnode.exec->out_array.size(), 1);
+      CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
+    } else if (opnode.cached_opr != nullptr) {
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx);
     } else {
       LOG(FATAL) << "TODO";
