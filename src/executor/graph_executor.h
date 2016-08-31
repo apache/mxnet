@@ -10,16 +10,19 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
 #include <mxnet/symbolic.h>
-#include <mxnet/op_attr_types.h>
 #include <nnvm/graph.h>
+#include <nnvm/op_attr_types.h>
 #include <nnvm/graph_attr_types.h>
-#include <nnvm/pass_functions.h>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
+#include "./exec_pass.h"
 
 namespace mxnet {
 namespace exec {
+
+using nnvm::Graph;
 
 // graph executors
 class GraphExecutor : public Executor {
@@ -43,26 +46,6 @@ class GraphExecutor : public Executor {
             Executor* shared_exec = nullptr);
 
  protected:
-  // executor to execute an operator.
-  class OpExecutor {
-   public:
-    // virtual destructor
-    virtual ~OpExecutor() {}
-    // initialize the operator
-    virtual void Init() = 0;
-    // run the operator given runtime context
-    virtual void Run(RunContext rctx) = 0;
-    // input arrays
-    std::vector<NDArray> in_array;
-    // out arrays
-    std::vector<NDArray> out_array;
-    // the output requirement
-    std::vector<OpReqType> req;
-    // runtime op context, contains allocated resources.
-    OpContext op_ctx;
-  };
-  class ForwardOpExecutor;
-  class BackwardOpExecutor;
   // Information about operational node
   struct OpNode {
     // the context of the node
@@ -73,20 +56,17 @@ class GraphExecutor : public Executor {
     Engine::OprHandle cached_opr{nullptr};
   };
   // internal initialization of the graph.
-  void InitGraph(nnvm::Symbol symbol,
-                 const Context& default_ctx,
-                 const std::map<std::string, Context>& ctx_map,
-                 const std::vector<NDArray>& in_args,
-                 const std::vector<NDArray>& arg_grad_store,
-                 const std::vector<OpReqType>& grad_req_type,
-                 const std::vector<NDArray>& aux_states);
-  nnvm::Graph InitGradGraph(nnvm::Symbol symbol,
-                            const std::vector<OpReqType>& grad_req_type,
-                            const std::vector<NDArray>& arg_grad_store);
-  // intitialize the operator executors on each node
-  void InitOpExecs();
-  // intitialize the operator executors on each node
-  void InitResources();
+  Graph InitGraph(nnvm::Symbol symbol,
+                  const Context& default_ctx,
+                  const std::map<std::string, Context>& ctx_map,
+                  const std::vector<NDArray>& in_args,
+                  const std::vector<NDArray>& arg_grad_store,
+                  const std::vector<OpReqType>& grad_req_type,
+                  const std::vector<NDArray>& aux_states);
+  // initialize the full graph, including gradient.
+  Graph InitFullGraph(nnvm::Symbol symbol,
+                      const std::vector<OpReqType>& grad_req_type,
+                      const std::vector<NDArray>& arg_grad_store);
   // initialize the cached operator
   void InitCachedOps();
   // initialize the resources in the graph
@@ -97,10 +77,8 @@ class GraphExecutor : public Executor {
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
   // internal graph
   nnvm::Graph graph_;
-  // data structure about entries
+  // operator node
   std::vector<OpNode> op_nodes_;
-  // context of each data entry
-  std::vector<Context> data_context_;
   // internal data entry of each node
   std::vector<NDArray> data_entry_;
   // internal data pool of allocated entries
@@ -109,17 +87,18 @@ class GraphExecutor : public Executor {
   std::vector<NDArray> output_arrays_;
   // gradient store
   std::vector<std::pair<OpReqType, NDArray> > grad_store_;
-  // head gradient entry
+  // array to hold head gradient.
+  std::vector<NDArray> head_grad_array_;
+  // entry to hold head gradient
   std::vector<nnvm::NodeEntry> head_grad_entry_;
+  // the index map of entry to map.
   std::unordered_map<const nnvm::Node*, size_t> head_grad_map_;
   // number of outputs.
-  size_t num_outputs_;
+  size_t num_forward_outputs_{0};
   // number of inputs
-  size_t num_inputs_;
+  size_t num_forward_inputs_{0};
   // number of forward nodes
-  size_t num_forward_nodes_;
-  // total number of allocated temp space.
-  size_t total_allocated_temp_{0};
+  size_t num_forward_nodes_{0};
 };
 
 }  // namespace exec
