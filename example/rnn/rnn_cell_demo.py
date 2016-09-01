@@ -12,7 +12,7 @@ data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 
 
 def Perplexity(label, pred):
-    # IMPORTANT: we make a transpose of label here, because when
+    # TODO(tofix): we make a transpose of label here, because when
     # using the RNN cell, we called swap axis to the data.
     label = label.T.reshape((-1,))
     loss = 0.
@@ -22,7 +22,7 @@ def Perplexity(label, pred):
 
 
 if __name__ == '__main__':
-    batch_size = 32
+    batch_size = 128
     buckets = [10, 20, 30, 40, 50, 60]
     num_hidden = 200
     num_embed = 200
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     learning_rate = 0.01
     momentum = 0.0
 
-    contexts = [mx.context.gpu(i) for i in range(1)]
+    contexts = [mx.context.gpu(i) for i in range(4)]
     vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
 
     init_h = [('LSTM_init_h', (batch_size, num_lstm_layer, num_hidden))]
@@ -50,11 +50,13 @@ if __name__ == '__main__':
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
                                  output_dim=num_embed, name='embed')
 
+        # TODO(tofix)
         # The inputs and labels from IO are all in batch-major.
         # We need to transform them into time-major to use RNN cells.
         embed_tm = mx.sym.SwapAxis(embed, dim1=0, dim2=1)
         label_tm = mx.sym.SwapAxis(label, dim1=0, dim2=1)
 
+        # TODO(tofix)
         # Create transformed RNN initial states. Normally we do
         # no need to do this. But the RNN symbol expects the state
         # to be time-major shape layout, while the current mxnet
@@ -68,11 +70,30 @@ if __name__ == '__main__':
         rnn_c_init = mx.sym.SwapAxis(mx.sym.Variable('LSTM_init_c'),
                                      dim1=0, dim2=1)
 
+        # TODO(tofix)
+        # currently all the LSTM parameters are concatenated as
+        # a huge vector, and named '<name>_parameters'. By default
+        # mxnet initializer does not know how to initilize this
+        # guy because its name does not ends with _weight or _bias
+        # or anything familiar. Here we just use a temp workaround
+        # to create a variable and name it as LSTM_bias to get
+        # this demo running. Note by default bias is initialized
+        # as zeros, so this is not a good scheme. But calling it
+        # LSTM_weight is not good, as this is 1D vector, while
+        # the initialization scheme of a weight parameter needs
+        # at least two dimensions.
+        rnn_params = mx.sym.Variable('LSTM_bias')
+
         # RNN cell takes input of shape (time, batch, feature)
         rnn = mx.sym.RNN(data=embed_tm, state_size=num_hidden,
                          num_layers=num_lstm_layer, mode='lstm',
-                         name='LSTM', state=rnn_h_init,
-                         state_cell=rnn_c_init)
+                         name='LSTM', 
+                         # The following params can be omitted
+                         # provided we do not need to apply the
+                         # workarounds mentioned above
+                         state=rnn_h_init,
+                         state_cell=rnn_c_init, 
+                         parameters=rnn_params)
 
         # the RNN cell output is of shape (time, batch, dim)
         # if we need the states and cell states in the last time
@@ -83,8 +104,8 @@ if __name__ == '__main__':
 
         # now we collapse the time and batch dimension to do the
         # final linear logistic regression prediction
-        hidden = mx.sym.Reshape(data=rnn, target_shape=(0, num_hidden))
-        label_cl = mx.sym.Reshape(data=label_tm, target_shape=(0,))
+        hidden = mx.sym.Reshape(data=rnn, shape=(-1, num_hidden))
+        label_cl = mx.sym.Reshape(data=label_tm, shape=(-1,))
 
         pred = mx.sym.FullyConnected(data=hidden, num_hidden=len(vocab),
                                      name='pred')
