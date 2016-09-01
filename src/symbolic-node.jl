@@ -630,6 +630,11 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
       name = ""
     end
 
+    if $func_name == :transpose
+      kwargs = Any[key != :axes ? (key, arg) : (key, reverse(map(i->length(arg)-i, arg))) for (key, arg) in kwargs]
+    end
+
+
     param_keys = String[]
     param_vals = String[]
     symbol_kws = Dict{Symbol, SymbolicNode}()
