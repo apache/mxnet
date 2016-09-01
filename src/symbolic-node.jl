@@ -703,14 +703,9 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
   end
 
   func_def = Expr(:function, func_head, Expr(:block, func_body))
-  # TODO(vchuravy) find a more elegant solution fro v0.5
-  if isdefined(Base, func_name) || isdefined(func_name)
-    return func_def
-  else
-    return quote
-      $func_def
-      @doc $f_desc $func_name
-    end
+  return quote
+    @doc $f_desc ->
+    $func_def
   end
 end
 
