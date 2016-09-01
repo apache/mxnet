@@ -302,10 +302,12 @@ function test_kwargs()
   info("NDArray::kwargs")
   dims1 = (2,3,4)
 
-  x = mx.empty(dims1)
-  tx = mx.transpose(x, axes=(1,0,2))
-  # @test size(tx) == (3,2,4)
-  @test size(tx) == (2,4,3)
+  A = rand(Float32, dims1)
+  x = mx.NDArray(A)
+  tx = mx.transpose(x, axes=(2,1,3))
+  tA = permutedims(A, [2,1,3])
+  @test size(tx) == size(tA)
+  @test all(copy(tx) .== tA)
 end
 
 ################################################################################

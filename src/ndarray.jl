@@ -1035,6 +1035,15 @@ function _get_function_expressions(handle :: MX_handle, name)
   if name == :dot
     _use_vars.args[2:end] = flipdim(_use_vars.args[2:end], 1)
   end
+
+  if name == :transpose
+    transform = quote
+      kwargs = Any[key != :axes ? (key, arg) : (key, reverse(map(i->length(arg)-i, arg))) for (key, arg) in kwargs]
+    end
+  else
+    transform = :()
+  end
+
   stmt_call = quote
     local handle = _get_function($(QuoteNode(name)))
     _invoke_mxfunction(handle, $_use_vars, $_scalars, $_mut_vars; kwargs...)
@@ -1047,6 +1056,7 @@ function _get_function_expressions(handle :: MX_handle, name)
 
   func_def = quote
     function $name($(args...); kwargs...)
+      $transform
       $stmt_call
       $stmt_ret
     end
