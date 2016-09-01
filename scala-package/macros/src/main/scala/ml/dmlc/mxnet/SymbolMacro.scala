@@ -1,8 +1,11 @@
 package ml.dmlc.mxnet
 
 import scala.annotation.StaticAnnotation
+import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox.Context
+
+import ml.dmlc.mxnet.init.Base._
 
 private[mxnet] class FillDefs extends StaticAnnotation {
   def macroTransform(annottees: Any*) = macro ImplMacros.addDefs
@@ -18,6 +21,7 @@ object ImplMacros {
     createFromNamedSymbolsNoCheck("LeakyReLU", name, attr)
   }
   */
+  initSymbolModule().foreach(addr => println(s"Symbol addr: $addr"))
 
   def impl(c: Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
@@ -92,5 +96,11 @@ object ImplMacros {
     // wrap the result up in an Expr, and return it
     val result = c.Expr(Block(modDefs, Literal(Constant())))
     result
+  }
+
+  private def initSymbolModule(): List[Long] = {
+    val symbolList = ListBuffer.empty[Long]
+    _LIB.mxSymbolListAtomicSymbolCreators(symbolList)
+    symbolList.toList
   }
 }

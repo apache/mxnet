@@ -54,6 +54,8 @@
 
   <packaging>pom</packaging>
   <modules>
+    <module>init</module>
+    <module>init-native</module>
     <module>macros</module>
     <module>core</module>
     <module>native</module>

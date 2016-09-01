@@ -10,9 +10,10 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-macros_2.11</artifactId>
+  <groupId>ml.dmlc.mxnet</groupId>
+  <artifactId>mxnet-init_2.11</artifactId>
   <version>0.1.2-SNAPSHOT</version>
-  <name>MXNet Scala Package - Macros</name>
+  <name>MXNet Scala Package - Initializer</name>
 
   <profiles>
     <profile>
@@ -64,25 +65,8 @@
   </build>
   <dependencies>
     <dependency>
-      <groupId>ml.dmlc.mxnet</groupId>
-      <artifactId>mxnet-init_${scala.binary.version}</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>ml.dmlc.mxnet</groupId>
-      <artifactId>libmxnet-init-scala-${platform}</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-      <type>jnilib</type>
-    </dependency>
-    <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-reflect</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
