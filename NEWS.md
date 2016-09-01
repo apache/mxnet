@@ -1,6 +1,15 @@
 MXNet Change Log
 ================
-## in progress version
+## NNVM: inprogress refactor branch
+- Move symbolic API to NNVM @tqchen
+  - Most front-end C API are backward  compatible
+  - Removed symbolic api in MXNet and relies on NNVM
+- OpProperty registration now is deprecated
+  - New operators are encouraged to register their property to NNVM op registry attribute
+- Known features removed limitations to be fixed
+  - Bulk segment execution not yet added.
+  - The gradient aggregation optimization hack by switching to addto is not yet added,
+    can harm LSTM if it is constructed by unrolling the graph
 
 ## v0.7
 -  0.6 is skipped because there are a lot of improvements since initial release
