@@ -127,9 +127,13 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
+		WHOLE_ARCH= -force_load
+		NO_WHOLE_ARCH= -noforce_load
 		SCALA_PKG_PROFILE := osx-x86_64
 	else
 		SCALA_PKG_PROFILE := linux-x86_64
+		WHOLE_ARCH= --whole-archive
+		NO_WHOLE_ARCH= --no-whole-archive
 	endif
 endif
 
@@ -204,7 +208,7 @@ lib/libmxnet.a: $(ALLX_DEP)
 lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o, $^) $(LDFLAGS) \
-	-Wl,--whole-archive $(filter %.a, $^) -Wl,--no-whole-archive
+	-Wl,${WHOLE_ARCH} $(filter %.a, $^) -Wl,${NO_WHOLE_ARCH}
 
 $(PS_PATH)/build/libps.a: PSLITE
 
