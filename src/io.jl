@@ -576,6 +576,7 @@ function _define_data_iter_creator(hdr :: MX_handle)
   end
 
   defun = quote
+    @doc $f_desc ->
     function $iter_name(; kwargs...)
       arg_keys = String[string(k) for (k,v) in kwargs]
       arg_vals = String[dump_mx_param(v) for (k,v) in kwargs]
@@ -589,7 +590,6 @@ function _define_data_iter_creator(hdr :: MX_handle)
     end
     $(isprovider ? :(const $alias_name = $iter_name) : :())
 
-    @doc $f_desc $iter_name
   end
   defun
 end

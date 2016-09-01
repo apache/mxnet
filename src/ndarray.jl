@@ -1047,7 +1047,6 @@ function _get_function_expressions(handle :: MX_handle, name)
   func_head = Expr(:call, name, args...)
 
   func_def  = Expr(:function, func_head, func_body)
-  exprs = Expr[func_def]
 
   if accept_empty_mutate
     args0      = args[1:n_used_vars+n_scalars]
@@ -1058,9 +1057,10 @@ function _get_function_expressions(handle :: MX_handle, name)
     func_head0 = Expr(:call, name, args0...)
 
     func_def0  = Expr(:function, func_head0, func_body0)
-    push!(exprs, func_def0)
+    return func_def, func_def0
+  else
+    return func_def, :()
   end
-  return exprs
 end
 
 macro _import_ndarray_functions()
@@ -1071,19 +1071,13 @@ macro _import_ndarray_functions()
     handle = funcs[i]
 
     name, desc = _get_function_description(handle)
-    exprs = _get_function_expressions(handle, name)
+    func_def, func_def0 = _get_function_expressions(handle, name)
 
-    # TODO(vchuravy): Fix this in a more elegant way once we only support
-    # v0.5
-    if isdefined(Base, name) || isdefined(name)
-      expr = quote
-        $(exprs...)
-      end
-    else
-      expr = quote
-        $(exprs...)
-        @doc $desc $name
-      end
+    expr = quote
+      $(isdefined(Base, name) ? :(import Base.$name) : :())
+      @doc $desc ->
+      $func_def
+      $func_def0
     end
 
     push!(func_exprs, expr)

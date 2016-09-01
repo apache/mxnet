@@ -2,6 +2,12 @@
     SymbolicNode
 
 SymbolicNode is the basic building block of the symbolic graph in MXNet.jl.
+
+    (self :: SymbolicNode)(args :: SymbolicNode...)
+    (self :: SymbolicNode)(; kwargs...)
+
+Make a new node by composing `self` with `args`. Or the arguments
+can be specified using keyword arguments.
 """
 type SymbolicNode
   handle :: MX_SymbolHandle
@@ -31,15 +37,6 @@ Make a copy of a SymbolicNode. The same as making a deep copy.
 function Base.copy(self :: SymbolicNode)
   Base.deepcopy(self)
 end
-
-# TODO(vchuravy) How to add documentation to the v0.5 style call overloading
-@doc """
-    call(self :: SymbolicNode, args :: SymbolicNode...)
-    call(self :: SymbolicNode; kwargs...)
-
-Make a new node by composing `self` with `args`. Or the arguments
-can be specified using keyword arguments.
-""" SymbolicNode
 
 @compat function (self::SymbolicNode)(args :: SymbolicNode...)
   s = deepcopy(self)
@@ -703,14 +700,9 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
   end
 
   func_def = Expr(:function, func_head, Expr(:block, func_body))
-  # TODO(vchuravy) find a more elegant solution fro v0.5
-  if isdefined(Base, func_name) || isdefined(func_name)
-    return func_def
-  else
-    return quote
-      $func_def
-      @doc $f_desc $func_name
-    end
+  return quote
+    @doc $f_desc ->
+    $func_def
   end
 end
 
