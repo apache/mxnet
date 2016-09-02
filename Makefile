@@ -14,6 +14,10 @@ ifndef DMLC_CORE
 	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
 
+ifndef NNVM_PATH
+	NNVM_PATH = $(ROOTDIR)/nnvm
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -33,7 +37,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -151,15 +155,20 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
+		WHOLE_ARCH= -all_load
+		NO_WHOLE_ARCH= -noall_load
 		SCALA_PKG_PROFILE := osx-x86_64
 	else
 		SCALA_PKG_PROFILE := linux-x86_64
+		WHOLE_ARCH= --whole-archive
+		NO_WHOLE_ARCH= --no-whole-archive
 	endif
 endif
 
 # all dep
-LIB_DEP += $(DMLC_CORE)/libdmlc.a
+LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
+
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda
@@ -167,6 +176,17 @@ ifeq ($(USE_CUDA), 1)
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
+
+# For quick compile test, used smaller subset
+ALLX_DEP = $(filter-out build/src/operator/%, $(ALL_DEP))
+ALLX_DEP+= build/src/operator/fully_connected.o
+ALLX_DEP+= build/src/operator/fully_connected_gpu.o
+ALLX_DEP+= build/src/operator/operator.o
+ALLX_DEP+= build/src/operator/operator_util.o
+ALLX_DEP+= build/src/operator/elementwise_unary_op.o
+ALLX_DEP+= build/src/operator/custom.o
+
+ALLX_DEP= $(ALL_DEP)
 
 ifeq ($(USE_NVRTC), 1)
 	LDFLAGS += -lnvrtc
@@ -209,13 +229,14 @@ build/plugin/%.o: plugin/%.cc
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
-lib/libmxnet.a: $(ALL_DEP)
+lib/libmxnet.a: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
 
-lib/libmxnet.so: $(ALL_DEP)
+lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o, $^) $(LDFLAGS) \
+	-Wl,${WHOLE_ARCH} $(filter %.a, $^) -Wl,${NO_WHOLE_ARCH}
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -227,7 +248,10 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); make libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-bin/im2rec: tools/im2rec.cc $(ALL_DEP)
+$(NNVM_PATH)/lib/libnnvm.a:
+	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
+
+bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
