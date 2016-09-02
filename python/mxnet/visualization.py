@@ -228,24 +228,24 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             else:
                 continue
         elif op == "Convolution":
-            label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
-                                                    _str2tuple(node["param"]["kernel"])[1],
-                                                    _str2tuple(node["param"]["stride"])[0],
-                                                    node["param"]["num_filter"])
+            label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["attr"]["kernel"])[0],
+                                                    _str2tuple(node["attr"]["kernel"])[1],
+                                                    _str2tuple(node["attr"]["stride"])[0],
+                                                    node["attr"]["num_filter"])
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
-            label = r"FullyConnected\n%s" % node["param"]["num_hidden"]
+            label = r"FullyConnected\n%s" % node["attr"]["num_hidden"]
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
         elif op == "Activation" or op == "LeakyReLU":
-            label = r"%s\n%s" % (op, node["param"]["act_type"])
+            label = r"%s\n%s" % (op, node["attr"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = r"Pooling\n%s, %sx%s/%s" % (node["param"]["pool_type"],
-                                                _str2tuple(node["param"]["kernel"])[0],
-                                                _str2tuple(node["param"]["kernel"])[1],
-                                                _str2tuple(node["param"]["stride"])[0])
+            label = r"Pooling\n%s, %sx%s/%s" % (node["attr"]["pool_type"],
+                                                _str2tuple(node["attr"]["kernel"])[0],
+                                                _str2tuple(node["attr"]["kernel"])[1],
+                                                _str2tuple(node["attr"]["stride"])[0])
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]
@@ -284,5 +284,3 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                     dot.edge(tail_name=name, head_name=input_name, **attr)
 
     return dot
-
-
