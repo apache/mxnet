@@ -19,19 +19,19 @@
     <profile>
       <id>osx-x86_64-cpu</id>
       <modules>
-        <module>osx-x86_64-cpu</module>
+        <module>osx-x86_64</module>
       </modules>
     </profile>
     <profile>
       <id>linux-x86_64-cpu</id>
       <modules>
-        <module>linux-x86_64-cpu</module>
+        <module>linux-x86_64</module>
       </modules>
     </profile>
     <profile>
       <id>linux-x86_64-gpu</id>
       <modules>
-        <module>linux-x86_64-gpu</module>
+        <module>linux-x86_64</module>
       </modules>
     </profile>
   </profiles>

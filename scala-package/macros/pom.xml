@@ -18,19 +18,22 @@
     <profile>
       <id>osx-x86_64-cpu</id>
       <properties>
-        <platform>osx-x86_64-cpu</platform>
+        <platform>osx-x86_64</platform>
+        <libtype>jnilib</libtype>
       </properties>
     </profile>
     <profile>
       <id>linux-x86_64-cpu</id>
       <properties>
-        <platform>linux-x86_64-cpu</platform>
+        <platform>linux-x86_64</platform>
+        <libtype>so</libtype>
       </properties>
     </profile>
     <profile>
       <id>linux-x86_64-gpu</id>
       <properties>
-        <platform>linux-x86_64-gpu</platform>
+        <platform>linux-x86_64</platform>
+        <libtype>so</libtype>
       </properties>
     </profile>
   </profiles>
@@ -74,7 +77,7 @@
       <artifactId>libmxnet-init-scala-${platform}</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
-      <type>jnilib</type>
+      <type>${libtype}</type>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>

@@ -11,9 +11,9 @@
   </parent>
 
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>libmxnet-init-scala-osx-x86_64-cpu</artifactId>
+  <artifactId>libmxnet-init-scala-osx-x86_64</artifactId>
   <version>0.1.2-SNAPSHOT</version>
-  <name>MXNet Scala Package - Initializer Native OSX-x86_64 CPU-only</name>
+  <name>MXNet Scala Package - Initializer Native OSX-x86_64</name>
   <url>http://maven.apache.org</url>
 
   <packaging>jnilib</packaging>
