@@ -298,6 +298,18 @@ function test_eltype()
   end
 end
 
+function test_kwargs()
+  info("NDArray::kwargs")
+  dims1 = (2,3,4)
+
+  A = rand(Float32, dims1)
+  x = mx.NDArray(A)
+  tx = mx.transpose(x, axes=(2,1,3))
+  tA = permutedims(A, [2,1,3])
+  @test size(tx) == size(tA)
+  @test all(copy(tx) .== tA)
+end
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -315,5 +327,6 @@ test_sqrt()
 test_eltype()
 test_nd_as_jl()
 test_dot()
+test_kwargs()
 
 end
