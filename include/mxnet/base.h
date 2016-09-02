@@ -11,6 +11,10 @@
 #include <dmlc/type_traits.h>
 #include <dmlc/parameter.h>
 #include <mshadow/tensor.h>
+// nnvm headers for symbolic construction.
+#include <nnvm/op.h>
+#include <nnvm/tuple.h>
+#include <nnvm/symbolic.h>
 #include <string>
 
 /*!
@@ -80,6 +84,10 @@ typedef mshadow::gpu gpu;
 typedef mshadow::index_t index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
+/*! \brief Shape data structure used to record shape information */
+using TShape = nnvm::TShape;
+/*! \brief operator structure from NNVM */
+using Op = nnvm::Op;
 
 /*! \brief Context information about the execution environment */
 struct Context {
