@@ -226,7 +226,6 @@ class MXNET_API Engine {
       }, exec_ctx, const_vars, mutable_vars, prop, priority);
   }
 
- protected:
   /*!
    * \brief factory function to create OnComplete callback.
    * \param callback th static callback function.

@@ -716,10 +716,12 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
-MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
+MXNET_REGISTER_NDARRAY_FUN(_set_value)
+.set_function(SetValueOp);
 
 
-MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
+MXNET_REGISTER_NDARRAY_FUN(_onehot_encode)
+.set_function(BinaryOp<ndarray::OneHotEncode>);
 
 MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
 .set_function(BinaryOp<ndarray::MatChooseRowElem>)
@@ -750,7 +752,9 @@ MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
     SampleUniform(s[0], s[1], out[0]);
   })
 .set_num_scalars(2)
-.set_num_mutate_vars(1);
+.set_num_mutate_vars(1)
+.add_argument("min", "real_t", "lower bound")
+.add_argument("max", "real_t", "uppper bound");
 
 MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
 .set_body([](NDArray **u, real_t *s, NDArray **out,
@@ -758,7 +762,9 @@ MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
     SampleGaussian(s[0], s[1], out[0]);
   })
 .set_num_scalars(2)
-.set_num_mutate_vars(1);
+.set_num_mutate_vars(1)
+.add_argument("mean", "real_t", "mean")
+.add_argument("std", "real_t", "standard deviation");
 
 MXNET_REGISTER_NDARRAY_FUN(clip)
 .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)

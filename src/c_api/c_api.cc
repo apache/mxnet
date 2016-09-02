@@ -16,6 +16,9 @@
 #include <mxnet/c_api.h>
 #include <mxnet/kvstore.h>
 #include <mxnet/mxrtc.h>
+#include <mxnet/op_attr_types.h>
+#include <nnvm/node.h>
+#include <nnvm/op_attr_types.h>
 #include <vector>
 #include <sstream>
 #include <string>
@@ -400,6 +403,237 @@ int MXFuncInvokeEx(FunctionHandle fun,
           num_params,
           param_keys,
           param_vals);
+  API_END();
+}
+
+int MXImperativeInvoke(AtomicSymbolCreator creator,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       int num_params,
+                       char **param_keys,
+                       char **param_vals) {
+  static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
+  static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
+  static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
+  static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
+  static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
+  static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
+  static auto& mutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
+  static auto& tmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+  const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+
+  API_BEGIN();
+  nnvm::NodeAttrs attrs;
+  for (int i = 0; i < num_params; ++i) {
+    attrs.dict.insert({param_keys[i], param_vals[i]});
+  }
+
+  if (num_args.count(op)) {
+    attrs.dict.insert({num_args[op], std::to_string(num_inputs)});
+  }
+  if (op->attr_parser != nullptr) {
+    op->attr_parser(&attrs);
+  }
+  int infered_num_inputs;
+  if (op->get_num_inputs != nullptr) {
+    infered_num_inputs = op->get_num_inputs(attrs);
+  } else {
+    infered_num_inputs = op->num_inputs;
+  }
+  CHECK_EQ(num_inputs, infered_num_inputs)
+    << infered_num_inputs << " needed, " << num_inputs << " given";
+  int infered_num_outputs;
+  if (op->get_num_outputs != nullptr) {
+    infered_num_outputs = op->get_num_outputs(attrs);
+  } else {
+    infered_num_outputs = op->num_outputs;
+  }
+
+  std::vector<NDArray> ndinputs, ndoutputs;
+  for (int i = 0; i < num_inputs; ++i) {
+    ndinputs.push_back(*reinterpret_cast<NDArray*>(inputs[i]));
+  }
+  if (*outputs == nullptr) {
+    *num_outputs = infered_num_outputs;
+    ndoutputs.resize(infered_num_outputs);
+  } else {
+    CHECK_EQ(infered_num_outputs, *num_outputs)
+      << infered_num_outputs << " needed, " << *num_outputs << " given";
+    for (int i = 0; i < infered_num_outputs; ++i) {
+      ndoutputs.push_back(*(*reinterpret_cast<NDArray***>(outputs))[i]);
+    }
+  }
+  
+  if (ndfunc.count(op)) {
+    ndfunc[op](attrs, ndinputs, &ndoutputs);
+  } else {
+    std::vector<TShape> in_shapes, out_shapes;
+    for (auto& i : ndinputs) {
+      in_shapes.push_back(i.shape());
+    }
+    out_shapes.resize(infered_num_outputs);
+    CHECK(infershape.count(op)) << "Op must have FInferShape registered";
+    CHECK(infershape[op](attrs, &in_shapes, &out_shapes));
+    CHECK_EQ(out_shapes.size(), infered_num_outputs);
+
+    std::vector<int> in_types, out_types;
+    for (auto& i : ndinputs) {
+      in_types.push_back(i.dtype());
+    }
+    out_types.resize(infered_num_outputs);
+    CHECK(infertype.count(op)) << "Op must have FInferShape registered";
+    CHECK(infertype[op](attrs, &in_types, &out_types));
+    CHECK_EQ(out_types.size(), infered_num_outputs);
+
+    // TODO(piiswrong): infer ctx
+    Context ctx;
+    if (num_inputs) {
+      ctx = ndinputs[0].ctx();
+    } else if (*num_outputs) {
+      CHECK(!ndoutputs[0].is_none())
+        << "Op without input must have initialized output";
+      ctx = ndoutputs[0].ctx();
+    } else {
+      LOG(FATAL) << "Need at least one input or output";
+    }
+
+    for (int i = 0; i < infered_num_outputs; ++i) {
+      if (ndoutputs[i].is_none()) {
+        ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+      }
+    }
+
+    std::vector<engine::VarHandle> read_vars, write_vars;
+    // request resources
+    std::vector<Resource> requested;
+    if (tmp_resource.count(op)) {
+      int ntmp = 0;
+      for (const auto& req : tmp_resource[op](attrs)) {
+        switch (req.type) {
+         case ResourceRequest::kTempSpace:
+          ++ntmp;
+         case ResourceRequest::kRandom:
+          requested.push_back(ResourceManager::Get()->Request(ctx, req));
+          write_vars.push_back(requested.back().var);
+          break;
+         default:
+          LOG(FATAL) << "resource type not yet supported";
+        }
+      }
+      CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
+    }
+
+    std::vector<uint32_t> auxidx;
+    for (auto& i : ndinputs) {
+      read_vars.push_back(i.var());
+    }
+    for (auto& i : ndoutputs) {
+      write_vars.push_back(i.var());
+    }
+    if (mutate.count(op)) {
+      auxidx = mutate[op](attrs);
+      std::sort(auxidx.begin(), auxidx.end());
+      for (auto & i : auxidx) {
+        write_vars.push_back(ndinputs[i].var());
+      }
+    }
+    DeduplicateVarHandle(&read_vars, &write_vars);
+
+    FCompute fn;
+    if (ctx.dev_mask() == cpu::kDevMask && fcpu.count(op)) {
+      fn = fcpu[op];
+    } else if (ctx.dev_mask() == gpu::kDevMask && fgpu.count(op)) {
+      fn = fgpu[op];
+    }
+    if (fn) {
+      Engine::Get()->PushSync(
+        [ctx, attrs, fn, ndinputs, ndoutputs, requested](RunContext rctx) {
+          std::vector<TBlob> input_blobs, output_blobs;
+          for (auto& i : ndinputs) {
+            input_blobs.push_back(i.data());
+          }
+          for (auto& i : ndoutputs) {
+            i.CheckAndAlloc();
+            output_blobs.push_back(i.data());
+          }
+          OpContext opctx{false, rctx, 
+                          engine::CallbackOnComplete(),
+                          requested};
+          std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+          fn(attrs, opctx, input_blobs, req, output_blobs);
+          if (ctx.dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+        }, ctx, read_vars, write_vars);
+    } else if (createop.count(op)) {
+      Operator* opr = createop[op](attrs, ctx, in_shapes, in_types);
+      struct Capture {
+        engine::CallbackOnComplete on_complete;
+        Operator *opr;
+      };
+      Engine::Get()->PushAsync(
+        [ctx, attrs, opr, auxidx, ndinputs, ndoutputs, requested](
+            RunContext rctx,
+            engine::CallbackOnComplete on_complete) {
+          std::vector<TBlob> input_blobs, aux_blobs, output_blobs;
+          auto atop = auxidx.begin();
+          for (int i = 0; i < ndinputs.size(); ++i) {
+            if (atop != auxidx.end() && i == *atop) {
+              aux_blobs.push_back(ndinputs[i].data());
+              ++atop;
+            } else {
+              input_blobs.push_back(ndinputs[i].data());
+            }
+          }
+          for (auto& i : ndoutputs) {
+            i.CheckAndAlloc();
+            output_blobs.push_back(i.data());
+          }
+          Capture* capture = new Capture({on_complete, opr});
+          OpContext opctx{false, rctx, 
+                          Engine::Get()->CreateCallback(
+                            [](Engine* engine, void *cpt_handle) {
+                                Capture* cpt = static_cast<Capture*>(cpt_handle);
+                                cpt->on_complete();
+                                delete cpt->opr;
+                                delete cpt;
+                              }, static_cast<void*>(capture)),
+                          requested};
+          std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+          opr->Forward(opctx, input_blobs, req, output_blobs, aux_blobs);
+          if (opr->exec_type() != Operator::kAsync) {
+            if (ctx.dev_mask() == gpu::kDevMask) {
+              rctx.get_stream<gpu>()->Wait();
+            }
+            on_complete();
+            delete opr;
+            delete capture;
+          }
+        }, ctx, read_vars, write_vars);
+    } else {
+      LOG(FATAL)
+        << "Operator " << op->name 
+        << " cannot be run; requires at least one of"
+        << " FCompute<xpu>, NDArrayFunction, FCreateOperator be registered";
+    }
+  }
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    for (int i = 0; i < infered_num_outputs; ++i) {
+      ret->ret_handles.push_back(
+        reinterpret_cast<NDArrayHandle>(new NDArray(ndoutputs[i])));
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  } else {
+    for (int i = 0; i < infered_num_outputs; ++i) {
+      *(*reinterpret_cast<NDArray***>(outputs))[i] = ndoutputs[i];
+    }
+  }
   API_END();
 }
 
