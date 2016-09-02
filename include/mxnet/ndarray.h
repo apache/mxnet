@@ -277,6 +277,22 @@ class NDArray {
     return ret;
   }
   /*!
+   * \brief Create a NDArray that shares memory with current one
+   *  The new array must have smaller memory size than the current array.
+   * \param shape new shape
+   * \param dtype The data type.
+   * \return NDArray in new shape and type.
+   */
+  inline NDArray AsArray(const TShape &shape, int dtype) const {
+    CHECK_GE(shape_.Size() * mshadow::mshadow_sizeof(dtype_),
+             shape.Size() * mshadow::mshadow_sizeof(dtype))
+        << "NDArray.AsArray: target memory size is bigger";
+    NDArray ret = *this;
+    ret.shape_ = shape;
+    ret.dtype_ = dtype;
+    return ret;
+  }
+  /*!
    * \brief Get an reshaped NDArray
    * \param shape new shape
    * \return NDArray in new shape
