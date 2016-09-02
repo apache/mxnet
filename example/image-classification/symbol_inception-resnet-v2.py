@@ -1,6 +1,6 @@
 """
 
-Inception V4, suitable for images with around 299 x 299
+Inception resnet v2, suitable for images with around 299 x 299
 
 Reference:
 
