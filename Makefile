@@ -127,8 +127,8 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
-		WHOLE_ARCH= -force_load
-		NO_WHOLE_ARCH= -noforce_load
+		WHOLE_ARCH= -all_load
+		NO_WHOLE_ARCH= -noall_load
 		SCALA_PKG_PROFILE := osx-x86_64
 	else
 		SCALA_PKG_PROFILE := linux-x86_64

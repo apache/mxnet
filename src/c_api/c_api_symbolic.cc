@@ -55,10 +55,13 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                 const char **return_type) {
   static auto& map_key_var_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
   const Op* op = static_cast<Op*>(creator);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  ret->ret_str.resize(0);
+
   if (map_key_var_args.count(op) != 0) {
     *key_var_num_args = map_key_var_args[op].c_str();
   } else {
-    *key_var_num_args = nullptr;
+    *key_var_num_args = ret->ret_str.c_str();
   }
   return NNSymbolGetAtomicSymbolInfo(
       creator, name, description,
