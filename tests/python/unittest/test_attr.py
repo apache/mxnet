@@ -28,14 +28,23 @@ def test_operator():
     fc2weight = fc2.get_internals()['fc2_weight']
 
 
+def contain(x, y):
+    for k, v in x.items():
+        if k not in y:
+            return False
+        if y[k] != v:
+            return False
+    return True
+
+
 def test_list_attr():
     data = mx.sym.Variable('data', attr={'mood': 'angry'})
     op = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
                             num_filter=1, attr={'mood': 'so so'})
-    assert op.list_attr(recursive=True) == {'data_mood': 'angry', 'conv_mood': 'so so',
-                                            'conv_weight_mood': 'so so', 'conv_bias_mood': 'so so'}
-    assert op.list_attr() == {'mood': 'so so'}
-
+    assert contain({'data_mood': 'angry', 'conv_mood': 'so so',
+                    'conv_weight_mood': 'so so', 'conv_bias_mood': 'so so'},
+                    op.list_attr(recursive=True))
+    assert contain({'mood': 'so so'}, op.list_attr())
 
 if __name__ == '__main__':
     test_attr_basic()
