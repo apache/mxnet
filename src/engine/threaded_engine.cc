@@ -188,7 +188,7 @@ ThreadedOpr* ThreadedEngine::NewOperator(
     std::vector<VarHandle> const& mutable_vars,
     FnProperty prop) {
   auto ret = ThreadedOpr::New();
-  ret->fn = fn;
+  ret->fn = std::move(fn);
   ret->prop = prop;
   ret->const_vars.resize(const_vars.size());
   ret->mutable_vars.resize(mutable_vars.size());
@@ -280,7 +280,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& const_vars,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop, int priority) {
-  ThreadedOpr *opr = NewOperator(fn, const_vars, mutable_vars, prop);
+  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop);
   opr->temporary = true;
   Push(opr, exec_ctx, priority);
 }
