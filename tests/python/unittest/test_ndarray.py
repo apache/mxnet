@@ -96,8 +96,8 @@ def test_ndarray_elementwise():
             check_with_uniform(lambda x, y: x * y, 2, dim, type_list=all_type)
             check_with_uniform(lambda x, y: x / y, 2, dim, type_list=real_type)
             check_with_uniform(lambda x, y: x / y, 2, dim, rmin=1, type_list=all_type)
-            check_with_uniform(mx.nd.sqrt, 2, dim, np.sqrt, rmin=0)
-            check_with_uniform(mx.nd.square, 2, dim, np.square, rmin=0)
+            check_with_uniform(mx.nd.sqrt, 1, dim, np.sqrt, rmin=0)
+            check_with_uniform(mx.nd.square, 1, dim, np.square, rmin=0)
             check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
 def test_ndarray_negate():

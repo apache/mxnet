@@ -468,6 +468,29 @@ MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
                              int num_params,
                              char **param_keys,
                              char **param_vals);
+/*!
+ * \brief invoke a nnvm op and imperative function
+ * \param creator the op
+ * \param num_scalars number of scalar arguments
+ * \param scalars scalar arguments
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \param num_inputs number of input NDArrays
+ * \param inputs input NDArrays
+ * \param num_outputs number of output NDArrays
+ * \param outputs output NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
+                                 int num_inputs,
+                                 NDArrayHandle *inputs,
+                                 int *num_outputs,
+                                 NDArrayHandle **outputs,
+                                 int num_params,
+                                 char **param_keys,
+                                 char **param_vals);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
