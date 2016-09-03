@@ -720,10 +720,12 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
-MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
+MXNET_REGISTER_NDARRAY_FUN(_set_value)
+.set_function(SetValueOp);
 
 
-MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
+MXNET_REGISTER_NDARRAY_FUN(_onehot_encode)
+.set_function(BinaryOp<ndarray::OneHotEncode>);
 
 MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
 .set_function(BinaryOp<ndarray::MatChooseRowElem>)

@@ -1127,104 +1127,46 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
 # pylint: disable=too-many-locals, invalid-name
 def _make_ndarray_function(handle):
     """Create a NDArray function from the FunctionHandle."""
-    NDARRAY_ARG_BEFORE_SCALAR = 1
-    ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
-    # Get the property of NDArray
-    n_used_vars = mx_uint()
-    n_scalars = mx_uint()
-    n_mutate_vars = mx_uint()
-    type_mask = ctypes.c_int()
-    check_call(_LIB.MXFuncDescribe(
-        handle,
-        ctypes.byref(n_used_vars),
-        ctypes.byref(n_scalars),
-        ctypes.byref(n_mutate_vars),
-        ctypes.byref(type_mask)))
-    n_mutate_vars = n_mutate_vars.value
-    n_used_vars = n_used_vars.value
-    n_scalars = n_scalars.value
-    type_mask = type_mask.value
-    accept_empty_mutate = (type_mask & ACCEPT_EMPTY_MUTATE_TARGET) != 0
-    # infer type of the function
-    if (type_mask & NDARRAY_ARG_BEFORE_SCALAR) != 0:
-        use_vars_range = range(0, n_used_vars)
-        scalar_range = range(n_used_vars, n_used_vars + n_scalars)
-    else:
-        scalar_range = range(0, n_scalars)
-        use_vars_range = range(n_scalars, n_used_vars + n_scalars)
-
-    # Get the information from the function
     name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
+    key_var_num_args = ctypes.c_char_p()
     num_args = mx_uint()
     arg_names = ctypes.POINTER(ctypes.c_char_p)()
     arg_types = ctypes.POINTER(ctypes.c_char_p)()
     arg_descs = ctypes.POINTER(ctypes.c_char_p)()
     ret_type = ctypes.c_char_p()
 
-    check_call(_LIB.MXFuncGetInfo(
+    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
         handle, ctypes.byref(name), ctypes.byref(desc),
         ctypes.byref(num_args),
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
         ctypes.byref(arg_descs),
+        ctypes.byref(key_var_num_args),
         ctypes.byref(ret_type)))
-    func_name = py_str(name.value)
     param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
+    key_var_num_args = py_str(key_var_num_args.value)
+    func_name = py_str(name.value)
+    desc = py_str(desc.value)
+    if key_var_num_args:
+        desc += '\nThis function support variable length of positional input.'
     doc_str = ('%s\n\n' +
                '%s\n' +
                'out : NDArray, optional\n' +
                '    The output NDArray to hold the result.\n\n'+
                'Returns\n' +
                '-------\n' +
-               'out : NDArray\n'+
-               '    The output of binary function.')
-    doc_str = doc_str % (py_str(desc.value), param_str)
+               'out : NDArray or list of NDArray\n' +
+               '    The output of this function.')
+    doc_str = doc_str % (desc, param_str)
+
+    arguments = []
+    for i in range(num_args.value):
+        dtype = py_str(arg_types[i])
+        if not (dtype.startswith('NDArray') or dtype.startswith('Symbol')):
+            arguments.append(py_str(arg_names[i]))
 
     # Definition of internal functions.
-    def binary_ndarray_function(lhs, rhs, out=None, **kwargs):
-        """Internal binary function
-        """
-        if out:
-            if not isinstance(out, NDArray):
-                raise TypeError('out must be NDArray')
-            if not out.writable:
-                raise TypeError('out must be writable')
-        else:
-            if not accept_empty_mutate:
-                raise TypeError('argument out is required to call %s' % func_name)
-            out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvokeEx( \
-                handle, \
-                c_array(NDArrayHandle, (lhs.handle, rhs.handle)), \
-                c_array(mx_float, ()), \
-                c_array(NDArrayHandle, (out.handle,)), \
-                ctypes.c_int(len(kwargs)), \
-                c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]), \
-                c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
-        return out
-
-    def unary_ndarray_function(src, out=None, *args, **kwargs):
-        """internal NDArray function"""
-        if out:
-            if not isinstance(out, NDArray):
-                raise TypeError('out must be NDArray')
-            if not out.writable:
-                raise TypeError('out must be writable')
-        else:
-            if not accept_empty_mutate:
-                raise TypeError('argument out is required to call %s' % func_name)
-            out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvokeEx( \
-                handle, \
-                c_array(NDArrayHandle, (src.handle,)), \
-                c_array(mx_float, [args[i] for i in scalar_range]), \
-                c_array(NDArrayHandle, (out.handle,)), \
-                ctypes.c_int(len(kwargs)), \
-                c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]), \
-                c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
-        return out
-
     def generic_ndarray_function(*args, **kwargs):
         """Invoke this function by passing in parameters
 
@@ -1240,53 +1182,60 @@ def _make_ndarray_function(handle):
         out : NDArray
             The result NDArray(tuple) of result of computation.
         """
-        if 'out' in kwargs:
-            mutate_vars = kwargs['out']
-            if isinstance(mutate_vars, NDArray):
-                mutate_vars = (mutate_vars,)
-            if len(mutate_vars) != n_mutate_vars:
-                raise TypeError('expect %d out in %s', n_mutate_vars, func_name)
-            del kwargs['out']
-        else:
-            if accept_empty_mutate:
-                mutate_vars = tuple(
-                    NDArray(_new_empty_handle()) for i in range(n_mutate_vars))
+        ndargs = []
+        pos_args = []
+        for i in args:
+            if isinstance(i, NDArray):
+                ndargs.append(i)
             else:
-                raise TypeError('argument out is required to call %s' % func_name)
-        check_call(_LIB.MXFuncInvokeEx( \
-            handle, \
-            c_array(NDArrayHandle, [args[i].handle for i in use_vars_range]), \
-            c_array(mx_float, [args[i] for i in scalar_range]), \
-            c_array(NDArrayHandle, [v.handle for v in mutate_vars]), \
-            ctypes.c_int(len(kwargs)), \
-            c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]), \
-            c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
-        if n_mutate_vars == 1:
-            return mutate_vars[0]
+                pos_args.append(str(i))
+
+        assert len(pos_args) <= len(arguments)
+        kwargs.update(zip(arguments[:len(pos_args)], pos_args))
+
+        original_output = None
+        if 'out' in kwargs:
+            output_vars = kwargs['out']
+            original_output = output_vars
+            del kwargs['out']
+            if isinstance(output_vars, NDArray):
+                output_vars = (output_vars,)
+            num_output = ctypes.c_int(len(output_vars))
+            output_vars = c_array(NDArrayHandle, [v.handle for v in output_vars])
+            output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
         else:
-            return mutate_vars
+            output_vars = ctypes.POINTER(NDArrayHandle)()
+            num_output = ctypes.c_int(0)
+
+        check_call(_LIB.MXImperativeInvoke(
+                handle,
+                ctypes.c_int(len(ndargs)),
+                c_array(NDArrayHandle, [i.handle for i in ndargs]),
+                ctypes.byref(num_output),
+                ctypes.byref(output_vars),
+                ctypes.c_int(len(kwargs)),
+                c_array(ctypes.c_char_p, [key.encode('ascii') for key in kwargs.keys()]),
+                c_array(ctypes.c_char_p, [str(i).encode('ascii') for i in kwargs.values()])))
+        if original_output is not None:
+            return original_output
+        if num_output.value == 1:
+            return NDArray(ctypes.cast(output_vars[0], NDArrayHandle))
+        else:
+            return [NDArray(ctypes.cast(output_vars[i], NDArrayHandle)) for i in range(num_output.value)]
     # End of function declaration
-    if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
-        ret_function = binary_ndarray_function
-    elif n_mutate_vars == 1 and n_used_vars == 1 and n_scalars == 0:
-        ret_function = unary_ndarray_function
-    else:
-        ret_function = generic_ndarray_function
-    ret_function.__name__ = func_name
-    ret_function.__doc__ = doc_str
-    return ret_function
+    generic_ndarray_function.__name__ = func_name
+    generic_ndarray_function.__doc__ = doc_str
+    return generic_ndarray_function
 
 
 
 # pylint: enable=too-many-locals, invalid-name
-
 def _init_ndarray_module():
     """List and add all the ndarray functions to current module."""
     plist = ctypes.POINTER(FunctionHandle)()
     size = ctypes.c_uint()
-    check_call(_LIB.MXListFunctions(ctypes.byref(size),
-                                    ctypes.byref(plist)))
-
+    check_call(_LIB.MXSymbolListAtomicSymbolCreators(ctypes.byref(size),
+                                                     ctypes.byref(plist)))
     module_obj = sys.modules[__name__]
     module_internal = sys.modules["mxnet._ndarray_internal"]
     for i in range(size.value):

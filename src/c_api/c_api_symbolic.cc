@@ -14,6 +14,7 @@
 namespace mxnet {
 namespace op {
 void RegisterLegacyOpProp();
+void RegisterLegacyNDFunc();
 }
 
 // convert nnvm symbol to a nnvm graph.
@@ -41,6 +42,7 @@ std::vector<uint32_t> ReadOnlyArgIndices(const nnvm::IndexedGraph& idx) {
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
   mxnet::op::RegisterLegacyOpProp();
+  mxnet::op::RegisterLegacyNDFunc();
   return NNSymbolListAtomicSymbolCreators(out_size, out_array);
 }
 
