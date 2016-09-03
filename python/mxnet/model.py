@@ -3,9 +3,11 @@
 """MXNet model module"""
 from __future__ import absolute_import
 
-import numpy as np
 import time
 import logging
+from collections import namedtuple
+import numpy as np
+
 from . import io
 from . import nd
 from . import symbol as sym
@@ -14,7 +16,6 @@ from . import metric
 from . import kvstore as kvs
 from .context import Context, cpu
 from .initializer import Uniform
-from collections import namedtuple
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
 
@@ -79,8 +80,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
     """ Initialize kvstore"""
-    for idx in range(len(param_arrays)):
-        param_on_devs = param_arrays[idx]
+    for idx, param_on_devs in enumerate(param_arrays):
         kvstore.init(idx, arg_params[param_names[idx]])
 
         if update_on_kvstore:
@@ -262,7 +262,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     do_reset = False
                     break
 
-            if do_reset == True:
+            if do_reset:
                 logger.info('Epoch[%d] Resetting Data Iterator', epoch)
                 train_data.reset()
 
