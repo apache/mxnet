@@ -3,8 +3,9 @@
 
 """Online evaluation metric module."""
 from __future__ import absolute_import
-from . import ndarray
+
 import numpy
+from . import ndarray
 
 def check_label_shapes(labels, preds, shape=0):
     """Check to see if the two arrays are the same size."""
@@ -41,7 +42,7 @@ class EvalMetric(object):
 
     def reset(self):
         """Clear the internal statistics to initial state."""
-        if self.num == None:
+        if self.num is None:
             self.num_inst = 0
             self.sum_metric = 0.0
         else:
@@ -58,7 +59,7 @@ class EvalMetric(object):
         value : float
            Value of the evaluation.
         """
-        if self.num == None:
+        if self.num is None:
             if self.num_inst == 0:
                 return (self.name, float('nan'))
             else:
@@ -133,9 +134,9 @@ class Accuracy(EvalMetric):
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
 
-        for i in range(len(labels)):
-            pred_label = ndarray.argmax_channel(preds[i]).asnumpy().astype('int32')
-            label = labels[i].asnumpy().astype('int32')
+        for label, pred_label in zip(labels, preds):
+            pred_label = ndarray.argmax_channel(pred_label).asnumpy().astype('int32')
+            label = label.asnumpy().astype('int32')
 
             check_label_shapes(label, pred_label)
 
@@ -157,10 +158,10 @@ class TopKAccuracy(EvalMetric):
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
 
-        for i in range(len(labels)):
-            assert(len(preds[i].shape) <= 2), 'Predictions should be no more than 2 dims'
-            pred_label = numpy.argsort(preds[i].asnumpy().astype('float32'), axis=1)
-            label = labels[i].asnumpy().astype('int32')
+        for label, pred_label in zip(labels, preds):
+            assert(len(pred_label.shape) <= 2), 'Predictions should be no more than 2 dims'
+            pred_label = numpy.argsort(pred_label.asnumpy().astype('float32'), axis=1)
+            label = label.asnumpy().astype('int32')
             check_label_shapes(label, pred_label)
             num_samples = pred_label.shape[0]
             num_dims = len(pred_label.shape)
@@ -182,9 +183,9 @@ class F1(EvalMetric):
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
 
-        for i in range(len(labels)):
-            pred = preds[i].asnumpy()
-            label = labels[i].asnumpy().astype('int32')
+        for label, pred in zip(labels, preds):
+            pred = pred.asnumpy()
+            label = label.asnumpy().astype('int32')
             pred_label = numpy.argmax(pred, axis=1)
 
             check_label_shapes(label, pred)

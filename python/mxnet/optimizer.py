@@ -457,10 +457,7 @@ class ccSGD(Optimizer):
 
     def __getstate__(self):
         this = self.__dict__.copy()
-        if this.get('handle', None) is not None:
-            this['handle'] = True
-        else:
-            this['handle'] = False
+        this['handle'] = this.get('handle', None) is not None
 
     def __setstate__(self, state):
         if state.get('handle', False):
