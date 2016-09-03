@@ -488,6 +488,7 @@ void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------
+
 /*! \brief definition of NDArray function */
 typedef std::function<void (NDArray **used_vars,
                             real_t *scalars,
