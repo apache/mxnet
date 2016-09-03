@@ -34,7 +34,7 @@ DMLC_REGISTER_PARAMETER(RNNParam);
 MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
 .describe("Apply a recurrent layer to input.")
 .add_argument("data", "Symbol", "Input data to RNN")
-.add_argument("parameters", "Symbol", "Vector of all RNN trainable parameters")
+.add_argument("parameters", "Symbol", "Vector of all RNN trainable parameters concatenated")
 .add_argument("state", "Symbol", "initial hidden state of the RNN")
 .add_argument("state_cell", "Symbol", "initial cell state for LSTM networks (only for LSTM)")
 .add_arguments(RNNParam::__FIELDS__());
