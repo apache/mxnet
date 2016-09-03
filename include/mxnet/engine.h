@@ -8,6 +8,7 @@
 
 #include <dmlc/base.h>
 #if DMLC_USE_CXX11
+#include <algorithm>
 #include <memory>
 #include <functional>
 #endif
@@ -206,7 +207,6 @@ class MXNET_API Engine {
       }, exec_ctx, const_vars, mutable_vars, prop, priority);
   }
 
- protected:
   /*!
    * \brief factory function to create OnComplete callback.
    * \param callback th static callback function.

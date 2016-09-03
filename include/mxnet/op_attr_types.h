@@ -16,6 +16,7 @@
 
 #include "./base.h"
 #include "./operator.h"
+#include "./ndarray.h"
 
 namespace mxnet {
 
@@ -42,7 +43,24 @@ using FCreateLayerOp = std::function<
  */
 using FResourceRequest = std::function<
   std::vector<ResourceRequest> (const NodeAttrs& n)>;
-
+/*!
+ * \brief Register an operator called as a NDArray function
+ *
+ * \note Register under "FNDArrayFunction"
+ */
+using FNDArrayFunction = std::function<void (const nnvm::NodeAttrs& attrs,
+                                             const std::vector<NDArray>& inputs,
+                                             std::vector<NDArray>* outputs)>;
+/*!
+ * \brief Resiger a compute function for simple stateless forward only operator
+ *
+ * \note Register under "FCompute<cpu>" and "FCompute<gpu>"
+ */
+using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<TBlob>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<TBlob>& outputs)>;
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_
