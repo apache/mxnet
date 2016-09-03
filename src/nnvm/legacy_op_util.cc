@@ -3,9 +3,11 @@
  * \file legacy_op_util.cc
  * \brief Utility to adapt OpProperty to the new NNVM registery
  */
+#include <dmlc/base.h>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/ndarray.h>
 #include <nnvm/node.h>
 #include <memory>
 
@@ -75,7 +77,7 @@ bool OpPropInferAttr(const NodeAttrs& attrs,
 
 bool OpPropInferShape(const NodeAttrs& attrs,
                       std::vector<TShape> *iattr,
-                      std::vector<TShape>* oattr) {
+                      std::vector<TShape> *oattr) {
   auto finfer = [](const OperatorProperty* op,
                    std::vector<TShape> *in,
                    std::vector<TShape> *out,
@@ -86,8 +88,8 @@ bool OpPropInferShape(const NodeAttrs& attrs,
 }
 
 bool OpPropInferType(const NodeAttrs& attrs,
-                     std::vector<int> *iattr,
-                     std::vector<int>* oattr) {
+                      std::vector<int> *iattr,
+                      std::vector<int> *oattr) {
   auto finfer = [](const OperatorProperty* op,
                    std::vector<int> *in,
                    std::vector<int> *out,
@@ -347,6 +349,61 @@ NNVM_REGISTER_OP(_NoGradient)
 .set_num_inputs(0)
 .set_num_outputs(1)
 .describe("Place holder for variable who cannot perform gradient");
+
+void RegisterLegacyNDFunc() {
+  for (auto reg : dmlc::Registry<NDArrayFunctionReg>::List()) {
+    if (reg->type_mask & kScalarArgBeforeNDArray) continue;
+    Op& op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER_OR_GET__(reg->name);
+    if (op.attr_parser != nullptr) continue;
+    CHECK_LE(reg->num_scalars + reg->num_use_vars, reg->arguments.size());
+    auto func = reg->body;
+    op.describe(reg->description);
+    op.add_arguments(reg->arguments);
+    op.set_num_inputs(reg->num_use_vars);
+    op.set_num_outputs(reg->num_mutate_vars);
+    op.set_attr_parser([](NodeAttrs* attrs){});
+    op.attr<FNDArrayFunction>("FNDArrayFunction", [reg](const nnvm::NodeAttrs& attrs,
+                                                        const std::vector<NDArray>& inputs,
+                                                        std::vector<NDArray>* outputs) {
+        CHECK_EQ(inputs.size(), reg->num_use_vars);
+        CHECK_EQ(outputs->size(), reg->num_mutate_vars);
+
+        int n_scalars = reg->num_scalars;
+        std::vector<float> scalars;
+        scalars.reserve(n_scalars);
+        auto dict = attrs.dict;
+        for (int i = 0; i < n_scalars; ++i) {
+          const std::string& name = reg->arguments[i+reg->num_use_vars].name;
+          auto s = dict.find(name);
+          CHECK_NE(s, dict.end()) << "Missing scalar param " << name;
+          scalars.push_back(std::stof(s->second));
+          dict.erase(s);
+        }
+
+        int n_params = dict.size();
+        std::vector<const char*> keys, vals;
+        keys.reserve(n_params);
+        vals.reserve(n_params);
+        for (auto& i : dict) {
+          keys.push_back(dmlc::BeginPtr(i.first));
+          vals.push_back(dmlc::BeginPtr(i.second));
+        }
+        std::vector<NDArray*> input_ptrs, output_ptrs;
+        for (auto& i : inputs) {
+          input_ptrs.push_back(const_cast<NDArray*>(&i));
+        }
+        for (auto& i : *outputs) {
+          output_ptrs.push_back(&i);
+        }
+        reg->body(input_ptrs.data(),
+                  scalars.data(),
+                  output_ptrs.data(),
+                  n_params,
+                  const_cast<char**>(keys.data()),
+                  const_cast<char**>(vals.data()));
+      });
+  }
+}
 
 }  // namespace op
 }  // namespace mxnet
