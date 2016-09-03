@@ -95,7 +95,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
 
     DMLC_DECLARE_FIELD(p).set_default(0.)
     .set_range(0, 1)
-    .describe("Fraction of the input that gets dropped out at training time");
+    .describe("Dropout probability, fraction of the input that gets dropped out at training time");
 
     DMLC_DECLARE_FIELD(state_outputs).set_default(false)
     .describe("Whether to have the states as symbol outputs.");
