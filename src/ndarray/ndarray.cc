@@ -745,27 +745,6 @@ MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromToSimple)
 .set_type_mask(kNDArrayArgBeforeScalar);
 
-// register random number generators
-MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    SampleUniform(s[0], s[1], out[0]);
-  })
-.set_num_scalars(2)
-.set_num_mutate_vars(1)
-.add_argument("min", "real_t", "lower bound")
-.add_argument("max", "real_t", "uppper bound");
-
-MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    SampleGaussian(s[0], s[1], out[0]);
-  })
-.set_num_scalars(2)
-.set_num_mutate_vars(1)
-.add_argument("mean", "real_t", "mean")
-.add_argument("std", "real_t", "standard deviation");
-
 MXNET_REGISTER_NDARRAY_FUN(clip)
 .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
 .set_body([](NDArray **u, real_t *s, NDArray **out,

@@ -16,9 +16,6 @@
 #include <mxnet/c_api.h>
 #include <mxnet/kvstore.h>
 #include <mxnet/mxrtc.h>
-#include <mxnet/op_attr_types.h>
-#include <nnvm/node.h>
-#include <nnvm/op_attr_types.h>
 #include <vector>
 #include <sstream>
 #include <string>

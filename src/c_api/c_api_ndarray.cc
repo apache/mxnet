@@ -12,6 +12,7 @@
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include "./c_api_common.h"
+#include "../common/utils.h"
 
 using namespace mxnet;
 
@@ -79,7 +80,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       ndoutputs.emplace_back(std::move(*outarray[i]));
     }
   }
-  
+
   if (ndfunc.count(op)) {
     ndfunc[op](attrs, ndinputs, &ndoutputs);
   } else {
@@ -161,7 +162,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
         write_vars.push_back(ndinputs[i].var());
       }
     }
-    DeduplicateVarHandle(&read_vars, &write_vars);
+    common::DeduplicateVarHandle(&read_vars, &write_vars);
 
     FCompute fn;
     if (ctx.dev_mask() == cpu::kDevMask && fcpu.count(op)) {
@@ -182,7 +183,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
             i.CheckAndAlloc();
             output_blobs.push_back(i.data());
           }
-          OpContext opctx{false, rctx, 
+          OpContext opctx{false, rctx,
                           engine::CallbackOnComplete(),
                           requested};
           std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
@@ -217,7 +218,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
             output_blobs.push_back(i.data());
           }
           Capture* capture = new Capture({on_complete, opr});
-          OpContext opctx{false, rctx, 
+          OpContext opctx{false, rctx,
                           Engine::Get()->CreateCallback(
                             [](Engine* engine, void *cpt_handle) {
                                 Capture* cpt = static_cast<Capture*>(cpt_handle);
@@ -232,14 +233,14 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
             if (ctx.dev_mask() == gpu::kDevMask) {
               rctx.get_stream<gpu>()->Wait();
             }
-            on_complete();
             delete opr;
             delete capture;
+            on_complete();
           }
         }, ctx, read_vars, write_vars);
     } else {
       LOG(FATAL)
-        << "Operator " << op->name 
+        << "Operator " << op->name
         << " cannot be run; requires at least one of"
         << " FCompute<xpu>, NDArrayFunction, FCreateOperator be registered";
     }
