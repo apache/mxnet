@@ -268,7 +268,7 @@ class Executor(object):
         """
         # pylint: disable=too-many-branches
         arg_shapes, _, aux_shapes = self._symbol.infer_shape(**kwargs)
-        if arg_shapes == None:
+        if arg_shapes is None:
             raise ValueError("Insufficient argument shapes provided.")
 
         new_arg_dict = {}
@@ -336,4 +336,3 @@ class Executor(object):
         check_call(_LIB.MXExecutorPrint(
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
-

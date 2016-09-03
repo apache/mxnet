@@ -1,13 +1,16 @@
 # coding: utf-8
 # pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member
 """Monitor outputs, weights, and gradients for debugging."""
+from __future__ import absolute_import
+
+import re
 import ctypes
+import logging
+from math import sqrt
+
 from .ndarray import NDArray
 from .base import NDArrayHandle, py_str
 from . import ndarray
-import logging
-from math import sqrt
-import re
 
 
 class Monitor(object):
@@ -114,7 +117,3 @@ class Monitor(object):
         res = self.toc()
         for n, k, v in res:
             logging.info('Batch: {:7d} {:30s} {:s}'.format(n, k, v))
-
-
-
-

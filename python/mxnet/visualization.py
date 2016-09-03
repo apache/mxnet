@@ -5,11 +5,11 @@
 """Visualization module"""
 from __future__ import absolute_import
 
-from .symbol import Symbol
-import json
 import re
 import copy
+import json
 
+from .symbol import Symbol
 
 def _str2tuple(string):
     """convert shape string to list, internal use only
@@ -59,7 +59,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
         draw_shape = True
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
-        if out_shapes == None:
+        if out_shapes is None:
             raise ValueError("Input shape is incompete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
@@ -76,8 +76,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
           "#fdb462", "#b3de69", "#fccde5")
 
     # make nodes
-    for i in range(len(nodes)):
-        node = nodes[i]
+    for i, node in enumerate(nodes):
         op = node["op"]
         name = node["name"]
         # input data
@@ -120,8 +119,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
         dot.node(name=name, label=label, **attr)
 
     # add edges
-    for i in range(len(nodes)):
-        node = nodes[i]
+    for i, node in enumerate(nodes):
         op = node["op"]
         name = node["name"]
         if op == "null":
