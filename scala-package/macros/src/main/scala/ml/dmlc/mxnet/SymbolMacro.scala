@@ -7,21 +7,22 @@ import scala.reflect.macros.blackbox
 
 import ml.dmlc.mxnet.init.Base._
 
-// scalastyle:off
-private[mxnet] class FillDefs extends StaticAnnotation {
-  def macroTransform(annottees: Any*) = macro ImplMacros.addDefs
+private[mxnet] class AddSymbolFunctions extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addDefs
 }
 
-private[mxnet] object ImplMacros {
+private[mxnet] object SymbolImplMacros {
   case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)
 
+  // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     impl(c)(false, annottees: _*)
   }
+  // scalastyle:off havetype
 
   private val symbolFunctions: Map[String, SymbolFunction] = initSymbolModule()
 
-  def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+  private def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
     val AST_TYPE_MAP_STRING_ANY = AppliedTypeTree(Ident(TypeName("Map")),
@@ -38,8 +39,8 @@ private[mxnet] object ImplMacros {
     )
 
     val functionDefs = symbolFunctions map { case (funcName, funcProp) =>
-      // FIXME
-      DefDef(Modifiers(), TermName(funcName + "2"), List(),
+      val functionScope = if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
+      DefDef(functionScope, TermName(funcName), List(),
         List(
           List(
             ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("name"),
@@ -70,9 +71,8 @@ private[mxnet] object ImplMacros {
 
     val inputs = annottees.map(_.tree).toList
     // pattern match on the inputs
-    val modDefs = inputs map { tree => tree match {
+    val modDefs = inputs map {
       case ClassDef(mods, name, something, template) =>
-        // println(s"DEBUG: $mods | $name | $something | $template")
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
             Template(superMaybe, emptyValDef, defs ++ functionDefs)
@@ -81,10 +81,8 @@ private[mxnet] object ImplMacros {
         }
         ClassDef(mods, name, something, q)
       case ModuleDef(mods, name, template) =>
-        // println(s"DEBUG Module: $mods | $name | $template")
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            // println(s"DEBUG Template: $superMaybe | $emptyValDef | $defs")
             Template(superMaybe, emptyValDef, defs ++ functionDefs)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
@@ -92,7 +90,6 @@ private[mxnet] object ImplMacros {
         ModuleDef(mods, name, q)
       case ex =>
         throw new IllegalArgumentException(s"Invalid macro input: $ex")
-    }
     }
     // wrap the result up in an Expr, and return it
     val result = c.Expr(Block(modDefs, Literal(Constant())))
@@ -125,7 +122,9 @@ private[mxnet] object ImplMacros {
         ""
       }
     val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n$extraDoc\n"
+    // scalastyle:off println
     println("Atomic Symbol function defination:\n" + docStr)
+    // scalastyle:on println
     (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 
@@ -141,4 +140,3 @@ private[mxnet] object ImplMacros {
     s"Parameters\n----------\n${params.mkString("\n")}\n"
   }
 }
-// scalastyle:on
