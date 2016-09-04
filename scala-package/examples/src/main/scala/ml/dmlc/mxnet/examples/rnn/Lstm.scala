@@ -89,7 +89,7 @@ object Lstm {
       if (dropout > 0f) hidden = Symbol.Dropout()(Map("data" -> hidden, "p" -> dropout))
       hiddenAll = hiddenAll :+ hidden
     }
-    val hiddenConcat = Symbol.Concat()(hiddenAll, Map("dim" -> 0))
+    val hiddenConcat = Symbol.Concat()(hiddenAll: _*)(Map("dim" -> 0))
     val pred = Symbol.FullyConnected("pred")(Map("data" -> hiddenConcat, "num_hidden" -> numLabel,
                                             "weight" -> clsWeight, "bias" -> clsBias))
     label = Symbol.transpose(label)

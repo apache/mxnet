@@ -768,10 +768,6 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
 // scalastyle:on finalize
 @FillDefs
 object Symbol {
-  // debug codes for macros
-  val b: Int = 10
-  def showA(a: Int): Unit = println(s"a = $a")
-
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
@@ -1299,8 +1295,9 @@ object Symbol {
    * dim : int, optional, default='1'. the dimension to be concated.
    */
   def Concat(name: String = null, attr: Map[String, String] = null)(
-             inputs: Array[Symbol], params: Map[String, Any] = null): Symbol = {
-    createFromListedSymbolsNoCheck("Concat", name, attr)(inputs, params)
+             inputs: Symbol*)(params: Map[String, Any] = null): Symbol = {
+    // createFromListedSymbolsNoCheck("Concat", name, attr)(inputs, params)
+    createSymbolGeneral("Concat", name, attr, inputs, params)
   }
 
   /**
@@ -1419,6 +1416,38 @@ object Symbol {
     (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 
+  def createSymbolGeneral(operator: String, name: String, attr: Map[String, String],
+      symbols: Seq[Symbol], kwargs: Map[String, Any]): Symbol = {
+    val symbolKwargs: Map[String, Symbol] =
+      if (kwargs == null || kwargs.isEmpty) {
+        Map.empty[String, Symbol]
+      } else {
+        kwargs.filter { case (key, value) =>
+          value.isInstanceOf[Symbol]
+        }.map { case (key, value) =>
+          (key, value.asInstanceOf[Symbol])
+        }
+      }
+    val strKwargs: Map[String, String] =
+      if (kwargs == null || kwargs.isEmpty) {
+        Map.empty[String, String]
+      } else {
+        kwargs.filter { case (key, value) =>
+          !value.isInstanceOf[Symbol]
+        }.map { case (key, value) =>
+          (key, value.toString)
+        }
+      }
+    require(symbols.isEmpty || symbolKwargs.isEmpty, String.format(
+      "%s can only accept input Symbols either as positional or keyword arguments, not both",
+      operator))
+    if (symbols.isEmpty) {
+      createFromNamedSymbols(operator, name, attr)(symbolKwargs, strKwargs)
+    } else {
+      createFromListedSymbols(operator, name, attr)(symbols.toArray, strKwargs)
+    }
+  }
+
   /**
    * Activation Operator of Neural Net.
    * The parameters listed below can be passed in as keyword arguments.
@@ -1475,7 +1504,7 @@ object Symbol {
     val function = functions(operator)
     require(function != null, s"invalid operator name $operator")
     require(function.keyVarNumArgs == null || function.keyVarNumArgs.isEmpty,
-      "This function support variable length of Symbol arguments.\n" +
+      s"[$operator] support variable length of Symbol arguments.\n" +
       "Please pass all the input Symbols via positional arguments instead of keyword arguments.")
 
     val paramKeys =

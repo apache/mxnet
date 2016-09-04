@@ -3,83 +3,79 @@ package ml.dmlc.mxnet
 import scala.annotation.StaticAnnotation
 import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
-import scala.reflect.macros.blackbox.Context
-
+import scala.reflect.macros.blackbox
 
 import ml.dmlc.mxnet.init.Base._
 
+// scalastyle:off
 private[mxnet] class FillDefs extends StaticAnnotation {
   def macroTransform(annottees: Any*) = macro ImplMacros.addDefs
 }
 
-object ImplMacros {
+private[mxnet] object ImplMacros {
   case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)
 
-
-  def addDefs(c: Context)(annottees: c.Expr[Any]*) = {
+  def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     impl(c)(false, annottees: _*)
   }
 
-  /*
-  def LeakyReLU(name: String = null, attr: Map[String, String] = null): SymbolCreateNamedFunc = {
-    createFromNamedSymbolsNoCheck("LeakyReLU", name, attr)
-  }
-  */
-  val symbolFunctions: Map[String, SymbolFunction] = initSymbolModule()
+  private val symbolFunctions: Map[String, SymbolFunction] = initSymbolModule()
 
-  def impl(c: Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+  def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
     val AST_TYPE_MAP_STRING_ANY = AppliedTypeTree(Ident(TypeName("Map")),
       List(Ident(TypeName("String")), Ident(TypeName("Any"))))
     val AST_TYPE_MAP_STRING_STRING = AppliedTypeTree(Ident(TypeName("Map")),
       List(Ident(TypeName("String")), Ident(TypeName("String"))))
+    val AST_TYPE_SYMBOL_VARARG = AppliedTypeTree(
+      Select(
+        Select(Ident(termNames.ROOTPKG), TermName("scala")),
+        TypeName("<repeated>")
+      ),
+      List(Select(Select(Select(
+        Ident(TermName("ml")), TermName("dmlc")), TermName("mxnet")), TypeName("Symbol")))
+    )
 
-    val inputs = annottees.map(_.tree).toList
-    // create the definitions we're going to add
-    val newDefDefs = List(
-      DefDef(Modifiers(), TermName("x"), List(), List(), TypeTree(), Literal(Constant(5))),
-      DefDef(Modifiers(), TermName("y"), List(), List(), TypeTree(), Literal(Constant(7.0f))),
-      DefDef(Modifiers(), TermName("f"), List(), List(List(ValDef(Modifiers(),
-        TermName("a"), Ident(TypeName("Int")), EmptyTree))), TypeTree(),
-        Apply(Select(Ident(TermName("a")), TermName("$plus")), List(Literal(Constant(3))))),
-      DefDef(Modifiers(), TermName("f2"), List(), List(List(ValDef(Modifiers(),
-        TermName("a"), Ident(TypeName("Int")), EmptyTree))), TypeTree(),
-        Apply(Select(Ident(TermName("a")), TermName("$plus")), List(Ident(TermName("b"))))),
-      DefDef(Modifiers(), TermName("f3"), List(), List(List(ValDef(Modifiers(),
-        TermName("a"), Ident(TypeName("Int")), EmptyTree))), TypeTree(),
-        Apply(Ident(TermName("showA")), List(Ident(TermName("a"))))),
-      DefDef(Modifiers(), TermName("f4"), List(), List(List(ValDef(Modifiers(),
-        TermName("a"), Ident(TypeName("Int")), EmptyTree),
-        ValDef(Modifiers(), TermName("b"), Ident(TypeName("String")), EmptyTree))), TypeTree(),
-        Apply(Select(Ident(TermName("a")), TermName("$plus")), List(Ident(TermName("b"))))),
-      DefDef(Modifiers(), TermName("LeakyReLU2"), List(),
+    val functionDefs = symbolFunctions map { case (funcName, funcProp) =>
+      // FIXME
+      DefDef(Modifiers(), TermName(funcName + "2"), List(),
         List(
           List(
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("name"), Ident(TypeName("String")), Literal(Constant(null))),
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("attr"), AST_TYPE_MAP_STRING_STRING, Literal(Constant(null)))
+            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("name"),
+              Ident(TypeName("String")), Literal(Constant(null))),
+            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("attr"),
+              AST_TYPE_MAP_STRING_STRING, Literal(Constant(null)))
           ),
           List(
-            ValDef(Modifiers(), TermName("kwargs"), AST_TYPE_MAP_STRING_ANY, EmptyTree)
+            ValDef(Modifiers(), TermName("args"), AST_TYPE_SYMBOL_VARARG, EmptyTree)
+          ),
+          List(
+            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("kwargs"),
+              AST_TYPE_MAP_STRING_ANY, Literal(Constant(null)))
           )
         ), TypeTree(),
         Apply(
-          Apply(
-            Ident(TermName("createFromNamedSymbolsNoCheck")),
-            List(Literal(Constant("LeakyReLU")))
-          ),
-          List(Ident(TermName("kwargs")))
+          Ident(TermName("createSymbolGeneral")),
+          List(
+            Literal(Constant(funcName)),
+            Ident(TermName("name")),
+            Ident(TermName("attr")),
+            Ident(TermName("args")),
+            Ident(TermName("kwargs"))
+          )
         )
       )
-    )
+    }
 
+    val inputs = annottees.map(_.tree).toList
     // pattern match on the inputs
     val modDefs = inputs map { tree => tree match {
       case ClassDef(mods, name, something, template) =>
         // println(s"DEBUG: $mods | $name | $something | $template")
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ newDefDefs)
+            Template(superMaybe, emptyValDef, defs ++ functionDefs)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
@@ -89,7 +85,7 @@ object ImplMacros {
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
             // println(s"DEBUG Template: $superMaybe | $emptyValDef | $defs")
-            Template(superMaybe, emptyValDef, defs ++ newDefDefs)
+            Template(superMaybe, emptyValDef, defs ++ functionDefs)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
@@ -145,3 +141,4 @@ object ImplMacros {
     s"Parameters\n----------\n${params.mkString("\n")}\n"
   }
 }
+// scalastyle:on

@@ -126,7 +126,7 @@ object NeuralStyle {
       Symbol.Convolution()(Map("data" -> channels.get(i), "weight" -> sKernel,
                     "num_filter" -> 1, "kernel" -> "(3,3)", "pad" -> "(1,1)",
                     "no_bias" -> true, "stride" -> "(1,1)"))
-    }.toArray) * tvWeight
+    }: _*)() * tvWeight
     val kernel = {
       val tmp = NDArray.empty(Shape(1, 1, 3, 3), ctx)
       tmp.set(Array[Float](0, -1, 0, -1, 4, -1, 0, -1, 0))

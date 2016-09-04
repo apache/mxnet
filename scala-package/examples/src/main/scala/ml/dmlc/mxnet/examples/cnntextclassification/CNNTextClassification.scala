@@ -44,7 +44,7 @@ object CNNTextClassification {
     }
 
     val totalFilters = numFilter * filterList.length
-    val concat = Symbol.Concat()(polledOutputs, Map("dim" -> 1))
+    val concat = Symbol.Concat()(polledOutputs: _*)(Map("dim" -> 1))
     val hPool = Symbol.Reshape()(Map("data" -> concat,
       "target_shape" -> s"($batchSize, $totalFilters)"))
 

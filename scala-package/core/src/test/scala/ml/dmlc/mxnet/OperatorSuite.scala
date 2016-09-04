@@ -46,7 +46,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val targetDim = shapes.map(_(dimension)).sum
 
     val inputs = (0 until shapes.size).map(i => Symbol.Variable(s"arg$i"))
-    val out = Symbol.Concat(name = "conc")(inputs.toArray, Map("dim" -> dimension))
+    val out = Symbol.Concat(name = "conc")(inputs: _*)(Map("dim" -> dimension))
     val arr = shapes.map { shape =>
       val nd = NDArray.empty(shape)
       nd.set(shape(dimension))
