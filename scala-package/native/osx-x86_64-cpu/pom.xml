@@ -69,6 +69,7 @@
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
             <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ../../../nnvm/lib/libnnvm.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>
