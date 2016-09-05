@@ -107,10 +107,10 @@ object NeuralStyle {
     var gramLoss = List[Symbol]()
     for (i <- 0 until gram.listOutputs().length) {
       val gvar = Symbol.Variable(s"target_gram_$i")
-      gramLoss = gramLoss :+ Symbol.sum(Symbol.square(gvar - gram.get(i)))
+      gramLoss = gramLoss :+ Symbol.sum()(Symbol.square()(gvar - gram.get(i))())()
     }
     val cvar = Symbol.Variable("target_content")
-    val contentLoss = Symbol.sum(Symbol.square(cvar - content))
+    val contentLoss = Symbol.sum()(Symbol.square()(cvar - content)())()
     (Symbol.Group(gramLoss: _*), contentLoss)
   }
 

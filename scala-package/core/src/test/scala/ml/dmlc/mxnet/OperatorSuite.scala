@@ -278,7 +278,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 3
 
-    val test = Symbol.sign(data)
+    val test = Symbol.sign()(data)()
     val exeTest = test.bind(Context.cpu(), args = Array(arrData), argsGrad = Array(arrGrad))
     exeTest.forward()
     val out = exeTest.outputs.head
@@ -297,7 +297,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 2
 
-    val test = Symbol.round(data) + Symbol.ceil(data) + Symbol.floor(data)
+    val test = Symbol.round()(data)() + Symbol.ceil()(data)() + Symbol.floor()(data)()
     val exeTest = test.bind(Context.cpu(), args = Array(arrData))
     exeTest.forward()
     val out = exeTest.outputs.head
@@ -312,7 +312,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 3
 
-    val test = Symbol.rsqrt(data) + Symbol.cos(data) + Symbol.sin(data)
+    val test = Symbol.rsqrt()(data)() + Symbol.cos()(data)() + Symbol.sin()(data)()
     val exeTest = test.bind(Context.cpu(), args = Array(arrData), argsGrad = Array(arrGrad))
     exeTest.forward()
     val out = exeTest.outputs.head
@@ -446,7 +446,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val arrData = dataTmp.copy()
     val arrGrad = NDArray.ones(shape) * 3
 
-    val test = Symbol.abs(data)
+    val test = Symbol.abs()(data)()
     val exeTest = test.bind(Context.cpu(), args = Array(arrData), argsGrad = Array(arrGrad))
     exeTest.forward()
     val out = exeTest.outputs.head
