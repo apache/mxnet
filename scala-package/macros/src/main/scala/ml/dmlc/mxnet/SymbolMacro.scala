@@ -40,6 +40,9 @@ private[mxnet] object SymbolImplMacros {
 
     val functionDefs = symbolFunctions map { case (funcName, funcProp) =>
       val functionScope = if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
+      // It will generate definition something like,
+      // def Concat(name: String = null, attr: Map[String, String] = null)
+      //           (args: Symbol*)(kwargs: Map[String, Any] = null)
       DefDef(functionScope, TermName(funcName), List(),
         List(
           List(
