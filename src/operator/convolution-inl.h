@@ -370,10 +370,17 @@ class ConvolutionProp : public OperatorProperty {
             && ksize_x <= dshape[3] + 2 * param_.pad[1])
           << "kernel size exceed input";
       (*out_shape)[conv::kOut][1] = param_.num_filter;
+#ifndef CAFFE_CONV_COMPATIABLE
       (*out_shape)[conv::kOut][2] = (dshape[2] + 2 * param_.pad[0] -
           (param_.dilate[0] * (ksize_y - 1) + 1)) / param_.stride[0] + 1;
       (*out_shape)[conv::kOut][3] = (dshape[3] + 2 * param_.pad[1] -
           (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
+#else
+      (*out_shape)[conv::kOut][2] = static_cast<int>(ceil(static_cast<float>(dshape[2] +
+        2 * param_.pad[0] - (param_.dilate[0] * (ksize_y - 1) + 1)) / param_.stride[0])) + 1;
+      (*out_shape)[conv::kOut][3] =  static_cast<int>(ceil(static_cast<float>(dshape[3] +
+        2 * param_.pad[1] - (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1])) + 1;
+#endif
       return true;
     } else if (param_.kernel.ndim() == 3) {
       // 3d conv

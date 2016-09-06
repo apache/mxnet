@@ -196,6 +196,11 @@ if(USE_DIST_KVSTORE)
 	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
 endif()
 
+if(CAFFE_CONV_COMPATIABLE)
+	add_definitions(-DCAFFE_CONV_COMPATIABLE)
+endif()
+
+
 # ---[ Linter target
 if(MSVC)
   find_package(PythonInterp 2)
