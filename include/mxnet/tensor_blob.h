@@ -637,6 +637,19 @@ class TBlob {
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(), stride_, stream);
   }
+  /*!
+   * \brief flatten the tensor to 1 dimension, collapse all the dimensions together.
+   * \param stream the possible stream target tensor should reside on
+   * \tparam Device which device the tensor is on
+   * \tparam DType the type of elements in the tensor
+   * \return tensor after flatten
+   */
+  template<typename Device, typename DType>
+  inline mshadow::Tensor<Device, 1, DType> FlatTo1D(
+      mshadow::Stream<Device> *stream = NULL) const {
+    return this->get_with_shape<Device, 1, DType>(
+        mshadow::Shape1(shape_.Size()), stream);
+  }
   /*! \brief return number of dimension of the tensor inside */
   inline int ndim(void) const {
     return shape_.ndim();
