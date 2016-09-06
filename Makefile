@@ -97,9 +97,9 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
-SRC = $(wildcard src/*.cc src/*/*.cc)
+SRC = $(wildcard src/*.cc src/*/*.cc src/*/*/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
-CUSRC = $(wildcard src/*/*.cu)
+CUSRC = $(wildcard src/*.cu src/*/*.cu src/*/*/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
@@ -151,12 +151,12 @@ endif
 
 # For quick compile test, used smaller subset
 ALLX_DEP = $(filter-out build/src/operator/%, $(ALL_DEP))
-ALLX_DEP+= build/src/operator/fully_connected.o
-ALLX_DEP+= build/src/operator/fully_connected_gpu.o
+ALLX_DEP+= build/src/operator/nn_op/fully_connected.o
+ALLX_DEP+= build/src/operator/nn_op/fully_connected_gpu.o
 ALLX_DEP+= build/src/operator/operator.o
 ALLX_DEP+= build/src/operator/operator_util.o
-ALLX_DEP+= build/src/operator/elementwise_unary_op.o
-ALLX_DEP+= build/src/operator/custom.o
+ALLX_DEP+= build/src/operator/tensor_op/elementwise_unary_op.o
+ALLX_DEP+= build/src/operator/nn_op/custom.o
 
 ALLX_DEP= $(ALL_DEP)
 
@@ -307,6 +307,7 @@ clean_all: clean
 -include build/*.d
 -include build/*/*.d
 -include build/*/*/*.d
+-include build/*/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
 	-include $(patsubst %, %/*.d %/*/*.d, $(EXTRA_OPERATORS))
 endif
