@@ -280,7 +280,7 @@ class PythonLossModule(PythonModule):
         merge_multi_context : bool
             Should always be `True`, because we do not use multiple contexts for computing.
         """
-        assert merge_multi_context == True
+        assert merge_multi_context is True
         return [self._scores]
 
     def backward(self, out_grads=None):
@@ -324,7 +324,7 @@ class PythonLossModule(PythonModule):
         merge_multi_context : bool
             Should always be `True` because we do not use multiple context for computation.
         """
-        assert merge_multi_context == True
+        assert merge_multi_context is True
         return [self._scores_grad]
 
     def install_monitor(self, mon):

@@ -3,12 +3,13 @@
 """Executor manager"""
 from __future__ import absolute_import
 
+import logging
+import numpy as np
+
 from .base import mx_real_t
 from . import ndarray as nd
 from .context import cpu
 
-import logging
-import numpy as np
 
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
@@ -106,11 +107,11 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
     arg_names = sym.list_arguments()
 
-    if need_grad == False:
+    if need_grad is False:
         need_grad = set()
-    elif need_grad == True:
+    elif need_grad is True:
         need_grad = set(arg_names) - set(input_shapes.keys())
-    elif need_grad is set:
+    elif isinstance(need_grad, set):
         pass
     else:
         raise AssertionError("need_grad must be boolean or set.")
@@ -118,8 +119,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
 
     # create or borrow arguments and gradients
-    for i in range(len(arg_names)):
-        name = arg_names[i]
+    for i, name in enumerate(arg_names):
         if not name in param_names:
             # data or label
             if shared_data_arrays is not None and \
@@ -215,11 +215,11 @@ class DataParallelExecutorGroup(object):
         self.param_names = [arg_names[i] for i in self.param_idx]
 
         self.train_execs = []
-        for i in range(len(ctx)):
+        for i, ctxi in enumerate(ctx):
             data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
                            for k, v in train_data.provide_data + train_data.provide_label}
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
-            train_exec = _bind_exec(sym, ctx[i], data_shapes, self.param_names,
+            train_exec = _bind_exec(sym, ctxi, data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
                                     shared_data_arrays=self.shared_data_arrays[i])
             self.train_execs.append(train_exec)

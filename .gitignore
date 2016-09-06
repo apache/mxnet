@@ -115,4 +115,9 @@ scala-package/*/*/target/
 .project
 .cproject
 .pydevproject
+CMakeFiles
+cmake_install.cmake
+dmlc-core
+ps-lite
 nnvm
+lib

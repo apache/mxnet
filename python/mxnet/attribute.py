@@ -59,4 +59,3 @@ class AttrScope(object):
         AttrScope.current = self._old_scope
 
 AttrScope.current = AttrScope()
-

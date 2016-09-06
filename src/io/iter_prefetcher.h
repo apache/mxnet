@@ -25,10 +25,19 @@ namespace io {
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   /*! \brief number of prefetched batches */
   size_t prefetch_buffer;
+  /*! \brief data type */
+  int dtype;
+
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(prefetch_buffer).set_default(4)
         .describe("Backend Param: Number of prefetched parameters");
+    DMLC_DECLARE_FIELD(dtype)
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("float64", mshadow::kFloat64)
+      .add_enum("float16", mshadow::kFloat16)
+      .set_default(mshadow::default_type_flag)
+      .describe("Data type.");
   }
 };
 
@@ -36,7 +45,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
 class PrefetcherIter : public IIterator<DataBatch> {
  public:
   explicit PrefetcherIter(IIterator<TBlobBatch>* base)
-      : out_(nullptr), loader_(base) {
+      : loader_(base), out_(nullptr) {
   }
 
   ~PrefetcherIter() {
@@ -70,7 +79,9 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->data.resize(batch.data.size());
           (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
-            (*dptr)->data.at(i) = NDArray(batch.data[i].shape_, Context::CPU());
+            (*dptr)->data.at(i) = NDArray(batch.data[i].shape_,
+                                          Context::CPU(), false,
+                                          param_.dtype);
           }
         }
         CHECK(batch.data.size() == (*dptr)->data.size());
@@ -102,7 +113,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
     // do recycle
     if (recycle_queue_.size() == param_.prefetch_buffer) {
       DataBatch *old_batch =  recycle_queue_.front();
-      // can be more efficienct on engine
+      // can be more efficient on engine
       for (NDArray& arr : old_batch->data) {
         arr.WaitToWrite();
       }
@@ -115,17 +126,19 @@ class PrefetcherIter : public IIterator<DataBatch> {
     return *out_;
   }
 
- private:
+ protected:
   /*! \brief prefetcher parameters */
   PrefetcherParam param_;
-  // output data
-  DataBatch *out_;
-  // queue to be recycled
-  std::queue<DataBatch*> recycle_queue_;
-  // backend thread
-  dmlc::ThreadedIter<DataBatch> iter_;
-  // internal batch loader
+  /*! \brief internal batch loader */
   std::unique_ptr<IIterator<TBlobBatch> > loader_;
+
+ private:
+  /*! \brief output data */
+  DataBatch *out_;
+  /*! \brief queue to be recycled */
+  std::queue<DataBatch*> recycle_queue_;
+  /*! \brief backend thread */
+  dmlc::ThreadedIter<DataBatch> iter_;
 };
 }  // namespace io
 }  // namespace mxnet

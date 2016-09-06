@@ -5,12 +5,14 @@ from __future__ import absolute_import
 
 from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
-from ctypes import c_void_p, cast, c_int, c_char, c_char_p, cast, c_bool
-c_int_p = POINTER(c_int)
+from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
+
 from .base import _LIB, check_call
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol
 from .ndarray import NDArray
+
+c_int_p = POINTER(c_int)
 
 class PythonOp(object):
     """Base class for operators implemented in python

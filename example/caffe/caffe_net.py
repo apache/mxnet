@@ -1,4 +1,3 @@
-import os, sys
 import mxnet as mx
 from data import get_iterator 
 import argparse
@@ -51,13 +50,18 @@ def get_lenet():
         lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
     return lenet
 
+def get_network_from_json_file(file_name):
+    network = mx.sym.load(file_name)
+    return network
+
 def parse_args():
-    parser = argparse.ArgumentParser(description='train an image classifer on mnist')
+    parser = argparse.ArgumentParser(description='train an image classifier on mnist')
     parser.add_argument('--network', type=str, default='lenet',
-                        choices = ['mlp', 'lenet'],
-                        help='the cnn to use')
+                        help='the cnn to use (mlp | lenet | <path to network json file>')
     parser.add_argument('--caffe-loss', type=int, default=0,
                         help='Use CaffeLoss symbol')
+    parser.add_argument('--caffe-data', type=bool, default=False,
+                        help='Use Caffe input-data layer (True | False)')
     parser.add_argument('--data-dir', type=str, default='mnist/',
                         help='the input data directory')
     parser.add_argument('--gpus', type=str,
@@ -88,16 +92,21 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     use_caffe_loss = args.caffe_loss
+    use_caffe_data = args.caffe_data
 
+    data_shape = ()
     if args.network == 'mlp':
         data_shape = (784, )
         net = get_mlp()
-    else:
-        data_shape = (1, 28, 28)
+    elif args.network == 'lenet':
+        if not use_caffe_data:
+            data_shape = (1, 28, 28)
         net = get_lenet()
+    else:
+        net = get_network_from_json_file(args.network)
 
     # train
     if use_caffe_loss:
-        train_model.fit(args, net, get_iterator(data_shape), mx.metric.Caffe())
+        train_model.fit(args, net, get_iterator(data_shape, use_caffe_data), mx.metric.Caffe())
     else:
-        train_model.fit(args, net, get_iterator(data_shape))
+        train_model.fit(args, net, get_iterator(data_shape, use_caffe_data))
