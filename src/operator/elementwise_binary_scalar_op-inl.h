@@ -29,9 +29,9 @@ void BinaryScalarLForward_(const TBlob& lhs,
   CHECK_EQ(ret->type_flag_, lhs.type_flag_)
     << "Binary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> out = ret->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req,
-                    F<OP>(lhs.FlatTo2D<xpu, DType>(s),
+                    F<OP>(lhs.FlatTo1D<xpu, DType>(s),
                           scalar<DType>(env.scalar)));
   });
 }
@@ -47,10 +47,10 @@ void BinaryScalarRForward_(const TBlob& rhs,
   CHECK_EQ(ret->type_flag_, rhs.type_flag_)
     << "Binary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> out = ret->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> out = ret->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req,
                     F<OP>(scalar<DType>(env.scalar),
-                          rhs.FlatTo2D<xpu, DType>(s)));
+                          rhs.FlatTo1D<xpu, DType>(s)));
   });
 }
 
@@ -66,9 +66,9 @@ void BinaryScalarBackwardT0_(const OutputGrad& out_grad,
   CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
     << "Unary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> igrad = in_grad->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
-                    F<BackwardOp>(out_grad.data.FlatTo2D<xpu, DType>()));
+                    F<BackwardOp>(out_grad.data.FlatTo1D<xpu, DType>()));
     });
 }
 
@@ -84,9 +84,9 @@ void BinaryScalarBackwardT1_(const OutputGrad& out_grad,
   CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
     << "Unary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> igrad = in_grad->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
-                    F<BackwardOp>(out_grad.data.FlatTo2D<xpu, DType>(),
+                    F<BackwardOp>(out_grad.data.FlatTo1D<xpu, DType>(),
                                   scalar<DType>(env.scalar)));
   });
 }
@@ -104,11 +104,11 @@ void BinaryScalarBackwardT2_(const OutputGrad& out_grad,
   CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
     << "Unary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> igrad = in_grad->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
-                    (F<BackwardOp>(lhs.data.FlatTo2D<xpu, DType>(),
+                    (F<BackwardOp>(lhs.data.FlatTo1D<xpu, DType>(),
                                    scalar<DType>(env.scalar)) *
-                     out_grad.data.FlatTo2D<xpu, DType>()));
+                     out_grad.data.FlatTo1D<xpu, DType>()));
     });
 }
 
@@ -125,11 +125,11 @@ void DivRBackward_(const OutputGrad& out_grad,
   CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
     << "Unary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> igrad = in_grad->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
                     (scalar<DType>(-env.scalar) /
-                     F<mshadow_op::square>(in_data.data.FlatTo2D<xpu, DType>()) *
-                     out_grad.data.FlatTo2D<xpu, DType>()));
+                     F<mshadow_op::square>(in_data.data.FlatTo1D<xpu, DType>()) *
+                     out_grad.data.FlatTo1D<xpu, DType>()));
   });
 }
 
@@ -147,12 +147,12 @@ void PowerLBackward_(const OutputGrad& out_grad,
   CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
     << "Unary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> igrad = in_grad->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
-                    (F<mshadow_op::power>(lhs.data.FlatTo2D<xpu, DType>(),
+                    (F<mshadow_op::power>(lhs.data.FlatTo1D<xpu, DType>(),
                                           scalar<DType>(env.scalar - 1.0f)) *
                      scalar<DType>(env.scalar) *
-                     out_grad.data.FlatTo2D<xpu, DType>()));
+                     out_grad.data.FlatTo1D<xpu, DType>()));
   });
 }
 
@@ -169,11 +169,11 @@ void PowerRBackward_(const OutputGrad& out_grad,
   CHECK_EQ(in_grad->type_flag_, out_grad.data.type_flag_)
     << "Unary function only support input/output with the same type";
   MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
-    mshadow::Tensor<xpu, 2, DType> igrad = in_grad->FlatTo2D<xpu, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> igrad = in_grad->FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req,
                     (scalar<DType>(logf(env.scalar)) *
-                     out_data.data.FlatTo2D<xpu, DType>() *
-                     out_grad.data.FlatTo2D<xpu, DType>()));
+                     out_data.data.FlatTo1D<xpu, DType>() *
+                     out_grad.data.FlatTo1D<xpu, DType>()));
   });
 }
 
