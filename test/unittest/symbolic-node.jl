@@ -106,6 +106,12 @@ function test_attrs()
   @test_throws MethodError mx.Convolution(data=data2, kernel = (1,1), num_filter = 1, attrs = Dict(:test => "1.0", :test2 => 1.0))
 end
 
+function test_functions()
+  info("SymbolicNode::Functions")
+  data = mx.Variable(:data)
+  typeof(mx.sum(data)) == mx.SymbolicNode
+end
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -116,5 +122,6 @@ test_infer_shape()
 test_infer_shape_error()
 test_saveload()
 test_attrs()
+test_functions()
 
 end

@@ -610,7 +610,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
 
   signature = _format_signature(Int(ref_nargs[]), ref_arg_names)
   f_desc = "    " * func_name_s * "(" * signature * ")\n\n"
-  f_desc = unsafe_wrap(String, ref_desc[]) * "\n\n"
+  f_desc *= unsafe_wrap(String, ref_desc[]) * "\n\n"
   if !isempty(kv_nargs_s)
     f_desc *= "This function support variable length positional `SymbolicNode` inputs.\n\n"
   end
@@ -620,9 +620,9 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
   f_desc *= "* `attrs::Dict{Symbol, AbstractString}`: The attributes associated with this `SymbolicNode`.\n\n"
   f_desc *= "Returns `$(_format_typestring(unsafe_wrap(String, ref_ret_type[])))`."
 
-  # function $func_name(args...; kwargs...)
-  func_head = Expr(:call, func_name, Expr(:parameters, Expr(:..., :kwargs)), Expr(:..., :args))
-  func_body = quote
+  func_def = quote
+  @doc $f_desc ->
+  function $func_name(args::SymbolicNode...; kwargs...)
     idx = findfirst(x -> x[1] == :name, kwargs)
     if idx > 0
       name = kwargs[idx][2]
@@ -702,13 +702,9 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     end
 
     return node
-  end
-
-  func_def = Expr(:function, func_head, Expr(:block, func_body))
-  return quote
-    @doc $f_desc ->
-    $func_def
-  end
+  end # function
+  end # quote
+  return func_def
 end
 
 function _get_atomic_symbol_creators()
