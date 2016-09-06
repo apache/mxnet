@@ -24,7 +24,7 @@
 #include <functional>
 #include <utility>
 #include "./c_api_common.h"
-#include "../operator/custom-inl.h"
+#include "../operator/nn/custom-inl.h"
 
 using namespace mxnet;
 
