@@ -171,6 +171,7 @@ class Uniform(Initializer):
         self.scale = scale
 
     def _init_weight(self, _, arr):
+        logging.info('Init (Uniform) %s with scale %s', _, self.scale)
         random.uniform(-self.scale, self.scale, out=arr)
 
 
@@ -186,6 +187,7 @@ class Normal(Initializer):
         self.sigma = sigma
 
     def _init_weight(self, _, arr):
+        logging.info('Init (Normal) %s with sigma %s', _, self.sigma)
         random.normal(0, self.sigma, out=arr)
 
 
@@ -268,6 +270,7 @@ class Xavier(Initializer):
             random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
+        logging.info('Init (Xavier %s %s) %s with scale %s', self.rnd_type, self.magnitude, _, scale)
 
 class MSRAPrelu(Xavier):
     """Initialize the weight with initialization scheme from
