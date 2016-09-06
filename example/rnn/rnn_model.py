@@ -33,7 +33,7 @@ class LSTMInferenceModel(object):
         data_shape = [("data", (batch_size,))]
 
         input_shapes = dict(init_c + init_h + data_shape)
-        self.executor = self.sym.simple_bind(ctx=mx.cpu(), **input_shapes)
+        self.executor = self.sym.simple_bind(ctx=ctx, **input_shapes)
 
         for key in self.executor.arg_dict.keys():
             if key in arg_params:
