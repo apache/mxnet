@@ -299,14 +299,14 @@ jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
-clean:
+clean: cyclean
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
 	cd $(NNVM_PATH); make clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d %/*/*.d %/*.o %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean:
+clean: cyclean
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
