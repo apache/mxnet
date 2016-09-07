@@ -58,22 +58,13 @@ def _create_kvstore(kvstore, num_device, arg_params):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            if kvstore is 'local':
-                # automatically select a proper local
-                max_size = max(np.prod(param.shape) for param in arg_params.values())
-                if max_size < 1024 * 1024 * 16:
-                    kvstore = 'local_update_cpu'
-                else:
-                    kvstore = 'local_allreduce_cpu'
-                logging.info('Auto-select kvstore type = %s', kvstore)
             kv = kvs.create(kvstore)
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
     # detect whether or not update weight on kvstore
+    # make it simple, always be true
     update_on_kvstore = True
-    if not kv or 'local_allreduce' in kv.type:
-        update_on_kvstore = False
 
     return (kv, update_on_kvstore)
 
