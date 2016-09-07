@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=unused-argument, too-many-arguments
 """Extra symbol documents
 
 Guidelines
@@ -30,6 +31,9 @@ The following documents are recommended:
   expect the users to read those, but they will be executed by `doctest` to
   ensure the behavior of each operator does not change unintentionally.
 """
+from __future__ import absolute_import as _abs
+import re as _re
+from .base import build_param_doc as _build_param_doc
 
 class SymbolDoc(object):
     """The base class for attaching doc to operators."""
@@ -198,6 +202,33 @@ class FullyConnectedDoc(SymbolDoc):
     >>> test_utils.almost_equal(out, out_np)
     True
     """
+
+
+
+def _build_doc(func_name,
+               desc,
+               arg_names,
+               arg_types,
+               arg_desc,
+               key_var_num_args=None,
+               ret_type=None):
+    """Build docstring for symbolic functions."""
+    param_str = _build_param_doc(arg_names, arg_types, arg_desc)
+    if key_var_num_args:
+        desc += '\nThis function support variable length of positional input.'
+    doc_str = ('%s\n\n' +
+               '%s\n' +
+               'name : string, optional.\n' +
+               '    Name of the resulting symbol.\n\n' +
+               'Returns\n' +
+               '-------\n' +
+               'symbol: Symbol\n' +
+               '    The result symbol.')
+    doc_str = doc_str % (desc, param_str)
+    extra_doc = "\n" + '\n'.join([x.__doc__ for x in type.__subclasses__(SymbolDoc)
+                                  if x.__name__ == '%sDoc' % func_name])
+    doc_str += _re.sub(_re.compile("    "), "", extra_doc)
+    return doc_str
 
 
 class ConcatDoc(SymbolDoc):

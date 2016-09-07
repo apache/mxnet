@@ -14,7 +14,7 @@ from .base import _LIB, string_types, numeric_types
 from .base import c_array, mx_float, py_str, c_str, mx_real_t
 from .base import mx_uint, NDArrayHandle, FunctionHandle
 from .base import ctypes2buffer
-from .base import check_call, ctypes2docstring
+from .base import check_call, build_param_doc as _build_param_doc
 from .context import Context
 from . import _ndarray_internal as _internal
 
@@ -1144,7 +1144,12 @@ def _make_ndarray_function(handle):
         ctypes.byref(arg_descs),
         ctypes.byref(key_var_num_args),
         ctypes.byref(ret_type)))
-    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
+    narg = int(num_args.value)
+    param_str = _build_param_doc(
+        [py_str(arg_names[i]) for i in range(narg)],
+        [py_str(arg_types[i]) for i in range(narg)],
+        [py_str(arg_descs[i]) for i in range(narg)])
+
     key_var_num_args = py_str(key_var_num_args.value)
     func_name = py_str(name.value)
     desc = py_str(desc.value)
