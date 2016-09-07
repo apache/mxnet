@@ -59,9 +59,12 @@ if !libmxnet_detected
         ChangeDirectory(_srcdir)
         `rm -rf mxnet`
         `git clone --recursive https://github.com/dmlc/mxnet`
-        `git checkout $libmxnet_curr_ver`
+        @build_steps begin
+          ChangeDirectory(joinpath(_srcdir, "mxnet"))
+          `git checkout $libmxnet_curr_ver`
+        end
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
-          ChangeDirectory("$_mxdir")
+          ChangeDirectory(_mxdir)
           `cp make/config.mk config.mk`
           if is_apple()
             `cp make/osx.mk config.mk`
