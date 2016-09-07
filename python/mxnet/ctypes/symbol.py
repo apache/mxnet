@@ -3,13 +3,13 @@
 """Symbolic configuration API."""
 from __future__ import absolute_import as _abs
 
-import copy
 import ctypes
 import sys
 from ..base import _LIB
-from ..base import c_array, c_str, mx_uint, py_str, string_types
+from ..base import c_array, c_str, mx_uint, py_str
 from ..base import SymbolHandle
-from ..base import check_call, ctypes2docstring
+from ..base import check_call
+from ..symbol_doc import _build_doc
 from ..name import NameManager
 from ..attribute import AttrScope
 
@@ -118,22 +118,17 @@ def _make_atomic_symbol_function(handle):
         ctypes.byref(arg_descs),
         ctypes.byref(key_var_num_args),
         ctypes.byref(ret_type)))
-    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
+    narg = int(num_args.value)
     func_name = py_str(name.value)
-    desc = py_str(desc.value)
     key_var_num_args = py_str(key_var_num_args.value)
 
-    if key_var_num_args:
-        desc += '\nThis function support variable length of positional input.'
-    doc_str = ('%s\n\n' +
-               '%s\n' +
-               'name : string, optional.\n' +
-               '    Name of the resulting symbol.\n\n' +
-               'Returns\n' +
-               '-------\n' +
-               'symbol: Symbol\n' +
-               '    The result symbol.')
-    doc_str = doc_str % (desc, param_str)
+    doc_str = _build_doc(func_name,
+                         py_str(desc.value),
+                         [py_str(arg_names[i]) for i in range(narg)],
+                         [py_str(arg_types[i]) for i in range(narg)],
+                         [py_str(arg_descs[i]) for i in range(narg)],
+                         key_var_num_args,
+                         py_str(ret_type.value))
 
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.

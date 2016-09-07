@@ -14,8 +14,8 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install libpng
     brew install ImageMagick
     if [ ${TASK} == "python_test" ]; then
-        python -m pip install nose numpy --user `whoami`
-        python3 -m pip install nose numpy --user `whoami`
+        python -m pip install nose numpy cython --user `whoami`
+        python3 -m pip install nose numpy cython --user `whoami`
     fi
 fi
 

@@ -1,27 +1,24 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
 """Symbolic configuration API of mxnet."""
-from __future__ import absolute_import
+from __future__ import absolute_import as _abs
 
-import copy
 import ctypes
 from numbers import Number
-import re
-import numpy
+
 import os as _os
 import sys as _sys
+import numpy as _numpy
 
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
-from .base import check_call, ctypes2docstring
-from .name import NameManager
-from .attribute import AttrScope
+from .base import check_call
 from .context import Context
 from .ndarray import NDArray, zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
-from .symbol_doc import SymbolDoc
 from . import _symbol_internal as _internal
+from .attribute import AttrScope
 
 # Use different verison of SymbolBase
 # When possible, use cython to speedup part of computation.
@@ -109,7 +106,7 @@ class Symbol(SymbolBase):
         return self.__mul__(-1.0)
 
     def __copy__(self):
-        return copy.deepcopy(self)
+        return self.__deepcopy__(None)
 
     def __deepcopy__(self, _):
         handle = SymbolHandle()
@@ -148,7 +145,7 @@ class Symbol(SymbolBase):
         -------
         the resulting symbol
         """
-        s = copy.deepcopy(self)
+        s = self.__copy__()
         s._compose(*args, **kwargs)
         return s
 
@@ -382,7 +379,7 @@ class Symbol(SymbolBase):
             keys = None
             for s in args:
                 if s is not None:
-                    s = numpy.dtype(s).type
+                    s = _numpy.dtype(s).type
                     if s not in _DTYPE_NP_TO_MX:
                         raise TypeError('Argument need to be one of '+str(_DTYPE_NP_TO_MX))
                     sdata.append(_DTYPE_NP_TO_MX[s])
@@ -391,7 +388,7 @@ class Symbol(SymbolBase):
         else:
             keys = []
             for k, v in kwargs.items():
-                v = numpy.dtype(v).type
+                v = _numpy.dtype(v).type
                 if v in _DTYPE_NP_TO_MX:
                     keys.append(c_str(k))
                     sdata.append(_DTYPE_NP_TO_MX[v])

@@ -5,6 +5,7 @@ import ctypes as _ctypes
 from numbers import Number as _Number
 from ..name import NameManager
 from ..attribute import AttrScope
+from ..symbol_doc import _build_doc
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from cpython.version cimport PY_MAJOR_VERSION
@@ -127,20 +128,18 @@ cdef _make_atomic_symbol_function(AtomicSymbolCreator handle):
         &num_args, &arg_names,
         &arg_types, &arg_descs,
         &key_var_num_args, &return_type))
-    key_vargs = py_str(key_var_num_args)
-    param_str = BuildDoc(num_args, arg_names, arg_types, arg_descs)
-    if key_var_num_args:
-        param_str += '\nThis function support variable length of positional input.'
     func_name = py_str(name)
-    doc_str = ('%s\n\n' +
-               '%s\n' +
-               'name : string, optional.\n' +
-               '    Name of the resulting symbol.\n\n' +
-               'Returns\n' +
-               '-------\n' +
-               'symbol: Symbol\n' +
-               '    The result symbol.')
-    doc_str = doc_str % (desc, param_str)
+
+    key_vargs = py_str(key_var_num_args)
+    num_args = int(num_args)
+    doc_str = _build_doc(func_name,
+                         py_str(desc),
+                         [py_str(arg_names[i]) for i in range(num_args)],
+                         [py_str(arg_types[i]) for i in range(num_args)],
+                         [py_str(arg_descs[i]) for i in range(num_args)],
+                         key_vargs,
+                         py_str(return_type) if return_type != NULL else '')
+
     func_hint = func_name.lower()
 
     def creator(*args, **kwargs):

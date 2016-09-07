@@ -35,7 +35,7 @@ def config_cython():
                 language="c++"))
         return cythonize(ret)
     except:
-        print("Cython is not installed, will compile without cython module")
+        print("WARNING: Cython is not installed, will compile without cython module")
         return []
 
 setup(name='mxnet',
@@ -48,4 +48,4 @@ setup(name='mxnet',
       packages=['mxnet', 'mxnet.module'],
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet',
-      ext_modules = config_cython())
+      ext_modules=config_cython())
