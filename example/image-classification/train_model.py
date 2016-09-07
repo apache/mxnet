@@ -37,6 +37,10 @@ def fit(args, network, data_loader, batch_end_callback=None):
         model_args = {'arg_params' : tmp.arg_params,
                       'aux_params' : tmp.aux_params,
                       'begin_epoch' : args.load_epoch}
+        # TODO: check epoch_size for 'dist_sync'
+        epoch_size = args.num_examples / args.batch_size
+        model_args['begin_num_update'] = epoch_size * args.load_epoch
+
     # save model
     save_model_prefix = args.save_model_prefix
     if save_model_prefix is None:
