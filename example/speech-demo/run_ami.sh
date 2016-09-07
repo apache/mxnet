@@ -13,7 +13,7 @@ set -u           #Fail on an undefined variable
 . ./cmd.sh
 . ./path.sh
 
-cmd=hostd3.pl
+cmd=run.pl
 # root folder,
 expdir=exp_mxnet
 
@@ -22,20 +22,21 @@ expdir=exp_mxnet
 ##################################################
 
 # alignment folder
-ali_src=exp_cntk/sdm1/dnn_120fbank_ali
+ali_src=exp/sdm1/tri3a_ali
 
 # decoding graph
 graph_src=exp/sdm1/tri3a/graph_ami_fsh.o3g.kn.pr1-7/
 
 # features
-train_src=data/sdm1/train_fbank_gcmvn
-dev_src=data/sdm1/eval_fbank_gcmvn
+train_src=data/sdm1/train/fbank_gcmvn
+dev_src=data/sdm1/eval/fbank_gcmvn
 
 # config file
 config=ami_local_bptt.cfg
 
 # optional settings,
-njdec=128
+# check your kaldi output
+njdec=80
 scoring="--min-lmwt 5 --max-lmwt 19"
 
 # The device number to run the training
@@ -72,13 +73,13 @@ if [ $stage -le 0 ] ; then
     mkdir -p $dir/rawpost
 
     # for compressed ali
-    #$cmd JOB=1:$njdec $dir/log/gen_post.JOB.log \
-    #    ali-to-pdf $ali_src/final.mdl "ark:gunzip -c $ali_src/ali.JOB.gz |" \
-    #        ark:- | ali-to-post ark:- ark,scp:$dir/rawpost/post.JOB.ark,$dir/rawpost/post.JOB.scp || exit 1;
-    num=`cat $ali_src/num_jobs`
-    $cmd JOB=1:$num $dir/log/gen_post.JOB.log \
-        ali-to-pdf $ali_src/final.mdl ark:$ali_src/ali.JOB.ark \
+    $cmd JOB=1:$njdec $dir/log/gen_post.JOB.log \
+        ali-to-pdf $ali_src/final.mdl "ark:gunzip -c $ali_src/ali.JOB.gz |" \
             ark:- \| ali-to-post ark:- ark,scp:$dir/rawpost/post.JOB.ark,$dir/rawpost/post.JOB.scp || exit 1;
+    num=`cat $ali_src/num_jobs`
+    #$cmd JOB=1:$num $dir/log/gen_post.JOB.log \
+    #    ali-to-pdf $ali_src/final.mdl ark:$ali_src/ali.JOB.ark \
+    #        ark:- \| ali-to-post ark:- ark,scp:$dir/rawpost/post.JOB.ark,$dir/rawpost/post.JOB.scp || exit 1;
 
 
     for n in $(seq $njdec); do
