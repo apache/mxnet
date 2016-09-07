@@ -121,7 +121,8 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
+.PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen\
+	cython2 cython3 cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -268,6 +269,16 @@ doc: doxygen
 
 doxygen:
 	doxygen docs/Doxyfile
+
+# Cython build
+cython2:
+	cd python; python2 setup.py build_ext --inplace
+
+cython3:
+	cd python; python3 setup.py build_ext --inplace
+
+cyclean:
+	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
 
 # R related shortcuts
 rcpplint:

@@ -16,6 +16,7 @@ from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import check_call, ctypes2docstring
 from .base import mx_real_t
+from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
 from .ndarray import array
 from .ndarray import concatenate
@@ -656,7 +657,12 @@ def _make_io_iterator(handle):
             ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
     iter_name = py_str(name.value)
-    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
+
+    narg = int(num_args.value)
+    param_str = _build_param_doc(
+        [py_str(arg_names[i]) for i in range(narg)],
+        [py_str(arg_types[i]) for i in range(narg)],
+        [py_str(arg_descs[i]) for i in range(narg)])
 
     doc_str = ('%s\n\n' +
                '%s\n' +
