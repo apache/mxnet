@@ -3,6 +3,7 @@ using Compat
 # First try to detect and load existing libmxnet
 ################################################################################
 libmxnet_detected = false
+libmxnet_curr_ver = "master"
 
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
@@ -58,6 +59,7 @@ if !libmxnet_detected
         ChangeDirectory(_srcdir)
         `rm -rf mxnet`
         `git clone --recursive https://github.com/dmlc/mxnet`
+        `git checkout $libmxnet_curr_ver`
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
           ChangeDirectory("$_mxdir")
           `cp make/config.mk config.mk`
