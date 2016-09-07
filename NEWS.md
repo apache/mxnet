@@ -1,3 +1,7 @@
+# v0.1.0 (2016.09.07)
+
+* Track specific libmxnet version for each release.
+
 # v0.0.9 (2016.09.06)
 
 * Migrated documentation system to `Documenter.jl` (@vchuravy)
