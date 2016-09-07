@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
+# pylint: disable=invalid-name, protected-access, too-many-arguments,  global-statement
 """Symbolic configuration API."""
 from __future__ import absolute_import as _abs
 
@@ -94,6 +94,7 @@ class SymbolBase(object):
 _symbol_cls = SymbolBase
 
 def _set_symbol_class(cls):
+    """Set the symbolic class to be cls"""
     global _symbol_cls
     _symbol_cls = cls
 
