@@ -46,7 +46,7 @@ function get_cifar10()
           run(`unzip -u cifar10.zip`)
         catch
           try
-            run(pipe(`7z x cifar10.zip`,stdout=DevNull))
+            run(pipeline(`7z x cifar10.zip`, stdout=DevNull))
           catch
             error("Extraction Failed:No extraction program found in path")
           end
