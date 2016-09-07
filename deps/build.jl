@@ -23,7 +23,7 @@ if !libmxnet_detected
   ################################################################################
   # If not found, try to build automatically using BinDeps
   ################################################################################
-  if is_windows()
+  if @compat(is_windows())
     info("Please follow the libmxnet documentation on how to build manually")
     info("or to install pre-build packages:")
     info("http://mxnet.readthedocs.io/en/latest/how_to/build.html#building-on-windows")
