@@ -45,7 +45,7 @@ if !libmxnet_detected
 
   if blas_vendor == :unknown
     error("Julia is build with an unkown blas library ($blas_path).\n Automatic building of libmxnet is not yet supported.")
-  elseif blas_vendor != :openblas64 || blas_vendor != :openblas
+  elseif blas_vendor != :openblas64 && blas_vendor != :openblas
     warn("Unsure if we can build against $blas_vendor.")
   end
 
