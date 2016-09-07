@@ -87,7 +87,7 @@ You can also disable only one rule, by specifying its rule id, as specified in:
     </parameters>
   </check>
 
-  <check level="error" class="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" enabled="true"></check>
+  <check customId="havetype" level="error" class="org.scalastyle.scalariform.PublicMethodsHaveTypeChecker" enabled="true"></check>
 
   <check level="error" class="org.scalastyle.file.NewLineAtEofChecker" enabled="true"></check>
 

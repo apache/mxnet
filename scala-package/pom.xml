@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-parent_2.10</artifactId>
+  <artifactId>mxnet-parent_2.11</artifactId>
   <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
@@ -48,12 +48,15 @@
   </developers>
 
   <properties>
-    <scala.version>2.10.4</scala.version>
-    <scala.binary.version>2.10</scala.binary.version>
+    <scala.version>2.11.8</scala.version>
+    <scala.binary.version>2.11</scala.binary.version>
   </properties>
 
   <packaging>pom</packaging>
   <modules>
+    <module>init</module>
+    <module>init-native</module>
+    <module>macros</module>
     <module>core</module>
     <module>native</module>
     <module>examples</module>
@@ -303,6 +306,16 @@
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
           <version>3.2.2</version>
+          <configuration>
+            <recompileMode>incremental</recompileMode>
+            <compilerPlugins>
+              <compilerPlugin>
+                <groupId>org.scalamacros</groupId>
+                <artifactId>paradise_${scala.version}</artifactId>
+                <version>2.1.0</version>
+              </compilerPlugin>
+            </compilerPlugins>
+          </configuration>
           <executions>
             <execution>
               <id>compile</id>

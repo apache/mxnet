@@ -10,28 +10,28 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-scala-native-parent</artifactId>
+  <artifactId>mxnet-scala-init-native-parent</artifactId>
   <version>0.1.2-SNAPSHOT</version>
-  <name>MXNet Scala Package - Native Parent</name>
+  <name>MXNet Scala Package - Initializer Native Parent</name>
   <packaging>pom</packaging>
 
   <profiles>
     <profile>
       <id>osx-x86_64-cpu</id>
       <modules>
-        <module>osx-x86_64-cpu</module>
+        <module>osx-x86_64</module>
       </modules>
     </profile>
     <profile>
       <id>linux-x86_64-cpu</id>
       <modules>
-        <module>linux-x86_64-cpu</module>
+        <module>linux-x86_64</module>
       </modules>
     </profile>
     <profile>
       <id>linux-x86_64-gpu</id>
       <modules>
-        <module>linux-x86_64-gpu</module>
+        <module>linux-x86_64</module>
       </modules>
     </profile>
   </profiles>
