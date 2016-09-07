@@ -629,11 +629,19 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     else
       name = ""
     end
-
-    if $func_name == :transpose
-      kwargs = Any[key != :axes ? (key, arg) : (key, reverse(map(i->length(arg)-i, arg))) for (key, arg) in kwargs]
+    
+    # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
+    # See https://github.com/dmlc/MXNet.jl/issues/55
+    if $func_name_s == "dot"
+      args = reverse(args)
     end
 
+    # XXX: hacky way of solving the semantic difference of the axes parameter in Julia
+    # and in libmxnet.
+    # See https://github.com/dmlc/MXNet.jl/pull/123
+    if $func_name_s == "transpose"
+      kwargs = Any[key != :axes ? (key, arg) : (key, reverse(map(i->length(arg)-i, arg))) for (key, arg) in kwargs]
+    end
 
     param_keys = String[]
     param_vals = String[]

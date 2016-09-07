@@ -1036,6 +1036,9 @@ function _get_function_expressions(handle :: MX_handle, name)
     _use_vars.args[2:end] = flipdim(_use_vars.args[2:end], 1)
   end
 
+  # XXX: hacky way of solving the semantic difference of the axes parameter in Julia
+  # and in libmxnet.
+  # See https://github.com/dmlc/MXNet.jl/pull/123
   if name == :transpose
     transform = quote
       kwargs = Any[key != :axes ? (key, arg) : (key, reverse(map(i->length(arg)-i, arg))) for (key, arg) in kwargs]

@@ -2,7 +2,7 @@ module TestSymbolicNode
 using MXNet
 using Base.Test
 
-using ..Main: mlp2
+using ..Main: mlp2, reldiff
 
 ################################################################################
 # Test Implementations
@@ -112,6 +112,20 @@ function test_functions()
   typeof(mx.sum(data)) == mx.SymbolicNode
 end
 
+function test_dot()
+  info("SymbolicNode::dot")
+  x = mx.Variable(:x)
+  y = mx.Variable(:y)
+  z = mx.dot(x, y)
+  z_exec = mx.bind(z, context=mx.cpu(), 
+                   args=Dict(:x=>mx.ones((100, 2)), :y=>mx.ones((2, 200))))
+  mx.forward(z_exec)
+
+  ret = copy(z_exec.outputs[1])
+  @test size(ret) == (100, 200)
+  @test reldiff(ret, 2*ones(100, 200)) < 1e-6
+end
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -123,5 +137,6 @@ test_infer_shape_error()
 test_saveload()
 test_attrs()
 test_functions()
+test_dot()
 
 end
