@@ -481,6 +481,45 @@ class SimpleOpRegistry {
   __make_ ## SimpleOpRegEntry ## _ ## Name ## __ ## DEV ##__ =          \
       ::mxnet::op::SimpleOpRegistry::Get()->__REGISTER_OR_FIND__(#Name)
 
+//-----------------------------------------------
+// Utility functions for building NNVM operators
+//-----------------------------------------------
+/*! \brief Set shape of all inputs/outputs to shape of the first input */
+inline bool UniformShape(const nnvm::NodeAttrs& attrs,
+                          std::vector<TShape> *ishape,
+                          std::vector<TShape> *oshape) {
+  if (ishape->size() == 0 || (*ishape)[0].ndim() == 0) return false;
+  for (TShape& pshape : *oshape) {
+    pshape = (*ishape)[0];
+  }
+  for (TShape& pshape : *ishape) {
+    pshape = (*ishape)[0];
+  }
+  return true;
+}
+
+/*! \brief Set dtype of all inputs/outputs to dtype of the first input */
+inline bool UniformType(const nnvm::NodeAttrs& attrs,
+                        std::vector<int> *itype,
+                        std::vector<int> *otype) {
+  if (itype->size() == 0 || (*itype)[0] == -1) return false;
+  for (int& ptype : *otype) {
+    ptype = (*itype)[0];
+  }
+  for (int& ptype : *itype) {
+    ptype = (*itype)[0];
+  }
+  return true;
+}
+
+/*! \brief Parse keyword arguments as PType arguments and save to parsed */
+template<typename PType>
+inline void ParamParser(nnvm::NodeAttrs* attrs) {
+  PType param;
+  param.Init(attrs->dict);
+  attrs->parsed = std::move(param);
+}
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_UTIL_H_
