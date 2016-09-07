@@ -74,6 +74,7 @@ INFO:root:iter 5, 0.290799 sec, 1.552567 GB/sec per gpu, error 0.000000
 - Finally we change to VGG and also run the `sgd` optimizor
 
 ```bash
+~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1,2,3,4,5,6,7 --network vgg --optimizer sgd
 INFO:root:Namespace(batch_size=128, data_shape='128,3,224,224', depth=152, disp_batches=1, gpus='0,1,2,3,4,5,6,7', kv_store='device', network='vgg', num_batches=5, num_classes=1000, optimizer='sgd', test_results=1)
 INFO:root:num of arrays = 22, total size = 531.453344 MB
 INFO:root:iter 1, 0.525208 sec, 1.770810 GB/sec per gpu, error 0.000000
