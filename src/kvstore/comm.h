@@ -3,6 +3,10 @@
  */
 #ifndef MXNET_KVSTORE_COMM_H_
 #define MXNET_KVSTORE_COMM_H_
+#include <string>
+#include <algorithm>
+#include <utility>
+#include <limits>
 #include <vector>
 #include "mxnet/ndarray.h"
 namespace mxnet {

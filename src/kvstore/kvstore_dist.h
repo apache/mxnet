@@ -27,7 +27,7 @@ namespace kvstore {
  */
 class KVStoreDist : public KVStoreLocal {
  public:
-  KVStoreDist(bool use_device_comm)
+  explicit KVStoreDist(bool use_device_comm)
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);

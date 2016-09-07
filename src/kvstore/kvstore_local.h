@@ -24,7 +24,7 @@ class KVStoreLocal : public KVStore {
   /*
    * \param use_device_comm
    */
-  KVStoreLocal(bool use_device_comm) : KVStore() {
+  explicit KVStoreLocal(bool use_device_comm) : KVStore() {
     if (use_device_comm) {
       comm_ = new CommDevice();
     } else {
