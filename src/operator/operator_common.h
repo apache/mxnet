@@ -15,6 +15,7 @@
 #include <istream>
 #include <ostream>
 #include <string>
+#include <vector>
 
 namespace mxnet {
 namespace op {
@@ -127,6 +128,23 @@ struct InferTypeError {
     return nullptr;                                                  \
   }
 #endif
+
+// describe op registration point
+// TODO(eric): move to dmlc-core
+#define STRINGIZE_DETAIL(x) #x
+#define STRINGIZE(x) STRINGIZE_DETAIL(x)
+#define MXNET_DESCRIBE(x) describe(x "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
+
+// quick helper to make node
+inline nnvm::NodeEntry MakeNode(const char* op_name,
+                                std::string node_name,
+                                std::vector<nnvm::NodeEntry> inputs) {
+  nnvm::NodePtr p = nnvm::Node::Create();
+  p->attrs.op = nnvm::Op::Get(op_name);
+  p->attrs.name = std::move(node_name);
+  p->inputs = std::move(inputs);
+  return nnvm::NodeEntry{p, 0, 0};
+}
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_
