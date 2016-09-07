@@ -756,7 +756,7 @@ class FeedForward(BASE_ESTIMATOR):
         # init optmizer
         if isinstance(self.optimizer, str):
             batch_size = data.batch_size
-            if kvstore and kvstore.type == 'dist_sync':
+            if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(self.optimizer,
                                    rescale_grad=(1.0/batch_size),
