@@ -22,13 +22,13 @@ object ExampleMultiTask {
 
   def buildNetwork(): Symbol = {
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected("fc1")(Map("data" -> data, "num_hidden" -> 128))
-    val act1 = Symbol.Activation("relu1")(Map("data" -> fc1, "act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected("fc2")(Map("data" -> act1, "num_hidden" -> 64))
-    val act2 = Symbol.Activation("relu2")(Map("data" -> fc2, "act_type" -> "relu"))
-    val fc3 = Symbol.FullyConnected("fc3")(Map("data" -> act2, "num_hidden" -> 10))
-    val sm1 = Symbol.SoftmaxOutput("softmax1")(Map("data" -> fc3))
-    val sm2 = Symbol.SoftmaxOutput("softmax2")(Map("data" -> fc3))
+    val fc1 = Symbol.FullyConnected("fc1")()(Map("data" -> data, "num_hidden" -> 128))
+    val act1 = Symbol.Activation("relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
+    val fc2 = Symbol.FullyConnected("fc2")()(Map("data" -> act1, "num_hidden" -> 64))
+    val act2 = Symbol.Activation("relu2")()(Map("data" -> fc2, "act_type" -> "relu"))
+    val fc3 = Symbol.FullyConnected("fc3")()(Map("data" -> act2, "num_hidden" -> 10))
+    val sm1 = Symbol.SoftmaxOutput("softmax1")()(Map("data" -> fc3))
+    val sm2 = Symbol.SoftmaxOutput("softmax2")()(Map("data" -> fc3))
 
     val softmax = Symbol.Group(sm1, sm2)
 

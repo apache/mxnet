@@ -16,26 +16,27 @@ object Lstm {
   def lstm(numHidden: Int, inData: Symbol, prevState: LSTMState,
            param: LSTMParam, seqIdx: Int, layerIdx: Int, dropout: Float = 0f): LSTMState = {
     val inDataa = {
-      if (dropout > 0f) Symbol.Dropout()(Map("data" -> inData, "p" -> dropout))
+      if (dropout > 0f) Symbol.Dropout()()(Map("data" -> inData, "p" -> dropout))
       else inData
     }
-    val i2h = Symbol.FullyConnected(s"t${seqIdx}_l${layerIdx}_i2h")(Map("data" -> inDataa,
+    val i2h = Symbol.FullyConnected(s"t${seqIdx}_l${layerIdx}_i2h")()(Map("data" -> inDataa,
                                                        "weight" -> param.i2hWeight,
                                                        "bias" -> param.i2hBias,
                                                        "num_hidden" -> numHidden * 4))
-    val h2h = Symbol.FullyConnected(s"t${seqIdx}_l${layerIdx}_h2h")(Map("data" -> prevState.h,
+    val h2h = Symbol.FullyConnected(s"t${seqIdx}_l${layerIdx}_h2h")()(Map("data" -> prevState.h,
                                                        "weight" -> param.h2hWeight,
                                                        "bias" -> param.h2hBias,
                                                        "num_hidden" -> numHidden * 4))
     val gates = i2h + h2h
-    val sliceGates = Symbol.SliceChannel(s"t${seqIdx}_l${layerIdx}_slice")(Array(gates),
-        Map("num_outputs" -> 4))
-    val ingate = Symbol.Activation()(Map("data" -> sliceGates.get(0), "act_type" -> "sigmoid"))
-    val inTransform = Symbol.Activation()(Map("data" -> sliceGates.get(1), "act_type" -> "tanh"))
-    val forgetGate = Symbol.Activation()(Map("data" -> sliceGates.get(2), "act_type" -> "sigmoid"))
-    val outGate = Symbol.Activation()(Map("data" -> sliceGates.get(3), "act_type" -> "sigmoid"))
+    val sliceGates = Symbol.SliceChannel(s"t${seqIdx}_l${layerIdx}_slice")(
+      gates)(Map("num_outputs" -> 4))
+    val ingate = Symbol.Activation()()(Map("data" -> sliceGates.get(0), "act_type" -> "sigmoid"))
+    val inTransform = Symbol.Activation()()(Map("data" -> sliceGates.get(1), "act_type" -> "tanh"))
+    val forgetGate = Symbol.Activation()()(
+      Map("data" -> sliceGates.get(2), "act_type" -> "sigmoid"))
+    val outGate = Symbol.Activation()()(Map("data" -> sliceGates.get(3), "act_type" -> "sigmoid"))
     val nextC = (forgetGate * prevState.c) + (ingate * inTransform)
-    val nextH = outGate * Symbol.Activation()(Map("data" -> nextC, "act_type" -> "tanh"))
+    val nextH = outGate * Symbol.Activation()()(Map("data" -> nextC, "act_type" -> "tanh"))
     LSTMState(c = nextC, h = nextH)
   }
 
@@ -65,9 +66,9 @@ object Lstm {
     // embeding layer
     val data = Symbol.Variable("data")
     var label = Symbol.Variable("softmax_label")
-    val embed = Symbol.Embedding("embed")(Map("data" -> data, "input_dim" -> inputSize,
+    val embed = Symbol.Embedding("embed")()(Map("data" -> data, "input_dim" -> inputSize,
                                            "weight" -> embedWeight, "output_dim" -> numEmbed))
-    val wordvec = Symbol.SliceChannel()(Array(embed),
+    val wordvec = Symbol.SliceChannel()(embed)(
       Map("num_outputs" -> seqLen, "squeeze_axis" -> true))
 
     var hiddenAll = Array[Symbol]()
@@ -86,15 +87,15 @@ object Lstm {
         lastStates(i) = nextState
       }
       // decoder
-      if (dropout > 0f) hidden = Symbol.Dropout()(Map("data" -> hidden, "p" -> dropout))
+      if (dropout > 0f) hidden = Symbol.Dropout()()(Map("data" -> hidden, "p" -> dropout))
       hiddenAll = hiddenAll :+ hidden
     }
-    val hiddenConcat = Symbol.Concat()(hiddenAll, Map("dim" -> 0))
-    val pred = Symbol.FullyConnected("pred")(Map("data" -> hiddenConcat, "num_hidden" -> numLabel,
-                                            "weight" -> clsWeight, "bias" -> clsBias))
-    label = Symbol.transpose(label)
-    label = Symbol.Reshape()(Map("data" -> label, "target_shape" -> "(0,)"))
-    val sm = Symbol.SoftmaxOutput("softmax")(Map("data" -> pred, "label" -> label))
+    val hiddenConcat = Symbol.Concat()(hiddenAll: _*)(Map("dim" -> 0))
+    val pred = Symbol.FullyConnected("pred")()(Map("data" -> hiddenConcat, "num_hidden" -> numLabel,
+                                                   "weight" -> clsWeight, "bias" -> clsBias))
+    label = Symbol.transpose()(label)()
+    label = Symbol.Reshape()()(Map("data" -> label, "target_shape" -> "(0,)"))
+    val sm = Symbol.SoftmaxOutput("softmax")()(Map("data" -> pred, "label" -> label))
     sm
   }
 
@@ -119,8 +120,8 @@ object Lstm {
 
     val data = Symbol.Variable("data")
 
-    var hidden = Symbol.Embedding("embed")(Map("data" -> data, "input_dim" -> inputSize,
-                                           "weight" -> embedWeight, "output_dim" -> numEmbed))
+    var hidden = Symbol.Embedding("embed")()(Map("data" -> data, "input_dim" -> inputSize,
+                                             "weight" -> embedWeight, "output_dim" -> numEmbed))
 
     var dpRatio = 0f
     // stack LSTM
@@ -134,10 +135,10 @@ object Lstm {
       lastStates(i) = nextState
     }
     // decoder
-    if (dropout > 0f) hidden = Symbol.Dropout()(Map("data" -> hidden, "p" -> dropout))
-    val fc = Symbol.FullyConnected("pred")(Map("data" -> hidden, "num_hidden" -> numLabel,
+    if (dropout > 0f) hidden = Symbol.Dropout()()(Map("data" -> hidden, "p" -> dropout))
+    val fc = Symbol.FullyConnected("pred")()(Map("data" -> hidden, "num_hidden" -> numLabel,
                                       "weight" -> clsWeight, "bias" -> clsBias))
-    val sm = Symbol.SoftmaxOutput("softmax")(Map("data" -> fc))
+    val sm = Symbol.SoftmaxOutput("softmax")()(Map("data" -> fc))
     var output = Array(sm)
     for (state <- lastStates) {
       output = output :+ state.c

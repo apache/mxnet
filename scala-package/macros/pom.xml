@@ -10,28 +10,30 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-core_2.11</artifactId>
+  <artifactId>mxnet-macros_2.11</artifactId>
   <version>0.1.2-SNAPSHOT</version>
-  <name>MXNet Scala Package - Core</name>
+  <name>MXNet Scala Package - Macros</name>
 
   <profiles>
     <profile>
       <id>osx-x86_64-cpu</id>
       <properties>
-        <platform>osx-x86_64-cpu</platform>
+        <platform>osx-x86_64</platform>
+        <libtype>jnilib</libtype>
       </properties>
     </profile>
     <profile>
       <id>linux-x86_64-cpu</id>
       <properties>
-        <platform>linux-x86_64-cpu</platform>
+        <platform>linux-x86_64</platform>
+        <libtype>so</libtype>
       </properties>
     </profile>
     <profile>
       <id>linux-x86_64-gpu</id>
       <properties>
-        <platform>linux-x86_64-gpu</platform>
+        <platform>linux-x86_64</platform>
+        <libtype>so</libtype>
       </properties>
     </profile>
   </profiles>
@@ -58,16 +60,6 @@
         <artifactId>scala-maven-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-        <configuration>
-          <argLine>
-            -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
-            -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
-          </argLine> 
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.scalastyle</groupId>
         <artifactId>scalastyle-maven-plugin</artifactId>
       </plugin>
@@ -82,13 +74,18 @@
     </dependency>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
-      <artifactId>mxnet-macros_${scala.binary.version}</artifactId>
+      <artifactId>libmxnet-init-scala-${platform}</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
+      <type>${libtype}</type>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-reflect</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
@@ -105,10 +102,6 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_${scala.binary.version}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.scalacheck</groupId>

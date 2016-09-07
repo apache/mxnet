@@ -92,10 +92,10 @@ object NeuralStyle {
     var gradScale = List[Int]()
     for (i <- 0 until style.listOutputs().length) {
       val shape = outputShape(i)
-      val x = Symbol.Reshape()(Map("data" -> style.get(i),
+      val x = Symbol.Reshape()()(Map("data" -> style.get(i),
           "target_shape" -> Shape(shape(1), shape(2) * shape(3))))
       // use fully connected to quickly do dot(x, x^T)
-      val gram = Symbol.FullyConnected()(Map("data" -> x, "weight" -> x,
+      val gram = Symbol.FullyConnected()()(Map("data" -> x, "weight" -> x,
           "no_bias" -> true, "num_hidden" -> shape(1)))
       gramList = gramList :+ gram
       gradScale = gradScale :+ (shape(1) * shape(2) * shape(3) * shape(1))
@@ -107,10 +107,10 @@ object NeuralStyle {
     var gramLoss = List[Symbol]()
     for (i <- 0 until gram.listOutputs().length) {
       val gvar = Symbol.Variable(s"target_gram_$i")
-      gramLoss = gramLoss :+ Symbol.sum(Symbol.square(gvar - gram.get(i)))
+      gramLoss = gramLoss :+ Symbol.sum()(Symbol.square()(gvar - gram.get(i))())()
     }
     val cvar = Symbol.Variable("target_content")
-    val contentLoss = Symbol.sum(Symbol.square(cvar - content))
+    val contentLoss = Symbol.sum()(Symbol.square()(cvar - content)())()
     (Symbol.Group(gramLoss: _*), contentLoss)
   }
 
@@ -121,12 +121,12 @@ object NeuralStyle {
     val nChannel = img.shape(1)
     val sImg = Symbol.Variable("img")
     val sKernel = Symbol.Variable("kernel")
-    val channels = Symbol.SliceChannel()(Array(sImg), Map("num_outputs" -> nChannel))
+    val channels = Symbol.SliceChannel()(sImg)(Map("num_outputs" -> nChannel))
     val out = Symbol.Concat()((0 until nChannel).map { i =>
-      Symbol.Convolution()(Map("data" -> channels.get(i), "weight" -> sKernel,
+      Symbol.Convolution()()(Map("data" -> channels.get(i), "weight" -> sKernel,
                     "num_filter" -> 1, "kernel" -> "(3,3)", "pad" -> "(1,1)",
                     "no_bias" -> true, "stride" -> "(1,1)"))
-    }.toArray) * tvWeight
+    }: _*)() * tvWeight
     val kernel = {
       val tmp = NDArray.empty(Shape(1, 1, 3, 3), ctx)
       tmp.set(Array[Float](0, -1, 0, -1, 4, -1, 0, -1, 0))
