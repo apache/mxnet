@@ -30,7 +30,7 @@ if !libmxnet_detected
     error("Automatic building libxmnet on Windows is currently not supported yet.")
   end
 
-  openblas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
+  blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
 
   if VERSION >= v"0.5.0-dev+4338"
     blas_vendor = Base.BLAS.vendor()
@@ -42,6 +42,14 @@ if !libmxnet_detected
   if blas_vendor == :openblas64
     ilp64 = "-DINTERFACE64"
   end
+
+  if blas_vendor == :unknown
+    error("Julia is build with an unkown blas library ($blas_path).\n Automatic building of libmxnet is not yet supported.")
+  elseif blas_vendor != :openblas64 || blas_vendor != :openblas
+    warn("Unsure if we can build against $blas_vendor.")
+  end
+
+  blas_name = blas_vendor == :openblas64 ? "openblas" : string(blas_vendor)
 
   #--------------------------------------------------------------------------------
   # Build libmxnet
@@ -62,6 +70,7 @@ if !libmxnet_detected
         @build_steps begin
           ChangeDirectory(joinpath(_srcdir, "mxnet"))
           `git checkout $libmxnet_curr_ver`
+          `git submodule update`
         end
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
           ChangeDirectory(_mxdir)
@@ -72,7 +81,7 @@ if !libmxnet_detected
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
           `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
           `cp ../../cblas.h include/cblas.h`
-          `make USE_BLAS=openblas MSHADOW_LDFLAGS="$openblas_path"`
+          `make USE_BLAS=$blas_name MSHADOW_LDFLAGS="$blas_path"`
           `cp lib/libmxnet.so $_libdir`
         end)
       end
