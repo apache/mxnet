@@ -3,7 +3,7 @@ using Compat
 # First try to detect and load existing libmxnet
 ################################################################################
 libmxnet_detected = false
-libmxnet_curr_ver = "master"
+libmxnet_curr_ver = "7a90e598623314b5f7adc1184e4012f6c6160ff6"
 
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
