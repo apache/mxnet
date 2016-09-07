@@ -63,8 +63,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
         raise TypeError('kvstore must be KVStore, str or None')
 
     # detect whether or not update weight on kvstore
-    # make it simple, always be true
-    update_on_kvstore = True
+    # make it simple, always be true for non-empty kvstore
+    update_on_kvstore = False if kv is None else True
 
     return (kv, update_on_kvstore)
 

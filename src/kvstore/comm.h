@@ -58,6 +58,11 @@ class CommCPU : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
+    // avoid extra copy for single device, but it may bring problems for
+    // abnormal usage of kvstore
+    if (src.size() == 1) {
+      return src[0];
+    }
     std::vector<Engine::VarHandle> const_vars(src.size() - 1);
     std::vector<NDArray> reduce(src.size());
     auto& buf = merge_buf_[key];
@@ -192,6 +197,12 @@ class CommDevice : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
+    // avoid extra copy for single device, but it may bring problems for
+    // abnormal usage of kvstore
+    if (src.size() == 1) {
+      return src[0];
+    }
+
     if (!inited_) {
       std::vector<Context> devs;
       for (const auto& a : src) {
