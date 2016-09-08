@@ -11,7 +11,7 @@ import functools
 import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
-from .base import c_array, mx_float, py_str, c_str, mx_real_t
+from .base import c_array, py_str, c_str, mx_real_t
 from .base import mx_uint, NDArrayHandle, FunctionHandle
 from .base import ctypes2buffer
 from .base import check_call, build_param_doc as _build_param_doc
@@ -1213,20 +1213,21 @@ def _make_ndarray_function(handle):
             num_output = ctypes.c_int(0)
 
         check_call(_LIB.MXImperativeInvoke(
-                handle,
-                ctypes.c_int(len(ndargs)),
-                c_array(NDArrayHandle, [i.handle for i in ndargs]),
-                ctypes.byref(num_output),
-                ctypes.byref(output_vars),
-                ctypes.c_int(len(kwargs)),
-                c_array(ctypes.c_char_p, [key.encode('ascii') for key in kwargs.keys()]),
-                c_array(ctypes.c_char_p, [str(i).encode('ascii') for i in kwargs.values()])))
+            handle,
+            ctypes.c_int(len(ndargs)),
+            c_array(NDArrayHandle, [i.handle for i in ndargs]),
+            ctypes.byref(num_output),
+            ctypes.byref(output_vars),
+            ctypes.c_int(len(kwargs)),
+            c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]),
+            c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
         if original_output is not None:
             return original_output
         if num_output.value == 1:
             return NDArray(ctypes.cast(output_vars[0], NDArrayHandle))
         else:
-            return [NDArray(ctypes.cast(output_vars[i], NDArrayHandle)) for i in range(num_output.value)]
+            return [NDArray(ctypes.cast(output_vars[i], NDArrayHandle))
+                    for i in range(num_output.value)]
     # End of function declaration
     generic_ndarray_function.__name__ = func_name
     generic_ndarray_function.__doc__ = doc_str
