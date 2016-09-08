@@ -44,7 +44,7 @@ if !libmxnet_detected
   end
 
   if blas_vendor == :unknown
-    info("Julia is build with an unkown blas library ($blas_path).")
+    info("Julia is built with an unkown blas library ($blas_path).")
     info("Attempting build without reusing the blas library")
     USE_JULIA_BLAS = false
   elseif !(blas_vendor in (:openblas, :openblas64))
@@ -100,7 +100,7 @@ if !libmxnet_detected
           else
             `make -j$(nprocs())`
           end
-          `rm $_libdir/libmxnet.so`
+          `rm -f $_libdir/libmxnet.so`
         end
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
           `cp $_mxdir/lib/libmxnet.so $_libdir/`
