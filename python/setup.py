@@ -2,6 +2,7 @@
 """Setup mxnet package."""
 from __future__ import absolute_import
 import os, sys
+# need to use distutils.core for correct placement of cython dll
 from distutils.core import setup
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
@@ -15,6 +16,7 @@ LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
 
 def config_cython():
+    """Try to configure cython and retyurn cython configuration"""
     try:
         from Cython.Build import cythonize
         from distutils.extension import Extension
@@ -34,7 +36,7 @@ def config_cython():
                 include_dirs=["../include/", "../nnvm/include"],
                 language="c++"))
         return cythonize(ret)
-    except:
+    except ImportError:
         print("WARNING: Cython is not installed, will compile without cython module")
         return []
 
