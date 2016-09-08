@@ -276,6 +276,14 @@ class NDArray(object):
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    def _copy_slice_to(self, axis, start, stop, nd_to):
+        axis = mx_uint(axis)
+        start = mx_uint(start)
+        stop = mx_uint(stop)
+        check_call(_LIB.MXNDArrayCopySliceTo(
+            self.handle, axis, start, stop, nd_to.handle))
+
+
     def _at(self, idx):
         """Return a sub NDArray that shares memory with current one.
 

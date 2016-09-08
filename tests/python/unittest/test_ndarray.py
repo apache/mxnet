@@ -186,6 +186,20 @@ def test_ndarray_slice():
     A[3:8] = A2[3:8]
     assert same(A[3:8].asnumpy(), A2[3:8])
 
+
+def test_ndarray_slice_along_axis():
+    arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
+    sub_arr = mx.nd.zeros((3, 2, 2, 3))
+    arr._copy_slice_to(1, 1, 3, sub_arr)
+
+    # test we sliced correctly
+    assert same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+
+    # test that slice is copy, instead of shared memory
+    sub_arr[:] = 0
+    assert not same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+
+
 def test_clip():
     shape = (10,)
     A = mx.random.uniform(-10, 10, shape)
@@ -261,6 +275,7 @@ def test_broadcast():
     test_broadcast_to()
 
 if __name__ == '__main__':
+    test_ndarray_slice_along_axis()
     test_ndarray_slice()
     test_ndarray_pickle()
     test_ndarray_saveload()

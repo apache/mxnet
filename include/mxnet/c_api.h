@@ -310,7 +310,7 @@ MXNET_DLL int MXNDArrayWaitAll();
 MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
 /*!
  * \brief Slice the NDArray along axis 0.
- * \param handle the handle to the narraya
+ * \param handle the handle to the NDArray
  * \param slice_begin The beginning index of slice
  * \param slice_end The ending index of slice
  * \param out The NDArrayHandle of sliced NDArray
@@ -321,10 +321,31 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_end,
                              NDArrayHandle *out);
 /*!
+ * \brief Slice the NDArray along any axis.
+ * \param handle the handle to the ndarray
+ * \param axis the axis along which to do slicing
+ * \param slice_begin The beginning index of slice
+ * \param slice_end The ending index of slice
+ * \param out The NDArrayHandle of the output NDArray
+ * \return 0 when success, -1 when failure happens
+ *
+ * Unlike the MXNDArraySlice method in which the sliced
+ * array shares memory with the original array. This
+ * method always copies the data.
+ *
+ * Also this method expects that out is pre-allocated with
+ * appropriate shape.
+ */
+MXNET_DLL int MXNDArrayCopySliceTo(NDArrayHandle handle,
+                                   mx_uint axis,
+                                   mx_uint slice_begin,
+                                   mx_uint slice_end,
+                                   NDArrayHandle out);
+/*!
  * \brief Index the NDArray along axis 0.
- * \param handle the handle to the narraya
+ * \param handle the handle to the NDArray
  * \param idx the index
- * \param out The NDArrayHandle of sliced NDArray
+ * \param out The NDArrayHandle of output NDArray
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
