@@ -88,6 +88,10 @@ class SymbolBase(object):
         check_call(_LIB.NNSymbolSetAttrs(
             self.handle, num_args, keys, vals))
 
+    def _set_handle(self, handle):
+        """Set handle."""
+        self.handle = handle
+
     def __reduce__(self):
         return (_symbol_cls, (None,), self.__getstate__())
 
@@ -121,14 +125,14 @@ def _make_atomic_symbol_function(handle):
     narg = int(num_args.value)
     func_name = py_str(name.value)
     key_var_num_args = py_str(key_var_num_args.value)
-
+    ret_type = py_str(ret_type.value) if ret_type.value is not None else ''
     doc_str = _build_doc(func_name,
                          py_str(desc.value),
                          [py_str(arg_names[i]) for i in range(narg)],
                          [py_str(arg_types[i]) for i in range(narg)],
                          [py_str(arg_descs[i]) for i in range(narg)],
                          key_var_num_args,
-                         py_str(ret_type.value))
+                         ret_type)
 
     def creator(*args, **kwargs):
         """Activation Operator of Neural Net.
