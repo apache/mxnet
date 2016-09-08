@@ -25,7 +25,7 @@ class KVStoreServer(object):
         """return the server controller"""
         def server_controller(cmd_id, cmd_body, _):
             """server controler"""
-            if self.init_logginig == False:
+            if not self.init_logginig:
                 # the reason put the codes here is because we cannot get
                 # kvstore.rank earlier
                 head = '%(asctime)-15s Server[' + str(

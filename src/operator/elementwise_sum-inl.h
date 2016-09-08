@@ -52,34 +52,34 @@ class ElementWiseSumOp : public Operator {
     if (req[elemsum::kOut] == kNullOp) return;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> out = out_data[elemsum::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> out = out_data[elemsum::kOut].FlatTo1D<xpu, DType>(s);
     switch (size_) {
       case 2: {
-        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_0 = in_data[elemsum::kData0].FlatTo1D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_1 = in_data[elemsum::kData1].FlatTo1D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], in_0 + in_1);
         break;
       }
       case 3: {
-        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> in_2 = in_data[elemsum::kData2].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_0 = in_data[elemsum::kData0].FlatTo1D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_1 = in_data[elemsum::kData1].FlatTo1D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_2 = in_data[elemsum::kData2].FlatTo1D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], in_0 + in_1 + in_2);
         break;
       }
       case 4: {
-        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> in_1 = in_data[elemsum::kData1].FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> in_2 = in_data[elemsum::kData2].FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> in_3 = in_data[elemsum::kData3].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_0 = in_data[elemsum::kData0].FlatTo1D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_1 = in_data[elemsum::kData1].FlatTo1D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_2 = in_data[elemsum::kData2].FlatTo1D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_3 = in_data[elemsum::kData3].FlatTo1D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], in_0 + in_1 + in_2 + in_3);
         break;
       }
       default: {
-        Tensor<xpu, 2, DType> in_0 = in_data[elemsum::kData0].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 1, DType> in_0 = in_data[elemsum::kData0].FlatTo1D<xpu, DType>(s);
         Assign(out, req[elemsum::kOut], F<mshadow_op::identity>(in_0));
         for (int i = 1; i < size_; ++i) {
-          out += in_data[i].FlatTo2D<xpu, DType>(s);
+          out += in_data[i].FlatTo1D<xpu, DType>(s);
         }
         break;
       }
@@ -97,10 +97,10 @@ class ElementWiseSumOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_grad.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> ograd = out_grad[elemsum::kOut].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = out_grad[elemsum::kOut].FlatTo1D<xpu, DType>(s);
     for (int i = 0; i < size_; ++i) {
       if (req[i] == kNullOp || req[i] == kWriteInplace) continue;
-      Tensor<xpu, 2, DType> igrad = in_grad[i].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> igrad = in_grad[i].FlatTo1D<xpu, DType>(s);
       Assign(igrad, req[i], F<mshadow_op::identity>(ograd));
     }
   }

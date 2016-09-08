@@ -3,12 +3,12 @@
 """Initialization helper for mxnet"""
 from __future__ import absolute_import
 
+import re
+import logging
 import numpy as np
 from .base import string_types
 from .ndarray import NDArray, load
 from . import random
-import logging
-import re
 
 class Initializer(object):
     """Base class for Initializer."""
