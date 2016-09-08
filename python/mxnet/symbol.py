@@ -1,5 +1,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
+# pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of mxnet."""
 from __future__ import absolute_import as _abs
 
@@ -24,18 +25,19 @@ from .attribute import AttrScope
 # When possible, use cython to speedup part of computation.
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .ctypes.symbol import SymbolBase, _set_symbol_class
+        from ._ctypes.symbol import SymbolBase, _set_symbol_class
     elif _sys.version_info >= (3, 0):
         from ._cy3.symbol import SymbolBase, _set_symbol_class, _init_symbol_module
     else:
         from ._cy2.symbol import SymbolBase, _set_symbol_class, _init_symbol_module
-except:
-    from .ctypes.symbol import SymbolBase, _set_symbol_class, _init_symbol_module
+except ImportError:
+    from ._ctypes.symbol import SymbolBase, _set_symbol_class, _init_symbol_module
 
 
 class Symbol(SymbolBase):
     """Symbol is symbolic graph of the mxnet."""
     # disable dictionary storage, also do not have parent type.
+    # pylint: disable=no-member
     __slots__ = []
 
     def __repr__(self):
@@ -127,6 +129,7 @@ class Symbol(SymbolBase):
             return {'handle': None}
 
     def __setstate__(self, state):
+        # pylint: disable=assigning-non-slot
         handle = state['handle']
         if handle is not None:
             json_str = handle
