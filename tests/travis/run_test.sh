@@ -121,7 +121,7 @@ if [ ${TASK} == "julia" ]; then
     export MXNET_HOME="${PWD}"
     julia -e 'Pkg.clone("MXNet"); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
     exit 0
-if
+fi
 
 if [ ${TASK} == "scala_test" ]; then
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
