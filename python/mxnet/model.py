@@ -47,7 +47,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
     arg_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's weights.
     """
-
+    update_on_kvstore = True
     if kvstore is None:
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
@@ -59,12 +59,17 @@ def _create_kvstore(kvstore, num_device, arg_params):
             kv = None
         else:
             kv = kvs.create(kvstore)
+            if kvstore is 'local':
+            # automatically select a proper local
+                max_size = max(np.prod(param.shape) for param in
+                               arg_params.values())
+                if max_size > 1024 * 1024 * 16:
+                    update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
-    # detect whether or not update weight on kvstore
-    # make it simple, always be true for non-empty kvstore
-    update_on_kvstore = False if kv is None else True
+    if kv is None:
+        update_on_kvstore = False
 
     return (kv, update_on_kvstore)
 
