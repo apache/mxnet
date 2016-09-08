@@ -1,5 +1,6 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines, import-error
+# pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
+# pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of mxnet."""
 from __future__ import absolute_import as _abs
 
