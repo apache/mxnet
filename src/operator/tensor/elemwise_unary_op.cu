@@ -3,10 +3,19 @@
  * \file elemwise_unary_op.cu
  * \brief GPU Implementation of unary function.
  */
-#include "./elemwise_unary_op-inl.h"
+#include "./elemwise_unary_op.h"
+#include "./elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
+// copy
+NNVM_REGISTER_OP(_copy)
+.attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::identity>);
+
+// negative
+NNVM_REGISTER_OP(negative)
+.attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::negation>);
+
 // abs
 NNVM_REGISTER_OP(abs)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::abs>);

@@ -138,13 +138,27 @@ struct InferTypeError {
 // quick helper to make node
 inline nnvm::NodeEntry MakeNode(const char* op_name,
                                 std::string node_name,
-                                std::vector<nnvm::NodeEntry> inputs) {
+                                std::vector<nnvm::NodeEntry> inputs,
+                                std::unordered_map<std::string, std::string> dict) {
   nnvm::NodePtr p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
   p->attrs.name = std::move(node_name);
+  p->attrs.dict = std::move(dict);
+  if (p->op()->attr_parser != nullptr) {
+    p->op()->attr_parser(&(p->attrs));
+  }
   p->inputs = std::move(inputs);
   return nnvm::NodeEntry{p, 0, 0};
 }
+
+/*! \brief Parse keyword arguments as PType arguments and save to parsed */
+template<typename PType>
+inline void ParamParser(nnvm::NodeAttrs* attrs) {
+  PType param;
+  param.Init(attrs->dict);
+  attrs->parsed = std::move(param);
+}
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_

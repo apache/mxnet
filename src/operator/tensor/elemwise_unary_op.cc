@@ -3,10 +3,23 @@
  * \file elemwise_unary_op.cc
  * \brief CPU Implementation of unary function.
  */
-#include "./elemwise_unary_op-inl.h"
+#include "./elemwise_unary_op.h"
+#include "./elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
+// copy
+MXNET_OPERATOR_REGISTER_UNARY(_copy)
+.MXNET_DESCRIBE("Copy src to output")
+.attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::identity>)
+.attr<nnvm::FGradient>("FGradient", UnaryGradUseNone{"_copy"});
+
+// negative
+MXNET_OPERATOR_REGISTER_UNARY(negative)
+.MXNET_DESCRIBE("Negate src")
+.attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::negation>)
+.attr<nnvm::FGradient>("FGradient", UnaryGradUseNone{"negative"});
+
 // abs
 MXNET_OPERATOR_REGISTER_UNARY(abs)
 .MXNET_DESCRIBE("Take absolute value of the src")
