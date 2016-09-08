@@ -115,6 +115,48 @@ class BackwardOpExecutor : public OpExecutor {
   std::vector<TBlob*> arg_data_ptr_;
 };
 
+// fcompute executor executor
+class FComputeExecutor : public OpExecutor {
+ public:
+  void Run(RunContext rctx) override {
+    op_ctx.run_ctx = rctx;
+    fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
+  }
+  void Setup() override {
+    in_data_.resize(in_array.size());
+    out_data_.resize(out_array.size());
+    auto get_blob =  [](const NDArray& nd) {
+      return nd.data();
+    };
+    std::transform(in_array.begin(), in_array.end(), in_data_.begin(), get_blob);
+    std::transform(out_array.begin(), out_array.end(), out_data_.begin(), get_blob);
+  }
+  Operator::ExecType exec_type() const override {
+    return Operator::kSync;
+  }
+  explicit FComputeExecutor(FCompute fcompute, const NodeAttrs& attrs)
+      : fcompute_(fcompute), attrs_(attrs) {
+  }
+
+  static FCompute GetFCompute(const Op* op, Context ctx) {
+    static auto& fcompute_cpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
+    static auto& fcompute_gpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
+    if (ctx.dev_mask() == cpu::kDevMask) {
+      return fcompute_cpu.get(op, nullptr);
+    } else if (ctx.dev_mask() == gpu::kDevMask) {
+      return fcompute_gpu.get(op, nullptr);
+    } else {
+      LOG(FATAL) << "Unknown device mask";
+      return nullptr;
+    }
+  }
+
+ private:
+  FCompute fcompute_;
+  const NodeAttrs& attrs_;
+  std::vector<TBlob> in_data_, out_data_;
+};
+
 // pass to attach operator executors
 Graph AttachOpExecs(Graph g) {
   using nnvm::DTypeVector;
@@ -124,6 +166,7 @@ Graph AttachOpExecs(Graph g) {
   auto& fcreate_layer_op = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
   auto& fmutate_inputs = nnvm::Op::GetAttr<FMutateInputs>("FMutateInputs");
   auto& is_layer_backward = nnvm::Op::GetAttr<bool>("TIsLayerOpBackward");
+
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
@@ -140,6 +183,7 @@ Graph AttachOpExecs(Graph g) {
     if (fmutate_inputs.count(inode.source->op())) {
       mutate_index = fmutate_inputs[inode.source->op()](inode.source->attrs);
     }
+    FCompute fcompute = FComputeExecutor::GetFCompute(inode.source->op(), vctx[i]);
     if (fcreate_layer_op.count(inode.source->op())) {
       std::vector<TShape> ishape;
       std::vector<int> itype;
@@ -159,6 +203,8 @@ Graph AttachOpExecs(Graph g) {
           dynamic_cast<ForwardOpExecutor*>(ret[fwd_id].get())->op_,
           mxnet::op::OpPropGetOpProperty(inode.source->attrs),
           mutate_index);
+    } else if (fcompute != nullptr) {
+      ret[i] = std::make_shared<FComputeExecutor>(fcompute, inode.source->attrs);
     } else {
       LOG(INFO) << "FCompute not registered " << inode.source->op()->name;
     }
