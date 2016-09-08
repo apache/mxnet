@@ -23,6 +23,7 @@ list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
 
 include_directories("include")
 include_directories("mshadow")
+include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 
 if(MSVC)
@@ -31,6 +32,7 @@ if(MSVC)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
+  add_definitions(-DNNVM_EXPORTS)
   set(CMAKE_C_FLAGS "/MP")
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
@@ -66,7 +68,7 @@ if(USE_OPENMP)
 endif()
 
 # cudnn detection
-if(USE_CUDNN)
+if(USE_CUDNN AND USE_CUDA)
   detect_cuDNN()
   if(HAVE_CUDNN)
     add_definitions(-DUSE_CUDNN)
@@ -76,10 +78,15 @@ if(USE_CUDNN)
   endif()
 endif()
 
+add_subdirectory("nnvm")
 add_subdirectory("dmlc-core")
+
 if(USE_DIST_KVSTORE)
 	add_subdirectory("ps-lite")
 endif()
+
+mxnet_source_group("Include\\nnvm"   GLOB "nnvm/include/nnvm/*.h")
+mxnet_source_group("Include\\dmlc"   GLOB "nnvm/include/dmlc/*.h")
 
 mxnet_source_group("Include\\common"   GLOB "src/common/*.h")
 mxnet_source_group("Include\\c_api"   GLOB "src/c_api/*.h")
@@ -118,7 +125,7 @@ mxnet_source_group("Source\\resource.cc"   GLOB "src/resource.cc/*.cc")
 mxnet_source_group("Source\\storage"   GLOB "src/storage/*.cc")
 mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
 
-FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
+FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "nnvm/include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu")
 
 if(USE_PLUGINS_WARPCTC)
@@ -184,6 +191,7 @@ else()
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
+target_link_libraries(mxnet nnvm)
 
 if(MSVC)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
