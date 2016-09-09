@@ -98,9 +98,9 @@ object Basic {
     val sym = Symbol.Group(styleLoss, contentLoss)
     val init = new PretrainedInit(prefix, params, true)
     val mod = new Module(symbol = sym, context = ctx,
-                        dataShapes = Map(s"${prefix}_data" -> dShape),
-                        initializer = init, forTraining = true,
-                        inputsNeedGrad = true)
+                         dataShapes = Map(s"${prefix}_data" -> dShape),
+                         initializer = init, forTraining = true,
+                         inputsNeedGrad = true)
     (mod, gScale)
   }
 }

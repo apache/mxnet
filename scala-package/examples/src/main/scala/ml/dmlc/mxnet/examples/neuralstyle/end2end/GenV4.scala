@@ -82,9 +82,9 @@ object GenV4 {
       else (dataShape, false, false)
     }
     val mod = new Module(symbol = sym, context = ctx,
-                        dataShapes = dataShapes,
-                        initializer = new Xavier(magnitude = 2f),
-                        forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
+                         dataShapes = dataShapes,
+                         initializer = new Xavier(magnitude = 2f),
+                         forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
     mod
   }
 }

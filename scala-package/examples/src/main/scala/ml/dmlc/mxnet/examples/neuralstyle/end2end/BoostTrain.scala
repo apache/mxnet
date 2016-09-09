@@ -92,9 +92,9 @@ object BoostTrain {
       )
       gens.foreach { gen =>
         val opt = new SGD(learningRate = 1e-4f,
-                                           momentum = 0.9f,
-                                           wd = 5e-3f,
-                                           clipGradient = 5f)
+                          momentum = 0.9f,
+                          wd = 5e-3f,
+                          clipGradient = 5f)
         gen.initOptimizer(opt)
       }
 

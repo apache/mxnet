@@ -14,14 +14,13 @@ import ml.dmlc.mxnet.DataBatch
 /**
  * @author Depeng Liang
  */
-class Module(
-              symbol: Symbol,
-              context: Context,
-              dataShapes: Map[String, Shape],
-              labelShapes: Map[String, Shape] = Map[String, Shape](),
-              initializer: Initializer = new Uniform(0.01f),
-              forTraining: Boolean = true,
-              inputsNeedGrad: Boolean = false) {
+class Module(symbol: Symbol,
+             context: Context,
+             dataShapes: Map[String, Shape],
+             labelShapes: Map[String, Shape] = Map[String, Shape](),
+             initializer: Initializer = new Uniform(0.01f),
+             forTraining: Boolean = true,
+             inputsNeedGrad: Boolean = false) {
 
   private val logger = LoggerFactory.getLogger(classOf[Module])
 
