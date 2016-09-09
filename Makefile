@@ -122,7 +122,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 endif
 
 .PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen\
-	cython2 cython3 cyclean
+	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
@@ -271,6 +271,9 @@ doxygen:
 	doxygen docs/Doxyfile
 
 # Cython build
+cython:
+	cd python; python setup.py build_ext --inplace
+
 cython2:
 	cd python; python2 setup.py build_ext --inplace
 
