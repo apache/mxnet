@@ -190,7 +190,7 @@ def test_ndarray_slice():
 def test_ndarray_slice_along_axis():
     arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
     sub_arr = mx.nd.zeros((3, 2, 2, 3))
-    arr._copy_slice_to(1, 2, 4, sub_arr)
+    arr.copy_slice_to(1, 2, 4, sub_arr)
 
     # test we sliced correctly
     assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
@@ -200,7 +200,7 @@ def test_ndarray_slice_along_axis():
     assert not same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
 
     # now test assigning back the slice
-    arr._assign_slice_from(1, 2, 4, sub_arr)
+    arr.assign_slice_from(1, 2, 4, sub_arr)
     assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
 
 

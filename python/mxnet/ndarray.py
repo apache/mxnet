@@ -276,7 +276,7 @@ class NDArray(object):
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    def _copy_slice_to(self, axis, start, stop, target):
+    def copy_slice_to(self, axis, start, stop, target):
         """Copy a slice along an axis.
 
         Parameters
@@ -303,7 +303,7 @@ class NDArray(object):
         assert isinstance(target, NDArray)
         return _internal._copy_slice_to(self, axis, start, stop, out=target)
 
-    def _assign_slice_from(self, axis, start, stop, source):
+    def assign_slice_from(self, axis, start, stop, source):
         """Assign a slice from an NDArray.
 
         Parameters
@@ -964,9 +964,7 @@ def concatenate(arrays, axis=0, always_copy=True):
                 ctx=arrays[0].context, dtype=dtype)
     idx = 0
     for arr in arrays:
-        # pylint: disable=protected-access
-        ret._assign_slice_from(axis, idx, idx+arr.shape[axis], arr)
-        # pylint: enable=protected-access
+        ret.assign_slice_from(axis, idx, idx+arr.shape[axis], arr)
         idx += arr.shape[axis]
 
     return ret
