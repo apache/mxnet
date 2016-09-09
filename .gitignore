@@ -121,3 +121,6 @@ dmlc-core
 ps-lite
 nnvm
 lib
+
+# Visual Studio Code
+.vscode
