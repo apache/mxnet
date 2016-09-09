@@ -5,15 +5,16 @@
 from __future__ import absolute_import
 from collections import namedtuple
 
-import ctypes
 import os
+import ctypes
+import struct
+import numbers
+import numpy as np
+
 from .base import _LIB
 from .base import RecordIOHandle
 from .base import check_call
 from .base import c_str
-import struct
-import numpy as np
-import numbers
 try:
     import cv2
     opencv_available = True
