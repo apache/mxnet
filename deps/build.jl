@@ -56,6 +56,7 @@ if !libmxnet_detected
   end
 
   blas_name = blas_vendor == :openblas64 ? "openblas" : string(blas_vendor)
+  MSHADOW_LDFLAGS = "MSHADOW_LDFLAGS=-lm $blas_path"
 
   #--------------------------------------------------------------------------------
   # Build libmxnet
@@ -65,6 +66,9 @@ if !libmxnet_detected
   _srcdir = joinpath(BinDeps.depsdir(mxnet), "src")
   _mxdir  = joinpath(_srcdir, "mxnet")
   _libdir = joinpath(_prefix, "lib")
+  # We have do eagerly delete the installed libmxnet.so
+  # Otherwise we won't rebuild on an update.
+  run(`rm -f $_libdir/libmxnet.so`)
   provides(BuildProcess,
     (@build_steps begin
       CreateDirectory(_srcdir)
@@ -76,9 +80,12 @@ if !libmxnet_detected
         end)
         @build_steps begin
           ChangeDirectory(_mxdir)
+          # TODO(vchuravy). We have to reset mshadow/make/mshadow.mk
+          `git -C mshadow checkout -- make/mshadow.mk`
           `git fetch`
           `git checkout $libmxnet_curr_ver`
           `git submodule update`
+          `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
         end
         FileRule(joinpath(_mxdir, "config.mk"), @build_steps begin
           ChangeDirectory(_mxdir)
@@ -93,14 +100,10 @@ if !libmxnet_detected
           ChangeDirectory(_mxdir)
           `cp ../../cblas.h include/cblas.h`
           if USE_JULIA_BLAS
-          MakeTargets("USE_BLAS=$blas_name -j$(nprocs())", env=Dict(
-                      "MSHADOW_LDFLAGS" => blas_path,
-                      "MSHADOW_CFLAGS" => ilp64,
-                     ))
+            `make -j$(nprocs()) USE_BLAS=$blas_name $MSHADOW_LDFLAGS`
           else
             `make -j$(nprocs())`
           end
-          `rm -f $_libdir/libmxnet.so`
         end
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
           `cp $_mxdir/lib/libmxnet.so $_libdir/`
