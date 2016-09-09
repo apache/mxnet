@@ -6,13 +6,13 @@ algorithm can do is to classify real world images.
 In this example we will show how to use a pretrained Inception-BatchNorm Network to predict the class of
 real world image. The network architecture is decribed in [1].
 
-The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://webdocs.cs.ualberta.ca/~bx3/data/Inception.zip)
+The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.dmlc.ml/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/R-package/classifyRealImageWithPretrainedModel.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/classifyRealImageWithPretrainedModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
 
 Pacakge Loading
@@ -112,7 +112,7 @@ preproc.image <- function(im, mean.image) {
   shape <- dim(im)
   short.edge <- min(shape[1:2])
   xx <- floor((shape[1] - short.edge) / 2)
-  yy <- floor((shape[2] - short.edge) / 2) 
+  yy <- floor((shape[2] - short.edge) / 2)
   croped <- crop.borders(im, xx, yy)
   # resize to 224 x 224, needed by input of the model.
   resized <- resize(croped, 224, 224)

@@ -5,7 +5,8 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call
-from .ndarray import NDArray, empty
+from .ndarray import empty
+from . import _ndarray_internal as _internal
 
 
 def uniform(low, high, shape=None, ctx=None, out=None):
@@ -38,17 +39,17 @@ def uniform(low, high, shape=None, ctx=None, out=None):
         if isinstance(shape, int):
             shape = (shape,)
         out = empty(shape, ctx)
-    return NDArray._random_uniform(low, high, out=out)
+    return _internal._sample_uniform(low=low, high=high, shape=out.shape, out=out)
 
 
-def normal(mean, stdvar, shape=None, ctx=None, out=None):
+def normal(loc, scale, shape=None, ctx=None, out=None):
     """Generate normal(Gaussian) distribution N(mean, stdvar^2) with shape.
 
     Parameters
     ----------
-    mean : float
+    loc : float
         The mean of the normal distribution.
-    stdvar : float
+    scale : float
         The standard deviation of normal distribution.
     shape : tuple, optional
         Output shape of the NDArray generated.
@@ -71,7 +72,7 @@ def normal(mean, stdvar, shape=None, ctx=None, out=None):
         if isinstance(shape, int):
             shape = (shape,)
         out = empty(shape, ctx)
-    return NDArray._random_gaussian(mean, stdvar, out=out)
+    return _internal._sample_normal(loc=loc, scale=scale, shape=out.shape, out=out)
 
 
 def seed(seed_state):
@@ -96,4 +97,3 @@ def seed(seed_state):
         raise ValueError('sd must be int')
     seed_state = ctypes.c_int(int(seed_state))
     check_call(_LIB.MXRandomSeed(seed_state))
-

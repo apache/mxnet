@@ -29,7 +29,7 @@ There are several ways to upload local data to S3. One simple way is using
 [s3cmd](http://s3tools.org/s3cmd). For example:
 
 ```bash
-wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip
+wget http://data.dmlc.ml/mxnet/data/mnist.zip
 unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ```
 
@@ -72,7 +72,7 @@ echo "USE_CUDNN=1" >>config.mk
 echo "USE_BLAS=atlas" >> config.mk
 echo "USE_DIST_KVSTORE = 1" >>config.mk
 echo "USE_S3=1" >>config.mk
-make -j8
+make -j$(nproc)
 ```
 
 To test whether everything is installed properly, we train a Convolutional neural network on MNIST using a GPU:

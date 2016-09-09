@@ -111,10 +111,18 @@ EXTRA_OPERATORS =
 # plugins
 #----------------------------
 
+# whether to use caffe integration. This requires installing caffe.
+# You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
+# CAFFE_PATH = $(HOME)/caffe
+# MXNET_PLUGINS += plugin/caffe/caffe.mk
+
 # whether to use torch integration. This requires installing torch.
 # You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH
 # TORCH_PATH = $(HOME)/torch
 # MXNET_PLUGINS += plugin/torch/torch.mk
+
+# WARPCTC_PATH = $(HOME)/warp-ctc
+# MXNET_PLUGINS += plugin/warpctc/warpctc.mk
 
 # whether to use sframe integration. This requires build sframe
 # git@github.com:dato-code/SFrame.git

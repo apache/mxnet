@@ -23,6 +23,9 @@ object Base {
   type KVStoreHandle = CPtrAddress
   type ExecutorHandle = CPtrAddress
   type SymbolHandle = CPtrAddress
+  type RecordIOHandle = CPtrAddress
+  type OptimizerCreator = CPtrAddress
+  type OptimizerHandle = CPtrAddress
 
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
@@ -33,6 +36,10 @@ object Base {
   type KVStoreHandleRef = RefLong
   type ExecutorHandleRef = RefLong
   type SymbolHandleRef = RefLong
+  type RecordIOHandleRef = RefLong
+  type OptimizerCreatorRef = RefLong
+  type OptimizerHandleRef = RefLong
+
 
   try {
     try {
@@ -43,7 +50,8 @@ object Base {
           "Copying native library from the archive. " +
           "Consider installing the library somewhere in the path " +
           "(for Windows: PATH, for Linux: LD_LIBRARY_PATH), " +
-          "or specifying by Java cmd option -Djava.library.path=[lib path].")
+          "or specifying by Java cmd option -Djava.library.path=[lib path]." +
+          "Exception:", e)
         NativeLibraryLoader.loadLibrary("mxnet-scala")
     }
   } catch {
@@ -69,6 +77,7 @@ object Base {
       System.loadLibrary(libname)
     } catch {
       case e: UnsatisfiedLinkError =>
+        logger.warn("Failed to load from native path. Exception:", e)
         val os = System.getProperty("os.name")
         // ref: http://lopica.sourceforge.net/os.html
         if (os.startsWith("Linux")) {

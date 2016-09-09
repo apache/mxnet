@@ -12,6 +12,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/symbolic.h>
 #include <vector>
+#include <utility>
 #include "./static_graph.h"
 
 namespace mxnet {
@@ -112,6 +113,36 @@ inline uint32_t ColorNodeGroup(
   }
   return cindex + 1;
 }
+
+template <typename GNode, typename HashType, typename FVisit,
+          typename HashFunc, typename InDegree, typename GetInput>
+void PostOrderDFSVisit(const std::vector<GNode>& heads, FVisit fvisit,
+                       HashFunc hash, InDegree indegree, GetInput getinput) {
+  std::vector<std::pair<GNode, uint32_t> > stack;
+  std::unordered_set<HashType> visited;
+  for (auto& head : heads) {
+    HashType head_hash = hash(head);
+    if (visited.count(head_hash) == 0) {
+      stack.push_back(std::make_pair(head, 0));
+      visited.insert(head_hash);
+    }
+    while (!stack.empty()) {
+      std::pair<GNode, uint32_t>& back = stack.back();
+      if (back.second == indegree(back.first)) {
+        fvisit(back.first);
+        stack.pop_back();
+      } else {
+        const GNode& input = getinput(back.first, back.second++);
+        HashType input_hash = hash(input);
+        if (visited.count(input_hash) == 0) {
+          stack.push_back(std::make_pair(input, 0));
+          visited.insert(input_hash);
+        }
+      }
+    }
+  }
+}
+
 }  // namespace graph
 }  // namespace mxnet
 #endif  // MXNET_SYMBOL_GRAPH_ALGORITHM_H_

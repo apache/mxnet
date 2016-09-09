@@ -211,9 +211,7 @@ class StaticGraph {
    * \param banned The banned map, used to ban some nodes from the graph.
    * \return a post DFS visit order of nodes that can reach heads.
    */
-  std::vector<uint32_t> PostDFSOrder(const std::vector<uint32_t>& head_nodes,
-                                     const std::unordered_set<uint32_t>& banned
-                                     = std::unordered_set<uint32_t>()) const;
+  std::vector<uint32_t> PostDFSOrder(const std::vector<uint32_t>& head_nodes) const;
   /*!
    * \brief infer the node shapes in the computation graph.
    *

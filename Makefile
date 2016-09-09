@@ -22,7 +22,6 @@ endif
 include $(config)
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
-unexport NO_OPENMP
 
 # all tge possible warning tread
 WARNFLAGS= -Wall
@@ -37,9 +36,9 @@ endif
 CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS = -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS = -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 ifndef LINT_LANG
@@ -101,10 +100,10 @@ CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
 ifneq ($(EXTRA_OPERATORS),)
-	EXTRA_SRC = $(wildcard $(EXTRA_OPERATORS)/*.cc $(EXTRA_OPERATORS)/*/*.cc)
-	EXTRA_OBJ = $(patsubst $(EXTRA_OPERATORS)/%.cc, $(EXTRA_OPERATORS)/build/%.o, $(EXTRA_SRC))
-	EXTRA_CUSRC = $(wildcard $(EXTRA_OPERATORS)/*.cu $(EXTRA_OPERATORS)/*/*.cu)
-	EXTRA_CUOBJ = $(patsubst $(EXTRA_OPERATORS)/%.cu, $(EXTRA_OPERATORS)/build/%_gpu.o, $(EXTRA_CUSRC))
+	EXTRA_SRC = $(wildcard $(patsubst %, %/*.cc %/*/*.cc, $(EXTRA_OPERATORS)))
+	EXTRA_OBJ = $(patsubst %.cc, %.o, $(EXTRA_SRC))
+	EXTRA_CUSRC = $(wildcard $(patsubst %, %/*.cu %/*/*.cu, $(EXTRA_OPERATORS)))
+	EXTRA_CUOBJ = $(patsubst %.cu, %_gpu.o, $(EXTRA_CUSRC))
 else
 	EXTRA_SRC =
 	EXTRA_OBJ =
@@ -150,35 +149,35 @@ endif
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/src/$*.o $< >build/src/$*.d
-	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
+	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/src/$*.o $< >build/src/$*.d
+	$(CXX) -std=c++11 -c $(CFLAGS) -c $< -o $@
 
 build/src/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
-build/plugin/%.o: plugin/%.cc
-	@mkdir -p $(@D)
-	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/plugin/$*.o $< >build/plugin/$*.d
-	$(CXX) -std=c++0x -c $(CFLAGS) -c $< -o $@
-
 # A nvcc bug cause it to generate "generic/xxx.h" dependencies from torch headers.
 # Use CXX to generate dependency instead.
 build/plugin/%_gpu.o: plugin/%.cu
 	@mkdir -p $(@D)
-	$(CXX) -std=c++0x $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
+	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS)" $<
 
-$(EXTRA_OPERATORS)/build/%.o: $(EXTRA_OPERATORS)/%.cc
+build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++0x $(CFLAGS) -Isrc/operator -MM -MT $(EXTRA_OPERATORS)/build/$*.o $< >$(EXTRA_OPERATORS)/build/$*.d
-	$(CXX) -std=c++0x -c $(CFLAGS) -Isrc/operator -c $< -o $@
+	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*.o $< >build/plugin/$*.d
+	$(CXX) -std=c++11 -c $(CFLAGS) -c $< -o $@
 
-$(EXTRA_OPERATORS)/build/%_gpu.o: $(EXTRA_OPERATORS)/%.cu
+%_gpu.o: %.cu
 	@mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $(EXTRA_OPERATORS)/build/$*_gpu.o $< >$(EXTRA_OPERATORS)/build/$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
+
+%.o: %.cc
+	@mkdir -p $(@D)
+	$(CXX) -std=c++11 $(CFLAGS) -Isrc/operator -MM -MT $*.o $< >$*.d
+	$(CXX) -std=c++11 -c $(CFLAGS) -Isrc/operator -c $< -o $@
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
@@ -190,18 +189,21 @@ lib/libmxnet.so: $(ALL_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
-$(PS_PATH)/build/libps.a:
-	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
-	ln -fs $(PS_PATH)/tracker .
+$(PS_PATH)/build/libps.a: PSLITE
 
-$(DMLC_CORE)/libdmlc.a:
+PSLITE:
+	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
+
+$(DMLC_CORE)/libdmlc.a: DMLCCORE
+
+DMLCCORE:
 	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -std=c++0x  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++11  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include tests/cpp/unittest.mk
 
@@ -237,26 +239,26 @@ rpkg:	roxygen
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
-											-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-											-Dlddeps="$(LIB_DEP)")
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)")
 
 scalatest:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
-							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-							 -Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
-							  -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-								-Dlddeps="$(LIB_DEP)")
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
-							 -Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-							 -Dlddeps="$(LIB_DEP)")
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP)")
 
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
@@ -266,7 +268,7 @@ clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
-	$(RM) -r $(EXTRA_OPERATORS)/build
+	$(RM) -r  $(patsubst %, %/*.d %/*/*.d %/*.o %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
@@ -280,5 +282,5 @@ clean_all: clean
 -include build/*/*.d
 -include build/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
-	-include $(EXTRA_OPERATORS)/build/*.d
+	-include $(patsubst %, %/*.d %/*/*.d, $(EXTRA_OPERATORS))
 endif

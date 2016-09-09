@@ -65,11 +65,25 @@ class NDArray {
    * \return the data TBlob
    */
   inline TBlob data() const {
+    TBlob res;
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      return TBlob(static_cast<DType*>(ptr_->shandle.dptr)
+      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
         + offset_, shape_, ptr_->shandle.ctx.dev_mask());
     });
-    return TBlob();
+    return res;
+  }
+  /*!
+   * \return a chunk of raw data in TBlob
+   */
+  inline TBlob raw_data(index_t offset, index_t length) const {
+    TBlob res;
+    TShape raw_shape(1);
+    raw_shape[0] = length;
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
+      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
+        + offset_ + offset, raw_shape, ptr_->shandle.ctx.dev_mask());
+    });
+    return res;
   }
   /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
@@ -228,12 +242,23 @@ class NDArray {
     NDArray ret = *this;
     CHECK(!is_none()) << "NDArray is not initialized";
     CHECK_GE(shape_[0], end) << "Slice end index out of range";
-    size_t length = 1;
-    for (index_t i = 1; i < shape_.ndim(); ++i) {
-      length *= shape_[i];
-    }
+    size_t length = shape_.ProdShape(1, shape_.ndim());
     ret.offset_ += begin * length;
     ret.shape_[0] = end - begin;
+    return ret;
+  }
+  /*!
+   * \brief Index a NDArray
+   * \param idx the index
+   * \return idx-th sub array NDArray
+   */
+  inline NDArray At(index_t idx) const {
+    NDArray ret = *this;
+    CHECK(!is_none()) << "NDArray is not initialized";
+    CHECK_GE(shape_[0], idx) << "index out of range";
+    size_t length = shape_.ProdShape(1, shape_.ndim());
+    ret.offset_ += idx * length;
+    ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
     return ret;
   }
   /*!
@@ -355,6 +380,18 @@ class NDArray {
  *     due to different possible convention carried by copy function.
  */
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+
+/*!
+ * \brief copy a slice along any axis.
+ * \param from the NDArray we want to slice from
+ * \param slice_dim the axis we want to perform slice in
+ * \param start the beginning of the slice
+ * \param end the ending of the slice
+ * \param to the pre-allocated NDArray to copy the slice to
+ * \param priority the priority of the task
+ */
+void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
+                 NDArray *to, int priority = 0);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.

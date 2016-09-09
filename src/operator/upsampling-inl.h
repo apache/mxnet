@@ -39,7 +39,7 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .set_range(1, 1000)
     .describe("Up sampling scale");
     DMLC_DECLARE_FIELD(num_filter)
-    .describe("Input filter. Only used by nearest sample_type.")
+    .describe("Input filter. Only used by bilinear sample_type.")
     .set_default(0);
     DMLC_DECLARE_FIELD(sample_type)
     .add_enum("nearest", up_enum::kNearest)
@@ -62,7 +62,7 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   }
 };  // struct UpSamplingParam
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class UpSamplingNearestOp : public Operator {
  public:
   explicit UpSamplingNearestOp(UpSamplingParam p) {
@@ -82,11 +82,11 @@ class UpSamplingNearestOp : public Operator {
       return;
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> out = out_data[up_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
     if (param_.num_args > 1) {
       int begin = 0;
       for (int i = 0; i < param_.num_args; ++i) {
-        Tensor<xpu, 4> data = in_data[i].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
         int end = begin + data.size(1);
         int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
         if (param_.multi_input_mode == up_enum::kSum) {
@@ -101,7 +101,7 @@ class UpSamplingNearestOp : public Operator {
         begin = end;
       }
     } else {
-      Tensor<xpu, 4> data = in_data[up_enum::kData].get<xpu, 4, real_t>(s);
+      Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
       Assign(out, req[up_enum::kOut], upsampling_nearest(data, param_.scale));
     }
   }
@@ -118,11 +118,11 @@ class UpSamplingNearestOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_grad.size(), param_.num_args);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad = out_grad[up_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> grad = out_grad[up_enum::kOut].get<xpu, 4, DType>(s);
     if (param_.num_args > 1) {
       int begin = 0;
       for (int i = 0; i < param_.num_args; ++i) {
-        Tensor<xpu, 4> input_grad = in_grad[i].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4, DType> input_grad = in_grad[i].get<xpu, 4, DType>(s);
         mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
         int end = begin + input_grad.size(1);
         int scale = grad.size(2)/in_shape[0];
@@ -146,7 +146,7 @@ class UpSamplingNearestOp : public Operator {
         begin = end;
       }
     } else {
-      Tensor<xpu, 4> input_grad = in_grad[up_enum::kData].get<xpu, 4, real_t>(s);
+      Tensor<xpu, 4, DType> input_grad = in_grad[up_enum::kData].get<xpu, 4, DType>(s);
       mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
       Assign(input_grad, req[up_enum::kData],
              pool<mshadow::red::sum>(grad,
@@ -163,7 +163,7 @@ class UpSamplingNearestOp : public Operator {
 };  // class UpSamplingNearestOp
 
 template<typename xpu>
-Operator *CreateOp(UpSamplingParam param);
+Operator *CreateOp(UpSamplingParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -205,7 +205,7 @@ class UpSamplingProp : public OperatorProperty {
         CHECK_EQ(oh%shape[2], 0) << "UpSamplingNearest: input height of " << shape[2] << \
           "does not divide output height of " << oh;
         CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input weight of " << shape[3] << \
-          "does not divide output weight of " << ow;
+          "does not divide output width of " << ow;
         if (param_.multi_input_mode == up_enum::kSum) {
           CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
             "Number of channels must be the same when multi_input_mode==sum";
@@ -217,7 +217,7 @@ class UpSamplingProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
       CHECK_EQ(dshape.ndim(), 4) << \
-        "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
+        "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
       if (dshape.ndim() ==  0) return false;
       int kernel = 2 * param_.scale - param_.scale % 2;
       SHAPE_ASSIGN_CHECK(*in_shape,
@@ -229,6 +229,26 @@ class UpSamplingProp : public OperatorProperty {
     oshape[3] = dshape[3] * param_.scale;
     out_shape->clear();
     out_shape->push_back(oshape);
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_GE(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    for (index_t i = 0; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
+                                       << "Expected " << dtype << " v.s. given "
+                                       << (*in_type)[i] << " at " << ListArguments()[i];
+      }
+    }
+    out_type->clear();
+    out_type->push_back(dtype);
     return true;
   }
 
@@ -279,7 +299,14 @@ class UpSamplingProp : public OperatorProperty {
     }
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
+
 
  private:
   UpSamplingParam param_;

@@ -13,20 +13,28 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__) # get a logger to accuracies are printed
 
+logs = sys.stderr
+
 CNNModel = namedtuple("CNNModel", ['cnn_exec', 'symbol', 'data', 'label', 'param_blocks'])
 
-def make_text_cnn(sentence_size, num_embed, batch_size, num_label=2, filter_list=[3, 4, 5], num_filter=100, dropout=0.):
+def make_text_cnn(sentence_size, num_embed, batch_size, vocab_size,
+        num_label=2, filter_list=[3, 4, 5], num_filter=100,
+        dropout=0., with_embedding=True):
+
     input_x = mx.sym.Variable('data') # placeholder for input
     input_y = mx.sym.Variable('softmax_label') # placeholder for output
 
     # embedding layer
-    # embed_layer = mx.sym.Embedding(data=input_x, input_dim=vocab_size, output_dim=num_embed, name='vocab_embed')
-    # embed_layer = mx.sym.Reshape(data=embed_layer, target_shape=(1, 1, sentence_size, num_embed))
+    if not with_embedding:
+        embed_layer = mx.sym.Embedding(data=input_x, input_dim=vocab_size, output_dim=num_embed, name='vocab_embed')
+        conv_input = mx.sym.Reshape(data=embed_layer, target_shape=(batch_size, 1, sentence_size, num_embed))
+    else:
+        conv_input = input_x
 
     # create convolution + (max) pooling layer for each filter operation
     pooled_outputs = []
     for i, filter_size in enumerate(filter_list):
-        convi = mx.sym.Convolution(data=input_x, kernel=(filter_size, num_embed), num_filter=num_filter)
+        convi = mx.sym.Convolution(data=conv_input, kernel=(filter_size, num_embed), num_filter=num_filter)
         relui = mx.sym.Activation(data=convi, act_type='relu')
         pooli = mx.sym.Pooling(data=relui, pool_type='max', kernel=(sentence_size - filter_size + 1, 1), stride=(1,1))
         pooled_outputs.append(pooli)
@@ -54,12 +62,18 @@ def make_text_cnn(sentence_size, num_embed, batch_size, num_label=2, filter_list
     return sm
 
 
-def setup_cnn_model(ctx, batch_size, sentence_size, num_embed, dropout=0.5, initializer=mx.initializer.Uniform(0.1)):
-    cnn = make_text_cnn(sentence_size, num_embed, batch_size=batch_size, dropout=dropout)
+def setup_cnn_model(ctx, batch_size, sentence_size, num_embed, vocab_size,
+        dropout=0.5, initializer=mx.initializer.Uniform(0.1), with_embedding=True):
+
+    cnn = make_text_cnn(sentence_size, num_embed, batch_size=batch_size,
+            vocab_size=vocab_size, dropout=dropout, with_embedding=with_embedding)
     arg_names = cnn.list_arguments()
 
     input_shapes = {}
-    input_shapes['data'] = (batch_size, 1, sentence_size, num_embed)
+    if with_embedding:
+        input_shapes['data'] = (batch_size, 1, sentence_size, num_embed)
+    else:
+        input_shapes['data'] = (batch_size, sentence_size)
 
     arg_shape, out_shape, aux_shape = cnn.infer_shape(**input_shapes)
     arg_arrays = [mx.nd.zeros(s, ctx) for s in arg_shape]
@@ -88,7 +102,8 @@ def setup_cnn_model(ctx, batch_size, sentence_size, num_embed, dropout=0.5, init
     return CNNModel(cnn_exec=cnn_exec, symbol=cnn, data=data, label=label, param_blocks=param_blocks)
 
 
-def train_cnn(model, X_train_batch, y_train_batch, X_dev_batch, y_dev_batch, batch_size, optimizer='rmsprop', max_grad_norm=5.0, learning_rate=0.001, epoch=200):
+def train_cnn(model, X_train_batch, y_train_batch, X_dev_batch, y_dev_batch, batch_size,
+        optimizer='rmsprop', max_grad_norm=5.0, learning_rate=0.0005, epoch=200):
     m = model
     # create optimizer
     opt = mx.optimizer.create(optimizer)
@@ -139,13 +154,25 @@ def train_cnn(model, X_train_batch, y_train_batch, X_dev_batch, y_dev_batch, bat
         # decay learning rate
         if iteration % 50 == 0 and iteration > 0:
             opt.lr *= 0.5
-            print >> sys.stderr, 'reset learning rate to %g' % opt.lr
+            print >> logs, 'reset learning rate to %g' % opt.lr
 
         # end of training loop
         toc = time.time()
-        print >> sys.stderr, 'Iter [%d] Train: Time: %.3f, Training Accuracy: %.3f' % (iteration, toc - tic, num_correct * 100 / float(num_total))
+        train_time = toc - tic
+        train_acc = num_correct * 100 / float(num_total)
 
-        # eval on dev set
+        # saving checkpoint
+        if (iteration + 1) % 10 == 0:
+            prefix = 'cnn'
+            m.symbol.save('checkpoint/%s-symbol.json' % prefix)
+            save_dict = {('arg:%s' % k) :v  for k, v in m.cnn_exec.arg_dict.items()}
+            save_dict.update({('aux:%s' % k) : v for k, v in m.cnn_exec.aux_dict.items()})
+            param_name = 'checkpoint/%s-%04d.params' % (prefix, iteration)
+            mx.nd.save(param_name, save_dict)
+            print >> logs, 'Saved checkpoint to %s' % param_name
+
+
+        # evaluate on dev set
         num_correct = 0
         num_total = 0
         for begin in range(0, X_dev_batch.shape[0], batch_size):
@@ -161,7 +188,9 @@ def train_cnn(model, X_train_batch, y_train_batch, X_dev_batch, y_dev_batch, bat
             num_correct += sum(batchY == np.argmax(m.cnn_exec.outputs[0].asnumpy(), axis=1))
             num_total += len(batchY)
 
-        print >> sys.stderr, 'Dev Accuracy thus far: %.3f' % ( num_correct * 100 / float(num_total) )
+        dev_acc = num_correct * 100 / float(num_total)
+        print >> logs, 'Iter [%d] Train: Time: %.3fs, Training Accuracy: %.3f \
+                --- Dev Accuracy thus far: %.3f' % (iteration, train_time, train_acc, dev_acc)
 
 
 def main():
@@ -169,7 +198,6 @@ def main():
     # word2vec = data_helpers.load_google_word2vec('data/GoogleNews-vectors-negative300.bin')
     word2vec = data_helpers.load_pretrained_word2vec('data/rt.vec')
     x, y = data_helpers.load_data_with_word2vec(word2vec)
-
 
     # randomly shuffle data
     np.random.seed(10)
@@ -194,9 +222,38 @@ def main():
     print 'embedding size', num_embed
     batch_size = 50
 
-    cnn_model = setup_cnn_model(mx.gpu(0), batch_size, sentence_size, num_embed, dropout=0.5)
+    cnn_model = setup_cnn_model(mx.gpu(1), batch_size, sentence_size, num_embed, dropout=0.5)
+    train_cnn(cnn_model, x_train, y_train, x_dev, y_dev, batch_size)
+
+def train_without_pretrained_embedding():
+    x, y, vocab, vocab_inv = data_helpers.load_data()
+    vocab_size = len(vocab)
+
+    # randomly shuffle data
+    np.random.seed(10)
+    shuffle_indices = np.random.permutation(np.arange(len(y)))
+    x_shuffled = x[shuffle_indices]
+    y_shuffled = y[shuffle_indices]
+
+    # split train/dev set
+    x_train, x_dev = x_shuffled[:-1000], x_shuffled[-1000:]
+    y_train, y_dev = y_shuffled[:-1000], y_shuffled[-1000:]
+    print 'Train/Dev split: %d/%d' % (len(y_train), len(y_dev))
+    print 'train shape:', x_train.shape
+    print 'dev shape:', x_dev.shape
+    print 'vocab_size', vocab_size
+   
+    batch_size = 50
+    num_embed = 300
+    sentence_size = x_train.shape[1]
+
+    print 'batch size', batch_size
+    print 'sentence max words', sentence_size
+    print 'embedding size', num_embed
+
+    cnn_model = setup_cnn_model(mx.gpu(0), batch_size, sentence_size, num_embed, vocab_size, dropout=0.5, with_embedding=False)
     train_cnn(cnn_model, x_train, y_train, x_dev, y_dev, batch_size)
 
 
 if __name__ == '__main__':
-    main()
+    train_without_pretrained_embedding()

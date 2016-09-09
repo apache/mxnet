@@ -15,6 +15,7 @@ namespace mxnet {
 namespace op {
 
 class SimpleOpPropBase;
+class SimpleSourceOpProp;
 class SimpleUnaryOpProp;
 class SimpleBinaryOpProp;
 
@@ -64,6 +65,12 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     return *this;
   }
 
+  TSelf& set_shape_function(SourceShapeFunction fshapeinfer) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    source_shape_ = fshapeinfer;
+    return *this;
+  }
+
   TSelf& set_shape_function(UnaryShapeFunction fshapeinfer) override {
     std::lock_guard<std::mutex> lock(mutex_);
     unary_shape_ = fshapeinfer;
@@ -73,6 +80,21 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   TSelf& set_shape_function(BinaryShapeFunction fshapeinfer) override {
     std::lock_guard<std::mutex> lock(mutex_);
     binary_shape_ = fshapeinfer;
+    return *this;
+  }
+
+  TSelf& set_function(int dev_mask,
+                      SourceFunction fsource,
+                      SimpleOpRegOption register_symbolic) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    SetFunction(&fsource_, dev_mask, fsource, "SourceFunction");
+    if (++reg_counter_ == 1) {
+      this->RegisterSourceImperative();
+      register_symbolic_ = (register_symbolic == kRegisterSymbolic);
+      if (register_symbolic_) {
+        this->RegisterSourceSymbolic();
+      }
+    }
     return *this;
   }
 
@@ -178,6 +200,7 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
  protected:
   // make friend with unary op
   friend class SimpleOpPropBase;
+  friend class SimpleSourceOpProp;
   friend class SimpleUnaryOpProp;
   friend class SimpleBinaryOpProp;
   // internal mutex
@@ -196,6 +219,11 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
   bool enable_kwargs_{false};
   // resource requirements
   std::vector<ResourceRequest> resource_requests_;
+  // ------ source functions ----
+  // source shape inference information.
+  SourceShapeFunction source_shape_{nullptr};
+  // source functions on each device mask
+  std::vector<SourceFunction> fsource_;
   // ------ unary functions -----
   // unary shape inference information.
   UnaryShapeFunction unary_shape_{nullptr};
@@ -266,6 +294,10 @@ class SimpleOpRegEntryImpl : public SimpleOpRegEntry {
     }
     return *op_reg_;
   }
+  // register source function.
+  void RegisterSourceImperative();
+  // register source symbolic function.
+  void RegisterSourceSymbolic();
   // register unary function.
   void RegisterUnaryImperative();
   // register unary symbolic function.
@@ -295,6 +327,264 @@ SimpleOpRegistry::~SimpleOpRegistry() {
     delete kv.second;
   }
 }
+
+// base class
+struct SimpleOpScalarParam :
+      public dmlc::Parameter<SimpleOpScalarParam> {
+  float scalar;
+  DMLC_DECLARE_PARAMETER(SimpleOpScalarParam) {
+    DMLC_DECLARE_FIELD(scalar)
+        .describe("scalar value.");
+  }
+};
+
+DMLC_REGISTER_PARAMETER(SimpleOpScalarParam);
+
+class SimpleOpPropBase : public OperatorProperty {
+ public:
+  std::string name;
+  EnvArguments env;
+  SimpleOpRegEntryImpl* source;
+
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+    if (source->enable_kwargs_) {
+      env.kwargs = kwargs;
+    } else if (source->enable_scalar_) {
+      SimpleOpScalarParam param;
+      param.Init(kwargs);
+      env.scalar = param.scalar;
+    } else {
+      CHECK_EQ(kwargs.size(), 0)
+          << "Operator " << source->symbol_name_ << " donot accept any keyword arguments";
+    }
+  }
+
+  std::map<std::string, std::string> GetParams() const override {
+    if (source->enable_kwargs_) {
+      return std::map<std::string, std::string>(
+          env.kwargs.begin(), env.kwargs.end());
+    } else if (source->enable_scalar_) {
+      SimpleOpScalarParam param;
+      param.scalar = env.scalar;
+      return param.__DICT__();
+    } else {
+      return std::map<std::string, std::string>();
+    }
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return source->resource_requests_;
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return source->resource_requests_;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_LE(in_type->size(), this->ListArguments().size());
+    int dtype = -1;
+    // reduce dtype to a common one.
+    for (unsigned i = 0; i < in_type->size(); ++i) {
+      if (dtype == -1) {
+        dtype = in_type->at(i);
+      } else {
+        CHECK(in_type->at(i) == -1 ||
+              in_type->at(i) == dtype) <<
+          "Non-uniform input data type. Expected " << dtype << "got " << in_type->at(i);
+      }
+    }
+
+    if (dtype == -1) {
+      LOG(FATAL) << "At least one input type needs to be specified.";
+      return false;
+    }
+
+    int n_in = this->ListArguments().size();
+    in_type->clear();
+    for (int i = 0; i < n_in; ++i) in_type->push_back(dtype);
+
+    int n_out = this->ListOutputs().size();
+    out_type->clear();
+    for (int i = 0; i < n_out; ++i) out_type->push_back(dtype);
+
+    int n_aux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (int i = 0; i < n_aux; ++i) aux_type->push_back(dtype);
+    return true;
+  }
+
+  std::string TypeString() const override {
+    return name;
+  }
+};
+
+//-------------------------------------
+// source function Implementation
+//-------------------------------------
+void SimpleOpRegEntryImpl::RegisterSourceImperative() {
+  CHECK_EQ(reg_counter_, 1);
+  // The body to be registered
+  auto body = [this] (NDArray** used_vars,
+                      real_t* s,
+                      NDArray** mutate_vars,
+                      int num_params,
+                      char** param_keys,
+                      char** param_vals) {
+    NDArray* out = mutate_vars[0];
+    // setup env.
+    EnvArguments env;
+    if (enable_scalar_) env.scalar = s[0];
+    if (enable_kwargs_) {
+      for (int i = 0; i < num_params; ++i) {
+        env.kwargs.emplace_back(std::make_pair(
+            std::string(param_keys[i]), std::string(param_vals[i])));
+      }
+    } else {
+      CHECK_EQ(num_params, 0)
+        << "operator " << this->name << " do not take keyword arguments";
+    }
+    // shape inference.
+    CHECK(source_shape_ != nullptr);
+    TShape dshape = source_shape_(env);
+    // check output shape.
+    CHECK(!out->is_none());
+    CHECK(out->shape() == dshape) << "target shape mismatch "
+    << out->shape() << " vs. " << dshape;
+
+    // important: callback must always capture by value
+    NDArray ret = *out;
+    // request resources.
+    std::vector<Engine::VarHandle> write_vars = {ret.var()};
+    for (ResourceRequest req : resource_requests_) {
+      env.resource.push_back(ResourceManager::Get()->Request(ret.ctx(), req));
+      write_vars.push_back(env.resource.back().var);
+    }
+    // check if the function exist
+    int dev_mask = ret.ctx().dev_mask();
+    // error message
+    if (static_cast<size_t>(dev_mask) >= fsource_.size() ||
+        fsource_[dev_mask] == nullptr) {
+      if (dev_mask == gpu::kDevMask) {
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      }
+      LOG(FATAL) << "Function " << this->name
+                 << "not registered for device " << dev_mask;
+    }
+    // invoke the function
+    SourceFunction fun = fsource_[dev_mask];
+    OpReqType req = kWriteTo;
+
+    Engine::Get()->PushSync([ret, fun, dev_mask, req, env](RunContext ctx) {
+        ret.CheckAndAlloc();
+        TBlob tmp = ret.data();
+        (*fun)(env, &tmp, req, ctx);
+#if MXNET_USE_CUDA
+        if (dev_mask == gpu::kDevMask) {
+          ctx.get_stream<gpu>()->Wait();
+        }
+#endif
+      }, ret.ctx(), {}, write_vars);
+  };
+  // register the function.
+  NDArrayReg()
+      .set_body(body)
+      .set_num_use_vars(0)
+      .set_num_mutate_vars(1);
+  if (enable_scalar_) {
+      NDArrayReg()
+          .set_num_scalars(1)
+          .add_argument("scalar", "float", "scalar input to the function");
+  }
+}
+
+// operator to invoke unary function.
+struct SimpleSourceOperator : public Operator {
+  EnvArguments env;
+  SourceFunction forward;
+
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data,
+               const std::vector<TBlob> &aux_args) override {
+    if (ctx.requested.size() != 0) env.resource = ctx.requested;
+    CHECK_EQ(in_data.size(), 0);
+    CHECK_EQ(out_data.size(), 1);
+    TBlob out = out_data[0];
+    (*forward)(env, &out, req[0], ctx.run_ctx);
+  }
+
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad,
+                const std::vector<TBlob> &aux_args) override {
+    LOG(FATAL) << "no gradient can be done";
+    // no nothing.
+  }
+};  // class SimpleUnaryOperator
+
+class SimpleSourceOpProp : public SimpleOpPropBase {
+ public:
+  bool InferShape(std::vector<TShape> *in_shape,
+                  std::vector<TShape> *out_shape,
+                  std::vector<TShape> *aux_shape) const override {
+    CHECK_EQ(in_shape->size(), 0)
+        << in_shape->size();
+    CHECK(source->source_shape_ != nullptr);
+    out_shape->clear();
+    out_shape->push_back((*(source->source_shape_))(env));
+    return true;
+  }
+
+  OperatorProperty* Copy() const override {
+    auto ptr = new SimpleSourceOpProp();
+    ptr->source = source;
+    ptr->name = name;
+    ptr->env = env;
+    return ptr;
+  }
+
+  Operator* CreateOperator(Context ctx) const override {
+    size_t dev_mask = ctx.dev_mask();
+    SimpleSourceOperator *op = new SimpleSourceOperator();
+    CHECK(dev_mask < source->fsource_.size() && source->fsource_[dev_mask] != nullptr);
+    op->forward = source->fsource_[dev_mask];
+    op->env = this->env;
+    return op;
+  }
+
+  std::vector<std::string> ListArguments() const override {
+    return {};
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    out_type->clear();
+    out_type->push_back(mshadow::kFloat32);
+    return true;
+  }
+};
+
+void SimpleOpRegEntryImpl::RegisterSourceSymbolic() {
+  // register the operator
+  auto op_factory = [this]() {
+    SimpleSourceOpProp *prop = new SimpleSourceOpProp();
+    prop->name = this->symbol_name_;
+    prop->source = this;
+    return prop;
+  };
+  OpReg()
+      .set_body(op_factory);
+}
+
 //-------------------------------------
 // unary function Implementation
 //-------------------------------------
@@ -457,64 +747,6 @@ struct SimpleUnaryOperator : public Operator {
   }
 };  // class SimpleUnaryOperator
 
-struct SimpleOpScalarParam :
-      public dmlc::Parameter<SimpleOpScalarParam> {
-  float scalar;
-  DMLC_DECLARE_PARAMETER(SimpleOpScalarParam) {
-    DMLC_DECLARE_FIELD(scalar)
-        .describe("scalar value.");
-  }
-};
-
-DMLC_REGISTER_PARAMETER(SimpleOpScalarParam);
-
-class SimpleOpPropBase : public OperatorProperty {
- public:
-  std::string name;
-  EnvArguments env;
-  SimpleOpRegEntryImpl* source;
-
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    if (source->enable_kwargs_) {
-      env.kwargs = kwargs;
-    } else if (source->enable_scalar_) {
-      SimpleOpScalarParam param;
-      param.Init(kwargs);
-      env.scalar = param.scalar;
-    } else {
-      CHECK_EQ(kwargs.size(), 0)
-          << "Operator " << source->symbol_name_ << " donot accept any keyword arguments";
-    }
-  }
-
-  std::map<std::string, std::string> GetParams() const override {
-    if (source->enable_kwargs_) {
-      return std::map<std::string, std::string>(
-          env.kwargs.begin(), env.kwargs.end());
-    } else if (source->enable_scalar_) {
-      SimpleOpScalarParam param;
-      param.scalar = env.scalar;
-      return param.__DICT__();
-    } else {
-      return std::map<std::string, std::string>();
-    }
-  }
-
-  std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return source->resource_requests_;
-  }
-
-  std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return source->resource_requests_;
-  }
-
-  std::string TypeString() const override {
-    return name;
-  }
-};
-
 class SimpleUnaryOpProp : public SimpleOpPropBase {
  public:
   bool InferShape(std::vector<TShape> *in_shape,
@@ -609,10 +841,8 @@ void SimpleOpRegEntryImpl::RegisterUnarySymbolic() {
   };
   OpReg()
       .set_body(op_factory)
-      .add_argument("lhs", "Symbol", "Left symbolic input to the function")
-      .add_argument("rhs", "Symbol", "Left symbolic input to the function");
+      .add_argument("src", "Symbol", "Left symbolic input to the function");
 }
-
 
 //-------------------------------------
 // binary function Implementation
@@ -898,7 +1128,7 @@ void SimpleOpRegEntryImpl::RegisterBinarySymbolic() {
   OpReg()
       .set_body(op_factory)
       .add_argument("lhs", "Symbol", "Left symbolic input to the function")
-      .add_argument("rhs", "Symbol", "Left symbolic input to the function");
+      .add_argument("rhs", "Symbol", "Right symbolic input to the function");
 }
 
 }  // namespace op

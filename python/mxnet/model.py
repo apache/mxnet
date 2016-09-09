@@ -3,9 +3,11 @@
 """MXNet model module"""
 from __future__ import absolute_import
 
-import numpy as np
 import time
 import logging
+from collections import namedtuple
+import numpy as np
+
 from . import io
 from . import nd
 from . import symbol as sym
@@ -14,7 +16,6 @@ from . import metric
 from . import kvstore as kvs
 from .context import Context, cpu
 from .initializer import Uniform
-from collections import namedtuple
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
 
@@ -79,8 +80,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
     """ Initialize kvstore"""
-    for idx in range(len(param_arrays)):
-        param_on_devs = param_arrays[idx]
+    for idx, param_on_devs in enumerate(param_arrays):
         kvstore.init(idx, arg_params[param_names[idx]])
 
         if update_on_kvstore:
@@ -262,7 +262,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     do_reset = False
                     break
 
-            if do_reset == True:
+            if do_reset:
                 logger.info('Epoch[%d] Resetting Data Iterator', epoch)
                 train_data.reset()
 
@@ -304,6 +304,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             name_value = eval_metric.get_name_value()
             for name, value in name_value:
                 logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+            eval_data.reset()
     # end of all epochs
     return
 
@@ -607,9 +608,6 @@ class FeedForward(BASE_ESTIMATOR):
 
         i = 0
         for batch in X:
-            if num_batch is not None and i == num_batch:
-                break
-            i += 1
 
             _load_data(batch, data_arrays)
             self._pred_exec.forward(is_train=False)
@@ -624,6 +622,9 @@ class FeedForward(BASE_ESTIMATOR):
                     data_list[j].append(x[0:real_size].asnumpy())
                 for j, x in enumerate(batch.label):
                     label_list[j].append(x[0:real_size].asnumpy())
+            i += 1
+            if num_batch is not None and i == num_batch:
+                break
 
         outputs = [np.concatenate(x) for x in output_list]
         if len(outputs) == 1:
@@ -743,11 +744,6 @@ class FeedForward(BASE_ESTIMATOR):
 
         arg_names, param_names, aux_names = \
                 self._init_params(dict(data.provide_data+data.provide_label))
-        param_idx2name = {}
-        for i, n in enumerate(param_names):
-            for k in range(len(self.ctx)):
-                param_idx2name[i*len(self.ctx)+k] = n
-        self.kwargs["param_idx2name"] = param_idx2name
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
@@ -756,6 +752,15 @@ class FeedForward(BASE_ESTIMATOR):
         # create kvstore
         (kvstore, update_on_kvstore) = _create_kvstore(
             kvstore, len(self.ctx), self.arg_params)
+
+        param_idx2name = {}
+        if update_on_kvstore:
+            param_idx2name.update(enumerate(param_names))
+        else:
+            for i, n in enumerate(param_names):
+                for k in range(len(self.ctx)):
+                    param_idx2name[i*len(self.ctx)+k] = n
+        self.kwargs["param_idx2name"] = param_idx2name
 
         # init optmizer
         if isinstance(self.optimizer, str):

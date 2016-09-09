@@ -320,6 +320,17 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(arr2.toArray === Array(3f, 4f, 5f, 6f))
   }
 
+  test("reshape") {
+    val arr = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Shape(3, 2))
+
+    val arr1 = arr.reshape(Array(2, 3))
+    assert(arr1.shape === Shape(2, 3))
+    assert(arr1.toArray === Array(1f, 2f, 3f, 4f, 5f, 6f))
+
+    arr.set(1f)
+    assert(arr1.toArray === Array(1f, 1f, 1f, 1f, 1f, 1f))
+  }
+
   test("dispose deps") {
     val arr1 = NDArray.ones(1, 2)
     val arr2 = NDArray.ones(1, 2)
@@ -358,5 +369,12 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(!arr2.isDisposed)
     assert(!arr1_2.isDisposed)
     assert(arr3.isDisposed)
+  }
+
+  test("serialize and deserialize") {
+    val arr = NDArray.ones(1, 2) * 3
+    val bytes = arr.serialize()
+    val arrCopy = NDArray.deserialize(bytes)
+    assert(arr === arrCopy)
   }
 }

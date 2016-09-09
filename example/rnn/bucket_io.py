@@ -24,8 +24,8 @@ def default_read_content(path):
 def default_build_vocab(path):
     content = default_read_content(path)
     content = content.split(' ')
-    the_vocab = {}
     idx = 1 # 0 is left for zero-padding
+    the_vocab = {}
     the_vocab[' '] = 0 # put a dummy element here so that len(vocab) is correct
     for word in content:
         if len(word) == 0:
@@ -67,6 +67,11 @@ def default_gen_buckets(sentences, batch_size, the_vocab):
         buckets.append(max_len)
     return buckets
 
+class ModelParallelBatch(object):
+    """Batch used for model parallelism"""
+    def __init__(self, data, bucket_key):
+        self.data = np.array(data)
+        self.bucket_key = bucket_key
 
 class SimpleBatch(object):
     def __init__(self, data_names, data, label_names, label, bucket_key):
@@ -109,7 +114,7 @@ class DummyIter(mx.io.DataIter):
 class BucketSentenceIter(mx.io.DataIter):
     def __init__(self, path, vocab, buckets, batch_size,
                  init_states, data_name='data', label_name='label',
-                 seperate_char=' <eos> ', text2id=None, read_content=None):
+                 seperate_char=' <eos> ', text2id=None, read_content=None, model_parallel=False):
         super(BucketSentenceIter, self).__init__()
 
         if text2id == None:
@@ -129,6 +134,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.vocab_size = len(vocab)
         self.data_name = data_name
         self.label_name = label_name
+        self.model_parallel = model_parallel
 
         buckets.sort()
         self.buckets = buckets
@@ -193,33 +199,59 @@ class BucketSentenceIter(mx.io.DataIter):
         self.data_buffer = []
         self.label_buffer = []
         for i_bucket in range(len(self.data)):
-            data = np.zeros((self.batch_size, self.buckets[i_bucket]))
-            label = np.zeros((self.batch_size, self.buckets[i_bucket]))
-            self.data_buffer.append(data)
-            self.label_buffer.append(label)
+            if not self.model_parallel:
+                data = np.zeros((self.batch_size, self.buckets[i_bucket]))
+                label = np.zeros((self.batch_size, self.buckets[i_bucket]))
+                self.data_buffer.append(data)
+                self.label_buffer.append(label)
+            else:
+                data = np.zeros((self.buckets[i_bucket], self.batch_size))
+                self.data_buffer.append(data)
+
+        if self.model_parallel:
+            # Transpose data if model parallel 
+            for i in range(len(self.data)):
+                bucket_data = self.data[i]
+                self.data[i] = np.transpose(bucket_data)
 
     def __iter__(self):
-        init_state_names = [x[0] for x in self.init_states]
 
         for i_bucket in self.bucket_plan:
             data = self.data_buffer[i_bucket]
-            label = self.label_buffer[i_bucket]
-
             i_idx = self.bucket_curr_idx[i_bucket]
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
             self.bucket_curr_idx[i_bucket] += self.batch_size
-            data[:] = self.data[i_bucket][idx]
-            label[:, :-1] = data[:, 1:]
-            label[:, -1] = 0
+            
+            # Model parallelism 
+            if self.model_parallel:
+                if self.data[i_bucket][:, idx].shape[1] == 0:
+                    print "WARNING: detected shape " + str(self.data[i_bucket][:, idx].shape)
+                    continue
+                data[:] = self.data[i_bucket][:, idx]
+                data_batch = ModelParallelBatch(data, self.buckets[i_bucket])
+                yield data_batch
+            
+            # Data parallelism
+            else:
+                init_state_names = [x[0] for x in self.init_states]
+                data[:] = self.data[i_bucket][idx]
 
-            data_all = [mx.nd.array(data)] + self.init_state_arrays
-            label_all = [mx.nd.array(label)]
-            data_names = ['data'] + init_state_names
-            label_names = ['softmax_label']
+                for sentence in data:
+                    assert len(sentence) == self.buckets[i_bucket]
+                
+                label = self.label_buffer[i_bucket]
+                label[:, :-1] = data[:, 1:]
+                label[:, -1] = 0
 
-            data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
-                                     self.buckets[i_bucket])
-            yield data_batch
+                data_all = [mx.nd.array(data)] + self.init_state_arrays
+                label_all = [mx.nd.array(label)]
+                data_names = ['data'] + init_state_names
+                label_names = ['softmax_label']
+
+                data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
+                                         self.buckets[i_bucket])
+                yield data_batch
+
 
     def reset(self):
         self.bucket_curr_idx = [0 for x in self.data]

@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments, too-many-locals, too-many-public-methods
+# pylint: disable=too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
 """`BaseModule` defines an API for modules."""
 
 import logging
@@ -171,6 +171,7 @@ class BaseModule(object):
                                                  locals=locals())
                 for callback in _as_list(batch_end_callback):
                     callback(batch_end_params)
+        return eval_metric.get_name_value()
 
     def iter_predict(self, eval_data, num_batch=None, reset=True):
         """Iterate over predictions.
@@ -247,7 +248,7 @@ class BaseModule(object):
                 break
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
-            outputs = [out[0:out.shape[0]-pad] for out in self.get_outputs()]
+            outputs = [out[0:out.shape[0]-pad].copy() for out in self.get_outputs()]
 
             output_list.append(outputs)
 
@@ -274,7 +275,8 @@ class BaseModule(object):
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
-            force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None):
+            force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
+            validation_metric=None, monitor=None):
         """Train the module parameters.
 
         Parameters
@@ -325,16 +327,19 @@ class BaseModule(object):
         num_epoch : int
             Number of epochs to run training.
         """
-
         assert num_epoch is not None, 'please specify number of epochs'
 
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
                   for_training=True, force_rebind=force_rebind)
+        if monitor is not None:
+            self.install_monitor(monitor)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=allow_missing, force_init=force_init)
         self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
                             optimizer_params=optimizer_params)
 
+        if validation_metric is None:
+            validation_metric = eval_metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
 
@@ -345,9 +350,14 @@ class BaseModule(object):
             tic = time.time()
             eval_metric.reset()
             for nbatch, data_batch in enumerate(train_data):
+                if monitor is not None:
+                    monitor.tic()
                 self.forward_backward(data_batch)
                 self.update()
                 self.update_metric(eval_metric, data_batch.label)
+
+                if monitor is not None:
+                    monitor.toc_print()
 
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
@@ -370,9 +380,9 @@ class BaseModule(object):
             #----------------------------------------
             # evaluation on validation set
             if eval_data:
-                self.score(eval_data, eval_metric,
-                           batch_end_callback=eval_batch_end_callback, epoch=epoch)
-                for name, val in eval_metric.get_name_value():
+                res = self.score(eval_data, validation_metric,
+                                 batch_end_callback=eval_batch_end_callback, epoch=epoch)
+                for name, val in res:
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
 
             # end of 1 epoch, reset the data-iter for another epoch
@@ -448,7 +458,7 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def set_params(self, arg_params, aux_params):
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
         """Assign parameter and aux state values.
 
         Parameters
@@ -457,9 +467,15 @@ class BaseModule(object):
             Dictionary of name to value (`NDArray`) mapping.
         aux_params : dict
             Dictionary of name to value (`NDArray`) mapping.
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+
         """
         self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
-                         allow_missing=False, force_init=True)
+                         allow_missing=allow_missing, force_init=force_init)
 
     def save_params(self, fname):
         """Save model parameters to file.
@@ -494,6 +510,10 @@ class BaseModule(object):
             else:
                 raise ValueError("Invalid param file " + fname)
         self.set_params(arg_params, aux_params)
+
+    def install_monitor(self, mon):
+        """Install monitor on all executors"""
+        raise NotImplementedError()
 
     ################################################################################
     # Computations

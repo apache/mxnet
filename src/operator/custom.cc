@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2015 by Contributors
- * \file ndarray_op.cc
+ * \file custom.cc
  * \brief
  * \author Junyuan Xie
 */
@@ -18,7 +18,7 @@ Context CustomOp<cpu>::get_ctx() {
 }
 
 template<>
-Operator *CreateOp<cpu>(CustomOpInfo op_info) {
+Operator *CreateOp<cpu>(CustomOpInfo *op_info) {
   return new CustomOp<cpu>(op_info);
 }
 
@@ -31,7 +31,7 @@ Context CustomOp<gpu>::get_ctx() {
 }
 
 template<>
-Operator* CreateOp<gpu>(CustomOpInfo op_info) {
+Operator* CreateOp<gpu>(CustomOpInfo *op_info) {
   return new CustomOp<gpu>(op_info);
 }
 #endif  // MXNET_USE_CUDA
@@ -71,7 +71,12 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
   std::sort(ndvar.begin(), ndvar.end());
   ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
 
-  CHECK(op_info_.forward(ptrs.size(), ptrs.data(), tags.data(), reqs.data(), ctx.is_train));
+  CHECK(
+    op_info_->forward(ptrs.size(),
+    ptrs.data(), tags.data(),
+    reqs.data(),
+    ctx.is_train,
+    op_info_->p_forward));
 
   // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
   Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {
@@ -124,7 +129,13 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
     tags.push_back(3);
   }
 
-  CHECK(op_info_.backward(ptrs.size(), ptrs.data(), tags.data(), reqs.data(), true));
+  CHECK(
+    op_info_->backward(ptrs.size(),
+    ptrs.data(),
+    tags.data(),
+    reqs.data(),
+    true,
+    op_info_->p_backward));
   // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
   Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){
       ctx.async_on_complete();
@@ -132,7 +143,7 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
 }
 
 Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                                          std::vector<int> *in_type) const {
+                                         std::vector<int> *in_type) const {
   std::vector<unsigned*> shapes;
   std::vector<int> ndims;
   for (auto iter = in_shape->begin(); iter != in_shape->end(); ++iter) {
@@ -145,9 +156,9 @@ Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sh
   } else {
     str_ctx = "gpu";
   }
-  CustomOpInfo op_info;
-  CHECK(info_.create_operator(str_ctx.c_str(), shapes.size(), shapes.data(),
-                              ndims.data(), in_type->data(), &op_info));
+  CustomOpInfo *op_info = new CustomOpInfo;
+  CHECK(info_->create_operator(str_ctx.c_str(), shapes.size(), shapes.data(),
+                              ndims.data(), in_type->data(), op_info, info_->p_create_operator));
   DO_BIND_DISPATCH(CreateOp, op_info);
 }
 

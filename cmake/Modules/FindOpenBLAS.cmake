@@ -1,4 +1,5 @@
-
+file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
+file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
 
 SET(Open_BLAS_INCLUDE_SEARCH_PATHS
   /usr/include
@@ -10,8 +11,8 @@ SET(Open_BLAS_INCLUDE_SEARCH_PATHS
   /opt/OpenBLAS/include
   ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/include
   ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
-  $ENV{OpenBLAS_HOME}
-  $ENV{OpenBLAS_HOME}/include
+  ${OpenBLAS_HOME}
+  ${OpenBLAS_HOME}/include
 )
 
 SET(Open_BLAS_LIB_SEARCH_PATHS
@@ -26,14 +27,17 @@ SET(Open_BLAS_LIB_SEARCH_PATHS
         /opt/OpenBLAS/lib
         ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
         ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
-        $ENV{OpenBLAS}cd
-        $ENV{OpenBLAS}/lib
-        $ENV{OpenBLAS_HOME}
-        $ENV{OpenBLAS_HOME}/lib
+	${OpenBLAS_DIR}
+	${OpenBLAS_DIR}/lib
+        ${OpenBLAS_HOME}
+        ${OpenBLAS_HOME}/lib
  )
 
 FIND_PATH(OpenBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Open_BLAS_INCLUDE_SEARCH_PATHS})
 FIND_LIBRARY(OpenBLAS_LIB NAMES openblas PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
+IF(NOT OpenBLAS_LIB)
+	FIND_FILE(OpenBLAS_LIB NAMES libopenblas.dll.a PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
+ENDIF()
 
 SET(OpenBLAS_FOUND ON)
 

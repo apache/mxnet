@@ -1,4 +1,4 @@
-# Run MXNet on Multiple CPU/GPUs
+# Run MXNet on Multiple CPU/GPUs with Data Parallel
 
 MXNet supports trainig with multiple CPUs and GPUs since the very
 beginning. Almost any program using MXNet's provided training modules, such as
@@ -140,7 +140,7 @@ start a job by using `ssh`, `mpi`, `sge`, or `yarn`.
 
 Assume we are at the directory `mxnet/example/image-classification`.  and want
 to train mnist with lenet by using
-[train_mnist.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/train_mnist.py]).
+[train_mnist.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/train_mnist.py).
 On a single machine  we can run by
 
 ```bash

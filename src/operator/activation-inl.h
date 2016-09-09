@@ -60,10 +60,6 @@ class ActivationOp : public Operator {
     Tensor<xpu, 2, DType> data = in_data[activation::kData].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
     Assign(out, req[activation::kOut], F<ForwardOp>(data));
-    // Use asynchronize complete notification
-    // This is only intended as an example of async ops
-    if (s != NULL) s->Wait();
-    ctx.async_on_complete();
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -83,16 +79,6 @@ class ActivationOp : public Operator {
     Tensor<xpu, 2, DType> m_out_data = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> m_in_grad = in_grad[activation::kData].FlatTo2D<xpu, DType>(s);
     Assign(m_in_grad, req[activation::kData], F<BackwardOp>(m_out_data) * m_out_grad);
-    // Use asynchronize complete notification
-    // This is only intended as an example of async ops
-    if (s != NULL) s->Wait();
-    ctx.async_on_complete();
-  }
-
-  virtual ExecType exec_type() const {
-    // Use asynchronize complete notification
-    // This is only intended as an example of async ops
-    return kAsync;
   }
 };  // class ActivationOp
 

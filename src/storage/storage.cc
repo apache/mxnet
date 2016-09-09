@@ -21,17 +21,23 @@ class StorageImpl : public Storage {
  public:
   Handle Alloc(size_t size, Context ctx) override;
   void Free(Handle handle) override;
+  void DirectFree(Handle handle) override;
   StorageImpl() {}
   virtual ~StorageImpl() = default;
 
  private:
-  static constexpr size_t kPoolThreshold = 4096 * 1024 * 1024ul;
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
 
   template <class DeviceStorage>
-  using CurrentStorageManager =
-      storage::PooledStorageManager<DeviceStorage, kPoolThreshold>;
+  using CPUStorageManager =
+      storage::NaiveStorageManager<DeviceStorage>;
+  template <class DeviceStorage>
+  using PinnedStorageManager =
+      storage::NaiveStorageManager<DeviceStorage>;
+  template <class DeviceStorage>
+  using GPUStorageManager =
+      storage::PooledStorageManager<DeviceStorage>;
 
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
@@ -64,15 +70,15 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
         storage::StorageManager *ptr = nullptr;
         switch (ctx.dev_type) {
           case Context::kCPU: {
-            ptr = new CurrentStorageManager<storage::CPUDeviceStorage>();
+            ptr = new CPUStorageManager<storage::CPUDeviceStorage>();
             break;
           }
           case Context::kCPUPinned: {
-            ptr = new CurrentStorageManager<storage::PinnedMemoryStorage>();
+            ptr = new PinnedStorageManager<storage::PinnedMemoryStorage>();
             break;
           }
           case Context::kGPU: {
-            ptr = new CurrentStorageManager<storage::GPUDeviceStorage>();
+            ptr = new GPUStorageManager<storage::GPUDeviceStorage>();
             break;
           }
           default: LOG(FATAL) <<  "Unimplemented device " << ctx.dev_type;
@@ -87,13 +93,26 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
 void StorageImpl::Free(Storage::Handle handle) {
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
-  storage::StorageManager *maneger = device.Get(
+  storage::StorageManager *manager = device.Get(
       ctx.dev_id, []() {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
   this->ActivateDevice(ctx);
-  maneger->Free(handle.dptr, handle.size);
+  manager->Free(handle.dptr, handle.size);
+}
+
+void StorageImpl::DirectFree(Storage::Handle handle) {
+  const Context &ctx = handle.ctx;
+  auto&& device = storage_managers_.at(ctx.dev_type);
+  storage::StorageManager *manager = device.Get(
+      ctx.dev_id, []() {
+        LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
+        return nullptr;
+      });
+  this->ActivateDevice(ctx);
+  // directly free ths data.
+  manager->DirectFree(handle.dptr, handle.size);
 }
 
 std::shared_ptr<Storage> Storage::_GetSharedRef() {

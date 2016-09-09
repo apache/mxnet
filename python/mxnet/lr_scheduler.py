@@ -48,7 +48,7 @@ class FactorScheduler(LRScheduler):
     factor: float
         the factor for reducing the learning rate
     """
-    def __init__(self, step, factor=1):
+    def __init__(self, step, factor=1, stop_factor_lr=1e-8):
         super(FactorScheduler, self).__init__()
         if step < 1:
             raise ValueError("Schedule step must be greater or equal than 1 round")
@@ -56,6 +56,7 @@ class FactorScheduler(LRScheduler):
             raise ValueError("Factor must be no more than 1 to make lr reduce")
         self.step = step
         self.factor = factor
+        self.stop_factor_lr = stop_factor_lr
         self.count = 0
 
     def __call__(self, num_update):
@@ -71,8 +72,13 @@ class FactorScheduler(LRScheduler):
         if num_update > self.count + self.step:
             self.count += self.step
             self.base_lr *= self.factor
-            logging.info("Update[%d]: Change learning rate to %0.5e",
-                         num_update, self.base_lr)
+            if self.base_lr < self.stop_factor_lr:
+                self.base_lr = self.stop_factor_lr
+                logging.info("Update[%d]: now learning rate arrived at %0.5e, will not "
+                             "change in the future", num_update, self.base_lr)
+            else:
+                logging.info("Update[%d]: Change learning rate to %0.5e",
+                             num_update, self.base_lr)
         return self.base_lr
 
 class MultiFactorScheduler(LRScheduler):

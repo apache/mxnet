@@ -201,8 +201,6 @@ inline void ImageRecordIOParser::Init(
   if (param_.path_imglist.length() != 0) {
     label_map_.reset(new ImageLabelMap(param_.path_imglist.c_str(),
       param_.label_width, !param_.verbose));
-  } else {
-    param_.label_width = 1;
   }
   CHECK(param_.path_imgrec.length() != 0)
       << "ImageRecordIOIterator: must specify image_rec";
@@ -276,7 +274,16 @@ ParseNext(std::vector<InstVector> *out_vec) {
       mshadow::Tensor<cpu, 1> label = out.label().Back();
       if (label_map_ != nullptr) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));
+      } else if (rec.label != NULL) {
+        CHECK_EQ(param_.label_width, rec.num_label)
+          << "rec file provide " << rec.num_label << "-dimensional label "
+             "but label_width is set to " << param_.label_width;
+        mshadow::Copy(label, mshadow::Tensor<cpu, 1>(rec.label,
+                                                     mshadow::Shape1(rec.num_label)));
       } else {
+        CHECK_EQ(param_.label_width, 1)
+          << "label_width must be 1 unless an imglist is provided "
+             "or the rec file is packed with multi dimensional label";
         label[0] = rec.header.label;
       }
       res.release();

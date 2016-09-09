@@ -2,6 +2,37 @@
 Reproducing https://github.com/gcr/torch-residual-networks
 For image size of 32x32
 
+Test accuracy are 0.9309 and 0.9303 in this patch and Kaiming He's paper, respectively.
+The accuracy is the best one of the last 3 epochs (0.930288, 0.930889 and 0.929587),
+while the original paper select the best one in 5 runs.
+The dockerfile and log are in: https://gist.github.com/Answeror/f9160145e1c64bb509f52c00014bdb77
+
+The only difference between this patch and Facebook's implementation
+(https://github.com/gcr/torch-residual-networks and https://github.com/facebook/fb.resnet.torch) are:
+
+1. The kernel of shortcut with downsampling is 2x2 rather than 1x1.
+   I can't reproduce this accuracy with 1x1 kernel. Note the shortcut does not contain learnable parameters.
+2. I use a BatchNorm after data layer to simulate z-score normalization.
+   Although subtract (127, 127, 127) and divide 60 works equally well.
+3. An eps of 2e-5 is used in BatchNorm instead of 1e-5 because cuDNN v5 don't allow such small eps.
+
+Some details affect the accuracy:
+
+1. Z-score normalization of the input.
+2. Weight decay of all parameters (weight, bias, gamma, beta). See comments in `train_cifar10_resnet.py `for details.
+3. Nesterov momentum
+4. `fix_gamma=False` in BatchNorm (gamma is necessary because of the weight decay of the conv weight)
+5. Initialization
+6. 4 pixel padding
+
+And thanks #1230 (@freesouls) and #1041 (@shuokay) to provide preliminary implementations.
+
+## update@2016-06-08
+
+With #2366 and a batch size of 64, I got an accuracy of 0.939704 after 200 epochs on 2 GPUs.
+Note, **the accuracy is strongly affected by the batch size**, the more GPU you use, the smaller batch size should be.
+See https://gist.github.com/Answeror/f9160145e1c64bb509f52c00014bdb77#file-resnet-dual-gpu-log for the full log.
+
 References:
 
 Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun. "Deep Residual Learning for Image Recognition"
@@ -18,7 +49,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='train an image classifer on cifar10')
 parser.add_argument('--data-dir', type=str, default='cifar10/',
                     help='the input data directory')
-parser.add_argument('--gpus', type=str, default='0',
+parser.add_argument('--gpus', type=str,
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--num-examples', type=int, default=50000,
                     help='the number of training examples')
@@ -48,7 +79,7 @@ def _download(data_dir):
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')):
-        os.system('wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip')
+        os.system('wget http://data.dmlc.ml/mxnet/data/cifar10.zip')
         os.system('unzip -u cifar10.zip')
         os.system('mv cifar/* .; rm -rf cifar; rm cifar10.zip')
     os.chdir('..')

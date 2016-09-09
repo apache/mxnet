@@ -49,7 +49,7 @@ First we register our new operator with the name 'softmax':
 @mx.operator.register("softmax")
 class SoftmaxProp(mx.operator.CustomOpProp):
 ```
-Then we call our base constructor with `need_top_grad=False` be cause softmax is a loss layer and we don't need gradient input from layers above:
+Then we call our base constructor with `need_top_grad=False` because softmax is a loss layer and we don't need gradient input from layers above:
 ```python
     def __init__(self):
         super(SoftmaxProp, self).__init__(need_top_grad=False)

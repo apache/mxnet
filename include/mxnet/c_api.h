@@ -25,7 +25,7 @@
 
 /*! \brief manually define unsigned int */
 typedef unsigned int mx_uint;
-/*! \brief manually define unsigned int */
+/*! \brief manually define float */
 typedef float mx_float;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
@@ -95,21 +95,37 @@ struct NDArrayOpInfo {
 
 struct CustomOpInfo {
   bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
-                  const int* /*reqs*/, const bool /*is_train*/);
+                  const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
   bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
-                   const int* /*reqs*/, const bool /*is_train*/);
+                   const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
+  bool (*del)(void* /*state*/);
+  // all functions also pass a payload void* pointer
+  void* p_forward;
+  void* p_backward;
+  void* p_del;
 };
 
 struct CustomOpPropInfo {
-  bool (*list_arguments)(char*** /*args*/);
-  bool (*list_outputs)(char*** /*outputs*/);
-  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/);
+  bool (*list_arguments)(char*** /*args*/, void* /*state*/);
+  bool (*list_outputs)(char*** /*outputs*/, void* /*state*/);
+  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/,
+                      void* /*state*/);
   bool (*declare_backward_dependency)(const int* /*out_grad*/, const int* /*in_data*/,
                                       const int* /*out_data*/, int* /*num_deps*/,
-                                      int** /*rdeps*/);
+                                      int** /*rdeps*/, void* /*state*/);
   bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
-                                   int* /*ndims*/, int* /*dtypes*/, CustomOpInfo* /*ret*/);
-  bool (*list_auxiliary_states)(char*** /*aux*/);
+                          int* /*ndims*/, int* /*dtypes*/,
+                          CustomOpInfo* /*ret*/, void* /*state*/);
+  bool (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
+  bool (*del)(void* /*state*/);
+  // all functions also pass a payload void* pointer
+  void* p_list_arguments;
+  void* p_list_outputs;
+  void* p_infer_shape;
+  void* p_declare_backward_dependency;
+  void* p_create_operator;
+  void* p_list_auxiliary_states;
+  void* p_del;
 };
 
 typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
@@ -294,7 +310,7 @@ MXNET_DLL int MXNDArrayWaitAll();
 MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
 /*!
  * \brief Slice the NDArray along axis 0.
- * \param handle the handle to the narraya
+ * \param handle the handle to the NDArray
  * \param slice_begin The beginning index of slice
  * \param slice_end The ending index of slice
  * \param out The NDArrayHandle of sliced NDArray
@@ -304,6 +320,16 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              mx_uint slice_begin,
                              mx_uint slice_end,
                              NDArrayHandle *out);
+/*!
+ * \brief Index the NDArray along axis 0.
+ * \param handle the handle to the NDArray
+ * \param idx the index
+ * \param out The NDArrayHandle of output NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
+                          mx_uint idx,
+                          NDArrayHandle *out);
 /*!
  * \brief Reshape the NDArray.
  * \param handle the handle to the narray
@@ -453,6 +479,14 @@ MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
  */
 MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                                AtomicSymbolCreator **out_array);
+
+/*!
+ * \brief Get the name of an atomic symbol.
+ * \param creator the AtomicSymbolCreator.
+ * \param name The returned name of the creator.
+ */
+MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
+                                          const char **name);
 /*!
  * \brief Get the detailed information about atomic symbol.
  * \param creator the AtomicSymbolCreator.
@@ -1069,6 +1103,8 @@ MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
 MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
                           const char **keys,
                           const char **vals);
+
+
 /*!
  * \brief Create a kvstore
  * \param type the type of KVStore
@@ -1212,6 +1248,16 @@ MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
 MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
 
 /**
+ * \brief whether to do barrier when finalize
+ *
+ * \param handle handle to the KVStore
+ * \param barrier_before_exit whether to do barrier when kvstore finalize
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetBarrierBeforeExit(KVStoreHandle handle,
+                                            const int barrier_before_exit);
+
+/**
  * \brief the prototype of a server controller
  * \param head the head of the command
  * \param body the body of the command
@@ -1246,6 +1292,21 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
                                              const char* cmd_body);
 
 /**
+ * \brief Get the number of ps dead node(s) specified by {node_id}
+ *
+ * \param handle handle to the KVStore
+ * \param node_id Can be a node group or a single node.
+ *                kScheduler = 1, kServerGroup = 2, kWorkerGroup = 4
+ * \param number Ouptut number of dead nodes
+ * \param timeout_sec A node fails to send heartbeart in {timeout_sec} seconds
+ *                    will be presumed as 'dead'
+ */
+MXNET_DLL int MXKVStoreGetNumDeadNode(KVStoreHandle handle,
+                                      const int node_id,
+                                      int *number,
+                                      const int timeout_sec = 60);
+
+/**
  * \brief Create a RecordIO writer object
  * \param uri path to file
  * \param out handle pointer to the created object
@@ -1271,6 +1332,14 @@ MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
                                           const char *buf, size_t size);
 
 /**
+ * \brief Get the current writer pointer position
+ * \param handle handle to RecordIO object
+ * \param pos handle to output position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos);
+
+/**
  * \brief Create a RecordIO reader object
  * \param uri path to file
  * \param out handle pointer to the created object
@@ -1294,6 +1363,14 @@ MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
 */
 MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
                                         char const **buf, size_t *size);
+
+/**
+ * \brief Set the current reader pointer position
+ * \param handle handle to RecordIO object
+ * \param pos target position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos);
 
 /**
  * \brief Create a MXRtc object
