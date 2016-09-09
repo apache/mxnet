@@ -803,6 +803,19 @@ MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromToSimple)
 .set_type_mask(kNDArrayArgBeforeScalar);
 
+MXNET_REGISTER_NDARRAY_FUN(_copy_slice_to)
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
+  CopySliceTo(*u[0], 
+              static_cast<index_t>(s[0]), 
+              static_cast<index_t>(s[1]), 
+              static_cast<index_t>(s[2]), out[0]);
+})
+.set_num_use_vars(1)
+.set_num_scalars(3)
+.set_num_mutate_vars(1)
+.set_type_mask(kNDArrayArgBeforeScalar);
+
 // register random number generators
 MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
 .set_body([](NDArray **u, real_t *s, NDArray **out,

@@ -382,10 +382,16 @@ class NDArray {
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
 /*!
- * TODO(chiyuan): add doc
+ * \brief copy a slice along any axis.
+ * \param from the NDArray we want to slice from
+ * \param slice_dim the axis we want to perform slice in
+ * \param start the beginning of the slice
+ * \param end the ending of the slice
+ * \param to the pre-allocated NDArray to copy the slice to
+ * \param priority the priority of the task
  */
 void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end, 
-                 NDArray *to, int priority = 0);
+                 NDArray *to, int priority=0);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.

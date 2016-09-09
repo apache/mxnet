@@ -282,19 +282,6 @@ int MXNDArraySlice(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
-int MXNDArrayCopySliceTo(NDArrayHandle handle,
-                         mx_uint axis,
-                         mx_uint slice_begin,
-                         mx_uint slice_end,
-                         NDArrayHandle out) {
-  API_BEGIN();
-  CopySliceTo(
-      *static_cast<NDArray*>(handle),
-      axis, slice_begin, slice_end,
-      static_cast<NDArray*>(out));
-  API_END();
-}
-
 int MXNDArrayAt(NDArrayHandle handle,
                 mx_uint idx,
                 NDArrayHandle *out) {
