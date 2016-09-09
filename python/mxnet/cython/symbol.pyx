@@ -14,9 +14,19 @@ include "./base.pyi"
 
 cdef extern from "nnvm/c_api.h":
     const char* NNGetLastError();
-    int NNSymbolListAtomicSymbolCreators(nn_uint *out_size,
-                                         AtomicSymbolCreator **out_array);
-    int NNSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
+    int NNListAllOpNames(nn_uint *out_size,
+                      const char ***out_array);
+    int NNGetOpHandle(const char *op_name,
+                      OpHandle *handle);
+    int NNGetOpInfo(OpHandle op,
+                    const char **name,
+                    const char **description,
+                    nn_uint *num_doc_args,
+                    const char ***arg_names,
+                    const char ***arg_type_infos,
+                    const char ***arg_descriptions,
+                    const char **return_type);
+    int NNSymbolCreateAtomicSymbol(OpHandle op,
                                    nn_uint num_param,
                                    const char **keys,
                                    const char **vals,
@@ -33,7 +43,7 @@ cdef extern from "nnvm/c_api.h":
                         SymbolHandle* args);
 
 cdef extern from "mxnet/c_api.h":
-    int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
+    int MXSymbolGetAtomicSymbolInfo(OpHandle creator,
                                     const char **name,
                                     const char **description,
                                     nn_uint *num_doc_args,
@@ -102,7 +112,7 @@ cdef SymbolSetAttr(SymbolHandle handle, dict kwargs):
 
 _symbol_cls = SymbolBase
 
-def _set_symbol_class(cls):
+cdef _set_symbol_class(cls):
     global _symbol_cls
     _symbol_cls = cls
 
@@ -112,9 +122,9 @@ cdef NewSymbol(SymbolHandle handle):
     (<SymbolBase>sym).chandle = handle
     return sym
 
-cdef _make_atomic_symbol_function(AtomicSymbolCreator handle):
+cdef _make_atomic_symbol_function(OpHandle handle, string name):
     """Create an atomic symbol function by handle and funciton name."""
-    cdef const char *name
+    cdef const char *real_name
     cdef const char *desc
     cdef nn_uint num_args
     cdef const char** arg_names
@@ -124,11 +134,11 @@ cdef _make_atomic_symbol_function(AtomicSymbolCreator handle):
     cdef const char* key_var_num_args
 
     CALL(MXSymbolGetAtomicSymbolInfo(
-        handle, &name, &desc,
+        handle, &real_name, &desc,
         &num_args, &arg_names,
         &arg_types, &arg_descs,
         &key_var_num_args, &return_type))
-    func_name = py_str(name)
+    func_name = py_str(name.c_str())
 
     key_vargs = py_str(key_var_num_args)
     num_args = int(num_args)
@@ -210,15 +220,25 @@ cdef _make_atomic_symbol_function(AtomicSymbolCreator handle):
     return creator
 
 
-def _init_symbol_module(root_namespace):
+def _init_symbol_module(symbol_class, root_namespace):
     """List and add all the atomic symbol functions to current module."""
-    cdef AtomicSymbolCreator* plist
+    cdef const char** op_name_ptrs
     cdef nn_uint size
-    CALL(NNSymbolListAtomicSymbolCreators(&size, &plist))
+    cdef vector[string] op_names
+    cdef OpHandle handle
+
+    _set_symbol_class(symbol_class)
+    CALL(NNListAllOpNames(&size, &op_name_ptrs))
+    for i in range(size):
+        op_names.push_back(string(op_name_ptrs[i]))
+        print op_names[i]
+
+
     module_obj = _sys.modules["%s.symbol" % root_namespace]
     module_internal = _sys.modules["%s._symbol_internal" % root_namespace]
-    for i in range(size):
-        function = _make_atomic_symbol_function(plist[i])
+    for i in range(op_names.size()):
+        CALL(NNGetOpHandle(op_names[i].c_str(), &handle))
+        function = _make_atomic_symbol_function(handle, op_names[i])
         if function.__name__.startswith('_'):
             setattr(module_internal, function.__name__, function)
         else:

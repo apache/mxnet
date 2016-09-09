@@ -101,9 +101,7 @@ if [ ${TASK} == "python_test" ]; then
         python -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/unittest || exit -1
         make cython3
-        make cython2
         # cython tests
-        python2 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/train || exit -1
     else
