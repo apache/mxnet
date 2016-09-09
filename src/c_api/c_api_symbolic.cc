@@ -43,7 +43,7 @@ int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
   mxnet::op::RegisterLegacyOpProp();
   mxnet::op::RegisterLegacyNDFunc();
-  return NNSymbolListAtomicSymbolCreators(out_size, out_array);
+  return NNListUniqueOps(out_size, out_array);
 }
 
 int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
@@ -65,7 +65,7 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
   } else {
     *key_var_num_args = ret->ret_str.c_str();
   }
-  return NNSymbolGetAtomicSymbolInfo(
+  return NNGetOpInfo(
       creator, name, description,
       num_args, arg_names, arg_type_infos,
       arg_descriptions, return_type);
