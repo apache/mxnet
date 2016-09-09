@@ -25,13 +25,13 @@ from .attribute import AttrScope
 # When possible, use cython to speedup part of computation.
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from ._ctypes.symbol import SymbolBase, _set_symbol_class
+        from ._ctypes.symbol import SymbolBase, _init_symbol_module
     elif _sys.version_info >= (3, 0):
-        from ._cy3.symbol import SymbolBase, _set_symbol_class, _init_symbol_module
+        from ._cy3.symbol import SymbolBase, _init_symbol_module
     else:
-        from ._cy2.symbol import SymbolBase, _set_symbol_class, _init_symbol_module
+        from ._cy2.symbol import SymbolBase, _init_symbol_module
 except ImportError:
-    from ._ctypes.symbol import SymbolBase, _set_symbol_class, _init_symbol_module
+    from ._ctypes.symbol import SymbolBase, _init_symbol_module
 
 
 class Symbol(SymbolBase):
@@ -991,9 +991,9 @@ def load_json(json_str):
     check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
     return Symbol(handle)
 
+
 # Initialize the atomic symbol in startups
-_init_symbol_module("mxnet")
-_set_symbol_class(Symbol)
+_init_symbol_module(Symbol, "mxnet")
 
 # pylint: disable=no-member
 # pylint: disable=redefined-builtin
