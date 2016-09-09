@@ -964,7 +964,9 @@ def concatenate(arrays, axis=0, always_copy=True):
                 ctx=arrays[0].context, dtype=dtype)
     idx = 0
     for arr in arrays:
+        # pylint: disable=protected-access
         ret._assign_slice_from(axis, idx, idx+arr.shape[axis], arr)
+        # pylint: enable=protected-access
         idx += arr.shape[axis]
 
     return ret

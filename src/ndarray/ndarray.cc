@@ -246,7 +246,7 @@ void AssignSliceFrom(const NDArray &from, int slice_dim, index_t start, index_t 
 
   std::vector<Engine::VarHandle> const_vars{from.var()};
   NDArray ret = *to;
-  
+
 #define MXNET_ASSIGNSLICEFROM_IMPL(xpu1, xpu2) \
     Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
       ret.CheckAndAlloc(); \
