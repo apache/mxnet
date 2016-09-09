@@ -391,7 +391,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
  * \param priority the priority of the task
  */
 void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end, 
-                 NDArray *to, int priority=0);
+                 NDArray &to, int priority=0);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
