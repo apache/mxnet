@@ -276,6 +276,33 @@ class NDArray(object):
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    def _copy_slice_to(self, axis, start, stop, target):
+        """Copy a slice along an axis.
+
+        Parameters
+        ----------
+        axis : int
+            The axis along which to do slicing.
+        start : int
+            The starting index of the slice.
+        stop : int
+            The finishing index of the slice.
+        target : NDArray or Context
+            If an NDArray, must be pre-allocated with compatible shape.
+            If a Context, a new NDArray will be created.
+
+        Returns
+        -------
+        The sliced copy of the NDArray.
+        """
+        if isinstance(target, Context):
+            shape = list(self.shape)
+            shape[axis] = stop - start
+            target = NDArray(_new_alloc_handle(shape, target, True, self.dtype))
+
+        assert isinstance(target, NDArray)
+        return _internal._copy_slice_to(self, axis, start, stop, out=target)
+
     def _at(self, idx):
         """Return a sub NDArray that shares memory with current one.
 

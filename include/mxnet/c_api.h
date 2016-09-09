@@ -310,7 +310,7 @@ MXNET_DLL int MXNDArrayWaitAll();
 MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
 /*!
  * \brief Slice the NDArray along axis 0.
- * \param handle the handle to the narraya
+ * \param handle the handle to the NDArray
  * \param slice_begin The beginning index of slice
  * \param slice_end The ending index of slice
  * \param out The NDArrayHandle of sliced NDArray
@@ -322,9 +322,9 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              NDArrayHandle *out);
 /*!
  * \brief Index the NDArray along axis 0.
- * \param handle the handle to the narraya
+ * \param handle the handle to the NDArray
  * \param idx the index
- * \param out The NDArrayHandle of sliced NDArray
+ * \param out The NDArrayHandle of output NDArray
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
