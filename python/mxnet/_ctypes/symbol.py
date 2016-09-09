@@ -7,7 +7,7 @@ import ctypes
 import sys
 from ..base import _LIB
 from ..base import c_array, c_str, mx_uint, py_str
-from ..base import SymbolHandle
+from ..base import SymbolHandle, OpHandle
 from ..base import check_call
 from ..symbol_doc import _build_doc
 from ..name import NameManager
@@ -103,9 +103,9 @@ def _set_symbol_class(cls):
     _symbol_cls = cls
 
 
-def _make_atomic_symbol_function(handle):
+def _make_atomic_symbol_function(handle, name):
     """Create an atomic symbol function by handle and funciton name."""
-    name = ctypes.c_char_p()
+    real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
     num_args = mx_uint()
     arg_names = ctypes.POINTER(ctypes.c_char_p)()
@@ -115,7 +115,7 @@ def _make_atomic_symbol_function(handle):
     ret_type = ctypes.c_char_p()
 
     check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
-        handle, ctypes.byref(name), ctypes.byref(desc),
+        handle, ctypes.byref(real_name), ctypes.byref(desc),
         ctypes.byref(num_args),
         ctypes.byref(arg_names),
         ctypes.byref(arg_types),
@@ -123,7 +123,7 @@ def _make_atomic_symbol_function(handle):
         ctypes.byref(key_var_num_args),
         ctypes.byref(ret_type)))
     narg = int(num_args.value)
-    func_name = py_str(name.value)
+    func_name = name
     key_var_num_args = py_str(key_var_num_args.value)
     ret_type = py_str(ret_type.value) if ret_type.value is not None else ''
     doc_str = _build_doc(func_name,
@@ -191,18 +191,25 @@ def _make_atomic_symbol_function(handle):
     creator.__doc__ = doc_str
     return creator
 
-def _init_symbol_module(root):
+
+def _init_symbol_module(symbol_class, root_namespace):
     """List and add all the atomic symbol functions to current module."""
-    plist = ctypes.POINTER(ctypes.c_void_p)()
+    _set_symbol_class(symbol_class)
+    plist = ctypes.POINTER(ctypes.c_char_p)()
     size = ctypes.c_uint()
 
-    check_call(_LIB.NNSymbolListAtomicSymbolCreators(ctypes.byref(size),
-                                                     ctypes.byref(plist)))
-    module_obj = sys.modules["%s.symbol" % root]
-    module_internal = sys.modules["%s._symbol_internal" % root]
+    check_call(_LIB.NNListAllOpNames(ctypes.byref(size),
+                                     ctypes.byref(plist)))
+    op_names = []
     for i in range(size.value):
-        hdl = SymbolHandle(plist[i])
-        function = _make_atomic_symbol_function(hdl)
+        op_names.append(py_str(plist[i]))
+
+    module_obj = sys.modules["%s.symbol" % root_namespace]
+    module_internal = sys.modules["%s._symbol_internal" % root_namespace]
+    for name in op_names:
+        hdl = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+        function = _make_atomic_symbol_function(hdl, name)
         if function.__name__.startswith('_'):
             setattr(module_internal, function.__name__, function)
         else:
