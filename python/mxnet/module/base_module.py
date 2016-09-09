@@ -603,7 +603,8 @@ class BaseModule(object):
     # module setup
     ################################################################################
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None,
+             batch_axis=0):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -626,6 +627,10 @@ class BaseModule(object):
             Default is `None`. This is used in bucketing. When not `None`, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+        batch_axis : int
+            Default 0. The axis of mini-batch. For most applications, the axis 0 should be
+            the batch size. However, for example, for RNNs, the axis 0 might be used for time,
+            and axis 1 for mini-batch. This parameter allows us to control this.
         """
         raise NotImplementedError()
 
