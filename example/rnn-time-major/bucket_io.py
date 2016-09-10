@@ -223,11 +223,7 @@ class BucketSentenceIter(mx.io.DataIter):
             else:
                 data[:] = self.data[i_bucket][idx]
 
-            for sentence in data:
-                assert len(sentence) == self.buckets[i_bucket]
-            
             label = self.label_buffer[i_bucket]
-
             if self.time_major:
                 label[:-1, :] = data[1:, :]
                 label[-1, :] = 0

@@ -33,7 +33,7 @@ if __name__ == '__main__':
     learning_rate = 0.01
     momentum = 0.0
 
-    contexts = [mx.context.gpu(i) for i in range(4)]
+    contexts = [mx.context.gpu(i) for i in range(1)]
     vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
 
     init_h = [('LSTM_state', (num_lstm_layer, batch_size, num_hidden))]
@@ -91,11 +91,11 @@ if __name__ == '__main__':
                                      name='pred')
 
         # reshape to be of compatible shape as labels
-        pred_tm = mx.sym.Reshape(data=pred, shape=(-1, batch_size, len(vocab)))
+        pred_tm = mx.sym.Reshape(data=pred, shape=(seq_len, -1, len(vocab)))
 
         sm = mx.sym.SoftmaxOutput(data=pred_tm, label=label, name='softmax')
 
-        data_names = ['data', 'LSTM_init_h', 'LSTM_init_c']
+        data_names = ['data', 'LSTM_state', 'LSTM_state_cell']
         label_names = ['softmax_label']
 
         return (sm, data_names, label_names)
