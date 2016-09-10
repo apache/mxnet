@@ -209,7 +209,9 @@ class CommDevice : public Comm {
         devs.push_back(a.ctx());
       }
       InitMergeBuffer(devs);
-      EnableP2P(devs);
+      if (dmlc::GetEnv("MXNET_ENABLE_GPU_P2P", 1)) {
+        EnableP2P(devs);
+      }
     }
 
     auto& buf = merge_buf_[key];
@@ -285,8 +287,10 @@ class CommDevice : public Comm {
     }
     if (enabled != n*(n-1)) {
       // print warning info if not fully enabled
-      LOG(WARNING) << "only " << enabled <<  "out of "
-                   << n*(n-1) << " GPU pairs are enabled direct access";
+      LOG(WARNING) << "only " << enabled <<  " out of "
+                   << n*(n-1) << " GPU pairs are enabled direct access. "
+                   << "It may affect the perofmrance. "
+                   << "You can set MXNET_ENABLE_GPU_P2P=0 to turn it off";
       std::string access(n, '.');
       for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
