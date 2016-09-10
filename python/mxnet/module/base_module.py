@@ -329,8 +329,9 @@ class BaseModule(object):
         """
         assert num_epoch is not None, 'please specify number of epochs'
 
+        batch_axis = train_data.batch_axis if hasattr(train_data, 'batch_axis') else 0
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
-                  for_training=True, force_rebind=force_rebind)
+                  for_training=True, force_rebind=force_rebind, batch_axis=batch_axis)
         if monitor is not None:
             self.install_monitor(monitor)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,

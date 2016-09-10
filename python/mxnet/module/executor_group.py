@@ -141,10 +141,12 @@ class DataParallelExecutorGroup(object):
         """
         assert len(data_shapes) > 0
 
-        for _, shape in data_shapes:
+        for name, shape in data_shapes:
             batch_size = shape[self.batch_axis]
             if self.batch_size is not None:
-                assert batch_size == self.batch_size, "all data must have the same batch size"
+                assert batch_size == self.batch_size, ("all data must have the same batch size: "
+                                                       + ("batch_size = %d, but " % self.batch_size)
+                                                       + ("%s has shape %s" % (name, shape)))
             else:
                 self.batch_size = batch_size
 
