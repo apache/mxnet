@@ -141,6 +141,20 @@ struct log_grad {
   }
 };
 
+struct sin {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(sinf(a));
+  }
+};
+
+struct sin_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(cosf(a));
+  }
+};
+
 struct cos {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
@@ -155,19 +169,62 @@ struct cos_grad {
   }
 };
 
-struct sin {
+struct tan {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(sinf(a));
+    return DType(tanf(a));
   }
 };
 
-struct sin_grad {
+struct tan_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(cosf(a));
+    return DType(powf(tanf(a), 2) + 1);
   }
 };
+
+struct arcsin {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(asinf(a));
+  }
+};
+
+struct arcsin_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(1.0 / (powf((1 - a*a), 0.5)));
+  }
+};
+
+struct arccos {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(acosf(a));
+  }
+};
+
+struct arccos_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(-1.0 / (powf((1 - a*a), 0.5)));
+  }
+};
+
+struct arctan {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(atanf(a));
+  }
+};
+
+struct arctan_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(1 / (a*a + 1));
+  }
+};
+
 struct square {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
