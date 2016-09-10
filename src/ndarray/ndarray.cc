@@ -248,7 +248,6 @@ void AssignSliceFrom(const NDArray &from, int slice_dim, index_t start, index_t 
   NDArray ret = *to;
 
 #define MXNET_ASSIGNSLICEFROM_IMPL(xpu1, xpu2) \
-    Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
       ret.CheckAndAlloc(); \
       for (index_t i = 0; i < from_shape[0]; ++i) { \
         index_t length = from_shape[1] * from_shape[2]; \
@@ -259,20 +258,36 @@ void AssignSliceFrom(const NDArray &from, int slice_dim, index_t start, index_t 
         TBlob blob_to = ret.raw_data(dst_idx, length); \
         ndarray::Copy<xpu1, xpu2>(blob_from, &blob_to, \
                                   from.ctx(), ret.ctx(), ctx); \
-      } \
-    }, from.ctx(), const_vars, {ret.var()}, \
-    FnProperty::kNormal, priority)
+      }
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
-    MXNET_ASSIGNSLICEFROM_IMPL(cpu, cpu);
+    Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+      MXNET_ASSIGNSLICEFROM_IMPL(cpu, cpu);
+    }, from.ctx(), const_vars, {ret.var()},
+    FnProperty::kNormal, priority);
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
-      MXNET_ASSIGNSLICEFROM_IMPL(cpu, gpu);
+      Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+        MXNET_ASSIGNSLICEFROM_IMPL(cpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, ret.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyToGPU, priority);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
-      MXNET_ASSIGNSLICEFROM_IMPL(gpu, cpu);
+      Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+        MXNET_ASSIGNSLICEFROM_IMPL(gpu, cpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
-      MXNET_ASSIGNSLICEFROM_IMPL(gpu, gpu);
+      Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+        MXNET_ASSIGNSLICEFROM_IMPL(gpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -307,7 +322,6 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
   NDArray ret = *to;
 
 #define MXNET_COPYSLICETO_IMPL(xpu1, xpu2) \
-    Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) { \
       ret.CheckAndAlloc(); \
       for (index_t i = 0; i < from_shape[0]; ++i) { \
         index_t src_idx = i * (from_shape[1] * from_shape[2]) + \
@@ -319,20 +333,36 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
         TBlob blob_to = ret.raw_data(dst_idx, length); \
         ndarray::Copy<xpu1, xpu2>(blob_from, &blob_to, \
                                   from.ctx(), ret.ctx(), ctx); \
-      } \
-    }, from.ctx(), const_vars, {ret.var()}, \
-    FnProperty::kNormal, priority)
+      }
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
-    MXNET_COPYSLICETO_IMPL(cpu, cpu);
+    Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+      MXNET_COPYSLICETO_IMPL(cpu, cpu);
+    }, from.ctx(), const_vars, {ret.var()},
+    FnProperty::kNormal, priority);
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
-      MXNET_COPYSLICETO_IMPL(cpu, gpu);
+      Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+        MXNET_COPYSLICETO_IMPL(cpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, ret.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyToGPU, priority);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
-      MXNET_COPYSLICETO_IMPL(gpu, cpu);
+      Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+        MXNET_COPYSLICETO_IMPL(gpu, cpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
-      MXNET_COPYSLICETO_IMPL(gpu, gpu);
+      Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+        MXNET_COPYSLICETO_IMPL(gpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
