@@ -267,7 +267,7 @@ class DataParallelExecutorGroup(object):
         for key, the_shape in zip(self.symbol.list_outputs(), shapes):
             the_shape = list(the_shape)
             the_shape[self.batch_axis] = self.batch_size
-            concat_shapes.append(key, tuple(the_shape))
+            concat_shapes.append((key, tuple(the_shape)))
         return concat_shapes
 
     def get_outputs(self, merge_multi_context=True):
