@@ -177,7 +177,7 @@ class LeakyReLUOp : public Operator {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         grad_weight = sumall_except_dim<1>(F<prelu_grad>(data) * grad);
-        gdata = F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad;
+        gdata = F<mshadow_op::xelu_grad>(data, broadcast<1>(weight, data.shape_)) * grad;
         break;
       }
       case leakyrelu::kRReLU: {
