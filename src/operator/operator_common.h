@@ -76,13 +76,13 @@ struct InferTypeError {
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                   \
   {                                                                     \
-    auto &out = (shape_array)[index];                                   \
-    if (out.ndim() == 0) {                                              \
-      out = shape;                                                      \
+    auto &local_out = (shape_array)[index];                             \
+    if (local_out.ndim() == 0) {                                        \
+      local_out = shape;                                                \
     } else {                                                            \
-      if (out != shape) {                                               \
+      if (local_out != shape) {                                         \
         std::ostringstream os;                                          \
-        os << "Shape inconsistent, Provided " <<  '='<< out << ','      \
+        os << "Shape inconsistent, Provided " <<  '='<< local_out << ','\
            << " inferred shape=" << shape;                              \
         throw ::mxnet::op::InferShapeError(os.str(), index);            \
       }                                                                 \
@@ -98,13 +98,13 @@ struct InferTypeError {
  */
 #define TYPE_ASSIGN_CHECK(type_array, index, type)                      \
   {                                                                     \
-    auto &out = (type_array)[index];                                    \
-    if (out == -1) {                                                    \
-      out = type;                                                       \
+    auto &local_out = (type_array)[index];                              \
+    if (local_out == -1) {                                              \
+      local_out = type;                                                 \
     } else {                                                            \
-      if (out != type) {                                                \
+      if (local_out != type) {                                          \
         std::ostringstream os;                                          \
-        os << "Type inconsistent, Provided " <<  '='<< out << ','       \
+        os << "Type inconsistent, Provided " <<  '='<< local_out << ',' \
            << " inferred type=" << type;                                \
         throw ::mxnet::op::InferTypeError(os.str(), index);             \
       }                                                                 \
@@ -128,6 +128,43 @@ struct InferTypeError {
     return nullptr;                                                  \
   }
 #endif
+
+#define MXNET_NDIM_SWITCH(dim, NDIM, ...)           \
+  switch (dim) {                                    \
+   case 1:                                          \
+    {                                               \
+      const int NDIM = 1;                           \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case 2:                                           \
+    {                                               \
+      const int NDIM = 2;                           \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case 3:                                           \
+    {                                               \
+      const int NDIM = 3;                           \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case 4:                                           \
+    {                                               \
+      const int NDIM = 4;                           \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case 5:                                           \
+    {                                               \
+      const int NDIM = 5;                           \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    LOG(FATAL) << "Up to 5 dimensional arrays are " \
+               << "supported, got " << dim;         \
+  }
 
 // describe op registration point
 // TODO(eric): move to dmlc-core

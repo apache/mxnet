@@ -21,14 +21,14 @@ NNVM_REGISTER_OP(abs)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::abs>);
 
 NNVM_REGISTER_OP(_backward_abs)
-.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_backward<mshadow_op::sign> >);
+.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::sign> >);
 
 // sign
 NNVM_REGISTER_OP(sign)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::sign>);
 
 NNVM_REGISTER_OP(_backward_sign)
-.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_backward<mshadow_op::sign_grad> >);
+.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::sign_grad> >);
 
 // round
 NNVM_REGISTER_OP(round)
@@ -47,14 +47,14 @@ NNVM_REGISTER_OP(square)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::square>);
 
 NNVM_REGISTER_OP(_backward_square)
-.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_backward<mshadow_op::square_grad> >);
+.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::square_grad> >);
 
 // sqrt
 NNVM_REGISTER_OP(sqrt)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::square_root>);
 
 NNVM_REGISTER_OP(_backward_sqrt)
-.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_backward<mshadow_op::square_root_grad> >);
+.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::square_root_grad> >);
 
 // rsqrt
 NNVM_REGISTER_OP(rsqrt)
@@ -62,7 +62,7 @@ NNVM_REGISTER_OP(rsqrt)
 
 NNVM_REGISTER_OP(_backward_rsqrt)
 .attr<FCompute>("FCompute<gpu>",
-  BinaryCompute<gpu, unary_backward<mshadow_op::reciprocal_square_root_grad> >);
+  BinaryCompute<gpu, unary_bwd<mshadow_op::reciprocal_square_root_grad> >);
 
 // exp
 NNVM_REGISTER_OP(exp)
@@ -73,21 +73,21 @@ NNVM_REGISTER_OP(log)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::log>);
 
 NNVM_REGISTER_OP(_backward_log)
-.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_backward<mshadow_op::log_grad> >);
+.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::log_grad> >);
 
 // cos
 NNVM_REGISTER_OP(cos)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::cos>);
 
 NNVM_REGISTER_OP(_backward_cos)
-.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_backward<mshadow_op::cos_grad> >);
+.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::cos_grad> >);
 
 // sin
 NNVM_REGISTER_OP(sin)
 .attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::sin>);
 
 NNVM_REGISTER_OP(_backward_sin)
-.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_backward<mshadow_op::sin_grad> >);
+.attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::sin_grad> >);
 
 }  // namespace op
 }  // namespace mxnet

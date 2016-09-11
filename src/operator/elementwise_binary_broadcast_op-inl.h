@@ -507,42 +507,42 @@ void BroadcastPowerBackward_(const OutputGrad& out_grad,
 }
 
 
-MXNET_REGISTER_SIMPLE_OP(broadcast_plus, XPU)
-.set_shape_function(BinaryBroadcastShape_)
-.set_function(XPU::kDevMask, BinaryBroadcastForward_<
-              XPU, mshadow::op::plus>, kNoInplace, kRegisterSymbolic)
-.set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
-              XPU, mshadow_op::identity, mshadow_op::identity>, kNoInplace)
-.describe("lhs add rhs with broadcast");
+// MXNET_REGISTER_SIMPLE_OP(broadcast_plus, XPU)
+// .set_shape_function(BinaryBroadcastShape_)
+// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
+//               XPU, mshadow::op::plus>, kNoInplace, kRegisterSymbolic)
+// .set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
+//               XPU, mshadow_op::identity, mshadow_op::identity>, kNoInplace)
+// .describe("lhs add rhs with broadcast");
 
-MXNET_REGISTER_SIMPLE_OP(broadcast_minus, XPU)
-.set_shape_function(BinaryBroadcastShape_)
-.set_function(XPU::kDevMask, BinaryBroadcastForward_<
-              XPU, mshadow::op::minus>, kNoInplace, kRegisterSymbolic)
-.set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
-              XPU, mshadow_op::identity, mshadow_op::negation>, kNoInplace)
-.describe("lhs minus rhs with broadcast");
+// MXNET_REGISTER_SIMPLE_OP(broadcast_minus, XPU)
+// .set_shape_function(BinaryBroadcastShape_)
+// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
+//               XPU, mshadow::op::minus>, kNoInplace, kRegisterSymbolic)
+// .set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
+//               XPU, mshadow_op::identity, mshadow_op::negation>, kNoInplace)
+// .describe("lhs minus rhs with broadcast");
 
-MXNET_REGISTER_SIMPLE_OP(broadcast_mul, XPU)
-.set_shape_function(BinaryBroadcastShape_)
-.set_function(XPU::kDevMask, BinaryBroadcastForward_<
-              XPU, mshadow::op::mul>, kNoInplace, kRegisterSymbolic)
-.set_gradient(XPU::kDevMask, BroadcastMulBackward_<XPU>, kNoInplace)
-.describe("lhs multiple rhs with broadcast");
+// MXNET_REGISTER_SIMPLE_OP(broadcast_mul, XPU)
+// .set_shape_function(BinaryBroadcastShape_)
+// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
+//               XPU, mshadow::op::mul>, kNoInplace, kRegisterSymbolic)
+// .set_gradient(XPU::kDevMask, BroadcastMulBackward_<XPU>, kNoInplace)
+// .describe("lhs multiple rhs with broadcast");
 
-MXNET_REGISTER_SIMPLE_OP(broadcast_div, XPU)
-.set_shape_function(BinaryBroadcastShape_)
-.set_function(XPU::kDevMask, BinaryBroadcastForward_<
-              XPU, mshadow::op::div>, kNoInplace, kRegisterSymbolic)
-.set_gradient(XPU::kDevMask, BroadcastDivBackward_<XPU>, kNoInplace)
-.describe("lhs divide rhs with broadcast");
+// MXNET_REGISTER_SIMPLE_OP(broadcast_div, XPU)
+// .set_shape_function(BinaryBroadcastShape_)
+// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
+//               XPU, mshadow::op::div>, kNoInplace, kRegisterSymbolic)
+// .set_gradient(XPU::kDevMask, BroadcastDivBackward_<XPU>, kNoInplace)
+// .describe("lhs divide rhs with broadcast");
 
-MXNET_REGISTER_SIMPLE_OP(broadcast_power, XPU)
-.set_shape_function(BinaryBroadcastShape_)
-.set_function(XPU::kDevMask, BinaryBroadcastForward_<
-              XPU, mshadow_op::power>, kNoInplace, kRegisterSymbolic)
-.set_gradient(XPU::kDevMask, BroadcastPowerBackward_<XPU>, kNoInplace)
-.describe("lhs power rhs with broadcast");
+// MXNET_REGISTER_SIMPLE_OP(broadcast_power, XPU)
+// .set_shape_function(BinaryBroadcastShape_)
+// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
+//               XPU, mshadow_op::power>, kNoInplace, kRegisterSymbolic)
+// .set_gradient(XPU::kDevMask, BroadcastPowerBackward_<XPU>, kNoInplace)
+// .describe("lhs power rhs with broadcast");
 
 }  // namespace op
 }  // namespace mxnet

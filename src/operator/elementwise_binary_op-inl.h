@@ -210,35 +210,35 @@ void MinimumBackward_(const OutputGrad& out_grad,
 }
 
 
-MXNET_REGISTER_SIMPLE_OP(_plus, XPU)
-.set_symbol_op_name("_Plus")
-.set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::plus>, kInplaceLhsOut)
-.set_gradient(XPU::kDevMask, PlusBackward_<XPU>, kInplaceOutLhs)
-.describe("Add lhs and rhs");
+// MXNET_REGISTER_SIMPLE_OP(_plus, XPU)
+// .set_symbol_op_name("_Plus")
+// .set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::plus>, kInplaceLhsOut)
+// .set_gradient(XPU::kDevMask, PlusBackward_<XPU>, kInplaceOutLhs)
+// .describe("Add lhs and rhs");
 
-MXNET_REGISTER_SIMPLE_OP(_minus, XPU)
-.set_symbol_op_name("_Minus")
-.set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::minus>, kInplaceLhsOut)
-.set_gradient(XPU::kDevMask, MinusBackward_<XPU>, kInplaceOutLhs)
-.describe("Minus lhs and rhs");
+// MXNET_REGISTER_SIMPLE_OP(_minus, XPU)
+// .set_symbol_op_name("_Minus")
+// .set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::minus>, kInplaceLhsOut)
+// .set_gradient(XPU::kDevMask, MinusBackward_<XPU>, kInplaceOutLhs)
+// .describe("Minus lhs and rhs");
 
-MXNET_REGISTER_SIMPLE_OP(_mul, XPU)
-.set_symbol_op_name("_Mul")
-.set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::mul>, kInplaceLhsOut)
-.set_gradient(XPU::kDevMask, MulBackward_<XPU>, kInplaceOutLhs)
-.describe("Multiply lhs and rhs");
+// MXNET_REGISTER_SIMPLE_OP(_mul, XPU)
+// .set_symbol_op_name("_Mul")
+// .set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::mul>, kInplaceLhsOut)
+// .set_gradient(XPU::kDevMask, MulBackward_<XPU>, kInplaceOutLhs)
+// .describe("Multiply lhs and rhs");
 
-MXNET_REGISTER_SIMPLE_OP(_div, XPU)
-.set_symbol_op_name("_Div")
-.set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::div>, kInplaceLhsOut)
-.set_gradient(XPU::kDevMask, DivBackward_<XPU>, kInplaceOutLhs)
-.describe("Multiply lhs by rhs");
+// MXNET_REGISTER_SIMPLE_OP(_div, XPU)
+// .set_symbol_op_name("_Div")
+// .set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow::op::div>, kInplaceLhsOut)
+// .set_gradient(XPU::kDevMask, DivBackward_<XPU>, kInplaceOutLhs)
+// .describe("Multiply lhs by rhs");
 
-MXNET_REGISTER_SIMPLE_OP(_power, XPU)
-.set_symbol_op_name("_Power")
-.set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow_op::power>, kInplaceLhsOut)
-.set_gradient(XPU::kDevMask, PowerBackward_<XPU>, kInplaceOutLhs)
-.describe("Elementwise power(lhs, rhs)");
+// MXNET_REGISTER_SIMPLE_OP(_power, XPU)
+// .set_symbol_op_name("_Power")
+// .set_function(XPU::kDevMask, BinaryForward_<XPU, mshadow_op::power>, kInplaceLhsOut)
+// .set_gradient(XPU::kDevMask, PowerBackward_<XPU>, kInplaceOutLhs)
+// .describe("Elementwise power(lhs, rhs)");
 
 MXNET_REGISTER_SIMPLE_OP(_maximum, XPU)
 .set_symbol_op_name("_Maximum")

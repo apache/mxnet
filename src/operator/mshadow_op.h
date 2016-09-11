@@ -27,6 +27,19 @@ struct identity_grad {
   }
 };
 
+struct left {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a;
+  }
+};
+
+struct right {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return b;
+  }
+};
 
 struct negation {
   template<typename DType>
@@ -228,6 +241,13 @@ struct power_grad {
   }
 };
 
+struct power_rgrad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(powf( a, b )*logf(b));
+  }
+};
+
 struct rpower {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -337,6 +357,20 @@ struct rminus {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(b-a);
+  }
+};
+
+struct div_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(DType(1)/b);
+  }
+};
+
+struct div_rgrad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(-a/(b*b));
   }
 };
 
