@@ -222,7 +222,7 @@ def test_reduce():
     sample_num = 200
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func):
         for i in range(sample_num):
-            ndim = np.random.randint(1, 8)
+            ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 11, size=ndim)
             axis_flags = np.random.randint(0, 2, size=ndim)
             axes = []
@@ -256,7 +256,7 @@ def test_broadcast():
     sample_num = 1000
     def test_broadcast_to():
         for i in range(sample_num):
-            ndim = np.random.randint(1, 8)
+            ndim = np.random.randint(1, 6)
             target_shape = np.random.randint(1, 11, size=ndim)
             shape = target_shape.copy()
             axis_flags = np.random.randint(0, 2, size=ndim)
@@ -276,11 +276,12 @@ def test_broadcast():
 
 if __name__ == '__main__':
     test_ndarray_slice_along_axis()
+    test_broadcast()
+    test_ndarray_elementwise()
     test_ndarray_slice()
     test_ndarray_pickle()
     test_ndarray_saveload()
     test_ndarray_copy()
-    test_ndarray_elementwise()
     test_ndarray_negate()
     test_ndarray_scalar()
     test_clip()
@@ -289,4 +290,3 @@ if __name__ == '__main__':
     test_ndarray_onehot()
     test_ndarray_fill()
     test_reduce()
-    test_broadcast()

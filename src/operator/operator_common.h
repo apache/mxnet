@@ -76,13 +76,13 @@ struct InferTypeError {
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                   \
   {                                                                     \
-    auto &out = (shape_array)[index];                                   \
-    if (out.ndim() == 0) {                                              \
-      out = shape;                                                      \
+    auto &local_out = (shape_array)[index];                             \
+    if (local_out.ndim() == 0) {                                        \
+      local_out = shape;                                                \
     } else {                                                            \
-      if (out != shape) {                                               \
+      if (local_out != shape) {                                         \
         std::ostringstream os;                                          \
-        os << "Shape inconsistent, Provided " <<  '='<< out << ','      \
+        os << "Shape inconsistent, Provided " <<  '='<< local_out << ','\
            << " inferred shape=" << shape;                              \
         throw ::mxnet::op::InferShapeError(os.str(), index);            \
       }                                                                 \
@@ -98,13 +98,13 @@ struct InferTypeError {
  */
 #define TYPE_ASSIGN_CHECK(type_array, index, type)                      \
   {                                                                     \
-    auto &out = (type_array)[index];                                    \
-    if (out == -1) {                                                    \
-      out = type;                                                       \
+    auto &local_out = (type_array)[index];                              \
+    if (local_out == -1) {                                              \
+      local_out = type;                                                 \
     } else {                                                            \
-      if (out != type) {                                                \
+      if (local_out != type) {                                          \
         std::ostringstream os;                                          \
-        os << "Type inconsistent, Provided " <<  '='<< out << ','       \
+        os << "Type inconsistent, Provided " <<  '='<< local_out << ',' \
            << " inferred type=" << type;                                \
         throw ::mxnet::op::InferTypeError(os.str(), index);             \
       }                                                                 \
@@ -136,19 +136,25 @@ struct InferTypeError {
 #define MXNET_DESCRIBE(x) describe(x "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 
 // quick helper to make node
-inline nnvm::NodeEntry MakeNode(const char* op_name,
-                                std::string node_name,
-                                std::vector<nnvm::NodeEntry> inputs,
-                                std::unordered_map<std::string, std::string> dict) {
+inline std::vector<nnvm::NodeEntry> MakeGradNode(
+    const char* op_name,
+    const nnvm::NodePtr& n,
+    std::vector<nnvm::NodeEntry> inputs,
+    std::unordered_map<std::string, std::string> dict) {
   nnvm::NodePtr p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
-  p->attrs.name = std::move(node_name);
+  p->attrs.name = n->attrs.name + "_backward";
   p->attrs.dict = std::move(dict);
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
   }
+  p->control_deps.emplace_back(n);
   p->inputs = std::move(inputs);
-  return nnvm::NodeEntry{p, 0, 0};
+  std::vector<nnvm::NodeEntry> ret;
+  for (index_t i = 0; i < p->num_outputs(); ++i) {
+    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+  }
+  return ret;
 }
 
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */
