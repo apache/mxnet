@@ -221,6 +221,27 @@ struct power {
   }
 };
 
+struct power_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(powf( a, b - 1 )*b);
+  }
+};
+
+struct rpower {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(powf( b, a ));
+  }
+};
+
+struct rpower_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(a*logf(b));
+  }
+};
+
 /*! \brief used for generate element of maximum */
 struct maximum {
   template<typename DType>
@@ -309,6 +330,27 @@ struct minus_sign {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(a-b > DType(0.0f) ? DType(1.0f) : -DType(1.0f));
+  }
+};
+
+struct rminus {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(b-a);
+  }
+};
+
+struct rdiv {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(b/a);
+  }
+};
+
+struct rdiv_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(-b/(a*a));
   }
 };
 
