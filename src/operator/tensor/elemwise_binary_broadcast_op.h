@@ -7,6 +7,7 @@
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
 
 #include <mxnet/operator_util.h>
+#include <algorithm>
 #include <vector>
 #include <utility>
 #include "../mshadow_op.h"
@@ -45,7 +46,7 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
     if (l != r) {
-      CHECK(l == 1 || r == 1) 
+      CHECK(l == 1 || r == 1)
         << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
       out[i] = std::max(l, r);
     } else {
@@ -146,7 +147,8 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename Reducer, typename xpu, typename SrcExp, int ndim, typename DType>
-void ReduceToAssign(mshadow::Tensor<xpu, ndim, DType> out, const OpReqType req, const SrcExp &src_) {
+void ReduceToAssign(mshadow::Tensor<xpu, ndim, DType> out,
+                    const OpReqType req, const SrcExp &src_) {
   using namespace mshadow;
   using namespace mshadow::expr;
   Shape<ndim> src_shape = ShapeCheck<ndim, SrcExp>::Check(src_);

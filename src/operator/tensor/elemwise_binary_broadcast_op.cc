@@ -23,7 +23,8 @@ NNVM_REGISTER_OP(_backward_plus)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
   })
-.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity, mshadow_op::identity>);
+.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity,
+                                                                mshadow_op::identity>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_minus)
 .add_alias("broadcast_minus").add_alias("_Minus")
@@ -39,7 +40,8 @@ NNVM_REGISTER_OP(_backward_minus)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
   })
-.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity, mshadow_op::negation>);
+.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity,
+                                                                mshadow_op::negation>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_mul)
 .add_alias("broadcast_mul").add_alias("_Mul")
@@ -51,10 +53,10 @@ NNVM_REGISTER_OP(_backward_mul)
 .set_num_outputs(2)
 .attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
   [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-// .attr<nnvm::FInplaceOption>("FInplaceOption",
-//   [](const NodeAttrs& attrs){
-//     return std::vector<std::pair<int, int> >{{0, 1}};
-//   })
+.attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::right,
                                                               mshadow_op::left>);
 
@@ -94,44 +96,3 @@ NNVM_REGISTER_OP(_backward_power)
 
 }  // namespace op
 }  // namespace mxnet
-
-//
-
-
-
-// MXNET_REGISTER_SIMPLE_OP(broadcast_plus, XPU)
-// .set_shape_function(BinaryBroadcastShape_)
-// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
-//               XPU, mshadow::op::plus>, kNoInplace, kRegisterSymbolic)
-// .set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
-//               XPU, mshadow_op::identity, mshadow_op::identity>, kNoInplace)
-// .describe("lhs add rhs with broadcast");
-
-// MXNET_REGISTER_SIMPLE_OP(broadcast_minus, XPU)
-// .set_shape_function(BinaryBroadcastShape_)
-// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
-//               XPU, mshadow::op::minus>, kNoInplace, kRegisterSymbolic)
-// .set_gradient(XPU::kDevMask, BinaryBroadcastBackward_<
-//               XPU, mshadow_op::identity, mshadow_op::negation>, kNoInplace)
-// .describe("lhs minus rhs with broadcast");
-
-// MXNET_REGISTER_SIMPLE_OP(broadcast_mul, XPU)
-// .set_shape_function(BinaryBroadcastShape_)
-// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
-//               XPU, mshadow::op::mul>, kNoInplace, kRegisterSymbolic)
-// .set_gradient(XPU::kDevMask, BroadcastMulBackward_<XPU>, kNoInplace)
-// .describe("lhs multiple rhs with broadcast");
-
-// MXNET_REGISTER_SIMPLE_OP(broadcast_div, XPU)
-// .set_shape_function(BinaryBroadcastShape_)
-// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
-//               XPU, mshadow::op::div>, kNoInplace, kRegisterSymbolic)
-// .set_gradient(XPU::kDevMask, BroadcastDivBackward_<XPU>, kNoInplace)
-// .describe("lhs divide rhs with broadcast");
-
-// MXNET_REGISTER_SIMPLE_OP(broadcast_power, XPU)
-// .set_shape_function(BinaryBroadcastShape_)
-// .set_function(XPU::kDevMask, BinaryBroadcastForward_<
-//               XPU, mshadow_op::power>, kNoInplace, kRegisterSymbolic)
-// .set_gradient(XPU::kDevMask, BroadcastPowerBackward_<XPU>, kNoInplace)
-// .describe("lhs power rhs with broadcast");
