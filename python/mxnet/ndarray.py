@@ -7,7 +7,6 @@ from __future__ import division
 import ctypes
 import warnings
 import sys
-import functools
 import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
