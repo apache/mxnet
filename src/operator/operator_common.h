@@ -129,43 +129,6 @@ struct InferTypeError {
   }
 #endif
 
-#define MXNET_NDIM_SWITCH(dim, NDIM, ...)           \
-  switch (dim) {                                    \
-   case 1:                                          \
-    {                                               \
-      const int NDIM = 1;                           \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  case 2:                                           \
-    {                                               \
-      const int NDIM = 2;                           \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  case 3:                                           \
-    {                                               \
-      const int NDIM = 3;                           \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  case 4:                                           \
-    {                                               \
-      const int NDIM = 4;                           \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  case 5:                                           \
-    {                                               \
-      const int NDIM = 5;                           \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  default:                                          \
-    LOG(FATAL) << "Up to 5 dimensional arrays are " \
-               << "supported, got " << dim;         \
-  }
-
 // describe op registration point
 // TODO(eric): move to dmlc-core
 #define STRINGIZE_DETAIL(x) #x
@@ -173,19 +136,23 @@ struct InferTypeError {
 #define MXNET_DESCRIBE(x) describe(x "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 
 // quick helper to make node
-inline nnvm::NodeEntry MakeNode(const char* op_name,
-                                std::string node_name,
-                                std::vector<nnvm::NodeEntry> inputs,
-                                std::unordered_map<std::string, std::string> dict) {
+inline std::vector<nnvm::NodeEntry> MakeGradNode(const char* op_name,
+                                                 const nnvm::NodePtr& n,
+                                                 std::vector<nnvm::NodeEntry> inputs) {
   nnvm::NodePtr p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
-  p->attrs.name = std::move(node_name);
-  p->attrs.dict = std::move(dict);
+  p->attrs.name = n->attrs.name + "_backward";
+  p->attrs.dict = n->attrs.dict;
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
   }
+  p->control_deps.emplace_back(n);
   p->inputs = std::move(inputs);
-  return nnvm::NodeEntry{p, 0, 0};
+  std::vector<nnvm::NodeEntry> ret;
+  for (index_t i = 0; i < p->num_outputs(); ++i) {
+    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+  }
+  return ret;
 }
 
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */

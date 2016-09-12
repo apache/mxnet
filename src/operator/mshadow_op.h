@@ -244,7 +244,7 @@ struct power_grad {
 struct power_rgrad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(powf( a, b )*logf(b));
+    return DType(powf( a, b )*logf(a));
   }
 };
 

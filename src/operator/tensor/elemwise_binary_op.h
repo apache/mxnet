@@ -61,8 +61,8 @@ void BinaryBackwardUseOut(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> out = inputs[0].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> ograd = inputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> out = inputs[1].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(lgrad, req[0], ograd*F<LOP>(out));
     ASSIGN_DISPATCH(rgrad, req[1], ograd*F<ROP>(out));
   });
@@ -80,9 +80,9 @@ void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> lhs = inputs[0].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> rhs = inputs[1].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> ograd = inputs[2].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> rhs = inputs[2].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(lgrad, req[0], ograd*F<LOP>(lhs, rhs));
     ASSIGN_DISPATCH(rgrad, req[1], ograd*F<ROP>(lhs, rhs));
   });

@@ -43,8 +43,8 @@ void BinaryScalarBackward(const nnvm::NodeAttrs& attrs,
   double alpha = nnvm::get<double>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> lhs = inputs[0].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> ograd = inputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req[0], ograd*F<OP>(lhs, scalar<DType>(DType(alpha))));
   });
 }

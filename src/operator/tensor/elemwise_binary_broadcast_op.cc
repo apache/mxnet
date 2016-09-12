@@ -10,13 +10,15 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_plus)
-.add_alias("broadcast_plus")
+.add_alias("broadcast_plus").add_alias("_Plus")
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::plus>)
 .attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_plus"});
 
 NNVM_REGISTER_OP(_backward_plus)
 .set_num_inputs(1)
 .set_num_outputs(2)
+.attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
 .attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
@@ -24,13 +26,15 @@ NNVM_REGISTER_OP(_backward_plus)
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity, mshadow_op::identity>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_minus)
-.add_alias("broadcast_minus")
+.add_alias("broadcast_minus").add_alias("_Minus")
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::minus>)
 .attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_minus"});
 
 NNVM_REGISTER_OP(_backward_minus)
 .set_num_inputs(1)
 .set_num_outputs(2)
+.attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
 .attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
@@ -38,28 +42,32 @@ NNVM_REGISTER_OP(_backward_minus)
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity, mshadow_op::negation>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_mul)
-.add_alias("broadcast_mul")
+.add_alias("broadcast_mul").add_alias("_Mul")
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::mul>)
 .attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mul"});
 
 NNVM_REGISTER_OP(_backward_mul)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::left,
-                                                              mshadow_op::right>);
+.attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
+// .attr<nnvm::FInplaceOption>("FInplaceOption",
+//   [](const NodeAttrs& attrs){
+//     return std::vector<std::pair<int, int> >{{0, 1}};
+//   })
+.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::right,
+                                                              mshadow_op::left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_div)
-.add_alias("broadcast_div")
+.add_alias("broadcast_div").add_alias("_Div")
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::div>)
 .attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
 
 NNVM_REGISTER_OP(_backward_div)
 .set_num_inputs(3)
 .set_num_outputs(2)
+.attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
 .attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
@@ -68,13 +76,15 @@ NNVM_REGISTER_OP(_backward_div)
                                                               mshadow_op::div_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_power)
-.add_alias("broadcast_power")
+.add_alias("broadcast_power").add_alias("_Power")
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_power"});
 
 NNVM_REGISTER_OP(_backward_power)
 .set_num_inputs(3)
 .set_num_outputs(2)
+.attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
 .attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
