@@ -284,6 +284,10 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
 }
 
 void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
+  if (from.var() == to->var()) {
+    // skip to copy to itself
+    return;
+  }
   CHECK(from.shape() == to->shape())
       << "operands shape mismatch";
   CHECK(from.shape().ndim() != 0)
