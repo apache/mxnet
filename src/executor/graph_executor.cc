@@ -330,7 +330,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   // other initializations
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
   g = nnvm::pass::InferType(g, arg_types);
-  g = nnvm::ApplyPass(g, {"PlanMemory"});
+  g = nnvm::ApplyPass(g, "PlanMemory");
   return g;
 }
 
