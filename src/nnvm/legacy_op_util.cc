@@ -199,7 +199,7 @@ inline std::vector<NodeEntry> OpPropGradient(
   gnode->attrs = ptr->attrs;
   gnode->attrs.op = back_op;
   gnode->attrs.name = ptr->attrs.name + "_backward";
-  std::vector<NodeEntry> in_grad(prop.inputs.size());
+  std::vector<NodeEntry> in_grad(prop.arguments.size());
   for (uint32_t i = 0; i < prop.arguments.size(); ++i) {
     in_grad[i] = NodeEntry{gnode, i, 0};
   }
