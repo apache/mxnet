@@ -270,7 +270,14 @@ struct maximum {
   }
 };
 
-struct maximum_grad {
+struct ge {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(a >= b ? DType(1) : DType(0));
+  }
+};
+
+struct gt {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(a > b ? DType(1) : DType(0));
@@ -284,10 +291,18 @@ struct minimum {
     return DType(a < b ? a : b);
   }
 };
-struct minimum_grad  {
+
+struct lt {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(a < b ? DType(1) : DType(0));
+  }
+};
+
+struct le {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return DType(a <= b ? DType(1) : DType(0));
   }
 };
 

@@ -94,5 +94,39 @@ NNVM_REGISTER_OP(_backward_power)
 .attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::power_grad,
                                                               mshadow_op::power_rgrad>);
 
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_maximum)
+.add_alias("broadcast_maximum").add_alias("_Maximum")
+.attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
+.attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_maximum"});
+
+NNVM_REGISTER_OP(_backward_maximum)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
+.attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
+.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::ge,
+                                                              mshadow_op::lt>);
+
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_minimum)
+.add_alias("broadcast_minimum").add_alias("_Minimum")
+.attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::minimum>)
+.attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_minimum"});
+
+NNVM_REGISTER_OP(_backward_minimum)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
+.attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
+.attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le,
+                                                              mshadow_op::gt>);
+
 }  // namespace op
 }  // namespace mxnet

@@ -52,7 +52,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_maximum_scalar)
 MXNET_OPERATOR_REGISTER_BINARY(_backward_maximum_scalar)
 .add_argument("scalar", "float", "scalar value")
 .set_attr_parser([](NodeAttrs* attrs) {attrs->parsed = std::stod(attrs->dict["scalar"]);})
-.attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::maximum_grad>);
+.attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::ge>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_minimum_scalar)
 .attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::minimum>)
@@ -62,7 +62,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_minimum_scalar)
 MXNET_OPERATOR_REGISTER_BINARY(_backward_minimum_scalar)
 .add_argument("scalar", "float", "scalar value")
 .set_attr_parser([](NodeAttrs* attrs) {attrs->parsed = std::stod(attrs->dict["scalar"]);})
-.attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::minimum_grad>);
+.attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::le>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_power_scalar)
 .attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::power>)
