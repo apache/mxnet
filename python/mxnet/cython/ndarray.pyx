@@ -150,6 +150,7 @@ cdef _make_ndarray_function(OpHandle handle, string name):
         num_output = output_vars.size()
         if output_vars.size() == 0:
             output_vars.resize(1)
+            p_output_vars = NULL
         else:
             p_output_vars = &output_vars[0]
 
