@@ -47,7 +47,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
     arg_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's weights.
     """
-
+    update_on_kvstore = True
     if kvstore is None:
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
@@ -58,21 +58,17 @@ def _create_kvstore(kvstore, num_device, arg_params):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            if kvstore is 'local':
-                # automatically select a proper local
-                max_size = max(np.prod(param.shape) for param in arg_params.values())
-                if max_size < 1024 * 1024 * 16:
-                    kvstore = 'local_update_cpu'
-                else:
-                    kvstore = 'local_allreduce_cpu'
-                logging.info('Auto-select kvstore type = %s', kvstore)
             kv = kvs.create(kvstore)
+            if kvstore is 'local':
+            # automatically select a proper local
+                max_size = max(np.prod(param.shape) for param in
+                               arg_params.values())
+                if max_size > 1024 * 1024 * 16:
+                    update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
-    # detect whether or not update weight on kvstore
-    update_on_kvstore = True
-    if not kv or 'local_allreduce' in kv.type:
+    if kv is None:
         update_on_kvstore = False
 
     return (kv, update_on_kvstore)
@@ -765,7 +761,7 @@ class FeedForward(BASE_ESTIMATOR):
         # init optmizer
         if isinstance(self.optimizer, str):
             batch_size = data.batch_size
-            if kvstore and kvstore.type == 'dist_sync':
+            if kvstore and 'dist' in kvstore.type and not '_async' in kvstore.type:
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(self.optimizer,
                                    rescale_grad=(1.0/batch_size),

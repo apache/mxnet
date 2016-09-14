@@ -727,7 +727,9 @@ def test_batchnorm_training():
 
         data = mx.symbol.Variable('data')
         test = mx.symbol.BatchNorm(data, fix_gamma=False)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
+        test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
 def test_convolution_grouping():
@@ -926,38 +928,44 @@ def test_convolution_dilated_impulse_response():
 
 def test_reshape():
 
-    def test_reshape_new(src_shape, shape_args, dst_shape):
+    def test_reshape_new(src_shape, shape_args, reverse, dst_shape):
         net = mx.sym.Variable("data")
-        net = mx.sym.Reshape(net, shape=shape_args)
+        net = mx.sym.Reshape(net, shape=shape_args, reverse=reverse)
         js = net.tojson()
         net = mx.sym.load_json(js)
         _, output_shape, __ = net.infer_shape(data=src_shape)
         assert output_shape[0] == dst_shape, \
-            'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s, Output Shape = %s' \
-            %(str(src_shape), str(shape_args), str(dst_shape), str(output_shape[0]))
+            'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
+            'Output Shape = %s' %(str(src_shape), str(shape_args), str(reverse),
+                                  str(dst_shape), str(output_shape[0]))
         dat_npy = np.random.rand(*src_shape)
         grad_npy = np.random.rand(*dst_shape)
         exe = net.simple_bind(mx.cpu(), data=src_shape)
         exe.arg_dict['data'][:] = dat_npy
         exe.forward(is_train=True)
         assert np.square(exe.outputs[0].asnumpy() - dat_npy.reshape(dst_shape)).mean() < 1E-7, \
-            'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s' %(str(src_shape),
-                                                                     str(shape_args), str(dst_shape))
+            'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s'\
+            %(str(src_shape), str(shape_args), str(reverse), str(dst_shape))
         exe.backward(out_grads=mx.nd.array(grad_npy))
         assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7, \
-            'Src Shape = %s, Shape Arguments = %s, Dst Shape = %s' %(str(src_shape),
-                                                                     str(shape_args), str(dst_shape))
+            'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s'\
+            %(str(src_shape), str(shape_args), str(reverse), str(dst_shape))
     # Test new api (Using shape)
-    test_cases = [[(2, 3, 5, 5), (0, -1), (2, 75)],
-                  [(2, 3, 5, 5), (0, 0, -1), (2, 3, 25)],
-                  [(5, 3, 4, 5), (0, -1, 0), (5, 15, 4)],
-                  [(2, 3, 5, 4), (-1, 0, 0), (8, 3, 5),
-                  [(2, 3, 4, 5), (3, -1, 0), (3, 10, 4)],
-                  [(2, 3, 5, 5), (5, 3, 0, -1), (5, 3, 5, 2)],
-                  [(2, 3, 5, 5), (0, 0, 0, 0), (2, 3, 5, 5)],
-                  [(2, 4, 5, 3), (-1, 2, 2, 1), (30, 2, 2, 1)]]]
+    test_cases = [[(2, 3, 5, 5), (0, -1), False, (2, 75)],
+                  [(2, 3, 5, 5), (0, 0, -1), False, (2, 3, 25)],
+                  [(5, 3, 4, 5), (0, -1, 0), False, (5, 15, 4)],
+                  [(2, 3, 5, 4), (-1, 0, 0), False, (8, 3, 5)],
+                  [(2, 3, 5, 5), (0, 0, 0, 0), False, (2, 3, 5, 5)],
+                  [(2, 4, 5, 3), (-1, 2, 2, 1), False, (30, 2, 2, 1)],
+                  [(2, 3, 5, 5), (0, -1), True, (5, 30)],
+                  [(2, 3, 5, 5), (0, 0, -1), True, (3, 5, 10)],
+                  [(5, 3, 4, 5), (0, -1, 0), True, (3, 20, 5)],
+                  [(2, 3, 5, 4), (-1, 0, 0), True, (6, 5, 4)],
+                  [(2, 3, 4, 5), (3, -1, 0), True, (3, 8, 5)],
+                  [(2, 3, 5, 5), (5, 3, 0, -1), True, (5, 3, 5, 2)],
+                  [(2, 3, 5, 5), (0, 0, 0, 0), True, (2, 3, 5, 5)]]
     for test_case in test_cases:
-        test_reshape_new(test_case[0], test_case[1], test_case[2])
+        test_reshape_new(*test_case)
     # Test old api
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, target_shape=(2, 0))
@@ -1131,7 +1139,6 @@ def test_flip():
 
 
 def test_stn():
-    import pdb
     np.set_printoptions(threshold=np.nan)
     num_filter = 2  # conv of loc net
     kernel = (3, 3)  # conv of loc net
