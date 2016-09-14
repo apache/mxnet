@@ -74,9 +74,9 @@ void UnaryCompute(const nnvm::NodeAttrs& attrs,
   NNVM_REGISTER_OP(name)                                        \
   .set_num_inputs(1)                                            \
   .set_num_outputs(1)                                           \
-  .attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
-  .attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .attr<nnvm::FInplaceOption>("FInplaceOption",                 \
+  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                 \
       return std::vector<std::pair<int, int> >{{0, 0}};         \
     })                                                          \
