@@ -22,8 +22,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
                        int *num_outputs,
                        NDArrayHandle **outputs,
                        int num_params,
-                       char **param_keys,
-                       char **param_vals) {
+                       const char **param_keys,
+                       const char **param_vals) {
   static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
