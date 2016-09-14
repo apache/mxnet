@@ -57,8 +57,9 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-bool BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshape, const TShape& oshape,
-                                 TShape *new_lshape, TShape *new_rshape, TShape *new_oshape) {
+inline bool BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshape,
+                                        const TShape& oshape, TShape *new_lshape,
+                                        TShape *new_rshape, TShape *new_oshape) {
   if (lshape == rshape) return false;
   int odim = std::max<int>(oshape.ndim(), MXNET_SPECIAL_MAX_NDIM);
   *new_lshape = TShape(odim);
@@ -154,12 +155,16 @@ void ReduceToAssign(mshadow::Tensor<xpu, ndim, DType> out,
   Shape<ndim> src_shape = ShapeCheck<ndim, SrcExp>::Check(src_);
   Shape<ndim> axes;
   index_t reducing_size = 1, remaining_size = 1;
-  for (int i = 0, j = ndim-1, k = ndim-1; k >= 0; --k) {
+  int i = 0;
+  for (int k = 0; k < ndim; ++k)
+    if (src_shape[k] != out.shape_[k])
+      ++i;
+  for (int j = ndim-1, k = ndim-1; k >= 0; --k) {
     if (src_shape[k] == out.shape_[k]) {
       axes[j--] = k;
       remaining_size *= src_shape[k];
     } else {
-      axes[i++] = k;
+      axes[--i] = k;
       reducing_size *= src_shape[k];
     }
   }
@@ -339,10 +344,10 @@ void BinaryBroadcastBackwardUseOut(const nnvm::NodeAttrs& attrs,
   .set_num_outputs(1)                                            \
   .attr<nnvm::FInferShape>("FInferShape", BinaryBroadcastShape)  \
   .attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)      \
-  // .attr<nnvm::FInplaceOption>("FInplaceOption",                  \
-  //   [](const NodeAttrs& attrs){                                  \
-  //     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};  \
-  //   })                                                           \
+  .attr<nnvm::FInplaceOption>("FInplaceOption",                  \
+    [](const NodeAttrs& attrs){                                  \
+      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};  \
+    })                                                           \
   .add_argument("lhs", "NDArray", "first input")                 \
   .add_argument("rhs", "NDArray", "second input")
 

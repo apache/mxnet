@@ -138,11 +138,12 @@ struct InferTypeError {
 // quick helper to make node
 inline std::vector<nnvm::NodeEntry> MakeGradNode(const char* op_name,
                                                  const nnvm::NodePtr& n,
-                                                 std::vector<nnvm::NodeEntry> inputs) {
+                                                 std::vector<nnvm::NodeEntry> inputs,
+                                                 std::unordered_map<std::string, std::string> dict) {
   nnvm::NodePtr p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
   p->attrs.name = n->attrs.name + "_backward";
-  p->attrs.dict = n->attrs.dict;
+  p->attrs.dict = std::move(dict);
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
   }
