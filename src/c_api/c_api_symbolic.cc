@@ -39,6 +39,13 @@ std::vector<uint32_t> ReadOnlyArgIndices(const nnvm::IndexedGraph& idx) {
 
 // symbolic configuration generation API.
 // Redirect to NNVM's C API
+int MXListAllOpNames(nn_uint *out_size,
+                     const char ***out_array) {
+  mxnet::op::RegisterLegacyOpProp();
+  mxnet::op::RegisterLegacyNDFunc();
+  return NNListAllOpNames(out_size, out_array);
+}
+
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
   mxnet::op::RegisterLegacyOpProp();

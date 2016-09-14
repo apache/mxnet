@@ -13,6 +13,8 @@ from ..symbol_doc import _build_doc
 from ..name import NameManager
 from ..attribute import AttrScope
 
+_symbol_cls = None
+
 class SymbolBase(object):
     """Symbol is symbolic graph."""
     __slots__ = ["handle"]
@@ -95,7 +97,6 @@ class SymbolBase(object):
     def __reduce__(self):
         return (_symbol_cls, (None,), self.__getstate__())
 
-_symbol_cls = SymbolBase
 
 def _set_symbol_class(cls):
     """Set the symbolic class to be cls"""
@@ -198,7 +199,7 @@ def _init_symbol_module(symbol_class, root_namespace):
     plist = ctypes.POINTER(ctypes.c_char_p)()
     size = ctypes.c_uint()
 
-    check_call(_LIB.NNListAllOpNames(ctypes.byref(size),
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
                                      ctypes.byref(plist)))
     op_names = []
     for i in range(size.value):

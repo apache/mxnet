@@ -4,8 +4,8 @@ from __future__ import absolute_import
 import os
 import sys
 # need to use distutils.core for correct placement of cython dll
-#from distutils.core import setup
-from setuptools import setup
+from distutils.core import setup
+#from setuptools import setup
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
 # Will be invoked which introduces dependences
@@ -21,7 +21,8 @@ def config_cython():
     """Try to configure cython and retyurn cython configuration"""
     try:
         from Cython.Build import cythonize
-        from setuptools.extension import Extension
+        #from setuptools.extension import Extension
+        from distutils.extension import Extension
         if sys.version_info >= (3, 0):
             subdir = "_cy3"
         else:
