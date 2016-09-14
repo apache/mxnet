@@ -1,22 +1,40 @@
 # coding: utf-8
 # pylint: disable= too-many-lines, redefined-builtin, protected-access
+# pylint: disable=import-error, no-name-in-module
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
 
 import ctypes
 import warnings
-import sys
+
+import os as _os
+import sys as _sys
+
 import functools
 import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
 from .base import c_array, py_str, c_str, mx_real_t
-from .base import mx_uint, NDArrayHandle, FunctionHandle
+from .base import mx_uint, NDArrayHandle, check_call
 from .base import ctypes2buffer
-from .base import check_call, build_param_doc as _build_param_doc
 from .context import Context
 from . import _ndarray_internal as _internal
+
+# Use different verison of SymbolBase
+# When possible, use cython to speedup part of computation.
+try:
+    if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
+        from ._ctypes.ndarray import NDArrayBase, _init_ndarray_module
+    elif _sys.version_info >= (3, 0):
+        from ._cy3.ndarray import NDArrayBase, _init_ndarray_module
+    else:
+        from ._cy2.ndarray import NDArrayBase, _init_ndarray_module
+except ImportError:
+    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
+        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
+    from ._ctypes.ndarray import NDArrayBase, _init_ndarray_module
+
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
@@ -76,31 +94,17 @@ def waitall():
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
-class NDArray(object):
+class NDArray(NDArrayBase):
     """NDArray object in mxnet.
 
     NDArray is basic ndarray/Tensor like data structure in mxnet.
     """
+    __slots__ = []
     # pylint: disable= no-member
-    def __init__(self, handle, writable=True):
-        """initialize a new NDArray
-
-        Parameters
-        ----------
-        handle : NDArrayHandle
-            NDArray handle of C API
-        """
-        assert isinstance(handle, NDArrayHandle)
-        self.handle = handle
-        self.writable = writable
-
     def __repr__(self):
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
                                 shape_info, self.context)
-
-    def __del__(self):
-        check_call(_LIB.MXNDArrayFree(self.handle))
 
     def __add__(self, other):
         return add(self, other)
@@ -185,8 +189,8 @@ class NDArray(object):
         return power(other, self)
 
     def __getstate__(self):
-        this = self.__dict__.copy()
-        handle = this['handle']
+        handle = self.handle
+        this = {'handle' : None}
         if handle is not None:
             length = ctypes.c_size_t()
             cptr = ctypes.POINTER(ctypes.c_char)()
@@ -197,6 +201,7 @@ class NDArray(object):
         return this
 
     def __setstate__(self, state):
+        # pylint: disable=assigning-non-slot
         handle = state['handle']
         if handle is not None:
             buf = handle
@@ -204,8 +209,9 @@ class NDArray(object):
             ptr = (ctypes.c_char * len(buf)).from_buffer(buf)
             length = ctypes.c_size_t(len(buf))
             check_call(_LIB.MXNDArrayLoadFromRawBytes(ptr, length, ctypes.byref(handle)))
-            state['handle'] = handle
-        self.__dict__.update(state)
+            self.handle = handle
+        else:
+            self.handle = None
 
     def __setitem__(self, in_slice, value):
         """Set ndarray value.
@@ -566,6 +572,9 @@ class NDArray(object):
         if self.context == context:
             return self
         return self.copyto(context)
+
+
+_init_ndarray_module(NDArray, "mxnet")
 
 
 def onehot_encode(indices, out):
@@ -1123,140 +1132,3 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
                                    len(str_img),
                                    str_img=str_img,
                                    out=out)
-
-# pylint: disable=too-many-locals, invalid-name
-def _make_ndarray_function(handle):
-    """Create a NDArray function from the FunctionHandle."""
-    name = ctypes.c_char_p()
-    desc = ctypes.c_char_p()
-    key_var_num_args = ctypes.c_char_p()
-    num_args = mx_uint()
-    arg_names = ctypes.POINTER(ctypes.c_char_p)()
-    arg_types = ctypes.POINTER(ctypes.c_char_p)()
-    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
-    ret_type = ctypes.c_char_p()
-
-    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
-        handle, ctypes.byref(name), ctypes.byref(desc),
-        ctypes.byref(num_args),
-        ctypes.byref(arg_names),
-        ctypes.byref(arg_types),
-        ctypes.byref(arg_descs),
-        ctypes.byref(key_var_num_args),
-        ctypes.byref(ret_type)))
-    narg = int(num_args.value)
-    param_str = _build_param_doc(
-        [py_str(arg_names[i]) for i in range(narg)],
-        [py_str(arg_types[i]) for i in range(narg)],
-        [py_str(arg_descs[i]) for i in range(narg)])
-
-    key_var_num_args = py_str(key_var_num_args.value)
-    func_name = py_str(name.value)
-    desc = py_str(desc.value)
-    if key_var_num_args:
-        desc += '\nThis function support variable length of positional input.'
-    doc_str = ('%s\n\n' +
-               '%s\n' +
-               'out : NDArray, optional\n' +
-               '    The output NDArray to hold the result.\n\n'+
-               'Returns\n' +
-               '-------\n' +
-               'out : NDArray or list of NDArray\n' +
-               '    The output of this function.')
-    doc_str = doc_str % (desc, param_str)
-
-    arguments = []
-    for i in range(num_args.value):
-        dtype = py_str(arg_types[i])
-        if not (dtype.startswith('NDArray') or dtype.startswith('Symbol')):
-            arguments.append(py_str(arg_names[i]))
-
-    # Definition of internal functions.
-    def generic_ndarray_function(*args, **kwargs):
-        """Invoke this function by passing in parameters
-
-        Parameters
-        ----------
-        *args
-            Positional arguments of input scalars and NDArray
-        out : NDArray or tuple of NDArray, optional
-            Output NDArray, used to hold the output result.
-
-        Returns
-        -------
-        out : NDArray
-            The result NDArray(tuple) of result of computation.
-        """
-        ndargs = []
-        pos_args = []
-        for i in args:
-            if isinstance(i, NDArray):
-                ndargs.append(i)
-            else:
-                pos_args.append(str(i))
-
-        assert len(pos_args) <= len(arguments)
-        kwargs.update(zip(arguments[:len(pos_args)], pos_args))
-
-        original_output = None
-        if 'out' in kwargs:
-            output_vars = kwargs['out']
-            original_output = output_vars
-            del kwargs['out']
-            if isinstance(output_vars, NDArray):
-                output_vars = (output_vars,)
-            num_output = ctypes.c_int(len(output_vars))
-            output_vars = c_array(NDArrayHandle, [v.handle for v in output_vars])
-            output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
-        else:
-            output_vars = ctypes.POINTER(NDArrayHandle)()
-            num_output = ctypes.c_int(0)
-
-        check_call(_LIB.MXImperativeInvoke(
-            handle,
-            ctypes.c_int(len(ndargs)),
-            c_array(NDArrayHandle, [i.handle for i in ndargs]),
-            ctypes.byref(num_output),
-            ctypes.byref(output_vars),
-            ctypes.c_int(len(kwargs)),
-            c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]),
-            c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
-        if original_output is not None:
-            return original_output
-        if num_output.value == 1:
-            return NDArray(ctypes.cast(output_vars[0], NDArrayHandle))
-        else:
-            return [NDArray(ctypes.cast(output_vars[i], NDArrayHandle))
-                    for i in range(num_output.value)]
-    # End of function declaration
-    generic_ndarray_function.__name__ = func_name
-    generic_ndarray_function.__doc__ = doc_str
-    return generic_ndarray_function
-
-
-
-# pylint: enable=too-many-locals, invalid-name
-def _init_ndarray_module():
-    """List and add all the ndarray functions to current module."""
-    plist = ctypes.POINTER(FunctionHandle)()
-    size = ctypes.c_uint()
-    check_call(_LIB.MXSymbolListAtomicSymbolCreators(ctypes.byref(size),
-                                                     ctypes.byref(plist)))
-    module_obj = sys.modules[__name__]
-    module_internal = sys.modules["mxnet._ndarray_internal"]
-    for i in range(size.value):
-        hdl = FunctionHandle(plist[i])
-        function = _make_ndarray_function(hdl)
-        # if function name starts with underscore, register as internal namespace
-        if function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            fname = function.__name__
-            fn_obj = getattr(module_obj, fname, None)
-            if fn_obj is None:
-                setattr(module_obj, fname, function)
-            else:
-                setattr(module_obj, fname + '_internal', function)
-
-# Initialize the NDArray module
-_init_ndarray_module()
