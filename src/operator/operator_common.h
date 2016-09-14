@@ -136,10 +136,11 @@ struct InferTypeError {
 #define MXNET_DESCRIBE(x) describe(x "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 
 // quick helper to make node
-inline std::vector<nnvm::NodeEntry> MakeGradNode(const char* op_name,
-                                                 const nnvm::NodePtr& n,
-                                                 std::vector<nnvm::NodeEntry> inputs,
-                                                 std::unordered_map<std::string, std::string> dict) {
+inline std::vector<nnvm::NodeEntry> MakeGradNode(
+    const char* op_name,
+    const nnvm::NodePtr& n,
+    std::vector<nnvm::NodeEntry> inputs,
+    std::unordered_map<std::string, std::string> dict) {
   nnvm::NodePtr p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
   p->attrs.name = n->attrs.name + "_backward";

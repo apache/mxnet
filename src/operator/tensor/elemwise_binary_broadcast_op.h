@@ -14,7 +14,6 @@
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_op.h"
 #include "../operator_common.h"
-#include "../broadcast_reduce_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -169,7 +168,7 @@ void ReduceToAssign(mshadow::Tensor<xpu, ndim, DType> out,
     }
   }
   if (reducing_size == 1) {
-    ASSIGN_DISPATCH(out, req, src_);
+    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
   } else {
     ASSIGN_DISPATCH(out.FlatTo1D(), req,
       (reduce_except_dim<1, Reducer>(reshape(transpose(src_, axes),
@@ -183,7 +182,7 @@ void ReduceToAssign(mshadow::Tensor<xpu, 2, DType> out, const OpReqType req, con
   using namespace mshadow::expr;
   Shape<2> src_shape = ShapeCheck<2, SrcExp>::Check(src_);
   if (src_shape == out.shape_) {
-    ASSIGN_DISPATCH(out, req, src_);
+    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
   } else if (src_shape[0] == out.shape_[0]) {
     ASSIGN_DISPATCH(out.FlatTo1D(), req, (reduce_except_dim<0, Reducer>(src_)));
   } else if (src_shape[1] == out.shape_[1]) {

@@ -9,6 +9,7 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <utility>
+#include <algorithm>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_broadcast_op.h"
@@ -22,19 +23,6 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
       .describe("Empty or unsigned or tuple. The axes to perform the reduction."
                 "If left empty, a global reduction will be performed.");
-    DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axis which is reduced is left "
-                "in the result as dimension with size one.");
-  }
-};
-
-struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
-  int axis;
-  bool keepdims;
-  DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(-1)
-      .describe("The axis to perform the reduction."
-                "By default, a global reduction will be performed.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If true, the axis which is reduced is left "
                 "in the result as dimension with size one.");
@@ -98,41 +86,6 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
       }
     }
   }
-  LOG(INFO) << ishape << oshape;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
-}
-
-inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
-                            std::vector<TShape> *in_attrs,
-                            std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
-  if ((*in_attrs)[0].ndim() == 0) return false;
-  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  TShape &ishape = (*in_attrs)[0];
-  TShape oshape;
-  if (param.axis == -1) {
-    if (param.keepdims) {
-      oshape = TShape(ishape.ndim());
-    } else {
-      oshape = TShape(1);
-    }
-  } else {
-    CHECK_LT(param.axis, ishape.ndim())
-      << "Reduction axis " << param.axis
-      << " Exceeds input dimensions " << ishape;
-    if (param.keepdims) {
-      oshape = ishape;
-      oshape[param.axis] = 1;
-    } else {
-      oshape = TShape(ishape.ndim() - 1);
-      for (int i = 0; i < param.axis; ++i)
-        oshape[i] = ishape[i];
-      for (int i = param.axis+1; i < ishape.ndim(); ++i)
-        oshape[i-1] = ishape[i];
-    }
-  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
@@ -148,6 +101,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
   TShape &ishape = (*in_attrs)[0];
   TShape oshape = ishape;
   for (int i = 0; i < param.axis.ndim(); ++i) {
+    CHECK_EQ(oshape[param.axis[i]], 1) << "Broadcasting axis must have size 1";
     oshape[param.axis[i]] = param.size[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
@@ -159,8 +113,15 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  if ((*in_attrs)[0].ndim() == 0) return false;
+  TShape& ishape = (*in_attrs)[0];
+  if (ishape.ndim() == 0) return false;
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
+  CHECK_EQ(ishape.ndim(), param.shape.ndim())
+    << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
+  for (int i = 0; i < ishape.ndim(); ++i) {
+    CHECK(ishape[i] == param.shape[i] || ishape[i] == 1)
+      << "Broadcasting axis must have size 1";
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
   return true;
 }
@@ -207,14 +168,27 @@ inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
 }
 
 template<typename xpu, typename reducer>
-inline void ReduceCompute(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<TBlob>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<TBlob>& outputs,
-                              const TShape& small) {
+void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (!param.keepdims) {
+    if (param.axis.ndim() == 0) {
+      small = TShape(inputs[0].shape_.ndim());
+    } else {
+      small = inputs[0].shape_;
+      for (int i = 0; i < param.axis.ndim(); ++i)
+        small[param.axis[i]] = 1;
+    }
+  } else {
+    small = outputs[0].shape_;
+  }
+
   TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -236,50 +210,24 @@ inline void ReduceCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename reducer>
-void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  TShape small;
-  if (!param.keepdims) {
-    small = inputs[0].shape_;
-    for (int i = 0; i < param.axis.ndim(); ++i)
-      small[param.axis[i]] = 1;
-  } else {
-    small = outputs[0].shape_;
-  }
-  ReduceCompute<xpu, reducer>(attrs, ctx, inputs, req, outputs, small);
-}
-
-template<typename xpu, typename reducer>
-void ReduceAxisCompute(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
-  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  TShape small;
-  if (!param.keepdims) {
-    small = inputs[0].shape_;
-    small[param.axis] = 1;
-  } else {
-    small = outputs[0].shape_;
-  }
-  ReduceCompute<xpu, reducer>(attrs, ctx, inputs, req, outputs, small);
-}
-
 template<typename xpu, typename OP>
-inline void ReduceBackward(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<TBlob>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<TBlob>& outputs,
-                              const TShape& small) {
+void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.axis.ndim() == 0) {
+    small = TShape(outputs[0].shape_.ndim());
+  } else {
+    small = outputs[0].shape_;
+    for (int i = 0; i < param.axis.ndim(); ++i)
+      small[param.axis[i]] = 1;
+  }
+
   TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -309,41 +257,17 @@ inline void ReduceBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename OP>
-void ReduceAxesBackward(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  TShape small = inputs[0].shape_;
-  for (int i = 0; i < param.axis.ndim(); ++i)
-    small[param.axis[i]] = 1;
-  ReduceBackward<xpu, OP>(attrs, ctx, inputs, req, outputs, small);
-}
-
-template<typename xpu, typename OP>
-void ReduceAxisBackward(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
-  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  TShape small = inputs[0].shape_;
-  small[param.axis] = 1;
-  ReduceBackward<xpu, OP>(attrs, ctx, inputs, req, outputs, small);
-}
-
 template<typename xpu>
-void BroadcastCompute(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
+inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs,
+                                 const TShape& small) {
   using namespace mshadow;
   using namespace mshadow::expr;
   TShape src_shape, dst_shape;
-  BroadcastReduceShapeCompact(outputs[0].shape_, inputs[0].shape_, &dst_shape, &src_shape);
+  BroadcastReduceShapeCompact(outputs[0].shape_, small, &dst_shape, &src_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (dst_shape.ndim() == 2) {
@@ -363,6 +287,33 @@ void BroadcastCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<typename xpu>
+inline void BroadcastCompute(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, inputs[0].shape_);
+}
+
+template<typename xpu>
+inline void ReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
+                                      const OpContext& ctx,
+                                      const std::vector<TBlob>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<TBlob>& outputs) {
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.axis.ndim() == 0) {
+    small = TShape(outputs[0].shape_.ndim());
+  } else {
+    small = outputs[0].shape_;
+    for (int i = 0; i < param.axis.ndim(); ++i)
+      small[param.axis[i]] = 1;
+  }
+  BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
+}
+
 template<typename PType>
 inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
   PType param;
@@ -378,8 +329,7 @@ struct ReduceGrad {
     return MakeGradNode(
         op_name, n,
         {ograds[0], n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
-        n->attrs.dict
-      );
+        n->attrs.dict);
   }
 };
 
@@ -387,36 +337,32 @@ struct ReduceGrad {
   NNVM_REGISTER_OP(name)                                        \
   .set_num_inputs(1)                                            \
   .set_num_outputs(1)                                           \
+  .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
+  .attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)      \
   .attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .add_argument("src", "NDArray", "Source input")
 
-#define MXNET_OPERATOR_REGISTER_REDUCE_AXES(name)               \
-  MXNET_OPERATOR_REGISTER_REDUCE(name)                          \
-  .attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)      \
-  .set_attr_parser(AxesParamParser<ReduceAxesParam>)
-
-#define MXNET_OPERATOR_REGISTER_REDUCE_AXIS(name)               \
-  MXNET_OPERATOR_REGISTER_REDUCE(name)                          \
-  .attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)      \
-  .set_attr_parser(ParamParser<ReduceAxisParam>)
-
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)           \
   NNVM_REGISTER_OP(name)                                        \
-  .set_num_inputs(3)                                            \
   .set_num_outputs(1)                                           \
+  .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",   \
     [](const NodeAttrs& attrs) {                                \
       return std::vector<uint32_t>{0};                          \
     })
 
-#define MXNET_OPERATOR_REGISTER_REDUCE_AXES_BACKWARD(name)      \
-  MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)                 \
-  .set_attr_parser(AxesParamParser<ReduceAxesParam>)
-
-#define MXNET_OPERATOR_REGISTER_REDUCE_AXIS_BACKWARD(name)      \
-  MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)                 \
-  .set_attr_parser(ParamParser<ReduceAxisParam>)
-
+#define MXNET_OPERATOR_REGISTER_BROADCAST(name)                 \
+  NNVM_REGISTER_OP(name)                                        \
+  .set_num_inputs(1)                                            \
+  .set_num_outputs(1)                                           \
+  .attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
+  .attr<nnvm::FGradient>("FGradient",                           \
+    [](const nnvm::NodePtr& n,                                  \
+       const std::vector<nnvm::NodeEntry>& ograds) {            \
+      return MakeGradNode("sum", n, ograds,                     \
+        {{"keepdims", "true"}});                                \
+    })                                                          \
+  .add_argument("src", "NDArray", "Source input")
 
 }  // namespace op
 }  // namespace mxnet

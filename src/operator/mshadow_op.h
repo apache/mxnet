@@ -266,21 +266,7 @@ struct rpower_grad {
 struct maximum {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a > b ? a : b);
-  }
-};
-
-struct ge {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a >= b ? DType(1) : DType(0));
-  }
-};
-
-struct gt {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a > b ? DType(1) : DType(0));
+    return a > b ? a : b;
   }
 };
 
@@ -288,21 +274,42 @@ struct gt {
 struct minimum {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a < b ? a : b);
+    return a < b ? a : b;
+  }
+};
+
+struct ge {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a >= b ? DType(1) : DType(0);
+  }
+};
+
+struct gt {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a > b ? DType(1) : DType(0);
   }
 };
 
 struct lt {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a < b ? DType(1) : DType(0));
+    return a < b ? DType(1) : DType(0);
   }
 };
 
 struct le {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a <= b ? DType(1) : DType(0));
+    return a <= b ? DType(1) : DType(0);
+  }
+};
+
+struct eq {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a == b ? DType(1) : DType(0);
   }
 };
 
