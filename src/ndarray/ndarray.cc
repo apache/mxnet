@@ -225,13 +225,13 @@ void ScalarOp(const NDArray &lhs,
 
 void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
                  NDArray *to, int priority) {
-  CHECK(from.shape().ndim() == to->shape().ndim())
+  CHECK_EQ(from.shape().ndim(), to->shape().ndim())
       << "from and to must have the same number of dimensions";
-  CHECK(slice_dim < from.shape().ndim())
+  CHECK_LT(slice_dim, static_cast<int>(from.shape().ndim()))
       << "slice dimension out of bounds";
-  CHECK(start < end)
+  CHECK_LT(start, end)
       << "slice is empty";
-  CHECK(end < from.shape()[slice_dim])
+  CHECK_LT(end, from.shape()[slice_dim])
       << "slice out of bounds";
 
   mshadow::Shape<3> from_shape = from.shape().FlatTo3D(slice_dim);
@@ -820,24 +820,11 @@ MXNET_REGISTER_NDARRAY_FUN(_copy_slice_to)
 .set_num_use_vars(1)
 .set_num_scalars(3)
 .set_num_mutate_vars(1)
-.set_type_mask(kNDArrayArgBeforeScalar);
-
-// register random number generators
-MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    SampleUniform(s[0], s[1], out[0]);
-  })
-.set_num_scalars(2)
-.set_num_mutate_vars(1);
-
-MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    SampleGaussian(s[0], s[1], out[0]);
-  })
-.set_num_scalars(2)
-.set_num_mutate_vars(1);
+.set_type_mask(kNDArrayArgBeforeScalar)
+.add_argument("src", "NDArray", "Source input")
+.add_argument("slice_dim", "int", "the dimension to be sliced")
+.add_argument("start", "int", "The starting position to be sliced")
+.add_argument("end", "int", "The ending position of the slice");
 
 MXNET_REGISTER_NDARRAY_FUN(clip)
 .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
