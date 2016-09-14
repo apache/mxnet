@@ -58,9 +58,9 @@ void BinaryScalarBackward(const nnvm::NodeAttrs& attrs,
   .set_attr_parser([](NodeAttrs* attrs) {                       \
       attrs->parsed = std::stod(attrs->dict["scalar"]);         \
     })                                                          \
-  .attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
-  .attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .attr<nnvm::FInplaceOption>("FInplaceOption",                 \
+  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                 \
       return std::vector<std::pair<int, int> >{{0, 0}};         \
     })                                                          \
