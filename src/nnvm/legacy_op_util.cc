@@ -312,35 +312,35 @@ void RegisterLegacyOpProp() {
     op.set_attr_parser(attr_parser);
     op.set_num_inputs(OpPropNumInputs);
     op.set_num_outputs(OpPropNumOutputs);
-    op.attr<nnvm::FListInputNames>("FListInputNames", OpPropListInputNames);
-    op.attr<nnvm::FListOutputNames>("FListOutputNames", OpPropListOutputNames);
-    op.attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", OpPropNumVisibleOutputs);
-    op.attr<nnvm::FInferShape>("FInferShape", OpPropInferShape);
-    op.attr<nnvm::FInferType>("FInferType", OpPropInferType);
-    op.attr<nnvm::FMutateInputs>("FMutateInputs", OpPropMutateInputs);
-    op.attr<nnvm::FInplaceOption>("FInplaceOption", OpPropInplaceOption);
-    op.attr<FResourceRequest>("FResourceRequest", OpPropResourceRequest);
-    op.attr<FCreateLayerOp>("FCreateLayerOp", OpPropCreateLayerOp);
+    op.set_attr<nnvm::FListInputNames>("FListInputNames", OpPropListInputNames);
+    op.set_attr<nnvm::FListOutputNames>("FListOutputNames", OpPropListOutputNames);
+    op.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", OpPropNumVisibleOutputs);
+    op.set_attr<nnvm::FInferShape>("FInferShape", OpPropInferShape);
+    op.set_attr<nnvm::FInferType>("FInferType", OpPropInferType);
+    op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpPropMutateInputs);
+    op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpPropInplaceOption);
+    op.set_attr<FResourceRequest>("FResourceRequest", OpPropResourceRequest);
+    op.set_attr<FCreateLayerOp>("FCreateLayerOp", OpPropCreateLayerOp);
     if (reg->key_var_num_args.length() != 0) {
-      op.attr<std::string>("key_var_num_args", reg->key_var_num_args);
+      op.set_attr<std::string>("key_var_num_args", reg->key_var_num_args);
     }
     // register BackwardOps
     std::string back_op_name = "_backward_" + reg->name;
     Op& back_op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER__(back_op_name);
-    op.attr<nnvm::FGradient>("FGradient", std::bind(
+    op.set_attr<nnvm::FGradient>("FGradient", std::bind(
         OpPropGradient, &back_op,
         std::placeholders::_1, std::placeholders::_2));
     back_op.set_attr_parser(attr_parser);
     back_op.set_num_inputs(nnvm::kVarg);
     back_op.set_num_outputs(OpBackNumOutputs);
-    back_op.attr<nnvm::FBackwardOutToInIndex>(
+    back_op.set_attr<nnvm::FBackwardOutToInIndex>(
         "FBackwardOutToInIndex", OpBackOutToInIndex);
-    back_op.attr<nnvm::FListOutputNames>("FListOutputNames", OpBackListOutputNames);
-    back_op.attr<nnvm::FMutateInputs>("FMutateInputs", OpBackMutateInputs);
-    back_op.attr<nnvm::FInplaceOption>("FInplaceOption", OpBackInplaceOption);
-    back_op.attr<FResourceRequest>(
+    back_op.set_attr<nnvm::FListOutputNames>("FListOutputNames", OpBackListOutputNames);
+    back_op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpBackMutateInputs);
+    back_op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpBackInplaceOption);
+    back_op.set_attr<FResourceRequest>(
         "FResourceRequest", OpBackResourceRequest);
-    back_op.attr<bool>("TIsLayerOpBackward", true);
+    back_op.set_attr<bool>("TIsLayerOpBackward", true);
   }
 }
 
@@ -364,7 +364,7 @@ void RegisterLegacyNDFunc() {
     op.set_num_inputs(reg->num_use_vars);
     op.set_num_outputs(reg->num_mutate_vars);
     op.set_attr_parser([](NodeAttrs* attrs){});
-    op.attr<FNDArrayFunction>("FNDArrayFunction", [reg](const nnvm::NodeAttrs& attrs,
+    op.set_attr<FNDArrayFunction>("FNDArrayFunction", [reg](const nnvm::NodeAttrs& attrs,
                                                         const std::vector<NDArray>& inputs,
                                                         std::vector<NDArray>* outputs) {
         CHECK_EQ(inputs.size(), reg->num_use_vars);
