@@ -31,6 +31,8 @@ try:
     else:
         from ._cy2.symbol import SymbolBase, _init_symbol_module
 except ImportError:
+    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
+        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.symbol import SymbolBase, _init_symbol_module
 
 
