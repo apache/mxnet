@@ -184,7 +184,7 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
   dmlc::istream is(fi.get());
   s->outputs = nnvm::pass::LoadJSON(
-      std::string(std::istreambuf_iterator<char>(is), {})).outputs;
+     std::string(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>())).outputs;
   *out = s;
   is.set_stream(nullptr);
   API_END_HANDLE_ERROR(delete s);
