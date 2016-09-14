@@ -1,6 +1,11 @@
 from ..base import MXNetError
 
+from libcpp.vector cimport vector
+from libcpp.string cimport string
+from cpython.version cimport PY_MAJOR_VERSION
+
 ctypedef void* SymbolHandle
+ctypedef void* NDArrayHandle
 ctypedef void* OpHandle
 ctypedef unsigned nn_uint
 
@@ -43,3 +48,55 @@ cdef vector[const char*] SVec2Ptr(vector[string]& vec):
     for i in range(vec.size()):
         svec[i] = vec[i].c_str()
     return svec
+
+
+cdef extern from "nnvm/c_api.h":
+    const char* NNGetLastError();
+    int NNGetOpHandle(const char *op_name,
+                      OpHandle *handle);
+    int NNGetOpInfo(OpHandle op,
+                    const char **name,
+                    const char **description,
+                    nn_uint *num_doc_args,
+                    const char ***arg_names,
+                    const char ***arg_type_infos,
+                    const char ***arg_descriptions,
+                    const char **return_type);
+    int NNSymbolCreateAtomicSymbol(OpHandle op,
+                                   nn_uint num_param,
+                                   const char **keys,
+                                   const char **vals,
+                                   SymbolHandle *out);
+    int NNSymbolFree(SymbolHandle symbol);
+    int NNSymbolSetAttrs(SymbolHandle symbol,
+                         nn_uint num_param,
+                         const char** keys,
+                         const char** values);
+    int NNSymbolCompose(SymbolHandle sym,
+                        const char* name,
+                        nn_uint num_args,
+                        const char** keys,
+                        SymbolHandle* args);
+
+
+cdef extern from "mxnet/c_api.h":
+    int MXListAllOpNames(nn_uint *out_size,
+                         const char ***out_array);
+    int MXSymbolGetAtomicSymbolInfo(OpHandle creator,
+                                    const char **name,
+                                    const char **description,
+                                    nn_uint *num_doc_args,
+                                    const char ***arg_names,
+                                    const char ***arg_type_infos,
+                                    const char ***arg_descriptions,
+                                    const char **key_var_args,
+                                    const char **return_type);
+    int MXImperativeInvoke(OpHandle creator,
+                           int num_inputs,
+                           NDArrayHandle *inputs,
+                           int *num_outputs,
+                           NDArrayHandle **outputs,
+                           int num_params,
+                           const char **param_keys,
+                           const char **param_vals);
+    int MXNDArrayFree(NDArrayHandle handle);
