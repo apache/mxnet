@@ -34,3 +34,9 @@ TEST(Storage, Basic_GPU) {
   EXPECT_EQ(handle.dptr, ptr);
 }
 #endif  // MXNET_USE_CUDA
+
+int main(int argc, char ** argv) {
+  testing::InitGoogleTest(&argc, argv);
+  testing::FLAGS_gtest_death_test_style = "threadsafe";
+  return RUN_ALL_TESTS();
+}
