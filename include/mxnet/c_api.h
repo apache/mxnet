@@ -486,12 +486,20 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  int num_params,
-                                 char **param_keys,
-                                 char **param_vals);
+                                 const char **param_keys,
+                                 const char **param_vals);
 
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
+/*!
+ * \brief list all the available operator names, include entries.
+ * \param out_size the size of returned array
+ * \param out_array the output operator name array.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListAllOpNames(mx_uint *out_size,
+                               const char ***out_array);
 /*!
  * \brief list all the available AtomicSymbolEntry
  * \param out_size the size of returned array

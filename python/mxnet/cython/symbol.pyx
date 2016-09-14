@@ -6,52 +6,8 @@ from numbers import Number as _Number
 from ..name import NameManager
 from ..attribute import AttrScope
 from ..symbol_doc import _build_doc
-from libcpp.vector cimport vector
-from libcpp.string cimport string
-from cpython.version cimport PY_MAJOR_VERSION
 
 include "./base.pyi"
-
-cdef extern from "nnvm/c_api.h":
-    const char* NNGetLastError();
-    int NNListAllOpNames(nn_uint *out_size,
-                      const char ***out_array);
-    int NNGetOpHandle(const char *op_name,
-                      OpHandle *handle);
-    int NNGetOpInfo(OpHandle op,
-                    const char **name,
-                    const char **description,
-                    nn_uint *num_doc_args,
-                    const char ***arg_names,
-                    const char ***arg_type_infos,
-                    const char ***arg_descriptions,
-                    const char **return_type);
-    int NNSymbolCreateAtomicSymbol(OpHandle op,
-                                   nn_uint num_param,
-                                   const char **keys,
-                                   const char **vals,
-                                   SymbolHandle *out);
-    int NNSymbolFree(SymbolHandle symbol);
-    int NNSymbolSetAttrs(SymbolHandle symbol,
-                         nn_uint num_param,
-                         const char** keys,
-                         const char** values);
-    int NNSymbolCompose(SymbolHandle sym,
-                        const char* name,
-                        nn_uint num_args,
-                        const char** keys,
-                        SymbolHandle* args);
-
-cdef extern from "mxnet/c_api.h":
-    int MXSymbolGetAtomicSymbolInfo(OpHandle creator,
-                                    const char **name,
-                                    const char **description,
-                                    nn_uint *num_doc_args,
-                                    const char ***arg_names,
-                                    const char ***arg_type_infos,
-                                    const char ***arg_descriptions,
-                                    const char **key_var_args,
-                                    const char **return_type);
 
 cdef class SymbolBase:
     """Symbol is symbolic graph."""
@@ -228,11 +184,9 @@ def _init_symbol_module(symbol_class, root_namespace):
     cdef OpHandle handle
 
     _set_symbol_class(symbol_class)
-    CALL(NNListAllOpNames(&size, &op_name_ptrs))
+    CALL(MXListAllOpNames(&size, &op_name_ptrs))
     for i in range(size):
         op_names.push_back(string(op_name_ptrs[i]))
-        print op_names[i]
-
 
     module_obj = _sys.modules["%s.symbol" % root_namespace]
     module_internal = _sys.modules["%s._symbol_internal" % root_namespace]
