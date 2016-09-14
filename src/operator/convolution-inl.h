@@ -38,6 +38,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   uint64_t workspace;
   bool no_bias;
   int cudnn_tune;
+  bool cudnn_off;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     int shape[] = {1, 1};
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (y, x) or (d, y, x)");
@@ -67,6 +68,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
               "Leads to higher startup time but may give better speed."
               "auto tune is turned off by default."
               "Set environment varialbe MXNET_CUDNN_AUTOTUNE_DEFAULT=1 to turn on by default.");
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
+    .describe("Turn off cudnn.");
   }
 };
 
