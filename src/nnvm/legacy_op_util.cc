@@ -355,7 +355,9 @@ void RegisterLegacyNDFunc() {
     if (reg->type_mask & kScalarArgBeforeNDArray) continue;
     Op& op = ::dmlc::Registry<::nnvm::Op>::Get()->__REGISTER_OR_GET__(reg->name);
     if (op.attr_parser != nullptr) continue;
-    CHECK_LE(reg->num_scalars + reg->num_use_vars, reg->arguments.size());
+
+    CHECK_LE(reg->num_scalars + reg->num_use_vars, reg->arguments.size())
+        << reg->name;
     auto func = reg->body;
     op.describe(reg->description);
     op.add_arguments(reg->arguments);
