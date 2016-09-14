@@ -727,7 +727,9 @@ def test_batchnorm_training():
 
         data = mx.symbol.Variable('data')
         test = mx.symbol.BatchNorm(data, fix_gamma=False)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
+        test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=5e-2)
 
 def test_convolution_grouping():
@@ -1137,7 +1139,6 @@ def test_flip():
 
 
 def test_stn():
-    import pdb
     np.set_printoptions(threshold=np.nan)
     num_filter = 2  # conv of loc net
     kernel = (3, 3)  # conv of loc net
