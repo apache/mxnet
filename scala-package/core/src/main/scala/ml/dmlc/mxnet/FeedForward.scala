@@ -37,7 +37,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
                   val beginEpoch: Int = 0) {
   val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   // check if symbol contain duplicated names.
-  Executor.checkArguments(symbol)
+  ExecutorManager.checkArguments(symbol)
 
   // rematch parameters to delete useless ones
   private var _argParams =
@@ -124,7 +124,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     if (this.predExec == null) {
       val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
       predExec.copyParamsFrom(_argParams, _auxParams)
-      Executor.checkArguments(symbol)
+      ExecutorManager.checkArguments(symbol)
       this.predExec = predExec
     }
   }
@@ -172,7 +172,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
     while (data.hasNext && i != numBatch) {
       val batch = data.next()
       i += 1
-      Executor.loadData(batch, dataArrays)
+      ExecutorManager.loadData(batch, dataArrays)
       predExec.forward(isTrain = false)
       val padded = batch.pad
       val realSize = batchSize - padded

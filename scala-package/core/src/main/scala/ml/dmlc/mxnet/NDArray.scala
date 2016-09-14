@@ -733,7 +733,6 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
 
   /**
    * Return a reshaped NDArray that shares memory with current one.
-   *
    * @param dims New shape.
    *
    * @return a reshaped NDArray that shares memory with current one.
@@ -742,6 +741,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     val reshapeHandle = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayReshape(handle, dims.length, dims, reshapeHandle))
     new NDArray(handle = reshapeHandle.value, writable = this.writable)
+  }
+
+  /**
+   * Return a reshaped NDArray that shares memory with current one.
+   * @param dims New shape.
+   *
+   * @return a reshaped NDArray that shares memory with current one.
+   */
+  def reshape(dims: Shape): NDArray = {
+    reshape(dims.toArray)
   }
 
   /**
