@@ -33,9 +33,11 @@ def config_cython():
             if not fn.endswith(".pyx"):
                 continue
             ret.append(Extension(
-                "mxnet/%s/%s" % (subdir, fn[:-4]),
+                "mxnet/%s/.%s" % (subdir, fn[:-4]),
                 ["mxnet/cython/%s" % fn],
                 include_dirs=["../include/", "../nnvm/include"],
+                library_dirs=['mxnet'],
+                libraries=['libmxnet'],
                 language="c++"))
         return cythonize(ret)
     except ImportError:

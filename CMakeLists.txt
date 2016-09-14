@@ -14,7 +14,7 @@ mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
-include(mshadow/cmake/mshadow.cmake)
+include(mshadow/cmake/mshadow.cmake) 
 include(mshadow/cmake/Utils.cmake)
 include(mshadow/cmake/Cuda.cmake)
 
@@ -23,6 +23,7 @@ list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
 
 include_directories("include")
 include_directories("mshadow")
+include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 
 if(MSVC)
@@ -31,6 +32,8 @@ if(MSVC)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
+  add_definitions(-DNNVM_EXPORTS)
+  add_definitions(-DDMLC_STRICT_CXX11)
   set(CMAKE_C_FLAGS "/MP")
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
@@ -66,7 +69,7 @@ if(USE_OPENMP)
 endif()
 
 # cudnn detection
-if(USE_CUDNN)
+if(USE_CUDNN AND USE_CUDA)
   detect_cuDNN()
   if(HAVE_CUDNN)
     add_definitions(-DUSE_CUDNN)
@@ -76,7 +79,9 @@ if(USE_CUDNN)
   endif()
 endif()
 
+
 add_subdirectory("dmlc-core")
+
 if(USE_DIST_KVSTORE)
 	add_subdirectory("ps-lite")
 endif()
@@ -92,6 +97,7 @@ mxnet_source_group("Include\\optimizer"   GLOB "src/optimizer/*.h")
 mxnet_source_group("Include\\resource.cc"   GLOB "src/resource.cc/*.h")
 mxnet_source_group("Include\\storage"   GLOB "src/storage/*.h")
 mxnet_source_group("Include\\symbol"   GLOB "src/symbol/*.h")
+mxnet_source_group("Include\\executor"   GLOB "src/executor/*.h")
 
 mxnet_source_group("Cuda\\common"   GLOB "src/common/*.cu")
 mxnet_source_group("Cuda\\c_api"   GLOB "src/c_api/*.cu")
@@ -117,9 +123,28 @@ mxnet_source_group("Source\\optimizer"   GLOB "src/optimizer/*.cc")
 mxnet_source_group("Source\\resource.cc"   GLOB "src/resource.cc/*.cc")
 mxnet_source_group("Source\\storage"   GLOB "src/storage/*.cc")
 mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
+mxnet_source_group("Source\\executor"   GLOB "src/executor/*.cc")
+mxnet_source_group("Source\\nnvm"   GLOB "src/nnvm/*.cc")
+
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu")
+
+# add nnvm to source
+
+mxnet_source_group("NNVM\\Include\\c_api"   GLOB "nnvm/src/c_api/*.h")
+mxnet_source_group("NNVM\\Include\\core"   GLOB "nnvm/src/core/*.h")
+mxnet_source_group("NNVM\\Include\\pass"   GLOB "nnvm/src/pass/*.h")
+mxnet_source_group("NNVM\\Include\\nnvm"   GLOB "nnvm/include/nnvm/*.h")
+mxnet_source_group("NNVM\\Include\\dmlc"   GLOB "nnvm/include/dmlc/*.h")
+
+mxnet_source_group("NNVM\\Source"   GLOB "nnvm/src/*.cc")
+mxnet_source_group("NNVM\\Source\\c_api"   GLOB "nnvm/src/c_api/*.cc")
+mxnet_source_group("NNVM\\Source\\core"   GLOB "nnvm/src/core/*.cc")
+mxnet_source_group("NNVM\\Source\\pass"   GLOB "nnvm/src/pass/*.cc")
+
+FILE(GLOB_RECURSE NNVMSOURCE "nnvm/src/*.cc" "nnvm/src/*.h" "nnvm/include/*.h")
+list(APPEND SOURCE ${NNVMSOURCE})
 
 if(USE_PLUGINS_WARPCTC)
 	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
@@ -185,8 +210,10 @@ endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
 
+
 if(MSVC)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
+
 endif()
 
 if(USE_DIST_KVSTORE)

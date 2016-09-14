@@ -412,7 +412,8 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
       size_t nword = (bytes + 3) / 4;
       CHECK_LE(nword, std::numeric_limits<index_t>::max());
       // allocate float arrays
-      data_pool_.emplace_back(NDArray(TShape({index_t(nword)}), ctx));
+      TShape shape{index_t(nword)};
+      data_pool_.emplace_back(NDArray(shape, ctx));
     }
   }
   CHECK_EQ(data_pool_.size(), pool_info.size());
