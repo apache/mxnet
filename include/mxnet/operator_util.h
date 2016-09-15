@@ -453,7 +453,7 @@ class SimpleOpRegistry {
 /*!
 * \brief Maximum ndim supported for special operators like broadcasting with non contiguous lhs/rhs
 */
-#define MXNET_SPECIAL_MAX_NDIM 7
+#define MXNET_SPECIAL_MAX_NDIM 5
 
 
 //--------------------------------------------------------------
