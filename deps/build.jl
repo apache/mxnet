@@ -32,6 +32,16 @@ if !libmxnet_detected
 
   blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
 
+  # Try to find cuda
+  hascuda = false
+  if haskey(ENV, "CUDA_HOME")
+    hascuda = Libdl.dlopen_e(joinpath(ENV["CUDA_HOME"], "lib64", "libcuda.so")) != C_NULL
+  else
+    cudapaths = String["/opt/cuda/lib64", "/usr/local/cuda/lib64"]
+    cudalib = Libdl.find_library(["libcuda", "libcuda.so"], cudapaths)
+    hascuda = Libdl.dlopen_e(cudalib) != C_NULL
+  end
+
   if VERSION >= v"0.5.0-dev+4338"
     blas_vendor = Base.BLAS.vendor()
   else
@@ -80,7 +90,6 @@ if !libmxnet_detected
         end)
         @build_steps begin
           ChangeDirectory(_mxdir)
-          # TODO(vchuravy). We have to reset mshadow/make/mshadow.mk
           `git -C mshadow checkout -- make/mshadow.mk`
           `git fetch`
           `git checkout $libmxnet_curr_ver`
@@ -95,6 +104,12 @@ if !libmxnet_detected
             `cp make/config.mk config.mk`
           end
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
+          if hascuda
+            `sed -i -s 's/USE_CUDA = 0/USE_CUDA = 1/' config.mk`
+            if haskey(ENV, "CUDA_HOME")
+              `sed -i -s 's/USE_CUDA_PATH = NULL/USE_CUDA_PATH = $(ENV["CUDA_HOME"])/' config.mk`
+            end
+          end
         end)
         @build_steps begin
           ChangeDirectory(_mxdir)
