@@ -37,8 +37,6 @@ def config_cython():
                 "mxnet/%s/.%s" % (subdir, fn[:-4]),
                 ["mxnet/cython/%s" % fn],
                 include_dirs=["../include/", "../nnvm/include"],
-                library_dirs=['mxnet'],
-                libraries=['libmxnet'],
                 language="c++"))
         return cythonize(ret)
     except ImportError:
