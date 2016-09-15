@@ -20,6 +20,9 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
       case activation::kSigmoid:
         op = new ActivationOp<cpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, DType>();
         break;
+      case activation::kLinear:
+        op = new ActivationOp<cpu, mshadow_op::identity, mshadow_op::identity_grad, DType>();
+        break;
       case activation::kTanh:
         op = new ActivationOp<cpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>();
         break;
