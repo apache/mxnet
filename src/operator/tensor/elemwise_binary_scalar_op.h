@@ -24,7 +24,6 @@ void BinaryScalarCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   double alpha = nnvm::get<double>(attrs.parsed);
-  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> lhs = inputs[0].FlatTo1D<xpu, DType>(s);
@@ -42,11 +41,10 @@ void BinaryScalarBackward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   double alpha = nnvm::get<double>(attrs.parsed);
-  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> lhs = inputs[0].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> ograd = inputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(igrad, req[0], ograd*F<OP>(lhs, scalar<DType>(DType(alpha))));
   });
 }
