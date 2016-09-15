@@ -90,6 +90,39 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs);
 }
 
+struct ElemwiseGradUseIn {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    for (auto& h : n->inputs) {
+      heads.push_back(h);
+    }
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
+
+struct ElemwiseGradUseOut {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    index_t n_out = n->num_outputs();
+    for (index_t i = 0; i < n_out; ++i) {
+      heads.emplace_back(nnvm::NodeEntry{n, i, 0});
+    }
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
+
+struct ElemwiseGradUseNone {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeGradNode(op_name, n, ograds, n->attrs.dict);
+  }
+};
+
 }  // namespace op
 }  // namespace mxnet
 
