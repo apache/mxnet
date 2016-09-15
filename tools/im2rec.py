@@ -138,6 +138,9 @@ def write_worker(q_out, fname, working_dir):
             print('time:', cur_time - pre_time, ' count:', count)
             pre_time = cur_time
         count += 1
+    fout.close()
+    if sys.platform == 'win32':
+        os.remove(fname)
     os.rename(fname+'.tmp', fname)
 
 def parse_args():
