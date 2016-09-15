@@ -13,6 +13,8 @@
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
 
+#include "../operator/elemwise_op_common.h"
+
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
@@ -243,7 +245,7 @@ NNVM_REGISTER_OP(_cvimdecode)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<ImdecodeParam>)
-.attr<FNDArrayFunction>("FNDArrayFunction", Imdecode)
+.set_attr<FNDArrayFunction>("FNDArrayFunction", Imdecode)
 .add_argument("buf", "NDArray", "Buffer containing binary encoded image")
 .add_arguments(ImdecodeParam::__FIELDS__());
 
@@ -252,9 +254,9 @@ NNVM_REGISTER_OP(_cvimresize)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<ResizeParam>)
-.attr<nnvm::FInferShape>("FInferShape", ResizeShape)
-.attr<nnvm::FInferType>("FInferType", op::UniformType)
-.attr<FCompute>("FCompute<cpu>", Imresize)
+.set_attr<nnvm::FInferShape>("FInferShape", ResizeShape)
+.set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1,1>)
+.set_attr<FCompute>("FCompute<cpu>", Imresize)
 .add_argument("src", "NDArray", "source image")
 .add_arguments(ResizeParam::__FIELDS__());
 
@@ -263,9 +265,9 @@ NNVM_REGISTER_OP(_cvcopyMakeBorder)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<MakeBorderParam>)
-.attr<nnvm::FInferShape>("FInferShape", MakeBorderShape)
-.attr<nnvm::FInferType>("FInferType", op::UniformType)
-.attr<FCompute>("FCompute<cpu>", copyMakeBorder)
+.set_attr<nnvm::FInferShape>("FInferShape", MakeBorderShape)
+.set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1,1>)
+.set_attr<FCompute>("FCompute<cpu>", copyMakeBorder)
 .add_argument("src", "NDArray", "source image")
 .add_arguments(MakeBorderParam::__FIELDS__());
 

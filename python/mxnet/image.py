@@ -180,7 +180,6 @@ def HorizontalFlipAug(p):
 def CastAug():
     def aug(src):
         src = src.astype(np.float32)
-        src /= 255.0
         return src
     return aug
 
@@ -206,12 +205,16 @@ def CreateAugmenter(data_shape, rand_crop=False, rand_resize=False, rand_mirror=
         auglist.append(ColorJitterAug(brightness, contrast, saturation))
 
     if pca_noise > 0:
-        eigval = np.array([0.2175, 0.0188, 0.0045])
+        eigval = np.array([ 55.46, 4.794, 1.148 ])
         eigvec = np.array([[ -0.5675,  0.7192,  0.4009 ],
                            [ -0.5808, -0.0045, -0.8140 ],
                            [ -0.5836, -0.6948,  0.4203 ]])
         auglist.append(LightingAug(pca_noise, eigval, eigvec))
 
+    if mean is True:
+        mean = np.array([ 123.68,  116.28 ,  103.53 ])
+    if std is True:
+        std = np.array([ 58.395,  57.12 ,  57.375])
     if mean:
         auglist.append(ColorNormalizeAug(mean, std))
 
@@ -307,7 +310,6 @@ class ImageIter(io.DataIter):
         c, h, w = self.data_shape
         batch_data = nd.zeros((batch_size, h, w, c))
         batch_label = nd.zeros((batch_size, self.label_width))
-
         try:
             for i in range(batch_size):
                 label, data = self.next_sample()
