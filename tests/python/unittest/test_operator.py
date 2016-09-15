@@ -768,7 +768,7 @@ def test_convolution_grouping():
 
 def _gen_broadcast_data():
     # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
-    ndim = np.random.randint(1, 8)
+    ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
     l_same_dim = np.random.randint(0, 5)
     r_same_dim = np.random.randint(0, 5)
@@ -997,7 +997,7 @@ def test_reduce():
     def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym):
         for i in range(sample_num):
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
-            ndim = np.random.randint(1, 8)
+            ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
             axis_flags = np.random.randint(0, 2, size=ndim)
@@ -1043,7 +1043,7 @@ def test_broadcast():
     sample_num = 200
     for i in range(sample_num):
         # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
-        ndim = np.random.randint(1, 8)
+        ndim = np.random.randint(1, 6)
         target_shape = np.random.randint(1, 6, size=(ndim,))
         axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
         shape = target_shape.copy()

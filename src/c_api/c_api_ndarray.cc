@@ -105,7 +105,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     for (auto& i : ndinputs) {
       in_types.push_back(i.dtype());
     }
-    out_types.resize(infered_num_outputs);
+    out_types.resize(infered_num_outputs, -1);
     CHECK(infertype.count(op)) << "Op must have FInferShape registered";
     CHECK(infertype[op](attrs, &in_types, &out_types));
     CHECK_EQ(out_types.size(), infered_num_outputs);
@@ -125,6 +125,15 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     for (int i = 0; i < infered_num_outputs; ++i) {
       if (ndoutputs[i].is_none()) {
         ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+      } else {
+        CHECK_EQ(ndoutputs[i].shape(), out_shapes[i])
+          << i << "th output has invalid shape. "
+          << "Expecting " << out_shapes[i] << " got "
+          << ndoutputs[i].shape();
+        CHECK_EQ(ndoutputs[i].dtype(), out_types[i])
+          << i << "th output has invalid shape. "
+          << "Expecting " << out_types[i] << " got "
+          << ndoutputs[i].dtype();
       }
     }
 
