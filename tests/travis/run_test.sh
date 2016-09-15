@@ -102,7 +102,7 @@ if [ ${TASK} == "python_test" ]; then
         python3 -m nose tests/python/unittest || exit -1
         make cython3
         # cython tests
-        export MXNET_ENFORCE_CYTHON=true
+        export MXNET_ENFORCE_CYTHON=1
         python3 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/train || exit -1
     else
