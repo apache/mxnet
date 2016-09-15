@@ -23,13 +23,68 @@ void BinaryCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
-  CHECK_EQ(inputs[1].type_flag_, outputs[0].type_flag_);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> lhs = inputs[0].FlatTo1D<xpu, DType>(s);
     Tensor<xpu, 1, DType> rhs = inputs[1].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req[0], F<OP>(lhs, rhs));
+  });
+}
+
+template<typename xpu, typename LOP, typename ROP>
+void BinaryBackwardUseNone(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
+    ASSIGN_DISPATCH(lgrad, req[0], F<LOP>(ograd));
+    ASSIGN_DISPATCH(rgrad, req[1], F<ROP>(ograd));
+  });
+}
+
+template<typename xpu, typename LOP, typename ROP>
+void BinaryBackwardUseOut(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> out = inputs[1].FlatTo1D<xpu, DType>(s);
+    ASSIGN_DISPATCH(lgrad, req[0], ograd*F<LOP>(out));
+    ASSIGN_DISPATCH(rgrad, req[1], ograd*F<ROP>(out));
+  });
+}
+
+template<typename xpu, typename LOP, typename ROP>
+void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 1, DType> lgrad = outputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> rgrad = outputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> rhs = inputs[2].FlatTo1D<xpu, DType>(s);
+    ASSIGN_DISPATCH(lgrad, req[0], ograd*F<LOP>(lhs, rhs));
+    ASSIGN_DISPATCH(rgrad, req[1], ograd*F<ROP>(lhs, rhs));
   });
 }
 
@@ -45,6 +100,15 @@ void BinaryCompute(const nnvm::NodeAttrs& attrs,
     })                                                          \
   .add_argument("lhs", "NDArray", "first input")                \
   .add_argument("rhs", "NDArray", "second input")
+
+#define MXNET_OPERATOR_REGISTER_BINARY_BACKWARD(name)            \
+  NNVM_REGISTER_OP(name)                                         \
+  .set_num_inputs(1)                                             \
+  .set_num_outputs(2)                                            \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                  \
+    [](const NodeAttrs& attrs){                                  \
+      return std::vector<std::pair<int, int> >{{0, 1}};          \
+    })
 
 }  // namespace op
 }  // namespace mxnet
