@@ -34,13 +34,13 @@ NNVM_REGISTER_OP(_maximum_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::maximum>);
 
 NNVM_REGISTER_OP(_backward_maximum_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::maximum_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::ge>);
 
 NNVM_REGISTER_OP(_minimum_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::minimum>);
 
 NNVM_REGISTER_OP(_backward_minimum_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::minimum_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::le>);
 
 NNVM_REGISTER_OP(_power_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::power>);
