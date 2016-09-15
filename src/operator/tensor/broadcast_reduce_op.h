@@ -69,7 +69,7 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   } else {
     if (param.keepdims) {
       oshape = ishape;
-      for (int i = 0; i < param.axis.ndim(); ++i) {
+      for (index_t i = 0; i < param.axis.ndim(); ++i) {
         oshape[param.axis[i]] = 1;
       }
     } else {
@@ -77,7 +77,7 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
         << "Reduction axis " << param.axis[param.axis.ndim()-1]
         << " Exceeds input dimensions " << ishape;
       oshape = TShape(std::max<index_t>(1, ishape.ndim() - param.axis.ndim()));
-      for (int i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
+      for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
         if (j < param.axis.ndim() && i == param.axis[j]) {
           ++j;
           continue;
@@ -100,7 +100,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(param.axis.ndim() , param.size.ndim());
   TShape &ishape = (*in_attrs)[0];
   TShape oshape = ishape;
-  for (int i = 0; i < param.axis.ndim(); ++i) {
+  for (index_t i = 0; i < param.axis.ndim(); ++i) {
     CHECK_EQ(oshape[param.axis[i]], 1) << "Broadcasting axis must have size 1";
     oshape[param.axis[i]] = param.size[i];
   }
@@ -118,7 +118,7 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
   CHECK_EQ(ishape.ndim(), param.shape.ndim())
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
-  for (int i = 0; i < ishape.ndim(); ++i) {
+  for (index_t i = 0; i < ishape.ndim(); ++i) {
     CHECK(ishape[i] == param.shape[i] || ishape[i] == 1)
       << "Broadcasting axis must have size 1";
   }
@@ -131,12 +131,12 @@ inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
   index_t idim = std::max<index_t>(big.ndim(), MXNET_SPECIAL_MAX_NDIM);
   *new_big = TShape(idim);
   *new_small = TShape(idim);
-  int j = 0;
+  index_t j = 0;
   if (small.Size() == 1) {
     (*new_big)[j++] = big.Size();
   } else {
-    int bprod = 1, sprod = 1;
-    for (int i = 0, k = 0; i < big.ndim(); ++i) {
+    index_t bprod = 1, sprod = 1;
+    for (index_t i = 0, k = 0; i < big.ndim(); ++i) {
       bool red_axis = big[i] != small[i];
       if ((red_axis && sprod > 1) || (!red_axis && bprod != sprod)) {
         (*new_big)[j] = bprod;
@@ -182,7 +182,7 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
       small = TShape(inputs[0].shape_.ndim());
     } else {
       small = inputs[0].shape_;
-      for (int i = 0; i < param.axis.ndim(); ++i)
+      for (index_t i = 0; i < param.axis.ndim(); ++i)
         small[param.axis[i]] = 1;
     }
   } else {
@@ -224,7 +224,7 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
     small = TShape(outputs[0].shape_.ndim());
   } else {
     small = outputs[0].shape_;
-    for (int i = 0; i < param.axis.ndim(); ++i)
+    for (index_t i = 0; i < param.axis.ndim(); ++i)
       small[param.axis[i]] = 1;
   }
 
@@ -308,7 +308,7 @@ inline void ReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
     small = TShape(outputs[0].shape_.ndim());
   } else {
     small = outputs[0].shape_;
-    for (int i = 0; i < param.axis.ndim(); ++i)
+    for (index_t i = 0; i < param.axis.ndim(); ++i)
       small[param.axis[i]] = 1;
   }
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);

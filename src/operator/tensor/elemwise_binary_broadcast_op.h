@@ -38,10 +38,10 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     return true;
   }
   TShape out(std::max(lhs.ndim(), rhs.ndim()));
-  int bl = out.ndim() - lhs.ndim();
-  int br = out.ndim() - rhs.ndim();
-  for (int i = 0; i < out.ndim(); ++i) {
-    int l = 1, r = 1;
+  index_t bl = out.ndim() - lhs.ndim();
+  index_t br = out.ndim() - rhs.ndim();
+  for (index_t i = 0; i < out.ndim(); ++i) {
+    index_t l = 1, r = 1;
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
     if (l != r) {
@@ -60,15 +60,15 @@ inline bool BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rsha
                                         const TShape& oshape, TShape *new_lshape,
                                         TShape *new_rshape, TShape *new_oshape) {
   if (lshape == rshape) return false;
-  int odim = std::max<int>(oshape.ndim(), MXNET_SPECIAL_MAX_NDIM);
+  index_t odim = std::max<index_t>(oshape.ndim(), MXNET_SPECIAL_MAX_NDIM);
   *new_lshape = TShape(odim);
   *new_rshape = TShape(odim);
   *new_oshape = TShape(odim);
-  int bl = oshape.ndim() - lshape.ndim();
-  int br = oshape.ndim() - rshape.ndim();
-  int j = 0, lprod = 1, rprod = 1, oprod = 1;
-  for (int i = 0; i < oshape.ndim(); ++i) {
-    int l = 1, r = 1, o = oshape[i];
+  index_t bl = oshape.ndim() - lshape.ndim();
+  index_t br = oshape.ndim() - rshape.ndim();
+  index_t j = 0, lprod = 1, rprod = 1, oprod = 1;
+  for (index_t i = 0; i < oshape.ndim(); ++i) {
+    index_t l = 1, r = 1, o = oshape[i];
     if (i >= bl) l = lshape[i-bl];
     if (j >= br) r = rshape[i-br];
     if ((lprod != rprod || l != r) &&
