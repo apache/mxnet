@@ -5,9 +5,9 @@ import pickle as pkl
 from check_utils import _np_reduce
 
 def reldiff(a, b):
-    diff = np.sum(np.abs(a - b))
-    norm = np.sum(np.abs(a))
-    reldiff = diff  / (norm + 1e-8)
+    diff = np.abs(a - b)
+    norm = np.abs(a)
+    reldiff = np.max(diff  / (norm + 1e-7))
     return reldiff
 
 
@@ -39,7 +39,7 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
         if isinstance(out1, mx.nd.NDArray):
             out1 = out1.asnumpy()
         if dtype == np.float16:
-            assert reldiff(out1, out2) < 1e-3
+            assert reldiff(out1, out2) < 2e-3
         else:
             assert reldiff(out1, out2) < 1e-6
 
