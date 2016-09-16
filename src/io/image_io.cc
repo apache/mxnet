@@ -116,7 +116,13 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
       cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
                   param.flag == 0 ? CV_8U : CV_8UC3,
                   ndout.data().dptr_);
+#if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
       cv::imdecode(buf, param.flag, &dst);
+#else
+      cv::Mat tmp = cv::imdecode(buf, param.flag);
+      CHECK(!tmp.empty());
+      tmp.copyTo(dst);
+#endif
       CHECK(!dst.empty());
       CHECK_EQ(static_cast<void*>(dst.ptr()), ndout.data().dptr_);
       if (param.to_rgb) {
@@ -255,7 +261,7 @@ NNVM_REGISTER_OP(_cvimresize)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<ResizeParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ResizeShape)
-.set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1,1>)
+.set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Imresize)
 .add_argument("src", "NDArray", "source image")
 .add_arguments(ResizeParam::__FIELDS__());
@@ -266,12 +272,12 @@ NNVM_REGISTER_OP(_cvcopyMakeBorder)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<MakeBorderParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", MakeBorderShape)
-.set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1,1>)
+.set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", copyMakeBorder)
 .add_argument("src", "NDArray", "source image")
 .add_arguments(MakeBorderParam::__FIELDS__());
 
-}
-}
+}  // namespace io
+}  // namespace mxnet
 
 
