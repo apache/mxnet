@@ -70,7 +70,7 @@ inline bool BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rsha
   for (index_t i = 0; i < oshape.ndim(); ++i) {
     index_t l = 1, r = 1, o = oshape[i];
     if (i >= bl) l = lshape[i-bl];
-    if (j >= br) r = rshape[i-br];
+    if (i >= br) r = rshape[i-br];
     if ((lprod != rprod || l != r) &&
         lprod*l > 1 && rprod*r > 1) {
       (*new_lshape)[j] = lprod;
