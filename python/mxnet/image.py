@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable=no-member, too-many-lines, redefined-builtin, protected-access, unused-import, invalid-name
-# pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, redefined-variable-type, too-many-branches
+# pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches
 """Image IO API of mxnet."""
 from __future__ import absolute_import
 
