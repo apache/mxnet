@@ -15,19 +15,19 @@ import scala.collection.mutable.ArrayBuffer
  * @param auxNames Name of all auxiliary states of the network.
  * @param trainData Training data iterator.
  * @param workLoadList The list of work load for different devices, in the same order as ctx
- * @param logger When not specified, default logger will be used.
+ * @param symGen symbol generator for bucketing
  */
-class DataParallelExecutorManager(symbol: Symbol,
-                                  ctx: Array[Context],
-                                  paramNames: Seq[String],
-                                  argNames: Seq[String],
-                                  private val auxNames: Seq[String],
+class DataParallelExecutorManager(private val symbol: Symbol,
+                                  private val ctx: Array[Context],
+                                  private[mxnet] val paramNames: IndexedSeq[String],
+                                  private[mxnet] val argNames: IndexedSeq[String],
+                                  private[mxnet] val auxNames: IndexedSeq[String],
                                   trainData: DataIter,
                                   private var workLoadList: Seq[Float] = null,
-                                  logger: Logger = DataParallelExecutorManager.logger) {
+                                  private val symGen: SymbolGenerator = null) {
   // preparation
   private val numDevice = ctx.length
-  logger.info(s"Start training with [${ctx.mkString(",")}]")
+  DataParallelExecutorManager.logger.info(s"Start training with [${ctx.mkString(",")}]")
 
   // make sure the architecture is valid
   ExecutorManager.checkArguments(symbol)
@@ -39,65 +39,49 @@ class DataParallelExecutorManager(symbol: Symbol,
 
   private val slices = ExecutorManager.splitInputSlice(trainData.batchSize, workLoadList)
 
-  private val trainExecs =
-    ctx.zipWithIndex.map { case (context, i) =>
-      val dataShapes =
-        (trainData.provideData ++ trainData.provideLabel).map { case (name: String, shape: Shape) =>
-          (name, Shape(slices(i)._2 - slices(i)._1) ++ shape.drop(1))
-        }
-      symbol.simpleBind(context, "write", shapeDict = dataShapes)
-    }
+  private val paramNameSet = paramNames.toSet
 
-  // data structure
-  private val dataNames = trainData.provideData.map(_._1).toArray
-  private val labelNames = trainData.provideLabel.map(_._1).toArray
+  private val execGrp = new DataParallelExecutorGroup(
+    symbol, argNames, paramNameSet, ctx, slices, trainData)
+  private var currExecGrp: DataParallelExecutorGroup = null // this is set when data is loaded
 
-  private val dataArrays =
-    dataNames.map { name =>
-      trainExecs.zipWithIndex.map { case (exec, i) =>
-        val slice = slices(i)
-        (slice._1, slice._2, exec.argDict(name))
-      }
-    }
-  private val labelArrays =
-    labelNames.map { name =>
-      trainExecs.zipWithIndex.map { case (exec, i) =>
-        val slice = slices(i)
-        (slice._1, slice._2, exec.argDict(name))
-      }
-    }
-
-  private val paramIdx = (0 until argNames.length).filter { i =>
-    paramNames.contains(argNames(i))
+  private val execGrpBucket: mutable.Map[AnyRef, DataParallelExecutorGroup]
+    = mutable.HashMap.empty[AnyRef, DataParallelExecutorGroup]
+  if (symGen != null) {
+    execGrpBucket.put(trainData.defaultBucketKey, execGrp)
   }
-  private[mxnet] val _paramNames = paramIdx.map(argNames(_))
-  private[mxnet] val paramArrays = paramIdx.map { i =>
-    trainExecs.map(_.argArrays(i))
-  }.toArray
-  private[mxnet] val gradArrays = paramIdx.map { i =>
-    trainExecs.map(_.gradArrays(i))
-  }.toArray
 
-  private val auxArrays = (0 until auxNames.length).map { i =>
-    trainExecs.map(_.auxArrays(i))
-  }.toArray
-  private val batchSize = trainData.batchSize
-  private val outputShapes: Array[Shape] = trainExecs(0).outputs.map { x: NDArray =>
-    Shape(batchSize) ++ x.shape.drop(1)
+  // shared parameter arrays
+  def paramArrays: IndexedSeq[Array[NDArray]] = {
+    // param arrays should be shared by all executor groups
+    execGrp.paramArrays
   }
-  private[mxnet] val cpuOutputArrays = outputShapes.map(NDArray.zeros(_))
+
+  // shared gradient arrays
+  def gradArrays: IndexedSeq[Array[NDArray]] = {
+    // grad arrays should be shared by all executor groups
+    execGrp.gradArrays
+  }
+
+  // shared aux states
+  def auxArrays: IndexedSeq[Array[NDArray]] = {
+    // aux arrays are also shared by all executor groups
+    execGrp.auxArrays
+  }
 
   /**
-   * Release the related executors.
+   * Release all the executor groups.
    * The object shall never be used after it is disposed.
    */
   def dispose(): Unit = {
-    trainExecs.foreach(_.dispose())
+    execGrp.dispose()
+    execGrpBucket.values.foreach(_.dispose())
   }
 
   // Install monitor on all executors
   def installMonitor(monitor: Monitor): Unit = {
-    trainExecs.foreach(monitor.install)
+    require(symGen == null, "Monitoring is not implemented for bucketing")
+    execGrp.trainExecs.foreach(monitor.install)
   }
 
   /**
@@ -106,7 +90,7 @@ class DataParallelExecutorManager(symbol: Symbol,
    * @param auxParams source aux arrays
    */
   def setParams(argParams: Map[String, NDArray], auxParams: Map[String, NDArray]): Unit = {
-    trainExecs.foreach(_.copyParamsFrom(argParams, auxParams))
+    execGrp.trainExecs.foreach(_.copyParamsFrom(argParams, auxParams))
   }
 
   /**
@@ -116,7 +100,8 @@ class DataParallelExecutorManager(symbol: Symbol,
    * @note This function will inplace update the NDArrays in arg_params and aux_params.
    */
   def copyTo(argParams: Map[String, NDArray], auxParams: Map[String, NDArray]): Unit = {
-    for ((name, block) <- _paramNames zip paramArrays) {
+    // TODO: dtype
+    for ((name, block) <- paramNames zip paramArrays) {
       val weight = block.map(_.copyTo(Context.cpu())).reduce(_ + _) / block.length
       weight.copyTo(argParams(name))
     }
@@ -128,23 +113,37 @@ class DataParallelExecutorManager(symbol: Symbol,
 
   // load data and labels into arrays
   def loadDataBatch(dataBatch: DataBatch): Unit = {
-    ExecutorManager.loadDataMulti(dataBatch, dataArrays)
-    ExecutorManager.loadLabelMulti(dataBatch, labelArrays)
-  }
-
-  // Perform a forward pass on each executor
-  def forward(isTrain: Boolean = false): Unit = {
-    for ((texec, islice) <- trainExecs zip slices) {
-      texec.forward(isTrain)
-      for ((cpuOut, devOut) <- cpuOutputArrays zip texec.outputs) {
-        devOut.copyTo(cpuOut.slice(islice))
+    currExecGrp =
+      if (symGen != null) {
+        val key = dataBatch.bucketKey
+        require(key != null, "bucketKey must not be null for bucketing io")
+        if (!execGrpBucket.contains(key)) {
+          // create new bucket entry
+          val sym = symGen.generate(key)
+          val grp = new DataParallelExecutorGroup(sym, argNames, paramNameSet,
+            ctx, slices, dataBatch, sharedGroup = execGrp)
+          execGrpBucket.put(key, grp)
+        }
+        execGrpBucket(key)
+      } else {
+        execGrp
       }
-    }
+    currExecGrp.loadDataBatch(dataBatch)
   }
 
-  // Perform a backward pass on each executor
+  // run forward on the current executor
+  def forward(isTrain: Boolean = false): Unit = {
+    currExecGrp.forward(isTrain = isTrain)
+  }
+
+  // run backward on the current executor
   def backward(): Unit = {
-    trainExecs.foreach(_.backward())
+    currExecGrp.backward()
+  }
+
+  // update metric with the current executor
+  def updateMetric(metric: EvalMetric, labels: IndexedSeq[NDArray]): Unit = {
+    currExecGrp.updateMetric(metric, labels)
   }
 }
 
@@ -243,11 +242,11 @@ object ExecutorManager {
   }
 
   // bind executor for bucketing, potentially sharing data with an existing executor.
-  private def bindExec(sym: Symbol, ctx: Context, inputShapes: Map[String, Shape],
-                       paramNames: Set[String], needGrad: Boolean = false,
-                       grads: Set[String] = null, baseExec: Executor = null,
-                       sharedDataArrays: mutable.Map[String, NDArray] = null,
-                       inputTypes: Map[String, Class[_ >: Float with Int with Double]] = null) = {
+  private[mxnet] def bindExec(sym: Symbol, ctx: Context, inputShapes: Map[String, Shape],
+      paramNames: Set[String], needGrad: Boolean = false,
+      grads: Set[String] = null, baseExec: Executor = null,
+      sharedDataArrays: mutable.Map[String, NDArray] = null,
+      inputTypes: Map[String, Class[_ >: Float with Int with Double]] = null) = {
     val (argShape, _, auxShape) = sym.inferShape(inputShapes)
     require(argShape != null)
     val inputTypesUpdate =
@@ -299,8 +298,8 @@ object ExecutorManager {
               val zeros = NDArray.zeros(argShape(i), ctx) // TODO: dtype = arg_types[i])
               // replace existing shared array because the new one is bigger
               sharedDataArrays.put(name, zeros)
-              // dispose the replaced array
-              arr.dispose()
+              // TODO: shall we dispose the replaced array here?
+              // arr.dispose()
               zeros
             }
           } else {
@@ -349,3 +348,170 @@ object ExecutorManager {
       auxStates = auxArrays, group2ctx = null, sharedExec = baseExec)
   }
 }
+
+/**
+ * A group of executors living on different devices, for data parallel.
+ * @param sym The network configuration.
+ * @param argNames Equals `sym.list_arguments()`
+ * @param paramNames Names of all trainable parameters.
+ * @param ctx List of devices for training (data parallel)
+ * @param slices Describes how the data parallel splits data into different devices.
+ * @param providedData training data shapes
+ * @param providedLabel training label shapes
+ * @param sharedGroup: DataParallelExecutorGroup
+ *                   An existing executor group, if to share parameters with it.
+ *
+ */
+class DataParallelExecutorGroup private(sym: Symbol,
+                                argNames: IndexedSeq[String], paramNames: Set[String],
+                                ctx: Array[Context], private val slices: Array[(Int, Int)],
+                                providedData: Map[String, Shape],
+                                providedLabel: Map[String, Shape],
+                                sharedGroup: DataParallelExecutorGroup)  {
+  // make sure the architecture is valid
+  ExecutorManager.checkArguments(sym)
+
+  private[mxnet] val sharedDataArrays: Array[mutable.Map[String, NDArray]] =
+    if (sharedGroup == null) {
+      ctx.map(_ => mutable.HashMap.empty[String, NDArray])
+    } else {
+      sharedGroup.sharedDataArrays
+    }
+
+  private[mxnet] val dataNames = providedData.map { case (k, _) => k }
+  private[mxnet] val labelNames = providedLabel.map { case (k, _) => k }
+  private[mxnet] val auxNames = sym.listAuxiliaryStates()
+  private[mxnet] val paramIdx = argNames.zipWithIndex
+    .filter { case (name, i) => paramNames.contains(name) }
+    .map { case (name, i) => i }
+  private[mxnet] val paramNamesComb = paramIdx.map(i => argNames(i)).toSet
+
+  private[mxnet] val trainExecs: Array[Executor] =
+    ctx.zipWithIndex.map { case (ctxi, i) =>
+      val dataShapes =
+        (providedData ++ providedLabel) map { case (name, shape) =>
+          name -> (Shape(slices(i)._2 - slices(i)._1) ++ shape.slice(1, shape.length))
+        }
+      val sharedExec: Executor = if (sharedGroup == null) null else sharedGroup.trainExecs(i)
+      ExecutorManager.bindExec(sym, ctxi, dataShapes, paramNamesComb,
+        needGrad = true, baseExec = sharedExec,
+        sharedDataArrays = sharedDataArrays(i))
+    }
+
+  // data structure
+  private[mxnet] val dataArrays =
+    dataNames.map(name =>
+      trainExecs.zipWithIndex.map { case (e, i) =>
+        (slices(i)._1, slices(i)._2, e.argDict(name))
+      }
+    ).toIndexedSeq
+  private[mxnet] val labelArrays =
+    labelNames.map(name =>
+      trainExecs.zipWithIndex.map { case (e, i) =>
+        (slices(i)._1, slices(i)._2, e.argDict(name))
+      }
+    ).toIndexedSeq
+  private[mxnet] val paramArrays = paramIdx.map(i =>
+    trainExecs.map(e => e.argArrays(i))
+  ).toIndexedSeq
+  private[mxnet] val gradArrays = paramIdx.map(i =>
+    trainExecs.map(e => e.gradArrays(i))
+  ).toIndexedSeq
+  private[mxnet] val auxArrays = (0 until auxNames.length).map(i =>
+    trainExecs.map(e => e.auxArrays(i))
+  )
+
+  /**
+   * A group of executors living on different devices, for data parallel
+   * @param sym The network configuration.
+   * @param argNames Equals `sym.list_arguments()`
+   * @param paramNames Names of all trainable parameters.
+   * @param ctx List of devices for training (data parallel)
+   * @param slices Describes how the data parallel splits data into different devices.
+   * @param trainData The dataset for training.
+   *                  Loading of actual data is not necessarily needed at this stage.
+   * @param sharedGroup: DataParallelExecutorGroup
+   *                   An existing executor group, if to share parameters with it.
+   *
+   */
+  def this(sym: Symbol,
+      argNames: IndexedSeq[String], paramNames: Set[String],
+      ctx: Array[Context], slices: Array[(Int, Int)],
+      trainData: DataIter,
+      sharedGroup: DataParallelExecutorGroup) {
+    this(sym, argNames, paramNames, ctx, slices,
+      trainData.provideData, trainData.provideLabel, sharedGroup)
+  }
+
+  def this(sym: Symbol,
+           argNames: IndexedSeq[String], paramNames: Set[String],
+           ctx: Array[Context], slices: Array[(Int, Int)],
+           trainData: DataIter) {
+    this(sym, argNames, paramNames, ctx, slices,
+      trainData.provideData, trainData.provideLabel, null)
+  }
+
+  /**
+   * A group of executors living on different devices, for data parallel
+   * @param sym The network configuration.
+   * @param argNames Equals `sym.list_arguments()`
+   * @param paramNames Names of all trainable parameters.
+   * @param ctx List of devices for training (data parallel)
+   * @param slices Describes how the data parallel splits data into different devices.
+   * @param trainData The dataset for training.
+   *                  Loading of actual data is not necessarily needed at this stage.
+   * @param sharedGroup: DataParallelExecutorGroup
+   *                   An existing executor group, if to share parameters with it.
+   *
+   */
+  def this(sym: Symbol,
+      argNames: IndexedSeq[String], paramNames: Set[String],
+      ctx: Array[Context], slices: Array[(Int, Int)],
+      trainData: DataBatch,
+      sharedGroup: DataParallelExecutorGroup) {
+    this(sym, argNames, paramNames, ctx, slices,
+      trainData.provideData, trainData.provideLabel, sharedGroup)
+  }
+
+  def this(sym: Symbol,
+           argNames: IndexedSeq[String], paramNames: Set[String],
+           ctx: Array[Context], slices: Array[(Int, Int)],
+           trainData: DataBatch) {
+    this(sym, argNames, paramNames, ctx, slices,
+      trainData.provideData, trainData.provideLabel, null)
+  }
+
+  // load data and labels into arrays
+  def loadDataBatch(dataBatch: DataBatch): Unit = {
+    ExecutorManager.loadDataMulti(dataBatch, dataArrays)
+    ExecutorManager.loadLabelMulti(dataBatch, labelArrays)
+  }
+
+  // Perform a forward pass on each executor
+  def forward(isTrain: Boolean = false): Unit = {
+    trainExecs.foreach(_.forward(isTrain = isTrain))
+  }
+
+  // Perform a backward pass on each executor
+  def backward(): Unit = {
+    trainExecs.foreach(_.backward())
+  }
+
+  // Update evaluation metric with label and current outputs
+  def updateMetric(metric: EvalMetric, labels: IndexedSeq[NDArray]): Unit = {
+    (trainExecs zip slices).foreach { case (texec, islice) =>
+      val labelsSlice = labels.map(_.slice(islice))
+      metric.update(labelsSlice, texec.outputs)
+    }
+  }
+
+  /**
+   * Release the related executors.
+   * The object shall never be used after it is disposed.
+   */
+  def dispose(): Unit = {
+    trainExecs.foreach(_.dispose())
+  }
+}
+
+

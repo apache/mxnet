@@ -75,9 +75,10 @@ object ButketIo {
     }
     buckets = buckets.sorted
     // pre-allocate with the largest bucket for better memory sharing
-    private val defaultBucketKey = (buckets(0) /: buckets.drop(1)) { (max, elem) =>
+    private val _defaultBucketKey = (buckets(0) /: buckets.drop(1)) { (max, elem) =>
       if (max < elem) elem else max
     }
+    override def defaultBucketKey: AnyRef = _defaultBucketKey.asInstanceOf[AnyRef]
     // we just ignore the sentence it is longer than the maximum
     // bucket size here
     private val data = buckets.indices.map(x => Array[Array[Float]]()).toArray
@@ -125,11 +126,10 @@ object ButketIo {
       labelBuffer = labelBuffer :+ NDArray.zeros(_batchSize, buckets(iBucket))
     }
 
-    private val _provideData = {
-      val tmp = Map("data" -> Shape(_batchSize, defaultBucketKey))
+    private val _provideData = { val tmp = Map("data" -> Shape(_batchSize, _defaultBucketKey))
       tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
     }
-    private val _provideLabel = Map("softmax_label" -> Shape(_batchSize, defaultBucketKey))
+    private val _provideLabel = Map("softmax_label" -> Shape(_batchSize, _defaultBucketKey))
 
     private var iBucket = 0
 

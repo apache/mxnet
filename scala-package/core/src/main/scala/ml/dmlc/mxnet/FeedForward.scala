@@ -26,15 +26,16 @@ import scala.collection.mutable.ListBuffer
  *                         contain extra parameters than needed.
  * @param beginEpoch The beginning training epoch.
  */
-class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cpu()),
-                  val numEpoch: Int = -1, val epochSize: Int = -1,
-                  val optimizer: Optimizer = new SGD(),
-                  val initializer: Initializer = new Uniform(0.01f),
-                  val batchSize: Int = 128,
-                  argParams: Map[String, NDArray] = null,
-                  auxParams: Map[String, NDArray] = null,
-                  allowExtraParams: Boolean = false,
-                  val beginEpoch: Int = 0) {
+class FeedForward private(val symbol: Symbol, val symGen: SymbolGenerator,
+                          val ctx: Array[Context],
+                          val numEpoch: Int, val epochSize: Int,
+                          val optimizer: Optimizer,
+                          val initializer: Initializer,
+                          val batchSize: Int,
+                          argParams: Map[String, NDArray],
+                          auxParams: Map[String, NDArray],
+                          allowExtraParams: Boolean,
+                          val beginEpoch: Int) {
   val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   // check if symbol contain duplicated names.
   ExecutorManager.checkArguments(symbol)
@@ -71,6 +72,27 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
 
   private var monitor: Option[Monitor] = None
 
+  def this(symbol: Symbol, ctx: Array[Context] = Array(Context.cpu()),
+           numEpoch: Int = -1, epochSize: Int = -1,
+           optimizer: Optimizer = new SGD(),
+           initializer: Initializer = new Uniform(0.01f),
+           batchSize: Int = 128,
+           argParams: Map[String, NDArray] = null,
+           auxParams: Map[String, NDArray] = null,
+           allowExtraParams: Boolean = false,
+           beginEpoch: Int = 0) {
+    this(symbol, null, ctx, numEpoch, epochSize, optimizer, initializer, batchSize,
+          argParams, auxParams, allowExtraParams, beginEpoch)
+  }
+
+  def this(symbol: SymbolGenerator, ctx: Array[Context], numEpoch: Int, epochSize: Int,
+           optimizer: Optimizer, initializer: Initializer, batchSize: Int,
+           argParams: Map[String, NDArray], auxParams: Map[String, NDArray],
+           allowExtraParams: Boolean, beginEpoch: Int) {
+    this(null, symbol, ctx, numEpoch, epochSize, optimizer, initializer, batchSize,
+      argParams, auxParams, allowExtraParams, beginEpoch)
+  }
+
   def setMonitor(m: Monitor): Unit = {
     monitor = Option(m)
   }
@@ -81,11 +103,11 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
 
   // Initialize weight parameters and auxiliary states
   private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
-  : (Seq[String], Seq[String], Seq[String]) = {
+  : (IndexedSeq[String], IndexedSeq[String], IndexedSeq[String]) = {
     val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
     val argNames = symbol.listArguments()
-    val inputNames = inputShapes.keys
-    val paramNames = argNames.toSet -- inputNames.toSet
+    val inputNames = inputShapes.keys.toSet
+    val paramNames = argNames.filter(!inputNames.contains(_))
     val auxNames = symbol.listAuxiliaryStates()
 
     val paramNameShapes = (argNames zip argShapes).filter { case (name, _) =>
@@ -116,7 +138,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
 
     _argParams = argParams
     _auxParams = auxParams
-    (argNames, paramNames.toSeq, auxNames)
+    (argNames, paramNames, auxNames)
   }
 
   // Initialize the predictor module for running prediction.
@@ -298,7 +320,7 @@ class FeedForward(val symbol: Symbol, val ctx: Array[Context] = Array(Context.cp
       evalMetric = evalMetric,
       epochEndCallback = Option(epochEndCallback),
       batchEndCallback = Option(batchEndCallback),
-      logger = logger, workLoadList = workLoadList,
+      workLoadList = workLoadList,
       monitor = monitor)
   }
 
@@ -591,6 +613,17 @@ object FeedForward {
                   epochEndCallback, batchEndCallback, logger, workLoadList)
       }
       model
+    }
+
+    /**
+     * Construct the FeedForward model but do NOT train
+     * @return the un-trained model
+     */
+    def setup(): FeedForward = {
+      new FeedForward(
+        modelDef, ctx, numEpoch, epochSize,
+        optimizer, initializer, batchSize,
+        argParams, auxParams, allowExtraParams, beginEpoch)
     }
   }
 }
