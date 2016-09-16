@@ -60,9 +60,11 @@ def make_list(args):
             str_chunk = ''
         sep = int(chunk_size * args.train_ratio)
         sep_test = int(chunk_size * args.test_ratio)
-        write_list(args.prefix + str_chunk + '_test.lst', chunk[:sep_test])
+        if args.test_ratio:
+            write_list(args.prefix + str_chunk + '_test.lst', chunk[:sep_test])
+        if args.train_ratio + args.test_ratio < 1.0:
+            write_list(args.prefix + str_chunk + '_val.lst', chunk[sep_test + sep:])
         write_list(args.prefix + str_chunk + '_train.lst', chunk[sep_test:sep_test + sep])
-        write_list(args.prefix + str_chunk + '_val.lst', chunk[sep_test + sep:])
 
 def read_list(path_in):
     with open(path_in) as fin:
@@ -118,16 +120,18 @@ def read_worker(args, q_in, q_out):
 def write_worker(q_out, fname, working_dir):
     pre_time = time.time()
     count = 0
-    fname_rec = os.path.basename(fname)
+    fname = os.path.basename(fname)
     fname_rec = os.path.splitext(fname)[0] + '.rec'
+    fname_idx = os.path.splitext(fname)[0] + '.idx'
     fout = open(fname+'.tmp', 'w')
-    record = mx.recordio.MXRecordIO(os.path.join(working_dir, fname_rec), 'w')
+    record = mx.recordio.MXIndexedRecordIO(os.path.join(working_dir, fname_idx),
+                                           os.path.join(working_dir, fname_rec), 'w')
     while True:
         deq = q_out.get()
         if deq is None:
             break
         s, item = deq
-        record.write(s)
+        record.write_idx(item[0], s)
 
         line = '%d\t' % item[0]
         for j in item[2:]:
@@ -237,8 +241,10 @@ if __name__ == '__main__':
                     print('multiprocessing not available, fall back to single threaded encoding')
                     import Queue
                     q_out = Queue.Queue()
-                    fname_rec = os.path.basename(fname)
+                    fname = os.path.basename(fname)
                     fname_rec = os.path.splitext(fname)[0] + '.rec'
+                    fname_idx = os.path.splitext(fname)[0] + '.idx'
+                    fidx = open(os.path.join(working_dir, fname_idx), 'w')
                     record = mx.recordio.MXRecordIO(os.path.join(working_dir, fname_rec), 'w')
                     cnt = 0
                     pre_time = time.time()
@@ -248,6 +254,7 @@ if __name__ == '__main__':
                             continue
                         _, s, _ = q_out.get()
                         record.write(s)
+                        fidx.write('%d\t%d\n'%(item[0], record.tell()))
                         if cnt % 1000 == 0:
                             cur_time = time.time()
                             print('time:', cur_time - pre_time, ' count:', cnt)
