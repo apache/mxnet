@@ -43,7 +43,7 @@ class ExecutorSuite extends FunSuite with BeforeAndAfterAll {
 
   test("reshape") {
     val x = Symbol.Variable("x")
-    val y = Symbol.FullyConnected()(Map("data" -> x, "num_hidden" -> 4))
+    val y = Symbol.FullyConnected()()(Map("data" -> x, "num_hidden" -> 4))
 
     val exec = y.simpleBind(Context.cpu(), "write", shapeDict = Map("x" -> Shape(5, 4)))
     exec.argArrays(0).set(1)

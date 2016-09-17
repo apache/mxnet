@@ -35,26 +35,26 @@ object CNNTextClassification {
     val inputX = Symbol.Variable("data")
     val inputY = Symbol.Variable("softmax_label")
     val polledOutputs = filterList.map { filterSize =>
-      val conv = Symbol.Convolution()(Map("data" -> inputX, "kernel" -> s"($filterSize, $numEmbed)",
-          "num_filter" -> numFilter))
-       val relu = Symbol.Activation()(Map("data" -> conv, "act_type" -> "relu"))
-       val pool = Symbol.Pooling()(Map("data" -> relu, "pool_type" -> "max",
-           "kernel" -> s"(${sentenceSize - filterSize + 1}, 1)", "stride" -> "(1,1)"))
-       pool
+      val conv = Symbol.Convolution()()(
+        Map("data" -> inputX, "kernel" -> s"($filterSize, $numEmbed)", "num_filter" -> numFilter))
+      val relu = Symbol.Activation()()(Map("data" -> conv, "act_type" -> "relu"))
+      val pool = Symbol.Pooling()()(Map("data" -> relu, "pool_type" -> "max",
+        "kernel" -> s"(${sentenceSize - filterSize + 1}, 1)", "stride" -> "(1,1)"))
+      pool
     }
 
     val totalFilters = numFilter * filterList.length
-    val concat = Symbol.Concat()(polledOutputs, Map("dim" -> 1))
-    val hPool = Symbol.Reshape()(Map("data" -> concat,
+    val concat = Symbol.Concat()(polledOutputs: _*)(Map("dim" -> 1))
+    val hPool = Symbol.Reshape()()(Map("data" -> concat,
       "target_shape" -> s"($batchSize, $totalFilters)"))
 
     val hDrop = {
-      if (dropout > 0f) Symbol.Dropout()(Map("data" -> hPool, "p" -> dropout))
+      if (dropout > 0f) Symbol.Dropout()()(Map("data" -> hPool, "p" -> dropout))
       else hPool
     }
 
-    val fc = Symbol.FullyConnected()(Map("data" -> hDrop, "num_hidden" -> numLabel))
-    val sm = Symbol.SoftmaxOutput()(Map("data" -> fc, "label" -> inputY))
+    val fc = Symbol.FullyConnected()()(Map("data" -> hDrop, "num_hidden" -> numLabel))
+    val sm = Symbol.SoftmaxOutput()()(Map("data" -> fc, "label" -> inputY))
     sm
   }
 
