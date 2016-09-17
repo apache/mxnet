@@ -13,7 +13,7 @@ cdef class NDArrayBase:
     cdef int cwritable
 
     cdef _set_handle(self, handle):
-        cdef unsigned long ptr
+        cdef unsigned long long ptr
         if handle is None:
             self.chandle = NULL
         else:
@@ -25,7 +25,7 @@ cdef class NDArrayBase:
             if self.chandle == NULL:
                 return None
             else:
-                return _ctypes.cast(<unsigned long>self.chandle, _ctypes.c_void_p)
+                return _ctypes.cast(<unsigned long long>self.chandle, _ctypes.c_void_p)
         def __set__(self, value):
             self._set_handle(value)
 
