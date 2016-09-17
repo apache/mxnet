@@ -10,6 +10,7 @@ import scala.collection.mutable.ListBuffer
  * Model class of MXNet for training and predicting feedforward nets.
  * This class is designed for a single-data single output supervised network.
  * @param symbol The symbol configuration of computation network.
+ * @param symGen Symbol generator for bucketing.
  * @param ctx The device context of training and prediction.
  *            To use multi GPU training, pass in a list of gpu contexts.
  * @param numEpoch Training parameter, number of training epochs(epochs).
@@ -26,43 +27,24 @@ import scala.collection.mutable.ListBuffer
  *                         contain extra parameters than needed.
  * @param beginEpoch The beginning training epoch.
  */
-class FeedForward private(val symbol: Symbol, val symGen: SymbolGenerator,
-                          val ctx: Array[Context],
-                          val numEpoch: Int, val epochSize: Int,
-                          val optimizer: Optimizer,
-                          val initializer: Initializer,
-                          val batchSize: Int,
-                          argParams: Map[String, NDArray],
-                          auxParams: Map[String, NDArray],
-                          allowExtraParams: Boolean,
-                          val beginEpoch: Int) {
+class FeedForward private(
+    private var symbol: Symbol, private val symGen: SymbolGenerator,
+    val ctx: Array[Context],
+    val numEpoch: Int, val epochSize: Int,
+    val optimizer: Optimizer,
+    val initializer: Initializer,
+    val batchSize: Int,
+    argParams: Map[String, NDArray],
+    auxParams: Map[String, NDArray],
+    private val allowExtraParams: Boolean,
+    val beginEpoch: Int) {
   val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
-  // check if symbol contain duplicated names.
-  ExecutorManager.checkArguments(symbol)
-
-  // rematch parameters to delete useless ones
-  private var _argParams =
-    if (allowExtraParams) {
-      if (argParams != null) {
-        val argNames = symbol.listArguments().toSet
-        argParams.filter { case (k, v) => argNames.contains(k) }
-      } else {
-        null
-      }
-    } else {
-      argParams
-    }
-  private var _auxParams =
-    if (allowExtraParams) {
-      if (auxParams != null) {
-        val auxNames = symbol.listAuxiliaryStates().toSet
-        auxParams.filter { case (k, v) => auxNames.contains(k) }
-      } else {
-        null
-      }
-    } else {
-      auxParams
-    }
+  private var argumentChecked = false
+  private var _argParams = argParams
+  private var _auxParams = auxParams
+  if (symGen == null) {
+    checkArguments()
+  }
 
   def getArgParams: Map[String, NDArray] = _argParams
   def getAuxParams: Map[String, NDArray] = _auxParams
@@ -72,6 +54,7 @@ class FeedForward private(val symbol: Symbol, val symGen: SymbolGenerator,
 
   private var monitor: Option[Monitor] = None
 
+  // scalastyle:off parameterNum
   def this(symbol: Symbol, ctx: Array[Context] = Array(Context.cpu()),
            numEpoch: Int = -1, epochSize: Int = -1,
            optimizer: Optimizer = new SGD(),
@@ -91,6 +74,28 @@ class FeedForward private(val symbol: Symbol, val symGen: SymbolGenerator,
            allowExtraParams: Boolean, beginEpoch: Int) {
     this(null, symbol, ctx, numEpoch, epochSize, optimizer, initializer, batchSize,
       argParams, auxParams, allowExtraParams, beginEpoch)
+  }
+  // scalastyle:on parameterNum
+
+  // verify the argument of the default symbol and user provided parameters
+  def checkArguments(): Unit = {
+    if (!argumentChecked) {
+      require(symbol != null)
+      // check if symbol contain duplicated names.
+      ExecutorManager.checkArguments(symbol)
+      // rematch parameters to delete useless ones
+      if (allowExtraParams) {
+        if (_argParams != null) {
+          val argNames = symbol.listArguments().toSet
+          _argParams = _argParams.filter { case (k, v) => argNames.contains(k) }
+        }
+        if (auxParams != null) {
+          val auxNames = symbol.listAuxiliaryStates().toSet
+          _auxParams = _auxParams.filter { case (k, v) => auxNames.contains(k) }
+        }
+      }
+      argumentChecked = true
+    }
   }
 
   def setMonitor(m: Monitor): Unit = {
@@ -143,12 +148,19 @@ class FeedForward private(val symbol: Symbol, val symGen: SymbolGenerator,
 
   // Initialize the predictor module for running prediction.
   private def initPredictor(inputShapes: Map[String, Shape]): Unit = {
-    if (this.predExec == null) {
-      val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
-      predExec.copyParamsFrom(_argParams, _auxParams)
-      ExecutorManager.checkArguments(symbol)
-      this.predExec = predExec
+    if (this.predExec != null) {
+      val (argShapes, _, _) = symbol.inferShape(inputShapes)
+      require(argShapes != null, "Incomplete input shapes")
+      val predShapes = this.predExec.argArrays.map(_.shape)
+      if (argShapes.sameElements(predShapes)) {
+        return
+      }
     }
+    // for now only use the first device
+    val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
+    predExec.copyParamsFrom(_argParams, _auxParams)
+    ExecutorManager.checkArguments(symbol)
+    this.predExec = predExec
   }
 
   // Initialize the iterator given input.
@@ -294,6 +306,10 @@ class FeedForward private(val symbol: Symbol, val symGen: SymbolGenerator,
                   batchEndCallback: BatchEndCallback = null, logger: Logger = FeedForward.logger,
                   workLoadList: Seq[Float] = null): Unit = {
     require(evalMetric != null, "evalMetric cannot be null")
+    if (symGen != null) {
+      this.symbol = symGen.generate(trainData.defaultBucketKey)
+      checkArguments()
+    }
     val (argNames, paramNames, auxNames) =
       initParams(trainData.provideData ++ trainData.provideLabel)
 
@@ -308,6 +324,16 @@ class FeedForward private(val symbol: Symbol, val symGen: SymbolGenerator,
     val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
     this.optimizer.setArgNames(argNames)
     this.optimizer.setRescaleGrad(1f / batchSize)
+    this.optimizer.setSymbol(this.symbol)
+    val paramIdx2Name =
+      if (updateOnKVStore) {
+        paramNames.zipWithIndex.map { case (name, idx) => idx -> name }.toMap
+      } else {
+        paramNames.zipWithIndex.flatMap { case (name, idx) =>
+          (0 until ctx.length).map(k => (idx * ctx.length + k) -> name).toMap
+        }.toMap
+      }
+    this.optimizer.setIdx2Name(paramIdx2Name)
 
     logger.debug("Start training on multi-device")
     Model.trainMultiDevice(
@@ -405,9 +431,11 @@ object FeedForward {
       allowExtraParams = allowExtraParams)
   }
 
-  def newBuilder(modelDef: Symbol): Builder = new Builder(modelDef)
+  def newBuilder(modelDef: Symbol): Builder = new Builder(modelDef, null)
+  def newBuilder(symGen: SymbolGenerator): Builder = new Builder(null, symGen)
 
-  class Builder private[FeedForward](modelDef: Symbol) {
+  class Builder private[FeedForward](private val modelDef: Symbol,
+                                     private val symGen: SymbolGenerator) {
     private var ctx: Array[Context] = Array(Context.cpu())
     private var numEpoch: Int = -1
     private var epochSize: Int = -1
@@ -602,7 +630,7 @@ object FeedForward {
     def build(): FeedForward = {
       require(trainData != null, "Training data missing")
       val model = new FeedForward(
-        modelDef, ctx, numEpoch, epochSize,
+        modelDef, symGen, ctx, numEpoch, epochSize,
         optimizer, initializer, batchSize,
         argParams, auxParams, allowExtraParams, beginEpoch)
       if (kvStoreInst == null) {
@@ -621,7 +649,7 @@ object FeedForward {
      */
     def setup(): FeedForward = {
       new FeedForward(
-        modelDef, ctx, numEpoch, epochSize,
+        modelDef, symGen, ctx, numEpoch, epochSize,
         optimizer, initializer, batchSize,
         argParams, auxParams, allowExtraParams, beginEpoch)
     }
