@@ -205,6 +205,8 @@ object ExecutorManager {
   // Load a list of arrays into a list of arrays
   private[mxnet] def loadGeneral(data: Seq[NDArray], targets: Seq[NDArray]): Unit = {
     (data zip targets).foreach { case (dSrc, dTarget) =>
+      require(dSrc.shape == dTarget.shape,
+        s"src shape ${dSrc.shape} mismatch dst shape ${dTarget.shape}")
       dSrc.copyTo(dTarget)
     }
   }
@@ -215,6 +217,8 @@ object ExecutorManager {
     for ((src, dTargets) <- data zip targets) {
       for ((start, end, dst) <- dTargets) {
         val sliced = src.slice(start, end)
+        require(sliced.shape == dst.shape,
+          s"src shape ${sliced.shape} mismatch dst shape ${dst.shape}")
         sliced.copyTo(dst)
         sliced.dispose()
       }
