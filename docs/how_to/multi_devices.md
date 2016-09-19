@@ -30,7 +30,7 @@ can use a large batch size for multiple GPUs.
 
 > To use GPUs, we need to compiled MXNet with GPU support. For
 > example, set `USE_CUDA=1` in `config.mk` before `make`. (see
-> [build](../get_started/build.html) for more options).
+> [MXNet installation guide](build.html) for more options).
 
 If a machine has one or more than one GPU cards installed, then each card is
 labeled by a number starting from 0. To use a particular GPU, one can often
@@ -131,7 +131,7 @@ information about these two data consistency models.
 ### How to Launch a Job
 
 > To use distributed training, we need to compile with `USE_DIST_KVSTORE=1`
-> (see [build](../get_started/build.html) for more options).
+> (see [MXNet installation guide](build.html) for more options).
 
 Launching a distributed job is little bit different than running on a single
 machine. MXNet provides
