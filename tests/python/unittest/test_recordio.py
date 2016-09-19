@@ -40,7 +40,7 @@ def test_indexed_recordio():
     del writer
 
     reader = mx.recordio.MXIndexedRecordIO(fidx, frec, 'r')
-    keys = reader.keys()
+    keys = reader.keys
     assert sorted(keys) == [i for i in range(N)]
     random.shuffle(keys)
     for i in keys:
