@@ -1583,6 +1583,55 @@ def test_l2_normalization():
                     for width in [5, 7]:
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
+def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[:] = data_init
+    arr_data = mx.nd.array(data_tmp)
+    arr_grad = mx.nd.empty(shape)
+    arr_grad[:] = 3
+
+    test = forward_mxnet_call(data)
+    exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout = forward_numpy_call(data_tmp)
+    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
+
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = grad_init
+    npout_grad = out_grad.asnumpy()
+    temp = backward_numpy_call(data_tmp)
+    npout_grad = npout_grad * temp
+    exe_test.backward(out_grad)
+    arr_grad = arr_grad.asnumpy()
+    # print(name)
+    # print(arr_grad)
+    # print(npout_grad)
+    assert reldiff(arr_grad, npout_grad) < 1e-6, "%s mathematical backward failed\n%s\n\n%s" % (
+        name, arr_grad, npout_grad)
+
+
+def test_mathematical():
+    # rsqrt
+    mathematical_core("rsqrt",
+                      lambda x: mx.sym.rsqrt(x),
+                      lambda x: 1 / np.sqrt(x),
+                      lambda x: -(1.0 / (2.0 * x * np.sqrt(x))))
+    # tan
+    mathematical_core("tan", lambda x: mx.sym.tan(x), lambda x: np.tan(x), lambda x: np.tan(x) ** 2 + 1)
+    # arcsin
+    mathematical_core("arcsin", lambda x: mx.sym.arcsin(x), lambda x: np.arcsin(x),
+                      lambda x: 1. / (1. - x ** 2) ** (1. / 2.), 0.5, 0.5)
+    # arccos
+    mathematical_core("arccos", lambda x: mx.sym.arccos(x), lambda x: np.arccos(x),
+                      lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), 0.5, 0.5)
+    # arctan
+    mathematical_core("arctan", lambda x: mx.sym.arctan(x), lambda x: np.arctan(x),
+                      lambda x: 1. / (x ** 2. + 1.), 0.5, 0.5)
+
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1627,3 +1676,5 @@ if __name__ == '__main__':
     test_pad()
     test_instance_normalization()
     test_l2_normalization()
+    test_mathematical()
+
