@@ -5,7 +5,6 @@
 from __future__ import absolute_import
 from collections import namedtuple
 
-import os
 import ctypes
 import struct
 import numbers
@@ -117,28 +116,28 @@ class MXIndexedRecordIO(MXRecordIO):
         data type for keys
     """
     def __init__(self, idx_path, uri, flag, key_type=int):
-        super(MXIndexedRecordIO, self).__init__(uri, flag)
         self.idx_path = idx_path
         self.idx = {}
+        self.keys = []
         self.key_type = key_type
-        if not self.writable and os.path.isfile(idx_path):
-            with open(idx_path) as fin:
-                for line in fin.readlines():
-                    line = line.strip().split('\t')
-                    self.idx[key_type(line[0])] = int(line[1])
+        self.fidx = None
+        super(MXIndexedRecordIO, self).__init__(uri, flag)
+
+    def open(self):
+        super(MXIndexedRecordIO, self).open()
+        self.idx = {}
+        self.keys = []
+        self.fidx = open(self.idx_path, self.flag)
+        if not self.writable:
+            for line in iter(self.fidx.readline, ''):
+                line = line.strip().split('\t')
+                key = self.key_type(line[0])
+                self.idx[key] = int(line[1])
+                self.keys.append(key)
 
     def close(self):
-        if self.writable:
-            with open(self.idx_path, 'w') as fout:
-                for k, v in self.idx.items():
-                    fout.write(str(k)+'\t'+str(v)+'\n')
         super(MXIndexedRecordIO, self).close()
-
-    def reset(self):
-        if self.writable:
-            self.idx = {}
-            super(MXIndexedRecordIO, self).close()
-            super(MXIndexedRecordIO, self).open()
+        self.fidx.close()
 
     def seek(self, idx):
         """Query current read head position"""
@@ -160,15 +159,12 @@ class MXIndexedRecordIO(MXRecordIO):
 
     def write_idx(self, idx, buf):
         """Write record with index"""
+        key = self.key_type(idx)
         pos = self.tell()
-        self.idx[self.key_type(idx)] = pos
         self.write(buf)
-
-    def keys(self):
-        """List all keys from index"""
-        return list(self.idx.keys())
-
-
+        self.fidx.write('%s\t%d\n'%(str(key), pos))
+        self.idx[key] = pos
+        self.keys.append(key)
 
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
