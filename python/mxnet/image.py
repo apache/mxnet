@@ -285,27 +285,29 @@ class ImageIter(io.DataIter):
     """
     def __init__(self, batch_size, data_shape, label_width=1,
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
-                 shuffle=False, part_index=0, num_parts=1, **kwargs):
+                 shuffle=False, part_index=0, num_parts=1, aug_list=None, **kwargs):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist
         if path_imgrec:
             if path_imgidx:
                 self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')
-                self.imgidx = self.imgrec.idx
+                self.imgidx = list(self.imgrec.keys)
             else:
                 self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')
+                self.imgidx = None
         else:
             self.imgrec = None
+
         if path_imglist:
             with open(path_imglist) as fin:
                 imglist = {}
-                while True:
-                    line = fin.readline()
-                    if not line:
-                        break
+                imgkeys = []
+                for line in iter(fin.readline, ''):
                     line = line.strip().split('\t')
                     label = nd.array([float(i) for i in line[1:-1]])
-                    imglist[int(line[0])] = (label, line[-1])
+                    key = int(line[0])
+                    imglist[key] = (label, line[-1])
+                    imgkeys.append(key)
                 self.imglist = imglist
         else:
             self.imglist = None
@@ -319,12 +321,11 @@ class ImageIter(io.DataIter):
         self.label_width = label_width
 
         self.shuffle = shuffle
-        if shuffle or num_parts > 1:
-            if self.imgrec is None:
-                self.seq = self.imglist.keys()
-            else:
-                assert self.imgidx is not None
-                self.seq = self.imgidx.keys()
+        if self.imgrec is None:
+            self.seq = imgkeys
+        elif shuffle or num_parts > 1:
+            assert self.imgidx is not None
+            self.seq = self.imgidx
         else:
             self.seq = None
 
@@ -333,8 +334,10 @@ class ImageIter(io.DataIter):
             N = len(self.seq)
             C = N/num_parts
             self.seq = self.seq[part_index*C:(part_index+1)*C]
-
-        self.auglist = CreateAugmenter(data_shape, **kwargs)
+        if aug_list is None:
+            self.auglist = CreateAugmenter(data_shape, **kwargs)
+        else:
+            self.auglist = aug_list
         self.cur = 0
         self.reset()
 
@@ -360,7 +363,7 @@ class ImageIter(io.DataIter):
                 else:
                     return self.imglist[idx][0], img
             else:
-                label, fname = self.imglist[self.seq[self.cur]]
+                label, fname = self.imglist[idx]
                 if self.imgrec is None:
                     with open(os.path.join(self.path_root, fname), 'rb') as fin:
                         img = fin.read()
@@ -389,4 +392,4 @@ class ImageIter(io.DataIter):
                 raise StopIteration
 
         batch_data = nd.transpose(batch_data, axes=(0, 3, 1, 2))
-        return io.DataBatch(batch_data, batch_label, batch_size-1-i)
+        return io.DataBatch([batch_data], [batch_label], batch_size-1-i)
