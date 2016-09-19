@@ -114,7 +114,7 @@ NNVM_REGISTER_OP(_backward_arccos)
 NNVM_REGISTER_OP(arctan)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::arctan>);
 
-NNVM_REGISTER_OP(_backward_arccos)
+NNVM_REGISTER_OP(_backward_arctan)
 .set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::arctan_grad> >);
 
 }  // namespace op
