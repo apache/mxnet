@@ -76,7 +76,7 @@ def read_list(path_in):
             item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
             yield item
 
-def image_encode(args, item, q_out):
+def image_encode(args, i, item, q_out):
     try:
         img = cv2.imread(os.path.join(args.root, item[1]), args.color)
     except:
@@ -105,17 +105,18 @@ def image_encode(args, item, q_out):
 
     try:
         s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
-        q_out.put((s, item))
+        q_out.put((i, s, item))
     except Exception, e:
         print('pack_img error:', item[1], e)
         return
 
 def read_worker(args, q_in, q_out):
     while True:
-        item = q_in.get()
-        if item is None:
+        deq = q_in.get()
+        if deq is None:
             break
-        image_encode(args, item, q_out)
+        i, item = deq
+        image_encode(args, i, item, q_out)
 
 def write_worker(q_out, fname, working_dir):
     pre_time = time.time()
@@ -123,28 +124,27 @@ def write_worker(q_out, fname, working_dir):
     fname = os.path.basename(fname)
     fname_rec = os.path.splitext(fname)[0] + '.rec'
     fname_idx = os.path.splitext(fname)[0] + '.idx'
-    fout = open(fname+'.tmp', 'w')
     record = mx.recordio.MXIndexedRecordIO(os.path.join(working_dir, fname_idx),
                                            os.path.join(working_dir, fname_rec), 'w')
-    while True:
+    buf = {}
+    more = True
+    while more:
         deq = q_out.get()
-        if deq is None:
-            break
-        s, item = deq
-        record.write_idx(item[0], s)
+        if deq is not None:
+            i, s, item = deq
+            buf[i] = (s, item)
+        else:
+            more = False
+        while count in buf:
+            s, item = buf[count]
+            del buf[count]
+            record.write_idx(item[0], s)
 
-        line = '%d\t' % item[0]
-        for j in item[2:]:
-            line += '%f\t' % j
-        line += '%s\n' % item[1]
-        fout.write(line)
-
-        if count % 1000 == 0:
-            cur_time = time.time()
-            print('time:', cur_time - pre_time, ' count:', count)
-            pre_time = cur_time
-        count += 1
-    os.rename(fname+'.tmp', fname)
+            if count % 1000 == 0:
+                cur_time = time.time()
+                print('time:', cur_time - pre_time, ' count:', count)
+                pre_time = cur_time
+            count += 1
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -170,6 +170,8 @@ def parse_args():
                         help='If true recursively walk through subdirs and assign an unique label\
         to images in each folder. Otherwise only include images in the root folder\
         and give them label 0.')
+    cgroup.add_argument('--shuffle', default=True, help='If this is set as True, \
+        im2rec will randomize the image order in <prefix>.lst')
 
     rgroup = parser.add_argument_group('Options for creating database')
     rgroup.add_argument('--resize', type=int, default=0,
@@ -190,8 +192,6 @@ def parse_args():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
                         help='specify the encoding of the images.')
-    rgroup.add_argument('--shuffle', default=True, help='If this is set as True, \
-        im2rec will randomize the image order in <prefix>.lst')
     rgroup.add_argument('--pack-label', default=False,
         help='Whether to also pack multi dimensional label in the record file') 
     args = parser.parse_args()
@@ -229,7 +229,7 @@ if __name__ == '__main__':
                     write_process.start()
 
                     for i, item in enumerate(image_list):
-                        q_in[i % len(q_in)].put(item)
+                        q_in[i % len(q_in)].put((i, item))
                     for q in q_in:
                         q.put(None)
                     for p in read_process:
