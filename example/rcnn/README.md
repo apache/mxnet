@@ -1,9 +1,9 @@
 # Faster R-CNN in MXNet with distributed implementation and data parallelization
 
-Region Proposal Network solves object detection as a regression problem 
-from the objectness perspective. Bounding boxes are predicted by applying 
-learned bounding box deltas to base boxes, namely anchor boxes across 
-different positions in feature maps. Training process directly learns a 
+Region Proposal Network solves object detection as a regression problem
+from the objectness perspective. Bounding boxes are predicted by applying
+learned bounding box deltas to base boxes, namely anchor boxes across
+different positions in feature maps. Training process directly learns a
 mapping from raw image intensities to bounding box transformation targets.
 
 Fast R-CNN treats general object detection as a classification problem and
@@ -13,7 +13,7 @@ detection results. Cropping feature maps instead of image input accelerates
 computation utilizing shared convolution maps. Bounding box displacements
 are simultaneously learned in the training process.
 
-Faster R-CNN utilize an alternate optimization training process between RPN 
+Faster R-CNN utilize an alternate optimization training process between RPN
 and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 
 ## Getting Started
@@ -46,6 +46,10 @@ and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
   `model` folder will be used to place model checkpoints along the training process.
 * Start training by running `python -m tools.train_rcnn --proposal ss` to use the selective search proposal.
 * Start testing by running `python -m tools.test_rcnn --proposal ss`.
+
+## Approximate Joint Training
+* Support training faster-rcnn model using end2end training method which is implemented by approximate joint training, and it is almost the same as [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn)
+* Start end2end training by running `python -u train_end2end.py`, please using `python train_end2end.py --help` to query how to setting the training paramters, such as you can setting the step of dropping lr by `--factor-step`.
 
 ## Information
 * Download link to trained model
