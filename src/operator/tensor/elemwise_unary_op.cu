@@ -89,5 +89,33 @@ NNVM_REGISTER_OP(sin)
 NNVM_REGISTER_OP(_backward_sin)
 .set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::sin_grad> >);
 
+// tan
+NNVM_REGISTER_OP(tan)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::tan>);
+
+NNVM_REGISTER_OP(_backward_tan)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::tan_grad> >);
+
+// arcsin
+NNVM_REGISTER_OP(arcsin)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::arcsin>);
+
+NNVM_REGISTER_OP(_backward_arcsin)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::arcsin_grad> >);
+
+// arccos
+NNVM_REGISTER_OP(arccos)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::arccos>);
+
+NNVM_REGISTER_OP(_backward_arccos)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::arccos_grad> >);
+
+// arctan
+NNVM_REGISTER_OP(arctan)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::arctan>);
+
+NNVM_REGISTER_OP(_backward_arccos)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::arctan_grad> >);
+
 }  // namespace op
 }  // namespace mxnet
