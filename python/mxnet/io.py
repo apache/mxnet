@@ -234,6 +234,7 @@ class PrefetchingIter(DataIter):
 
     @property
     def provide_data(self):
+        """The name and shape of data provided by this iterator"""
         if self.rename_data is None:
             return sum([i.provide_data for i in self.iters], [])
         else:
@@ -242,6 +243,7 @@ class PrefetchingIter(DataIter):
 
     @property
     def provide_label(self):
+        """The name and shape of label provided by this iterator"""
         if self.rename_label is None:
             return sum([i.provide_label for i in self.iters], [])
         else:
