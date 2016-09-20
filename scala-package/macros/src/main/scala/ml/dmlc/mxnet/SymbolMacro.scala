@@ -101,13 +101,18 @@ private[mxnet] object SymbolImplMacros {
 
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): Map[String, SymbolFunction] = {
-    val symbolList = ListBuffer.empty[SymbolHandle]
-    _LIB.mxSymbolListAtomicSymbolCreators(symbolList)
-    symbolList.map(makeAtomicSymbolFunction).toMap
+    val opNames = ListBuffer.empty[String]
+    _LIB.mxListAllOpNames(opNames)
+    opNames.map(opName => {
+      val opHandle = new RefLong
+      _LIB.nnGetOpHandle(opName, opHandle)
+      makeAtomicSymbolFunction(opHandle.value, opName)
+    }).toMap
   }
 
   // Create an atomic symbol function by handle and function name.
-  private def makeAtomicSymbolFunction(handle: SymbolHandle): (String, SymbolFunction) = {
+  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
+      : (String, SymbolFunction) = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
@@ -124,11 +129,12 @@ private[mxnet] object SymbolImplMacros {
       } else {
         ""
       }
-    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n$extraDoc\n"
+    val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
+    val docStr = s"$aliasName $realName\n${desc.value}\n\n$paramStr\n$extraDoc\n"
     // scalastyle:off println
-    println("Atomic Symbol function defination:\n" + docStr)
+    println("Atomic Symbol function definition:\n" + docStr)
     // scalastyle:on println
-    (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
+    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 
   // Convert ctypes returned doc string information into parameters docstring.
