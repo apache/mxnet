@@ -219,7 +219,7 @@ PSLITE:
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
 DMLCCORE:
-	+ cd $(DMLC_CORE); make libdmlc.a config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+	+ cd $(DMLC_CORE); make libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 $(NNVM_PATH)/lib/libnnvm.a:
 	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
