@@ -10,6 +10,9 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  */
 class LibInfo {
   @native def nativeLibInit(): Int
+  // Operators
+  @native def mxListAllOpNames(names: ListBuffer[String]): Int
+  @native def nnGetOpHandle(opName: String, opHandle: RefLong): Int
   // NDArray
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
