@@ -629,7 +629,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     else
       name = ""
     end
-    
+
     # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
     # See https://github.com/dmlc/MXNet.jl/issues/55
     if $func_name_s == "dot"
@@ -755,7 +755,7 @@ macro _import_atomic_symbol_creators()
   end)
 end
 
-@_import_atomic_symbol_creators()
+#@_import_atomic_symbol_creators()
 
 ################################################################################
 # Utility macros to chain up symbols
