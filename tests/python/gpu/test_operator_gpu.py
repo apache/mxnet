@@ -8,7 +8,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import time
 
-def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
+def check_consistency(sym, ctx_list, scale=1.0, grad_req='write', init_dict=None):
     tol = {np.dtype(np.float16): 1e-1,
            np.dtype(np.float32): 1e-3,
            np.dtype(np.float64): 1e-5,
@@ -24,6 +24,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
     init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe_list[0].arg_arrays]
     if sym.name == 'embedding':
         init[0] = np.random.randint(low=0, high=10, size=exe_list[0].arg_arrays[0].shape)
+    if init_dict is not None:
+        for name, arr in zip(sym.list_arguments(), init):
+            if name in init_dict:
+                arr[:] = init_dict[name]
 
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
