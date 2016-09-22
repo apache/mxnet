@@ -155,6 +155,17 @@ function empty(shape :: Int...)
   empty(shape)
 end
 
+import Base.similar
+
+"""
+    similar(arr :: NDArray)
+
+Create an `NDArray` with similar shape, data type, and context with the given one.
+"""
+function similar(arr :: NDArray)
+  empty(eltype(arr), size(arr), context(arr))
+end
+
 """
     zeros(DType, shape :: Tuple, ctx :: Context)
     zeros(DType, shape :: Tuple)
@@ -398,7 +409,7 @@ function copy!(dst :: NDArray, src :: NDArray)
     return
   end
 
-  _copyto(src, dst)
+  _copyto(src, out=dst)
   return dst
 end
 
@@ -513,9 +524,9 @@ function add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
   @assert dst.writable
   for arg in args
     if isa(arg, Real)
-      _plus_scalar(dst, convert(eltype(dst), arg), dst)
+      _plus_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
     else
-      _plus(dst, arg, dst)
+      _plus(dst, arg, out=dst)
     end
   end
   return dst
@@ -553,9 +564,9 @@ Subtract a bunch of arguments from `dst`. Inplace updating.
 function sub_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable
   if isa(arg, Real)
-    _minus_scalar(dst, convert(eltype(dst), arg), dst)
+    _minus_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
   else
-    _minus(dst, arg, dst)
+    _minus(dst, arg, out=dst)
   end
 end
 
@@ -586,7 +597,7 @@ function .-(arg0 :: Real, arg1 :: NDArray)
 end
 
 function -(arg0 :: NDArray)
-  _mul_scalar(arg0, -one(eltype(arg0)))
+  _mul_scalar(arg0, scalar=-one(eltype(arg0)))
 end
 
 """
@@ -598,9 +609,9 @@ Inplace updating.
 function mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable
   if isa(arg, Real)
-    _mul_scalar(dst, convert(eltype(dst), arg), dst)
+    _mul_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
   else
-    _mul(dst, arg, dst)
+    _mul(dst, arg, out=dst)
   end
   return dst
 end
@@ -642,9 +653,9 @@ Elementwise divide a scalar or an `NDArray` of the same shape from `dst`. Inplac
 function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   @assert dst.writable
   if isa(arg, Real)
-    _div_scalar(dst, convert(eltype(dst), arg), dst)
+    _div_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
   else
-    _div(dst, arg, dst)
+    _div(dst, arg, out=dst)
   end
 end
 
@@ -964,6 +975,8 @@ function _get_ndarray_function_def(name :: String)
         num_outputs = 0
       end
 
+      args = collect(args)  # tuple to list
+
       # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
       # See https://github.com/dmlc/MXNet.jl/issues/55
       if $name == "dot"
@@ -978,13 +991,16 @@ function _get_ndarray_function_def(name :: String)
       end
 
       output_handles = [Base.cconvert(MX_handle, x) for x in output_vars]
-      output_handles_pp = [Base.cconvert(Ptr{MX_handle}, output_handles)]
+      if length(output_handles) > 0
+        output_handles_pp = [Base.cconvert(Ptr{MX_handle}, output_handles)]
+      else
+        output_handles_pp = [Base.convert(Ptr{MX_handle}, 0)]
+      end
       num_outputs_p = [convert(Cint, num_outputs)]
 
       kw_keys_str = String[string(x[1]) for x in kwargs]
       kw_vals_str = String[string(x[2]) for x in kwargs]
 
-      args = collect(args)  # tuple to list
       op_handle = _get_cached_libmx_op_handle($(QuoteNode(name)))
       @mxcall(:MXImperativeInvoke,
               (MX_handle, Cint, Ptr{MX_handle},
@@ -996,8 +1012,9 @@ function _get_ndarray_function_def(name :: String)
 
       if out == nothing
         handle_array = unsafe_wrap(Array, output_handles_pp[], num_outputs_p[])
+        handle_array = [MX_NDArrayHandle(x) for x in handle_array]
         arrays = [NDArray(hdr) for hdr in handle_array]
-        if mx_num_outputs == 1
+        if length(arrays) == 1
           return arrays[1]
         else
           return arrays

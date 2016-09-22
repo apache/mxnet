@@ -33,38 +33,39 @@ end
 function test_assign()
   dims    = rand_dims()
   tensor  = rand(mx.MX_float, dims)
+  thresh  = 1e-3
 
   info("NDArray::assign::dims = $dims")
 
   # Julia Array -> NDArray assignment
   array   = mx.empty(size(tensor))
   array[:]= tensor
-  @test reldiff(tensor, copy(array)) < 1e-6
+  @test reldiff(tensor, copy(array)) < thresh
 
   array2  = mx.zeros(size(tensor))
-  @test reldiff(zeros(size(tensor)), copy(array2)) < 1e-6
+  @test reldiff(zeros(size(tensor)), copy(array2)) < thresh
 
   array3 = mx.zeros(Float16, size(tensor))
-  @test reldiff(zeros(Float16, size(tensor)), copy(array2)) < 1e-6
+  @test reldiff(zeros(Float16, size(tensor)), copy(array2)) < thresh
 
   # scalar -> NDArray assignment
   scalar    = rand()
   array2[:] = scalar
-  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < 1e-6
+  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < thresh
 
   scalar = rand(Float16)
   array2[:] = scalar
-  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < 1e-6
+  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < thresh
 
   scalar = rand(Float64)
   array2[:] = scalar
   array3[:] = scalar
-  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < 1e-6
-  @test reldiff(zeros(Float16,size(tensor))+scalar, copy(array3)) < 1e-6
+  @test reldiff(zeros(size(tensor))+scalar, copy(array2)) < thresh
+  @test reldiff(zeros(Float16,size(tensor))+scalar, copy(array3)) < thresh
 
   # NDArray -> NDArray assignment
   array[:]  = array2
-  @test reldiff(zeros(size(tensor))+scalar, copy(array)) < 1e-6
+  @test reldiff(zeros(size(tensor))+scalar, copy(array)) < thresh
 end
 
 function test_slice()
@@ -235,7 +236,7 @@ function test_clip()
   j_array, nd_array = rand_tensors(dims)
   clip_up   = maximum(abs(j_array)) / 2
   clip_down = 0
-  clipped   = mx.clip(nd_array, clip_down, clip_up)
+  clipped   = mx.clip(nd_array, a_min=clip_down, a_max=clip_up)
 
   # make sure the original array is not modified
   @test reldiff(copy(nd_array), j_array) < 1e-6
