@@ -53,6 +53,16 @@ If you want to contribute to this list and the examples, please open a new pull 
 * "Learn to sort by LSTM" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/lstm_sort) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-lstm-example/)
 * [Neural Art using extremely lightweight (<500K) neural network](https://github.com/pavelgonchar/neural-art-mini) Lightweight version of mxnet neural art implementation by [Pavel Gonchar](https://github.com/pavelgonchar)
 * [Neural Art with generative networks](https://github.com/zhaw/neural_style) by [zhaw](https://github.com/zhaw)
+* [Faster R-CNN in MXNet with distributed implementation and data parallelization](https://github.com/dmlc/mxnet/tree/master/example/rcnn)
+* [Asynchronous Methods for Deep Reinforcement Learning in MXNet](https://github.com/zmonoid/Asyn-RL-MXNet/blob/master/mx_asyn.py) by [zmonoid](https://github.com/zmonoid)
+* [Deep Q-learning in MXNet](https://github.com/zmonoid/DQN-MXNet) by [zmonoid](https://github.com/zmonoid)
+* [Face Detection with End-to-End Integration of a ConvNet and a 3D Model (ECCV16)](https://github.com/tfwu/FaceDetection-ConvNet-3D) by [tfwu](https://github.com/tfwu), source code for paper Yunzhu Li, Benyuan Sun, Tianfu Wu and Yizhou Wang, "Face Detection with End-to-End Integration of a ConvNet and a 3D Model", ECCV 2016 <https://arxiv.org/abs/1606.00850>
+* [End-to-End Chinese plate recognition base on MXNet](https://github.com/szad670401/end-to-end-for-chinese-plate-recognition) by [szad670401](https://github.com/szad670401)
+* [Reproduce ResNet-v2 (Identity Mappings in Deep Residual Networks) using MXNet](https://github.com/tornadomeet/ResNet) by [tornadomeet](https://github.com/tornadomeet)
+* [Learning similarity among images in MXNet](http://www.jianshu.com/p/70a66c8f73d3) by xlvector in Chinese. Github [link](https://github.com/xlvector/learning-dl/tree/master/mxnet/triple-loss)
+* [Matrix decomposition (SVD) with MXNet](http://www.jianshu.com/p/ebf7bf53ed3e) by xlvector in Chinese. Github [link](https://github.com/xlvector/mxnet/blob/svd/example/svd/svd.py)
+* [MultiGPU enabled image generative models (GAN and DCGAN)](https://github.com/tqchen/mxnet-gan) by [Tianqi Chen](https://github.com/tqchen)
+* [Baidu Warp CTC with Mxnet](https://github.com/dmlc/mxnet/tree/master/example/warpctc) by xlvector
 
 ###<a name="ipython-notebooks"></a>IPython Notebooks
 -----------------
@@ -82,14 +92,15 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Video backup in Mainland China](http://pan.baidu.com/s/1eS58Gue) 
 * [iPython Notebook](https://github.com/dmlc/mxnet-gtc-tutorial) 
 
-###<a name="deep-learning-for-hackers"></a>Deep learning for hackers with MXnet
+###<a name="deep-learning-for-hackers"></a>Deep learning for hackers with MXNet
 
-* Deep learning for hackers with MXnet (1) GPU installation and MNIST [English](https://no2147483647.wordpress.com/2015/12/07/deep-learning-for-hackers-with-mxnet-1/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial1) - a tutorial of installing MXnet with GPU and introduction to deep learning by MNIST example.
-* Deep learning for hackers with MXnet (2): Neural art [English](https://no2147483647.wordpress.com/2015/12/21/deep-learning-for-hackers-with-mxnet-2/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial2) - a tutorial of generating Van Gogh style cat paintings.
+* Deep learning for hackers with MXNet (1) GPU installation and MNIST [English](https://no2147483647.wordpress.com/2015/12/07/deep-learning-for-hackers-with-mxnet-1/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial1) - a tutorial of installing MXnet with GPU and introduction to deep learning by MNIST example.
+* Deep learning for hackers with MXNet (2): Neural art [English](https://no2147483647.wordpress.com/2015/12/21/deep-learning-for-hackers-with-mxnet-2/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial2) - a tutorial of generating Van Gogh style cat paintings.
 
-### <a name="mxnet-aws"></a>MXnet setup on AWS
+### <a name="mxnet-aws"></a>MXNet on the cloud
 * [Setup Amazon AWS GPU instance with MXnet](https://no2147483647.wordpress.com/2016/01/16/setup-amazon-aws-gpu-instance-with-mxnet/) - AWS GPU instance setup with GPU (CUDA with latest cuDNN and S3 support)
-* [Intro Guide to AWS (MXnet with Julia)](http://www.datasciencebowl.com/aws_guide/) - A step-by-step guide of using spot instances with Amazon Web Services (AWS) to help you save money when training DSB models on Mxnet by [Mike Kim](http://www.datasciencebowl.com/author/mikekim/)
+* [Intro Guide to AWS (MXNet with Julia)](http://www.datasciencebowl.com/aws_guide/) - A step-by-step guide of using spot instances with Amazon Web Services (AWS) to help you save money when training DSB models on MXNet by [Mike Kim](http://www.datasciencebowl.com/author/mikekim/)
+* [Building Deep Neural Networks in the Cloud with Azure GPU VMs, MXNet and Microsoft R Server](https://blogs.technet.microsoft.com/machinelearning/2016/09/15/building-deep-neural-networks-in-the-cloud-with-azure-gpu-vms-mxnet-and-microsoft-r-server/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft
 
 ### <a name="kaggle-tutorials"></a>Kaggle tutorials
 * [Kaggle 2nd Annual Data Science Bowl End-to-End Deep Learning Tutorial (Python)](https://www.kaggle.com/c/second-annual-data-science-bowl/forums/t/18079/end-to-end-deep-learning-tutorial-0-0392) - an end-to-end python tutorial for Kaggle heart disease diagnose competition (public leaderboard score 0.0392)
