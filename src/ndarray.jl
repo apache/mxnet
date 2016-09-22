@@ -964,6 +964,7 @@ function _get_ndarray_function_def(name :: String)
 
   func_def = quote
     function $func_name(args::NDArray...; out=nothing, kwargs...)
+      println($name)
       if out != nothing
         output_vars = out
         if isa(output_vars, NDArray)
@@ -980,7 +981,7 @@ function _get_ndarray_function_def(name :: String)
       # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
       # See https://github.com/dmlc/MXNet.jl/issues/55
       if $name == "dot"
-        args = flipdim(args, 1)
+        args = reverse(args)
       end
 
       # XXX: hacky way of solving the semantic difference of the axes parameter in Julia
@@ -1001,7 +1002,8 @@ function _get_ndarray_function_def(name :: String)
       kw_keys_str = String[string(x[1]) for x in kwargs]
       kw_vals_str = String[string(x[2]) for x in kwargs]
 
-      op_handle = _get_cached_libmx_op_handle($(QuoteNode(name)))
+      #op_handle = _get_cached_libmx_op_handle($(QuoteNode(name)))
+      op_handle = _get_cached_libmx_op_handle($(name))
       @mxcall(:MXImperativeInvoke,
               (MX_handle, Cint, Ptr{MX_handle},
                Ptr{Cint}, Ptr{Ptr{MX_handle}},

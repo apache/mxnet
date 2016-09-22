@@ -29,7 +29,8 @@ else
 end
 
 function __init__()
-  _populate_symbol_creator_cache!()
+  # TODO: bug in nnvm, if do not call this, call get handle "_copyto" will fail
+  _get_libmx_op_names()
   _populate_iter_creator_cache!()
 
   atexit() do
