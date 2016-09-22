@@ -48,7 +48,7 @@ struct CaffeDataParam : public dmlc::Parameter<CaffeDataParam> {
 template<typename Dtype>
 class CaffeDataIter : public IIterator<TBlobBatch> {
  public:
-  explicit CaffeDataIter(int type_flag) : batch_size_(0), channels_(0), width_(1), height_(1)
+  explicit CaffeDataIter(int type_flag) : batch_size_(0), channels_(1), width_(1), height_(1)
                                , type_flag_(type_flag), loc_(0)
   {}
   virtual ~CaffeDataIter(void) {}
@@ -100,7 +100,8 @@ class CaffeDataIter : public IIterator<TBlobBatch> {
 
       if (top_size > DATA) {
         if (param_.flat) {
-          batch_data_ = TBlob(nullptr, mshadow::Shape2(batch_size_, width_ * height_),
+          batch_data_ = TBlob(nullptr, mshadow::Shape2(batch_size_,
+                                                       channels_ * width_ * height_),
                               cpu::kDevCPU, type_flag_);
         } else {
           batch_data_ = TBlob(nullptr, mxnet::TShape(top_[DATA]->shape().begin(),
