@@ -596,8 +596,7 @@ function _define_atomic_symbol_creator(name :: String)
 
   func_name = Symbol(name)
   func_def = quote
-  @doc $f_desc ->
-  function $func_name(args::SymbolicNode...; kwargs...)
+  function $func_name(::Type{SymbolicNode}, args::SymbolicNode...; kwargs...)
     idx = findfirst(x -> x[1] == :name, kwargs)
     if idx > 0
       name = kwargs[idx][2]
@@ -687,7 +686,18 @@ function _define_atomic_symbol_creator(name :: String)
     return node
   end # function
   end # quote
-  return func_def
+
+  func_def2 = quote
+  @doc $f_desc ->
+  function $func_name(args::SymbolicNode...; kwargs...)
+    $func_name(SymbolicNode, args...; kwargs...)
+  end # function
+  end # quote
+
+  return quote
+    $func_def
+    $func_def2
+  end
 end
 
 macro _import_atomic_symbol_creators()
@@ -696,8 +706,8 @@ macro _import_atomic_symbol_creators()
   # enough to disambiguate the method for NDArray and SymbolicNode
   const ignored_ops = ["_set_value"]
 
-  names = _get_libmx_op_names()
-  func_exprs = map(names) do name
+  op_names = _get_libmx_op_names()
+  func_exprs = map(op_names) do name
     if name ∉ ignored_ops
       expr = _define_atomic_symbol_creator(name)
     end

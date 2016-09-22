@@ -20,8 +20,8 @@ function test_internal()
   info("SymbolicNode::internal")
 
   data  = mx.Variable(:data)
-  oldfc = mx.FullyConnected(data=data, name=:fc1, num_hidden=10)
-  net1  = mx.FullyConnected(data=oldfc, name=:fc2, num_hidden=100)
+  oldfc = mx.FullyConnected(data, name=:fc1, num_hidden=10)
+  net1  = mx.FullyConnected(oldfc, name=:fc2, num_hidden=100)
 
   @test mx.list_arguments(net1) == [:data,:fc1_weight,:fc1_bias,:fc2_weight,:fc2_bias]
 
@@ -34,12 +34,12 @@ function test_compose()
   info("SymbolicNode::compose")
 
   data = mx.Variable(:data)
-  net1 = mx.FullyConnected(data=data, name=:fc1, num_hidden=10)
-  net1 = mx.FullyConnected(data=net1, name=:fc2, num_hidden=100)
+  net1 = mx.FullyConnected(data, name=:fc1, num_hidden=10)
+  net1 = mx.FullyConnected(net1, name=:fc2, num_hidden=100)
 
-  net2 = mx.FullyConnected(name=:fc3, num_hidden=10)
-  net2 = mx.Activation(data=net2, act_type=:relu)
-  net2 = mx.FullyConnected(data=net2, name=:fc4, num_hidden=20)
+  net2 = mx.FullyConnected(mx.SymbolicNode, name=:fc3, num_hidden=10)
+  net2 = mx.Activation(net2, act_type=:relu)
+  net2 = mx.FullyConnected(net2, name=:fc4, num_hidden=20)
 
   composed  = net2(fc3_data=net1, name=:composed)
   multi_out = mx.Group(composed, net1)
@@ -96,14 +96,13 @@ function test_attrs()
   data2 = mx.Variable(:data2, attrs = Dict(:test => "hallo!"))
   @test get(mx.get_attr(data2, :test)) == "hallo!"
 
-  conv = mx.Convolution(data = data2, kernel = (1,1), num_filter = 1, attrs = Dict(:a => "a", :π => "π"))
+  conv = mx.Convolution(data2, kernel = (1,1), num_filter = 1, attrs = Dict(:a => "a", :π => "π"))
   @test isnull(mx.get_attr(conv, :b))
   @test get(mx.get_attr(conv, :a)) == "a"
   @test get(mx.get_attr(conv, :π)) == "π"
-  @test mx.list_attr(conv) == Dict(:a => "a", :π => "π")
 
   @test_throws MethodError mx.Variable(:data3, attrs = Dict(:test => "1.0", :test2 => 1.0))
-  @test_throws MethodError mx.Convolution(data=data2, kernel = (1,1), num_filter = 1, attrs = Dict(:test => "1.0", :test2 => 1.0))
+  @test_throws MethodError mx.Convolution(data2, kernel = (1,1), num_filter = 1, attrs = Dict(:test => "1.0", :test2 => 1.0))
 end
 
 function test_functions()
@@ -117,7 +116,7 @@ function test_dot()
   x = mx.Variable(:x)
   y = mx.Variable(:y)
   z = mx.dot(x, y)
-  z_exec = mx.bind(z, context=mx.cpu(), 
+  z_exec = mx.bind(z, context=mx.cpu(),
                    args=Dict(:x=>mx.ones((100, 2)), :y=>mx.ones((2, 200))))
   mx.forward(z_exec)
 

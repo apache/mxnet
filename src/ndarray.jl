@@ -963,8 +963,7 @@ function _get_ndarray_function_def(name :: String)
   func_name = Symbol(name)
 
   func_def = quote
-    function $func_name(args::NDArray...; out=nothing, kwargs...)
-      println($name)
+    function $func_name(::Type{NDArray}, args::NDArray...; out=nothing, kwargs...)
       if out != nothing
         output_vars = out
         if isa(output_vars, NDArray)
@@ -1027,7 +1026,13 @@ function _get_ndarray_function_def(name :: String)
     end
   end
 
-  return func_def
+  func_def2 = quote
+    function $func_name(args::NDArray...; out=nothing, kwargs...)
+      $func_name(NDArray, args...; out=out, kwargs...)
+    end
+  end
+
+  return func_def, func_def2
 end
 
 macro _import_ndarray_functions()
@@ -1036,13 +1041,14 @@ macro _import_ndarray_functions()
     op_handle = _get_libmx_op_handle(name)
 
     desc, key_narg = _get_libmx_op_description(name, op_handle)
-    func_def = _get_ndarray_function_def(name)
+    func_def, func_def2 = _get_ndarray_function_def(name)
 
     func_name = Symbol(name)
     expr = quote
       $(isdefined(Base, func_name) ? :(import Base.$func_name) : :())
-      @doc $desc ->
       $func_def
+      @doc $desc ->
+      $func_def2
     end
   end
 
