@@ -154,6 +154,82 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncGetInfo
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxImperativeInvoke
+  (JNIEnv *env, jobject obj, jlong funcPtr, jlongArray inputs,
+    jlongArray outputsGiven, jobject outputs, jint numParams,
+    jobjectArray paramKeys, jobjectArray paramVals) {
+
+  const char **cParamKeys = NULL;
+  const char **cParamVals = NULL;
+  if (numParams > 0) {
+     cParamKeys = new const char *[numParams];
+     cParamVals = new const char *[numParams];
+     for (size_t i = 0; i < numParams; i++) {
+       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
+       const char *key = env->GetStringUTFChars(jkey, 0);
+       cParamKeys[i] = key;
+       env->DeleteLocalRef(jkey);
+       jstring jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramVals, i));
+       const char *val = env->GetStringUTFChars(jval, 0);
+       cParamVals[i] = val;
+       env->DeleteLocalRef(jval);
+     }
+   }
+
+  int numOutputs = 0;
+  jlong *cOutputsGiven = NULL;
+  NDArrayHandle *cOutputs = NULL;
+  if (outputsGiven) {
+    cOutputsGiven = env->GetLongArrayElements(outputsGiven, NULL);
+    cOutputs = reinterpret_cast<NDArrayHandle *>(cOutputsGiven);
+    numOutputs = static_cast<int>(env->GetArrayLength(outputsGiven));
+  }
+  jlong *cInputs = env->GetLongArrayElements(inputs, NULL);
+  jsize numInputs = env->GetArrayLength(inputs);
+  int ret = MXImperativeInvoke(reinterpret_cast<AtomicSymbolCreator>(funcPtr),
+                               static_cast<int>(numInputs),
+                               reinterpret_cast<NDArrayHandle *>(cInputs),
+                               &numOutputs,
+                               &cOutputs,
+                               static_cast<int>(numParams),
+                               cParamKeys,
+                               cParamVals);
+  env->ReleaseLongArrayElements(inputs, cInputs, 0);
+  if (cOutputsGiven) {
+    env->ReleaseLongArrayElements(outputsGiven, cOutputsGiven, 0);
+  }
+
+  // release allocated memory
+  if (numParams > 0) {
+    for (size_t i = 0; i < numParams; i++) {
+      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
+      env->ReleaseStringUTFChars(jkey, cParamKeys[i]);
+      env->DeleteLocalRef(jkey);
+      jstring jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramVals, i));
+      env->ReleaseStringUTFChars(jval, cParamVals[i]);
+      env->DeleteLocalRef(jval);
+    }
+    delete[] cParamKeys;
+    delete[] cParamVals;
+  }
+
+  if (cOutputs) {
+    jclass longCls = env->FindClass("java/lang/Long");
+    jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
+    // scala.collection.mutable.ListBuffer append method
+    jclass listClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+    jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
+        "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    for (size_t i = 0; i < numOutputs; ++i) {
+      env->CallObjectMethod(outputs, listAppend,
+                            env->NewObject(longCls, longConst,
+                            reinterpret_cast<uint64_t>(cOutputs[i])));
+    }
+  }
+
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvoke
   (JNIEnv *env, jobject obj, jlong funcPtr, jlongArray useVars,
     jfloatArray scalarArgs, jlongArray mutateVars) {
