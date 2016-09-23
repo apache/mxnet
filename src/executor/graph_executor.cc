@@ -326,7 +326,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
         = grad_store_[j - num_forward_outputs_].second;
   }
   arg_shapes.resize(idx.input_nodes().size(), TShape());
-  arg_types.resize(idx.input_nodes().size(), 0);
+  arg_types.resize(idx.input_nodes().size(), -1);
   // other initializations
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
   g = nnvm::pass::InferType(g, arg_types);
@@ -373,10 +373,10 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   }
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
+    if (!data_entry_[i].is_none()) continue;
     size_t bytes = vshape[i].Size() * mshadow::mshadow_sizeof(vdtype[i]);
     int storage_id = vstorage[i];
     if (storage_id < 0) continue;
-    if (!data_entry_[i].is_none()) continue;
     size_t sid = static_cast<size_t>(storage_id);
     if (sid >= pool_info.size()) {
       pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0)});
