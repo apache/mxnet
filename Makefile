@@ -179,14 +179,6 @@ else
 endif
 
 # For quick compile test, used smaller subset
-ALLX_DEP = $(filter-out build/src/operator/%, $(ALL_DEP))
-ALLX_DEP+= build/src/operator/fully_connected.o
-ALLX_DEP+= build/src/operator/fully_connected_gpu.o
-ALLX_DEP+= build/src/operator/operator.o
-ALLX_DEP+= build/src/operator/operator_util.o
-ALLX_DEP+= build/src/operator/elementwise_unary_op.o
-ALLX_DEP+= build/src/operator/custom.o
-
 ALLX_DEP= $(ALL_DEP)
 
 ifeq ($(USE_NVRTC), 1)
@@ -300,6 +292,7 @@ rpkg:	roxygen
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
+	cp -rf nnvm/include/* R-package/inst/include
 	R CMD build --no-build-vignettes R-package
 
 scalapkg:
