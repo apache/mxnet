@@ -9,6 +9,7 @@
 #include <mxnet/op_attr_types.h>
 #include <mxnet/ndarray.h>
 #include <nnvm/node.h>
+#include <nnvm/graph.h>
 #include <memory>
 
 namespace mxnet {
@@ -54,7 +55,11 @@ bool OpPropInferAttr(const NodeAttrs& attrs,
                      std::vector<AttrType> *oattr,
                      FInfer finfer) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
-  CHECK_EQ(prop.inputs.size(), iattr->size());
+  CHECK_EQ(prop.inputs.size(), iattr->size())
+      << "op=" << attrs.op->name
+      << ", inputs.size=" << prop.inputs.size()
+      << ", iattr.size=" << iattr->size()
+      << ", arg.size=" << prop.arguments.size();
   std::vector<AttrType> in_attr(prop.arguments.size());
   std::vector<AttrType> aux_attr(prop.aux_states.size());
 
@@ -290,6 +295,38 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
     remap[i].second = *static_cast<int*>(remap_index[i].second);
   }
   return remap;
+}
+
+inline std::string DefaultVarName(const std::string &op_name,
+                                  const std::string &arg_name) {
+  if (op_name.length() == 0) {
+    return arg_name;
+  } else {
+    return op_name + '_' + arg_name;
+  }
+}
+
+void FixLegacyGraphBatchNorm(nnvm::Symbol* s) {
+  using nnvm::Symbol;
+  using nnvm::FListInputNames;
+
+  const nnvm::Op* bn = nnvm::Op::Get("BatchNorm");
+  nnvm::DFSVisit(s->outputs, [ bn](const std::shared_ptr<Node>& n) {
+      static auto& flist_inputs = Op::GetAttr<FListInputNames>("FListInputNames");
+      if (n->op() == bn && n->inputs.size() < n->num_inputs()) {
+        FListInputNames fn = flist_inputs.get(n->op(), nullptr);
+        CHECK(fn != nullptr);
+        auto arg_names = fn(n->attrs);
+        size_t begin = n->inputs.size();
+        size_t end = n->num_inputs();
+        CHECK_EQ(end, begin + 2);
+        for (size_t i = begin; i < end; ++i) {
+          n->inputs.push_back(
+              Symbol::CreateVariable(
+                  DefaultVarName(n->attrs.name, arg_names[i])).outputs[0]);
+        }
+      }
+    });
 }
 
 // register the legacy operator properties under NNVM registry.
