@@ -1073,3 +1073,29 @@ def minimum(left, right):
         return left if left > right else right
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+
+
+# pylint: disable=no-member
+# pylint: disable=redefined-builtin
+def hypot(left, right):
+    """ minimum left and right
+
+    Parameters
+    ---------
+    left: Symbol or Number
+    right: Symbol or Number
+
+    Returns
+    -------
+    result: Symbol or Number
+    """
+    if isinstance(left, Symbol) and isinstance(right, Symbol):
+        return _internal._Hypot(left, right)
+    if isinstance(left, Symbol) and isinstance(right, Number):
+        return _internal._HypotScalar(left, scalar=right)
+    if isinstance(left, Number) and isinstance(right, Symbol):
+        return _internal._HypotScalar(right, scalar=left)
+    if isinstance(left, Number) and isinstance(right, Number):
+        return _numpy.hypot(left, right)
+    else:
+        raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
