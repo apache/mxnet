@@ -134,7 +134,7 @@ object CNNTextClassification {
           model.cnnExec.backward()
 
           val tmpCorrect = {
-            val predLabel = NDArray.argmaxChannel(model.cnnExec.outputs(0))
+            val predLabel = NDArray.argmax_channel(model.cnnExec.outputs(0))
             predLabel.toArray.zip(batchL).map { predLabel =>
               if (predLabel._1 == predLabel._2) 1
               else 0
@@ -189,7 +189,7 @@ object CNNTextClassification {
             model.cnnExec.forward(isTrain = false)
 
             val tmpCorrect = {
-              val predLabel = NDArray.argmaxChannel(model.cnnExec.outputs(0))
+              val predLabel = NDArray.argmax_channel(model.cnnExec.outputs(0))
               predLabel.toArray.zip(batchL).map { predLabel =>
                 if (predLabel._1 == predLabel._2) 1
                 else 0
