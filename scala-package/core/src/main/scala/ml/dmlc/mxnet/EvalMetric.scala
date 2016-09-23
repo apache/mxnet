@@ -49,7 +49,7 @@ class Accuracy extends EvalMetric("accuracy") {
       "labels and predictions should have the same length.")
 
     for ((pred, label) <- preds zip labels) {
-      val predLabel = NDArray.argmaxChannel(pred)
+      val predLabel = NDArray.argmax_channel(pred)
       require(label.shape == predLabel.shape,
         s"label ${label.shape} and prediction ${predLabel.shape}" +
         s"should have the same length.")
@@ -111,7 +111,7 @@ class F1 extends EvalMetric("f1") {
       "labels and predictions should have the same length.")
 
     for ((pred, label) <- preds zip labels) {
-      val predLabel = NDArray.argmaxChannel(pred)
+      val predLabel = NDArray.argmax_channel(pred)
       require(label.shape == predLabel.shape,
         s"label ${label.shape} and prediction ${predLabel.shape}" +
         s"should have the same length.")
