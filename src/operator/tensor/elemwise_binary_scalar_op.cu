@@ -54,5 +54,11 @@ NNVM_REGISTER_OP(_rpower_scalar)
 NNVM_REGISTER_OP(_backward_rpower_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::rpower_grad>);
 
+NNVM_REGISTER_OP(_hypot_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::hypot>);
+
+NNVM_REGISTER_OP(_backward_hypot_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::hypot_grad_left>);
+
 }  // namespace op
 }  // namespace mxnet

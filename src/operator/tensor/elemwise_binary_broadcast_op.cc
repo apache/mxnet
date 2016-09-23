@@ -128,5 +128,24 @@ NNVM_REGISTER_OP(_backward_minimum)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le,
                                                               mshadow_op::gt>);
 
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_hypot)
+.add_alias("broadcast_hypot").add_alias("_Hypot")
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::hypot>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_hypot" });
+
+NNVM_REGISTER_OP(_backward_hypot)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+[](const NodeAttrs& attrs) {
+  return std::vector<uint32_t> {0, 1};
+})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs) {
+  return std::vector<std::pair<int, int> > {{0, 1}};
+})
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::hypot_grad_left,
+                    mshadow_op::hypot_grad_right>);
+
 }  // namespace op
 }  // namespace mxnet
