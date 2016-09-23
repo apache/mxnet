@@ -15,6 +15,7 @@ namespace mxnet {
 namespace op {
 void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
+void FixLegacyGraphBatchNorm(nnvm::Symbol* s);
 }
 
 // convert nnvm symbol to a nnvm graph.
@@ -192,6 +193,7 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   dmlc::istream is(fi.get());
   s->outputs = nnvm::pass::LoadJSON(
      std::string(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>())).outputs;
+  op::FixLegacyGraphBatchNorm(s);
   *out = s;
   is.set_stream(nullptr);
   API_END_HANDLE_ERROR(delete s);
@@ -201,6 +203,7 @@ int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   s->outputs = nnvm::pass::LoadJSON(json).outputs;
+  op::FixLegacyGraphBatchNorm(s);
   *out = s;
   API_END_HANDLE_ERROR(delete s);
 }

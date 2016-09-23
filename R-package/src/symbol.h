@@ -8,6 +8,7 @@
 
 #include <Rcpp.h>
 #include <mxnet/c_api.h>
+#include <nnvm/c_api.h>
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -175,9 +176,9 @@ class SymbolFunction : public ::Rcpp::CppFunction {
 
  private:
   // make constructor private
-  explicit SymbolFunction(AtomicSymbolCreator handle);
+  explicit SymbolFunction(OpHandle handle, std::string name);
   /*! \brief internal creator handle. */
-  AtomicSymbolCreator handle_;
+  OpHandle handle_;
   // name of the function
   std::string name_;
   // hint used to generate the names
