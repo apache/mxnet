@@ -135,7 +135,9 @@ class Accuracy(EvalMetric):
         check_label_shapes(labels, preds)
 
         for label, pred_label in zip(labels, preds):
-            pred_label = ndarray.argmax_channel(pred_label).asnumpy().astype('int32')
+            if pred_label.shape != label.shape:
+                pred_label = ndarray.argmax_channel(pred_label)
+            pred_label = pred_label.asnumpy().astype('int32')
             label = label.asnumpy().astype('int32')
 
             check_label_shapes(label, pred_label)
