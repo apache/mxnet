@@ -96,6 +96,15 @@ MXNET_OPERATOR_REGISTER_UNARY(log)
 MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::log_grad> >);
 
+// sin
+MXNET_OPERATOR_REGISTER_UNARY(sin)
+.MXNET_DESCRIBE("Take sin of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::sin>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sin" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_sin)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::sin_grad> >);
+
 // cos
 MXNET_OPERATOR_REGISTER_UNARY(cos)
 .MXNET_DESCRIBE("Take cos of the src")
@@ -104,15 +113,6 @@ MXNET_OPERATOR_REGISTER_UNARY(cos)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_cos)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::cos_grad> >);
-
-// sin
-MXNET_OPERATOR_REGISTER_UNARY(sin)
-.MXNET_DESCRIBE("Take sin of the src")
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::sin>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sin"});
-
-MXNET_OPERATOR_REGISTER_BINARY(_backward_sin)
-.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::sin_grad> >);
 
 // tan
 MXNET_OPERATOR_REGISTER_UNARY(tan)
@@ -149,6 +149,78 @@ MXNET_OPERATOR_REGISTER_UNARY(arctan)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_arctan)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::arctan_grad> >);
+
+// degrees
+MXNET_OPERATOR_REGISTER_UNARY(degrees)
+.MXNET_DESCRIBE("Take degrees of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::degrees>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_degrees" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_degrees)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::degrees_grad> >);
+
+// radians
+MXNET_OPERATOR_REGISTER_UNARY(radians)
+.MXNET_DESCRIBE("Take radians of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::radians>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_radians" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_radians)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::radians_grad> >);
+
+// sinh
+MXNET_OPERATOR_REGISTER_UNARY(sinh)
+.MXNET_DESCRIBE("Take sinh of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::sinh>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sinh" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_sinh)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::sinh_grad> >);
+
+// cosh
+MXNET_OPERATOR_REGISTER_UNARY(cosh)
+.MXNET_DESCRIBE("Take cosh of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::cosh>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_cosh" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_cosh)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::cosh_grad> >);
+
+// tanh
+MXNET_OPERATOR_REGISTER_UNARY(tanh)
+.MXNET_DESCRIBE("Take tanh of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::tanh>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tanh" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_tanh)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::tanh_grad> >);
+
+// arcsinh
+MXNET_OPERATOR_REGISTER_UNARY(arcsinh)
+.MXNET_DESCRIBE("Take arcsinh of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arcsinh>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsinh" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_arcsinh)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::arcsinh_grad> >);
+
+// arccosh
+MXNET_OPERATOR_REGISTER_UNARY(arccosh)
+.MXNET_DESCRIBE("Take arccosh of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arccosh>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccosh" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_arccosh)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::arccosh_grad> >);
+
+// arctanh
+MXNET_OPERATOR_REGISTER_UNARY(arctanh)
+.MXNET_DESCRIBE("Take arctanh of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arctanh>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_arctanh)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::arctanh_grad> >);
 
 }  // namespace op
 }  // namespace mxnet
