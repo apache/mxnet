@@ -35,7 +35,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListAllOpNames
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_nnGetOpHandle
   (JNIEnv *env, jobject obj, jstring jopname, jobject jhandle) {
-
   OpHandle handle;
   const char *opname = env->GetStringUTFChars(jopname, 0);
   int ret = NNGetOpHandle(opname, &handle);
@@ -162,19 +161,19 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxImperativeInvoke
   const char **cParamKeys = NULL;
   const char **cParamVals = NULL;
   if (numParams > 0) {
-     cParamKeys = new const char *[numParams];
-     cParamVals = new const char *[numParams];
-     for (size_t i = 0; i < numParams; i++) {
-       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
-       const char *key = env->GetStringUTFChars(jkey, 0);
-       cParamKeys[i] = key;
-       env->DeleteLocalRef(jkey);
-       jstring jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramVals, i));
-       const char *val = env->GetStringUTFChars(jval, 0);
-       cParamVals[i] = val;
-       env->DeleteLocalRef(jval);
-     }
-   }
+    cParamKeys = new const char *[numParams];
+    cParamVals = new const char *[numParams];
+    for (size_t i = 0; i < numParams; i++) {
+      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
+      const char *key = env->GetStringUTFChars(jkey, 0);
+      cParamKeys[i] = key;
+      env->DeleteLocalRef(jkey);
+      jstring jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramVals, i));
+      const char *val = env->GetStringUTFChars(jval, 0);
+      cParamVals[i] = val;
+      env->DeleteLocalRef(jval);
+    }
+  }
 
   int numOutputs = 0;
   jlong *cOutputsGiven = NULL;
