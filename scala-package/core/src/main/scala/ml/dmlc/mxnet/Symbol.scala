@@ -843,27 +843,29 @@ object Symbol {
 
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): Map[String, SymbolFunction] = {
-    val symbolList = ListBuffer.empty[SymbolHandle]
-    checkCall(_LIB.mxSymbolListAtomicSymbolCreators(symbolList))
-    symbolList.map(makeAtomicSymbolFunction).toMap
+    val opNames = ListBuffer.empty[String]
+    checkCall(_LIB.mxListAllOpNames(opNames))
+    opNames.map(opName => {
+      val opHandle = new RefLong
+      checkCall(_LIB.nnGetOpHandle(opName, opHandle))
+      makeAtomicSymbolFunction(opHandle.value, opName)
+    }).toMap
   }
 
   // Create an atomic symbol function by handle and function name.
-  private def makeAtomicSymbolFunction(handle: SymbolHandle): (String, SymbolFunction) = {
+  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
+      : (String, SymbolFunction) = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
-    val numArgs = new MXUintRef
+    val numArgs = new RefInt
     val argNames = ListBuffer.empty[String]
     val argTypes = ListBuffer.empty[String]
     val argDescs = ListBuffer.empty[String]
 
     checkCall(_LIB.mxSymbolGetAtomicSymbolInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
-    val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
-    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
-    logger.debug("Atomic Symbol function defination:\n{}", docStr)
-    (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
+    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 
   // Used by SymbolMacro
