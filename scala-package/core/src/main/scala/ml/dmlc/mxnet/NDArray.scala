@@ -141,10 +141,10 @@ object NDArray {
   // List and add all the atomic symbol functions to current module.
   private def initNDArrayModule(): Map[String, NDArrayFunction] = {
     val opNames = ListBuffer.empty[String]
-    _LIB.mxListAllOpNames(opNames)
+    checkCall(_LIB.mxListAllOpNames(opNames))
     opNames.map(opName => {
       val opHandle = new RefLong
-      _LIB.nnGetOpHandle(opName, opHandle)
+      checkCall(_LIB.nnGetOpHandle(opName, opHandle))
       makeNDArrayFunction(opHandle.value, opName)
     }).toMap
   }
@@ -160,15 +160,8 @@ object NDArray {
     val argTypes = ListBuffer.empty[String]
     val argDescs = ListBuffer.empty[String]
 
-    _LIB.mxSymbolGetAtomicSymbolInfo(
-      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
-    // TODO
-    val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
-    val extraDoc: String = if (keyVarNumArgs.value != null && keyVarNumArgs.value.length > 0) {
-      s"This function support variable length of positional input (${keyVarNumArgs.value})."
-    } else {
-      ""
-    }
+    checkCall(_LIB.mxSymbolGetAtomicSymbolInfo(
+      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
     val arguments = (argTypes zip argNames).filter { case (dtype, _) =>
       !(dtype.startsWith("NDArray") || dtype.startsWith("Symbol"))
     }.map { case (_, argName) =>
