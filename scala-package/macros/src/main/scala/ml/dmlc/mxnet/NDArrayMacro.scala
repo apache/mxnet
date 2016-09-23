@@ -132,7 +132,6 @@ private[mxnet] object NDArrayMacro {
 
     _LIB.mxSymbolGetAtomicSymbolInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
-    // TODO
     val paramStr = OperatorBuildUtils.ctypes2docstring(argNames, argTypes, argDescs)
     val extraDoc: String = if (keyVarNumArgs.value != null && keyVarNumArgs.value.length > 0) {
       s"This function support variable length of positional input (${keyVarNumArgs.value})."

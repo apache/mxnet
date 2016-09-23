@@ -133,7 +133,7 @@ private[mxnet] object SymbolImplMacros {
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
     val docStr = s"$aliasName $realName\n${desc.value}\n\n$paramStr\n$extraDoc\n"
     // scalastyle:off println
-    println("Atomic Symbol function definition:\n" + docStr)
+    println("Symbol function definition:\n" + docStr)
     // scalastyle:on println
     (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }

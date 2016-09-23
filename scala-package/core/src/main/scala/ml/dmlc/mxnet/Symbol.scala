@@ -1,10 +1,5 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.Base.NDArrayHandle
-import ml.dmlc.mxnet.Base.RefInt
-import ml.dmlc.mxnet.Base.RefLong
-import ml.dmlc.mxnet.Base.RefString
-import ml.dmlc.mxnet.Base.SymbolHandle
 import ml.dmlc.mxnet.Base._
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -871,11 +866,6 @@ object Symbol {
     } else {
       ""
     }
-    val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
-    val docStr = s"$aliasName $realName\n${desc.value}\n\n$paramStr\n$extraDoc\n"
-    // scalastyle:off println
-    println("Atomic Symbol function definition:\n" + docStr)
-    // scalastyle:on println
     (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 

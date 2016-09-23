@@ -163,7 +163,7 @@ while (valDataIter.hasNext) {
 val y = NDArray.concatenate(labels)
 
 // get predicted labels
-val py = NDArray.argmaxChannel(prob)
+val py = NDArray.argmax_channel(prob)
 require(y.shape == py.shape)
 
 // calculate accuracy

@@ -55,11 +55,13 @@ object NDArray {
   private[mxnet] def genericNDArrayFunctionInvoke(
     funcName: String, args: Seq[Any], kwargs: Map[String, Any] = null): NDArrayFuncReturn = {
     val function = functions(funcName)
-    val ndArgs = ArrayBuffer.empty[NDArrayHandle]
+    val ndArgs = ArrayBuffer.empty[NDArray]
     val posArgs = ArrayBuffer.empty[String]
     args.foreach {
       case arr: NDArray =>
-        ndArgs.append(arr.handle)
+        ndArgs.append(arr)
+      case arrFunRet: NDArrayFuncReturn =>
+        arrFunRet.arr.foreach(ndArgs.append(_))
       case arg =>
         posArgs.append(arg.toString)
     }
@@ -77,6 +79,7 @@ object NDArray {
         val output = kwargs("out")
         output match {
           case nd: NDArray => (Array(nd), Array(nd.handle))
+          case ndFuncRet: NDArrayFuncReturn => (ndFuncRet.arr, ndFuncRet.arr.map(_.handle))
           case ndArr: Seq[NDArray] => (ndArr.toArray, ndArr.toArray.map(_.handle))
           case _ => throw new IllegalArgumentException(
             "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
@@ -86,9 +89,13 @@ object NDArray {
       }
 
     val outputs = ArrayBuffer.empty[NDArrayHandle]
-    checkCall(_LIB.mxImperativeInvoke(function.handle, ndArgs.toArray, outputVars,
+    checkCall(_LIB.mxImperativeInvoke(function.handle, ndArgs.map(_.handle).toArray, outputVars,
       outputs, updatedKwargs.size, updatedKwargs.keys.toArray, updatedKwargs.values.toArray))
-    new NDArrayFuncReturn(Option(oriOutputs).getOrElse(outputs.map(new NDArray(_)).toArray))
+    new NDArrayFuncReturn(Option(oriOutputs).getOrElse {
+      val outputArrs = outputs.map(new NDArray(_)).toArray
+      addDependency(ndArgs.toArray, outputArrs)
+      outputArrs
+    })
   }
 
   /**
@@ -557,8 +564,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    */
   def set(value: Float): NDArray = {
     require(writable, "trying to assign to a readonly NDArray")
-    NDArray.genericNDArrayFunctionInvoke("_set_value", Seq[Any](value),
-      Map[String, Any]("out" -> this))
+    NDArray.genericNDArrayFunctionInvoke("_set_value", Seq(value), Map("out" -> this))
     this
   }
 
@@ -578,7 +584,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   def +(other: Float): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq[Any](this, other))
+    NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq(this, other))
   }
 
   def +=(other: NDArray): NDArray = {
@@ -593,8 +599,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq[Any](this, other),
-      Map[String, Any]("out" -> this))
+    NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq(this, other), Map("out" -> this))
     this
   }
 
@@ -603,7 +608,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   def -(other: Float): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq[Any](this, other))
+    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other))
   }
 
   def -=(other: NDArray): NDArray = {
@@ -618,8 +623,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
-    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq[Any](this, other),
-      Map[String, Any]("out" -> this))
+    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other), Map("out" -> this))
     this
   }
 
@@ -628,11 +632,11 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   def *(other: Float): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq[Any](this, other))
+    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other))
   }
 
   def unary_-(): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq[Any](this, -1f))
+    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, -1f))
   }
 
   def *=(other: NDArray): NDArray = {
@@ -647,8 +651,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
-    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq[Any](this, other),
-      Map[String, Any]("out" -> this))
+    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other), Map("out" -> this))
     this
   }
 
@@ -657,7 +660,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   def /(other: Float): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq[Any](this, other))
+    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other))
   }
 
   def /=(other: NDArray): NDArray = {
@@ -672,8 +675,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
-    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq[Any](this, other),
-      Map[String, Any]("out" -> this))
+    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other), Map("out" -> this))
     this
   }
 
@@ -773,10 +775,10 @@ class NDArrayConversions(val value: Float) {
   }
 
   def -(other: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_rminus_scalar", Seq[Any](other, value))
+    NDArray.genericNDArrayFunctionInvoke("_rminus_scalar", Seq(other, value))
   }
   def -(other: NDArrayFuncReturn): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_rminus_scalar", Seq[Any](other.head, value))
+    NDArray.genericNDArrayFunctionInvoke("_rminus_scalar", Seq(other.head, value))
   }
 
   def *(other: NDArray): NDArray = {
@@ -787,16 +789,16 @@ class NDArrayConversions(val value: Float) {
   }
 
   def /(other: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_rdiv_scalar", Seq[Any](other, value))
+    NDArray.genericNDArrayFunctionInvoke("_rdiv_scalar", Seq(other, value))
   }
   def /(other: NDArrayFuncReturn): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_rdiv_scalar", Seq[Any](other.head, value))
+    NDArray.genericNDArrayFunctionInvoke("_rdiv_scalar", Seq(other.head, value))
   }
 }
 
 case class NDArrayFunction(handle: NDArrayHandle, arguments: List[String])
 
-class NDArrayFuncReturn(private val arr: Array[NDArray]) {
+class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def head: NDArray = apply(0)
   def get: NDArray = {
     require(arr.length == 1, s"return array length = ${arr.length}")
