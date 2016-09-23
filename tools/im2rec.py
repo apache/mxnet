@@ -20,7 +20,9 @@ def list_image(root, recursive, exts):
     i = 0
     if recursive:
         cat = {}
-        for path, _, files in os.walk(root, followlinks=True):
+        for path, dirs, files in os.walk(root, followlinks=True):
+            dirs.sort()
+            files.sort()
             for fname in files:
                 fpath = os.path.join(path, fname)
                 suffix = os.path.splitext(fname)[1].lower()
@@ -29,10 +31,10 @@ def list_image(root, recursive, exts):
                         cat[path] = len(cat)
                     yield (i, os.path.relpath(fpath, root), cat[path])
                     i += 1
-        for k, v in cat.items():
+        for k, v in sorted(cat.items(), key=lambda x: x[1]):
             print(os.path.relpath(k, root), v)
     else:
-        for fname in os.listdir(root):
+        for fname in sorted(os.listdir(root)):
             fpath = os.path.join(root, fname)
             suffix = os.path.splitext(fname)[1].lower()
             if os.path.isfile(fpath) and (suffix in exts):
