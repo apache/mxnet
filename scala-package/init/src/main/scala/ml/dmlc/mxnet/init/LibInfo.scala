@@ -14,4 +14,6 @@ class LibInfo {
                                           argTypes: ListBuffer[String],
                                           argDescs: ListBuffer[String],
                                           keyVarNumArgs: RefString): Int
+  @native def mxListAllOpNames(names: ListBuffer[String]): Int
+  @native def nnGetOpHandle(opName: String, opHandle: RefLong): Int
 }
