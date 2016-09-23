@@ -1583,6 +1583,53 @@ def test_l2_normalization():
                     for width in [5, 7]:
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
+def mathematical_core_binary(name,
+                             forward_mxnet_call,
+                             forward_numpy_call,
+                             backward_numpy_call1,
+                             backward_numpy_call2,
+                             data1_init=2.,
+                             data2_init=3.,
+                             grad_init=2.):
+    data1 = mx.symbol.Variable('data')
+    data2 = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp1 = np.random.rand(3, 4)
+    data_tmp2 = np.random.rand(3, 4)
+    data_tmp1[:] = data1_init
+    data_tmp2[:] = data2_init
+
+    arr_data1 = mx.nd.array(data_tmp1)
+    arr_data2 = mx.nd.array(data_tmp2)
+
+    arr_grad1 = mx.nd.empty(shape)
+    arr_grad2 = mx.nd.empty(shape)
+
+    test = forward_mxnet_call(data1, data2)
+    exe_test = test.bind(mx.cpu(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout = forward_numpy_call(data_tmp1, data_tmp2)
+    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
+
+    out_grad = mx.nd.empty(shape)
+    out_grad[:] = grad_init
+    exe_test.backward(out_grad)
+
+    npout_grad = np.ones(shape)
+    npout_grad[:] = grad_init
+
+    npout_grad1 = npout_grad * backward_numpy_call1(data_tmp1, data_tmp2)
+    npout_grad2 = npout_grad * backward_numpy_call2(data_tmp1, data_tmp2)
+    arr_grad1 = arr_grad1.asnumpy()
+    arr_grad2 = arr_grad2.asnumpy()
+
+    assert reldiff(arr_grad1, npout_grad1) < 1e-6, "%s mathematical backward1 failed\n%s\n\n%s" % (
+        name, arr_grad1, npout_grad)
+    assert reldiff(arr_grad2, npout_grad2) < 1e-6, "%s mathematical backward2 failed\n%s\n\n%s" % (
+        name, arr_grad2, npout_grad)
+
+
 def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -1630,6 +1677,53 @@ def test_mathematical():
     # arctan
     mathematical_core("arctan", lambda x: mx.sym.arctan(x), lambda x: np.arctan(x),
                       lambda x: 1. / (x ** 2. + 1.), 0.5, 0.5)
+    # hypot
+    mathematical_core_binary("hypot",
+                             lambda x, y: mx.sym.hypot(x, y),
+                             lambda x, y: np.hypot(x, y),
+                             lambda x, y: x / np.hypot(x, y),
+                             lambda x, y: y / np.hypot(x, y),
+                             0.5, 0.5, 0.5)
+
+    # hypot scalar
+    mathematical_core("hypot scalar",
+                      lambda x: mx.sym.hypot(x, 3),
+                      lambda x: np.hypot(x, 3),
+                      lambda x: x / np.hypot(x, 3),
+                      0.5, 0.5)
+
+    # degrees
+    mathematical_core("degrees",
+                      lambda x: mx.sym.degrees(x),
+                      lambda x: np.degrees(x),
+                      lambda x: 180./np.pi,
+                      0.5, 0.5)
+    # radians
+    mathematical_core("radians",
+                      lambda x: mx.sym.radians(x),
+                      lambda x: np.radians(x),
+                      lambda x: np.pi / 180.,
+                      0.6, 1)
+    # sinh
+    mathematical_core("sinh", lambda x: mx.sym.sinh(x), lambda x: np.sinh(x), lambda x: np.cosh(x))
+
+    # cosh
+    mathematical_core("cosh", lambda x: mx.sym.cosh(x), lambda x: np.cosh(x), lambda x: np.sinh(x), 5, 5)
+
+    # tanh
+    mathematical_core("tanh", lambda x: mx.sym.tanh(x), lambda x: np.tanh(x), lambda x: 1. - np.tanh(x) ** 2, 0.5, 1)
+
+    # arcsinh
+    mathematical_core("arcsinh", lambda x: mx.sym.arcsinh(x), lambda x: np.arcsinh(x),
+                      lambda x: 1./(x**2 + 1.)**(1./2.))
+
+    # arccosh
+    mathematical_core("arccosh", lambda x: mx.sym.arccosh(x), lambda x: np.arccosh(x),
+                      lambda x: 1./(x**2 - 1.)**(1./2.))
+
+    # arctanh
+    mathematical_core("arctanh", lambda x: mx.sym.arctanh(x), lambda x: np.arctanh(x),
+                      lambda x: -1./(x**2 - 1.), 0.5)
 
 
 if __name__ == '__main__':
