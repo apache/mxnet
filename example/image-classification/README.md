@@ -93,7 +93,7 @@ We can train a model using multiple machines.
   ```
 
 See more launch options, e.g. by `Yarn`, and how to write a distributed training
-program on this [tutorial](http://mxnet.readthedocs.org/en/latest/distributed_training.html)
+program on this [tutorial](http://mxnet.readthedocs.io/en/latest/how_to/multi_devices.html)
 
 ### Predict
 
