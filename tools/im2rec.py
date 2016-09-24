@@ -139,7 +139,7 @@ def write_worker(q_out, fname, working_dir):
             pre_time = cur_time
         count += 1
     fout.close()
-    if sys.platform == 'win32':
+    if os.path.isfile(fname):
         os.remove(fname)
     os.rename(fname+'.tmp', fname)
 
