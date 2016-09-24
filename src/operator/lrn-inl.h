@@ -139,7 +139,7 @@ class LocalResponseNormProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     return {
-      out_grad[lrn_enum::kOut], in_data[lrn_enum::kData], 
+      out_grad[lrn_enum::kOut], in_data[lrn_enum::kData],
       out_data[lrn_enum::kTmpNorm], out_data[lrn_enum::kTmpNorm],
       out_data[lrn_enum::kOut]
       };
