@@ -2,6 +2,7 @@ package ml.dmlc.mxnet.examples.rnn
 
 import ml.dmlc.mxnet.{DataBatch, DataIter, NDArray, Shape}
 import org.slf4j.LoggerFactory
+import scala.collection.immutable.ListMap
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.util.Random
@@ -98,12 +99,14 @@ object BucketIo {
     for (sentence <- sentences) {
       val ids = text2Id(sentence, vocab)
       if (ids.length > 0) {
-        buckets.indices.foreach { idx =>
+        import scala.util.control.Breaks._
+        breakable { buckets.indices.foreach { idx =>
           if (buckets(idx) >= ids.length) {
             data(idx) = data(idx) :+
             (ids.map(_.toFloat) ++ Array.fill[Float](buckets(idx) - ids.length)(0f))
+            break()
           }
-        }
+        }}
       }
     }
 
@@ -141,10 +144,10 @@ object BucketIo {
 
     private val initStateArrays = initStates.map(x => NDArray.zeros(x._2._1, x._2._2))
 
-    private val _provideData = { val tmp = Map("data" -> Shape(_batchSize, _defaultBucketKey))
+    private val _provideData = { val tmp = ListMap("data" -> Shape(_batchSize, _defaultBucketKey))
       tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
     }
-    private val _provideLabel = Map("softmax_label" -> Shape(_batchSize, _defaultBucketKey))
+    private val _provideLabel = ListMap("softmax_label" -> Shape(_batchSize, _defaultBucketKey))
 
     private var iBucket = 0
 
@@ -158,7 +161,7 @@ object BucketIo {
 
       val datas = idx.map(i => data(bucketIdx)(i))
       for (sentence <- datas) {
-        assert(sentence.length == buckets(bucketIdx))
+        require(sentence.length == buckets(bucketIdx))
       }
       dataBuf.set(datas.flatten)
 
@@ -167,12 +170,16 @@ object BucketIo {
       labelBuf.set(labels.flatten)
 
       iBucket += 1
+      val batchProvideData = { val tmp = ListMap("data" -> dataBuf.shape)
+        tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
+      }
+      val batchProvideLabel = ListMap("softmax_label" -> labelBuf.shape)
       new DataBatch(IndexedSeq(dataBuf) ++ initStateArrays,
                     IndexedSeq(labelBuf),
                     getIndex(),
                     getPad(),
                     this.buckets(bucketIdx).asInstanceOf[AnyRef],
-                    provideData, provideLabel)
+                    batchProvideData, batchProvideLabel)
     }
 
     /**

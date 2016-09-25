@@ -297,7 +297,7 @@ object Model {
           if (epochSize != -1 && nBatch >= epochSize) {
             doReset = false
           }
-          dataBatch.dispose()
+          //dataBatch.dispose()
         }
         if (doReset) {
           trainData.reset()
@@ -321,7 +321,7 @@ object Model {
           executorManager.loadDataBatch(evalBatch)
           executorManager.forward(isTrain = false)
           executorManager.updateMetric(evalMetric, evalBatch.label)
-          evalBatch.dispose()
+          //evalBatch.dispose()
         }
 
         val (name, value) = evalMetric.get

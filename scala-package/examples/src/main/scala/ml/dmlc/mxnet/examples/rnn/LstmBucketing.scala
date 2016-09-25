@@ -6,6 +6,8 @@ import ml.dmlc.mxnet.examples.rnn.BucketIo.BucketSentenceIter
 import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
  * Bucketing LSTM examples
  * @author Yizhi Liu
@@ -15,10 +17,18 @@ object LstmBucketing {
   private val logger: Logger = LoggerFactory.getLogger(classOf[LstmBucketing])
 
   def perplexity(label: NDArray, pred: NDArray): Float = {
-    val labelArr = label.toArray
+    val batchSize = label.shape(0)
+    // TODO: NDArray transpose
+    val labelArr = Array.fill(label.size)(0)
+    (0 until batchSize).foreach(row => {
+      val labelRow = label.slice(row)
+      labelRow.toArray.zipWithIndex.foreach { case (l, col) =>
+        labelArr(col * batchSize + row) = l.toInt
+      }
+    })
     var loss = .0
     (0 until pred.shape(0)).foreach(i =>
-      loss -= Math.log(Math.max(1e-10f, pred.slice(i).toArray(labelArr(i).toInt)))
+      loss -= Math.log(Math.max(1e-10f, pred.slice(i).toArray(labelArr(i))))
     )
     Math.exp(loss / labelArr.length).toFloat
   }

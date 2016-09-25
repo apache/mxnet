@@ -64,7 +64,7 @@ object Lstm {
     }
     val paramCells = paramCellsBuf.toArray
     val lastStates = lastStatesBuf.toArray
-    assert(lastStates.length == numLstmLayer)
+    require(lastStates.length == numLstmLayer)
 
     // embeding layer
     val data = Symbol.Variable("data")
@@ -72,7 +72,7 @@ object Lstm {
     val embed = Symbol.Embedding("embed")()(Map("data" -> data, "input_dim" -> inputSize,
                                            "weight" -> embedWeight, "output_dim" -> numEmbed))
     val wordvec = Symbol.SliceChannel()()(
-      Map("data" -> embed, "num_outputs" -> seqLen, "squeeze_axis" -> true))
+      Map("data" -> embed, "num_outputs" -> seqLen, "squeeze_axis" -> 1))
 
     val hiddenAll = ArrayBuffer[Symbol]()
     var dpRatio = 0f

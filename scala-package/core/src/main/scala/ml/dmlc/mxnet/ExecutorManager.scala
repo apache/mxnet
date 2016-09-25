@@ -2,6 +2,7 @@ package ml.dmlc.mxnet
 
 import org.slf4j.{LoggerFactory, Logger}
 
+import scala.collection.immutable.ListMap
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -382,8 +383,8 @@ class DataParallelExecutorGroup private(sym: Symbol,
       sharedGroup.sharedDataArrays
     }
 
-  private[mxnet] val dataNames = providedData.map { case (k, _) => k }
-  private[mxnet] val labelNames = providedLabel.map { case (k, _) => k }
+  private[mxnet] val dataNames = providedData.map { case (k, _) => k }.toList
+  private[mxnet] val labelNames = providedLabel.map { case (k, _) => k }.toList
   private[mxnet] val auxNames = sym.listAuxiliaryStates()
   private[mxnet] val paramIdx = argNames.zipWithIndex
     .filter { case (name, i) => paramNames.contains(name) }
@@ -393,9 +394,14 @@ class DataParallelExecutorGroup private(sym: Symbol,
   private[mxnet] val trainExecs: Array[Executor] =
     ctx.zipWithIndex.map { case (ctxi, i) =>
       val dataShapes =
-        (providedData ++ providedLabel) map { case (name, shape) =>
+        // TODO
+        //(providedData ++ providedLabel) map { case (name, shape) =>
+        //  name -> (Shape(slices(i)._2 - slices(i)._1) ++ shape.slice(1, shape.length))
+        //}
+        ListMap.empty[String, Shape] ++ (dataNames ++ labelNames).map(name => {
+          val shape = (providedData ++ providedLabel)(name)
           name -> (Shape(slices(i)._2 - slices(i)._1) ++ shape.slice(1, shape.length))
-        }
+        })
       val sharedExec: Executor = if (sharedGroup == null) null else sharedGroup.trainExecs(i)
       ExecutorManager.bindExec(sym, ctxi, dataShapes, paramNamesComb,
         needGrad = true, baseExec = sharedExec,

@@ -347,7 +347,8 @@ class FeedForward private(
       epochEndCallback = Option(epochEndCallback),
       batchEndCallback = Option(batchEndCallback),
       workLoadList = workLoadList,
-      monitor = monitor)
+      monitor = monitor,
+      symGen = symGen)
   }
 
   /**
