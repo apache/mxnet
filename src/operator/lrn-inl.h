@@ -144,14 +144,6 @@ class LocalResponseNormProp : public OperatorProperty {
     };
   }
 
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-    return {{out_grad[lrn_enum::kOut], in_grad[lrn_enum::kData]}};
-  }
-
   int NumVisibleOutputs() const override {
     return 1;
   }
