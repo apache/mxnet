@@ -88,26 +88,34 @@ void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
   });
 }
 
-#define MXNET_OPERATOR_REGISTER_BINARY(name)                    \
-  NNVM_REGISTER_OP(name)                                        \
-  .set_num_inputs(2)                                            \
+#define MXNET_OPERATOR_REGISTER_BINARY(name)                        \
+  NNVM_REGISTER_OP(name)                                            \
+  .set_num_inputs(2)                                                \
   .set_num_outputs(1)                                               \
   .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                 \
-      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}}; \
-    })                                                          \
-  .add_argument("lhs", "NDArray", "first input")                \
+    [](const NodeAttrs& attrs){                                     \
+      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};     \
+    })                                                              \
+  .add_argument("lhs", "NDArray", "first input")                    \
   .add_argument("rhs", "NDArray", "second input")
 
-#define MXNET_OPERATOR_REGISTER_BINARY_BACKWARD(name)            \
-  NNVM_REGISTER_OP(name)                                         \
-  .set_num_inputs(1)                                             \
-  .set_num_outputs(2)                                            \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                  \
-    [](const NodeAttrs& attrs){                                  \
-      return std::vector<std::pair<int, int> >{{0, 1}};          \
+#define MXNET_OPERATOR_REGISTER_BINARY_BACKWARD(name)             \
+  NNVM_REGISTER_OP(name)                                          \
+  .set_num_inputs(1)                                              \
+  .set_num_outputs(2)                                             \
+  .set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex", \
+    [](const NodeAttrs& attrs) {                                  \
+      return std::vector<uint32_t>{0, 1};                         \
+    })                                                            \
+  .set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",   \
+    [](const NodeAttrs& attrs) {                                  \
+      return std::vector<uint32_t>{0};                            \
+    })                                                            \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",               \
+    [](const NodeAttrs& attrs){                                   \
+      return std::vector<std::pair<int, int> >{{0, 1}};           \
     })
 
 }  // namespace op
