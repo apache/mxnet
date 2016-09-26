@@ -8,6 +8,12 @@ import os
 import random
 import logging
 import numpy as np
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 from . import ndarray as nd
 from . import _ndarray_internal as _internal
 from ._ndarray_internal import _cvimresize as imresize
@@ -15,10 +21,6 @@ from ._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
 from . import io
 from . import recordio
 
-try:
-    import cv2
-except ImportError:
-    cv2 = None
 
 def imdecode(buf, **kwargs):
     """Decode an image from string. Requires OpenCV to work.
@@ -48,8 +50,8 @@ def scale_down(src_size, size):
         w, h = sw, float(h*sw)/w
     return int(w), int(h)
 
-def resize(src, size, interp=2):
-    """Scale shorter edge to size"""
+def resize_short(src, size, interp=2):
+    """Resize shorter edge to size"""
     h, w, _ = src.shape
     if h > w:
         new_h, new_w = size*h/w, size
@@ -116,11 +118,11 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
     out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
     return out, (x0, y0, new_w, new_h)
 
-def ScaleAug(size, interp=2):
-    """Make scale shorter edge to size augumenter"""
+def ResizeAug(size, interp=2):
+    """Make resize shorter edge to size augumenter"""
     def aug(src):
         """Augumenter body"""
-        return [resize(src, size, interp)]
+        return [resize_short(src, size, interp)]
     return aug
 
 def RandomCropAug(size, interp=2):
@@ -227,14 +229,14 @@ def CastAug():
         return [src]
     return aug
 
-def CreateAugmenter(data_shape, scale=0, rand_crop=False, rand_resize=False, rand_mirror=False,
+def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
                     mean=None, std=None, brightness=0, contrast=0, saturation=0,
                     pca_noise=0, inter_method=2):
     """Create augumenter list"""
     auglist = []
 
-    if scale > 0:
-        auglist.append(ScaleAug(scale, inter_method))
+    if resize > 0:
+        auglist.append(ResizeAug(resize, inter_method))
 
     crop_size = (data_shape[2], data_shape[1])
     if rand_resize:
