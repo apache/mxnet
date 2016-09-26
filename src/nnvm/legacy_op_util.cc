@@ -235,7 +235,7 @@ std::vector<uint32_t> OpBackInGradIndex(const NodeAttrs& attrs) {
   std::vector<int> in_data_index(prop.arguments.size(), -1);
   std::vector<int> out_data_index(prop.outputs.size(), -1);
   int counter = 0;
-  for (size_t i = 0; i < in_data_index.size(); ++i) {
+  for (size_t i = 0; i < out_grad_index.size(); ++i) {
     out_grad_index[i] = counter++;
   }
   auto args_index = prop.ptr->DeclareBackwardDependency(
