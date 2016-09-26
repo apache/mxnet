@@ -103,10 +103,12 @@ object Visualization {
       val path = s"$directory${File.separator}$filename"
       val writer = new PrintWriter(path)
       try {
+        // scalastyle:off println
         writer.println(s"${this._head}")
         this._body.toArray.foreach { line => writer.println(s"$line") }
         writer.println(s"${this._tail}")
         writer.flush()
+        // scalastyle:off println
       } finally {
         writer.close()
       }
