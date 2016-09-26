@@ -1,11 +1,12 @@
 # coding: utf-8
 # pylint: disable=no-member, too-many-lines, redefined-builtin, protected-access, unused-import, invalid-name
-# pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches
+# pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
 """Image IO API of mxnet."""
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import os
 import random
+import logging
 import numpy as np
 from . import ndarray as nd
 from . import _ndarray_internal as _internal
@@ -13,6 +14,11 @@ from ._ndarray_internal import _cvimresize as imresize
 from ._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
 from . import io
 from . import recordio
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 def imdecode(buf, **kwargs):
     """Decode an image from string. Requires OpenCV to work.
@@ -41,6 +47,15 @@ def scale_down(src_size, size):
     if sw < w:
         w, h = sw, float(h*sw)/w
     return int(w), int(h)
+
+def resize(src, size, interp=2):
+    """Scale shorter edge to size"""
+    h, w, _ = src.shape
+    if h > w:
+        new_h, new_w = size*h/w, size
+    else:
+        new_h, new_w = size, size*w/h
+    return imresize(src, new_w, new_h, interp=interp)
 
 def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
     """Crop src at fixed location, and (optionally) resize it to size"""
@@ -73,63 +88,70 @@ def center_crop(src, size, interp=2):
 
 def color_normalize(src, mean, std):
     """Normalize src with mean and std"""
-    src = src - mean
+    src -= mean
     if std is not None:
-        src = src / std
+        src /= std
     return src
 
-def random_size_crop(src, size, min_area=0.08, ratio=(3.0/4.0, 4.0/3.0), interp=2):
+def random_size_crop(src, size, min_area, ratio, interp=2):
     """Randomly crop src with size. Randomize area and aspect ratio"""
     h, w, _ = src.shape
-    area = w*h
-    for _ in range(10):
-        new_area = random.uniform(min_area, 1.0) * area
-        new_ratio = random.uniform(*ratio)
-        new_w = int(np.sqrt(new_area*new_ratio))
-        new_h = int(np.sqrt(new_area/new_ratio))
+    new_ratio = random.uniform(*ratio)
+    if new_ratio * h > w:
+        max_area = w*int(w/new_ratio)
+    else:
+        max_area = h*int(h*new_ratio)
 
-        if random.random() < 0.5:
-            new_w, new_h = new_h, new_w
+    min_area *= h*w
+    if max_area < min_area:
+        return random_crop(src, size, interp)
+    new_area = random.uniform(min_area, max_area)
+    new_w = int(np.sqrt(new_area*new_ratio))
+    new_h = int(np.sqrt(new_area/new_ratio))
 
-        if new_w > w or new_h > h:
-            continue
+    assert new_w <= w and new_h <= h
+    x0 = random.randint(0, w - new_w)
+    y0 = random.randint(0, h - new_h)
 
-        x0 = random.randint(0, w - new_w)
-        y0 = random.randint(0, h - new_h)
+    out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
+    return out, (x0, y0, new_w, new_h)
 
-        out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
-        return out, (x0, y0, new_w, new_h)
-
-    return random_crop(src, size)
+def ScaleAug(size, interp=2):
+    """Make scale shorter edge to size augumenter"""
+    def aug(src):
+        """Augumenter body"""
+        return [resize(src, size, interp)]
+    return aug
 
 def RandomCropAug(size, interp=2):
     """Make random crop augumenter"""
     def aug(src):
         """Augumenter body"""
-        return random_crop(src, size, interp)[0]
+        return [random_crop(src, size, interp)[0]]
     return aug
 
-def RandomSizedCropAug(size, min_area=0.08, ratio=(3.0/4.0, 4.0/3.0), interp=2):
+def RandomSizedCropAug(size, min_area, ratio, interp=2):
     """Make random crop with random resizing and random aspect ratio jitter augumenter"""
     def aug(src):
         """Augumenter body"""
-        return random_size_crop(src, size, min_area, ratio, interp)[0]
+        return [random_size_crop(src, size, min_area, ratio, interp)[0]]
     return aug
 
 def CenterCropAug(size, interp=2):
     """Make center crop augmenter"""
     def aug(src):
         """Augumenter body"""
-        return center_crop(src, size, interp)[0]
+        return [center_crop(src, size, interp)[0]]
     return aug
 
 def RandomOrderAug(ts):
     """Apply list of augmenters in random order"""
     def aug(src):
         """Augumenter body"""
+        src = [src]
         random.shuffle(ts)
-        for i in ts:
-            src = i(src)
+        for t in ts:
+            src = [j for i in src for j in t(i)]
         return src
     return aug
 
@@ -142,7 +164,7 @@ def ColorJitterAug(brightness, contrast, saturation):
             """Augumenter body"""
             alpha = 1.0 + random.uniform(-brightness, brightness)
             src *= alpha
-            return src
+            return [src]
         ts.append(baug)
 
     if contrast > 0:
@@ -152,8 +174,8 @@ def ColorJitterAug(brightness, contrast, saturation):
             gray = src*coef
             gray = (3.0*(1.0-alpha)/gray.size)*nd.sum(gray)
             src *= alpha
-            src = src + gray
-            return src
+            src += gray
+            return [src]
         ts.append(caug)
 
     if saturation > 0:
@@ -164,8 +186,8 @@ def ColorJitterAug(brightness, contrast, saturation):
             gray = nd.sum(gray, axis=2, keepdims=True)
             gray *= (1.0-alpha)
             src *= alpha
-            src = src + gray
-            return src
+            src += gray
+            return [src]
         ts.append(saug)
     return RandomOrderAug(ts)
 
@@ -175,8 +197,8 @@ def LightingAug(alphastd, eigval, eigvec):
         """Augumenter body"""
         alpha = np.random.normal(0, alphastd, size=(3,))
         rgb = np.dot(eigvec*alpha, eigval)
-        src = src + nd.array(rgb)
-        return src
+        src += nd.array(rgb)
+        return [src]
     return aug
 
 def ColorNormalizeAug(mean, std):
@@ -185,7 +207,7 @@ def ColorNormalizeAug(mean, std):
     std = nd.array(std)
     def aug(src):
         """Augumenter body"""
-        return color_normalize(src, mean, std)
+        return [color_normalize(src, mean, std)]
     return aug
 
 def HorizontalFlipAug(p):
@@ -194,7 +216,7 @@ def HorizontalFlipAug(p):
         """Augumenter body"""
         if random.random() < p:
             src = nd.flip(src, axis=1)
-        return src
+        return [src]
     return aug
 
 def CastAug():
@@ -202,18 +224,22 @@ def CastAug():
     def aug(src):
         """Augumenter body"""
         src = src.astype(np.float32)
-        return src
+        return [src]
     return aug
 
-def CreateAugmenter(data_shape, rand_crop=False, rand_resize=False, rand_mirror=False,
+def CreateAugmenter(data_shape, scale=0, rand_crop=False, rand_resize=False, rand_mirror=False,
                     mean=None, std=None, brightness=0, contrast=0, saturation=0,
                     pca_noise=0, inter_method=2):
     """Create augumenter list"""
     auglist = []
+
+    if scale > 0:
+        auglist.append(ScaleAug(scale, inter_method))
+
     crop_size = (data_shape[2], data_shape[1])
     if rand_resize:
         assert rand_crop
-        auglist.append(RandomSizedCropAug(crop_size, inter_method))
+        auglist.append(RandomSizedCropAug(crop_size, 0.3, (3.0/4.0, 4.0/3.0), inter_method))
     elif rand_crop:
         auglist.append(RandomCropAug(crop_size, inter_method))
     else:
@@ -238,7 +264,8 @@ def CreateAugmenter(data_shape, rand_crop=False, rand_resize=False, rand_mirror=
         mean = np.array([123.68, 116.28, 103.53])
     if std is True:
         std = np.array([58.395, 57.12, 57.375])
-    if mean:
+    if mean is not None:
+        assert std is not None
         auglist.append(ColorNormalizeAug(mean, std))
 
     return auglist
@@ -289,6 +316,7 @@ class ImageIter(io.DataIter):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist
         if path_imgrec:
+            print('loading recordio...')
             if path_imgidx:
                 self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')
                 self.imgidx = list(self.imgrec.keys)
@@ -299,6 +327,7 @@ class ImageIter(io.DataIter):
             self.imgrec = None
 
         if path_imglist:
+            print('loading image list...')
             with open(path_imglist) as fin:
                 imglist = {}
                 imgkeys = []
@@ -315,7 +344,10 @@ class ImageIter(io.DataIter):
 
         assert len(data_shape) == 3 and data_shape[0] == 3
         self.provide_data = [('data', (batch_size,) + data_shape)]
-        self.provide_label = [('softmax_label', (batch_size, label_width))]
+        if label_width > 1:
+            self.provide_label = [('softmax_label', (batch_size, label_width))]
+        else:
+            self.provide_label = [('softmax_label', (batch_size,))]
         self.batch_size = batch_size
         self.data_shape = data_shape
         self.label_width = label_width
@@ -370,6 +402,8 @@ class ImageIter(io.DataIter):
                 return label, img
         else:
             s = self.imgrec.read()
+            if s is None:
+                raise StopIteration
             header, img = recordio.unpack(s)
             return header.label, img
 
@@ -377,16 +411,22 @@ class ImageIter(io.DataIter):
         batch_size = self.batch_size
         c, h, w = self.data_shape
         batch_data = nd.zeros((batch_size, h, w, c))
-        batch_label = nd.zeros((batch_size, self.label_width))
+        batch_label = nd.zeros(self.provide_label[0][1])
         i = 0
         try:
-            for i in range(batch_size):
-                label, data = self.next_sample()
-                data = imdecode(data)
+            while i < batch_size:
+                label, s = self.next_sample()
+                data = [imdecode(s)]
+                if len(data[0].shape) == 0:
+                    logging.debug('Invalid image, skipping.')
+                    continue
                 for aug in self.auglist:
-                    data = aug(data)
-                batch_data[i][:] = data
-                batch_label[i][:] = label
+                    data = [ret for src in data for ret in aug(src)]
+                for d in data:
+                    assert i < batch_size, 'Batch size must be multiples of augmenter output length'
+                    batch_data[i][:] = d
+                    batch_label[i][:] = label
+                    i += 1
         except StopIteration:
             if not i:
                 raise StopIteration
