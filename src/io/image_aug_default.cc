@@ -23,8 +23,8 @@ namespace io {
 
 /*! \brief image augmentation parameters*/
 struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentParam> {
-  /*! \brief scale shorter edge to size before applying other augmentations */
-  int scale;
+  /*! \brief resize shorter edge to size before applying other augmentations */
+  int resize;
   /*! \brief whether we do random cropping */
   bool rand_crop;
   /*! \brief whether we do nonrandom croping */
@@ -67,7 +67,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   TShape data_shape;
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
-    DMLC_DECLARE_FIELD(scale).set_default(-1)
+    DMLC_DECLARE_FIELD(resize).set_default(-1)
         .describe("Augmentation Param: scale shorter edge to size "
                   "before applying other augmentations.");
     DMLC_DECLARE_FIELD(rand_crop).set_default(false)
@@ -173,14 +173,14 @@ class DefaultImageAugmenter : public ImageAugmenter {
                   common::RANDOM_ENGINE *prnd) override {
     using mshadow::index_t;
     cv::Mat res;
-    if (param_.scale != -1) {
+    if (param_.resize != -1) {
       int new_height, new_width;
       if (src.rows > src.cols) {
-        new_height = param_.scale*src.rows/src.cols;
-        new_width = param_.scale;
+        new_height = param_.resize*src.rows/src.cols;
+        new_width = param_.resize;
       } else {
-        new_height = param_.scale;
-        new_width = param_.scale*src.cols/src.rows;
+        new_height = param_.resize;
+        new_width = param_.resize*src.cols/src.rows;
       }
       CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
        (param_.inter_method >= 9 && param_.inter_method <= 10))
