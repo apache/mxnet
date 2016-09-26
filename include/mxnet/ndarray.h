@@ -273,7 +273,11 @@ class NDArray {
     CHECK_GE(shape_[0], idx) << "index out of range";
     size_t length = shape_.ProdShape(1, shape_.ndim());
     ret.offset_ += idx * length;
-    ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
+    if (shape_.ndim() > 1) {
+      ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
+    } else {
+      ret.shape_ = mshadow::Shape1(1);
+    }
     return ret;
   }
   /*!
