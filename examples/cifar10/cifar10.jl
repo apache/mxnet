@@ -5,9 +5,9 @@ using MXNet
 
 # basic Conv + BN + ReLU factory
 function conv_factory(data, num_filter, kernel; stride=(1,1), pad=(0,0), act_type=:relu)
-  conv = mx.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad)
-  bn   = mx.BatchNorm(data=conv)
-  act  = mx.Activation(data=bn, act_type=act_type)
+  conv = mx.Convolution(data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad)
+  bn   = mx.BatchNorm(conv)
+  act  = mx.Activation(bn, act_type=act_type)
   return act
 end
 
@@ -16,7 +16,7 @@ function downsample_factory(data, ch_3x3)
   # conv 3x3
   conv = conv_factory(data, ch_3x3, (3,3), stride=(2,2), pad=(1,1))
   # pool
-  pool = mx.Pooling(data=data, kernel=(3,3), stride=(2,2), pool_type=:max)
+  pool = mx.Pooling(data, kernel=(3,3), stride=(2,2), pool_type=:max)
   # concat
   concat = mx.Concat(conv, pool)
   return concat
@@ -48,10 +48,10 @@ in4d    = simple_factory(in4b, 48, 96)
 in4e    = downsample_factory(in4d, 96)
 in5a    = simple_factory(in4e, 176, 160)
 in5b    = simple_factory(in5a, 176, 160)
-pool    = mx.Pooling(data=in5b, pool_type=:avg, kernel=(7,7), name=:global_pool)
-flatten = mx.Flatten(data=pool, name=:flatten1)
-fc      = mx.FullyConnected(data=flatten, num_hidden=10, name=:fc1)
-softmax = mx.SoftmaxOutput(data=fc, name=:loss)
+pool    = mx.Pooling(in5b, pool_type=:avg, kernel=(7,7), name=:global_pool)
+flatten = mx.Flatten(pool, name=:flatten1)
+fc      = mx.FullyConnected(flatten, num_hidden=10, name=:fc1)
+softmax = mx.SoftmaxOutput(fc, name=:loss)
 
 
 #--------------------------------------------------------------------------------

@@ -6,12 +6,12 @@ using MXNet
 
 #-- Option 1: explicit composition
 # data = mx.Variable(:data)
-# fc1  = mx.FullyConnected(data = data, name=:fc1, num_hidden=128)
-# act1 = mx.Activation(data = fc1, name=:relu1, act_type=:relu)
-# fc2  = mx.FullyConnected(data = act1, name=:fc2, num_hidden=64)
-# act2 = mx.Activation(data = fc2, name=:relu2, act_type=:relu)
-# fc3  = mx.FullyConnected(data = act2, name=:fc3, num_hidden=10)
-# mlp  = mx.SoftmaxOutput(data = fc3, name=:softmax)
+# fc1  = mx.FullyConnected(data, name=:fc1, num_hidden=128)
+# act1 = mx.Activation(fc1, name=:relu1, act_type=:relu)
+# fc2  = mx.FullyConnected(act1, name=:fc2, num_hidden=64)
+# act2 = mx.Activation(fc2, name=:relu2, act_type=:relu)
+# fc3  = mx.FullyConnected(act2, name=:fc3, num_hidden=10)
+# mlp  = mx.SoftmaxOutput(fc3, name=:softmax)
 
 #-- Option 2: using the mx.chain macro
 # mlp = @mx.chain mx.Variable(:data)             =>
