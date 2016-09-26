@@ -5,6 +5,7 @@
  * \author Junyuan Xie
  */
 #include <dmlc/parameter.h>
+#include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
@@ -23,7 +24,8 @@ namespace mxnet {
 namespace io {
 
 // http://www.64lines.com/jpeg-width-height
-// Gets the JPEG size from the array of data passed to the function, file reference: http://www.obrador.com/essentialjpeg/headerinfo.htm
+// Gets the JPEG size from the array of data passed to the function,
+// file reference: http://www.obrador.com/essentialjpeg/headerinfo.htm
 bool get_jpeg_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uint32_t *height) {
   // Check for valid JPEG image
   uint32_t i = 0;  // Keeps track of the position within the file
@@ -39,7 +41,8 @@ bool get_jpeg_size(const uint8_t* data, uint32_t data_size, uint32_t *width, uin
         i+=block_length;  // Increase the file index to get to the next block
         if (i >= data_size) return false;  // Check to protect against segmentation faults
         if (data[i] != 0xFF) return false;  // Check that we are truly at the start of another block
-        if (data[i+1] == 0xC0) {
+        uint8_t m = data[i+1];
+        if (m == 0xC0 || (m >= 0xC1 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC)) {
           // 0xFFC0 is the "Start of frame" marker which contains the file size
           // The structure of the 0xFFC0 block is quite simple
           // [0xFFC0][ushort length][uchar precision][ushort x][ushort y]
@@ -99,16 +102,34 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
   const uint8_t* str_img = reinterpret_cast<uint8_t*>(inputs[0].data().dptr_);
   uint32_t len = inputs[0].shape().Size();
 
-  inputs[0].WaitToRead();
+  NDArray ndin = inputs[0];
+  ndin.WaitToRead();
   TShape oshape(3);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
   } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
   } else {
-    LOG(FATAL) << "Only supports png and jpg.";
+    cv::Mat buf(1, ndin.shape().Size(), CV_8U, ndin.data().dptr_);
+    cv::Mat res = cv::imdecode(buf, param.flag);
+    if (res.empty()) {
+      LOG(INFO) << "Invalid image file. Only supports png and jpg.";
+      (*outputs)[0] = NDArray();
+      return;
+    }
+    oshape[0] = res.rows;
+    oshape[1] = res.cols;
+    NDArray ndout(oshape, Context::CPU(), false, mshadow::kUint8);
+    cv::Mat dst(ndout.shape()[0], ndout.shape()[1],
+                param.flag == 0 ? CV_8U : CV_8UC3,
+                ndout.data().dptr_);
+    res.copyTo(dst);
+    if (param.to_rgb) {
+      cv::cvtColor(dst, dst, CV_BGR2RGB);
+    }
+    (*outputs)[0] = ndout;
+    return;
   }
 
-  NDArray ndin = inputs[0];
   NDArray ndout(oshape, Context::CPU(), true, mshadow::kUint8);
   Engine::Get()->PushSync([ndin, ndout, param](RunContext ctx){
       ndout.CheckAndAlloc();
