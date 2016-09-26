@@ -1,10 +1,11 @@
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.Symbol
-import ml.dmlc.mxnet.Shape
 import scala.util.parsing.json._
 import java.io.File
 import java.io.PrintWriter
+import scala.collection.mutable.ArrayBuffer
+import ml.dmlc.mxnet.Symbol
+import ml.dmlc.mxnet.Shape
 
 /**
  * @author Depeng Liang
@@ -65,9 +66,8 @@ object Visualization {
     private val _node = "\t%s %s"
     private val _edge = "\t\t%s -> %s %s"
     private val _tail = "}"
-    private var _body = Array[String]()
+    private val _body = ArrayBuffer[String]()
 
-    import scala.collection.mutable.Map
     private def attribute(label: String = null, attrs: Map[String, String]): String = {
       if (label != null) {
         s"[label=$label ${("" /: attrs){ (acc, elem) => s"$acc ${elem._1}=${elem._2}"}}]"
@@ -84,7 +84,7 @@ object Visualization {
      * @param attrs Any additional node attributes (must be strings).
      */
     def node(name: String, label: String = null, attrs: Map[String, String]): Unit = {
-      _body :+= _node.format(name, attribute(label, attrs))
+      _body += _node.format(name, attribute(label, attrs))
     }
 
     /**
@@ -93,26 +93,29 @@ object Visualization {
      * @param headName End node identifier.
      * @param label Caption to be displayed near the edge.
      * @param attrs Any additional edge attributes (must be strings).
-      */
+     */
     def edge(tailName: String, headName: String,
         label: String = null, attrs: Map[String, String]): Unit = {
-      _body :+= _edge.format(tailName, headName, attribute(label, attrs))
+      _body += _edge.format(tailName, headName, attribute(label, attrs))
     }
 
     private def save(filename: String, directory: String): String = {
       val path = s"$directory${File.separator}$filename"
       val writer = new PrintWriter(path)
-      writer.write(s"${this._head}\n")
-      this._body.foreach { line => writer.write(s"$line\n") }
-      writer.write(s"${this._tail}\n")
-      writer.flush()
-      writer.close()
+      try {
+        writer.println(s"${this._head}")
+        this._body.toArray.foreach { line => writer.println(s"$line") }
+        writer.println(s"${this._tail}")
+        writer.flush()
+      } finally {
+        writer.close()
+      }
       path
     }
 
     private def command(engine: String, format: String, filepath: String): String = {
-      assert(ENGINES.contains(engine) == true, s"unknown engine: $engine")
-      assert(FORMATS.contains(format) == true, s"unknown format: $format")
+      require(ENGINES.contains(engine) == true, s"unknown engine: $engine")
+      require(FORMATS.contains(format) == true, s"unknown format: $format")
       s"$engine -T${format} -O $filepath"
     }
 
@@ -168,7 +171,7 @@ object Visualization {
       else {
         val internals = symbol.getInternals()
         val (_, outShapes, _) = internals.inferShape(shape)
-        assert(outShapes != null, "Input shape is incompete")
+        require(outShapes != null, "Input shape is incompete")
         val shapeDict = internals.listOutputs().zip(outShapes).toMap
         (true, shapeDict)
       }
@@ -177,15 +180,15 @@ object Visualization {
       case None => null
       case Some(map) => map.asInstanceOf[Map[String, Any]]
     }
-    assert(conf != null)
+    require(conf != null)
 
-    assert(conf.contains("nodes"))
+    require(conf.contains("nodes"))
     val nodes = conf("nodes").asInstanceOf[List[Any]]
 
-    assert(conf.contains("heads"))
+    require(conf.contains("heads"))
     val heads = {
       val headsList = conf("heads").asInstanceOf[List[List[Int]]]
-      assert(headsList.length > 0)
+      require(headsList.length > 0)
       headsList(0).toSet
     }
 
@@ -242,7 +245,7 @@ object Visualization {
         case "Softmax" => attr("fillcolor") = cm(6)
         case _ => attr("fillcolor") = cm(7)
       }
-      if (!continue) dot.node(name = name , label, attr)
+      if (!continue) dot.node(name = name , label, attr.toMap)
     }
 
     // add edges
@@ -267,7 +270,7 @@ object Visualization {
               val label = s""""${shape.mkString("x")}""""
               attrs("label") = label
             }
-            dot.edge(tailName = name, headName = inputName, attrs = attrs)
+            dot.edge(tailName = name, headName = inputName, attrs = attrs.toMap)
           }
         }
       }
