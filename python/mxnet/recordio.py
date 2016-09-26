@@ -16,9 +16,8 @@ from .base import check_call
 from .base import c_str
 try:
     import cv2
-    opencv_available = True
 except ImportError:
-    opencv_available = False
+    cv2 = None
 
 class MXRecordIO(object):
     """Python interface for read/write RecordIO data formmat
@@ -233,7 +232,7 @@ def unpack_img(s, iscolor=-1):
     """
     header, s = unpack(s)
     img = np.fromstring(s, dtype=np.uint8)
-    assert opencv_available
+    assert cv2 is not None
     img = cv2.imdecode(img, iscolor)
     return header, img
 
@@ -257,7 +256,7 @@ def pack_img(header, img, quality=80, img_fmt='.jpg'):
     s : str
         The packed string
     """
-    assert opencv_available
+    assert cv2 is not None
     jpg_formats = ['.JPG', '.JPEG']
     png_formats = ['.PNG']
     encode_params = None
