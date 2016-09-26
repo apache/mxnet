@@ -338,25 +338,29 @@ struct ReduceGrad {
   .set_num_inputs(1)                                            \
   .set_num_outputs(1)                                           \
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
-  .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)      \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
+  .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .add_argument("src", "NDArray", "Source input")
 
-#define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)           \
-  NNVM_REGISTER_OP(name)                                        \
-  .set_num_outputs(1)                                           \
-  .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
+#define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
+  NNVM_REGISTER_OP(name)                                            \
+  .set_num_outputs(1)                                               \
+  .set_attr_parser(AxesParamParser<ReduceAxesParam>)                \
   .set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",   \
-    [](const NodeAttrs& attrs) {                                \
-      return std::vector<uint32_t>{0};                          \
+    [](const NodeAttrs& attrs) {                                    \
+      return std::vector<uint32_t>{0};                              \
+    })                                                              \
+  .set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",     \
+    [](const NodeAttrs& attrs) {                                    \
+      return std::vector<uint32_t>{0};                              \
     })
 
 #define MXNET_OPERATOR_REGISTER_BROADCAST(name)                 \
   NNVM_REGISTER_OP(name)                                        \
   .set_num_inputs(1)                                            \
   .set_num_outputs(1)                                           \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<nnvm::FGradient>("FGradient",                           \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
+  .set_attr<nnvm::FGradient>("FGradient",                       \
     [](const nnvm::NodePtr& n,                                  \
        const std::vector<nnvm::NodeEntry>& ograds) {            \
       return MakeGradNode("sum", n, ograds,                     \
