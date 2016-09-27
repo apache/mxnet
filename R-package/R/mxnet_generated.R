@@ -615,7 +615,7 @@ NULL
 
 #' Take arccos of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:137
+#' From:src/operator/tensor/elemwise_unary_op.cc:155
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -625,9 +625,21 @@ NULL
 #' @name mx.nd.arccos
 NULL
 
+#' Take arccosh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:227
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.arccosh
+NULL
+
 #' Take arcsin of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:128
+#' From:src/operator/tensor/elemwise_unary_op.cc:146
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -637,9 +649,21 @@ NULL
 #' @name mx.nd.arcsin
 NULL
 
+#' Take arcsinh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:218
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.arcsinh
+NULL
+
 #' Take arctan of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:146
+#' From:src/operator/tensor/elemwise_unary_op.cc:164
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -647,6 +671,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.arctan
+NULL
+
+#' Take arctanh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:236
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.arctanh
 NULL
 
 #' Take argmax indices of each channel of the src.The result will be ndarray of shape (num_channel,) on the same device.
@@ -693,6 +729,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.broadcast.div
+NULL
+
+#' broadcast_hypot
+#' 
+#' @param lhs  NDArray
+#'     first input
+#' @param rhs  NDArray
+#'     second input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.hypot
 NULL
 
 #' broadcast_maximum
@@ -819,7 +867,7 @@ NULL
 
 #' Take cos of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:101
+#' From:src/operator/tensor/elemwise_unary_op.cc:128
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -827,6 +875,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.cos
+NULL
+
+#' Take cosh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:200
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.cosh
 NULL
 
 #' Crop the input matrix and return a new one
@@ -841,6 +901,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.crop
+NULL
+
+#' Take degrees of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:173
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.degrees
 NULL
 
 #' Calculate dot product of two matrices or two vectors
@@ -877,6 +949,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.expand.dims
+NULL
+
+#' Take `exp(x) - 1` in a numerically stable way
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:119
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.expm1
 NULL
 
 #' Fill one element of each line(row for python, column for R/Julia) in lhs according to index indicated by rhs and values indicated by mhs. This function assume rhs uses 0-based index.
@@ -917,6 +1001,30 @@ NULL
 #' @name mx.nd.floor
 NULL
 
+#' Take the gamma function (extension of the factorial function) of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:245
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.gamma
+NULL
+
+#' Take gammaln (log of the absolute value of gamma(x)) of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:254
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.gammaln
+NULL
+
 #' Take log of the src
 #' 
 #' From:src/operator/tensor/elemwise_unary_op.cc:92
@@ -927,6 +1035,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.log
+NULL
+
+#' Take `log(1 + x)` in a numerically stable way
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:110
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.log1p
 NULL
 
 #' Compute max along axis. If axis is empty, global reduction is performed
@@ -989,6 +1109,18 @@ NULL
 #' @name mx.nd.normal
 NULL
 
+#' Take radians of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:182
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.radians
+NULL
+
 #' Take round of the src
 #' 
 #' From:src/operator/tensor/elemwise_unary_op.cc:43
@@ -1043,7 +1175,7 @@ NULL
 
 #' Take sin of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:110
+#' From:src/operator/tensor/elemwise_unary_op.cc:101
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -1051,6 +1183,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.sin
+NULL
+
+#' Take sinh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:191
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.sinh
 NULL
 
 #' Slice the input along certain axis and return a sliced array.
@@ -1129,7 +1273,7 @@ NULL
 
 #' Take tan of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:119
+#' From:src/operator/tensor/elemwise_unary_op.cc:137
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -1137,6 +1281,18 @@ NULL
 #' 
 #' @export
 #' @name mx.nd.tan
+NULL
+
+#' Take tanh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:209
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.tanh
 NULL
 
 #' Transpose the input matrix and return a new one
@@ -1210,10 +1366,12 @@ mx.io.CSVIter <- function(...) {
 #'     Batch Param: Batch size.
 #' @param round.batch  boolean, optional, default=True
 #'     Batch Param: Use round robin to handle overflow batch.
-#' @param prefetch.buffer  long (non-negative), optional, default=4
+#' @param prefetch.buffer  , optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @param dtype  {'float16', 'float32', 'float64'},optional, default='float32'
 #'     Data type.
+#' @param resize  int, optional, default='-1'
+#'     Augmentation Param: scale shorter edge to size before applying other augmentations.
 #' @param rand.crop  boolean, optional, default=False
 #'     Augmentation Param: Whether to random crop on the image
 #' @param crop.y.start  int, optional, default='-1'
@@ -1301,7 +1459,7 @@ mx.io.ImageRecordIter <- function(...) {
 #'     partition the data into multiple parts
 #' @param part.index  int, optional, default='0'
 #'     the index of the part will read
-#' @param prefetch.buffer  long (non-negative), optional, default=4
+#' @param prefetch.buffer  , optional, default=4
 #'     Backend Param: Number of prefetched parameters
 #' @param dtype  {'float16', 'float32', 'float64'},optional, default='float32'
 #'     Data type.
@@ -2019,7 +2177,7 @@ mx.symbol.adam_update <- function(...) {
 
 #' arccos:Take arccos of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:137
+#' From:src/operator/tensor/elemwise_unary_op.cc:155
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -2032,9 +2190,24 @@ mx.symbol.arccos <- function(...) {
   mx.varg.symbol.arccos(list(...))
 }
 
+#' arccosh:Take arccosh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:227
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.arccosh <- function(...) {
+  mx.varg.symbol.arccosh(list(...))
+}
+
 #' arcsin:Take arcsin of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:128
+#' From:src/operator/tensor/elemwise_unary_op.cc:146
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -2047,9 +2220,24 @@ mx.symbol.arcsin <- function(...) {
   mx.varg.symbol.arcsin(list(...))
 }
 
+#' arcsinh:Take arcsinh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:218
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.arcsinh <- function(...) {
+  mx.varg.symbol.arcsinh(list(...))
+}
+
 #' arctan:Take arctan of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:146
+#' From:src/operator/tensor/elemwise_unary_op.cc:164
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -2060,6 +2248,21 @@ mx.symbol.arcsin <- function(...) {
 #' @export
 mx.symbol.arctan <- function(...) {
   mx.varg.symbol.arctan(list(...))
+}
+
+#' arctanh:Take arctanh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:236
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.arctanh <- function(...) {
+  mx.varg.symbol.arctanh(list(...))
 }
 
 #' argmax_channel:Take argmax indices of each channel of the src.The result will be ndarray of shape (num_channel,) on the same device.
@@ -2118,6 +2321,21 @@ mx.symbol.broadcast_axis <- function(...) {
 #' @export
 mx.symbol.broadcast_div <- function(...) {
   mx.varg.symbol.broadcast_div(list(...))
+}
+
+#' broadcast_hypot:
+#' 
+#' @param lhs  NDArray
+#'     first input
+#' @param rhs  NDArray
+#'     second input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_hypot <- function(...) {
+  mx.varg.symbol.broadcast_hypot(list(...))
 }
 
 #' broadcast_maximum:
@@ -2274,7 +2492,7 @@ mx.symbol.clip <- function(...) {
 
 #' cos:Take cos of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:101
+#' From:src/operator/tensor/elemwise_unary_op.cc:128
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -2285,6 +2503,21 @@ mx.symbol.clip <- function(...) {
 #' @export
 mx.symbol.cos <- function(...) {
   mx.varg.symbol.cos(list(...))
+}
+
+#' cosh:Take cosh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:200
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.cosh <- function(...) {
+  mx.varg.symbol.cosh(list(...))
 }
 
 #' crop:Crop the input matrix and return a new one
@@ -2302,6 +2535,21 @@ mx.symbol.cos <- function(...) {
 #' @export
 mx.symbol.crop <- function(...) {
   mx.varg.symbol.crop(list(...))
+}
+
+#' degrees:Take degrees of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:173
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.degrees <- function(...) {
+  mx.varg.symbol.degrees(list(...))
 }
 
 #' dot:Calculate dot product of two matrices or two vectors
@@ -2347,6 +2595,21 @@ mx.symbol.exp <- function(...) {
 #' @export
 mx.symbol.expand_dims <- function(...) {
   mx.varg.symbol.expand_dims(list(...))
+}
+
+#' expm1:Take `exp(x) - 1` in a numerically stable way
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:119
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.expm1 <- function(...) {
+  mx.varg.symbol.expm1(list(...))
 }
 
 #' fill_element_0index:Fill one element of each line(row for python, column for R/Julia) in lhs according to index indicated by rhs and values indicated by mhs. This function assume rhs uses 0-based index.
@@ -2396,6 +2659,36 @@ mx.symbol.floor <- function(...) {
   mx.varg.symbol.floor(list(...))
 }
 
+#' gamma:Take the gamma function (extension of the factorial function) of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:245
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.gamma <- function(...) {
+  mx.varg.symbol.gamma(list(...))
+}
+
+#' gammaln:Take gammaln (log of the absolute value of gamma(x)) of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:254
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.gammaln <- function(...) {
+  mx.varg.symbol.gammaln(list(...))
+}
+
 #' log:Take log of the src
 #' 
 #' From:src/operator/tensor/elemwise_unary_op.cc:92
@@ -2409,6 +2702,21 @@ mx.symbol.floor <- function(...) {
 #' @export
 mx.symbol.log <- function(...) {
   mx.varg.symbol.log(list(...))
+}
+
+#' log1p:Take `log(1 + x)` in a numerically stable way
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:110
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.log1p <- function(...) {
+  mx.varg.symbol.log1p(list(...))
 }
 
 #' max:Compute max along axis. If axis is empty, global reduction is performed
@@ -2486,6 +2794,21 @@ mx.symbol.normal <- function(...) {
   mx.varg.symbol.normal(list(...))
 }
 
+#' radians:Take radians of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:182
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.radians <- function(...) {
+  mx.varg.symbol.radians(list(...))
+}
+
 #' round:Take round of the src
 #' 
 #' From:src/operator/tensor/elemwise_unary_op.cc:43
@@ -2555,7 +2878,7 @@ mx.symbol.sign <- function(...) {
 
 #' sin:Take sin of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:110
+#' From:src/operator/tensor/elemwise_unary_op.cc:101
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -2566,6 +2889,21 @@ mx.symbol.sign <- function(...) {
 #' @export
 mx.symbol.sin <- function(...) {
   mx.varg.symbol.sin(list(...))
+}
+
+#' sinh:Take sinh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:191
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.sinh <- function(...) {
+  mx.varg.symbol.sinh(list(...))
 }
 
 #' slice_axis:Slice the input along certain axis and return a sliced array.
@@ -2662,7 +3000,7 @@ mx.symbol.sum <- function(...) {
 
 #' tan:Take tan of the src
 #' 
-#' From:src/operator/tensor/elemwise_unary_op.cc:119
+#' From:src/operator/tensor/elemwise_unary_op.cc:137
 #' 
 #' @param src  NDArray
 #'     Source input
@@ -2673,6 +3011,21 @@ mx.symbol.sum <- function(...) {
 #' @export
 mx.symbol.tan <- function(...) {
   mx.varg.symbol.tan(list(...))
+}
+
+#' tanh:Take tanh of the src
+#' 
+#' From:src/operator/tensor/elemwise_unary_op.cc:209
+#' 
+#' @param src  NDArray
+#'     Source input
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.tanh <- function(...) {
+  mx.varg.symbol.tanh(list(...))
 }
 
 #' transpose:Transpose the input matrix and return a new one
