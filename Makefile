@@ -227,9 +227,9 @@ lib/libmxnet.a: $(ALLX_DEP)
 	ar crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALLX_DEP)
-	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o, $^) $(LDFLAGS) \
-	-Wl,${WHOLE_ARCH} $(filter %.a, $^) -Wl,${NO_WHOLE_ARCH}
+	 @mkdir -p $(@D)
+	 $(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
+	 -Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 
 $(PS_PATH)/build/libps.a: PSLITE
 
