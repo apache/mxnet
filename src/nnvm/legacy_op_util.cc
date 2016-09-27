@@ -229,6 +229,29 @@ std::vector<uint32_t> OpBackOutToInIndex(const NodeAttrs& attrs) {
   return idx;
 }
 
+std::vector<uint32_t> OpBackInGradIndex(const NodeAttrs& attrs) {
+  auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
+  std::vector<int> out_grad_index(prop.ptr->NumVisibleOutputs());
+  std::vector<int> in_data_index(prop.arguments.size(), -1);
+  std::vector<int> out_data_index(prop.outputs.size(), -1);
+  int counter = 0;
+  for (size_t i = 0; i < out_grad_index.size(); ++i) {
+    out_grad_index[i] = counter++;
+  }
+  auto args_index = prop.ptr->DeclareBackwardDependency(
+      out_grad_index, in_data_index, out_data_index);
+  std::vector<uint32_t> ret;
+  counter = 0;
+  for (size_t i = 0; i < args_index.size(); ++i) {
+    if (args_index[i] >= 0) {
+      CHECK_EQ(args_index[i], counter);
+      ++counter;
+      ret.push_back(static_cast<uint32_t>(i));
+    }
+  }
+  return ret;
+}
+
 inline uint32_t OpBackNumOutputs(const NodeAttrs& attrs) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
   return static_cast<uint32_t>(prop.arguments.size());
@@ -372,6 +395,8 @@ void RegisterLegacyOpProp() {
     back_op.set_num_outputs(OpBackNumOutputs);
     back_op.set_attr<nnvm::FBackwardOutToInIndex>(
         "FBackwardOutToInIndex", OpBackOutToInIndex);
+    back_op.set_attr<nnvm::FBackwardInGradIndex>(
+        "FBackwardInGradIndex", OpBackInGradIndex);
     back_op.set_attr<nnvm::FListOutputNames>("FListOutputNames", OpBackListOutputNames);
     back_op.set_attr<nnvm::FMutateInputs>("FMutateInputs", OpBackMutateInputs);
     back_op.set_attr<nnvm::FInplaceOption>("FInplaceOption", OpBackInplaceOption);
