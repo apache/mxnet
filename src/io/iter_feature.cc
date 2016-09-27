@@ -1,5 +1,7 @@
 /*!
- *  feature array iter
+ *  Copyright (c) 2016 by Contributors
+ * \file iter_feature.cc
+ * \brief feature recordio data iterator
  */
 #include <mxnet/io.h>
 #include <dmlc/base.h>
@@ -43,7 +45,7 @@ struct FeatureParserParam : public dmlc::Parameter<FeatureParserParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(FeatureParserParam) {
     DMLC_DECLARE_FIELD(path_featurebin).set_default("./data/feature.rec")
-        .describe("Dataset Param: Path to feature rec file，replace imagedata with feature in the rec file");
+        .describe("Dataset Param: Path to packed feature rec file");
     DMLC_DECLARE_FIELD(label_count).set_lower_bound(1).set_default(1)
         .describe("Dataset Param: How many labels for an image.");
     DMLC_DECLARE_FIELD(feature_dim).set_lower_bound(1).set_default(1024)
@@ -120,12 +122,11 @@ inline void FeatureIOParser::Init(
       param_.num_parts, "recordio"));
   // use 64 MB chunk when possible
   source_->HintChunkSize(8 << 20UL);
-
 }
 
 inline bool FeatureIOParser::
 ParseNext(std::vector<InstVectorFea> *out_vec) {
-   bool ret = true;
+  bool ret = true;
   CHECK(source_ != nullptr);
   dmlc::InputSplit::Blob chunk;
   if (!source_->NextChunk(&chunk)) return false;
@@ -148,14 +149,13 @@ ParseNext(std::vector<InstVectorFea> *out_vec) {
              mshadow::Shape1(param_.feature_dim),
              mshadow::Shape1(param_.label_count));
 
-    if (rec.content_size != param_.feature_dim * sizeof(double)){
+    if (rec.content_size != param_.feature_dim * sizeof(double)) {
         ret = false;
     }
     mshadow::Tensor<cpu, 1> data = out.data().Back();
-    double* fea_val = (double*)(rec.content);
-    for (int i = 0; i < param_.feature_dim; i++)
-    {
-        data[i] = (float)fea_val[i];
+    double* fea_val = reinterpret_cast<double*>(rec.content);
+    for (int i = 0; i < param_.feature_dim; i++) {
+        data[i] = static_cast<float>(fea_val[i]);
     }
 
     mshadow::Tensor<cpu, 1> label = out.label().Back();

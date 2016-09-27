@@ -181,7 +181,7 @@ class InstVectorFea {
   std::vector<unsigned> index_;
   // feature data(feature array)
   TensorVector<1, real_t> data_;
- // label
+  // label
   TensorVector<1, real_t> label_;
 };
 

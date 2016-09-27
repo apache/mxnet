@@ -26,6 +26,7 @@ include $(DMLC_CORE)/make/dmlc.mk
 # all tge possible warning tread
 WARNFLAGS= -Wall
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+#DEBUG = 1
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
@@ -50,6 +51,7 @@ ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1 `pkg-config --cflags opencv`
 	LDFLAGS += `pkg-config --libs opencv`
 	BIN += bin/im2rec
+        BIN += bin/fea2rec
 else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
 endif
@@ -200,6 +202,7 @@ DMLCCORE:
 	+ cd $(DMLC_CORE); make libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALL_DEP)
+bin/fea2rec: tools/im2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
