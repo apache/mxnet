@@ -1,6 +1,8 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+
+import scala.collection.immutable.ListMap
 import scala.collection.mutable.ArrayBuffer
 
 object Executor {
@@ -98,7 +100,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
           }
         }
       } else {
-        import java.lang.AssertionError
         throw new  AssertionError(s"Shape of unspecified array arg:$name changed." +
                     "This can cause the new executor to not share parameters " +
                     "with the old one. Please check for error in network." +
@@ -121,7 +122,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
           newAuxDict = newAuxDict + (name -> arr.reshape(newShape.toArray))
         }
       } else {
-        import java.lang.AssertionError
         throw new  AssertionError(s"Shape of unspecified array aux:$name changed." +
                   "This can cause the new executor to not share parameters " +
                   "with the old one. Please check for error in network." +

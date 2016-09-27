@@ -221,7 +221,7 @@ object ExecutorManager {
         require(sliced.shape == dst.shape,
           s"src shape ${sliced.shape} mismatch dst shape ${dst.shape}")
         sliced.copyTo(dst)
-        sliced.dispose()
+        // sliced.dispose()
       }
     }
   }
@@ -251,7 +251,7 @@ object ExecutorManager {
       paramNames: Set[String], needGrad: Boolean = false,
       grads: Set[String] = null, baseExec: Executor = null,
       sharedDataArrays: mutable.Map[String, NDArray] = null,
-      inputTypes: Map[String, Class[_ >: Float with Int with Double]] = null) = {
+      inputTypes: ListMap[String, Class[_ >: Float with Int with Double]] = null) = {
     val (argShape, _, auxShape) = sym.inferShape(inputShapes)
     require(argShape != null)
     val inputTypesUpdate =
@@ -394,14 +394,9 @@ class DataParallelExecutorGroup private(sym: Symbol,
   private[mxnet] val trainExecs: Array[Executor] =
     ctx.zipWithIndex.map { case (ctxi, i) =>
       val dataShapes =
-        // TODO
-        //(providedData ++ providedLabel) map { case (name, shape) =>
-        //  name -> (Shape(slices(i)._2 - slices(i)._1) ++ shape.slice(1, shape.length))
-        //}
-        ListMap.empty[String, Shape] ++ (dataNames ++ labelNames).map(name => {
-          val shape = (providedData ++ providedLabel)(name)
+        (providedData ++ providedLabel) map { case (name, shape) =>
           name -> (Shape(slices(i)._2 - slices(i)._1) ++ shape.slice(1, shape.length))
-        })
+        }
       val sharedExec: Executor = if (sharedGroup == null) null else sharedGroup.trainExecs(i)
       ExecutorManager.bindExec(sym, ctxi, dataShapes, paramNamesComb,
         needGrad = true, baseExec = sharedExec,

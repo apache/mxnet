@@ -359,10 +359,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    */
   def simpleBind(ctx: Context, gradReq: String = "write",
                  shapeDict: Map[String, Shape],
-                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null): Executor = {
+                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null)
+                 : Executor = {
     val types =
-      if (typeDict == null) listArguments().map((_, classOf[Float])).toMap
-      else typeDict
+      if (typeDict == null) {
+        listArguments().map((_, classOf[Float])).toMap
+      } else {
+        typeDict
+      }
     val (argShapes, _, auxShapes) = inferShape(shapeDict)
     val (argTypes, _, auxTypes) = inferType(types)
     require(argShapes != null && argTypes != null, "Input node is not complete")

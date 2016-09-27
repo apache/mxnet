@@ -211,7 +211,7 @@ object BucketIo {
     override def getIndex(): IndexedSeq[Long] = IndexedSeq[Long]()
 
     // The name and shape of label provided by this iterator
-    override def provideLabel: Map[String, Shape] = this._provideLabel
+    override def provideLabel: ListMap[String, Shape] = this._provideLabel
 
     /**
      * get the number of padding examples
@@ -221,7 +221,7 @@ object BucketIo {
     override def getPad(): Int = 0
 
     // The name and shape of data provided by this iterator
-    override def provideData: Map[String, Shape] = this._provideData
+    override def provideData: ListMap[String, Shape] = this._provideData
 
     override def hasNext: Boolean = {
       iBucket < bucketPlan.length

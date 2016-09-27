@@ -6,8 +6,6 @@ import ml.dmlc.mxnet.examples.rnn.BucketIo.BucketSentenceIter
 import ml.dmlc.mxnet.optimizer.SGD
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.mutable.ArrayBuffer
-
 /**
  * Bucketing LSTM examples
  * @author Yizhi Liu
