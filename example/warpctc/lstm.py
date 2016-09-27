@@ -77,3 +77,42 @@ def lstm_unroll(num_lstm_layer, seq_len,
     sm = mx.sym.WarpCTC(data=pred, label=label, label_length = num_label, input_length = seq_len)
     return sm
 
+
+def lstm_inference_symbol(num_lstm_layer, seq_len, num_hidden, num_label):
+    param_cells = []
+    last_states = []
+    for i in range(num_lstm_layer):
+        param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
+                                     i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
+                                     h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
+                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i)))
+        state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
+                          h=mx.sym.Variable("l%d_init_h" % i))
+        last_states.append(state)
+    assert (len(last_states) == num_lstm_layer)
+
+    # embeding layer
+    data = mx.sym.Variable('data')
+    wordvec = mx.sym.SliceChannel(data=data, num_outputs=seq_len, squeeze_axis=1)
+
+    hidden_all = []
+    for seqidx in range(seq_len):
+        hidden = wordvec[seqidx]
+        for i in range(num_lstm_layer):
+            next_state = lstm(num_hidden, indata=hidden,
+                              prev_state=last_states[i],
+                              param=param_cells[i],
+                              seqidx=seqidx, layeridx=i)
+            hidden = next_state.h
+            last_states[i] = next_state
+        hidden_all.append(hidden)
+
+    hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
+    fc = mx.sym.FullyConnected(data=hidden_concat, num_hidden=11)
+    sm = mx.sym.SoftmaxOutput(data=fc, name='softmax')
+
+    output = [sm]
+    for state in last_states:
+        output.append(state.c)
+        output.append(state.h)
+    return mx.sym.Group(output)
