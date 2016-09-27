@@ -1725,6 +1725,29 @@ def test_mathematical():
     mathematical_core("arctanh", lambda x: mx.sym.arctanh(x), lambda x: np.arctanh(x),
                       lambda x: -1./(x**2 - 1.), 0.5)
 
+    # log1p
+    mathematical_core("log1p", lambda x: mx.sym.log1p(x), lambda x: np.log1p(x),
+                      lambda x: 1. / (1.0 + x), 0.5, 0.5)
+    # expm1
+    mathematical_core("expm1", lambda x: mx.sym.expm1(x), lambda x: np.expm1(x),
+                      lambda x: np.exp(x), 0.5, 0.5)
+
+
+def test_special_functions_using_scipy():
+    try:
+        from scipy import special as scipy_special
+    except:
+        print("Could not import scipy. Skipping unit tests for special functions")
+        return
+
+    # gamma
+    mathematical_core("gamma", lambda x: mx.sym.gamma(x), lambda x: scipy_special.gamma(x),
+                     lambda x: scipy_special.gamma(x) * scipy_special.psi(x), 0.5, 0.5)
+
+    # gammaln
+    mathematical_core("gammaln", lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
+                     lambda x: scipy_special.psi(x), 0.5, 0.5)
+
 
 if __name__ == '__main__':
     test_expand_dims()
@@ -1771,4 +1794,4 @@ if __name__ == '__main__':
     test_instance_normalization()
     test_l2_normalization()
     test_mathematical()
-
+    test_special_functions_using_scipy()

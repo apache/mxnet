@@ -633,7 +633,7 @@ class Symbol(SymbolBase):
                         arg_handles.append(None)
                         arg_arrays.append(None)
                     else:
-                        raise ValueError('Must specify all the arguments in %s' % arg_key)
+                        raise ValueError('key `%s` is missing in `%s`' % (name, arg_key))
         else:
             raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
