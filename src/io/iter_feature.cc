@@ -109,10 +109,10 @@ inline void FeatureIOParser::Init(
   param_.preprocess_threads = threadget;
 
   CHECK(param_.path_featurebin.length() != 0)
-      << "ImageRecordIOIterator: must specify image_rec";
+      << "FeatureIOIterator: must specify a feature_rec file";
 
   if (param_.verbose) {
-    LOG(INFO) << "ImageRecordIOParser: " << param_.path_featurebin
+    LOG(INFO) << "FeatureIOParser: " << param_.path_featurebin
               << ", use " << threadget << " threads for decoding..";
   }
   source_.reset(dmlc::InputSplit::Create(
