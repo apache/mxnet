@@ -143,7 +143,6 @@ ParseNext(std::vector<InstVectorFea> *out_vec) {
     InstVectorFea &out = (*out_vec)[tid];
     out.Clear();
     while (reader.NextRecord(&blob)) {
-
     rec.Load(blob.dptr, blob.size);
     out.Push(static_cast<unsigned>(rec.image_index()),
              mshadow::Shape1(param_.feature_dim),
