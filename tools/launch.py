@@ -19,7 +19,12 @@ def dmlc_opts(opts):
             '--host-file', opts.hostfile,
             '--sync-dst-dir', opts.sync_dst_dir]
     args += opts.command;
-    from dmlc_tracker import opts
+    try:
+        from dmlc_tracker import opts
+    except ImportError:
+        print("Can't load dmlc_tracker package.  Perhaps you need to run")
+        print("    git submodule update --init --recursive")
+        raise
     dmlc_opts = opts.get_opts(args)
     return dmlc_opts
 
