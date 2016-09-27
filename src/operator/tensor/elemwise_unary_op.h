@@ -11,6 +11,7 @@
 #include <utility>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../special_functions-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -105,6 +105,24 @@ MXNET_OPERATOR_REGISTER_UNARY(sin)
 MXNET_OPERATOR_REGISTER_BINARY(_backward_sin)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::sin_grad> >);
 
+// log1p
+MXNET_OPERATOR_REGISTER_UNARY(log1p)
+.MXNET_DESCRIBE("Take `log(1 + x)` in a numerically stable way")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log1p>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log1p"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_log1p)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::log1p_grad> >);
+
+// expm1
+MXNET_OPERATOR_REGISTER_UNARY(expm1)
+.MXNET_DESCRIBE("Take `exp(x) - 1` in a numerically stable way")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::expm1>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_expm1"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_expm1)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::exp> >);
+
 // cos
 MXNET_OPERATOR_REGISTER_UNARY(cos)
 .MXNET_DESCRIBE("Take cos of the src")
@@ -221,6 +239,24 @@ MXNET_OPERATOR_REGISTER_UNARY(arctanh)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_arctanh)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::arctanh_grad> >);
+
+// gamma
+MXNET_OPERATOR_REGISTER_UNARY(gamma)
+.MXNET_DESCRIBE("Take the gamma function (extension of the factorial function) of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::gamma>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_gamma"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_gamma)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::gamma_grad> >);
+
+// gammaln
+MXNET_OPERATOR_REGISTER_UNARY(gammaln)
+.MXNET_DESCRIBE("Take gammaln (log of the absolute value of gamma(x)) of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::gammaln>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_gammaln"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_gammaln)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::gammaln_grad> >);
 
 }  // namespace op
 }  // namespace mxnet
