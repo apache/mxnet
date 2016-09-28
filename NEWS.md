@@ -2,6 +2,21 @@ MXNet Change Log
 ================
 ## in progress version
 
+## v0.8
+This is the last release before the NNVM refactor.
+- CaffeOp and CaffeIter for interfacing with Caffe by @HrWangChengdu @cjolivier01
+- WrapCTC plugin for sequence learning by @xlvector
+- Improved Multi-GPU performance by @mli
+- CuDNN RNN support by @sbodenstein
+- OpenCV plugin for parallel image IO by @piiswrong
+- More operators as simple op
+    - Simple OP @tqchen
+    - element wise op with axis and broadcast @mli @sxjscience
+- Cudnn auto tuning for faster convolution by @piiswrong
+- More applications
+    - Faster RCNN by @precedenceguo
+
+
 ## v0.7
 -  0.6 is skipped because there are a lot of improvements since initial release
 - More math operators
