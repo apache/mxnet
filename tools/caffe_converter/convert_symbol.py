@@ -77,6 +77,12 @@ def proto2script(proto_file):
         input_dim = proto.input_dim
     elif len(proto.input_shape) > 0: 
         input_dim = proto.input_shape[0].dim
+    elif (layer[0].type == "Input"):
+        input_dim = layer[0].input_param.shape._values[0].dim
+        layer.pop(0)
+    else:
+        raise Exception('Invalid proto file.')   
+
     # We assume the first bottom blob of first layer is the output from data layer
     input_name = layer[0].bottom[0]
     output_name = ""
