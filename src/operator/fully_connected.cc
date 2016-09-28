@@ -4,11 +4,30 @@
  * \brief fully connect operator
 */
 #include "./fully_connected-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_fully_connected-inl.h"
+#endif
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    op = new MKLDNNFullyConnectedOp<float>(param);
+    break;
+  case mshadow::kFloat64:
+    op = new MKLDNNFullyConnectedOp<double>(param);
+    break;
+  case mshadow::kFloat16:
+    LOG(FATAL) << "float16 fully connected layer is "
+                  "not supported by MKLDNN.";
+    break;
+  default:
+    LOG(FATAL) << "Unsupported type " << dtype;
+  }
+#else
   switch (dtype) {
   case mshadow::kFloat32:
     op = new FullyConnectedOp<cpu, float>(param);
@@ -23,6 +42,7 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   default:
     LOG(FATAL) << "Unsupported type " << dtype;
   }
+#endif
   return op;
 }
 

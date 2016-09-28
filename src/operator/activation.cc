@@ -6,12 +6,35 @@
 */
 #include "./activation-inl.h"
 #include "./mshadow_op.h"
-
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_ReLU-inl.h"
+#endif
 namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    switch (param.act_type) {
+      case activation::kReLU:
+        // MKLDNN only supports ReLU
+        op = new MKLDNNReLUOp<DType>(param);
+        break;
+      case activation::kSigmoid:
+        op = new ActivationOp<cpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, DType>();
+        break;
+      case activation::kTanh:
+        op = new ActivationOp<cpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>();
+        break;
+      case activation::kSoftReLU:
+        op = new ActivationOp<cpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>();
+        break;
+      default:
+        LOG(FATAL) << "unknown activation type";
+    }
+  })
+#else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.act_type) {
       case activation::kReLU:
@@ -30,6 +53,7 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
         LOG(FATAL) << "unknown activation type";
     }
   })
+#endif
   return op;
 }
 

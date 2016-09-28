@@ -63,6 +63,13 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+ifeq ($(USE_MKLDNN),1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1 -I$(MKLDNN_ROOT)/include
+	LDFLAGS += -L$(MKLDNN_ROOT)/lib/ -liomp5 -lmklml_gnu -lmklml_intel
+else
+	CFLAGS += -DMXNET_USE_MKLDNN=0
+endif
+
 ifeq ($(USE_THREADED_ENGINE), 1)
 	CFLAGS += -DMXNET_USE_THREADED_ENGINE
 endif

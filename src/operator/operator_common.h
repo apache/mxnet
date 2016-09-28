@@ -15,6 +15,7 @@
 #include <istream>
 #include <ostream>
 #include <string>
+// #define PRINT_LAYER_TIME
 
 namespace mxnet {
 namespace op {

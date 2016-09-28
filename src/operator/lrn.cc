@@ -9,12 +9,20 @@
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn_lrn-inl.h"
 #endif
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_lrn-inl.h"
+#endif
+
 
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(LRNParam param) {
+#if MXNET_USE_MKLDNN == 1
+  return new MKLDNNLocalResponseNormOp<real_t>(param);
+#else
   return new LocalResponseNormOp<cpu>(param);
+#endif
 }
 
 Operator* LocalResponseNormProp::CreateOperator(Context ctx) const {

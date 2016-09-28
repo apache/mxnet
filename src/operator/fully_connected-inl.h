@@ -15,7 +15,6 @@
 #include <utility>
 #include "./operator_common.h"
 
-
 namespace mxnet {
 namespace op {
 
@@ -56,6 +55,9 @@ class FullyConnectedOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+#ifdef PRINT_LAYER_TIME
+    double start_time = dmlc::GetTime();
+#endif
     if (req[fullc::kOut] == kNullOp) return;
     CHECK_EQ(req[fullc::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
@@ -82,6 +84,10 @@ class FullyConnectedOp : public Operator {
       Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
       out += repmat(bias, data.size(0));
     }
+#ifdef PRINT_LAYER_TIME
+    double end_time = dmlc::GetTime();
+    LOG(INFO)<< "forward FC" << (end_time-start_time) << " s";
+#endif
   }
 
   virtual void Backward(const OpContext &ctx,

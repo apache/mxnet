@@ -6,6 +6,9 @@
 */
 
 #include "./convolution-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_convolution-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -15,9 +18,15 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new MKLDNNConvolutionOp<DType>(param);
+  })
+#else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConvolutionOp<cpu, DType>(param);
   })
+#endif
   return op;
 }
 
