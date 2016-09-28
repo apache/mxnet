@@ -98,6 +98,7 @@ def proto2script(proto_file):
             type_string = 'mx.symbol.Pooling'
             param = layer[i].pooling_param
             param_string = ''
+            param_string += "pad_convention='same', "
             if param.global_pooling == True:
                 # there must be a param `kernel` in a pooling layer
                 param_string += "global_pool=True, kernel=(1,1)"
