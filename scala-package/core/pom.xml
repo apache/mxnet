@@ -117,7 +117,6 @@
     <dependency>
       <groupId>org.scala-lang.modules</groupId>
       <artifactId>scala-parser-combinators_${scala.binary.version}</artifactId>
-      <version>1.0.4</version>
     </dependency>
   </dependencies>
 </project>
