@@ -16,7 +16,7 @@ object Visualization {
    * A simplify implementation of the python-Graphviz library functionality
    * based on: https://github.com/xflr6/graphviz/tree/master/graphviz
    */
-  class Dot(name: String, format: String) {
+  class Dot(name: String) {
     // http://www.graphviz.org/cgi-bin/man?dot
     private val ENGINES = Set(
       "dot", "neato", "twopi", "circo", "fdp", "sfdp", "patchwork", "osage"
@@ -164,8 +164,8 @@ object Visualization {
    *                      means to plot the network in "oval"
    * @return Dot object of symbol
    */
-  def plotNetwork(symbol: Symbol, title: String = "plot",
-      saveFormat: String = "pdf", shape: Map[String, Shape] = null,
+  def plotNetwork(symbol: Symbol,
+      title: String = "plot", shape: Map[String, Shape] = null,
       nodeAttrs: Map[String, String] = Map[String, String]()): Dot = {
 
     val (drawShape, shapeDict) = {
@@ -199,7 +199,7 @@ object Visualization {
               "width" -> "1.3", "height" -> "0.8034", "style" -> "filled")
     // merge the dict provided by user and the default one
     nodeAttrs.foreach { case (k, v) => nodeAttr(k) = v }
-    val dot = new Dot(name = title, format = saveFormat)
+    val dot = new Dot(name = title)
     // color map
     val cm = List(""""#8dd3c7"""", """"#fb8072"""", """"#ffffb3"""",
                             """"#bebada"""", """"#80b1d3"""", """"#fdb462"""",

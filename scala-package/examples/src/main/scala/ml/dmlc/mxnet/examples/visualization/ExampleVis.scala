@@ -50,7 +50,7 @@ object ExampleVis {
       val (sym, shape) = getNetSymbol(leis.net)
 
       val dot = Visualization.plotNetwork(symbol = sym,
-          title = leis.net, saveFormat = "pdf", shape = Map("data" -> shape),
+          title = leis.net, shape = Map("data" -> shape),
           nodeAttrs = Map("shape" -> "rect", "fixedsize" -> "false"))
 
       dot.render(engine = "dot", format = "pdf", fileName = leis.net, path = leis.outDir)
