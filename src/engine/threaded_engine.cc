@@ -186,8 +186,10 @@ ThreadedOpr* ThreadedEngine::NewOperator(
     ThreadedEngine::AsyncFn fn,
     std::vector<VarHandle> const& const_vars,
     std::vector<VarHandle> const& mutable_vars,
-    FnProperty prop) {
+    FnProperty prop,
+    const char* opr_name) {
   auto ret = ThreadedOpr::New();
+  ret->opr_name = opr_name;
   ret->fn = std::move(fn);
   ret->prop = prop;
   ret->const_vars.resize(const_vars.size());
@@ -252,7 +254,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
     }, Context::CPU(), {}, deps, FnProperty::kAsync);
 }
 
-void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority) {
+void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
@@ -262,6 +264,7 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority) {
       threaded_opr->mutable_vars.size() + 1));
   opr_block->ctx = exec_ctx;
   opr_block->priority = priority;
+  opr_block->profiling = profiling;
   ++pending_;
   // Add read dependencies.
   for (auto&& i : threaded_opr->const_vars) {
@@ -279,10 +282,29 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority) {
 void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& const_vars,
                                std::vector<VarHandle> const& mutable_vars,
-                               FnProperty prop, int priority) {
-  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop);
+                               FnProperty prop,
+                               int priority,
+                               bool profiling,
+                               const char* opr_name) {
+  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name);
   opr->temporary = true;
-  Push(opr, exec_ctx, priority);
+  Push(opr, exec_ctx, priority, profiling);
+}
+
+void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
+                              std::vector<VarHandle> const& const_vars,
+                              std::vector<VarHandle> const& mutable_vars,
+                              FnProperty prop,
+                              int priority,
+                              bool profiling,
+                              const char* opr_name) {
+  Profiler *profiler = Profiler::Get();
+  this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
+      exec_fn(ctx);
+      on_complete();
+    }, exec_ctx, const_vars, mutable_vars, prop, priority,
+    (profiler->GetState() == Profiler::kRunning && profiler->GetMode() == Profiler::kAllOperator),
+    opr_name);
 }
 
 void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
@@ -379,9 +401,16 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
 }
 
 void ThreadedEngine::OnCompleteStatic(
-    Engine *engine, void *threaded_opr) {
-  static_cast<ThreadedEngine*>(engine)->OnComplete(
-      static_cast<ThreadedOpr*>(threaded_opr));
+    Engine *engine, void *opr_block_) {
+  OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
+  ThreadedOpr *threaded_opr = opr_block->opr;
+
+  if (opr_block->profiling) {
+    // record operator end timestamp
+    SetOprEnd(opr_block->opr_stat);
+  }
+  static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);
+  OprBlock::Delete(opr_block);
 }
 
 }  // namespace engine
