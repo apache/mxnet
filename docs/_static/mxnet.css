@@ -20,11 +20,6 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-ol,
-ul {
-    list-style: none
-}
-
 table {
     border-collapse: separate;
     border-spacing: 0
@@ -420,7 +415,7 @@ div.sphinxsidebar {
 div.sphinxsidebar ul { padding: 0 }
 div.sphinxsidebar ul ul { margin-left: 15px }
 
-@media (min-width:1200px) {
+@media (min-width:1000px) {
     .content { float: right; width: 66.66666667%; margin-right: 5% }
     div.sphinxsidebar {display: block}
 }

@@ -1,6 +1,6 @@
 MXNet Python Model API
 ======================
-The model API in mxnet is not really an API.
+The model API is a simplified way to train neural networks using common best practices.
 It is a thin wrapper build on top of [ndarray](ndarray.md) and [symbolic](symbol.md)
 modules to make neural network training easy.
 
