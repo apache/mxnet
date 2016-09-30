@@ -69,7 +69,7 @@ if [ ${TASK} == "r_test" ]; then
     cd ..
 
     make rpkg
-    R CMD check --no-examples --no-manual --no-vignettes --no-build-vignettes mxnet_*.tar.gz
+#    R CMD check --no-examples --no-manual --no-vignettes --no-build-vignettes mxnet_*.tar.gz
     R CMD INSTALL mxnet_*.tar.gz
 
     Rscript tests/travis/r_vignettes.R
@@ -82,7 +82,6 @@ if [ ${TASK} == "r_test" ]; then
     cat CallbackFunctionTutorial.R \
     fiveMinutesNeuralNetwork.R \
     mnistCompetition.R \
-    classifyRealImageWithPretrainedModel.R \
     ndarrayAndSymbolTutorial.R > r_test.R
 
     Rscript r_test.R || exit -1
