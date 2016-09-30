@@ -93,6 +93,12 @@ USE_S3 = 0
 # path to folders containing projects specific operators that you don't want to put in src/operators
 EXTRA_OPERATORS =
 
+#----------------------------
+# per example additional operators
+#----------------------------
+# whether to use extra operators for ssd detection.
+# there is no extra dependency, by default we could always enable it
+EXTRA_OPERATORS += example/ssd/operator
 
 #----------------------------
 # plugins

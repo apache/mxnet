@@ -323,4 +323,3 @@ class PoolingProp : public OperatorProperty {
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_POOLING_INL_H_
-

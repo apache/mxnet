@@ -122,9 +122,9 @@ CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
 ifneq ($(EXTRA_OPERATORS),)
-	EXTRA_SRC = $(wildcard $(patsubst %, %/*.cc %/*/*.cc, $(EXTRA_OPERATORS)))
+	EXTRA_SRC = $(wildcard $(foreach DIR, $(EXTRA_OPERATORS), $(foreach PAT, *.cc */*.cc, $(DIR)/$(PAT))))
 	EXTRA_OBJ = $(patsubst %.cc, %.o, $(EXTRA_SRC))
-	EXTRA_CUSRC = $(wildcard $(patsubst %, %/*.cu %/*/*.cu, $(EXTRA_OPERATORS)))
+	EXTRA_CUSRC = $(wildcard $(foreach DIR, $(EXTRA_OPERATORS), $(foreach PAT, *.cu */*.cu, $(DIR)/$(PAT))))
 	EXTRA_CUOBJ = $(patsubst %.cu, %_gpu.o, $(EXTRA_CUSRC))
 else
 	EXTRA_SRC =
@@ -290,7 +290,7 @@ clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
-	$(RM) -r  $(patsubst %, %/*.d %/*/*.d %/*.o %/*/*.o, $(EXTRA_OPERATORS))
+	$(RM) -r  $(foreach DIR, $(EXTRA_OPERATORS), $(foreach PAT, *.d */*.d *.o */*.o, $(DIR)/$(PAT)))
 else
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
@@ -304,5 +304,5 @@ clean_all: clean
 -include build/*/*.d
 -include build/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
-	-include $(patsubst %, %/*.d %/*/*.d, $(EXTRA_OPERATORS))
+	-include $(foreach DIR, $(EXTRA_OPERATORS), $(foreach PAT, *.d */*.d, $(DIR)/$(PAT)))
 endif
