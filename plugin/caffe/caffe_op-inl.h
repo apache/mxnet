@@ -100,9 +100,7 @@ class CaffeOp : public Operator {
                                        top_.begin(),
                                        out_data.begin(),
                                        param_.num_out);
-
     CaffeOpSetup();
-
     // Init caffe's weight pointer
     if (!init_w_) {
       init_w_ = true;
@@ -112,7 +110,10 @@ class CaffeOp : public Operator {
                                          param_.num_weight);
       caffe::SetOpBlobs(caffeOp_, wei_);
     }
-
+    if (ctx.is_train)
+      caffeOp_->SetPhase(::caffe::TRAIN);
+    else
+      caffeOp_->SetPhase(::caffe::TEST);
     caffeOp_->Forward(bot_, top_);
 
 #if defined(__CUDACC__)
