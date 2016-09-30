@@ -11,6 +11,7 @@
 
 #include "./exec_pass.h"
 #include "./graph_executor.h"
+#include "../engine/profiler.h"
 
 namespace mxnet {
 namespace exec {
@@ -444,6 +445,7 @@ void GraphExecutor::InitCachedOps() {
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
+    op_nodes_[nid].opr_name = inode.source->attrs.name.c_str();
     op_nodes_[nid].exec = op_execs[nid];
     op_nodes_[nid].ctx = vctx[nid];
     auto& exec = op_nodes_[nid].exec;
@@ -515,7 +517,8 @@ void GraphExecutor::InitCachedOps() {
 
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
-      }, Context::CPU(), {}, all_vars);
+      }, Context::CPU(), {}, all_vars,
+      FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SetupExec"));
 
     auto exec_fun = [exec, is_async, is_gpu](
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
@@ -537,8 +540,9 @@ void GraphExecutor::InitCachedOps() {
       }
     };
     // setup the vars
-    op_nodes_[nid].cached_opr =  Engine::Get()->NewOperator(
-        exec_fun, use_vars, mutate_vars, FnProperty::kNormal);
+    op_nodes_[nid].cached_opr = Engine::Get()->NewOperator(
+        exec_fun, use_vars, mutate_vars,
+        FnProperty::kNormal, PROFILER_MESSAGE(op_nodes_[nid].opr_name));
   }
 }
 
@@ -557,7 +561,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CHECK_EQ(opnode.exec->out_array.size(), 1);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
     } else if (opnode.cached_opr != nullptr) {
-      Engine::Get()->Push(opnode.cached_opr, opnode.ctx);
+      Engine::Get()->Push(opnode.cached_opr, opnode.ctx, 0,
+                          engine::Profiler::Get()->GetState() == engine::Profiler::kRunning);
     } else {
       LOG(FATAL) << "Not accessed";
     }

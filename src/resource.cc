@@ -172,7 +172,7 @@ class ResourceManagerImpl : public ResourceManager {
           r->set_stream(rctx.get_stream<xpu>());
           r->Seed(seed);
         }, ctx, {}, {resource.var},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SetSeed"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("ResourceRandomSetSeed"));
     }
   };
 
