@@ -251,13 +251,7 @@ cyclean:
 rcpplint:
 	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
-rcppexport:
-	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package\")"
-
-roxygen:
-	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
-
-rpkg:	roxygen
+rpkg:
 	mkdir -p R-package/inst
 	mkdir -p R-package/inst/libs
 	cp -rf lib/libmxnet.so R-package/inst/libs
@@ -265,6 +259,11 @@ rpkg:	roxygen
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
 	cp -rf nnvm/include/* R-package/inst/include
+	echo "import(Rcpp)" > R-package/NAMESPACE
+	echo "import(methods)" >> R-package/NAMESPACE
+	R CMD INSTALL R-package
+	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
+	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
 
 scalapkg:
@@ -296,14 +295,14 @@ jnilint:
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
 	cd $(NNVM_PATH); make clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d %/*/*.d %/*.o %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: cyclean
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
 	cd $(NNVM_PATH); make clean; cd -
