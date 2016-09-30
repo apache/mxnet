@@ -251,7 +251,8 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
               threaded_opr->mutable_vars.end());
   this->PushSync([threaded_opr](RunContext) {
       ThreadedOpr::Delete(threaded_opr);
-    }, Context::CPU(), {}, deps, FnProperty::kAsync);
+    }, Context::CPU(), {}, deps,
+    FnProperty::kAsync, 0, false, PROFILER_MESSAGE("DeleteOperator"));
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
@@ -316,7 +317,8 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
       // so during `ThreadedEngine::OnComplete` it could be recycled.
       threaded_var->SetToDelete();
       delete_fn(ctx);
-    }, exec_ctx, {}, {var}, FnProperty::kAsync);
+    }, exec_ctx, {}, {var},
+    FnProperty::kAsync, 0, false, PROFILER_MESSAGE("DeleteVariable"));
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
@@ -339,7 +341,8 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       if (engine_info_) {
         LOG(INFO) << "Sync is notified";
       }
-    }, Context::CPU(), {var}, {}, FnProperty::kNormal);
+    }, Context::CPU(), {var}, {},
+    FnProperty::kNormal, 0, false, PROFILER_MESSAGE("WaitForVar"));
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {

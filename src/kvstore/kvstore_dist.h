@@ -116,7 +116,10 @@ class KVStoreDist : public KVStoreLocal {
           pinned_ctx_,
           {},
           {recv_buf.var()},
-          FnProperty::kNormal, priority);
+          FnProperty::kNormal,
+          priority,
+          false,
+          PROFILER_MESSAGE("KVStoreDistPull"));
 
       comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
     }
@@ -221,7 +224,10 @@ class KVStoreDist : public KVStoreLocal {
           pinned_ctx_,
           {send_buf.var()},
           {},
-          FnProperty::kNormal, priority);
+          FnProperty::kNormal,
+          priority,
+          false,
+          PROFILER_MESSAGE("KVStoreDistPush"));
     }
   }
 

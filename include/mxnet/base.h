@@ -73,6 +73,15 @@
 #define MXNET_PREDICT_ONLY 0
 #endif
 
+/*!
+ * \brief define operator message for profiler
+ */
+#if MXNET_USE_PROFILER
+#define PROFILER_MESSAGE(msg) msg
+#else
+#define PROFILER_MESSAGE(msg) nullptr
+#endif
+
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
