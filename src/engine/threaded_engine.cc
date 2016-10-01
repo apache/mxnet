@@ -407,11 +407,12 @@ void ThreadedEngine::OnCompleteStatic(
     Engine *engine, void *opr_block_) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
-
+#if MXNET_USE_PROFILER
   if (opr_block->profiling) {
     // record operator end timestamp
     SetOprEnd(opr_block->opr_stat);
   }
+#endif
   static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);
   OprBlock::Delete(opr_block);
 }

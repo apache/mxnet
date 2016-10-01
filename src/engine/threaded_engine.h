@@ -276,12 +276,13 @@ class ThreadedEngine : public Engine {
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
   }
   ~ThreadedEngine() {
+#if MXNET_USE_PROFILER
     // dump trace file if profiler is enabled when engine is destructed.
     Profiler* profiler = Profiler::Get();
     if (profiler->IsEnableOutput()) {
       profiler->DumpProfile();
     }
-
+#endif
     {
       std::unique_lock<std::mutex> lock{finished_m_};
       kill_.store(true);
@@ -307,17 +308,18 @@ class ThreadedEngine : public Engine {
    */
   void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
-
+#if MXNET_USE_PROFILER
     if (opr_block->profiling) {
       const Context& ctx = opr_block->ctx;
       opr_block->opr_stat = Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
       uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
       opr_block->opr_stat->thread_id = id;
-      opr_block->opr_stat->opr_name  = threaded_opr->opr_name;
+      opr_block->opr_stat->opr_name  =
+          (threaded_opr->opr_name ? std::string(threaded_opr->opr_name) : "unknown");
       // record operator start timestamp
       SetOprStart(opr_block->opr_stat);
     }
-
+#endif
     CallbackOnComplete callback = this->CreateCallback(
         ThreadedEngine::OnCompleteStatic, opr_block);
     bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);

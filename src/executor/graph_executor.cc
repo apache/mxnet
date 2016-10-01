@@ -445,7 +445,14 @@ void GraphExecutor::InitCachedOps() {
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
-    op_nodes_[nid].opr_name = inode.source->attrs.name.c_str();
+#if MXNET_USE_PROFILER
+    // TODO(ziheng) memory leak risk
+    char* opr_name = new char[inode.source->attrs.name.size()];
+    strcpy(opr_name, inode.source->attrs.name.c_str());
+    op_nodes_[nid].opr_name = opr_name;
+#else
+    op_nodes_[nid].opr_name = nullptr;
+#endif
     op_nodes_[nid].exec = op_execs[nid];
     op_nodes_[nid].ctx = vctx[nid];
     auto& exec = op_nodes_[nid].exec;
