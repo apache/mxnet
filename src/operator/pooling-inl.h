@@ -25,7 +25,7 @@ namespace pool_enum {
 enum PoolingOpInputs {kData};
 enum PoolingOpOutputs {kOut};
 enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling};
-enum PoolingOpPadConventionType {kSame, kValid};
+enum PoolingOpPadConventionType {kValid, kFull};
 }  // namespace pool_enum
 
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
@@ -33,7 +33,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   TShape stride;
   TShape pad;
   int pool_type;
-  int pad_convention;
+  int pooling_convention;
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
@@ -50,10 +50,12 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("sum", pool_enum::kSumPooling)
     .describe("Pooling type to be applied.");
  
-    DMLC_DECLARE_FIELD(pad_convention).set_default(pool_enum::kValid)
-    .add_enum("same", pool_enum::kSame)
+    DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
+    .add_enum("full", pool_enum::kFull)
     .add_enum("valid", pool_enum::kValid)
-    .describe("Pooling convention to be applied.");
+    .describe("Pooling convention to be applied."
+              "kValid is default setting of Mxnet and rounds down the output pooling size."
+              "kFull is compatible with Caffe and rounds up the output pooling size.");
 
     int stride_shape[] = {1, 1};
     DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
@@ -206,7 +208,7 @@ class PoolingProp : public OperatorProperty {
         CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0]
               && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
             << "kernel size exceed input";
-        if (param_.pad_convention == pool_enum::kValid) {
+        if (param_.pooling_convention == pool_enum::kValid) {
           oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
           oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
         } else {
