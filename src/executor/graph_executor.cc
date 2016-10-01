@@ -447,8 +447,9 @@ void GraphExecutor::InitCachedOps() {
     if (inode.source->is_variable()) continue;
 #if MXNET_USE_PROFILER
     // TODO(ziheng) memory leak risk
-    char* opr_name = new char[inode.source->attrs.name.size()];
-    strcpy(opr_name, inode.source->attrs.name.c_str());
+    int len = inode.source->attrs.name.size();
+    char* opr_name = new char[len+1];
+    snprintf(opr_name, len+1, inode.source->attrs.name.c_str());
     op_nodes_[nid].opr_name = opr_name;
 #else
     op_nodes_[nid].opr_name = nullptr;

@@ -15,7 +15,7 @@ def parse_args():
 args = parse_args()
 
 if __name__ == '__main__':
-    mx.profiler.profiler_set_config(mode='profiler', filename=args.profile_filename)
+    mx.profiler.profiler_set_config(mode='symbolic', filename=args.profile_filename)
     print('profile file save to {0}'.format(args.profile_filename))
 
 
@@ -34,7 +34,6 @@ if __name__ == '__main__':
     flag = False
     print "execution begin"
     for i in range(args.iter_num):
-        print i
         if i == args.begin_profiling_iter:
             t0 = time.clock()
             mx.profiler.profiler_set_state('run')

@@ -205,9 +205,9 @@ struct ThreadedOpr final : public Opr,
   std::vector<ThreadedVar*> const_vars;
   /*! \brief The variable this operation will mutate. */
   std::vector<ThreadedVar*> mutable_vars;
-  /*! \brief the property of the operator */
+  /*! \brief The property of the operator */
   FnProperty prop;
-  /*! TODO(ziheng) */
+  /*! \brief The name of the operator */
   const char* opr_name;
   /*!
    * \brief Whether this is an temporary operator

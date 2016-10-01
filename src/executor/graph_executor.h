@@ -48,7 +48,7 @@ class GraphExecutor : public Executor {
  protected:
   // Information about operational node
   struct OpNode {
-    // name of operator
+    // The name of the operator
     const char* opr_name;
     // the context of the node
     Context ctx;

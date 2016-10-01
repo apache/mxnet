@@ -163,13 +163,13 @@ class MXNET_API Engine {
    * \param priority Priority of the action, as hint to the engine.
    * \tparam SyncFn the synchronous function to be pushed.
    */
-   virtual void PushSync(SyncFn exec_fn, Context exec_ctx,
-                         std::vector<VarHandle> const& const_vars,
-                         std::vector<VarHandle> const& mutable_vars,
-                         FnProperty prop = FnProperty::kNormal,
-                         int priority = 0,
-                         bool profiling = false,
-                         const char* opr_name = nullptr) = 0;
+  virtual void PushSync(SyncFn exec_fn, Context exec_ctx,
+                        std::vector<VarHandle> const& const_vars,
+                        std::vector<VarHandle> const& mutable_vars,
+                        FnProperty prop = FnProperty::kNormal,
+                        int priority = 0,
+                        bool profiling = false,
+                        const char* opr_name = nullptr) = 0;
   /*!
    * \brief Schedule the deletion of a variable.
    *
