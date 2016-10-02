@@ -53,24 +53,10 @@ void Profiler::SetState(ProfilerState state) {
       this->enable_output_ = true;
 }
 
-Profiler::ProfilerState Profiler::GetState() {
-  std::lock_guard<std::mutex> lock{Profiler::m_};
-  return this->state_;
-}
-
 void Profiler::SetConfig(ProfilerMode mode, std::string output_filename) {
   std::lock_guard<std::mutex> lock{Profiler::m_};
   this->mode_ = mode;
   this->filename_ = output_filename;
-}
-
-Profiler::ProfilerMode Profiler::GetMode() {
-  return mode_;
-}
-
-bool Profiler::IsEnableOutput() {
-  std::lock_guard<std::mutex> lock{Profiler::m_};
-  return this->enable_output_;
 }
 
 OprExecStat *Profiler::AddOprStat(int dev_type, int dev_id) {
@@ -85,10 +71,6 @@ OprExecStat *Profiler::AddOprStat(int dev_type, int dev_id) {
   dev_stat.opr_exec_stats.push_back(opr_stat);
 
   return opr_stat;
-}
-
-uint64_t Profiler::GetInitTime() {
-  return init_time_;
 }
 
 void Profiler::EmitPid(std::ostream& os, const std::string& name, int pid) {

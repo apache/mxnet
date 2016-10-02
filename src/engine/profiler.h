@@ -71,17 +71,25 @@ class Profiler {
   /*! \brief set state of profiler */
   void SetState(ProfilerState state);
   /*! \return state of profiler */
-  ProfilerState GetState();
+  inline ProfilerState GetState() {
+    return this->state_;
+  };
   /*! \brief set configure of profiler */
   void SetConfig(ProfilerMode mode, std::string output_filename);
   /*! \return mode of profiler */
-  ProfilerMode GetMode();
+  inline ProfilerMode GetMode() {
+    return this->mode_;
+  }
   /*! \return whether the profiler is enabled to output */
-  bool IsEnableOutput();
+  inline bool IsEnableOutput() {
+    return this->enable_output_;
+  }
   /*! \brief dump the profile file */
   void DumpProfile();
   /*! \return the profiler init time, time unit is microsecond (10^-6) s */
-  uint64_t GetInitTime();
+  inline uint64_t GetInitTime() {
+    return init_time_;
+  }
   /*! \brief add one operation execution record in
    *   corresponding device statistics */
   OprExecStat* AddOprStat(int dev_type, int dev_id);
