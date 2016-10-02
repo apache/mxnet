@@ -304,7 +304,11 @@ void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
       exec_fn(ctx);
       on_complete();
     }, exec_ctx, const_vars, mutable_vars, prop, priority,
+#if MXNET_USE_PROFILER
     (profiler->GetState() == Profiler::kRunning && profiler->GetMode() == Profiler::kAllOperator),
+#else
+    false,
+#endif
     opr_name);
 }
 

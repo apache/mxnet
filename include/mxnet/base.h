@@ -77,11 +77,16 @@
  * \brief define operator message for profiler
  */
 #if MXNET_USE_PROFILER
-#define PROFILER_MESSAGE(msg) msg
+#define PROFILER_MESSAGE(msg)     msg
 #else
-#define PROFILER_MESSAGE(msg) nullptr
+#define PROFILER_MESSAGE(msg)     nullptr
 #endif
 
+/*!
+ * \brief define function name as profiler message
+ */
+#define PROFILER_MESSAGE_STR(s)   #s
+#define PROFILER_MESSAGE_FUNCNAME PROFILER_MESSAGE(__FUNCTION__)
 
 /*! \brief namespace of mxnet */
 namespace mxnet {

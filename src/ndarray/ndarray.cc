@@ -67,7 +67,7 @@ void TernaryOp(const NDArray &lhs,
       TBlob tmp = ret.data();
       ndarray::Eval<cpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
     }, lhs.ctx(), const_vars, { ret.var() },
-    FnProperty::kNormal, 0, false, PROFILER_MESSAGE("TernaryOp"));
+    FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
     break;
   }
 #if MXNET_USE_CUDA
@@ -79,7 +79,7 @@ void TernaryOp(const NDArray &lhs,
       // Wait GPU kernel to complete
       ctx.get_stream<gpu>()->Wait();
     }, lhs.ctx(), const_vars, { ret.var() },
-    FnProperty::kNormal, 0, false, PROFILER_MESSAGE("TernaryOp"));
+    FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
     break;
   }
 #endif
@@ -129,7 +129,7 @@ void BinaryOp(const NDArray &lhs,
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("BinaryOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -141,7 +141,7 @@ void BinaryOp(const NDArray &lhs,
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, lhs.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("BinaryOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -160,7 +160,7 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
           TBlob tmp = ret.data();
           ndarray::Eval<cpu>(rhs, &tmp, ctx);
         }, ret.ctx(), {}, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SetValueOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -172,7 +172,7 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, ret.ctx(), {}, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SetValueOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -211,7 +211,7 @@ void ScalarOp(const NDArray &lhs,
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
         }, lhs.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("ScalarOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -223,7 +223,7 @@ void ScalarOp(const NDArray &lhs,
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, lhs.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("ScalarOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -270,7 +270,7 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
                                   from.ctx(), ret.ctx(), ctx); \
       } \
     }, from.ctx(), const_vars, {ret.var()}, \
-    FnProperty::kNormal, priority, false, PROFILER_MESSAGE("CopySliceTo"))
+    FnProperty::kNormal, priority, false, PROFILER_MESSAGE_FUNCNAME)
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     MXNET_COPYSLICETO_IMPL(cpu, cpu);
@@ -315,7 +315,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
                                 from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, priority, false, PROFILER_MESSAGE("CopyFromTo"));
+      FnProperty::kNormal, priority, false, PROFILER_MESSAGE_FUNCNAME);
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
@@ -327,7 +327,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, ret.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyToGPU, priority, false, PROFILER_MESSAGE("CopyFromTo"));
+        FnProperty::kCopyToGPU, priority, false, PROFILER_MESSAGE_FUNCNAME);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -337,7 +337,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority, false, PROFILER_MESSAGE("CopyFromTo"));
+        FnProperty::kCopyFromGPU, priority, false, PROFILER_MESSAGE_FUNCNAME);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -347,7 +347,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority, false, PROFILER_MESSAGE("CopyFromTo"));
+        FnProperty::kCopyFromGPU, priority, false, PROFILER_MESSAGE_FUNCNAME);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -388,7 +388,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           TBlob tmp = ret.data();
           ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
         }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority, false, PROFILER_MESSAGE("ElementwiseSum"));
+        FnProperty::kNormal, priority, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -404,7 +404,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority, false, PROFILER_MESSAGE("ElementwiseSum"));
+        FnProperty::kNormal, priority, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -431,7 +431,7 @@ void ClipOp(const NDArray &src,
           TBlob tmp = ret.data();
           ndarray::EvalClip<cpu>(src.data(), a_min, a_max, &tmp, ctx);
         }, src.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("ClipOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
     #if MXNET_USE_CUDA
@@ -441,7 +441,7 @@ void ClipOp(const NDArray &src,
           TBlob tmp = ret.data();
           ndarray::EvalClip<gpu>(src.data(), a_min, a_max, &tmp, ctx);
         }, src.ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("ClipOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
     #endif
@@ -470,7 +470,7 @@ void SampleOP(const real_t &a,
           TBlob tmp = ret.data();
           ndarray::EvalRandom<cpu, Distribution>(a, b, resource, &tmp, ctx);
         }, out->ctx(), {}, {ret.var(), resource.var},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SampleOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -482,7 +482,7 @@ void SampleOP(const real_t &a,
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, out->ctx(), {}, {ret.var(), resource.var},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SampleOp"));
+        FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -626,7 +626,7 @@ void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
           TBlob tmp = inter_out.data();
           ndarray::EvalBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
       }, src.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, 0, false, PROFILER_MESSAGE("Broadcast"));
+      FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -640,7 +640,7 @@ void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
       }, src.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, 0, false, PROFILER_MESSAGE("Broadcast"));
+      FnProperty::kNormal, 0, false, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif

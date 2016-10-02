@@ -570,7 +570,12 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
     } else if (opnode.cached_opr != nullptr) {
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx, 0,
-                          engine::Profiler::Get()->GetState() == engine::Profiler::kRunning);
+#if MXNET_USE_PROFILER
+                          engine::Profiler::Get()->GetState() == engine::Profiler::kRunning
+#else
+                          false
+#endif
+                          );
     } else {
       LOG(FATAL) << "Not accessed";
     }
