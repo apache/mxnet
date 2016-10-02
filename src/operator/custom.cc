@@ -82,7 +82,7 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
   Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {
       ctx.async_on_complete();
     }, ndctx, ndvar, {},
-    FnProperty::kNormal, 0, false, PROFILER_MESSAGE("CustomOpForward"));
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpForward"));
 }
 
 template<typename xpu>
@@ -141,7 +141,7 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
   Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){
       ctx.async_on_complete();
     }, ndctx, ndvar, {},
-    FnProperty::kNormal, 0, false, PROFILER_MESSAGE("CustomOpBackward"));
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpBackward"));
 }
 
 Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,

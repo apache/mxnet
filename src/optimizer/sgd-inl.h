@@ -123,12 +123,12 @@ class SGDOpt : public Optimizer {
         Engine::Get()->PushSync([this, index, w, g, lr, wd](RunContext ctx) {
           call_sgd_mom_update_cpu(ctx, w.data(), g.data(), mom[index].data(), lr, wd, param_);
         }, w.ctx(), {g.var()}, {w.var(), mom[index].var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SGDOptUpdate"));
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("SGDOptUpdate"));
       } else {
         Engine::Get()->PushSync([this, index, w, g, lr, wd](RunContext ctx) {
           call_sgd_update_cpu(ctx, w.data(), g.data(), lr, wd, param_);
         }, w.ctx(), {g.var()}, {w.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SGDOptUpdate"));
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("SGDOptUpdate"));
       }
       break;
      case Context::kGPU:
@@ -137,12 +137,12 @@ class SGDOpt : public Optimizer {
         Engine::Get()->PushSync([this, index, w, g, lr, wd](RunContext ctx) {
           call_sgd_mom_update_gpu(ctx, w.data(), g.data(), mom[index].data(), lr, wd, param_);
         }, w.ctx(), {g.var()}, {w.var(), mom[index].var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SGDOptUpdate"));
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("SGDOptUpdate"));
       } else {
         Engine::Get()->PushSync([this, index, w, g, lr, wd](RunContext ctx) {
           call_sgd_update_gpu(ctx, w.data(), g.data(), lr, wd, param_);
         }, w.ctx(), {g.var()}, {w.var()},
-        FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SGDOptUpdate"));
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("SGDOptUpdate"));
       }
       break;
 #else

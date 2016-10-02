@@ -252,7 +252,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
   this->PushSync([threaded_opr](RunContext) {
       ThreadedOpr::Delete(threaded_opr);
     }, Context::CPU(), {}, deps,
-    FnProperty::kAsync, 0, false, PROFILER_MESSAGE("DeleteOperator"));
+    FnProperty::kAsync, 0, PROFILER_MESSAGE("DeleteOperator"));
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
@@ -285,31 +285,17 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop,
                                int priority,
-                               bool profiling,
                                const char* opr_name) {
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name);
   opr->temporary = true;
-  Push(opr, exec_ctx, priority, profiling);
-}
-
-void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
-                              std::vector<VarHandle> const& const_vars,
-                              std::vector<VarHandle> const& mutable_vars,
-                              FnProperty prop,
-                              int priority,
-                              bool profiling,
-                              const char* opr_name) {
-  Profiler *profiler = Profiler::Get();
-  this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
-      exec_fn(ctx);
-      on_complete();
-    }, exec_ctx, const_vars, mutable_vars, prop, priority,
 #if MXNET_USE_PROFILER
-    (profiler->GetState() == Profiler::kRunning && profiler->GetMode() == Profiler::kAllOperator),
+  Profiler *profiler = Profiler::Get();
+  bool profiling = (profiler->GetState() == Profiler::kRunning) &&
+                   (profiler->GetMode() == Profiler::kAllOperator);
 #else
-    false,
+  bool profiling = false;
 #endif
-    opr_name);
+  Push(opr, exec_ctx, priority, profiling);
 }
 
 void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
@@ -322,7 +308,7 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
       threaded_var->SetToDelete();
       delete_fn(ctx);
     }, exec_ctx, {}, {var},
-    FnProperty::kAsync, 0, false, PROFILER_MESSAGE("DeleteVariable"));
+    FnProperty::kAsync, 0, PROFILER_MESSAGE("DeleteVariable"));
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
@@ -345,8 +331,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       if (engine_info_) {
         LOG(INFO) << "Sync is notified";
       }
-    }, Context::CPU(), {var}, {},
-    FnProperty::kNormal, 0, false, PROFILER_MESSAGE("WaitForVar"));
+    }, Context::CPU(), {var}, {});
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {

@@ -72,7 +72,7 @@ void MXRtc::push(std::vector<NDArray> const& input,
     for (auto& i : input) var_in.push_back(i.var());
     for (auto& i : output) var_out.push_back(i.var());
     Engine::Get()->PushSync(op, output[0].ctx(), var_in, var_out,
-            FnProperty::kNormal, 0, false, PROFILER_MESSAGE("MXRtc"));
+            FnProperty::kNormal, 0, PROFILER_MESSAGE("MXRtc"));
 }
 
 std::string MXRtc::decorate(const std::string& name,

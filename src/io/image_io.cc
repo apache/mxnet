@@ -150,7 +150,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
         cv::cvtColor(dst, dst, CV_BGR2RGB);
       }
     }, ndout.ctx(), {ndin.var()}, {ndout.var()},
-    FnProperty::kNormal, 0, false, PROFILER_MESSAGE("Imdecode"));
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imdecode"));
   (*outputs)[0] = ndout;
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";

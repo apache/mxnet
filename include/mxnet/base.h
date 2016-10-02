@@ -85,7 +85,6 @@
 /*!
  * \brief define function name as profiler message
  */
-#define PROFILER_MESSAGE_STR(s)   #s
 #define PROFILER_MESSAGE_FUNCNAME PROFILER_MESSAGE(__FUNCTION__)
 
 /*! \brief namespace of mxnet */

@@ -251,15 +251,7 @@ class ThreadedEngine : public Engine {
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop = FnProperty::kNormal,
                  int priority = 0,
-                 bool profiling = false,
                  const char* opr_name = nullptr) override;
-  void PushSync(SyncFn exec_fun, Context exec_ctx,
-                std::vector<VarHandle> const& const_vars,
-                std::vector<VarHandle> const& mutable_vars,
-                FnProperty prop = FnProperty::kNormal,
-                int priority = 0,
-                bool profiling = false,
-                const char* opr_name = nullptr) override;
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;

@@ -274,7 +274,7 @@ void TuneCudnnConvolution(ConvolutionParam param,
       *back_algo = bwd_data_algo[i].algo;
     }
   }, ctx, {}, {var},
-  FnProperty::kNormal, 0, false, PROFILER_MESSAGE("TuneCudnnConvolution"));
+  FnProperty::kNormal, 0, PROFILER_MESSAGE("TuneCudnnConvolution"));
   Engine::Get()->WaitForVar(var);
   Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
 

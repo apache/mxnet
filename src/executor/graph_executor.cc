@@ -526,7 +526,7 @@ void GraphExecutor::InitCachedOps() {
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
       }, Context::CPU(), {}, all_vars,
-      FnProperty::kNormal, 0, false, PROFILER_MESSAGE("SetupExec"));
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("SetupExec"));
 
     auto exec_fun = [exec, is_async, is_gpu](
         RunContext ctx, Engine::CallbackOnComplete on_complete) {

@@ -150,26 +150,7 @@ class MXNET_API Engine {
                          std::vector<VarHandle> const& mutable_vars,
                          FnProperty prop = FnProperty::kNormal,
                          int priority = 0,
-                         bool profiling = false,
                          const char* opr_name = nullptr) = 0;
-  /*!
-   * \brief Push an synchronous operation to the engine.
-   * \param exec_fn Execution function that executes the operation.
-   * \param exec_ctx Execution context.
-   * \param const_vars The variables that current operation will use but not
-   *                   mutate.
-   * \param mutable_vars The variables that current operation will mutate.
-   * \param prop Property of the function.
-   * \param priority Priority of the action, as hint to the engine.
-   * \tparam SyncFn the synchronous function to be pushed.
-   */
-  virtual void PushSync(SyncFn exec_fn, Context exec_ctx,
-                        std::vector<VarHandle> const& const_vars,
-                        std::vector<VarHandle> const& mutable_vars,
-                        FnProperty prop = FnProperty::kNormal,
-                        int priority = 0,
-                        bool profiling = false,
-                        const char* opr_name = nullptr) = 0;
   /*!
    * \brief Schedule the deletion of a variable.
    *
@@ -209,7 +190,28 @@ class MXNET_API Engine {
    * \return A shared pointer to Engine singleton.
    */
   static std::shared_ptr<Engine> _GetSharedRef();
-
+  /*!
+   * \brief Push an synchronous operation to the engine.
+   * \param exec_fn Execution function that executes the operation.
+   * \param exec_ctx Execution context.
+   * \param const_vars The variables that current operation will use but not
+   *                   mutate.
+   * \param mutable_vars The variables that current operation will mutate.
+   * \param prop Property of the function.
+   * \param priority Priority of the action, as hint to the engine.
+   * \tparam SyncFn the synchronous function to be pushed.
+   */
+  inline void PushSync(SyncFn exec_fn, Context exec_ctx,
+                       std::vector<VarHandle> const& const_vars,
+                       std::vector<VarHandle> const& mutable_vars,
+                       FnProperty prop = FnProperty::kNormal,
+                       int priority = 0,
+                       const char* opr_name = nullptr) {
+    this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
+      exec_fn(ctx);
+      on_complete();
+      }, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
+  }
   /*!
    * \brief factory function to create OnComplete callback.
    * \param callback th static callback function.
