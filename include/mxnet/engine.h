@@ -208,8 +208,8 @@ class MXNET_API Engine {
                        int priority = 0,
                        const char* opr_name = nullptr) {
     this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
-      exec_fn(ctx);
-      on_complete();
+        exec_fn(ctx);
+        on_complete();
       }, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
   }
   /*!

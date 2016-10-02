@@ -16,6 +16,8 @@
 namespace mxnet {
 namespace engine {
 
+// TODO(ziheng) more lock free
+
 Profiler* Profiler::instance_ = nullptr;
 std::mutex Profiler::m_;
 
