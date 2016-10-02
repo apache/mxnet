@@ -207,7 +207,7 @@ void BinaryBroadcastBackward_(const OutputGrad& out_grad,
     << "Binary function only support ingrad/outgrad with the same type";
   CHECK_EQ(out_grad.data.type_flag_, rhs_grad->type_flag_)
     << "Binary function only support ingrad/outgrad with the same type";
-  CHECK_EQ(rhs_grad->shape_.ndim(), rhs_grad->shape_.ndim()) <<
+  CHECK_EQ(lhs_grad->shape_.ndim(), rhs_grad->shape_.ndim()) <<
     "the ndim of lhs_grad and rhs_grad must be equal,"
     " shape of lhs_grad=" << lhs_grad->shape_ << " shape of rhs_grad=" << rhs_grad->shape_;
   if (!IsBroadcastNeeded_(lhs_grad->shape_, rhs_grad->shape_)) {
