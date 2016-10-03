@@ -47,4 +47,6 @@ from . import torch as th
 from . import module
 from . import module as mod
 
+from . import test_utils
+
 __version__ = base.__version__
