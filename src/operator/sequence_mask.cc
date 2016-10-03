@@ -14,7 +14,7 @@ inline void SequenceMask(const Tensor<cpu, 3, DType> &dst,
   for (index_t b = 0; b < dst.size(1); ++b)
     for (index_t s = label[b]; s < dst.size(0); ++s)
       for (index_t r = 0; r < dst.size(2); ++r)
-      dst[s][b][r] = 0.;
+        dst[s][b][r] = 0.;
 }
 
 }  // namespace mshadow
