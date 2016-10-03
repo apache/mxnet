@@ -58,8 +58,9 @@ class SequenceReverseOp : public Operator {
           Assign(
               out[s][b], req,
               F<mshadow_op::identity>(
-                  data[seq_length - s - 1][b])) else  // preserve padding type
-              Assign(out[s][b], req, F<mshadow_op::identity>(data[s][b]))
+                  data[seq_length - s - 1][b]))
+        else  // preserve padding type
+          Assign(out[s][b], req, F<mshadow_op::identity>(data[s][b]))
       }
     }
   }
@@ -121,7 +122,6 @@ class SequenceReverseOp : public Operator {
         in_grad[seq_reverse::kData].get_with_shape<xpu, 3, DType>(s3, s);
     Tensor<xpu, 3, DType> output_grad =
         out_grad[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
-    std::cout << "diajosidjfaoisdfjoisdfjaoisdfjaosdf" << std::endl;
     // copy indices to vector
     std::vector<index_t> indices_vec(n, max_seq_len);
     if (param_.use_sequence_length)
