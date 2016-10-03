@@ -30,9 +30,18 @@ Operator *SequenceLastProp::CreateOperatorEx(Context ctx, std::vector<TShape> *i
 DMLC_REGISTER_PARAMETER(SequenceLastParam);
 
 MXNET_REGISTER_OP_PROPERTY(SequenceLast, SequenceLastProp)
-.describe("Get the last element of a sequence.")
-.add_argument("data", "Symbol", "Input data to softmax.")
-.add_argument("sequence_length", "Symbol", "vector of sequence lengths.")
+.describe("Takes the last element of a sequence. Takes an n-dimensional tensor of "
+"the form (max sequence length, batchsize, other dims) and return s an (n-1)-dimensional tensor"
+"of the form (batchsize, other dims). This layer takes an optional input tensor "
+"sequence_length\" (list of sequence lengths of length batchsize) when the "
+"\"sequence_length\" option is set to true. This allows the layer to handle "
+"variable-length sequences. If \"sequence_length\" is false, then each example "
+"in the batch is assumed to have the max sequence length."
+)
+.add_argument("data", "Symbol",
+"n-dimensional input tensor of the form (max sequence length, batchsize, other dims)")
+.add_argument("sequence_length", "Symbol",
+"vector of sequence lengths of size batchsize")
 .add_arguments(SequenceLastParam::__FIELDS__());
 
 

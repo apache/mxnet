@@ -43,9 +43,19 @@ Operator *SequenceMaskProp::CreateOperatorEx(Context ctx, std::vector<TShape> *i
 DMLC_REGISTER_PARAMETER(SequenceMaskParam);
 
 MXNET_REGISTER_OP_PROPERTY(SequenceMask, SequenceMaskProp)
-.describe("Get the last element of a sequence.")
-.add_argument("data", "Symbol", "Input data of the form (seq len, other dims).")
-.add_argument("sequence_length", "Symbol", "vector of sequence lengths.")
+.describe("Sets all elements outside the sequence to zero. Takes an "
+"n-dimensional tensor of the form (max sequence length, batchsize, other dims) and "
+"returns a tensor of the same shape. This operator takes an optional input tensor "
+"sequence_length\" (list of sequence lengths of length batchsize) when the "
+"\"sequence_length\" option is set to true. This allows the layer to handle "
+"variable-length sequences. If \"sequence_length\" is false, then each example"
+"in the batch is assumed to have the max sequence length, and this operator"
+"becomes the identity operator."
+)
+.add_argument("data", "Symbol",
+"n-dimensional input tensor of the form (max sequence length, batchsize, other dims)")
+.add_argument("sequence_length", "Symbol",
+"vector of sequence lengths of size batchsize")
 .add_arguments(SequenceMaskParam::__FIELDS__());
 
 
