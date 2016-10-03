@@ -12,66 +12,39 @@
 #include <mxnet/operator.h>
 #include <algorithm>
 #include <map>
-#include <vector>
 #include <string>
 #include <utility>
-#include "./operator_common.h"
+#include <vector>
 #include "./mshadow_op.h"
 #include "./operator_common.h"
+#include "./operator_common.h"
+#include "./sequence_op_common.h"
 
 namespace mxnet {
 namespace op {
 
 namespace seq_last {
-enum SequenceLastOpInputs {kData, kSequenceLength};
-enum SequenceLastOpOutputs {kOut};
+enum SequenceLastOpInputs { kData, kSequenceLength };
+enum SequenceLastOpOutputs { kOut };
 }
 
 struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
   bool use_sequence_length;
   DMLC_DECLARE_PARAMETER(SequenceLastParam) {
-    DMLC_DECLARE_FIELD(use_sequence_length).set_default(false)
-    .describe("If set to true, this layer takes in extra input sequence_length"
-              "to specify variable length sequence");
+    DMLC_DECLARE_FIELD(use_sequence_length)
+        .set_default(false)
+        .describe(
+            "If set to true, this layer takes in extra input sequence_length"
+            "to specify variable length sequence");
   }
 };
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 class SequenceLastOp : public Operator {
  public:
-  explicit SequenceLastOp(SequenceLastParam p) {
-    this->param_ = p;
-  }
-  void index_array_copy(
-                        TBlob index,
-                        std::vector<index_t> *index_vec,
-                        OpContext ctx) {
-    int seq_len = index.Size();
-    if (index.dev_mask_ == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-      DType *temp_index =
-        reinterpret_cast<DType*>(malloc(sizeof(DType) * seq_len));
-      cudaError_t cuda_status = cudaMemcpyAsync(
-                                            temp_index,
-                                            index.dptr_,
-                                            seq_len*sizeof(DType),
-                                            cudaMemcpyDeviceToHost,
-                                            ctx.get_stream<gpu>()->stream_);
-    CHECK_EQ(cuda_status, cudaSuccess) << "cuda memcpy label error";
-    for (int i = 0; i < seq_len; ++i) {
-      (*index_vec)[i] = static_cast<index_t>(temp_index[i]);
-    }
-    free(temp_index);
-#endif
-    } else {
-    DType* index_array = static_cast<DType*>(index.dptr_);
-    for (int i = 0; i < seq_len; ++i)
-      (*index_vec)[i] = static_cast<index_t>(index_array[i]);
-    }
-}
+  explicit SequenceLastOp(SequenceLastParam p) { this->param_ = p; }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
+  virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
@@ -84,26 +57,30 @@ class SequenceLastOp : public Operator {
 
     // Get any size input + output into required form
     int n = in_data[seq_last::kData].size(1);
-    int seq_len = in_data[seq_last::kData].size(0);
+    int max_seq_len = in_data[seq_last::kData].size(0);
     int total_size = in_data[seq_last::kData].Size();
-    Shape<2> s2 = Shape2(n, static_cast<int>(total_size/n/seq_len));
-    Shape<3> s3 = Shape3(seq_len, n, static_cast<int>(total_size/n/seq_len));
-    Tensor<xpu, 3, DType> data = in_data[seq_last::kData].get_with_shape<xpu, 3, DType>(s3, s);
-    Tensor<xpu, 2, DType> out = out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(s2, s);
+    Shape<2> s2 = Shape2(n, static_cast<int>(total_size / n / max_seq_len));
+    Shape<3> s3 =
+        Shape3(max_seq_len, n, static_cast<int>(total_size / n / max_seq_len));
+    Tensor<xpu, 3, DType> data =
+        in_data[seq_last::kData].get_with_shape<xpu, 3, DType>(s3, s);
+    Tensor<xpu, 2, DType> out =
+        out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(s2, s);
 
-    // copy indices to vector
-    if (!param_.use_sequence_length) {
-      Assign(out, req[seq_last::kOut], F<mshadow_op::identity>(data[seq_len - 1]));
-    } else {
-      std::vector<index_t> indices_vec(n);
-      index_array_copy(in_data[seq_last::kSequenceLength], &indices_vec, ctx);
-      if (req[seq_last::kOut] == kWriteTo)
-          out = 0.0f;
+    if (param_.use_sequence_length) {
+      std::vector<index_t> indices_vec(n, max_seq_len);
+      IndexTensorToVector(
+          in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s),
+          &indices_vec);
+      if (req[seq_last::kOut] == kWriteTo) out = 0.0f;
       index_t seq_ind;
       for (index_t i = 0; i < n; ++i) {
-          seq_ind = indices_vec[i] - 1;  // 1-indexing
-          out[i] += data[seq_ind][i];
+        seq_ind = indices_vec[i] - 1;  // 1-indexing
+        out[i] += data[seq_ind][i];
       }
+    } else {
+      Assign(out, req[seq_last::kOut],
+             F<mshadow_op::identity>(data[max_seq_len - 1]));
     }
   }
 
@@ -120,34 +97,35 @@ class SequenceLastOp : public Operator {
     CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2 : 1);
 
     // break immediately if null grad
-    if (req[seq_last::kData] == kNullOp)
-      return;
+    if (req[seq_last::kData] == kNullOp) return;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
     int n = in_grad[seq_last::kData].size(1);
-    int seq_len = in_grad[seq_last::kData].size(0);
+    int max_seq_len = in_grad[seq_last::kData].size(0);
     int total_size = in_grad[seq_last::kData].Size();
-    Shape<2> s2 = Shape2(n, static_cast<int>(total_size/n/seq_len));
-    Shape<3> s3 = Shape3(seq_len, n, static_cast<int>(total_size/n/seq_len));
+    Shape<2> s2 = Shape2(n, static_cast<int>(total_size / n / max_seq_len));
+    Shape<3> s3 =
+        Shape3(max_seq_len, n, static_cast<int>(total_size / n / max_seq_len));
 
     Tensor<xpu, 3, DType> data_grad =
-      in_grad[seq_last::kData].get_with_shape<xpu, 3, DType>(s3, s);
+        in_grad[seq_last::kData].get_with_shape<xpu, 3, DType>(s3, s);
     Tensor<xpu, 2, DType> output_grad =
-      out_grad[seq_last::kOut].get_with_shape<xpu, 2, DType>(s2, s);
+        out_grad[seq_last::kOut].get_with_shape<xpu, 2, DType>(s2, s);
 
     // copy indices to vector
-    std::vector<index_t> indices_vec(n, seq_len);
+    std::vector<index_t> indices_vec(n, max_seq_len);
     if (param_.use_sequence_length)
-      index_array_copy(in_data[seq_last::kSequenceLength], &indices_vec, ctx);
+      IndexTensorToVector(
+          in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s),
+          &indices_vec);
 
     index_t seq_ind;
-    if (req[seq_last::kData] == kWriteTo)
-        data_grad = 0.0f;
+    if (req[seq_last::kData] == kWriteTo) data_grad = 0.0f;
     for (index_t i = 0; i < n; ++i) {
-        seq_ind = indices_vec[i] -  1;
-        data_grad[seq_ind][i] += output_grad[i];
+      seq_ind = indices_vec[i] - 1;
+      data_grad[seq_ind][i] += output_grad[i];
     }
   }
 
@@ -155,15 +133,13 @@ class SequenceLastOp : public Operator {
   SequenceLastParam param_;
 };  // class SequenceLastOp
 
-template<typename xpu>
-Operator* CreateOp(SequenceLastParam param, int dtype);
+template <typename xpu>
+Operator *CreateOp(SequenceLastParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class SequenceLastProp : public OperatorProperty {
  public:
-  int NumOutputs() const override {
-    return 1;
-  }
+  int NumOutputs() const override { return 1; }
 
   std::vector<std::string> ListArguments() const override {
     if (param_.use_sequence_length)
@@ -172,11 +148,10 @@ class SequenceLastProp : public OperatorProperty {
       return {"data"};
   }
 
-  std::vector<std::string> ListOutputs() const override {
-    return {"output"};
-  }
+  std::vector<std::string> ListOutputs() const override { return {"output"}; }
 
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+  void Init(
+      const std::vector<std::pair<std::string, std::string>> &kwargs) override {
     param_.Init(kwargs);
   }
 
@@ -184,23 +159,22 @@ class SequenceLastProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
+  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2 : 1)
-      << "Input:[data, sequence_length]";
+        << "Input:[data, sequence_length]";
 
     const TShape &dshape = (*in_shape)[seq_last::kData];
     if (dshape.ndim() == 0) return false;
     // seq length vector is same as batch size
     if (param_.use_sequence_length)
-      SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength, Shape1(dshape[1]));
+      SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength,
+                         Shape1(dshape[1]));
 
     // calculate output size
     TShape shape_o(dshape.ndim() - 1);
-    for (index_t i = 0; i < shape_o.ndim(); ++i)
-        shape_o[i] = dshape[i + 1];
+    for (index_t i = 0; i < shape_o.ndim(); ++i) shape_o[i] = dshape[i + 1];
 
     const TShape &oshape = shape_o;
     out_shape->clear();
@@ -208,9 +182,8 @@ class SequenceLastProp : public OperatorProperty {
     return true;
   }
 
-  bool InferType(std::vector<int> *in_type,
-                   std::vector<int> *out_type,
-                   std::vector<int> *aux_type) const override {
+  bool InferType(std::vector<int> *in_type, std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
     CHECK_GE(in_type->size(), param_.use_sequence_length ? 2 : 1);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
@@ -220,47 +193,43 @@ class SequenceLastProp : public OperatorProperty {
       } else {
         CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
                                        << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+                                       << (*in_type)[i] << " at "
+                                       << ListArguments()[i];
       }
     }
     out_type->clear();
     out_type->push_back(dtype);
     return true;
-    }
+  }
 
-  OperatorProperty* Copy() const override {
+  OperatorProperty *Copy() const override {
     auto ptr = new SequenceLastProp();
     ptr->param_ = param_;
     return ptr;
   }
 
-  std::string TypeString() const override {
-    return "SequenceLast";
-  }
+  std::string TypeString() const override { return "SequenceLast"; }
 
   std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+      const std::vector<int> &out_grad, const std::vector<int> &in_data,
+      const std::vector<int> &out_data) const override {
     if (param_.use_sequence_length)
-      return {out_grad[seq_last::kOut],
-              in_data[seq_last::kSequenceLength]
-            };
+      return {out_grad[seq_last::kOut], in_data[seq_last::kSequenceLength]};
     else
       return {out_grad[seq_last::kOut]};
   }
 
-  Operator* CreateOperator(Context ctx) const override {
+  Operator *CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:
   SequenceLastParam param_;
-};  // class SequenceLastProp
+};      // class SequenceLastProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
