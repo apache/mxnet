@@ -14,11 +14,11 @@ Tutorials
 * [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md)
 * [How to Create New Operations (Layers)](../../how_to/new_op.md)
 
-Python API Documents
+Python API Reference
 --------------------
-* [High Level Model Training Related API](model.md)
-* [The Module API](module.md)
-* [NDArray API](ndarray.md)
-* [Symbolic API](symbol.md)
-* [KVStore API](kvstore.md)
-* [Data Loading API](io.md)
+* [Module API](module.md) a flexible high-level interface for training neural networks
+* [Model API](model.md) an alternate simple high-level interface for training neural networks
+* [Symbolic API](symbol.md) for operations on NDArrays to assemble neural networks from layers
+* [IO Data Loading API](io.md) for parsing and loading data
+* [NDArray API](ndarray.md) for vector/matrix/tensor operations
+* [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training
