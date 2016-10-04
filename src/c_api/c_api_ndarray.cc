@@ -92,7 +92,9 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     for (auto& i : ndinputs) {
       in_shapes.emplace_back(i.shape());
     }
-    out_shapes.resize(infered_num_outputs);
+    for (auto& i : ndoutputs) {
+      out_shapes.emplace_back(i.shape());
+    }
     CHECK(infershape.count(op)) << "Op must have FInferShape registered";
     CHECK(infershape[op](attrs, &in_shapes, &out_shapes));
     CHECK_EQ(out_shapes.size(), infered_num_outputs);
@@ -105,7 +107,9 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     for (auto& i : ndinputs) {
       in_types.push_back(i.dtype());
     }
-    out_types.resize(infered_num_outputs, -1);
+    for (auto& i : ndoutputs) {
+      out_types.push_back(i.dtype());
+    }
     CHECK(infertype.count(op)) << "Op must have FInferShape registered";
     CHECK(infertype[op](attrs, &in_types, &out_types));
     CHECK_EQ(out_types.size(), infered_num_outputs);
@@ -114,12 +118,15 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     Context ctx;
     if (num_inputs) {
       ctx = ndinputs[0].ctx();
-    } else if (*num_outputs) {
-      CHECK(!ndoutputs[0].is_none())
-        << "Op without input must have initialized output";
+    } else if (*num_outputs && !ndoutputs[0].is_none()) {
       ctx = ndoutputs[0].ctx();
+    } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
+      ctx = Context::FromString(attrs.dict["ctx"]);
     } else {
-      LOG(FATAL) << "Need at least one input or output";
+      ctx = Context::CPU();
+    }
+    if (ctx.dev_type == Context::kCPUPinned) {
+      ctx = Context::CPU();
     }
 
     for (int i = 0; i < infered_num_outputs; ++i) {
