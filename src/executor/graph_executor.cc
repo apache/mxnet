@@ -369,7 +369,7 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
     CHECK_NE(vshape[eid].ndim(), 0);
     CHECK_NE(vdtype[eid], -1);
     data_entry_[idx.entry_id(nid, 0)] =
-        NDArray(vshape[eid], data_context[eid], vdtype[eid]);
+        NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
   }
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
