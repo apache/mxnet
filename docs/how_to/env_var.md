@@ -25,6 +25,9 @@ Usually you do not need to change these settings, but they are listed here for r
   - Maximum number of temp workspace we can allocate to each device.
   - Set this to small number can save GPU memory.
   - It will also likely to decrease level of parallelism, which is usually OK.
+* MXNET_GPU_MEM_POOL_RESERVE (default=5)
+  - Percentage of GPU memory to reserve for things other than gpu array, such as kernel launch or cudnn handle space.
+  - Try setting this to a larger value if you see strange out of memory error from kernel launch, after multiple iterations, etc.
 
 ## Engine type
 
