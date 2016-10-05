@@ -4,7 +4,7 @@
 from __future__ import absolute_import, print_function, division
 import time
 import numpy as np
-from numpy.testing import assert_allclose, build_err_msg
+import numpy.testing as npt
 import mxnet as mx
 _rng = np.random.RandomState(1234)
 
@@ -12,8 +12,8 @@ _rng = np.random.RandomState(1234)
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     """Compatible reduce for old version numpy
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     dat : np.ndarray
         Same as Numpy
 
@@ -55,17 +55,12 @@ def same(a, b):
 def reldiff(a, b):
     """Calculate the relative difference between two input arrays
 
-    Calculated by \frac{|a-b|^2)}{|a|^2 + |b|^2}
+    Calculated by :math:`\\frac{|a-b|^2}{|a|^2 + |b|^2}`
 
     Parameters
     ----------
     a : np.ndarray
     b : np.ndarray
-
-    Returns
-    -------
-    float :
-        The
     """
     diff = np.sum(np.abs(a - b))
     norm = np.sum(np.abs(a)) + np.sum(np.abs(b))
@@ -80,7 +75,7 @@ def _parse_location(sym, location, ctx):
 
     Parameters
     ----------
-    sym : mx.Symbol
+    sym : Symbol
     location : None or list of np.ndarray or dict of str to np.ndarray
 
     Returns
@@ -104,7 +99,7 @@ def _parse_aux_states(sym, aux_states, ctx):
 
     Parameters
     ----------
-    sym : mx.Symbol
+    sym : Symbol
     aux_states : None or list of np.ndarray or dict of str to np.ndarray
 
     Returns
@@ -130,9 +125,9 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
 
     Class based on Theano's `theano.gradient.numeric_grad` [1]
 
-    Parameters:
-    -----------
-    executor : `mxnet.executor.Executor`
+    Parameters
+    ----------
+    executor : Executor
         exectutor that computes the forward pass
     location : list of numpy.ndarray or dict of str to numpy.ndarray
         Argument values used as location to compute gradient
@@ -180,18 +175,18 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
 
     Based on Theano's `theano.gradient.verify_grad` [1]
 
-    Parameters:
-    -----------
-    sym : `mxnet.symbol.Symbol`
+    Parameters
+    ----------
+    sym : Symbol
         Symbol containing op to test
     location : list or tuple or dict
         Argument values used as location to compute gradient
 
-        - If type is list of numpy.ndarray, the position is in
-          the same order of `sym.list_arguments()`.
-        - If type is dict of str -> numpy.ndarray, then it maps the name of arguments
-          to the corresponding numpy.ndarray.
-        - In either case, value of all the arguments must be provided.
+        - if type is list of numpy.ndarray
+            inner elements should have the same the same order as mxnet.sym.list_arguments().
+        - if type is dict of str -> numpy.ndarray
+            maps the name of arguments to the corresponding numpy.ndarray.
+        *In either case, value of all the arguments must be provided.*
     aux_states : ist or tuple or dict, optional
         The auxiliary states required when generating the executor for the symbol
     numeric_eps : float, optional
@@ -201,8 +196,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
     grad_nodes : None or list or tuple or dict, optional
         Names of the nodes to check gradient on
     use_forward_train : bool
-        Whether to use is_train=True during the forwarding path of the executor
-        when computing the finite-difference
+        Whether to use is_train=True when computing the finite-difference
     ctx : Context, optional
         Check the gradient computation on the specified device
     References
@@ -285,12 +279,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
             raise ValueError
         if np.isnan(rel) or rel > check_eps:
             np.set_printoptions(threshold=4, suppress=True)
-            msg = build_err_msg(arr_l,
-                                err_msg="In symbol \"%s\", ctx=%s, "
-                                        "numeric check failed for \"%s\", grad_req= \"%s\". "
-                                        "Rel Err=%f, Expected <=%f"
-                                %(sym.name, str(ctx), name, grad_req[name], rel, check_eps),
-                                names=["NUMERICAL", "BACKWARD"])
+            msg = npt.build_err_msg(arr_l,
+                                    err_msg="In symbol \"%s\", ctx=%s, "
+                                            "numeric check failed for \"%s\", grad_req= \"%s\". "
+                                            "Rel Err=%f, Expected <=%f"
+                                    %(sym.name, str(ctx), name, grad_req[name], rel, check_eps),
+                                    names=["NUMERICAL", "BACKWARD"])
             raise Exception(msg)
 
 
@@ -299,23 +293,29 @@ def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=N
 
     Parameters
     ---------
-    sym : mxnet.symbol.Symbol
+    sym : Symbol
         output symbol
-    location : list of np.ndarray of dict
+    location : list of np.ndarray or dict of str to np.ndarray
         The evaluation point
-        if location is a list, it contains all the numpy arrays corresponding to sym.list_arguments
-        if location is a dict, it contains the mapping between argument names and their values
+
+        - if type is list of np.ndarray
+            contain all the numpy arrays corresponding to `sym.list_arguments()`
+        - if type is dict of str to np.ndarray
+            contain the mapping between argument names and their values
     expected : list of np.ndarray or dict of str to np.ndarray
         The expected output value
-        if list, contains arrays corresponding to exe.outputs
-        if dict, contains mapping between sym.list_output() and exe.outputs
+
+        - if type is list of np.ndarray
+            contain arrays corresponding to exe.outputs
+        - if type is dict of str to np.ndarray
+            contain mapping between sym.list_output() and exe.outputs
     check_eps : float, optional
         relative error to check to
     aux_states : list of np.ndarray of dict, optional
-        if aux_states is a list
-            it contains all the numpy arrays corresponding to sym.list_auxiliary_states
-        if aux_states is a dict
-            it contains the mapping between names of auxiliary states and their values
+        - if type is list of np.ndarray
+            contain all the numpy arrays corresponding to sym.list_auxiliary_states
+        - if type is dict of str to np.ndarray
+            contain the mapping between names of auxiliary states and their values
     ctx : Context, optional
         running context
     """
@@ -337,34 +337,44 @@ def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=N
         rel = reldiff(expect, output)
         if rel > check_eps:
             np.set_printoptions(threshold=4, suppress=True)
-            msg = build_err_msg([expect, output],
-                                err_msg="In symbol \"%s\", ctx=%s, "
-                                        "forward check failed for \"%s\". "
-                                        "Rel Err=%f, Expected <=%f"
-                                %(sym.name, str(ctx), output_name, rel, check_eps),
-                                names=["EXPECTED", "FORWARD"])
+            msg = npt.build_err_msg([expect, output],
+                                    err_msg="In symbol \"%s\", ctx=%s, "
+                                            "forward check failed for \"%s\". "
+                                            "Rel Err=%f, Expected <=%f"
+                                    %(sym.name, str(ctx), output_name, rel, check_eps),
+                                    names=["EXPECTED", "FORWARD"])
             raise Exception(msg)
 
 
 def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
                             aux_states=None, grad_req='write', ctx=mx.cpu()):
     """Compare backward call to expected value.
+
     Parameters
     ---------
-    sym : mxnet.symbol.Symbol
+    sym : Symbol
         output symbol
-    location : list np.ndarray
+    location : list of np.ndarray or dict of str to np.ndarray
         The evaluation point
-        if location is a list, it contains all the numpy arrays corresponding to sym.list_arguments
-        if location is a dict, it contains the mapping between argument names and their values
+
+        - if type is list of np.ndarray
+            contain all the numpy arrays corresponding to mxnet.sym.list_arguments
+        - if type is dict of str to np.ndarray
+            contain the mapping between argument names and their values
     out_grads : None or list of np.ndarray or dict of str to np.ndarray
         numpy arrays corresponding to sym.outputs for incomming gradient
-        if list, contains arrays corresponding to exe.outputs
-        if dict, contains mapping between sym.list_output() and exe.outputs
+
+        - if type is list of np.ndarray
+            contains arrays corresponding to exe.outputs
+        - if type is dict of str to np.ndarray
+            contains mapping between mxnet.sym.list_output() and Executor.outputs
     expected : list of np.ndarray or dict of str to np.ndarray
         expected gradient values
-        if list, contains arrays corresponding to exe.grad_arrays
-        if dict, contains mapping between sym.list_arguments() and exe.outputs
+
+        - if type is list of np.ndarray
+            contains arrays corresponding to exe.grad_arrays
+        - if type is dict of str to np.ndarray
+            contains mapping between sym.list_arguments() and exe.outputs
     check_eps: float, optional
         relative error to check to
     aux_states : list of np.ndarray or dict of str to np.ndarray
@@ -409,12 +419,12 @@ def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
             raise ValueError
         if rel > check_eps:
             np.set_printoptions(threshold=4, suppress=True)
-            msg = build_err_msg(arr_l,
-                                err_msg="In symbol \"%s\", ctx=%s, "
-                                        "backward check failed for \"%s\". "
-                                        "Rel Err=%f, Expected <=%f"
-                                %(sym.name, str(ctx), name, rel, check_eps),
-                                names=["EXPECTED", "BACKWARD"])
+            msg = npt.build_err_msg(arr_l,
+                                    err_msg="In symbol \"%s\", ctx=%s, "
+                                            "backward check failed for \"%s\". "
+                                            "Rel Err=%f, Expected <=%f"
+                                    %(sym.name, str(ctx), name, rel, check_eps),
+                                    names=["EXPECTED", "BACKWARD"])
             raise Exception(msg)
 
 
@@ -425,11 +435,22 @@ def check_speed(sym, location=None, ctx=mx.cpu(), N=20, grad_req=None, typ="whol
     Parameters
     ----------
     sym : Symbol
-    location : none or dict of np.ndarray
+        symbol to run the speed test
+    location : none or dict of str to np.ndarray
+        location to evaluate the inner executor
     ctx : Context
+        running context
     N : int, optional
+        repeat times
     grad_req : None or str or list of str or dict of str to str, optional
+        gradient requirements
     typ : str, optional
+        "whole" or "forward"
+
+        - "whole"
+            test the forward_backward speed
+        - "forward"
+            only test the forward speed
     """
     if grad_req is None:
         grad_req = 'write'
@@ -488,32 +509,37 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
     Parameters
     ----------
     sym : Symbol
+        symbol to run the consistency test
     ctx_list : list
+        running context. See example for more detail.
     scale : float, optional
+        standard deviation of the inner normal distribution. Used in initialization
     grad_req : str or list of str or dict of str to str
-
+        gradient requirement.
     Examples
     --------
     >>> # create the symbol
     >>> sym = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
     >>> # initialize the running context
-    >>> ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},\
-                    {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},\
-                    {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},\
-                    {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},\
-                    {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}}]
+    >>> ctx_list =\
+[{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},\
+ {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},\
+ {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},\
+ {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},\
+ {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}}]
     >>> check_consistency(sym, ctx_list)
     >>> sym = mx.sym.Concat(name='concat', num_args=2)
-    >>> ctx_list = [{'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
-                     'type_dict': {'concat_arg0': np.float64, 'concat_arg1': np.float64}},\
-                    {'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
-                     'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}},\
-                    {'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
-                     'type_dict': {'concat_arg0': np.float16, 'concat_arg1': np.float16}},\
-                    {'ctx': mx.cpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
-                     'type_dict': {'concat_arg0': np.float64, 'concat_arg1': np.float64}},\
-                    {'ctx': mx.cpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
-                     'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}}]
+    >>> ctx_list = \
+[{'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
+  'type_dict': {'concat_arg0': np.float64, 'concat_arg1': np.float64}},\
+ {'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
+  'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}},\
+ {'ctx': mx.gpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
+  'type_dict': {'concat_arg0': np.float16, 'concat_arg1': np.float16}},\
+ {'ctx': mx.cpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
+  'type_dict': {'concat_arg0': np.float64, 'concat_arg1': np.float64}},\
+ {'ctx': mx.cpu(0), 'concat_arg1': (2, 10), 'concat_arg0': (2, 10),\
+  'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}}]
     >>> check_consistency(sym, ctx_list)
     """
     tol = {np.dtype(np.float16): 1e-1,
@@ -553,7 +579,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
         for arr1, arr2 in zip([outputs[i]]+grads[i], [outputs[max_idx]]+grads[max_idx]):
             arr2 = arr2.astype(dtypes[i])
             try:
-                assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
                 print(e)
 
@@ -571,6 +597,6 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
         for arr1, arr2 in zip([outputs[i]], [outputs[max_idx]]):
             arr2 = arr2.astype(dtypes[i])
             try:
-                assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
                 print(e)
