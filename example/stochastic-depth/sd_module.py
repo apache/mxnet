@@ -3,6 +3,19 @@ import mxnet as mx
 import numpy as np
 
 
+class RandomNumberQueue(object):
+    def __init__(self, pool_size=1000):
+        self._pool = np.random.rand(pool_size)
+        self._index = 0
+
+    def get_sample(self):
+        if self._index >= len(self._pool):
+            self._pool = np.random.rand(len(self._pool))
+            self._index = 0
+        self._index += 1
+        return self._pool[self._index-1]
+
+
 class StochasticDepthModule(mx.module.BaseModule):
     """Stochastic depth module is a two branch computation: one is actual computing and the
     other is the skip computing (usually an identity map). This is similar to a Residual block,
@@ -50,6 +63,7 @@ class StochasticDepthModule(mx.module.BaseModule):
         self._gate_open = True
         self._outputs = None
         self._input_grads = None
+        self._rnd_queue = RandomNumberQueue()
 
     @property
     def data_names(self):
@@ -113,7 +127,7 @@ class StochasticDepthModule(mx.module.BaseModule):
             self._outputs = data_batch.data
 
         if is_train:
-            self._gate_open = np.random.rand() < self._open_rate
+            self._gate_open = self._rnd_queue.get_sample() < self._open_rate
             if self._gate_open:
                 self._module_compute.forward(data_batch, is_train=True)
                 computed_outputs = self._module_compute.get_outputs()

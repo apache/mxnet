@@ -26,6 +26,18 @@
 # INFO:root:Epoch[80] Time cost=48.348
 # INFO:root:Saved checkpoint to "sd-110-0081.params"
 # INFO:root:Epoch[80] Validation-accuracy=0.880142
+# ...
+# INFO:root:Epoch[115] Batch [50] Speed: 1037.04 samples/sec      Train-accuracy=0.937040
+# INFO:root:Epoch[115] Batch [100]        Speed: 1041.12 samples/sec      Train-accuracy=0.934219
+# INFO:root:Epoch[115] Batch [150]        Speed: 1036.02 samples/sec      Train-accuracy=0.933125
+# INFO:root:Epoch[115] Batch [200]        Speed: 1057.49 samples/sec      Train-accuracy=0.938125
+# INFO:root:Epoch[115] Batch [250]        Speed: 1060.56 samples/sec      Train-accuracy=0.933438
+# INFO:root:Epoch[115] Batch [300]        Speed: 1046.25 samples/sec      Train-accuracy=0.935625
+# INFO:root:Epoch[115] Batch [350]        Speed: 1043.83 samples/sec      Train-accuracy=0.927188
+# INFO:root:Epoch[115] Train-accuracy=0.938477
+# INFO:root:Epoch[115] Time cost=47.815
+# INFO:root:Saved checkpoint to "sd-110-0116.params"
+# INFO:root:Epoch[115] Validation-accuracy=0.884415
 # ###########################################################################################
 
 import os

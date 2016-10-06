@@ -1,3 +1,8 @@
+################################################################################
+# A sanity check mainly for debugging purpose. See sd_cifar10.py for a non-trivial
+# example of stochastic depth on cifar10.
+################################################################################
+
 import os
 import sys
 import mxnet as mx
@@ -10,7 +15,7 @@ from train_mnist import get_iterator
 from symbol_resnet import get_conv
 
 death_rates = [0.3]
-contexts = [mx.context.gpu()]
+contexts = [mx.context.cpu()]
 
 data = mx.symbol.Variable('data')
 conv = get_conv(
@@ -78,4 +83,4 @@ val = mx.io.MNISTIter(
 
 logging.basicConfig(level=logging.DEBUG)
 mod_seq.fit(train, val, optimizer_params={'learning_rate': 0.01, 'momentum': 0.9},
-            num_epoch=n_epoch, batch_end_callback=mx.callback.Speedometer(batch_size, 50))
+            num_epoch=n_epoch, batch_end_callback=mx.callback.Speedometer(batch_size, 10))
