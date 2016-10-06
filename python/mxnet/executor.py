@@ -49,6 +49,7 @@ class Executor(object):
         self._arg_dict = None
         self._grad_dict = None
         self._aux_dict = None
+        self._output_dict = None
         self._monitor_callback = None
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
@@ -124,7 +125,7 @@ class Executor(object):
 
         Parameters
         ----------
-        out_grads : NDArray or list of NDArray, optional
+        out_grads : NDArray or list of NDArray or dict of str to NDArray, optional
             Gradient on the outputs to be propagated back.
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
@@ -133,6 +134,8 @@ class Executor(object):
             out_grads = []
         elif isinstance(out_grads, NDArray):
             out_grads = [out_grads]
+        elif isinstance(out_grads, dict):
+            out_grads = [out_grads[k] for k in self._symbol.list_outputs()]
 
         for obj in out_grads:
             if not isinstance(obj, NDArray):
@@ -207,6 +210,24 @@ class Executor(object):
             self._aux_dict = Executor._get_dict(
                 self._symbol.list_auxiliary_states(), self.aux_arrays)
         return self._aux_dict
+
+    @property
+    def output_dict(self):
+        """Get dictionary representation of output arrays.
+
+        Returns
+        -------
+        output_dict : dict of str to NDArray
+            The dictionary that maps name of output names to NDArrays.
+
+        Raises
+        ------
+        ValueError : if there are duplicated names in the outputs.
+        """
+        if self._output_dict is None:
+            self._output_dict = Executor._get_dict(
+                self._symbol.list_outputs(), self.outputs)
+        return self._output_dict
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
         """Copy parameters from arg_params, aux_params into executor's internal array.

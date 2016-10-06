@@ -27,7 +27,7 @@ from sphinx_util import MarkdownParser, AutoStructify
 
 # -- mock out modules
 import mock
-MOCK_MODULES = ['numpy', 'scipy', 'scipy.sparse', 'sklearn', 'matplotlib']
+MOCK_MODULES = ['numpy', 'numpy.testing', 'scipy', 'scipy.sparse', 'sklearn', 'matplotlib']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
