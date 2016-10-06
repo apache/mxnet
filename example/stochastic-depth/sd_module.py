@@ -2,7 +2,28 @@ import logging
 import mxnet as mx
 import numpy as np
 
+
 class StochasticDepthModule(mx.module.BaseModule):
+    """Stochastic depth module is a two branch computation: one is actual computing and the
+    other is the skip computing (usually an identity map). This is similar to a Residual block,
+    except that a random variable is used to randomly turn off the computing branch, in order
+    to save computation during training.
+
+    Parameters
+    ----------
+    symbol_compute: Symbol
+        The computation branch.
+    symbol_skip: Symbol
+        The skip branch. Could be None, in which case an identity map will be automatically
+        used. Note the two branch should produce exactly the same output shapes.
+    data_names: list of str
+        Default is `['data']`. Indicating the input names. Note if `symbol_skip` is not None,
+        it should have the same input names as `symbol_compute`.
+    label_names: list of str
+        Default is None, indicating that this module does not take labels.
+    death_rate: float
+        Default 0. The probability of turning off the computing branch.
+    """
     def __init__(self, symbol_compute, symbol_skip=None,
                  data_names=('data',), label_names=None,
                  logger=logging, context=mx.context.cpu(),
@@ -122,6 +143,11 @@ class StochasticDepthModule(mx.module.BaseModule):
         self._module_compute.update()
         if self._module_skip:
             self._module_skip.update()
+
+    def update_metric(self, eval_metric, labels):
+        self._module_compute.update_metric(eval_metric, labels)
+        if self._module_skip:
+            self._module_skip.update_metric(eval_metric, labels)
 
     def get_outputs(self, merge_multi_context=True):
         assert merge_multi_context, "Force merging for now"
