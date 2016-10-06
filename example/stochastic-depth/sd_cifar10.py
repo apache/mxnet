@@ -1,3 +1,33 @@
+###########################################################################################
+# Implementation of the stochastic depth algorithm described in the paper
+#
+#    Huang, Gao, et al. "Deep networks with stochastic depth." arXiv preprint arXiv:1603.09382 (2016).
+#
+# Reference torch implementation can be found at https://github.com/yueatsprograms/Stochastic_Depth
+#
+# There are some differences in the implementation:
+# - A BN->ReLU->Conv is used for skip connection when input and output shapes are different,
+#   as oppose to a padding layer.
+# - The residual block is different: we use BN->ReLU->Conv->BN->ReLU->Conv, as oppose to
+#   Conv->BN->ReLU->Conv->BN (->ReLU also applied to skip connection).
+# - We did not try to match with the same initialization, learning rate scheduling, etc.
+#
+#--------------------------------------------------------------------------------
+# A sample from the running log:
+#
+# INFO:root:Epoch[80] Batch [50]  Speed: 1020.95 samples/sec      Train-accuracy=0.910080
+# INFO:root:Epoch[80] Batch [100] Speed: 1013.41 samples/sec      Train-accuracy=0.912031
+# INFO:root:Epoch[80] Batch [150] Speed: 1035.48 samples/sec      Train-accuracy=0.913438
+# INFO:root:Epoch[80] Batch [200] Speed: 1045.00 samples/sec      Train-accuracy=0.907344
+# INFO:root:Epoch[80] Batch [250] Speed: 1055.32 samples/sec      Train-accuracy=0.905937
+# INFO:root:Epoch[80] Batch [300] Speed: 1071.71 samples/sec      Train-accuracy=0.912500
+# INFO:root:Epoch[80] Batch [350] Speed: 1033.73 samples/sec      Train-accuracy=0.910937
+# INFO:root:Epoch[80] Train-accuracy=0.919922
+# INFO:root:Epoch[80] Time cost=48.348
+# INFO:root:Saved checkpoint to "sd-110-0081.params"
+# INFO:root:Epoch[80] Validation-accuracy=0.880142
+# ###########################################################################################
+
 import os
 import sys
 import mxnet as mx
@@ -32,7 +62,10 @@ def residual_module(death_rate, n_channel, name_scope, context, stride=1, bn_mom
 
     # skip branch
     if stride > 1:
-        sym_skip = mx.symbol.Convolution(data=data, num_filter=n_channel, kernel=(3, 3), pad=(1, 1),
+        sym_skip = mx.symbol.BatchNorm(data=data, fix_gamma=False, momentum=bn_momentum,
+                                       eps=2e-5, name=name_scope+'_skip_bn')
+        sym_skip = mx.symbol.Activation(data=sym_skip, act_type='relu', name=name_scope+'_skip_relu')
+        sym_skip = mx.symbol.Convolution(data=sym_skip, num_filter=n_channel, kernel=(3, 3), pad=(1, 1),
                                          stride=(stride, stride), name=name_scope+'_skip_conv')
     else:
         sym_skip = None
@@ -46,7 +79,7 @@ def residual_module(death_rate, n_channel, name_scope, context, stride=1, bn_mom
 # Build architecture
 # Configurations
 bn_momentum = 0.9
-contexts = [mx.context.gpu(i) for i in range(8)]
+contexts = [mx.context.gpu(i) for i in range(1)]
 n_residual_blocks = 18
 death_rate = 0.5
 death_mode = 'linear_decay'  # 'linear_decay' or 'uniform'
@@ -107,15 +140,15 @@ mod_seq.add(mod_final, auto_wiring=True, take_labels=True)
 # Training
 num_examples = 60000
 batch_size = 128
-base_lr = 0.05
-lr_factor = 0.1
-lr_factor_epoch = 10
+base_lr = 0.008
+lr_factor = 0.5
+lr_factor_epoch = 100
 momentum = 0.9
 weight_decay = 0.00001
 kv_store = 'local'
 
 initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
-num_epochs = 50
+num_epochs = 500
 
 epoch_size = num_examples / batch_size
 lr_scheduler = mx.lr_scheduler.FactorScheduler(step=max(int(epoch_size * lr_factor_epoch), 1), factor=lr_factor)
