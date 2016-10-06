@@ -72,7 +72,7 @@ class CuDNNConvolutionOp : public Operator {
     }
     Tensor<gpu, 1, DType> workspace =
         ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
-                                 mshadow::Shape1(forward_workspace_), s);
+            mshadow::Shape1(forward_workspace_), s);
 
     if (param_.kernel.ndim() == 2) {
       Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
@@ -98,6 +98,7 @@ class CuDNNConvolutionOp : public Operator {
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
+      typename DataType<DType>::ScaleType beta_add = 1.0f;
       CHECK_EQ(cudnnConvolutionForward(s->dnn_handle_,
                                        &alpha,
                                        in_desc_,
@@ -108,20 +109,19 @@ class CuDNNConvolutionOp : public Operator {
                                        algo_,
                                        workspace.dptr_,
                                        forward_workspace_byte_,
-                                       &beta,
+                                       req[conv::kOut] == kAddTo? &beta_add : &beta,
                                        out_desc_,
                                        out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
       if (!param_.no_bias) {
-        beta = 1.0f;
         Tensor<gpu, 1, DType> bias = in_data[conv::kBias].get<gpu, 1, DType>(s);
         #if CUDNN_MAJOR >= 4
         CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
-                                  &alpha,
-                                  bias_desc_,
-                                  bias.dptr_ + bias_offset_ * g,
-                                  &beta,
-                                  out_desc_,
-                                  out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
+                                &alpha,
+                                bias_desc_,
+                                bias.dptr_ + bias_offset_ * g,
+                                &beta_add,
+                                out_desc_,
+                                out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
         #endif
         #if CUDNN_MAJOR == 3
         CHECK_EQ(cudnnAddTensor(s->dnn_handle_,
@@ -129,7 +129,7 @@ class CuDNNConvolutionOp : public Operator {
                                 &alpha,
                                 bias_desc_,
                                 bias.dptr_ + bias_offset_ * g,
-                                &beta,
+                                &beta_add,
                                 out_desc_,
                                 out_ptr + out_offset_ * g), CUDNN_STATUS_SUCCESS);
         #endif
@@ -191,7 +191,7 @@ class CuDNNConvolutionOp : public Operator {
                                               &alpha,
                                               out_desc_,
                                               grad_ptr + out_offset_ * g,
-                                              req[conv::kBias] == kWriteTo ? &beta : &beta_add,
+                                              req[conv::kBias] == kAddTo ? &beta_add : &beta,
                                               bias_desc_,
                                               gbias.dptr_ + bias_offset_ * g),
                  CUDNN_STATUS_SUCCESS);
@@ -207,7 +207,7 @@ class CuDNNConvolutionOp : public Operator {
                back_algo_w_,
                workspace.dptr_,
                backward_workspace_byte_,
-               req[conv::kWeight] == kWriteTo? &beta : &beta_add,
+               req[conv::kWeight] == kAddTo? &beta_add : &beta,
                filter_desc_,
                gwmat_ptr + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
       #elif CUDNN_MAJOR == 5
@@ -221,7 +221,7 @@ class CuDNNConvolutionOp : public Operator {
                back_algo_w_,
                workspace.dptr_,
                backward_workspace_byte_,
-               req[conv::kWeight] == kWriteTo? &beta : &beta_add,
+               req[conv::kWeight] == kAddTo? &beta_add : &beta,
                filter_desc_,
                gwmat_ptr + weight_offset_ * g));
       #endif
@@ -236,6 +236,7 @@ class CuDNNConvolutionOp : public Operator {
                back_algo_,
                workspace.dptr_,
                backward_workspace_byte_,
+               req[conv::kData] == kAddTo? &beta_add : &beta,
                &beta,
                in_desc_,
                gdata_ptr + data_offset_ * g), CUDNN_STATUS_SUCCESS);
@@ -250,7 +251,7 @@ class CuDNNConvolutionOp : public Operator {
                back_algo_,
                workspace.dptr_,
                backward_workspace_byte_,
-               &beta,
+               req[conv::kData] == kAddTo? &beta_add : &beta,
                in_desc_,
                gdata_ptr + data_offset_ * g), CUDNN_STATUS_SUCCESS);
       #endif
