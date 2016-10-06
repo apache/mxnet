@@ -212,6 +212,17 @@ function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name 
   error("$name is not provided by this data provider")
 end
 
+"""
+    eachbatch(provider::AbstractDataProvider)
+
+Allows you to perform operations on data every epoch. This is especially useful
+when you need to perform real-time augmentation of the data. 
+
+# Arguments:
+* `provider`: an instance of the custom DataProvider type. You must return this
+instance after modifying its fields.
+
+"""
 eachbatch(provider :: AbstractDataProvider) = provider
 
 """
