@@ -65,12 +65,6 @@ n_epoch = 2
 batch_size = 100
 
 
-# args = type('', (), {})()
-# args.batch_size = batch_size
-# args.data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "image-classification", "mnist"))
-# kv = mx.kvstore.create('local')
-# train, val = get_iterator((1, 28, 28))(args, kv)
-
 train = mx.io.MNISTIter(
         image="../image-classification/mnist/train-images-idx3-ubyte",
         label="../image-classification/mnist/train-labels-idx1-ubyte",

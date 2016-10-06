@@ -53,6 +53,7 @@ class StochasticDepthModule(mx.module.BaseModule):
     def get_params(self):
         params = self._module_compute.get_params()
         if self._module_skip:
+            params = [x.copy() for x in params]
             skip_params = self._module_skip.get_params()
             for a, b in zip(params, skip_params):
                 # make sure they do not contain duplicated param names

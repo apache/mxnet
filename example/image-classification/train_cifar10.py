@@ -77,5 +77,6 @@ def get_iterator(args, kv):
 
     return (train, val)
 
-# train
-train_model.fit(args, net, get_iterator)
+if __name__ == '__main__':
+    # train
+    train_model.fit(args, net, get_iterator)
