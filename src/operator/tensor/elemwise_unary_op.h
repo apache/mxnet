@@ -38,6 +38,23 @@ void UnaryCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+
+template<typename xpu>
+void IdentityCompute(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (req[0] == kNullOp || req[0] == kWriteInplace) return;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
+    ASSIGN_DISPATCH(out, req[0], F<mshadow_op::identity>(inputs[0].FlatTo1D<xpu, DType>(s)));
+  });
+}
+
 #define MXNET_OPERATOR_REGISTER_UNARY(name)                         \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(1)                                                \
