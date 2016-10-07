@@ -16,6 +16,19 @@ MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
+NNVM_REGISTER_OP(_backward_copy)
+.set_num_inputs(1)
+.set_num_outputs(2)
+.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
+
 // negative
 MXNET_OPERATOR_REGISTER_UNARY(negative)
 .MXNET_DESCRIBE("Negate src")
