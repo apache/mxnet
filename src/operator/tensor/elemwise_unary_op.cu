@@ -12,6 +12,9 @@ namespace op {
 NNVM_REGISTER_OP(_copy)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
+NNVM_REGISTER_OP(_backward_copy)
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+
 // negative
 NNVM_REGISTER_OP(negative)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::negation>);
