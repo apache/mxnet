@@ -70,23 +70,48 @@ const std::vector<NDArray>& GraphExecutor::outputs() const {
 
 nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   using nnvm::Op;
-  using nnvm::Node;
+  static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 8);
+  static const Op* ewise_plus_op = Op::Get("_ewise_plus");
+  static const Op* ewise_sum_op = Op::Get("ElementWiseSum");
+  static const Op* identity_op = Op::Get("identity");
+
   if (v.size() == 1) {
     return std::move(v[0]);
   } else if (v.size() == 0) {
     // TODO(tqchen) should be zero node
-    nnvm::NodePtr ng = Node::Create();
+    nnvm::NodePtr ng = nnvm::Node::Create();
     ng->attrs.op = Op::Get("_NoGradient");
     ng->attrs.name = "NoGradient";
     return nnvm::NodeEntry{ng, 0, 0};
   } else {
-    nnvm::NodePtr sum_node = Node::Create();
-    sum_node->attrs.op = Op::Get("ElementWiseSum");
-    sum_node->attrs.name = "sum_grad";
-    sum_node->attrs.dict["num_args"] = std::to_string(v.size());
-    sum_node->attrs.op->attr_parser(&(sum_node->attrs));
-    sum_node->inputs = std::move(v);
-    return nnvm::NodeEntry{sum_node, 0, 0};
+    if (v.size() < inplace_sum_cap) {
+      nnvm::NodePtr sum_node = nnvm::Node::Create();
+      sum_node->attrs.op = ewise_sum_op;
+      sum_node->attrs.name = "sum_grad";
+      sum_node->attrs.dict["num_args"] = std::to_string(v.size());
+      sum_node->attrs.op->attr_parser(&(sum_node->attrs));
+      sum_node->inputs = std::move(v);
+      return nnvm::NodeEntry{sum_node, 0, 0};
+    } else {
+      // use a stream line of plus instead
+      nnvm::NodeEntry ret = v[0];
+      for (size_t i = 1; i < v.size(); ++i) {
+        std::ostringstream os;
+        os << "sum_grad_" << i;
+        nnvm::NodePtr x = nnvm::Node::Create();
+        x->attrs.op = ewise_plus_op;
+        x->attrs.name = os.str();
+        x->inputs = {ret, v[i]};
+        ret = nnvm::NodeEntry{x, 0, 0};
+      }
+      // identity node is used to avoid exposure of dummy plus node
+      // when its output get assigned to another space.
+      nnvm::NodePtr id_node = nnvm::Node::Create();
+      id_node->attrs.op = identity_op;
+      id_node->attrs.name = "sum_grad_final";
+      id_node->inputs = {ret};
+      return nnvm::NodeEntry{id_node, 0, 0};
+    }
   }
 }
 
@@ -331,6 +356,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
   g = nnvm::pass::InferType(g, arg_types);
   g = nnvm::ApplyPass(g, "PlanMemory");
+  g = DetectInplaceAddTo(g);
   return g;
 }
 
@@ -438,12 +464,18 @@ void GraphExecutor::InitCachedOps() {
   const auto& op_execs =
       graph_.GetAttr<OpExecVector>("op_execs");
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
+  const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
+  const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
 
   op_nodes_.resize(idx.num_nodes());
   // setup the array and requirements.
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
+    if (skip_plus_node.at(nid)) {
+      op_nodes_[nid].skip_exec_node = true; continue;
+    }
+
     op_nodes_[nid].exec = op_execs[nid];
     op_nodes_[nid].ctx = vctx[nid];
     auto& exec = op_nodes_[nid].exec;
@@ -456,7 +488,10 @@ void GraphExecutor::InitCachedOps() {
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
       exec->out_array.push_back(data_entry_[eid]);
-      if (vstorage_inplace[eid] >= 0) {
+      if (addto_entry.at(eid) != 0) {
+        exec->req.push_back(kAddTo);
+
+      } else if (vstorage_inplace[eid] >= 0) {
         exec->req.push_back(kWriteInplace);
       } else if (vstorage_inplace[eid] == -2) {
         // -2 indicate that the entry is never referenced.
@@ -466,20 +501,22 @@ void GraphExecutor::InitCachedOps() {
       }
     }
   }
+  // Note that this modifies the requirment of kWriteInplace
   for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
     auto& e = idx.outputs()[j];
     op_nodes_[e.node_id].exec->req[e.index] =
         grad_store_[j - num_forward_outputs_].first;
   }
-
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
+    if (op_nodes_[nid].skip_exec_node) continue;
     auto& exec = op_nodes_[nid].exec;
 
     std::vector<uint32_t> inplace_inputs;
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
+      // must check exec->req because, vstorage_inplace is only a hint.
       if (vstorage_inplace[eid] >= 0 && exec->req.at(index) == kWriteInplace) {
         inplace_inputs.push_back(vstorage_inplace[eid]);
       }
@@ -549,6 +586,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
+    if (op_nodes_[nid].skip_exec_node) continue;
     OpNode& opnode = op_nodes_[nid];
     opnode.exec->op_ctx.is_train = is_train;
     if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy) {

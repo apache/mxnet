@@ -83,6 +83,24 @@ Graph AttachOpExecs(Graph g);
  */
 Graph AttachOpResources(Graph g);
 
+/*!
+ * \brief Discover chance of inplace addto operators.
+ *  i.e. z = plus(z, source_op), and encourage it to become z += source_op.
+ *
+ * This optimization is coupled with executor. This is helpful to reduce memory
+ * and computation for gradient aggregation of RNN.
+ *
+ * Require storage placement to be already finished.
+ *
+ * \param g input graph need to contain op_exec attribute.
+ *
+ * \return graph two new attributes, changes attribute "storage_id".
+ *  - "addto_entry", std::vector<bool> size=g.num_node_entries()
+ *    - addto_entry[eid] == 1, the corresponding op need to be performed using req=kAddTo
+ *  - "skip_plus_node", std::vector<int> if set to 1, current op's execution is skiped.
+ */
+Graph DetectInplaceAddTo(Graph g);
+
 }  // namespace exec
 }  // namespace mxnet
 
