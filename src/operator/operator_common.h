@@ -133,7 +133,7 @@ struct InferTypeError {
 // TODO(eric): move to dmlc-core
 #define STRINGIZE_DETAIL(x) #x
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
-#define MXNET_DESCRIBE(x) describe(x "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
+#define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 
 // quick helper to make node
 inline std::vector<nnvm::NodeEntry> MakeGradNode(
