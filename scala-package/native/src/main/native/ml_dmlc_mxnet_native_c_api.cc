@@ -370,6 +370,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySlice
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayAt
+  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jint idx, jobject jout) {
+  NDArrayHandle out;
+  int ret = MXNDArrayAt(reinterpret_cast<NDArrayHandle>(ndArrayPtr), idx, &out);
+  SetLongField(env, jout, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayReshape
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jint ndim, jintArray dims, jobject reshapedHandle) {
   NDArrayHandle out;
@@ -394,7 +402,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayGetContext
   (JNIEnv *env, jobject obj, jlong arrayPtr, jobject devTypeId, jobject devId) {
   int outDevType;
   int outDevId;
-  int ret = MXNDArrayGetContext((NDArrayHandle) arrayPtr, &outDevType, &outDevId);
+  int ret = MXNDArrayGetContext(reinterpret_cast<NDArrayHandle>(arrayPtr), &outDevType, &outDevId);
   jclass refClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
   jfieldID refFid = env->GetFieldID(refClass, "value", "I");
   env->SetIntField(devTypeId, refFid, outDevType);
@@ -485,6 +493,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
     delete[] keys;
   }
 
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayGetDType
+  (JNIEnv * env, jobject obj, jlong jhandle, jobject jdtype) {
+  int dtype;
+  int ret = MXNDArrayGetDType(reinterpret_cast<NDArrayHandle>(jhandle), &dtype);
+  SetIntField(env, jdtype, dtype);
   return ret;
 }
 
