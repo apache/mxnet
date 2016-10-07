@@ -39,5 +39,5 @@ NNVM_REGISTER_OP(batch_dot)
 NNVM_REGISTER_OP(_backward_batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
-}  // op
-}  // mxnet
+}  // namespace op
+}  // namespace mxnet

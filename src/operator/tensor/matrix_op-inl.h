@@ -3,8 +3,8 @@
  * \file broadcast_reduce_op-inl.h
  * \brief Function defintion of matrix related operators
  */
-#ifndef MXNET_OPERATOR_MATRIX_OP_INL_H_
-#define MXNET_OPERATOR_MATRIX_OP_INL_H_
+#ifndef MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
+#define MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -573,4 +573,4 @@ void Flip(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_MATRIX_OP_INL_H_
+#endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_

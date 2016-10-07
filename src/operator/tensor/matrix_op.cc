@@ -155,5 +155,5 @@ NNVM_REGISTER_OP(_backward_batch_dot)
   [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
-}  // op
-}  // mxnet
+}  // namespace op
+}  // namespace mxnet
