@@ -10,7 +10,7 @@ namespace mxnet {
 namespace op {
 // copy
 NNVM_REGISTER_OP(_copy)
-.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::identity>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
 // negative
 NNVM_REGISTER_OP(negative)
