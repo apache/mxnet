@@ -52,6 +52,8 @@ class GraphExecutor : public Executor {
     Context ctx;
     // The executor
     std::shared_ptr<OpExecutor> exec;
+    // skip the execution of this node
+    bool skip_exec_node{false};
     // cached operator handle
     Engine::OprHandle cached_opr{nullptr};
   };
