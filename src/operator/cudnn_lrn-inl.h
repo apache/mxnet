@@ -36,7 +36,7 @@ class CuDNNLocalResponseNormOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 2);
     float alpha = 1.0f;
     float beta = 0.0f;
     Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -68,7 +68,7 @@ class CuDNNLocalResponseNormOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 2);
     CHECK_EQ(req.size(), 1);
     CHECK_EQ(in_grad.size(), 1);
     float alpha = 1.0f;
@@ -100,7 +100,7 @@ class CuDNNLocalResponseNormOp : public Operator {
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 2);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       Tensor<gpu, 4> data = in_data[lrn_enum::kData].get<gpu, 4, real_t>(s);

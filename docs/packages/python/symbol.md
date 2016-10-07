@@ -1,11 +1,13 @@
 # MXNet Python Symbolic API
-* [How to Commpose Symbols](#overloaded-operators) introduces operator overloading of symbols
-* [Symbol Attributes](#symbol-attributes) introduces how to attach attributes to symbols
+* [How to Commpose Symbols](#overloaded-operators) introduces operator overloading of symbols.
+* [Symbol Attributes](#symbol-attributes) introduces how to attach attributes to symbols.
 * [Serialization](#serialization) introduces how to save and load symbols.
-* [Multiple Outputs](#multiple-outputs) introduces how to configure multiple outputs
+* [Executing Symbols](#executing-symbols) introduces how to evaluate the symbols with data.
+* [Execution API Reference](#execution-api-reference) gives reference to all the execution APIs.
+* [Multiple Outputs](#multiple-outputs) introduces how to configure multiple outputs.
 * [Symbol Creation API Reference](#symbol-creationapi-reference) gives reference to all functions.
-* [Symbol Object Document](#mxnet.symbol.Symbol) gives API reference to the Symbol Object
-* [Execution API Reference](#execution-api-reference) tell us on what executor can do.
+* [Symbol Object Document](#mxnet.symbol.Symbol) gives API reference to the Symbol Object.
+* [Testing Utility Reference](#testing-utility-reference) gives reference to the testing utilities.
 
 You are also highly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md)
 with this document.
@@ -111,7 +113,24 @@ The following code gives an example of saving a symbol to S3 bucket, load it bac
 True
 ```
 
-Multiple Ouputs
+Executing Symbols
+-----------------
+Once you have assembled a set of symbols into a computation graph, the MXNet engine can evalaute those symbols. 
+If you are training a neural network, this is typically
+all hanled by the high level [Model class](model.md) and the [`fit()`](model.html#mxnet.model.FeedForward.fit) function.
+
+For neural networks used in "feed-forward", "prediction", or "inference" mode (all different terms for the same
+thing: running a trained network), the input arguments will be the 
+input data, and the weights of the neural network that were learned during training.  
+
+To manually execute a set of symbols, you need to create an [`Executor`](#mxnet.executor.Executor) object, 
+which is typically constructed by calling the [`simple_bind()`](#mxnet.symbol.Symbol.simple_bind) method on a symbol.  
+For an example of this, see the sample 
+[`notebook on how to use simple_bind()`](https://github.com/dmlc/mxnet/blob/master/example/notebooks/simple_bind.ipynb)
+To see how to manually 
+
+
+Multiple Outputs
 ---------------
 You can use [mxnet.symbol.Group](#mxnet.symbol.Group) function to group the symbols together.
 
@@ -159,4 +178,17 @@ Execution API Reference
 .. raw:: html
 
     <script>auto_index("mxnet.executor");</script>
+```
+
+
+Testing Utility Reference
+-------------------------
+
+```eval_rst
+.. automodule:: mxnet.test_utils
+    :members:
+
+.. raw:: html
+
+    <script>auto_index("mxnet.test_utils");</script>
 ```
