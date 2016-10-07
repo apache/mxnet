@@ -180,14 +180,30 @@ def test_ndarray_slice():
 def test_ndarray_slice_along_axis():
     arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
     sub_arr = mx.nd.zeros((3, 2, 2, 3))
-    arr._copy_slice_to(1, 1, 3, sub_arr)
+    arr.copy_slice_to(1, 2, 4, sub_arr)
 
     # test we sliced correctly
-    assert same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
 
     # test that slice is copy, instead of shared memory
     sub_arr[:] = 0
-    assert not same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+    assert not same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
+
+    # now test assigning back the slice
+    arr.assign_slice_from(1, 2, 4, sub_arr)
+    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
+
+
+def test_ndarray_concatenate():
+    axis = 1
+    shapes = [(2, 3, 4, 2), (2, 2, 4, 2), (2, 1, 4, 2)]
+    arrays_np = [np.random.uniform(-10, 10, s).astype(np.float32) for s in shapes]
+    arrays_nd = [mx.nd.array(x) for x in arrays_np]
+
+    array_nd = mx.nd.concatenate(arrays_nd, axis=axis)
+    array_np = np.concatenate(arrays_np, axis=axis)
+
+    assert same(array_np, array_nd.asnumpy())
 
 
 def test_clip():
@@ -265,6 +281,7 @@ def test_broadcast():
     test_broadcast_to()
 
 if __name__ == '__main__':
+    test_ndarray_concatenate()
     test_ndarray_slice_along_axis()
     test_ndarray_slice()
     test_ndarray_pickle()
