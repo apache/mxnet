@@ -19,6 +19,51 @@ from .ndarray import array
 from .ndarray import concatenate
 
 
+class LayoutMapper(object):
+    """A helper class to decide data layouts (which axis is batch_size dimension)."""
+    def get_data_layout(self, name):
+        """Get data layout.
+
+        Parameters
+        ----------
+        name : str
+            The name of the blob (could be data, label or output names).
+
+        Returns
+        -------
+        An axis indicating the batch_size dimension. When data-parallelism is
+        used, the data will be automatically split and concatenate along the batch_size
+        dimension. Axis can be -1, which means the array thing will be copied for each
+        data-parallelism device.
+        """
+        raise NotImplementedError()
+
+
+class DefaultLayoutMapper(LayoutMapper):
+    """A default data layout mapper.
+
+    It decides the data layout by name postfix:
+
+    - 'xxx:bm' means batch-major, axis = 0
+    - 'xxx:tm' means time-major, axis = 1
+    - 'xxx:nm' means none-major, axis = -1
+
+    Otherwise, it just use `default_axis`.
+    """
+    def __init__(self, default_axis=0):
+        super(DefaultLayoutMapper, self).__init__()
+        self._default_axis = default_axis
+
+    def get_data_layout(self, name):
+        if name.endswith(':bm'):
+            return 0
+        if name.endswith(':tm'):
+            return 1
+        if name.endswith(':nm'):
+            return -1
+        return self._default_axis
+
+
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
     def __init__(self, data, label, pad=None, index=None,

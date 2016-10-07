@@ -279,6 +279,8 @@ class NDArray(object):
     def copy_slice_to(self, axis, start, stop, target):
         """Copy a slice along an axis.
 
+        Unlike `slice_axis`, the source and target can live on different contexts.
+
         Parameters
         ----------
         axis : int
@@ -305,6 +307,8 @@ class NDArray(object):
 
     def assign_slice_from(self, axis, start, stop, source):
         """Assign a slice from an NDArray.
+
+        The source and target can live on different contexts.
 
         Parameters
         ----------
