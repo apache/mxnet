@@ -44,13 +44,13 @@ mod_seq.add(mod1).add(mod2, take_labels=True, auto_wiring=True)
 n_epoch = 2
 batch_size = 100
 train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image="../image-classification/mnist/train-images-idx3-ubyte",
+        label="../image-classification/mnist/train-labels-idx1-ubyte",
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
+        image="../image-classification/mnist/t10k-images-idx3-ubyte",
+        label="../image-classification/mnist/t10k-labels-idx1-ubyte",
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
