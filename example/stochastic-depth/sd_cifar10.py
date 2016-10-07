@@ -13,7 +13,9 @@
 # - We did not try to match with the same initialization, learning rate scheduling, etc.
 #
 #--------------------------------------------------------------------------------
-# A sample from the running log:
+# A sample from the running log (We achieved ~9.4% error after 500 epochs, some
+# more careful tuning of the hyper parameters and maybe also the arch is needed
+# to achieve the reported numbers in the paper):
 #
 # INFO:root:Epoch[80] Batch [50]  Speed: 1020.95 samples/sec      Train-accuracy=0.910080
 # INFO:root:Epoch[80] Batch [100] Speed: 1013.41 samples/sec      Train-accuracy=0.912031
@@ -38,6 +40,20 @@
 # INFO:root:Epoch[115] Time cost=47.815
 # INFO:root:Saved checkpoint to "sd-110-0116.params"
 # INFO:root:Epoch[115] Validation-accuracy=0.884415
+# ...
+# INFO:root:Saved checkpoint to "sd-110-0499.params"
+# INFO:root:Epoch[498] Validation-accuracy=0.908554
+# INFO:root:Epoch[499] Batch [50] Speed: 1068.28 samples/sec      Train-accuracy=0.991422
+# INFO:root:Epoch[499] Batch [100]        Speed: 1053.10 samples/sec      Train-accuracy=0.991094
+# INFO:root:Epoch[499] Batch [150]        Speed: 1042.89 samples/sec      Train-accuracy=0.995156
+# INFO:root:Epoch[499] Batch [200]        Speed: 1066.22 samples/sec      Train-accuracy=0.991406
+# INFO:root:Epoch[499] Batch [250]        Speed: 1050.56 samples/sec      Train-accuracy=0.990781
+# INFO:root:Epoch[499] Batch [300]        Speed: 1032.02 samples/sec      Train-accuracy=0.992500
+# INFO:root:Epoch[499] Batch [350]        Speed: 1062.16 samples/sec      Train-accuracy=0.992969
+# INFO:root:Epoch[499] Train-accuracy=0.994141
+# INFO:root:Epoch[499] Time cost=47.401
+# INFO:root:Saved checkpoint to "sd-110-0500.params"
+# INFO:root:Epoch[499] Validation-accuracy=0.906050
 # ###########################################################################################
 
 import os
