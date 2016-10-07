@@ -389,7 +389,7 @@ mx.model.select.layout.predict <- function(X, model) {
 #' @export
 
 mx.model.FeedForward.create <-
-function(symbol, X, y=NULL, ctx=NULL, begin.round=1
+function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          num.round=10, optimizer="sgd",
          initializer=mx.init.uniform(0.01),
          eval.data=NULL, eval.metric=NULL,
