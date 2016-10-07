@@ -8,10 +8,12 @@
 
 namespace mxnet {
 namespace op {
+
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
-.MXNET_DESCRIBE("Copy src to output")
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::identity>)
+.MXNET_DESCRIBE("Identity mapping, copy src to output")
+.add_alias("identity")
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 // negative
