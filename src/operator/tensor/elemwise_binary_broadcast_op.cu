@@ -13,8 +13,12 @@ NNVM_REGISTER_OP(_plus)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow::op::plus>);
 
 NNVM_REGISTER_OP(_backward_plus)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
-                                                                mshadow_op::identity>);
+.set_attr<FCompute>("FCompute<gpu>",
+                    BinaryBroadcastBackwardUseNone<gpu,
+                    mshadow_op::identity, mshadow_op::identity>);
+
+NNVM_REGISTER_OP(_ewise_plus)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow::op::plus>);
 
 NNVM_REGISTER_OP(_minus)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow::op::minus>);
