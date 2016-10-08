@@ -2,7 +2,7 @@
  * Copyright (c) 2015 by Contributors
  * \file correlation-inl.h
  * \brief correlation operator and symbol
- * \author Xu Dong 
+ * \author Xu Dong
 */
 #ifndef MXNET_OPERATOR_CORRELATION_INL_H_
 #define MXNET_OPERATOR_CORRELATION_INL_H_
@@ -110,16 +110,18 @@ class CorrelationOp : public Operator {
     Tensor<xpu, 4> out_g = out_grad[Correlation::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> tmp1 = out_data[Correlation::kTemp1].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> tmp2 = out_data[Correlation::kTemp2].get<xpu, 4, real_t>(s);
+    if (req[0] != kAddTo) grad_data1 = 0.0f;
+    if (req[1] != kAddTo) grad_data2 = 0.0f;
     CHECK_EQ(grad_data1.CheckContiguous(), true);
     CHECK_EQ(grad_data2.CheckContiguous(), true);
     CHECK_EQ(out_g.CheckContiguous(), true);
     CHECK_EQ(tmp1.CheckContiguous(), true);
     CHECK_EQ(tmp2.CheckContiguous(), true);
     CorrelationBackward(out_g, grad_data1, grad_data2, tmp1, tmp2, top_channels_,
-    top_height_, top_width_, param_.pad_size, param_.is_multiply,
-    param_.max_displacement, param_.kernel_size, neighborhood_grid_radius_,
-    neighborhood_grid_width_, kernel_radius_, param_.stride1, param_.stride2,
-    num, channels, height, width);
+                        top_height_, top_width_, param_.pad_size, param_.is_multiply,
+                        param_.max_displacement, param_.kernel_size, neighborhood_grid_radius_,
+                        neighborhood_grid_width_, kernel_radius_, param_.stride1, param_.stride2,
+                        num, channels, height, width);
   }
 
  private:
