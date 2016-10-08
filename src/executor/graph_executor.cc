@@ -176,12 +176,14 @@ nnvm::Graph GraphExecutor::InitFullGraph(
     if (type == "CuDNNBatchNorm") return false;
     return true;
   };
-
+  // take gradient
   nnvm::Graph g_grad = nnvm::pass::Gradient(
       g, symbol.outputs, xs, head_grad_entry_,
       AggregateGradient, need_mirror);
   CHECK_EQ(g_grad.outputs.size(), xs.size());
-  g.outputs.insert(g.outputs.end(), g_grad.outputs.begin(), g_grad.outputs.end());
+  for (const auto &e : g_grad.outputs) {
+    g.outputs.push_back(e);
+  }
   return g;
 }
 
@@ -490,7 +492,6 @@ void GraphExecutor::InitCachedOps() {
       exec->out_array.push_back(data_entry_[eid]);
       if (addto_entry.at(eid) != 0) {
         exec->req.push_back(kAddTo);
-
       } else if (vstorage_inplace[eid] >= 0) {
         exec->req.push_back(kWriteInplace);
       } else if (vstorage_inplace[eid] == -2) {
@@ -549,11 +550,9 @@ void GraphExecutor::InitCachedOps() {
     dedup(use_vars);
     dedup(mutate_vars);
     dedup(all_vars);
-
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
       }, Context::CPU(), {}, all_vars);
-
     auto exec_fun = [exec, is_async, is_gpu](
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
       if (is_async) {

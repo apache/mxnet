@@ -114,7 +114,7 @@ def test_reshape():
     x = mx.sym.Variable('x')
     y = mx.sym.FullyConnected(x, num_hidden=4)
 
-    exe = y.simple_bind(mx.cpu(), x=(5,4))
+    exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req=[])
     exe.arg_arrays[0][:] = 1
     exe.arg_arrays[1][:] = mx.nd.ones((4,4))
     exe.arg_arrays[2][:] = 0

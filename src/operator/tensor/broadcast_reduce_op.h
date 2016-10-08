@@ -210,6 +210,7 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+// works when shape inference of output is given
 template<typename xpu, typename OP>
 void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
@@ -362,9 +363,9 @@ struct ReduceGrad {
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .set_attr<nnvm::FGradient>("FGradient",                       \
     [](const nnvm::NodePtr& n,                                  \
-       const std::vector<nnvm::NodeEntry>& ograds) {            \
-      return MakeGradNode("sum", n, ograds,                     \
-        {{"keepdims", "true"}});                                \
+       const std::vector<nnvm::NodeEntry>& ograds) {           \
+      return MakeGradNode("_broadcast_backward", n, ograds,    \
+                          {{"keepdims", "true"}});              \
     })                                                          \
   .add_argument("src", "NDArray", "Source input")
 
