@@ -19,16 +19,16 @@
 
 namespace mxnet {
 namespace op {
-template<int n_in, int n_out, typename AttrType,
+template<typename AttrType,
          bool (*is_none)(const AttrType&), bool reverse_infer>
 inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                          std::vector<AttrType> *in_attrs,
                          std::vector<AttrType> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), n_in) << attrs.name << in_attrs->size() << n_in;
-  CHECK_EQ(out_attrs->size(), n_out);
+  size_t n_in = in_attrs->size();
+  size_t n_out = out_attrs->size();
   bool found = false;
   AttrType dattr;
-  for (int i = 0; i < n_in; ++i) {
+  for (size_t i = 0; i < n_in; ++i) {
     if (!is_none((*in_attrs)[i])) {
       dattr = (*in_attrs)[i];
       found = true;
@@ -36,7 +36,7 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
     }
   }
   if (reverse_infer && !found) {
-    for (int i = 0; i < n_out; ++i) {
+    for (size_t i = 0; i < n_out; ++i) {
       if (!is_none((*out_attrs)[i])) {
         dattr = (*out_attrs)[i];
         found = true;
@@ -47,7 +47,7 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
   if (!found) {
     return false;
   }
-  for (int i = 0; i < n_in; ++i) {
+  for (size_t i = 0; i < n_in; ++i) {
     if (is_none((*in_attrs)[i])) {
       (*in_attrs)[i] = dattr;
     } else if ((*in_attrs)[i] != dattr) {
@@ -55,7 +55,7 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                  << "expected " << dattr << ", got " << (*in_attrs)[i];
     }
   }
-  for (int i = 0; i < n_out; ++i) {
+  for (size_t i = 0; i < n_out; ++i) {
     if (is_none((*out_attrs)[i])) {
       (*out_attrs)[i] = dattr;
     } else if ((*out_attrs)[i] != dattr) {
@@ -74,7 +74,9 @@ template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  return ElemwiseAttr<n_in, n_out, TShape, shape_is_none, true>(
+  CHECK_EQ(in_attrs->size(), n_in) << attrs.name << in_attrs->size() << n_in;
+  CHECK_EQ(out_attrs->size(), n_out);
+  return ElemwiseAttr<TShape, shape_is_none, true>(
     attrs, in_attrs, out_attrs);
 }
 
@@ -86,7 +88,9 @@ template<int n_in, int n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
-  return ElemwiseAttr<n_in, n_out, int, type_is_none, true>(
+  CHECK_EQ(in_attrs->size(), n_in) << attrs.name << in_attrs->size() << n_in;
+  CHECK_EQ(out_attrs->size(), n_out);
+  return ElemwiseAttr<int, type_is_none, true>(
     attrs, in_attrs, out_attrs);
 }
 

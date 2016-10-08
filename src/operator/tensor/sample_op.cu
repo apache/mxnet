@@ -3,7 +3,7 @@
  * \file sample_op.cu
  * \brief GPU Implementation of sample op
  */
-#include "./sample_op-inl.h"
+#include "./sample_op.h"
 
 namespace mxnet {
 namespace op {
