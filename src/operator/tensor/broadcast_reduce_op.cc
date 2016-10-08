@@ -50,5 +50,18 @@ MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastToShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
+// backward op for broadcast.
+NNVM_REGISTER_OP(_broadcast_backward)
+.set_attr_parser(ParamParser<ReduceAxesParam>)
+.set_attr<nnvm::FBackwardOutToInIndex>(
+    "FBackwardOutToInIndex", [](const NodeAttrs& attrs) {
+      return std::vector<uint32_t>{0};
+    })
+.set_attr<nnvm::FBackwardInGradIndex>(
+    "FBackwardInGradIndex", [](const NodeAttrs& attrs) {
+      return std::vector<uint32_t>{0};
+    })
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>);
+
 }  // namespace op
 }  // namespace mxnet

@@ -48,7 +48,10 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (req[0] == kNullOp || req[0] == kWriteInplace) return;
+  if (req[0] == kNullOp) return;
+  if (req[0] == kWriteInplace) {
+    CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_); return;
+  }
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req[0], F<mshadow_op::identity>(inputs[0].FlatTo1D<xpu, DType>(s)));
