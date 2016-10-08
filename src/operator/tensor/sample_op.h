@@ -1,10 +1,10 @@
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file sample_op-inl.h
+ * \file sample_op.h
  * \brief Function defintion sampling operators.
  */
-#ifndef MXNET_OPERATOR_TENSOR_SAMPLE_OP_INL_H_
-#define MXNET_OPERATOR_TENSOR_SAMPLE_OP_INL_H_
+#ifndef MXNET_OPERATOR_TENSOR_SAMPLE_OP_H_
+#define MXNET_OPERATOR_TENSOR_SAMPLE_OP_H_
 
 #include <mxnet/operator_util.h>
 #include <string>
@@ -124,4 +124,4 @@ inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
   .add_arguments(ParamType::__FIELDS__())
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_TENSOR_SAMPLE_OP_INL_H_
+#endif  // MXNET_OPERATOR_TENSOR_SAMPLE_OP_H_
