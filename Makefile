@@ -202,7 +202,7 @@ DMLCCORE:
 	+ cd $(DMLC_CORE); make libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALL_DEP)
-bin/fea2rec: tools/im2rec.cc $(ALL_DEP)
+bin/fea2rec: tools/fea2rec.cc $(ALL_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
