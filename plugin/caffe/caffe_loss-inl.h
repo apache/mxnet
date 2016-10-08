@@ -99,6 +99,10 @@ class CaffeLoss : public Operator {
                                       out_data.begin(),
                                       param_.num_out);
     CaffeOpSetup();
+    if (ctx.is_train)
+      caffeOp_->SetPhase(::caffe::TRAIN);
+    else
+      caffeOp_->SetPhase(::caffe::TEST);
     caffeOp_->Forward(bot_, top_);
 
 #if defined(__CUDACC__)

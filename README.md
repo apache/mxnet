@@ -2,10 +2,8 @@
 =====
 
 [![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
-[![Build Status](http://ci.dmlc.ml/buildStatus/icon?job=mxnet)](http://ci.dmlc.ml/job/mxnet)
-[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.readthedocs.org/en/latest/)
+[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.io/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
-[![todofy badge](https://todofy.org/b/dmlc/mxnet)](https://todofy.org/r/dmlc/mxnet)
 
 ![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
 
