@@ -13,7 +13,11 @@ NNVM_REGISTER_OP(_copy)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_copy)
-.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+
+// identity output as first input, but attributes are constrainted to be like rhs
+NNVM_REGISTER_OP(_identity_attr_like_rhs)
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
 // negative
 NNVM_REGISTER_OP(negative)

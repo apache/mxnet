@@ -87,7 +87,7 @@ class ROIPoolingOp : public Operator {
     CHECK_EQ(out_data.size(), expected);
     CHECK_EQ(out_grad[roipool::kOut].shape_[0], in_data[roipool::kBox].shape_[0]);
     CHECK_EQ(out_data[roipool::kMaxIdx].shape_[0], in_data[roipool::kBox].shape_[0]);
-    CHECK_EQ(req[roipool::kOut], kWriteTo);
+    CHECK_EQ(req[roipool::kData], kWriteTo);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 4, DType> grad_out = out_grad[roipool::kOut].get<xpu, 4, DType>(s);
@@ -99,6 +99,9 @@ class ROIPoolingOp : public Operator {
     CHECK_EQ(max_idx.CheckContiguous(), true);
     CHECK_EQ(grad_in.CheckContiguous(), true);
     grad_in = 0.0f;
+    // force set gradient bbox to be 0 to make gradient checker happy
+    Tensor<xpu, 2, DType> grad_bbox = in_grad[roipool::kBox].get<xpu, 2, DType>(s);
+    grad_bbox = 0.0f;
     ROIPoolBackward(grad_in, grad_out, bbox, max_idx, param_.spatial_scale);
   }
 

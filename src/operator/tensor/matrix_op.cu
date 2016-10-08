@@ -10,34 +10,34 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(transpose)
-.set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", Transpose<gpu>);
 
 NNVM_REGISTER_OP(expand_dims)
-.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(crop)
-.set_attr<FCompute>("FCompute<cpu>", Crop<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", Crop<gpu>);
 
 NNVM_REGISTER_OP(slice_axis)
-.set_attr<FCompute>("FCompute<cpu>", Slice<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", Slice<gpu>);
 
 NNVM_REGISTER_OP(_backward_slice_axis)
-.set_attr<FCompute>("FCompute<cpu>", SliceGrad_<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceGrad_<gpu>);
 
 NNVM_REGISTER_OP(flip)
-.set_attr<FCompute>("FCompute<cpu>", Flip<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", Flip<gpu>);
 
 NNVM_REGISTER_OP(dot)
-.set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", DotForward_<gpu>);
 
 NNVM_REGISTER_OP(_backward_dot)
-.set_attr<FCompute>("FCompute<cpu>", DotBackward_<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", DotBackward_<gpu>);
 
 NNVM_REGISTER_OP(batch_dot)
-.set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", BatchDotForward_<gpu>);
 
 NNVM_REGISTER_OP(_backward_batch_dot)
-.set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", BatchDotBackward_<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
