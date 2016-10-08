@@ -38,7 +38,7 @@ class PythonModule(BaseModule):
         self._label_shapes = None
         self._output_shapes = None
 
-        self.batch_axis = None
+        self.layout_mapper = None
 
     ################################################################################
     # Symbol information
@@ -142,7 +142,7 @@ class PythonModule(BaseModule):
     ################################################################################
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             batch_axis=0):
+             layout_mapper=None):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -165,16 +165,14 @@ class PythonModule(BaseModule):
             Default is `None`. This is used in bucketing. When not `None`, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
-        batch_axis : int
-            Default 0. The axis of mini-batch. For most applications, the axis 0 should be
-            the batch size. However, for example, for RNNs, the axis 0 might be used for time,
-            and axis 1 for mini-batch. This parameter allows us to control this.
+        layout_mapper: LayoutMapper
+            Default None. A helper that decide the layout of data, label and outputs (time-major? batch-major?).
         """
         if self.binded and not force_rebind:
             self.logger.warning('Already binded, ignoring bind()')
             return
 
-        self.batch_axis = batch_axis
+        self.layout_mapper = layout_mapper
 
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad

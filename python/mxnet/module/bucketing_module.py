@@ -42,7 +42,7 @@ class BucketingModule(BaseModule):
 
         self._buckets = {}
         self._curr_module = None
-        self._batch_axis = None
+        self._layout_mapper = None
 
     def _reset_bind(self):
         """Internal utility function to reset binding."""
@@ -137,7 +137,7 @@ class BucketingModule(BaseModule):
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             batch_axis=0):
+             layout_mapper=None):
         """Binding for a `BucketingModule` means setting up the buckets and bind the
         executor for the default bucket key. Executors corresponding to other keys are
         binded afterwards with `switch_bucket`.
@@ -156,10 +156,8 @@ class BucketingModule(BaseModule):
             Default is `False`.
         shared_module : BucketingModule
             Default is `None`. This value is currently not used.
-        batch_axis : int
-            Default 0. The axis of mini-batch. For most applications, the axis 0 should be
-            the batch size. However, for example, for RNNs, the axis 0 might be used for time,
-            and axis 1 for mini-batch. This parameter allows us to control this.
+        layout_mapper: LayoutMapper
+            Default None. A helper that decide the layout of data, label and outputs (time-major? batch-major?).
         """
         # in case we already initialized params, keep it
         if self.params_initialized:
@@ -184,7 +182,7 @@ class BucketingModule(BaseModule):
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list)
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
-                    force_rebind=False, shared_module=None, batch_axis=batch_axis)
+                    force_rebind=False, shared_module=None, layout_mapper=layout_mapper)
         self._curr_module = module
         self._buckets[self._default_bucket_key] = module
 
@@ -192,7 +190,7 @@ class BucketingModule(BaseModule):
         if self.params_initialized:
             self.set_params(arg_params, aux_params)
 
-        self._batch_axis = batch_axis
+        self._layout_mapper = layout_mapper
 
     def switch_bucket(self, bucket_key, data_shapes, label_shapes=None):
         """Switch to a different bucket. This will change `self.curr_module`.
@@ -215,7 +213,7 @@ class BucketingModule(BaseModule):
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
                         force_rebind=False, shared_module=self._curr_module,
-                        batch_axis=self._batch_axis)
+                        layout_mapper=self._layout_mapper)
             self._buckets[bucket_key] = module
 
         self._curr_module = self._buckets[bucket_key]
