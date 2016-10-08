@@ -375,7 +375,7 @@ class DataParallelExecutorGroup(object):
                     # slicing NDArray along axis 0 can avoid copying
                     labels_slice.append(label[islice])
                 elif axis > 0:
-                    labels_slice.append(label.copy_slice_to(aixs, islice.start,
+                    labels_slice.append(label.copy_slice_to(axis, islice.start,
                                                             islice.stop, label.context))
                 else:
                     labels_slice.append(label)

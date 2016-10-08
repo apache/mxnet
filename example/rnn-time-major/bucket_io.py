@@ -130,7 +130,7 @@ class BucketSentenceIter(mx.io.DataIter):
         self.data_name = data_name
         self.label_name = label_name
         self.time_major = time_major
-        self.batch_axis = 1 if time_major else 0
+        self.layout_mapper = mx.io.DefaultLayoutMapper(1 if time_major else 0)
 
         buckets.sort()
         self.buckets = buckets
