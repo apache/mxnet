@@ -476,11 +476,7 @@ void GraphExecutor::InitCachedOps() {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
 #if MXNET_USE_PROFILER
-    // TODO(ziheng) memory leak risk
-    int len = inode.source->attrs.name.size();
-    char* opr_name = new char[len+1];
-    snprintf(opr_name, len+1, inode.source->attrs.name.c_str());
-    op_nodes_[nid].opr_name = opr_name;
+    op_nodes_[nid].opr_name = inode.source->op()->name.c_str();
 #else
     op_nodes_[nid].opr_name = nullptr;
 #endif
@@ -567,7 +563,8 @@ void GraphExecutor::InitCachedOps() {
     dedup(all_vars);
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
-      }, Context::CPU(), {}, all_vars);
+      }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
+      PROFILER_MESSAGE("SetupExec"));
     auto exec_fun = [exec, is_async, is_gpu] (
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
       if (is_async) {
