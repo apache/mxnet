@@ -40,6 +40,7 @@ object Base {
   type OptimizerCreatorRef = RefLong
   type OptimizerHandleRef = RefLong
 
+  val MX_REAL_TYPE = DType.Float32
 
   try {
     try {
