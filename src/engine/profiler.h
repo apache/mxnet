@@ -73,7 +73,7 @@ class Profiler {
   /*! \return state of profiler */
   inline ProfilerState GetState() {
     return this->state_;
-  };
+  }
   /*! \brief set configure of profiler */
   void SetConfig(ProfilerMode mode, std::string output_filename);
   /*! \return mode of profiler */
