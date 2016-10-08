@@ -548,12 +548,17 @@ void GraphExecutor::InitCachedOps() {
       vars.resize(std::unique(vars.begin(), vars.end()) - vars.begin());
     };
     dedup(use_vars);
+    for (auto v : use_vars) {
+      if (std::binary_search(mutate_vars.begin(), mutate_vars.end(), v)) {
+        LOG(FATAL) << "var duplication happens for op " << inode.source->attrs.name;
+      }
+    }
     dedup(mutate_vars);
     dedup(all_vars);
     Engine::Get()->PushSync([exec](RunContext rctx) {
         exec->Setup();
       }, Context::CPU(), {}, all_vars);
-    auto exec_fun = [exec, is_async, is_gpu](
+    auto exec_fun = [exec, is_async, is_gpu] (
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
       if (is_async) {
         exec->op_ctx.async_on_complete = on_complete;
@@ -585,8 +590,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
-    if (op_nodes_[nid].skip_exec_node) continue;
     OpNode& opnode = op_nodes_[nid];
+    if (op_nodes_[nid].skip_exec_node) continue;
     opnode.exec->op_ctx.is_train = is_train;
     if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy) {
       CHECK_EQ(inode.inputs.size(), 1);
