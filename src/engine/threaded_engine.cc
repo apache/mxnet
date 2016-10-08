@@ -331,7 +331,8 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       if (engine_info_) {
         LOG(INFO) << "Sync is notified";
       }
-    }, Context::CPU(), {var}, {});
+    }, Context::CPU(), {var}, {},
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("WaitForVar"));
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {
@@ -397,7 +398,7 @@ void ThreadedEngine::OnCompleteStatic(
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
 #if MXNET_USE_PROFILER
-  if (opr_block->profiling) {
+  if (opr_block->profiling && threaded_opr->opr_name) {
     // record operator end timestamp
     SetOprEnd(opr_block->opr_stat);
   }

@@ -208,7 +208,7 @@ struct ThreadedOpr final : public Opr,
   /*! \brief The property of the operator */
   FnProperty prop;
   /*! \brief The name of the operator */
-  const char* opr_name;
+  const char* opr_name{nullptr};
   /*!
    * \brief Whether this is an temporary operator
    *        that can be deleted right after the operation completed.
@@ -301,13 +301,12 @@ class ThreadedEngine : public Engine {
   void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
 #if MXNET_USE_PROFILER
-    if (opr_block->profiling) {
+    if (opr_block->profiling && threaded_opr->opr_name) {
       const Context& ctx = opr_block->ctx;
       opr_block->opr_stat = Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
       uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
       opr_block->opr_stat->thread_id = id;
-      opr_block->opr_stat->opr_name  =
-          (threaded_opr->opr_name ? std::string(threaded_opr->opr_name) : "unknown");
+      opr_block->opr_stat->opr_name  = std::string(threaded_opr->opr_name);
       // record operator start timestamp
       SetOprStart(opr_block->opr_stat);
     }
