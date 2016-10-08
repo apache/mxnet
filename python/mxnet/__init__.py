@@ -52,4 +52,6 @@ from . import module as mod
 from . import image
 from . import image as img
 
+from . import test_utils
+
 __version__ = base.__version__

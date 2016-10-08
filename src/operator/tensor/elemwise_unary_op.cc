@@ -8,11 +8,36 @@
 
 namespace mxnet {
 namespace op {
+
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
-.MXNET_DESCRIBE("Copy src to output")
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::identity>)
+.MXNET_DESCRIBE("Identity mapping, copy src to output")
+.add_alias("identity")
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
+
+NNVM_REGISTER_OP(_backward_copy)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
+
+// identity output as first input, but attributes are constrainted to be like rhs
+NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
+.set_num_inputs(2)
+.set_attr<nnvm::FInplaceOption>(
+    "FInplaceOption", [](const NodeAttrs& attrs) {
+      return std::vector<std::pair<int, int> >{{0, 0}};
+    })
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>);
 
 // negative
 MXNET_OPERATOR_REGISTER_UNARY(negative)

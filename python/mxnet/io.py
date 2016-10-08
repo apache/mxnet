@@ -197,16 +197,8 @@ class PrefetchingIter(DataIter):
         self.n_iter = len(iters)
         assert self.n_iter > 0
         self.iters = iters
-        if rename_data is None:
-            self.provide_data = sum([i.provide_data for i in iters], [])
-        else:
-            self.provide_data = sum([[(r[n], s) for n, s in i.provide_data] \
-                                    for r, i in zip(rename_data, iters)], [])
-        if rename_label is None:
-            self.provide_label = sum([i.provide_label for i in iters], [])
-        else:
-            self.provide_label = sum([[(r[n], s) for n, s in i.provide_label] \
-                                    for r, i in zip(rename_label, iters)], [])
+        self.rename_data = rename_data
+        self.rename_label = rename_label
         self.batch_size = self.provide_data[0][1][0]
         self.data_ready = [threading.Event() for i in range(self.n_iter)]
         self.data_taken = [threading.Event() for i in range(self.n_iter)]
@@ -240,6 +232,24 @@ class PrefetchingIter(DataIter):
         for thread in self.prefetch_threads:
             thread.join()
 
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        if self.rename_data is None:
+            return sum([i.provide_data for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_data] \
+                       for r, i in zip(self.rename_data, self.iters)], [])
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        if self.rename_label is None:
+            return sum([i.provide_label for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_label] \
+                       for r, i in zip(self.rename_label, self.iters)], [])
+
     def reset(self):
         for e in self.data_ready:
             e.wait()
@@ -264,7 +274,9 @@ class PrefetchingIter(DataIter):
             self.current_batch = DataBatch(sum([batch.data for batch in self.next_batch], []),
                                            sum([batch.label for batch in self.next_batch], []),
                                            self.next_batch[0].pad,
-                                           self.next_batch[0].index)
+                                           self.next_batch[0].index,
+                                           provide_data=self.provide_data,
+                                           provide_label=self.provide_label)
             for e in self.data_ready:
                 e.clear()
             for e in self.data_taken:

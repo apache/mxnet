@@ -2,17 +2,7 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
-from check_utils import _np_reduce
-
-def reldiff(a, b):
-    diff = np.abs(a - b)
-    norm = np.abs(a)
-    reldiff = np.max(diff  / (norm + 1e-7))
-    return reldiff
-
-
-def same(a, b):
-    return np.sum(a != b) == 0
+from mxnet.test_utils import *
 
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -245,11 +235,11 @@ def test_reduce():
                                                          %(ndarray_ret.shape, numpy_ret.shape)
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-4
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
                       mx.nd.sum)
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.max),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
                       mx.nd.max)
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.min),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min)
 
 def test_broadcast():

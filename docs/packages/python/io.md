@@ -132,9 +132,9 @@ A sample command:
 ```
 More details can be found by running ```./bin/im2rec```.
 
-### Extension: Mutliple Labels for a Single Image
+### Extension: Multiple Labels for a Single Image
 
-The `im2rec` tool and `mx.io.ImageRecordIter` also has a mutli-label support for a single image.
+The `im2rec` tool and `mx.io.ImageRecordIter` also has a multi-label support for a single image.
 Assume you have 4 labels for a single image, you can take the following steps to utilize the RecordIO tools.
 
 1. Write the the image list files as follows:

@@ -385,7 +385,7 @@ class NDArray {
   /*! \brief offset in chunk */
   size_t offset_;
   /*! \brief type of data */
-  int dtype_;
+  int dtype_ = -1;
 };
 
 /*!
