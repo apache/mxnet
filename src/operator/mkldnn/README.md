@@ -1,7 +1,7 @@
 # MKLDNN PLUGIN
 
-MKLDNN is one intel released library to accelerate Deep Neural Network (DNN) applications on Intel architecture.
-This README shows users how to setup mxnet with MKLDNN accerlation.
+MKLDNN is one INTEL released library to accelerate Deep Neural Network (DNN) applications on Intel architecture.
+This README shows users how to setup mxnet with MKLDNN library.
 
 ## prepare MKLDNN Minimal Library
 ```
