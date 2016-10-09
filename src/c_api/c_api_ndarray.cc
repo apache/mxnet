@@ -208,7 +208,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
             rctx.get_stream<gpu>()->Wait();
           }
           on_complete();
-        }, ctx, read_vars, write_vars);
+        }, ctx, read_vars, write_vars, FnProperty::kNormal,
+        0, PROFILER_MESSAGE(op->name.c_str()));
     } else if (createop.count(op)) {
       Operator* opr = createop[op](attrs, ctx, in_shapes, in_types);
       struct Capture {
@@ -253,7 +254,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
             delete capture;
             on_complete();
           }
-        }, ctx, read_vars, write_vars);
+        }, ctx, read_vars, write_vars, FnProperty::kNormal,
+        0, PROFILER_MESSAGE(op->name.c_str()));
     } else {
       LOG(FATAL)
         << "Operator " << op->name
