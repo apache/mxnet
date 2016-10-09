@@ -84,7 +84,7 @@ class CommCPU : public Comm {
     Engine::Get()->PushSync([reduce, this](RunContext rctx) {
         ReduceSumCPU(reduce);
       }, Context::CPU(), const_vars, {reduce[0].var()},
-      FnProperty::kCPUPrioritized, priority);
+      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
 
     return buf.merged;
   }

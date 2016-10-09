@@ -45,6 +45,11 @@ else
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
+# CFLAGS for profiler
+ifeq ($(USE_PROFILER), 1)
+	CFLAGS += -DMXNET_USE_PROFILER=1
+endif
+
 ifndef LINT_LANG
 	LINT_LANG="all"
 endif
