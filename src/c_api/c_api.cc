@@ -25,6 +25,7 @@
 #include <utility>
 #include "./c_api_common.h"
 #include "../operator/custom-inl.h"
+#include "../engine/profiler.h"
 
 using namespace mxnet;
 
@@ -73,6 +74,20 @@ int MXRandomSeed(int seed) {
 int MXNotifyShutdown() {
   API_BEGIN();
   Engine::Get()->NotifyShutdown();
+  API_END();
+}
+
+int MXSetProfilerConfig(int mode, const char* filename) {
+  API_BEGIN();
+  // mode, kOnlySymbolic: 0, kAllOperator: 1
+  engine::Profiler::Get()->SetConfig(engine::Profiler::ProfilerMode(mode), std::string(filename));
+  API_END();
+}
+
+int MXSetProfilerState(int state) {
+  API_BEGIN();
+  // state, kNotRunning: 0, kRunning: 1
+  engine::Profiler::Get()->SetState(engine::Profiler::ProfilerState(state));
   API_END();
 }
 
