@@ -56,7 +56,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     infered_num_inputs = op->num_inputs;
   }
   CHECK_EQ(num_inputs, infered_num_inputs)
-    << infered_num_inputs << " needed, " << num_inputs << " given";
+    << "Expecting " << infered_num_inputs << " inputs, got " << num_inputs;
   int infered_num_outputs;
   if (op->get_num_outputs != nullptr) {
     infered_num_outputs = op->get_num_outputs(attrs);
@@ -74,7 +74,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     ndoutputs.resize(infered_num_outputs);
   } else {
     CHECK_EQ(infered_num_outputs, *num_outputs)
-      << infered_num_outputs << " needed, " << *num_outputs << " given";
+      << "Expecting " << infered_num_outputs << " outputs, got " << *num_outputs;
     ndoutputs.reserve(infered_num_outputs);
     for (int i = 0; i < infered_num_outputs; ++i) {
       ndoutputs.emplace_back(std::move(*outarray[i]));
@@ -84,6 +84,22 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   if (ndfunc.count(op)) {
     ndfunc[op](attrs, ndinputs, &ndoutputs);
   } else {
+    // TODO(piiswrong): infer ctx
+    Context ctx;
+    if (num_inputs) {
+      ctx = ndinputs[0].ctx();
+    } else if (*num_outputs && !ndoutputs[0].is_none()) {
+      ctx = ndoutputs[0].ctx();
+    } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
+      ctx = Context::FromString(attrs.dict["ctx"]);
+    } else {
+      ctx = Context::CPU();
+    }
+    // Pinned context doesn't propagate
+    if (ctx.dev_type == Context::kCPUPinned) {
+      ctx = Context::CPU();
+    }
+
     std::vector<TShape>& in_shapes = ret->arg_shapes;
     std::vector<TShape>& out_shapes = ret->out_shapes;
     in_shapes.clear();
@@ -113,21 +129,6 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     CHECK(infertype.count(op)) << "Op must have FInferShape registered";
     CHECK(infertype[op](attrs, &in_types, &out_types));
     CHECK_EQ(out_types.size(), static_cast<size_t>(infered_num_outputs));
-
-    // TODO(piiswrong): infer ctx
-    Context ctx;
-    if (num_inputs) {
-      ctx = ndinputs[0].ctx();
-    } else if (*num_outputs && !ndoutputs[0].is_none()) {
-      ctx = ndoutputs[0].ctx();
-    } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
-      ctx = Context::FromString(attrs.dict["ctx"]);
-    } else {
-      ctx = Context::CPU();
-    }
-    if (ctx.dev_type == Context::kCPUPinned) {
-      ctx = Context::CPU();
-    }
 
     for (int i = 0; i < infered_num_outputs; ++i) {
       if (ndoutputs[i].is_none()) {
