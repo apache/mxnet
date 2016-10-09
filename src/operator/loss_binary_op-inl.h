@@ -7,6 +7,7 @@
 #define MXNET_OPERATOR_LOSS_BINARY_OP_INL_H_
 
 #include <mxnet/operator_util.h>
+#include <vector>
 #include "./mshadow_op.h"
 #include "./elemwise_op_common.h"
 
