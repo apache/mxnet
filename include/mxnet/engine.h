@@ -142,7 +142,6 @@ class MXNET_API Engine {
    * \param mutable_vars The variables that current operation will mutate.
    * \param prop Property of the function.
    * \param priority Priority of the action, as hint to the engine.
-   * \param profiling The variable indicate whether to profile this operator.
    * \param opr_name The operator name.
    */
   virtual void PushAsync(AsyncFn exec_fun, Context exec_ctx,
@@ -199,6 +198,7 @@ class MXNET_API Engine {
    * \param mutable_vars The variables that current operation will mutate.
    * \param prop Property of the function.
    * \param priority Priority of the action, as hint to the engine.
+   * \param opr_name The operator name.
    * \tparam SyncFn the synchronous function to be pushed.
    */
   inline void PushSync(SyncFn exec_fn, Context exec_ctx,
