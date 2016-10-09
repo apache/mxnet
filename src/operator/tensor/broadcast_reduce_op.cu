@@ -42,10 +42,10 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 
 // Legacy support
 NNVM_REGISTER_OP(argmax_channel)
-.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>)
+.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
 
 NNVM_REGISTER_OP(norm)
-.set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", L2NormCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
