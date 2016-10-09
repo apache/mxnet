@@ -1,6 +1,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -138,11 +139,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    *            List of types of outputs.
    *            The order is in the same order as list_auxiliary()
    */
-  def inferType(args: Class[_ >: Float with Int with Double]*)
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
-    val sdata: Array[Int] = args.map(NDArray.DTYPE_NATIVE_TO_MX.getOrElse(_, -1)).toArray
+  def inferType(args: DType*) : (Seq[DType], Seq[DType], Seq[DType]) = {
+    val sdata: Array[Int] = args.map { dtype =>
+      if (dtype == null) -1
+      else dtype.id
+    }.toArray
     inferType(null, sdata)
   }
 
@@ -162,22 +163,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    *            List of types of outputs.
    *            The order is in the same order as list_auxiliary()
    */
-  def inferType(kwargs: Map[String, Class[_ >: Float with Int with Double]])
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
-    val filteredArgs = kwargs.filter { case (key, value) =>
-      NDArray.DTYPE_NATIVE_TO_MX.contains(value)
-    }
-    val keys = filteredArgs.keys.toArray
-    val sdata = filteredArgs.values.map(NDArray.DTYPE_NATIVE_TO_MX(_)).toArray
+  def inferType(kwargs: Map[String, DType]) : (Seq[DType], Seq[DType], Seq[DType]) = {
+    val keys = kwargs.keys.toArray
+    val sdata = kwargs.values.map(_.id).toArray
     inferType(keys, sdata)
   }
 
   private def inferType(keys: Array[String], values: Array[Int])
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
+    : (Seq[DType], Seq[DType], Seq[DType]) = {
     val argTypeData = ListBuffer.empty[Int]
     val outTypeData = ListBuffer.empty[Int]
     val auxTypeData = ListBuffer.empty[Int]
@@ -185,9 +178,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     checkCall(_LIB.mxSymbolInferType(
       handle, keys, values, argTypeData, outTypeData, auxTypeData, complete))
     if (complete.value != 0) {
-      (argTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
-        outTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
-        auxTypeData.map(NDArray.DTYPE_MX_TO_NATIVE))
+      (argTypeData.map(DType(_)), outTypeData.map(DType(_)), auxTypeData.map(DType(_)))
     } else {
       (null, null, null)
     }
