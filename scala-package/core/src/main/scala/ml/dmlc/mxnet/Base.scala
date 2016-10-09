@@ -42,6 +42,8 @@ object Base {
   type OptimizerHandleRef = RefLong
   type RtcHandleRef = RefLong
 
+  val MX_REAL_TYPE = DType.Float32
+
   try {
     try {
       tryLoadLibraryOS("mxnet-scala")
