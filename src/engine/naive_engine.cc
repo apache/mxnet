@@ -18,6 +18,7 @@ class NaiveEngine final : public Engine {
     std::vector<VarHandle> const_vars;
     std::vector<VarHandle> mutable_vars;
     FnProperty prop;
+    const char* opr_name;
   };
 
   NaiveEngine() {
@@ -44,32 +45,37 @@ class NaiveEngine final : public Engine {
   OprHandle NewOperator(AsyncFn fn,
                         std::vector<VarHandle> const& const_vars,
                         std::vector<VarHandle> const& mutable_vars,
-                        FnProperty prop) override {
+                        FnProperty prop = FnProperty::kNormal,
+                        const char* opr_name = nullptr) override {
     NaiveOpr *opr = new NaiveOpr();
     opr->fn = fn;
     opr->const_vars = const_vars;
     opr->mutable_vars = mutable_vars;
     opr->prop = prop;
+    opr->opr_name = opr_name;
     return opr;
   }
   void DeleteOperator(OprHandle op) override {
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     delete opr;
   }
-  void Push(OprHandle op, Context exec_ctx, int priority) override {
+  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override {
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     this->PushAsync(opr->fn,
                     exec_ctx,
                     opr->const_vars,
                     opr->mutable_vars,
-                    opr->prop);
+                    opr->prop,
+                    priority,
+                    PROFILER_MESSAGE(opr->opr_name));
   }
   void PushAsync(AsyncFn exec_fun,
                  Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
-                 FnProperty prop,
-                 int priority = 0) override {
+                 FnProperty prop = FnProperty::kNormal,
+                 int priority = 0,
+                 const char* opr_name = nullptr) override {
     CallbackOnComplete callback = CreateCallback(
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;
@@ -97,7 +103,8 @@ class NaiveEngine final : public Engine {
         << "NaiveEngine only support synchronize Push so far";
   }
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
-    this->PushSync(delete_fn, exec_ctx, {}, {var}, FnProperty::kNormal);
+    this->PushSync(delete_fn, exec_ctx, {}, {var},
+                   FnProperty::kNormal, 0, PROFILER_MESSAGE("DeleteVariable"));
   }
   void WaitForVar(VarHandle var) override {
   }
