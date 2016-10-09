@@ -66,6 +66,9 @@ class LibInfo {
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandleRef): Int
+  @native def mxNDArrayAt(handle: NDArrayHandle,
+                          idx: MXUint,
+                          out: NDArrayHandleRef): Int
   @native def mxNDArrayReshape(handle: NDArrayHandle,
                                nDim: Int,
                                dims: Array[Int],
@@ -84,6 +87,7 @@ class LibInfo {
   @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
   @native def mxNDArraySaveRawBytes(handle: NDArrayHandle, buf: ArrayBuffer[Byte]): Int
   @native def mxNDArrayLoadFromRawBytes(bytes: Array[Byte], handle: NDArrayHandleRef): Int
+  @native def mxNDArrayGetDType(handle: NDArrayHandle, dtype: RefInt): Int
 
   // KVStore Server
   @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int
