@@ -160,6 +160,24 @@ MXNET_DLL int MXRandomSeed(int seed);
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXNotifyShutdown();
+/*!
+ * \brief Set up configuration of profiler
+ * \param mode indicate the working mode of profiler,
+ *  record anly symbolic operator when mode == 0,
+ *  record all operator when mode == 1
+ * \param filename where to save trace file
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
+/*!
+ * \brief Set up state of profiler
+ * \param state indicate the working state of profiler,
+ *  profiler not running when state == 0,
+ *  profiler running when state == 1
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerState(int state);
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
