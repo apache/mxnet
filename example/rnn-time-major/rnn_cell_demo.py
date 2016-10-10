@@ -1,5 +1,35 @@
 """A simple demo of new RNN cell with PTB language model."""
 
+################################################################################
+# Speed test (time major is 1.5~2 times faster than batch major).
+#
+# -- This script (time major) -----
+# 2016-10-10 18:43:21,890 Epoch[0] Batch [50]     Speed: 1717.76 samples/sec      Train-Perplexity=4311.345018
+# 2016-10-10 18:43:25,959 Epoch[0] Batch [100]    Speed: 1573.17 samples/sec      Train-Perplexity=844.092421
+# 2016-10-10 18:43:29,807 Epoch[0] Batch [150]    Speed: 1663.17 samples/sec      Train-Perplexity=498.080716
+# 2016-10-10 18:43:33,871 Epoch[0] Batch [200]    Speed: 1574.84 samples/sec      Train-Perplexity=455.051252
+# 2016-10-10 18:43:37,720 Epoch[0] Batch [250]    Speed: 1662.87 samples/sec      Train-Perplexity=410.500066
+# 2016-10-10 18:43:40,766 Epoch[0] Batch [300]    Speed: 2100.81 samples/sec      Train-Perplexity=274.317460
+# 2016-10-10 18:43:44,571 Epoch[0] Batch [350]    Speed: 1682.45 samples/sec      Train-Perplexity=350.132577
+# 2016-10-10 18:43:48,377 Epoch[0] Batch [400]    Speed: 1681.41 samples/sec      Train-Perplexity=320.674884
+# 2016-10-10 18:43:51,253 Epoch[0] Train-Perplexity=336.210212
+# 2016-10-10 18:43:51,253 Epoch[0] Time cost=33.529
+# 2016-10-10 18:43:53,373 Epoch[0] Validation-Perplexity=282.453883
+#
+# -- ../rnn/rnn_cell_demo.py (batch major) -----
+# 2016-10-10 18:44:34,133 Epoch[0] Batch [50]     Speed: 1004.50 samples/sec      Train-Perplexity=4398.428571
+# 2016-10-10 18:44:39,874 Epoch[0] Batch [100]    Speed: 1114.85 samples/sec      Train-Perplexity=771.401960
+# 2016-10-10 18:44:45,528 Epoch[0] Batch [150]    Speed: 1132.03 samples/sec      Train-Perplexity=525.207444
+# 2016-10-10 18:44:51,564 Epoch[0] Batch [200]    Speed: 1060.37 samples/sec      Train-Perplexity=453.741140
+# 2016-10-10 18:44:57,865 Epoch[0] Batch [250]    Speed: 1015.78 samples/sec      Train-Perplexity=411.914237
+# 2016-10-10 18:45:04,032 Epoch[0] Batch [300]    Speed: 1037.92 samples/sec      Train-Perplexity=381.302188
+# 2016-10-10 18:45:10,153 Epoch[0] Batch [350]    Speed: 1045.49 samples/sec      Train-Perplexity=363.326871
+# 2016-10-10 18:45:16,062 Epoch[0] Batch [400]    Speed: 1083.21 samples/sec      Train-Perplexity=377.929014
+# 2016-10-10 18:45:19,993 Epoch[0] Train-Perplexity=294.675899
+# 2016-10-10 18:45:19,993 Epoch[0] Time cost=52.604
+# 2016-10-10 18:45:21,401 Epoch[0] Validation-Perplexity=294.345659
+################################################################################
+
 import os
 
 import numpy as np
