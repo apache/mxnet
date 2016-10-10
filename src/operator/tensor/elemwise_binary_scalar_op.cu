@@ -61,7 +61,7 @@ NNVM_REGISTER_OP(_backward_hypot_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::hypot_grad_left>);
 
 NNVM_REGISTER_OP(smooth_l1)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::smooth_l1_loss>)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::smooth_l1_loss>);
 
 NNVM_REGISTER_OP(_backward_smooth_l1)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::smooth_l1_gradient>);
