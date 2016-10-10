@@ -24,8 +24,6 @@ object Base {
   type ExecutorHandle = CPtrAddress
   type SymbolHandle = CPtrAddress
   type RecordIOHandle = CPtrAddress
-  type OptimizerCreator = CPtrAddress
-  type OptimizerHandle = CPtrAddress
 
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
@@ -37,8 +35,6 @@ object Base {
   type ExecutorHandleRef = RefLong
   type SymbolHandleRef = RefLong
   type RecordIOHandleRef = RefLong
-  type OptimizerCreatorRef = RefLong
-  type OptimizerHandleRef = RefLong
 
   val MX_REAL_TYPE = DType.Float32
 
