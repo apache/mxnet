@@ -57,8 +57,6 @@ DataIterHandle = ctypes.c_void_p
 KVStoreHandle = ctypes.c_void_p
 RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p
-OptimizerHandle = ctypes.c_void_p
-OptimizerCreator = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------

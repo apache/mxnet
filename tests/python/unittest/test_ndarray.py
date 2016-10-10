@@ -277,21 +277,24 @@ def test_dot():
 
 def test_reduce():
     sample_num = 200
-    def test_reduce_inner(numpy_reduce_func, nd_reduce_func):
+    def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes):
         for i in range(sample_num):
             ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 11, size=ndim)
-            axis_flags = np.random.randint(0, 2, size=ndim)
-            axes = []
-            for (axis, flag) in enumerate(axis_flags):
-                if flag:
-                    axes.append(axis)
-            keepdims = np.random.randint(0, 2)
             dat = np.random.rand(*shape) - 0.5
-            if 0 == len(axes):
-                axes = tuple(range(ndim))
+            keepdims = np.random.randint(0, 2)
+            if multi_axes:
+                axis_flags = np.random.randint(0, 2, size=ndim)
+                axes = []
+                for (axis, flag) in enumerate(axis_flags):
+                    if flag:
+                        axes.append(axis)
+                if 0 == len(axes):
+                    axes = tuple(range(ndim))
+                else:
+                    axes = tuple(axes)
             else:
-                axes = tuple(axes)
+                axes = np.random.randint(0, ndim)
             numpy_ret = numpy_reduce_func(dat, axis=axes, keepdims=keepdims)
 
             ndarray_ret = nd_reduce_func(mx.nd.array(dat), axis=axes, keepdims=keepdims)
@@ -303,11 +306,15 @@ def test_reduce():
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-4
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
-                      mx.nd.sum)
+                      mx.nd.sum, True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
-                      mx.nd.max)
+                      mx.nd.max, True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
-                      mx.nd.min)
+                      mx.nd.min, True)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmax),
+                      mx.nd.argmax, False)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmin),
+                      mx.nd.argmin, False)
 
 def test_broadcast():
     sample_num = 1000
