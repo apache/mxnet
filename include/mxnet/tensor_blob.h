@@ -419,7 +419,7 @@ class TShape : public Tuple<index_t> {
     return s;
   }
   /*!
-   * flatten the higher dimension to second dimension, return a 2D shape
+   * flatten the lower dimension to first dimension, return a 2D shape
    * \return the flat 2d shape
    */
   inline mshadow::Shape<2> FlatTo2D(void) const {

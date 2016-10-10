@@ -93,7 +93,8 @@ if __name__ == '__main__':
         # reshape to be of compatible shape as labels
         pred_tm = mx.sym.Reshape(data=pred, shape=(seq_len, -1, len(vocab)))
 
-        sm = mx.sym.SoftmaxOutput(data=pred_tm, label=label, name='softmax')
+        sm = mx.sym.SoftmaxOutput(data=pred_tm, label=label, preserve_shape=True,
+                                  name='softmax')
 
         data_names = ['data', 'LSTM_state', 'LSTM_state_cell']
         label_names = ['softmax_label']

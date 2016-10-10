@@ -8,9 +8,9 @@ from mxnet.test_utils import *
 
 
 def np_softmax(x):
-    x = x - np.max(x, axis=1).reshape(x.shape[0], 1)
+    x = x - np.max(x, axis=-1, keepdims=True)
     x = np.exp(x)
-    x /= np.sum(x, axis=1).reshape(x.shape[0], 1)
+    x /= np.sum(x, axis=-1, keepdims=True)
     return x
 
 
@@ -238,11 +238,11 @@ def check_softmax_with_ignore_label(xpu):
     assert(abs(np.sum(grad1[:int(shape[0]/2)])) < 1e-5)
     assert(reldiff(grad0[int(shape[0]/2):], grad1[int(shape[0]/2):]) < 1e-5)
 
-def check_softmax_with_shape(shape, xpu):
+def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     # bind with label
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
-    Y = mx.symbol.SoftmaxOutput(data=X, label=L)
+    Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
     x = mx.random.uniform(-1, 1, shape, ctx = xpu)
     l = mx.random.uniform(-1, 1, shape, ctx = xpu)
     l[:] = np_softmax(l.asnumpy())
@@ -255,7 +255,9 @@ def check_softmax_with_shape(shape, xpu):
     assert_allclose(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy())
 
 def test_softmax():
-    check_softmax_with_shape((3, 4), mx.cpu())
+    check_softmax_with_shape((3, 4), mx.cpu(), preserve_shape=False)
+    check_softmax_with_shape((3, 4), mx.cpu(), preserve_shape=True)
+    check_softmax_with_shape((3, 4, 2), mx.cpu(), preserve_shape=True)
 
 def check_multi_softmax_with_shape(shape, xpu):
     X = mx.symbol.Variable('X')
