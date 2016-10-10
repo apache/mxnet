@@ -13,7 +13,7 @@ the runtime dependency scheduling problem in deep learning. We will introduce th
 scheduling problem, how it can help make multi-device deep learning easier and faster, and
 discuss possible designs of a generic dependency engine that is library and operation independent.
 
-Most design details of this article inspires the dependency engine of mxnet, with the dependency tracking algorithm majorly contributed by [Yutian Li](https://github.com/hotpxl) and [Mingjie Wang](https://github.com/jermainewang).
+Most design details of this article inspires the dependency engine of MXNet, with the dependency tracking algorithm majorly contributed by [Yutian Li](https://github.com/hotpxl) and [Mingjie Wang](https://github.com/jermainewang).
 
 Dependency Scheduling Problem
 -----------------------------
@@ -83,7 +83,7 @@ interesting challenges for dependency engine. Consider the following example
 ![Dep Rand](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_rand.png)
 
 Here we are generating random numbers in a sequence. While it seems that the two random number
-generations can be parallelized. This is usually not the case. Because usually a pseudorandom
+generations can be parallelized. This is usually not the case. Because usually a pseudo random
 number generator (PRNG) is not thread-safe because it might contain some internal state to mutate
 when generating a new number. Even if the PRNG is thread-safe, it is still desirable to
 run the generation in the a serialized way, so we can get reproducible random numbers.
@@ -141,7 +141,7 @@ Few important notes:
 - There is a lag of computation between last backward to layer k to next forward call to layer k.
 	- We can do the weight synchronization of layer k ***in parallel*** with other computation in this lag.
 
-The points mentioned in above list is the exact optimization used by multi GPU deep learning libaries such as cxxnet.
+The points mentioned in above list is the exact optimization used by multi GPU deep learning libraries such as CXXNet.
 The idea is to overlap the weight synchronization(communication) with the computation.
 However, as you may find out it is really not easy to do that, as the copy need to be triggered as soon as backward of
 that layer completes, which then triggers the reduction, updates etc.
@@ -300,7 +300,7 @@ for example, they are usually good for better parallelization, and easier fault 
 
 However, making things purely immutable makes several things hard:
 - It is harder to schedule the resource contention problems such as random number and deletion.
-- The engine usually need to manage resources (memory, random number) to avoid conflictions.
+- The engine usually need to manage resources (memory, random number) to avoid conflicts.
 	- It is harder to plug in user allocated space etc.
 - No pre-allocated static memory, again because the usual pattern is write to a pre-allocated layer space,
   which is not supported is data is immutable.

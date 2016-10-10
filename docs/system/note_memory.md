@@ -25,7 +25,7 @@ the gradient needed.
 
 ![Backward Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/back_graph.png)
 
-Libraries like caffe, cxxnet, torch uses the backprop on same graph. While libraries like Theano, CGT takes the explicit
+Libraries like Caffe, CXXNet, torch uses the backprop on same graph. While libraries like Theano, CGT takes the explicit
 backward path approach. We will adopt the ***explicit backward path*** way in the article, because it brings several advantages
 in turns of optimization.
 
@@ -80,26 +80,26 @@ This means we need roughly ```2 n``` memory cells. This is the same in the expli
 the number of nodes in backward pass in roughly the same as forward pass.
 
 ### Inplace Operations
-One of the very first thing that we can do is inplace memory sharing of operations. This is usually done for
+One of the very first thing that we can do is in-place memory sharing of operations. This is usually done for
 simple operations such as activation functions. Consider the following case, where we want to
 compute the value of three chained sigmoid function.
 
 ![Inplace op](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_inline.png)
 
-Because we can compute sigmoid in the ```inplace``` manner, that is, use the same memory for input and output.
+Because we can compute sigmoid in the ```in-place``` manner, that is, use the same memory for input and output.
 We can simply allocate one copy of memory, and use it compute arbitrary length of sigmoid chain.
 
-However, the inplace optimization sometimes can be done in the wrong way, especially when the package tries
+However, the in-place optimization sometimes can be done in the wrong way, especially when the package tries
 to be a bit general. Consider the following case, where the value of B is not only used by C, but also F.
 
-![Inplace trap](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_inline_trap.png)
+![In-place trap](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_inline_trap.png)
 
-We cannot perform inplace optimization because the value of B is still needed after ```C=sigmoid(B)``` is computed.
-So an algorithm that simply do inplace optimization for every sigmoid operation might fall into such trap,
+We cannot perform in-place optimization because the value of B is still needed after ```C=sigmoid(B)``` is computed.
+So an algorithm that simply do in-place optimization for every sigmoid operation might fall into such trap,
 and we need to be careful on when we can do it.
 
 ### Normal Memory Sharing
-Memories can also be shared besides the inplace operation. Consider the following case, because the
+Memories can also be shared besides the in-place operation. Consider the following case, because the
 value of B is no longer needed when we compute E, we can reuse the memory to hold the result of E.
 
 ![Normal Sharing](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_normal.png)
@@ -122,7 +122,7 @@ In the above example:
 Memory Allocation Algorithm
 ---------------------------
 We have discussed how the general techniques to optimize memory allocations in previous section.
-However, we also see that there are traps which we want to avoid like the inplace case.
+However, we also see that there are traps which we want to avoid like the in-place case.
 How can we allocate the memory correctly? This is not a new problem. For example, it is very similar
 to register allocation in compilers. So there could be a lot we can borrow. We do not attempt to give
 a comprehensive review of techniques here, but rather introduce some simple but useful trick to attack
@@ -144,7 +144,7 @@ and keep a counter of future operations that depends on the node.
 
 ![Alloc](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/alloc_step.png)
 
-- An inplace optimization can be performed when only current operation depend on the source(i.e. counter=1)
+- An in-place optimization can be performed when only current operation depend on the source(i.e. counter=1)
 - A memory can be recycled into the box on the upper right corner when counter goes to 0
 - Every time, when we need new memory, we can either get it from the box, or allocate a new one.
 
@@ -217,7 +217,7 @@ Now comes the question on how much we can really save by using these techniques.
 
 The answer is we can roughly reduce the memory consumption ***by half*** using these techniques. This is on the coarse grained operation graphs that are already optimized with big operations. More memory reduction could be seen if we are optimizing a fine-grained computation network used by symbolic libraries such as Theano.
 
-Most of the ideas in this article inspires the design of mxnet.
+Most of the ideas in this article inspires the design of MXNet.
 We provide an [Memory Cost Estimation Script](https://github.com/dmlc/mxnet/tree/master/example/memcost),
 which you can play with to see how much memory we need under different strategies.
 

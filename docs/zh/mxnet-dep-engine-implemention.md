@@ -257,8 +257,8 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     }
   }
   // This is outside of lock scope
-  // Be very carful, pending_write_ and num_pending_reads_
-  // can change now, do not reply ont the two variables.
+  // Be very careful, pending_write_ and num_pending_reads_
+  // can change now, do not reply on the two variables.
   // The linked list \in [old_pending_write, end_of_read_chain)
   // is already detached from this Var.
   // So it is safe to modify these
@@ -400,7 +400,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
     finished_cv_.notify_all();
   }
 
-  // delte operator if it is temperory
+  // delta operator if it is temporary
   if (threaded_opr->temporary) {
     ThreadedOpr::Delete(threaded_opr);
   }
