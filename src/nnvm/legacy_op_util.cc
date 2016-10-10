@@ -83,11 +83,17 @@ bool OpPropInferAttr(const NodeAttrs& attrs,
 bool OpPropInferShape(const NodeAttrs& attrs,
                       std::vector<TShape> *iattr,
                       std::vector<TShape> *oattr) {
-  auto finfer = [](const OperatorProperty* op,
+  std::string name = attrs.name;
+  auto finfer = [name](const OperatorProperty* op,
                    std::vector<TShape> *in,
                    std::vector<TShape> *out,
                    std::vector<TShape> *aux) {
-    return op->InferShape(in, out, aux);
+    try {
+      return op->InferShape(in, out, aux);
+    }
+    catch (const std::exception& e) {
+      throw dmlc::Error(e.what() + std::string(" with ") + name);
+    }
   };
   return OpPropInferAttr(attrs, iattr, oattr, finfer);
 }
