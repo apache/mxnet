@@ -1,10 +1,6 @@
 # pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
 """Common Optimization algorithms with regularizations."""
 import math
-import ctypes
-from .base import _LIB, check_call
-from .base import c_array, mx_uint, mx_float, c_str
-from .base import OptimizerHandle, OptimizerCreator
 from .ndarray import NDArray, zeros, clip, sqrt
 from .ndarray import sgd_update, sgd_mom_update, adam_update
 from .random import normal
@@ -55,39 +51,6 @@ class Optimizer(object):
                 **kwargs)
         else:
             raise ValueError('Cannot find optimizer %s' % name)
-
-    @staticmethod
-    def _init_cc_optimizer(name, param_keys, param_vals):
-        """Initialize handle to C++ optimizer.
-
-        Parameters
-        ----------
-        name : str
-            name of the optimizer registered with MXNET_REGISTER_OPTIMIZER
-        param_keys : list of str
-            list of argument names passed to Init(kwargs)
-        param_vals : list
-            corresponding values
-
-        Returns
-        -------
-        handle : OptimizerHandle
-            handle to the optimizer
-        """
-        creator = OptimizerCreator()
-        check_call(_LIB.MXOptimizerFindCreator(c_str(name),
-                                               ctypes.byref(creator)))
-        assert creator, "Cannot find c++ implementation of optimizer \
-                        registered with name "+name
-        param_keys = c_array(ctypes.c_char_p, [c_str(s) for s in param_keys])
-        param_vals = c_array(ctypes.c_char_p, [c_str(str(s)) for s in param_vals])
-        handle = OptimizerHandle()
-        check_call(_LIB.MXOptimizerCreateOptimizer(
-            creator,
-            mx_uint(len(param_keys)),
-            param_keys, param_vals,
-            ctypes.byref(handle)))
-        return handle
 
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
@@ -422,82 +385,10 @@ class SGLD(Optimizer):
 
 
 @register
-class ccSGD(Optimizer):
-    """A very simple SGD optimizer with momentum and weight regularization.
-    Implemented in C++.
-
-    Parameters
-    ----------
-    learning_rate : float, optional
-        learning_rate of SGD
-
-    momentum : float, optional
-       momentum value
-
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-
-    rescale_grad : float, optional
-        rescaling factor of gradient.
-
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
-    """
-    def __init__(self, momentum=0.0, rescale_grad=1., clip_gradient=-1., **kwargs):
-        super(ccSGD, self).__init__(rescale_grad=rescale_grad,
-                                    clip_gradient=clip_gradient,
-                                    **kwargs)
-        self.momentum = momentum
-
-        self.handle = Optimizer._init_cc_optimizer(
-            'ccsgd',
-            ['momentum', 'rescale_grad', 'clip_gradient'],
-            [momentum, rescale_grad, clip_gradient])
-
-    def __getstate__(self):
-        this = self.__dict__.copy()
-        this['handle'] = this.get('handle', None) is not None
-
-    def __setstate__(self, state):
-        if state.get('handle', False):
-            state['handle'] = Optimizer._init_cc_optimizer(
-                'ccsgd',
-                ['momentum', 'rescale_grad', 'clip_gradient'],
-                [state['momentum'], state['rescale_grad'], state['clip_gradient']])
-        self.__dict__.update(state)
-
-    def create_state(self, index, weight):
-        return None
-
-    def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-        self._update_count(index)
-        check_call(_LIB.MXOptimizerUpdate(self.handle,
-                                          ctypes.c_int(index),
-                                          weight.handle,
-                                          grad.handle,
-                                          mx_float(lr),
-                                          mx_float(wd)))
-
+class ccSGD(SGD):
+    """[Deprecated] Same as sgd. Left here for backward compatibility."""
+    def __init__(self, *args, **kwargs):
+        super(ccSGD, self).__init__(*args, **kwargs)
 
 @register
 class Adam(Optimizer):

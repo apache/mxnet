@@ -29,6 +29,19 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   }
 };
 
+struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
+  int axis;
+  bool keepdims;
+  DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
+    DMLC_DECLARE_FIELD(axis).set_default(-1)
+      .describe("Empty or unsigned. The axis to perform the reduction."
+                "If left empty, a global reduction will be performed.");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If true, the axis which is reduced is left "
+                "in the result as dimension with size one.");
+  }
+};
+
 struct BroadcastAxesParam : public dmlc::Parameter<BroadcastAxesParam> {
   TShape axis;
   TShape size;
@@ -50,6 +63,38 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
                 "has the same meaning as `A = broadcast_axis(B, axis=0, size=10)`.");
   }
 };
+
+inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
+                            std::vector<TShape> *in_attrs,
+                            std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  TShape& ishape = (*in_attrs)[0];
+  if (ishape.ndim() == 0) return false;
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  if (param.axis == -1 || ishape.ndim() == 1) {
+    if (param.keepdims) {
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(ishape.ndim()));
+    } else {
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
+    }
+  } else {
+    CHECK_LT(param.axis, ishape.ndim())
+        << "Reduction axis " << param.axis
+        << " Exceeds input dimensions " << ishape;
+    if (param.keepdims) {
+      TShape oshape = ishape;
+      oshape[param.axis] = 1;
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+    } else {
+      TShape oshape(ishape.ndim() - 1);
+      for (int i = 0; i < param.axis; ++i) oshape[i] = ishape[i];
+      for (int i = param.axis+1; i < ishape.ndim(); ++i) oshape[i-1] = ishape[i];
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+    }
+  }
+  return true;
+}
 
 inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *in_attrs,
@@ -164,6 +209,35 @@ inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
     new_big->assign(&(*new_big)[0], &(*new_big)[MXNET_SPECIAL_MAX_NDIM]);
   } else {
     LOG(FATAL) << "Too many reduction axes from " << big << " to " << small;
+  }
+}
+
+template<typename xpu, typename reducer>
+void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (param.axis == -1) {
+    LOG(FATAL) << "Global reduction not supported yet";
+  } else {
+    index_t leading = 1, trailing = 1;
+    for (int i = 0; i < param.axis; ++i)
+      leading *= inputs[0].shape_[i];
+    for (int i = param.axis+1; i < inputs[0].ndim(); ++i)
+      trailing *= inputs[0].shape_[i];
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(
+        Shape2(leading, trailing), s);
+      Tensor<xpu, 3, DType> in = inputs[0].get_with_shape<xpu, 3, DType>(
+        Shape3(leading, inputs[0].shape_[param.axis], trailing), s);
+      CHECK(req[0] != kAddTo) << "AddTo is not supported";
+      ASSIGN_DISPATCH(out, req[0], (reduce_with_axis<reducer, true>(in, 1)));
+    });
   }
 }
 
@@ -334,6 +408,32 @@ struct ReduceGrad {
   }
 };
 
+template<typename xpu>
+void L2NormCompute(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    mshadow::Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
+    mshadow::Tensor<xpu, 1, DType> in = inputs[0].get_with_shape<xpu, 1, DType>(
+      mshadow::Shape1(inputs[0].shape_.Size()), s);
+    mshadow::VectorDot(out, in, in);
+    ASSIGN_DISPATCH(out, req[0], mshadow::expr::F<mxnet::op::mshadow_op::square_root>(out));
+  });
+}
+
+#define MXNET_OPERATOR_REGISTER_REDUCE_AXIS(name)               \
+  NNVM_REGISTER_OP(name)                                        \
+  .set_num_inputs(1)                                            \
+  .set_num_outputs(1)                                           \
+  .set_attr_parser(ParamParser<ReduceAxisParam>)                \
+  .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
+  .add_argument("src", "NDArray", "Source input")               \
+  .add_arguments(ReduceAxisParam::__FIELDS__())
+
 #define MXNET_OPERATOR_REGISTER_REDUCE(name)                    \
   NNVM_REGISTER_OP(name)                                        \
   .set_num_inputs(1)                                            \
@@ -341,7 +441,8 @@ struct ReduceGrad {
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("src", "NDArray", "Source input")
+  .add_argument("src", "NDArray", "Source input")               \
+  .add_arguments(ReduceAxesParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
   NNVM_REGISTER_OP(name)                                            \
@@ -363,8 +464,8 @@ struct ReduceGrad {
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .set_attr<nnvm::FGradient>("FGradient",                       \
     [](const nnvm::NodePtr& n,                                  \
-       const std::vector<nnvm::NodeEntry>& ograds) {           \
-      return MakeGradNode("_broadcast_backward", n, ograds,    \
+       const std::vector<nnvm::NodeEntry>& ograds) {            \
+      return MakeGradNode("_broadcast_backward", n, ograds,     \
                           {{"keepdims", "true"}});              \
     })                                                          \
   .add_argument("src", "NDArray", "Source input")
