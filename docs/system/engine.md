@@ -30,7 +30,7 @@ struct RunContext {
 	void *stream;
 };
 ```
-Alternatively, one could use `mxnet::engine::DAGEngine::Fn` which is the same type defination.
+Alternatively, one could use `mxnet::engine::DAGEngine::Fn` which is the same type definition.
 
 All the functions will be executed by the internal threads of the engine. In such model, it is usually not suggested to push *blocking* functions to the engine (usually for dealing with I/O tasks like disk, web service, UI, etc.) since it will occupy the execution thread and reduce the total throughput. In such case, we provide another *asynchronous* function type:
 ```c++

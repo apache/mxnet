@@ -25,7 +25,7 @@ of l1 loss and l2 loss. The loss itself can be written as:
 loss = outside_weight .* f(inside_weight .* (data - label))
 grad = outside_weight .* inside_weight .* f'(inside_weight .* (data - label))
 ```
-where `.*` stands for elementwise multiplication and `f`, `f'` is the smooth l1 loss function, 
+where `.*` stands for element wise multiplication and `f`, `f'` is the smooth l1 loss function, 
 which we suppose we have in `mshadow` for now. At first glance, it is impossible to implement 
 this particular loss as an unary or binary operator. But we have automatic differentiation in 
 the symbolic execution. That would simplify the loss to `f` and `f'` directly. In this way, this 
@@ -226,7 +226,7 @@ MXNET_REGISTER_SIMPLE_OP(smooth_l1, XPU)
 ```
 Remember from shape functions that a default behavior without `set_shape_function` will be forcing the inputs 
 (if binary) to be of the same shape and yield the same shape for output. The `set_enable_scalar` will be 
-discussed in addtional information.
+discussed in additional information.
 
 ### All in a List
 * Create a shape function for determining the output shape
@@ -259,7 +259,7 @@ functions and gradients, additional arguments are contained in `env.kwarg`, whic
 simplify parsing keyword arguments. Refer to the [guide on parameter structure](https://github.com/dmlc/dmlc-core/blob/master/doc/parameter.md)
 for more details.
 
-Addtional resources like `mshadow::Random<xpu>` and temporary memory space can also be requested and 
+Additional resources like `mshadow::Random<xpu>` and temporary memory space can also be requested and 
 accessed from `EnvArguments.resource`. The registration routine is `set_resource_request(ResourceRequest req)` 
 or `set_resource_request(const std::vector<ResourceRequest>)`, where `mxnet::ResourceRequest` is defined as in:
 ```cpp
@@ -290,7 +290,7 @@ can implement them as a `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` con
 as a good example. `mshadow_op` are expression mappers and deal with the scalar case of desired functions. Refer to 
 [mshadow expression API guide](https://github.com/dmlc/mshadow/tree/master/doc) for details.
 
-It could also be possible that the operation cannot be done in an elementwise way, like the softmax loss and gradient. 
+It could also be possible that the operation cannot be done in an element wise way, like the softmax loss and gradient. 
 Then there is a need to create a new tensor operation. Then we need to create a `mshadow` function and a `mshadow::cuda`
 function directly. Please refer to `mshadow` library for details or `src/operator/roi_pooling.cc` for an example.
 
@@ -314,5 +314,5 @@ struct smooth_l1_loss {
 The gradient is similar, which can be found in `src/operator/smooth_l1_unary-inl.h`.
 
 ### Beyond Two Operands
-This new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs, 
+This new unified API is designed to fulfil the fundamentals of an operation. For operators with more than two inputs, 
 more than one outputs, or in need of more features, please refer to the original [Operator API](operator.md).

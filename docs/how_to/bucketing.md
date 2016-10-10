@@ -14,7 +14,7 @@ Taking the [PennTreeBank language model example](https://github.com/dmlc/mxnet/t
 
 The architecture used in the example is a simple word-embedding layer followed by two LSTM layers. In the original example, the model is unrolled explicitly in time for a fixed length of 32. In this demo, we will show how to use bucketing to implement variable-length sequence training.
 
-In order to enable bucketing, MXNet need to know how to construct a new unrolled symbolic architecture for a different sequence length. To achieve this, instead of constructing a model with a fixed `Symbol`, we use a callback function that generating new `Symbol` on a *bucket key*.
+In order to enable bucketing, MXNet need to know how to construct a new unrolled symbolic architecture for a different sequence length. To achieve this, instead of constructing a model with a fixed `Symbol`, we use a callback function that generates new `Symbol` on a *bucket key*.
 
 
 ```python
@@ -35,11 +35,11 @@ The data iterator need to report the `default_bucket_key`, which allows MXNet to
 
 However, to achieve training, we still need to add some extra bits to our `DataIter`. Apart from reporting the `default_bucket_key` as mentioned above, we also need to report the current `bucket_key` for each mini-batch. More specifically, the `DataBatch` object returned in each mini-batch by the `DataIter` should contain the following *extra* properties
 
-* `bucket_key`: the bucket key corresponding to this batch of data. In our example, it will be the sequence length for this batch of data. If the executors corresponding to this bucket key has not yet been created, they will be constructed according to the symbolic model returned by `gen_sym` on this bucket key. Created executors will be cached for future use. Note the generated `Symbol` could be arbitrary, but they should all have the same trainable parameters and auxiliary states.
+* `bucket_key`: The bucket key corresponding to this batch of data. In our example, it will be the sequence length for this batch of data. If the executors corresponding to this bucket key has not yet been created, they will be constructed according to the symbolic model returned by `gen_sym` on this bucket key. Created executors will be cached for future use. Note that generated `Symbol` could be arbitrary, but they should all have the same trainable parameters and auxiliary states.
 * `provide_data`: this is the same information reported by the `DataIter` object. Since now each bucket corresponds to different architecture, they could have different input data. Also, one **should** make sure that the `provide_data` information returned by the `DataIter` object is compatible with the architecture for `default_bucket_key`.
 * `provide_label`: the same as `provide_data`.
 
-Now the `DataIter` is responsible for grouping the data into different buckets. Assuming randomization is enabled, in each mini-batch, it choose a random bucket (according to a distribution balanced by the bucket sizes), and then randomly choose sequences from that bucket to form a mini-batch. And do some proper *padding* for sequences of different length *within* the mini-batch if necessary.
+Now, the `DataIter` is responsible for grouping the data into different buckets. Assuming randomization is enabled, in each mini-batch, it choose a random bucket (according to a distribution balanced by the bucket sizes), and then randomly choose sequences from that bucket to form a mini-batch. And do some proper *padding* for sequences of different length *within* the mini-batch if necessary.
 
 Please refer to [example/rnn/lstm_ptb_bucketing.py](https://github.com/dmlc/mxnet/blob/master/example/rnn/lstm_bucketing.py) for the full implementation of a `DataIter` that read text sequences implement the API shown above. In this example, bucketing can be used with a static configuration (e.g. `buckets = [10, 20, 30, 40, 50, 60]`), or let MXnet to generate bucketing automatically according to dataset(`buckets = []`). The latter approach is implemented with greedily adding a bucket as long as the number of input for the bucket is large enough(see [default_gen_buckets()](https://github.com/dmlc/mxnet/blob/master/example/rnn/bucket_io.py#L43)). 
 

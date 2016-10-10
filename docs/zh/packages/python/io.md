@@ -58,7 +58,7 @@ Create A Data Iterator
 >>>        batch_size=100,
 >>>        # Augmentation Parameter
 >>>        # 可选
->>>        # when offers mean_img, each image will substract the mean value at each pixel
+>>>        # when offers mean_img, each image will subtract the mean value at each pixel
 >>>        mean_img="data/cifar/cifar10_mean.bin",
 >>>        # Augmentation Parameter
 >>>        # 可选

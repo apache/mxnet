@@ -11,7 +11,7 @@ Sounds exciting? This page contains links to all the related documents on R pack
 
 Get Started
 -----------
-Checkout the [Installation Guide](../get_started/build.md) contains instructions to install mxnet, and [Tutorials](#tutorials) for examples on how to use mxnet for various tasks.
+Checkout the [Installation Guide](../get_started/build.md) contains instructions to install MXNet, and [Tutorials](#tutorials) for examples on how to use MXNet for various tasks.
 
 Tutorials
 ---------
@@ -25,7 +25,7 @@ Tutorials
 Resources
 ---------
 There are several information to get you started
-* [Installation Guide](../get_started/build.md) contains instructions to install mxnet.
+* [Installation Guide](../get_started/build.md) contains instructions to install MXNet.
 * [Contributor Guide](http://mxnet.readthedocs.org/en/latest/contribute.html#r-package)
-  - The R package section gives various guidelines on how to contribute code, tutorial, rmarkdown examples to mxnet.
+  - The R package section gives various guidelines on how to contribute code, tutorial, rmarkdown examples to MXNet.
   - Your contribution is always welcomed!

@@ -103,12 +103,12 @@ Imperative programs, on the other hand, need to ***be prepared for all possible 
 there is a possibility that any of these variables could be used in the future, this prevents the system to share the memory space of these variables.
 
 Of course this argument is a bit idealized, since garbage collection can happen in imperative programs when things runs out of scope, and memory could be re-used.
-However, the constraint to be "prepared for all possible futures" indeed happens, and limits the optimizations we can do. This holds for non-trival cases such
+However, the constraint to be "prepared for all possible futures" indeed happens, and limits the optimizations we can do. This holds for non-trivial cases such
 as gradient calculation, which we will be discussing in next section.
 
 Another optimization that symbolic programs can do is operation folding. In the above programs, the multiplication and addition can be folded into one operation.
 Which is represented in the following graph. This means one GPU kernel will be executed(instead of two) if the computation runs on GPU.
-This is actually what we will do to hand crafted operations in optimized libraries such as cxxnet, caffe. Doing so will improve the computation efficiency.
+This is actually what we will do to hand crafted operations in optimized libraries such as CXXNet, Caffe. Doing so will improve the computation efficiency.
 
 ![Comp Graph Folded](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph_fold.png)
 
@@ -118,7 +118,7 @@ boundary on which value is needed and which is not. While imperative programs on
 
 ### Case Study on Backprop and AutoDiff
 
-In this section, we will compare the two programing models on the problem of auto differentiation, or backpropagation. Gradient calculation is actually
+In this section, we will compare the two programming models on the problem of auto differentiation, or backpropagation. Gradient calculation is actually
 the problem that all the deep learning library need to solve. It is possible to do gradient calculation in both imperative and symbolic style.
 
 Let us start with the imperative programs. The following snippet is a minimum python code that does automatic differentiation on the toy example we discussed.
@@ -182,7 +182,7 @@ They corresponds to the red nodes in the following figure.
 
 What the imperative program did was actually the same as the symbolic way. It implicitly saves a backward
 computation graph in the grad closure. When we invoked the ```d.grad```, we start from ```d(D)```,
-backtrace the graph to compute the gradient and collect the results back.
+backtrack the graph to compute the gradient and collect the results back.
 
 So we can find that in fact the gradient calculation in both symbolic and imperative programming follows the same
 pattern. What is the difference between the two then? Again recall the "have to prepared for all possible futures"
@@ -222,10 +222,10 @@ with context.NoGradient():
 However, the above example still have many possible futures, which means we cannot do the inplace calculation
 to re-use the memory in forward pass(a trick commonly used to reduce GPU memory usage).
 The techniques introduced in this section generates explicit backward pass.
-On some of the toolkits such as caffe, cxxnet. Backprop is done implicitly on the same graph.
+On some of the tool-kits such as Caffe, CXXNet. Backprop is done implicitly on the same graph.
 The discussions of this section also applies to these cases as well.
 
-Most configuration file based libraries such as cxxnet, caffe are designed for one or two generic requirement.
+Most configuration file based libraries such as CXXNet, Caffe are designed for one or two generic requirement.
 Get the activation of each layer, or get gradient of all the weights. Same problem stays for these libraries,
 the more generic operations the library have to support, the less optimization(memory sharing) we can do, based on the same data structure.
 
@@ -257,7 +257,7 @@ configuration layer on top of the imperative language.
 
 ### Parameter Update
 
-Most symbolic programs are data flow(computation) graphs. Dataflow graph can be used to descrie computation conveniently.
+Most symbolic programs are data flow(computation) graphs. Dataflow graph can be used to describe computation conveniently.
 However, it is not obvious how to use data flow graph to describe parameter updates, because parameter updates introduces mutation,
 which is not concept of data flow. What most symbolic programs do is to introduce a special update statement, to update some persistent
 states of the programs.
@@ -279,8 +279,8 @@ Big vs Small Operations
 Now we have pass through the battlefield between symbolic and imperative programs. Let us start to talk about the operations supported by deep learning libraries.
 Usually there are two types of operations supported by different deep learning libraries.
 - The big layer operations such as FullyConnected, BatchNormalize
-- The small operations such as elementwise addition, multiplications.
-The libraries like cxxnet, caffe support layer level operations. While the libraries like Theano, Minerva support fine grained operations.
+- The small operations such as element wise addition, multiplications.
+The libraries like CXXNet, Caffe support layer level operations. While the libraries like Theano, Minerva support fine grained operations.
 
 ### Smaller Operations can be More Flexible
 This is quite natural, in a sense that we can always use smaller operations to compose bigger operations.
@@ -289,7 +289,7 @@ For example, the sigmoid unit can be simply be composed by division and exponent
 sigmoid(x) = 1.0 / (1.0 + exp(-x))
 ```
 If we have the smaller operations as building blocks, we can express most of the problems we want.
-For readers who are more familar with cxxnet, caffe style layers. These operations is not different from a layer, except that they are smaller.
+For readers who are more familiar with CXXNet, Caffe style layers. These operations is not different from a layer, except that they are smaller.
 ```python
 SigmoidLayer(x) = EWiseDivisionLayer(1.0, AddScalarLayer(ExpLayer(-x), 1.0))
 ```
@@ -303,8 +303,8 @@ SigmoidLayer(x) = EWiseDivisionLayer(1.0, AddScalarLayer(ExpLayer(-x), 1.0))
 ```
 This will create overhead in terms of computation and memory (which could be optimized, with cost).
 
-So the libraries like cxxnet, caffe take a different approach. To support more coarse grained operations
-such as BatchNormalization, and the SigmoidLayer directly. In each of these layers, the calculation kernel is handcrafted
+So the libraries like CXXNet, Caffe take a different approach. To support more coarse grained operations
+such as BatchNormalization, and the SigmoidLayer directly. In each of these layers, the calculation kernel is hand crafted
 with one or only some CUDA kernel launches. This brings more efficiency to these implementations.
 
 ### Compilation and Optimization
@@ -312,23 +312,23 @@ with one or only some CUDA kernel launches. This brings more efficiency to these
 Can the small operations be optimized? Of course they can. This comes to the system optimization part of the compilation engine.
 There are two types of optimization that can be done on the computation graph
 - The memory allocation optimization, to reuse memory of the intermediate computations.
-- Operator fusion, to detect subgraph pattern such as the sigmoid and fuse them into a bigger operation kernel.
+- Operator fusion, to detect sub-graph pattern such as the sigmoid and fuse them into a bigger operation kernel.
 The memory allocation optimization was actually not restricted to small operations graphs, but can also be applied to bigger operations graph as well.
 
-However these optimization may not be essential for bigger operation libraries like cxxnet, caffe. As you never find the compilation step in them. Actually there is a (dumb) ```compilation step``` in these libraries, that basically translate the layers into a fixed forward, backprop execution plan, by running each operation one by one.
+However these optimization may not be essential for bigger operation libraries like CXXNet, Caffe. As you never find the compilation step in them. Actually there is a (dumb) ```compilation step``` in these libraries, that basically translate the layers into a fixed forward, backprop execution plan, by running each operation one by one.
 
-For computation graphs with smaller operations, these optimizations are crucial for performance. Because the operations are small, there are many subgraph patterns
+For computation graphs with smaller operations, these optimizations are crucial for performance. Because the operations are small, there are many sub-graph patterns
 that can be matched. Also because the final generated operations may not be able to enumerated, an explicit recompilation of the kernels is required, as opposed to
 the fixed amount of pre-compiled kernels in the big operation libraries. This is the cause of compilation overhead of the symbolic libraries that support small operations.
 The requirement of compilation optimization also creates overhead of engineering for the libraries that solely support smaller operations.
 
 Like in the symbolic vs imperative case. The bigger operation libraries "cheat" by asking user to provide restrictions(to the common layer provided),
-so user is actually the one that does the subgraph matching. This removes the compilation overhead to the real brain, which is usually not too bad.
+so user is actually the one that does the sub-graph matching. This removes the compilation overhead to the real brain, which is usually not too bad.
 
 ### Expression Template and Statically Typed Language
 
 As we can see we always have a need to write small operations and compose them together.
-Libraries like caffe use hand-carfted kernels to build up these bigger blocks. Otheriwse user have to compose up smaller operations from python side.
+Libraries like Caffe use hand-crafted kernels to build up these bigger blocks. Otherwise user have to compose up smaller operations from python side.
 
 Actually, there is a third choice, that works pretty well. This is called expression template. Basically, the idea is to use template programming to
 generate generic kernels from expression tree at compile time. You can refer to the [Expression Template Tutorial](https://github.com/dmlc/mshadow/blob/master/guide/exp-template/README.md)
@@ -399,11 +399,11 @@ of operation fusion and directly running them.
 
 ### Choose your Own Flavours
 
-As we have compare the flavours of deep learning programs. The goal of this article is to list these choices and compare their trade-offs.
+As we have compare the flavours of deep learning programs. The goal of this article is to list these choices and compare their trade-off.
 There may not be a universal solution for all. But you can always choose your flavour, or combine the flavours you like to create
 more interesting and intelligent deep learning libraries.
 
 Contribution to this Note
 -------------------------
 This note is part of our effort to [open-source system design notes](index.md)
-for deep learning libraries. You are more welcomed to contribute to this Note, by submitting a pull request.
+for deep learning libraries. You are more than welcome to contribute to this Note, by submitting a pull request.

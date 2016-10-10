@@ -2,7 +2,7 @@ Design Efficient Deep Learning Data Loading Module
 ==================================================
 Data loading is an important part of the machine learning system, especially when the data is huge and do not fit into memory.  The general design goal of  data loading module is to achieve more efficient data loading, less effort on data preparation, clean and flexible interface.
 
-This tutorial will be organized as follows: in IO Design Insight section, we introduce some insights and guidelines in our data loading design; in Data Format section, we introduce our solution using dmlc-core's binary recordIO implementation; in Data Loading section, we introduce our method to hide IO cost by utilizing the Threadediter provided by dmlc-core; in the Interface Design section, we will show you the simple way to construct a MXNet data iterator in a few lines of python; in the Future Extension part, we discuss how to make data loading more flexible to support more learning tasks.
+This tutorial will be organized as follows: in IO Design Insight section, we introduce some insights and guidelines in our data loading design; in Data Format section, we introduce our solution using dmlc-core's binary recordIO implementation; in Data Loading section, we introduce our method to hide IO cost by utilizing the Threaded iter provided by dmlc-core; in the Interface Design section, we will show you the simple way to construct a MXNet data iterator in a few lines of python; in the Future Extension part, we discuss how to make data loading more flexible to support more learning tasks.
 
 We will cover the following key requirements, in detail in the later part of sections.
 
@@ -16,7 +16,7 @@ We will cover the following key requirements, in detail in the later part of sec
 IO design usually involves two kinds of work: data preparation and data loading. Data preparation usually influences the time consuming offline, while data loading influences the online performance. In this section, we will introduce our insight of IO design involving the two phases.
 
 ### Data Preparation
-Data preparation is to pack the data into certain format for later processing. When the data is huge, i.e. full ImageNet, this process may be time-consuming. Since that, there're several things we need to pay attention:
+Data preparation is to pack the data into certain format for later processing. When the data is huge, i.e. full ImageNet, this process may be time-consuming. Since that, there are several things we need to pay attention:
 
 - Pack the dataset into small numbers of files. A dataset may contain millions of data instances. Packed data distributes easily from machine to machine;
 - Do the packing once. No repacking is needed when the running setting has been changed (usually means the number of running machines);
@@ -24,7 +24,7 @@ Data preparation is to pack the data into certain format for later processing. W
 - Access to arbitrary parts easily. This is crucial for distributed machine learning when data parallelism is introduced. Things may get tricky when the data has been packed into several physical data files. The desired behavior could be: the packed data can be logically partite into arbitrary numbers of partitions, no matter how many physical data files there are. For example, we pack 1000 images into 4 physical files, each contains 250 images. Then we use 10 machines to training DNN, we should be able to load approximately 100 images per machine. Some machine may need images from different physical files.
 
 ### Data Loading
-Data loading is to load the packed data into RAM. One ultimate goal is to load as quickly as possible. Thus there're several things we need to pay attention:
+Data loading is to load the packed data into RAM. One ultimate goal is to load as quickly as possible. Thus there are several things we need to pay attention:
 - Continuous reading. This is to avoid arbitrary reading from disk;
 - Reduce the bytes to be loaded. This can be achieved by storing the data instance in a compact way, e.g. save the image in JPEG format;
 - Load and train in different threads. This is to hide the loading time cost;
@@ -63,8 +63,8 @@ The desired behavior of data loading could be: the packed data can be logically 
 Since binary recordIO can easily locate the start and end of a record using the Magic Number, we can achieve the above goal using the InputSplit functionality provided by dmlc-core.
 
 InputSplit takes the following parameters:
-- FileSystem *filesys: dmlc-core encapsulate the IO operations for different filesystems, like hdfs, s3, local. User don't need to worry about the difference between filesystems any more;
-- Char *uri: the uri of files. Note that it could be a list of files, for we may pack the data into several physical parts. File uris are separated by ';'.
+- FileSystem *filesys: dmlc-core encapsulate the IO operations for different file systems, like hdfs, s3, local. User don't need to worry about the difference between file systems any more;
+- Char *uri: the uri of files. Note that it could be a list of files, for we may pack the data into several physical parts. File URIs are separated by ';'.
 - Unsigned nsplit: the number of logical splits. Nsplit could be different from the number of physical file parts;
 - Unsigned rank: which split to load in this process;
 
@@ -84,24 +84,24 @@ The splitting process is demonstrated below:
 By conducting the above operations, we now identify the records belong to each part, and the physical data files needed by each logical part. InputSplit greatly reduce the difficulty of data parallelism, where each process only read part of the data.
 
 Since logical partition doesn't rely on the number of physical data files, we can process huge dataset like ImageNet_22K in parallel easily as illustrated below. We don't need to consider distributed loading issue at the preparation time, just select the most efficient physical file number according to the dataset size and the computing resources you have.
-![parellelprepare](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/io/parallelprepare.jpg)
+![parallelprepare](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/io/parallelprepare.jpg)
 
 ## Data Loading and Preprocessing
 
-When the speed of loading and preprocessing can't catch up with the speed of training or evaluation, IO will become the bottleneck of the whole system. In this section, we will introduce our tricks to pursuit the ultimate efficiency to load and preprocess data packed in binary recordIO format. In our ImageNet practice, we can achieve the IO speed of **3000** images/s **with normal HDD**.
+When the speed of loading and preprocessing can't catch up with the speed of training or evaluation, IO will become the bottleneck of the whole system. In this section, we will introduce our tricks to pursuit the ultimate efficiency to load and pre-process data packed in binary recordIO format. In our ImageNet practice, we can achieve the IO speed of **3000** images/s **with normal HDD**.
 
 ### Loading and preprocessing on the fly
 
-When training deep neural networks, we sometimes can only load and preprocess the data along with training because of the following reasons:
+When training deep neural networks, we sometimes can only load and pre-process the data along with training because of the following reasons:
 - The whole size of the dataset exceed the RAM size, we can't load them in advance;
 - The preprocessing pipeline may produce different output for the same data at different epoch if we would like to introduce randomness in training;
 
-To achieve the goal of ultimate efficiency, multi-thread technic is introduced in the related procedures. We take imagenet training as an example, after loading a bunch of image records, we can start ***multiple threads to do the image decoding and image augmentation*** , as illustrated below:
+To achieve the goal of ultimate efficiency, multi-thread technique is introduced in the related procedures. We take Imagenet training as an example, after loading a bunch of image records, we can start ***multiple threads to do the image decoding and image augmentation*** , as illustrated below:
 ![process](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/io/process.jpg)
 
 ### Hide IO Cost Using Threadediter
 
-One way to hide IO cost is to prefetch the data for next batch on a stand-alone thread, while the main thread conducting feed-forward and backward. In order to support more complicated training schemas, MXNet provide a more general IO processing pipeline using threadediter provided by dmlc-core.
+One way to hide IO cost is to pre-fetch the data for next batch on a stand-alone thread, while the main thread conducting feed-forward and backward. In order to support more complicated training schemas, MXNet provide a more general IO processing pipeline using threadediter provided by dmlc-core.
 
 The key of threadediter is to start a stand-alone thread acts like a data provider, while the main thread acts like data consumer as illustrated below.
 
@@ -121,7 +121,7 @@ dataiter = mx.io.ImageRecordIter(
     data_shape=(3,28,28),
     # Batch Parameter, tells how many images in a batch
     batch_size=100,
-    # Augmentation Parameter, when offers mean_img, each image will substract the mean value at each pixel
+    # Augmentation Parameter, when offers mean_img, each image will subtract the mean value at each pixel
     mean_img="data/cifar/cifar10_mean.bin",
     # Augmentation Parameter, randomly crop a patch of the data_shape from the original image
     rand_crop=True,

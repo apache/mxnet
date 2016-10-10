@@ -1,6 +1,6 @@
 # Run MXNet on Multiple CPU/GPUs with Data Parallel
 
-MXNet supports trainig with multiple CPUs and GPUs since the very
+MXNet supports training with multiple CPUs and GPUs since the very
 beginning. Almost any program using MXNet's provided training modules, such as
 [python/mxnet.model](https://github.com/dmlc/mxnet/blob/master/python/mxnet/model.py),
 can be efficiently run over multiple devices.
@@ -16,12 +16,12 @@ updated model are communicated cross these devices.
 
 ### Workload Partitioning
 
-If using data parallelism, MXNet will evenly partition a minbatch in each
+If using data parallelism, MXNet will evenly partition a mini batch in each
 GPUs. Assume we train with batch size *b* and *k* GPUs, then in one iteration
 each GPU will perform forward and backward on a batch with size *b/k*. The
 gradients are then summed over all GPUs before updating the model.
 
-In ideal case, *k* GPUs will provide *k* time speedup comparing to the single
+In ideal case, *k* GPUs will provide *k* time speed up comparing to the single
 GPU. In addition, assume the model has size *m* and the temporal workspace is
 *t*, then the memory footprint of each GPU will be *m+t/k*. In other words, we
 can use a large batch size for multiple GPUs.
@@ -33,8 +33,8 @@ can use a large batch size for multiple GPUs.
 > [MXNet installation guide](build.html) for more options).
 
 If a machine has one or more than one GPU cards installed, then each card is
-labeled by a number starting from 0. To use a particular GPU, one can often
-either specify the context `ctx` in codes or pass `--gpus` in commandlines. For
+labelled by a number starting from 0. To use a particular GPU, one can often
+either specify the context `ctx` in codes or pass `--gpus` in command line. For
 example, to use GPU 0 and 2 in python one can often create a model with
 ```python
 import mxnet as mx
@@ -76,7 +76,7 @@ kvstore type                gradient aggregation  weight updating
 ```
 
 Here
-- `local_update_cpu`: gradients are first copied to CPU memory, and aggregated
+- `local_update_cpu`: Gradients are first copied to CPU memory, and aggregated
   on CPU. Then we update the weight on CPU and copy back the updated weight to
   GPUs. It is suitable when the layer model size is not large, such as
   convolution layers.
@@ -98,7 +98,7 @@ Here
 
 The `kvstore` type is `local` in default. It will choose `local_update_cpu` if the
 weight size of each layer is less than 1Mb, which can be changed by
-the environment varialbe `MXNET_KVSTORE_BIGARRAY_BOUND`, and
+the environment variable `MXNET_KVSTORE_BIGARRAY_BOUND`, and
 `local_allreduce_cpu` otherwise.
 
 ## Distributed Training with Multiple Machines
@@ -115,8 +115,8 @@ and speed when using multiple machines.
   results for using batch size *n\*b* on a single machine.
 
 - `dist_async` remove the aggregation operation in `dist_sync`. The weight is
-  updated once received gradient from any machine. The updating is atomic,
-  namely no two updatings happen on the same weight at the same time. However,
+  updated once received gradient from any machine. The update is atomic,
+  namely no two updates happen on the same weight at the same time. However,
   the order is not guaranteed.
 
 Roughly speaking, `dist_sync` runs slower than `dist_async` due the extra
