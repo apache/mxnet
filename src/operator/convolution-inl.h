@@ -339,9 +339,9 @@ class ConvolutionProp : public OperatorProperty {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
     if (param_.kernel.ndim() == 2) {
-      param_.layout = param_.layout == -1 ? kNCHW : param_.layout;
+      param_.layout = param_.layout == -1 ? mshadow::kNCHW : param_.layout;
     } else {
-      param_.layout = param_.layout == -1 ? kNCDHW : param_.layout;
+      param_.layout = param_.layout == -1 ? mshadow::kNCDHW : param_.layout;
     }
   }
 
@@ -404,7 +404,7 @@ class ConvolutionProp : public OperatorProperty {
       Shape<5> dshape = ConvertLayout(dshp.get<5>(), param_.layout, kNCDHW);
       Shape<5> wshape = Shape5(param_.num_filter, dshape[1] / param_.num_group,
                                param_.kernel[0], param_.kernel[1], param_.kernel[2]);
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, weight);
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, wshape);
       if (!param_.no_bias) {
         SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
       }

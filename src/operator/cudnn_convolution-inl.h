@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <mutex>
 #include "./convolution-inl.h"
 #include "../common/cuda_utils.h"
 
@@ -24,8 +25,8 @@ class CuDNNAlgoReg {
     std::ostringstream oss;
     for (auto& i : in_shape) oss << i << ";";
     for (auto& i : out_shape) oss << i << ";";
-    auto dict = param_.__DICT__();
-    for (auto& k : dict) oss << k << "=" << dict[k] << ";";
+    auto dict = param.__DICT__();
+    for (auto& k : dict) oss << k.first << "=" << k.second << ";";
     return oss.str(); 
   }
 
@@ -36,9 +37,9 @@ class CuDNNAlgoReg {
     std::lock_guard<std::mutex> guard(lock_);
     auto i = reg_.find(key);
     if (i != reg_.end()) {
-      *fwd = i->fwd;
-      *bwd = i->bwd;
-      *flt = i->flt;
+      *fwd = i->second.fwd;
+      *bwd = i->second.bwd;
+      *flt = i->second.flt;
       return true;
     }
     return false;
@@ -64,7 +65,7 @@ class CuDNNAlgoReg {
 
   std::mutex lock_;
   std::unordered_map<std::string, CudnnAlgorithms> reg_;
-}
+};
 
 template<typename DType>
 class CuDNNConvolutionOp : public Operator {
@@ -78,7 +79,7 @@ class CuDNNConvolutionOp : public Operator {
     // convert MB to words
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
     init_cudnn_ = false;
-    dtype_ = mshadow::DataType<DType>::kCudnnFlag;
+    dtype_ = DataType<DType>::kCudnnFlag;
 
 #if CUDNN_MAJOR >= 5
     MSHADOW_LAYOUT_SWITCH(param_.layout, Layout, {
@@ -373,8 +374,8 @@ class CuDNNConvolutionOp : public Operator {
       #if CUDNN_MAJOR >= 5
       CHECK_EQ(cudnnSetFilterNdDescriptor(filter_desc_,
                                           dtype_,
-                                          CUDNN_TENSOR_NCDHW,
-                                          static_cast<int>(wshape.size()),
+                                          CUDNN_TENSOR_NCHW,
+                                          static_cast<int>(wshape.ndim()),
                                           &wshape[0]), CUDNN_STATUS_SUCCESS);
       #else
       LOG(FATAL) << "Only support CUDNN V5 for 3D convolution";
@@ -411,14 +412,14 @@ class CuDNNConvolutionOp : public Operator {
 
     CHECK_EQ(cudnnSetTensorNdDescriptor(in_desc_,
                                         dtype_,
-                                        static_cast<int>(dshape.size()),
+                                        static_cast<int>(dshape.ndim()),
                                         static_cast<int*>(&dshape[0]),
                                         static_cast<int*>(&dstride[0])),
              CUDNN_STATUS_SUCCESS);
 
     CHECK_EQ(cudnnSetTensorNdDescriptor(out_desc_,
                                         dtype_,
-                                        static_cast<int>(oshape.size()),
+                                        static_cast<int>(oshape.ndim()),
                                         static_cast<int*>(&oshape[0]),
                                         static_cast<int*>(&ostride[0])),
              CUDNN_STATUS_SUCCESS);
@@ -446,12 +447,12 @@ class CuDNNConvolutionOp : public Operator {
   void SelectAlgo(const Context& ctx,
                   const std::vector<TShape>& in_shape,
                   const std::vector<TShape>& out_shape) {
-    std::string key = CuDNNAlgoReg::Get()->MakeKey(param_, in_shape, out_shape);
+    std::string key = CuDNNAlgoReg::Get()->GetKey(param_, in_shape, out_shape);
     if (CuDNNAlgoReg::Get()->Find(key, &algo_, &back_algo_, &back_algo_w_)) return;
 
     Engine::VarHandle var = Engine::Get()->NewVariable();
     Engine::Get()->PushSync([=](RunContext rctx) {
-      Stream<gpu> *s = rctx.get_stream<gpu>();
+      mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
       if (!param_.cudnn_tune) {
@@ -486,17 +487,17 @@ class CuDNNConvolutionOp : public Operator {
 
         cudnnConvolutionFwdAlgoPerf_t fwd_algo[kMaxAlgos];
         CHECK_EQ(cudnnFindConvolutionForwardAlgorithm(s->dnn_handle_,
-                 in_desc,
-                 filter_desc,
-                 conv_desc,
-                 out_desc,
+                 in_desc_,
+                 filter_desc_,
+                 conv_desc_,
+                 out_desc_,
                  kMaxAlgos,
                  &nalgo,
                  fwd_algo), CUDNN_STATUS_SUCCESS);
         i = 0;
         while (i < nalgo
                && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
-               || (param.cudnn_tune == conv::kLimited
+               || (param_.cudnn_tune == conv::kLimited
                && fwd_algo[i].memory > workspace_byte))) ++i;
         if (i == nalgo) {
           LOG(FATAL) << "Failed to find an convolution algorithm.";
@@ -506,17 +507,17 @@ class CuDNNConvolutionOp : public Operator {
 
         cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo[kMaxAlgos];
         CHECK_EQ(cudnnFindConvolutionBackwardFilterAlgorithm(s->dnn_handle_,
-                 in_desc,
-                 out_desc,
-                 conv_desc,
-                 filter_desc,
+                 in_desc_,
+                 out_desc_,
+                 conv_desc_,
+                 filter_desc_,
                  kMaxAlgos,
                  &nalgo,
                  bwd_filter_algo), CUDNN_STATUS_SUCCESS);
         i = 0;
         while (i < nalgo
                && (bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
-               || (param.cudnn_tune == conv::kLimited
+               || (param_.cudnn_tune == conv::kLimited
                && bwd_filter_algo[i].memory > workspace_byte))) ++i;
         if (i == nalgo) {
           LOG(FATAL) << "Failed to find an convolution algorithm.";
@@ -526,17 +527,17 @@ class CuDNNConvolutionOp : public Operator {
 
         cudnnConvolutionBwdDataAlgoPerf_t bwd_data_algo[kMaxAlgos];
         CHECK_EQ(cudnnFindConvolutionBackwardDataAlgorithm(s->dnn_handle_,
-                 filter_desc,
-                 out_desc,
-                 conv_desc,
-                 in_desc,
+                 filter_desc_,
+                 out_desc_,
+                 conv_desc_,
+                 in_desc_,
                  kMaxAlgos,
                  &nalgo,
                  bwd_data_algo), CUDNN_STATUS_SUCCESS);
         i = 0;
         while (i < nalgo
                && (bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
-               || (param.cudnn_tune == conv::kLimited
+               || (param_.cudnn_tune == conv::kLimited
                && bwd_data_algo[i].memory > workspace_byte))) ++i;
         if (i == nalgo) {
           LOG(FATAL) << "Failed to find an convolution algorithm.";
@@ -544,8 +545,7 @@ class CuDNNConvolutionOp : public Operator {
           this->back_algo_ = bwd_data_algo[i].algo;
         }
       }
-    }, ctx, {}, {var},
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("CudnnConvolutionSelectAlgo"));
+    }, ctx, {}, {var});
     Engine::Get()->WaitForVar(var);
     Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
 
@@ -554,6 +554,8 @@ class CuDNNConvolutionOp : public Operator {
 
   void GetTempSize(const OpContext& ctx) {
     if (init_temp_size_) return;
+    mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+    size_t back_size, back_size_w;
     CHECK_EQ(cudnnGetConvolutionBackwardDataWorkspaceSize(s->dnn_handle_,
                filter_desc_,
                out_desc_,
