@@ -171,7 +171,7 @@ class PoolingOp : public Operator {
     }
   }
 
- protected:
+ private:
   PoolingParam param_;
 };  // class PoolingOp
 
