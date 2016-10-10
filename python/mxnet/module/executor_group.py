@@ -139,7 +139,7 @@ class DataParallelExecutorGroup(object):
         if label_shapes is not None:
             # call it to make sure labels has the same batch size as data
             self.label_layouts = self.decide_slices(label_shapes)
-        self.output_layouts = [self.layout_mapper.get_data_layout(name)
+        self.output_layouts = [self.layout_mapper.get_batch_axis(name)
                                for name in self.symbol.list_outputs()]
 
         self.bind_exec(data_shapes, label_shapes, shared_group)
@@ -153,7 +153,7 @@ class DataParallelExecutorGroup(object):
             list of (name, shape) specifying the shapes for the input data or label.
         """
         assert len(data_shapes) > 0
-        major_axis = [self.layout_mapper.get_data_layout(name)
+        major_axis = [self.layout_mapper.get_batch_axis(name)
                       for (name, _) in data_shapes]
 
         for (name, shape), axis in zip(data_shapes, major_axis):
