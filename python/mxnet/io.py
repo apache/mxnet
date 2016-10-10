@@ -5,6 +5,7 @@
 from __future__ import absolute_import
 from collections import OrderedDict
 
+import re
 import sys
 import ctypes
 import logging
@@ -21,8 +22,23 @@ from .ndarray import concatenate
 
 class LayoutMapper(object):
     """A helper class to decide data layouts (which axis is batch_size dimension)."""
-    def get_data_layout(self, name):
-        """Get data layout.
+    def get_layout_string(self, name):
+        """Get layout string for the given data name.
+
+        Paramseters
+        -----------
+        name : str
+            The name of a data, label or output tensor.
+
+        Returns
+        -------
+        The layout string. For example "NCHW". Returns None if
+        not known.
+        """
+        raise NotImplementedError()
+
+    def get_batch_axis(self, name):
+        """Get the dimension that corresponds to the batch size.
 
         Parameters
         ----------
@@ -42,26 +58,28 @@ class LayoutMapper(object):
 class DefaultLayoutMapper(LayoutMapper):
     """A default data layout mapper.
 
-    It decides the data layout by name postfix:
-
-    - 'xxx:bm' means batch-major, axis = 0
-    - 'xxx:tm' means time-major, axis = 1
-    - 'xxx:nm' means none-major, axis = -1
-
-    Otherwise, it just use `default_axis`.
+    It decides the data layout by information encoded in name.
+    If a name contains the string :__layout_XXXXX__, then XXXXX
+    will be parsed as the layout string.
     """
-    def __init__(self, default_axis=0):
+    def __init__(self, default_batch_axis=0):
         super(DefaultLayoutMapper, self).__init__()
-        self._default_axis = default_axis
+        self._default_batch_axis = default_batch_axis
 
-    def get_data_layout(self, name):
-        if name.endswith(':bm'):
-            return 0
-        if name.endswith(':tm'):
-            return 1
-        if name.endswith(':nm'):
-            return -1
-        return self._default_axis
+    LAYOUT_PATTERN = re.compile(r':__layout_([^_*])__')
+    def get_layout_string(self, name):
+        ret = DefaultLayoutMapper.LAYOUT_PATTERN.search(name)
+        if ret is None:
+            return None
+        return ret.group(1)
+
+    def get_batch_axis(self, name):
+        layout = self.get_layout_string(name)
+        if layout is None:
+            return self._default_batch_axis
+        # N indicate batch size. Note when N is not found,
+        # it returns -1, which is what we expect
+        return layout.find('N')
 
 
 class DataBatch(object):
