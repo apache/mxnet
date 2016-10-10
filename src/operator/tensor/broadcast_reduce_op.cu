@@ -34,5 +34,18 @@ NNVM_REGISTER_OP(broadcast_to)
 NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow::red::sum>);
 
+MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
+.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
+
+MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
+.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::minimum>);
+
+// Legacy support
+NNVM_REGISTER_OP(argmax_channel)
+.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
+
+NNVM_REGISTER_OP(norm)
+.set_attr<FCompute>("FCompute<gpu>", L2NormCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
