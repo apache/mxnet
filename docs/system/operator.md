@@ -123,7 +123,7 @@ It is possible that one convolution has several implementations and users want t
   }
   ```
 
-* **Inplace Option:** To further save memory allocation cost, inplace update are welcomed. This usually happens for element-wise operations when input tensor and output tensor are of the same shape. This could be specified by the following interface:
+* **Inplace Option:** To further save memory allocation cost, in-place update are welcomed. This usually happens for element-wise operations when input tensor and output tensor are of the same shape. This could be specified by the following interface:
   ```c++
   virtual std::vector<std::pair<int, void*>> ElewiseOpProperty::ForwardInplaceOption(
       const std::vector<int> &in_data,
@@ -184,7 +184,7 @@ class ConvolutionOpProperty : public OperatorProperty {
 };
 ```
 
-### Parameterize Operator
+### Parametrize Operator
 When implementing convolution operator, we need to know the kernal size, the stride size, padding size and so on. These parameters should be passed to the operator before any `Forward` or `Backward` interface is called. To do so, user could define a `ConvolutionParam` structure:
 ```c++
 #include <dmlc/parameter.h>

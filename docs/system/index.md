@@ -6,7 +6,7 @@ libraries in general. We believe that open sourcing this system design note can 
 ## Deep Learning Design Notes
 
 This section will be updated with self-contained design notes on various aspect of deep learning systems,
-in terms of abstraction, optimization and trade-offs.
+in terms of abstraction, optimization and trade-off.
 
 * [Programming Models for Deep Learning](program_model.md)
 * [Dependency Engine for Deep Learning](note_engine.md)
@@ -20,14 +20,14 @@ The next parts will be specific to MXNet
 
 ![System Overview](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/system/overview.png)
 
-The above shows major modules of mxnet, and how do they interact with each
+The above shows major modules of MXNet, and how do they interact with each
 other. The modules are
 - [Runtime Dependency Engine](engine.md): Schedules and executes the
   operations according to their read/write dependency.
 - Storage Allocator: Efficiently allocate and recycles memory blocks for GPU and
   CPU.
 - Resource Manager: Manage global resources such as random number generator, temporal space.
-- NDArray: Dynamic asynchronize n-dimensional arrays, provide flexible
+- NDArray: Dynamic asynchronous n-dimensional arrays, provide flexible
   imperative programs for MXNet.
 - Symbolic Execution: Static symbolic graph executor, provide efficient symbolic
   graph execution and optimization.

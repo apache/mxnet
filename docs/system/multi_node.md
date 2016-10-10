@@ -70,13 +70,13 @@ They produce (almost) the same results, but may vary on speed.
 - `local_update_cpu`, gradients are first copied to main memory, next averaged on CPU,
   and then update the weight on CPU. It is suitable when the average size of
   weights are not large and there are a large number of weight. For example the
-  google Inception network.
+  GOOGLE Inception network.
 
 - `local_allreduce_cpu` is similar to `local_update_cpu` except that the
   averaged gradients are copied back to the devices, and then weights are
   updated on devices. It is faster than 1 when the weight size is large so we
   can use the device to accelerate the computation (but we increase the workload
-  by *k* times). Examples are AlexNet on imagenet.
+  by *k* times). Examples are AlexNet on Imagenet.
 
 - `local_allreduce_device` is similar to `local_allreduce_cpu` except that the
   gradient are averaged on a chosen device. It may take advantage of the

@@ -11,7 +11,7 @@ Introduction
 This page will introduce data input method in MXNet. MXNet use iterator to provide data to the neural network.  Iterators do some preprocessing and generate batch for the neural network.
 
 * We provide basic iterators for MNIST image and RecordIO image.
-* To hide the IO cost, prefetch strategy is used to allow parallelism of learning process and data fetching. Data will automatically fetched by an independent thread.
+* To hide the IO cost, pre-fetch strategy is used to allow parallelism of learning process and data fetching. Data will automatically fetched by an independent thread.
 
 Parameters For Data Iterator
 ----------------------------
@@ -21,7 +21,7 @@ Generally to create a data iterator, you need to provide five kinds of parameter
 * **Dataset Param** gives the basic information for the dataset, e.g. file path, input shape.
 * **Batch Param** gives the information to form a batch, e.g. batch size.
 * **Augmentation Param** tells which augmentation operations(e.g. crop, mirror) should be taken on an input image.
-* **Backend Param** controls the behavior of the backend threads to hide data loading cost.
+* **Backend Param** controls the behavior of the back-end threads to hide data loading cost.
 * **Auxiliary Param** provides options to help checking and debugging.
 
 Usually, **Dataset Param** and **Batch Param** MUST be given, otherwise data batch can't be create. Other parameters can be given according to algorithm and performance need. Examples and detail explanation of the options will be provided in the later Section.
@@ -57,7 +57,7 @@ The following code gives an example of creating a Cifar data iterator.
 >>>        batch_size=100,
 >>>        # Augmentation Parameter
 >>>        # Optional
->>>        # when offers mean_img, each image will substract the mean value at each pixel
+>>>        # when offers mean_img, each image will subtract the mean value at each pixel
 >>>        mean_img="data/cifar/cifar10_mean.bin",
 >>>        # Augmentation Parameter
 >>>        # Optional
@@ -81,7 +81,7 @@ The following code gives an example of creating a Cifar data iterator.
 >>>        prefetch_buffer=1)
 ```
 
-From the above code, we could find how to create a data iterator. First, you need to explicitly point out what kind of data(MNIST, ImageRecord etc) to be fetched. Then provide the options about the dataset, batching, image augmentation, multi-tread processing and prefetching. Our code will automatically check the validity of the params, if a compulsary param is missing, an error will occur.
+From the above code, we could find how to create a data iterator. First, you need to explicitly point out what kind of data(MNIST, ImageRecord etc.) to be fetched. Then provide the options about the dataset, batching, image augmentation, multi-tread processing and prefetching. Our code will automatically check the validity of the params, if a compulsory param is missing, an error will occur.
 
 How To Get Data
 ---------------
@@ -93,10 +93,10 @@ We provide the [script](../../tests/python/common/get_data.py) to download MNIST
 RecordIO implements a file format for a sequence of records. We recommend storing images as records and pack them together. The benefits are:
 
 * Storing images in compacted format, e.g. JPEG, for records can have different size. Compacted format will greatly reduce the dataset size in disk.
-* Packing data together allow continous reading on the disk.
+* Packing data together allow continuous reading on the disk.
 * RecordIO has a simple way of partition, which makes it easier for distributed setting. Example about this will be provided later.
 
-We provide the [im2rec tool](../../tools/im2rec.cc) to create Image RecordIO dataset by yourself. Here's the walkthrough:
+We provide the [im2rec tool](../../tools/im2rec.cc) to create Image RecordIO dataset by yourself. Here's the walk through:
 
 ### 0.Before you start
 Make sure you have downloaded the data. You don't need to resize the images by yourself, currently ```im2rec``` could resize it automatically. You could check the promoting message of ```im2rec``` for details.

@@ -1,7 +1,7 @@
 Char RNN Example
 =============================================
 
-This example aims to show how to use lstm model to build a char level language model, and generate text from it. We use a tiny shakespeare text for demo purpose.
+This example aims to show how to use LSTM model to build a char level language model, and generate text from it. We use a tiny Shakespeare text for demo purpose.
 
 Data can be found at [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare) 
 
@@ -13,7 +13,7 @@ This tutorial is written in Rmarkdown.
 
 Load Data 
 ---------
-First of all, load in the data and preprocess it.
+First of all, load in the data and pre-process it.
 
 ```r
 require(mxnet)
@@ -164,7 +164,7 @@ X.val <- list(data=X.val.data, label=X.val.label)
 
 Training Model
 --------------
-In `mxnet`, we have a function called `mx.lstm` so that users can build a general lstm model. 
+In `mxnet`, we have a function called `mx.lstm` so that users can build a general LSTM model. 
 
 
 ```r
