@@ -212,13 +212,11 @@ class DataParallelExecutorGroup(object):
         if is_train is None:
             is_train = self.for_training
 
-        if is_train:
-            # It could be the case that even though we are binded for training, we
-            # still do not have label arrays. For example, this could happen if we
-            # are using a module without a loss function (the user will compute the
-            # loss and gradients using some other ways), and we do not need the label
-            # here.
-            if self.label_arrays is not None:
+        # we are going to load label whenever it's available, this is useful
++       # when we need label in validation
++       if self.label_arrays is not None:
+            assert not is_train or data_batch.label
+            if data_batch.label:
                 _load_label(data_batch, self.label_arrays)
 
         for exec_ in self.execs:
