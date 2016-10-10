@@ -113,3 +113,25 @@ def vis_all_detection(im_array, detections, imdb_classes=None, thresh=0.7):
                                '{:s} {:.3f}'.format(imdb_classes[j], score),
                                bbox=dict(facecolor=color, alpha=0.5), fontsize=12, color='white')
     plt.show()
+
+def save_all_detection(im_array, detections, imdb_classes=None, thresh=0.7):
+    """
+    save all detections in one image with result.png
+    :param im_array: [b=1 c h w] in rgb
+    :param detections: [ numpy.ndarray([[x1 y1 x2 y2 score]]) for j in classes ]
+    :param imdb_classes: list of names in imdb
+    :param thresh: threshold for valid detections
+    :return:
+    """
+    import random
+    im = image_processing.transform_inverse(im_array, config.PIXEL_MEANS)
+    im = im[:, :, ::-1].copy()  # back to b,g,r
+    for j in range(1, len(imdb_classes)):
+        color = (255*random.random(), 255*random.random(), 255*random.random())  # generate a random color
+        dets = detections[j]
+        for i in range(dets.shape[0]):
+            bbox = dets[i, :4]
+            score = dets[i, -1]
+            if score > thresh:
+                cv2.rectangle(im, (int(round(bbox[0])), int(round(bbox[1]))), (int(round(bbox[2])), int(round(bbox[3]))), color, 2)
+    cv2.imwrite("result.jpg", im)

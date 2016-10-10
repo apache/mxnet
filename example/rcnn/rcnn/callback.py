@@ -1,5 +1,6 @@
 import time
 import logging
+from rcnn.config import config
 
 
 class Speedometer(object):
@@ -24,6 +25,8 @@ class Speedometer(object):
                     name, value = param.eval_metric.get()
                     logging.info("Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f,\t%s=%f,\t%s=%f",
                                  param.epoch, count, speed, name[0], value[0], name[1], value[1], name[2], value[2])
+                    if config.END2END:
+                        print "\t\t\t\t\t\t\tTrain-{}={},\t{}={},\t{}={}".format(name[3], value[3], name[4], value[4], name[5], value[5])
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)
