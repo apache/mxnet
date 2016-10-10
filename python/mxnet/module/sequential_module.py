@@ -204,7 +204,8 @@ class SequentialModule(BaseModule):
         shared_module : Module
             Default is `None`. Currently shared module is not supported for `SequentialModule`.
         layout_mapper: LayoutMapper
-            Default None. A helper that decide the layout of data, label and outputs (time-major? batch-major?).
+            Default None. A helper that decide the layout of data, label and outputs
+            (time-major? batch-major?).
         """
         if self.binded and not force_rebind:
             self.logger.warning('Already binded, ignoring bind()')

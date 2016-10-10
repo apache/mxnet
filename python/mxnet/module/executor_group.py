@@ -41,14 +41,14 @@ def _merge_multi_context(outputs, major_axis):
     like living on one context.
     """
     rets = []
-    for x, axis in zip(outputs, major_axis):
+    for tensors, axis in zip(outputs, major_axis):
         if axis >= 0:
-            rets.append(nd.concatenate(x, axis=axis, always_copy=False))
+            rets.append(nd.concatenate(tensors, axis=axis, always_copy=False))
         else:
             # negative axis means the there is no batch_size axis, and all the
             # results should be the same on each device. We simply take the
             # first one, without checking they are actually the same
-            rets.append(x[0])
+            rets.append(tensors[0])
     return rets
 
 

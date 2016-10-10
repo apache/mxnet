@@ -224,7 +224,8 @@ class Module(BaseModule):
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
         layout_mapper: LayoutMapper
-            Default None. A helper that decide the layout of data, label and outputs (time-major? batch-major?).
+            Default None. A helper that decide the layout of data, label and outputs
+            (time-major? batch-major?).
         """
         # force rebinding is typically used when one want to switch from
         # training to prediction phase.

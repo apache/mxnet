@@ -157,7 +157,8 @@ class BucketingModule(BaseModule):
         shared_module : BucketingModule
             Default is `None`. This value is currently not used.
         layout_mapper: LayoutMapper
-            Default None. A helper that decide the layout of data, label and outputs (time-major? batch-major?).
+            Default None. A helper that decide the layout of data, label and outputs
+            (time-major? batch-major?).
         """
         # in case we already initialized params, keep it
         if self.params_initialized:
