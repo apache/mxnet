@@ -22,7 +22,7 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
 #if MXNET_USE_CUDNN == 1
   if (param.dilate[0] == 1 && param.dilate[1] == 1 && !param.cudnn_off) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      op = new CuDNNConvolutionOp<DType>(param, in_shape, out_shape, ctx);
+      op = new CuDNNConvolutionOp<DType>(param, *in_shape, *out_shape, ctx);
     })
   } else {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
