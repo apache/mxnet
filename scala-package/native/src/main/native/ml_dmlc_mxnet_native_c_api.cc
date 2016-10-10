@@ -1655,90 +1655,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRecordIOReaderSeek
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxOptimizerFindCreator
-  (JNIEnv *env, jobject obj, jstring jkey, jobject out) {
-  OptimizerCreator creator;
-  const char *key = env->GetStringUTFChars(jkey, 0);
-  int ret = MXOptimizerFindCreator(key, &creator);
-  env->ReleaseStringUTFChars(jkey, key);
-  SetLongField(env, out, reinterpret_cast<jlong>(creator));
-  return ret;
-}
-
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxOptimizerCreateOptimizer
-  (JNIEnv *env, jobject obj, jlong jcreator, jint num_param,
-    jobjectArray jkeys, jobjectArray jvals, jobject out) {
-  OptimizerHandle handle;
-  OptimizerCreator creator = reinterpret_cast<OptimizerCreator>(jcreator);
-  int len = env->GetArrayLength(jkeys);
-  const char **keys = NULL;
-  if (jkeys != NULL) {
-    keys = new const char *[len];
-    for (size_t i = 0; i < len; i++) {
-      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
-      const char *key = env->GetStringUTFChars(jkey, 0);
-      keys[i] = key;
-      env->DeleteLocalRef(jkey);
-    }
-  }
-  const char **vals = NULL;
-  if (jvals != NULL) {
-    vals = new const char *[len];
-    for (size_t i = 0; i < len; i++) {
-      jstring jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(jvals, i));
-      const char *val = env->GetStringUTFChars(jval, 0);
-      vals[i] = val;
-      env->DeleteLocalRef(jval);
-    }
-  }
-  int ret = MXOptimizerCreateOptimizer(creator,
-                                       num_param,
-                                       keys,
-                                       vals,
-                                       &handle);
-  SetLongField(env, out, reinterpret_cast<jlong>(handle));
-  // release allocated memory
-  if (jkeys != NULL) {
-    for (size_t i = 0; i < len; i++) {
-      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
-      env->ReleaseStringUTFChars(jkey, keys[i]);
-      env->DeleteLocalRef(jkey);
-    }
-    delete[] keys;
-  }
-  if (jvals != NULL) {
-    for (size_t i = 0; i < len; i++) {
-      jstring jval = reinterpret_cast<jstring>(env->GetObjectArrayElement(jvals, i));
-      env->ReleaseStringUTFChars(jval, vals[i]);
-      env->DeleteLocalRef(jval);
-    }
-    delete[] vals;
-  }
-  return ret;
-}
-
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxOptimizerFree
-  (JNIEnv *env, jobject obj, jlong jhandle) {
-  OptimizerHandle handle = reinterpret_cast<OptimizerHandle>(jhandle);
-  int ret = MXOptimizerFree(handle);
-  return ret;
-}
-
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxOptimizerUpdate
-  (JNIEnv *env, jobject obj, jlong jhandle, jint index, jlong jweight,
-    jlong jgrad, jfloat lr, jfloat wd) {
-  OptimizerHandle handle = reinterpret_cast<OptimizerHandle>(jhandle);
-  NDArrayHandle weight = reinterpret_cast<NDArrayHandle>(jweight);
-  NDArrayHandle grad = reinterpret_cast<NDArrayHandle>(jgrad);
-  int ret = MXOptimizerUpdate(handle,
-                              index,
-                              weight,
-                              grad,
-                              lr,
-                              wd);
-  return ret;
-}
-
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcCreate
   (JNIEnv *env, jobject obj, jstring jname, jobjectArray jinputNames,
     jobjectArray joutputNames, jlongArray jinputs, jlongArray joutputs,
@@ -1833,3 +1749,4 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcFree
   int ret = MXRtcFree(handle);
   return ret;
 }
+

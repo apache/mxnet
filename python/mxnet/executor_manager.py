@@ -85,6 +85,9 @@ def _load_general(data, targets):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
         else:
+            assert d_targets[-1][0].stop == d_src.shape[0], \
+                "Batch size miss match. Expected %d, got %d"%( \
+                    d_targets[-1][0].stop, d_src.shape[0])
             for slice_idx, d_dst in d_targets:
                 d_src[slice_idx].copyto(d_dst)
 
