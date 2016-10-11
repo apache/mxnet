@@ -2,7 +2,7 @@
  *  Copyright (c) 2015 by Contributors
  * \file operator_util.h
  * \brief Utility functions and registries to help quickly build new operators.
- *
+ *  [Deprecated]
  *  Use the register functions in this file when possible to simplify operator creations.
  *  Operators registered in this file will be exposed to both NDArray API and symbolic API.
  *
@@ -10,6 +10,10 @@
  */
 #ifndef MXNET_OPERATOR_UTIL_H_
 #define MXNET_OPERATOR_UTIL_H_
+
+#ifdef _MSC_VER
+#pragma warning(disable:4503)  // disable warning: decorated name length exceeded.
+#endif
 
 #include <dmlc/registry.h>
 #include <dmlc/parameter.h>
@@ -450,6 +454,32 @@ class SimpleOpRegistry {
 * \brief Maximum ndim supported for special operators like broadcasting with non contiguous lhs/rhs
 */
 #define MXNET_SPECIAL_MAX_NDIM 5
+
+
+//--------------------------------------------------------------
+// The following part are API Registration of Simple Operators
+//--------------------------------------------------------------
+/*!
+ * \brief Macro to register simple operator to both imperative and symbolic API.
+ *
+ * see src/operator/elementwise_unary_op-inl.h for example
+ *
+ * \code
+ * // example of registering a sigmoid operator on GPU
+ * // MySigmoid is of type UnaryFunction,
+ * // MySigmoidGrad is of type UnaryGradFunctionT2
+ *
+ * MXNET_REGISTER_SIMPLE_OP(sigmoid, cpu)
+ * .set_function(MySigmoid<gpu>, true)
+ * .set_gradient(MySigmoidGrad<gpu>, true)
+ * .describe("Sigmoid function");
+ *
+ * \endcode
+ */
+#define MXNET_REGISTER_SIMPLE_OP(Name, DEV)                             \
+  static ::mxnet::op::SimpleOpRegEntry &                                \
+  __make_ ## SimpleOpRegEntry ## _ ## Name ## __ ## DEV ##__ =          \
+      ::mxnet::op::SimpleOpRegistry::Get()->__REGISTER_OR_FIND__(#Name)
 
 }  // namespace op
 }  // namespace mxnet
