@@ -138,7 +138,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
     DMLC_DECLARE_FIELD(part_index).set_default(0)
         .describe("the index of the part will read");
     DMLC_DECLARE_FIELD(shuffle_chunk_size).set_default(0)
-        .describe("the size(MB) of the shuffle chunk");
+        .describe("the size(MB) of the shuffle chunk, used with shuffle=True,"\
+                  " it can enable global shuffling");
     DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
         .describe("the seed for chunk shuffling");
   }
