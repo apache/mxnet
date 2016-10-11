@@ -36,7 +36,7 @@ build described below.
 ## Local build
 
 To build the documentation without docker on your local machine, first
-install the required packages for Ubutun 14.04.  These are approximately:
+install the required packages for Ubuntu 14.04.  These are approximately:
 
 ```
 sudo apt-get install doxygen python-pip
