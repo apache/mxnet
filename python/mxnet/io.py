@@ -1,21 +1,22 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201, no-self-use
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201, no-self-use, no-member
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
 from collections import OrderedDict
 
-import ctypes
 import sys
-import numpy as np
+import ctypes
 import logging
 import threading
+import numpy as np
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 from .ndarray import array
+from .ndarray import concatenate
 
 
 class DataBatch(object):
@@ -196,16 +197,8 @@ class PrefetchingIter(DataIter):
         self.n_iter = len(iters)
         assert self.n_iter > 0
         self.iters = iters
-        if rename_data is None:
-            self.provide_data = sum([i.provide_data for i in iters], [])
-        else:
-            self.provide_data = sum([[(r[n], s) for n, s in i.provide_data] \
-                                    for r, i in zip(rename_data, iters)], [])
-        if rename_label is None:
-            self.provide_label = sum([i.provide_label for i in iters], [])
-        else:
-            self.provide_label = sum([[(r[n], s) for n, s in i.provide_label] \
-                                    for r, i in zip(rename_label, iters)], [])
+        self.rename_data = rename_data
+        self.rename_label = rename_label
         self.batch_size = self.provide_data[0][1][0]
         self.data_ready = [threading.Event() for i in range(self.n_iter)]
         self.data_taken = [threading.Event() for i in range(self.n_iter)]
@@ -239,6 +232,24 @@ class PrefetchingIter(DataIter):
         for thread in self.prefetch_threads:
             thread.join()
 
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        if self.rename_data is None:
+            return sum([i.provide_data for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_data] \
+                       for r, i in zip(self.rename_data, self.iters)], [])
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        if self.rename_label is None:
+            return sum([i.provide_label for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_label] \
+                       for r, i in zip(self.rename_label, self.iters)], [])
+
     def reset(self):
         for e in self.data_ready:
             e.wait()
@@ -263,7 +274,9 @@ class PrefetchingIter(DataIter):
             self.current_batch = DataBatch(sum([batch.data for batch in self.next_batch], []),
                                            sum([batch.label for batch in self.next_batch], []),
                                            self.next_batch[0].pad,
-                                           self.next_batch[0].index)
+                                           self.next_batch[0].index,
+                                           provide_data=self.provide_data,
+                                           provide_label=self.provide_label)
             for e in self.data_ready:
                 e.clear()
             for e in self.data_taken:
@@ -307,11 +320,11 @@ def _init_data(data, allow_empty, default_name):
         raise TypeError("Input must be NDArray, numpy.ndarray, " + \
                 "a list of them or dict with them as values")
     for k, v in data.items():
-        if isinstance(v, NDArray):
-            data[k] = v.asnumpy()
-    for k, v in data.items():
-        if not isinstance(v, np.ndarray):
-            raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
+        if not isinstance(v, NDArray):
+            try:
+                data[k] = array(v)
+            except:
+                raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                     "should be NDArray or numpy.ndarray")
 
     return list(data.items())
@@ -348,15 +361,12 @@ class NDArrayIter(DataIter):
         if shuffle:
             idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
-            self.data = [(k, v[idx]) for k, v in self.data]
-            self.label = [(k, v[idx]) for k, v in self.label]
-
-        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
-        self.num_source = len(self.data_list)
+            self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
+            self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
 
         # batching
         if last_batch_handle == 'discard':
-            new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
+            new_n = self.data[0][1].shape[0] - self.data[0][1].shape[0] % batch_size
             data_dict = OrderedDict(self.data)
             label_dict = OrderedDict(self.label)
             for k, _ in self.data:
@@ -365,6 +375,9 @@ class NDArrayIter(DataIter):
                 label_dict[k] = label_dict[k][:new_n]
             self.data = data_dict.items()
             self.label = label_dict.items()
+
+        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
+        self.num_source = len(self.data_list)
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
             "batch_size need to be smaller than data size."
@@ -395,10 +408,7 @@ class NDArrayIter(DataIter):
 
     def iter_next(self):
         self.cursor += self.batch_size
-        if self.cursor < self.num_data:
-            return True
-        else:
-            return False
+        return self.cursor < self.num_data
 
     def next(self):
         if self.iter_next():
@@ -411,11 +421,10 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only"""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return [array(x[1][self.cursor:self.cursor+self.batch_size]) for x in data_source]
+            return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return [array(np.concatenate((x[1][self.cursor:], x[1][:pad]),
-                                         axis=0)) for x in data_source]
+            return [concatenate([x[1][self.cursor:], x[1][:pad]]) for x in data_source]
 
     def getdata(self):
         return self._getdata(self.data)

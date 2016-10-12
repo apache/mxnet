@@ -278,13 +278,13 @@ probs = mx.predict(model, test_provider)
 ## Tensor Computation
 
 Next we briefly introduce the tensor computation interface, which is often more
-flexiable to use than the previous symbolic interface. It is often used to
+flexible to use than the previous symbolic interface. It is often used to
 implement the layers, define weight updating rules, and debug.
 
 
 ### Python
 
-The python inferface is similar to `numpy.NDArray`.
+The python interface is similar to `numpy.NDArray`.
 
 ```python
 >>> import mxnet as mx
@@ -333,3 +333,5 @@ res3: ml.dmlc.mxnet.Shape = (2,3)
 ```
 
 ### Julia
+
+Coming soon...

@@ -199,7 +199,7 @@ machines.
 This is achieved by lazy evaluation. Any operation we write down is issued to a
 internal engine, and then returned. For example, if we run `a += 1`, it
 returns immediately after pushing the plus operation to the engine. This
-asynchronicity allows us to push more operations to the engine, so it can determine
+asynchronism allows us to push more operations to the engine, so it can determine
 the read and write dependency and find the best way to execute them in
 parallel.
 
@@ -268,7 +268,7 @@ We can also specify the automatic generated names explicitly:
 MXNet provides well-optimized symbols (see
 [src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)) for
 commonly used layers in deep learning. We can also easily define new operators
-in python.  The following example first performs an elementwise add between two
+in python.  The following example first performs an element-wise add between two
 symbols, then feeds them to the fully connected operator.
 
 ```python
@@ -289,7 +289,7 @@ forward composition exemplified above.
 >>> net2 = mx.symbol.FullyConnected(data=net2, name='net2', num_hidden=128)
 >>> composed_net = net(data=net2, name='compose')
 >>> composed_net.list_arguments()
-['data2', 'net2_weight', 'net2_bias', 'compose_fc1_weight', 'compose_fc1_bias']
+['data2', 'net2_weight', 'net2_bias', 'fc1_weight', 'fc1_bias']
 ```
 
 In the above example, *net* is used as a function to apply to an existing symbol
@@ -353,16 +353,16 @@ which provides a detailed explanation of the concepts in pictures.
 In short, it is designed to be very efficient in both memory and runtime.
 
 The major reason for us to introduce the Symbolic API is to bring the efficient C++
-operations in powerful toolkits such as cxxnet and caffe together with the
+operations in powerful tool-kits such as CXXNet and caffe together with the
 flexible dynamic NDArray operations. All the memory and computation resources are
 allocated statically during Bind, to maximize the runtime performance and memory
 utilization.
 
-The coarse grained operators are equivalent to cxxnet layers, which are
+The coarse grained operators are equivalent to CXXNet layers, which are
 extremely efficient.  We also provide fine grained operators for more flexible
-composition. Because we are also doing more inplace memory allocation, mxnet can
-be ***more memory efficient*** than cxxnet, and achieves the same runtime, with
-greater flexiblity.
+composition. Because we are also doing more in place memory allocation, MXNet can
+be ***more memory efficient*** than CXXNet, and achieves the same runtime, with
+greater flexibility.
 
 ## Distributed Key-value Store
 
@@ -491,9 +491,9 @@ This section will be updated when the distributed version is ready.
 <!-- * Use fine-grained operator to extend parts of of more flexible symbolic graph. -->
 <!-- * Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward of executors. -->
 
-<!-- We believe that different ways offers you different levels of flexibilty and -->
+<!-- We believe that different ways offers you different levels of flexibility and -->
 <!-- efficiency. Normally you do not need to be flexible in all parts of the -->
 <!-- networks, so we allow you to use the fast optimized parts, and compose it -->
 <!-- flexibly with fine-grained operator or dynamic NArray. We believe such kind of -->
 <!-- mixture allows you to build the deep learning architecture both efficiently and -->
-<!-- flexibly as your choice. To mix is to maximize the peformance and flexiblity. -->
+<!-- flexibly as your choice. To mix is to maximize the performance and flexibility. -->

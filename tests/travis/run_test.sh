@@ -74,7 +74,7 @@ if [ ${TASK} == "r_test" ]; then
 
     Rscript tests/travis/r_vignettes.R
 
-    wget http://webdocs.cs.ualberta.ca/~bx3/data/Inception.zip
+    wget http://data.dmlc.ml/mxnet/data/Inception.zip
     unzip Inception.zip && rm -rf Inception.zip
     wget https://s3-us-west-2.amazonaws.com/mxnet/train.csv -O train.csv
     wget https://s3-us-west-2.amazonaws.com/mxnet/test.csv -O test.csv
@@ -108,6 +108,18 @@ if [ ${TASK} == "python_test" ]; then
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
     fi
+    exit 0
+fi
+
+if [ ${TASK} == "julia" ]; then
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    export MXNET_HOME="${PWD}"
+    julia -e 'Pkg.clone("MXNet"); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
     exit 0
 fi
 

@@ -55,7 +55,7 @@ namespace op {
 inline bool IsBroadcastNeeded_(const TShape& lhs,
                               const TShape& rhs) {
   // force ndim to be equal. do not smartly padding dims with 1s, which may confuse users
-  CHECK_EQ(lhs.ndim(), rhs.ndim());
+  CHECK_EQ(lhs.ndim(), rhs.ndim()) << "lhs:" << lhs << " rhs:" << rhs;
   for (index_t i = 0; i < lhs.ndim(); ++i) {
     if (lhs[i] != rhs[i]) return true;
   }
@@ -207,7 +207,7 @@ void BinaryBroadcastBackward_(const OutputGrad& out_grad,
     << "Binary function only support ingrad/outgrad with the same type";
   CHECK_EQ(out_grad.data.type_flag_, rhs_grad->type_flag_)
     << "Binary function only support ingrad/outgrad with the same type";
-  CHECK_EQ(rhs_grad->shape_.ndim(), rhs_grad->shape_.ndim()) <<
+  CHECK_EQ(lhs_grad->shape_.ndim(), rhs_grad->shape_.ndim()) <<
     "the ndim of lhs_grad and rhs_grad must be equal,"
     " shape of lhs_grad=" << lhs_grad->shape_ << " shape of rhs_grad=" << rhs_grad->shape_;
   if (!IsBroadcastNeeded_(lhs_grad->shape_, rhs_grad->shape_)) {

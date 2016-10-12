@@ -77,6 +77,12 @@ def proto2script(proto_file):
         input_dim = proto.input_dim
     elif len(proto.input_shape) > 0: 
         input_dim = proto.input_shape[0].dim
+    elif (layer[0].type == "Input"):
+        input_dim = layer[0].input_param.shape._values[0].dim
+        layer.pop(0)
+    else:
+        raise Exception('Invalid proto file.')   
+
     # We assume the first bottom blob of first layer is the output from data layer
     input_name = layer[0].bottom[0]
     output_name = ""
@@ -115,6 +121,14 @@ def proto2script(proto_file):
         if layer[i].type == 'ReLU' or layer[i].type == 18:
             type_string = 'mx.symbol.Activation'
             param_string = "act_type='relu'"
+            need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
+        if layer[i].type == 'TanH' or layer[i].type == 23:
+            type_string = 'mx.symbol.Activation'
+            param_string = "act_type='tanh'"
+            need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
+        if layer[i].type == 'Sigmoid' or layer[i].type == 19:
+            type_string = 'mx.symbol.Activation'
+            param_string = "act_type='sigmoid'"
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
         if layer[i].type == 'LRN' or layer[i].type == 15:
             type_string = 'mx.symbol.LRN'

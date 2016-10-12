@@ -40,13 +40,17 @@ struct ImageRecordIO {
   };
   /*! \brief header of image recordio */
   Header header;
+  /*! \brief point to label */
+  float *label;
+  /*! \brief number of float labels */
+  int num_label;
   /*! \brief pointer to data content */
   uint8_t *content;
   /*! \brief size of the content */
   size_t content_size;
   /*! \brief constructor */
   ImageRecordIO(void)
-      : content(NULL), content_size(0) {
+      : label(NULL), num_label(0), content(NULL), content_size(0) {
     memset(&header, 0, sizeof(header));
   }
   /*! \brief get image id from record */
@@ -63,6 +67,16 @@ struct ImageRecordIO {
     std::memcpy(&header, buf, sizeof(header));
     content = reinterpret_cast<uint8_t*>(buf) + sizeof(header);
     content_size = size - sizeof(header);
+    if (header.flag > 0) {
+      CHECK(content_size >= sizeof(float)*header.flag);
+      label = reinterpret_cast<float*>(content);
+      num_label = header.flag;
+      content = reinterpret_cast<uint8_t*>(label + header.flag);
+      content_size -= sizeof(float)*header.flag;
+    } else {
+      label = NULL;
+      num_label = 0;
+    }
   }
   /*!
    * \brief save the record header

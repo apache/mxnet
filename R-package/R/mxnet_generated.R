@@ -22,10 +22,26 @@ NULL
 #' @name mx.nd.argmax.channel
 NULL
 
+#' Calculate batched dot product of two matrices. (batch, M, K) batch_dot (batch, K, N) --> (batch, M, N)
+#' 
+#' @param lhs  NDArray
+#'     Left operand  to the function
+#' @param rhs  NDArray
+#'     Right operand to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.batch.dot
+NULL
+
 #' Broadcast data in the given axis to the given size. The original size of the broadcasting axis must be 1.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     The axes to perform the broadcasting.
+#' @param size  Shape(tuple), optional, default=()
+#'     Target sizes of the broadcasting axes.
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -80,6 +96,30 @@ NULL
 #' @name mx.nd.broadcast.plus
 NULL
 
+#' lhs power rhs with broadcast
+#' 
+#' @param lhs  NDArray
+#'     Left operand  to the function
+#' @param rhs  NDArray
+#'     Right operand to the function
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.power
+NULL
+
+#' Broadcast data to the target shape. The original size of the broadcasting axis must be 1.
+#' 
+#' @param src  NDArray
+#'     Source input to the function
+#' @param shape  Shape(tuple), optional, default=()
+#'     The shape of the desired array. We can set the dim to zero if it's same as the original. E.g `A = broadcast_to(B, shape=(10, 0, 0))` has the same meaning as `A = broadcast_axis(B, axis=0, size=10)`.
+#' @return out The result mx.ndarray
+#' 
+#' @export
+#' @name mx.nd.broadcast.to
+NULL
+
 #' Take ceil value of the src
 #' 
 #' @param src  NDArray
@@ -130,6 +170,10 @@ NULL
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param begin  Shape(tuple), required
+#'     starting coordinates
+#' @param end  Shape(tuple), required
+#'     ending coordinates
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -162,6 +206,8 @@ NULL
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  int (non-negative), required
+#'     Position (amongst axes) where new axis is to be inserted.
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -186,6 +232,8 @@ NULL
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  int, required
+#'     The dimension to flip
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -212,40 +260,56 @@ NULL
 #' @name mx.nd.log
 NULL
 
-#' Take max of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' Take max of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @return out The result mx.ndarray
 #' 
 #' @export
 #' @name mx.nd.max
 NULL
 
-#' (Depreciated! Use max instead!) Take max of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' (Depreciated! Use max instead!) Take max of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @return out The result mx.ndarray
 #' 
 #' @export
 #' @name mx.nd.max.axis
 NULL
 
-#' Take min of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' Take min of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @return out The result mx.ndarray
 #' 
 #' @export
 #' @name mx.nd.min
 NULL
 
-#' (Depreciated! Use min instead!) Take min of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' (Depreciated! Use min instead!) Take min of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -306,6 +370,12 @@ NULL
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  int, required
+#'     The axis to be sliced
+#' @param begin  int, required
+#'     The beginning index to be sliced
+#' @param end  int, required
+#'     The end index to be sliced
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -354,20 +424,28 @@ NULL
 #' @name mx.nd.square
 NULL
 
-#' Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' Take sum of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @return out The result mx.ndarray
 #' 
 #' @export
 #' @name mx.nd.sum
 NULL
 
-#' (Depreciated! Use sum instead!) Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' (Depreciated! Use sum instead!) Take sum of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -378,6 +456,8 @@ NULL
 #' 
 #' @param src  NDArray
 #'     Source input to the function
+#' @param axes  Shape(tuple), optional, default=()
+#'     Target axis order. By default the axes will be inverted.
 #' @return out The result mx.ndarray
 #' 
 #' @export
@@ -615,6 +695,8 @@ mx.symbol.Cast <- function(...) {
 #'     Tmp workspace for convolution (MB).
 #' @param no.bias  boolean, optional, default=False
 #'     Whether to disable bias parameter.
+#' @param cudnn.tune  {'fastest', 'limited_workspace', 'off'},optional, default='limited_workspace'
+#'     Whether to find convolution algo by running performance test.Leads to higher startup time but may give better speed
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -1058,6 +1140,27 @@ mx.symbol.SoftmaxOutput <- function(...) {
   mx.varg.symbol.SoftmaxOutput(list(...))
 }
 
+#' Apply spatial transformer to input feature map.
+#' 
+#' @param data  Symbol
+#'     Input data to the SpatialTransformerOp.
+#' @param loc  Symbol
+#'     localisation net, the output dim should be 6 when transform_type is affine, and the name of loc symbol should better starts with 'stn_loc', so that initialization it with iddentify tranform, or you shold initialize the weight and bias by yourself.
+#' @param target.shape  Shape(tuple), optional, default=(0,0)
+#'     output shape(h, w) of spatial transformer: (y, x)
+#' @param transform.type  {'affine'}, required
+#'     transformation type
+#' @param sampler.type  {'bilinear'}, required
+#'     sampling type
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.SpatialTransformer <- function(...) {
+  mx.varg.symbol.SpatialTransformer(list(...))
+}
+
 #' Apply swapaxis to input.
 #' 
 #' @param data  Symbol
@@ -1113,10 +1216,29 @@ mx.symbol.abs <- function(...) {
   mx.varg.symbol.abs(list(...))
 }
 
+#' Calculate batched dot product of two matrices. (batch, M, K) batch_dot (batch, K, N) --> (batch, M, N)
+#' 
+#' @param lhs  Symbol
+#'     Left symbolic input to the function
+#' @param rhs  Symbol
+#'     Right symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.batch_dot <- function(...) {
+  mx.varg.symbol.batch_dot(list(...))
+}
+
 #' Broadcast data in the given axis to the given size. The original size of the broadcasting axis must be 1.
 #' 
 #' @param src  Symbol
 #'     Left symbolic input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     The axes to perform the broadcasting.
+#' @param size  Shape(tuple), optional, default=()
+#'     Target sizes of the broadcasting axes.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -1186,6 +1308,36 @@ mx.symbol.broadcast_plus <- function(...) {
   mx.varg.symbol.broadcast_plus(list(...))
 }
 
+#' lhs power rhs with broadcast
+#' 
+#' @param lhs  Symbol
+#'     Left symbolic input to the function
+#' @param rhs  Symbol
+#'     Right symbolic input to the function
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_power <- function(...) {
+  mx.varg.symbol.broadcast_power(list(...))
+}
+
+#' Broadcast data to the target shape. The original size of the broadcasting axis must be 1.
+#' 
+#' @param src  Symbol
+#'     Left symbolic input to the function
+#' @param shape  Shape(tuple), optional, default=()
+#'     The shape of the desired array. We can set the dim to zero if it's same as the original. E.g `A = broadcast_to(B, shape=(10, 0, 0))` has the same meaning as `A = broadcast_axis(B, axis=0, size=10)`.
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.broadcast_to <- function(...) {
+  mx.varg.symbol.broadcast_to(list(...))
+}
+
 #' Take ceil value of the src
 #' 
 #' @param src  Symbol
@@ -1244,6 +1396,8 @@ mx.symbol.exp <- function(...) {
 #' 
 #' @param src  Symbol
 #'     Left symbolic input to the function
+#' @param axis  int (non-negative), required
+#'     Position (amongst axes) where new axis is to be inserted.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -1352,6 +1506,12 @@ mx.symbol.sin <- function(...) {
 #' 
 #' @param src  Symbol
 #'     Left symbolic input to the function
+#' @param axis  int, required
+#'     The axis to be sliced
+#' @param begin  int, required
+#'     The beginning index to be sliced
+#' @param end  int, required
+#'     The end index to be sliced
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -1415,10 +1575,14 @@ mx.symbol.square <- function(...) {
   mx.varg.symbol.square(list(...))
 }
 
-#' Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' Take sum of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  Symbol
 #'     Left symbolic input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -1428,10 +1592,14 @@ mx.symbol.sum <- function(...) {
   mx.varg.symbol.sum(list(...))
 }
 
-#' (Depreciated! Use sum instead!) Take sum of the src in the given axis. Params: `axis` and `keepdims`. axis: tuple or integer of axes to reduce, global reduce will be performed if not set. keepdims: the same meaning as Numpy.
+#' (Depreciated! Use sum instead!) Take sum of the src in the given axis and returns a NDArray. Follows numpy semantics.
 #' 
 #' @param src  Symbol
 #'     Left symbolic input to the function
+#' @param axis  Shape(tuple), optional, default=()
+#'     Same as Numpy. The axes to perform the reduction.If left empty, a global reduction will be performed.
+#' @param keepdims  boolean, optional, default=False
+#'     Same as Numpy. If keepdims is set to true, the axis which is reduced is left in the result as dimension with size one.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol
@@ -1445,6 +1613,8 @@ mx.symbol.sum_axis <- function(...) {
 #' 
 #' @param src  Symbol
 #'     Left symbolic input to the function
+#' @param axes  Shape(tuple), optional, default=()
+#'     Target axis order. By default the axes will be inverted.
 #' @param name  string, optional
 #'     Name of the resulting symbol.
 #' @return out The result mx.symbol

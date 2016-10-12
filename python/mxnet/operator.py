@@ -5,12 +5,14 @@ from __future__ import absolute_import
 
 from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
-from ctypes import c_void_p, cast, c_int, c_char, c_char_p, cast, c_bool
-c_int_p = POINTER(c_int)
+from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
+
 from .base import _LIB, check_call
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol
 from .ndarray import NDArray
+
+c_int_p = POINTER(c_int)
 
 class PythonOp(object):
     """Base class for operators implemented in python
@@ -211,10 +213,10 @@ class NumpyOp(PythonOp):
                                  None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
-        sym = symbol.Symbol._Native(*args,
-                                    info=cb_ptr,
-                                    need_top_grad=self.need_top_grad(),
-                                    **kwargs)
+        sym = symbol._internal._Native(*args,
+                                       info=cb_ptr,
+                                       need_top_grad=self.need_top_grad(),
+                                       **kwargs)
         # keep a reference of ourself in PythonOp so we don't get garbage collected.
         PythonOp._ref_holder.append(self)
         return sym
@@ -358,9 +360,9 @@ class NDArrayOp(PythonOp):
                                    None, None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
-        sym = symbol.Symbol._NDArray(*args,
-                                     info=cb_ptr,
-                                     **kwargs)
+        sym = symbol._internal._NDArray(*args,
+                                        info=cb_ptr,
+                                        **kwargs)
         # keep a reference of ourself in PythonOp so we don't get garbage collected.
         PythonOp._ref_holder.append(self)
         return sym

@@ -81,6 +81,16 @@ USE_STATIC_MKL = NONE
 endif
 
 #----------------------------
+# Settings for power and arm arch
+#----------------------------
+ARCH := $(shell uname -a)
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le))
+	USE_SSE=0
+else
+	USE_SSE=1
+endif
+
+#----------------------------
 # distributed computing
 #----------------------------
 
@@ -110,6 +120,11 @@ EXTRA_OPERATORS =
 #----------------------------
 # plugins
 #----------------------------
+
+# whether to use caffe integration. This requires installing caffe.
+# You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
+# CAFFE_PATH = $(HOME)/caffe
+# MXNET_PLUGINS += plugin/caffe/caffe.mk
 
 # whether to use torch integration. This requires installing torch.
 # You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH

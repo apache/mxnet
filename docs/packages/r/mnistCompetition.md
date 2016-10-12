@@ -2,7 +2,7 @@ Handwritten Digits Classification Competition
 =============================================
 
 [MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set.
-We will present the basic usage of [mxnet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
+We will present the basic usage of [MXNet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
 
 This tutorial is written in Rmarkdown. You can download the source [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/mnistCompetition.Rmd) and view a
 hosted version of tutorial [here](http://mxnet.readthedocs.io/en/latest/packages/r/mnistCompetition.html).
@@ -40,7 +40,7 @@ Here every image is represented as a single row in train/test. The greyscale of 
 train.x <- t(train.x/255)
 test <- t(test/255)
 ```
-We also transpose the input matrix to npixel x nexamples, which is the column major format accepted by mxnet (and the convention of R).
+We also transpose the input matrix to npixel x nexamples, which is the column major format accepted by MXNet (and the convention of R).
 
 In the label part, we see the number of each digit is fairly even:
 
@@ -240,8 +240,8 @@ device.gpu <- lapply(0:(n.gpu-1), function(i) {
 })
 ```
 
-As you can see, we can pass a list of devices, to ask mxnet to train on multiple GPUs (you can do similar thing for cpu,
-but since internal computation of cpu is already multi-threaded, there is less gain than using GPUs).
+As you can see, we can pass a list of devices, to ask MXNet to train on multiple GPUs (you can do similar thing for CPU,
+but since internal computation of CPU is already multi-threaded, there is less gain than using GPUs).
 
 We start by training on CPU first. Because it takes a bit time to do so, we will only run it for one iteration.
 

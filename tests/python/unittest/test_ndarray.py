@@ -2,17 +2,7 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
-from check_utils import _np_reduce
-
-def reldiff(a, b):
-    diff = np.sum(np.abs(a - b))
-    norm = np.sum(np.abs(a))
-    reldiff = diff  / (norm + 1e-8)
-    return reldiff
-
-
-def same(a, b):
-    return np.sum(a != b) == 0
+from mxnet.test_utils import *
 
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -186,6 +176,20 @@ def test_ndarray_slice():
     A[3:8] = A2[3:8]
     assert same(A[3:8].asnumpy(), A2[3:8])
 
+
+def test_ndarray_slice_along_axis():
+    arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
+    sub_arr = mx.nd.zeros((3, 2, 2, 3))
+    arr._copy_slice_to(1, 1, 3, sub_arr)
+
+    # test we sliced correctly
+    assert same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+
+    # test that slice is copy, instead of shared memory
+    sub_arr[:] = 0
+    assert not same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+
+
 def test_clip():
     shape = (10,)
     A = mx.random.uniform(-10, 10, shape)
@@ -231,11 +235,11 @@ def test_reduce():
                                                          %(ndarray_ret.shape, numpy_ret.shape)
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-4
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
                       mx.nd.sum)
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.max),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
                       mx.nd.max)
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.min),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min)
 
 def test_broadcast():
@@ -261,6 +265,7 @@ def test_broadcast():
     test_broadcast_to()
 
 if __name__ == '__main__':
+    test_ndarray_slice_along_axis()
     test_ndarray_slice()
     test_ndarray_pickle()
     test_ndarray_saveload()

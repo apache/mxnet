@@ -9,7 +9,7 @@ parser.add_argument('--network', type=str, default='inception-bn-28-small',
                     help = 'the cnn to use')
 parser.add_argument('--data-dir', type=str, default='cifar10/',
                     help='the input data directory')
-parser.add_argument('--gpus', type=str, default='0',
+parser.add_argument('--gpus', type=str,
                     help='the gpus will be used, e.g "0,1,2,3"')
 parser.add_argument('--num-examples', type=int, default=60000,
                     help='the number of training examples')
@@ -40,7 +40,7 @@ def _download(data_dir):
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')) :
-        os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip")
+        os.system("wget http://data.dmlc.ml/mxnet/data/cifar10.zip")
         os.system("unzip -u cifar10.zip")
         os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
     os.chdir("..")
@@ -50,8 +50,7 @@ import importlib
 net = importlib.import_module('symbol_' + args.network).get_symbol(10)
 
 # data
-def get_iterator(args, kv):
-    data_shape = (3, 28, 28)
+def get_iterator(args, kv, data_shape=(3, 28, 28)):
     if '://' not in args.data_dir:
         _download(args.data_dir)
 
@@ -77,5 +76,6 @@ def get_iterator(args, kv):
 
     return (train, val)
 
-# train
-train_model.fit(args, net, get_iterator)
+if __name__ == '__main__':
+    # train
+    train_model.fit(args, net, get_iterator)

@@ -13,4 +13,4 @@ These are used to generate the index used in search.
 - [Tutorials](system/index.md)
 
 # Chinese translation of docs
-- [Chinse translation of docs](index_zh.md)
+- [Chinese translation of docs](index_zh.md)

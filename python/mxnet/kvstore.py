@@ -29,8 +29,8 @@ def _ctype_key_value(keys, vals):
             assert(isinstance(k, int))
         c_keys = []
         c_vals = []
-        for i in range(len(keys)):
-            c_key_i, c_val_i = _ctype_key_value(keys[i], vals[i])
+        for key, val in zip(keys, vals):
+            c_key_i, c_val_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
         return (c_array(ctypes.c_int, c_keys), c_array(NDArrayHandle, c_vals))
