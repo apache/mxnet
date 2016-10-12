@@ -244,6 +244,8 @@ class FeedForward private(
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric, kvStoreType: String,
           epochEndCallback: EpochEndCallback, batchEndCallback: BatchEndCallback,
           logger: Logger, workLoadList: Seq[Float]): Unit = {
+    // init params first to allow kv store use _argParams to decide its type
+    initSymbolParams(trainData)
     // create kvstore
     val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
     fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
@@ -277,6 +279,8 @@ class FeedForward private(
           epochEndCallback: EpochEndCallback,
           batchEndCallback: BatchEndCallback, logger: Logger,
           workLoadList: Seq[Float]): Unit = {
+    // init params first to allow kv store use _argParams to decide its type
+    initSymbolParams(trainData)
     // create kvstore
     val (kvStore, updateOnKVStore) = Model.createKVStore(kv)
     fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
@@ -300,18 +304,22 @@ class FeedForward private(
     fit(trainData, evalData, new Accuracy(), kvStore)
   }
 
+  private def initSymbolParams(trainData: DataIter)
+    : (IndexedSeq[String], IndexedSeq[String], IndexedSeq[String]) = {
+    if (symGen != null) {
+      this.symbol = symGen.generate(trainData.defaultBucketKey)
+      checkArguments()
+    }
+    initParams(trainData.provideData ++ trainData.provideLabel)
+  }
+
   private def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric = new Accuracy(),
                   kvStore: Option[KVStore], updateOnKVStore: Boolean,
                   epochEndCallback: EpochEndCallback = null,
                   batchEndCallback: BatchEndCallback = null, logger: Logger = FeedForward.logger,
                   workLoadList: Seq[Float] = null): Unit = {
     require(evalMetric != null, "evalMetric cannot be null")
-    if (symGen != null) {
-      this.symbol = symGen.generate(trainData.defaultBucketKey)
-      checkArguments()
-    }
-    val (argNames, paramNames, auxNames) =
-      initParams(trainData.provideData ++ trainData.provideLabel)
+    val (argNames, paramNames, auxNames) = initSymbolParams(trainData)
 
     // init optimizer
     val batchSizeMultiplier = kvStore.map { kv =>
