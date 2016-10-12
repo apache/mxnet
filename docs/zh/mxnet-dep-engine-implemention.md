@@ -27,7 +27,7 @@
 # 基本背景知识<a id="orgheadline1"></a>
 
 MXNET中有一个依赖引擎，这个引擎是用来分析计算过程的依赖关系，把不依赖的计算并行
-化，以达到提高性能的目的。它的基本原理可以看官方的[文档](https://mxnet-bing.readthedocs.io/en/latest/system/note_engine.html)。 简单的说就是给每一个对
+化，以达到提高性能的目的。它的基本原理可以看官方的[文档](https://mxnet-bing.readthedocs.io/en/latest/architecture/note_engine.html)。 简单的说就是给每一个对
 象打上一个tag，这个tag叫做Var，每一个计算(op)都会依赖一个或者多个Var，依赖有两种
 类型：写依赖和读依赖。依赖引擎为每一个Var都维护一个队列，然后根据op的依赖关系向
 队列中添加ReadDependency和WriteDependency，当各个依赖完成后要更新队列的状态。
