@@ -1,6 +1,6 @@
 # MXNet How To
 
-This page contains guidelines to use and develop mxnets.
+This page contains guidelines to use and develop MXNets.
 
 ## Installation
 - [How to Install MXNet](build.md)
@@ -10,8 +10,8 @@ This page contains guidelines to use and develop mxnets.
 - [Train LSTM with multiple GPUs in model parallelism](model_parallel_lstm.md)
 - [Run MXNet on smart devices](smart_device.md)
 - [Run MXNet on cloud](cloud.md)
-- [Use pretrained models](pretrained.md)
-- [Use mxnet on variable input length/size (bucketing)](bucketing.md)
+- [Use pre-trained models](pretrained.md)
+- [Use MXNet on variable input length/size (bucketing)](bucketing.md)
 - [Improve performance tips](perf.md)
 
 ## Develop and Hack MXNet

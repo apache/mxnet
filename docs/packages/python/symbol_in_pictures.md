@@ -15,7 +15,7 @@ graph that describes what computation is needed. The following picture shows how
 
 Configure Neural Nets
 ---------------------
-Besides fine-grained operations, mxnet also provide a way to perform big operations that is analogous to layers in neural nets.
+Besides fine-grained operations, MXNet also provide a way to perform big operations that is analogous to layers in neural nets.
 We can use these operators to describe a neural net configuration.
 
 ![Net Compose](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/compose_net.png)

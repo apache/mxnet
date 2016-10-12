@@ -3,8 +3,8 @@ Classify Real-World Images with Pre-trained Model
 MXNet is a flexible and efficient deep learning framework. One of the cool thing that a deep learning
 algorithm can do is to classify real world images.
 
-In this example we will show how to use a pretrained Inception-BatchNorm Network to predict the class of
-real world image. The network architecture is decribed in [1].
+In this example we will show how to use a pre-trained Inception-BatchNorm Network to predict the class of
+real world image. The network architecture is described in [1].
 
 The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.dmlc.ml/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
@@ -15,7 +15,7 @@ This tutorial is written in Rmarkdown.
 - You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/classifyRealImageWithPretrainedModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
 
-Pacakge Loading
+Package Loading
 ---------------
 To get started, we load the mxnet package by require mxnet.
 
@@ -28,7 +28,7 @@ require(mxnet)
 ## Loading required package: methods
 ```
 
-In this example, we also need the imager package to load and preprocess the images in R.
+In this example, we also need the imager package to load and pre-process the images in R.
 
 
 ```r
@@ -66,7 +66,7 @@ require(imager)
 ##     save.image
 ```
 
-Load the Pretrained Model
+Load the Pre-trained Model
 -------------------------
 Make sure you unzip the pre-trained model in current folder. And we can use the model
 loading function to load the model into R.
@@ -83,7 +83,7 @@ We also need to load in the mean image, which is used for preprocessing using ``
 mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
 ```
 
-Load and Preprocess the Image
+Load and Pre-process the Image
 -----------------------------
 Now we are ready to classify a real image. In this example, we simply take the parrots image
 from imager package. But you can always change it to other images.
@@ -100,8 +100,8 @@ plot(im)
 
 Before feeding the image to the deep net, we need to do some preprocessing
 to make the image fit the input requirement of deepnet. The preprocessing
-include cropping, and substraction of the mean.
-Because mxnet is deeply integerated with R, we can do all the processing in R function.
+include cropping, and subtraction of the mean.
+Because MXNet is deeply integrated with R, we can do all the processing in R function.
 
 The preprocessing function:
 

@@ -324,16 +324,16 @@ which provides a detailed explanation of concepts in pictures.
 
 ### How Efficient is Symbolic API
 
-In short, they design to be very efficienct in both memory and runtime.
+In short, they design to be very efficient in both memory and runtime.
 
 The major reason for us to introduce Symbolic API, is to bring the efficient C++
-operations in powerful toolkits such as cxxnet and caffe together with the
+operations in powerful tool-kits such as CXXNet and Caffe together with the
 flexible dynamic NArray operations. All the memory and computation resources are
 allocated statically during Bind, to maximize the runtime performance and memory
 utilization.
 
-The coarse grained operators are equivalent to cxxnet layers, which are
+The coarse grained operators are equivalent to 	CXXNet layers, which are
 extremely efficient.  We also provide fine grained operators for more flexible
-composition. Because we are also doing more inplace memory allocation, mxnet can
-be ***more memory efficient*** than cxxnet, and gets to same runtime, with
-greater flexiblity.
+composition. Because we are also doing more in-place memory allocation, MXNet can
+be ***more memory efficient*** than CXXNet, and gets to same runtime, with
+greater flexibility.

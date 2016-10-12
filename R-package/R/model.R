@@ -352,6 +352,8 @@ mx.model.select.layout.predict <- function(X, model) {
 #'     This is only used when X is R array.
 #' @param ctx mx.context or list of mx.context, optional
 #'     The devices used to perform training.
+#' @param begin.round integer (default=1)
+#'     The initial iteration over the training data to train the model.
 #' @param num.round integer (default=10)
 #'     The number of iterations over training data to train the model.
 #' @param optimizer string, default="sgd"
@@ -387,7 +389,7 @@ mx.model.select.layout.predict <- function(X, model) {
 #' @export
 
 mx.model.FeedForward.create <-
-function(symbol, X, y=NULL, ctx=NULL,
+function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
          num.round=10, optimizer="sgd",
          initializer=mx.init.uniform(0.01),
          eval.data=NULL, eval.metric=NULL,
@@ -444,7 +446,7 @@ function(symbol, X, y=NULL, ctx=NULL,
   kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), verbose=verbose)
   model <- mx.model.train(symbol, ctx, input.shape,
                           params$arg.params, params$aux.params,
-                          1, num.round, optimizer=optimizer,
+                          begin.round, num.round, optimizer=optimizer,
                           train.data=X, eval.data=eval.data,
                           metric=eval.metric,
                           epoch.end.callback=epoch.end.callback,
