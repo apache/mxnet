@@ -64,6 +64,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Matrix decomposition (SVD) with MXNet](http://www.jianshu.com/p/ebf7bf53ed3e) by xlvector in Chinese. Github [link](https://github.com/xlvector/mxnet/blob/svd/example/svd/svd.py)
 * [MultiGPU enabled image generative models (GAN and DCGAN)](https://github.com/tqchen/mxnet-gan) by [Tianqi Chen](https://github.com/tqchen)
 * [Baidu Warp CTC with Mxnet](https://github.com/dmlc/mxnet/tree/master/example/warpctc) by xlvector
+* [Deep reinforcement learning for playing flappybird by mxnet](https://github.com/li-haoran/DRL-FlappyBird) by LIHaoran
 
 ###<a name="ipython-notebooks"></a>IPython Notebooks
 -----------------
