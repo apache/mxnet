@@ -32,11 +32,11 @@ The following documents are recommended:
 
 class SymbolDoc(object):
     """The base class for attaching doc to operators."""
-    
+
     @staticmethod
     def get_output_shape(sym, **input_shapes):
         """Get user friendly information of the output shapes."""
-        s_inputs, s_outputs, s_aux = sym.infer_shape(**input_shapes)
+        _, s_outputs, _ = sym.infer_shape(**input_shapes)
         return dict(zip(sym.list_outputs(), s_outputs))
 
 

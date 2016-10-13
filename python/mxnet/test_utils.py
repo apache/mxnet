@@ -1,33 +1,33 @@
 # coding: utf-8
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long
+# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
 from __future__ import absolute_import, print_function, division
 import time
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-_rng = np.random.RandomState(1234)
 
 from .context import cpu, gpu
 from .ndarray import array
 
+_rng = np.random.RandomState(1234)
 
 def default_context():
     """Get default context for regression test."""
-    # TODO: get context from environment variable to support
+    # _TODO: get context from environment variable to support
     # testing with GPUs
     return cpu()
 
 
 def default_dtype():
     """Get default data type for regression test."""
-    # TODO: get default dtype from environment variable
+    # _TODO: get default dtype from environment variable
     return np.float32
 
 
 def default_numerical_threshold():
     """Get default numerical threshold for regression test."""
-    # TODO: get from env variable, different threshold might
+    # _TODO: get from env variable, different threshold might
     # be needed for different device and dtype
     return 1e-6
 
@@ -106,6 +106,24 @@ def almost_equal(a, b, threshold=None):
 
 
 def simple_forward(sym, ctx=None, **inputs):
+    """A simple forward function for a symbol.
+
+    Primarily used in doctest to conveniently test the function
+    of a symbol. Takes numpy array as inputs and outputs are
+    also converted to numpy arrays.
+
+    Parameters
+    ----------
+    ctx : Context
+        If None, will take the default context.
+    inputs : keyword arguments
+        Mapping each input name to a numpy array.
+
+    Returns
+    -------
+    The result as a numpy array. Multiple results will
+    be returned as a list of numpy arrays.
+    """
     ctx = ctx or default_context()
     inputs = {k: array(v) for k, v in inputs.iteritems()}
     exe = sym.bind(ctx, args=inputs)

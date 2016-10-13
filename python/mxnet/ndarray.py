@@ -96,9 +96,8 @@ class NDArray(object):
 
     def __repr__(self):
         shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '<%s %s @%s>' % (
-                self.__class__.__name__,
-                shape_info, self.context)
+        return '<%s %s @%s>' % (self.__class__.__name__,
+                                shape_info, self.context)
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))

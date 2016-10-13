@@ -37,9 +37,8 @@ class Symbol(object):
 
     def __repr__(self):
         """Get a string representation of the symbol."""
-        return '<%s %s>' % (
-                self.__class__.__name__,
-                self.name)
+        return '<%s %s>' % (self.__class__.__name__,
+                            self.name)
 
     def __add__(self, other):
         if isinstance(other, Symbol):
