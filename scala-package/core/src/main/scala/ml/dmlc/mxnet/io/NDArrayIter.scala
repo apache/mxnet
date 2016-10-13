@@ -66,8 +66,8 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
 
   private val (_provideData: ListMap[String, Shape],
                _provideLabel: ListMap[String, Shape]) = {
-    val pData = initData.map(getShape).toMap
-    val pLabel = initLabel.map(getShape).toMap
+    val pData = ListMap.empty[String, Shape] ++ initData.map(getShape)
+    val pLabel = ListMap.empty[String, Shape] ++ initLabel.map(getShape)
     (pData, pLabel)
   }
 
