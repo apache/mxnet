@@ -9,10 +9,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(softmax_cross_entropy)
-.set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyForward<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxCrossEntropyForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_softmax_cross_entropy)
-.set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyBackward<cpu>);
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxCrossEntropyBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
