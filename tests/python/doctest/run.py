@@ -27,7 +27,7 @@ def import_into(globs, module, names=None, error_on_overwrite=True):
 
 
 def test_symbols():
-    globs = {'mxnet': mxnet}
+    globs = {'mxnet': mxnet, 'test_utils': mxnet.test_utils}
 
     # make sure all the operators are available
     import_into(globs, mxnet.symbol)

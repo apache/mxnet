@@ -1,9 +1,34 @@
 # coding: utf-8
-"""Extra symbol documents"""
+"""Extra symbol documents
 
-import numpy
-from .context import cpu, gpu
-from .ndarray import array
+Guidelines
+----------
+
+To add extra doc to the operator `XXX`, write a class `XXXDoc`, deriving
+from the base class `SymbolDoc`, and put the extra doc as the docstring
+of `XXXDoc`.
+
+The document added here should be Python-specific. Documents that are useful
+for all language bindings should be added to the C++ side where the operator
+is defined / registered.
+
+The code snippet in the docstring will be run using `doctest`. During running,
+the environment will have access to
+
+- all the global names in this file (e.g. `SymbolDoc`)
+- all the operators (e.g. `FullyConnected`)
+- the name `test_utils` for `mxnet.test_utils` (e.g. `test_utils.reldiff`)
+- the name `mxnet` (e.g. `mxnet.nd.zeros`)
+
+The following documents are recommended:
+
+- *Examples*: simple and short code snippet showing how to use this operator.
+  It should show typical calling examples and behaviors (e.g. maps an input
+  of what shape to an output of what shape).
+- *Regression Test*: longer test code for the operators. We normally do not
+  expect the users to read those, but they will be executed by `doctest` to
+  ensure the behavior of each operator does not change unintentionally.
+"""
 
 class SymbolDoc(object):
     """The base class for attaching doc to operators."""
@@ -13,48 +38,6 @@ class SymbolDoc(object):
         """Get user friendly information of the output shapes."""
         s_inputs, s_outputs, s_aux = sym.infer_shape(**input_shapes)
         return dict(zip(sym.list_outputs(), s_outputs))
-
-    @staticmethod
-    def default_context():
-        """Get default context for regression test."""
-        # TODO: get context from environment variable to support
-        # testing with GPUs
-        return cpu()
-
-    @staticmethod
-    def default_dtype():
-        """Get default data type for regression test."""
-        # TODO: get default dtype from environment variable
-        return numpy.float32
-
-    @staticmethod
-    def default_numerical_threshold():
-        """Get default numerical threshold for regression test."""
-        # TODO: get from env variable, different threshold might
-        # be needed for different device and dtype
-        return 1e-6
-
-    @staticmethod
-    def random_arrays(*shapes):
-        """Generate some random numpy arrays."""
-        return [numpy.random.randn(*s).astype(SymbolDoc.default_dtype())
-                for s in shapes]
-
-    @staticmethod
-    def almost_equal(a, b, threshold=None):
-        threshold = threshold or SymbolDoc.default_numerical_threshold()
-        return numpy.max(numpy.abs(a-b)) <= threshold
-
-    @staticmethod
-    def simple_forward(sym, ctx=None, **inputs):
-        ctx = ctx or SymbolDoc.default_context()
-        inputs = {k: array(v) for k, v in inputs.iteritems()}
-        exe = sym.bind(ctx, args=inputs)
-        exe.forward()
-        outputs = [x.asnumpy() for x in exe.outputs]
-        if len(outputs) == 1:
-            outputs = outputs[0]
-        return outputs
 
 
 class FullyConnectedDoc(SymbolDoc):
@@ -86,11 +69,12 @@ class FullyConnectedDoc(SymbolDoc):
     Regression Test
     ---------------
     >>> dim_in, dim_out = (3, 4)
-    >>> x, w, b = SymbolDoc.random_arrays((10, dim_in), (dim_out, dim_in), (dim_out,))
+    >>> x, w, b = test_utils.random_arrays((10, dim_in), (dim_out, dim_in), (dim_out,))
     >>> op = FullyConnected(num_hidden=dim_out, name='FC')
-    >>> out = SymbolDoc.simple_forward(op, FC_data=x, FC_weight=w, FC_bias=b)
+    >>> out = test_utils.simple_forward(op, FC_data=x, FC_weight=w, FC_bias=b)
+    >>> # numpy implementation of FullyConnected
     >>> out_np = numpy.dot(x, w.T) + b
-    >>> SymbolDoc.almost_equal(out, out_np)
+    >>> test_utils.almost_equal(out, out_np)
     True
     """
     pass

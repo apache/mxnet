@@ -8,6 +8,35 @@ import numpy.testing as npt
 import mxnet as mx
 _rng = np.random.RandomState(1234)
 
+from .context import cpu, gpu
+from .ndarray import array
+
+
+def default_context():
+    """Get default context for regression test."""
+    # TODO: get context from environment variable to support
+    # testing with GPUs
+    return cpu()
+
+
+def default_dtype():
+    """Get default data type for regression test."""
+    # TODO: get default dtype from environment variable
+    return np.float32
+
+
+def default_numerical_threshold():
+    """Get default numerical threshold for regression test."""
+    # TODO: get from env variable, different threshold might
+    # be needed for different device and dtype
+    return 1e-6
+
+
+def random_arrays(*shapes):
+    """Generate some random numpy arrays."""
+    return [np.random.randn(*s).astype(default_dtype())
+            for s in shapes]
+
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     """Compatible reduce for old version numpy
@@ -68,6 +97,23 @@ def reldiff(a, b):
         return 0
     ret = diff / norm
     return ret
+
+
+def almost_equal(a, b, threshold=None):
+    """Test if two numpy arrays are almost equal."""
+    threshold = threshold or default_numerical_threshold()
+    return reldiff(a, b) <= threshold
+
+
+def simple_forward(sym, ctx=None, **inputs):
+    ctx = ctx or default_context()
+    inputs = {k: array(v) for k, v in inputs.iteritems()}
+    exe = sym.bind(ctx, args=inputs)
+    exe.forward()
+    outputs = [x.asnumpy() for x in exe.outputs]
+    if len(outputs) == 1:
+        outputs = outputs[0]
+    return outputs
 
 
 def _parse_location(sym, location, ctx):
@@ -215,6 +261,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
         # otherwise too much precision is lost in numerical gradient
         plain = _rng.rand(*shape) + 0.1
         return plain
+
     location = _parse_location(sym=sym, location=location, ctx=ctx)
     location_npy = {k:v.asnumpy() for k, v in location.items()}
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
