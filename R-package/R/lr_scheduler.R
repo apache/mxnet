@@ -8,8 +8,8 @@ FactorScheduler <- function(step, factor_val, stop_factor_lr=1e-8, verbose=TRUE)
     count      <- optimizerEnv$count
     lr         <- optimizerEnv$lr
     if (num_update > count + step){
-      count = count + step
-      lr = lr * factor_val
+      count <- count + step
+      lr    <- lr * factor_val
       if(lr < stop_factor_lr){
         lr <- stop_factor_lr
         if(verbose) cat(paste0("Update[", num_update, 
@@ -19,7 +19,7 @@ FactorScheduler <- function(step, factor_val, stop_factor_lr=1e-8, verbose=TRUE)
         if(verbose) cat(paste0("Update[", num_update, 
                                "]: learning rate is changed to ", lr, "\n"))
       }
-      optimizerEnv$lr <- lr
+      optimizerEnv$lr    <- lr
       optimizerEnv$count <- count      
       
     }
