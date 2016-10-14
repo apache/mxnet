@@ -199,7 +199,8 @@ class Module(BaseModule):
         self._exec_group.set_params(self._arg_params, self._aux_params)
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None,
+             layout_mapper=None):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -222,6 +223,9 @@ class Module(BaseModule):
             Default is `None`. This is used in bucketing. When not `None`, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+        layout_mapper: LayoutMapper
+            Default None. A helper that decide the layout of data, label and outputs
+            (time-major? batch-major?).
         """
         # force rebinding is typically used when one want to switch from
         # training to prediction phase.
@@ -259,7 +263,8 @@ class Module(BaseModule):
                                                      label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
-                                                     fixed_param_names=self._fixed_param_names)
+                                                     fixed_param_names=self._fixed_param_names,
+                                                     layout_mapper=layout_mapper)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
