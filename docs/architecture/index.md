@@ -12,7 +12,7 @@ in terms of abstraction, optimization and trade-off.
 * [Dependency Engine for Deep Learning](note_engine.md)
 * [Squeeze the Memory Consumption of Deep Learning](note_memory.md)
 * [Efficient Data Loading Module for Deep Learning](note_data_loading.md)
-* [Survay of RNN Interface](rnn_interface.md)
+* [Survey of RNN Interface](rnn_interface.md)
 
 The next parts will be specific to MXNet
 
