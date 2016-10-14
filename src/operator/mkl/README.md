@@ -24,9 +24,14 @@ Download MKL:
 
 ## Build/Install MxNet
 ```
-  1. Navigate to directory you installed MKL into (default is /opt/intel/compilers_and_libraries_2017.0.098/linux/mkl/
-  2. Run 'source bin/mklvars.sh intel64'
-  3. Navigate to your MxNet directory
+  1. Navigate to directory you installed MKL Bin into (default is /opt/intel/compilers_and_libraries_2017.0.098/linux/mkl/bin
+  2. Fix MKL 2017.0.098 script bug manually
+     2.1 mv mklvars.sh mklvars.sh.bak
+	 2.2 cp <MxNet Dir>/src/operator/mkl/mklvars.sh .
+	 2.3 edit mklvars.sh, replace
+		CPRO_PATH=<INSTALLDIR> =>  CPRO_PATH=/opt/intel/compilers_and_libraries_2017.0.098/linux
+  3. Run 'source mklvars.sh intel64'
+  4. Navigate to your MxNet directory
   5. Enable USE_MKL2017=1 in make/config.mk
   7. Run 'make -jX'
   8. Navigate into the python directory
