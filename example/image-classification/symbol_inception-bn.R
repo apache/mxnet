@@ -1,12 +1,16 @@
 library(mxnet)
 
+eps = 1e-10 + 1e-5
+bn_mom = 0.9
+fix_gamma = FALSE
+
 ConvFactory <- function(data, num_filter, kernel, stride = c(1, 1),
                         pad = c(0, 0), name = '', suffix = '') {
     conv <- mx.symbol.Convolution(data = data, num_filter = num_filter,
                                   kernel = kernel, stride = stride, pad = pad,
                                   name = paste('conv_', name, suffix, sep = ''))
     
-    bn <- mx.symbol.BatchNorm(data = conv, name = paste('bn_', name, suffix, sep = ''))
+    bn <- mx.symbol.BatchNorm(data = conv, eps = eps, momentum = bn_mom, fix.gamma = fix_gamma, name = paste('bn_', name, suffix, sep = ''))
     act <- mx.symbol.Activation(data = bn, act_type = 'relu', name = paste('relu_', name, suffix, sep = ''))
     return(act)
 }
@@ -77,16 +81,16 @@ get_symbol <- function(num_classes = 1000) {
   data = mx.symbol.Variable(name = "data")
   # stage 1
   conv1 = ConvFactory(data = data, num_filter = 64, kernel = c(7, 7),
-                      stride = c(2, 2), pad = c(3, 3), name = 'conv1')
+                      stride = c(2, 2), pad = c(3, 3), name = '1')
   pool1 = mx.symbol.Pooling(data = conv1, kernel = c(3, 3), stride = c(2, 2),
-                            name = 'pool1', pool_type = 'max')
+                            name = 'pool_1', pool_type = 'max')
   # stage 2
   conv2red = ConvFactory(data = pool1, num_filter = 64, kernel = c(1, 1),
-                         stride = c(1, 1), name = 'conv2red')
+                         stride = c(1, 1), name = '2_red')
   conv2 = ConvFactory(data = conv2red, num_filter = 192, kernel = c(3, 3),
-                      stride = c(1, 1), pad = c(1, 1), name = 'conv2')
+                      stride = c(1, 1), pad = c(1, 1), name = '2')
   pool2 = mx.symbol.Pooling(data = conv2, kernel = c(3, 3), stride = c(2, 2),
-                            name = 'pool2', pool_type = 'max')
+                            name = 'pool_2', pool_type = 'max')
   # stage 2
   in3a = InceptionFactoryA(pool2, 64, 64, 64, 64, 96, "avg", 32, '3a')
   in3b = InceptionFactoryA(in3a, 64, 64, 96, 64, 96, "avg", 64, '3b')
