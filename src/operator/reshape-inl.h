@@ -110,6 +110,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   TShape target_shape;
   bool keep_highest;
   ShapeInfo shape;
+  bool reverse;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
     int tmp[] = {0, 0};
     DMLC_DECLARE_FIELD(target_shape)
@@ -125,6 +126,12 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     .describe("Target new shape. If the dim is same, set it to 0. If the dim is set "
               "to be -1, it will be inferred from the rest of dims. One and only one dim "
               "can be -1");
+    DMLC_DECLARE_FIELD(reverse)
+      .set_default(false)
+      .describe("Whether to match the shapes from the backward. If reverse is true, "
+      "0 values in the `shape` argument will be searched from the backward. E.g the "
+      "original shape is (10, 5, 4) and the shape argument is (-1, 0). If reverse is true, "
+      "the new shape should be (50, 4). Otherwise it will be (40, 5).");
   }
 };
 
@@ -203,17 +210,26 @@ class ReshapeProp : public OperatorProperty {
     const TShape &dshape = in_shape->at(reshape_enum::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.shape.ndim() != 0) {
+      std::vector<int> dshape_vec;
+      std::vector<int> param_shape_vec(param_.shape.info);
+      for (index_t i = 0; i < dshape.ndim(); ++i) {
+        dshape_vec.push_back(dshape[i]);
+      }
       std::vector<int> tmp;
       int src_idx = 0;
       int neg_idx = -1;
       size_t new_size = dshape.Size();
       bool keep = true;
-      for (index_t i = 0; i < param_.shape.info.size(); ++i) {
-        int proposed_dim = param_.shape.info[i];
+      if (param_.reverse) {
+        std::reverse(dshape_vec.begin(), dshape_vec.end());
+        std::reverse(param_shape_vec.begin(), param_shape_vec.end());
+      }
+      for (index_t i = 0; i < param_shape_vec.size(); ++i) {
+        int proposed_dim = param_shape_vec[i];
         if (proposed_dim == 0) {
           // keep same
           CHECK_EQ(keep, true) << "After set manual dim, can't keep original dim";
-          tmp.push_back(dshape[src_idx++]);
+          tmp.push_back(dshape_vec[src_idx++]);
           new_size /= tmp.back();
         } else if (proposed_dim < 0) {
           // infer
@@ -227,7 +243,7 @@ class ReshapeProp : public OperatorProperty {
           tmp.push_back(proposed_dim);
           new_size /= proposed_dim;
           // after set manual shape, can't keep same
-          if (param_.shape.info.size() != dshape.ndim()) {
+          if (param_shape_vec.size() != dshape_vec.size()) {
             keep = false;
           } else {
             src_idx++;
@@ -237,6 +253,11 @@ class ReshapeProp : public OperatorProperty {
 
       if (neg_idx >= 0) {
         tmp[neg_idx] = new_size;
+      }
+      if (param_.reverse) {
+        std::reverse(param_shape_vec.begin(), param_shape_vec.end());
+        std::reverse(dshape_vec.begin(), dshape_vec.end());
+        std::reverse(tmp.begin(), tmp.end());
       }
       TShape oshape(tmp.begin(), tmp.end());
       CHECK_EQ(oshape.Size(), dshape.Size())

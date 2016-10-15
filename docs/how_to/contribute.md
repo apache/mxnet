@@ -30,7 +30,7 @@ git rebase upstream/master
   it might be good to merge them together(use git rebase then squash) into more meaningful groups.
 * Send the pull request!
   - Fix the problems reported by automatic checks
-  - If you are contributing a new module, consider add a testcase in [tests](../tests)
+  - If you are contributing a new module, consider add a test case in [tests](../tests)
 
 Git Workflow Howtos
 -------------------
@@ -86,14 +86,14 @@ Documents
 
 Testcases
 ---------
-* All the testcases are in [tests](../tests)
-* We use python nose for python test cases and gtest for c++ unittests.
+* All the test cases are in [tests](../tests)
+* We use python nose for python test cases and gtest for c++ unit tests.
 
 Examples
 --------
 * Usecases and examples will be in [example](../example)
-* We are super excited to hear about your story, if you have blogposts,
-  tutorials code solutions using mxnet, please tell us and we will add
+* We are super excited to hear about your story, if you have blog posts,
+  tutorials code solutions using MXNet, please tell us and we will add
   a link in the example pages.
 
 Core Library
@@ -121,7 +121,7 @@ make rcpplint
 - When needed, you can disable the linter warning of certain line with ```// NOLINT(*)``` comments.
 
 ### Auto Generated API
-- Many mxnet API are exposed from Rcpp side in a dynamic way.
+- Many MXNet API are exposed from Rcpp side in a dynamic way.
 - The [mx_generated.R](R/mx_generated.R) is auto generated API and documents for these functions.
 - You can remake the file by typing the following command at root folder
 ```bash
@@ -153,7 +153,7 @@ make the-markdown-to-make.md
 - Add the generated figure to the ```dmlc/web-data``` repo.
   - If you already cloned the repo to doc, this means a ```git add```
 - Create PR for both the markdown  and ```dmlc/web-data```
-- You can also build the document locally by typing the followig command at ```doc```
+- You can also build the document locally by typing the following command at ```doc```
 ```bash
 make html
 ```

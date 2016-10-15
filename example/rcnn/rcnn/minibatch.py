@@ -33,7 +33,7 @@ from helper.processing.bbox_transform import bbox_transform
 from rcnn.config import config
 
 
-def get_minibatch(roidb, num_classes, mode='test'):
+def get_minibatch(roidb, num_classes, mode='test', need_mean=True):
     """
     return minibatch of images in roidb
     :param roidb: a list of dict, whose length controls batch size
@@ -44,7 +44,7 @@ def get_minibatch(roidb, num_classes, mode='test'):
     # build im_array: [num_images, c, h, w]
     num_images = len(roidb)
     random_scale_indexes = npr.randint(0, high=len(config.SCALES), size=num_images)
-    im_array, im_scales = get_image_array(roidb, config.SCALES, random_scale_indexes)
+    im_array, im_scales = get_image_array(roidb, config.SCALES, random_scale_indexes, need_mean=need_mean)
 
     if mode == 'train':
         cfg_key = 'TRAIN'
@@ -124,7 +124,7 @@ def get_minibatch(roidb, num_classes, mode='test'):
     return data, label
 
 
-def get_image_array(roidb, scales, scale_indexes):
+def get_image_array(roidb, scales, scale_indexes, need_mean=True):
     """
     build image array from specific roidb
     :param roidb: images to be processed
@@ -141,7 +141,7 @@ def get_image_array(roidb, scales, scale_indexes):
             im = im[:, ::-1, :]
         target_size = scales[scale_indexes[i]]
         im, im_scale = image_processing.resize(im, target_size, config.MAX_SIZE)
-        im_tensor = image_processing.transform(im, config.PIXEL_MEANS)
+        im_tensor = image_processing.transform(im, config.PIXEL_MEANS, need_mean=need_mean)
         processed_ims.append(im_tensor)
         im_scales.append(im_scale)
     array = image_processing.tensor_vstack(processed_ims)
@@ -347,9 +347,9 @@ def assign_anchor(feat_shape, gt_boxes, im_info, feat_stride=16,
         positive_weights = np.ones((1, 4)) * 1.0 / num_examples
         negative_weights = np.ones((1, 4)) * 1.0 / num_examples
     else:
-        assert ((config.TRAIN.RPN_POSTIVE_WEIGHT > 0) & (config.TRAIN.RPN_POSTIVE_WEIGHT < 1))
-        positive_weights = config.TRAIN.RPN_POSTIVE_WEIGHT / np.sum(labels == 1)
-        negative_weights = (1.0 - config.TRAIN.RPN_POSTIVE_WEIGHT) / np.sum(labels == 1)
+        assert ((config.TRAIN.RPN_POSITIVE_WEIGHT > 0) & (config.TRAIN.RPN_POSITIVE_WEIGHT < 1))
+        positive_weights = config.TRAIN.RPN_POSITIVE_WEIGHT / np.sum(labels == 1)
+        negative_weights = (1.0 - config.TRAIN.RPN_POSITIVE_WEIGHT) / np.sum(labels == 1)
     bbox_outside_weights[labels == 1, :] = positive_weights
     bbox_outside_weights[labels == 0, :] = negative_weights
 
@@ -388,4 +388,8 @@ def assign_anchor(feat_shape, gt_boxes, im_info, feat_stride=16,
              'bbox_target': bbox_targets,
              'bbox_inside_weight': bbox_inside_weights,
              'bbox_outside_weight': bbox_outside_weights}
+
+    if config.END2END == 1:
+        label.update({'gt_boxes': gt_boxes})
+
     return label

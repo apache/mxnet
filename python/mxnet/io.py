@@ -5,6 +5,7 @@
 from __future__ import absolute_import
 from collections import OrderedDict
 
+import re
 import sys
 import ctypes
 import logging
@@ -17,6 +18,68 @@ from .base import check_call, ctypes2docstring
 from .ndarray import NDArray
 from .ndarray import array
 from .ndarray import concatenate
+
+
+class LayoutMapper(object):
+    """A helper class to decide data layouts (which axis is batch_size dimension)."""
+    def get_layout_string(self, name):
+        """Get layout string for the given data name.
+
+        Paramseters
+        -----------
+        name : str
+            The name of a data, label or output tensor.
+
+        Returns
+        -------
+        The layout string. For example "NCHW". Returns None if
+        not known.
+        """
+        raise NotImplementedError()
+
+    def get_batch_axis(self, name):
+        """Get the dimension that corresponds to the batch size.
+
+        Parameters
+        ----------
+        name : str
+            The name of the blob (could be data, label or output names).
+
+        Returns
+        -------
+        An axis indicating the batch_size dimension. When data-parallelism is
+        used, the data will be automatically split and concatenate along the batch_size
+        dimension. Axis can be -1, which means the array thing will be copied for each
+        data-parallelism device.
+        """
+        raise NotImplementedError()
+
+
+class DefaultLayoutMapper(LayoutMapper):
+    """A default data layout mapper.
+
+    It decides the data layout by information encoded in name.
+    If a name contains the string :__layout_XXXXX__, then XXXXX
+    will be parsed as the layout string.
+    """
+    def __init__(self, default_batch_axis=0):
+        super(DefaultLayoutMapper, self).__init__()
+        self._default_batch_axis = default_batch_axis
+
+    LAYOUT_PATTERN = re.compile(r':__layout_([^_*])__')
+    def get_layout_string(self, name):
+        ret = DefaultLayoutMapper.LAYOUT_PATTERN.search(name)
+        if ret is None:
+            return None
+        return ret.group(1)
+
+    def get_batch_axis(self, name):
+        layout = self.get_layout_string(name)
+        if layout is None:
+            return self._default_batch_axis
+        # N indicate batch size. Note when N is not found,
+        # it returns -1, which is what we expect
+        return layout.find('N')
 
 
 class DataBatch(object):
@@ -197,16 +260,8 @@ class PrefetchingIter(DataIter):
         self.n_iter = len(iters)
         assert self.n_iter > 0
         self.iters = iters
-        if rename_data is None:
-            self.provide_data = sum([i.provide_data for i in iters], [])
-        else:
-            self.provide_data = sum([[(r[n], s) for n, s in i.provide_data] \
-                                    for r, i in zip(rename_data, iters)], [])
-        if rename_label is None:
-            self.provide_label = sum([i.provide_label for i in iters], [])
-        else:
-            self.provide_label = sum([[(r[n], s) for n, s in i.provide_label] \
-                                    for r, i in zip(rename_label, iters)], [])
+        self.rename_data = rename_data
+        self.rename_label = rename_label
         self.batch_size = self.provide_data[0][1][0]
         self.data_ready = [threading.Event() for i in range(self.n_iter)]
         self.data_taken = [threading.Event() for i in range(self.n_iter)]
@@ -240,6 +295,24 @@ class PrefetchingIter(DataIter):
         for thread in self.prefetch_threads:
             thread.join()
 
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        if self.rename_data is None:
+            return sum([i.provide_data for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_data] \
+                       for r, i in zip(self.rename_data, self.iters)], [])
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        if self.rename_label is None:
+            return sum([i.provide_label for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_label] \
+                       for r, i in zip(self.rename_label, self.iters)], [])
+
     def reset(self):
         for e in self.data_ready:
             e.wait()
@@ -264,7 +337,9 @@ class PrefetchingIter(DataIter):
             self.current_batch = DataBatch(sum([batch.data for batch in self.next_batch], []),
                                            sum([batch.label for batch in self.next_batch], []),
                                            self.next_batch[0].pad,
-                                           self.next_batch[0].index)
+                                           self.next_batch[0].index,
+                                           provide_data=self.provide_data,
+                                           provide_label=self.provide_label)
             for e in self.data_ready:
                 e.clear()
             for e in self.data_taken:

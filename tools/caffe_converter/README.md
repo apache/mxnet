@@ -35,3 +35,6 @@ For example: `python convert_model.py VGG_ILSVRC_16_layers_deploy.prototxt VGG_I
 * We have verified the results of VGG_16/VGG_19 model and BVLC_googlenet results from Caffe model zoo.
 * The tool only supports single input and single output network.
 * The tool can only work with the L2LayerParameter in Caffe.
+* Caffe uses a convention for multi-strided pooling output shape inconsistent with MXNet
+    * This importer doesn't handle this problem properly yet
+    * And example of this failure is importing bvlc_Googlenet. The user needs to add padding to stride-2 pooling to make this work right now.

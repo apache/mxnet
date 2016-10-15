@@ -762,7 +762,7 @@ class Symbol(object):
 
         Returns
         -------
-        executor : mxnet.Executor
+        executor : Executor
             The generated Executor
 
         Notes
