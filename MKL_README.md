@@ -12,8 +12,14 @@ Download MKL:
 
 ## Build/Install MxNet
   1. Enable USE_MKL2017=1 in make/config.mk
+    1.1 USE_BLAS should be atlas by default
+    1.2 if need USE_BLAS to be mkl, please  Navigate here - https://registrationcenter.intel.com/en/forms/?productid=2558&licensetype=2 to do a full MKL installation
   2. Run 'make -jX'
-    2.1 Makefile will execute "prepare_mkl.sh" to download the mkl automatically
+    2.1 Makefile will execute "prepare_mkl.sh" to download the mkl under root folder.e.g. <MXNET ROOTDIR> /mklml_lnx_2017.0.0.20160801
+    2.2 if download failed because of proxy setting, please do it manually before make
+    2.2.1 wget https://github.com/intel/caffe/releases/download/self_containted_MKLGOLD/mklml_lnx_2017.0.0.20160801.tgz
+    2.2.2 tar zxvf mklml_lnx_2017.0.0.20160801.tgz
+
   3. Navigate into the python directory
   4. Run 'python setup.py install'
 ```
