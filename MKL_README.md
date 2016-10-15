@@ -22,4 +22,7 @@ Download MKL:
 
   3. Navigate into the python directory
   4. Run 'python setup.py install'
+  5. Before excute python scipt, need to set LD_LIBRARY_PATH
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<MXNET ROOTDIR>/mklml_lnx_2017.0.0.20160801/lib
 ```
+
