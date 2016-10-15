@@ -58,6 +58,12 @@ ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
 endif
 
+ifeq ($(USE_MKL2017), 1)
+	CFLAGS += -DMXNET_USE_MKL2017=1
+	CFLAGS += -DUSE_MKL=1
+endif
+
+
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
@@ -93,7 +99,7 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
-SRC = $(wildcard src/*.cc src/*/*.cc)
+SRC = $(wildcard src/*.cc src/*/*.cc src/*/*/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))

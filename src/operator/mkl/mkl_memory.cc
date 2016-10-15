@@ -22,6 +22,7 @@
 #include "../operator_common.h"
 
 #if MXNET_USE_MKL2017 == 1
+#include <mxnet/mkl_memory.h>
 #include "mkl_memory-inl.h"
 
 
@@ -182,99 +183,23 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
 template <typename Dtype>
 Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     Dtype *cpu_ptr, bool set_prv_ptr,
-    std::shared_ptr<MklDnnChunk> dnnChunk,
+    std::shared_ptr<MKLMemHolder> holder,
     MKLMemoryDescriptor<Dtype>* converted_in_fwd) {
   const Dtype* prv_ptr = NULL;
-  if (dnnChunk != NULL) {
-    prv_ptr = static_cast<const Dtype*>(dnnChunk->prv_data());
-  }
+
   if (this->convert_to_int) {
-    int status;
-    void *convert_resources[dnnResourceNumber];
     if (prv_ptr == NULL) {
       if (converted_in_fwd) {
-        // hack for reusing previously done conversion
-        // if(dnnLayoutCompare(converted_in_fwd->layout_int , this->layout_int))
-        if (1) {
           MKL_DLOG(INFO) << "reusing fwd               "
             << converted_in_fwd->name << " == " << this->name;
           return converted_in_fwd->internal_ptr;
-        } else {
-          MKL_DLOG(INFO) << "layout doesn't match      "
-            << converted_in_fwd->name << " != " << this->name;
-        }
       }
       MKL_DLOG(INFO) << "convert      => priv                                => "
         << this->name;
       this->allocate();
       this->convert_to_prv(cpu_ptr);
-      if (set_prv_ptr) {
-        dnnChunk->set_prv_descriptor(this->get_shared_ptr(), true);
-      }
+
       return this->internal_ptr;
-    } else {
-      // This section helps if padding needs to be added (or removed...)
-      // TODO(intel): consider removing when no longer needed.
-      std::shared_ptr<PrvMemDescr> prv_mem_descriptor = dnnChunk->get_prv_descriptor();
-      CHECK_EQ(prv_mem_descriptor->get_descr_type(),
-          PrvMemDescr::PRV_DESCR_MKL2017);
-      std::shared_ptr<MKLMemoryDescriptor<Dtype> > current_descr =
-        std::static_pointer_cast<MKLMemoryDescriptor<Dtype> >
-        (prv_mem_descriptor);
-      if (!dnnLayoutCompare<Dtype>(current_descr->layout_int,
-            this->layout_int)) {
-        if (converted_in_fwd) {
-          // hack for reusing previously done conversion
-          // if(dnnLayoutCompare(converted_in_fwd->layout_int,this->layout_int))
-          if (1) {
-            MKL_DLOG(INFO) << "reusing fwd               "
-              << converted_in_fwd->name << " == " << this->name;
-            return converted_in_fwd->internal_ptr;
-          } else {
-            MKL_DLOG(INFO) << "layout doesn't match      "
-              << converted_in_fwd->name << " != " << this->name;
-          }
-        }
-        MKL_DLOG(INFO) << "convert priv => priv      "
-          << current_descr->name << " => " << this->name;
-        if (this->convert_prv2prv) {
-          CHECK_EQ(dnnLayoutCompare<Dtype>(
-                this->descr_prv2prv_conversion->layout_int,
-                this->layout_int), 0);
-          status = 0;
-        } else {
-          status = dnnConversionCreate<Dtype>(&this->convert_prv2prv,
-              current_descr->layout_int, this->layout_int);
-          if (status == 0)
-            this->descr_prv2prv_conversion = current_descr;
-        }
-        if (status != 0) {
-          // TODO(intel): Very weird that we end up here for conv1. No idea why....
-          MKL_DLOG(INFO) << "!!!! Failed creation convert_prv2prv with status "
-            << status << "\n";
-          this->allocate();
-          convert_resources[dnnResourceFrom] = cpu_ptr;
-          convert_resources[dnnResourceTo] =
-            reinterpret_cast<void*>(this->internal_ptr);
-          status = dnnExecute<Dtype>(this->convert_to_int, convert_resources);
-          CHECK_EQ(status, 0) << "Conversion failed with status " << status;
-        } else {
-          this->allocate();
-          convert_resources[dnnResourceFrom] =
-            const_cast<void*>(static_cast<const void*>(prv_ptr));
-          convert_resources[dnnResourceTo] =
-            reinterpret_cast<void*>(this->internal_ptr);
-          status = dnnExecute<Dtype>(this->convert_prv2prv, convert_resources);
-          CHECK_EQ(status, 0) << "Conversion failed with status " << status;
-        }
-        if (set_prv_ptr) {
-          dnnChunk->set_prv_descriptor(this->get_shared_ptr(), true);
-        }
-        return this->internal_ptr;
-      } else if (current_descr.get() != this) {
-        MKL_DLOG(INFO) << "layout OK                 "
-          << current_descr->name << " == " << this->name;
-      }
     }
     return const_cast<Dtype *>(prv_ptr);
   }

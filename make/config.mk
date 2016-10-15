@@ -59,6 +59,9 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
+# whether use MKL2017 library
+USE_MKL2017 = 1
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
@@ -66,7 +69,7 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
 USE_BLAS = apple
 else
-USE_BLAS = atlas
+USE_BLAS = mkl
 endif
 
 # add path to intel library, you may need it for MKL, if you did not add the path

@@ -23,7 +23,6 @@
 #define MXNET_OPERATOR_MKL_MKL_MEMORY_INL_H_
 
 
-#include <mxnet/mkl_memory.h>
 #include <string>
 #include <vector>
 #include <memory>
@@ -109,7 +108,7 @@ struct MKLMemoryDescriptor : MKLMemoryDescriptorBase<DType> {
   // The last get_converted_prv() argument is a hack for reusing
   // in backward a conversion done already in the forward direction.
   DType* get_converted_prv(DType *data_ptr, bool set_prv_ptr,
-              std::shared_ptr<MklDnnChunk> dnnChunk = NULL,
+              std::shared_ptr<MKLMemHolder> holder = NULL,
               MKLMemoryDescriptor<DType>* converted_in_fwd = NULL);
 
   MKLMemoryDescriptor() {}
