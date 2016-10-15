@@ -81,6 +81,16 @@ USE_STATIC_MKL = NONE
 endif
 
 #----------------------------
+# Settings for power and arm arch
+#----------------------------
+ARCH := $(shell uname -a)
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le))
+	USE_SSE=0
+else
+	USE_SSE=1
+endif
+
+#----------------------------
 # distributed computing
 #----------------------------
 

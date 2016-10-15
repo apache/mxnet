@@ -43,6 +43,7 @@ config.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
 
 # used for end2end training
 # RPN proposal
+config.END2END = 0
 config.TRAIN.RPN_NMS_THRESH = 0.7
 config.TRAIN.RPN_PRE_NMS_TOP_N = 12000
 config.TRAIN.RPN_POST_NMS_TOP_N = 6000
@@ -51,7 +52,9 @@ config.TRAIN.RPN_MIN_SIZE = 16
 config.TRAIN.BBOX_NORMALIZATION_PRECOMPUTED = False
 config.TRAIN.BBOX_MEANS = (0.0, 0.0, 0.0, 0.0)
 config.TRAIN.BBOX_STDS = (0.1, 0.1, 0.2, 0.2)
-
+config.TRAIN.BBOX_MEANS_INV = (0.0, 0.0, 0.0, 0.0)
+config.TRAIN.BBOX_STDS_INV = (10.0, 10.0, 5.0, 5.0)
+config.TRAIN.IMS_PER_BATCH = 1
 config.TEST = edict()
 
 # R-CNN testing

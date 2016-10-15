@@ -50,8 +50,7 @@ import importlib
 net = importlib.import_module('symbol_' + args.network).get_symbol(10)
 
 # data
-def get_iterator(args, kv):
-    data_shape = (3, 28, 28)
+def get_iterator(args, kv, data_shape=(3, 28, 28)):
     if '://' not in args.data_dir:
         _download(args.data_dir)
 
@@ -77,5 +76,6 @@ def get_iterator(args, kv):
 
     return (train, val)
 
-# train
-train_model.fit(args, net, get_iterator)
+if __name__ == '__main__':
+    # train
+    train_model.fit(args, net, get_iterator)

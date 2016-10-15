@@ -27,7 +27,8 @@ namespace kvstore {
  */
 class KVStoreDist : public KVStoreLocal {
  public:
-  KVStoreDist() : ps_worker_(nullptr), server_(nullptr) {
+  explicit KVStoreDist(bool use_device_comm)
+      : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
       ps::StartAsync("mxnet\0");
@@ -36,6 +37,7 @@ class KVStoreDist : public KVStoreLocal {
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
     }
+    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
   }
 
   virtual ~KVStoreDist() {
@@ -56,10 +58,15 @@ class KVStoreDist : public KVStoreLocal {
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
     CheckUnique(keys);
+    for (size_t i = 0; i < keys.size(); ++i) {
+      comm_->Init(keys[i], values[i].shape());
+    }
     if (get_rank() == 0) {
-      Push(keys, values, 0);
+      Push_(keys, values, 0, false);
       // wait until the push is finished
-      Wait(keys);
+      for (const auto& v : values) {
+        v.WaitToWrite();
+      }
     } else {
       // do nothing
     }
@@ -71,37 +78,7 @@ class KVStoreDist : public KVStoreLocal {
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
             int priority) override {
-    // first aggregate the values over keys
-    std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray> > grouped_vals;
-    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
-
-    for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      // merge over devcies
-      int key = uniq_keys[i];
-      const NDArray& merged = MergePushValue(key, grouped_vals[i], priority);
-
-      // push to servers
-      auto push_to_servers =
-          [this, key, merged](RunContext rctx, Engine::CallbackOnComplete cb) {
-         // convert to ps keys
-        size_t size = merged.shape().Size();
-        PSKV& pskv = EncodeKey(key, size);
-
-        // do push
-        real_t* data = static_cast<real_t*>(merged.data().dptr_);
-        // false means no delete
-        ps::SArray<real_t> vals(data, size, false);
-        CHECK_NOTNULL(ps_worker_)->ZPush(
-        pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
-      };
-      Engine::Get()->PushAsync(
-          push_to_servers,
-          pinned_ctx_,
-          {merged.var()},
-          {},
-          FnProperty::kNormal, priority);
-    }
+    Push_(keys, values, priority, true);
   }
 
   void Pull(const std::vector<int>& keys,
@@ -113,16 +90,15 @@ class KVStoreDist : public KVStoreLocal {
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      const auto& vals = grouped_vals[i];
-
-      // first pull to a buffer. we reuse the merge buf so that all pushes and
-      // pulls on the same key on the local machine are always sequentials
-      auto& buf = merge_buf_[key].merged;
-      if (buf.is_none()) {
-        buf = NDArray(vals[0]->shape(), pinned_ctx_);
+      // use the same array for merging to guarantee that pull always happens
+      // after the previous push on this key
+      auto& recv_buf = comm_buf_[key];
+      if (recv_buf.is_none()) {
+        // it may happen for the first time a no-rank-0 worker pull the weight.
+        recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_);
       }
-      real_t* data = static_cast<real_t*>(buf.data().dptr_);
-      size_t size = buf.shape().Size();
+      real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
+      size_t size = recv_buf.shape().Size();
 
       auto pull_from_servers = [this, key, data, size](
           RunContext rctx, Engine::CallbackOnComplete cb) {
@@ -139,13 +115,10 @@ class KVStoreDist : public KVStoreLocal {
           pull_from_servers,
           pinned_ctx_,
           {},
-          {buf.var()},
+          {recv_buf.var()},
           FnProperty::kNormal, priority);
 
-      // copy data from buffer to vals
-      for (auto v : vals) {
-        CopyFromTo(buf, v);
-      }
+      comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
     }
   }
 
@@ -205,20 +178,50 @@ class KVStoreDist : public KVStoreLocal {
   }
 
  private:
-  /**
-   * \brief Wait until all pushes and pulls issued on each key have been
-   * finished
-   *
-   * \param keys a list of keys
-   */
-  void Wait(const std::vector<int>& keys) {
-    for (int key : keys) {
-      auto it = merge_buf_.find(key);
-      CHECK(it != merge_buf_.end())
-          << "there is no push/pull on key " << key << " before";
-      CHECK(!it->second.merged.is_none())
-          << "there is no push/pull on key " << key << " before";
-      it->second.merged.WaitToWrite();
+  void Push_(const std::vector<int>& keys,
+             const std::vector<NDArray>& values,
+             int priority,
+             bool do_merge)  {
+    // first aggregate the values over keys
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NDArray> > grouped_vals;
+    GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      // merge over devcies
+      int key = uniq_keys[i];
+      const auto& vals = grouped_vals[i];
+      NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
+
+      auto& send_buf = comm_buf_[key];
+      if (merged.ctx().dev_mask() == cpu::kDevMask) {
+        send_buf = merged;  // avoid memory copy
+      } else {
+        if (send_buf.is_none()) {
+          send_buf = NDArray(merged.shape(), pinned_ctx_);
+        }
+        CopyFromTo(merged, &send_buf);
+      }
+
+      // push to servers
+      size_t size = send_buf.shape().Size();
+      real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
+      auto push_to_servers =
+          [this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
+         // convert to ps keys
+        PSKV& pskv = EncodeKey(key, size);
+
+        // do push. false means no delete
+        ps::SArray<real_t> vals(data, size, false);
+        CHECK_NOTNULL(ps_worker_)->ZPush(
+        pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
+      };
+      Engine::Get()->PushAsync(
+          push_to_servers,
+          pinned_ctx_,
+          {send_buf.var()},
+          {},
+          FnProperty::kNormal, priority);
     }
   }
 
@@ -298,11 +301,16 @@ class KVStoreDist : public KVStoreLocal {
    * \brief for worker to push and pull data
    */
   ps::KVWorker<real_t>* ps_worker_;
-
   /**
    * \brief the server handle
    */
   KVStoreDistServer* server_;
+  /**
+   * \brief threshold for partition
+   */
+  size_t bigarray_bound_;
+  /// \brief send & recver buffer
+  std::unordered_map<int, NDArray> comm_buf_;
 };
 
 }  // namespace kvstore

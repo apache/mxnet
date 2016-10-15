@@ -2,17 +2,7 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
-from check_utils import _np_reduce
-
-def reldiff(a, b):
-    diff = np.sum(np.abs(a - b))
-    norm = np.sum(np.abs(a))
-    reldiff = diff  / (norm + 1e-8)
-    return reldiff
-
-
-def same(a, b):
-    return np.sum(a != b) == 0
+from mxnet.test_utils import *
 
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -190,14 +180,30 @@ def test_ndarray_slice():
 def test_ndarray_slice_along_axis():
     arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
     sub_arr = mx.nd.zeros((3, 2, 2, 3))
-    arr._copy_slice_to(1, 1, 3, sub_arr)
+    arr.copy_slice_to(1, 2, 4, sub_arr)
 
     # test we sliced correctly
-    assert same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
 
     # test that slice is copy, instead of shared memory
     sub_arr[:] = 0
-    assert not same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
+    assert not same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
+
+    # now test assigning back the slice
+    arr.assign_slice_from(1, 2, 4, sub_arr)
+    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
+
+
+def test_ndarray_concatenate():
+    axis = 1
+    shapes = [(2, 3, 4, 2), (2, 2, 4, 2), (2, 1, 4, 2)]
+    arrays_np = [np.random.uniform(-10, 10, s).astype(np.float32) for s in shapes]
+    arrays_nd = [mx.nd.array(x) for x in arrays_np]
+
+    array_nd = mx.nd.concatenate(arrays_nd, axis=axis)
+    array_np = np.concatenate(arrays_np, axis=axis)
+
+    assert same(array_np, array_nd.asnumpy())
 
 
 def test_clip():
@@ -245,11 +251,11 @@ def test_reduce():
                                                          %(ndarray_ret.shape, numpy_ret.shape)
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-4
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.sum),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
                       mx.nd.sum)
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.max),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
                       mx.nd.max)
-    test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.min),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min)
 
 def test_broadcast():
@@ -275,6 +281,7 @@ def test_broadcast():
     test_broadcast_to()
 
 if __name__ == '__main__':
+    test_ndarray_concatenate()
     test_ndarray_slice_along_axis()
     test_ndarray_slice()
     test_ndarray_pickle()

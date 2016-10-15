@@ -142,6 +142,9 @@ various distributed filesystem such as HDFS/Amazon S3/...
 #### Building with Intel MKL Support
 First, `source /path/to/intel/bin/compilervars.sh` to automatically set environment variables. Then, edit [make/config.mk](../../make/config.mk), let `USE_BLAS = mkl`. `USE_INTEL_PATH = NONE` is usually not necessary to be modified.
 
+#### Building for distributed training
+To be able to run distributed training jobs, the `USE_DIST_KVSTORE=1` flag must be set.  This enables a distributed
+key-value store needed to share parameters between multiple machines working on training the same neural network.
 
 ## Python Package Installation
 

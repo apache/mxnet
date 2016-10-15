@@ -1,8 +1,8 @@
-# Cloud setup for MXNet
+# Cloud Setup for MXNet
 
 ## Setup an AWS GPU Cluster from Scratch
 
-In this document we give a step-by-step tutorial on how to set up Amazon AWS for
+In this document, we provide a step-by-step tutorial on how to set up an Amazon AWS cluster with
 MXNet. In particular, we will address:
 
 - [Use Amazon S3 to host data](#use-amazon-s3-to-host-data)
@@ -33,11 +33,11 @@ wget http://data.dmlc.ml/mxnet/data/mnist.zip
 unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ```
 
-### Set Up an EC2 GPU Instance
+### Setup an EC2 GPU Instance
 
 MXNet requires the following libraries
 
-- C++ compiler with C++11 suports, such as `gcc >= 4.8`
+- C++ compiler with C++11 supports, such as `gcc >= 4.8`
 - `CUDA` (`CUDNN` in optional) for GPU linear algebra
 - `BLAS` (cblas, open-blas, atblas, mkl, or others) for CPU linear algebra
 - `opencv` for image augmentations
@@ -60,7 +60,7 @@ We provide a public Amazon Machine Images, [ami-12fd8178](https://console.aws.am
 
 ### Build and Run MXNet on a GPU Instance
 
-The following commands build MXNet with CUDA/CUDNN, S3, and distributed
+The following commands build MXNet with CUDA/CUDNN, S3 and distributed
 training.
 
 ```bash
@@ -81,7 +81,7 @@ To test whether everything is installed properly, we train a Convolutional neura
 python tests/python/gpu/test_conv.py
 ```
 
-If the MNISt data is placed on `s3://dmlc/mnist`, we can read the S3 data directly with the following command
+If the MNIST data is placed on `s3://dmlc/mnist`, we can read the S3 data directly with the following command
 
 ```bash
 sed -i.bak "s!data_dir = 'data'!data_dir = 's3://dmlc/mnist'!" tests/python/gpu/test_conv.py
@@ -149,4 +149,4 @@ benchmark for the distributed training. We may consider other [examples](https:/
 It is common to pack a dataset into multiple files, especially when working in a distributed environment. MXNet supports direct loading from multiple data shards. Simply put all the record files into a folder, and point the data path to the folder.
 
 #### Use YARN, MPI, SGE
-While ssh can be simple for cases when we do not have a cluster scheduling framework. MXNet is designed to be able to port to various platforms.  We also provide other scripts in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker) to run on other cluster frameworks, including Hadoop(YARN) and SGE. Your contribution is more than welcomed to provide examples to run mxnet on your favorite distributed platform.
+While ssh can be simple for cases when we do not have a cluster scheduling framework. MXNet is designed to be able to port to various platforms.  We also provide other scripts in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker) to run on other cluster frameworks, including Hadoop(YARN) and SGE. Your contribution is more than welcomed to provide examples to run MXNet on your favourite distributed platform.
