@@ -4,11 +4,27 @@
  * \brief fully connect operator
 */
 #include "./fully_connected-inl.h"
+#if MXNET_USE_MKL2017 == 1
+#include <mxnet/mkl_memory.h>
+#include "./mkl/mkl_memory-inl.h"
+#include "./mkl/mkl_fully_connected-inl.h"
+#endif  // MXNET_USE_MKL2017
+
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   Operator *op = NULL;
+#if MXNET_USE_MKL2017 == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new MKLFullyConnectedOp<cpu, float>(param);
+  case mshadow::kFloat64:
+    return new MKLFullyConnectedOp<cpu, double>(param);
+  default:
+    break;
+  }
+#else
   switch (dtype) {
   case mshadow::kFloat32:
     op = new FullyConnectedOp<cpu, float>(param);
@@ -23,6 +39,7 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   default:
     LOG(FATAL) << "Unsupported type " << dtype;
   }
+#endif
   return op;
 }
 
