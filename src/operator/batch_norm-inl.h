@@ -214,7 +214,7 @@ class BatchNormOp : public Operator {
 };  // class BatchNormOp
 
 template<typename xpu>
-Operator *CreateOp(BatchNormParam param);
+Operator *CreateOp(BatchNormParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -296,7 +296,13 @@ class BatchNormProp : public OperatorProperty {
     return {"moving_mean", "moving_var"};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+      LOG(FATAL) << "Not Implemented.";
+      return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+      std::vector<int> *in_type) const override;
 
  private:
   BatchNormParam param_;
