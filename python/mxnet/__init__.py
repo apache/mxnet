@@ -11,6 +11,7 @@ from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
 from . import symbol
+from . import symbol_doc
 from . import io
 from . import recordio
 from . import operator
