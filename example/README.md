@@ -27,8 +27,8 @@ If you want to contribute to this list and the examples, please open a new pull 
 ###<a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
 * [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
-* [MXNet Python](http://mxnet.readthedocs.io/en/latest/packages/python/index.html) - Python library
-* [MXNetR](http://mxnet.readthedocs.io/en/latest/packages/r/index.html) - R library
+* [MXNet Python](http://mxnet.readthedocs.io/en/latest/api/python/index.html) - Python library
+* [MXNetR](http://mxnet.readthedocs.io/en/latest/api/r/index.html) - R library
 * [MXNet.jl](http://mxnetjl.readthedocs.org/en/latest/) - Julia library
 * [gomxnet](https://github.com/jdeng/gomxnet) - Go binding
 * [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library
@@ -43,6 +43,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Numpy Operator Customization](https://github.com/dmlc/mxnet/tree/master/example/numpy-ops) - Example on quick customize new ops with numpy.
 * [Adversary Sample Generation](adversary) - Find adversary sample by using fast sign method.
 * [Neural Art](neural-style) -  Generate artistic style images.
+* [DQN and Double DQN](https://github.com/dmlc/mxnet/tree/master/example/dqn) -  Examples of training DQN and Double DQN to play Atari Games.
 * [Kaggle 1st national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb1) - a MXnet example for Kaggle Nation Data Science Bowl 1
 * [Kaggle 2nd national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb2) - a tutorial for Kaggle Second Nation Data Science Bowl
 * [CNN for Text Classification](cnn_text_classification) - a MXnet example for text classification
@@ -63,6 +64,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Matrix decomposition (SVD) with MXNet](http://www.jianshu.com/p/ebf7bf53ed3e) by xlvector in Chinese. Github [link](https://github.com/xlvector/mxnet/blob/svd/example/svd/svd.py)
 * [MultiGPU enabled image generative models (GAN and DCGAN)](https://github.com/tqchen/mxnet-gan) by [Tianqi Chen](https://github.com/tqchen)
 * [Baidu Warp CTC with Mxnet](https://github.com/dmlc/mxnet/tree/master/example/warpctc) by xlvector
+* [Deep reinforcement learning for playing flappybird by mxnet](https://github.com/li-haoran/DRL-FlappyBird) by LIHaoran
 
 ###<a name="ipython-notebooks"></a>IPython Notebooks
 -----------------

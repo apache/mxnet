@@ -43,7 +43,7 @@ act2 = mx.symbol.TorchModule(data_0=fc2, lua_string='nn.ReLU(false)', num_data=1
 fc3 = mx.symbol.TorchModule(data_0=act2, lua_string='nn.Linear(64, 10)', num_data=1, num_params=2, num_outputs=1, name='fc3')
 mlp = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
 ```
-Let's break it down. First `data = mx.symbol.Variable('data')` defines a Variable as placeholder for input.
+Let's break it down. First `data = mx.symbol.Variable('data')` defines a Variable as place holder for input.
 Then it's fed through Torch's nn modules with `fc1 = mx.symbol.TorchModule(data_0=data, lua_string='nn.Linear(784, 128)', num_data=1, num_params=2, num_outputs=1, name='fc1')`.
 We can also replace the last line with:
 ```Python

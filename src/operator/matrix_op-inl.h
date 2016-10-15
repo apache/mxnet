@@ -443,7 +443,7 @@ inline TShape CropShape(const TShape& shp,
   CHECK_EQ(shp.ndim(), param.end.ndim());
   TShape ret(shp.ndim());
   for (index_t i = 0; i < shp.ndim(); ++i) {
-    CHECK(param.begin[i] <= shp[i] && param.end[i] <= shp[i]);
+    CHECK(param.begin[i] < shp[i] && param.end[i] <= shp[i]);
     ret[i] = param.end[i] - param.begin[i];
   }
   return ret;
@@ -659,7 +659,7 @@ MXNET_REGISTER_SIMPLE_OP(crop, XPU)
 .set_enable_kwargs(true)
 .set_function(XPU::kDevMask, Crop<XPU>, kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(CropShape)
-.describe("Crop the input matrix and return a new one")
+.describe("Crop the input tensor and return a new one")
 .add_arguments(SimpleCropParam::__FIELDS__());
 
 // slice_axis
