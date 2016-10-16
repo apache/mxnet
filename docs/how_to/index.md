@@ -2,9 +2,6 @@
 
 This page contains guidelines to use and develop MXNets.
 
-## Installation
-- [How to Install MXNet](build.md)
-
 ## Use MXNet on Specific Tasks
 - [Train with multiple CPU/GPUs in data parallelism](multi_devices.md)
 - [Train LSTM with multiple GPUs in model parallelism](model_parallel_lstm.md)
@@ -17,7 +14,6 @@ This page contains guidelines to use and develop MXNets.
 ## Develop and Hack MXNet
 - [Create new operators](new_op.md)
 - [Use Torch from MXNet](torch.md)
-- [Contribute to MXNet](contribute.md)
 - [Set environment variables of MXNet](env_var.md)
 
 ## Frequently Ask Questions
