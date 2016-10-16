@@ -10,7 +10,6 @@ from rcnn.module import MutableModule
 from rcnn.symbol import get_faster_rcnn
 from utils.load_data import load_gt_roidb
 from utils.load_model import do_checkpoint, load_param
-from rcnn.warmup import WarmupScheduler
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -98,8 +97,7 @@ def end2end_train(image_set, test_image_set, year, root_path, devkit_path, pretr
     optimizer_params = {'momentum': mom,
                         'wd': wd,
                         'learning_rate': lr,
-                        'lr_scheduler': WarmupScheduler(factor_step, 0.1, warmup_lr=lr*0.1, warmup_step=200) if not resume \
-                                        else mx.lr_scheduler.FactorScheduler(factor_step, 0.1),
+                        'lr_scheduler': mx.lr_scheduler.FactorScheduler(factor_step, 0.1),
                         'clip_gradient': 1.0,
                         'rescale_grad': 1.0 }
                         # 'rescale_grad': (1.0 / config.TRAIN.RPN_BATCH_SIZE)}
