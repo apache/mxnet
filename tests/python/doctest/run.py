@@ -1,10 +1,11 @@
 import doctest
 import logging
 import mxnet
+import numpy
 
 def import_into(globs, module, names=None, error_on_overwrite=True):
     """Import names from module into the globs dict.
-    
+
     Parameters
     ----------
     """
@@ -16,7 +17,7 @@ def import_into(globs, module, names=None, error_on_overwrite=True):
         mod_names = names
 
     for name in mod_names:
-        if name in globs:
+        if name in globs and globs[name] is not getattr(module, name):
             error_msg = 'Attempting to overwrite definition of %s' % name
             if error_on_overwrite:
                 raise RuntimeError(error_msg)
@@ -27,7 +28,7 @@ def import_into(globs, module, names=None, error_on_overwrite=True):
 
 
 def test_symbols():
-    globs = {'mxnet': mxnet, 'test_utils': mxnet.test_utils}
+    globs = {'numpy': numpy, 'mxnet': mxnet, 'test_utils': mxnet.test_utils}
 
     # make sure all the operators are available
     import_into(globs, mxnet.symbol)

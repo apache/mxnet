@@ -19,6 +19,7 @@ the environment will have access to
 - all the operators (e.g. `FullyConnected`)
 - the name `test_utils` for `mxnet.test_utils` (e.g. `test_utils.reldiff`)
 - the name `mxnet` (e.g. `mxnet.nd.zeros`)
+- the name `numpy`
 
 The following documents are recommended:
 
@@ -38,6 +39,42 @@ class SymbolDoc(object):
         """Get user friendly information of the output shapes."""
         _, s_outputs, _ = sym.infer_shape(**input_shapes)
         return dict(zip(sym.list_outputs(), s_outputs))
+
+
+class ActivationDoc(SymbolDoc):
+    """
+    Examples
+    --------
+    A one-hidden-layer MLP with ReLU activation:
+
+    >>> data = Variable('data')
+    >>> mlp = FullyConnected(data=data, num_hidden=128, name='proj')
+    >>> mlp = Activation(data=mlp, act_type='relu', name='activation')
+    >>> mlp = FullyConnected(data=mlp, num_hidden=10, name='mlp')
+    >>> mlp
+    <Symbol mlp>
+
+    Regression Test
+    ---------------
+    ReLU activation
+
+    >>> test_suites = [
+    ...     ('relu', lambda x: numpy.maximum(x, 0)),
+    ...     ('sigmoid', lambda x: 1 / (1 + numpy.exp(-x))),
+    ...     ('tanh', lambda x: numpy.tanh(x)),
+    ...     ('softrelu', lambda x: numpy.log(1 + numpy.exp(x)))
+    ... ]
+    >>> x = test_utils.random_arrays((2, 3, 4))
+    >>> for act_type, numpy_impl in test_suites:
+    ...     op = Activation(act_type=act_type, name='act')
+    ...     y = test_utils.simple_forward(op, act_data=x)
+    ...     y_np = numpy_impl(x)
+    ...     print('%s: %s' % (act_type, test_utils.almost_equal(y, y_np)))
+    relu: True
+    sigmoid: True
+    tanh: True
+    softrelu: True
+    """
 
 
 class FullyConnectedDoc(SymbolDoc):
