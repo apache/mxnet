@@ -232,3 +232,8 @@ Contribution to this Note
 -------------------------
 This note is part of our effort to [open-source system design notes](index.md)
  for deep learning libraries. You are more welcomed to contribute to this Note, by submitting a pull request.
+
+# Recommended next steps
+
+* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
+* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
