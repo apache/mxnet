@@ -19,6 +19,7 @@ the environment will have access to
 - all the operators (e.g. `FullyConnected`)
 - the name `test_utils` for `mxnet.test_utils` (e.g. `test_utils.reldiff`)
 - the name `mxnet` (e.g. `mxnet.nd.zeros`)
+- the name `numpy`
 
 The following documents are recommended:
 
@@ -38,6 +39,69 @@ class SymbolDoc(object):
         """Get user friendly information of the output shapes."""
         _, s_outputs, _ = sym.infer_shape(**input_shapes)
         return dict(zip(sym.list_outputs(), s_outputs))
+
+
+class ActivationDoc(SymbolDoc):
+    """
+    Examples
+    --------
+    A one-hidden-layer MLP with ReLU activation:
+
+    >>> data = Variable('data')
+    >>> mlp = FullyConnected(data=data, num_hidden=128, name='proj')
+    >>> mlp = Activation(data=mlp, act_type='relu', name='activation')
+    >>> mlp = FullyConnected(data=mlp, num_hidden=10, name='mlp')
+    >>> mlp
+    <Symbol mlp>
+
+    Regression Test
+    ---------------
+    ReLU activation
+
+    >>> test_suites = [
+    ...     ('relu', lambda x: numpy.maximum(x, 0)),
+    ...     ('sigmoid', lambda x: 1 / (1 + numpy.exp(-x))),
+    ...     ('tanh', lambda x: numpy.tanh(x)),
+    ...     ('softrelu', lambda x: numpy.log(1 + numpy.exp(x)))
+    ... ]
+    >>> x = test_utils.random_arrays((2, 3, 4))
+    >>> for act_type, numpy_impl in test_suites:
+    ...     op = Activation(act_type=act_type, name='act')
+    ...     y = test_utils.simple_forward(op, act_data=x)
+    ...     y_np = numpy_impl(x)
+    ...     print('%s: %s' % (act_type, test_utils.almost_equal(y, y_np)))
+    relu: True
+    sigmoid: True
+    tanh: True
+    softrelu: True
+    """
+
+
+class FlattenDoc(SymbolDoc):
+    """
+    Examples
+    --------
+    Flatten is usually applied before `FullyConnected`, to reshape the 4D tensor
+    produced by convolutional layers to 2D matrix:
+
+    >>> data = Variable('data')  # say this is 4D from some conv/pool
+    >>> flatten = Flatten(data=data, name='flat')  # now this is 2D
+    >>> SymbolDoc.get_output_shape(flatten, data=(2, 3, 4, 5))
+    {'flat_output': (2L, 60L)}
+
+    Regression Test
+    ---------------
+    >>> test_dims = [(2, 3, 4, 5), (2, 3), (2,)]
+    >>> op = Flatten(name='flat')
+    >>> for dims in test_dims:
+    ...     x = test_utils.random_arrays(dims)
+    ...     y = test_utils.simple_forward(op, flat_data=x)
+    ...     y_np = x.reshape((dims[0], numpy.prod(dims[1:])))
+    ...     print('%s: %s' % (dims, test_utils.almost_equal(y, y_np)))
+    (2, 3, 4, 5): True
+    (2, 3): True
+    (2,): True
+    """
 
 
 class FullyConnectedDoc(SymbolDoc):
@@ -77,7 +141,6 @@ class FullyConnectedDoc(SymbolDoc):
     >>> test_utils.almost_equal(out, out_np)
     True
     """
-    pass
 
 
 class ConcatDoc(SymbolDoc):
@@ -97,7 +160,6 @@ class ConcatDoc(SymbolDoc):
     Note the shape should be the same except on the dimension that is being
     concatenated.
     """
-    pass
 
 
 class BroadcastPlusDoc(SymbolDoc):
