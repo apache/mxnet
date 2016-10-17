@@ -4,6 +4,8 @@ import ml.dmlc.mxnet.{DataBatch, DataIter, NDArray, Shape}
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Semaphore
 
+import scala.collection.immutable.ListMap
+
 /**
  * Base class for prefetching iterators. Takes one or more DataIters
  * and combine them with prefetching.
@@ -21,29 +23,29 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
 
   require(iters.length > 0, "Iters length must be greater than 0")
 
-  private val _provideData: Map[String, Shape] = {
+  private val _provideData: ListMap[String, Shape] = {
     if (dataNames == null) {
-      iters.map(_.provideData).foldLeft(Map[String, Shape]()) { (acc, elem) =>
+      iters.map(_.provideData).foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
         acc ++ elem
       }
     } else {
       iters.zipWithIndex.map(tu => (tu._1.provideData, tu._2))
              .map(m => m._1.map(t => (dataNames(m._2)(t._1), t._2)))
-             .foldLeft(Map[String, Shape]()) { (acc, elem) =>
+             .foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
         acc ++ elem
       }
     }
   }
 
-  private val _provideLabel: Map[String, Shape] = {
+  private val _provideLabel: ListMap[String, Shape] = {
     if (labelNames == null) {
-      iters.map(_.provideLabel).foldLeft(Map[String, Shape]()) { (acc, elem) =>
+      iters.map(_.provideLabel).foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
         acc ++ elem
       }
     } else {
       iters.zipWithIndex.map(tu => (tu._1.provideLabel, tu._2))
              .map(m => m._1.map(t => (labelNames(m._2)(t._1), t._2)))
-             .foldLeft(Map[String, Shape]()) { (acc, elem) =>
+             .foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
         acc ++ elem
       }
     }
@@ -57,7 +59,7 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
 
   @volatile private var started: Boolean = true
   private var currentBatch: DataBatch = null
-  private var nextBatch: Array[DataBatch] = (0 until iters.length).map { i =>
+  private val nextBatch: Array[DataBatch] = (0 until iters.length).map { i =>
     new DataBatch(null, null, null, 0)
   }.toArray
 
@@ -114,7 +116,7 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
   override def getIndex(): IndexedSeq[Long] = currentBatch.index
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = this._provideLabel
+  override def provideLabel: ListMap[String, Shape] = this._provideLabel
 
   /**
    * get the number of padding examples
@@ -124,7 +126,7 @@ class PrefetchingIter(val iters: IndexedSeq[DataIter],
   override def getPad(): Int = this.currentBatch.pad
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = this._provideData
+  override def provideData: ListMap[String, Shape] = this._provideData
 
   override def hasNext: Boolean = {
     for (e <- dataReady) e.acquire()

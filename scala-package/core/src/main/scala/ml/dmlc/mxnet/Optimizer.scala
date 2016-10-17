@@ -33,6 +33,8 @@ abstract class Optimizer extends Serializable {
   protected var specialized: Boolean = false
   protected val weightSet: mutable.Set[Int] = mutable.HashSet.empty[Int]
   protected var rescaleGrad: Float = 1
+  protected var symbol: Symbol = null
+  protected var idx2name: Map[Int, String] = null
 
   /**
    * Update the parameters.
@@ -75,6 +77,16 @@ abstract class Optimizer extends Serializable {
   // Set rescaling factor of gradient.
   def setRescaleGrad(rescaleGrad: Float): Unit = {
     this.rescaleGrad = rescaleGrad
+  }
+
+  // TODO
+  def setSymbol(sym: Symbol): Unit = {
+    this.symbol = sym
+  }
+
+  // TODO: Special treat weight decay in parameters.
+  def setIdx2Name(paramIdx2Name: Map[Int, String]): Unit = {
+    this.idx2name = paramIdx2Name
   }
 
   /**
