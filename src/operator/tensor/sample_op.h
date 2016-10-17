@@ -46,6 +46,7 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
     .describe("Standard deviation of the distribution.");
     DMLC_DECLARE_FIELD(shape)
+    .set_default(TShape())
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
