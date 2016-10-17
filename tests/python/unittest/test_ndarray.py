@@ -39,6 +39,50 @@ def random_ndarray(dim):
     data = mx.nd.array(np.random.uniform(-10, 10, shape))
     return data
 
+
+def test_ndarray_setitem():
+    shape = (3, 4, 2)
+
+    # scalar assignment
+    x = mx.nd.zeros(shape)
+    x[:] = 1
+    x_np = np.ones(shape, dtype=x.dtype)
+    assert same(x.asnumpy(), x_np)
+
+    # ndarray assignment
+    x = mx.nd.zeros(shape)
+    x[:] = mx.nd.ones(shape)
+    x_np = np.ones(shape, dtype=x.dtype)
+    assert same(x.asnumpy(), x_np)
+
+    # numpy assignment
+    x = mx.nd.zeros(shape)
+    x[:] = np.ones(shape)
+    x_np = np.ones(shape, dtype=x.dtype)
+    assert same(x.asnumpy(), x_np)
+
+    # indexing sub-arrays
+    x = mx.nd.zeros(shape)
+    x[1] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[1] = 1
+    assert same(x.asnumpy(), x_np)
+
+    # all-dim indexing
+    x = mx.nd.zeros(shape)
+    val = mx.nd.ones((3, 2, 1))
+    x[:, 1:3, 1] = val
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[:, 1:3, 1:2] = val.asnumpy()
+    assert same(x.asnumpy(), x_np)
+
+    x = mx.nd.zeros(shape)
+    x[:, 1:3, 1] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[:, 1:3, 1:2] = 1
+    assert same(x.asnumpy(), x_np)
+
+
 def test_ndarray_elementwise():
     np.random.seed(0)
     nrepeat = 10
@@ -288,6 +332,7 @@ def test_broadcast():
     test_broadcast_to()
 
 if __name__ == '__main__':
+    test_ndarray_setitem()
     test_ndarray_crop()
     test_ndarray_concatenate()
     test_ndarray_slice()

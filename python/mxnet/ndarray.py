@@ -208,28 +208,82 @@ class NDArray(object):
         self.__dict__.update(state)
 
     def __setitem__(self, in_slice, value):
-        """Set ndarray value"""
+        """Set ndarray value.
+
+        `value` can be a scalar, an `NDArray` or numpy array of compatible shape.
+        The following modes are supported:
+
+        - `array[:] = value`: set all the contents
+        - `array[i] = value`: set the i-th slice. If the array is of dimension
+          `(d1, d2, d3)`, it sets value of a slice of shape `(1, d2, d3)`.
+        - `array[i:j] = value`: similarly, if the array is of dimension
+          `(d1, d2, d3)`, it sets value of a slice of shape `(j-i, d2, d3)`.
+
+        Fully-dimensional indexing is also supported. For example, if array is
+        of shape `(d1, d2, d3)`, one can do
+
+        - `array[:, :, :] = value`: achieving the same effect of `array[:] = value`
+        - `array[:, i, j:k] = value`: each index could be a python slice or an int.
+        """
         if not self.writable:
             raise ValueError('trying to assign to a readonly NDArray')
         if isinstance(in_slice, int):
             sliced_arr = self._at(in_slice)
             sliced_arr[:] = value
             return
-        if not isinstance(in_slice, slice) or in_slice.step is not None:
-            raise ValueError('NDArray only support continuous slicing on axis 0')
-        if in_slice.start is not None or in_slice.stop is not None:
-            sliced_arr = self._slice(in_slice.start, in_slice.stop)
-            sliced_arr[:] = value
-            return
-        if isinstance(value, NDArray):
-            if value.handle is not self.handle:
-                value.copyto(self)
-        elif isinstance(value, numeric_types):
-            _internal._set_value(float(value), out=self)
-        elif isinstance(value, (np.ndarray, np.generic)):
-            self._sync_copyfrom(value)
-        else:
-            raise TypeError('type %s not supported' % str(type(value)))
+        if isinstance(in_slice, slice):
+            if in_slice.step is not None:
+                raise ValueError('NDArray only support continuous slicing on axis 0')
+            if in_slice.start is not None or in_slice.stop is not None:
+                sliced_arr = self._slice(in_slice.start, in_slice.stop)
+                sliced_arr[:] = value
+                return
+            if isinstance(value, NDArray):
+                if value.handle is not self.handle:
+                    value.copyto(self)
+            elif isinstance(value, numeric_types):
+                _internal._set_value(float(value), out=self)
+            elif isinstance(value, (np.ndarray, np.generic)):
+                self._sync_copyfrom(value)
+            else:
+                raise TypeError('type %s not supported' % str(type(value)))
+        if isinstance(in_slice, tuple):
+            # multi-dimension indexing
+            my_shape = self.shape
+            assert len(in_slice) == len(my_shape)
+            for slice_i in in_slice:
+                assert isinstance(slice_i, (slice, int))
+            begin = [0 for _ in my_shape]
+            end = [x for x in my_shape]
+            for i, slice_i in enumerate(in_slice):
+                if isinstance(slice_i, int):
+                    assert slice_i < my_shape[i]
+                    begin[i] = slice_i
+                    end[i] = slice_i + 1
+                if isinstance(slice_i, slice):
+                    # only support continuous slicing
+                    assert slice_i.step is None
+                    begin[i] = slice_i.start or 0
+                    end[i] = slice_i.stop or my_shape[i]
+                    assert begin[i] < end[i]
+                    assert end[i] <= my_shape[i]
+            begin = tuple(begin)
+            end = tuple(end)
+            if isinstance(value, NDArray):
+                value = value.as_in_context(self.context)
+                _internal._crop_assign(self, value, out=self,
+                                       begin=begin, end=end)
+            elif isinstance(value, numeric_types):
+                _internal._crop_assign_scalar(self, out=self,
+                                              begin=begin, end=end,
+                                              scalar=value)
+            elif isinstance(value, (np.ndarray, np.generic)):
+                value = array(value, ctx=self.context)
+                _internal._crop_assign(self, value, out=self,
+                                       begin=begin, end=end)
+            else:
+                raise TypeError('type %s not supported' % str(type(value)))
+
 
     def __getitem__(self, in_slice):
         """Get ndarray"""
