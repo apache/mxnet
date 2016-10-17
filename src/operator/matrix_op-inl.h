@@ -443,12 +443,84 @@ inline TShape CropShape(const TShape& shp,
   CHECK_EQ(shp.ndim(), param.end.ndim());
   TShape ret(shp.ndim());
   for (index_t i = 0; i < shp.ndim(); ++i) {
-    CHECK(param.begin[i] < shp[i] && param.end[i] <= shp[i]);
+    CHECK(param.begin[i] <= shp[i] && param.end[i] <= shp[i]);
     ret[i] = param.end[i] - param.begin[i];
   }
   return ret;
 }
 
+template<typename xpu>
+void CropAssign(const TBlob& lhs,
+                const TBlob& rhs,
+                const EnvArguments& env,
+                TBlob *ret,
+                OpReqType req,
+                RunContext ctx) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+
+  CHECK_EQ(req, kWriteInplace)
+      << "CropAssign operator must perform inplace write";
+  CHECK_EQ(lhs.type_flag_, rhs.type_flag_);
+  SimpleCropParam param;
+  param.Init(env.kwargs);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(lhs.type_flag_, DType, {
+    switch (lhs.shape_.ndim()) {
+      case 0:
+        break;
+      case 1: {
+        Tensor<xpu, 1, DType> out = lhs.get<xpu, 1, DType>(s);
+        Tensor<xpu, 1, DType> in = rhs.get<xpu, 1, DType>(s);
+        slice(out, param.begin.get<1>(), param.end.get<1>()) = in;
+        break;
+      }
+      case 2: {
+        Tensor<xpu, 2, DType> out = lhs.get<xpu, 2, DType>(s);
+        Tensor<xpu, 2, DType> in = rhs.get<xpu, 2, DType>(s);
+        slice(out, param.begin.get<2>(), param.end.get<2>()) = in;
+        break;
+      }
+      case 3: {
+        Tensor<xpu, 3, DType> out = lhs.get<xpu, 3, DType>(s);
+        Tensor<xpu, 3, DType> in = rhs.get<xpu, 3, DType>(s);
+        slice(out, param.begin.get<3>(), param.end.get<3>()) = in;
+        break;
+      }
+      case 4: {
+        Tensor<xpu, 4, DType> out = lhs.get<xpu, 4, DType>(s);
+        Tensor<xpu, 4, DType> in = rhs.get<xpu, 4, DType>(s);
+        slice(out, param.begin.get<4>(), param.end.get<4>()) = in;
+        break;
+      }
+      case 5: {
+        Tensor<xpu, 5, DType> out = lhs.get<xpu, 5, DType>(s);
+        Tensor<xpu, 5, DType> in = rhs.get<xpu, 5, DType>(s);
+        slice(out, param.begin.get<5>(), param.end.get<5>()) = in;
+        break;
+      }
+      default:
+        LOG(FATAL) << "CropAssign supports at most 5 dimensions";
+        break;
+    }
+  });
+}
+
+inline TShape CropAssignShape(const TShape& lshape,
+                              const TShape& rshape,
+                              const EnvArguments& env) {
+  CHECK_EQ(lshape.ndim(), rshape.ndim());
+
+  SimpleCropParam param;
+  param.Init(env.kwargs);
+  CHECK_EQ(rshape.ndim(), param.begin.ndim());
+  CHECK_EQ(rshape.ndim(), param.end.ndim());
+  for (index_t i = 0; i < rshape.ndim(); ++i) {
+    CHECK(param.begin[i] <= param.end[i]);
+    CHECK(param.end[i] - param.begin[i] == rshape[i]);
+  }
+  return lshape;
+}
 
 struct SliceParam : public dmlc::Parameter<SliceParam> {
   int axis;
@@ -659,7 +731,27 @@ MXNET_REGISTER_SIMPLE_OP(crop, XPU)
 .set_enable_kwargs(true)
 .set_function(XPU::kDevMask, Crop<XPU>, kNoInplace, kNotRegisterSymbolic)
 .set_shape_function(CropShape)
-.describe("Crop the input tensor and return a new one")
+.describe(R"(Crop the input tensor and return a new one.
+
+Requirements
+------------
+- the input and output (if explicitly given) are of the same data type,
+  and on the same device.
+)")
+.add_arguments(SimpleCropParam::__FIELDS__());
+
+// _crop_assign
+MXNET_REGISTER_SIMPLE_OP(_crop_assign, XPU)
+.set_enable_kwargs(true)
+.set_function(XPU::kDevMask, CropAssign<XPU>, kInplaceLhsOut, kNotRegisterSymbolic)
+.set_shape_function(CropAssignShape)
+.describe(R"(Assign the rhs to a cropped subset of lhs.
+
+Requirements
+------------
+- output should be explicitly given and be the same as lhs.
+- lhs and rhs are of the same data type, and on the same device.
+)")
 .add_arguments(SimpleCropParam::__FIELDS__());
 
 // slice_axis

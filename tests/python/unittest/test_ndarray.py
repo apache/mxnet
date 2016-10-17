@@ -177,6 +177,19 @@ def test_ndarray_slice():
     assert same(A[3:8].asnumpy(), A2[3:8])
 
 
+def test_ndarray_crop():
+    x = mx.nd.ones((2, 3, 4))
+    y = mx.nd.crop(x, begin=(0, 0, 0), end=(2, 2, 3))
+    assert same(y.asnumpy(), np.ones((2, 2, 3), dtype=y.dtype))
+
+    z = mx.nd.zeros((2, 2, 3))
+    mx.nd._internal._crop_assign(x, z, begin=(0, 0, 0),
+                                 end=(2, 2, 3), out=x)
+    np_x = np.ones((2, 3, 4), dtype=x.dtype)
+    np_x[0:2, 0:2, 0:3] = 0
+    assert same(x.asnumpy(), np_x)
+
+
 def test_ndarray_slice_along_axis():
     arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
     sub_arr = mx.nd.zeros((3, 2, 2, 3))
@@ -281,6 +294,7 @@ def test_broadcast():
     test_broadcast_to()
 
 if __name__ == '__main__':
+    test_ndarray_crop()
     test_ndarray_concatenate()
     test_ndarray_slice_along_axis()
     test_ndarray_slice()
