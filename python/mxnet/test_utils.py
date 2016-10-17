@@ -34,8 +34,11 @@ def default_numerical_threshold():
 
 def random_arrays(*shapes):
     """Generate some random numpy arrays."""
-    return [np.random.randn(*s).astype(default_dtype())
-            for s in shapes]
+    arrays = [np.random.randn(*s).astype(default_dtype())
+              for s in shapes]
+    if len(arrays) == 1:
+        return arrays[0]
+    return arrays
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
