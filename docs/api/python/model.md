@@ -1,5 +1,5 @@
-MXNet Python Model API
-======================
+# MXNet Python Model API
+
 The model API is a simplified way to train neural networks using common best practices.
 It is a thin wrapper build on top of [ndarray](ndarray.md) and [symbolic](symbol.md)
 modules to make neural network training easy.
@@ -11,8 +11,8 @@ modules to make neural network training easy.
 * [Evaluation Metric API Reference](#initializer-api-reference)
 * [Optimizer API Reference](#optimizer-api-reference)
 
-Train a Model
--------------
+## Train a Model
+
 To train a model, you can follow two steps, first a configuration using symbol,
 then call ```model.Feedforward.create``` to create a model for you.
 The following example creates a two layer neural networks.
@@ -43,8 +43,8 @@ model.fit(X=data_set)
 ```
 For more information, you can refer to [Model API Reference](#model-api-reference).
 
-Save the Model
---------------
+# Save the Model
+
 It is important to save your work after the job done.
 To save the model, you can directly pickle it if you like the pythonic way.
 We also provide a save and load function.
@@ -61,8 +61,8 @@ model_loaded = mx.model.FeedForward.load(prefix, iteration)
 The advantage of this save and load function is they are language agnostic,
 and you should be able to save and load directly into cloud storage such as S3 and HDFS.
 
-Periodically Checkpoint
------------------------
+# Periodically Checkpoint
+
 It is also helpful to periodically checkpoint your model after each iteration.
 To do so, you can simply add a checkpoint callback ```do_checkpoint(path)``` to the function.
 The training process will automatically checkpoint to the specified place after
@@ -78,8 +78,8 @@ model = mx.model.FeedForward.create(
 ```
 You can load the model checkpoint later using ```Feedforward.load```.
 
-Use Multiple Devices
---------------------
+# Use Multiple Devices
+
 Simply set ```ctx``` to be the list of devices you like to train on.
 
 ```python
@@ -99,8 +99,8 @@ The training will be done in a data parallel way on the GPUs you specified.
 ```
 
 
-Initializer API Reference
--------------------------
+# Initializer API Reference
+
 
 ```eval_rst
 .. automodule:: mxnet.initializer
@@ -111,8 +111,8 @@ Initializer API Reference
     <script>auto_index("mxnet.initializer");</script>
 ```
 
-Evaluation Metric API Reference
--------------------------------
+# Evaluation Metric API Reference
+
 
 ```eval_rst
 .. automodule:: mxnet.metric
@@ -123,8 +123,8 @@ Evaluation Metric API Reference
     <script>auto_index("mxnet.metric");</script>
 ```
 
-Optimizer API Reference
------------------------
+# Optimizer API Reference
+
 
 ```eval_rst
 .. automodule:: mxnet.optimizer
@@ -135,8 +135,8 @@ Optimizer API Reference
     <script>auto_index("mxnet.optimizer");</script>
 ```
 
-Model API Reference
--------------------
+# Model API Reference
+
 
 ```eval_rst
 .. automodule:: mxnet.model
@@ -146,3 +146,9 @@ Model API Reference
 
     <script>auto_index("mxnet.model");</script>
 ```
+
+# Recommended Next Steps
+* [Symbolic API](symbol.md) for operations on NDArrays to assemble neural networks from layers
+* [IO Data Loading API](io.md) for parsing and loading data
+* [NDArray API](ndarray.md) for vector/matrix/tensor operations
+* [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training

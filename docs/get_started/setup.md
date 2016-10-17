@@ -9,7 +9,14 @@ This topic covers the following:
 
 
 &nbsp;
+
+
+&nbsp;
+
 You can just get started with MXNet, without reading further, by directly jumping to [Quick Installation Guide](#Quick-Installation) to set up MXNet with a set of bash scripts.
+
+
+&nbsp;
 
 
 &nbsp;

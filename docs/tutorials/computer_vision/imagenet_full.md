@@ -101,3 +101,6 @@ There is no doubt that directly use probability over 21k classes loss diversity 
 [2] HDD/SSD data is from public website may not be accurate.
 
 [3] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." *arXiv preprint arXiv:1502.03167* (2015).
+
+# Recommended Next Steps
+* [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

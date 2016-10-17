@@ -1,10 +1,7 @@
-Module Interface HowTo
-======================
-
+# Module Interface - How To
 The module API provide intermediate-level and high-level interface for computation with neural networks in MXNet. A "module" is an instance of subclasses of `BaseModule`. The most widely used module class is simply called `Module`, which wraps a `Symbol` and one or more `Executor`s. Please refer to the API doc for `BaseModule` below for a full list of functions available. Each specific subclass of modules might have some extra interface functions. We provide here some examples of common use cases. All the module APIs live in the namespace of `mxnet.module` or simply `mxnet.mod`.
 
-Preparing a module for computation
-----------------------------------
+## Preparing a module for computation
 
 To construct a module, refer to the constructors of the specific module class. For example, the `Module` class takes a `Symbol` as input,
 
@@ -36,8 +33,7 @@ mod.init_params()
 
 Now you can compute with the module via functions like `forward()`, `backward()`, etc. If you simply want to fit a module, you do not need to call `bind()` and `init_params()` explicitly, as the `fit()` function will call them automatically if needed.
 
-Training, Predicting, and Evaluating
-------------------------------------
+## Training, Predicting, and Evaluating
 
 Modules provide high-level APIs for training, predicting and evaluating. To fit a module, simply call the `fit()` function with some `DataIter`s:
 
@@ -71,8 +67,8 @@ mod.score(val_dataiter, metric)
 
 It will run predictions on each batch in the provided `DataIter` and compute the evaluation score using the provided `EvalMetric`. The evaluation results will be stored in `metric` so that you can query later on.
 
-Saving and Loading Module Parameters
-------------------------------------
+## Saving and Loading Module Parameters
+
 
 You can save the module parameters in each training epoch by using a `checkpoint` callback.
 
@@ -103,8 +99,8 @@ mod.fit(..., arg_params=arg_params, aux_params=aux_params,
 Note we also pass in `begin_epoch` so that `fit()` knows we are resuming from a previous saved epoch.
 
 
-Module Interface API
-====================
+# Module Interface API
+
 
 ```eval_rst
 .. raw:: html
@@ -112,8 +108,7 @@ Module Interface API
     <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 ```
 
-The BaseModule Interface
-------------------------
+## The BaseModule Interface
 
 ```eval_rst
 .. automodule:: mxnet.module.base_module
@@ -124,8 +119,8 @@ The BaseModule Interface
     <script>auto_index("mxnet.module.base_module");</script>
 ```
 
-The Built-in Modules
---------------------
+## The Built-in Modules
+
 
 ```eval_rst
 .. automodule:: mxnet.module.module
@@ -154,8 +149,8 @@ The Built-in Modules
     <script>auto_index("mxnet.module.sequential_module");</script>
 ```
 
-Writing Modules in Python
--------------------------
+## Writing Modules in Python
+
 
 ```eval_rst
 .. automodule:: mxnet.module.python_module
@@ -165,3 +160,10 @@ Writing Modules in Python
 
     <script>auto_index("mxnet.module.python_module");</script>
 ```
+
+# Recommended Next Steps
+* [Model API](model.md) an alternate simple high-level interface for training neural networks
+* [Symbolic API](symbol.md) for operations on NDArrays to assemble neural networks from layers
+* [IO Data Loading API](io.md) for parsing and loading data
+* [NDArray API](ndarray.md) for vector/matrix/tensor operations
+* [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training

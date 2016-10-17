@@ -1,17 +1,12 @@
-KVStore API
-===========
+# Distributed Key-value Store
 
-* [Basic Push and Pull](#basic-push-and-pull)
-* [Interface for list key-value pairs](#interface-for-list-key-value-pairs)
-* [Multiple machines]() TODO
+KVStore is a place for data sharing. We can think it as a single object shared
+across different devices (GPUs and machines), where each device can push data in
+and pull data out.
 
-## Basic Push and Pull
+## Initialization
 
-Basic operation over multiple devices (gpus) on a single machine.
-
-### Initialization
-
-Let's first consider a simple example. It initializes
+Let's first consider a simple example: initialize
 a (`int`, `NDAarray`) pair into the store, and then pull the value out.
 
 ```python
@@ -25,7 +20,7 @@ a (`int`, `NDAarray`) pair into the store, and then pull the value out.
  [ 2.  2.  2.]]
 ```
 
-### Push, Aggregation, and Updater
+## Push, Aggregation, and Updater
 
 For any key has been initialized, we can push a new value with the same shape to the key.
 
@@ -51,8 +46,8 @@ values and then push the aggregated value.
  [ 4.  4.  4.]]
 ```
 
-For each push, KVStore applies the pushed value into the value stored by a
-`updater`. The default updater is `ASSGIN`, we can replace the default one to
+For each push, KVStore combines the pushed value with the value stored using an
+`updater`. The default updater is `ASSIGN`; we can replace the default to
 control how data is merged.
 
 ```python
@@ -72,9 +67,9 @@ update on key: 3
  [ 6.  6.  6.]]
 ```
 
-### Pull
+## Pull
 
-We already see how to pull a single key-value pair. Similar to push, we can also
+We have already seen how to pull a single key-value pair. Similarly to push, we can also
 pull the value into several devices by a single call.
 
 ```python
@@ -85,10 +80,10 @@ pull the value into several devices by a single call.
  [ 6.  6.  6.]]
 ```
 
-## Interface for list key-value pairs
+## Handle a list of key-value pairs
 
-All operations introduced so far are about a single key. KVStore also provides
-the interface for a list of key-value pairs. For single device:
+All operations introduced so far involve a single key. KVStore also provides
+an interface for a list of key-value pairs. For a single device:
 
 ```python
 >>> keys = [5, 7, 9]
@@ -104,7 +99,7 @@ update on key: 9
  [ 3.  3.  3.]]
 ```
 
-For multi-devices:
+For multiple devices:
 
 ```python
 >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
@@ -118,23 +113,24 @@ update on key: 9
  [ 11.  11.  11.]]
 ```
 
-```eval_rst
-.. raw:: html
-
-    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
-```
+## Multiple machines
+Base on parameter server. The `updater` will runs on the server nodes.
+This section will be updated when the distributed version is ready.
 
 
-## API Reference
+<!-- ## How to Choose between APIs -->
 
-```eval_rst
-.. automodule:: mxnet.kvstore
-    :members:
+<!-- You can mix them all as much as you like. Here are some guidelines -->
+<!-- * Use Symbolic API and coarse grained operator to create established structure. -->
+<!-- * Use fine-grained operator to extend parts of of more flexible symbolic graph. -->
+<!-- * Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward of executors. -->
 
-.. raw:: html
-
-    <script>auto_index("mxnet.kvstore");</script>
-```
+<!-- We believe that different ways offers you different levels of flexibility and -->
+<!-- efficiency. Normally you do not need to be flexible in all parts of the -->
+<!-- networks, so we allow you to use the fast optimized parts, and compose it -->
+<!-- flexibly with fine-grained operator or dynamic NArray. We believe such kind of -->
+<!-- mixture allows you to build the deep learning architecture both efficiently and -->
+<!-- flexibly as your choice. To mix is to maximize the performance and flexibility. -->
 
 # Recommended Next Steps
-* [Python Tutorials](http://mxnet.io/tutorials/index.html#Python-Tutorials)
+* [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

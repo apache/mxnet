@@ -1,31 +1,14 @@
-MXNet R Package
-===============
-You have find MXNet R Package! The MXNet R packages brings flexible and efficient GPU
+MXNet - R API
+=============
+MXNet supports R programming language. The MXNet R package brings flexible and efficient GPU
 computing and state-of-art deep learning to R.
 
 - It enables you to write seamless tensor/matrix computation with multiple GPUs in R.
 - It also enables you construct and customize the state-of-art deep learning models in R,
   and apply them to tasks such as image classification and data science challenges.
 
-Sounds exciting? This page contains links to all the related documents on R package.
-
-Get Started
------------
-Checkout the [Installation Guide](../get_started/build.md) contains instructions to install MXNet, and [Tutorials](#tutorials) for examples on how to use MXNet for various tasks.
-
-Tutorials
----------
-* [Neural Network with MXNet in Five Minutes](fiveMinutesNeuralNetwork.md)
-* [Classify Realworld Images with Pretrained Model](classifyRealImageWithPretrainedModel.md)
-* [Handwritten Digits Classification Competition](mnistCompetition.md)
-* [Tutorial on NDArray and Symbol](ndarrayAndSymbolTutorial.md)
-* [Tutorial on Callback Functions](CallbackFunctionTutorial.md)
-* [Character Language Model using RNN Model](CharRnnModel.md)
+We are working on MXNet for R API interface documentation. In the mean time you can refer below resources to get started.
 
 Resources
----------
-There are several information to get you started
-* [Installation Guide](../get_started/build.md) contains instructions to install MXNet.
-* [Contributor Guide](http://mxnet.readthedocs.org/en/latest/contribute.html#r-package)
-  - The R package section gives various guidelines on how to contribute code, tutorial, rmarkdown examples to MXNet.
-  - Your contribution is always welcomed!
+=========
+* [MXNet for R Tutorials](http://mxnet.io/tutorials/index.html#R-Tutorials)

@@ -6,7 +6,7 @@ which can very useful in model training.
 
 This tutorial is written in Rmarkdown.
 
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/CallbackFunctionTutorial.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/api/r/CallbackFunctionTutorial.html)
 
 - You can find the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CallbackFunctionTutorial.Rmd)
 
@@ -254,3 +254,9 @@ model <- mx.model.FeedForward.create(
 ```
 
 You can see once the validation metric goes below the threshold we set, the training process will stop early.
+
+# Recommended Next Steps
+* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
