@@ -16,6 +16,6 @@
   interact with Symbolic Execution.
   
 # Recommended Next Steps
-* [MXNet Architecture] (http://mxnet.io/architecture/overview.html)
+* [MXNet Architecture](http://mxnet.io/architecture/overview.html)
 * [How to read MXNet code](http://mxnet.io/architecture/read_code.html)
 * [Develop and hack MXNet](http://mxnet.io/how_to/develop_and_hack.html)

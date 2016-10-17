@@ -779,4 +779,4 @@ situation. But they are different on both semantic and performance.
 
 * [Analogy to other DL systems](http://mxnet.io/architecture/analogy.html)
 * [How to read MXNet code](http://mxnet.io/architecture/read_code.html)
-* [Develop and hack MXNet](http://mxnet.io/architecture/develop_and_hack.html)
+* [Develop and hack MXNet](http://mxnet.io/how_to/develop_and_hack.html)
