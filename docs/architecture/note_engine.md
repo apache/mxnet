@@ -317,3 +317,9 @@ This note is part of our effort to [open-source system design notes](index.md)
 ### Source Code of the Generic Dependency Engine
 [MXNet](https://github.com/dmlc/mxnet) provides an implementation of generic dependency engine described in this article.
 You can find more descriptions in the [here](engine.md). You are also welcome to contribute to the code.
+
+# Recommended next steps
+
+* [Squeeze the Memory Consumption of Deep Learning](http://mxnet.io/architecture/note_memory.html)
+* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
+* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
