@@ -77,6 +77,33 @@ class ActivationDoc(SymbolDoc):
     """
 
 
+class FlattenDoc(SymbolDoc):
+    """
+    Examples
+    --------
+    Flatten is usually applied before `FullyConnected`, to reshape the 4D tensor
+    produced by convolutional layers to 2D matrix:
+
+    >>> data = Variable('data')  # say this is 4D from some conv/pool
+    >>> flatten = Flatten(data=data, name='flat')  # now this is 2D
+    >>> SymbolDoc.get_output_shape(flatten, data=(2, 3, 4, 5))
+    {'flat_output': (2L, 60L)}
+
+    Regression Test
+    ---------------
+    >>> test_dims = [(2, 3, 4, 5), (2, 3), (2,)]
+    >>> op = Flatten(name='flat')
+    >>> for dims in test_dims:
+    ...     x = test_utils.random_arrays(dims)
+    ...     y = test_utils.simple_forward(op, flat_data=x)
+    ...     y_np = x.reshape((dims[0], numpy.prod(dims[1:])))
+    ...     print('%s: %s' % (dims, test_utils.almost_equal(y, y_np)))
+    (2, 3, 4, 5): True
+    (2, 3): True
+    (2,): True
+    """
+
+
 class FullyConnectedDoc(SymbolDoc):
     """
     Examples
@@ -114,7 +141,6 @@ class FullyConnectedDoc(SymbolDoc):
     >>> test_utils.almost_equal(out, out_np)
     True
     """
-    pass
 
 
 class ConcatDoc(SymbolDoc):
@@ -134,7 +160,6 @@ class ConcatDoc(SymbolDoc):
     Note the shape should be the same except on the dimension that is being
     concatenated.
     """
-    pass
 
 
 class BroadcastPlusDoc(SymbolDoc):

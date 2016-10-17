@@ -36,7 +36,8 @@ MXNET_REGISTER_OP_PROPERTY(Reshape, ReshapeProp)
 .add_arguments(ReshapeParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(Flatten, FlattenProp)
-.describe("Flatten input")
+.describe(R"(Flatten input into 2D by collapsing all the higher dimensions.
+A (d1, d2, ..., dK) tensor is flatten to (d1, d2* ... *dK) matrix.)")
 .add_argument("data", "Symbol", "Input data to flatten.");
 }  // namespace op
 }  // namespace mxnet
