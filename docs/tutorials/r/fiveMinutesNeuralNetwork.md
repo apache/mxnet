@@ -8,7 +8,7 @@ We will show you how to do classification and regression tasks respectively. The
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/fiveMinutesNeuralNetwork.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/api/r/fiveMinutesNeuralNetwork.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd)
 
 ## Classification
@@ -317,3 +317,7 @@ model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
 Congratulations! Now you have learnt the basic for using `mxnet`. Please check the other tutorials for advanced features.
 
 
+# Recommended Next Steps
+* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)

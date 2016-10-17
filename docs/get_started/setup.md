@@ -9,6 +9,18 @@ This topic covers the following:
 
 
 &nbsp;
+
+
+&nbsp;
+
+You can just get started with MXNet, without reading further, by directly jumping to [Quick Installation Guide](#Quick-Installation) to set up MXNet with a set of bash scripts.
+
+
+&nbsp;
+
+
+&nbsp;
+ 
 If the instructions on this page do not work for you, please feel free to ask questions at [mxnet/issues](https://github.com/dmlc/mxnet/issues), or even better to send
 pull request if you can fix the problem. Refer here for [contribution guidelines](http://mxnet.io/community/index.html).
 

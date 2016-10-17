@@ -89,4 +89,4 @@ mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')
 The complete code for this example can be found at `examples/numpy-ops/custom_softmax.py`
 
 ## C++/MShadow(CUDA)
-Please refer to [Developer Guide - SimpleOp](../system/operator_util.md) and [Developer Guide - Operators](https://mxnet.readthedocs.org/en/latest/system/operator.html) for detail.
+Please refer to [Developer Guide - SimpleOp](../system/operator_util.md) and [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet) for detail.

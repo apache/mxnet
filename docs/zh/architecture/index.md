@@ -35,7 +35,7 @@
 
 ## How to Read the Code
 - 所有模块的接口在 [include](../../include) 可以找到, 这些接口有很详细的注释文档.
-- 可以通过  [Doxygen Version](https://mxnet.readthedocs.org/en/latest/doxygen) 来阅读文档.
+- 可以通过  [Doxygen Version](http://mxnet.io/doxygen) 来阅读文档.
 - 所有模块都只依赖其他模块在[include](../../include) 目录下的的头文件.
 - 模块的具体实现在 [src](../../src) 目录下.
 - 所有源码的作用域仅限于源码所在目录  [src/common](../../src/common) and [include](../../include).
@@ -66,5 +66,5 @@ Documents of Each Module
 
 List of Other Resources
 -----------------------
-* [Doxygen Version of C++ API](https://mxnet.readthedocs.org/en/latest/doxygen) gives a comprehensive document of C++ API.
+* [Doxygen Version of C++ API](http://mxnet.io/doxygen) gives a comprehensive document of C++ API.
 * [Contributor Guide](../how_to/contribute.md) gives guidelines on how to push changes to the project.

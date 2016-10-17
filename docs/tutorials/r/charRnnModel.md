@@ -8,7 +8,7 @@ Data can be found at [here](https://github.com/dmlc/web-data/tree/master/mxnet/t
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.org/en/latest/packages/r/CharRnnModel.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/api/r/CharRnnModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CharRnnModel.Rmd)
 
 Load Data 
@@ -313,3 +313,6 @@ Other RNN models
 In `mxnet`, other RNN models like custom RNN and gru is also provided.
 - For **custom RNN model**, you can replace `mx.lstm` with `mx.rnn` to train rnn model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.rnn.inference` and `mx.rnn.forward` to inference from rnn model and get forward result from the inference model.
 - For **GRU model**, you can replace `mx.lstm` with `mx.gru` to train gru model. Also, you can replace `mx.lstm.inference` and `mx.lstm.forward` with `mx.gru.inference` and `mx.gru.forward` to inference from gru model and get forward result from the inference model.
+
+# Recommended Next Steps
+* [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

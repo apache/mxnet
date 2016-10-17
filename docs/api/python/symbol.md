@@ -192,3 +192,10 @@ Testing Utility Reference
 
     <script>auto_index("mxnet.test_utils");</script>
 ```
+
+# Recommended Next Steps
+* [Symbolic Configuration and Execution in Pictures](http://mxnet.io/api/python/symbol_in_pictures.html)
+* [IO Data Loading API](io.md) for parsing and loading data
+* [NDArray API](ndarray.md) for vector/matrix/tensor operations
+* [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training
+

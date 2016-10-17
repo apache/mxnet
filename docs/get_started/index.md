@@ -2,9 +2,20 @@
 MXNet is an open source library for Deep Learning with following features:
 1. **Flexible** - Supports both imperative and symbolic programming.
 2. **Portable** - Runs on CPUs or GPUs, on clusters, servers, desktops, or mobile phones.
-3. **Multiple language support** - Supports over 7 programming languages, including C++, Python, R, Scala, Julia, Matlab, and Javascript
+3. **Multiple language support** - Supports over 7 programming languages, including C++, Python, R, Scala, Julia, Matlab, and Javascript.
 4. **Distributed** - Supports distributed training on multiple CPU/GPU machines, including AWS, GCE, Azure, and Yarn clusters.
-5. **Optimized for performance** - Optimized C++ backend engine parallelizes both I/O and computation
+5. **Optimized for performance** - Optimized C++ backend engine parallelizes both I/O and computation.
+
+
+&nbsp;
+
+# Setup and Installation
+
+Refer [Setup and Installation](http://mxnet.io/get_started/setup.html) guide for setting up MXNet.
+
+
+&nbsp;
+
 
 &nbsp;
 

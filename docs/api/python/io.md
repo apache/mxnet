@@ -178,3 +178,6 @@ IO API Reference
 
     <script>auto_index("mxnet.io");</script>
 ```
+# Recommended Next Steps
+* [NDArray API](ndarray.md) for vector/matrix/tensor operations
+* [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training

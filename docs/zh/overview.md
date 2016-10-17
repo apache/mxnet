@@ -239,5 +239,5 @@ MXNet是DMLC第一个结合了所有成员努力的项目，也同时吸引了�
 ## 扩展阅读
 
 1. 此文大部分内容已经发表在NIPS LearningSys 2015上，[paper link](http://www.cs.cmu.edu/~muli/file/MXNet-learning-sys.pdf)
-2. 本文只是对MXNet各个部件做了初步的介绍，更多文档参见 [MXNet/doc](http://MXNet.readthedocs.org/en/latest/index.html)
+2. 本文只是对MXNet各个部件做了初步的介绍，更多文档参见 [MXNet/doc](http://mxnet.io/)
 3. 本文实验代码均在 [MXNet/example](https://github.com/dmlc/mxnet/tree/master/example)

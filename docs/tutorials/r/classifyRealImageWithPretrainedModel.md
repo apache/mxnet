@@ -12,7 +12,7 @@ This model gives the recent state-of-art prediction accuracy on image net datase
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/classifyRealImageWithPretrainedModel.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/api/r/classifyRealImageWithPretrainedModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
 
 Package Loading
@@ -188,3 +188,7 @@ So I searched on the web to check it out.. and hmm it does get the right answer 
 Reference
 ---------
 [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." arXiv preprint arXiv:1502.03167 (2015).
+
+# Recommended Next Steps
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)

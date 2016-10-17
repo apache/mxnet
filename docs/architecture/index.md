@@ -12,6 +12,9 @@ In this section, we will describe general design concepts of Deep Learning syste
 
 &nbsp;
 
+
+&nbsp;
+
 Refer below sections for more details
 * [Programming Models for Deep Learning](http://mxnet.io/architecture/program_model.html)
 * [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)

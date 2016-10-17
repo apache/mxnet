@@ -150,3 +150,6 @@ Context API Reference
 
     <script>auto_index("mxnet.context");</script>
 ```
+
+# Recommended Next Steps
+* [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training
