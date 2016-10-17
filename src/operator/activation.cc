@@ -46,10 +46,18 @@ Operator *ActivationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
 DMLC_REGISTER_PARAMETER(ActivationParam);
 
 MXNET_REGISTER_OP_PROPERTY(Activation, ActivationProp)
-.describe("Apply activation function to input."
-          "Softmax Activation is only available with CUDNN on GPU"
-          "and will be computed at each location across channel if input is 4D.")
-.add_argument("data", "Symbol", "Input data to activation function.")
+.describe(R"(Elementwise activation function.
+
+The following activation types are supported (operations are applied elementwisely to each
+scalar of the input tensor):
+
+- `relu`: Rectified Linear Unit, `y = max(x, 0)`
+- `sigmoid`: `y = 1 / (1 + exp(-x))`
+- `tanh`: Hyperbolic tangent, `y = (exp(x) - exp(-x)) / (exp(x) + exp(-x))`
+- `softrelu`: Soft ReLU, or SoftPlus, `y = log(1 + exp(x))`
+
+See `LeakyReLU` for other activations with parameters.
+)")
 .add_arguments(ActivationParam::__FIELDS__());
 
 }  // namespace op
