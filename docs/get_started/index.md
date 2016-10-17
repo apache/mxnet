@@ -9,6 +9,13 @@ MXNet is an open source library for Deep Learning with following features:
 
 &nbsp;
 
+# Setup and Installation
+
+Refer [Setup and Installation](http://mxnet.io/get_started/setup.html) guide for setting up MXNet.
+
+
+&nbsp;
+
 Before we get started with MXNet, let's see how a MXNet programming interface would look like. First, we should MXNet program for training a basic digit recognition model and then we will also see the MXNet interface for tensor computation.
 
 # First MXNet Model - Train an MLP on MNIST

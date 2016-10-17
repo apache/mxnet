@@ -3,7 +3,7 @@ MXNET是这样压榨深度学习的内存消耗的
 
 最近在学习mxnet，发现mxnet的有些思想挺好，这里试着翻译它的一篇文章，也试着了解减少内存消耗的设计原则，希望这篇文章对大家有帮助。
 原文链接[Squeeze the Memory Consumption of Deep
-Learning](https://mxnet.readthedocs.org/en/latest/developer-guide/note_memory.html)
+Learning](http://mxnet.io/architecture/note_memory.html)
 
 深度学习的重要主题是关于训练更深度和更大型的网络。最近几年，硬件普遍升级的相当迅速，这种巨型的深度网络怪物常常对显存有更多的需求。如果同样的网络模型我们能使用更少的内存意味着我们每批输入数据可以输入更多，也能增加GPU的利用率。
 
@@ -140,7 +140,7 @@ sigmoid函数的值。
 
 ### 优先保证安全和正确
 
-保正正确，这是我们需要知道的第一原则。这意味着执行的这种方式需要考虑采取隐式依赖内存共享。这可以通过添加隐式依赖边到执行图模型来完成。或者更简单的，按照依赖引擎说明[dependency engine note](http://mxnet.readthedocs.org/en/latest/developer-guide/note_engine.html)中所述，如果执行引擎意识到变化了，往序列里推送一个操作和写入同样的变量标记，这个标记表示相同的内存区域。
+保正正确，这是我们需要知道的第一原则。这意味着执行的这种方式需要考虑采取隐式依赖内存共享。这可以通过添加隐式依赖边到执行图模型来完成。或者更简单的，按照依赖引擎说明[dependency engine note](http://mxnet.io/architecture/overview.html#execution-engine)中所述，如果执行引擎意识到变化了，往序列里推送一个操作和写入同样的变量标记，这个标记表示相同的内存区域。
 
 另一种方式是一直产生内存分配方案，这是安全的，也意味着永远都不分配同样的内存给可以并行的节点。可能这不是理想的方式，因为有时内存的减少是更可取的，我们可以在相同的GPU获取由多个计算流的执行结果，但这没有太大的提高。
 
