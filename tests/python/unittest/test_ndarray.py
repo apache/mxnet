@@ -178,15 +178,26 @@ def test_ndarray_slice():
 
 
 def test_ndarray_crop():
+    # get crop
     x = mx.nd.ones((2, 3, 4))
-    y = mx.nd.crop(x, begin=(0, 0, 0), end=(2, 2, 3))
-    assert same(y.asnumpy(), np.ones((2, 2, 3), dtype=y.dtype))
+    y = mx.nd.crop(x, begin=(0, 0, 0), end=(2, 1, 3))
+    assert same(y.asnumpy(), np.ones((2, 1, 3), dtype=y.dtype))
 
-    z = mx.nd.zeros((2, 2, 3))
+    # crop assign
+    z = mx.nd.zeros((2, 1, 3))
     mx.nd._internal._crop_assign(x, z, begin=(0, 0, 0),
-                                 end=(2, 2, 3), out=x)
-    np_x = np.ones((2, 3, 4), dtype=x.dtype)
-    np_x[0:2, 0:2, 0:3] = 0
+                                 end=(2, 1, 3), out=x)
+    np_x = np.ones(x.shape, dtype=x.dtype)
+    np_x[0:2, 0:1, 0:3] = 0
+    assert same(x.asnumpy(), np_x)
+
+    # crop assign with scalar
+    x = mx.nd.ones((2, 3, 4))
+    mx.nd._internal._crop_assign_scalar(x, scalar=5,
+                                        begin=(0, 0, 0),
+                                        end=(2, 1, 3), out=x)
+    np_x = np.ones(x.shape, dtype=x.dtype)
+    np_x[0:2, 0:1, 0:3] = 5
     assert same(x.asnumpy(), np_x)
 
 
