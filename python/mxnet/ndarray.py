@@ -969,11 +969,21 @@ def concatenate(arrays, axis=0, always_copy=True):
         assert shape_rest1 == arr.shape[0:axis]
         assert shape_rest2 == arr.shape[axis+1:]
         assert dtype == arr.dtype
-    ret = empty(shape_rest1 + (shape_axis,) + shape_rest2,
-                ctx=arrays[0].context, dtype=dtype)
+    ret_shape = shape_rest1 + (shape_axis,) + shape_rest2
+    ret = empty(ret_shape, ctx=arrays[0].context, dtype=dtype)
+
     idx = 0
+    begin = [0 for _ in ret_shape]
+    end = list(ret_shape)
     for arr in arrays:
-        ret.assign_slice_from(axis, idx, idx+arr.shape[axis], arr)
+        if axis == 0:
+            ret[idx:idx+arr.shape[0]] = arr
+        else:
+            begin[axis] = idx
+            end[axis] = idx+arr.shape[axis]
+            _internal._crop_assign(ret, arr, out=ret,
+                                   begin=tuple(begin),
+                                   end=tuple(end))
         idx += arr.shape[axis]
 
     return ret
