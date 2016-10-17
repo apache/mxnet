@@ -8,7 +8,7 @@ os:
 
 env:
   # code analysis
-  - TASK=lint
+  # - TASK=lint
   # build mxnet.so with CUDA
   - TASK=build
   # run tests/cpp
@@ -24,9 +24,13 @@ env:
 matrix:
   exclude:
     - os: osx
-      env: TASK=lint
-    - os: osx
       env: TASK=julia JULIA_VER=0.4
+    - os: linux
+      env: TASK=build
+    - os: linux
+      env: TASK=cpp_test
+    - os: linux
+      env: TASK=python_test
     - os: linux
       env: TASK=r_test
 

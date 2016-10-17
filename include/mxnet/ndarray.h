@@ -394,6 +394,18 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
                  NDArray *to, int priority = 0);
 
 /*!
+ * \brief assign a slice along any axis.
+ * \param from the NDArray whose value is used for assigning
+ * \param slice_dim the axis we want to perform slice in
+ * \param start the beginning of the slice
+ * \param end the ending of the slice
+ * \param to the bigger NDArray whose slice we want to assign to
+ * \param priority the priority of the task
+ */
+void AssignSliceFrom(const NDArray &from, int slice_dim, index_t start, index_t end,
+                     NDArray *to, int priority = 0);
+
+/*!
  * \brief Perform elementwise sum over each data from source, store result into out.
  * \param source the ndarray we want to sum
  * \param out the target ndarray

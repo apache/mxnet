@@ -94,6 +94,11 @@ class NDArray(object):
         self.handle = handle
         self.writable = writable
 
+    def __repr__(self):
+        shape_info = 'x'.join(['%d' % x for x in self.shape])
+        return '<%s %s @%s>' % (self.__class__.__name__,
+                                shape_info, self.context)
+
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))
 
@@ -276,8 +281,10 @@ class NDArray(object):
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    def _copy_slice_to(self, axis, start, stop, target):
+    def copy_slice_to(self, axis, start, stop, target):
         """Copy a slice along an axis.
+
+        Unlike `slice_axis`, the source and target can live on different contexts.
 
         Parameters
         ----------
@@ -302,6 +309,25 @@ class NDArray(object):
 
         assert isinstance(target, NDArray)
         return _internal._copy_slice_to(self, axis, start, stop, out=target)
+
+    def assign_slice_from(self, axis, start, stop, source):
+        """Assign a slice from an NDArray.
+
+        The source and target can live on different contexts.
+
+        Parameters
+        ----------
+        axis : int
+            The axis along which to do slicing.
+        start : int
+            The starting index of the slice.
+        stop : int
+            The finishing index of the slice.
+        source : NDArray
+            The array whose content is used for the assignment.
+        """
+        assert isinstance(source, NDArray)
+        return _internal._assign_slice_from(source, axis, start, stop, out=self)
 
     def _at(self, idx):
         """Return a sub NDArray that shares memory with current one.
@@ -909,7 +935,7 @@ def array(source_array, ctx=None, dtype=mx_real_t):
     arr[:] = source_array
     return arr
 
-def concatenate(arrays, always_copy=True):
+def concatenate(arrays, axis=0, always_copy=True):
     """Concatenate a list of NDArrays along the first dimension.
 
     Parameters
@@ -917,6 +943,8 @@ def concatenate(arrays, always_copy=True):
     arrays : list of NDArray
         Arrays to be concatenate. They must have identical shape except
         the first dimension. They also must have the same data type.
+    axis : int
+        The axis along which to concatenate.
     always_copy : bool
         Default `True`. When not `True`, if the arrays only contain one
         `NDArray`, that element will be returned directly, avoid copying.
@@ -932,18 +960,21 @@ def concatenate(arrays, always_copy=True):
     if not always_copy and len(arrays) == 1:
         return arrays[0]
 
-    shape0 = arrays[0].shape[0]
-    shape_rest = arrays[0].shape[1:]
+    shape_axis = arrays[0].shape[axis]
+    shape_rest1 = arrays[0].shape[0:axis]
+    shape_rest2 = arrays[0].shape[axis+1:]
     dtype = arrays[0].dtype
     for arr in arrays[1:]:
-        shape0 += arr.shape[0]
-        assert shape_rest == arr.shape[1:]
+        shape_axis += arr.shape[axis]
+        assert shape_rest1 == arr.shape[0:axis]
+        assert shape_rest2 == arr.shape[axis+1:]
         assert dtype == arr.dtype
-    ret = empty((shape0,) + shape_rest, ctx=arrays[0].context, dtype=dtype)
+    ret = empty(shape_rest1 + (shape_axis,) + shape_rest2,
+                ctx=arrays[0].context, dtype=dtype)
     idx = 0
     for arr in arrays:
-        ret[idx:idx+arr.shape[0]] = arr
-        idx += arr.shape[0]
+        ret.assign_slice_from(axis, idx, idx+arr.shape[axis], arr)
+        idx += arr.shape[axis]
 
     return ret
 

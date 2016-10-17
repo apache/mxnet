@@ -223,6 +223,80 @@ void ScalarOp(const NDArray &lhs,
   }
 }
 
+void AssignSliceFrom(const NDArray &from, int slice_dim, index_t start, index_t end,
+                     NDArray *to, int priority) {
+  CHECK(from.shape().ndim() == to->shape().ndim())
+      << "from and to must have the same number of dimensions";
+  CHECK(slice_dim < from.shape().ndim())
+      << "slice dimension out of bounds";
+  CHECK(start < end)
+      << "slice is empty";
+  CHECK(end <= to->shape()[slice_dim])
+      << "slice out of bounds";
+
+  mshadow::Shape<3> from_shape = from.shape().FlatTo3D(slice_dim);
+  mshadow::Shape<3> to_shape = to->shape().FlatTo3D(slice_dim);
+  CHECK(from_shape[0] == to_shape[0] && from_shape[2] == to_shape[2])
+      << "shape incompatible";
+  CHECK(end - start == from_shape[1])
+      << "shape incompatible";
+
+  int a = from.ctx().dev_mask();
+  int b = to->ctx().dev_mask();
+
+  std::vector<Engine::VarHandle> const_vars{from.var()};
+  NDArray ret = *to;
+
+#define MXNET_ASSIGNSLICEFROM_IMPL(xpu1, xpu2) \
+      ret.CheckAndAlloc(); \
+      for (index_t i = 0; i < from_shape[0]; ++i) { \
+        index_t length = from_shape[1] * from_shape[2]; \
+        index_t src_idx = i * length; \
+        index_t dst_idx = i * (to_shape[1] * to_shape[2]) + start * to_shape[2]; \
+        \
+        TBlob blob_from = from.raw_data(src_idx, length); \
+        TBlob blob_to = ret.raw_data(dst_idx, length); \
+        ndarray::Copy<xpu1, xpu2>(blob_from, &blob_to, \
+                                  from.ctx(), ret.ctx(), ctx); \
+      }
+
+  if (a == cpu::kDevMask && b == cpu::kDevMask) {
+    Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+      MXNET_ASSIGNSLICEFROM_IMPL(cpu, cpu);
+    }, from.ctx(), const_vars, {ret.var()},
+    FnProperty::kNormal, priority);
+  } else {
+#if MXNET_USE_CUDA
+    if (a == cpu::kDevMask && b == gpu::kDevMask) {
+      Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+        MXNET_ASSIGNSLICEFROM_IMPL(cpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, ret.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyToGPU, priority);
+    } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
+      Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+        MXNET_ASSIGNSLICEFROM_IMPL(gpu, cpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
+    } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
+      Engine::Get()->PushSync([from, ret, from_shape, to_shape, start, end](RunContext ctx) { \
+        MXNET_ASSIGNSLICEFROM_IMPL(gpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
+    } else {
+      LOG(FATAL) << "unknown device mask";
+    }
+#else
+    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+  }
+}
+
 void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
                  NDArray *to, int priority) {
   CHECK(from.shape().ndim() == to->shape().ndim())
@@ -231,7 +305,7 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
       << "slice dimension out of bounds";
   CHECK(start < end)
       << "slice is empty";
-  CHECK(end < from.shape()[slice_dim])
+  CHECK(end <= from.shape()[slice_dim])
       << "slice out of bounds";
 
   mshadow::Shape<3> from_shape = from.shape().FlatTo3D(slice_dim);
@@ -248,7 +322,6 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
   NDArray ret = *to;
 
 #define MXNET_COPYSLICETO_IMPL(xpu1, xpu2) \
-    Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) { \
       ret.CheckAndAlloc(); \
       for (index_t i = 0; i < from_shape[0]; ++i) { \
         index_t src_idx = i * (from_shape[1] * from_shape[2]) + \
@@ -260,20 +333,36 @@ void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
         TBlob blob_to = ret.raw_data(dst_idx, length); \
         ndarray::Copy<xpu1, xpu2>(blob_from, &blob_to, \
                                   from.ctx(), ret.ctx(), ctx); \
-      } \
-    }, from.ctx(), const_vars, {ret.var()}, \
-    FnProperty::kNormal, priority)
+      }
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
-    MXNET_COPYSLICETO_IMPL(cpu, cpu);
+    Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+      MXNET_COPYSLICETO_IMPL(cpu, cpu);
+    }, from.ctx(), const_vars, {ret.var()},
+    FnProperty::kNormal, priority);
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
-      MXNET_COPYSLICETO_IMPL(cpu, gpu);
+      Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+        MXNET_COPYSLICETO_IMPL(cpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, ret.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyToGPU, priority);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
-      MXNET_COPYSLICETO_IMPL(gpu, cpu);
+      Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+        MXNET_COPYSLICETO_IMPL(gpu, cpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
-      MXNET_COPYSLICETO_IMPL(gpu, gpu);
+      Engine::Get()->PushSync([from, ret, from_shape, start, end](RunContext ctx) {
+        MXNET_COPYSLICETO_IMPL(gpu, gpu);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), const_vars, {ret.var()},
+      FnProperty::kCopyFromGPU, priority);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -810,12 +899,21 @@ MXNET_REGISTER_NDARRAY_FUN(_copyto)
 MXNET_REGISTER_NDARRAY_FUN(_copy_slice_to)
 .set_body([](NDArray **u, real_t *s, NDArray **out,
              int num_params, char **param_keys, char **param_vals) {
-  CopySliceTo(*u[0],
-              static_cast<index_t>(s[0]),
+  CopySliceTo(*u[0], static_cast<int>(s[0]),
               static_cast<index_t>(s[1]),
               static_cast<index_t>(s[2]), out[0]);
-})
-.set_num_use_vars(1)
+}).set_num_use_vars(1)
+.set_num_scalars(3)
+.set_num_mutate_vars(1)
+.set_type_mask(kNDArrayArgBeforeScalar);
+
+MXNET_REGISTER_NDARRAY_FUN(_assign_slice_from)
+.set_body([](NDArray **u, real_t *s, NDArray **out,
+             int num_params, char **param_keys, char **param_vals) {
+  AssignSliceFrom(*u[0], static_cast<int>(s[0]),
+                  static_cast<index_t>(s[1]),
+                  static_cast<index_t>(s[2]), out[0]);
+}).set_num_use_vars(1)
 .set_num_scalars(3)
 .set_num_mutate_vars(1)
 .set_type_mask(kNDArrayArgBeforeScalar);

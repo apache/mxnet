@@ -8,9 +8,12 @@ from mxnet.test_utils import *
 
 
 def np_softmax(x):
-    x = x - np.max(x, axis=1).reshape(x.shape[0], 1)
+    # fix for old numpy on Travis not supporting keepdims
+    # x = x - np.max(x, axis=-1, keepdims=True)
+    x = x - np.max(x, axis=-1).reshape(x.shape[:-1] + (1,))
     x = np.exp(x)
-    x /= np.sum(x, axis=1).reshape(x.shape[0], 1)
+    # x /= np.sum(x, axis=-1, keepdims=True)
+    x /= np.sum(x, axis=-1).reshape(x.shape[:-1] + (1,))
     return x
 
 
@@ -238,11 +241,11 @@ def check_softmax_with_ignore_label(xpu):
     assert(abs(np.sum(grad1[:int(shape[0]/2)])) < 1e-5)
     assert(reldiff(grad0[int(shape[0]/2):], grad1[int(shape[0]/2):]) < 1e-5)
 
-def check_softmax_with_shape(shape, xpu):
+def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     # bind with label
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
-    Y = mx.symbol.SoftmaxOutput(data=X, label=L)
+    Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
     x = mx.random.uniform(-1, 1, shape, ctx = xpu)
     l = mx.random.uniform(-1, 1, shape, ctx = xpu)
     l[:] = np_softmax(l.asnumpy())
@@ -255,7 +258,9 @@ def check_softmax_with_shape(shape, xpu):
     assert_allclose(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy())
 
 def test_softmax():
-    check_softmax_with_shape((3, 4), mx.cpu())
+    check_softmax_with_shape((3, 4), mx.cpu(), preserve_shape=False)
+    check_softmax_with_shape((3, 4), mx.cpu(), preserve_shape=True)
+    check_softmax_with_shape((3, 4, 2), mx.cpu(), preserve_shape=True)
 
 def check_multi_softmax_with_shape(shape, xpu):
     X = mx.symbol.Variable('X')
@@ -1237,14 +1242,14 @@ def test_batch_dot(ctx=mx.cpu()):
                                    bgrad_npy + b_init_grad_npy) < 1E-3
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
-    
+
     img1 = mx.sym.Variable('img1')
     img2 = mx.sym.Variable('img2')
     return mx.sym.Correlation(data1=img1,data2=img2,kernel_size =kernel_size,max_displacement = max_displacement,
                               stride1 = stride1,stride2 = stride2,pad_size= pad_size,is_multiply = is_multiply)
 
 def correlation_forward(data1,data2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply):
-    
+
     # compute output's dimension
     paddedbottomheight = data1.shape[2] + 2 * pad_size
     paddedbottomwidth = data1.shape[3] + 2 * pad_size
@@ -1255,31 +1260,31 @@ def correlation_forward(data1,data2,pad_size,kernel_size,stride1,stride2,max_dis
     neighborhood_grid_radius = max_displacement // stride2
     neighborhood_grid_width = neighborhood_grid_radius * 2 + 1
     top_channels = neighborhood_grid_width * neighborhood_grid_width
-    
+
     out = np.zeros((data1.shape[0], top_channels, top_height, top_width))
     tmp1 = np.zeros((data1.shape[0],data1.shape[1],paddedbottomheight, paddedbottomwidth))
     tmp2 = np.zeros((data1.shape[0],data1.shape[1],paddedbottomheight, paddedbottomwidth))
-    
+
     tmp1[:, :, pad_size:pad_size + data1.shape[2], pad_size:pad_size + data1.shape[3]] = data1[:,:,:,:]
     tmp2[:, :, pad_size:pad_size + data2.shape[2], pad_size:pad_size + data2.shape[3]] = data2[:,:,:,:]
-    
+
     for i in range(top_height):
         for j in range(top_width):
             for nbatch in range(data1.shape[0]):
-                
+
                 # x1,y1 is the location in data1 , i,j is the location in output
                 x1 = j * stride1 + max_displacement
                 y1 = i * stride1 + max_displacement
-                
+
                 for top_channel in range(top_channels):
-                    
+
                     s2o = (top_channel % neighborhood_grid_width - neighborhood_grid_radius) * stride2
                     s2p = (top_channel // neighborhood_grid_width - neighborhood_grid_radius) * stride2
-                    
-                    # location in data2 
+
+                    # location in data2
                     x2 = x1 + s2o
                     y2 = y1 + s2p
-                    
+
                     for h in range(kernel_size):
                         for w in range(kernel_size):
                             for channel in range(data1.shape[1]):
@@ -1291,8 +1296,8 @@ def correlation_forward(data1,data2,pad_size,kernel_size,stride1,stride2,max_dis
     return out,tmp1,tmp2
 
 def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply):
-    
-    # compute output's dimension 
+
+    # compute output's dimension
     paddedbottomheight = data1.shape[2] + 2 * pad_size
     paddedbottomwidth = data1.shape[3] + 2 * pad_size
     kernel_radius = (kernel_size - 1) // 2
@@ -1302,28 +1307,28 @@ def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,str
     neighborhood_grid_radius = max_displacement // stride2
     neighborhood_grid_width = neighborhood_grid_radius * 2 + 1
     top_channels = neighborhood_grid_width * neighborhood_grid_width
-    
+
     out = np.zeros((data1.shape[0], top_channels, top_height, top_width))
     tmp1_grad = np.zeros(tmp1.shape)
     tmp2_grad = np.zeros(tmp2.shape)
-    
+
     for i in range(top_height):
         for j in range(top_width):
             for nbatch in range(data1.shape[0]):
-                
+
                 # x1,y1 is the location in data1 , i,j is the location in output
                 x1 = j * stride1 + max_displacement
                 y1 = i * stride1 + max_displacement
-                
+
                 for top_channel in range(top_channels):
-                    
+
                     s2o = (top_channel % neighborhood_grid_width - neighborhood_grid_radius) * stride2
                     s2p = (top_channel // neighborhood_grid_width - neighborhood_grid_radius) * stride2
-                    
-                    # location in data2 
+
+                    # location in data2
                     x2 = x1 + s2o
                     y2 = y1 + s2p
-                    
+
                     for h in range(kernel_size):
                         for w in range(kernel_size):
                             for channel in range(data1.shape[1]):
@@ -1334,13 +1339,13 @@ def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,str
                                     sgn = 1 if (tmp1[nbatch, channel, y1 + h,x1 + w]>=tmp2[nbatch, channel, y2 + h,x2 + w]) else -1
                                     tmp1_grad[nbatch,channel,y1+h,x1+w]+= out_grad[nbatch,top_channel,i,j]*sgn
                                     tmp2_grad[nbatch,channel,y2+h,x2+w]+= out_grad[nbatch,top_channel,i,j]*(-sgn)
-    
+
     tmp1_grad = tmp1_grad / float(kernel_size**2*data1.shape[1])
     tmp2_grad = tmp2_grad / float(kernel_size**2*data1.shape[1])
     return tmp1_grad[:,:,pad_size:pad_size+data1.shape[2],pad_size:pad_size+data1.shape[3]],tmp2_grad[:,:,pad_size:pad_size+data1.shape[2],pad_size:pad_size+data1.shape[3]],
 
 def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
-    
+
     img1 = np.random.random(data_shape)
     img2 = np.random.random(data_shape)
 
@@ -1352,14 +1357,14 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     exe1.arg_dict['img2'][:] = img2
 
     #cpu forward
-    exe1.forward()  
+    exe1.forward()
     # python forward
     forward_result,tmp1,tmp2 = correlation_forward(img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
     # forward error
     assert np.abs(exe1.outputs[0].asnumpy()-forward_result).mean()<1e-4
-    
-    # out_grad 
+
+    # out_grad
     a = np.ones(forward_result.shape)
     out_grad1 = mx.nd.array(a,mx.cpu())
     # cpu backward
@@ -1367,12 +1372,12 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     # python backward
     grad1,grad2 = correlation_backward(a,tmp1,tmp2,img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
-    # backward error 
+    # backward error
     assert np.abs(exe1.grad_dict['img1'].asnumpy() - grad1).mean() < 1e-4
     assert np.abs(exe1.grad_dict['img2'].asnumpy() - grad2).mean() < 1e-4
 
 def test_correlation():
-    
+
     unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 1,stride2 = 1,pad_size = 4,is_multiply = False)
     unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = False)
     unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = True)
@@ -1403,7 +1408,7 @@ def test_support_vector_machine_l1_svm():
     exec1.forward()
 
     assert_allclose(x_np, exec1.outputs[0].asnumpy())
-    
+
     exec1.backward()
 
     l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
@@ -1432,9 +1437,9 @@ def test_support_vector_machine_l2_svm():
     exec1.forward()
 
     assert_allclose(x_np, exec1.outputs[0].asnumpy())
-    
+
     exec1.backward()
-    
+
     l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
     l_mask = np.array(l_mask, dtype=np.float32)*2 -1
     grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)

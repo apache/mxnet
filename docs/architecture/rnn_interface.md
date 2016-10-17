@@ -85,3 +85,7 @@ The low-level API for recurrent connection seem to be a *delay node*. But I'm no
 ## TensorFlow
 
 The [current example of RNNLM](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html#recurrent-neural-networks) in TensorFlow use explicit unrolling for a predefined number of time steps. The white paper mentioned advanced control flow API (Theano's scan-like) coming in the future.
+
+# Recommended next steps
+
+* [MXNet System Overview](http://mxnet.io/architecture/overview.html)

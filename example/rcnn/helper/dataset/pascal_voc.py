@@ -273,7 +273,7 @@ class PascalVOC(IMDB):
         python evaluation wrapper
         :return: None
         """
-        annopath = os.path.join(self.data_path, 'Annotations', '{:s}.xml')
+        annopath = os.path.join(self.data_path, 'Annotations', '{0!s}.xml')
         imageset_file = os.path.join(self.data_path, 'ImageSets', 'Main', self.image_set + '.txt')
         cache_dir = os.path.join(self.cache_path, self.name)
         aps = []

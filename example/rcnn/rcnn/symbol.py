@@ -382,6 +382,6 @@ def get_faster_rcnn(num_classes=21, num_anchors=9):
     bbox_pred = mx.symbol.Reshape(data=bbox_loss, shape=(config.TRAIN.IMS_PER_BATCH, -1, 4 * num_classes), name='bbox_pred_reshape')
 
     # group output
-    group = mx.symbol.Group([rois[1], rpn_cls_loss, rpn_bbox_loss, cls_prob, bbox_pred])  # rois[1] is used for evaluation
+    group = mx.symbol.Group([mx.sym.BlockGrad(rois[1]), rpn_cls_loss, rpn_bbox_loss, cls_prob, bbox_pred])  # rois[1] is used for evaluation
 
     return group

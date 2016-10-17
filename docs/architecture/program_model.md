@@ -407,3 +407,10 @@ Contribution to this Note
 -------------------------
 This note is part of our effort to [open-source system design notes](index.md)
 for deep learning libraries. You are more than welcome to contribute to this Note, by submitting a pull request.
+
+# Recommended next steps
+
+* [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
+* [Squeeze the Memory Consumption of Deep Learning](http://mxnet.io/architecture/note_memory.html)
+* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
+* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)

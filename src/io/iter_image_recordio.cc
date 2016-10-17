@@ -8,6 +8,7 @@
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
 #include <dmlc/common.h>
+#include <dmlc/input_split_shuffle.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/recordio.h>
@@ -108,6 +109,10 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   int num_parts;
   /*! \brief the index of the part will read*/
   int part_index;
+  /*! \brief the size of a shuffle chunk*/
+  size_t shuffle_chunk_size;
+  /*! \brief the seed for chunk shuffling*/
+  int shuffle_chunk_seed;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
@@ -132,6 +137,11 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("partition the data into multiple parts");
     DMLC_DECLARE_FIELD(part_index).set_default(0)
         .describe("the index of the part will read");
+    DMLC_DECLARE_FIELD(shuffle_chunk_size).set_default(0)
+        .describe("the size(MB) of the shuffle chunk, used with shuffle=True,"\
+                  " it can enable global shuffling");
+    DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
+        .describe("the seed for chunk shuffling");
   }
 };
 
@@ -212,8 +222,32 @@ inline void ImageRecordIOParser::Init(
   source_.reset(dmlc::InputSplit::Create(
       param_.path_imgrec.c_str(), param_.part_index,
       param_.num_parts, "recordio"));
-  // use 64 MB chunk when possible
-  source_->HintChunkSize(8 << 20UL);
+  if (param_.shuffle_chunk_size > 0) {
+    if (param_.shuffle_chunk_size > 4096) {
+      LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
+                 << " MB which is larger than 4096 MB, please set "
+                    "smaller chunk size";
+    }
+    if (param_.shuffle_chunk_size < 4) {
+      LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
+                 << " MB which is less than 4 MB, please set "
+                    "larger chunk size";
+    }
+    // 1.1 ratio is for a bit more shuffle parts to avoid boundary issue
+    unsigned num_shuffle_parts =
+        std::ceil(source_->GetTotalSize() * 1.1 /
+                  (param_.num_parts * (param_.shuffle_chunk_size << 20UL)));
+
+    if (num_shuffle_parts > 1) {
+      source_.reset(dmlc::InputSplitShuffle::Create(
+          param_.path_imgrec.c_str(), param_.part_index,
+          param_.num_parts, "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
+    }
+    source_->HintChunkSize(param_.shuffle_chunk_size << 17UL);
+  } else {
+    // use 64 MB chunk when possible
+    source_->HintChunkSize(8 << 20UL);
+  }
 #else
   LOG(FATAL) << "ImageRec need opencv to process";
 #endif
