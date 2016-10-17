@@ -243,10 +243,10 @@ inline void ImageRecordIOParser::Init(
           param_.path_imgrec.c_str(), param_.part_index,
           param_.num_parts, "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
     }
-    source_->HintChunkSize(param_.shuffle_chunk_size << 20UL);
+    source_->HintChunkSize(param_.shuffle_chunk_size << 17UL);
   } else {
     // use 64 MB chunk when possible
-    source_->HintChunkSize(64 << 20UL);
+    source_->HintChunkSize(8 << 20UL);
   }
 #else
   LOG(FATAL) << "ImageRec need opencv to process";
