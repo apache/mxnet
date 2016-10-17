@@ -69,7 +69,8 @@ class FactorScheduler(LRScheduler):
             the maximal number of updates applied to a weight.
         """
 
-        if num_update > self.count + self.step:
+        # NOTE: use while rather than if  (for continuing training via load_epoch)
+        while num_update > self.count + self.step:
             self.count += self.step
             self.base_lr *= self.factor
             if self.base_lr < self.stop_factor_lr:
@@ -121,11 +122,14 @@ class MultiFactorScheduler(LRScheduler):
             the maximal number of updates applied to a weight.
         """
 
-        if self.cur_step_ind <= len(self.step)-1:
+        # NOTE: use while rather than if  (for continuing training via load_epoch)
+        while self.cur_step_ind <= len(self.step)-1:
             if num_update > self.step[self.cur_step_ind]:
                 self.count = self.step[self.cur_step_ind]
                 self.cur_step_ind += 1
                 self.base_lr *= self.factor
                 logging.info("Update[%d]: Change learning rate to %0.5e",
                              num_update, self.base_lr)
+            else:
+                return self.base_lr
         return self.base_lr
