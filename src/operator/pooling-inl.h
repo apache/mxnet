@@ -215,8 +215,6 @@ class PoolingProp : public OperatorProperty {
           oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
                               param_.stride[1];
         } else {
-          int test = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-                              param_.stride[0];
           oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
                               dshape[2] + 2 * param_.pad[0] -
                               param_.kernel[0]) / param_.stride[0]));
