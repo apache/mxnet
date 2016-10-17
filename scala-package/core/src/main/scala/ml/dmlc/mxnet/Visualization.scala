@@ -4,8 +4,6 @@ import scala.util.parsing.json._
 import java.io.File
 import java.io.PrintWriter
 import scala.collection.mutable.ArrayBuffer
-import ml.dmlc.mxnet.Symbol
-import ml.dmlc.mxnet.Shape
 
 /**
  * @author Depeng Liang

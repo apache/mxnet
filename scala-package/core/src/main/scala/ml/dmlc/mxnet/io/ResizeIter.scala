@@ -5,6 +5,7 @@ import java.util.NoSuchElementException
 import ml.dmlc.mxnet.{DataBatch, DataIter, NDArray, Shape}
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.ListMap
 
 
 /**
@@ -25,7 +26,7 @@ class ResizeIter(val dataIter: DataIter,
   private val logger = LoggerFactory.getLogger(classOf[ResizeIter])
 
   private var currentBatch: DataBatch = null
-  private var cur = 0;
+  private var cur = 0
 
 
   /**
@@ -116,12 +117,12 @@ class ResizeIter(val dataIter: DataIter,
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = {
+  override def provideData: ListMap[String, Shape] = {
     dataIter.provideData
   }
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = {
+  override def provideLabel: ListMap[String, Shape] = {
     dataIter.provideLabel
   }
 }
