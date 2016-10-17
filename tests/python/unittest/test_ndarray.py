@@ -190,23 +190,6 @@ def test_ndarray_crop():
     assert same(x.asnumpy(), np_x)
 
 
-def test_ndarray_slice_along_axis():
-    arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
-    sub_arr = mx.nd.zeros((3, 2, 2, 3))
-    arr.copy_slice_to(1, 2, 4, sub_arr)
-
-    # test we sliced correctly
-    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
-
-    # test that slice is copy, instead of shared memory
-    sub_arr[:] = 0
-    assert not same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
-
-    # now test assigning back the slice
-    arr.assign_slice_from(1, 2, 4, sub_arr)
-    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
-
-
 def test_ndarray_concatenate():
     axis = 1
     shapes = [(2, 3, 4, 2), (2, 2, 4, 2), (2, 1, 4, 2)]
@@ -296,7 +279,6 @@ def test_broadcast():
 if __name__ == '__main__':
     test_ndarray_crop()
     test_ndarray_concatenate()
-    test_ndarray_slice_along_axis()
     test_ndarray_slice()
     test_ndarray_pickle()
     test_ndarray_saveload()
