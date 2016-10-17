@@ -8,7 +8,7 @@ A. Gatys, Alexander S. Ecker, and Matthias Bethge.
 
 First use `download.sh` to download pre-trained model and sample inputs
 
-Then run `python run.py`, use `-h` to see more options
+Then run `python nstyle.py`, use `-h` to see more options
 
 ## Sample results
 
