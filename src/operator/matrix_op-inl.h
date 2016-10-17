@@ -554,27 +554,32 @@ void CropAssignScalar(const TBlob& src,
         break;
       case 1: {
         Tensor<xpu, 1, DType> out = src.get<xpu, 1, DType>(s);
-        slice(out, param.begin.get<1>(), param.end.get<1>()) = static_cast<DType>(scalar_param.scalar);
+        slice(out, param.begin.get<1>(), param.end.get<1>()) = \
+            static_cast<DType>(scalar_param.scalar);
         break;
       }
       case 2: {
         Tensor<xpu, 2, DType> out = src.get<xpu, 2, DType>(s);
-        slice(out, param.begin.get<2>(), param.end.get<2>()) = static_cast<DType>(scalar_param.scalar);
+        slice(out, param.begin.get<2>(), param.end.get<2>()) = \
+            static_cast<DType>(scalar_param.scalar);
         break;
       }
       case 3: {
         Tensor<xpu, 3, DType> out = src.get<xpu, 3, DType>(s);
-        slice(out, param.begin.get<3>(), param.end.get<3>()) = static_cast<DType>(scalar_param.scalar);
+        slice(out, param.begin.get<3>(), param.end.get<3>()) = \
+            static_cast<DType>(scalar_param.scalar);
         break;
       }
       case 4: {
         Tensor<xpu, 4, DType> out = src.get<xpu, 4, DType>(s);
-        slice(out, param.begin.get<4>(), param.end.get<4>()) = static_cast<DType>(scalar_param.scalar);
+        slice(out, param.begin.get<4>(), param.end.get<4>()) = \
+            static_cast<DType>(scalar_param.scalar);
         break;
       }
       case 5: {
         Tensor<xpu, 5, DType> out = src.get<xpu, 5, DType>(s);
-        slice(out, param.begin.get<5>(), param.end.get<5>()) = static_cast<DType>(scalar_param.scalar);
+        slice(out, param.begin.get<5>(), param.end.get<5>()) = \
+            static_cast<DType>(scalar_param.scalar);
         break;
       }
       default:
@@ -582,8 +587,6 @@ void CropAssignScalar(const TBlob& src,
         break;
     }
   });
-
-
 }
 
 inline TShape CropAssignScalarShape(const TShape& in_shape,

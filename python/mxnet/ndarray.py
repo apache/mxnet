@@ -225,6 +225,7 @@ class NDArray(object):
         - `array[:, :, :] = value`: achieving the same effect of `array[:] = value`
         - `array[:, i, j:k] = value`: each index could be a python slice or an int.
         """
+        # pylint: disable=too-many-branches
         if not self.writable:
             raise ValueError('trying to assign to a readonly NDArray')
         if isinstance(in_slice, int):
@@ -283,7 +284,7 @@ class NDArray(object):
                                        begin=begin, end=end)
             else:
                 raise TypeError('type %s not supported' % str(type(value)))
-
+        # pylint: enable=too-many-branches
 
     def __getitem__(self, in_slice):
         """Get ndarray"""
@@ -987,9 +988,11 @@ def concatenate(arrays, axis=0, always_copy=True):
         else:
             begin[axis] = idx
             end[axis] = idx+arr.shape[axis]
+            # pylint: disable=no-member,protected-access
             _internal._crop_assign(ret, arr, out=ret,
                                    begin=tuple(begin),
                                    end=tuple(end))
+            # pylint: enable=no-member,protected-access
         idx += arr.shape[axis]
 
     return ret

@@ -27,12 +27,14 @@ def _load_general(data, targets, major_axis):
                     end = np.array(shape)
                     begin[axis] = slice_idx.start
                     end[axis] = slice_idx.stop
+                    # pylint: disable=no-member,protected-access
                     if d_src.context == d_dst.context:
                         nd.crop(d_src, begin=tuple(begin), end=tuple(end), out=d_dst)
                     else:
                         # on different device, crop and then do cross device copy
                         d_dst_copy = nd.crop(d_src, begin=tuple(begin), end=tuple(end))
                         d_dst_copy.copyto(d_dst)
+                    # pylint: enable=no-member,protected-access
                 else:
                     d_src.copyto(d_dst)
 
