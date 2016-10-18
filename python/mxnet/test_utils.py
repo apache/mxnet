@@ -7,7 +7,7 @@ import numpy as np
 import numpy.testing as npt
 import mxnet as mx
 
-from .context import cpu, gpu
+from .context import cpu, gpu, Context
 from .ndarray import array
 
 _rng = np.random.RandomState(1234)
@@ -16,8 +16,11 @@ def default_context():
     """Get default context for regression test."""
     # _TODO: get context from environment variable to support
     # testing with GPUs
-    return cpu()
+    return Context.default_ctx
 
+def set_default_context(ctx):
+    """Set default ctx"""
+    Context.default_ctx = ctx
 
 def default_dtype():
     """Get default data type for regression test."""
@@ -237,7 +240,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
 
 
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, check_eps=1e-2,
-                           grad_nodes=None, use_forward_train=True, ctx=mx.cpu()):
+                           grad_nodes=None, use_forward_train=True, ctx=None):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -270,6 +273,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
+    if ctx is None:
+        ctx = default_context()
 
     def random_projection(shape):
         """Get a random weight matrix with not too small elements
@@ -356,7 +361,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
             raise Exception(msg)
 
 
-def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=None, ctx=mx.cpu()):
+def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=None, ctx=None):
     """Compare foward call to expected value.
 
     Parameters
@@ -387,6 +392,9 @@ def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=N
     ctx : Context, optional
         running context
     """
+    if ctx is None:
+        ctx = default_context()
+
     location = _parse_location(sym=sym, location=location, ctx=ctx)
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
     if isinstance(expected, dict):
@@ -415,7 +423,7 @@ def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=N
 
 
 def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
-                            aux_states=None, grad_req='write', ctx=mx.cpu()):
+                            aux_states=None, grad_req='write', ctx=None):
     """Compare backward call to expected value.
 
     Parameters
@@ -451,6 +459,9 @@ def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
     ctx : Context, optional
         running context
     """
+    if ctx is None:
+        ctx = default_context()
+
     location = _parse_location(sym=sym, location=location, ctx=ctx)
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
     if isinstance(expected, (list, tuple)):
@@ -496,7 +507,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
             raise Exception(msg)
 
 
-def check_speed(sym, location=None, ctx=mx.cpu(), N=20, grad_req=None, typ="whole",
+def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
                 **kwargs):
     """Check the running speed of a symbol
 
@@ -520,6 +531,9 @@ def check_speed(sym, location=None, ctx=mx.cpu(), N=20, grad_req=None, typ="whol
         - "forward"
             only test the forward speed
     """
+    if ctx is None:
+        ctx = default_context()
+
     if grad_req is None:
         grad_req = 'write'
     if location is None:
