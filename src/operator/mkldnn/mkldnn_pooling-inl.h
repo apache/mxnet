@@ -37,7 +37,7 @@ bool UseMKLDNNPooling(PoolingParam param, std::vector<TShape> *in_shape,
         1 + static_cast<int>(ceil(static_cast<float>(
                 input_width + 2 * param.pad[1] -
                 param.kernel[1]) / param.stride[1]));
-    if ((full_model_output_height == output_height) || (full_model_output_width == output_width)) {
+    if ((full_model_output_height == output_height) && (full_model_output_width == output_width)) {
       return true;
     } else {
       return false;
