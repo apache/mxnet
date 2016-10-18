@@ -145,6 +145,13 @@ NNVM_REGISTER_OP(degrees)
 NNVM_REGISTER_OP(_backward_degrees)
 .set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::degrees_grad> >);
 
+// radians
+NNVM_REGISTER_OP(radians)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::radians>);
+
+NNVM_REGISTER_OP(_backward_radians)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::radians_grad> >);
+
 // cosh
 NNVM_REGISTER_OP(cosh)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::cosh>);
