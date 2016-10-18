@@ -126,6 +126,7 @@ class MKLDNNPoolingOp : public Operator {
           reinterpret_cast<void *>(bwd_out_diff_->get_converted_prv(outgrad.dptr_, false));
       pooling_res_[dnnResourceDiffSrc] =
           reinterpret_cast<void *>(bwd_in_diff_->get_converted_prv(ingrad.dptr_, false));
+      // sngle-threaded memset will hurt performance
       memset(pooling_res_[dnnResourceDiffSrc], 0,
              sizeof(DType) * ingrad.shape_.Size());
       CHECK_EQ(dnnExecute<DType>(poolingBwd_, pooling_res_), E_SUCCESS);
@@ -180,12 +181,12 @@ class MKLDNNPoolingOp : public Operator {
         dst_strides[1] = dst_sizes[0];
         dst_strides[2] = dst_sizes[0] * dst_sizes[1];
         dst_strides[3] = dst_sizes[0] * dst_sizes[1] * dst_sizes[2];
-        kernel_size[0] = this->param_.kernel[0];
-        kernel_size[1] = this->param_.kernel[1];
-        kernel_stride[0] = this->param_.stride[0];
-        kernel_stride[1] = this->param_.stride[1];
-        src_offset[0] = -this->param_.pad[0];
-        src_offset[1] = -this->param_.pad[1];
+        kernel_size[0] = this->param_.kernel[1];
+        kernel_size[1] = this->param_.kernel[0];
+        kernel_stride[0] = this->param_.stride[1];
+        kernel_stride[1] = this->param_.stride[0];
+        src_offset[0] = -this->param_.pad[1];
+        src_offset[1] = -this->param_.pad[0];
 
         fwd_in_data_->create_user_layout(dim, src_sizes, src_strides);
         fwd_out_data_->create_user_layout(dim, dst_sizes, dst_strides);
