@@ -136,6 +136,17 @@ class MKLConcatOp : public Operator {
       Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
                                out_data[concat_enum::kOut].shape_[1], 1, 1);
       out = out_data[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+    } else if (in_data[0].ndim() == 3) {
+      for (int i = 0; i < size_; ++i) {
+        Shape<4> dshape = Shape4(in_data[i].shape_[0],
+                                 in_data[i].shape_[1],
+                                 in_data[i].shape_[2], 1);
+        data[i] = in_data[i].get_with_shape<xpu, 4, DType>(dshape, s);
+      }
+      Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
+                               out_data[concat_enum::kOut].shape_[1],
+                               out_data[concat_enum::kOut].shape_[2], 1);
+      out = out_data[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
     } else {
       for (int i = 0; i < size_; ++i) {
         data[i] = in_data[i].get<xpu, 4, DType>(s);
@@ -220,10 +231,20 @@ class MKLConcatOp : public Operator {
       Shape<4> dshape = Shape4(out_grad[concat_enum::kOut].shape_[0],
         out_grad[concat_enum::kOut].shape_[1], 1, 1);
       grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
-
       for (int i = 0; i < size_; ++i) {
         dshape = Shape4(in_grad[i].shape_[0],
           in_grad[i].shape_[1], 1, 1);
+        grad_in[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
+      }
+    } else if (in_grad[0].ndim() == 3) {
+      Shape<4> dshape = Shape4(out_grad[concat_enum::kOut].shape_[0],
+                               out_grad[concat_enum::kOut].shape_[1],
+                               out_grad[concat_enum::kOut].shape_[2], 1);
+      grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      for (int i = 0; i < size_; ++i) {
+        dshape = Shape4(in_grad[i].shape_[0],
+                        in_grad[i].shape_[1],
+                        in_grad[i].shape_[2], 1);
         grad_in[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
       }
     } else {

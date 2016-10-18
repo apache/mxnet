@@ -18,21 +18,22 @@ template<>
 Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
-  switch (dtype) {
-  case mshadow::kFloat32:
-    op = new MKLConcatOp<cpu, float>(param);
-    break;
-  case mshadow::kFloat64:
-    op = new MKLConcatOp<cpu, double>(param);
-    break;
-  default:
-    break;
+  if (1 == param.dim) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+      op = new MKLConcatOp<cpu, float>(param);
+      break;
+    case mshadow::kFloat64:
+      op = new MKLConcatOp<cpu, double>(param);
+      break;
+    default:
+      break;
+    }
   }
-#else
+#endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConcatOp<cpu, DType>(param);
   });
-#endif
   return op;
 }
 
