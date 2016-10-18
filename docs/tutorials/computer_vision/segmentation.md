@@ -1,4 +1,4 @@
-# Segmentation
+# Image Segmentation
 
 You can get the source code for below example [here](https://github.com/dmlc/mxnet/tree/master/example/fcn-xs)
 

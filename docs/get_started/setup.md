@@ -13,7 +13,7 @@ This topic covers the following:
 
 &nbsp;
 
-You can just get started with MXNet, without reading further, by directly jumping to [Quick Installation Guide](#Quick-Installation) to set up MXNet with a set of bash scripts.
+You can just get started with MXNet, without reading further, by directly jumping to [Quick Installation Guide](#quick-installation) to set up MXNet with a set of bash scripts.
 
 
 &nbsp;
@@ -73,8 +73,33 @@ For users of Python on Amazon Linux and Ubuntu operating systems, MXNet provides
 
 ### Quick Installation on Ubuntu
 
-```<Coming Soon>```
+We provide simple installation scripts for setting up MXNet for Python on Ubuntu 12+ machine. We will install MXNet in your home folder ```~/MXNet```.
 
+
+&nbsp;
+
+We need ```git``` to clone MXNet source code repository to your machine. 
+```bash
+# Install git if not already installed.
+sudo apt-get update
+sudo apt-get -y install git
+```
+
+Clone MXNet source code repository to your machine, run installation script and refresh environment variables. Installation script, along with installing MXNet, will also install all MXNet dependencies namely ```Numpy```, ```LibBLAS``` and ```OpenCV```.
+
+```bash
+# Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
+git clone https://github.com/dmlc/mxnet.git ~/MXNet/mxnet --recursive
+
+# Install MXNet dependencies
+cd ~/MXNet/mxnet/setup-utils
+bash install-mxnet-ubuntu.sh
+
+# We have added MXNet Python package path in your ~/.bashrc. 
+# Run below command to refresh environment variables.
+$ source ~/.bashrc
+
+You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu.sh).
 
 &nbsp;
 

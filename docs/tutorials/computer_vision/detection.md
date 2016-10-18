@@ -1,4 +1,4 @@
-# Detection
+# Object Detection using Faster R-CNN
 You can get the source code for below example [here](https://github.com/dmlc/mxnet/tree/master/example/rcnn).
 
 # Faster R-CNN in MXNet with distributed implementation and data parallelization

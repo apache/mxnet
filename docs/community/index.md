@@ -10,4 +10,8 @@ Refer here for guide to [contributions](http://mxnet.io/community/contribute.htm
 
 ## Roadmap
 
-Coming soon..
+MXNet is evolving fast with community contributions. To better understand what next in MXNet and what we are working on internally, refer here - [MXNet Roadmap](https://github.com/dmlc/mxnet/labels/Roadmap)
+
+
+&nbsp;
+We welcome community contributions. Refer here for guide to [contributions](http://mxnet.io/community/contribute.html).

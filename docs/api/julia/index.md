@@ -1,4 +1,5 @@
-# MXNet - Julia API
+MXNet - Julia API
+=================
 MXNet supports Julia programming language. The MXNet Julia package brings flexible and efficient GPU
 computing and state-of-art deep learning to Julia.
 
