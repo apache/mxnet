@@ -108,7 +108,7 @@ def almost_equal(a, b, threshold=None):
     return reldiff(a, b) <= threshold
 
 
-def simple_forward(sym, ctx=None, **inputs):
+def simple_forward(sym, ctx=None, is_train=False, **inputs):
     """A simple forward function for a symbol.
 
     Primarily used in doctest to conveniently test the function
@@ -130,7 +130,7 @@ def simple_forward(sym, ctx=None, **inputs):
     ctx = ctx or default_context()
     inputs = {k: array(v) for k, v in inputs.iteritems()}
     exe = sym.bind(ctx, args=inputs)
-    exe.forward()
+    exe.forward(is_train=is_train)
     outputs = [x.asnumpy() for x in exe.outputs]
     if len(outputs) == 1:
         outputs = outputs[0]
