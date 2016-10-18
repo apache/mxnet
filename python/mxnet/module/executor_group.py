@@ -21,7 +21,20 @@ def _load_general(data, targets, major_axis):
         else:
             for slice_idx, d_dst in d_targets:
                 if axis >= 0:
-                    d_src.copy_slice_to(axis, slice_idx.start, slice_idx.stop, d_dst)
+                    # copy slice
+                    shape = d_src.shape
+                    begin = np.zeros(len(shape), dtype=int)
+                    end = np.array(shape)
+                    begin[axis] = slice_idx.start
+                    end[axis] = slice_idx.stop
+                    # pylint: disable=no-member,protected-access
+                    if d_src.context == d_dst.context:
+                        nd.crop(d_src, begin=tuple(begin), end=tuple(end), out=d_dst)
+                    else:
+                        # on different device, crop and then do cross device copy
+                        d_dst_copy = nd.crop(d_src, begin=tuple(begin), end=tuple(end))
+                        d_dst_copy.copyto(d_dst)
+                    # pylint: enable=no-member,protected-access
                 else:
                     d_src.copyto(d_dst)
 

@@ -109,6 +109,7 @@ logging.info('running on %s', platform.node())
 
 devs = mx.cpu() if (args.gpus is None or args.gpus == '') else [
     mx.gpu(int(i)) for i in args.gpus.split(',')]
+logging.info('Starting with devices %s', devs)
 
 mod = mx.mod.Module(net, context=devs)
 

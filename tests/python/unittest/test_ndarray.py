@@ -39,6 +39,50 @@ def random_ndarray(dim):
     data = mx.nd.array(np.random.uniform(-10, 10, shape))
     return data
 
+
+def test_ndarray_setitem():
+    shape = (3, 4, 2)
+
+    # scalar assignment
+    x = mx.nd.zeros(shape)
+    x[:] = 1
+    x_np = np.ones(shape, dtype=x.dtype)
+    assert same(x.asnumpy(), x_np)
+
+    # ndarray assignment
+    x = mx.nd.zeros(shape)
+    x[:] = mx.nd.ones(shape)
+    x_np = np.ones(shape, dtype=x.dtype)
+    assert same(x.asnumpy(), x_np)
+
+    # numpy assignment
+    x = mx.nd.zeros(shape)
+    x[:] = np.ones(shape)
+    x_np = np.ones(shape, dtype=x.dtype)
+    assert same(x.asnumpy(), x_np)
+
+    # indexing sub-arrays
+    x = mx.nd.zeros(shape)
+    x[1] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[1] = 1
+    assert same(x.asnumpy(), x_np)
+
+    # all-dim indexing
+    x = mx.nd.zeros(shape)
+    val = mx.nd.ones((3, 2, 1))
+    x[:, 1:3, 1] = val
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[:, 1:3, 1:2] = val.asnumpy()
+    assert same(x.asnumpy(), x_np)
+
+    x = mx.nd.zeros(shape)
+    x[:, 1:3, 1] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[:, 1:3, 1:2] = 1
+    assert same(x.asnumpy(), x_np)
+
+
 def test_ndarray_elementwise():
     np.random.seed(0)
     nrepeat = 10
@@ -177,21 +221,28 @@ def test_ndarray_slice():
     assert same(A[3:8].asnumpy(), A2[3:8])
 
 
-def test_ndarray_slice_along_axis():
-    arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
-    sub_arr = mx.nd.zeros((3, 2, 2, 3))
-    arr.copy_slice_to(1, 2, 4, sub_arr)
+def test_ndarray_crop():
+    # get crop
+    x = mx.nd.ones((2, 3, 4))
+    y = mx.nd.crop(x, begin=(0, 0, 0), end=(2, 1, 3))
+    assert same(y.asnumpy(), np.ones((2, 1, 3), dtype=y.dtype))
 
-    # test we sliced correctly
-    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
+    # crop assign
+    z = mx.nd.zeros((2, 1, 3))
+    mx.nd._internal._crop_assign(x, z, begin=(0, 0, 0),
+                                 end=(2, 1, 3), out=x)
+    np_x = np.ones(x.shape, dtype=x.dtype)
+    np_x[0:2, 0:1, 0:3] = 0
+    assert same(x.asnumpy(), np_x)
 
-    # test that slice is copy, instead of shared memory
-    sub_arr[:] = 0
-    assert not same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
-
-    # now test assigning back the slice
-    arr.assign_slice_from(1, 2, 4, sub_arr)
-    assert same(arr.asnumpy()[:, 2:4, :, :], sub_arr.asnumpy())
+    # crop assign with scalar
+    x = mx.nd.ones((2, 3, 4))
+    mx.nd._internal._crop_assign_scalar(x, scalar=5,
+                                        begin=(0, 0, 0),
+                                        end=(2, 1, 3), out=x)
+    np_x = np.ones(x.shape, dtype=x.dtype)
+    np_x[0:2, 0:1, 0:3] = 5
+    assert same(x.asnumpy(), np_x)
 
 
 def test_ndarray_concatenate():
@@ -281,8 +332,9 @@ def test_broadcast():
     test_broadcast_to()
 
 if __name__ == '__main__':
+    test_ndarray_setitem()
+    test_ndarray_crop()
     test_ndarray_concatenate()
-    test_ndarray_slice_along_axis()
     test_ndarray_slice()
     test_ndarray_pickle()
     test_ndarray_saveload()
