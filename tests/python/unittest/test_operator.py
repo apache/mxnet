@@ -1606,7 +1606,7 @@ def mathematical_core_binary(name,
     arr_grad2 = mx.nd.empty(shape)
 
     test = forward_mxnet_call(data1, data2)
-    exe_test = test.bind(mx.cpu(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
+    exe_test = test.bind(default_context(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp1, data_tmp2)
@@ -1640,7 +1640,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     arr_grad[:] = 3
 
     test = forward_mxnet_call(data)
-    exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp)
@@ -1658,80 +1658,6 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     # print(npout_grad)
     assert reldiff(arr_grad, npout_grad) < 1e-6, "%s mathematical backward failed\n%s\n\n%s" % (
         name, arr_grad, npout_grad)
-
-
-def test_mathematical():
-    # rsqrt
-    mathematical_core("rsqrt",
-                      lambda x: mx.sym.rsqrt(x),
-                      lambda x: 1 / np.sqrt(x),
-                      lambda x: -(1.0 / (2.0 * x * np.sqrt(x))))
-    # tan
-    mathematical_core("tan", lambda x: mx.sym.tan(x), lambda x: np.tan(x), lambda x: np.tan(x) ** 2 + 1)
-    # arcsin
-    mathematical_core("arcsin", lambda x: mx.sym.arcsin(x), lambda x: np.arcsin(x),
-                      lambda x: 1. / (1. - x ** 2) ** (1. / 2.), 0.5, 0.5)
-    # arccos
-    mathematical_core("arccos", lambda x: mx.sym.arccos(x), lambda x: np.arccos(x),
-                      lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), 0.5, 0.5)
-    # arctan
-    mathematical_core("arctan", lambda x: mx.sym.arctan(x), lambda x: np.arctan(x),
-                      lambda x: 1. / (x ** 2. + 1.), 0.5, 0.5)
-    # hypot
-    mathematical_core_binary("hypot",
-                             lambda x, y: mx.sym.hypot(x, y),
-                             lambda x, y: np.hypot(x, y),
-                             lambda x, y: x / np.hypot(x, y),
-                             lambda x, y: y / np.hypot(x, y),
-                             0.5, 0.5, 0.5)
-
-    # hypot scalar
-    mathematical_core("hypot scalar",
-                      lambda x: mx.sym.hypot(x, 3),
-                      lambda x: np.hypot(x, 3),
-                      lambda x: x / np.hypot(x, 3),
-                      0.5, 0.5)
-
-    # degrees
-    mathematical_core("degrees",
-                      lambda x: mx.sym.degrees(x),
-                      lambda x: np.degrees(x),
-                      lambda x: 180./np.pi,
-                      0.5, 0.5)
-    # radians
-    mathematical_core("radians",
-                      lambda x: mx.sym.radians(x),
-                      lambda x: np.radians(x),
-                      lambda x: np.pi / 180.,
-                      0.6, 1)
-    # sinh
-    mathematical_core("sinh", lambda x: mx.sym.sinh(x), lambda x: np.sinh(x), lambda x: np.cosh(x))
-
-    # cosh
-    mathematical_core("cosh", lambda x: mx.sym.cosh(x), lambda x: np.cosh(x), lambda x: np.sinh(x), 5, 5)
-
-    # tanh
-    mathematical_core("tanh", lambda x: mx.sym.tanh(x), lambda x: np.tanh(x), lambda x: 1. - np.tanh(x) ** 2, 0.5, 1)
-
-    # arcsinh
-    mathematical_core("arcsinh", lambda x: mx.sym.arcsinh(x), lambda x: np.arcsinh(x),
-                      lambda x: 1./(x**2 + 1.)**(1./2.))
-
-    # arccosh
-    mathematical_core("arccosh", lambda x: mx.sym.arccosh(x), lambda x: np.arccosh(x),
-                      lambda x: 1./(x**2 - 1.)**(1./2.))
-
-    # arctanh
-    mathematical_core("arctanh", lambda x: mx.sym.arctanh(x), lambda x: np.arctanh(x),
-                      lambda x: -1./(x**2 - 1.), 0.5)
-
-    # log1p
-    mathematical_core("log1p", lambda x: mx.sym.log1p(x), lambda x: np.log1p(x),
-                      lambda x: 1. / (1.0 + x), 0.5, 0.5)
-    # expm1
-    mathematical_core("expm1", lambda x: mx.sym.expm1(x), lambda x: np.expm1(x),
-                      lambda x: np.exp(x), 0.5, 0.5)
-
 
 def test_special_functions_using_scipy():
     try:
@@ -1773,7 +1699,7 @@ def mathematical_core_binary(name,
     arr_grad2 = mx.nd.empty(shape)
 
     test = forward_mxnet_call(data1, data2)
-    exe_test = test.bind(mx.cpu(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
+    exe_test = test.bind(default_context(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp1, data_tmp2)
@@ -1807,7 +1733,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     arr_grad[:] = 3
 
     test = forward_mxnet_call(data)
-    exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+    exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp)
