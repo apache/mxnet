@@ -52,6 +52,15 @@ NNVM_REGISTER_OP(ElementWiseSum)
     uint32_t ret = dmlc::get<ElementWiseSumParam>(attrs.parsed).num_args;
     return ret;
   })
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    uint32_t num_args = dmlc::get<ElementWiseSumParam>(attrs.parsed).num_args;
+    std::vector<std::string> ret;
+    for (uint32_t i = 0; i < num_args; ++i) {
+      ret.push_back(std::string("arg") + std::to_string(i));
+    }
+    return ret;
+  })
 .set_attr<std::string>("key_var_num_args", "num_args")
 .set_attr<FCompute>("FCompute<cpu>", ElementWiseSumCompute<cpu>)
 .set_attr<nnvm::FInplaceOption>(
