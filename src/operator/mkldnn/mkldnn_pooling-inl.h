@@ -126,7 +126,7 @@ class MKLDNNPoolingOp : public Operator {
           reinterpret_cast<void *>(bwd_out_diff_->get_converted_prv(outgrad.dptr_, false));
       pooling_res_[dnnResourceDiffSrc] =
           reinterpret_cast<void *>(bwd_in_diff_->get_converted_prv(ingrad.dptr_, false));
-      // sngle-threaded memset will hurt performance
+      // single-threaded memset will hurt performance
       memset(pooling_res_[dnnResourceDiffSrc], 0,
              sizeof(DType) * ingrad.shape_.Size());
       CHECK_EQ(dnnExecute<DType>(poolingBwd_, pooling_res_), E_SUCCESS);
