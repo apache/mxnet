@@ -1,4 +1,4 @@
-Squeeze the Memory Consumption of Deep Learning
+Optimizing the Memory Consumption in Deep Learning
 ===============================================
 One important theme about deep learning is to train deeper and larger nets.
 While the hardware has been upgraded rapidly in recent years, the huge deepnet monsters are

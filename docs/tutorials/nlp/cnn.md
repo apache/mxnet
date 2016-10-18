@@ -1,5 +1,5 @@
-Implementing CNN for Text Classification in MXNet
-============
+# Text Classification using Convolutional Neural Network on MXNet
+
 You can get the source code for below example [here](https://github.com/dmlc/mxnet/tree/master/example/cnn_text_classification)
 
 It is slightly simplified implementation of Kim's [Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1408.5882) paper in MXNet.

@@ -6,14 +6,14 @@
 
 #### [Training Deep Net on 14 Million Images by Using A Single Machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
 #### [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html)
-#### [Segmentation](http://mxnet.io/tutorials/computer_vision/segmentation.html)
-#### [Detection](http://mxnet.io/tutorials/computer_vision/detection.html)
+#### [Image Segmentation](http://mxnet.io/tutorials/computer_vision/segmentation.html)
+#### [Object Detection using Faster R-CNN](http://mxnet.io/tutorials/computer_vision/detection.html)
 #### [Neural Art](http://mxnet.io/tutorials/computer_vision/neural_art.html)
 
 ### Natural Language Processing
 
 #### [Recurrent Neural Networks](http://mxnet.io/tutorials/nlp/rnn.html)
-#### [Convnet Text Classification](http://mxnet.io/tutorials/nlp/cnn.html)
+#### [Text Classification using Convolutional Neural Network](http://mxnet.io/tutorials/nlp/cnn.html)
 #### [NCE Loss](http://mxnet.io/tutorials/nlp/nce_loss.html)
 
 ### Speech Recognition

@@ -2,7 +2,7 @@ Contribute to MXNet
 ===================
 MXNet has been developed and used by a group of active community members.
 Everyone is more than welcome to contribute. It is a way to make the project better and more accessible to more users.
-* Please add your name to [CONTRIBUTORS.md](../CONTRIBUTORS.md) after your patch has been merged.
+* Please add your name to [CONTRIBUTORS.md](https://github.com/dmlc/mxnet/blob/master/CONTRIBUTORS.md) after your patch has been merged.
 
 Guidelines
 ----------
@@ -30,7 +30,7 @@ git rebase upstream/master
   it might be good to merge them together(use git rebase then squash) into more meaningful groups.
 * Send the pull request!
   - Fix the problems reported by automatic checks
-  - If you are contributing a new module, consider add a test case in [tests](../tests)
+  - If you are contributing a new module, consider add a test case in [tests](https://github.com/dmlc/mxnet/tree/master/tests)
 
 Git Workflow Howtos
 -------------------
@@ -86,12 +86,12 @@ Documents
 
 Testcases
 ---------
-* All the test cases are in [tests](../tests)
+* All the test cases are in [tests](https://github.com/dmlc/mxnet/tree/master/tests)
 * We use python nose for python test cases and gtest for c++ unit tests.
 
 Examples
 --------
-* Usecases and examples will be in [example](../example)
+* Usecases and examples will be in [example](https://github.com/dmlc/mxnet/tree/master/example)
 * We are super excited to hear about your story, if you have blog posts,
   tutorials code solutions using MXNet, please tell us and we will add
   a link in the example pages.
@@ -137,7 +137,7 @@ make roxygen
 ```
 
 ### Rmarkdown Vignettes
-Rmarkdown vignettes are placed in [R-package/vignettes](../R-package/vignettes)
+Rmarkdown vignettes are placed in [R-package/vignettes](https://github.com/dmlc/mxnet/tree/master/R-package/vignettes)
 These Rmarkdown files are not compiled. We host the compiled version on [doc/R-package](R-package)
 
 The following steps are followed to add a new Rmarkdown vignettes:

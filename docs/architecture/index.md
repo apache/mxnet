@@ -18,7 +18,7 @@ In this section, we will describe general design concepts of Deep Learning syste
 Refer below sections for more details
 * [Programming Models for Deep Learning](http://mxnet.io/architecture/program_model.html)
 * [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
-* [Squeeze the Memory Consumption of Deep Learning](http://mxnet.io/architecture/note_memory.html)
+* [Optimizing the Memory Consumption in Deep Learning](http://mxnet.io/architecture/note_memory.html)
 * [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
 * [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
 
@@ -26,7 +26,6 @@ Refer below sections for more details
 
 In this section, we will describe MXNet System architecture and various components.
 * [MXNet System Overview](http://mxnet.io/architecture/overview.html)
-* [Analogy to other DL systems](http://mxnet.io/architecture/analogy.html)
 * [How to read the code](http://mxnet.io/architecture/read_code.html)
 * [Develop and hack MXNet](http://mxnet.io/how_to/develop_and_hack.html)
 
