@@ -364,8 +364,8 @@ class DataParallelExecutorGroup(object):
             out_grads_slice = []
             for grad, axis in zip(out_grads, self.output_layouts):
                 if axis >= 0:
-                    out_grads_slice.append(grad.copy_slice_to(axis, islice.start, islice.stop,
-                                                              self.contexts[i]))
+                    og_my_slice = nd.slice_axis(grad, axis=axis, begin=islice.start, end=islice.stop)
+                    out_grads_slice.append(og_my_slice.as_in_context(self.contexts[i]))
                 else:
                     out_grads_slice.append(grad.copyto(self.contexts[i]))
 
@@ -388,8 +388,9 @@ class DataParallelExecutorGroup(object):
                     # slicing NDArray along axis 0 can avoid copying
                     labels_slice.append(label[islice])
                 elif axis > 0:
-                    labels_slice.append(label.copy_slice_to(axis, islice.start,
-                                                            islice.stop, label.context))
+                    label_my_slice = nd.slice_axis(label, axis=axis, begin=islice.start,
+                                                   end=islice.stop).as_in_context(label.context)
+                    labels_slice.append(label_my_slice)
                 else:
                     labels_slice.append(label)
 
