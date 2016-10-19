@@ -83,28 +83,10 @@ if __name__ == '__main__':
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
                                  output_dim=num_embed, name='embed')
 
-        # TODO(tofix)
-        # currently all the LSTM parameters are concatenated as
-        # a huge vector, and named '<name>_parameters'. By default
-        # mxnet initializer does not know how to initilize this
-        # guy because its name does not ends with _weight or _bias
-        # or anything familiar. Here we just use a temp workaround
-        # to create a variable and name it as LSTM_bias to get
-        # this demo running. Note by default bias is initialized
-        # as zeros, so this is not a good scheme. But calling it
-        # LSTM_weight is not good, as this is 1D vector, while
-        # the initialization scheme of a weight parameter needs
-        # at least two dimensions.
-        rnn_params = mx.sym.Variable('LSTM_bias')
-
         # RNN cell takes input of shape (time, batch, feature)
         rnn = mx.sym.RNN(data=embed, state_size=num_hidden,
                          num_layers=num_lstm_layer, mode='lstm',
-                         name='LSTM', 
-                         # The following params can be omitted
-                         # provided we do not need to apply the
-                         # workarounds mentioned above
-                         parameters=rnn_params)
+                         name='LSTM')
 
         # the RNN cell output is of shape (time, batch, dim)
         # if we need the states and cell states in the last time
@@ -134,7 +116,7 @@ if __name__ == '__main__':
     if len(buckets) == 1:
         mod = mx.mod.Module(*sym_gen(buckets[0]), context=contexts)
     else:
-        mod = mx.mod.BucketingModule(sym_gen, 
+        mod = mx.mod.BucketingModule(sym_gen,
                                      default_bucket_key=data_train.default_bucket_key,
                                      context=contexts)
 
