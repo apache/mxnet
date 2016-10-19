@@ -117,6 +117,7 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
+        self.layout_mapper = None
 
     ################################################################################
     # High Level API
@@ -329,9 +330,10 @@ class BaseModule(object):
         """
         assert num_epoch is not None, 'please specify number of epochs'
 
-        layout_mapper = train_data.layout_mapper if hasattr(train_data, 'layout_mapper') else None
+        if hasattr(train_data, 'layout_mapper'):
+            self.layout_mapper = train_data.layout_mapper
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
-                  for_training=True, force_rebind=force_rebind, layout_mapper=layout_mapper)
+                  for_training=True, force_rebind=force_rebind)
         if monitor is not None:
             self.install_monitor(monitor)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
@@ -604,8 +606,7 @@ class BaseModule(object):
     # module setup
     ################################################################################
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None,
-             layout_mapper=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -628,9 +629,6 @@ class BaseModule(object):
             Default is `None`. This is used in bucketing. When not `None`, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
-        layout_mapper: LayoutMapper
-            Default None. A helper that decide the layout of data, label and outputs
-            (time-major? batch-major?).
         """
         raise NotImplementedError()
 

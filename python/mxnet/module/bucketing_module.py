@@ -42,7 +42,6 @@ class BucketingModule(BaseModule):
 
         self._buckets = {}
         self._curr_module = None
-        self._layout_mapper = None
 
     def _reset_bind(self):
         """Internal utility function to reset binding."""
@@ -136,8 +135,7 @@ class BucketingModule(BaseModule):
         self.params_initialized = True
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None,
-             layout_mapper=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None):
         """Binding for a `BucketingModule` means setting up the buckets and bind the
         executor for the default bucket key. Executors corresponding to other keys are
         binded afterwards with `switch_bucket`.
@@ -156,9 +154,6 @@ class BucketingModule(BaseModule):
             Default is `False`.
         shared_module : BucketingModule
             Default is `None`. This value is currently not used.
-        layout_mapper: LayoutMapper
-            Default None. A helper that decide the layout of data, label and outputs
-            (time-major? batch-major?).
         """
         # in case we already initialized params, keep it
         if self.params_initialized:
@@ -182,16 +177,15 @@ class BucketingModule(BaseModule):
         symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list)
+        module.layout_mapper = self.layout_mapper
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
-                    force_rebind=False, shared_module=None, layout_mapper=layout_mapper)
+                    force_rebind=False, shared_module=None)
         self._curr_module = module
         self._buckets[self._default_bucket_key] = module
 
         # copy back saved params, if already initialized
         if self.params_initialized:
             self.set_params(arg_params, aux_params)
-
-        self._layout_mapper = layout_mapper
 
     def switch_bucket(self, bucket_key, data_shapes, label_shapes=None):
         """Switch to a different bucket. This will change `self.curr_module`.
@@ -211,10 +205,10 @@ class BucketingModule(BaseModule):
             module = Module(symbol, data_names, label_names,
                             logger=self.logger, context=self._context,
                             work_load_list=self._work_load_list)
+            module.layout_mapper = self.layout_mapper
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
-                        force_rebind=False, shared_module=self._curr_module,
-                        layout_mapper=self._layout_mapper)
+                        force_rebind=False, shared_module=self._curr_module)
             self._buckets[bucket_key] = module
 
         self._curr_module = self._buckets[bucket_key]
