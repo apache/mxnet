@@ -7,6 +7,7 @@ import time
 from .. import metric
 from .. import ndarray
 
+from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
 
@@ -489,8 +490,8 @@ class BaseModule(object):
             Path to output param file.
         """
         arg_params, aux_params = self.get_params()
-        save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
-        save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+        save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
+        save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
         ndarray.save(fname, save_dict)
 
     def load_params(self, fname):

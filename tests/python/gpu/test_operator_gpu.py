@@ -5,9 +5,13 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import check_consistency
+from mxnet.test_utils import check_consistency, set_default_context
 from numpy.testing import assert_allclose
 import time
+
+set_default_context(mx.gpu(0))
+del test_support_vector_machine_l1_svm
+del test_support_vector_machine_l2_svm
 
 def test_batchnorm_with_type():
     sym = mx.sym.BatchNorm(name='norm', fix_gamma=False)
