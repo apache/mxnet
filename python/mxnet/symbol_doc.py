@@ -77,6 +77,33 @@ class ActivationDoc(SymbolDoc):
     """
 
 
+class DropoutDoc(SymbolDoc):
+    """
+    Examples
+    --------
+    Apply dropout to corrupt input as zero with probability 0.2:
+
+    >>> data = Variable('data')
+    >>> data_dp = Dropout(data=data, p=0.2)
+
+    Regression Test
+    ---------------
+    >>> shape = (100, 100)  # take larger shapes to be more statistical stable
+    >>> x = numpy.ones(shape)
+    >>> op = Dropout(p=0.5, name='dp')
+    >>> # dropout is identity during testing
+    >>> y = test_utils.simple_forward(op, dp_data=x, is_train=False)
+    >>> test_utils.almost_equal(x, y, threshold=0)
+    True
+    >>> y = test_utils.simple_forward(op, dp_data=x, is_train=True)
+    >>> # expectation is (approximately) unchanged
+    >>> numpy.abs(x.mean() - y.mean()) < 0.1
+    True
+    >>> set(numpy.unique(y)) == set([0, 2])
+    True
+    """
+
+
 class FlattenDoc(SymbolDoc):
     """
     Examples
