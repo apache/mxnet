@@ -19,13 +19,14 @@
 *         zhenlin.luo@intel.com
 *
 *******************************************************************************/
-#include "mkl_service.h"
+
 
 
 #include "mkl_cppwrapper.h"
-
 #include <stdio.h>
 #if MXNET_USE_MKL2017 == 1
+#include "mkl_service.h"
+
 int getMKLBuildDate() {
     static int build = 0;
     if (build == 0) {

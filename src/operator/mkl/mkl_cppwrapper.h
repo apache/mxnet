@@ -25,7 +25,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-
+#if MXNET_USE_MKL2017 == 1
 #include "mkl_dnn_types.h"
 #include "mkl_dnn.h"
 #include "mkl_version.h"
@@ -35,6 +35,7 @@
 #if (__INTEL_MKL__ < 2017) || (__INTEL_MKL_BUILD_DATE <= 20160311)
 #error: To use the new MKL DNN API, you must install Intel(R) MKL 2017 Beta Update 1 or higher.
 #endif
+#define ENABLE_MKL_DEBUG
 #ifdef ENABLE_MKL_DEBUG
 #define MKL_DLOG(severity) LOG(severity)
 #else
@@ -1040,4 +1041,5 @@ template <> inline dnnError_t dnnInnerProductCreateBackwardBias<double>(
             attributes, dimensions,
             dstSize);
 }
+#endif // #MXNET_USE_MKL2017 == 1
 #endif  // MXNET_OPERATOR_MKL_MKL_CPPWRAPPER_H_
