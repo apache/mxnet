@@ -90,7 +90,7 @@ class Initializer(object):
     def _init_beta(self, _, arr):
         arr[:] = 0.0
 
-    def _init_cudnn_rnn_params(name, arr, state_size):
+    def _init_cudnn_rnn_params(self, name, arr, state_size):
         scale = 1.0 / np.sqrt(state_size)
         random.uniform(-scale, scale, out=arr)
 
