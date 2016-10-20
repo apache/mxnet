@@ -698,7 +698,8 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @param source The data source we should like to copy from.
    */
   private def syncCopyfrom(source: Array[Float]): Unit = {
-    require(source.length == size, "array size do not match the size of NDArray")
+    require(source.length == size,
+      s"array size (${source.length}) do not match the size of NDArray ($size)")
     checkCall(_LIB.mxNDArraySyncCopyFromCPU(handle, source, source.length))
   }
 
@@ -733,7 +734,6 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
 
   /**
    * Return a reshaped NDArray that shares memory with current one.
-   *
    * @param dims New shape.
    *
    * @return a reshaped NDArray that shares memory with current one.
@@ -742,6 +742,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     val reshapeHandle = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayReshape(handle, dims.length, dims, reshapeHandle))
     new NDArray(handle = reshapeHandle.value, writable = this.writable)
+  }
+
+  /**
+   * Return a reshaped NDArray that shares memory with current one.
+   * @param dims New shape.
+   *
+   * @return a reshaped NDArray that shares memory with current one.
+   */
+  def reshape(dims: Shape): NDArray = {
+    reshape(dims.toArray)
   }
 
   /**

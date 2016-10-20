@@ -1,18 +1,18 @@
 # Performance
 
-The following factors may significant affect the performance:
+The following factors may significantly affect the performance:
 
-1. Use a fast backend. A fast BLAS library, e.g. openblas, altas,
+1. Use a fast back-end. A fast BLAS library, e.g. openblas, altas,
 and mkl, is necessary if only using CPU. While for Nvidia GPUs, we strongly
 recommend to use CUDNN.
 2. Three important things for the input data:
-  1. data format. If you are using the `rec` format, then everything should be
+  1. Data format. If you are using the `rec` format, then everything should be
     fine.
-  2. decoding. In default MXNet uses 4 CPU threads for decoding the images, which
+  2. Decoding. In default MXNet uses 4 CPU threads for decoding the images, which
     are often able to decode over 1k images per second. You
     may increase the number of threads if either you are using a low-end CPU or
     you GPUs are very powerful.
-  3. place to store the data. Any local or distributed filesystem (HDFS, Amazon
+  3. Place to store the data. Any local or distributed filesystem (HDFS, Amazon
     S3) should be fine. There may be a problem if multiple machines read the
     data from the network shared filesystem (NFS) at the same time.
 3. Use a large batch size. We often choose the largest one which can fit into

@@ -1,12 +1,47 @@
 # coding: utf-8
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long
+# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
 from __future__ import absolute_import, print_function, division
 import time
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
+
+from .context import cpu, gpu, Context
+from .ndarray import array
+
 _rng = np.random.RandomState(1234)
+
+def default_context():
+    """Get default context for regression test."""
+    # _TODO: get context from environment variable to support
+    # testing with GPUs
+    return Context.default_ctx
+
+def set_default_context(ctx):
+    """Set default ctx"""
+    Context.default_ctx = ctx
+
+def default_dtype():
+    """Get default data type for regression test."""
+    # _TODO: get default dtype from environment variable
+    return np.float32
+
+
+def default_numerical_threshold():
+    """Get default numerical threshold for regression test."""
+    # _TODO: get from env variable, different threshold might
+    # be needed for different device and dtype
+    return 1e-6
+
+
+def random_arrays(*shapes):
+    """Generate some random numpy arrays."""
+    arrays = [np.random.randn(*s).astype(default_dtype())
+              for s in shapes]
+    if len(arrays) == 1:
+        return arrays[0]
+    return arrays
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
@@ -68,6 +103,41 @@ def reldiff(a, b):
         return 0
     ret = diff / norm
     return ret
+
+
+def almost_equal(a, b, threshold=None):
+    """Test if two numpy arrays are almost equal."""
+    threshold = threshold or default_numerical_threshold()
+    return reldiff(a, b) <= threshold
+
+
+def simple_forward(sym, ctx=None, is_train=False, **inputs):
+    """A simple forward function for a symbol.
+
+    Primarily used in doctest to conveniently test the function
+    of a symbol. Takes numpy array as inputs and outputs are
+    also converted to numpy arrays.
+
+    Parameters
+    ----------
+    ctx : Context
+        If None, will take the default context.
+    inputs : keyword arguments
+        Mapping each input name to a numpy array.
+
+    Returns
+    -------
+    The result as a numpy array. Multiple results will
+    be returned as a list of numpy arrays.
+    """
+    ctx = ctx or default_context()
+    inputs = {k: array(v) for k, v in inputs.iteritems()}
+    exe = sym.bind(ctx, args=inputs)
+    exe.forward(is_train=is_train)
+    outputs = [x.asnumpy() for x in exe.outputs]
+    if len(outputs) == 1:
+        outputs = outputs[0]
+    return outputs
 
 
 def _parse_location(sym, location, ctx):
@@ -170,7 +240,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
 
 
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, check_eps=1e-2,
-                           grad_nodes=None, use_forward_train=True, ctx=mx.cpu()):
+                           grad_nodes=None, use_forward_train=True, ctx=None):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -203,6 +273,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
+    if ctx is None:
+        ctx = default_context()
 
     def random_projection(shape):
         """Get a random weight matrix with not too small elements
@@ -215,6 +287,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
         # otherwise too much precision is lost in numerical gradient
         plain = _rng.rand(*shape) + 0.1
         return plain
+
     location = _parse_location(sym=sym, location=location, ctx=ctx)
     location_npy = {k:v.asnumpy() for k, v in location.items()}
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
@@ -288,7 +361,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
             raise Exception(msg)
 
 
-def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=None, ctx=mx.cpu()):
+def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=None, ctx=None):
     """Compare foward call to expected value.
 
     Parameters
@@ -319,6 +392,9 @@ def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=N
     ctx : Context, optional
         running context
     """
+    if ctx is None:
+        ctx = default_context()
+
     location = _parse_location(sym=sym, location=location, ctx=ctx)
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
     if isinstance(expected, dict):
@@ -347,7 +423,7 @@ def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=N
 
 
 def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
-                            aux_states=None, grad_req='write', ctx=mx.cpu()):
+                            aux_states=None, grad_req='write', ctx=None):
     """Compare backward call to expected value.
 
     Parameters
@@ -383,6 +459,9 @@ def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
     ctx : Context, optional
         running context
     """
+    if ctx is None:
+        ctx = default_context()
+
     location = _parse_location(sym=sym, location=location, ctx=ctx)
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
     if isinstance(expected, (list, tuple)):
@@ -428,7 +507,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
             raise Exception(msg)
 
 
-def check_speed(sym, location=None, ctx=mx.cpu(), N=20, grad_req=None, typ="whole",
+def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
                 **kwargs):
     """Check the running speed of a symbol
 
@@ -452,6 +531,9 @@ def check_speed(sym, location=None, ctx=mx.cpu(), N=20, grad_req=None, typ="whol
         - "forward"
             only test the forward speed
     """
+    if ctx is None:
+        ctx = default_context()
+
     if grad_req is None:
         grad_req = 'write'
     if location is None:

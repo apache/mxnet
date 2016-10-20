@@ -21,7 +21,7 @@ def resize(im, target_size, max_size):
     return im, im_scale
 
 
-def transform(im, pixel_means):
+def transform(im, pixel_means, need_mean=False):
     """
     transform into mxnet tensor
     substract pixel size and transform to correct format
@@ -32,7 +32,8 @@ def transform(im, pixel_means):
     im = im.copy()
     im[:, :, (0, 1, 2)] = im[:, :, (2, 1, 0)]
     im = im.astype(float)
-    im -= pixel_means
+    if need_mean:
+        im -= pixel_means
     im_tensor = im[np.newaxis, :]
     # put channel first
     channel_swap = (0, 3, 1, 2)

@@ -17,7 +17,7 @@ Usually you do not need to change these settings, but they are listed here for r
 ## Memory options
 
 * MXNET_EXEC_ENABLE_INPLACE (default=true)
-  - Whether to enable inplace optimization in symbolic execution.
+  - Whether to enable in place optimization in symbolic execution.
 * MXNET_EXEC_MATCH_RANGE (default=10)
   - The rough matching scale in symbolic execution memory allocator.
   - Set this to 0 if we do not want to enable memory sharing between graph nodes(for debug purpose).
