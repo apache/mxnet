@@ -1041,5 +1041,5 @@ template <> inline dnnError_t dnnInnerProductCreateBackwardBias<double>(
             attributes, dimensions,
             dstSize);
 }
-#endif // #MXNET_USE_MKL2017 == 1
+#endif  // #MXNET_USE_MKL2017 == 1
 #endif  // MXNET_OPERATOR_MKL_MKL_CPPWRAPPER_H_

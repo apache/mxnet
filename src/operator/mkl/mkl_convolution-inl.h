@@ -290,7 +290,6 @@ class MKLConvolutionOp : public Operator {
     out_ptr = out.dptr_;
     int status;
     void *res_convolutionFwd[dnnResourceNumber];
-    MKL_DLOG(INFO) << "MKLCONV 1: start forward resource setup";
     res_convolutionFwd[dnnResourceSrc] =
       fwd_bottom_data->get_converted_prv(data_ptr, false);
     res_convolutionFwd[dnnResourceFilter] =
@@ -322,7 +321,6 @@ class MKLConvolutionOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
-    MKL_DLOG(INFO) << "Backward" << getName().c_str();
     if (param_.kernel.ndim() > 2) {
       LOG(FATAL) << "Volume convolution is not implmented in mshadow";
     }
@@ -391,11 +389,9 @@ class MKLConvolutionOp : public Operator {
       res_convolutionBwdBias[dnnResourceDiffDst] =
         bwdb_top_diff->get_converted_prv(grad.dptr_, false);
       if (bwdb_bias_diff->conversion_needed()) {
-        MKL_DLOG(INFO) << "MKLCONV: bwd bias diff needs converted ";
         res_convolutionBwdBias[dnnResourceDiffBias] =
           bwdb_bias_diff->prv_ptr();
       } else {
-        MKL_DLOG(INFO) << "MKLCONV: bwd bias diff direct use";
         res_convolutionBwdBias[dnnResourceDiffBias] =
           reinterpret_cast<void *>(gbias.dptr_);
       }

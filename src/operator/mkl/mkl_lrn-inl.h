@@ -122,9 +122,7 @@ class MKLLRNOp : public Operator {
 
     const void* bottom_data = NULL;
     if (bottom_data == NULL) {
-      MKL_DLOG(INFO) << "MKLLRN: use cpu data as input";
       if (lrnFwd == NULL) {
-        MKL_DLOG(INFO) << "MKLRELU: lrnFwd is first pass";
         dnnError_t e;
         dnnLayout_t lrn_buffer_l = NULL;
         e = dnnLRNCreateForward<DType>(&lrnFwd, NULL, fwd_bottom_data_->layout_usr,
@@ -152,7 +150,6 @@ class MKLLRNOp : public Operator {
     lrn_res[dnnResourceSrc] = const_cast<void*>(bottom_data);
     lrn_res[dnnResourceDst] =
       reinterpret_cast<void *>(out.dptr_);
-    MKL_DLOG(INFO) << "MKLLRN: Fwd using cpu_data for output";
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
     e = dnnExecute<DType>(lrnFwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
@@ -178,23 +175,13 @@ class MKLLRNOp : public Operator {
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
 
-    // std::shared_ptr<MklDnnChunk> top_diffChunk = out_grad[lrn_enum::kOut].getMklDnnChunk();
     lrn_res[dnnResourceDiffDst] =
       bwd_top_diff_->get_converted_prv(grad.dptr_, false);
 
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
-    // std::shared_ptr<MklDnnChunk> bottom_diffChunk = in_grad[lrn_enum::kData].getMklDnnChunk();
     lrn_res[dnnResourceSrc] =
       fwd_bottom_data_->get_converted_prv(data.dptr_, false);
-
-    /*if (bwd_bottom_diff_->conversion_needed()) {
-      MKL_DLOG(INFO) << "MKLLRN: Bwd using prv_data for output";
-      lrn_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
-      bottom_diffChunk->set_prv_descriptor(bwd_bottom_diff_);
-    } else { */
-      MKL_DLOG(INFO) << "MKLLRN: Bwd using cpu_data for output";
-      lrn_res[dnnResourceDiffSrc] = grad_in.dptr_;
-    // }
+    lrn_res[dnnResourceDiffSrc] = grad_in.dptr_;
     e = dnnExecute<DType>(lrnBwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
   }

@@ -60,7 +60,6 @@ class MKLConcatOp : public Operator {
   void LayerSetUp(const std::vector<mshadow::Tensor<xpu, 4, DType> > &data,
                   const mshadow::Tensor<xpu, 4, DType> &out,
                   int data_shape_size) {
-    MKL_DLOG(INFO) << "Layer Setup:" << getName().c_str();
     size_t dim_src = data_shape_size;
     size_t dim_dst = dim_src;
     num_concats_ = size_;
@@ -159,7 +158,6 @@ class MKLConcatOp : public Operator {
       LayerSetUp(data, out, 4);
     }
 
-    MKL_DLOG(INFO) << "TEST1";
     dnnError_t e;
     bool isFirstPass = (concatFwd_ == NULL);
     dnnLayout_t *layouts = NULL;

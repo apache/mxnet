@@ -61,7 +61,6 @@ class MKLBatchNormOp : public Operator {
  private:
   void LayerSetUp(const mshadow::Tensor<xpu, 4, DType> &data,
                   const mshadow::Tensor<xpu, 4, DType> &out) {
-    MKL_DLOG(INFO) << "Layer Setup" << getName().c_str();
     eps_ = param_.eps;
     size_t dim = 4, sizes[4], strides[4];
     channels_ = data.shape_[1];
@@ -96,8 +95,6 @@ class MKLBatchNormOp : public Operator {
 
     workspace_buffer_ = NULL;
     scaleShift_buffer_ = NULL;
-    // "Lazy" allocation because here we don't know
-    // what layout is used by neighbours.
 
     // Primitives will be allocated during the first fwd pass
     batchNormFwd = NULL;
@@ -123,7 +120,6 @@ class MKLBatchNormOp : public Operator {
       CHECK_GE(req.size(), 1);
       CHECK_EQ(req[batchnorm::kOut], kWriteTo);
     }
-    MKL_DLOG(INFO) << "Forward:" << getName().c_str();
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType>  data;
@@ -152,7 +148,6 @@ class MKLBatchNormOp : public Operator {
     int is_first_pass = 0;
 
     if (NULL == bottom_data) {
-      MKL_DLOG(INFO) << "Using cpu_data in MKLBatchNormLayer.";
       if (batchNormFwd == NULL) {
         // First pass
         is_first_pass = 1;
@@ -230,7 +225,6 @@ class MKLBatchNormOp : public Operator {
       } else {
         BatchNorm_res[dnnResourceDst] =
           reinterpret_cast<void *>(out.dptr_);
-        MKL_DLOG(INFO) << "Using cpu_data for top in DnnBatchNorm.";
       }
 
       e = dnnExecute<DType>(batchNormFwd, BatchNorm_res);
@@ -262,7 +256,6 @@ class MKLBatchNormOp : public Operator {
     CHECK_EQ(in_grad.size(), 3);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data, grad, grad_in;
-    MKL_DLOG(INFO) << "Backward:" << getName().c_str();
 
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[batchnorm::kOut].shape_[0],
@@ -356,7 +349,6 @@ class MKLBatchNormOp : public Operator {
 
  private:
   BatchNormParam param_;
-  //  DType moving_average_fraction_;
   DType eps_;
   bool use_weight_bias_;
 

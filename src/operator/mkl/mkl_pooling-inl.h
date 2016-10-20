@@ -97,7 +97,6 @@ class MKLPoolingOp : public Operator {
  private:
   void LayerSetUp(const mshadow::Tensor<xpu, 4, DType> &data,
                   const mshadow::Tensor<xpu, 4, DType> &out) {
-    MKL_DLOG(INFO) << "Layer Setup" << getName().c_str();
     channels_ = data.shape_[1];
     height_ = data.shape_[2];
     width_ = data.shape_[3];
@@ -203,7 +202,6 @@ class MKLPoolingOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    MKL_DLOG(INFO) << "Forward:" << getName().c_str();
     if (param_.kernel.ndim() >= 3) {
       LOG(FATAL) << "Not implmented";
     }
@@ -234,7 +232,6 @@ class MKLPoolingOp : public Operator {
 
     void* bottom_data = NULL;
     if (NULL == bottom_data) {
-      MKL_DLOG(INFO) << "MKLPOOLING: use cpu data as input";
       bottom_data = data.dptr_;
       if (NULL == poolingFwd) {
         status = dnnPoolingCreateForward<DType>(&poolingFwd, NULL,
@@ -273,7 +270,6 @@ class MKLPoolingOp : public Operator {
       pooling_res[dnnResourceDst] = reinterpret_cast<void *>(fwd_top_data->prv_ptr());
     } else {
       pooling_res[dnnResourceDst] = reinterpret_cast<void *>(out.dptr_);
-      MKL_DLOG(INFO) << "Using cpu data for top in mklPooling";
     }
     status = dnnExecute<DType>(poolingFwd, pooling_res);
     CHECK_EQ(status, E_SUCCESS);
@@ -288,7 +284,6 @@ class MKLPoolingOp : public Operator {
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
-    MKL_DLOG(INFO) << "Backward:" << getName().c_str();
     if (!req[0]) {
       return;
     }

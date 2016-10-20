@@ -66,7 +66,6 @@ class MKLReluOp : public Operator {
  private:
   void LayerSetUp(const mshadow::Tensor<xpu, 4, DType> &data,
                   const mshadow::Tensor<xpu, 4, DType> &out) {
-    MKL_DLOG(INFO) << "Layer Setup" << getName().c_str();
     size_t dim = 4;
     size_t *sizes = new size_t[dim];
     size_t *strides = new size_t[dim];
@@ -97,7 +96,6 @@ class MKLReluOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
-    MKL_DLOG(INFO) << "Forward:" << getName().c_str();
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data;
     Tensor<xpu, 4, DType> out;
@@ -117,7 +115,6 @@ class MKLReluOp : public Operator {
     void* bottom_data = NULL;
 
     if (bottom_data  == NULL) {
-      MKL_DLOG(INFO) << "MKLRELU: use cpu data as input";
       bottom_data = data.dptr_;
       if (reluFwd_ == NULL) {
       dnnError_t e;
@@ -139,16 +136,13 @@ class MKLReluOp : public Operator {
       if (NULL != bottom_prv_descriptor) {
         relu_res[dnnResourceDst] =
           reinterpret_cast<void *>(fwd_bottom_data_->prv_ptr());
-        MKL_DLOG(INFO) << "Using bottom as top (in-place) in mklReLU";
       } else {
-        MKL_DLOG(INFO) << "Using mutable prv  (out-of-place) in mklReLU";
         relu_res[dnnResourceDst] =
           reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
       }
     } else {
       relu_res[dnnResourceDst] =
       reinterpret_cast<void *>(out.dptr_);
-      MKL_DLOG(INFO) << "Using cpu_data for top in mklReLU.";
     }
     e = dnnExecute<DType>(reluFwd_, relu_res);
     CHECK_EQ(e, E_SUCCESS);
@@ -160,9 +154,7 @@ class MKLReluOp : public Operator {
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
-    MKL_DLOG(INFO) << "Backward:" << getName().c_str();
     if (!req[0]) {
-      MKL_DLOG(INFO) << "MKLRELU:no backward required";
       return;
     }
     using namespace mshadow;

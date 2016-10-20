@@ -32,14 +32,10 @@ template <typename Dtype>
 void MKLMemoryDescriptorBase<Dtype>::create_conversions() {
   int status;
   if (this->convert_from_int) {
-    MKL_DLOG(INFO) << "convert_from_int layout already created, recreating for"
-           << this->name;
     status = dnnDelete<Dtype>(this->convert_from_int);
     CHECK_EQ(status, E_SUCCESS);
   }
   if (this->convert_to_int) {
-    MKL_DLOG(INFO) << "convert_to_int layout already created, recreating for"
-           << this->name;
     status = dnnDelete<Dtype>(this->convert_to_int);
     CHECK_EQ(status, E_SUCCESS);
   }
@@ -64,8 +60,6 @@ void MKLMemoryDescriptorBase<Dtype>::create_internal_layout(
     const dnnPrimitive_t primitive, dnnResourceType_t type) {
   int status;
   if (this->layout_int) {
-    MKL_DLOG(INFO) << "Internal layout already created, recreating for"
-           << this->name;
     status = dnnLayoutDelete<Dtype>(this->layout_int);
     CHECK_EQ(status, E_SUCCESS);
   }
@@ -84,8 +78,6 @@ void MKLMemoryDescriptorBase<Dtype>::create_user_layout(
     size_t dimension, const size_t size[], const size_t strides[]) {
   int status;
   if (this->layout_usr) {
-    MKL_DLOG(INFO) << "User layout already created, recreating for"
-               << this->name;
     status = dnnLayoutDelete<Dtype>(this->layout_usr);
     CHECK_EQ(status, E_SUCCESS);
   }
@@ -115,8 +107,6 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_prv(void* cpu_ptr) {
   int status;
   void *convert_resources[dnnResourceNumber];
 
-  MKL_DLOG(INFO) << "convert priv =>           "  << this->name << " =>";
-
   convert_resources[dnnResourceFrom] = this->prv_ptr();
   convert_resources[dnnResourceTo]   = cpu_ptr;
   status = dnnExecute<Dtype>(this->convert_from_int, convert_resources);
@@ -129,8 +119,6 @@ void MKLMemoryDescriptorBase<Dtype>::convert_to_prv(void* cpu_ptr) {
   CHECK(this->convert_to_int);
   int status;
   void *convert_resources[dnnResourceNumber];
-
-  MKL_DLOG(INFO) << "convert      => priv                                => " << this->name;
 
   convert_resources[dnnResourceFrom] = cpu_ptr;
   convert_resources[dnnResourceTo]   = this->prv_ptr();
@@ -162,8 +150,6 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
         std::static_pointer_cast<MKLMemoryDescriptorBase<Dtype> >
             (other);
 
-  MKL_DLOG(INFO) << "convert other => priv     "  << other_descr->name << " => " << this->name;
-
   int status;
   dnnPrimitive_t convert;
   status = dnnConversionCreate<Dtype>(&convert,
@@ -190,12 +176,8 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
   if (this->convert_to_int) {
     if (prv_ptr == NULL) {
       if (converted_in_fwd) {
-          MKL_DLOG(INFO) << "reusing fwd               "
-            << converted_in_fwd->name << " == " << this->name;
           return converted_in_fwd->internal_ptr;
       }
-      MKL_DLOG(INFO) << "convert      => priv                                => "
-        << this->name;
       this->allocate();
       this->convert_to_prv(cpu_ptr);
 
