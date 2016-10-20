@@ -42,10 +42,12 @@ struct MKLMemoryDescriptorBase {
       status = dnnDelete<DType>(this->convert_from_int);
       CHECK_EQ(status, E_SUCCESS);
     }
+    this->convert_from_int = NULL;
     if (this->convert_to_int) {
       status = dnnDelete<DType>(this->convert_to_int);
       CHECK_EQ(status, E_SUCCESS);
     }
+    this->convert_to_int = NULL;
     if (this->layout_int && !dnnLayoutCompare<DType>(layout_usr, layout_int)) {
       CHECK(layout_usr);
       status =
