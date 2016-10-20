@@ -5,12 +5,45 @@
  * \author Bing Xu
 */
 #include "./pooling-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_pooling-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
+
+
 template<>
-Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
+Operator* CreateOp<cpu>(PoolingParam param, int dtype,
+                        std::vector<TShape> *in_shape,
+                        std::vector<TShape> *out_shape) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    switch (param.pool_type) {
+      case pool_enum::kMaxPooling:
+        if (UseMKLDNNPooling(param, in_shape, out_shape)) {
+          op = new MKLDNNPoolingOp<DType>(param);
+        } else {
+          op = new PoolingOp<cpu, mshadow::red::maximum, DType>(param);
+        }
+        break;
+      case pool_enum::kAvgPooling:
+        if (UseMKLDNNPooling(param, in_shape, out_shape)) {
+          op = new MKLDNNPoolingOp<DType>(param);
+        } else {
+          op = new PoolingOp<cpu, mshadow::red::sum, DType>(param);
+        }
+        break;
+      case pool_enum::kSumPooling:
+        op = new PoolingOp<cpu, mshadow::red::sum, DType>(param);
+        break;
+      default:
+        LOG(FATAL) << "unknown pooling type";
+        return NULL;
+    }
+  })
+#else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.pool_type) {
       case pool_enum::kMaxPooling:
@@ -26,7 +59,8 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
         LOG(FATAL) << "unknown pooling type";
         return NULL;
     }
-  });
+  })
+#endif
   return op;
 }
 
@@ -37,7 +71,7 @@ Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape);
 }
 
 DMLC_REGISTER_PARAMETER(PoolingParam);

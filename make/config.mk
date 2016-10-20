@@ -51,6 +51,12 @@ USE_CUDNN = 0
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVRTC = 0
 
+# whether use MKLDNN library
+USE_MKLDNN = 0
+
+# MKLDNN root library
+MKLDNN_ROOT = NONE
+
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator

@@ -6,12 +6,19 @@
 */
 
 #include "./batch_norm-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_batch_norm-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(BatchNormParam param) {
+#if MXNET_USE_MKLDNN == 1
+  return new MKLBatchNormOp<float>(param);
+#else
   return new BatchNormOp<cpu>(param);
+#endif
 }
 
 Operator *BatchNormProp::CreateOperator(Context ctx) const {
