@@ -13,7 +13,7 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<gpu>(LRNParam param) {
+Operator* CreateOp<gpu>(LRNParam param, int dtype) {
 #if MXNET_USE_CUDNN == 1
   return new CuDNNLocalResponseNormOp(param);
 #else
