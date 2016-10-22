@@ -61,6 +61,7 @@ endif
 ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -DMKL_EXPERIMENTAL=0
 	ICC_ON=0	
 	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON))
 	MKLROOT=$(firstword $(RETURN_STRING))
@@ -71,12 +72,6 @@ ifeq ($(MKL_EXTERNAL), 1)
 	CFLAGS += -I$(MKLROOT)/include
 	LDFLAGS += -L$(MKLROOT)/lib/ -liomp5 -lmklml_gnu -lmklml_intel
 endif
-endif
-
-ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-	CFLAGS += -DMKL_EXPERIMENTAL=1
-else
-	CFLAGS += -DMKL_EXPERIMENTAL=0
 endif
 
 ifeq ($(USE_CUDNN), 1)
