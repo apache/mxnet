@@ -17,6 +17,9 @@
 #include <algorithm>
 #include "./base.h"
 
+#if MXNET_USE_MKL2017 == 1
+#include "./mkl_memory.h"
+#endif
 namespace mxnet {
 
 /*!
@@ -551,10 +554,18 @@ class TBlob {
   int dev_mask_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
+  /*! \brief storing mkl chunk buffer blob, use for experimental only */
+#if MKL_EXPERIMENTAL == 1
+  std::shared_ptr<MKLChunk> mkl_chunk;
+#endif
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
       : dptr_(NULL), dev_mask_(cpu::kDevMask),
-        type_flag_(mshadow::DataType<real_t>::kFlag) {}
+        type_flag_(mshadow::DataType<real_t>::kFlag) {
+#if MKL_EXPERIMENTAL == 1
+      mkl_chunk = NULL;
+#endif
+  }
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
@@ -568,7 +579,12 @@ class TBlob {
       : dptr_(dptr), shape_(shape),
         stride_(shape[shape.ndim() - 1]),
         dev_mask_(dev_mask),
-        type_flag_(mshadow::DataType<DType>::kFlag) {}
+        type_flag_(mshadow::DataType<DType>::kFlag) {
+#if MKL_EXPERIMENTAL == 1
+      mkl_chunk = NULL;
+#endif
+  }
+
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
@@ -583,7 +599,11 @@ class TBlob {
       : dptr_(dptr), shape_(shape),
         stride_(shape[shape.ndim() - 1]),
         dev_mask_(dev_mask),
-        type_flag_(type_flag) {}
+        type_flag_(type_flag) {
+#if MKL_EXPERIMENTAL == 1
+      mkl_chunk = NULL;
+#endif
+  }
   /*!
    * \brief constructor from tensor
    * \param src source tensor
@@ -594,7 +614,18 @@ class TBlob {
   template<typename Device, int dim, typename DType>
   TBlob(const mshadow::Tensor<Device, dim, DType> &src) {  // NOLINT(*)
     *this = src;
+#if MKL_EXPERIMENTAL == 1
+    mkl_chunk = NULL;
+#endif
   }
+#if MKL_EXPERIMENTAL == 1
+  void setMKLChunk(std::shared_ptr<MKLChunk> dnnChunk) {
+      mkl_chunk = dnnChunk;
+  }
+  inline std::shared_ptr<MKLChunk> get_mkl_chunk() const {
+      return this->mkl_chunk;
+  }
+#endif
   /*!
    * \brief assignment from tensor
    * \param src source tensor
@@ -629,6 +660,16 @@ class TBlob {
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 2, DType> FlatTo2D(
       mshadow::Stream<Device> *stream = NULL) const {
+#if MKL_EXPERIMENTAL == 1
+    if (mkl_chunk != nullptr) {
+      mkl_chunk->check_and_prv_to_cpu(dptr_);
+    }
+#endif
+    return FlatTo2D_direct<Device, DType>(stream);
+  }
+  template<typename Device, typename DType>
+  inline mshadow::Tensor<Device, 2, DType> FlatTo2D_direct(
+    mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
@@ -677,6 +718,16 @@ class TBlob {
    */
   template<typename Device, int dim, typename DType>
   inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = NULL) const {
+#if MKL_EXPERIMENTAL == 1
+    if (mkl_chunk != nullptr) {
+        mkl_chunk->check_and_prv_to_cpu(dptr_);
+    }
+#endif
+    return get_direct<Device, dim, DType>(stream);
+  }
+  template<typename Device, int dim, typename DType>
+  inline mshadow::Tensor<Device, dim, DType>
+    get_direct(mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
@@ -686,6 +737,27 @@ class TBlob {
                                                shape_.get<dim>(),
                                                stride_, stream);
   }
+#if MKL_EXPERIMENTAL == 1
+  template<typename DType>
+  inline DType * prv_data() const {
+      std::shared_ptr<MKLChunk> bottom_data_chunk = this->get_mkl_chunk();
+      bool chunk_valid = (bottom_data_chunk != nullptr) && bottom_data_chunk->head_at_prv();
+      if (chunk_valid) {
+          return reinterpret_cast<DType*>(bottom_data_chunk->prv_data());
+      }
+      return NULL;
+  }
+
+  template<typename DType>
+  inline int prv_count() const {
+      std::shared_ptr<MKLChunk> bottom_data_chunk = this->get_mkl_chunk();
+      bool chunk_valid = (bottom_data_chunk != nullptr) && bottom_data_chunk->head_at_prv();
+      if (chunk_valid) {
+          return bottom_data_chunk->prv_count();
+      }
+      return 0;
+  }
+#endif
   /*!
    * \brief fetch a tensor in given shape
    *  If size do not match the stored size, an error will be issued
@@ -700,6 +772,18 @@ class TBlob {
   inline mshadow::Tensor<Device, dim, DType> get_with_shape(
       const mshadow::Shape<dim> &shape,
       mshadow::Stream<Device> *stream = NULL) const {
+#if MKL_EXPERIMENTAL == 1
+    if (mkl_chunk != nullptr) {
+        mkl_chunk->check_and_prv_to_cpu(dptr_);
+    }
+#endif
+    return get_with_shape_direct<Device, dim, DType>(shape, stream);
+  }
+
+  template<typename Device, int dim, typename DType>
+  inline mshadow::Tensor<Device, dim, DType> get_with_shape_direct(
+    const mshadow::Shape<dim> &shape,
+    mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device ::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)

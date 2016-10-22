@@ -127,11 +127,11 @@ class MKLBatchNormOp : public Operator {
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[batchnorm::kData].shape_[0],
                                in_data[batchnorm::kData].shape_[1], 1, 1);
-      data = in_data[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
-      out = out_data[batchnorm::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      data = in_data[batchnorm::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+      out = out_data[batchnorm::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
     } else {
-      data = in_data[batchnorm::kData].get<xpu, 4, DType>(s);
-      out = out_data[batchnorm::kOut].get<xpu, 4, DType>(s);
+      data = in_data[batchnorm::kData].get_direct<xpu, 4, DType>(s);
+      out = out_data[batchnorm::kOut].get_direct<xpu, 4, DType>(s);
     }
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> bias = in_data[batchnorm::kBeta].get<xpu, 1, DType>(s);
@@ -144,9 +144,46 @@ class MKLBatchNormOp : public Operator {
       init_mkldnn_ = true;
     }
     void* bottom_data = NULL;
+#if MKL_EXPERIMENTAL == 1
+    bottom_data =
+          reinterpret_cast<void *>(in_data[batchnorm::kData].prv_data<DType>());
+#endif
 
     int is_first_pass = 0;
+#if MKL_EXPERIMENTAL == 1
+    if (NULL != bottom_data) {
+      // Is it the first pass? Create a primitive.
+      if (batchNormFwd == NULL) {
+        is_first_pass = 1;
+        std::shared_ptr<MKLChunk> bottom_data_chunk = in_data[batchnorm::kData].get_mkl_chunk();
+        std::shared_ptr<PrvMemDescr> bottom_prv_desc =
+          bottom_data_chunk->get_prv_descriptor();
+        CHECK(bottom_prv_desc->get_descr_type() ==
+          PrvMemDescr::PRV_DESCR_MKL2017);
+        std::shared_ptr<MKLData<DType> > mem_descr
+          = std::static_pointer_cast<MKLData<DType>>(bottom_prv_desc);
+        CHECK(mem_descr != NULL);
+        fwd_bottom_data = mem_descr;
+        dnnError_t e;
+        e = dnnBatchNormalizationCreateForward<DType>(
+              &batchNormFwd, NULL, mem_descr->layout_int, eps_);
+        CHECK_EQ(e, E_SUCCESS);
+        fwd_top_data->create_internal_layout(batchNormFwd, dnnResourceDst);
+        bwd_top_diff->create_internal_layout(batchNormFwd, dnnResourceDst);
+        bwd_bottom_diff->create_internal_layout(batchNormFwd, dnnResourceSrc);
 
+
+        e = dnnBatchNormalizationCreateBackwardData<DType>(
+              &batchNormBwdData, NULL, mem_descr->layout_int, eps_);
+        CHECK_EQ(e, E_SUCCESS);
+        if (true) {
+          e = dnnBatchNormalizationCreateBackwardScaleShift<DType>(
+                &batchNormBwdScaleShift, NULL, mem_descr->layout_int, eps_);
+          CHECK_EQ(e, E_SUCCESS);
+        }
+      }
+    }
+#endif
     if (NULL == bottom_data) {
       if (batchNormFwd == NULL) {
         // First pass
@@ -202,6 +239,7 @@ class MKLBatchNormOp : public Operator {
         scaleShift_buffer_[channels_ + i] = (bias.dptr_)[i];
       }
     }
+#if MKL_EXPERIMENTAL == 0
     if (ctx.is_train && !param_.use_global_stats) {
       Tensor<xpu, 1, DType> mean = out_data[batchnorm::kMean].get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> var = out_data[batchnorm::kVar].get<xpu, 1, DType>(s);
@@ -213,22 +251,26 @@ class MKLBatchNormOp : public Operator {
       mean = scale * sumall_except_dim<1>(data);
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
-
+#endif
       dnnError_t e;
       void* BatchNorm_res[dnnResourceNumber];
       BatchNorm_res[dnnResourceSrc] = bottom_data;
       BatchNorm_res[dnnResourceWorkspace] = workspace_buffer_;
       BatchNorm_res[dnnResourceScaleShift] = scaleShift_buffer_;
       if (fwd_top_data->conversion_needed()) {
+#if MKL_EXPERIMENTAL == 1
+      std::shared_ptr<MKLChunk> topDnnChunk = out_data[batchnorm::kOut].get_mkl_chunk();
+      topDnnChunk->set_prv_descriptor(fwd_top_data);
+#endif
         BatchNorm_res[dnnResourceDst] =
           fwd_top_data->prv_ptr();
       } else {
         BatchNorm_res[dnnResourceDst] =
           reinterpret_cast<void *>(out.dptr_);
       }
-
       e = dnnExecute<DType>(batchNormFwd, BatchNorm_res);
       CHECK_EQ(e, E_SUCCESS);
+#if MKL_EXPERIMENTAL == 0
       if (fwd_top_data->conversion_needed()) {
         fwd_top_data->convert_from_prv(out.dptr_);
       }
@@ -239,6 +281,7 @@ class MKLBatchNormOp : public Operator {
              broadcast<1>(bias - (slope * moving_mean) /
                           F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
     }
+#endif
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -260,13 +303,13 @@ class MKLBatchNormOp : public Operator {
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[batchnorm::kOut].shape_[0],
                                out_grad[batchnorm::kOut].shape_[1], 1, 1);
-      data = in_data[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
-      grad = out_grad[batchnorm::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
-      grad_in = in_grad[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+      data = in_data[batchnorm::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+      grad = out_grad[batchnorm::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+      grad_in = in_grad[batchnorm::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
     } else {
-      data = in_data[batchnorm::kData].get<xpu, 4, DType>(s);
-      grad = out_grad[batchnorm::kOut].get<xpu, 4, DType>(s);
-      grad_in = in_grad[batchnorm::kData].get<xpu, 4, DType>(s);
+      data = in_data[batchnorm::kData].get_direct<xpu, 4, DType>(s);
+      grad = out_grad[batchnorm::kOut].get_direct<xpu, 4, DType>(s);
+      grad_in = in_grad[batchnorm::kData].get_direct<xpu, 4, DType>(s);
     }
 
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);
@@ -282,13 +325,20 @@ class MKLBatchNormOp : public Operator {
     if (param_.fix_gamma) {
       slope = 1.f;
     }
+#if MKL_EXPERIMENTAL == 0
     if (ctx.is_train && !param_.use_global_stats) {
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
+#endif
       void* bottom_data = NULL;
+#if MKL_EXPERIMENTAL == 1
+      bottom_data =
+          reinterpret_cast<void *>(in_data[batchnorm::kData].prv_data<DType>());
+#endif
       if (NULL == bottom_data) {
         bottom_data =
-          reinterpret_cast<void *>(const_cast<DType*>(data.dptr_));
+
+        reinterpret_cast<void *>(data.dptr_);
       }
 
       dnnError_t e;
@@ -296,10 +346,23 @@ class MKLBatchNormOp : public Operator {
       BatchNorm_res[dnnResourceSrc] = bottom_data;
       BatchNorm_res[dnnResourceWorkspace] = workspace_buffer_;
       BatchNorm_res[dnnResourceScaleShift] = scaleShift_buffer_;
+#if MKL_EXPERIMENTAL == 1
+      std::shared_ptr<MKLChunk> top_diff_chunk = out_grad[batchnorm::kOut].get_mkl_chunk();
+#else
+      std::shared_ptr<MKLMemHolder> top_diff_chunk = NULL;
+#endif
+    BatchNorm_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(grad.dptr_,
+                                                                        true, top_diff_chunk);
 
-      BatchNorm_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(grad.dptr_, false);
-
+#if MKL_EXPERIMENTAL == 1
+    std::shared_ptr<MKLChunk> bottom_diff_chunk = in_grad[batchnorm::kData].get_mkl_chunk();
+#else
+    std::shared_ptr<MKLMemHolder> bottom_diff_chunk = NULL;
+#endif
       if (bwd_bottom_diff->conversion_needed()) {
+#if MKL_EXPERIMENTAL == 1
+      bottom_diff_chunk->set_prv_descriptor(bwd_bottom_diff);
+#endif
         BatchNorm_res[dnnResourceDiffSrc] = bwd_bottom_diff->prv_ptr();
       } else {
         BatchNorm_res[dnnResourceDiffSrc] = grad_in.dptr_;
@@ -307,9 +370,11 @@ class MKLBatchNormOp : public Operator {
 
       e = dnnExecute<DType>(batchNormBwdData, BatchNorm_res);
       CHECK_EQ(e, E_SUCCESS);
+#if MKL_EXPERIMENTAL == 0
       if (bwd_bottom_diff->conversion_needed()) {
         bwd_bottom_diff->convert_from_prv(grad_in.dptr_);
       }
+#endif
       if (true) {  // use_weight_bias_
         void* BatchNormBwdScaleShift_res[dnnResourceNumber];
         BatchNormBwdScaleShift_res[dnnResourceSrc] = bottom_data;
@@ -330,6 +395,7 @@ class MKLBatchNormOp : public Operator {
           }
         }
       }
+#if MKL_EXPERIMENTAL == 0
     } else {
       // use global statistics with freeze moving mean and var.
       if (!param_.fix_gamma) {
@@ -345,6 +411,7 @@ class MKLBatchNormOp : public Operator {
         broadcast<1>(
         1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
     }
+#endif
   }
 
  private:

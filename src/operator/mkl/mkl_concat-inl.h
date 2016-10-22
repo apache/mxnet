@@ -13,7 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *
-* \file mkl_memory.cc
+* \file mkl_concat-inl.h
 * \brief
 * \author lingyan.guo@intel.com
 *         zhenlin.luo@intel.com
@@ -130,27 +130,26 @@ class MKLConcatOp : public Operator {
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_data[i].shape_[0],
                                  in_data[i].shape_[1], 1, 1);
-        data[i] = in_data[i].get_with_shape<xpu, 4, DType>(dshape, s);
+        data[i] = in_data[i].get_with_shape_direct<xpu, 4, DType>(dshape, s);
       }
       Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
                                out_data[concat_enum::kOut].shape_[1], 1, 1);
-      out = out_data[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      out = out_data[concat_enum::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
     } else if (in_data[0].ndim() == 3) {
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_data[i].shape_[0],
-                                 in_data[i].shape_[1],
-                                 in_data[i].shape_[2], 1);
-        data[i] = in_data[i].get_with_shape<xpu, 4, DType>(dshape, s);
+          in_data[i].shape_[1], in_data[i].shape_[2], 1);
+        data[i] = in_data[i].get_with_shape_direct<xpu, 4, DType>(dshape, s);
       }
       Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
-                               out_data[concat_enum::kOut].shape_[1],
-                               out_data[concat_enum::kOut].shape_[2], 1);
-      out = out_data[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+        out_data[concat_enum::kOut].shape_[1],
+        out_data[concat_enum::kOut].shape_[2], 1);
+      out = out_data[concat_enum::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
     } else {
       for (int i = 0; i < size_; ++i) {
-        data[i] = in_data[i].get<xpu, 4, DType>(s);
+        data[i] = in_data[i].get_direct<xpu, 4, DType>(s);
       }
-      out = out_data[concat_enum::kOut].get<xpu, 4, DType>(s);
+      out = out_data[concat_enum::kOut].get_direct<xpu, 4, DType>(s);
     }
 
     if (!init_mkldnn_) {
@@ -159,6 +158,9 @@ class MKLConcatOp : public Operator {
     }
 
     dnnError_t e;
+#if MKL_EXPERIMENTAL == 1
+    std::vector<void*> bottom_data;
+#endif
     bool isFirstPass = (concatFwd_ == NULL);
     dnnLayout_t *layouts = NULL;
     bool *isBottomDataFilled = NULL;
@@ -168,10 +170,32 @@ class MKLConcatOp : public Operator {
     }
 
     for (size_t n = 0; n < num_concats_; n++) {
+#if MKL_EXPERIMENTAL == 1
+      bottom_data.push_back(reinterpret_cast<void *>(in_data[n].prv_data<DType>()));
+      if (bottom_data[n] == NULL) {
+        bottom_data[n] =
+          reinterpret_cast<void *>(const_cast<DType*>(data[n].dptr_));
+#endif
         if (isFirstPass) {
           layouts[n] = fwd_bottom_data_[n]->layout_usr;
           isBottomDataFilled[n] = true;
         }
+#if MKL_EXPERIMENTAL == 1
+      } else if (isFirstPass) {
+        std::shared_ptr<MKLChunk> bottom_data_chunk = in_data[n].get_mkl_chunk();
+        std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
+          bottom_data_chunk->get_prv_descriptor();
+        CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
+          PrvMemDescr::PRV_DESCR_MKL2017);
+        std::shared_ptr<MKLData<DType> > mem_descr
+          = std::static_pointer_cast<MKLData<DType>>
+          (bottom_prv_descriptor);
+        CHECK(mem_descr != NULL);
+        fwd_bottom_data_[n] = mem_descr;
+        layouts[n] = mem_descr->layout_int;
+      }
+
+#endif
     }
 
     if (isFirstPass) {
@@ -199,13 +223,29 @@ class MKLConcatOp : public Operator {
 
     void *concat_res[dnnResourceNumber];
     for (int n = 0; n < num_concats_; ++n) {
+#if MKL_EXPERIMENTAL == 1
+    void * src_res = bottom_data[n];
+#else
+    void * src_res = data[n].dptr_;
+#endif
       concat_res[dnnResourceMultipleSrc + n]
-        = reinterpret_cast<void*>(data[n].dptr_);
+        = reinterpret_cast<void*>(src_res);
     }
 
+#if MKL_EXPERIMENTAL == 1
+    if (fwd_top_data_->conversion_needed()) {
+      std::shared_ptr<MKLChunk> top_chunk = out_data[concat_enum::kOut].get_mkl_chunk();
+        top_chunk->set_prv_descriptor(fwd_top_data_);
+      concat_res[dnnResourceDst] =
+        reinterpret_cast<void*>(fwd_top_data_->prv_ptr());
+    } else {
+#endif
 
     concat_res[dnnResourceDst] =
       reinterpret_cast<void*>(out.dptr_);
+#if MKL_EXPERIMENTAL == 1
+    }
+#endif
 
     e = dnnExecute<DType>(concatFwd_, concat_res);
     CHECK_EQ(e, E_SUCCESS);
@@ -228,27 +268,28 @@ class MKLConcatOp : public Operator {
     if (in_grad[0].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[concat_enum::kOut].shape_[0],
         out_grad[concat_enum::kOut].shape_[1], 1, 1);
-      grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      grad = out_grad[concat_enum::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+
       for (int i = 0; i < size_; ++i) {
         dshape = Shape4(in_grad[i].shape_[0],
           in_grad[i].shape_[1], 1, 1);
-        grad_in[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
+        grad_in[i] = in_grad[i].get_with_shape_direct<xpu, 4, DType>(dshape, s);
       }
     } else if (in_grad[0].ndim() == 3) {
       Shape<4> dshape = Shape4(out_grad[concat_enum::kOut].shape_[0],
-                               out_grad[concat_enum::kOut].shape_[1],
-                               out_grad[concat_enum::kOut].shape_[2], 1);
-      grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+        out_grad[concat_enum::kOut].shape_[1],
+        out_grad[concat_enum::kOut].shape_[2], 1);
+      grad = out_grad[concat_enum::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+
       for (int i = 0; i < size_; ++i) {
         dshape = Shape4(in_grad[i].shape_[0],
-                        in_grad[i].shape_[1],
-                        in_grad[i].shape_[2], 1);
-        grad_in[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
+          in_grad[i].shape_[1], in_grad[i].shape_[2], 1);
+        grad_in[i] = in_grad[i].get_with_shape_direct<xpu, 4, DType>(dshape, s);
       }
     } else {
-      grad = out_grad[concat_enum::kOut].get<xpu, 4, DType>(s);
+      grad = out_grad[concat_enum::kOut].get_direct<xpu, 4, DType>(s);
       for (int i = 0; i < size_; ++i) {
-        grad_in[i] = in_grad[i].get<xpu, 4, DType>(s);
+        grad_in[i] = in_grad[i].get_direct<xpu, 4, DType>(s);
       }
     }
 
@@ -262,11 +303,26 @@ class MKLConcatOp : public Operator {
 
     dnnError_t e;
     void *concat_res[dnnResourceNumber];
-
-    concat_res[dnnResourceSrc] = bwd_top_diff_->get_converted_prv(grad.dptr_, false);
+#if MKL_EXPERIMENTAL == 1
+    std::shared_ptr<MKLChunk> out_grad_chunk = out_grad[concat_enum::kOut].get_mkl_chunk();
+#else
+    std::shared_ptr<MKLMemHolder> out_grad_chunk = NULL;
+#endif
+    concat_res[dnnResourceSrc] = bwd_top_diff_->get_converted_prv(grad.dptr_, true,
+      out_grad_chunk);
 
     for (size_t i = 0; i < num_concats_; ++i) {
+#if MKL_EXPERIMENTAL == 1
+      if (bwd_bottom_diff_[i]->conversion_needed()) {
+        std::shared_ptr<MKLChunk> bottom_diff_chunk = in_grad[i].get_mkl_chunk();
+        bottom_diff_chunk->set_prv_descriptor(bwd_bottom_diff_[i]);
+        concat_res[dnnResourceMultipleDst + i] = bwd_bottom_diff_[i]->prv_ptr();
+      } else {
+#endif
         concat_res[dnnResourceMultipleDst + i] = grad_in[i].dptr_;
+#if MKL_EXPERIMENTAL == 1
+      }
+#endif
     }
 
     e = dnnExecute<DType>(concatBwd_, concat_res);
