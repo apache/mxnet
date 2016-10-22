@@ -350,11 +350,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    */
   def simpleBind(ctx: Context, gradReq: String = "write",
                  shapeDict: Map[String, Shape],
-                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null)
+                 typeDict: Map[String, DType] = null)
                  : Executor = {
     val types =
       if (typeDict == null) {
-        listArguments().map((_, classOf[Float])).toMap
+        listArguments().map((_, MX_REAL_TYPE)).toMap
       } else {
         typeDict
       }
