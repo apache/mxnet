@@ -52,7 +52,7 @@ enum SyncedHead {
   HEAD_AT_CPU,
   HEAD_AT_PRV,
 };
-struct MKLChunk {
+struct MKLMemHolder {
   SyncedHead head_;
   std::shared_ptr<PrvMemDescr> prv_descriptor_;
 
@@ -88,8 +88,8 @@ struct MKLChunk {
     CHECK(prv_descriptor_.get());
     return prv_descriptor_->prv_count();
   }
-  static std::shared_ptr<MKLChunk> create() {
-    return std::make_shared<MKLChunk>();
+  static std::shared_ptr<MKLMemHolder> create() {
+    return std::make_shared<MKLMemHolder>();
   }
   void  check_and_prv_to_cpu(void *dptr_) {
     if (head_ == HEAD_AT_PRV) {
@@ -99,7 +99,7 @@ struct MKLChunk {
       head_ = HEAD_AT_CPU;
     }
   }
-  MKLChunk() :
+  MKLMemHolder() :
     head_(HEAD_AT_CPU) {
     prv_descriptor_ = NULL;
   }

@@ -290,41 +290,45 @@ class MKLConvolutionOp : public Operator {
     out_ptr = out.dptr_;
     int status;
     void *res_convolutionFwd[dnnResourceNumber];
+    std::shared_ptr<MKLMemHolder> in_data_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> in_data_chunk = in_data[conv::kData].get_mkl_chunk();
+      in_data[conv::kData].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> in_data_chunk = NULL;
+      NULL;
 #endif
     res_convolutionFwd[dnnResourceSrc] =
-      fwd_bottom_data->get_converted_prv(data_ptr, false, in_data_chunk);
+      fwd_bottom_data->get_converted_prv(data_ptr, false, in_data_mem);
+    std::shared_ptr<MKLMemHolder> in_weight_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> in_weight_chunk = in_data[conv::kWeight].get_mkl_chunk();
+      in_data[conv::kWeight].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> in_weight_chunk = NULL;
+      NULL;
 #endif
     res_convolutionFwd[dnnResourceFilter] =
-      fwd_filter_data->get_converted_prv(wmat_ptr, true, in_weight_chunk);
+      fwd_filter_data->get_converted_prv(wmat_ptr, true, in_weight_mem);
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get_direct<xpu, 1, DType>(s);
+      std::shared_ptr<MKLMemHolder> in_bias_mem =
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> in_bias_chunk = in_data[conv::kBias].get_mkl_chunk();
+       in_data[conv::kBias].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> in_bias_chunk = NULL;
+       NULL;
 #endif
       res_convolutionFwd[dnnResourceBias] =
-        fwd_bias_data->get_converted_prv(bias.dptr_, true, in_bias_chunk);
+        fwd_bias_data->get_converted_prv(bias.dptr_, true, in_bias_mem);
     }
 
+    std::shared_ptr<MKLMemHolder> top_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> top_chunk = out_data[conv::kOut].get_mkl_chunk();
+     out_data[conv::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> top_chunk = NULL;
+     NULL;
 #endif
     if (fwd_top_data->conversion_needed()) {
       res_convolutionFwd[dnnResourceDst] =
         reinterpret_cast<void *>(fwd_top_data->prv_ptr());
 #if MKL_EXPERIMENTAL == 1
-      top_chunk->set_prv_descriptor(fwd_top_data);
+      top_mem->set_prv_descriptor(fwd_top_data);
 #endif
     } else {
       res_convolutionFwd[dnnResourceDst] = out_ptr;
@@ -373,27 +377,29 @@ class MKLConvolutionOp : public Operator {
     int status;
     if (req[0]) {
       void *res_convolutionBwdData[dnnResourceNumber];
+      std::shared_ptr<MKLMemHolder> out_grad_mem =
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> out_grad_chunk = out_grad[conv::kOut].get_mkl_chunk();
+       out_grad[conv::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> out_grad_chunk = NULL;
+       NULL;
 #endif
       res_convolutionBwdData[dnnResourceDiffDst] =
-        bwdd_top_diff->get_converted_prv(grad.dptr_, true, out_grad_chunk);
+        bwdd_top_diff->get_converted_prv(grad.dptr_, true, out_grad_mem);
+      std::shared_ptr<MKLMemHolder> in_weight_mem =
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> in_weight_chunk = in_data[conv::kWeight].get_mkl_chunk();
+        in_data[conv::kWeight].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> in_weight_chunk = NULL;
+        NULL;
 #endif
       res_convolutionBwdData[dnnResourceFilter] =
-        bwdd_filter_data->get_converted_prv(wmat.dptr_, false, in_weight_chunk);
+        bwdd_filter_data->get_converted_prv(wmat.dptr_, false, in_weight_mem);
      if (bwdd_bottom_diff->conversion_needed()) {
        res_convolutionBwdData[dnnResourceDiffSrc] =
          reinterpret_cast<void *>(bwdd_bottom_diff->prv_ptr());
 #if MKL_EXPERIMENTAL == 1
-       std::shared_ptr<MKLChunk> bottom_diff_chunk =
-         in_grad[conv::kData].get_mkl_chunk();
-       bottom_diff_chunk->set_prv_descriptor(bwdd_bottom_diff);
+       std::shared_ptr<MKLMemHolder> bottom_diff_mem =
+         in_grad[conv::kData].get_mkl_mem();
+       bottom_diff_mem->set_prv_descriptor(bwdd_bottom_diff);
 #endif
      } else {
        res_convolutionBwdData[dnnResourceDiffSrc] = gdata.dptr_;
@@ -408,29 +414,30 @@ class MKLConvolutionOp : public Operator {
     }
     if (req[1]) {
       void *res_convolutionBwdFilter[dnnResourceNumber];
+      std::shared_ptr<MKLMemHolder> out_bias_mem =
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> out_bias_chunk = out_grad[conv::kOut].get_mkl_chunk();
+        out_grad[conv::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> out_bias_chunk = NULL;
+        NULL;
 #endif
       res_convolutionBwdFilter[dnnResourceDiffDst] =
-        bwdf_top_diff->get_converted_prv(grad.dptr_, true, out_bias_chunk);
+        bwdf_top_diff->get_converted_prv(grad.dptr_, true, out_bias_mem);
       MKLMemoryDescriptor<DType>* fwd_bottom_data_desc = NULL;
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> in_data_chunk = in_data[conv::kData].get_mkl_chunk();
+      std::shared_ptr<MKLMemHolder> in_data_mem = in_data[conv::kData].get_mkl_mem();
       fwd_bottom_data_desc = fwd_bottom_data.get();
 #else
-      std::shared_ptr<MKLMemHolder> in_data_chunk = NULL;
+      std::shared_ptr<MKLMemHolder> in_data_mem = NULL;
 #endif
       res_convolutionBwdFilter[dnnResourceSrc] =
         bwdf_bottom_data->get_converted_prv(data.dptr_, false,
-                                            in_data_chunk,
+                                            in_data_mem,
                                             fwd_bottom_data_desc);
      if (bwdf_filter_diff->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
-       std::shared_ptr<MKLChunk> gwamt_chunk =
-         in_grad[conv::kWeight].get_mkl_chunk();
-       gwamt_chunk->set_prv_descriptor(bwdf_filter_diff);
+       std::shared_ptr<MKLMemHolder> gwamt_mem =
+         in_grad[conv::kWeight].get_mkl_mem();
+       gwamt_mem->set_prv_descriptor(bwdf_filter_diff);
 #endif
        res_convolutionBwdFilter[dnnResourceDiffFilter] =
          reinterpret_cast<void *>(bwdf_filter_diff->prv_ptr());
@@ -448,17 +455,18 @@ class MKLConvolutionOp : public Operator {
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> gbias = in_grad[conv::kBias].get_direct<xpu, 1, DType>(s);
       void *res_convolutionBwdBias[dnnResourceNumber];
+      std::shared_ptr<MKLMemHolder> out_grad_mem =
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> out_grad_chunk = out_grad[conv::kOut].get_mkl_chunk();
+        out_grad[conv::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> out_grad_chunk = NULL;
+        NULL;
 #endif
       res_convolutionBwdBias[dnnResourceDiffDst] =
-        bwdb_top_diff->get_converted_prv(grad.dptr_, true, out_grad_chunk);
+        bwdb_top_diff->get_converted_prv(grad.dptr_, true, out_grad_mem);
       if (bwdb_bias_diff->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
-        std::shared_ptr<MKLChunk> gbias_chunk = in_grad[conv::kBias].get_mkl_chunk();
-        gbias_chunk->set_prv_descriptor(bwdb_bias_diff);
+        std::shared_ptr<MKLMemHolder> gbias_mem = in_grad[conv::kBias].get_mkl_mem();
+        gbias_mem->set_prv_descriptor(bwdb_bias_diff);
 #endif
         res_convolutionBwdBias[dnnResourceDiffBias] =
           bwdb_bias_diff->prv_ptr();

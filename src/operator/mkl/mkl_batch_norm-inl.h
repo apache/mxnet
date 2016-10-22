@@ -155,9 +155,9 @@ class MKLBatchNormOp : public Operator {
       // Is it the first pass? Create a primitive.
       if (batchNormFwd == NULL) {
         is_first_pass = 1;
-        std::shared_ptr<MKLChunk> bottom_data_chunk = in_data[batchnorm::kData].get_mkl_chunk();
+        std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[batchnorm::kData].get_mkl_mem();
         std::shared_ptr<PrvMemDescr> bottom_prv_desc =
-          bottom_data_chunk->get_prv_descriptor();
+          bottom_data_mem->get_prv_descriptor();
         CHECK(bottom_prv_desc->get_descr_type() ==
           PrvMemDescr::PRV_DESCR_MKL2017);
         std::shared_ptr<MKLData<DType> > mem_descr
@@ -259,7 +259,7 @@ class MKLBatchNormOp : public Operator {
       BatchNorm_res[dnnResourceScaleShift] = scaleShift_buffer_;
       if (fwd_top_data->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> topDnnChunk = out_data[batchnorm::kOut].get_mkl_chunk();
+      std::shared_ptr<MKLMemHolder> topDnnChunk = out_data[batchnorm::kOut].get_mkl_mem();
       topDnnChunk->set_prv_descriptor(fwd_top_data);
 #endif
         BatchNorm_res[dnnResourceDst] =
@@ -346,22 +346,26 @@ class MKLBatchNormOp : public Operator {
       BatchNorm_res[dnnResourceSrc] = bottom_data;
       BatchNorm_res[dnnResourceWorkspace] = workspace_buffer_;
       BatchNorm_res[dnnResourceScaleShift] = scaleShift_buffer_;
+
+      std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> top_diff_chunk = out_grad[batchnorm::kOut].get_mkl_chunk();
+        out_grad[batchnorm::kOut].get_mkl_mem();
 #else
-      std::shared_ptr<MKLMemHolder> top_diff_chunk = NULL;
+        NULL;
 #endif
     BatchNorm_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(grad.dptr_,
-                                                                        true, top_diff_chunk);
+                                                                        true, top_diff_mem);
 
+
+    std::shared_ptr<MKLMemHolder> bottom_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> bottom_diff_chunk = in_grad[batchnorm::kData].get_mkl_chunk();
+      in_grad[batchnorm::kData].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> bottom_diff_chunk = NULL;
+      NULL;
 #endif
       if (bwd_bottom_diff->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
-      bottom_diff_chunk->set_prv_descriptor(bwd_bottom_diff);
+      bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff);
 #endif
         BatchNorm_res[dnnResourceDiffSrc] = bwd_bottom_diff->prv_ptr();
       } else {

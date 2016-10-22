@@ -120,10 +120,10 @@ class MKLReluOp : public Operator {
 #if MKL_EXPERIMENTAL == 1
     if (bottom_data != NULL) {
       if (reluFwd_ == NULL) {
-        std::shared_ptr<MKLChunk> bottom_data_chunk =
-          in_data[activation::kData].get_mkl_chunk();
+        std::shared_ptr<MKLMemHolder> bottom_data_mem =
+          in_data[activation::kData].get_mkl_mem();
         std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
-          bottom_data_chunk->get_prv_descriptor();
+          bottom_data_mem->get_prv_descriptor();
         CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
             PrvMemDescr::PRV_DESCR_MKL2017);
         std::shared_ptr<MKLData<DType> > mem_descr
@@ -165,17 +165,17 @@ class MKLReluOp : public Operator {
     if (fwd_top_data_->conversion_needed()) {
       std::shared_ptr<PrvMemDescr> bottom_prv_descriptor = NULL;
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> bottom_data_chunk =
-        in_data[activation::kData].get_mkl_chunk();
-      bottom_prv_descriptor = bottom_data_chunk->get_prv_descriptor();
+      std::shared_ptr<MKLMemHolder> bottom_data_mem =
+        in_data[activation::kData].get_mkl_mem();
+      bottom_prv_descriptor = bottom_data_mem->get_prv_descriptor();
 #endif
       if (NULL != bottom_prv_descriptor) {
         relu_res[dnnResourceDst] =
           reinterpret_cast<void *>(fwd_bottom_data_->prv_ptr());
       } else {
 #if MKL_EXPERIMENTAL == 1
-        std::shared_ptr<MKLChunk> top_chunk = out_data[activation::kOut].get_mkl_chunk();
-        top_chunk->set_prv_descriptor(fwd_top_data_);
+        std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].get_mkl_mem();
+        top_mem->set_prv_descriptor(fwd_top_data_);
 #endif
         relu_res[dnnResourceDst] =
           reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
@@ -231,19 +231,20 @@ class MKLReluOp : public Operator {
         reinterpret_cast<void *>(const_cast<DType*>(m_out_data.dptr_));
     }
     relu_res[dnnResourceSrc] = top_data;
+    std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> top_diff_chunk = out_grad[activation::kOut].get_mkl_chunk();
+      out_grad[activation::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> top_diff_chunk = NULL;
+      NULL;
 #endif
 
     relu_res[dnnResourceDiffDst] = bwd_top_diff_->get_converted_prv(m_out_grad.dptr_,
-                                                                    true, top_diff_chunk);
+                                                                    true, top_diff_mem);
     if (bwd_bottom_diff_->conversion_needed()) {
       relu_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLChunk> bottom_diff_chunk = in_grad[activation::kData].get_mkl_chunk();
-      bottom_diff_chunk->set_prv_descriptor(bwd_bottom_diff_);
+      std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[activation::kData].get_mkl_mem();
+      bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
 #endif
     } else {
       relu_res[dnnResourceDiffSrc] = m_in_grad.dptr_;

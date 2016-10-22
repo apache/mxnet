@@ -164,9 +164,9 @@ class MKLElementWiseOp : public Operator {
         dnnLayout_t int_layout = NULL;
         for (size_t i = 0; i < num_bottoms; ++i) {
           if (in_data[i].prv_data<DType>() != NULL) {
-            std::shared_ptr<MKLChunk> bottom_data_chunk = in_data[i].get_mkl_chunk();
+            std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[i].get_mkl_mem();
             std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
-              bottom_data_chunk->get_prv_descriptor();
+              bottom_data_mem->get_prv_descriptor();
             CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
                 PrvMemDescr::PRV_DESCR_MKL2017);
             std::shared_ptr<MKLData<DType> > mem_descr
@@ -208,13 +208,14 @@ class MKLElementWiseOp : public Operator {
       void *eltwise_res[dnnResourceNumber];
       for (int i = 0; i < num_bottoms; ++i) {
         if (fwd_bottom_data_[i]->conversion_needed()) {
+          std::shared_ptr<MKLMemHolder> in_data_mem =
 #if MKL_EXPERIMENTAL == 1
-          std::shared_ptr<MKLChunk> in_data_chunk = in_data[i].get_mkl_chunk();
+            in_data[i].get_mkl_mem();
 #else
-          std::shared_ptr<MKLMemHolder> in_data_chunk = NULL;
+            NULL;
 #endif
           eltwise_res[dnnResourceMultipleSrc + i] =
-            fwd_bottom_data_[i]->get_converted_prv(data[i].dptr_, false, in_data_chunk);
+            fwd_bottom_data_[i]->get_converted_prv(data[i].dptr_, false, in_data_mem);
         } else {
           eltwise_res[dnnResourceMultipleSrc + i] =
             reinterpret_cast<void *>(bottom_data[i]);
@@ -223,8 +224,8 @@ class MKLElementWiseOp : public Operator {
 
       if (fwd_top_data->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
-        std::shared_ptr<MKLChunk> top_chunk = out_data[elemsum::kOut].get_mkl_chunk();
-        top_chunk->set_prv_descriptor(fwd_top_data);
+        std::shared_ptr<MKLMemHolder> top_mem = out_data[elemsum::kOut].get_mkl_mem();
+        top_mem->set_prv_descriptor(fwd_top_data);
 #endif
         eltwise_res[dnnResourceDst] =
           reinterpret_cast<void*>(fwd_top_data->prv_ptr());
@@ -317,10 +318,11 @@ class MKLElementWiseOp : public Operator {
       count = ograd.MSize();
     }
     DType* bottom_diff = NULL;
+    std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> top_diff_chunk = out_grad[elemsum::kOut].get_mkl_chunk();
+      out_grad[elemsum::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> top_diff_chunk = NULL;
+      NULL;
 #endif
     for (int i = 0; i < size_; ++i) {
       if (req[i] == kNullOp || req[i] == kWriteInplace) continue;
@@ -338,9 +340,9 @@ class MKLElementWiseOp : public Operator {
                     (dnnResourceType_t)(dnnResourceMultipleSrc + i));
               }
               CHECK_EQ(true, bwd_bottom_diff[i]->layout_compare(
-                    top_diff_chunk->get_prv_descriptor()));
-              std::shared_ptr<MKLChunk> bottom_diff_chunk = in_grad[i].get_mkl_chunk();
-              bottom_diff_chunk->set_prv_descriptor(bwd_bottom_diff[i]);
+                    top_diff_mem->get_prv_descriptor()));
+              std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[i].get_mkl_mem();
+              bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff[i]);
               bottom_diff =
                 reinterpret_cast<DType*>(bwd_bottom_diff[i]->prv_ptr());
           }

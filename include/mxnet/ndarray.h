@@ -18,7 +18,6 @@
 #include "./base.h"
 #include "./storage.h"
 #include "./engine.h"
-
 #if MKL_EXPERIMENTAL == 1
 #include "./mkl_memory.h"
 #endif
@@ -36,7 +35,7 @@ class NDArray {
   /*! \brief default cosntructor */
   NDArray() {
 #if MKL_EXPERIMENTAL == 1
-      mkl_chunk = MKLChunk::create();
+      Mkl_mem_ = MKLMemHolder::create();
 #endif
   }
   /*!
@@ -51,7 +50,7 @@ class NDArray {
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
         shape_(shape), offset_(0), dtype_(dtype) {
 #if MKL_EXPERIMENTAL == 1
-      mkl_chunk = std::make_shared<MKLChunk>();
+      Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
   /*!
@@ -65,7 +64,7 @@ class NDArray {
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
         dtype_(data.type_flag_) {
 #if MKL_EXPERIMENTAL == 1
-      mkl_chunk = std::make_shared<MKLChunk>();
+      Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
   /*!
@@ -84,7 +83,7 @@ class NDArray {
         + offset_, shape_, ptr_->shandle.ctx.dev_mask());
     });
 #if MKL_EXPERIMENTAL == 1
-    res.setMKLChunk(mkl_chunk);
+    res.setMKLMemHolder(Mkl_mem_);
 #endif
     return res;
   }
@@ -374,8 +373,9 @@ class NDArray {
       }
     }
   };
+
 #if MKL_EXPERIMENTAL == 1
-  std::shared_ptr<MKLChunk> mkl_chunk;
+  std::shared_ptr<MKLMemHolder> Mkl_mem_;
 #endif
   /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_;
@@ -399,6 +399,8 @@ class NDArray {
  *     due to different possible convention carried by copy function.
  */
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+
+
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
  * \param source the ndarray we want to sum

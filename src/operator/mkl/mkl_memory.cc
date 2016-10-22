@@ -172,7 +172,7 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
 #if MKL_EXPERIMENTAL == 0
     std::shared_ptr<MKLMemHolder> holder,
 #else
-    std::shared_ptr<MKLChunk> dnnChunk,
+    std::shared_ptr<MKLMemHolder> dnnChunk,
 #endif
     MKLMemoryDescriptor<Dtype>* converted_in_fwd) {
   Dtype* prv_ptr = NULL;
@@ -189,8 +189,6 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
       if (converted_in_fwd) {
         return converted_in_fwd->internal_ptr;
       }
-      MKL_DLOG(INFO) << "convert      => priv                                => "
-        << this->name;
       this->allocate();
       this->convert_to_prv(cpu_ptr);
 #if MKL_EXPERIMENTAL == 1
@@ -216,13 +214,9 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
           // hack for reusing previously done conversion
           // if(dnnLayoutCompare(converted_in_fwd->layout_int,this->layout_int))
           if (true) {
-            MKL_DLOG(INFO) << "reusing fwd               "
-              << converted_in_fwd->name << " == " << this->name;
             return converted_in_fwd->internal_ptr;
           }
         }
-        MKL_DLOG(INFO) << "convert priv => priv      "
-          << current_descr->name << " => " << this->name;
         if (this->convert_prv2prv) {
           CHECK_EQ(dnnLayoutCompare<Dtype>(
             this->descr_prv2prv_conversion->layout_int,
@@ -254,8 +248,8 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
         }
         return this->internal_ptr;
       } else if (current_descr.get() != this) {
-        MKL_DLOG(INFO) << "layout OK                 "
-          << current_descr->name << " == " << this->name;
+        // MKL_DLOG(INFO) << "layout OK                 "
+        //  << current_descr->name << " == " << this->name;
       }
     }
 #endif

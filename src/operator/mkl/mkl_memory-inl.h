@@ -111,7 +111,7 @@ struct MKLMemoryDescriptor : MKLMemoryDescriptorBase<DType> {
 #if MKL_EXPERIMENTAL == 0
               std::shared_ptr<MKLMemHolder> holder = NULL,
 #else
-              std::shared_ptr<MKLChunk> dnnChunk,
+              std::shared_ptr<MKLMemHolder> dnnChunk,
 #endif
               MKLMemoryDescriptor<DType>* converted_in_fwd = NULL);
 

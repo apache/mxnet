@@ -128,10 +128,10 @@ class MKLLRNOp : public Operator {
 #if MKL_EXPERIMENTAL == 1
     if (NULL != bottom_data) {
       if (lrnFwd == NULL) {
-        std::shared_ptr<MKLChunk> bottom_data_chunk =
-          in_data[lrn_enum::kData].get_mkl_chunk();
+        std::shared_ptr<MKLMemHolder> bottom_data_mem =
+          in_data[lrn_enum::kData].get_mkl_mem();
         std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
-          bottom_data_chunk->get_prv_descriptor();
+          bottom_data_mem->get_prv_descriptor();
         CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
             PrvMemDescr::PRV_DESCR_MKL2017);
         std::shared_ptr<MKLData<DType> > mem_descr
@@ -195,10 +195,10 @@ class MKLLRNOp : public Operator {
     lrn_res[dnnResourceSrc] = const_cast<void*>(bottom_data);
 #if MKL_EXPERIMENTAL == 1
     if (fwd_top_data_->conversion_needed()) {
-      std::shared_ptr<MKLChunk> top_chunk = out_data[lrn_enum::kOut].get_mkl_chunk();
+      std::shared_ptr<MKLMemHolder> top_mem = out_data[lrn_enum::kOut].get_mkl_mem();
       lrn_res[dnnResourceDst] =
         reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
-      top_chunk->set_prv_descriptor(fwd_top_data_);
+      top_mem->set_prv_descriptor(fwd_top_data_);
     } else {
 #endif
     lrn_res[dnnResourceDst] =
@@ -230,28 +230,29 @@ class MKLLRNOp : public Operator {
 
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
-
+    std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> top_diff_chunk = out_grad[lrn_enum::kOut].get_mkl_chunk();
+      out_grad[lrn_enum::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> top_diff_chunk = NULL;
+      NULL;
 #endif
     lrn_res[dnnResourceDiffDst] =
-      bwd_top_diff_->get_converted_prv(grad.dptr_, true, top_diff_chunk);
+      bwd_top_diff_->get_converted_prv(grad.dptr_, true, top_diff_mem);
 
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
+    std::shared_ptr<MKLMemHolder> bottom_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> bottom_diff_chunk = in_grad[lrn_enum::kData].get_mkl_chunk();
+      in_grad[lrn_enum::kData].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> bottom_diff_chunk = NULL;
+      NULL;
 #endif
     lrn_res[dnnResourceSrc] =
-      fwd_bottom_data_->get_converted_prv(data.dptr_, false, bottom_diff_chunk);
+      fwd_bottom_data_->get_converted_prv(data.dptr_, false, bottom_diff_mem);
 
 #if MKL_EXPERIMENTAL == 1
     if (bwd_bottom_diff_->conversion_needed()) {
       lrn_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
-      bottom_diff_chunk->set_prv_descriptor(bwd_bottom_diff_);
+      bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
     } else {
 #endif
     lrn_res[dnnResourceDiffSrc] = grad_in.dptr_;

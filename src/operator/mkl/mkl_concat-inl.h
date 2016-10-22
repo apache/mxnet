@@ -182,9 +182,9 @@ class MKLConcatOp : public Operator {
         }
 #if MKL_EXPERIMENTAL == 1
       } else if (isFirstPass) {
-        std::shared_ptr<MKLChunk> bottom_data_chunk = in_data[n].get_mkl_chunk();
+        std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[n].get_mkl_mem();
         std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
-          bottom_data_chunk->get_prv_descriptor();
+          bottom_data_mem->get_prv_descriptor();
         CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
           PrvMemDescr::PRV_DESCR_MKL2017);
         std::shared_ptr<MKLData<DType> > mem_descr
@@ -234,8 +234,8 @@ class MKLConcatOp : public Operator {
 
 #if MKL_EXPERIMENTAL == 1
     if (fwd_top_data_->conversion_needed()) {
-      std::shared_ptr<MKLChunk> top_chunk = out_data[concat_enum::kOut].get_mkl_chunk();
-        top_chunk->set_prv_descriptor(fwd_top_data_);
+      std::shared_ptr<MKLMemHolder> top_mem = out_data[concat_enum::kOut].get_mkl_mem();
+        top_mem->set_prv_descriptor(fwd_top_data_);
       concat_res[dnnResourceDst] =
         reinterpret_cast<void*>(fwd_top_data_->prv_ptr());
     } else {
@@ -303,19 +303,20 @@ class MKLConcatOp : public Operator {
 
     dnnError_t e;
     void *concat_res[dnnResourceNumber];
+    std::shared_ptr<MKLMemHolder> out_grad_mem =
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLChunk> out_grad_chunk = out_grad[concat_enum::kOut].get_mkl_chunk();
+      out_grad[concat_enum::kOut].get_mkl_mem();
 #else
-    std::shared_ptr<MKLMemHolder> out_grad_chunk = NULL;
+      NULL;
 #endif
     concat_res[dnnResourceSrc] = bwd_top_diff_->get_converted_prv(grad.dptr_, true,
-      out_grad_chunk);
+      out_grad_mem);
 
     for (size_t i = 0; i < num_concats_; ++i) {
 #if MKL_EXPERIMENTAL == 1
       if (bwd_bottom_diff_[i]->conversion_needed()) {
-        std::shared_ptr<MKLChunk> bottom_diff_chunk = in_grad[i].get_mkl_chunk();
-        bottom_diff_chunk->set_prv_descriptor(bwd_bottom_diff_[i]);
+        std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[i].get_mkl_mem();
+        bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_[i]);
         concat_res[dnnResourceMultipleDst + i] = bwd_bottom_diff_[i]->prv_ptr();
       } else {
 #endif
