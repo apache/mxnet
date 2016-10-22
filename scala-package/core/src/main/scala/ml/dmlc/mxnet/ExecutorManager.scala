@@ -1,5 +1,6 @@
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.DType.DType
 import org.slf4j.{LoggerFactory, Logger}
 
 import scala.collection.immutable.ListMap
@@ -221,7 +222,6 @@ object ExecutorManager {
         require(sliced.shape == dst.shape,
           s"src shape ${sliced.shape} mismatch dst shape ${dst.shape}")
         sliced.copyTo(dst)
-        // sliced.dispose()
       }
     }
   }
@@ -251,12 +251,12 @@ object ExecutorManager {
       paramNames: Set[String], needGrad: Boolean = false,
       grads: Set[String] = null, baseExec: Executor = null,
       sharedDataArrays: mutable.Map[String, NDArray] = null,
-      inputTypes: ListMap[String, Class[_ >: Float with Int with Double]] = null) = {
+      inputTypes: ListMap[String, DType] = null) = {
     val (argShape, _, auxShape) = sym.inferShape(inputShapes)
     require(argShape != null)
     val inputTypesUpdate =
       if (inputTypes == null) {
-        inputShapes.map { case (key, _) => (key, classOf[Float]) }
+        inputShapes.map { case (key, _) => (key, Base.MX_REAL_TYPE) }
       } else {
         inputTypes
       }
