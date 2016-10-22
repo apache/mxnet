@@ -33,6 +33,8 @@ matrix:
       env: TASK=python_test
     - os: linux
       env: TASK=r_test
+    - os: linux
+      env: TASK=scala_test
 
 # dependent apt packages
 addons:

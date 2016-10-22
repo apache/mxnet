@@ -30,3 +30,8 @@ nosetests3 --verbose tests/python/train || exit -1
 # export PATH="${PATH}:${HOME}/julia/bin"
 # export MXNET_HOME="${PWD}"
 # julia -e 'Pkg.clone("MXNet"); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+
+echo "BUILD scala_test"
+export PATH=$PATH:/opt/apache-maven/bin
+make scalapkg || exit -1
+make scalatest || exit -1
