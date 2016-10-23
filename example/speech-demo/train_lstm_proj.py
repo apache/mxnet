@@ -57,7 +57,7 @@ def prepare_data(args):
 
 def CrossEntropy(labels, preds):
     labels = labels.reshape((-1,))
-    preds = preds.reshape((-1, preds.shape[2]))
+    preds = preds.reshape((-1, preds.shape[1]))
     loss = 0.
     num_inst = 0
     for i in range(preds.shape[0]):
@@ -70,7 +70,7 @@ def CrossEntropy(labels, preds):
 
 def Acc_exclude_padding(labels, preds):
     labels = labels.reshape((-1,))
-    preds = preds.reshape((-1, preds.shape[2]))
+    preds = preds.reshape((-1, preds.shape[1]))
     sum_metric = 0
     num_inst = 0
     for i in range(preds.shape[0]):
@@ -163,7 +163,7 @@ def do_training(training_method, args, module, data_train, data_val):
 
     def reset_optimizer():
         if optimizer == "sgd" or optimizer == "speechSGD":
-            module.init_optimizer(kvstore='local',
+            module.init_optimizer(kvstore='device',
                               optimizer=args.config.get('train', 'optimizer'),
                               optimizer_params={'lr_scheduler': lr_scheduler,
                                                 'momentum': momentum,
@@ -172,7 +172,7 @@ def do_training(training_method, args, module, data_train, data_val):
                                                 'wd': weight_decay},
                               force_init=True)
         else:
-            module.init_optimizer(kvstore='local',
+            module.init_optimizer(kvstore='device',
                               optimizer=args.config.get('train', 'optimizer'),
                               optimizer_params={'lr_scheduler': lr_scheduler,
                                                 'rescale_grad': 1.0,
