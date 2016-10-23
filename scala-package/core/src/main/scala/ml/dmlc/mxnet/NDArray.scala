@@ -105,14 +105,16 @@ object NDArray {
    */
   private def newAllocHandle(shape: Shape,
                              ctx: Context,
-                             delayAlloc: Boolean): NDArrayHandle = {
+                             delayAlloc: Boolean,
+                             dtype: DType = DType.Float32): NDArrayHandle = {
     val hdl = new NDArrayHandleRef
-    checkCall(_LIB.mxNDArrayCreate(
+    checkCall(_LIB.mxNDArrayCreateEx(
       shape.toArray,
       shape.length,
       ctx.deviceTypeid,
       ctx.deviceId,
       if (delayAlloc) 1 else 0,
+      dtype.id,
       hdl))
     hdl.value
   }
@@ -176,9 +178,9 @@ object NDArray {
    *
    * @return The created NDArray.
    */
-  def empty(shape: Shape, ctx: Context = null): NDArray = {
+  def empty(shape: Shape, ctx: Context = null, dtype: DType = DType.Float32): NDArray = {
     val context = if (ctx == null) Context.defaultCtx else ctx
-    new NDArray(handle = NDArray.newAllocHandle(shape, context, delayAlloc = false))
+    new NDArray(handle = NDArray.newAllocHandle(shape, context, delayAlloc = false, dtype))
   }
 
   def empty(shape: Int *): NDArray = empty(Shape(shape: _*))
@@ -709,8 +711,22 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    */
   def toArray: Array[Float] = {
     val data = Array.ofDim[Float](size)
-    checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, data, size))
+    //FIXME: checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, data, size))
     data
+  }
+
+  def internal: Array[Byte] = {
+    val arrLength =
+      dtype match {
+        case DType.UInt8 => size
+        case DType.Int32 => 4 * size
+        case DType.Float16 => 2 * size
+        case DType.Float32 => 4 * size
+        case DType.Float64 => 8 * size
+      }
+    val arr = Array.ofDim[Byte](arrLength)
+    checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, arr, size))
+    arr
   }
 
   /**

@@ -55,13 +55,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreateNone
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreate
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreateEx
   (JNIEnv *env, jobject obj, jintArray shape, jint ndim, jint devType,
-    jint devId, jint delayAlloc, jobject ndArrayHandle) {
+    jint devId, jint delayAlloc, jint dtype, jobject ndArrayHandle) {
   jint *shapeArr = env->GetIntArrayElements(shape, NULL);
   NDArrayHandle out;
-  int ret = MXNDArrayCreate(reinterpret_cast<mx_uint *>(shapeArr),
-                            static_cast<mx_uint>(ndim), devType, devId, delayAlloc, &out);
+  int ret = MXNDArrayCreateEx(reinterpret_cast<mx_uint *>(shapeArr), static_cast<mx_uint>(ndim),
+                              devType, devId, delayAlloc, dtype, &out);
   env->ReleaseIntArrayElements(shape, shapeArr, 0);
   SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
   return ret;
@@ -354,11 +354,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayGetShape
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySyncCopyToCPU
-  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jfloatArray data, jint size) {
-  jfloat *pdata = env->GetFloatArrayElements(data, NULL);
+  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jbyteArray data, jint size) {
+  jbyte *pdata = env->GetByteArrayElements(data, NULL);
   int ret = MXNDArraySyncCopyToCPU(reinterpret_cast<NDArrayHandle>(ndArrayPtr),
-                                   reinterpret_cast<mx_float *>(pdata), size);
-  env->ReleaseFloatArrayElements(data, pdata, 0);  // copy back to java array automatically
+                                   reinterpret_cast<void *>(pdata), size);
+  env->ReleaseByteArrayElements(data, pdata, 0);  // copy back to java array automatically
   return ret;
 }
 
