@@ -93,7 +93,7 @@ We can train a model using multiple machines.
   ```
 
 See more launch options, e.g. by `Yarn`, and how to write a distributed training
-program on this [tutorial](http://mxnet.readthedocs.org/en/latest/distributed_training.html)
+program on this [tutorial](http://mxnet.readthedocs.io/en/latest/how_to/multi_devices.html)
 
 ### Predict
 
@@ -109,9 +109,9 @@ There are two commonly used way to feed data into MXNet.
 
 The first is packing all example into one or several compact `recordio`
 files. See a step-by-step
-[tutorial](http://mxnet.readthedocs.io/en/latest/packages/python/io.html#create-dataset-using-recordio)
+[tutorial](http://mxnet.readthedocs.io/en/latest/api/python/io.html#create-dataset-using-recordio)
 and the
-[document](http://mxnet.readthedocs.io/en/latest/system/note_data_loading.html)
+[document](http://mxnet.readthedocs.io/en/latest/architecture/note_data_loading.html)
 describing how it works.
 
 *Note: A commonly mistake is forgetting shuffle the image list during packing. This will lead fail of training, eg. ```accuracy``` keeps 0.001 for several rounds.*

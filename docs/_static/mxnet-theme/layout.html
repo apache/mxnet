@@ -89,6 +89,7 @@
     {{ metatags }}
     {%- block htmltitle %}
     {%- if pagename != 'index' %}
+	
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {%- else %}
     <title>MXNet Documents</title>

@@ -8,7 +8,7 @@ We try to do our best to provide high speed operators for most common use cases.
 
 * ~~(Deprecated) Use native language, mxnet.rtc and mxnet.ndarray. This gives you most of the performance of 3) and most of the convenience of 1), but requires more knowledge of MXNet. You can write CUDA kernels in python and compile with during runtime.~~
 
-* 1) Use CustomOp to write new operators in frontend language (i.e. Python) that runs on cpu or gpu. Depending on your implementation, this can range from very fast to very slow.
+* 1) Use CustomOp to write new operators in front end language (i.e. Python) that runs on CPU or GPU. Depending on your implementation, this can range from very fast to very slow.
 
 * 2) Use C++/MShadow(CUDA). This can be difficult if you are not familiar with MXNet, mashadow or Cuda, but it will give you the best performance.
 
@@ -28,7 +28,7 @@ class Softmax(mx.operator.CustomOp):
         y /= y.sum(axis=1).reshape((x.shape[0], 1))
         self.assign(out_data[0], req[0], mx.nd.array(y))
 ```
-Here we defined the computation for forward pass of our operator. The forward function takes a list of input and a list of output NDArrays. Here we called .asnumpy() on the input NDArray to convert it to cpu based numpy arrays for convenience.
+Here we defined the computation for forward pass of our operator. The forward function takes a list of input and a list of output NDArrays. Here we called .asnumpy() on the input NDArray to convert it to CPU based numpy arrays for convenience.
 
 Keep in mind that this can be very slow. If you want the best performance, keep data in NDArray format and use operations under mx.nd to do the computation.
 
@@ -75,7 +75,7 @@ Next we need to provide `infer_shape` to declare the shape of our output/weight 
 ```
 The first dim of an input/output tensor is batch size. Our label is a set of integers, one for each data entry, and our output has the same shape as input. Infer_shape should always return three lists in the order inputs, outputs and auxiliary states (which we don't have here), even if one of them is empty.
 
-Finally, we need to define a create_operator function that will be called by the backend to create an instance of Softmax:
+Finally, we need to define a create_operator function that will be called by the back-end to create an instance of Softmax:
 ```python
     def create_operator(self, ctx, shapes, dtypes):
         return Softmax()
@@ -89,4 +89,4 @@ mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')
 The complete code for this example can be found at `examples/numpy-ops/custom_softmax.py`
 
 ## C++/MShadow(CUDA)
-Please refer to [Developer Guide - SimpleOp](../system/operator_util.md) and [Developer Guide - Operators](https://mxnet.readthedocs.org/en/latest/system/operator.html) for detail.
+Please refer to [Developer Guide - SimpleOp](../system/operator_util.md) and [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet) for detail.

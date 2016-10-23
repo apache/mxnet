@@ -259,7 +259,8 @@ class Module(BaseModule):
                                                      label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
-                                                     fixed_param_names=self._fixed_param_names)
+                                                     fixed_param_names=self._fixed_param_names,
+                                                     layout_mapper=self.layout_mapper)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params

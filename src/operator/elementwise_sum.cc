@@ -4,14 +4,33 @@
  * \brief elementwise sum operator
 */
 #include "./elementwise_sum-inl.h"
+#if MXNET_USE_MKL2017 == 1
+#include <mxnet/mkl_memory.h>
+#include "./mkl/mkl_memory-inl.h"
+#include "./mkl/mkl_elementwise-inl.h"
+#endif  // MXNET_USE_MKL2017
+
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(ElementWiseSumParam param, int dtype) {
   Operator *op = NULL;
+#if MXNET_USE_MKL2017 == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    op = new MKLElementWiseOp<cpu, float>(param, EltwiseParameter_EltwiseOp_SUM);
+    break;
+  case mshadow::kFloat64:
+    op = new MKLElementWiseOp<cpu, double>(param, EltwiseParameter_EltwiseOp_SUM);
+    break;
+  default:
+      break;
+  }
+#else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ElementWiseSumOp<cpu, DType>(param);
   });
+#endif
   return op;
 }
 

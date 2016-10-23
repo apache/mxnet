@@ -33,36 +33,63 @@ class Detector(object):
             hashes = np.round(roi_array * config.TEST.DEDUP_BOXES).dot(v)
             _, index, inv_index = np.unique(hashes, return_index=True, return_inverse=True)
             roi_array = roi_array[index, :]
+        if self.executor is None:
+            # fill in data
+            if config.TEST.HAS_RPN:
+                self.arg_params['data'] = mx.nd.array(im_array, self.ctx)
+                self.arg_params['im_info'] = mx.nd.array(im_info, self.ctx)
+                arg_shapes, out_shapes, aux_shapes = \
+                    self.symbol.infer_shape(data=self.arg_params['data'].shape, im_info=self.arg_params['im_info'].shape)
+            else:
+                self.arg_params['data'] = mx.nd.array(im_array, self.ctx)
+                self.arg_params['rois'] = mx.nd.array(roi_array, self.ctx)
+                arg_shapes, out_shapes, aux_shapes = \
+                    self.symbol.infer_shape(data=self.arg_params['data'].shape, rois=self.arg_params['rois'].shape)
 
-        # fill in data
-        if config.TEST.HAS_RPN:
-            self.arg_params['data'] = mx.nd.array(im_array, self.ctx)
-            self.arg_params['im_info'] = mx.nd.array(im_info, self.ctx)
-            arg_shapes, out_shapes, aux_shapes = \
-                self.symbol.infer_shape(data=self.arg_params['data'].shape, im_info=self.arg_params['im_info'].shape)
+            # fill in label and aux
+            arg_shapes_dict = {name: shape for name, shape in zip(self.symbol.list_arguments(), arg_shapes)}
+            self.arg_params['cls_prob_label'] = mx.nd.zeros(arg_shapes_dict['cls_prob_label'], self.ctx)
+            aux_names = self.symbol.list_auxiliary_states()
+            self.aux_params = {k: mx.nd.zeros(s, self.ctx) for k, s in zip(aux_names, aux_shapes)}
+
+            # execute
+            self.executor = self.symbol.bind(self.ctx, self.arg_params, args_grad=None,
+                                             grad_req='null', aux_states=self.aux_params)
+            executor = self.executor
         else:
-            self.arg_params['data'] = mx.nd.array(im_array, self.ctx)
-            self.arg_params['rois'] = mx.nd.array(roi_array, self.ctx)
-            arg_shapes, out_shapes, aux_shapes = \
-                self.symbol.infer_shape(data=self.arg_params['data'].shape, rois=self.arg_params['rois'].shape)
-
-        # fill in label and aux
-        arg_shapes_dict = {name: shape for name, shape in zip(self.symbol.list_arguments(), arg_shapes)}
-        self.arg_params['cls_prob_label'] = mx.nd.zeros(arg_shapes_dict['cls_prob_label'], self.ctx)
-        aux_names = self.symbol.list_auxiliary_states()
-        self.aux_params = {k: mx.nd.zeros(s, self.ctx) for k, s in zip(aux_names, aux_shapes)}
-
-        # execute
-        self.executor = self.symbol.bind(self.ctx, self.arg_params, args_grad=None,
-                                         grad_req='null', aux_states=self.aux_params)
-        output_dict = {name: nd for name, nd in zip(self.symbol.list_outputs(), self.executor.outputs)}
-        self.executor.forward(is_train=False)
+            if config.TEST.HAS_RPN:
+                # Test whether we need upsizing
+                if np.prod(im_array.shape) > np.prod(self.executor.arg_dict['data'].shape):
+                    self.executor = self.executor.reshape(allow_up_sizing=True, data=im_array.shape)
+                    executor = self.executor
+                else:
+                    executor = self.executor.reshape(allow_up_sizing=False, data=im_array.shape)
+                # fill in data
+                executor.arg_dict["data"][:] = im_array
+                executor.arg_dict["im_info"][:] = im_info
+            else:
+                if np.prod(im_array.shape) > np.prod(self.executor.arg_dict['data'].shape) or\
+                   np.prod(roi_array.shape) > np.prod(self.executor.arg_dict['rois'].shape):
+                    self.executor = self.executor.reshape(partial_shaping=True,
+                                                          allow_up_sizing=True,
+                                                          data=im_array.shape,
+                                                          rois=roi_array.shape)
+                    executor = self.executor
+                else:
+                    executor = self.executor.reshape(partial_shaping=True,
+                                                     allow_up_sizing=False,
+                                                     data=im_array.shape,
+                                                     rois=roi_array.shape)
+                # fill in data
+                executor.arg_dict["data"][:] = im_array
+                executor.arg_dict["rois"][:] = roi_array
+        executor.forward(is_train=False)
 
         # save output
-        scores = output_dict['cls_prob_reshape_output'].asnumpy()[0]
-        bbox_deltas = output_dict['bbox_pred_reshape_output'].asnumpy()[0]
+        scores = executor.output_dict['cls_prob_reshape_output'].asnumpy()[0]
+        bbox_deltas = executor.output_dict['bbox_pred_reshape_output'].asnumpy()[0]
         if config.TEST.HAS_RPN:
-            rois = output_dict['rois_output'].asnumpy()
+            rois = executor.output_dict['rois_output'].asnumpy()
             rois = rois[:, 1:].copy()  # scale back
         else:
             rois = roi_array[:, 1:]

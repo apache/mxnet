@@ -1,5 +1,5 @@
 The following is an overview of MXNet in Chinese. For english readers, please
-refer to our [NIPS learnsys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
+refer to our [NIPS LearningSys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
 
 # MXNet设计和实现简介
 

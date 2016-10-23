@@ -1,23 +1,19 @@
 # MXNet How To
 
-This page contains guidelines to use and develop mxnets.
-
-## Installation
-- [How to Install MXNet](build.md)
+This page contains guidelines to use and develop MXNets.
 
 ## Use MXNet on Specific Tasks
-- [Train with multiple CPU/GPUs in data parallelism](multi_devices.md)
-- [Train LSTM with multiple GPUs in model parallelism](model_parallel_lstm.md)
-- [Run MXNet on smart devices](smart_device.md)
-- [Run MXNet on cloud](cloud.md)
-- [Use pretrained models](pretrained.md)
-- [Use mxnet on variable input length/size (bucketing)](bucketing.md)
-- [Improve performance tips](perf.md)
+- [How to train with multiple CPU/GPUs with data parallelism](multi_devices.md)
+- [How to train with multiple GPUs in model parallelism - train LSTM](model_parallel_lstm.md)
+- [How to run MXNet on smart-devices/mobiles](smart_device.md)
+- [How To Setup MXNet on the AWS cloud using EC2 and S3](cloud.md)
+- [How to use pre-trained models](pretrained.md)
+- [How to use MXNet on variable input length/size (bucketing)](bucketing.md)
+- [How to improve MXNet Performance(perf.md)
 
 ## Develop and Hack MXNet
 - [Create new operators](new_op.md)
 - [Use Torch from MXNet](torch.md)
-- [Contribute to MXNet](contribute.md)
 - [Set environment variables of MXNet](env_var.md)
 
 ## Frequently Ask Questions

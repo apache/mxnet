@@ -9,14 +9,61 @@ from .. import context as ctx
 from .. import ndarray as nd
 
 from ..base import mx_real_t
-from ..executor_manager import _split_input_slice, _load_data, _load_label
+from ..executor_manager import _split_input_slice
+from ..io import DefaultLayoutMapper
 
-def _merge_multi_context(outputs):
+
+def _load_general(data, targets, major_axis):
+    """Load a list of arrays into a list of arrays specified by slices"""
+    for d_src, d_targets, axis in zip(data, targets, major_axis):
+        if isinstance(d_targets, nd.NDArray):
+            d_src.copyto(d_targets)
+        else:
+            for slice_idx, d_dst in d_targets:
+                if axis >= 0:
+                    # copy slice
+                    shape = d_src.shape
+                    begin = np.zeros(len(shape), dtype=int)
+                    end = np.array(shape)
+                    begin[axis] = slice_idx.start
+                    end[axis] = slice_idx.stop
+                    # pylint: disable=no-member,protected-access
+                    if d_src.context == d_dst.context:
+                        nd.crop(d_src, begin=tuple(begin), end=tuple(end), out=d_dst)
+                    else:
+                        # on different device, crop and then do cross device copy
+                        d_dst_copy = nd.crop(d_src, begin=tuple(begin), end=tuple(end))
+                        d_dst_copy.copyto(d_dst)
+                    # pylint: enable=no-member,protected-access
+                else:
+                    d_src.copyto(d_dst)
+
+
+def _load_data(batch, targets, major_axis):
+    """Load data into sliced arrays"""
+    _load_general(batch.data, targets, major_axis)
+
+
+def _load_label(batch, targets, major_axis):
+    """Load label into sliced arrays"""
+    _load_general(batch.label, targets, major_axis)
+
+
+def _merge_multi_context(outputs, major_axis):
     """Merge outputs that lives on multiple context into one, so that they look
     like living on one context.
     """
-    outputs = [nd.concatenate(x, always_copy=False) for x in outputs]
-    return outputs
+    rets = []
+    for tensors, axis in zip(outputs, major_axis):
+        if axis >= 0:
+            rets.append(nd.concatenate(tensors, axis=axis, always_copy=False))
+        else:
+            # negative axis means the there is no batch_size axis, and all the
+            # results should be the same on each device. We simply take the
+            # first one, without checking they are actually the same
+            rets.append(tensors[0])
+    return rets
+
 
 class DataParallelExecutorGroup(object):
     """DataParallelExecutorGroup is a group of executors that lives on a group of devices.
@@ -60,10 +107,12 @@ class DataParallelExecutorGroup(object):
     fixed_param_names: list of str
         Indicate parameters to be fixed during training. Parameters in this list will not allocate
         space for gradient, nor do gradient calculation.
+    layout_mapper : LayoutMapper
+        A helper to decide the data layout of data, label and outputs.
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
                  for_training, inputs_need_grad, shared_group=None, input_types=None,
-                 logger=logging, fixed_param_names=None):
+                 logger=logging, fixed_param_names=None, layout_mapper=None):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -98,7 +147,14 @@ class DataParallelExecutorGroup(object):
         self.aux_arrays = None
 
         # calculate workload and bind executors
-        self.decide_slices(data_shapes)
+        self.layout_mapper = layout_mapper or DefaultLayoutMapper()
+        self.data_layouts = self.decide_slices(data_shapes)
+        if label_shapes is not None:
+            # call it to make sure labels has the same batch size as data
+            self.label_layouts = self.decide_slices(label_shapes)
+        self.output_layouts = [self.layout_mapper.get_batch_axis(name)
+                               for name in self.symbol.list_outputs()]
+
         self.bind_exec(data_shapes, label_shapes, shared_group)
 
     def decide_slices(self, data_shapes):
@@ -107,14 +163,26 @@ class DataParallelExecutorGroup(object):
         Parameters
         ----------
         data_shapes : list
-            list of (name, shape) specifying the shapes for the input data.
+            list of (name, shape) specifying the shapes for the input data or label.
         """
         assert len(data_shapes) > 0
-        self.batch_size = data_shapes[0][1][0]
-        for shape in data_shapes:
-            assert shape[1][0] == self.batch_size, "all the data must have the same batch size"
+        major_axis = [self.layout_mapper.get_batch_axis(name)
+                      for (name, _) in data_shapes]
 
-        self.slices = _split_input_slice(self.batch_size, self.workload)
+        for (name, shape), axis in zip(data_shapes, major_axis):
+            if axis == -1:
+                continue
+
+            batch_size = shape[axis]
+            if self.batch_size is not None:
+                assert batch_size == self.batch_size, ("all data must have the same batch size: "
+                                                       + ("batch_size = %d, but " % self.batch_size)
+                                                       + ("%s has shape %s" % (name, shape)))
+            else:
+                self.batch_size = batch_size
+                self.slices = _split_input_slice(self.batch_size, self.workload)
+
+        return major_axis
 
     def bind_exec(self, data_shapes, label_shapes, shared_group):
         """Bind executors on their respective devices.
@@ -208,18 +276,12 @@ class DataParallelExecutorGroup(object):
         -------
 
         """
-        _load_data(data_batch, self.data_arrays)
+        _load_data(data_batch, self.data_arrays, self.data_layouts)
         if is_train is None:
             is_train = self.for_training
 
-        if is_train:
-            # It could be the case that even though we are binded for training, we
-            # still do not have label arrays. For example, this could happen if we
-            # are using a module without a loss function (the user will compute the
-            # loss and gradients using some other ways), and we do not need the label
-            # here.
-            if self.label_arrays is not None:
-                _load_label(data_batch, self.label_arrays)
+        if self.label_arrays is not None:
+            _load_label(data_batch, self.label_arrays, self.label_layouts)
 
         for exec_ in self.execs:
             exec_.forward(is_train=is_train)
@@ -228,8 +290,14 @@ class DataParallelExecutorGroup(object):
         """Get the shapes of the outputs."""
         outputs = self.execs[0].outputs
         shapes = [out.shape for out in outputs]
-        shapes = [tuple([self.batch_size] + list(shape[1:])) for shape in shapes]
-        return zip(self.symbol.list_outputs(), shapes)
+
+        concat_shapes = []
+        for key, the_shape, axis in zip(self.symbol.list_outputs(), shapes, self.output_layouts):
+            the_shape = list(the_shape)
+            if axis >= 0:
+                the_shape[axis] = self.batch_size
+            concat_shapes.append((key, tuple(the_shape)))
+        return concat_shapes
 
     def get_outputs(self, merge_multi_context=True):
         """Get outputs of the previous forward computation.
@@ -251,7 +319,7 @@ class DataParallelExecutorGroup(object):
         outputs = [[exec_.outputs[i] for exec_ in self.execs]
                    for i in range(len(self.execs[0].outputs))]
         if merge_multi_context:
-            outputs = _merge_multi_context(outputs)
+            outputs = _merge_multi_context(outputs, self.output_layouts)
         return outputs
 
     def get_input_grads(self, merge_multi_context=True):
@@ -273,7 +341,7 @@ class DataParallelExecutorGroup(object):
         """
         assert self.inputs_need_grad
         if merge_multi_context:
-            return _merge_multi_context(self.input_grad_arrays)
+            return _merge_multi_context(self.input_grad_arrays, self.data_layouts)
         return self.input_grad_arrays
 
     def backward(self, out_grads=None):
@@ -293,8 +361,17 @@ class DataParallelExecutorGroup(object):
             out_grads = []
 
         for i, (exec_, islice) in enumerate(zip(self.execs, self.slices)):
-            out_grads_slice = [grad[islice].as_in_context(self.contexts[i])
-                               for grad in out_grads]
+            out_grads_slice = []
+            for grad, axis in zip(out_grads, self.output_layouts):
+                if axis >= 0:
+                    # pylint: disable=no-member
+                    og_my_slice = nd.slice_axis(grad, axis=axis, begin=islice.start,
+                                                end=islice.stop)
+                    # pylint: enable=no-member
+                    out_grads_slice.append(og_my_slice.as_in_context(self.contexts[i]))
+                else:
+                    out_grads_slice.append(grad.copyto(self.contexts[i]))
+
             exec_.backward(out_grads=out_grads_slice)
 
     def update_metric(self, eval_metric, labels):
@@ -308,15 +385,28 @@ class DataParallelExecutorGroup(object):
             Typically comes from `label` of a `DataBatch`.
         """
         for texec, islice in zip(self.execs, self.slices):
-            labels_slice = [label[islice] for label in labels]
+            labels_slice = []
+            for label, axis in zip(labels, self.label_layouts):
+                if axis == 0:
+                    # slicing NDArray along axis 0 can avoid copying
+                    labels_slice.append(label[islice])
+                elif axis > 0:
+                    # pylint: disable=no-member
+                    label_my_slice = nd.slice_axis(label, axis=axis, begin=islice.start,
+                                                   end=islice.stop).as_in_context(label.context)
+                    # pylint: enable=no-member
+                    labels_slice.append(label_my_slice)
+                else:
+                    labels_slice.append(label)
+
             eval_metric.update(labels_slice, texec.outputs)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.
         """
-        data_shapes = self._sliced_shape(data_shapes, i)
+        data_shapes = self._sliced_shape(data_shapes, i, self.data_layouts)
         if label_shapes is not None:
-            label_shapes = self._sliced_shape(label_shapes, i)
+            label_shapes = self._sliced_shape(label_shapes, i, self.label_layouts)
         shared_exec = None if shared_group is None else shared_group.execs[i]
         context = self.contexts[i]
         shared_data_arrays = self.shared_data_arrays[i]
@@ -419,7 +509,7 @@ class DataParallelExecutorGroup(object):
                                     grad_req=grad_req, shared_exec=shared_exec)
         return executor
 
-    def _sliced_shape(self, shapes, i):
+    def _sliced_shape(self, shapes, i, major_axis):
         """Get the sliced shapes for the i-th executor.
 
         Parameters
@@ -429,8 +519,13 @@ class DataParallelExecutorGroup(object):
         i : int
             Which executor we are dealing with.
         """
-        return [(k, tuple([self.slices[i].stop-self.slices[i].start] + list(v[1:])))
-                for k, v in shapes]
+        sliced_shapes = []
+        for (k, shape), axis in zip(shapes, major_axis):
+            shape = list(shape)
+            if axis >= 0:
+                shape[axis] = self.slices[i].stop - self.slices[i].start
+            sliced_shapes.append((k, tuple(shape)))
+        return sliced_shapes
 
     def install_monitor(self, mon):
         """Install monitor on all executors"""

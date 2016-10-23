@@ -29,16 +29,6 @@ class StorageImpl : public Storage {
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
   static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
 
-  template <class DeviceStorage>
-  using CPUStorageManager =
-      storage::NaiveStorageManager<DeviceStorage>;
-  template <class DeviceStorage>
-  using PinnedStorageManager =
-      storage::NaiveStorageManager<DeviceStorage>;
-  template <class DeviceStorage>
-  using GPUStorageManager =
-      storage::PooledStorageManager<DeviceStorage>;
-
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU: break;
@@ -70,15 +60,23 @@ Storage::Handle StorageImpl::Alloc(size_t size, Context ctx) {
         storage::StorageManager *ptr = nullptr;
         switch (ctx.dev_type) {
           case Context::kCPU: {
-            ptr = new CPUStorageManager<storage::CPUDeviceStorage>();
+            ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
             break;
           }
           case Context::kCPUPinned: {
-            ptr = new PinnedStorageManager<storage::PinnedMemoryStorage>();
+#if MXNET_USE_CUDA
+            ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
+#else
+            LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
+#endif  // MXNET_USE_CUDA
             break;
           }
           case Context::kGPU: {
-            ptr = new GPUStorageManager<storage::GPUDeviceStorage>();
+#if MXNET_USE_CUDA
+            ptr = new storage::GPUPooledStorageManager();
+#else
+            LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
+#endif  // MXNET_USE_CUDA
             break;
           }
           default: LOG(FATAL) <<  "Unimplemented device " << ctx.dev_type;

@@ -42,6 +42,8 @@
 Previous Navbar Layout End -->
 
 <div class="navbar navbar-fixed-top">
+<a href="https://github.com/dmlc/mxnet"><img style="position: absolute; top: 0; right: 0; border: 0; z-index: 0" 
+src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_fork_me_green_ribbon.png" alt="Fork me on GitHub"/>
   <div class="container">
     <div id="header-inner" class="innder">
       <h1 id="logo-wrap">
@@ -52,7 +54,7 @@ Previous Navbar Layout End -->
         <a class="main-nav-link" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/index.html">{{name}}</a>
         {% endfor %}
 
-        {% for name in ['Packages'] %}
+        {% for name in ['API'] %}
         <span id="dropdown-menu-position-anchor">
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">{{name}} <span class="caret"></span></a>
           <ul id="package-dropdown-menu" class="dropdown-menu">
@@ -64,8 +66,11 @@ Previous Navbar Layout End -->
           </ul>
           {% endfor %}
         </span>
-        <a class="main-nav-link" href="{{url_root}}system/index.html">System</a>
-        <div id="search-input-wrap">
+		
+        <a class="main-nav-link" href="{{url_root}}architecture/index.html">Architecture</a>
+		<a class="main-nav-link" href="{{url_root}}community/index.html">Community</a>
+        
+		<div id="search-input-wrap">
           <div id="search-input-icon">
             <i class="fa fa-search"></i>
           </div>
