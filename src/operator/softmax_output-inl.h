@@ -329,7 +329,8 @@ class SoftmaxOutputProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     if (param_.out_grad) {
-      return {in_data[softmaxout_enum::kLabel], out_data[softmaxout_enum::kOut], out_grad[softmaxout_enum::kOut]};
+      return {in_data[softmaxout_enum::kLabel], out_data[softmaxout_enum::kOut],
+              out_grad[softmaxout_enum::kOut]};
     } else {
       return {in_data[softmaxout_enum::kLabel], out_data[softmaxout_enum::kOut]};
     }

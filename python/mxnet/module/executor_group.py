@@ -8,7 +8,6 @@ import numpy as np
 from .. import context as ctx
 from .. import ndarray as nd
 
-from ..base import mx_real_t
 from ..executor_manager import _split_input_slice
 from ..io import DefaultLayoutMapper
 
@@ -110,7 +109,8 @@ class DataParallelExecutorGroup(object):
     layout_mapper : LayoutMapper
         A helper to decide the data layout of data, label and outputs.
     grad_req : str, list of str, dict of str to str
-        Requirement for gradient accumulation. Can be 'write', 'add', or 'null' (default to 'write').
+        Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+        (default to 'write').
         Can be specified globally (str) or for each argument (list, dict).
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,

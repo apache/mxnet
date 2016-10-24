@@ -632,7 +632,8 @@ class BaseModule(object):
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
         grad_req : str, list of str, dict of str to str
-            Requirement for gradient accumulation. Can be 'write', 'add', or 'null' (default to 'write').
+            Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+            (default to 'write').
             Can be specified globally (str) or for each argument (list, dict).
         """
         raise NotImplementedError()
