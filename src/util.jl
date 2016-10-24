@@ -41,7 +41,7 @@ function get_cifar10()
   filenames = Dict([k => joinpath(cifar10_dir, v) for (k,v) in filenames])
   if !all(isfile, values(filenames))
     cd(cifar10_dir) do
-      run(`http://data.dmlc.ml/mxnet/data/cifar10.zip`)
+      download("http://data.dmlc.ml/mxnet/data/cifar10.zip", "cifar10.zip")
         try
           run(`unzip -u cifar10.zip`)
         catch
