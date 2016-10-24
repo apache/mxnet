@@ -55,8 +55,8 @@ def get_iterator(args, kv, data_shape=(3, 28, 28)):
         _download(args.data_dir)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "train.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        path_imgrec = os.path.join(args.data_dir, "train.rec"),
+        mean_img    = os.path.join(args.data_dir, "mean.bin"),
         data_shape  = data_shape,
         batch_size  = args.batch_size,
         rand_crop   = True,
@@ -65,8 +65,8 @@ def get_iterator(args, kv, data_shape=(3, 28, 28)):
         part_index  = kv.rank)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "test.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        path_imgrec = os.path.join(args.data_dir, "test.rec"),
+        mean_img    = os.path.join(args.data_dir, "mean.bin"),
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
