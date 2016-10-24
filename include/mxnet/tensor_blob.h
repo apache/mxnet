@@ -618,17 +618,6 @@ class TBlob {
     Mkl_mem_ = NULL;
 #endif
   }
-
-#if MKL_EXPERIMENTAL == 1
-  void setMKLMemHolder(std::shared_ptr<MKLMemHolder> dnnChunk) {
-      Mkl_mem_ = dnnChunk;
-  }
-
-  inline std::shared_ptr<MKLMemHolder> get_mkl_mem() const {
-      return this->Mkl_mem_;
-  }
-
-#endif
   /*!
    * \brief assignment from tensor
    * \param src source tensor
@@ -662,23 +651,17 @@ class TBlob {
    */
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 2, DType> FlatTo2D(
-      mshadow::Stream<Device> *stream = NULL) const {
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
-    return FlatTo2D_direct<Device, DType>(stream);
-  }
-
-  template<typename Device, typename DType>
-  inline mshadow::Tensor<Device, 2, DType> FlatTo2D_direct(
     mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+    }
+#endif
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(), stride_, stream);
   }
@@ -722,48 +705,20 @@ class TBlob {
    */
   template<typename Device, int dim, typename DType>
   inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = NULL) const {
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-        Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
-    return get_direct<Device, dim, DType>(stream);
-  }
-
-  template<typename Device, int dim, typename DType>
-  inline mshadow::Tensor<Device, dim, DType>
-    get_direct(mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-    return mshadow::Tensor<Device, dim, DType>(static_cast<DType*>(dptr_),
-      shape_.get<dim>(),
-      stride_, stream);
-  }
-
 #if MKL_EXPERIMENTAL == 1
-  template<typename DType>
-  inline DType * prv_data() const {
-      std::shared_ptr<MKLMemHolder> bottom_data_chunk = this->get_mkl_mem();
-      bool chunk_valid = (bottom_data_chunk != nullptr) && bottom_data_chunk->head_at_prv();
-      if (chunk_valid) {
-          return reinterpret_cast<DType*>(bottom_data_chunk->prv_data());
-      }
-      return NULL;
-  }
-
-  template<typename DType>
-  inline int prv_count() const {
-      std::shared_ptr<MKLMemHolder> bottom_data_chunk = this->get_mkl_mem();
-      bool chunk_valid = (bottom_data_chunk != nullptr) && bottom_data_chunk->head_at_prv();
-      if (chunk_valid) {
-          return bottom_data_chunk->prv_count();
-      }
-      return 0;
-  }
+    if (Mkl_mem_ != nullptr) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+    }
 #endif
+    return mshadow::Tensor<Device, dim, DType>(static_cast<DType*>(dptr_),
+                                               shape_.get<dim>(),
+                                               stride_, stream);
+  }
   /*!
    * \brief fetch a tensor in given shape
    *  If size do not match the stored size, an error will be issued
@@ -778,19 +733,7 @@ class TBlob {
   inline mshadow::Tensor<Device, dim, DType> get_with_shape(
       const mshadow::Shape<dim> &shape,
       mshadow::Stream<Device> *stream = NULL) const {
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-        Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
-    return get_with_shape_direct<Device, dim, DType>(shape, stream);
-  }
-
-  template<typename Device, int dim, typename DType>
-  inline mshadow::Tensor<Device, dim, DType> get_with_shape_direct(
-    const mshadow::Shape<dim> &shape,
-    mshadow::Stream<Device> *stream = NULL) const {
-    CHECK(Device::kDevMask == dev_mask_)
+    CHECK(Device ::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
@@ -798,6 +741,11 @@ class TBlob {
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
     CHECK_EQ(this->shape_.Size(), shape.Size())
       << "TBlob.get_with_shape: new and old shape do not match total elements";
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+    }
+#endif
     return mshadow::Tensor<Device, dim, DType>(static_cast<DType*>(dptr_),
                                                shape,
                                                shape[dim - 1],

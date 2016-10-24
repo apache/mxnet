@@ -32,6 +32,7 @@
 #include <string>
 #include <utility>
 #include "../operator_common.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -102,11 +103,15 @@ class MKLReluOp : public Operator {
     if (in_data[activation::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
       in_data[activation::kData].shape_[1], 1, 1);
-      data = in_data[activation::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
-      out = out_data[activation::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(in_data[activation::kData]);
+      data = in_data[activation::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(out_data[activation::kOut]);
+      out = out_data[activation::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
     } else {
-      data = in_data[activation::kData].get_direct<xpu, 4, DType>(s);
-      out = out_data[activation::kOut].get_direct<xpu, 4, DType>(s);
+      mkl_set_priv_flag(in_data[activation::kData]);
+      data = in_data[activation::kData].get<xpu, 4, DType>(s);
+      mkl_set_priv_flag(out_data[activation::kOut]);
+      out = out_data[activation::kOut].get<xpu, 4, DType>(s);
     }
     if (!init_mkldnn_) {
       LayerSetUp(data, out);
@@ -115,13 +120,13 @@ class MKLReluOp : public Operator {
     void* bottom_data = NULL;
 #if MKL_EXPERIMENTAL == 1
     bottom_data =
-          reinterpret_cast<void *>(in_data[activation::kData].prv_data<DType>());
+          reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[activation::kData]));
 #endif
 #if MKL_EXPERIMENTAL == 1
     if (bottom_data != NULL) {
       if (reluFwd_ == NULL) {
         std::shared_ptr<MKLMemHolder> bottom_data_mem =
-          in_data[activation::kData].get_mkl_mem();
+          in_data[activation::kData].Mkl_mem_;
         std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
           bottom_data_mem->get_prv_descriptor();
         CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
@@ -166,7 +171,7 @@ class MKLReluOp : public Operator {
       std::shared_ptr<PrvMemDescr> bottom_prv_descriptor = NULL;
 #if MKL_EXPERIMENTAL == 1
       std::shared_ptr<MKLMemHolder> bottom_data_mem =
-        in_data[activation::kData].get_mkl_mem();
+        in_data[activation::kData].Mkl_mem_;
       bottom_prv_descriptor = bottom_data_mem->get_prv_descriptor();
 #endif
       if (NULL != bottom_prv_descriptor) {
@@ -174,7 +179,7 @@ class MKLReluOp : public Operator {
           reinterpret_cast<void *>(fwd_bottom_data_->prv_ptr());
       } else {
 #if MKL_EXPERIMENTAL == 1
-        std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].get_mkl_mem();
+        std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].Mkl_mem_;
         top_mem->set_prv_descriptor(fwd_top_data_);
 #endif
         relu_res[dnnResourceDst] =
@@ -207,23 +212,30 @@ class MKLReluOp : public Operator {
     Tensor<xpu, 4, DType> m_out_data;
     Tensor<xpu, 4, DType> m_in_grad;
     Tensor<xpu, 4, DType> m_in_data;
+
     if (out_grad[activation::kOut].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
                                out_grad[activation::kOut].shape_[1], 1, 1);
-      m_out_grad = out_grad[activation::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
-      m_out_data = out_data[activation::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
-      m_in_grad = in_grad[activation::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(out_grad[activation::kOut]);
+      m_out_grad = out_grad[activation::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(out_data[activation::kOut]);
+      m_out_data = out_data[activation::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(in_grad[activation::kData]);
+      m_in_grad = in_grad[activation::kData].get_with_shape<xpu, 4, DType>(dshape, s);
     } else {
-      m_out_grad = out_grad[activation::kOut].get_direct<xpu, 4, DType>(s);
-      m_out_data = out_data[activation::kOut].get_direct<xpu, 4, DType>(s);
-      m_in_grad = in_grad[activation::kData].get_direct<xpu, 4, DType>(s);
+      mkl_set_priv_flag(out_grad[activation::kOut]);
+      m_out_grad = out_grad[activation::kOut].get<xpu, 4, DType>(s);
+      mkl_set_priv_flag(out_data[activation::kOut]);
+      m_out_data = out_data[activation::kOut].get<xpu, 4, DType>(s);
+      mkl_set_priv_flag(in_grad[activation::kData]);
+      m_in_grad = in_grad[activation::kData].get<xpu, 4, DType>(s);
     }
     dnnError_t e;
     void* relu_res[dnnResourceNumber];
     void* top_data = NULL;
 #if MKL_EXPERIMENTAL == 1
     top_data =
-          reinterpret_cast<void *>(out_data[activation::kOut].prv_data<DType>());
+          reinterpret_cast<void *>(mkl_prv_data<DType>(out_data[activation::kOut]));
 
 #endif
     if (NULL == top_data) {
@@ -233,7 +245,7 @@ class MKLReluOp : public Operator {
     relu_res[dnnResourceSrc] = top_data;
     std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-      out_grad[activation::kOut].get_mkl_mem();
+      out_grad[activation::kOut].Mkl_mem_;
 #else
       NULL;
 #endif
@@ -243,7 +255,7 @@ class MKLReluOp : public Operator {
     if (bwd_bottom_diff_->conversion_needed()) {
       relu_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[activation::kData].get_mkl_mem();
+      std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[activation::kData].Mkl_mem_;
       bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
 #endif
     } else {

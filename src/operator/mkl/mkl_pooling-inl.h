@@ -27,7 +27,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../pooling-inl.h"
-
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -205,8 +205,10 @@ class MKLPoolingOp : public Operator {
     if (param_.kernel.ndim() >= 3) {
       LOG(FATAL) << "Not implmented";
     }
-    Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get_direct<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> out = out_data[pool_enum::kOut].get_direct<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_data[pool_enum::kData]);
+    Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(out_data[pool_enum::kOut]);
+    Tensor<xpu, 4, DType> out = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
     //        mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     if (!init_mkldnn_) {
       LayerSetUp(data, out);
@@ -234,7 +236,7 @@ class MKLPoolingOp : public Operator {
     void* bottom_data = NULL;
 #if MKL_EXPERIMENTAL == 1
     bottom_data =
-          reinterpret_cast<void *>(in_data[pool_enum::kData].prv_data<DType>());
+          reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[pool_enum::kData]));
 #endif
     if (NULL == bottom_data) {
       bottom_data = data.dptr_;
@@ -255,7 +257,7 @@ class MKLPoolingOp : public Operator {
 #if MKL_EXPERIMENTAL == 1
     if (NULL != bottom_data) {
        if (NULL == poolingFwd) {
-          std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[pool_enum::kData].get_mkl_mem();
+          std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[pool_enum::kData].Mkl_mem_;
           std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
             bottom_data_mem->get_prv_descriptor();
           CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
@@ -304,7 +306,7 @@ class MKLPoolingOp : public Operator {
     pooling_res[dnnResourceWorkspace] = max_idx_data;
     if (fwd_top_data->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLMemHolder> top_mem = out_data[pool_enum::kOut].get_mkl_mem();
+    std::shared_ptr<MKLMemHolder> top_mem = out_data[pool_enum::kOut].Mkl_mem_;
       top_mem->set_prv_descriptor(fwd_top_data, true);
 #endif
       pooling_res[dnnResourceDst] = reinterpret_cast<void *>(fwd_top_data->prv_ptr());
@@ -340,8 +342,10 @@ class MKLPoolingOp : public Operator {
       LOG(FATAL) << "Not implmented";
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4, DType> grad = out_grad[pool_enum::kOut].get_direct<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> input_grad = in_grad[pool_enum::kData].get_direct<xpu, 4, DType>(s);
+    mkl_set_priv_flag(out_grad[pool_enum::kOut]);
+    Tensor<xpu, 4, DType> grad = out_grad[pool_enum::kOut].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_grad[pool_enum::kData]);
+    Tensor<xpu, 4, DType> input_grad = in_grad[pool_enum::kData].get<xpu, 4, DType>(s);
 
     dnnError_t e;
     void* pooling_res[dnnResourceNumber];
@@ -349,7 +353,7 @@ class MKLPoolingOp : public Operator {
 
     std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-      out_grad[pool_enum::kOut].get_mkl_mem();
+      out_grad[pool_enum::kOut].Mkl_mem_;
 #else
       NULL;
 #endif
@@ -358,7 +362,7 @@ class MKLPoolingOp : public Operator {
     if (bwd_bottom_diff->conversion_needed()) {
       pooling_res[dnnResourceDiffSrc] = bwd_bottom_diff->prv_ptr();
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[pool_enum::kData].get_mkl_mem();
+      std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[pool_enum::kData].Mkl_mem_;
       bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff);
 #endif
     } else {

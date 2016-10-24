@@ -31,6 +31,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -127,11 +128,15 @@ class MKLBatchNormOp : public Operator {
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[batchnorm::kData].shape_[0],
                                in_data[batchnorm::kData].shape_[1], 1, 1);
-      data = in_data[batchnorm::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
-      out = out_data[batchnorm::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(in_data[batchnorm::kData]);
+      data = in_data[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(out_data[batchnorm::kOut]);
+      out = out_data[batchnorm::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
     } else {
-      data = in_data[batchnorm::kData].get_direct<xpu, 4, DType>(s);
-      out = out_data[batchnorm::kOut].get_direct<xpu, 4, DType>(s);
+      mkl_set_priv_flag(in_data[batchnorm::kData]);
+      data = in_data[batchnorm::kData].get<xpu, 4, DType>(s);
+      mkl_set_priv_flag(out_data[batchnorm::kOut]);
+      out = out_data[batchnorm::kOut].get<xpu, 4, DType>(s);
     }
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> bias = in_data[batchnorm::kBeta].get<xpu, 1, DType>(s);
@@ -146,7 +151,7 @@ class MKLBatchNormOp : public Operator {
     void* bottom_data = NULL;
 #if MKL_EXPERIMENTAL == 1
     bottom_data =
-          reinterpret_cast<void *>(in_data[batchnorm::kData].prv_data<DType>());
+          reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[batchnorm::kData]));
 #endif
 
     int is_first_pass = 0;
@@ -155,7 +160,7 @@ class MKLBatchNormOp : public Operator {
       // Is it the first pass? Create a primitive.
       if (batchNormFwd == NULL) {
         is_first_pass = 1;
-        std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[batchnorm::kData].get_mkl_mem();
+        std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[batchnorm::kData].Mkl_mem_;
         std::shared_ptr<PrvMemDescr> bottom_prv_desc =
           bottom_data_mem->get_prv_descriptor();
         CHECK(bottom_prv_desc->get_descr_type() ==
@@ -259,7 +264,7 @@ class MKLBatchNormOp : public Operator {
       BatchNorm_res[dnnResourceScaleShift] = scaleShift_buffer_;
       if (fwd_top_data->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLMemHolder> topDnnChunk = out_data[batchnorm::kOut].get_mkl_mem();
+      std::shared_ptr<MKLMemHolder> topDnnChunk = out_data[batchnorm::kOut].Mkl_mem_;
       topDnnChunk->set_prv_descriptor(fwd_top_data);
 #endif
         BatchNorm_res[dnnResourceDst] =
@@ -303,13 +308,19 @@ class MKLBatchNormOp : public Operator {
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[batchnorm::kOut].shape_[0],
                                out_grad[batchnorm::kOut].shape_[1], 1, 1);
-      data = in_data[batchnorm::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
-      grad = out_grad[batchnorm::kOut].get_with_shape_direct<xpu, 4, DType>(dshape, s);
-      grad_in = in_grad[batchnorm::kData].get_with_shape_direct<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(in_data[batchnorm::kData]);
+      data = in_data[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(out_grad[batchnorm::kOut]);
+      grad = out_grad[batchnorm::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      mkl_set_priv_flag(in_grad[batchnorm::kData]);
+      grad_in = in_grad[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
     } else {
-      data = in_data[batchnorm::kData].get_direct<xpu, 4, DType>(s);
-      grad = out_grad[batchnorm::kOut].get_direct<xpu, 4, DType>(s);
-      grad_in = in_grad[batchnorm::kData].get_direct<xpu, 4, DType>(s);
+      mkl_set_priv_flag(in_data[batchnorm::kData]);
+      data = in_data[batchnorm::kData].get<xpu, 4, DType>(s);
+      mkl_set_priv_flag(out_grad[batchnorm::kOut]);
+      grad = out_grad[batchnorm::kOut].get<xpu, 4, DType>(s);
+      mkl_set_priv_flag(in_grad[batchnorm::kData]);
+      grad_in = in_grad[batchnorm::kData].get<xpu, 4, DType>(s);
     }
 
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);
@@ -333,7 +344,7 @@ class MKLBatchNormOp : public Operator {
       void* bottom_data = NULL;
 #if MKL_EXPERIMENTAL == 1
       bottom_data =
-          reinterpret_cast<void *>(in_data[batchnorm::kData].prv_data<DType>());
+          reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[batchnorm::kData]));
 #endif
       if (NULL == bottom_data) {
         bottom_data =
@@ -349,7 +360,7 @@ class MKLBatchNormOp : public Operator {
 
       std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-        out_grad[batchnorm::kOut].get_mkl_mem();
+        out_grad[batchnorm::kOut].Mkl_mem_;
 #else
         NULL;
 #endif
@@ -359,7 +370,7 @@ class MKLBatchNormOp : public Operator {
 
     std::shared_ptr<MKLMemHolder> bottom_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-      in_grad[batchnorm::kData].get_mkl_mem();
+      in_grad[batchnorm::kData].Mkl_mem_;
 #else
       NULL;
 #endif

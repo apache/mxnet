@@ -30,6 +30,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -112,8 +113,10 @@ class MKLLRNOp : public Operator {
     CHECK_EQ(out_data.size(), 2);
     CHECK_EQ(param_.nsize % 2, 1) << "LRN only supports odd values for local_size";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get_direct<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> out = out_data[lrn_enum::kOut].get_direct<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_data[lrn_enum::kData]);
+    Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(out_data[lrn_enum::kOut]);
+    Tensor<xpu, 4, DType> out = out_data[lrn_enum::kOut].get<xpu, 4, DType>(s);
 
     if (!init_mkldnn_) {
       LayerSetup(data, out);
@@ -123,13 +126,13 @@ class MKLLRNOp : public Operator {
     const void* bottom_data = NULL;
 #if MKL_EXPERIMENTAL == 1
     bottom_data =
-          reinterpret_cast<void*>(in_data[lrn_enum::kData].prv_data<DType>());
+          reinterpret_cast<void*>(mkl_prv_data<DType>(in_data[lrn_enum::kData]));
 #endif
 #if MKL_EXPERIMENTAL == 1
     if (NULL != bottom_data) {
       if (lrnFwd == NULL) {
         std::shared_ptr<MKLMemHolder> bottom_data_mem =
-          in_data[lrn_enum::kData].get_mkl_mem();
+          in_data[lrn_enum::kData].Mkl_mem_;
         std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
           bottom_data_mem->get_prv_descriptor();
         CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
@@ -195,7 +198,7 @@ class MKLLRNOp : public Operator {
     lrn_res[dnnResourceSrc] = const_cast<void*>(bottom_data);
 #if MKL_EXPERIMENTAL == 1
     if (fwd_top_data_->conversion_needed()) {
-      std::shared_ptr<MKLMemHolder> top_mem = out_data[lrn_enum::kOut].get_mkl_mem();
+      std::shared_ptr<MKLMemHolder> top_mem = out_data[lrn_enum::kOut].Mkl_mem_;
       lrn_res[dnnResourceDst] =
         reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
       top_mem->set_prv_descriptor(fwd_top_data_);
@@ -224,15 +227,18 @@ class MKLLRNOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4, DType> grad = out_grad[lrn_enum::kOut].get_direct<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get_direct<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> grad_in = in_grad[lrn_enum::kData].get_direct<xpu, 4, DType>(s);
+    mkl_set_priv_flag(out_grad[lrn_enum::kOut]);
+    Tensor<xpu, 4, DType> grad = out_grad[lrn_enum::kOut].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_data[lrn_enum::kData]);
+    Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_grad[lrn_enum::kData]);
+    Tensor<xpu, 4, DType> grad_in = in_grad[lrn_enum::kData].get<xpu, 4, DType>(s);
 
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
     std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-      out_grad[lrn_enum::kOut].get_mkl_mem();
+      out_grad[lrn_enum::kOut].Mkl_mem_;
 #else
       NULL;
 #endif
@@ -242,7 +248,7 @@ class MKLLRNOp : public Operator {
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
     std::shared_ptr<MKLMemHolder> bottom_diff_mem =
 #if MKL_EXPERIMENTAL == 1
-      in_grad[lrn_enum::kData].get_mkl_mem();
+      in_grad[lrn_enum::kData].Mkl_mem_;
 #else
       NULL;
 #endif

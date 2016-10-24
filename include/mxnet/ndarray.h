@@ -83,7 +83,7 @@ class NDArray {
         + offset_, shape_, ptr_->shandle.ctx.dev_mask());
     });
 #if MKL_EXPERIMENTAL == 1
-    res.setMKLMemHolder(Mkl_mem_);
+    res.Mkl_mem_ = Mkl_mem_;
 #endif
     return res;
   }

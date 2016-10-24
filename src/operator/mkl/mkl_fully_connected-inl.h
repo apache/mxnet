@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <vector>
 #include "../activation-inl.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
