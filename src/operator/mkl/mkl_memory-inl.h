@@ -108,7 +108,11 @@ struct MKLMemoryDescriptor : MKLMemoryDescriptorBase<DType> {
   // The last get_converted_prv() argument is a hack for reusing
   // in backward a conversion done already in the forward direction.
   DType* get_converted_prv(DType *data_ptr, bool set_prv_ptr,
+#if MKL_EXPERIMENTAL == 0
               std::shared_ptr<MKLMemHolder> holder = NULL,
+#else
+              std::shared_ptr<MKLMemHolder> dnnChunk,
+#endif
               MKLMemoryDescriptor<DType>* converted_in_fwd = NULL);
 
   MKLMemoryDescriptor() {}

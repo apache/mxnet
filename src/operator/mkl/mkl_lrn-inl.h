@@ -13,7 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *
-* \file mkl_memory.cc
+* \file mkl_lrn-inl.h
 * \brief
 * \author zhenlin.luo@intel.com
 *         lingyan.guo@intel.com
@@ -30,6 +30,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -112,7 +113,9 @@ class MKLLRNOp : public Operator {
     CHECK_EQ(out_data.size(), 2);
     CHECK_EQ(param_.nsize % 2, 1) << "LRN only supports odd values for local_size";
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    mkl_set_priv_flag(in_data[lrn_enum::kData]);
     Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(out_data[lrn_enum::kOut]);
     Tensor<xpu, 4, DType> out = out_data[lrn_enum::kOut].get<xpu, 4, DType>(s);
 
     if (!init_mkldnn_) {
@@ -121,6 +124,51 @@ class MKLLRNOp : public Operator {
     }
 
     const void* bottom_data = NULL;
+#if MKL_EXPERIMENTAL == 1
+    bottom_data =
+          reinterpret_cast<void*>(mkl_prv_data<DType>(in_data[lrn_enum::kData]));
+#endif
+#if MKL_EXPERIMENTAL == 1
+    if (NULL != bottom_data) {
+      if (lrnFwd == NULL) {
+        std::shared_ptr<MKLMemHolder> bottom_data_mem =
+          in_data[lrn_enum::kData].Mkl_mem_;
+        std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
+          bottom_data_mem->get_prv_descriptor();
+        CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
+            PrvMemDescr::PRV_DESCR_MKL2017);
+        std::shared_ptr<MKLData<DType> > mem_descr
+          = std::static_pointer_cast<MKLData<DType>>(bottom_prv_descriptor);
+        CHECK(mem_descr != nullptr);
+        fwd_bottom_data_ = mem_descr;
+
+        dnnError_t e;
+        dnnLayout_t lrn_buffer_l = NULL;
+
+        e = dnnLRNCreateForward<DType>(&lrnFwd, NULL, fwd_bottom_data_->layout_int,
+                                       size_, alpha_, beta_, k_);
+        CHECK_EQ(e, E_SUCCESS);
+
+        fwd_top_data_->create_internal_layout(lrnFwd, dnnResourceDst);
+
+        e = dnnLRNCreateBackward<DType>(&lrnBwd, NULL,
+                                        fwd_bottom_data_->layout_int, fwd_bottom_data_->layout_int,
+                                        size_, alpha_, beta_, k_);
+        CHECK_EQ(e, E_SUCCESS);
+
+        e = dnnLayoutCreateFromPrimitive<DType>(
+              &lrn_buffer_l, lrnFwd, dnnResourceWorkspace);
+        CHECK_EQ(e, E_SUCCESS);
+        e = dnnAllocateBuffer<DType>(
+              reinterpret_cast<void **>(&lrn_buffer_), lrn_buffer_l);
+        CHECK_EQ(e, E_SUCCESS);
+        dnnLayoutDelete<DType>(lrn_buffer_l);
+
+        bwd_top_diff_->create_internal_layout(lrnBwd, dnnResourceDiffDst);
+        bwd_bottom_diff_->create_internal_layout(lrnBwd, dnnResourceDiffSrc);
+      }
+    }
+#endif
     if (bottom_data == NULL) {
       if (lrnFwd == NULL) {
         dnnError_t e;
@@ -148,8 +196,19 @@ class MKLLRNOp : public Operator {
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
     lrn_res[dnnResourceSrc] = const_cast<void*>(bottom_data);
+#if MKL_EXPERIMENTAL == 1
+    if (fwd_top_data_->conversion_needed()) {
+      std::shared_ptr<MKLMemHolder> top_mem = out_data[lrn_enum::kOut].Mkl_mem_;
+      lrn_res[dnnResourceDst] =
+        reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
+      top_mem->set_prv_descriptor(fwd_top_data_);
+    } else {
+#endif
     lrn_res[dnnResourceDst] =
       reinterpret_cast<void *>(out.dptr_);
+#if MKL_EXPERIMENTAL == 1
+    }
+#endif
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
     e = dnnExecute<DType>(lrnFwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
@@ -168,20 +227,44 @@ class MKLLRNOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    mkl_set_priv_flag(out_grad[lrn_enum::kOut]);
     Tensor<xpu, 4, DType> grad = out_grad[lrn_enum::kOut].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_data[lrn_enum::kData]);
     Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_grad[lrn_enum::kData]);
     Tensor<xpu, 4, DType> grad_in = in_grad[lrn_enum::kData].get<xpu, 4, DType>(s);
 
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
-
+    std::shared_ptr<MKLMemHolder> top_diff_mem =
+#if MKL_EXPERIMENTAL == 1
+      out_grad[lrn_enum::kOut].Mkl_mem_;
+#else
+      NULL;
+#endif
     lrn_res[dnnResourceDiffDst] =
-      bwd_top_diff_->get_converted_prv(grad.dptr_, false);
+      bwd_top_diff_->get_converted_prv(grad.dptr_, true, top_diff_mem);
 
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
+    std::shared_ptr<MKLMemHolder> bottom_diff_mem =
+#if MKL_EXPERIMENTAL == 1
+      in_grad[lrn_enum::kData].Mkl_mem_;
+#else
+      NULL;
+#endif
     lrn_res[dnnResourceSrc] =
-      fwd_bottom_data_->get_converted_prv(data.dptr_, false);
+      fwd_bottom_data_->get_converted_prv(data.dptr_, false, bottom_diff_mem);
+
+#if MKL_EXPERIMENTAL == 1
+    if (bwd_bottom_diff_->conversion_needed()) {
+      lrn_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
+      bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
+    } else {
+#endif
     lrn_res[dnnResourceDiffSrc] = grad_in.dptr_;
+#if MKL_EXPERIMENTAL == 1
+    }
+#endif
     e = dnnExecute<DType>(lrnBwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
   }
@@ -212,3 +295,4 @@ class MKLLRNOp : public Operator {
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_MKL_MKL_LRN_INL_H_
+

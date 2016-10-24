@@ -32,6 +32,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -105,32 +106,40 @@ class MKLElementWiseOp : public Operator {
     if (in_data[0].ndim() == 1) {
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_data[i].shape_[0], 1, 1, 1);
-          data[i] = in_data[i].get_with_shape<xpu, 4, DType>(dshape, s);
+        mkl_set_priv_flag(in_data[i]);
+        data[i] = in_data[i].get_with_shape<xpu, 4, DType>(dshape, s);
       }
       Shape<4> dshape = Shape4(out_data[elemsum::kOut].shape_[0], 1, 1, 1);
+      mkl_set_priv_flag(out_data[elemsum::kOut]);
       out = out_data[elemsum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
     } else if (in_data[0].ndim() == 2) {
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_data[i].shape_[0],
                                  in_data[i].shape_[1], 1, 1);
+        mkl_set_priv_flag(in_data[i]);
         data[i] = in_data[i].get_with_shape<xpu, 4, DType>(dshape, s);
       }
       Shape<4> dshape = Shape4(out_data[elemsum::kOut].shape_[0],
                                out_data[elemsum::kOut].shape_[1], 1, 1);
+      mkl_set_priv_flag(out_data[elemsum::kOut]);
       out = out_data[elemsum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
     } else if (in_data[0].ndim() == 3) {
       for (int i = 0; i < size_; ++i) {
         Shape<4> dshape = Shape4(in_data[i].shape_[0],
                                  in_data[i].shape_[1], in_data[i].shape_[2], 1);
+        mkl_set_priv_flag(in_data[i]);
         data[i] = in_data[i].get_with_shape<xpu, 4, DType>(dshape, s);
       }
       Shape<4> dshape = Shape4(out_data[elemsum::kOut].shape_[0],
                                out_data[elemsum::kOut].shape_[1],
                                out_data[elemsum::kOut].shape_[2], 1);
+      mkl_set_priv_flag(out_data[elemsum::kOut]);
       out = out_data[elemsum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
       } else {
-        out = out_data[elemsum::kOut].get<xpu, 4, DType>(s);
+      mkl_set_priv_flag(out_data[elemsum::kOut]);
+      out = out_data[elemsum::kOut].get<xpu, 4, DType>(s);
         for (int i = 0; i < size_; ++i) {
+          mkl_set_priv_flag(in_data[i]);
           data[i] = in_data[i].get<xpu, 4, DType>(s);
         }
       }
@@ -141,14 +150,65 @@ class MKLElementWiseOp : public Operator {
 
     dnnError_t e;
     std::vector<void*> bottom_data;
+
+    int num_prv = 0;
+
     for (size_t i = 0; i < num_bottoms; i++) {
-      bottom_data.push_back(reinterpret_cast<void *>(in_data[i].dptr_));
+      void * i_data = NULL;
+#if MKL_EXPERIMENTAL == 1
+      i_data = reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[i]));
+      if (i_data != NULL) {
+        bottom_data.push_back(i_data);
+        num_prv += 1;
+      }
+#endif
+      if (i_data == NULL) {
+        bottom_data.push_back(reinterpret_cast<void *>(in_data[i].dptr_));
+      }
     }
 
-    if (sumPrimitive == NULL) {
-      e = dnnSumCreate<DType>(&sumPrimitive, NULL, num_bottoms,
-                              fwd_top_data->layout_usr, &coeffs_[0]);
-      CHECK_EQ(e, E_SUCCESS);
+#if MKL_EXPERIMENTAL == 1
+    if (num_prv > 0) {
+      if (sumPrimitive == NULL) {
+        dnnLayout_t int_layout = NULL;
+        for (size_t i = 0; i < num_bottoms; ++i) {
+          if (mkl_prv_data<DType>(in_data[i]) != NULL) {
+            std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[i].Mkl_mem_;
+            std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
+              bottom_data_mem->get_prv_descriptor();
+            CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
+                PrvMemDescr::PRV_DESCR_MKL2017);
+            std::shared_ptr<MKLData<DType> > mem_descr
+              = std::static_pointer_cast<MKLData<DType>>(bottom_prv_descriptor);
+
+            CHECK(mem_descr != NULL);
+            fwd_bottom_data_[i] = mem_descr;
+            if (int_layout == NULL) {
+              int_layout = mem_descr->layout_int;
+            }
+          }
+        }
+        e = dnnSumCreate<DType>(&sumPrimitive, NULL,
+                                num_bottoms, int_layout, &coeffs_[0]);
+        CHECK_EQ(e, E_SUCCESS);
+
+        fwd_top_data->create_internal_layout(sumPrimitive, dnnResourceDst);
+
+        for (int i = 0; i < num_bottoms; ++i) {
+          if (mkl_prv_data<DType>(in_data[i]) == NULL) {
+            fwd_bottom_data_[i]->create_internal_layout(sumPrimitive,
+                (dnnResourceType_t)(dnnResourceMultipleSrc + i));
+          }
+        }
+      }
+    }
+#endif
+    if (num_prv == 0) {
+      if (sumPrimitive == NULL) {
+        e = dnnSumCreate<DType>(&sumPrimitive, NULL, num_bottoms,
+                                fwd_top_data->layout_usr, &coeffs_[0]);
+        CHECK_EQ(e, E_SUCCESS);
+      }
     }
 
 
@@ -157,8 +217,14 @@ class MKLElementWiseOp : public Operator {
       void *eltwise_res[dnnResourceNumber];
       for (int i = 0; i < num_bottoms; ++i) {
         if (fwd_bottom_data_[i]->conversion_needed()) {
+          std::shared_ptr<MKLMemHolder> in_data_mem =
+#if MKL_EXPERIMENTAL == 1
+            in_data[i].Mkl_mem_;
+#else
+            NULL;
+#endif
           eltwise_res[dnnResourceMultipleSrc + i] =
-          fwd_bottom_data_[i]->get_converted_prv(data[i].dptr_, false);
+            fwd_bottom_data_[i]->get_converted_prv(data[i].dptr_, false, in_data_mem);
         } else {
           eltwise_res[dnnResourceMultipleSrc + i] =
             reinterpret_cast<void *>(bottom_data[i]);
@@ -166,6 +232,10 @@ class MKLElementWiseOp : public Operator {
       }
 
       if (fwd_top_data->conversion_needed()) {
+#if MKL_EXPERIMENTAL == 1
+        std::shared_ptr<MKLMemHolder> top_mem = out_data[elemsum::kOut].Mkl_mem_;
+        top_mem->set_prv_descriptor(fwd_top_data);
+#endif
         eltwise_res[dnnResourceDst] =
           reinterpret_cast<void*>(fwd_top_data->prv_ptr());
       } else {
@@ -175,10 +245,11 @@ class MKLElementWiseOp : public Operator {
 
       e = dnnExecute<DType>(sumPrimitive, eltwise_res);
       CHECK_EQ(e, E_SUCCESS);
-
+#if MKL_EXPERIMENTAL == 0
       if (fwd_top_data->conversion_needed()) {
         fwd_top_data->convert_from_prv(out.dptr_);
       }
+#endif
       break;
 
     case EltwiseParameter_EltwiseOp_PROD:
@@ -188,7 +259,6 @@ class MKLElementWiseOp : public Operator {
       LOG(FATAL) << "Unknown elementwise operation.";
     }
   }
-
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -204,53 +274,96 @@ class MKLElementWiseOp : public Operator {
     std::vector<Tensor<xpu, 4, DType> > igrad(size_);
     if (in_grad[0].ndim() == 1) {
       Shape<4> dshape = Shape4(out_grad[elemsum::kOut].shape_[0], 1, 1, 1);
+      mkl_set_priv_flag(out_grad[elemsum::kOut]);
       ograd = out_grad[elemsum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
 
       for (int i = 0; i < size_; ++i) {
         dshape = Shape4(in_grad[i].shape_[0], 1, 1, 1);
+        mkl_set_priv_flag(in_grad[i]);
         igrad[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
       }
     } else if (in_grad[0].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[elemsum::kOut].shape_[0],
                                out_grad[elemsum::kOut].shape_[1], 1, 1);
+      mkl_set_priv_flag(out_grad[elemsum::kOut]);
       ograd = out_grad[elemsum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
 
       for (int i = 0; i < size_; ++i) {
         dshape = Shape4(in_grad[i].shape_[0], in_grad[i].shape_[1], 1, 1);
-                        igrad[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
+        mkl_set_priv_flag(in_grad[i]);
+        igrad[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
       }
     } else if (in_grad[0].ndim() == 3) {
       Shape<4> dshape = Shape4(out_grad[elemsum::kOut].shape_[0],
                                out_grad[elemsum::kOut].shape_[1],
                                out_grad[elemsum::kOut].shape_[2], 1);
+      mkl_set_priv_flag(out_grad[elemsum::kOut]);
       ograd = out_grad[elemsum::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
       for (int i = 0; i < size_; ++i) {
         dshape = Shape4(in_grad[i].shape_[0], in_grad[i].shape_[1], in_grad[i].shape_[2], 1);
+        mkl_set_priv_flag(in_grad[i]);
         igrad[i] = in_grad[i].get_with_shape<xpu, 4, DType>(dshape, s);
       }
     } else {
+      mkl_set_priv_flag(out_grad[elemsum::kOut]);
       ograd = out_grad[elemsum::kOut].get<xpu, 4, DType>(s);
       for (int i = 0; i < size_; ++i) {
         if (req[i] == kNullOp || req[i] == kWriteInplace) continue;
+        mkl_set_priv_flag(in_grad[i]);
         igrad[i] = in_grad[i].get<xpu, 4, DType>(s);
       }
     }
     const DType* top_diff = NULL;
+#if MKL_EXPERIMENTAL == 1
+    top_diff = mkl_prv_data<DType>(out_grad[elemsum::kOut]);
+#endif
     int count = 0;
+
+    bool is_top_diff_prv = false;
+
     // If there is no diff in prv layout
     // then we are given cpu layout
     // and we will produce bottom at cpu layout as well
+#if MKL_EXPERIMENTAL == 1
+    if (top_diff != NULL) {
+      count = mkl_prv_count<DType>(out_grad[elemsum::kOut]);
+      is_top_diff_prv = true;
+    }
+#endif
     if (top_diff == NULL) {
       top_diff = ograd.dptr_;
       count = ograd.MSize();
     }
     DType* bottom_diff = NULL;
+    std::shared_ptr<MKLMemHolder> top_diff_mem =
+#if MKL_EXPERIMENTAL == 1
+      out_grad[elemsum::kOut].Mkl_mem_;
+#else
+      NULL;
+#endif
     for (int i = 0; i < size_; ++i) {
       if (req[i] == kNullOp || req[i] == kWriteInplace) continue;
       switch (op_) {
         case EltwiseParameter_EltwiseOp_SUM:
           CHECK_EQ(coeffs_[i], DType(1)) << "Not supported yet";
-          bottom_diff = igrad[i].dptr_;
+
+          if (!is_top_diff_prv) {
+            bottom_diff = igrad[i].dptr_;
+          }
+#if MKL_EXPERIMENTAL == 1
+          if (is_top_diff_prv) {
+              if (!bwd_bottom_diff[i]->layout_int) {
+                bwd_bottom_diff[i]->create_internal_layout(sumPrimitive,
+                    (dnnResourceType_t)(dnnResourceMultipleSrc + i));
+              }
+              CHECK_EQ(true, bwd_bottom_diff[i]->layout_compare(
+                    top_diff_mem->get_prv_descriptor()));
+              std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[i].Mkl_mem_;
+              bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff[i]);
+              bottom_diff =
+                reinterpret_cast<DType*>(bwd_bottom_diff[i]->prv_ptr());
+          }
+#endif
           memcpy(reinterpret_cast<void*>(bottom_diff),
             reinterpret_cast<const void*>(top_diff), sizeof(DType) * count);
           break;

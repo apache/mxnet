@@ -27,7 +27,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../pooling-inl.h"
-
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -205,8 +205,11 @@ class MKLPoolingOp : public Operator {
     if (param_.kernel.ndim() >= 3) {
       LOG(FATAL) << "Not implmented";
     }
+    mkl_set_priv_flag(in_data[pool_enum::kData]);
     Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(out_data[pool_enum::kOut]);
     Tensor<xpu, 4, DType> out = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
+    //        mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     if (!init_mkldnn_) {
       LayerSetUp(data, out);
       init_mkldnn_ = true;
@@ -231,6 +234,10 @@ class MKLPoolingOp : public Operator {
     void* pooling_res[dnnResourceNumber];
 
     void* bottom_data = NULL;
+#if MKL_EXPERIMENTAL == 1
+    bottom_data =
+          reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[pool_enum::kData]));
+#endif
     if (NULL == bottom_data) {
       bottom_data = data.dptr_;
       if (NULL == poolingFwd) {
@@ -239,7 +246,6 @@ class MKLPoolingOp : public Operator {
                                                 kernel_size, kernel_stride,
                                                 src_offset, dnnBorderZeros);
       CHECK_EQ(status, E_SUCCESS);
-
       // Now create poolingBwd
       status = dnnPoolingCreateBackward<DType>(&poolingBwd, NULL,
                                                algorithm, fwd_bottom_data->layout_usr,
@@ -248,6 +254,38 @@ class MKLPoolingOp : public Operator {
       CHECK_EQ(status, E_SUCCESS);
       }
     }
+#if MKL_EXPERIMENTAL == 1
+    if (NULL != bottom_data) {
+       if (NULL == poolingFwd) {
+          std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[pool_enum::kData].Mkl_mem_;
+          std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
+            bottom_data_mem->get_prv_descriptor();
+          CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
+                   PrvMemDescr::PRV_DESCR_MKL2017);
+          std::shared_ptr<MKLData<DType> > mem_descr
+            = std::static_pointer_cast<MKLData<DType>>(bottom_prv_descriptor);
+          CHECK(mem_descr != nullptr);
+          fwd_bottom_data = mem_descr;
+
+          status = dnnPoolingCreateForward<DType>(&poolingFwd, NULL,
+                                                  algorithm, fwd_bottom_data->layout_int,
+                                                  kernel_size, kernel_stride,
+                                                  src_offset, dnnBorderZeros);
+          CHECK_EQ(status, E_SUCCESS);
+          fwd_top_data->create_internal_layout(poolingFwd, dnnResourceDst);
+
+          // Now create poolingBwd
+          status = dnnPoolingCreateBackward<DType>(&poolingBwd, NULL,
+                                                   algorithm, fwd_bottom_data->layout_int,
+                                                   kernel_size, kernel_stride,
+                                                   src_offset, dnnBorderZeros);
+          CHECK_EQ(status, E_SUCCESS);
+          bwd_top_diff->create_internal_layout(poolingFwd, dnnResourceDst);
+          bwd_bottom_diff->create_internal_layout(poolingFwd, dnnResourceSrc);
+        }
+    }
+#endif
+
     if (first_pass) {
       dnnLayout_t max_idx_datal = NULL;
       status = dnnLayoutCreateFromPrimitive<DType>(
@@ -255,27 +293,33 @@ class MKLPoolingOp : public Operator {
       CHECK_EQ(status, E_SUCCESS);
       status = dnnAllocateBuffer<DType>(reinterpret_cast<void**>(&max_idx_data), max_idx_datal);
       CHECK_EQ(status, E_SUCCESS);
-
+#if MKL_EXPERIMENTAL == 0
       fwd_bottom_data->create_internal_layout(poolingFwd, dnnResourceSrc);
       fwd_top_data->create_internal_layout(poolingFwd, dnnResourceDst);
       bwd_top_diff->create_internal_layout(poolingBwd, dnnResourceDiffDst);
       bwd_bottom_diff->create_internal_layout(poolingBwd, dnnResourceDiffSrc);
-
+#endif
       dnnLayoutDelete<DType>(max_idx_datal);
       first_pass = false;
     }
     pooling_res[dnnResourceSrc] = bottom_data;
     pooling_res[dnnResourceWorkspace] = max_idx_data;
     if (fwd_top_data->conversion_needed()) {
+#if MKL_EXPERIMENTAL == 1
+    std::shared_ptr<MKLMemHolder> top_mem = out_data[pool_enum::kOut].Mkl_mem_;
+      top_mem->set_prv_descriptor(fwd_top_data, true);
+#endif
       pooling_res[dnnResourceDst] = reinterpret_cast<void *>(fwd_top_data->prv_ptr());
     } else {
       pooling_res[dnnResourceDst] = reinterpret_cast<void *>(out.dptr_);
     }
     status = dnnExecute<DType>(poolingFwd, pooling_res);
     CHECK_EQ(status, E_SUCCESS);
+#if MKL_EXPERIMENTAL == 0
     if (fwd_top_data->conversion_needed()) {
       fwd_top_data->convert_from_prv(out.dptr_);
     }
+#endif
   }
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
@@ -298,25 +342,39 @@ class MKLPoolingOp : public Operator {
       LOG(FATAL) << "Not implmented";
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    mkl_set_priv_flag(out_grad[pool_enum::kOut]);
     Tensor<xpu, 4, DType> grad = out_grad[pool_enum::kOut].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_grad[pool_enum::kData]);
     Tensor<xpu, 4, DType> input_grad = in_grad[pool_enum::kData].get<xpu, 4, DType>(s);
 
     dnnError_t e;
     void* pooling_res[dnnResourceNumber];
     pooling_res[dnnResourceWorkspace] = reinterpret_cast<void *>(max_idx_data);
 
+    std::shared_ptr<MKLMemHolder> top_diff_mem =
+#if MKL_EXPERIMENTAL == 1
+      out_grad[pool_enum::kOut].Mkl_mem_;
+#else
+      NULL;
+#endif
     pooling_res[dnnResourceDiffDst] =
-      bwd_top_diff->get_converted_prv(grad.dptr_, false);
+      bwd_top_diff->get_converted_prv(grad.dptr_, true, top_diff_mem);
     if (bwd_bottom_diff->conversion_needed()) {
       pooling_res[dnnResourceDiffSrc] = bwd_bottom_diff->prv_ptr();
+#if MKL_EXPERIMENTAL == 1
+      std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[pool_enum::kData].Mkl_mem_;
+      bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff);
+#endif
     } else {
       pooling_res[dnnResourceDiffSrc] = input_grad.dptr_;
     }
     e = dnnExecute<DType>(poolingBwd, pooling_res);
     CHECK_EQ(e, E_SUCCESS);
+#if MKL_EXPERIMENTAL == 0
     if (bwd_bottom_diff->conversion_needed()) {
       bwd_bottom_diff->convert_from_prv(input_grad.dptr_);
     }
+#endif
   }
 
  private:

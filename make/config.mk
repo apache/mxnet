@@ -62,6 +62,9 @@ USE_OPENMP = 1
 # whether use MKL2017 library
 USE_MKL2017 = 0
 
+# whether use MKL2017 experimental feature for high performance
+USE_MKL2017_EXPERIMENTAL = 0
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx

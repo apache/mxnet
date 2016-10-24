@@ -31,6 +31,7 @@
 #include <string>
 #include <utility>
 #include "../operator_common.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -275,8 +276,11 @@ class MKLConvolutionOp : public Operator {
     DType *data_ptr = NULL;
     DType *wmat_ptr = NULL;
     DType *out_ptr = NULL;
+    mkl_set_priv_flag(in_data[conv::kData]);
     Tensor<xpu, 4, DType> data = in_data[conv::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(out_data[conv::kOut]);
     Tensor<xpu, 4, DType> out = out_data[conv::kOut].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_data[conv::kWeight]);
     Tensor<xpu, 4, DType> wmat = in_data[conv::kWeight].get<xpu, 4, DType>(s);
     if (!init_mkldnn_) {
       LayerSetUp(data, out);
@@ -290,27 +294,57 @@ class MKLConvolutionOp : public Operator {
     out_ptr = out.dptr_;
     int status;
     void *res_convolutionFwd[dnnResourceNumber];
+    std::shared_ptr<MKLMemHolder> in_data_mem =
+#if MKL_EXPERIMENTAL == 1
+      in_data[conv::kData].Mkl_mem_;
+#else
+      NULL;
+#endif
     res_convolutionFwd[dnnResourceSrc] =
-      fwd_bottom_data->get_converted_prv(data_ptr, false);
+      fwd_bottom_data->get_converted_prv(data_ptr, false, in_data_mem);
+    std::shared_ptr<MKLMemHolder> in_weight_mem =
+#if MKL_EXPERIMENTAL == 1
+      in_data[conv::kWeight].Mkl_mem_;
+#else
+      NULL;
+#endif
     res_convolutionFwd[dnnResourceFilter] =
-      fwd_filter_data->get_converted_prv(wmat_ptr, false);
+      fwd_filter_data->get_converted_prv(wmat_ptr, true, in_weight_mem);
     if (!param_.no_bias) {
+      mkl_set_priv_flag(in_data[conv::kBias]);
       Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
+      std::shared_ptr<MKLMemHolder> in_bias_mem =
+#if MKL_EXPERIMENTAL == 1
+       in_data[conv::kBias].Mkl_mem_;
+#else
+       NULL;
+#endif
       res_convolutionFwd[dnnResourceBias] =
-        fwd_bias_data->get_converted_prv(bias.dptr_, false);
+        fwd_bias_data->get_converted_prv(bias.dptr_, true, in_bias_mem);
     }
 
+    std::shared_ptr<MKLMemHolder> top_mem =
+#if MKL_EXPERIMENTAL == 1
+     out_data[conv::kOut].Mkl_mem_;
+#else
+     NULL;
+#endif
     if (fwd_top_data->conversion_needed()) {
       res_convolutionFwd[dnnResourceDst] =
         reinterpret_cast<void *>(fwd_top_data->prv_ptr());
+#if MKL_EXPERIMENTAL == 1
+      top_mem->set_prv_descriptor(fwd_top_data);
+#endif
     } else {
       res_convolutionFwd[dnnResourceDst] = out_ptr;
     }
     status = dnnExecute<DType>(convolutionFwd, res_convolutionFwd);
     CHECK_EQ(status, 0) << "Forward convolution failed with status " << status;
+#if MKL_EXPERIMENTAL == 0
     if (fwd_top_data->conversion_needed()) {
         fwd_top_data->convert_from_prv(out_ptr);
     }
+#endif
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -330,15 +364,20 @@ class MKLConvolutionOp : public Operator {
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    mkl_set_priv_flag(in_data[conv::kData]);
     Tensor<xpu, 4, DType> data = in_data[conv::kData].get<xpu, 4, DType>(s);
     Shape<3> wmat_shape =
       Shape3(param_.num_group,
              param_.num_filter / param_.num_group,
              data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
+    mkl_set_priv_flag(in_data[conv::kWeight]);
     Tensor<xpu, 3, DType> wmat =
       in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+    mkl_set_priv_flag(out_grad[conv::kOut]);
     Tensor<xpu, 4, DType> grad = out_grad[conv::kOut].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_grad[conv::kData]);
     Tensor<xpu, 4, DType> gdata = in_grad[conv::kData].get<xpu, 4, DType>(s);
+    mkl_set_priv_flag(in_grad[conv::kWeight]);
     Tensor<xpu, 3, DType> gwmat =
       in_grad[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
     if (!init_mkldnn_) {
@@ -348,30 +387,68 @@ class MKLConvolutionOp : public Operator {
     int status;
     if (req[0]) {
       void *res_convolutionBwdData[dnnResourceNumber];
+      std::shared_ptr<MKLMemHolder> out_grad_mem =
+#if MKL_EXPERIMENTAL == 1
+       out_grad[conv::kOut].Mkl_mem_;
+#else
+       NULL;
+#endif
       res_convolutionBwdData[dnnResourceDiffDst] =
-        bwdd_top_diff->get_converted_prv(grad.dptr_, false);
+        bwdd_top_diff->get_converted_prv(grad.dptr_, true, out_grad_mem);
+      std::shared_ptr<MKLMemHolder> in_weight_mem =
+#if MKL_EXPERIMENTAL == 1
+        in_data[conv::kWeight].Mkl_mem_;
+#else
+        NULL;
+#endif
       res_convolutionBwdData[dnnResourceFilter] =
-        bwdd_filter_data->get_converted_prv(wmat.dptr_, false);
+        bwdd_filter_data->get_converted_prv(wmat.dptr_, false, in_weight_mem);
      if (bwdd_bottom_diff->conversion_needed()) {
        res_convolutionBwdData[dnnResourceDiffSrc] =
          reinterpret_cast<void *>(bwdd_bottom_diff->prv_ptr());
+#if MKL_EXPERIMENTAL == 1
+       std::shared_ptr<MKLMemHolder> bottom_diff_mem =
+         in_grad[conv::kData].Mkl_mem_;
+       bottom_diff_mem->set_prv_descriptor(bwdd_bottom_diff);
+#endif
      } else {
        res_convolutionBwdData[dnnResourceDiffSrc] = gdata.dptr_;
      }
      status = dnnExecute<DType>(convolutionBwdData, res_convolutionBwdData);
      CHECK_EQ(status, 0) << "Backward Data conv failed with status " << status;
+#if MKL_EXPERIMENTAL == 0
      if (bwdd_bottom_diff->conversion_needed()) {
        bwdd_bottom_diff->convert_from_prv(gdata.dptr_);
      }
+#endif
     }
     if (req[1]) {
       void *res_convolutionBwdFilter[dnnResourceNumber];
+      std::shared_ptr<MKLMemHolder> out_bias_mem =
+#if MKL_EXPERIMENTAL == 1
+        out_grad[conv::kOut].Mkl_mem_;
+#else
+        NULL;
+#endif
       res_convolutionBwdFilter[dnnResourceDiffDst] =
-        bwdf_top_diff->get_converted_prv(grad.dptr_, false);
+        bwdf_top_diff->get_converted_prv(grad.dptr_, true, out_bias_mem);
+      MKLMemoryDescriptor<DType>* fwd_bottom_data_desc = NULL;
+#if MKL_EXPERIMENTAL == 1
+      std::shared_ptr<MKLMemHolder> in_data_mem = in_data[conv::kData].Mkl_mem_;
+      fwd_bottom_data_desc = fwd_bottom_data.get();
+#else
+      std::shared_ptr<MKLMemHolder> in_data_mem = NULL;
+#endif
       res_convolutionBwdFilter[dnnResourceSrc] =
-        bwdf_bottom_data->get_converted_prv(data.dptr_, false, NULL,
-                                            fwd_bottom_data.get());
+        bwdf_bottom_data->get_converted_prv(data.dptr_, false,
+                                            in_data_mem,
+                                            fwd_bottom_data_desc);
      if (bwdf_filter_diff->conversion_needed()) {
+#if MKL_EXPERIMENTAL == 1
+       std::shared_ptr<MKLMemHolder> gwamt_mem =
+         in_grad[conv::kWeight].Mkl_mem_;
+       gwamt_mem->set_prv_descriptor(bwdf_filter_diff);
+#endif
        res_convolutionBwdFilter[dnnResourceDiffFilter] =
          reinterpret_cast<void *>(bwdf_filter_diff->prv_ptr());
      } else {
@@ -379,16 +456,29 @@ class MKLConvolutionOp : public Operator {
      }
      status = dnnExecute<DType>(convolutionBwdFilter, res_convolutionBwdFilter);
      CHECK_EQ(status, 0) << "Backward Filter conv failed with status " << status;
+#if MKL_EXPERIMENTAL == 0
      if (bwdf_filter_diff->conversion_needed()) {
        bwdf_filter_diff->convert_from_prv(gwmat.dptr_);
      }
+#endif
     }
     if (!param_.no_bias) {
+      mkl_set_priv_flag(in_grad[conv::kBias]);
       Tensor<xpu, 1, DType> gbias = in_grad[conv::kBias].get<xpu, 1, DType>(s);
       void *res_convolutionBwdBias[dnnResourceNumber];
+      std::shared_ptr<MKLMemHolder> out_grad_mem =
+#if MKL_EXPERIMENTAL == 1
+        out_grad[conv::kOut].Mkl_mem_;
+#else
+        NULL;
+#endif
       res_convolutionBwdBias[dnnResourceDiffDst] =
-        bwdb_top_diff->get_converted_prv(grad.dptr_, false);
+        bwdb_top_diff->get_converted_prv(grad.dptr_, true, out_grad_mem);
       if (bwdb_bias_diff->conversion_needed()) {
+#if MKL_EXPERIMENTAL == 1
+        std::shared_ptr<MKLMemHolder> gbias_mem = in_grad[conv::kBias].Mkl_mem_;
+        gbias_mem->set_prv_descriptor(bwdb_bias_diff);
+#endif
         res_convolutionBwdBias[dnnResourceDiffBias] =
           bwdb_bias_diff->prv_ptr();
       } else {
@@ -397,9 +487,11 @@ class MKLConvolutionOp : public Operator {
       }
       status = dnnExecute<DType>(convolutionBwdBias, res_convolutionBwdBias);
       CHECK_EQ(status, 0) << "Backward Bias failed with status " << status;
+#if MKL_EXPERIMENTAL == 0
       if (bwdb_bias_diff->conversion_needed()) {
         bwdb_bias_diff->convert_from_prv(gbias.dptr_);
       }
+#endif
     }
   }
 

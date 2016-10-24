@@ -169,20 +169,90 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
 template <typename Dtype>
 Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     Dtype *cpu_ptr, bool set_prv_ptr,
+#if MKL_EXPERIMENTAL == 0
     std::shared_ptr<MKLMemHolder> holder,
+#else
+    std::shared_ptr<MKLMemHolder> dnnChunk,
+#endif
     MKLMemoryDescriptor<Dtype>* converted_in_fwd) {
-  const Dtype* prv_ptr = NULL;
+  Dtype* prv_ptr = NULL;
+#if MKL_EXPERIMENTAL == 1
+  prv_ptr = static_cast<Dtype*>(dnnChunk->prv_data());
+#endif
 
-  if (this->convert_to_int) {
+  if (this->convert_to_int != NULL) {
+#if MKL_EXPERIMENTAL == 1
+    int status;
+    void *convert_resources[dnnResourceNumber];
+#endif
     if (prv_ptr == NULL) {
       if (converted_in_fwd) {
-          return converted_in_fwd->internal_ptr;
+        return converted_in_fwd->internal_ptr;
       }
       this->allocate();
       this->convert_to_prv(cpu_ptr);
-
+#if MKL_EXPERIMENTAL == 1
+      if (set_prv_ptr) {
+        dnnChunk->set_prv_descriptor(this->get_shared_ptr(), true);
+      }
+#endif
       return this->internal_ptr;
     }
+#if MKL_EXPERIMENTAL == 1
+    if (this->convert_to_int == NULL)  {
+      // This section helps if padding needs to be added (or removed...)
+      // TODO(intel): consider removing when no longer needed.
+      std::shared_ptr<PrvMemDescr> prv_mem_descriptor = dnnChunk->get_prv_descriptor();
+      CHECK_EQ(prv_mem_descriptor->get_descr_type(),
+        PrvMemDescr::PRV_DESCR_MKL2017);
+      std::shared_ptr<MKLMemoryDescriptor<Dtype> > current_descr =
+        std::static_pointer_cast<MKLMemoryDescriptor<Dtype> >
+        (prv_mem_descriptor);
+      if (!dnnLayoutCompare<Dtype>(current_descr->layout_int,
+        this->layout_int)) {
+        if (converted_in_fwd) {
+          // hack for reusing previously done conversion
+          // if(dnnLayoutCompare(converted_in_fwd->layout_int,this->layout_int))
+          if (true) {
+            return converted_in_fwd->internal_ptr;
+          }
+        }
+        if (this->convert_prv2prv) {
+          CHECK_EQ(dnnLayoutCompare<Dtype>(
+            this->descr_prv2prv_conversion->layout_int,
+            this->layout_int), 0);
+          status = 0;
+        } else {
+          status = dnnConversionCreate<Dtype>(&this->convert_prv2prv,
+            current_descr->layout_int, this->layout_int);
+          if (status == 0)
+            this->descr_prv2prv_conversion = current_descr;
+        }
+        if (status != 0) {
+          this->allocate();
+          convert_resources[dnnResourceFrom] = cpu_ptr;
+          convert_resources[dnnResourceTo] =
+            reinterpret_cast<void*>(this->internal_ptr);
+          status = dnnExecute<Dtype>(this->convert_to_int, convert_resources);
+          CHECK_EQ(status, 0) << "Conversion failed with status " << status;
+        } else {
+          this->allocate();
+          convert_resources[dnnResourceFrom] = reinterpret_cast<void*>(prv_ptr);
+          convert_resources[dnnResourceTo] =
+            reinterpret_cast<void*>(this->internal_ptr);
+          status = dnnExecute<Dtype>(this->convert_prv2prv, convert_resources);
+          CHECK_EQ(status, 0) << "Conversion failed with status " << status;
+        }
+        if (set_prv_ptr) {
+          dnnChunk->set_prv_descriptor(this->get_shared_ptr(), true);
+        }
+        return this->internal_ptr;
+      } else if (current_descr.get() != this) {
+        // MKL_DLOG(INFO) << "layout OK                 "
+        //  << current_descr->name << " == " << this->name;
+      }
+    }
+#endif
     return const_cast<Dtype *>(prv_ptr);
   }
   return cpu_ptr;
