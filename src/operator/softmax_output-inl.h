@@ -34,6 +34,7 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   bool use_ignore;
   bool preserve_shape;
   int normalization;
+  bool out_grad;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
@@ -59,6 +60,9 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     .describe("If set to null, op will do nothing on output gradient."
               "If set to batch, op will normalize gradient by divide batch size"
               "If set to valid, op will normalize gradient by divide sample not ignored");
+    DMLC_DECLARE_FIELD(out_grad)
+    .set_default(false)
+    .describe("Apply weighting from output gradient");
   };
 };
 
@@ -125,7 +129,12 @@ class SoftmaxOutputOp : public Operator {
       Tensor<xpu, 2, DType> label = in_data[softmaxout_enum::kLabel].FlatTo2D<xpu, DType>(s);
       Tensor<xpu, 2, DType> out = out_data[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
       Tensor<xpu, 2, DType> grad = in_grad[softmaxout_enum::kData].FlatTo2D<xpu, DType>(s);
-      grad = (out - label) * scalar<DType>(param_.grad_scale);
+      if (param_.out_grad) {
+        Tensor<xpu, 2, DType> ograd = out_grad[softmaxout_enum::kOut].FlatTo2D<xpu, DType>(s);
+        grad = scalar<DType>(param_.grad_scale) * (out - label) * ograd;
+      } else {
+        grad = (out - label) * scalar<DType>(param_.grad_scale);
+      }
     } else if (param_.multi_output) {
       int n = out_data[softmaxout_enum::kOut].size(0);
       int k = out_data[softmaxout_enum::kOut].size(1);
@@ -166,6 +175,11 @@ class SoftmaxOutputOp : public Operator {
       grad *= DType(param_.grad_scale /
                     (param_.normalization == softmaxout_enum::kValid ? 1 : s3[2]) /
                     valid_cnt);
+      if (param_.out_grad) {
+        Tensor<xpu, 3, DType> ograd =
+          out_grad[softmaxout_enum::kOut].get_with_shape<xpu, 3, DType>(s3, s);
+        grad *= ograd;
+      }
     } else {
       Shape<1> label_shape = Shape1(in_data[softmaxout_enum::kLabel].Size());
       Shape<2> data_shape;
@@ -208,6 +222,11 @@ class SoftmaxOutputOp : public Operator {
         valid_cnt = 1;
       }
       grad *= DType(param_.grad_scale / valid_cnt);
+      if (param_.out_grad) {
+        Tensor<xpu, 2, DType> ograd =
+          out_grad[softmaxout_enum::kOut].get_with_shape<xpu, 2, DType>(data_shape, s);
+        grad *= ograd;
+      }
     }
   }
 
@@ -309,7 +328,12 @@ class SoftmaxOutputProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {in_data[softmaxout_enum::kLabel], out_data[softmaxout_enum::kOut]};
+    if (param_.out_grad) {
+      return {in_data[softmaxout_enum::kLabel], out_data[softmaxout_enum::kOut],
+              out_grad[softmaxout_enum::kOut]};
+    } else {
+      return {in_data[softmaxout_enum::kLabel], out_data[softmaxout_enum::kOut]};
+    }
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(

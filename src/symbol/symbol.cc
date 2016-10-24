@@ -16,6 +16,7 @@ namespace mxnet {
 
 namespace symbol_constants {
 const char *kShapeKey = "__shape__";
+const char *kTypeKey = "__dtype__";
 const char *kNamespaceSeparator = "_";
 }  // namespace symbol_constants
 
@@ -673,6 +674,8 @@ bool Symbol::InferType(const std::unordered_map<std::string, int>& known_arg_typ
     if (it != known_arg_types.end()) {
       arg_types->at(i) = it->second;
       ++nmatched;
+    } else if (g.nodes[g.arg_nodes[i]].is_variable()) {
+      arg_types->at(i) = g.nodes[g.arg_nodes[i]].get_attr(symbol_constants::kTypeKey, -1);
     }
   }
   if (nmatched != known_arg_types.size()) {

@@ -8,7 +8,6 @@ import numpy as np
 from .. import context as ctx
 from .. import ndarray as nd
 
-from ..base import mx_real_t
 from ..executor_manager import _split_input_slice
 from ..io import DefaultLayoutMapper
 
@@ -109,10 +108,14 @@ class DataParallelExecutorGroup(object):
         space for gradient, nor do gradient calculation.
     layout_mapper : LayoutMapper
         A helper to decide the data layout of data, label and outputs.
+    grad_req : str, list of str, dict of str to str
+        Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+        (default to 'write').
+        Can be specified globally (str) or for each argument (list, dict).
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
                  for_training, inputs_need_grad, shared_group=None, input_types=None,
-                 logger=logging, fixed_param_names=None, layout_mapper=None):
+                 logger=logging, fixed_param_names=None, layout_mapper=None, grad_req='write'):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -130,6 +133,18 @@ class DataParallelExecutorGroup(object):
         self.fixed_param_names = fixed_param_names
         if self.fixed_param_names is None:
             self.fixed_param_names = []
+
+        self.grad_req = grad_req
+        if isinstance(self.grad_req, str):
+            self.grad_req = {k: self.grad_req for k in self.arg_names}
+        elif isinstance(self.grad_req, (list, tuple)):
+            assert len(self.grad_req, self.arg_names)
+            self.grad_req = dict(zip(self.arg_names, self.grad_req))
+        elif isinstance(self.grad_req, dict):
+            for name in self.arg_names:
+                assert name in self.grad_req, "argument %s not found in grad_req"%name
+        else:
+            raise ValueError("grad_req must be one of str, list, tuple, or dict.")
 
         if shared_group is not None:
             self.shared_data_arrays = shared_group.shared_data_arrays
@@ -281,7 +296,9 @@ class DataParallelExecutorGroup(object):
             is_train = self.for_training
 
         if self.label_arrays is not None:
-            _load_label(data_batch, self.label_arrays, self.label_layouts)
+            assert not is_train or data_batch.label
+            if data_batch.label:
+                _load_label(data_batch, self.label_arrays, self.label_layouts)
 
         for exec_ in self.execs:
             exec_.forward(is_train=is_train)
@@ -419,7 +436,7 @@ class DataParallelExecutorGroup(object):
         assert arg_shapes is not None, "shape inference failed"
 
         if self.input_types is None:
-            input_types = {k: mx_real_t for k in input_shapes.keys()}
+            input_types = {}
         else:
             input_types = self.input_types
         arg_types, _, aux_types = self.symbol.infer_type(**input_types)
@@ -433,9 +450,9 @@ class DataParallelExecutorGroup(object):
         for name in self.arg_names:
             if self.for_training:
                 if name in self.param_names and name not in self.fixed_param_names:
-                    grad_req[name] = 'write'
+                    grad_req[name] = self.grad_req[name]
                 elif name in data_names:
-                    grad_req[name] = 'write' if self.inputs_need_grad else 'null'
+                    grad_req[name] = self.grad_req[name] if self.inputs_need_grad else 'null'
                 else:
                     grad_req[name] = 'null'
             else:
