@@ -5,6 +5,7 @@
 import logging
 import numpy as np
 
+from ..base import mx_real_t
 from .. import context as ctx
 from .. import ndarray as nd
 
@@ -436,7 +437,7 @@ class DataParallelExecutorGroup(object):
         assert arg_shapes is not None, "shape inference failed"
 
         if self.input_types is None:
-            input_types = {}
+            input_types = {k: mx_real_t for k in input_shapes.keys()}
         else:
             input_types = self.input_types
         arg_types, _, aux_types = self.symbol.infer_type(**input_types)
