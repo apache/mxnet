@@ -181,7 +181,8 @@ class SequentialModule(BaseModule):
         self.params_initialized = True
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None,
+             grad_req='write'):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -202,6 +203,10 @@ class SequentialModule(BaseModule):
             binded. But with this `True`, the executors will be forced to rebind.
         shared_module : Module
             Default is `None`. Currently shared module is not supported for `SequentialModule`.
+        grad_req : str, list of str, dict of str to str
+            Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+            (default to 'write').
+            Can be specified globally (str) or for each argument (list, dict).
         """
         if self.binded and not force_rebind:
             self.logger.warning('Already binded, ignoring bind()')
@@ -239,7 +244,7 @@ class SequentialModule(BaseModule):
 
             module.bind(data_shapes=my_data_shapes, label_shapes=my_label_shapes,
                         for_training=for_training, inputs_need_grad=my_inputs_need_grad,
-                        force_rebind=force_rebind, shared_module=None)
+                        force_rebind=force_rebind, shared_module=None, grad_req=grad_req)
 
             # the output of the previous module is the data of the next module
             my_data_shapes = module.output_shapes

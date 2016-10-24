@@ -30,9 +30,10 @@ Operator *EmbeddingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
 
 MXNET_REGISTER_OP_PROPERTY(Embedding, EmbeddingProp)
-.describe("Get embedding for one-hot input. A n-dimensional input tensor will "
-"be trainsformed into a (n+1)-dimensional tensor, where a new dimension is "
-"added for the embedding results.")
+.describe(R"(Map integer index to vector representations (embeddings). Those
+embeddings are learnable parameters. For a input of shape `(d1, ..., dK)`, the
+output shape is `(d1, ..., dK, output_dim)`. All the input values should be
+integers in the range `[0, input_dim)`.)")
 .add_argument("data", "Symbol", "Input data to the EmbeddingOp.")
 .add_argument("weight", "Symbol", "Enbedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
