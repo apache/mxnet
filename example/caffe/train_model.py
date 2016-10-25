@@ -76,6 +76,7 @@ def fit(args, network, data_loader, eval_metrics=None, batch_end_callback=None):
         momentum           = 0.9,
         wd                 = 0.00001,
         initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        optimizer         = args.optimizer,
         **model_args)
 
     if eval_metrics == None:

@@ -5,6 +5,7 @@ import pickle
 from .ndarray import NDArray, zeros, clip, sqrt
 from .ndarray import sgd_update, sgd_mom_update, adam_update
 from .random import normal
+import logging
 
 
 class Optimizer(object):
@@ -271,6 +272,99 @@ class SGD(Optimizer):
         else:
             sgd_update(weight, grad, out=weight,
                        lr=lr, wd=wd, **self.kwargs)
+
+@register
+class DCASGD(Optimizer):
+    """ DCASGD optimizer with momentum and weight regularization.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        learning_rate of SGD
+
+    momentum : float, optional
+       momentum value
+
+    lamda : float, optional
+       scale DC value
+
+    wd : float, optional
+        L2 regularization coefficient add to all the weights
+
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+
+    param_idx2name : dict of string/int to float, optional
+        special treat weight decay in parameter ends with bias, gamma, and beta
+    """
+    def __init__(self, momentum=0.0, lamda = 0.04, **kwargs):
+        super(DCASGD, self).__init__(**kwargs)
+        self.momentum = momentum
+        self.weight_previous = {}
+        self.lamda = lamda
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state such as momentum.
+
+        Parameters
+        ----------
+        weight : NDArray
+            The weight data
+
+        """
+        if self.momentum == 0.0:
+            return None
+        else:
+            return zeros(weight.shape, weight.context, dtype=weight.dtype)
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+        """
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        grad = grad * self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        if state:
+            mom = state
+            mom[:] *= self.momentum
+            if self.weight_previous.has_key(index):
+                mom[:] += -lr * (grad + wd * weight + self.lamda * grad * grad * (weight - self.weight_previous[index]))
+                self.weight_previous[index] = weight
+            else:
+                mom[:] += -lr * (grad + wd * weight)
+                self.weight_previous[index] = weight
+            weight[:] += mom
+        else:
+            assert self.momentum == 0.0
+            if self.weight_previous.has_key(index):
+                weight[:] += -lr * (grad + wd * weight + self.lamda * grad * grad * (weight - self.weight_previous[index]))
+                self.weight_previous[index] = weight
+            else:
+                weight[:] += -lr * (grad + wd * weight)
+                self.weight_previous[index] = weight
 
 @register
 class NAG(SGD):
