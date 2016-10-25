@@ -523,7 +523,7 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 
 .github-btn { border: 0; overflow: hidden }
 
-.container {
+.navbar .container {
     margin-right: auto;
     margin-left: 50px;
     padding-left: 15px;
