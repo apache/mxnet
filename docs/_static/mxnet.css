@@ -192,7 +192,7 @@ body > .container {
     padding: 0 15px
 }
 
-@media screen and (max-width: 1050px) {
+@media screen and (max-width: 1085px) {
     #main-nav {
         display: block;
         font-size: 75%
@@ -321,7 +321,6 @@ div .burgerIcon a {
     padding: 0;
     background-color: white;
     list-style-position: inside;
-    border: 1px solid #0079b2;
     border-radius: 8px;
     min-width: 100px
 }
@@ -501,10 +500,10 @@ div.sphinxsidebar ul ul { margin-left: 15px }
     padding-right: 15px
 }
 
-@media screen and (max-width: 450px) {
+@media screen and (max-width: 480px) {
     #navContainer {
         position: fixed;
-        left: 20px;
+        left: 0;
     }
 }
 
