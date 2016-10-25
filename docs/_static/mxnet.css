@@ -461,11 +461,16 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 
 
-.section-tout{
+.section-tout {
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
     background-color:#eaf1f1
 }
+
+.section-tout .row div {
+    height: 110px;
+}
+
 .section-tout .fa{
     margin-right:.5em
 }
