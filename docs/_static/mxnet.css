@@ -326,7 +326,7 @@ div .burgerIcon {
     display: none;
 }
 
-@media screen and (max-width:850px) {
+@media screen and (max-width:870px) {
     div .burgerIcon {
         display: block
     }
@@ -410,6 +410,19 @@ li.dropdown-submenu ul.dropdown-menu a {
 @media screen and (min-width:769px) {
     #splash #banner-title {
         padding-top: 100px;
+    }
+}
+
+@media screen and (max-width:768px) {
+    #splash #banner-title {
+            font-size: 30px;
+            padding: 20px 30px 10px 30px;
+    }
+}
+
+@media screen and (max-width:405px) {
+    #splash #banner-title {
+            padding-top: 40px;
     }
 }
 
