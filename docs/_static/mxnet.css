@@ -122,6 +122,19 @@ body > .container {
     margin-bottom: 0px;
 }
 
+@media screen and (max-width: 480px) {
+    #navContainer {
+        position: fixed;
+        left: 0;
+    }
+}
+
+@media screen and (max-width: 405px) {
+    .navbar {
+        height: 80px
+    }
+}
+
 #header-inner {
     display: -webkit-box;
     display: -webkit-flex;
@@ -203,13 +216,13 @@ body > .container {
     }
 }
 
-@media screen and (max-width: 910px) {
+@media screen and (max-width: 930px) {
     .main-nav-link {
         padding: 0 5px
     }
 }
 
-@media screen and (max-width:850px) {
+@media screen and (max-width:870px) {
     #main-nav {
         display: none
     }
@@ -296,6 +309,15 @@ body > .container {
     font-size: inherit
 }
 
+@media screen and (max-width: 405px) {
+    #lang-select-wrap {
+        position: fixed;
+        top: 40px;
+        left: 90px;
+        width: 75px
+    }
+}
+
 /*burger icon*/
 div .burgerIcon {
     font-size: 25px;
@@ -312,6 +334,14 @@ div .burgerIcon {
 
 div .burgerIcon a {
     color: white;
+}
+
+@media screen and (max-width: 405px) {
+    .burgerIcon {
+        position:fixed;
+        top:45px;
+        left: 70px;
+    }
 }
 
 /*burger menu*/
@@ -499,15 +529,6 @@ div.sphinxsidebar ul ul { margin-left: 15px }
     padding-left: 15px;
     padding-right: 15px
 }
-
-@media screen and (max-width: 480px) {
-    #navContainer {
-        position: fixed;
-        left: 0;
-    }
-}
-
-
 
 /*embed end */
 
