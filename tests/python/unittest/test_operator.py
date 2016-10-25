@@ -1459,100 +1459,6 @@ def test_roipooling():
                            grad_nodes={'data':'add', 'rois':'write'},
                            numeric_eps=1e-3, check_eps=1e-2)
 
-
-# def mathematical_core_binary(name, context,
-#                              forward_mxnet_call,
-#                              forward_numpy_call,
-#                              backward_numpy_call1,
-#                              backward_numpy_call2,
-#                              data1_init=2.,
-#                              data2_init=3.,
-#                              grad_init=2.):
-#     data1 = mx.symbol.Variable('data')
-#     data2 = mx.symbol.Variable('data')
-#     shape = (3, 4)
-#     data_tmp1 = np.random.rand(3, 4)
-#     data_tmp2 = np.random.rand(3, 4)
-#     data_tmp1[:] = data1_init
-#     data_tmp2[:] = data2_init
-
-#     arr_data1 = mx.nd.array(data_tmp1, context)
-#     arr_data2 = mx.nd.array(data_tmp2, context)
-
-#     arr_grad1 = mx.nd.empty(shape, context)
-#     arr_grad2 = mx.nd.empty(shape, context)
-
-#     test = forward_mxnet_call(data1, data2)
-#     exe_test = test.bind(context, args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
-#     exe_test.forward()
-#     out = exe_test.outputs[0].asnumpy()
-#     npout = forward_numpy_call(data_tmp1, data_tmp2)
-#     assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
-
-#     out_grad = mx.nd.empty(shape, context)
-#     out_grad[:] = grad_init
-#     exe_test.backward(out_grad)
-
-#     npout_grad = np.ones(shape)
-#     npout_grad[:] = grad_init
-
-#     npout_grad1 = npout_grad * backward_numpy_call1(data_tmp1, data_tmp2)
-#     npout_grad2 = npout_grad * backward_numpy_call2(data_tmp1, data_tmp2)
-#     arr_grad1 = arr_grad1.asnumpy()
-#     arr_grad2 = arr_grad2.asnumpy()
-
-#     assert reldiff(arr_grad1, npout_grad1) < 1e-6, "%s mathematical backward1 failed\n%s\n\n%s" % (
-#         name, arr_grad1, npout_grad)
-#     assert reldiff(arr_grad2, npout_grad2) < 1e-6, "%s mathematical backward2 failed\n%s\n\n%s" % (
-#         name, arr_grad2, npout_grad)
-
-
-# def mathematical_core(name, context, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
-#     data = mx.symbol.Variable('data')
-#     shape = (3, 4)
-#     data_tmp = np.ones(shape)
-#     data_tmp[:] = data_init
-#     arr_data = mx.nd.array(data_tmp, context)
-#     arr_grad = mx.nd.empty(shape, context)
-#     arr_grad[:] = 3
-
-#     test = forward_mxnet_call(data)
-#     exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
-#     exe_test.forward()
-#     out = exe_test.outputs[0].asnumpy()
-#     npout = forward_numpy_call(data_tmp)
-#     assert reldiff(out, npout) < 1e-6, "%s matematical forward failed\n%s\n\n%s" % (name, out, npout)
-
-#     out_grad = mx.nd.empty(shape, context)
-#     out_grad[:] = grad_init
-#     npout_grad = out_grad.asnumpy()
-#     temp = backward_numpy_call(data_tmp)
-#     npout_grad = npout_grad * temp
-#     exe_test.backward(out_grad)
-#     arr_grad = arr_grad.asnumpy()
-#     # print(name)
-#     # print(arr_grad)
-#     # print(npout_grad)
-#     assert reldiff(arr_grad, npout_grad) < 1e-6, "%s mathematical backward failed\n%s\n\n%s" % (
-#         name, arr_grad, npout_grad)
-
-# def test_special_functions_using_scipy(context):
-#     try:
-#         from scipy import special as scipy_special
-#     except:
-#         print("Could not import scipy. Skipping unit tests for special functions")
-#         return
-
-#     # gamma
-#     mathematical_core("gamma", context, lambda x: mx.sym.gamma(x), lambda x: scipy_special.gamma(x),
-#                      lambda x: scipy_special.gamma(x) * scipy_special.psi(x), 0.5, 0.5)
-
-#     # gammaln
-#     mathematical_core("gammaln", context, lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
-#                      lambda x: scipy_special.psi(x), 0.5, 0.5)
-
-
-
 def mathematical_core_binary(name, context,
                              forward_mxnet_call,
                              forward_numpy_call,
@@ -1701,7 +1607,9 @@ def test_mathematical(context):
     # expm1
     mathematical_core("expm1", context, lambda x: mx.sym.expm1(x), lambda x: np.expm1(x),
                       lambda x: np.exp(x), 0.5, 0.5)
-
+    # log10
+    mathematical_core("log10", context, lambda x: mx.sym.log10(x), lambda x: np.log10(x),
+                      lambda x: (1 / x))
 
 def test_special_functions_using_scipy(context):
     try:
@@ -1720,46 +1628,46 @@ def test_special_functions_using_scipy(context):
 
 
 if __name__ == '__main__':
-#    test_expand_dims()
-#    test_slice_axis()
-#    test_softmax()
-#    test_broadcast_binary_op()
-#    test_flip()
-#    test_crop()
-#    test_transpose()
-#    test_convolution_grouping()
-#    test_nearest_upsampling()
-#    test_binary_op_duplicate_input()
-#    test_elementwise_sum()
-#    test_concat()
-#    test_slice_channel()
-#    test_regression()
-#    test_python_op()
-#    test_swapaxes()
-#    test_scalarop()
-#    test_scalar_pow()
-#    test_symbol_pow()
-#    test_pow_fn()
-#    test_embedding()
-#    test_rsqrt_cos_sin()
-#    test_maximum_minimum()
-#    test_maximum_minimum_scalar()
-#    test_abs()
-#    test_round_ceil_floor()
-#    test_deconvolution()
-#    test_batchnorm_training()
-#    check_softmax_with_ignore_label(default_context())
-#    test_convolution_dilated_impulse_response()
-#    test_reshape()
-#    test_reduce()
-#    test_broadcast()
-#    test_stn()
-#    test_dot()
-#    test_batch_dot()
-#    test_correlation()
-#    test_support_vector_machine_l1_svm()
-#   test_support_vector_machine_l2_svm()
-#   test_roipooling()
+    test_expand_dims()
+    test_slice_axis()
+    test_softmax()
+    test_broadcast_binary_op()
+    test_flip()
+    test_crop()
+    test_transpose()
+    test_convolution_grouping()
+    test_nearest_upsampling()
+    test_binary_op_duplicate_input()
+    test_elementwise_sum()
+    test_concat()
+    test_slice_channel()
+    test_regression()
+    test_python_op()
+    test_swapaxes()
+    test_scalarop()
+    test_scalar_pow()
+    test_symbol_pow()
+    test_pow_fn()
+    test_embedding()
+    test_rsqrt_cos_sin()
+    test_maximum_minimum()
+    test_maximum_minimum_scalar()
+    test_abs()
+    test_round_ceil_floor()
+    test_deconvolution()
+    test_batchnorm_training()
+    check_softmax_with_ignore_label(default_context())
+    test_convolution_dilated_impulse_response()
+    test_reshape()
+    test_reduce()
+    test_broadcast()
+    test_stn()
+    test_dot()
+    test_batch_dot()
+    test_correlation()
+    test_support_vector_machine_l1_svm()
+    test_support_vector_machine_l2_svm()
+    test_roipooling()
     for ctx in [mx.cpu(), mx.gpu()]:
         test_mathematical(ctx)
         test_special_functions_using_scipy(ctx)

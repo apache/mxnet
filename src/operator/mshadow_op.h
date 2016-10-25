@@ -161,6 +161,13 @@ struct log {
   }
 };
 
+struct log10 {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(log10f(a));
+  }
+};
+
 struct log_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
