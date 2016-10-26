@@ -17,15 +17,15 @@ parser.add_argument('--content-image', type=str, default='input/IMG_4343.jpg',
                     help='the content image')
 parser.add_argument('--style-image', type=str, default='input/starry_night.jpg',
                     help='the style image')
-parser.add_argument('--stop-eps', type=float, default=.005,
+parser.add_argument('--stop-eps', type=float, default=.0001,
                     help='stop if the relative chanage is less than eps')
 parser.add_argument('--content-weight', type=float, default=10,
                     help='the weight for the content image')
-parser.add_argument('--style-weight', type=float, default=1,
+parser.add_argument('--style-weight', type=float, default=2,
                     help='the weight for the style image')
 parser.add_argument('--tv-weight', type=float, default=1e-2,
                     help='the magtitute on TV loss')
-parser.add_argument('--max-num-epochs', type=int, default=1000,
+parser.add_argument('--max-num-epochs', type=int, default=750,
                     help='the maximal number of training epochs')
 parser.add_argument('--max-long-edge', type=int, default=600,
                     help='resize the content image')
