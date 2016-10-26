@@ -1172,11 +1172,11 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_END();
 }
 
-int MXDataIterGetIndex(DataIterHandle handle, uint64_t **out_index, uint64_t *out_size) {
+int MXDataIterGetIndex(DataIterHandle handle, mx_ulonglong **out_index, mx_ulonglong *out_size) {
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
   *out_size = db.index.size();
-  *out_index = const_cast<uint64_t*>(db.index.data());
+  *out_index = const_cast<mx_ulonglong*>(db.index.data());
   API_END();
 }
 
