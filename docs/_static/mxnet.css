@@ -588,10 +588,10 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 }
 
 .section h2 {
-    padding-top: 80px;
+    padding-top: 100px;
     margin-top: -60px;
     padding-bottom: 10px;
-    font-size: 22px;
+    font-size: 25px;
 }
 
 .section h3 {
@@ -666,4 +666,13 @@ dt:target, .highlighted {
     -webkit-border-radius: 6px 0 6px 6px;
     -moz-border-radius: 6px 0 6px 6px;
     border-radius: 6px 0 6px 6px;
+}
+
+/*Content paragraph space*/
+div.content p {
+    margin: 15px 0 15px 0;
+}
+
+div.highlight-python, div.highlight-none {
+    padding-bottom:  15px;
 }
