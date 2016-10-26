@@ -66,6 +66,7 @@ ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 else
 	CFLAGS += -DMKL_EXPERIMENTAL=0
 endif
+ifneq ($(USE_BLAS), mkl)
 	ICC_ON=0	
 	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON))
 	MKLROOT=$(firstword $(RETURN_STRING))
@@ -74,7 +75,8 @@ endif
 ifeq ($(MKL_EXTERNAL), 1)
 	MKL_LDFLAGS+=-Wl,-rpath,$(MKLROOT)/lib
 	CFLAGS += -I$(MKLROOT)/include
-	LDFLAGS += -L$(MKLROOT)/lib/ -liomp5 -lmklml_gnu -lmklml_intel
+	LDFLAGS += -L$(MKLROOT)/lib/ -liomp5 -lmklml_gnu
+endif
 endif
 endif
 
