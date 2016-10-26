@@ -113,11 +113,10 @@ class MKLLRNOp : public Operator {
     CHECK_EQ(out_data.size(), 2);
     CHECK_EQ(param_.nsize % 2, 1) << "LRN only supports odd values for local_size";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    mkl_set_priv_flag(in_data[lrn_enum::kData]);
-    Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(out_data[lrn_enum::kOut]);
-    Tensor<xpu, 4, DType> out = out_data[lrn_enum::kOut].get<xpu, 4, DType>(s);
-
+    Tensor<xpu, 4, DType> data = mkl_experimental_direct_get<xpu, 4, DType>(
+      in_data[lrn_enum::kData], s);
+    Tensor<xpu, 4, DType> out = mkl_experimental_direct_get<xpu, 4, DType>(
+      out_data[lrn_enum::kOut], s);
     if (!init_mkldnn_) {
       LayerSetup(data, out);
       init_mkldnn_ = true;
@@ -227,13 +226,12 @@ class MKLLRNOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    mkl_set_priv_flag(out_grad[lrn_enum::kOut]);
-    Tensor<xpu, 4, DType> grad = out_grad[lrn_enum::kOut].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(in_data[lrn_enum::kData]);
-    Tensor<xpu, 4, DType> data = in_data[lrn_enum::kData].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(in_grad[lrn_enum::kData]);
-    Tensor<xpu, 4, DType> grad_in = in_grad[lrn_enum::kData].get<xpu, 4, DType>(s);
-
+    Tensor<xpu, 4, DType> grad = mkl_experimental_direct_get<xpu, 4, DType>(
+      out_grad[lrn_enum::kOut], s);
+    Tensor<xpu, 4, DType> data = mkl_experimental_direct_get<xpu, 4, DType>(
+      in_data[lrn_enum::kData], s);
+    Tensor<xpu, 4, DType> grad_in = mkl_experimental_direct_get<xpu, 4, DType>(
+      in_grad[lrn_enum::kData], s);
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
     std::shared_ptr<MKLMemHolder> top_diff_mem =

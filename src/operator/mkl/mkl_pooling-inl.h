@@ -205,11 +205,10 @@ class MKLPoolingOp : public Operator {
     if (param_.kernel.ndim() >= 3) {
       LOG(FATAL) << "Not implmented";
     }
-    mkl_set_priv_flag(in_data[pool_enum::kData]);
-    Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(out_data[pool_enum::kOut]);
-    Tensor<xpu, 4, DType> out = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
-    //        mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
+    Tensor<xpu, 4, DType> data = mkl_experimental_direct_get<xpu, 4, DType>(
+      in_data[pool_enum::kData], s);
+    Tensor<xpu, 4, DType> out = mkl_experimental_direct_get<xpu, 4, DType>(
+      out_data[pool_enum::kOut], s);
     if (!init_mkldnn_) {
       LayerSetUp(data, out);
       init_mkldnn_ = true;
@@ -342,11 +341,10 @@ class MKLPoolingOp : public Operator {
       LOG(FATAL) << "Not implmented";
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    mkl_set_priv_flag(out_grad[pool_enum::kOut]);
-    Tensor<xpu, 4, DType> grad = out_grad[pool_enum::kOut].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(in_grad[pool_enum::kData]);
-    Tensor<xpu, 4, DType> input_grad = in_grad[pool_enum::kData].get<xpu, 4, DType>(s);
-
+    Tensor<xpu, 4, DType> grad = mkl_experimental_direct_get<xpu, 4, DType>(
+      out_grad[pool_enum::kOut], s);
+    Tensor<xpu, 4, DType> input_grad = mkl_experimental_direct_get<xpu, 4, DType>(
+      in_grad[pool_enum::kData], s);
     dnnError_t e;
     void* pooling_res[dnnResourceNumber];
     pooling_res[dnnResourceWorkspace] = reinterpret_cast<void *>(max_idx_data);
