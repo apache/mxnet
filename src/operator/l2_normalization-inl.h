@@ -58,8 +58,12 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[l2_normalization::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[l2_normalization::kOut].FlatTo2D<xpu, real_t>(s);
+    TShape orig_shape = in_data[l2_normalization::kData].shape_;
+    Shape<2> dshape = Shape2(orig_shape[0], orig_shape.ProdShape(1, orig_shape.ndim()));
+    Tensor<xpu, 2> data = in_data[l2_normalization::kData]
+      .get_with_shape<xpu, 2, real_t>(dshape, s);
+    Tensor<xpu, 2> out = out_data[l2_normalization::kOut]
+      .get_with_shape<xpu, 2, real_t>(dshape, s);
     Tensor<xpu, 1> norm = out_data[l2_normalization::kNorm].get<xpu, 1, real_t>(s);
     norm = sumall_except_dim<0>(F<mxnet::op::mshadow_op::square>(data));
     norm = F<mxnet::op::mshadow_op::square_root>(norm);
@@ -80,11 +84,15 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(req.size(), 1);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = out_data[l2_normalization::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad_in = in_grad[l2_normalization::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad_out = out_grad[l2_normalization::kOut].FlatTo2D<xpu, real_t>(s);
+    TShape orig_shape = out_data[l2_normalization::kOut].shape_;
+    Shape<2> dshape = Shape2(orig_shape[0], orig_shape.ProdShape(1, orig_shape.ndim()));
+    Tensor<xpu, 2> data = out_data[l2_normalization::kOut]
+      .get_with_shape<xpu, 2, real_t>(dshape, s);
+    Tensor<xpu, 2> grad_in = in_grad[l2_normalization::kData]
+      .get_with_shape<xpu, 2, real_t>(dshape, s);
+    Tensor<xpu, 2> grad_out = out_grad[l2_normalization::kOut]
+      .get_with_shape<xpu, 2, real_t>(dshape, s);
     Tensor<xpu, 1> norm = out_data[l2_normalization::kNorm].get<xpu, 1, real_t>(s);
-
     Tensor<xpu, 1> temp = ctx.requested[l2_normalization::kTempSpace].get_space<xpu>(
         mshadow::Shape1(data.shape_[0]), s);
     temp = sumall_except_dim<0>(grad_out * data);
