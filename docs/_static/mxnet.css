@@ -606,6 +606,10 @@ div.sphinxsidebar ul ul { margin-left: 15px }
     padding-bottom: 8px;
 }
 
+.section ul ul {
+    display: none
+}
+
 dt {
     margin-top: -76px;
     padding-top: 76px;
@@ -675,4 +679,9 @@ div.content p {
 
 div.highlight-python, div.highlight-none {
     padding-bottom:  15px;
+}
+
+/*bullet indentation*/
+#mxnet-python-symbolic-api ul {
+    padding-left: 20px;
 }
