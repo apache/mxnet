@@ -312,6 +312,18 @@ struct minus_sign {
   }
 };
 
+struct clip {
+  MSHADOW_XINLINE static real_t Map(real_t x, real_t bound) {
+    if (x > bound) {
+      return bound;
+    } else if (x < -bound) {
+      return -bound;
+    } else {
+      return x;
+    }
+  }
+};
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet

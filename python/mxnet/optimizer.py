@@ -651,7 +651,86 @@ class AdaGrad(Optimizer):
 
 
 @register
-class RMSProp(Optimizer):
+
+lass ccRMSProp(Optimizer):
+    """RMSProp optimizer of Tieleman & Hinton, 2012,
+
+    This code follows the version in http://cs231n.github.io/neural-networks-3/#ada.
+
+    Implemented in C++.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        Step size.
+        Default value is set to 0.002.
+    decay_rate: float, optional
+        decay factor of moving average for gradient, gradient^2.
+        Default value is set to 0.95.
+    epsilon: float, optional
+        Smoothing term (1e-8) that avoids division by zero.
+    wd: float, optional
+        L2 regularization coefficient add to all the weights
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+    clip_gradient : float, optional
+        if clip_gradient > 0, clip gradient in range [-clip_gradient, clip_gradient]
+    """
+    def __init__(self, learning_rate=0.0002, decay_rate=0.95,
+                 epsilon=1e-4, wd=1.0, momentum=0.0,
+                 rescale_grad=1.0, clip_gradient=-1.0,
+                 lr_scheduler=None):
+        super(ccRMSProp, self).__init__(rescale_grad)
+        self.lr = learning_rate
+        self.decay_rate = decay_rate
+        self.epsilon = epsilon
+        self.wd = wd
+        self.rescale_grad = rescale_grad
+        self.clip_gradient = clip_gradient
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler is not None:
+            self.lr_scheduler.base_lr = learning_rate
+
+        self.handle = Optimizer._init_cc_optimizer(
+            'ccrmsprop',
+            ['decay_rate', 'epsilon', 'wd', 'rescale_grad', 'clip_gradient'],
+            [decay_rate, epsilon, wd, rescale_grad, clip_gradient])
+
+    def create_state(self, index, weight):
+        return None
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+        """
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        if self.lr_scheduler is not None:
+            lr = self.lr_scheduler(self.num_update)
+            self._update_count(index)
+        else:
+            lr = self.lr
+        lr *= self.lr_scale.get(index, 1.0)
+        check_call(_LIB.MXOptimizerUpdate(self.handle,
+                                          ctypes.c_int(index),
+                                          weight.handle,
+                                          grad.handle,
+                                          mx_float(lr)))
+
+@registerclass RMSProp(Optimizer):
     """RMSProp optimizer of Tieleman & Hinton, 2012,
 
     This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
