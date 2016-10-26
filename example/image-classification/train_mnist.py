@@ -12,7 +12,8 @@ def _download(data_dir):
        (not os.path.exists('train-labels-idx1-ubyte')) or \
        (not os.path.exists('t10k-images-idx3-ubyte')) or \
        (not os.path.exists('t10k-labels-idx1-ubyte')):
-        os.system("wget http://data.dmlc.ml/mxnet/data/mnist.zip")
+        #os.system("wget http://data.dmlc.ml/mxnet/data/mnist.zip")
+        os.system("wget https://github.com/dmlc/web-data/raw/master/mxnet/example/mnist.zip")
         os.system("unzip -u mnist.zip; rm mnist.zip")
     os.chdir("..")
 
