@@ -24,14 +24,24 @@ namespace op {
 namespace l2_normalization {
 enum L2NormalizationOpInputs {kData};
 enum L2NormalizationOpOutputs {kOut, kNorm};
+enum L2NormalizationOpType {kInstance, kChannel};
 enum L2NormalizationBackResource {kTempSpace};
 }  // l2_normalization
 
 struct L2NormalizationParam : public dmlc::Parameter<L2NormalizationParam> {
   float eps;
+  int mode;
   DMLC_DECLARE_PARAMETER(L2NormalizationParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-10f)
     .describe("Epsilon to prevent div 0");
+    DMLC_DECLARE_FIELD(mode)
+    .add_enum("instance", l2_normalization::kInstance)
+    .add_enum("channel", l2_normalization::kChannel)
+    .set_default(l2_normalization::kInstance)
+    .describe("Normalization Mode. If set to instance, this operator will compute a "
+    "norm for each instance in the batch; this is the default mode. "
+    "If set to channel, this operator will compute a cross channel norm at "
+    "each position of each instance.");
   }
 };
 
@@ -58,12 +68,33 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[l2_normalization::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> out = out_data[l2_normalization::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 1> norm = out_data[l2_normalization::kNorm].get<xpu, 1, real_t>(s);
-    norm = sumall_except_dim<0>(F<mxnet::op::mshadow_op::square>(data));
-    norm = F<mxnet::op::mshadow_op::square_root>(norm);
-    out = data / broadcast<0>(norm + param_.eps, out.shape_);
+    TShape orig_shape = in_data[l2_normalization::kData].shape_;
+    if (param_.mode == l2_normalization::kInstance) {
+      Shape<2> dshape = Shape2(orig_shape[0],
+        orig_shape.ProdShape(1, orig_shape.ndim()));
+      Tensor<xpu, 2> data = in_data[l2_normalization::kData]
+        .get_with_shape<xpu, 2, real_t>(dshape, s);
+      Tensor<xpu, 2> out = out_data[l2_normalization::kOut]
+        .get_with_shape<xpu, 2, real_t>(dshape, s);
+      Tensor<xpu, 1> norm = out_data[l2_normalization::kNorm].get<xpu, 1, real_t>(s);
+      norm = sumall_except_dim<0>(F<mxnet::op::mshadow_op::square>(data));
+      norm = F<mxnet::op::mshadow_op::square_root>(norm);
+      out = data / broadcast<0>(norm + param_.eps, out.shape_);
+    } else {
+      CHECK_GE(orig_shape.ndim(), 3);
+      Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
+        orig_shape.ProdShape(2, orig_shape.ndim()));
+      Tensor<xpu, 3> data = in_data[l2_normalization::kData]
+        .get_with_shape<xpu, 3, real_t>(dshape, s);
+      Tensor<xpu, 3> out = out_data[l2_normalization::kOut]
+        .get_with_shape<xpu, 3, real_t>(dshape, s);
+      Shape<2> norm_shape = Shape2(dshape[0], dshape[2]);
+      Tensor<xpu, 2> norm = out_data[l2_normalization::kNorm]
+        .get_with_shape<xpu, 2, real_t>(norm_shape, s);
+      norm = reduce_with_axis<red::sum, false>(F<mxnet::op::mshadow_op::square>(data), 1);
+      norm = F<mxnet::op::mshadow_op::square_root>(norm);
+      out = data / broadcast_with_axis(norm + param_.eps, 0, orig_shape[1]);
+    }
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -80,18 +111,42 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(req.size(), 1);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = out_data[l2_normalization::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad_in = in_grad[l2_normalization::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> grad_out = out_grad[l2_normalization::kOut].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 1> norm = out_data[l2_normalization::kNorm].get<xpu, 1, real_t>(s);
-
-    Tensor<xpu, 1> temp = ctx.requested[l2_normalization::kTempSpace].get_space<xpu>(
-        mshadow::Shape1(data.shape_[0]), s);
-    temp = sumall_except_dim<0>(grad_out * data);
-
-    Assign(grad_in, req[l2_normalization::kData],
-      (grad_out - data * broadcast<0>(temp, data.shape_)) /
-      broadcast<0>(norm + param_.eps, data.shape_));
+    TShape orig_shape = out_data[l2_normalization::kOut].shape_;
+    if (param_.mode == l2_normalization::kInstance) {
+      Shape<2> dshape = Shape2(orig_shape[0],
+        orig_shape.ProdShape(1, orig_shape.ndim()));
+      Tensor<xpu, 2> data = out_data[l2_normalization::kOut]
+        .get_with_shape<xpu, 2, real_t>(dshape, s);
+      Tensor<xpu, 2> grad_in = in_grad[l2_normalization::kData]
+        .get_with_shape<xpu, 2, real_t>(dshape, s);
+      Tensor<xpu, 2> grad_out = out_grad[l2_normalization::kOut]
+        .get_with_shape<xpu, 2, real_t>(dshape, s);
+      Tensor<xpu, 1> norm = out_data[l2_normalization::kNorm].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1> temp = ctx.requested[l2_normalization::kTempSpace]
+        .get_space<xpu>(mshadow::Shape1(data.shape_[0]), s);
+      temp = sumall_except_dim<0>(grad_out * data);
+      Assign(grad_in, req[l2_normalization::kData],
+        (grad_out - data * broadcast<0>(temp, data.shape_)) /
+        broadcast<0>(norm + param_.eps, data.shape_));
+    } else {
+      Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
+        orig_shape.ProdShape(2, orig_shape.ndim()));
+      Tensor<xpu, 3> data = out_data[l2_normalization::kOut]
+        .get_with_shape<xpu, 3, real_t>(dshape, s);
+      Tensor<xpu, 3> grad_in = in_grad[l2_normalization::kData]
+        .get_with_shape<xpu, 3, real_t>(dshape, s);
+      Tensor<xpu, 3> grad_out = out_grad[l2_normalization::kOut]
+        .get_with_shape<xpu, 3, real_t>(dshape, s);
+      Shape<2> norm_shape = Shape2(dshape[0], dshape[2]);
+      Tensor<xpu, 2> norm = out_data[l2_normalization::kNorm]
+        .get_with_shape<xpu, 2, real_t>(norm_shape, s);
+      Tensor<xpu, 2> temp = ctx.requested[l2_normalization::kTempSpace]
+        .get_space<xpu>(mshadow::Shape2(data.shape_[0], data.shape_[2]), s);
+      temp = reduce_with_axis<red::sum, false>(grad_out * data, 1);
+      Assign(grad_in, req[l2_normalization::kData],
+        (grad_out - data * broadcast_with_axis(temp, 0, orig_shape[1])) /
+        broadcast_with_axis(norm + param_.eps, 0, orig_shape[1]));
+    }
   }
 
  private:
@@ -135,7 +190,12 @@ class L2NormalizationProp : public OperatorProperty {
     if ((*in_shape)[l2_normalization::kData].ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
-    out_shape->push_back(Shape1(dshape[0]));
+    if (param_.mode == l2_normalization::kInstance) {
+      out_shape->push_back(Shape1(dshape[0]));
+    } else {
+      CHECK_GE(dshape.ndim(), 3);
+      out_shape->push_back(Shape2(dshape[0], dshape.ProdShape(2, dshape.ndim())));
+    }
     return true;
   }
 
