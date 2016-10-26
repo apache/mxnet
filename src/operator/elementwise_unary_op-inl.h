@@ -138,6 +138,26 @@ MXNET_REGISTER_SIMPLE_OP(sin, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::sin>, kInplaceInOut)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::sin_grad>, kInplaceOutIn)
 .describe("Take sin of the src");
+// tan
+MXNET_REGISTER_SIMPLE_OP(tan, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::tan>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::tan_grad>, kInplaceOutIn)
+.describe("Take tan of the src");
+// arcsin
+MXNET_REGISTER_SIMPLE_OP(arcsin, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::arcsin>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::arcsin_grad>, kInplaceOutIn)
+.describe("Take arcsin of the src");
+// arccos
+MXNET_REGISTER_SIMPLE_OP(arccos, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::arccos>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::arccos_grad>, kInplaceOutIn)
+.describe("Take arcsin of the src");
+// arctan
+MXNET_REGISTER_SIMPLE_OP(arctan, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::arctan>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::arctan_grad>, kInplaceOutIn)
+.describe("Take tan of the src");
 
 }  // namespace op
 }  // namespace mxnet
