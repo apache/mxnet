@@ -716,6 +716,15 @@ Symbol Symbol::CreateGroup(const std::vector<Symbol> &symbols) {
   return ret;
 }
 
+Symbol Symbol::GetSubGroup(const std::vector<uint32_t> idx) {
+  Symbol ret;
+  for (const auto &i : idx) {
+    CHECK(i < this->heads_.size()) << "Index out of range.";
+    ret.heads_.push_back(this->heads_[i]);
+  }
+  return ret;
+}
+
 Symbol Symbol::CreateVariable(const std::string &name) {
   Symbol s;
   s.heads_.push_back(DataEntry(std::make_shared<Node>(nullptr, name), 0));

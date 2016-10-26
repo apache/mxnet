@@ -297,6 +297,27 @@ class Symbol(object):
             self.handle, ctypes.byref(handle)))
         return Symbol(handle=handle)
 
+    def get_subgroup(self, idx):
+        """Get a new grouped symbol by selecting a subset of the current symbol's output.
+
+        Parameters
+        ----------
+        idx : list of int
+            The index (as in list_outputs()) of the selected output
+
+        Returns
+        -------
+        ssubgroup : symbol
+            The selected subgroup
+        """
+        handle = SymbolHandle()
+        num_idx = mx_uint(len(idx))
+        idx = (mx_uint*len(idx))(*idx)
+        idx = ctypes.cast(idx, ctypes.POINTER(mx_uint))
+        check_call(_LIB.MXSymbolGetSubGroup(
+            self.handle, num_idx, idx, ctypes.byref(handle)))
+        return Symbol(handle=handle)
+
     def list_arguments(self):
         """List all the arguments in the symbol.
 

@@ -238,6 +238,13 @@ class Symbol {
     return heads_.size();
   }
   /*!
+   * \brief create equivalence of symbol by selecting a subgroup of the
+   *        current symbol's output
+   * \param index of selected symbols
+   * \return the subgroup symbol
+   */
+  Symbol GetSubGroup(const std::vector<uint32_t> idx);
+  /*!
    * \brief create Symbol by wrapping OperatorProperty
    * This function takes the ownership of op
    *

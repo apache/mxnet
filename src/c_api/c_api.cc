@@ -521,6 +521,21 @@ int MXSymbolCreateGroup(mx_uint num_symbols,
   API_END_HANDLE_ERROR(delete s);
 }
 
+int MXSymbolGetSubGroup(SymbolHandle symbol,
+                        mx_uint num_idx,
+                        mx_uint *idx,
+                        SymbolHandle *out) {
+  Symbol *s = new Symbol();
+  API_BEGIN();
+  std::vector<mx_uint> idx_vec;
+  for (mx_uint i = 0; i < num_idx; ++i) {
+    idx_vec.push_back(idx[i]);
+  }
+  *s = static_cast<Symbol*>(symbol)->GetSubGroup(idx_vec);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXSymbolGetOutput(SymbolHandle symbol,
                       mx_uint index,
                       SymbolHandle *out) {
