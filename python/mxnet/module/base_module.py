@@ -333,8 +333,9 @@ class BaseModule(object):
 
         if hasattr(train_data, 'layout_mapper'):
             self.layout_mapper = train_data.layout_mapper
+        data_types = dict(train_data.provide_data_type + train_data.provide_label_type)
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
-                  for_training=True, force_rebind=force_rebind)
+                  for_training=True, force_rebind=force_rebind, input_types=data_types)
         if monitor is not None:
             self.install_monitor(monitor)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,

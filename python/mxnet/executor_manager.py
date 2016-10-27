@@ -223,7 +223,7 @@ class DataParallelExecutorGroup(object):
             train_exec = _bind_exec(sym, ctxi, data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
                                     shared_data_arrays=self.shared_data_arrays[i],
-                                    input_types = data_types)
+                                    input_types=data_types)
             self.train_execs.append(train_exec)
 
         # data structure

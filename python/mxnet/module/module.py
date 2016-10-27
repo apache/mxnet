@@ -162,11 +162,11 @@ class Module(BaseModule):
         assert self.binded, 'call bind before initializing the parameters'
 
         if self._arg_params is None:
-            param_arrays = [nd.zeros(x[0].shape) for x in self._exec_group.param_arrays]
+            param_arrays = [nd.zeros(x[0].shape, dtype=x[0].dtype) for x in self._exec_group.param_arrays]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
 
         if self._aux_params is None:
-            aux_arrays = [nd.zeros(x[0].shape) for x in self._exec_group.aux_arrays]
+            aux_arrays = [nd.zeros(x[0].shape, dtype=x[0].dtype) for x in self._exec_group.aux_arrays]
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         def _impl(name, arr, cache):
@@ -200,7 +200,7 @@ class Module(BaseModule):
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             grad_req='write'):
+             grad_req='write', input_types=None):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -262,7 +262,7 @@ class Module(BaseModule):
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
                                                      layout_mapper=self.layout_mapper,
-                                                     grad_req=grad_req)
+                                                     grad_req=grad_req, input_types=input_types)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
