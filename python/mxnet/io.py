@@ -85,7 +85,8 @@ class DefaultLayoutMapper(LayoutMapper):
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
     def __init__(self, data, label, pad=None, index=None,
-                 bucket_key=None, provide_data=None, provide_label=None):
+                 bucket_key=None, provide_data=None, provide_label=None,
+                 provide_data_type=None, provide_label_type=None):
         self.data = data
         self.label = label
         self.pad = pad
@@ -95,6 +96,8 @@ class DataBatch(object):
         self.bucket_key = bucket_key
         self.provide_data = provide_data
         self.provide_label = provide_label
+        self.provide_data_type = provide_data_type
+        self.provide_label_type = provide_label_type
 
 class DataIter(object):
     """DataIter object in mxnet. """
@@ -200,7 +203,9 @@ class ResizeIter(DataIter):
         self.current_batch = None
 
         self.provide_data = data_iter.provide_data
+        self.provide_data_type = data_iter.provide_data_type
         self.provide_label = data_iter.provide_label
+        self.provide_label_type = data_iter.provide_label_type
         self.batch_size = data_iter.batch_size
 
     def reset(self):
@@ -305,12 +310,28 @@ class PrefetchingIter(DataIter):
                        for r, i in zip(self.rename_data, self.iters)], [])
 
     @property
+    def provide_data_type(self):
+        """The name and shape of data type provided by this iterator"""
+        if self.rename_data is None:
+            return sum([i.provide_data_type for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_data_type] \
+                       for r, i in zip(self.rename_data, self.iters)], [])
+    @property
     def provide_label(self):
         """The name and shape of label provided by this iterator"""
         if self.rename_label is None:
             return sum([i.provide_label for i in self.iters], [])
         else:
             return sum([[(r[n], s) for n, s in i.provide_label] \
+                       for r, i in zip(self.rename_label, self.iters)], [])
+
+    def provide_label_type(self):
+        """The name and shape of label type provided by this iterator"""
+        if self.rename_label is None:
+            return sum([i.provide_label_type for i in self.iters], [])
+        else:
+            return sum([[(r[n], s) for n, s in i.provide_label_type] \
                        for r, i in zip(self.rename_label, self.iters)], [])
 
     def reset(self):
@@ -454,10 +475,19 @@ class NDArrayIter(DataIter):
         return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.data]
 
     @property
+    def provide_data_type(self):
+        """The name and shape of data type provided by this iterator"""
+        return [(k, v.dtype) for k, v in self.data]
+
+    @property
     def provide_label(self):
         """The name and shape of label provided by this iterator"""
         return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.label]
 
+    @property
+    def provide_label_type(self):
+        """The name and shape of label type provided by this iterator"""
+        return [(k, v.dtype) for k, v in self.label]
 
     def hard_reset(self):
         """Igore roll over data and set to start"""
@@ -525,7 +555,9 @@ class MXDataIter(DataIter):
 
         # properties
         self.provide_data = [(data_name, data.shape)]
+        self.provide_data_type = [(data_name, data.dtype)]
         self.provide_label = [(label_name, label.shape)]
+        self.provide_label_type = [(label_name, label.dtype)]
         self.batch_size = data.shape[0]
 
 

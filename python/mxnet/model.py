@@ -517,7 +517,7 @@ class FeedForward(BASE_ESTIMATOR):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _init_predictor(self, input_shapes):
+    def _init_predictor(self, input_shapes, type_dict = None):
         """Initialize the predictor module for running prediction."""
         if self._pred_exec is not None:
             arg_shapes, _, _ = self.symbol.infer_shape(**dict(input_shapes))
@@ -527,7 +527,7 @@ class FeedForward(BASE_ESTIMATOR):
                 return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', **dict(input_shapes))
+            self.ctx[0], grad_req='null', type_dict = type_dict, **dict(input_shapes))
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
         _check_arguments(self.symbol)
@@ -596,7 +596,11 @@ class FeedForward(BASE_ESTIMATOR):
             X.reset()
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for name, dtype in X.provide_data_type:
+            type_dict[name] = dtype
+
+        self._init_predictor(data_shapes, type_dict)
         batch_size = X.batch_size
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
         output_list = [[] for _ in range(len(self._pred_exec.outputs))]
@@ -663,7 +667,11 @@ class FeedForward(BASE_ESTIMATOR):
 
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for name, dtype in X.provide_data_type:
+            type_dict[name] = dtype
+
+        self._init_predictor(data_shapes, type_dict)
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
 
         for i, batch in enumerate(X):

@@ -219,9 +219,11 @@ class DataParallelExecutorGroup(object):
             data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
                            for k, v in train_data.provide_data + train_data.provide_label}
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
+            data_types = dict(train_data.provide_data_type + train_data.provide_label_type)
             train_exec = _bind_exec(sym, ctxi, data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
-                                    shared_data_arrays=self.shared_data_arrays[i])
+                                    shared_data_arrays=self.shared_data_arrays[i],
+                                    input_types = data_types)
             self.train_execs.append(train_exec)
 
         # data structure
