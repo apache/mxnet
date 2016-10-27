@@ -24,7 +24,7 @@ namespace op {
 
 namespace pad_enum {
 enum PadOpInputs { kData };
-enum PadOpType { kConstant, kReflect, kReplicate };
+enum PadOpType { kConstant, kReplicate };
 enum PadOpOutputs { kOut };
 }
 
@@ -35,13 +35,22 @@ struct PadParam : public dmlc::Parameter<PadParam> {
   DMLC_DECLARE_PARAMETER(PadParam) {
     DMLC_DECLARE_FIELD(pad_type)
         .add_enum("constant", pad_enum::kConstant)
-        .add_enum("reflect", pad_enum::kReflect)
         .add_enum("replicate", pad_enum::kReplicate)
-        .describe("Pooling type to be applied.");
+        .describe(
+            "Padding type to use. \"constant\" pads all values with a constant "
+            "value,"
+            "the value of which can be specified with the padding_constant"
+            "option. \"replicate\" uses the boundary values of the array as "
+            "padding.");
 
-    DMLC_DECLARE_FIELD(pad_shape).describe("pad for pooling. ");
+    DMLC_DECLARE_FIELD(pad_shape).describe(
+        "A tuple of padding sizes of length 2*r, where r is the rank of the "
+        "input tensor. ");
     DMLC_DECLARE_FIELD(padding_constant)
-        .describe("pad for pooling. ")
+        .describe(
+            "This option is only used when pad_type is \"constant\". This "
+            "value will be used as the padding value. Defaults to 0 if not "
+            "specified.")
         .set_default(0.0);
   }
 };
@@ -60,12 +69,12 @@ class PadOp : public Operator {
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-
     // Get any size input + output into required form
     int rank = in_data[pad_enum::kData].ndim();
+    auto pad = param_.pad_shape;
     DType padding_constant = param_.padding_constant;
 
-    if (rank == 4) {
+    if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
       Tensor<xpu, 4, DType> data =
           in_data[pad_enum::kData].get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out =
@@ -73,7 +82,8 @@ class PadOp : public Operator {
       pad_image_2d(out, data, param_.pad_shape, param_.pad_type,
                    padding_constant);
     } else {
-      CHECK(false) << "Only ... ";
+      LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
+                    "two dimensions is currently implemented. ";
     }
 
     // Assign(out, req[pad_enum::kOut], F<mshadow_op::identity>(data));
@@ -91,18 +101,23 @@ class PadOp : public Operator {
     CHECK_EQ(out_grad.size(), 1);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-
     // Get any size input + output into required form
+    auto pad = param_.pad_shape;
     int rank = in_grad[pad_enum::kData].ndim();
     DType padding_constant = param_.padding_constant;
-
     // Currently only support rank 4
-    Tensor<xpu, 4, DType> in = in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> out = out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
-    in = 0.0f;
-    std::cout << in[0][0][0][0] << std::endl;
-    pad_image_2d_grad(in, out, param_.pad_shape, param_.pad_type,
-                      padding_constant);
+    if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
+      Tensor<xpu, 4, DType> in = in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
+      Tensor<xpu, 4, DType> out =
+          out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
+      in = 0.0f;
+
+      pad_image_2d_grad(in, out, param_.pad_shape, param_.pad_type,
+                        padding_constant);
+    } else {
+      LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
+                    "two dimensions is currently implemented. ";
+    }
   }
 
  private:

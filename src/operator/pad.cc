@@ -226,7 +226,12 @@ DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
     .describe("")
-    .add_argument("data", "Symbol", "n-dimensional input tensor.")
+    .add_argument("data", "Symbol", 
+    "Pads an n-dimensional input tensor. The padding amount pad_shape is a tuple"
+    " of size 2*n. For example, a pad_shape of [9,5,4,2] adds 9 padding values before"
+    "the first dimension, 5 padding values after the first dimension, 4 padding values "
+    "before the second dimension, and 2 padding values after the second dimension."
+  )
     .add_arguments(PadParam::__FIELDS__());
 
 }  // namespace op
