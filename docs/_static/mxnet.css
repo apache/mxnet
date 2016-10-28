@@ -613,7 +613,7 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 
 dt {
     margin-top: -76px;
-    padding-top: 76px;
+    padding-top: 100px;
 }
 
 dt:target, .highlighted {
@@ -670,19 +670,41 @@ dt:target, .highlighted {
     margin-left: 10px;
     -webkit-border-radius: 6px 0 6px 6px;
     -moz-border-radius: 6px 0 6px 6px;
-    border-radius: 6px 0 6px 6px;
+    border-radius: 6px 0 6px 6px
 }
 
 /*Content paragraph space*/
 div.content p {
-    margin: 15px 0 15px 0;
+    margin: 15px 0 15px 0
 }
 
 div.highlight-python, div.highlight-none {
-    padding-bottom:  15px;
+    padding-bottom:  15px
 }
 
-/*bullet indentation*/
-#mxnet-python-symbolic-api ul {
-    padding-left: 20px;
+/*list indentation*/
+.content ul {
+    padding-left: 20px 
+}
+
+.content ul {
+    padding-left: 20px 
+}
+
+/*API function formation*/
+div.seealso dd {
+    padding: 5px 5px
+}
+
+div.seealso dt {
+    padding-top: 80px
+}
+
+td {
+    padding-top:  10px !important;
+    padding-bottom: 10px !important
+}
+
+td p.first {
+    margin-bottom: 0
 }
