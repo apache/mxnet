@@ -453,7 +453,7 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter)
     return new PrefetcherIter(
         new BatchLoader(
             new ImageNormalizeIter(
-                new ImageRecordIter<>())));
+                new ImageRecordIter<real_t>())));
   });
 
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter)

@@ -609,7 +609,7 @@ class BaseModule(object):
     ################################################################################
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             grad_req='write'):
+             grad_req='write', input_types=None):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 

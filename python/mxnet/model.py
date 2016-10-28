@@ -517,7 +517,7 @@ class FeedForward(BASE_ESTIMATOR):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _init_predictor(self, input_shapes, type_dict = None):
+    def _init_predictor(self, input_shapes, type_dict=None):
         """Initialize the predictor module for running prediction."""
         if self._pred_exec is not None:
             arg_shapes, _, _ = self.symbol.infer_shape(**dict(input_shapes))
@@ -527,7 +527,7 @@ class FeedForward(BASE_ESTIMATOR):
                 return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', type_dict = type_dict, **dict(input_shapes))
+            self.ctx[0], grad_req='null', type_dict=type_dict, **dict(input_shapes))
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
         _check_arguments(self.symbol)

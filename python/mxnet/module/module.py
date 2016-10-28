@@ -162,11 +162,17 @@ class Module(BaseModule):
         assert self.binded, 'call bind before initializing the parameters'
 
         if self._arg_params is None:
-            param_arrays = [nd.zeros(x[0].shape, dtype=x[0].dtype) for x in self._exec_group.param_arrays]
+            param_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.param_arrays
+            ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
 
         if self._aux_params is None:
-            aux_arrays = [nd.zeros(x[0].shape, dtype=x[0].dtype) for x in self._exec_group.aux_arrays]
+            aux_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.aux_arrays
+            ]
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         def _impl(name, arr, cache):
