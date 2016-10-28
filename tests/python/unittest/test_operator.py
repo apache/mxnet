@@ -1535,6 +1535,21 @@ def mathematical_core(name, context, forward_mxnet_call, forward_numpy_call, bac
     assert reldiff(arr_grad, npout_grad) < 1e-6, "%s mathematical backward failed\n%s\n\n%s" % (
         name, arr_grad, npout_grad)
 
+def test_rounding(name, context, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[:] = data_init
+    arr_data = mx.nd.array(data_tmp, context)
+    arr_grad = mx.nd.empty(shape, context)
+    arr_grad[:] = 3
+
+    test = forward_mxnet_call(data)
+    exe_test = test.bind(context, args=[arr_data], args_grad=[arr_grad])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout = forward_numpy_call(data_tmp)
+    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
 
 def test_mathematical(context):
     # rsqrt
@@ -1611,6 +1626,16 @@ def test_mathematical(context):
     mathematical_core("log10", context, lambda x: mx.sym.log10(x), lambda x: np.log10(x),
                       lambda x: (1 / x))
 
+    # log2
+    mathematical_core("log2", context, lambda x: mx.sym.log2(x), lambda x: np.log2(x),
+                      lambda x: (1 / x))
+
+    # rint 
+    test_rounding("rint", context, lambda x: mx.sym.rint(x), lambda x: np.rint(x))
+
+    # fix
+    test_rounding("fix", context, lambda x: mx.sym.fix(x), lambda x: np.fix(x))
+
 def test_special_functions_using_scipy(context):
     try:
         from scipy import special as scipy_special
@@ -1628,46 +1653,46 @@ def test_special_functions_using_scipy(context):
 
 
 if __name__ == '__main__':
-    test_expand_dims()
-    test_slice_axis()
-    test_softmax()
-    test_broadcast_binary_op()
-    test_flip()
-    test_crop()
-    test_transpose()
-    test_convolution_grouping()
-    test_nearest_upsampling()
-    test_binary_op_duplicate_input()
-    test_elementwise_sum()
-    test_concat()
-    test_slice_channel()
-    test_regression()
-    test_python_op()
-    test_swapaxes()
-    test_scalarop()
-    test_scalar_pow()
-    test_symbol_pow()
-    test_pow_fn()
-    test_embedding()
-    test_rsqrt_cos_sin()
-    test_maximum_minimum()
-    test_maximum_minimum_scalar()
-    test_abs()
-    test_round_ceil_floor()
-    test_deconvolution()
-    test_batchnorm_training()
-    check_softmax_with_ignore_label(default_context())
-    test_convolution_dilated_impulse_response()
-    test_reshape()
-    test_reduce()
-    test_broadcast()
-    test_stn()
-    test_dot()
-    test_batch_dot()
-    test_correlation()
-    test_support_vector_machine_l1_svm()
-    test_support_vector_machine_l2_svm()
-    test_roipooling()
+    # test_expand_dims()
+    # test_slice_axis()
+    # test_softmax()
+    # test_broadcast_binary_op()
+    # test_flip()
+    # test_crop()
+    # test_transpose()
+    # test_convolution_grouping()
+    # test_nearest_upsampling()
+    # test_binary_op_duplicate_input()
+    # test_elementwise_sum()
+    # test_concat()
+    # test_slice_channel()
+    # test_regression()
+    # test_python_op()
+    # test_swapaxes()
+    # test_scalarop()
+    # test_scalar_pow()
+    # test_symbol_pow()
+    # test_pow_fn()
+    # test_embedding()
+    # test_rsqrt_cos_sin()
+    # test_maximum_minimum()
+    # test_maximum_minimum_scalar()
+    # test_abs()
+    # test_round_ceil_floor()
+    # test_deconvolution()
+    # test_batchnorm_training()
+    # check_softmax_with_ignore_label(default_context())
+    # test_convolution_dilated_impulse_response()
+    # test_reshape()
+    # test_reduce()
+    # test_broadcast()
+    # test_stn()
+    # test_dot()
+    # test_batch_dot()
+    # test_correlation()
+    # test_support_vector_machine_l1_svm()
+    # test_support_vector_machine_l2_svm()
+    # test_roipooling()
     for ctx in [mx.cpu(), mx.gpu()]:
         test_mathematical(ctx)
         test_special_functions_using_scipy(ctx)

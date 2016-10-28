@@ -168,6 +168,13 @@ struct log10 {
   }
 };
 
+struct log2 {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(log2f(a));
+  }
+};
+
 struct log_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
@@ -575,6 +582,30 @@ struct floor {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(floorf(a));
+  }
+};
+
+// rint 
+struct rint {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    float floor = floorf(a);
+    float ceil = ceilf(a); 
+    float floor_diff = fabsf(floor - a);
+    float ceil_diff = fabsf(ceil - a); 
+    return DType(floor_diff < ceil_diff ? floor : ceil);
+  }
+};
+
+// fix 
+struct fix {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    float floor = floorf(a);
+    float ceil = ceilf(a); 
+    float floor_diff = fabsf(floor - 0);
+    float ceil_diff = fabsf(ceil - 0); 
+    return DType(floor_diff < ceil_diff ? floor : ceil);
   }
 };
 
