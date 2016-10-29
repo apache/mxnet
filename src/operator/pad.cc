@@ -32,7 +32,7 @@ void single_image_2d_replicate(const Tensor<cpu, 3, DType> &dst,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  int k, ip_x, ip_y;
+  index_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
   for (k = 0; k < nslices; k++) {
     int i, j;
@@ -81,7 +81,7 @@ void single_image_2d_replicate_grad(const Tensor<cpu, 3, DType> &grad_in,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  int k, ip_x, ip_y;
+  index_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
   for (k = 0; k < nslices; k++) {
     int i, j;
@@ -121,10 +121,11 @@ void single_image_2d_constant(const Tensor<cpu, 3, DType> &dst,
                               mxnet::TShape pad, DType padding_constant) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
+  index_t c, w, h;
 #pragma omp parallel for private(c, w, h)
-  for (index_t c = 0; c < dst.size(0); ++c) {
-    for (index_t h = 0; h < dst.size(1); ++h) {
-      for (index_t w = 0; w < dst.size(2); ++w) {
+  for (c = 0; c < dst.size(0); ++c) {
+    for (h = 0; h < dst.size(1); ++h) {
+      for (w = 0; w < dst.size(2); ++w) {
         if ((w < pad_l) || (h < pad_t) || (h >= (src.size(1) + pad_t)) ||
             (w >= (src.size(2) + pad_l))) {
           dst[c][h][w] = padding_constant;
@@ -142,10 +143,11 @@ void single_image_2d_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
                                    mxnet::TShape pad) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
+  index_t c, h, w;
 #pragma omp parallel for private(c, w, h)
-  for (index_t c = 0; c < in_grad.size(0); ++c) {
-    for (index_t h = 0; h < in_grad.size(1); ++h) {
-      for (index_t w = 0; w < in_grad.size(2); ++w) {
+  for (c = 0; c < in_grad.size(0); ++c) {
+    for (h = 0; h < in_grad.size(1); ++h) {
+      for (w = 0; w < in_grad.size(2); ++w) {
         in_grad[c][h][w] += out_grad[c][h + pad_t][w + pad_l];
       }
     }
@@ -209,12 +211,15 @@ DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
     .describe("")
-    .add_argument("data", "Symbol", 
-    "Pads an n-dimensional input tensor. The padding amount pad_shape is a tuple"
-    " of size 2*n. For example, a pad_shape of [9,5,4,2] adds 9 padding values before"
-    "the first dimension, 5 padding values after the first dimension, 4 padding values "
-    "before the second dimension, and 2 padding values after the second dimension."
-  )
+    .add_argument("data", "Symbol",
+                  "Pads an n-dimensional input tensor. The padding amount "
+                  "pad_shape is a tuple"
+                  " of size 2*n. For example, a pad_shape of [9,5,4,2] adds 9 "
+                  "padding values before"
+                  "the first dimension, 5 padding values after the first "
+                  "dimension, 4 padding values "
+                  "before the second dimension, and 2 padding values after the "
+                  "second dimension.")
     .add_arguments(PadParam::__FIELDS__());
 
 }  // namespace op
