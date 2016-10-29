@@ -98,7 +98,7 @@ class LocalResponseNormOp : public Operator {
 };  // class LocalResponseNormOp
 
 template<typename xpu>
-Operator *CreateOp(LRNParam param);
+Operator *CreateOp(LRNParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class LocalResponseNormProp : public OperatorProperty {
@@ -120,9 +120,7 @@ class LocalResponseNormProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
-#if MXNET_USE_CUDNN != 1
     out_shape->push_back(dshape);
-#endif
     return true;
   }
 
@@ -140,23 +138,10 @@ class LocalResponseNormProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-#if MXNET_USE_CUDNN == 1
-    return {out_grad[lrn_enum::kOut], in_data[lrn_enum::kData], out_data[lrn_enum::kOut]};
-#else
-    return {out_grad[lrn_enum::kOut], in_data[lrn_enum::kData], out_data[lrn_enum::kTmpNorm]};
-#endif
-  }
-
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-#if MXNET_USE_CUDNN == 1
-    return {};
-#else
-    return {{out_grad[lrn_enum::kOut], in_grad[lrn_enum::kData]}};
-#endif
+    return {
+      out_grad[lrn_enum::kOut], in_data[lrn_enum::kData],
+      out_data[lrn_enum::kTmpNorm], out_data[lrn_enum::kOut]
+    };
   }
 
   int NumVisibleOutputs() const override {
@@ -164,7 +149,7 @@ class LocalResponseNormProp : public OperatorProperty {
   }
 
   int NumOutputs() const override {
-    return MXNET_USE_CUDNN == 1 ? 1 : 2;
+    return 2;
   }
 
   std::vector<std::string> ListArguments() const override {
@@ -172,14 +157,16 @@ class LocalResponseNormProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListOutputs() const override {
-#if MXNET_USE_CUDNN == 1
-    return {"output"};
-#else
     return {"output", "tmp_norm"};
-#endif
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   LRNParam param_;

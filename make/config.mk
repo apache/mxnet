@@ -59,6 +59,12 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
+# whether use MKL2017 library
+USE_MKL2017 = 0
+
+# whether use MKL2017 experimental feature for high performance
+USE_MKL2017_EXPERIMENTAL = 0
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
@@ -81,10 +87,10 @@ USE_STATIC_MKL = NONE
 endif
 
 #----------------------------
-# Settings for power arch
+# Settings for power and arm arch
 #----------------------------
 ARCH := $(shell uname -a)
-ifneq (,$(filter $(ARCH), powerpc64le ppc64le))
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le))
 	USE_SSE=0
 else
 	USE_SSE=1

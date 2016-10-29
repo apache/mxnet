@@ -27,7 +27,7 @@ object TrainCharRnn {
       // We can support various length input
       // For this problem, we cut each input sentence to length of 129
       // So we only need fix length bucket
-      val buckets = List(129)
+      val buckets = Array(129)
       // hidden unit in LSTM cell
       val numHidden = 512
       // embedding dimension, which is, map a char to a 256 dim vector
@@ -57,7 +57,7 @@ object TrainCharRnn {
       val initH = for (l <- 0 until numLstmLayer) yield (s"l${l}_init_h", (batchSize, numHidden))
       val initStates = initC ++ initH
 
-      val dataTrain = new ButketIo.BucketSentenceIter(incr.dataPath, vocab, buckets,
+      val dataTrain = new BucketIo.BucketSentenceIter(incr.dataPath, vocab, buckets,
                                           batchSize, initStates, seperateChar = "\n",
                                           text2Id = Utils.text2Id, readContent = Utils.readContent)
 

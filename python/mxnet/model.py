@@ -325,9 +325,11 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
     - ``prefix-symbol.json`` will be saved for symbol.
     - ``prefix-epoch.params`` will be saved for parameters.
     """
-    symbol.save('%s-symbol.json' % prefix)
-    save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+    if symbol is not None:
+        symbol.save('%s-symbol.json' % prefix)
+
+    save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
+    save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
     param_name = '%s-%04d.params' % (prefix, epoch)
     nd.save(param_name, save_dict)
     logging.info('Saved checkpoint to \"%s\"', param_name)

@@ -58,6 +58,28 @@ ifeq ($(USE_OPENMP), 1)
 	CFLAGS += -fopenmp
 endif
 
+ifeq ($(USE_MKL2017), 1)
+	CFLAGS += -DMXNET_USE_MKL2017=1
+	CFLAGS += -DUSE_MKL=1
+ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
+	CFLAGS += -DMKL_EXPERIMENTAL=1
+else
+	CFLAGS += -DMKL_EXPERIMENTAL=0
+endif
+ifneq ($(USE_BLAS), mkl)
+	ICC_ON=0	
+	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON))
+	MKLROOT=$(firstword $(RETURN_STRING))
+	MKL_LDFLAGS=-l$(word 2, $(RETURN_STRING))
+	MKL_EXTERNAL=$(lastword $(RETURN_STRING))
+ifeq ($(MKL_EXTERNAL), 1)
+	MKL_LDFLAGS+=-Wl,-rpath,$(MKLROOT)/lib
+	CFLAGS += -I$(MKLROOT)/include
+	LDFLAGS += -L$(MKLROOT)/lib/ -liomp5 -lmklml_gnu
+endif
+endif
+endif
+
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
@@ -93,7 +115,7 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
-SRC = $(wildcard src/*.cc src/*/*.cc)
+SRC = $(wildcard src/*.cc src/*/*.cc src/*/*/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))

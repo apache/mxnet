@@ -135,7 +135,8 @@ class BucketingModule(BaseModule):
         self.params_initialized = True
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None,
+             grad_req='write'):
         """Binding for a `BucketingModule` means setting up the buckets and bind the
         executor for the default bucket key. Executors corresponding to other keys are
         binded afterwards with `switch_bucket`.
@@ -154,6 +155,10 @@ class BucketingModule(BaseModule):
             Default is `False`.
         shared_module : BucketingModule
             Default is `None`. This value is currently not used.
+        grad_req : str, list of str, dict of str to str
+            Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+            (default to 'write').
+            Can be specified globally (str) or for each argument (list, dict).
         """
         # in case we already initialized params, keep it
         if self.params_initialized:
@@ -177,8 +182,9 @@ class BucketingModule(BaseModule):
         symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list)
+        module.layout_mapper = self.layout_mapper
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
-                    force_rebind=False, shared_module=None)
+                    force_rebind=False, shared_module=None, grad_req=grad_req)
         self._curr_module = module
         self._buckets[self._default_bucket_key] = module
 
@@ -204,6 +210,7 @@ class BucketingModule(BaseModule):
             module = Module(symbol, data_names, label_names,
                             logger=self.logger, context=self._context,
                             work_load_list=self._work_load_list)
+            module.layout_mapper = self.layout_mapper
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
                         force_rebind=False, shared_module=self._curr_module)

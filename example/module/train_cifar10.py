@@ -52,9 +52,9 @@ def _download(data_dir):
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')) :
-           os.system("wget http://data.dmlc.ml/mxnet/data/cifar10.zip")
-        os.system("unzip -u cifar10.zip")
-        os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
+            os.system("wget http://data.dmlc.ml/mxnet/data/cifar10.zip")
+            os.system("unzip -u cifar10.zip")
+            os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
     os.chdir(cwd)
 
 # network
@@ -109,6 +109,7 @@ logging.info('running on %s', platform.node())
 
 devs = mx.cpu() if (args.gpus is None or args.gpus == '') else [
     mx.gpu(int(i)) for i in args.gpus.split(',')]
+logging.info('Starting with devices %s', devs)
 
 mod = mx.mod.Module(net, context=devs)
 

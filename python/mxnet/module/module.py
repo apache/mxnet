@@ -199,7 +199,8 @@ class Module(BaseModule):
         self._exec_group.set_params(self._arg_params, self._aux_params)
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None,
+             grad_req='write'):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -259,7 +260,9 @@ class Module(BaseModule):
                                                      label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
-                                                     fixed_param_names=self._fixed_param_names)
+                                                     fixed_param_names=self._fixed_param_names,
+                                                     layout_mapper=self.layout_mapper,
+                                                     grad_req=grad_req)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params

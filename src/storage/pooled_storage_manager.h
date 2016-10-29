@@ -6,37 +6,49 @@
 #ifndef MXNET_STORAGE_POOLED_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_POOLED_STORAGE_MANAGER_H_
 
+#if MXNET_USE_CUDA
+  #include <cuda_runtime.h>
+#endif  // MXNET_USE_CUDA
 #include <mxnet/base.h>
 #include <unordered_map>
 #include <vector>
 #include <mutex>
 #include <new>
 #include "./storage_manager.h"
+#include "../common/cuda_utils.h"
+
 
 namespace mxnet {
 namespace storage {
 
+#if MXNET_USE_CUDA
 /*!
- * \brief Storage manager with a memory pool.
+ * \brief Storage manager with a memory pool on gpu.
  */
-template <class DeviceStorage>
-class PooledStorageManager final : public StorageManager {
+class GPUPooledStorageManager final : public StorageManager {
  public:
   /*!
    * \brief Default constructor.
    */
-  PooledStorageManager() = default;
+  GPUPooledStorageManager() {
+    reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
+  }
   /*!
    * \brief Default destructor.
    */
-  ~PooledStorageManager() {
+  ~GPUPooledStorageManager() {
     ReleaseAll();
   }
+
   void* Alloc(size_t size) override;
   void Free(void* ptr, size_t size) override;
 
   void DirectFree(void* ptr, size_t size) override {
-    DeviceStorage::Free(ptr);
+    cudaError_t err = cudaFree(ptr);
+    // ignore unloading error, as memory has already been recycled
+    if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+      LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
+    }
     used_memory_ -= size;
   }
 
@@ -46,26 +58,28 @@ class PooledStorageManager final : public StorageManager {
   std::mutex mutex_;
   // used memory
   size_t used_memory_ = 0;
+  // percentage of reserved memory
+  int reserve_;
   // memory pool
   std::unordered_map<size_t, std::vector<void*>> memory_pool_;
-  DISALLOW_COPY_AND_ASSIGN(PooledStorageManager);
-};  // class PooledStorageManager
+  DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
+};  // class GPUPooledStorageManager
 
-template <class DeviceStorage>
-void* PooledStorageManager<DeviceStorage>::Alloc(size_t size) {
+void* GPUPooledStorageManager::Alloc(size_t size) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
-    used_memory_ += size;
-    for (int i = 0; i < 2; ++i) {
-      try {
-        return DeviceStorage::Alloc(size);
-      } catch (const std::bad_alloc& e) {
-        ReleaseAll();
-      }
+    size_t free, total;
+    cudaMemGetInfo(&free, &total);
+    if (size > free - total*reserve_/100) ReleaseAll();
+
+    void* ret = nullptr;
+    cudaError_t e = cudaMalloc(&ret, size);
+    if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
+      LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
     }
-    LOG(FATAL) << "Memory allocation failed.";
-    return NULL;
+    used_memory_ += size;
+    return ret;
   } else {
     auto&& reuse_pool = reuse_it->second;
     auto ret = reuse_pool.back();
@@ -74,15 +88,13 @@ void* PooledStorageManager<DeviceStorage>::Alloc(size_t size) {
   }
 }
 
-template <class DeviceStorage>
-void PooledStorageManager<DeviceStorage>::Free(void* ptr, size_t size) {
+void GPUPooledStorageManager::Free(void* ptr, size_t size) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(ptr);
 }
 
-template <class DeviceStorage>
-void PooledStorageManager<DeviceStorage>::ReleaseAll() {
+void GPUPooledStorageManager::ReleaseAll() {
   for (auto&& i : memory_pool_) {
     for (auto&& j : i.second) {
       DirectFree(j, i.first);
@@ -90,6 +102,7 @@ void PooledStorageManager<DeviceStorage>::ReleaseAll() {
   }
   memory_pool_.clear();
 }
+#endif  // MXNET_USE_CUDA
 
 }  // namespace storage
 }  // namespace mxnet

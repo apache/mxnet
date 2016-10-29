@@ -18,7 +18,9 @@
 #include "./base.h"
 #include "./storage.h"
 #include "./engine.h"
-
+#if MKL_EXPERIMENTAL == 1
+#include "./mkl_memory.h"
+#endif
 // check c++11
 #if DMLC_USE_CXX11 == 0
 #error "cxx11 was required for ndarray module"
@@ -31,7 +33,11 @@ namespace mxnet {
 class NDArray {
  public:
   /*! \brief default cosntructor */
-  NDArray() {}
+  NDArray() {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = MKLMemHolder::create();
+#endif
+  }
   /*!
    * \brief constructing a new dynamic NDArray
    * \param shape the shape of array
@@ -43,6 +49,9 @@ class NDArray {
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
         shape_(shape), offset_(0), dtype_(dtype) {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+#endif
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -54,6 +63,9 @@ class NDArray {
   NDArray(const TBlob &data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
         dtype_(data.type_flag_) {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+#endif
   }
   /*!
    * \return the shape of current NDArray
@@ -70,6 +82,9 @@ class NDArray {
       res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
         + offset_, shape_, ptr_->shandle.ctx.dev_mask());
     });
+#if MKL_EXPERIMENTAL == 1
+    res.Mkl_mem_ = Mkl_mem_;
+#endif
     return res;
   }
   /*!
@@ -358,6 +373,10 @@ class NDArray {
       }
     }
   };
+
+#if MKL_EXPERIMENTAL == 1
+  std::shared_ptr<MKLMemHolder> Mkl_mem_;
+#endif
   /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_;
   /*! \brief shape of current NDArray */
@@ -381,17 +400,6 @@ class NDArray {
  */
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
-/*!
- * \brief copy a slice along any axis.
- * \param from the NDArray we want to slice from
- * \param slice_dim the axis we want to perform slice in
- * \param start the beginning of the slice
- * \param end the ending of the slice
- * \param to the pre-allocated NDArray to copy the slice to
- * \param priority the priority of the task
- */
-void CopySliceTo(const NDArray &from, int slice_dim, index_t start, index_t end,
-                 NDArray *to, int priority = 0);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.

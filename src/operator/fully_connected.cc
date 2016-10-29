@@ -4,11 +4,27 @@
  * \brief fully connect operator
 */
 #include "./fully_connected-inl.h"
+#if MXNET_USE_MKL2017 == 1
+#include <mxnet/mkl_memory.h>
+#include "./mkl/mkl_memory-inl.h"
+#include "./mkl/mkl_fully_connected-inl.h"
+#endif  // MXNET_USE_MKL2017
+
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   Operator *op = NULL;
+#if MXNET_USE_MKL2017 == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new MKLFullyConnectedOp<cpu, float>(param);
+  case mshadow::kFloat64:
+    return new MKLFullyConnectedOp<cpu, double>(param);
+  default:
+    break;
+  }
+#else
   switch (dtype) {
   case mshadow::kFloat32:
     op = new FullyConnectedOp<cpu, float>(param);
@@ -23,6 +39,7 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   default:
     LOG(FATAL) << "Unsupported type " << dtype;
   }
+#endif
   return op;
 }
 
@@ -39,7 +56,10 @@ Operator *FullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
 MXNET_REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
-.describe("Apply matrix multiplication to input then add a bias.")
+.describe(R"(Apply matrix multiplication to input then add a bias.
+It maps the input of shape `(batch_size, input_dim)` to the shape of
+`(batch_size, num_hidden)`. Learnable parameters include the weights
+of the linear transform and an optional bias vector.)")
 .add_argument("data", "Symbol", "Input data to the FullyConnectedOp.")
 .add_argument("weight", "Symbol", "Weight matrix.")
 .add_argument("bias", "Symbol", "Bias parameter.")

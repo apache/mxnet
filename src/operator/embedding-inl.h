@@ -30,9 +30,9 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int output_dim;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
-    .describe("input dim of one-hot encoding");
+    .describe("vocabulary size of the input indices.");
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
-    .describe("output dim of embedding");
+    .describe("dimension of the embedding vectors.");
   }
 };
 

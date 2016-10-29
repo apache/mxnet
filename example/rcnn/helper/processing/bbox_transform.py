@@ -32,7 +32,7 @@ def bbox_transform(ex_rois, gt_rois):
     return targets
 
 
-def bbox_pred(boxes, box_deltas):
+def bbox_pred(boxes, box_deltas, is_train=False):
     """
     Transform the set of class-agnostic boxes into class-specific boxes
     by applying the predicted offsets (box_deltas)
@@ -53,9 +53,15 @@ def bbox_pred(boxes, box_deltas):
     dy = box_deltas[:, 1::4]
     dw = box_deltas[:, 2::4]
     dh = box_deltas[:, 3::4]
-
+    if is_train:
+        dx = np.array(map(lambda x: np.sign(x)*10 if abs(x) > 10 else x, dx))
+        dy = np.array(map(lambda x: np.sign(x)*10 if abs(x) > 10 else x, dy))
     pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
     pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
+
+    if is_train:
+        dw = np.array(map(lambda x: np.sign(x)*8 if abs(x) > 8 else x, dw))
+        dh = np.array(map(lambda x: np.sign(x)*8 if abs(x) > 8 else x, dh))
     pred_w = np.exp(dw) * widths[:, np.newaxis]
     pred_h = np.exp(dh) * heights[:, np.newaxis]
 
@@ -87,4 +93,19 @@ def clip_boxes(boxes, im_shape):
     boxes[:, 2::4] = np.maximum(np.minimum(boxes[:, 2::4], im_shape[1] - 1), 0)
     # y2 < im_shape[0]
     boxes[:, 3::4] = np.maximum(np.minimum(boxes[:, 3::4], im_shape[0] - 1), 0)
+    return boxes
+
+def clip_pad(boxes, pad_shape):
+    """
+    Clip boxes of the pad area.
+    :param boxes: [n, c, H, W]
+    :param im_shape: [h, w]
+    :return: [n, c, h, w]
+    """
+    H, W = boxes.shape[2:]
+    h, w = pad_shape
+    if h < H:
+        boxes = boxes[:, :, :h, :].copy()
+    if w < W:
+        boxes = boxes[:, :, :, :w].copy()
     return boxes

@@ -91,7 +91,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * List all the arguments in the symbol.
    * @return Array of all the arguments.
    */
-  def listArguments(): Seq[String] = {
+  def listArguments(): IndexedSeq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListArguments(handle, arr))
     arr
@@ -101,7 +101,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * List all outputs in the symbol.
    * @return : List of all the outputs.
    */
-  def listOutputs(): Seq[String] = {
+  def listOutputs(): IndexedSeq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListOutputs(handle, arr))
     arr
@@ -116,7 +116,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
    * Most operators do not have Auxiliary states.
    */
-  def listAuxiliaryStates(): Seq[String] = {
+  def listAuxiliaryStates(): IndexedSeq[String] = {
     val sarr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListAuxiliaryStates(handle, sarr))
     sarr
@@ -205,7 +205,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * outShapes List of shapes of outputs. The order is in the same order as list_outputs()
    * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
    */
-  def inferShape(args: Shape*): (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+  def inferShape(args: Shape*): (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
     val keys: Array[String] = null
     val indPtr = ArrayBuffer(0)
     val sdata = ArrayBuffer.empty[Int]
@@ -229,7 +229,8 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    * outShapes List of shapes of outputs. The order is in the same order as list_outputs()
    * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
    */
-  def inferShape(kwargs: Map[String, Shape]): (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+  def inferShape(kwargs: Map[String, Shape])
+      : (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
     val keys = ArrayBuffer.empty[String]
     val indPtr = ArrayBuffer(0)
     val sdata = ArrayBuffer.empty[Int]
@@ -242,18 +243,18 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
   }
 
   def inferShape(keys: Array[String], indPtr: Array[Int], values: Array[Int])
-    : (Seq[Shape], Seq[Shape], Seq[Shape]) = {
+    : (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
     val argShapeData = ListBuffer.empty[Array[Int]]
     val outShapeData = ListBuffer.empty[Array[Int]]
     val auxShapeData = ListBuffer.empty[Array[Int]]
     val complete = new RefInt
 
-    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.size - 1, keys, indPtr, values,
+    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.length - 1, keys, indPtr, values,
       argShapeData, outShapeData, auxShapeData, complete))
     if (complete.value != 0) {
-      (argShapeData.map(s => Shape(s)),
-       outShapeData.map(s => Shape(s)),
-       auxShapeData.map(s => Shape(s)))
+      (argShapeData.map(s => Shape(s)).toIndexedSeq,
+       outShapeData.map(s => Shape(s)).toIndexedSeq,
+       auxShapeData.map(s => Shape(s)).toIndexedSeq)
     } else {
       (null, null, null)
     }
@@ -358,10 +359,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    */
   def simpleBind(ctx: Context, gradReq: String = "write",
                  shapeDict: Map[String, Shape],
-                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null): Executor = {
+                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null)
+                 : Executor = {
     val types =
-      if (typeDict == null) listArguments().map((_, classOf[Float])).toMap
-      else typeDict
+      if (typeDict == null) {
+        listArguments().map((_, classOf[Float])).toMap
+      } else {
+        typeDict
+      }
     val (argShapes, _, auxShapes) = inferShape(shapeDict)
     val (argTypes, _, auxTypes) = inferType(types)
     require(argShapes != null && argTypes != null, "Input node is not complete")
@@ -749,8 +754,8 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     executor._group2ctx =
       if (group2ctx == null) null
       else group2ctx.map { case (key, value) =>
-        (key -> new Context(value.deviceType, value.deviceId))
-      }.toMap
+        key -> new Context(value.deviceType, value.deviceId)
+      }
     executor
   }
 
@@ -1101,4 +1106,8 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
     Symbol.createFromListedSymbols("_RDivScalar")(
       Array(other), Map("scalar" -> value.toString))
   }
+}
+
+trait SymbolGenerator {
+  def generate(key: AnyRef): Symbol
 }
