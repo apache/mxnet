@@ -136,9 +136,10 @@ def vgg16_score(input, numclass, workspace_default=1024):
 
 def fcnxs_score(input, crop, offset, kernel=(64,64), stride=(32,32), numclass=21, workspace_default=1024):
     # score out
-    bigscore = mx.symbol.Deconvolution(data=input, kernel=kernel, stride=stride, num_filter=numclass,
-                workspace=workspace_default, name="bigscore")
+    bigscore = mx.symbol.Deconvolution(data=input, kernel=kernel, stride=stride, adj=(stride[0]-1, stride[1]-1),
+               num_filter=numclass, workspace=workspace_default, name="bigscore")
     upscore = mx.symbol.Crop(*[bigscore, crop], offset=offset, name="upscore")
+    # upscore = mx.symbol.Crop(*[input, crop], offset=offset, name="upscore")
     softmax = mx.symbol.SoftmaxOutput(data=upscore, multi_output=True, use_ignore=True, ignore_label=255, name="softmax")
     return softmax
 
@@ -157,9 +158,9 @@ def get_fcn16s_symbol(numclass=21, workspace_default=1024):
     score = vgg16_score(pool4, numclass, workspace_default)
     # score 2X
     score2 = mx.symbol.Deconvolution(data=score, kernel=(4, 4), stride=(2, 2), num_filter=numclass,
-                workspace=workspace_default, name="score2")  # 2X
+                 adj=(1, 1), workspace=workspace_default, name="score2")  # 2X
     score_pool4 = mx.symbol.Convolution(data=pool4, kernel=(1, 1), num_filter=numclass,
-                workspace=workspace_default, name="score_pool4")
+                 workspace=workspace_default, name="score_pool4")
     score_pool4c = mx.symbol.Crop(*[score_pool4, score2], offset=offset()["score_pool4c"], name="score_pool4c")
     score_fused = score2 + score_pool4c
     softmax = fcnxs_score(score_fused, data, offset()["fcn16s_upscore"], (32, 32), (16, 16), numclass, workspace_default)
@@ -172,14 +173,14 @@ def get_fcn8s_symbol(numclass=21, workspace_default=1024):
     score = vgg16_score(pool4, numclass, workspace_default)
     # score 2X
     score2 = mx.symbol.Deconvolution(data=score, kernel=(4, 4), stride=(2, 2),num_filter=numclass,
-                workspace=workspace_default, name="score2")  # 2X
+                adj=(1, 1), workspace=workspace_default, name="score2")  # 2X
     score_pool4 = mx.symbol.Convolution(data=pool4, kernel=(1, 1), num_filter=numclass,
                 workspace=workspace_default, name="score_pool4")
     score_pool4c = mx.symbol.Crop(*[score_pool4, score2], offset=offset()["score_pool4c"], name="score_pool4c")
     score_fused = score2 + score_pool4c
     # score 4X
     score4 = mx.symbol.Deconvolution(data=score_fused, kernel=(4, 4), stride=(2, 2),num_filter=numclass,
-                workspace=workspace_default, name="score4") # 4X
+                adj=(1, 1), workspace=workspace_default, name="score4") # 4X
     score_pool3 = mx.symbol.Convolution(data=pool3, kernel=(1, 1), num_filter=numclass,
                 workspace=workspace_default, name="score_pool3")
     score_pool3c = mx.symbol.Crop(*[score_pool3, score4], offset=offset()["score_pool3c"], name="score_pool3c")
