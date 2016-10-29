@@ -109,7 +109,8 @@ class PadOp : public Operator {
       Tensor<xpu, 4, DType> in = in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out =
           out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
-      in = 0.0f;
+      if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
+
       pad_image_2d_grad(in, out, param_.pad_shape, param_.pad_type);
     } else {
       LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
