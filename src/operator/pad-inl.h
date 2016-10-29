@@ -104,16 +104,13 @@ class PadOp : public Operator {
     // Get any size input + output into required form
     auto pad = param_.pad_shape;
     int rank = in_grad[pad_enum::kData].ndim();
-    DType padding_constant = param_.padding_constant;
     // Currently only support rank 4
     if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
       Tensor<xpu, 4, DType> in = in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out =
           out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
       in = 0.0f;
-
-      pad_image_2d_grad(in, out, param_.pad_shape, param_.pad_type,
-                        padding_constant);
+      pad_image_2d_grad(in, out, param_.pad_shape, param_.pad_type);
     } else {
       LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
                     "two dimensions is currently implemented. ";
@@ -154,13 +151,11 @@ class PadProp : public OperatorProperty {
 
     const TShape &dshape = (*in_shape)[pad_enum::kData];
     if (dshape.ndim() == 0) return false;
-
     TShape oshape = dshape;
     for (int i = 0; i < dshape.ndim(); ++i) {
       oshape[i] =
           param_.pad_shape[2 * i] + param_.pad_shape[2 * i + 1] + dshape[i];
     }
-
     out_shape->clear();
     out_shape->push_back(oshape);
     return true;

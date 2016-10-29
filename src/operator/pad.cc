@@ -46,7 +46,6 @@ void single_image_2d_replicate(const Tensor<cpu, 3, DType> &dst,
           ip_x = iwidth + pad_l - 1;
         }
         ip_x = ip_x - oStartX + iStartX;
-
         if (i < pad_t) {
           ip_y = pad_t;
         } else if (i >= pad_t && i < iheight + pad_t) {
@@ -140,7 +139,7 @@ void single_image_2d_constant(const Tensor<cpu, 3, DType> &dst,
 template <typename DType>
 void single_image_2d_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
                                    const Tensor<cpu, 3, DType> out_grad,
-                                   mxnet::TShape pad, DType padding_constant) {
+                                   mxnet::TShape pad) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
 #pragma omp parallel for private(c, w, h)
@@ -173,34 +172,18 @@ void pad_image_2d(const Tensor<cpu, 4, DType> &dst,
 template <typename DType>
 void pad_image_2d_grad(const Tensor<cpu, 4, DType> &in_grad,
                        const Tensor<cpu, 4, DType> out_grad, mxnet::TShape pad,
-                       int pad_type, DType padding_constant) {
+                       int pad_type) {
   for (index_t n = 0; n < in_grad.size(0); ++n) {
     switch (pad_type) {
       case mxnet::op::pad_enum::kReplicate:
         single_image_2d_replicate_grad(in_grad[n], out_grad[n], pad);
         break;
       case mxnet::op::pad_enum::kConstant:
-        single_image_2d_constant_grad(in_grad[n], out_grad[n], pad,
-                                 padding_constant);
+        single_image_2d_constant_grad(in_grad[n], out_grad[n], pad);
         break;
     }
   }
 }
-
-// #pragma omp parallel for private(p)
-//     for (p = 0; p < nbatch; p++) {
-//       THNN_(SpatialReplicationPadding_updateOutput_frame)
-//       (input_data + p * nslices * iwidth * iheight,
-//        output_data + p * nslices * owidth * oheight, nslices, iwidth,
-//        iheight,
-//        owidth, oheight, pad_l, pad_r, pad_t, pad_b);
-//     }
-//   }
-
-//   /* cleanup */
-//   THTensor_(free)(input);
-// }
-
 }  // namespace mshadow
 
 namespace mxnet {
