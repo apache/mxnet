@@ -1,5 +1,7 @@
 package ml.dmlc.mxnet
 
+import java.nio.{ByteOrder, ByteBuffer}
+
 import ml.dmlc.mxnet.Base._
 import ml.dmlc.mxnet.DType.DType
 import org.slf4j.LoggerFactory
@@ -178,7 +180,7 @@ object NDArray {
    *
    * @return The created NDArray.
    */
-  def empty(shape: Shape, ctx: Context = null, dtype: DType = DType.Float32): NDArray = {
+  def empty(shape: Shape, ctx: Context = null, dtype: DType = Base.MX_REAL_TYPE): NDArray = {
     val context = if (ctx == null) Context.defaultCtx else ctx
     new NDArray(handle = NDArray.newAllocHandle(shape, context, delayAlloc = false, dtype))
   }
@@ -195,8 +197,8 @@ object NDArray {
    *
    * @return The created NDArray.
    */
-  def zeros(shape: Shape, ctx: Context = null): NDArray = {
-    val arr = empty(shape, ctx)
+  def zeros(shape: Shape, ctx: Context = null, dtype: DType = Base.MX_REAL_TYPE): NDArray = {
+    val arr = empty(shape, ctx, dtype)
     arr.set(0f)
     arr
   }
@@ -211,8 +213,8 @@ object NDArray {
    * @param ctx The context of the NDArray, default to current default context.
    * @return The created NDArray.
    */
-  def ones(shape: Shape, ctx: Context = null): NDArray = {
-    val arr = empty(shape, ctx)
+  def ones(shape: Shape, ctx: Context = null, dtype: DType = Base.MX_REAL_TYPE): NDArray = {
+    val arr = empty(shape, ctx, dtype)
     arr.set(1f)
     arr
   }
@@ -533,12 +535,15 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   /**
-   * TODO
    * Return a copied numpy array of current array with specified type.
    * @param dtype Desired type of result array.
    * @return A copy of array content.
    */
-  // def asType(dtype: Class[_ >: Float with Int with Double]): NDArray = {
+  def asType(dtype: DType): NDArray = {
+    val res = NDArray.empty(this.shape, ctx = this.context, dtype = dtype)
+    this.copyTo(res)
+    res
+  }
 
   /**
    * Return a reshaped NDArray that shares memory with current one.
@@ -710,23 +715,15 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return  A copy of array content.
    */
   def toArray: Array[Float] = {
-    val data = Array.ofDim[Float](size)
-    //FIXME: checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, data, size))
-    data
+    internal.toFloatArray
   }
 
-  def internal: Array[Byte] = {
-    val arrLength =
-      dtype match {
-        case DType.UInt8 => size
-        case DType.Int32 => 4 * size
-        case DType.Float16 => 2 * size
-        case DType.Float32 => 4 * size
-        case DType.Float64 => 8 * size
-      }
+  def internal: NDArrayInternal = {
+    val myType = dtype
+    val arrLength = DType.numOfBytes(myType) * size
     val arr = Array.ofDim[Byte](arrLength)
     checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, arr, size))
-    arr
+    new NDArrayInternal(arr, myType)
   }
 
   /**
@@ -902,4 +899,58 @@ class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def copy(): NDArray = head.copy()
   def shape: Shape = head.shape
   def size: Int = head.size
+}
+
+class NDArrayInternal private[mxnet](private val internal: Array[Byte], private val dtype: DType) {
+  private val unitSize = DType.numOfBytes(dtype)
+  require(internal.length > 0 && internal.length % unitSize == 0,
+    s"$dtype size $unitSize cannot divide byte array size ${internal.length}")
+  private val units: Array[Array[Byte]] = (
+    for (i <- 0 until internal.length / unitSize)
+      yield internal.slice(i * unitSize, (i + 1) * unitSize)
+  ).toArray
+
+  def getRaw: Array[Byte] = internal
+  def toDoubleArray: Array[Double] = {
+    require(dtype != DType.Float16, "Currently cannot convert float16 to native numerical types")
+    dtype match {
+      case DType.Float32 => units.map(wrapBytes(_).getFloat.toDouble)
+      case DType.Float64 => units.map(wrapBytes(_).getDouble)
+      case DType.Int32 => units.map(wrapBytes(_).getInt.toDouble)
+      case DType.UInt8 => internal.map(_.toDouble)
+    }
+  }
+  def toFloatArray: Array[Float] = {
+    require(dtype != DType.Float16, "Currently cannot convert float16 to native numerical types")
+    dtype match {
+      case DType.Float32 => units.map(wrapBytes(_).getFloat)
+      case DType.Float64 => units.map(wrapBytes(_).getDouble.toFloat)
+      case DType.Int32 => units.map(wrapBytes(_).getInt.toFloat)
+      case DType.UInt8 => internal.map(_.toFloat)
+    }
+  }
+  def toIntArray: Array[Int] = {
+    require(dtype != DType.Float16, "Currently cannot convert float16 to native numerical types")
+    dtype match {
+      case DType.Float32 => units.map(wrapBytes(_).getFloat.toInt)
+      case DType.Float64 => units.map(wrapBytes(_).getDouble.toInt)
+      case DType.Int32 => units.map(wrapBytes(_).getInt)
+      case DType.UInt8 => internal.map(_.toInt)
+    }
+  }
+  def toByteArray: Array[Byte] = {
+    require(dtype != DType.Float16, "Currently cannot convert float16 to native numerical types")
+    dtype match {
+      case DType.Float16 | DType.Float32 => units.map(wrapBytes(_).getFloat.toByte)
+      case DType.Float64 => units.map(wrapBytes(_).getDouble.toByte)
+      case DType.Int32 => units.map(wrapBytes(_).getInt.toByte)
+      case DType.UInt8 => internal.clone()
+    }
+  }
+
+  private def wrapBytes(bytes: Array[Byte]): ByteBuffer = {
+    val bb = ByteBuffer.wrap(bytes)
+    bb.order(ByteOrder.LITTLE_ENDIAN)
+    bb
+  }
 }
