@@ -32,7 +32,7 @@ void single_image_2d_replicate(const Tensor<cpu, 3, DType> &dst,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  index_t k, ip_x, ip_y;
+  int k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
   for (k = 0; k < nslices; k++) {
     int i, j;
@@ -81,7 +81,7 @@ void single_image_2d_replicate_grad(const Tensor<cpu, 3, DType> &grad_in,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  index_t k, ip_x, ip_y;
+  int k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
   for (k = 0; k < nslices; k++) {
     int i, j;
@@ -121,7 +121,7 @@ void single_image_2d_constant(const Tensor<cpu, 3, DType> &dst,
                               mxnet::TShape pad, DType padding_constant) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
-  index_t c, w, h;
+  int c, w, h;
 #pragma omp parallel for private(c, w, h)
   for (c = 0; c < dst.size(0); ++c) {
     for (h = 0; h < dst.size(1); ++h) {
@@ -143,7 +143,7 @@ void single_image_2d_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
                                    mxnet::TShape pad) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
-  index_t c, h, w;
+  int c, h, w;
 #pragma omp parallel for private(c, w, h)
   for (c = 0; c < in_grad.size(0); ++c) {
     for (h = 0; h < in_grad.size(1); ++h) {
