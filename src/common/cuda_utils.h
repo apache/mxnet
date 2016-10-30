@@ -158,9 +158,9 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
 // From CUDA Programming Guide
 static inline  __device__  void atomicAdd(double *address, double val) {
-  unsigned long long int* address_as_ull = (unsigned long long int*)address;
-  unsigned long long int old = *address_as_ull;
-  unsigned long long int assumed;
+  uint64_t* address_as_ull = reinterpret_cast<uint64_t*>(address);
+  uint64_t old = *address_as_ull;
+  uint64_t assumed;
 
   do {
     assumed = old;
@@ -174,22 +174,28 @@ static inline  __device__  void atomicAdd(double *address, double val) {
 #endif
 
 // Overload atomicAdd for half precision
-// Taken from: https://github.com/torch/cutorch/blob/master/lib/THC/THCAtomics.cuh
+// Taken from:
+// https://github.com/torch/cutorch/blob/master/lib/THC/THCAtomics.cuh
 #if defined(__CUDA_ARCH__)
-static inline  __device__ void atomicAdd(mshadow::half::half_t *address, mshadow::half::half_t val) {
-  unsigned int * address_as_ui =
-      (unsigned int *) ((char *)address - ((size_t)address & 2));
-  unsigned int old = *address_as_ui;
-  unsigned int assumed;
-  
+static inline __device__ void atomicAdd(mshadow::half::half_t *address,
+                                        mshadow::half::half_t val) {
+  uint16_t *address_as_ui =
+      reinterpret_cast<uint16_t *>(reinterpret_cast<char *>(address) -
+                                   (reinterpret_cast<size_t>(address) & 2));
+  uint16_t old = *address_as_ui;
+  uint16_t assumed;
+
   do {
     assumed = old;
     mshadow::half::half_t hsum;
-    hsum.half_ = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+    hsum.half_ =
+        reinterpret_cast<size_t>(address) & 2 ? (old >> 16) : (old & 0xffff);
     hsum += val;
-    old = (size_t)address & 2 ? (old & 0xffff) | (hsum.half_ << 16) : (old & 0xffff0000) | hsum.half_;
+    old = reinterpret_cast<size_t>(address) & 2
+              ? (old & 0xffff) | (hsum.half_ << 16)
+              : (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
-   } while (assumed != old);
+  } while (assumed != old);
 }
 #endif
 

@@ -190,4 +190,4 @@ class PadProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_SEQUENCE_MASK_INL_H_
+#endif  // MXNET_OPERATOR_PAD_INL_H_

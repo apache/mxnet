@@ -45,7 +45,7 @@ __global__ void image_2d_replicate_kernel(Tensor<gpu, 4, DType> dst,
 }
 
 template <typename DType>
-inline void image_2d_replicate(Tensor<gpu, 4, DType> &dst,
+inline void image_2d_replicate(Tensor<gpu, 4, DType> dst,
                                const Tensor<gpu, 4, DType> &src,
                                const mxnet::TShape &pad) {
   const int padT = pad[4];
@@ -86,7 +86,7 @@ __global__ void image_2d_replicate_grad_kernel(
 }
 
 template <typename DType>
-inline void image_2d_replicate_grad(Tensor<gpu, 4, DType> &grad_in,
+inline void image_2d_replicate_grad(Tensor<gpu, 4, DType> grad_in,
                                     const Tensor<gpu, 4, DType> &grad_out,
                                     const mxnet::TShape &pad) {
   const int padT = pad[4];
@@ -133,7 +133,7 @@ __global__ void image_2d_constant_kernel(Tensor<gpu, 4, DType> dst,
 }
 
 template <typename DType>
-inline void image_2d_constant(Tensor<gpu, 4, DType> &dst,
+inline void image_2d_constant(Tensor<gpu, 4, DType> dst,
                               const Tensor<gpu, 4, DType> &src,
                               const mxnet::TShape &pad, const DType constant) {
   const int padT = pad[4];
@@ -169,7 +169,7 @@ __global__ void image_2d_constant_grad_kernel(
 }
 
 template <typename DType>
-inline void image_2d_constant_grad(Tensor<gpu, 4, DType> &grad_in,
+inline void image_2d_constant_grad(Tensor<gpu, 4, DType> grad_in,
                                    const Tensor<gpu, 4, DType> &grad_out,
                                    const mxnet::TShape &pad) {
   const int padT = pad[4];
@@ -188,7 +188,7 @@ inline void image_2d_constant_grad(Tensor<gpu, 4, DType> &grad_in,
 }  // namespace cuda
 
 template <typename DType>
-void pad_image_2d(Tensor<gpu, 4, DType> &dst, const Tensor<gpu, 4, DType> src,
+void pad_image_2d(Tensor<gpu, 4, DType> dst, const Tensor<gpu, 4, DType> src,
                   const mxnet::TShape pad, int pad_type,
                   const DType padding_constant) {
   switch (pad_type) {
@@ -199,10 +199,10 @@ void pad_image_2d(Tensor<gpu, 4, DType> &dst, const Tensor<gpu, 4, DType> src,
       cuda::image_2d_constant(dst, src, pad, padding_constant);
       break;
   }
-};
+}
 
 template <typename DType>
-void pad_image_2d_grad(Tensor<gpu, 4, DType> &grad_in,
+void pad_image_2d_grad(Tensor<gpu, 4, DType> grad_in,
                        const Tensor<gpu, 4, DType> grad_out,
                        const mxnet::TShape pad, int pad_type) {
   switch (pad_type) {
@@ -213,7 +213,7 @@ void pad_image_2d_grad(Tensor<gpu, 4, DType> &grad_in,
       cuda::image_2d_constant_grad(grad_in, grad_out, pad);
       break;
   }
-};
+}
 
 }  // namespace mshadow
 
