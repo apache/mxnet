@@ -1,11 +1,11 @@
 # MXNet Python Symbolic API
-* [How to Compose Symbols](#overloaded-operators) introduces operator overloading of symbols.
+* [How to Compose Symbols](#how-to-compose-symbols) introduces operator overloading of symbols.
 * [Symbol Attributes](#symbol-attributes) introduces how to attach attributes to symbols.
 * [Serialization](#serialization) introduces how to save and load symbols.
 * [Executing Symbols](#executing-symbols) introduces how to evaluate the symbols with data.
 * [Execution API Reference](#execution-api-reference) gives reference to all the execution APIs.
 * [Multiple Outputs](#multiple-outputs) introduces how to configure multiple outputs.
-* [Symbol Creation API Reference](#symbol-creationapi-reference) gives reference to all functions.
+* [Symbol Creation API Reference](#module-mxnet.symbol) gives reference to all functions.
 * [Symbol Object Document](#mxnet.symbol.Symbol) gives API reference to the Symbol Object.
 * [Testing Utility Reference](#testing-utility-reference) gives reference to the testing utilities.
 

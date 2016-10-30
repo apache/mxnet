@@ -280,7 +280,8 @@ body > .container {
 #lang-select-wrap {
     display: block;
     position: fixed;
-    right: 120px
+    right: 120px;
+    top: 5px
 }
 
 #lang-select-label {
@@ -323,7 +324,8 @@ div .burgerIcon {
     font-size: 25px;
     position: fixed;
     right: 185px;
-    display: none;
+    top: 10px;
+    display: none
 }
 
 @media screen and (max-width:870px) {
@@ -337,10 +339,9 @@ div .burgerIcon a {
 }
 
 @media screen and (max-width: 405px) {
-    .burgerIcon {
-        position:fixed;
-        top:45px;
-        left: 70px;
+    div .burgerIcon {
+        top: 45px;
+        left: 70px
     }
 }
 
@@ -588,10 +589,10 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 }
 
 .section h2 {
-    padding-top: 80px;
+    padding-top: 100px;
     margin-top: -60px;
     padding-bottom: 10px;
-    font-size: 22px;
+    font-size: 25px;
 }
 
 .section h3 {
@@ -606,9 +607,13 @@ div.sphinxsidebar ul ul { margin-left: 15px }
     padding-bottom: 8px;
 }
 
+.section ul ul {
+    display: none
+}
+
 dt {
     margin-top: -76px;
-    padding-top: 76px;
+    padding-top: 100px;
 }
 
 dt:target, .highlighted {
@@ -665,5 +670,41 @@ dt:target, .highlighted {
     margin-left: 10px;
     -webkit-border-radius: 6px 0 6px 6px;
     -moz-border-radius: 6px 0 6px 6px;
-    border-radius: 6px 0 6px 6px;
+    border-radius: 6px 0 6px 6px
+}
+
+/*Content paragraph space*/
+div.content p {
+    margin: 15px 0 15px 0
+}
+
+div.highlight-python, div.highlight-none {
+    padding-bottom:  15px
+}
+
+/*list indentation*/
+.content ul {
+    padding-left: 20px 
+}
+
+.content ul {
+    padding-left: 20px 
+}
+
+/*API function formation*/
+div.seealso dd {
+    padding: 5px 5px
+}
+
+div.seealso dt {
+    padding-top: 80px
+}
+
+td {
+    padding-top:  10px !important;
+    padding-bottom: 10px !important
+}
+
+td p.first {
+    margin-bottom: 0
 }

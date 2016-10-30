@@ -12,8 +12,7 @@ from utils.load_data import load_gt_roidb, load_test_ss_roidb, load_test_rpn_roi
 from utils.load_model import load_param
 
 
-def test_rcnn(imageset, year, root_path, devkit_path, prefix, epoch, ctx, vis=False, has_rpn=True, proposal='rpn',
-              end2end=False):
+def test_rcnn(imageset, year, root_path, devkit_path, prefix, epoch, ctx, vis=False, has_rpn=True, proposal='rpn'):
     # load symbol and testing data
     if has_rpn:
         sym = get_vgg_test()
@@ -62,7 +61,5 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     ctx = mx.gpu(args.gpu_id)
-    if args.end2end:
-        args.has_rpn = True
     test_rcnn(args.image_set, args.year, args.root_path, args.devkit_path, args.prefix, args.epoch, ctx, args.vis,
               args.has_rpn, args.proposal)
