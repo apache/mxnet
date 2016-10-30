@@ -179,11 +179,11 @@ static inline  __device__  void atomicAdd(double *address, double val) {
 #if defined(__CUDA_ARCH__)
 static inline __device__ void atomicAdd(mshadow::half::half_t *address,
                                         mshadow::half::half_t val) {
-  uint16_t *address_as_ui =
-      reinterpret_cast<uint16_t *>(reinterpret_cast<char *>(address) -
+  unsigned int *address_as_ui =
+      reinterpret_cast<unsigned int *>(reinterpret_cast<char *>(address) -
                                    (reinterpret_cast<size_t>(address) & 2));
-  uint16_t old = *address_as_ui;
-  uint16_t assumed;
+  unsigned int old = *address_as_ui;
+  unsigned int assumed;
 
   do {
     assumed = old;
