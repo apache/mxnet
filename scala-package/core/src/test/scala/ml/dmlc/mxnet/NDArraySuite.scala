@@ -412,4 +412,34 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     val arrCopy = NDArray.deserialize(bytes)
     assert(arr === arrCopy)
   }
+
+  test("dtype int32") {
+    val arr = NDArray.ones(Shape(1, 2), dtype = DType.Int32) * 2
+    assert(arr.dtype === DType.Int32)
+    assert(arr.internal.getRaw.length === 8)
+    assert(arr.internal.toFloatArray === Array(2f, 2f))
+    assert(arr.internal.toIntArray === Array(2, 2))
+    assert(arr.internal.toDoubleArray === Array(2d, 2d))
+    assert(arr.internal.toByteArray === Array(2.toByte, 2.toByte))
+  }
+
+  test("dtype uint8") {
+    val arr = NDArray.ones(Shape(1, 2), dtype = DType.UInt8) * 2
+    assert(arr.dtype === DType.UInt8)
+    assert(arr.internal.getRaw.length === 2)
+    assert(arr.internal.toFloatArray === Array(2f, 2f))
+    assert(arr.internal.toIntArray === Array(2, 2))
+    assert(arr.internal.toDoubleArray === Array(2d, 2d))
+    assert(arr.internal.toByteArray === Array(2.toByte, 2.toByte))
+  }
+
+  test("dtype float64") {
+    val arr = NDArray.ones(Shape(1, 2), dtype = DType.Float64) * 2
+    assert(arr.dtype === DType.Float64)
+    assert(arr.internal.getRaw.length === 16)
+    assert(arr.internal.toFloatArray === Array(2f, 2f))
+    assert(arr.internal.toIntArray === Array(2, 2))
+    assert(arr.internal.toDoubleArray === Array(2d, 2d))
+    assert(arr.internal.toByteArray === Array(2.toByte, 2.toByte))
+  }
 }
