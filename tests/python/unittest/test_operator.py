@@ -1465,7 +1465,7 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
     Y = mx.symbol.Pad(data=X, mode=mode, pad_width=pad_width)
     x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
     # numpy result
-    pad_grouped = zip(*[iter(list(pad_width))] * 2)
+    pad_grouped = list(zip(*[iter(list(pad_width))] * 2))
     np_out = np.pad(x.asnumpy(), pad_grouped, mode)
     # mxnet result
     grad = mx.nd.empty(shape, ctx = xpu)
