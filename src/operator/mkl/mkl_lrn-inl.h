@@ -244,15 +244,15 @@ class MKLLRNOp : public Operator {
       bwd_top_diff_->get_converted_prv(grad.dptr_, true, top_diff_mem);
 
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
+
+    lrn_res[dnnResourceSrc] =
+      fwd_bottom_data_->get_converted_prv(data.dptr_, false);
     std::shared_ptr<MKLMemHolder> bottom_diff_mem =
 #if MKL_EXPERIMENTAL == 1
       in_grad[lrn_enum::kData].Mkl_mem_;
 #else
       NULL;
 #endif
-    lrn_res[dnnResourceSrc] =
-      fwd_bottom_data_->get_converted_prv(data.dptr_, false, bottom_diff_mem);
-
 #if MKL_EXPERIMENTAL == 1
     if (bwd_bottom_diff_->conversion_needed()) {
       lrn_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
