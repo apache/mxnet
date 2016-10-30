@@ -209,16 +209,11 @@ Operator *PadProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
 DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
-    .describe("")
-    .add_argument("data", "Symbol",
-                  "Pads an n-dimensional input tensor. The padding amount "
-                  "pad_width is a tuple"
-                  " of size 2*n. For example, a pad_shape of [9,5,4,2] adds 9 "
-                  "padding values before"
-                  "the first dimension, 5 padding values after the first "
-                  "dimension, 4 padding values "
-                  "before the second dimension, and 2 padding values after the "
-                  "second dimension.")
+    .describe(
+        "Pads an n-dimensional input tensor. Allows for precise control of the "
+        "padding type and how much padding to apply on both sides of a given "
+        "dimension.")
+    .add_argument("data", "Symbol", "An n-dimensional input tensor.")
     .add_arguments(PadParam::__FIELDS__());
 
 }  // namespace op

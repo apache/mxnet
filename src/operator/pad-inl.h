@@ -38,14 +38,15 @@ struct PadParam : public dmlc::Parameter<PadParam> {
         .add_enum("edge", pad_enum::kEdge)
         .describe(
             "Padding type to use. \"constant\" pads all values with a constant "
-            "value,"
-            "the value of which can be specified with the constant_value"
-            "option. \"edge\" uses the boundary values of the array as "
-            "padding.");
+            "value, the value of which can be specified with the "
+            "constant_value option. \"edge\" uses the boundary values of the "
+            "array as padding.");
 
     DMLC_DECLARE_FIELD(pad_width).describe(
-        "A tuple of padding sizes of length 2*r, where r is the rank of the "
-        "input tensor. ");
+        "A tuple of padding widths of length 2*r, where r is the rank of the "
+        "input tensor, specifying number of values padded to the edges of each "
+        "axis. (before_1, after_1, ... , before_N, after_N) unique pad widths "
+        "for each axis. Equivalent to pad_width in numpy.pad, but flattened.");
     DMLC_DECLARE_FIELD(constant_value)
         .describe(
             "This option is only used when mode is \"constant\". This "
