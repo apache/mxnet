@@ -363,15 +363,13 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     require(argShapes != null && argTypes != null, "Input node is not complete")
     // alloc space
     val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
-      // TODO: NDArray dtype
-      NDArray.zeros(shape, ctx)
+      NDArray.zeros(shape, ctx, dtype = t)
     }
     val gradNDArrays =
       if (gradReq != "null") {
         (((listArguments() zip argShapes) zip argTypes) flatMap { case ((name, shape), t) =>
           if (!(name.endsWith("data") || name.endsWith("label"))) {
-            // TODO: NDArray dtype
-            Map(name -> NDArray.zeros(shape, ctx))
+            Map(name -> NDArray.zeros(shape, ctx, dtype = t))
           } else {
             Map.empty[String, NDArray]
           }
@@ -380,8 +378,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
         null
       }
     val auxNDArrays = (auxShapes zip auxTypes) map { case (shape, t) =>
-      // TODO: NDArray dtype
-      NDArray.zeros(shape, ctx)
+      NDArray.zeros(shape, ctx, dtype = t)
     }
     bind(ctx, argNDArrays, gradNDArrays, gradReq, auxNDArrays, null, null)
   }

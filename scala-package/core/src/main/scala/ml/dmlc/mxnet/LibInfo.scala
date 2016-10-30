@@ -24,12 +24,13 @@ class LibInfo {
                                  paramVals: Array[String]): Int
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
-  @native def mxNDArrayCreate(shape: Array[Int],
-                              ndim: Int,
-                              devType: Int,
-                              devId: Int,
-                              delayAlloc: Int,
-                              out: NDArrayHandleRef): Int
+  @native def mxNDArrayCreateEx(shape: Array[Int],
+                                ndim: Int,
+                                devType: Int,
+                                devId: Int,
+                                delayAlloc: Int,
+                                dtype: Int,
+                                out: NDArrayHandleRef): Int
   @native def mxNDArrayWaitAll(): Int
   @native def mxNDArrayWaitToRead(handle: NDArrayHandle): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int
@@ -60,7 +61,7 @@ class LibInfo {
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
   @native def mxNDArraySyncCopyToCPU(handle: NDArrayHandle,
-                                     data: Array[MXFloat],
+                                     data: Array[Byte],
                                      size: Int): Int
   @native def mxNDArraySlice(handle: NDArrayHandle,
                              start: MXUint,
