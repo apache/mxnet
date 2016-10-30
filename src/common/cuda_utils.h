@@ -158,9 +158,10 @@ inline const char* CurandGetErrorString(curandStatus_t status) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
 // From CUDA Programming Guide
 static inline  __device__  void atomicAdd(double *address, double val) {
-  uint64_t* address_as_ull = reinterpret_cast<uint64_t*>(address);
-  uint64_t old = *address_as_ull;
-  uint64_t assumed;
+  unsigned long long* address_as_ull = 
+    reinterpret_cast<unsigned long long*>(address);
+  unsigned long long old = *address_as_ull;
+  unsigned long long assumed;
 
   do {
     assumed = old;
