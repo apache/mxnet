@@ -11,13 +11,12 @@ namespace mshadow {
 ////////////////////////////////////////////////////////////////////////////////
 // Special Case: 2d image (so only pad width + height)
 
-// Case 1: Replication Padding
-// single_image_2d_replicate adapted from Torch
+// Case 1: Edge Padding (or Replication Padding)
+// single_image_2d_edge adapted from Torch
 // https://github.com/torch/nn/blob/master/lib/THNN/generic/SpatialReplicationPadding.c
 template <typename DType>
-void single_image_2d_replicate(const Tensor<cpu, 3, DType> &dst,
-                               const Tensor<cpu, 3, DType> src,
-                               mxnet::TShape pad) {
+void single_image_2d_edge(const Tensor<cpu, 3, DType> dst,
+                          const Tensor<cpu, 3, DType> src, mxnet::TShape pad) {
   const int nslices = src.size(0);
   const int iheight = src.size(1);
   const int iwidth = src.size(2);
@@ -64,9 +63,9 @@ void single_image_2d_replicate(const Tensor<cpu, 3, DType> &dst,
 }
 
 template <typename DType>
-void single_image_2d_replicate_grad(const Tensor<cpu, 3, DType> &grad_in,
-                                    const Tensor<cpu, 3, DType> grad_out,
-                                    mxnet::TShape pad) {
+void single_image_2d_edge_grad(const Tensor<cpu, 3, DType> &grad_in,
+                               const Tensor<cpu, 3, DType> grad_out,
+                               mxnet::TShape pad) {
   const int nslices = grad_in.size(0);
   const int iheight = grad_in.size(1);
   const int iwidth = grad_in.size(2);
@@ -118,7 +117,7 @@ void single_image_2d_replicate_grad(const Tensor<cpu, 3, DType> &grad_in,
 template <typename DType>
 void single_image_2d_constant(const Tensor<cpu, 3, DType> &dst,
                               const Tensor<cpu, 3, DType> src,
-                              mxnet::TShape pad, DType padding_constant) {
+                              mxnet::TShape pad, DType constant_value) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
   int c, w, h;
@@ -128,7 +127,7 @@ void single_image_2d_constant(const Tensor<cpu, 3, DType> &dst,
       for (w = 0; w < dst.size(2); ++w) {
         if ((w < pad_l) || (h < pad_t) || (h >= (src.size(1) + pad_t)) ||
             (w >= (src.size(2) + pad_l))) {
-          dst[c][h][w] = padding_constant;
+          dst[c][h][w] = constant_value;
         } else {
           dst[c][h][w] = src[c][h - pad_t][w - pad_l];
         }
@@ -157,15 +156,15 @@ void single_image_2d_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
 // General 2d image case
 template <typename DType>
 void pad_image_2d(const Tensor<cpu, 4, DType> &dst,
-                  const Tensor<cpu, 4, DType> src, mxnet::TShape pad,
-                  int pad_type, DType padding_constant) {
+                  const Tensor<cpu, 4, DType> src, mxnet::TShape pad, int mode,
+                  DType constant_value) {
   for (index_t n = 0; n < dst.size(0); ++n) {
-    switch (pad_type) {
-      case mxnet::op::pad_enum::kReplicate:
-        single_image_2d_replicate(dst[n], src[n], pad);
+    switch (mode) {
+      case mxnet::op::pad_enum::kEdge:
+        single_image_2d_edge(dst[n], src[n], pad);
         break;
       case mxnet::op::pad_enum::kConstant:
-        single_image_2d_constant(dst[n], src[n], pad, padding_constant);
+        single_image_2d_constant(dst[n], src[n], pad, constant_value);
         break;
     }
   }
@@ -174,11 +173,11 @@ void pad_image_2d(const Tensor<cpu, 4, DType> &dst,
 template <typename DType>
 void pad_image_2d_grad(const Tensor<cpu, 4, DType> &in_grad,
                        const Tensor<cpu, 4, DType> out_grad, mxnet::TShape pad,
-                       int pad_type) {
+                       int mode) {
   for (index_t n = 0; n < in_grad.size(0); ++n) {
-    switch (pad_type) {
-      case mxnet::op::pad_enum::kReplicate:
-        single_image_2d_replicate_grad(in_grad[n], out_grad[n], pad);
+    switch (mode) {
+      case mxnet::op::pad_enum::kEdge:
+        single_image_2d_edge_grad(in_grad[n], out_grad[n], pad);
         break;
       case mxnet::op::pad_enum::kConstant:
         single_image_2d_constant_grad(in_grad[n], out_grad[n], pad);
@@ -213,7 +212,7 @@ MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
     .describe("")
     .add_argument("data", "Symbol",
                   "Pads an n-dimensional input tensor. The padding amount "
-                  "pad_shape is a tuple"
+                  "pad_width is a tuple"
                   " of size 2*n. For example, a pad_shape of [9,5,4,2] adds 9 "
                   "padding values before"
                   "the first dimension, 5 padding values after the first "

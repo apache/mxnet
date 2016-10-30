@@ -14,13 +14,13 @@ namespace cuda {
 // Special Case: 2d image (so only pad width + height)
 
 // Case 1: Replication Padding
-// single_image_2d_replicate adapted from Torch
+// single_image_2d_edge adapted from Torch
 // https://github.com/torch/cunn/blob/master/lib/THCUNN/SpatialReplicationPadding.cu
 
 template <int n_bits, typename DType>
-__global__ void image_2d_replicate_kernel(Tensor<gpu, 4, DType> dst,
-                                          const Tensor<gpu, 4, DType> src,
-                                          const int padT, const int padL) {
+__global__ void image_2d_edge_kernel(Tensor<gpu, 4, DType> dst,
+                                     const Tensor<gpu, 4, DType> src,
+                                     const int padT, const int padL) {
   int outputPointId = threadIdx.x + blockIdx.x * blockDim.x;
   int plane = blockIdx.y;
   int batch = blockIdx.z;
@@ -45,9 +45,9 @@ __global__ void image_2d_replicate_kernel(Tensor<gpu, 4, DType> dst,
 }
 
 template <typename DType>
-inline void image_2d_replicate(Tensor<gpu, 4, DType> dst,
-                               const Tensor<gpu, 4, DType> &src,
-                               const mxnet::TShape &pad) {
+inline void image_2d_edge(Tensor<gpu, 4, DType> dst,
+                          const Tensor<gpu, 4, DType> &src,
+                          const mxnet::TShape &pad) {
   const int padT = pad[4];
   const int padL = pad[6];
   dim3 dimBlock(kBaseThreadNum);
@@ -55,15 +55,15 @@ inline void image_2d_replicate(Tensor<gpu, 4, DType> dst,
   dim3 dimGrid(xGridSize, dst.size(1), dst.size(0));
   CheckLaunchParam(dimGrid, dimBlock, "Pad");
   cudaStream_t stream = Stream<gpu>::GetStream(dst.stream_);
-  image_2d_replicate_kernel<kBaseThreadBits,
-                            DType><<<dimGrid, dimBlock, 0, stream>>>(
-      dst, src, padT, padL);
+  image_2d_edge_kernel<kBaseThreadBits,
+                       DType><<<dimGrid, dimBlock, 0, stream>>>(dst, src, padT,
+                                                                padL);
 }
 
 template <int n_bits, typename DType>
-__global__ void image_2d_replicate_grad_kernel(
-    Tensor<gpu, 4, DType> grad_in, const Tensor<gpu, 4, DType> grad_out,
-    const int padT, const int padL) {
+__global__ void image_2d_edge_grad_kernel(Tensor<gpu, 4, DType> grad_in,
+                                          const Tensor<gpu, 4, DType> grad_out,
+                                          const int padT, const int padL) {
   int outputPointId = threadIdx.x + blockIdx.x * blockDim.x;
   int plane = blockIdx.y;
   int batch = blockIdx.z;
@@ -86,9 +86,9 @@ __global__ void image_2d_replicate_grad_kernel(
 }
 
 template <typename DType>
-inline void image_2d_replicate_grad(Tensor<gpu, 4, DType> grad_in,
-                                    const Tensor<gpu, 4, DType> &grad_out,
-                                    const mxnet::TShape &pad) {
+inline void image_2d_edge_grad(Tensor<gpu, 4, DType> grad_in,
+                               const Tensor<gpu, 4, DType> &grad_out,
+                               const mxnet::TShape &pad) {
   const int padT = pad[4];
   const int padL = pad[6];
   dim3 dimBlock(kBaseThreadNum);
@@ -96,8 +96,8 @@ inline void image_2d_replicate_grad(Tensor<gpu, 4, DType> grad_in,
   dim3 dimGrid(xGridSize, grad_out.size(1), grad_out.size(0));
   CheckLaunchParam(dimGrid, dimBlock, "Pad");
   cudaStream_t stream = Stream<gpu>::GetStream(grad_out.stream_);
-  image_2d_replicate_grad_kernel<kBaseThreadBits,
-                                 DType><<<dimGrid, dimBlock, 0, stream>>>(
+  image_2d_edge_grad_kernel<kBaseThreadBits,
+                            DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padT, padL);
 }
 
@@ -189,14 +189,14 @@ inline void image_2d_constant_grad(Tensor<gpu, 4, DType> grad_in,
 
 template <typename DType>
 void pad_image_2d(Tensor<gpu, 4, DType> dst, const Tensor<gpu, 4, DType> src,
-                  const mxnet::TShape pad, int pad_type,
-                  const DType padding_constant) {
-  switch (pad_type) {
-    case mxnet::op::pad_enum::kReplicate:
-      cuda::image_2d_replicate(dst, src, pad);
+                  const mxnet::TShape pad, int mode,
+                  const DType constant_value) {
+  switch (mode) {
+    case mxnet::op::pad_enum::kEdge:
+      cuda::image_2d_edge(dst, src, pad);
       break;
     case mxnet::op::pad_enum::kConstant:
-      cuda::image_2d_constant(dst, src, pad, padding_constant);
+      cuda::image_2d_constant(dst, src, pad, constant_value);
       break;
   }
 }
@@ -204,10 +204,10 @@ void pad_image_2d(Tensor<gpu, 4, DType> dst, const Tensor<gpu, 4, DType> src,
 template <typename DType>
 void pad_image_2d_grad(Tensor<gpu, 4, DType> grad_in,
                        const Tensor<gpu, 4, DType> grad_out,
-                       const mxnet::TShape pad, int pad_type) {
-  switch (pad_type) {
-    case mxnet::op::pad_enum::kReplicate:
-      cuda::image_2d_replicate_grad(grad_in, grad_out, pad);
+                       const mxnet::TShape pad, int mode) {
+  switch (mode) {
+    case mxnet::op::pad_enum::kEdge:
+      cuda::image_2d_edge_grad(grad_in, grad_out, pad);
       break;
     case mxnet::op::pad_enum::kConstant:
       cuda::image_2d_constant_grad(grad_in, grad_out, pad);

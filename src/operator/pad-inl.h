@@ -24,31 +24,31 @@ namespace op {
 
 namespace pad_enum {
 enum PadOpInputs { kData };
-enum PadOpType { kConstant, kReplicate };
+enum PadOpType { kConstant, kEdge };
 enum PadOpOutputs { kOut };
 }
 
 struct PadParam : public dmlc::Parameter<PadParam> {
-  int pad_type;
-  double padding_constant;
-  TShape pad_shape;
+  int mode;
+  double constant_value;
+  TShape pad_width;
   DMLC_DECLARE_PARAMETER(PadParam) {
-    DMLC_DECLARE_FIELD(pad_type)
+    DMLC_DECLARE_FIELD(mode)
         .add_enum("constant", pad_enum::kConstant)
-        .add_enum("replicate", pad_enum::kReplicate)
+        .add_enum("edge", pad_enum::kEdge)
         .describe(
             "Padding type to use. \"constant\" pads all values with a constant "
             "value,"
-            "the value of which can be specified with the padding_constant"
-            "option. \"replicate\" uses the boundary values of the array as "
+            "the value of which can be specified with the constant_value"
+            "option. \"edge\" uses the boundary values of the array as "
             "padding.");
 
-    DMLC_DECLARE_FIELD(pad_shape).describe(
+    DMLC_DECLARE_FIELD(pad_width).describe(
         "A tuple of padding sizes of length 2*r, where r is the rank of the "
         "input tensor. ");
-    DMLC_DECLARE_FIELD(padding_constant)
+    DMLC_DECLARE_FIELD(constant_value)
         .describe(
-            "This option is only used when pad_type is \"constant\". This "
+            "This option is only used when mode is \"constant\". This "
             "value will be used as the padding value. Defaults to 0 if not "
             "specified.")
         .set_default(0.0);
@@ -71,16 +71,15 @@ class PadOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // Get any size input + output into required form
     int rank = in_data[pad_enum::kData].ndim();
-    auto pad = param_.pad_shape;
-    DType padding_constant = param_.padding_constant;
+    auto pad = param_.pad_width;
+    DType constant_value = param_.constant_value;
 
     if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
       Tensor<xpu, 4, DType> data =
           in_data[pad_enum::kData].get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out =
           out_data[pad_enum::kOut].get<xpu, 4, DType>(s);
-      pad_image_2d(out, data, param_.pad_shape, param_.pad_type,
-                   padding_constant);
+      pad_image_2d(out, data, param_.pad_width, param_.mode, constant_value);
     } else {
       LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
                     "two dimensions is currently implemented. ";
@@ -102,7 +101,7 @@ class PadOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // Get any size input + output into required form
-    auto pad = param_.pad_shape;
+    auto pad = param_.pad_width;
     int rank = in_grad[pad_enum::kData].ndim();
     // Currently only support rank 4
     if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
@@ -111,7 +110,7 @@ class PadOp : public Operator {
           out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
       if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
 
-      pad_image_2d_grad(in, out, param_.pad_shape, param_.pad_type);
+      pad_image_2d_grad(in, out, param_.pad_width, param_.mode);
     } else {
       LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
                     "two dimensions is currently implemented. ";
@@ -155,7 +154,7 @@ class PadProp : public OperatorProperty {
     TShape oshape = dshape;
     for (int i = 0; i < dshape.ndim(); ++i) {
       oshape[i] =
-          param_.pad_shape[2 * i] + param_.pad_shape[2 * i + 1] + dshape[i];
+          param_.pad_width[2 * i] + param_.pad_width[2 * i + 1] + dshape[i];
     }
     out_shape->clear();
     out_shape->push_back(oshape);
