@@ -50,6 +50,8 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
+        elif name.endswith("scale"):
+            self._init_scale(name, arr)
         else:
             self._init_default(name, arr)
     # pylint: disable=no-self-use, missing-docstring, invalid-name
@@ -80,6 +82,13 @@ class Initializer(object):
 
     def _init_gamma(self, _, arr):
         arr[:] = 1.0
+
+    def _init_scale(self, name, arr):
+        try:
+            s = float(name[:-6].split('_')[-1])
+            arr[:] = s
+        except:
+            self._init_one(name, arr)
 
     def _init_beta(self, _, arr):
         arr[:] = 0.0
