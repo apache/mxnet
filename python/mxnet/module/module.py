@@ -206,7 +206,7 @@ class Module(BaseModule):
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             grad_req='write', input_types=None):
+             grad_req='write'):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -260,6 +260,9 @@ class Module(BaseModule):
             shared_group = shared_module._exec_group
         else:
             shared_group = None
+        input_types = dict((x.name, x.type) for x in data_shapes)
+        for item in label_shapes:
+            input_types[item.name] = item.type
 
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, data_shapes,

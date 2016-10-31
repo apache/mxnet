@@ -3,6 +3,7 @@
 
 import logging
 import time
+from collections import namedtuple
 
 from .. import metric
 from .. import ndarray
@@ -333,9 +334,13 @@ class BaseModule(object):
 
         if hasattr(train_data, 'layout_mapper'):
             self.layout_mapper = train_data.layout_mapper
-        data_types = dict(train_data.provide_data_type + train_data.provide_label_type)
-        self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
-                  for_training=True, force_rebind=force_rebind, input_types=data_types)
+
+        provide_data = DataDesc.get_list(train_data.provide_data,
+                                         train_data.provide_data_type)
+        provide_label = DataDesc.get_list(train_data.provide_label,
+                                          train_data.provide_label_type)
+        self.bind(data_shapes=provide_data, label_shapes=provide_label,
+                  for_training=True, force_rebind=force_rebind)
         if monitor is not None:
             self.install_monitor(monitor)
         self.init_params(initializer=initializer, arg_params=arg_params, aux_params=aux_params,
@@ -609,7 +614,7 @@ class BaseModule(object):
     ################################################################################
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             grad_req='write', input_types=None):
+             grad_req='write'):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -670,3 +675,29 @@ class BaseModule(object):
         not even be associated with any symbols.
         """
         return self._symbol
+
+
+# pylint: disable=W0622
+class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
+    """Named data desc description contains name, shape, type and other extended attributes.
+    """
+    def __new__(cls, name, shape, type=float, layout='NCHW'):
+        ret = super(cls, DataDesc).__new__(cls, name, shape)
+        ret.type = type
+        ret.layout = layout
+        return ret
+
+    @staticmethod
+    def get_list(shapes, types):
+        """Get DataDesc list from attribute lists.
+
+        Parameters
+        ----------
+        shapes : shape tuple list with (name, shape) tuples
+        types : type tuple list with (name, type) tuples
+        """
+        if types is not None:
+            type_dict = dict(types)
+            return [DataDesc(x[0], x[1], type_dict[x[0]]) for x in shapes]
+        else:
+            return [DataDesc(x[0], x[1]) for x in shapes]

@@ -136,7 +136,7 @@ class BucketingModule(BaseModule):
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             grad_req='write', input_types=None):
+             grad_req='write'):
         """Binding for a `BucketingModule` means setting up the buckets and bind the
         executor for the default bucket key. Executors corresponding to other keys are
         binded afterwards with `switch_bucket`.
