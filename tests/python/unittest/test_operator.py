@@ -1461,6 +1461,30 @@ def test_roipooling():
                            grad_nodes={'data':'add', 'rois':'write'},
                            numeric_eps=1e-3, check_eps=1e-2)
 
+def check_pad_with_shape(shape, xpu, pad_width, mode):
+    # bind with label
+    X = mx.symbol.Variable('X')
+    Y = mx.symbol.Pad(data=X, mode=mode, pad_width=pad_width)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    # numpy result
+    pad_grouped = list(zip(*[iter(list(pad_width))] * 2))
+    np_out = np.pad(x.asnumpy(), pad_grouped, mode)
+    # mxnet result
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x], args_grad = {'X': grad})
+    exec1.forward()
+    out = exec1.outputs[0].asnumpy()
+    # compare numpy + mxnet
+    assert_allclose(out, np_out, rtol=1e-5)
+    # grad check
+    check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-3, check_eps=1e-2)
+
+def test_pad():
+    shape1 = (2, 3, 2, 3)
+    pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
+    check_pad_with_shape(shape1, default_context(), pad1, 'constant')
+    check_pad_with_shape(shape1, default_context(), pad1, 'edge')
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1502,3 +1526,4 @@ if __name__ == '__main__':
     test_support_vector_machine_l1_svm()
     test_support_vector_machine_l2_svm()
     test_roipooling()
+    test_pad()
