@@ -150,11 +150,11 @@ def test_slice_channel():
             shape = np.random.randint(1, 5, data_ndim).tolist()
             shape[axis] *= num_outputs
             out_ele_shape = [ele for ele in shape]
-            out_ele_shape[axis] /= num_outputs
+            out_ele_shape[axis] //= num_outputs
         data_npy = np.random.normal(size=shape)
         out_grads_npy = [np.random.normal(size=out_ele_shape) for i in range(num_outputs)]
         data = mx.sym.Variable('data')
-        sym = mx.sym.SliceChannel(data=data, num_outputs=num_outputs, axis=axis)
+        sym = mx.sym.SliceChannel(data=data, num_outputs=num_outputs, axis=axis, squeeze_axis=squeeze_axis)
         exe = sym.simple_bind(ctx=default_context(), data=data_npy.shape)
         assert len(exe.outputs) == num_outputs
         outputs = exe.forward(is_train=True, data=data_npy)
@@ -1461,7 +1461,6 @@ def test_roipooling():
                            grad_nodes={'data':'add', 'rois':'write'},
                            numeric_eps=1e-3, check_eps=1e-2)
 
-<<<<<<< 6084020b9e4b8d8a1d64aa6f6795e697e3ed10ee
 def check_pad_with_shape(shape, xpu, pad_width, mode):
     # bind with label
     X = mx.symbol.Variable('X')
@@ -1485,7 +1484,7 @@ def test_pad():
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
     check_pad_with_shape(shape1, default_context(), pad1, 'constant')
     check_pad_with_shape(shape1, default_context(), pad1, 'edge')
-=======
+
 
 def mathematical_core_binary(name,
                              forward_mxnet_call,

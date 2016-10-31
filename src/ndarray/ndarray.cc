@@ -237,7 +237,8 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
     return;
   }
   CHECK(from.shape() == to->shape())
-      << "operands shape mismatch";
+      << "operands shape mismatch"
+      << "from.shape = " << from.shape() << " to.shape=" << to->shape();
   CHECK(from.shape().ndim() != 0)
       << "source operands have zero dimension shape";
   // important: callback must always capture by value
