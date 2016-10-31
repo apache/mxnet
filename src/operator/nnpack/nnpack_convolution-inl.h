@@ -74,20 +74,19 @@ class NNPACKConvolutionOp : public ConvolutionOp<xpu,DType> {
     Tensor<xpu, 4, DType> out = out_data[conv::kOut].get<xpu, 4, DType>(s);
 
     //nnp_convolution_inference optimize for batch_size==1
-    //when W!=H, nnpack's result is incorrect, need to check why
-    if((data.shape_[0]!=1)||(data.shape_[2]!=data.shape_[3])) {
+    //when W or H less than 16, ConvolutionOp fast than nnpack's convolution
+    if((data.shape_[0]!=1)||(data.shape_[2]<16)||(data.shape_[3]<16)) {
         ConvolutionOp<xpu,DType>::Forward(ctx,in_data,req,out_data,aux_args);
     }
     else {
-        nnp_size input_size = {data.shape_[2],data.shape_[3]};
+        nnp_size input_size = {data.shape_[3],data.shape_[2]};
         nnp_padding input_padding = {param_.pad[0],param_.pad[1],param_.pad[0],param_.pad[1]};
         nnp_size kernel_size = {param_.kernel[1],param_.kernel[0]};
         nnp_size output_subsampling = {param_.stride[1],param_.stride[0]};
         Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
 
-        nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_ft16x16;
-        if( (param_.kernel[0]>16) || (param_.kernel[1]>16) || param_.stride[0]>1
-            || param_.stride[1]>1 || data.shape_[2]<256 || data.shape_[3]<256) {
+        nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_auto;
+        if((data.shape_[2]<32)||(data.shape_[3]<32)) {
             algorithm = nnp_convolution_algorithm_implicit_gemm;
         }
 
