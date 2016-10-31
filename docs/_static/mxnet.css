@@ -122,6 +122,19 @@ body > .container {
     margin-bottom: 0px;
 }
 
+@media screen and (max-width: 480px) {
+    #navContainer {
+        position: fixed;
+        left: 0;
+    }
+}
+
+@media screen and (max-width: 405px) {
+    .navbar {
+        height: 80px
+    }
+}
+
 #header-inner {
     display: -webkit-box;
     display: -webkit-flex;
@@ -172,18 +185,12 @@ body > .container {
 }
 
 #main-nav {
-    display: none;
+    display: block;
     -webkit-box-flex: 1;
     box-flex: 1;
     -webkit-flex: 1 auto;
     -ms-flex: 1 auto;
     flex: 1 auto;
-}
-
-@media screen and (min-width:769px) {
-    #main-nav {
-        display: block
-    }
 }
 
 .main-nav-link {
@@ -196,6 +203,29 @@ body > .container {
     font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
     display: inline-block;
     padding: 0 15px
+}
+
+@media screen and (max-width: 1085px) {
+    #main-nav {
+        display: block;
+        font-size: 75%
+    }
+    
+    .main-nav-link {
+        padding: 0 10px
+    }
+}
+
+@media screen and (max-width: 930px) {
+    .main-nav-link {
+        padding: 0 5px
+    }
+}
+
+@media screen and (max-width:870px) {
+    #main-nav {
+        display: none
+    }
 }
 
 .main-nav-link:hover {
@@ -248,14 +278,10 @@ body > .container {
 }
 
 #lang-select-wrap {
-    display: none;
-    position: relative
-}
-
-@media screen and (min-width:769px) {
-    #lang-select-wrap {
-        display: block
-    }
+    display: block;
+    position: fixed;
+    right: 120px;
+    top: 5px
 }
 
 #lang-select-label {
@@ -284,6 +310,81 @@ body > .container {
     font-size: inherit
 }
 
+@media screen and (max-width: 405px) {
+    #lang-select-wrap {
+        position: fixed;
+        top: 40px;
+        left: 90px;
+        width: 75px
+    }
+}
+
+/*burger icon*/
+div .burgerIcon {
+    font-size: 25px;
+    position: fixed;
+    right: 185px;
+    top: 10px;
+    display: none
+}
+
+@media screen and (max-width:870px) {
+    div .burgerIcon {
+        display: block
+    }
+}
+
+div .burgerIcon a {
+    color: white;
+}
+
+@media screen and (max-width: 405px) {
+    div .burgerIcon {
+        top: 45px;
+        left: 70px
+    }
+}
+
+/*burger menu*/
+#burgerMenu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    background-color: white;
+    list-style-position: inside;
+    border-radius: 8px;
+    min-width: 100px
+}
+
+#burgerMenu a {
+    display: table-cell;
+    font-size: 15px;
+    color: #0079b2;
+    vertical-align: middle;
+    height: 30px;
+    padding-left: 5px;
+    width: 108px;
+    max-width: 200px
+}
+
+#burgerMenu li {
+    height: 30px;
+    list-style-position: inside;
+}
+
+li.dropdown-submenu ul.dropdown-menu {
+    min-width: 75px;
+    width: 75px
+}
+
+li.dropdown-submenu ul.dropdown-menu li {
+    height: auto
+}
+
+li.dropdown-submenu ul.dropdown-menu a {
+    height: auto
+}
+
 /* banner */
 #splash{
     padding:60px 0 0 0;
@@ -310,6 +411,19 @@ body > .container {
 @media screen and (min-width:769px) {
     #splash #banner-title {
         padding-top: 100px;
+    }
+}
+
+@media screen and (max-width:768px) {
+    #splash #banner-title {
+            font-size: 30px;
+            padding: 20px 30px 10px 30px;
+    }
+}
+
+@media screen and (max-width:405px) {
+    #splash #banner-title {
+            padding-top: 40px;
     }
 }
 
@@ -348,11 +462,16 @@ body > .container {
 
 
 
-.section-tout{
+.section-tout {
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
     background-color:#eaf1f1
 }
+
+.section-tout .row div {
+    height: 110px;
+}
+
 .section-tout .fa{
     margin-right:.5em
 }
@@ -423,15 +542,12 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 
 .github-btn { border: 0; overflow: hidden }
 
-.container {
+.navbar .container {
     margin-right: auto;
-    margin-left: auto;
+    margin-left: 50px;
     padding-left: 15px;
     padding-right: 15px
 }
-
-
-
 
 /*embed end */
 
@@ -473,10 +589,10 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 }
 
 .section h2 {
-    padding-top: 80px;
+    padding-top: 100px;
     margin-top: -60px;
     padding-bottom: 10px;
-    font-size: 22px;
+    font-size: 25px;
 }
 
 .section h3 {
@@ -491,9 +607,13 @@ div.sphinxsidebar ul ul { margin-left: 15px }
     padding-bottom: 8px;
 }
 
+.section ul ul {
+    display: none
+}
+
 dt {
     margin-top: -76px;
-    padding-top: 76px;
+    padding-top: 100px;
 }
 
 dt:target, .highlighted {
@@ -502,4 +622,89 @@ dt:target, .highlighted {
 
 .section code.descname {
   font-size: 1em;
+}
+
+/*dropdown submenu*/
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -6px;
+    margin-left: -1px;
+    -webkit-border-radius: 0 6px 6px 6px;
+    -moz-border-radius: 0 6px 6px;
+    border-radius: 0 6px 6px 6px;
+}
+
+.dropdown-submenu:hover>.dropdown-menu {
+    display: block;
+}
+
+.dropdown-submenu>a:after {
+    display: block;
+    content: " ";
+    float: right;
+    width: 0;
+    height: 0;
+    border-color: transparent;
+    border-style: solid;
+    border-width: 5px 0 5px 5px;
+    border-left-color: #ccc;
+    margin-top: 5px;
+    margin-right: -10px;
+}
+
+.dropdown-submenu:hover>a:after {
+    border-left-color: #fff;
+}
+
+.dropdown-submenu.pull-left {
+    float: none;
+}
+
+.dropdown-submenu.pull-left>.dropdown-menu {
+    left: -100%;
+    margin-left: 10px;
+    -webkit-border-radius: 6px 0 6px 6px;
+    -moz-border-radius: 6px 0 6px 6px;
+    border-radius: 6px 0 6px 6px
+}
+
+/*Content paragraph space*/
+div.content p {
+    margin: 15px 0 15px 0
+}
+
+div.highlight-python, div.highlight-none {
+    padding-bottom:  15px
+}
+
+/*list indentation*/
+.content ul {
+    padding-left: 20px 
+}
+
+.content ul {
+    padding-left: 20px 
+}
+
+/*API function formation*/
+div.seealso dd {
+    padding: 5px 5px
+}
+
+div.seealso dt {
+    padding-top: 80px
+}
+
+td {
+    padding-top:  10px !important;
+    padding-bottom: 10px !important
+}
+
+td p.first {
+    margin-bottom: 0
 }

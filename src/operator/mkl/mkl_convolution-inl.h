@@ -276,12 +276,12 @@ class MKLConvolutionOp : public Operator {
     DType *data_ptr = NULL;
     DType *wmat_ptr = NULL;
     DType *out_ptr = NULL;
-    mkl_set_priv_flag(in_data[conv::kData]);
-    Tensor<xpu, 4, DType> data = in_data[conv::kData].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(out_data[conv::kOut]);
-    Tensor<xpu, 4, DType> out = out_data[conv::kOut].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(in_data[conv::kWeight]);
-    Tensor<xpu, 4, DType> wmat = in_data[conv::kWeight].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> data =
+      mkl_experimental_direct_get<xpu, 4, DType>(in_data[conv::kData], s);
+    Tensor<xpu, 4, DType> out =
+      mkl_experimental_direct_get<xpu, 4, DType>(out_data[conv::kOut], s);
+    Tensor<xpu, 4, DType> wmat =
+      mkl_experimental_direct_get<xpu, 4, DType>(in_data[conv::kWeight], s);
     if (!init_mkldnn_) {
       LayerSetUp(data, out);
       init_mkldnn_ = true;
@@ -311,8 +311,8 @@ class MKLConvolutionOp : public Operator {
     res_convolutionFwd[dnnResourceFilter] =
       fwd_filter_data->get_converted_prv(wmat_ptr, true, in_weight_mem);
     if (!param_.no_bias) {
-      mkl_set_priv_flag(in_data[conv::kBias]);
-      Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
+      Tensor<xpu, 1, DType> bias =
+        mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
       std::shared_ptr<MKLMemHolder> in_bias_mem =
 #if MKL_EXPERIMENTAL == 1
        in_data[conv::kBias].Mkl_mem_;
@@ -364,22 +364,23 @@ class MKLConvolutionOp : public Operator {
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    mkl_set_priv_flag(in_data[conv::kData]);
-    Tensor<xpu, 4, DType> data = in_data[conv::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> data =
+      mkl_experimental_direct_get<xpu, 4, DType>(in_data[conv::kData], s);
     Shape<3> wmat_shape =
       Shape3(param_.num_group,
              param_.num_filter / param_.num_group,
              data.shape_[1] / param_.num_group * param_.kernel[0] * param_.kernel[1]);
-    mkl_set_priv_flag(in_data[conv::kWeight]);
     Tensor<xpu, 3, DType> wmat =
-      in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
-    mkl_set_priv_flag(out_grad[conv::kOut]);
-    Tensor<xpu, 4, DType> grad = out_grad[conv::kOut].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(in_grad[conv::kData]);
-    Tensor<xpu, 4, DType> gdata = in_grad[conv::kData].get<xpu, 4, DType>(s);
-    mkl_set_priv_flag(in_grad[conv::kWeight]);
+      mkl_experimental_direct_get_with_shape<xpu, 3, DType>(
+      in_data[conv::kWeight], wmat_shape, s);
+    Tensor<xpu, 4, DType> grad =
+      mkl_experimental_direct_get<xpu, 4, DType>(out_grad[conv::kOut], s);
+    Tensor<xpu, 4, DType> gdata =
+      mkl_experimental_direct_get<xpu, 4, DType>(in_grad[conv::kData], s);
     Tensor<xpu, 3, DType> gwmat =
-      in_grad[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+      mkl_experimental_direct_get_with_shape<xpu, 3, DType>(
+      in_grad[conv::kWeight], wmat_shape, s);
+
     if (!init_mkldnn_) {
       init_mkldnn_ = true;
       LayerSetUp(data, grad);
@@ -463,8 +464,8 @@ class MKLConvolutionOp : public Operator {
 #endif
     }
     if (!param_.no_bias) {
-      mkl_set_priv_flag(in_grad[conv::kBias]);
-      Tensor<xpu, 1, DType> gbias = in_grad[conv::kBias].get<xpu, 1, DType>(s);
+      Tensor<xpu, 1, DType> gbias =
+        mkl_experimental_direct_get<xpu, 1, DType>(in_grad[conv::kBias], s);
       void *res_convolutionBwdBias[dnnResourceNumber];
       std::shared_ptr<MKLMemHolder> out_grad_mem =
 #if MKL_EXPERIMENTAL == 1

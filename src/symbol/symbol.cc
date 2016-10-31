@@ -486,8 +486,9 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
 bool Symbol::GetName(std::string* out) {
   Node* node = heads_[0].source.get();
   for (const DataEntry& e : heads_) {
-    CHECK(node == e.source.get())
-        << "Symbol.GetName only works for non-grouped symbol";
+    if (node != e.source.get()) {
+      *out = "GroupedSymbol"; return true;
+    }
   }
   *out = node->name;
   return true;
