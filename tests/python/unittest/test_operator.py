@@ -150,11 +150,11 @@ def test_slice_channel():
             shape = np.random.randint(1, 5, data_ndim).tolist()
             shape[axis] *= num_outputs
             out_ele_shape = [ele for ele in shape]
-            out_ele_shape[axis] /= num_outputs
+            out_ele_shape[axis] //= num_outputs
         data_npy = np.random.normal(size=shape)
         out_grads_npy = [np.random.normal(size=out_ele_shape) for i in range(num_outputs)]
         data = mx.sym.Variable('data')
-        sym = mx.sym.SliceChannel(data=data, num_outputs=num_outputs, axis=axis)
+        sym = mx.sym.SliceChannel(data=data, num_outputs=num_outputs, axis=axis, squeeze_axis=squeeze_axis)
         exe = sym.simple_bind(ctx=default_context(), data=data_npy.shape)
         assert len(exe.outputs) == num_outputs
         outputs = exe.forward(is_train=True, data=data_npy)
