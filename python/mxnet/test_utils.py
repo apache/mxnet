@@ -90,7 +90,7 @@ def same(a, b):
 def reldiff(a, b):
     """Calculate the relative difference between two input arrays
 
-    Calculated by :math:`\\frac{|a-b|^2}{|a|^2 + |b|^2}`
+    Calculated by :math:`\\frac{|a-b|_1}{|a|_1 + |b|_1}`
 
     Parameters
     ----------
@@ -108,7 +108,29 @@ def reldiff(a, b):
 def almost_equal(a, b, threshold=None):
     """Test if two numpy arrays are almost equal."""
     threshold = threshold or default_numerical_threshold()
-    return reldiff(a, b) <= threshold
+    rel = reldiff(a, b)
+    return not np.isnan(rel) and rel <= threshold
+
+
+def assert_almost_equal(a, b, threshold=None):
+    """Test that two numpy arrays are almost equal. Raise exception message if not.
+
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    threshold : None or float
+        The checking threshold. Default threshold will be used if set to None
+    """
+    threshold = threshold or default_numerical_threshold()
+    rel = reldiff(a, b)
+    if np.isnan(rel) or rel > threshold:
+        np.set_printoptions(threshold=4, suppress=True)
+        msg = npt.build_err_msg([a, b],
+                                err_msg="Rel Err=%f, Expected <=%f" % (rel, threshold),
+                                names=["a", "b"])
+        raise Exception(msg)
+    return rel
 
 
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
@@ -203,39 +225,42 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
         Argument values used as location to compute gradient
         Maps the name of arguments to the corresponding numpy.ndarray.
         Value of all the arguments must be provided.
-    aux_states : None or list of numpy.ndarray or dict of str to numpy.ndarray
+    aux_states : None or list of numpy.ndarray or dict of str to numpy.ndarray, optional
         Auxiliary states values used as location to compute gradient
         Maps the name of aux_states to the corresponding numpy.ndarray.
         Value of all the auxiliary arguments must be provided.
     eps : float, optional
         epsilon for the finite-difference method
-
+    use_forward_train : bool, optional
+        Whether to use `is_train=True` in testing.
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     for k, v in location.items():
         executor.arg_dict[k][:] = v
-    approx_grads = {k:np.zeros(v.shape, dtype=np.float32) for k, v in location.items()}
+    approx_grads = {k: np.zeros(v.shape, dtype=np.float32)
+                    for k, v in location.items()}
 
     executor.forward(is_train=use_forward_train)
     f_x = executor.outputs[0].asnumpy()[0]
+    for k in location:
+        location[k] = np.ascontiguousarray(location[k])
     for k, v in location.items():
         old_value = v.copy()
         for i in range(np.prod(v.shape)):
             # inplace update
-            v.reshape((np.prod(v.shape), 1))[i] += eps
-            # set initial states. Need to set all due to inplace operations
-            for key, val in location.items():
-                executor.arg_dict[key][:] = val
+            v.ravel()[i] += eps
+            executor.arg_dict[k][:] = v
             if aux_states is not None:
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
             executor.forward(is_train=use_forward_train)
             f_eps = executor.outputs[0].asnumpy()[0]
             approx_grads[k].ravel()[i] = (f_eps - f_x) / eps
-            v.reshape((np.prod(v.shape), 1))[i] = old_value.reshape((np.prod(v.shape), 1))[i]
-
+            v.ravel()[i] = old_value.ravel()[i]
+        # copy back the original value
+        executor.arg_dict[k][:] = old_value
     return approx_grads
 
 
