@@ -724,6 +724,10 @@ struct smooth_l1_gradient {
       return b * a;
     }
   }
+  // Stop compiler warnings, not supported for uint8_t
+  MSHADOW_XINLINE static uint8_t Map(uint8_t a, uint8_t b) {
+    return b * a;
+  }
 };  // struct smooth_l1_derivative
 
 }  // namespace mshadow_op
