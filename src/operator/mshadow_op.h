@@ -585,6 +585,26 @@ struct floor {
   }
 };
 
+/*! \brief used to round number to nearest integer */
+struct rint {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    float floor = floorf(a);
+    float ceil = ceilf(a);
+    return DType((floor - a) < (ceil - a) ? floor : ceil);
+  }
+};
+
+/*! \brief used to round number to integer nearest to 0 */
+struct fix {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    float floor = floorf(a);
+    float ceil = ceilf(a);
+    return DType((floor - 0) < (ceil - 0) ? floor : ceil);
+  }
+};
+
 /*! \brief used for generate gradient of MAE loss*/
 struct minus_sign {
   template<typename DType>

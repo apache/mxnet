@@ -78,6 +78,16 @@ MXNET_OPERATOR_REGISTER_UNARY(floor)
 .MXNET_DESCRIBE("Take floor of the src")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::floor>);
 
+// rint
+MXNET_OPERATOR_REGISTER_UNARY(rint)
+.MXNET_DESCRIBE("Take round of the src to nearest integer")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::rint>);
+
+// fix
+MXNET_OPERATOR_REGISTER_UNARY(fix)
+.MXNET_DESCRIBE("Take round of the src to integer nearest 0")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::fix>);
+
 // square
 MXNET_OPERATOR_REGISTER_UNARY(square)
 .MXNET_DESCRIBE("Take square of the src")
