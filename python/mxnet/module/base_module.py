@@ -8,6 +8,7 @@ from collections import namedtuple
 from .. import metric
 from .. import ndarray
 
+from ..base import mx_real_t
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
@@ -682,7 +683,7 @@ class BaseModule(object):
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """Named data desc description contains name, shape, type and other extended attributes.
     """
-    def __new__(cls, name, shape, type=float, layout='NCHW'):
+    def __new__(cls, name, shape, type=mx_real_t, layout='NCHW'):
         ret = super(cls, DataDesc).__new__(cls, name, shape)
         ret.type = type
         ret.layout = layout
