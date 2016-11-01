@@ -79,6 +79,9 @@ NNVM_REGISTER_OP(exp)
 NNVM_REGISTER_OP(log)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::log>);
 
+NNVM_REGISTER_OP(log)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::log10>);
+
 NNVM_REGISTER_OP(_backward_log)
 .set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::log_grad> >);
 

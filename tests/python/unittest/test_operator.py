@@ -1728,6 +1728,9 @@ def test_mathematical():
     mathematical_core("expm1", lambda x: mx.sym.expm1(x), lambda x: np.expm1(x),
                       lambda x: np.exp(x), 0.5, 0.5)
 
+    # log10
+    mathematical_core("log10", lambda x: mx.sym.log10(x), lambda x: np.log10(x),
+                      lambda x: (1 / x)) 
 
 def test_special_functions_using_scipy():
     try:

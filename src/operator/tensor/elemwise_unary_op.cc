@@ -118,6 +118,12 @@ MXNET_OPERATOR_REGISTER_UNARY(log)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
+// log10
+MXNET_OPERATOR_REGISTER_UNARY(log10)
+.MXNET_DESCRIBE("Take base-10 log of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log10>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+
 MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::log_grad> >);
 
