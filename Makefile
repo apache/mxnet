@@ -76,7 +76,7 @@ else
 	CFLAGS += -DMKL_EXPERIMENTAL=0
 endif
 ifneq ($(USE_BLAS), mkl)
-	ICC_ON=0	
+	ICC_ON=0
 	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON))
 	MKLROOT=$(firstword $(RETURN_STRING))
 	MKL_LDFLAGS=-l$(word 2, $(RETURN_STRING))

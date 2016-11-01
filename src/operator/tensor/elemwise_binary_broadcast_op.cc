@@ -16,7 +16,8 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_plus)
 
 // specialized to elementwise plus, currently only used for gradient aggregation
 MXNET_OPERATOR_REGISTER_BINARY(_ewise_plus)
-.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_plus"});
 
 NNVM_REGISTER_OP(_backward_plus)
 .set_num_inputs(1)
