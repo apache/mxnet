@@ -8,7 +8,6 @@
 
 namespace mxnet {
 namespace op {
-
 // sin
 NNVM_REGISTER_OP(sin)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::sin>);
