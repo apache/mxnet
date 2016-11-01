@@ -54,8 +54,18 @@ namespace op {
     }
 #endif
   }
-
-
+  template<typename xpu, int dim, typename DType>
+  inline  mshadow::Tensor<xpu, dim, DType> mkl_experimental_direct_get(
+    const TBlob &b, mshadow::Stream<xpu> *s) {
+    mkl_set_priv_flag(b);
+    return b.get<xpu, dim, DType>(s);
+  }
+  template<typename xpu, int dim, typename DType>
+  inline  mshadow::Tensor<xpu, dim, DType> mkl_experimental_direct_get_with_shape(
+    const TBlob &b, const mshadow::Shape<dim> &shape, mshadow::Stream<xpu> *s) {
+    mkl_set_priv_flag(b);
+    return b.get_with_shape<xpu, dim, DType>(shape, s);
+  }
 
 }  // namespace op
 }  // namespace mxnet

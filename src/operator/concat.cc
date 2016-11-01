@@ -21,11 +21,9 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
   if (1 == param.dim) {
     switch (dtype) {
       case mshadow::kFloat32:
-      op = new MKLConcatOp<cpu, float>(param);
-      break;
+      return new MKLConcatOp<cpu, float>(param);
     case mshadow::kFloat64:
-      op = new MKLConcatOp<cpu, double>(param);
-      break;
+      return new MKLConcatOp<cpu, double>(param);
     default:
       break;
     }

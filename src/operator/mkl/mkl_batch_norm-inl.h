@@ -128,15 +128,13 @@ class MKLBatchNormOp : public Operator {
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[batchnorm::kData].shape_[0],
                                in_data[batchnorm::kData].shape_[1], 1, 1);
-      mkl_set_priv_flag(in_data[batchnorm::kData]);
-      data = in_data[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
-      mkl_set_priv_flag(out_data[batchnorm::kOut]);
-      out = out_data[batchnorm::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
+      data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[batchnorm::kData], dshape, s);
+      out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_data[batchnorm::kOut], dshape, s);
     } else {
-      mkl_set_priv_flag(in_data[batchnorm::kData]);
-      data = in_data[batchnorm::kData].get<xpu, 4, DType>(s);
-      mkl_set_priv_flag(out_data[batchnorm::kOut]);
-      out = out_data[batchnorm::kOut].get<xpu, 4, DType>(s);
+      data = mkl_experimental_direct_get<xpu, 4, DType>(in_data[batchnorm::kData], s);
+      out = mkl_experimental_direct_get<xpu, 4, DType>(out_data[batchnorm::kOut], s);
     }
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> bias = in_data[batchnorm::kBeta].get<xpu, 1, DType>(s);
@@ -308,19 +306,16 @@ class MKLBatchNormOp : public Operator {
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[batchnorm::kOut].shape_[0],
                                out_grad[batchnorm::kOut].shape_[1], 1, 1);
-      mkl_set_priv_flag(in_data[batchnorm::kData]);
-      data = in_data[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
-      mkl_set_priv_flag(out_grad[batchnorm::kOut]);
-      grad = out_grad[batchnorm::kOut].get_with_shape<xpu, 4, DType>(dshape, s);
-      mkl_set_priv_flag(in_grad[batchnorm::kData]);
-      grad_in = in_grad[batchnorm::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+      data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[batchnorm::kData], dshape, s);
+      grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_grad[batchnorm::kOut], dshape, s);
+      grad_in = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_grad[batchnorm::kData], dshape, s);
     } else {
-      mkl_set_priv_flag(in_data[batchnorm::kData]);
-      data = in_data[batchnorm::kData].get<xpu, 4, DType>(s);
-      mkl_set_priv_flag(out_grad[batchnorm::kOut]);
-      grad = out_grad[batchnorm::kOut].get<xpu, 4, DType>(s);
-      mkl_set_priv_flag(in_grad[batchnorm::kData]);
-      grad_in = in_grad[batchnorm::kData].get<xpu, 4, DType>(s);
+      data = mkl_experimental_direct_get<xpu, 4, DType>(in_data[batchnorm::kData], s);
+      grad = mkl_experimental_direct_get<xpu, 4, DType>(out_grad[batchnorm::kOut], s);
+      grad_in = mkl_experimental_direct_get<xpu, 4, DType>(in_grad[batchnorm::kData], s);
     }
 
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);

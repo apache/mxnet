@@ -169,15 +169,12 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
 template <typename Dtype>
 Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     Dtype *cpu_ptr, bool set_prv_ptr,
-#if MKL_EXPERIMENTAL == 0
-    std::shared_ptr<MKLMemHolder> holder,
-#else
-    std::shared_ptr<MKLMemHolder> dnnChunk,
-#endif
+    std::shared_ptr<MKLMemHolder> dnn_chunk,
     MKLMemoryDescriptor<Dtype>* converted_in_fwd) {
   Dtype* prv_ptr = NULL;
 #if MKL_EXPERIMENTAL == 1
-  prv_ptr = static_cast<Dtype*>(dnnChunk->prv_data());
+  if (dnn_chunk != NULL)
+    prv_ptr = static_cast<Dtype*>(dnn_chunk->prv_data());
 #endif
 
   if (this->convert_to_int != NULL) {
@@ -193,7 +190,7 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
       this->convert_to_prv(cpu_ptr);
 #if MKL_EXPERIMENTAL == 1
       if (set_prv_ptr) {
-        dnnChunk->set_prv_descriptor(this->get_shared_ptr(), true);
+        dnn_chunk->set_prv_descriptor(this->get_shared_ptr(), true);
       }
 #endif
       return this->internal_ptr;
@@ -202,7 +199,7 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     if (this->convert_to_int == NULL)  {
       // This section helps if padding needs to be added (or removed...)
       // TODO(intel): consider removing when no longer needed.
-      std::shared_ptr<PrvMemDescr> prv_mem_descriptor = dnnChunk->get_prv_descriptor();
+      std::shared_ptr<PrvMemDescr> prv_mem_descriptor = dnn_chunk->get_prv_descriptor();
       CHECK_EQ(prv_mem_descriptor->get_descr_type(),
         PrvMemDescr::PRV_DESCR_MKL2017);
       std::shared_ptr<MKLMemoryDescriptor<Dtype> > current_descr =
@@ -244,7 +241,7 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
           CHECK_EQ(status, 0) << "Conversion failed with status " << status;
         }
         if (set_prv_ptr) {
-          dnnChunk->set_prv_descriptor(this->get_shared_ptr(), true);
+          dnn_chunk->set_prv_descriptor(this->get_shared_ptr(), true);
         }
         return this->internal_ptr;
       } else if (current_descr.get() != this) {
