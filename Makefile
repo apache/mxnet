@@ -75,7 +75,7 @@ ifneq ($(USE_BLAS), mkl)
 ifeq ($(MKL_EXTERNAL), 1)
 	MKL_LDFLAGS+=-Wl,-rpath,$(MKLROOT)/lib
 	CFLAGS += -I$(MKLROOT)/include
-	LDFLAGS += -L$(MKLROOT)/lib/ -liomp5 -lmklml_gnu
+	LDFLAGS += -Wl,--as-needed -L$(MKLROOT)/lib/ -liomp5 -lmklml_intel
 endif
 endif
 endif
