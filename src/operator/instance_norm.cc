@@ -31,18 +31,24 @@ MXNET_REGISTER_OP_PROPERTY(InstanceNorm, InstanceNormProp)
     .add_argument("data", "Symbol",
                   "A n-dimensional tensor (n > 2) of the form [batch, "
                   "channel, spatial_dim1, spatial_dim2, ...].")
-    .add_argument("weight", "Symbol", "Weight matrix.")
-    .add_argument("bias", "Symbol", "Bias parameter.")
+    .add_argument("weight", "Symbol",
+                  "A vector of length \'channel\', which multiplies the "
+                  "normalized input.")
+    .add_argument("bias", "Symbol",
+                  "A vector of length \'channel\', which is added to the "
+                  "product of the normalized input and the weight.")
     .add_arguments(InstanceNormParam::__FIELDS__())
     .describe(
-        "An operator taking in a n-dimensional tensor (n > 2), and "
-        "normalizing across the spatial dimensions. This is an implemention of "
+        "An operator taking in a n-dimensional input tensor (n > 2), and "
+        "normalizing the input by subtracting the mean and variance calculated "
+        "over the spatial dimensions. This is an implemention of "
         "the operator described in \"Instance Normalization: The "
         "Missing Ingredient for Fast Stylization\", D. Ulyanov, A. Vedaldi, V. "
         "Lempitsky, 2016 (arXiv:1607.08022v2). This layer is similar to batch "
         "normalization, with two differences: first, the normalization is "
-        "carried out per example (\'instance\'), not per batch. Second, the "
-        "same normalization is applied both at test and train time.");
+        "carried out per example (\'instance\'), not over a batch. Second, the "
+        "same normalization is applied both at test and train time. This "
+        "operation is also known as \'contrast normalization\'.");
 
 }  // namespace op
 }  // namespace mxnet
