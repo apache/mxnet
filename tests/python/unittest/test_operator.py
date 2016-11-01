@@ -1732,6 +1732,10 @@ def test_mathematical():
     mathematical_core("log10", lambda x: mx.sym.log10(x), lambda x: np.log10(x),
                       lambda x: (1 / x)) 
 
+    # log2
+    mathematical_core("log2", lambda x: mx.sym.log2(x), lambda x: np.log2(x),
+                      lambda x: (1 / x))
+
 def test_special_functions_using_scipy():
     try:
         from scipy import special as scipy_special
