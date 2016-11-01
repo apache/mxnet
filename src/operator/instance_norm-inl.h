@@ -101,6 +101,7 @@ class InstanceNormOp : public Operator {
     int rest_dim =
         static_cast<int>(in_data[instance_norm::kData].Size() / n / c);
     Shape<2> s2 = Shape2(n * c, rest_dim);
+    Shape<3> s3 = Shape3(n, c, rest_dim);
     // Get Inputs
     Tensor<xpu, 2> data =
         in_data[instance_norm::kData].get_with_shape<xpu, 2, real_t>(s2, s);
@@ -110,11 +111,8 @@ class InstanceNormOp : public Operator {
         in_data[instance_norm::kWeight].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gweight =
         in_grad[instance_norm::kWeight].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> bias = in_data[instance_norm::kBias].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbias = in_grad[instance_norm::kBias].get<xpu, 1, real_t>(s);
     // Get Outputs
-    Tensor<xpu, 2> out =
-        out_data[instance_norm::kOut].get_with_shape<xpu, 2, real_t>(s2, s);
     Tensor<xpu, 2> gout =
         out_grad[instance_norm::kOut].get_with_shape<xpu, 2, real_t>(s2, s);
     Tensor<xpu, 1> var = out_data[instance_norm::kVar].FlatTo1D<xpu, real_t>(s);
@@ -122,16 +120,18 @@ class InstanceNormOp : public Operator {
         out_data[instance_norm::kMean].FlatTo1D<xpu, real_t>(s);
 
     // Calculate grads
-    Assign(gbias, req[instance_norm::kBias], sumall_except_dim<0>(gout));
-
+    Assign(gbias, req[instance_norm::kBias],
+           sumall_except_dim<0>(swapaxis<1, 0>(reshape(gout, s3))));
     Assign(gweight, req[instance_norm::kOut],
-           sumall_except_dim<0>((data - broadcast<0>(mean, data.shape_)) /
+           sumall_except_dim<0>(swapaxis<1, 0>(reshape(
+               (data - broadcast<0>(mean, data.shape_)) /
                                 F<mshadow_op::square_root>(broadcast<0>(
-                                    var + param_.eps, data.shape_))));
+                                    var + param_.eps, data.shape_)), s3))));
     Assign(gdata, req[instance_norm::kOut],
-           gout * broadcast<0>(reshape(repmat(weight, n), Shape1(n * c)), out.shape_) /
-                F<mshadow_op::square_root>(
-                    broadcast<0>(var + param_.eps, data.shape_)));
+           gout * broadcast<0>(reshape(repmat(weight, n), Shape1(n * c)),
+                               data.shape_) /
+               F<mshadow_op::square_root>(
+                   broadcast<0>(var + param_.eps, data.shape_)));
   }
 
  private:
@@ -180,9 +180,9 @@ class InstanceNormProp : public OperatorProperty {
   std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad, const std::vector<int> &in_data,
       const std::vector<int> &out_data) const override {
-    return {out_grad[instance_norm::kOut],   out_data[instance_norm::kMean],
-            out_data[instance_norm::kVar],   in_data[instance_norm::kData],
-            in_data[instance_norm::kWeight], in_data[instance_norm::kBias]};
+    return {out_grad[instance_norm::kOut], out_data[instance_norm::kMean],
+            out_data[instance_norm::kVar], in_data[instance_norm::kData],
+            in_data[instance_norm::kWeight]};
   }
 
   int NumVisibleOutputs() const override { return 1; }
