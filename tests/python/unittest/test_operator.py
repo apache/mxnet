@@ -1662,11 +1662,9 @@ def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_in
     data_tmp = np.ones(shape)
     data_tmp[:] = data_init
     arr_data = mx.nd.array(data_tmp)
-    arr_grad = mx.nd.empty(shape)
-    arr_grad[:] = 3
 
     test = forward_mxnet_call(data)
-    exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
+    exe_test = test.bind(default_context(), args=[arr_data])
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp)
