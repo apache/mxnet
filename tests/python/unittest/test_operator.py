@@ -1753,6 +1753,20 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
         name, arr_grad, npout_grad)
 
 
+def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
+    data = mx.symbol.Variable('data')
+    shape = (3, 4)
+    data_tmp = np.ones(shape)
+    data_tmp[:] = data_init
+    arr_data = mx.nd.array(data_tmp)
+
+    test = forward_mxnet_call(data)
+    exe_test = test.bind(default_context(), args=[arr_data])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+    npout = forward_numpy_call(data_tmp)
+    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
+
 def test_mathematical():
     # rsqrt
     mathematical_core("rsqrt",
@@ -1825,6 +1839,19 @@ def test_mathematical():
     mathematical_core("expm1", lambda x: mx.sym.expm1(x), lambda x: np.expm1(x),
                       lambda x: np.exp(x), 0.5, 0.5)
 
+    # log10
+    mathematical_core("log10", lambda x: mx.sym.log10(x), lambda x: np.log10(x),
+                      lambda x: (1 / x)) 
+
+    # log2
+    mathematical_core("log2", lambda x: mx.sym.log2(x), lambda x: np.log2(x),
+                      lambda x: (1 / x))
+
+    # rint
+    rounding("rint", lambda x: mx.sym.rint(x), lambda x: np.rint(x))
+
+    # fix
+    rounding("fix", lambda x: mx.sym.fix(x), lambda x: np.fix(x))
 
 def test_special_functions_using_scipy():
     try:
