@@ -49,6 +49,14 @@ NNVM_REGISTER_OP(ceil)
 NNVM_REGISTER_OP(floor)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::floor>);
 
+// rint
+NNVM_REGISTER_OP(rint)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::rint>);
+
+// fix
+NNVM_REGISTER_OP(fix)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::fix>);
+
 // square
 NNVM_REGISTER_OP(square)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::square>);
@@ -78,6 +86,14 @@ NNVM_REGISTER_OP(exp)
 // log
 NNVM_REGISTER_OP(log)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::log>);
+
+// log10
+NNVM_REGISTER_OP(log10)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::log10>);
+
+// log2
+NNVM_REGISTER_OP(log2)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::log2>);
 
 NNVM_REGISTER_OP(_backward_log)
 .set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::log_grad> >);
