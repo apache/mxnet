@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 2.8.7)
 
 project(mxnet C CXX)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/local_config.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/build/local_config.cmake)
+endif()
+
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
@@ -13,18 +17,6 @@ mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
-
-include(mshadow/cmake/mshadow.cmake) 
-include(mshadow/cmake/Utils.cmake)
-include(mshadow/cmake/Cuda.cmake)
-
-set(mxnet_LINKER_LIBS "")
-list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
-
-include_directories("include")
-include_directories("mshadow")
-include_directories("nnvm/include")
-include_directories("dmlc-core/include")
 
 if(MSVC)
   add_definitions(-DDMLC_USE_CXX11)
@@ -50,6 +42,29 @@ else(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   endif()
 endif(MSVC)
+
+if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
+  include(mshadow/cmake/mshadow.cmake)
+  include(mshadow/cmake/Utils.cmake)
+  include(mshadow/cmake/Cuda.cmake)
+else()
+  include(mshadowUtils)
+  include(Utils)
+  include(Cuda)
+  include(mshadow)
+endif()
+
+foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
+ 	include_directories(${var})
+endforeach()
+
+set(mxnet_LINKER_LIBS "")
+list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+
+include_directories("include")
+include_directories("mshadow")
+include_directories("nnvm/include")
+include_directories("dmlc-core/include")
 
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
@@ -86,8 +101,9 @@ if(USE_CUDNN AND USE_CUDA)
   endif()
 endif()
 
-
+if(EXISTS ${PROJECT_SOURCE_DIR}/dmlc-core/cmake)
 add_subdirectory("dmlc-core")
+endif()
 
 if(USE_DIST_KVSTORE)
 	add_subdirectory("ps-lite")
@@ -217,6 +233,8 @@ if(MSVC)
     endif(${flag_var} MATCHES "/MD")
   endforeach(flag_var)
 endif()
+
+list(APPEND CUDA_INCLUDE_DIRS ${INCLUDE_DIRECTORIES})
 
 if(USE_CUDA)
   # define preprocessor macro so that we will not include the generated forcelink header
