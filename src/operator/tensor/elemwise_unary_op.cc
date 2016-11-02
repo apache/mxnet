@@ -78,6 +78,16 @@ MXNET_OPERATOR_REGISTER_UNARY(floor)
 .MXNET_DESCRIBE("Take floor of the src")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::floor>);
 
+// rint
+MXNET_OPERATOR_REGISTER_UNARY(rint)
+.MXNET_DESCRIBE("Take round of the src to nearest integer")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::rint>);
+
+// fix
+MXNET_OPERATOR_REGISTER_UNARY(fix)
+.MXNET_DESCRIBE("Take round of the src to integer nearest 0")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::fix>);
+
 // square
 MXNET_OPERATOR_REGISTER_UNARY(square)
 .MXNET_DESCRIBE("Take square of the src")
@@ -116,6 +126,18 @@ MXNET_OPERATOR_REGISTER_UNARY(exp)
 MXNET_OPERATOR_REGISTER_UNARY(log)
 .MXNET_DESCRIBE("Take log of the src")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+
+// log10
+MXNET_OPERATOR_REGISTER_UNARY(log10)
+.MXNET_DESCRIBE("Take base-10 log of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log10>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+
+// log2
+MXNET_OPERATOR_REGISTER_UNARY(log2)
+.MXNET_DESCRIBE("Take base-2 log of the src")
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log2>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
