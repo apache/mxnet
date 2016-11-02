@@ -21,7 +21,7 @@ namespace mxnet {
 namespace op {
 
 namespace instance_norm {
-enum InstanceNormInputs { kData, kWeight, kBias };
+enum InstanceNormInputs { kData, kGamma, kBeta };
 enum InstanceNormOutputs { kOut, kMean, kVar };
 enum InstanceNormBackResource { kTempSpace };
 }  // namespace instance_norm
@@ -60,9 +60,9 @@ class InstanceNormOp : public Operator {
     // Get Inputs
     Tensor<xpu, 2> data =
         in_data[instance_norm::kData].get_with_shape<xpu, 2, real_t>(s2, s);
-    Tensor<xpu, 1> weight =
-        in_data[instance_norm::kWeight].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> bias = in_data[instance_norm::kBias].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> gamma =
+        in_data[instance_norm::kGamma].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> beta = in_data[instance_norm::kBeta].get<xpu, 1, real_t>(s);
     // Get Outputs
     Tensor<xpu, 2> out =
         out_data[instance_norm::kOut].get_with_shape<xpu, 2, real_t>(s2, s);
@@ -75,11 +75,11 @@ class InstanceNormOp : public Operator {
                       data - broadcast<0>(mean, data.shape_)));
     Assign(
         out, req[instance_norm::kOut],
-        broadcast<0>(reshape(repmat(weight, n), Shape1(n * c)), out.shape_) *
+        broadcast<0>(reshape(repmat(gamma, n), Shape1(n * c)), out.shape_) *
                 (data - broadcast<0>(mean, data.shape_)) /
                 F<mshadow_op::square_root>(
                     broadcast<0>(var + param_.eps, data.shape_)) +
-            broadcast<0>(reshape(repmat(bias, n), Shape1(n * c)), out.shape_));
+            broadcast<0>(reshape(repmat(beta, n), Shape1(n * c)), out.shape_));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -110,11 +110,11 @@ class InstanceNormOp : public Operator {
         in_data[instance_norm::kData].get_with_shape<xpu, 2, real_t>(s2, s);
     Tensor<xpu, 2> gdata =
         in_grad[instance_norm::kData].get_with_shape<xpu, 2, real_t>(s2, s);
-    Tensor<xpu, 1> weight =
-        in_data[instance_norm::kWeight].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> gweight =
-        in_grad[instance_norm::kWeight].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> gbias = in_grad[instance_norm::kBias].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> gamma =
+        in_data[instance_norm::kGamma].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> ggamma =
+        in_grad[instance_norm::kGamma].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> gbeta = in_grad[instance_norm::kBeta].get<xpu, 1, real_t>(s);
     // Get Outputs
     Tensor<xpu, 2> gout =
         out_grad[instance_norm::kOut].get_with_shape<xpu, 2, real_t>(s2, s);
@@ -132,13 +132,13 @@ class InstanceNormOp : public Operator {
     // calculate temps
     gvar = sumall_except_dim<0>(
         (gout *
-         broadcast<0>(reshape(repmat(weight, n), Shape1(n * c)), data.shape_)) *
+         broadcast<0>(reshape(repmat(gamma, n), Shape1(n * c)), data.shape_)) *
         (data - broadcast<0>(mean, data.shape_)) * -0.5f *
         F<mshadow_op::power>(broadcast<0>(var + param_.eps, data.shape_),
                              -1.5f));
     gmean = sumall_except_dim<0>(
         gout *
-        broadcast<0>(reshape(repmat(weight, n), Shape1(n * c)), data.shape_));
+        broadcast<0>(reshape(repmat(gamma, n), Shape1(n * c)), data.shape_));
     gmean *= -1.0f / F<mshadow_op::square_root>(var + param_.eps);
     tmp = scale * sumall_except_dim<0>(
                       -2.0f * (data - broadcast<0>(mean, data.shape_)));
@@ -146,16 +146,16 @@ class InstanceNormOp : public Operator {
     gmean += tmp;
 
     // Calculate grads
-    Assign(gbias, req[instance_norm::kBias],
+    Assign(gbeta, req[instance_norm::kBeta],
            sumall_except_dim<0>(swapaxis<1, 0>(reshape(gout, s3))));
-    Assign(gweight, req[instance_norm::kWeight],
+    Assign(ggamma, req[instance_norm::kGamma],
            sumall_except_dim<0>(swapaxis<1, 0>(
                reshape(gout * (data - broadcast<0>(mean, data.shape_)) /
                            F<mshadow_op::square_root>(
                                broadcast<0>(var + param_.eps, data.shape_)),
                        s3))));
     Assign(gdata, req[instance_norm::kData],
-           (gout * broadcast<0>(reshape(repmat(weight, n), Shape1(n * c)),
+           (gout * broadcast<0>(reshape(repmat(gamma, n), Shape1(n * c)),
                                 data.shape_)) *
                    broadcast<0>(
                        1.0f / F<mshadow_op::square_root>(var + param_.eps),
@@ -213,7 +213,7 @@ class InstanceNormProp : public OperatorProperty {
       const std::vector<int> &out_data) const override {
     return {out_grad[instance_norm::kOut], out_data[instance_norm::kMean],
             out_data[instance_norm::kVar], in_data[instance_norm::kData],
-            in_data[instance_norm::kWeight]};
+            in_data[instance_norm::kGamma]};
   }
 
   std::vector<ResourceRequest> BackwardResource(
@@ -226,7 +226,7 @@ class InstanceNormProp : public OperatorProperty {
   int NumOutputs() const override { return 3; }
 
   std::vector<std::string> ListArguments() const override {
-    return {"data", "weight", "bias"};
+    return {"data", "gamma", "beta"};
   }
 
   std::vector<std::string> ListOutputs() const override {
