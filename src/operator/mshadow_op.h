@@ -161,6 +161,20 @@ struct log {
   }
 };
 
+struct log10 {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(log10f(a));
+  }
+};
+
+struct log2 {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(log2f(a));
+  }
+};
+
 struct log_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
@@ -568,6 +582,26 @@ struct floor {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(floorf(a));
+  }
+};
+
+/*! \brief used to round number to nearest integer */
+struct rint {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    float floor = floorf(a);
+    float ceil = ceilf(a);
+    return DType((floor - a) < (ceil - a) ? floor : ceil);
+  }
+};
+
+/*! \brief used to round number to integer nearest to 0 */
+struct fix {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    float floor = floorf(a);
+    float ceil = ceilf(a);
+    return DType((floor - 0) < (ceil - 0) ? floor : ceil);
   }
 };
 
