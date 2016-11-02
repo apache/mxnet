@@ -340,7 +340,6 @@ class BaseModule(object):
                                          train_data.provide_data_type)
         provide_label = DataDesc.get_list(train_data.provide_label,
                                           train_data.provide_label_type)
-
         self.bind(data_shapes=provide_data, label_shapes=provide_label,
                   for_training=True, force_rebind=force_rebind)
         if monitor is not None:
