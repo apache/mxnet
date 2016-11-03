@@ -10,6 +10,9 @@ mx.symbol.Pooling(...)
 \item{data}{Symbol
 Input data to the pooling operator.}
 
+\item{global.pool}{boolean, optional, default=False
+Ignore kernel size, do global pooling based on current input feature map. This is useful for input with different shape}
+
 \item{kernel}{Shape(tuple), required
 pooling kernel size: (y, x)}
 
