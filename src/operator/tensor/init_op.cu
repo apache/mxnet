@@ -8,10 +8,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(zeros)
+NNVM_REGISTER_OP(_zeros)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
 
-NNVM_REGISTER_OP(ones)
+NNVM_REGISTER_OP(_ones)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
 
 }  // namespace op

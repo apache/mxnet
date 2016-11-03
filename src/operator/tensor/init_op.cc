@@ -10,7 +10,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(InitOpParam);
 
-NNVM_REGISTER_OP(zeros)
+NNVM_REGISTER_OP(_zeros)
 .describe("fill target with zeros")
 .set_num_inputs(0)
 .set_num_outputs(1)
@@ -20,7 +20,7 @@ NNVM_REGISTER_OP(zeros)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
 .add_arguments(InitOpParam::__FIELDS__());
 
-NNVM_REGISTER_OP(ones)
+NNVM_REGISTER_OP(_ones)
 .describe("fill target with ones")
 .set_num_inputs(0)
 .set_num_outputs(1)

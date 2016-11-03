@@ -163,7 +163,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxImperativeInvoke
   if (numParams > 0) {
     cParamKeys = new const char *[numParams];
     cParamVals = new const char *[numParams];
-    for (size_t i = 0; i < numParams; i++) {
+    for (int i = 0; i < numParams; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
       const char *key = env->GetStringUTFChars(jkey, 0);
       cParamKeys[i] = key;
@@ -200,7 +200,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxImperativeInvoke
 
   // release allocated memory
   if (numParams > 0) {
-    for (size_t i = 0; i < numParams; i++) {
+    for (int i = 0; i < numParams; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
       env->ReleaseStringUTFChars(jkey, cParamKeys[i]);
       env->DeleteLocalRef(jkey);
@@ -257,7 +257,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvokeEx
   if (numParams > 0) {
     cParamKeys = new jbyte *[numParams];
     cParamVals = new jbyte *[numParams];
-    for (size_t i = 0; i < numParams; i++) {
+    for (int i = 0; i < numParams; i++) {
       jbyteArray jkey = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(paramKeys, i));
       jbyte *cParamKey = env->GetByteArrayElements(jkey, NULL);
       cParamKeys[i] = cParamKey;
@@ -279,7 +279,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvokeEx
   env->ReleaseFloatArrayElements(scalarArgs, cScalarArgs, 0);
   env->ReleaseLongArrayElements(mutateVars, cMutateVars, 0);
   if (numParams > 0) {
-    for (size_t i = 0; i < numParams; i++) {
+    for (int i = 0; i < numParams; i++) {
       jbyteArray jkey = reinterpret_cast<jbyteArray>(env->GetObjectArrayElement(paramKeys, i));
       env->ReleaseByteArrayElements(jkey, cParamKeys[i], 0);
       env->DeleteLocalRef(jkey);
@@ -466,7 +466,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
   const char **keys = NULL;
   if (jkeys != NULL) {
     keys = new const char *[numArgs];
-    for (size_t i = 0; i < numArgs; i++) {
+    for (int i = 0; i < numArgs; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
       const char *key = env->GetStringUTFChars(jkey, 0);
       keys[i] = key;
@@ -485,7 +485,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySave
 
   // release allocated memory
   if (jkeys != NULL) {
-    for (size_t i = 0; i < numArgs; i++) {
+    for (int i = 0; i < numArgs; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
       env->ReleaseStringUTFChars(jkey, keys[i]);
       env->DeleteLocalRef(jkey);
@@ -512,7 +512,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxInitPSEnv
   const char** vals = new const char*[paramSize];
   jstring jkey, jval;
   // use strcpy and release char* created by JNI inplace
-  for (size_t i = 0; i < paramSize; i++) {
+  for (int i = 0; i < paramSize; i++) {
     jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
     const char* ckey = env->GetStringUTFChars(jkey, 0);
     keys[i] = ckey;
@@ -529,7 +529,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxInitPSEnv
                         static_cast<const char**>(vals));
 
   // release keys and vals
-  for (size_t i = 0; i < paramSize; i++) {
+  for (int i = 0; i < paramSize; i++) {
     jstring key = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
     env->ReleaseStringUTFChars(key, keys[i]);
     env->DeleteLocalRef(key);
@@ -854,7 +854,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterCreateIter
   const char** vals = new const char*[paramSize];
   jstring jkey, jval;
   // use strcpy and release char* created by JNI inplace
-  for (size_t i = 0; i < paramSize; i++) {
+  for (int i = 0; i < paramSize; i++) {
     jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
     const char* ckey = env->GetStringUTFChars(jkey, 0);
     keys[i] = ckey;
@@ -876,7 +876,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDataIterCreateIter
   SetLongField(env, dataIterHandleRef, reinterpret_cast<jlong>(out));
 
   // release keys and vals
-  for (size_t i = 0; i < paramSize; i++) {
+  for (int i = 0; i < paramSize; i++) {
     jstring key = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
     env->ReleaseStringUTFChars(key, keys[i]);
     env->DeleteLocalRef(key);
@@ -1065,7 +1065,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateAtomicSymbol
   int paramSize = env->GetArrayLength(paramKeys);
   const char **keys = new const char*[paramSize];
   const char **vals = new const char*[paramSize];
-  for (size_t i = 0; i < paramSize; i++) {
+  for (int i = 0; i < paramSize; i++) {
     jstring key = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
     const char *rawKey = env->GetStringUTFChars(key, 0);
     keys[i] = rawKey;
@@ -1083,7 +1083,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCreateAtomicSymbol
   SetLongField(env, symbolRef, reinterpret_cast<jlong>(out));
 
   // release keys and vals
-  for (size_t i = 0; i < paramSize; i++) {
+  for (int i = 0; i < paramSize; i++) {
     jstring key = reinterpret_cast<jstring>(env->GetObjectArrayElement(paramKeys, i));
     env->ReleaseStringUTFChars(key, keys[i]);
     env->DeleteLocalRef(key);
@@ -1115,7 +1115,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCompose
   const char **keys = NULL;
   if (jkeys != NULL) {
     keys = new const char*[argSize];
-    for (size_t i = 0; i < argSize; i++) {
+    for (int i = 0; i < argSize; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
       const char *key = env->GetStringUTFChars(jkey, 0);
       keys[i] = key;
@@ -1131,7 +1131,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolCompose
   env->ReleaseLongArrayElements(jargs, args, 0);
   // release allocated memory
   if (jkeys != NULL) {
-    for (size_t i = 0; i < argSize; i++) {
+    for (int i = 0; i < argSize; i++) {
       jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
       env->ReleaseStringUTFChars(jkey, keys[i]);
       env->DeleteLocalRef(jkey);
@@ -1271,7 +1271,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolInferType
   const char **keys = NULL;
   if (jkeys != NULL) {
     keys = new const char *[numArgs];
-    for (size_t i = 0; i < numArgs; i++) {
+    for (int i = 0; i < numArgs; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
       const char *key = env->GetStringUTFChars(jkey, 0);
       keys[i] = key;
@@ -1458,7 +1458,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolInferShape
 
   // release allocated memory
   if (jkeys != NULL) {
-    for (size_t i = 0; i < jnumArgs; i++) {
+    for (int i = 0; i < jnumArgs; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
       env->ReleaseStringUTFChars(jkey, keys[i]);
       env->DeleteLocalRef(jkey);
@@ -1478,7 +1478,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindX
   int auxStatesLen = env->GetArrayLength(jauxArgsHandle);
 
   const char **mapKeys = new const char *[numCtx];
-  for (size_t i = 0; i < numCtx; i++) {
+  for (int i = 0; i < numCtx; i++) {
     jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jctxMapKeys, i));
     const char *key = env->GetStringUTFChars(jkey, 0);
     mapKeys[i] = key;
@@ -1510,7 +1510,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindX
   env->ReleaseLongArrayElements(jargsHandle, inArgs, 0);
   env->ReleaseIntArrayElements(jreqsArray, gradReqType, 0);
   env->ReleaseLongArrayElements(jauxArgsHandle, auxStates, 0);
-  for (size_t i = 0; i < numCtx; i++) {
+  for (int i = 0; i < numCtx; i++) {
     jstring jkey = (jstring) env->GetObjectArrayElement(jctxMapKeys, i);
     env->ReleaseStringUTFChars(jkey, mapKeys[i]);
     env->DeleteLocalRef(jkey);
@@ -1532,7 +1532,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindEX
   if ((int32_t)jsharedExec != 0) sharedExec = reinterpret_cast<ExecutorHandle>(jsharedExec);
 
   const char **mapKeys = new const char *[numCtx];
-  for (size_t i = 0; i < numCtx; i++) {
+  for (int i = 0; i < numCtx; i++) {
     jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jctxMapKeys, i));
     const char *key = env->GetStringUTFChars(jkey, 0);
     mapKeys[i] = key;
@@ -1565,7 +1565,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxExecutorBindEX
   env->ReleaseLongArrayElements(jargsHandle, inArgs, 0);
   env->ReleaseIntArrayElements(jreqsArray, gradReqType, 0);
   env->ReleaseLongArrayElements(jauxArgsHandle, auxStates, 0);
-  for (size_t i = 0; i < numCtx; i++) {
+  for (int i = 0; i < numCtx; i++) {
     jstring jkey = (jstring) env->GetObjectArrayElement(jctxMapKeys, i);
     env->ReleaseStringUTFChars(jkey, mapKeys[i]);
     env->DeleteLocalRef(jkey);
