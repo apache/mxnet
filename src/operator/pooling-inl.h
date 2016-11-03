@@ -206,9 +206,12 @@ class PoolingProp : public OperatorProperty {
         oshape[2] = 1;
         oshape[3] = 1;
       } else {
-        CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0]
-              && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
-            << "kernel size exceed input";
+        CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0])
+            << "kernel size (" << param_.kernel[0] << ") exceeds input (" << dshape[2] 
+            << " padded to " << (dshape[2] + 2*param_.pad[0]) << ")";
+        CHECK(param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
+            << "kernel size (" << param_.kernel[1] << ") exceeds input (" << dshape[3] 
+            << " padded to " << (dshape[3] + 2*param_.pad[1]) << ")";
         if (param_.pooling_convention == pool_enum::kValid) {
           oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
                               param_.stride[0];
