@@ -99,7 +99,7 @@ def reldiff(a, b):
     b : np.ndarray
     """
     diff = np.abs(a - b)
-    norm = np.maximum(np.abs(a), np.abs(b)) + 1e-07
+    norm = np.maximum(np.abs(a), np.abs(b)) + 1e07
     ret = np.max(diff / norm)
     return ret
 
