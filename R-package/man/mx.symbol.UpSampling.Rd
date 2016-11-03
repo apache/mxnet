@@ -25,6 +25,9 @@ How to handle multiple input. concat means concatenate upsampled images along th
 \item{num.args}{int, required
 Number of inputs to be upsampled. For nearest neighbor upsampling, this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other inputs will be upsampled to thesame size. For bilinear upsampling this must be 2; 1 input and 1 weight.}
 
+\item{workspace}{long (non-negative), optional, default=512
+Tmp workspace for deconvolution (MB)}
+
 \item{name}{string, optional
 Name of the resulting symbol.}
 }
