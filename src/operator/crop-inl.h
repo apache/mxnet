@@ -81,7 +81,7 @@ class CropOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_grad.size(), param_.num_args) << in_grad.size();
+    CHECK_EQ(in_grad.size(), static_cast<size_t>(param_.num_args)) << in_grad.size();
     CHECK_EQ(out_grad.size(), 1) << out_grad.size();
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> grad = out_grad[crop_enum::kOut].get<xpu, 4, real_t>(s);
@@ -114,11 +114,11 @@ class CropOp : public Operator {
       } else {
         CHECK_GE(static_cast<int>(param_.offset[0]), 0) <<
             "offset[0] should be larger than 0";
-        CHECK_LE(static_cast<int>(param_.offset[0]), data_shape[2]-out_shape[2]) <<
+        CHECK_LE(param_.offset[0], data_shape[2]-out_shape[2]) <<
             "offset[0] should be less than the residual space of height";
         CHECK_GE(static_cast<int>(param_.offset[1]), 0) <<
             "offset[1] should be larger than 0";
-        CHECK_LE(static_cast<int>(param_.offset[1]), data_shape[3]-out_shape[3]) <<
+        CHECK_LE(param_.offset[1], data_shape[3]-out_shape[3]) <<
             "offset[1] should be less than the residual space of width";
         offset_hw.push_back(static_cast<int>(param_.offset[0]));
         offset_hw.push_back(static_cast<int>(param_.offset[1]));

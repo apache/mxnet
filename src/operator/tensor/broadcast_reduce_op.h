@@ -79,7 +79,7 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
     }
   } else {
-    CHECK_LT(param.axis, ishape.ndim())
+    CHECK_LT(param.axis, static_cast<int>(ishape.ndim()))
         << "Reduction axis " << param.axis
         << " Exceeds input dimensions " << ishape;
     if (param.keepdims) {
@@ -89,7 +89,9 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
     } else {
       TShape oshape(ishape.ndim() - 1);
       for (int i = 0; i < param.axis; ++i) oshape[i] = ishape[i];
-      for (int i = param.axis+1; i < ishape.ndim(); ++i) oshape[i-1] = ishape[i];
+      for (int i = param.axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
+        oshape[i-1] = ishape[i];
+      }
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
     }
   }
