@@ -11,19 +11,22 @@ mx.symbol.SoftmaxOutput(...)
 Input data to softmax.}
 
 \item{label}{Symbol
-Label data.}
+Label data, can also be probability value with same shape as data}
 
 \item{grad.scale}{float, optional, default=1
 Scale the gradient by a float factor}
 
 \item{ignore.label}{float, optional, default=-1
-the ignore_label will not work in backward, and this only be used when multi_output=true}
+the label value will be ignored during backward (only works if use_ignore is set to be true).}
 
 \item{multi.output}{boolean, optional, default=False
 If set to true, for a (n,k,x_1,..,x_n) dimensional input tensor, softmax will generate n*x_1*...*x_n output, each has k classes}
 
 \item{use.ignore}{boolean, optional, default=False
 If set to true, the ignore_label value will not contribute to the backward gradient}
+
+\item{normalization}{{'batch', 'null', 'valid'},optional, default='null'
+If set to null, op will do nothing on output gradient.If set to batch, op will normalize gradient by divide batch sizeIf set to valid, op will normalize gradient by divide sample not ignored}
 
 \item{name}{string, optional
 Name of the resulting symbol.}

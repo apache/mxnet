@@ -1485,6 +1485,45 @@ def test_pad():
     check_pad_with_shape(shape1, default_context(), pad1, 'constant')
     check_pad_with_shape(shape1, default_context(), pad1, 'edge')
 
+def np_instance_norm(data, weight, bias, eps):
+    spatial_dims = data.shape[2::]
+    num_spatial_vals = np.prod(np.array(spatial_dims))
+    scale = 1/float(num_spatial_vals)
+    sum_axis = tuple(range(2, data.ndim))
+    mean = scale * np.sum(data, axis = sum_axis)
+    mean = np.reshape(np.repeat(mean, num_spatial_vals), data.shape)
+    var = scale * np.sum((data - mean)**2, axis = sum_axis)
+    var = np.reshape(np.repeat(var, num_spatial_vals), data.shape)
+    
+    weightBatch = np.tile(weight, (data.shape[0], 1))
+    weightBatch = np.reshape(np.repeat(weightBatch, num_spatial_vals), data.shape)
+    biasBatch = np.tile(bias, (data.shape[0], 1))
+    biasBatch = np.reshape(np.repeat(biasBatch, num_spatial_vals), data.shape)
+    return weightBatch * (data - mean)/np.sqrt(var + eps) + biasBatch
+
+def check_instance_norm_with_shape(shape, xpu):
+    # bind with label
+    eps = 0.0234
+    X = mx.symbol.Variable('X')
+    G = mx.symbol.Variable('G')
+    B = mx.symbol.Variable('B')
+
+    Y = mx.symbol.InstanceNorm(data=X, beta=B, gamma=G, eps=eps)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    gamma = mx.random.uniform(-1, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
+    beta = mx.random.uniform(-1, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
+
+    np_out = np_instance_norm(x.asnumpy(), gamma.asnumpy(), beta.asnumpy(), eps)
+    exec1 = Y.bind(xpu, args = {'X':x, 'G':gamma, 'B':beta})
+    exec1.forward(is_train=False)
+    out = exec1.outputs[0].asnumpy()
+    assert_allclose(out, np_out, rtol=1e-4)
+    check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()}, numeric_eps=1e-2, check_eps=0.16)
+
+def test_instance_normalization():
+    check_instance_norm_with_shape((2,4,5,6), default_context())
+    check_instance_norm_with_shape((3,3,2,3,2,1,1), default_context())
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1527,3 +1566,4 @@ if __name__ == '__main__':
     test_support_vector_machine_l2_svm()
     test_roipooling()
     test_pad()
+    test_instance_normalization()

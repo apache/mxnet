@@ -2,13 +2,16 @@
 % Please edit documentation in R/mxnet_generated.R
 \name{mx.symbol.Crop}
 \alias{mx.symbol.Crop}
-\title{Crop the 2nd and 3rd dim of input data, with the corresponding size of w_h or with width and height of the second input symbol}
+\title{Crop the 2nd and 3rd dim of input data, with the corresponding size of h_w or with width and height of the second input symbol, i.e., with one input, we need h_w to specify the crop height and width, otherwise the second input symbol's size will be used}
 \usage{
 mx.symbol.Crop(...)
 }
 \arguments{
+\item{data}{Symbol or Symbol[]
+Tensor or List of Tensors, the second input will be used as crop_like shape reference}
+
 \item{num.args}{int, required
-Number of inputs for crop, if equals one, then we will use the h_wfor crop heihgt and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here}
+Number of inputs for crop, if equals one, then we will use the h_wfor crop height and width, else if equals two, then we will use the heightand width of the second input symbol, we name crop_like here}
 
 \item{offset}{Shape(tuple), optional, default=(0,0)
 crop offset coordinate: (y, x)}
@@ -26,6 +29,6 @@ Name of the resulting symbol.}
 out The result mx.symbol
 }
 \description{
-Crop the 2nd and 3rd dim of input data, with the corresponding size of w_h or with width and height of the second input symbol
+Crop the 2nd and 3rd dim of input data, with the corresponding size of h_w or with width and height of the second input symbol, i.e., with one input, we need h_w to specify the crop height and width, otherwise the second input symbol's size will be used
 }
 
