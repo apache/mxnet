@@ -1869,7 +1869,15 @@ def test_special_functions_using_scipy():
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
 
+def test_init():
+    x = mx._symbol_internal._zeros(shape=(3,4))
+    exec1 = x.bind(default_context(), args=[], args_grad=[])
+    exec1.forward()
+    assert_allclose(exec1.outputs[0].asnumpy(), np.zeros((3,4)))
+
+
 if __name__ == '__main__':
+    test_init()
     test_expand_dims()
     test_slice_axis()
     test_softmax()
