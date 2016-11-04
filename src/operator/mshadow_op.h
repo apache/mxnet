@@ -753,7 +753,7 @@ struct smooth_l1_gradient {
     if (a > 1.0f / b) {
       return 1.0f;
     } else if (a < -1.0f / b) {
-      return -1.0f;
+      return DType(-1);
     } else {
       return b * a;
     }
