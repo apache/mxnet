@@ -11,6 +11,7 @@
 #include <vector>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "./init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -89,27 +90,6 @@ void SampleNormal_(const nnvm::NodeAttrs& attrs,
   prnd->SampleGaussian(&out, param.loc, param.scale);  // NOLINT(*)
 }
 
-template<typename ParamType>
-inline bool SampleShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *in_attrs,
-                        std::vector<TShape> *out_attrs) {
-  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 0);
-  CHECK_EQ(out_attrs->size(), 1);
-  if ((*out_attrs)[0].ndim() != 0 && param.shape.ndim() == 0) return true;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
-  return true;
-}
-
-inline bool SampleType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int> *in_attrs,
-                       std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 0);
-  CHECK_EQ(out_attrs->size(), 1);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
-  return true;
-}
-
 inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
   return { ResourceRequest::kRandom };
 }
@@ -119,8 +99,8 @@ inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
   .set_num_inputs(0)                                                    \
   .set_num_outputs(1)                                                   \
   .set_attr_parser(ParamParser<ParamType>)                              \
-  .set_attr<nnvm::FInferShape>("FInferShape", SampleShape<ParamType>)   \
-  .set_attr<nnvm::FInferType>("FInferType", SampleType)                 \
+  .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)     \
+  .set_attr<nnvm::FInferType>("FInferType", InitType)                   \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)       \
   .add_arguments(ParamType::__FIELDS__())
 }  // namespace op
