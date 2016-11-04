@@ -19,7 +19,7 @@
 #include "./storage.h"
 #include "./engine.h"
 #if MKL_EXPERIMENTAL == 1
-#include "./mkl_memory.h"
+#include <mkl_memory.h>
 #endif
 // check c++11
 #if DMLC_USE_CXX11 == 0

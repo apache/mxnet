@@ -7,7 +7,7 @@
 
 #include "./concat-inl.h"
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_concat-inl.h"
 #endif  // MXNET_USE_MKL2017
