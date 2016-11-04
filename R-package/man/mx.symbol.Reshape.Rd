@@ -8,10 +8,16 @@ mx.symbol.Reshape(...)
 }
 \arguments{
 \item{data}{Symbol
-Input data to  reshape.}
+Input data to reshape.}
 
-\item{target.shape}{Shape(tuple), required
-Target new shape. One and only one dim can be 0, in which case it will be inferred from the rest of dims}
+\item{target.shape}{Shape(tuple), optional, default=(0,0)
+(Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, in which case it will be inferred from the rest of dims}
+
+\item{keep.highest}{boolean, optional, default=False
+(Deprecated! Use shape instead.) Whether keep the highest dim unchanged.If set to yes, than the first dim in target_shape is ignored,and always fixed as input}
+
+\item{shape}{, optional, default=()
+Target new shape. If the dim is same, set it to 0. If the dim is set to be -1, it will be inferred from the rest of dims. One and only one dim can be -1}
 
 \item{name}{string, optional
 Name of the resulting symbol.}
