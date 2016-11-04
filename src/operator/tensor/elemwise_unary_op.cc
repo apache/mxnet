@@ -37,7 +37,17 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
       return std::vector<std::pair<int, int> >{{0, 0}};
     })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>);
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<nnvm::FGradient>(
+    "FGradient",  [](const nnvm::NodePtr& n,
+                     const std::vector<nnvm::NodeEntry>& ograds) {
+      auto lhs = MakeGradNode("_backward_copy", n, ograds, {});
+      nnvm::NodePtr ng = nnvm::Node::Create();
+      ng->attrs.op = nnvm::Op::Get("zeros");
+      ng->attrs.name = "zeros";
+      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      return lhs;
+    });
 
 // negative
 MXNET_OPERATOR_REGISTER_UNARY(negative)
