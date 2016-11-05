@@ -19,6 +19,9 @@ Momentum for moving average}
 \item{fix.gamma}{boolean, optional, default=True
 Fix gamma while training}
 
+\item{use.global.stats}{boolean, optional, default=False
+Whether use global moving statistics instead of local batch-norm. This will force change batch-norm into a scale shift operator.}
+
 \item{name}{string, optional
 Name of the resulting symbol.}
 }

@@ -10,7 +10,7 @@ mx.symbol.SoftmaxActivation(...)
 \item{data}{Symbol
 Input data to activation function.}
 
-\item{type}{{'channel', 'instance'},optional, default='instance'
+\item{mode}{{'channel', 'instance'},optional, default='instance'
 Softmax Mode. If set to instance, this operator will compute a softmax for each instance in the batch; this is the default mode. If set to channel, this operator will compute a num_channel-class softmax at each position of each instance; this can be used for fully convolutional network, image segmentation, etc.}
 
 \item{name}{string, optional

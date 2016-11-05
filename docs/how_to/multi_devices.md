@@ -49,7 +49,7 @@ python train_mnist.py --gpus 0,2 ...
 
 ### Advanced Usage
 
-If the GPUs are have different computation power, we can partition the workload
+If the GPUs have different computation power, we can partition the workload
 according to their powers. For example, if GPU 0 is 3 times faster than GPU 2,
 then we provide an additional workload option `work_load_list=[3, 1]`, see
 [model.fit](../api/python/model.html#mxnet.model.FeedForward.fit) for more
