@@ -40,6 +40,9 @@ Tmp workspace for convolution (MB).}
 \item{no.bias}{boolean, optional, default=False
 Whether to disable bias parameter.}
 
+\item{cudnn.tune}{{'fastest', 'limited_workspace', 'off'},optional, default='limited_workspace'
+Whether to find convolution algo by running performance test.Leads to higher startup time but may give better speed}
+
 \item{name}{string, optional
 Name of the resulting symbol.}
 }

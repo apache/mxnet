@@ -60,7 +60,7 @@ class MKLElementWiseOp : public Operator {
  private:
   void LayerSetUp(const std::vector<mshadow::Tensor<xpu, 4, DType> > &data,
                   const mshadow::Tensor<xpu, 4, DType> &out,
-                  int data_shape_size) {
+                  size_t data_shape_size) {
     coeffs_ = std::vector<DType>(data.size(), 1);
     // Whether to use an asymptotically slower (for >2 inputs) but stabler method
     // of computing the gradient for the PROD operation. (No effect for SUM op.)
@@ -192,7 +192,7 @@ class MKLElementWiseOp : public Operator {
 
         fwd_top_data->create_internal_layout(sumPrimitive, dnnResourceDst);
 
-        for (int i = 0; i < num_bottoms; ++i) {
+        for (size_t i = 0; i < num_bottoms; ++i) {
           if (mkl_prv_data<DType>(in_data[i]) == NULL) {
             fwd_bottom_data_[i]->create_internal_layout(sumPrimitive,
                 (dnnResourceType_t)(dnnResourceMultipleSrc + i));
@@ -213,7 +213,7 @@ class MKLElementWiseOp : public Operator {
     switch (op_) {
     case EltwiseParameter_EltwiseOp_SUM:
       void *eltwise_res[dnnResourceNumber];
-      for (int i = 0; i < num_bottoms; ++i) {
+      for (size_t i = 0; i < num_bottoms; ++i) {
         if (fwd_bottom_data_[i]->conversion_needed()) {
           std::shared_ptr<MKLMemHolder> in_data_mem =
 #if MKL_EXPERIMENTAL == 1
