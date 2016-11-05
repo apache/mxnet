@@ -74,6 +74,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [cifar-100](notebooks/cifar-100.ipynb) - A demo of how to train a 75.68% accuracy CIFAR-100 model
 * [simple bind](notebooks/simple_bind.ipynb) - A demo of low level training API.
 * [Multi task tutorial](https://github.com/haria/mxnet-multi-task-example/blob/master/multi-task.ipynb) - A demo of how to train and predict multi-task network on both MNIST and your own dataset.
+* [class active maps](https://github.com/dmlc/mxnet/blob/master/example/notebooks/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
 
 ###<a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------
