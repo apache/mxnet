@@ -683,9 +683,9 @@ class BaseModule(object):
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """Named data desc description contains name, shape, type and other extended attributes.
     """
-    def __new__(cls, name, shape, type=mx_real_t, layout='NCHW'):
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
         ret = super(cls, DataDesc).__new__(cls, name, shape)
-        ret.type = type
+        ret.dtype = dtype
         ret.layout = layout
         return ret
 

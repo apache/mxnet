@@ -260,9 +260,9 @@ class Module(BaseModule):
             shared_group = shared_module._exec_group
         else:
             shared_group = None
-        input_types = dict((x.name, x.type) for x in data_shapes)
+        input_types = dict((x.name, x.dtype) for x in data_shapes)
         for item in label_shapes:
-            input_types[item.name] = item.type
+            input_types[item.name] = item.dtype
 
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, data_shapes,
