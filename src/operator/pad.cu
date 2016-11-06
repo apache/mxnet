@@ -221,7 +221,7 @@ __global__ void image_3d_pad_edge_kernel(Tensor<gpu, 5, DType> dst,
       min(max(padF, outputPointZ), src.size(2) + padF - 1) - oStartZ + iStartZ;
 
   DType valueToCopy = src[batch][plane][inputPointZ][inputPointY][inputPointX];
-  dst[batch][plane][inputPointZ][outputPointY][outputPointX] = valueToCopy;
+  dst[batch][plane][outputPointZ][outputPointY][outputPointX] = valueToCopy;
 }
 
 template <typename DType>
@@ -253,7 +253,7 @@ __global__ void image_3d_pad_edge_grad_kernel(
   }
   int outputPointX = outputPointId % grad_out.size(4);
   int outputPointY = (outputPointId / grad_out.size(4)) % grad_out.size(3);
-  int outputPointZ = outputPointId / (grad_out.size(3) * grad_out.size(3));
+  int outputPointZ = outputPointId / (grad_out.size(3) * grad_out.size(4));
 
   int iStartX = max(0, -padL);
   int iStartY = max(0, -padT);
