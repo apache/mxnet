@@ -360,9 +360,10 @@ __global__ void image_3d_pad_constant_grad_kernel(
   if (inPointId >= pixel_num) {
     return;
   }
-  int inPointZ = inPointId % grad_in.size(4);
+
+  int inPointX = inPointId % grad_in.size(4);
   int inPointY = (inPointId / grad_in.size(4)) % grad_in.size(3);
-  int inPointX = inPointId / (grad_in.size(3) * grad_in.size(4));
+  int inPointZ = inPointId / (grad_in.size(3) * grad_in.size(4));
 
   int outPointZ = inPointZ + padF;
   int outPointX = inPointX + padL;
