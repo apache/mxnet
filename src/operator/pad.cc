@@ -16,7 +16,7 @@ namespace mshadow {
 // https://github.com/torch/nn/blob/master/lib/THNN/generic/SpatialReplicationPadding.c
 template <typename DType>
 void single_image_edge(const Tensor<cpu, 3, DType> dst,
-                          const Tensor<cpu, 3, DType> src, mxnet::TShape pad) {
+                       const Tensor<cpu, 3, DType> src, mxnet::TShape pad) {
   const int nslices = src.size(0);
   const int iheight = src.size(1);
   const int iwidth = src.size(2);
@@ -64,8 +64,8 @@ void single_image_edge(const Tensor<cpu, 3, DType> dst,
 
 template <typename DType>
 void single_image_edge_grad(const Tensor<cpu, 3, DType> &grad_in,
-                               const Tensor<cpu, 3, DType> grad_out,
-                               mxnet::TShape pad) {
+                            const Tensor<cpu, 3, DType> grad_out,
+                            mxnet::TShape pad) {
   const int nslices = grad_in.size(0);
   const int iheight = grad_in.size(1);
   const int iwidth = grad_in.size(2);
@@ -116,8 +116,8 @@ void single_image_edge_grad(const Tensor<cpu, 3, DType> &grad_in,
 // Case 2: Zero Padding
 template <typename DType>
 void single_image_constant(const Tensor<cpu, 3, DType> &dst,
-                              const Tensor<cpu, 3, DType> src,
-                              mxnet::TShape pad, DType constant_value) {
+                           const Tensor<cpu, 3, DType> src, mxnet::TShape pad,
+                           DType constant_value) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
   int c, w, h;
@@ -138,8 +138,8 @@ void single_image_constant(const Tensor<cpu, 3, DType> &dst,
 
 template <typename DType>
 void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
-                                   const Tensor<cpu, 3, DType> out_grad,
-                                   mxnet::TShape pad) {
+                                const Tensor<cpu, 3, DType> out_grad,
+                                mxnet::TShape pad) {
   const int pad_t = pad[4];
   const int pad_l = pad[6];
   int c, h, w;
@@ -161,7 +161,7 @@ void single_image_constant_grad(const Tensor<cpu, 3, DType> &in_grad,
 // https://github.com/torch/nn/blob/master/lib/THNN/generic/VolumetricReplicationPadding.c
 template <typename DType>
 void single_image_edge(const Tensor<cpu, 4, DType> dst,
-                          const Tensor<cpu, 4, DType> src, mxnet::TShape pad) {
+                       const Tensor<cpu, 4, DType> src, mxnet::TShape pad) {
   const int nslices = src.size(0);
   const int idepth = src.size(1);
   const int iheight = src.size(2);
@@ -228,8 +228,8 @@ void single_image_edge(const Tensor<cpu, 4, DType> dst,
 
 template <typename DType>
 void single_image_edge_grad(const Tensor<cpu, 4, DType> &grad_in,
-                               const Tensor<cpu, 4, DType> grad_out,
-                               mxnet::TShape pad) {
+                            const Tensor<cpu, 4, DType> grad_out,
+                            mxnet::TShape pad) {
   const int nslices = grad_in.size(0);
   const int idepth = grad_in.size(1);
   const int iheight = grad_in.size(2);
@@ -297,8 +297,8 @@ void single_image_edge_grad(const Tensor<cpu, 4, DType> &grad_in,
 // Case 2: Zero Padding
 template <typename DType>
 void single_image_constant(const Tensor<cpu, 4, DType> &dst,
-                              const Tensor<cpu, 4, DType> src,
-                              mxnet::TShape pad, DType constant_value) {
+                           const Tensor<cpu, 4, DType> src, mxnet::TShape pad,
+                           DType constant_value) {
   const int pad_f = pad[4];
   const int pad_t = pad[6];
   const int pad_l = pad[8];
@@ -323,8 +323,8 @@ void single_image_constant(const Tensor<cpu, 4, DType> &dst,
 
 template <typename DType>
 void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
-                                   const Tensor<cpu, 4, DType> out_grad,
-                                   mxnet::TShape pad) {
+                                const Tensor<cpu, 4, DType> out_grad,
+                                mxnet::TShape pad) {
   const int pad_f = pad[4];
   const int pad_t = pad[6];
   const int pad_l = pad[8];

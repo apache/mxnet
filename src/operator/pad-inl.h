@@ -117,9 +117,9 @@ class PadOp : public Operator {
       if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
       pad_image_grad(in, out, param_.pad_width, param_.mode);
     } else if ((rank == 5) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
-      Tensor<xpu, 4, DType> in = in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
-      Tensor<xpu, 4, DType> out =
-          out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
+      Tensor<xpu, 5, DType> in = in_grad[pad_enum::kData].get<xpu, 5, DType>(s);
+      Tensor<xpu, 5, DType> out =
+          out_grad[pad_enum::kOut].get<xpu, 5, DType>(s);
       if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
       pad_image_grad(in, out, param_.pad_width, param_.mode);
     } else {

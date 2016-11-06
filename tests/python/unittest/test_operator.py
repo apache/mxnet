@@ -1482,8 +1482,12 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
 def test_pad():
     shape1 = (2, 3, 2, 3)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
+    shape2 = (2, 3, 2, 3, 3)
+    pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
     check_pad_with_shape(shape1, default_context(), pad1, 'constant')
     check_pad_with_shape(shape1, default_context(), pad1, 'edge')
+    check_pad_with_shape(shape2, default_context(), pad2, 'constant')
+    check_pad_with_shape(shape2, default_context(), pad2, 'edge')
 
 def np_instance_norm(data, weight, bias, eps):
     spatial_dims = data.shape[2::]

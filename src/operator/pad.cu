@@ -287,7 +287,7 @@ inline void image_pad_edge_grad(Tensor<gpu, 5, DType> grad_in,
   dim3 dimGrid(xGridSize, grad_out.size(1), grad_out.size(0));
   CheckLaunchParam(dimGrid, dimBlock, "Pad");
   cudaStream_t stream = Stream<gpu>::GetStream(grad_out.stream_);
-  image_2d_pad_edge_grad_kernel<kBaseThreadBits,
+  image_3d_pad_edge_grad_kernel<kBaseThreadBits,
                                 DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padF, padT, padL);
 }
@@ -385,7 +385,7 @@ inline void image_pad_constant_grad(Tensor<gpu, 5, DType> grad_in,
   dim3 dimGrid(xGridSize, grad_in.size(1), grad_in.size(0));
   CheckLaunchParam(dimGrid, dimBlock, "Pad");
   cudaStream_t stream = Stream<gpu>::GetStream(grad_in.stream_);
-  image_2d_pad_constant_grad_kernel<kBaseThreadBits,
+  image_3d_pad_constant_grad_kernel<kBaseThreadBits,
                                     DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padF, padT, padL);
 }
