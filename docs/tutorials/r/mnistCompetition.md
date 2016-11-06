@@ -5,7 +5,7 @@ Handwritten Digits Classification Competition
 We will present the basic usage of [MXNet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
 
 This tutorial is written in Rmarkdown. You can download the source [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/mnistCompetition.Rmd) and view a
-hosted version of tutorial [here](http://mxnet.io/api/r/mnistCompetition.html).
+hosted version of tutorial [here](http://mxnet.io/tutorials/r/mnistCompetition.html).
 
 ## Data Loading
 

@@ -10,7 +10,7 @@ width=400/>
 
 ## How to use
 
-First build mxnet by following the [guide](http://mxnet.readthedocs.io/en/latest/how_to/build.html)
+First build mxnet by following the [guide](http://mxnet.io/get_started/setup.html#quick-installation)
 
 ### Train
 
