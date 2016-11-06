@@ -597,8 +597,8 @@ class FeedForward(BASE_ESTIMATOR):
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
         type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
-        for name, dtype in X.provide_data_type:
-            type_dict[name] = dtype
+        for x in X.provide_data:
+            type_dict[x.name] = x.dtype
 
         self._init_predictor(data_shapes, type_dict)
         batch_size = X.batch_size
@@ -668,8 +668,8 @@ class FeedForward(BASE_ESTIMATOR):
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
         type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
-        for name, dtype in X.provide_data_type:
-            type_dict[name] = dtype
+        for x in X.provide_data:
+            type_dict[x.name] = x.dtype
 
         self._init_predictor(data_shapes, type_dict)
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]

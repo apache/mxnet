@@ -3,12 +3,10 @@
 
 import logging
 import time
-from collections import namedtuple
 
 from .. import metric
 from .. import ndarray
 
-from ..base import mx_real_t
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
@@ -336,12 +334,7 @@ class BaseModule(object):
         if hasattr(train_data, 'layout_mapper'):
             self.layout_mapper = train_data.layout_mapper
 
-        provide_data = DataDesc.get_list(train_data.provide_data,
-                                         train_data.provide_data_type)
-        provide_label = DataDesc.get_list(train_data.provide_label,
-                                          train_data.provide_label_type)
-
-        self.bind(data_shapes=provide_data, label_shapes=provide_label,
+        self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
                   for_training=True, force_rebind=force_rebind)
         if monitor is not None:
             self.install_monitor(monitor)
@@ -677,29 +670,3 @@ class BaseModule(object):
         not even be associated with any symbols.
         """
         return self._symbol
-
-
-# pylint: disable=W0622
-class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
-    """Named data desc description contains name, shape, type and other extended attributes.
-    """
-    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
-        ret = super(cls, DataDesc).__new__(cls, name, shape)
-        ret.dtype = dtype
-        ret.layout = layout
-        return ret
-
-    @staticmethod
-    def get_list(shapes, types):
-        """Get DataDesc list from attribute lists.
-
-        Parameters
-        ----------
-        shapes : shape tuple list with (name, shape) tuples
-        types : type tuple list with (name, type) tuples
-        """
-        if types is not None:
-            type_dict = dict(types)
-            return [DataDesc(x[0], x[1], type_dict[x[0]]) for x in shapes]
-        else:
-            return [DataDesc(x[0], x[1]) for x in shapes]

@@ -216,10 +216,12 @@ class DataParallelExecutorGroup(object):
 
         self.train_execs = []
         for i, ctxi in enumerate(ctx):
-            data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
-                           for k, v in train_data.provide_data + train_data.provide_label}
+            data_shapes = {}
+            data_types = {}
+            for x in train_data.provide_data + train_data.provide_label:
+                data_shapes[x.name] = tuple([slices[i].stop-slices[i].start] + list(x.shape[1:]))
+                data_types[x.name] = x.dtype
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
-            data_types = dict(train_data.provide_data_type + train_data.provide_label_type)
             train_exec = _bind_exec(sym, ctxi, data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
                                     shared_data_arrays=self.shared_data_arrays[i],
