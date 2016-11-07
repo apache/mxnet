@@ -71,7 +71,7 @@ def get_iterator_uint8(kv):
     data_shape = (3, 28, 28)
 
     train = mx.io.ImageRecordUInt8Iter(
-        path_imgrec = "data/train.rec",
+        path_imgrec = "data/cifar/train.rec",
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -81,7 +81,7 @@ def get_iterator_uint8(kv):
     train = mx.io.PrefetchingIter(train)
 
     val = mx.io.ImageRecordUInt8Iter(
-        path_imgrec = "data/test.rec",
+        path_imgrec = "data/cifar/test.rec",
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
@@ -95,8 +95,8 @@ def get_iterator_float32(kv):
     data_shape = (3, 28, 28)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = "data/train.rec",
-        mean_img    = "data/mean.bin",
+        path_imgrec = "data/cifar/train.rec",
+        mean_img    = "data/cifar/mean.bin",
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -106,8 +106,8 @@ def get_iterator_float32(kv):
     train = mx.io.PrefetchingIter(train)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = "data/test.rec",
-        mean_img    = "data/mean.bin",
+        path_imgrec = "data/cifar/test.rec",
+        mean_img    = "data/cifar/mean.bin",
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
