@@ -47,7 +47,7 @@ class InstanceNormOp : public Operator {
     CHECK_EQ(in_data.size(), 3);
     CHECK_EQ(out_data.size(), 3);
 
-    CHECK_GE(in_data[instance_norm::kData].Size(), 3)
+    CHECK_GE(in_data[instance_norm::kData].ndim(), 3)
         << "InstanceNorm only supports input tensors of rank > 2.";
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
