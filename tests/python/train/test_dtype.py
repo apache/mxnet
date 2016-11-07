@@ -119,7 +119,7 @@ def get_iterator_float32(kv):
 
 num_epoch = 1
 
-def test_cifar10(train, val, use_module=False):
+def run_cifar10(train, val, use_module=False):
     train.reset()
     val.reset()
     devs = [mx.gpu(0)]
@@ -163,7 +163,7 @@ def test_cifar10(train, val, use_module=False):
         logging.info('final accuracy = %f', ret[0])
         assert (ret[0] > 0.4)
 
-if __name__ == "__main__":
+def test_cifar10():
     # print logging by default
     logging.basicConfig(level=logging.DEBUG)
     console = logging.StreamHandler()
@@ -172,8 +172,12 @@ if __name__ == "__main__":
 
     kv = mx.kvstore.create("local")
     (train, val) = get_iterator_float32(kv)
-    test_cifar10(train, val, use_module=False)
-    test_cifar10(train, val, use_module=True)
+    run_cifar10(train, val, use_module=False)
+    run_cifar10(train, val, use_module=True)
     (train, val) = get_iterator_uint8(kv)
-    test_cifar10(train, val, use_module=False)
-    test_cifar10(train, val, use_module=True)
+    run_cifar10(train, val, use_module=False)
+    run_cifar10(train, val, use_module=True)
+    
+
+if __name__ == "__main__":
+    test_cifar10()
