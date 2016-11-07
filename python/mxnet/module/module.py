@@ -267,7 +267,10 @@ class Module(BaseModule):
                            if isinstance(x, DataDesc) else (x[0], mx_real_t)
                            for x in data_shapes)
         for item in label_shapes:
-            input_types[item.name] = item.dtype
+            if isinstance(item, DataDesc):
+                input_types[item.name] = item.dtype
+            else:
+                input_types[item[0]] = mx_real_t
 
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, data_shapes,
