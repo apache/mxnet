@@ -14,6 +14,8 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..initializer import Uniform
 
 from .base_module import BaseModule
+from ..io import DataDesc
+from ..base import mx_real_t
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -260,7 +262,10 @@ class Module(BaseModule):
             shared_group = shared_module._exec_group
         else:
             shared_group = None
-        input_types = dict((x.name, x.dtype) for x in data_shapes)
+
+        input_types = dict((x.name, x.dtype)
+                           if isinstance(x, DataDesc) else (x[0], mx_real_t)
+                           for x in data_shapes)
         for item in label_shapes:
             input_types[item.name] = item.dtype
 

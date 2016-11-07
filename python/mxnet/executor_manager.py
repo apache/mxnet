@@ -220,7 +220,7 @@ class DataParallelExecutorGroup(object):
             data_shapes = {}
             data_types = {}
             for x in train_data.provide_data + train_data.provide_label:
-                data_shapes[x.name] = tuple([slices[i].stop-slices[i].start] + list(x.shape[1:]))
+                data_shapes[x[0]] = tuple([slices[i].stop - slices[i].start] + list(x[1][1:]))
                 if isinstance(x, DataDesc):
                     data_types[x.name] = x.dtype
                 else:
