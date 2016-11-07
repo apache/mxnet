@@ -59,7 +59,7 @@ class MKLConcatOp : public Operator {
  private:
   void LayerSetUp(const std::vector<mshadow::Tensor<xpu, 4, DType> > &data,
                   const mshadow::Tensor<xpu, 4, DType> &out,
-                  int data_shape_size) {
+                  size_t data_shape_size) {
     size_t dim_src = data_shape_size;
     size_t dim_dst = dim_src;
     num_concats_ = size_;
@@ -74,7 +74,7 @@ class MKLConcatOp : public Operator {
 
     split_channels_ = new size_t[num_concats_];
     for (size_t i = 0; i < num_concats_; ++i) {
-      CHECK_EQ(dim_src, data[i].shape_.kDimension);
+      CHECK_EQ((int)dim_src, data[i].shape_.kDimension);
 
       fwd_bottom_data_.push_back(MKLData<DType>::create());
       bwd_bottom_diff_.push_back(MKLData<DType>::create());
@@ -122,7 +122,7 @@ class MKLConcatOp : public Operator {
     using namespace mshadow::expr;
     CHECK_EQ(static_cast<int>(in_data.size()), size_);
     CHECK_EQ(out_data.size(), 1);
-    CHECK_LT(dimension_, in_data[concat_enum::kData0].ndim());
+    CHECK_LT(dimension_, (size_t)in_data[concat_enum::kData0].ndim());
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 4, DType> > data(size_);
     Tensor<xpu, 4, DType> out;
@@ -226,7 +226,7 @@ class MKLConcatOp : public Operator {
     delete[] isBottomDataFilled;
 
     void *concat_res[dnnResourceNumber];
-    for (int n = 0; n < num_concats_; ++n) {
+    for (size_t n = 0; n < num_concats_; ++n) {
 #if MKL_EXPERIMENTAL == 1
     void * src_res = bottom_data[n];
 #else
@@ -338,7 +338,7 @@ class MKLConcatOp : public Operator {
 
  private:
   int size_;
-  int dimension_;
+  size_t dimension_;
 
   bool init_mkldnn_;
 

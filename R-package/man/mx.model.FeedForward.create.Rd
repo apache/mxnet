@@ -5,8 +5,9 @@
 \title{Create a MXNet Feedforward neural net model with the specified training.}
 \usage{
 mx.model.FeedForward.create(symbol, X, y = NULL, ctx = NULL,
-  num.round = 10, optimizer = "sgd", initializer = mx.init.uniform(0.01),
-  eval.data = NULL, eval.metric = NULL, epoch.end.callback = NULL,
+  begin.round = 1, num.round = 10, optimizer = "sgd",
+  initializer = mx.init.uniform(0.01), eval.data = NULL,
+  eval.metric = NULL, epoch.end.callback = NULL,
   batch.end.callback = NULL, array.batch.size = 128,
   array.layout = "auto", kvstore = "local", verbose = TRUE,
   arg.params = NULL, aux.params = NULL, ...)
@@ -22,6 +23,9 @@ This is only used when X is R array.}
 
 \item{ctx}{mx.context or list of mx.context, optional
 The devices used to perform training.}
+
+\item{begin.round}{integer (default=1)
+The initial iteration over the training data to train the model.}
 
 \item{num.round}{integer (default=10)
 The number of iterations over training data to train the model.}
