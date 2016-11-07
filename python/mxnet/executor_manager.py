@@ -9,6 +9,7 @@ import numpy as np
 from .base import mx_real_t
 from . import ndarray as nd
 from .context import cpu
+from .io import DataDesc
 
 
 def _split_input_slice(batch_size, work_load_list):
@@ -220,7 +221,10 @@ class DataParallelExecutorGroup(object):
             data_types = {}
             for x in train_data.provide_data + train_data.provide_label:
                 data_shapes[x.name] = tuple([slices[i].stop-slices[i].start] + list(x.shape[1:]))
-                data_types[x.name] = x.dtype
+                if isinstance(x, DataDesc):
+                    data_types[x.name] = x.dtype
+                else:
+                    data_types[x[0]] = mx_real_t
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
             train_exec = _bind_exec(sym, ctxi, data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
