@@ -90,7 +90,7 @@ endif
 # Settings for power and arm arch
 #----------------------------
 ARCH := $(shell uname -a)
-ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le))
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64))
 	USE_SSE=0
 else
 	USE_SSE=1
