@@ -22,7 +22,7 @@ and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 ## Getting Started
 * Install python package `easydict`, `cv2`, `matplotlib`. MXNet require `numpy`.
 * Install MXNet with version no later than Commit 8a3424e, preferably the latest master.
-  Follow the instructions at http://mxnet.readthedocs.io/en/latest/how_to/build.html. Install the python interface.
+  Follow the instructions at http://mxnet.io/get_started/setup.html#quick-installation. Install the python interface.
 * Try out detection result by running `python demo.py --prefix final --epoch 0 --image myimage.jpg --gpu 0`.
   Suppose you have downloaded pretrained network and place the extracted file `final-0000.params` in this folder and there is an image named `myimage.jpg`.
 

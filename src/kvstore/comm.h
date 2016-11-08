@@ -163,7 +163,7 @@ class CommCPU : public Comm {
       }
     }
   }
-  /// \brief temperal space for pushing and pull
+  /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the merged value
     NDArray merged;
@@ -334,7 +334,7 @@ class CommDevice : public Comm {
   }
 
   std::vector<KeyShape> sorted_key_shape_;
-  /// \brief temperal space for pushing and pull
+  /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the merged value
     NDArray merged;

@@ -582,33 +582,42 @@ div.sphinxsidebar ul ul { margin-left: 15px }
 
 
 .section h1 {
-    padding-top: 90px;
+    padding-top: 100px;
     margin-top: -60px;
     padding-bottom: 10px;
-    font-size: 28px;
+    font-size: 32px;
 }
 
 .section h2 {
     padding-top: 100px;
     margin-top: -60px;
     padding-bottom: 10px;
-    font-size: 25px;
+    font-size: 29px;
 }
 
 .section h3 {
-    padding-top: 80px;
-    margin-top: -64px;
+    padding-top: 100px;
+    margin-top: -60px;
     padding-bottom: 8px;
+    font-size: 26px;
 }
 
 .section h4 {
-    padding-top: 80px;
-    margin-top: -64px;
+    padding-top: 100px;
+    margin-top: -60px;
     padding-bottom: 8px;
+    font-size: 23px;
 }
 
-.section ul ul {
-    display: none
+.section h5 {
+    padding-top: 100px;
+    margin-top: -60px;
+    padding-bottom: 8px;
+    font-size: 20px;
+}
+
+div.content a[href="#module-mxnet.symbol"] + ul {
+    display: none;
 }
 
 dt {
@@ -687,8 +696,13 @@ div.highlight-python, div.highlight-none {
     padding-left: 20px 
 }
 
-.content ul {
-    padding-left: 20px 
+.content ol {
+    padding-left: 20px !important
+}
+
+.content ul ul {
+    padding-left: 40px;
+    padding-bottom: 40px
 }
 
 /*API function formation*/
@@ -707,4 +721,9 @@ td {
 
 td p.first {
     margin-bottom: 0
+}
+
+/*Class title font size*/
+dl.class > dt {
+    font-size: 1.2em;
 }
