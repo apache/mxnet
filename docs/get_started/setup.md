@@ -148,7 +148,7 @@ cd mxnet; make -j$(nproc)
 
 Executing above commands produce a library called ```libmxnet.so```
 
-#### Build MXNet on OS X (Mac)
+### Build MXNet on OS X (Mac)
 
 On OS X, you need the following dependencies:
 * [Homebrew](http://brew.sh/) (to install dependencies)
@@ -198,11 +198,11 @@ After running the ```cmake``` command, use Xcode to open ```mxnet.xcodeproj```, 
 
 Both sets of commands produce a library called ```libmxnet.so```.
 
-#### Build MXNet on Windows
+### Build MXNet on Windows
 
 On Windows you can download and install the prebuilt MXNet package, or download, build, and install MXNet yourself.
 
-##### Installing Pre-built Packages on Windows
+#### Installing Pre-built Packages on Windows
 MXNet provides a prebuilt package for Windows. The prebuilt package includes the MXNet library, all of the dependent third-party libraries, a sample C++ solution for Visual Studio, and the Python installation script.
 
 1. Download the latest prebuilt package from the [Releases](https://github.com/dmlc/mxnet/releases) tab  of MXNet. 
@@ -215,7 +215,7 @@ MXNet provides a prebuilt package for Windows. The prebuilt package includes the
 &nbsp;
 This procedure produces a library called ```libmxnet.dll```.
 
-##### Building and Installing Packages on Windows
+#### Building and Installing Packages on Windows
 
 To build and install MXNet yourself, you need the following dependencies:
 * [Microsoft Visual Studio 2013](https://www.visualstudio.com/downloads/)
