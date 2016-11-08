@@ -26,10 +26,9 @@ nosetests3 --verbose tests/python/unittest || exit -1
 nosetests3 --verbose tests/python/gpu/test_operator_gpu.py || exit -1
 nosetests3 --verbose tests/python/train || exit -1
 
-# echo "BUILD julia_test"
-# export PATH="${PATH}:${HOME}/julia/bin"
-# export MXNET_HOME="${PWD}"
-# julia -e 'Pkg.clone("MXNet"); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+echo "BUILD julia_test"
+export MXNET_HOME="${PWD}"
+/home/ubuntu/julia/bin/julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
 
 echo "BUILD scala_test"
 export PATH=$PATH:/opt/apache-maven/bin
