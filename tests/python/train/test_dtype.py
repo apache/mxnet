@@ -119,7 +119,7 @@ def get_iterator_float32(kv):
 
 num_epoch = 1
 
-def run_cifar10(train, val, use_module=False):
+def run_cifar10(train, val, use_module):
     train.reset()
     val.reset()
     devs = [mx.gpu(0)]
@@ -163,6 +163,37 @@ def run_cifar10(train, val, use_module=False):
         logging.info('final accuracy = %f', ret[0])
         assert (ret[0] > 0.4)
 
+class CustomDataIter(mx.io.DataIter):
+    def __init__(self, data):
+        super(CustomDataIter, self).__init__()
+        self.data = data
+        self.batch_size = data.provide_data[0][1][0]
+
+        # use legacy tuple
+        self.provide_data = [(n, s) for n, s in data.provide_data]
+        self.provide_label = [(n, s) for n, s in data.provide_label]
+
+    def reset(self):
+        self.data.reset()
+
+    def next(self):
+        return self.data.next()
+
+    def iter_next(self):
+        return self.data.iter_next()
+
+    def getdata(self):
+        return self.data.getdata()
+
+    def getlabel(self):
+        return self.data.getlable()
+
+    def getindex(self):
+        return self.data.getindex()
+
+    def getpad(self):
+        return self.data.getpad()
+
 def test_cifar10():
     # print logging by default
     logging.basicConfig(level=logging.DEBUG)
@@ -171,13 +202,19 @@ def test_cifar10():
     logging.getLogger('').addHandler(console)
 
     kv = mx.kvstore.create("local")
+    # test float32 input
     (train, val) = get_iterator_float32(kv)
     run_cifar10(train, val, use_module=False)
     run_cifar10(train, val, use_module=True)
+
+    # test legecay tuple in provide_data and provide_label
+    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=False)
+    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=True)
+
+    # test uint8 input
     (train, val) = get_iterator_uint8(kv)
     run_cifar10(train, val, use_module=False)
     run_cifar10(train, val, use_module=True)
     
-
 if __name__ == "__main__":
     test_cifar10()

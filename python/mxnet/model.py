@@ -18,6 +18,8 @@ from .context import Context, cpu
 from .initializer import Uniform
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
+from .io import DataDesc
+from .base import mx_real_t
 
 BASE_ESTIMATOR = object
 
@@ -598,7 +600,10 @@ class FeedForward(BASE_ESTIMATOR):
         data_names = [x[0] for x in data_shapes]
         type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
         for x in X.provide_data:
-            type_dict[x.name] = x.dtype
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
 
         self._init_predictor(data_shapes, type_dict)
         batch_size = X.batch_size
@@ -669,7 +674,10 @@ class FeedForward(BASE_ESTIMATOR):
         data_names = [x[0] for x in data_shapes]
         type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
         for x in X.provide_data:
-            type_dict[x.name] = x.dtype
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
 
         self._init_predictor(data_shapes, type_dict)
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
