@@ -157,8 +157,9 @@ def run_cifar10(train, val, use_module):
 
     ret = executor.score(val, eval_metrics)
     if use_module:
-        logging.info('final accuracy = %f', list(ret)[0][1])
-        assert (list(ret)[0][1] > 0.4)
+        ret = list(ret)
+        logging.info('final accuracy = %f', ret[0][1])
+        assert (ret[0][1] > 0.4)
     else:
         logging.info('final accuracy = %f', ret[0])
         assert (ret[0] > 0.4)
