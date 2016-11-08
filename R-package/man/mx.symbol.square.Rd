@@ -8,7 +8,7 @@ mx.symbol.square(...)
 }
 \arguments{
 \item{src}{Symbol
-Source symbolic input to the function}
+Left symbolic input to the function}
 
 \item{name}{string, optional
 Name of the resulting symbol.}

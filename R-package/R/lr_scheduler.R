@@ -1,6 +1,13 @@
-
+#' Learning rate scheduler. Reduction based on a factor value.
+#'
+#' @param step (integer)
+#'        Schedule learning rate after n updates
+#' @param factor (double)
+#'        The factor for reducing the learning rate
+#' @return scheduler function
+#'
 #' @export
-FactorScheduler <- function(step, factor_val, stop_factor_lr=1e-8, verbose=TRUE) {
+mx.lr_scheduler.FactorScheduler <- function(step, factor_val, stop_factor_lr=1e-8, verbose=TRUE) {
   if(step < 1) stop("Schedule step must be greater or equal than 1 round")
   if(factor_val > 1) stop("Factor must be no more than 1 to make lr reduce")
   function(optimizerEnv){
@@ -26,8 +33,16 @@ FactorScheduler <- function(step, factor_val, stop_factor_lr=1e-8, verbose=TRUE)
   }
 }
 
+#' Multifactor learning rate scheduler. Reduction based on a factor value at different steps.
+#'
+#' @param step (array of integer)
+#'        Schedule learning rate after n updates
+#' @param factor (double)
+#'        The factor for reducing the learning rate
+#' @return scheduler function
+#'
 #' @export
-MultiFactorScheduler <- function(step, factor_val, stop_factor_lr=1e-8, verbose=TRUE) {
+mx.lr_scheduler.MultiFactorScheduler <- function(step, factor_val, stop_factor_lr=1e-8, verbose=TRUE) {
   if(!all(step == cummax(step))) stop("Schedule step must be an increasing integer list")
   if(any(step < 1))  stop("Schedule step must be greater or equal than 1 round")
   if(factor_val > 1) stop("Factor must be no more than 1 to make lr reduce")

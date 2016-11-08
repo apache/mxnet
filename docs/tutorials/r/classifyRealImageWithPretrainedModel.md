@@ -12,7 +12,7 @@ This model gives the recent state-of-art prediction accuracy on image net datase
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/api/r/classifyRealImageWithPretrainedModel.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
 
 Package Loading
