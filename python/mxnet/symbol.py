@@ -873,7 +873,7 @@ class Symbol(object):
     # pylint: enable= no-member
 
 
-def Variable(name, attr=None, shape=None, dtype=None):
+def Variable(name, attr=None, shape=None):
     """Create a symbolic variable with specified name.
 
     Parameters
@@ -901,9 +901,6 @@ def Variable(name, attr=None, shape=None, dtype=None):
     if shape is not None:
         attr = {} if attr is None else attr
         attr['__shape__'] = str(shape)
-    if dtype is not None:
-        attr = {} if attr is None else attr
-        attr['__dtype__'] = str(_DTYPE_NP_TO_MX[numpy.dtype(dtype).type])
     if attr:
         ret._set_attr(**attr)
     return ret

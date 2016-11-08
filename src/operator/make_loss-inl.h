@@ -22,13 +22,29 @@ namespace op {
 namespace make_loss_enum {
 enum MakeLossOpInputs {kData};
 enum MakeLossOpOutputs {kOut};
+enum MakeLossOpType {kNull, kBatch, kValid};
+enum MakeLossOpResource {kTempSpace};
 }  // namespace make_loss_enum
 
 struct MakeLossParam : public dmlc::Parameter<MakeLossParam> {
   float grad_scale;
+  int normalization;
+  float valid_thresh;
   DMLC_DECLARE_PARAMETER(MakeLossParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("gradient scale as a supplement to unary and binary operators");
+    DMLC_DECLARE_FIELD(valid_thresh).set_default(0.0f)
+    .describe("regard element valid when x > valid_thresh, this is "
+    "used only in valid normalization mode.");
+    DMLC_DECLARE_FIELD(normalization)
+    .add_enum("null", make_loss_enum::kNull)
+    .add_enum("batch", make_loss_enum::kBatch)
+    .add_enum("valid", make_loss_enum::kValid)
+    .set_default(make_loss_enum::kNull)
+    .describe("If set to null, op will not normalize on output gradient."
+              "If set to batch, op will normalize gradient by divide batch size."
+              "If set to valid, op will normalize gradient by divide # sample "
+              "marked as valid");
   }
 };
 
@@ -65,7 +81,22 @@ class MakeLossOp : public Operator {
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> grad = in_grad[make_loss_enum::kData].FlatTo2D<xpu, real_t>(s);
-    Assign(grad, req[make_loss_enum::kData], ScalarExp<real_t>(param_.grad_scale));
+    if (param_.normalization == make_loss_enum::kValid) {
+      Tensor<xpu, 2> data = in_data[make_loss_enum::kData].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 1> temp = ctx.requested[make_loss_enum::kTempSpace]
+        .get_space_typed<xpu, 1, real_t>(mshadow::Shape1(1), s);
+      temp = sumall_except_dim<0>(reduce_keepdim<red::sum, false>(
+        F<mshadow_op::threshold>(ScalarExp<real_t>(param_.valid_thresh), data), 0));
+      temp = F<mshadow_op::maximum>(ScalarExp<real_t>(1.f), temp);  // avoid zero
+      Assign(grad, req[make_loss_enum::kData],
+        ScalarExp<real_t>(param_.grad_scale) / broadcast<0>(
+        broadcast_keepdim(temp, 0, grad.shape_[0]), grad.shape_));
+    } else if (param_.normalization == make_loss_enum::kBatch) {
+      Assign(grad, req[make_loss_enum::kData],
+        ScalarExp<real_t>(param_.grad_scale / grad.shape_[0]));
+    } else {
+      Assign(grad, req[make_loss_enum::kData], ScalarExp<real_t>(param_.grad_scale));
+    }
   }
 
  private:
@@ -112,6 +143,17 @@ class MakeLossProp : public OperatorProperty {
       const std::vector<int> &out_grad,
       const std::vector<int> &in_data,
       const std::vector<int> &out_data) const override {
+    if (param_.normalization == make_loss_enum::kValid) {
+      return {in_data[make_loss_enum::kData]};
+    }
+    return {};
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    if (param_.normalization == make_loss_enum::kValid) {
+      return {ResourceRequest::kTempSpace};
+    }
     return {};
   }
 

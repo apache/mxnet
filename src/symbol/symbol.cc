@@ -16,7 +16,6 @@ namespace mxnet {
 
 namespace symbol_constants {
 const char *kShapeKey = "__shape__";
-const char *kTypeKey = "__dtype__";
 const char *kNamespaceSeparator = "_";
 }  // namespace symbol_constants
 
@@ -487,8 +486,9 @@ void Symbol::Compose(const std::unordered_map<std::string, Symbol>& kwargs,
 bool Symbol::GetName(std::string* out) {
   Node* node = heads_[0].source.get();
   for (const DataEntry& e : heads_) {
-    CHECK(node == e.source.get())
-        << "Symbol.GetName only works for non-grouped symbol";
+    if (node != e.source.get()) {
+      *out = "GroupedSymbol"; return true;
+    }
   }
   *out = node->name;
   return true;
@@ -674,8 +674,6 @@ bool Symbol::InferType(const std::unordered_map<std::string, int>& known_arg_typ
     if (it != known_arg_types.end()) {
       arg_types->at(i) = it->second;
       ++nmatched;
-    } else if (g.nodes[g.arg_nodes[i]].is_variable()) {
-      arg_types->at(i) = g.nodes[g.arg_nodes[i]].get_attr(symbol_constants::kTypeKey, -1);
     }
   }
   if (nmatched != known_arg_types.size()) {

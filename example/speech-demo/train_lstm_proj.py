@@ -57,7 +57,7 @@ def prepare_data(args):
 
 def CrossEntropy(labels, preds):
     labels = labels.reshape((-1,))
-    preds = preds.reshape((-1, preds.shape[2]))
+    preds = preds.reshape((-1, preds.shape[1]))
     loss = 0.
     num_inst = 0
     for i in range(preds.shape[0]):
@@ -70,7 +70,7 @@ def CrossEntropy(labels, preds):
 
 def Acc_exclude_padding(labels, preds):
     labels = labels.reshape((-1,))
-    preds = preds.reshape((-1, preds.shape[2]))
+    preds = preds.reshape((-1, preds.shape[1]))
     sum_metric = 0
     num_inst = 0
     for i in range(preds.shape[0]):
@@ -163,7 +163,7 @@ def do_training(training_method, args, module, data_train, data_val):
 
     def reset_optimizer():
         if optimizer == "sgd" or optimizer == "speechSGD":
-            module.init_optimizer(kvstore='local',
+            module.init_optimizer(kvstore='device',
                               optimizer=args.config.get('train', 'optimizer'),
                               optimizer_params={'lr_scheduler': lr_scheduler,
                                                 'momentum': momentum,
@@ -172,7 +172,7 @@ def do_training(training_method, args, module, data_train, data_val):
                                                 'wd': weight_decay},
                               force_init=True)
         else:
-            module.init_optimizer(kvstore='local',
+            module.init_optimizer(kvstore='device',
                               optimizer=args.config.get('train', 'optimizer'),
                               optimizer_params={'lr_scheduler': lr_scheduler,
                                                 'rescale_grad': 1.0,
@@ -191,7 +191,7 @@ def do_training(training_method, args, module, data_train, data_val):
                 lr_scheduler.momentum = np.power(np.power(momentum, 1.0/(data_train.batch_size * truncate_len)), data_batch.effective_sample_count)
             else:
                 if data_batch.effective_sample_count is not None:
-                    lr_scheduler.effective_sample_count = data_batch.effective_sample_count
+                    lr_scheduler.effective_sample_count = 1#data_batch.effective_sample_count
 
             module.forward_backward(data_batch)
             module.update()

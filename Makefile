@@ -61,6 +61,11 @@ endif
 ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
+ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
+	CFLAGS += -DMKL_EXPERIMENTAL=1
+else
+	CFLAGS += -DMKL_EXPERIMENTAL=0
+endif
 ifneq ($(USE_BLAS), mkl)
 	ICC_ON=0
 	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON))
@@ -70,11 +75,10 @@ ifneq ($(USE_BLAS), mkl)
 ifeq ($(MKL_EXTERNAL), 1)
 	MKL_LDFLAGS+=-Wl,-rpath,$(MKLROOT)/lib
 	CFLAGS += -I$(MKLROOT)/include
-	LDFLAGS += -L$(MKLROOT)/lib/ -liomp5 -lmklml_gnu -lmklml_intel
+	LDFLAGS += -Wl,--as-needed -L$(MKLROOT)/lib/ -liomp5 -lmklml_intel
 endif
 endif
 endif
-
 
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
@@ -118,9 +122,9 @@ CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
 ifneq ($(EXTRA_OPERATORS),)
-	EXTRA_SRC = $(wildcard $(patsubst %, %/*.cc %/*/*.cc, $(EXTRA_OPERATORS)))
+	EXTRA_SRC = $(wildcard $(patsubst %, %/*.cc, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.cc, $(EXTRA_OPERATORS)))
 	EXTRA_OBJ = $(patsubst %.cc, %.o, $(EXTRA_SRC))
-	EXTRA_CUSRC = $(wildcard $(patsubst %, %/*.cu %/*/*.cu, $(EXTRA_OPERATORS)))
+	EXTRA_CUSRC = $(wildcard $(patsubst %, %/*.cu, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.cu, $(EXTRA_OPERATORS)))
 	EXTRA_CUOBJ = $(patsubst %.cu, %_gpu.o, $(EXTRA_CUSRC))
 else
 	EXTRA_SRC =
@@ -286,7 +290,8 @@ clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
-	$(RM) -r  $(patsubst %, %/*.d %/*/*.d %/*.o %/*/*.o, $(EXTRA_OPERATORS))
+	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
+	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean:
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
@@ -300,5 +305,5 @@ clean_all: clean
 -include build/*/*.d
 -include build/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
-	-include $(patsubst %, %/*.d %/*/*.d, $(EXTRA_OPERATORS))
+	-include $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 endif

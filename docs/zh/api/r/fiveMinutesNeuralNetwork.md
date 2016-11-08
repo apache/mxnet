@@ -8,7 +8,7 @@
 
 本教程由Rmd编辑完成。
 
-- 你可以直接访问主站版本的教程：[MXNet R Document](http://mxnet.io/api/r/fiveMinutesNeuralNetwork.html)
+- 你可以直接访问主站版本的教程：[MXNet R Document](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
 - 你也可以从[这里](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd) 下载到Rmarkdown源文件
 
 ## 分类
