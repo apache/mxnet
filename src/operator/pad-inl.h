@@ -80,10 +80,16 @@ class PadOp : public Operator {
           in_data[pad_enum::kData].get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out =
           out_data[pad_enum::kOut].get<xpu, 4, DType>(s);
-      pad_image_2d(out, data, param_.pad_width, param_.mode, constant_value);
+      pad_image(out, data, param_.pad_width, param_.mode, constant_value);
+    } else if ((rank == 5) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
+      Tensor<xpu, 5, DType> data =
+          in_data[pad_enum::kData].get<xpu, 5, DType>(s);
+      Tensor<xpu, 5, DType> out =
+          out_data[pad_enum::kOut].get<xpu, 5, DType>(s);
+      pad_image(out, data, param_.pad_width, param_.mode, constant_value);
     } else {
-      LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
-                    "two dimensions is currently implemented. ";
+      LOG(FATAL) << "Only 4d or 5d input tensors with padding applied to "
+                    "dimensions > 1 is currently implemented.";
     }
 
     // Assign(out, req[pad_enum::kOut], F<mshadow_op::identity>(data));
@@ -104,17 +110,21 @@ class PadOp : public Operator {
     // Get any size input + output into required form
     auto pad = param_.pad_width;
     int rank = in_grad[pad_enum::kData].ndim();
-    // Currently only support rank 4
     if ((rank == 4) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
       Tensor<xpu, 4, DType> in = in_grad[pad_enum::kData].get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out =
           out_grad[pad_enum::kOut].get<xpu, 4, DType>(s);
       if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
-
-      pad_image_2d_grad(in, out, param_.pad_width, param_.mode);
+      pad_image_grad(in, out, param_.pad_width, param_.mode);
+    } else if ((rank == 5) && !pad[0] && !pad[1] && !pad[2] && !pad[3]) {
+      Tensor<xpu, 5, DType> in = in_grad[pad_enum::kData].get<xpu, 5, DType>(s);
+      Tensor<xpu, 5, DType> out =
+          out_grad[pad_enum::kOut].get<xpu, 5, DType>(s);
+      if (req[pad_enum::kData] == kWriteTo) in = 0.0f;
+      pad_image_grad(in, out, param_.pad_width, param_.mode);
     } else {
-      LOG(FATAL) << "Only 4d input tensors and padding applied to the last "
-                    "two dimensions is currently implemented. ";
+      LOG(FATAL) << "Only 4d and 5d input tensors with padding applied to "
+                    "dimensions > 1 is currently implemented. ";
     }
   }
 
