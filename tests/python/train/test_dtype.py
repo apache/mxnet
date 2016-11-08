@@ -122,7 +122,7 @@ num_epoch = 1
 def run_cifar10(train, val, use_module):
     train.reset()
     val.reset()
-    devs = [mx.gpu(0)]
+    devs = [mx.cpu(0)]
     net = get_net()
     mod = mx.mod.Module(net, context=devs)
     optim_args = {'learning_rate': 0.05, 'wd': 0.00001, 'momentum': 0.9}
@@ -195,27 +195,27 @@ class CustomDataIter(mx.io.DataIter):
     def getpad(self):
         return self.data.getpad()
 
-def test_cifar10():
-    # print logging by default
-    logging.basicConfig(level=logging.DEBUG)
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    logging.getLogger('').addHandler(console)
-
-    kv = mx.kvstore.create("local")
-    # test float32 input
-    (train, val) = get_iterator_float32(kv)
-    run_cifar10(train, val, use_module=False)
-    run_cifar10(train, val, use_module=True)
-
-    # test legecay tuple in provide_data and provide_label
-    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=False)
-    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=True)
-
-    # test uint8 input
-    (train, val) = get_iterator_uint8(kv)
-    run_cifar10(train, val, use_module=False)
-    run_cifar10(train, val, use_module=True)
-    
-if __name__ == "__main__":
-    test_cifar10()
+#def test_cifar10():
+#    # print logging by default
+#    logging.basicConfig(level=logging.DEBUG)
+#    console = logging.StreamHandler()
+#    console.setLevel(logging.DEBUG)
+#    logging.getLogger('').addHandler(console)
+#
+#    kv = mx.kvstore.create("local")
+#    # test float32 input
+#    (train, val) = get_iterator_float32(kv)
+#    run_cifar10(train, val, use_module=False)
+#    run_cifar10(train, val, use_module=True)
+#
+#    # test legecay tuple in provide_data and provide_label
+#    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=False)
+#    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=True)
+#
+#    # test uint8 input
+#    (train, val) = get_iterator_uint8(kv)
+#    run_cifar10(train, val, use_module=False)
+#    run_cifar10(train, val, use_module=True)
+#    
+#if __name__ == "__main__":
+#    test_cifar10()
