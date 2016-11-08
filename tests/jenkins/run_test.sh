@@ -27,9 +27,8 @@ nosetests3 --verbose tests/python/gpu/test_operator_gpu.py || exit -1
 nosetests3 --verbose tests/python/train || exit -1
 
 echo "BUILD julia_test"
-export PATH="${HOME}/julia/bin:${PATH}"
 export MXNET_HOME="${PWD}"
-julia -e 'Pkg.update(); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+/home/ubuntu/julia/bin/julia -e 'Pkg.update(); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
 
 echo "BUILD scala_test"
 export PATH=$PATH:/opt/apache-maven/bin
