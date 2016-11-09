@@ -5,6 +5,8 @@
 #   MKL_USE_SINGLE_DYNAMIC_LIBRARY  : use single dynamic library interface
 #   MKL_USE_STATIC_LIBS             : use static libraries
 #   MKL_MULTI_THREADED              : use multi-threading
+#   MKL_USE_ILP64                   : use ilp64 data model
+#   MKL_USE_CLUSTER                 : use cluster libraries
 #
 # This module defines the following variables:
 #
@@ -17,6 +19,8 @@
 mxnet_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
 mxnet_option(MKL_USE_STATIC_LIBS "Use static libraries" OFF IF NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
 mxnet_option(MKL_MULTI_THREADED  "Use multi-threading"   ON IF NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
+mxnet_option(MKL_USE_ILP64  "Use ilp64 data model" OFF)
+mxnet_option(MKL_USE_CLUSTER "Use cluster functions" OFF IF CMAKE_SIZEOF_VOID_P EQUAL 4)
 
 # ---[ Root folders
 set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
@@ -42,10 +46,21 @@ else()
     if(WIN32)
       list(APPEND __mkl_libs intel_c)
     else()
-      list(APPEND __mkl_libs intel gf)
+      list(APPEND __mkl_libs intel)
+      if(CMAKE_COMPILER_IS_GNUFORTRAN)
+        list(APPEND __mkl_libs gf)
+      endif()
     endif()
   else()
-    list(APPEND __mkl_libs intel_lp64 gf_lp64)
+    set(__mkl_lib64_suffix "lp64")
+    if(MKL_USE_ILP64)
+      set(__mkl_lib64_suffix "ilp64")
+      add_definitions(-DMKL_ILP64)
+    endif()
+    list(APPEND __mkl_libs "intel_${__mkl_lib64_suffix}")
+    if(CMAKE_COMPILER_IS_GNUFORTRAN)
+    	list(APPEND __mkl_libs "gf_${__mkl_lib64_suffix}")
+    endif()
   endif()
 
   if(MKL_MULTI_THREADED)
@@ -54,7 +69,10 @@ else()
      list(APPEND __mkl_libs sequential)
   endif()
 
-  list(APPEND __mkl_libs core cdft_core)
+  list(APPEND __mkl_libs core)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND MKL_USE_CLUSTER)
+    list(APPEND __mkl_libs cdft_core)
+  endif()
 endif()
 
 
