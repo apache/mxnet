@@ -4,15 +4,15 @@ We collect the frequently asked questions on [mxnet/issues](https://github.com/d
 
 ## Build and install
 
-The answers for most questions can be found on the [build page](build.md)
+The answers for most questions can be found on the [build page](http://mxnet.io/get_started/setup.html)
 
 ## Speed
 
-#### Took a long time to start running on GPU
+### Took a long time to start running on GPU
 
-Try to disable opencv to use GPU, such as [build opencv from source with GPU module disabled](build.md#build-opencv-from-source). 
+Try to disable opencv to use GPU, such as [build opencv from source with GPU module disabled](http://mxnet.io/get_started/setup.html#build-opencv-from-source-code). 
 
-#### Slow on a single GPU
+### Slow on a single GPU
 
 Check the following items:
 
@@ -23,7 +23,7 @@ Check the following items:
 5. Set to maximal clock for Tesla cards by `nvidia-smi -ac ??`. See [this blog](https://devblogs.nvidia.com/parallelforall/increase-performance-gpu-boost-k80-autoboost/)
 6. Check no throttle reason `nvidia-smi -q -d PERFORMANCE` often caused by temperature. 
 
-#### No speed up for using more than one GPUs or machines. 
+### No speed up for using more than one GPUs or machines. 
 
 Check the following items:
 1. Does your neural network already run fast, such as >1000 example/sec or >10 batches/sec? If yes, it's unlikely to get further speed up for adding more resources due to the communication overhead. 
@@ -32,13 +32,11 @@ Check the following items:
 
 ## Memory Usage
 
-#### Abnormal CPU memory usage
+### Abnormal CPU memory usage
 
 May be due to the data pre-fetch. Refer to [issue 2111](https://github.com/dmlc/mxnet/issues/2111) Should be fixed later.
 
-## the following part needs refactor
-
-#### How to Copy Part of Parameters to Another Model
+## How to Copy Part of Parameters to Another Model
 Most MXNet's model consists two parts, the argument arrays and symbol. You can simply copy the argument array to the argument array of another model. For example, in python model API, you can do
 ```python
 copied_model =  mx.model.FeedForward(ctx=mx.gpu(), symbol=new_symbol,
@@ -47,11 +45,11 @@ copied_model =  mx.model.FeedForward(ctx=mx.gpu(), symbol=new_symbol,
 ```
 To copy model parameter from existing ```old_arg_params```, see also this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb)
 
-#### How to Extract Feature Map of Certain Layer
+## How to Extract Feature Map of Certain Layer
 See this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb)
 
 
-#### What is the relation between MXNet and CXXNet, Minerva, Purine2
+## What is the relation between MXNet and CXXNet, Minerva, Purine2
 MXNet is created in collaboration by authors from the three projects.
 The project reflects what we have learnt from the past projects.
 It combines important flavour of the existing projects, being
@@ -62,6 +60,9 @@ ways of programming, and write CPU/GPU applications that are more
 memory efficient than cxxnet, purine and more flexible than minerva.
 
 
-#### What is the Relation to Tensorflow
+## What is the Relation to Tensorflow
 Both MXNet and [Tensorflow] (https://www.tensorflow.org/) use a computation graph abstraction, which is initially used by Theano, then also adopted by other packages such as CGT, caffe2, purine. Currently TensorFlow adopts an optimized symbolic API. While MXNet supports a more [mixed flavour](http://mxnet.io/architecture/program_model.html), with a dynamic dependency scheduler to combine symbolic and imperative programming together. 
 In short, MXNet is lightweight and “mixed”, with flexibility from imperative programming, while getting similar advantages by using a computation graph to make it very fast and memory efficient. That being said, most systems will involve and we expect both systems can learn and benefit from each other.
+
+## How to contribute to MXNet?
+Thank you for your interest in contributing to MXNet. Refer [contribution guidelines](http://mxnet.io/community/contribute.html) for more details.

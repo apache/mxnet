@@ -134,7 +134,7 @@ to get the gradient.
 ```
 The [model API](model.md) is a thin wrapper around the symbolic executors to support neural net training.
 
-You are also strongly encouraged to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md),
+You are also strongly encouraged to read [Symbolic Configuration and Execution in Pictures](http://mxnet.io/api/python/symbol_in_pictures.html),
 which provides a detailed explanation of the concepts in pictures.
 
 ## How Efficient is the Symbolic API?
@@ -154,4 +154,4 @@ be ***more memory efficient*** than CXXNet, and achieves the same runtime, with
 greater flexibility.
 
 # Recommended Next Steps
-* [KVStore](kvstore.md)
+* [KVStore](http://mxnet.io/tutorials/python/kvstore.html)

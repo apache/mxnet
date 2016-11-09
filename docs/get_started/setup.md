@@ -98,6 +98,7 @@ bash install-mxnet-ubuntu.sh
 # We have added MXNet Python package path in your ~/.bashrc. 
 # Run below command to refresh environment variables.
 $ source ~/.bashrc
+```
 
 You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu.sh).
 
@@ -167,6 +168,7 @@ Followed by installation of dependencies:
 ```bash
 brew update
 brew install git
+brew install pkg-config
 brew tap homebrew/science
 brew info opencv
 brew install opencv
@@ -243,7 +245,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug folder```.
 
-### 2. Install Language-specific Packages
+### Install Language-specific Packages
 Now install the packages for the programming language you want to use with MXNet. This section provides instructions for downloading and installing the following languages:
 * Python
 * R
