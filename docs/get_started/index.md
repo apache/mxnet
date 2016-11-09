@@ -11,7 +11,7 @@ MXNet is an open source library for Deep Learning with following features:
 
 # Setup and Installation
 
-Refer [Setup and Installation](http://mxnet.io/get_started/setup.html) guide for setting up MXNet.
+Refer [Setup and Installation](http://localhost:8008/get_started/setup.html) guide for setting up MXNet.
 
 
 &nbsp;
