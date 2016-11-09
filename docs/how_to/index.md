@@ -12,6 +12,7 @@ This page contains guidelines to use and develop MXNets.
 - [How to improve MXNet Performance(perf.md)
 
 ## Develop and Hack MXNet
+- [Guidelines for contributing to MXNet](http://mxnet.io/community/contribute.html)
 - [Create new operators](new_op.md)
 - [Use Torch from MXNet](torch.md)
 - [Set environment variables of MXNet](env_var.md)
