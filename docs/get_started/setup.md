@@ -167,6 +167,7 @@ Followed by installation of dependencies:
 ```bash
 brew update
 brew install git
+brew install pkg-config
 brew tap homebrew/science
 brew info opencv
 brew install opencv
