@@ -1644,14 +1644,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcCreate
   char *kernel = const_cast<char *>(env->GetStringUTFChars(jkernel, 0));
 
   int ret = MXRtcCreate(name,
-                                    static_cast<mx_uint>(num_input),
-                                    static_cast<mx_uint>(num_output),
-                                    inputNames,
-                                    outputNames,
-                                    reinterpret_cast<NDArrayHandle *>(inputs),
-                                    reinterpret_cast<NDArrayHandle *>(outputs),
-                                    kernel,
-                                    &out);
+                        static_cast<mx_uint>(num_input),
+                        static_cast<mx_uint>(num_output),
+                        inputNames,
+                        outputNames,
+                        reinterpret_cast<NDArrayHandle *>(inputs),
+                        reinterpret_cast<NDArrayHandle *>(outputs),
+                        kernel,
+                        &out);
 
   // release allocated memory
   env->ReleaseStringUTFChars(jname, name);
@@ -1687,16 +1687,16 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcPush
   int num_output = env->GetArrayLength(joutputs);
 
   int ret = MXRtcPush(handle,
-                                    static_cast<mx_uint>(num_input),
-                                    static_cast<mx_uint>(num_output),
-                                    reinterpret_cast<NDArrayHandle *>(inputs),
-                                    reinterpret_cast<NDArrayHandle *>(outputs),
-                                    static_cast<mx_uint>(gridDimX),
-                                    static_cast<mx_uint>(gridDimY),
-                                    static_cast<mx_uint>(gridDimZ),
-                                    static_cast<mx_uint>(blockDimX),
-                                    static_cast<mx_uint>(blockDimY),
-                                    static_cast<mx_uint>(blockDimZ));
+                      static_cast<mx_uint>(num_input),
+                      static_cast<mx_uint>(num_output),
+                      reinterpret_cast<NDArrayHandle *>(inputs),
+                      reinterpret_cast<NDArrayHandle *>(outputs),
+                      static_cast<mx_uint>(gridDimX),
+                      static_cast<mx_uint>(gridDimY),
+                      static_cast<mx_uint>(gridDimZ),
+                      static_cast<mx_uint>(blockDimX),
+                      static_cast<mx_uint>(blockDimY),
+                      static_cast<mx_uint>(blockDimZ));
 
   // release allocated memory
   env->ReleaseLongArrayElements(jinputs, inputs, 0);

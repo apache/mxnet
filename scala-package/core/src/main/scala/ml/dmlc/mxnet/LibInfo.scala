@@ -257,20 +257,20 @@ class LibInfo {
 
   // Rtc
   @native def mxRtcCreate(name: String,
-                                inputNames: Array[String],
-                                outputNames: Array[String],
-                                inputs: Array[NDArrayHandle],
-                                outputs: Array[NDArrayHandle],
-                                kernel: String,
-                                out: RtcHandleRef): Int
+                          inputNames: Array[String],
+                          outputNames: Array[String],
+                          inputs: Array[NDArrayHandle],
+                          outputs: Array[NDArrayHandle],
+                          kernel: String,
+                          out: RtcHandleRef): Int
   @native def mxRtcPush(handle: RtcHandle,
-                                inputs: Array[NDArrayHandle],
-                                outputs: Array[NDArrayHandle],
-                                gridDimX: Int,
-                                gridDimY: Int,
-                                gridDimZ: Int,
-                                blockDimX: Int,
-                                blockDimY: Int,
-                                blockDimZ: Int): Int
+                        inputs: Array[NDArrayHandle],
+                        outputs: Array[NDArrayHandle],
+                        gridDimX: Int,
+                        gridDimY: Int,
+                        gridDimZ: Int,
+                        blockDimX: Int,
+                        blockDimY: Int,
+                        blockDimZ: Int): Int
   @native def mxRtcFree(handle: RtcHandle): Int
 }

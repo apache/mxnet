@@ -25,7 +25,7 @@ import ml.dmlc.mxnet.Base._
  *         const int y_ndim = 1;
  *         const int y_dims[] = { 10 };
  *
- *          y[threadIdx.x] = x[threadIdx.x];
+ *         y[threadIdx.x] = x[threadIdx.x];
  *      }
  */
 class Rtc(name: String, inputs: Array[(String, NDArray)],
@@ -37,12 +37,12 @@ class Rtc(name: String, inputs: Array[(String, NDArray)],
   private val inputNDs = inputs.map(_._2.handle)
   private val outputNDs = outputs.map(_._2.handle)
   checkCall(_LIB.mxRtcCreate(name,
-                                inputNames,
-                                outputNames,
-                                inputNDs,
-                                outputNDs,
-                                kernel,
-                                rtcHandle))
+                             inputNames,
+                             outputNames,
+                             inputNDs,
+                             outputNDs,
+                             kernel,
+                             rtcHandle))
 
   /**
   * run the kernel.
@@ -60,15 +60,15 @@ class Rtc(name: String, inputs: Array[(String, NDArray)],
   def push(ins: Array[NDArray], outs: Array[NDArray],
     gridDims: (Int, Int, Int), blockDims: (Int, Int, Int)): Unit = {
     checkCall(_LIB.mxRtcPush(rtcHandle.value,
-                                ins.map(_.handle),
-                                outs.map(_.handle),
-                                gridDims._1,
-                                gridDims._2,
-                                gridDims._3,
-                                blockDims._1,
-                                blockDims._2,
-                                blockDims._3))
-  }
+                             ins.map(_.handle),
+                             outs.map(_.handle),
+                             gridDims._1,
+                             gridDims._2,
+                             gridDims._3,
+                             blockDims._1,
+                             blockDims._2,
+                             blockDims._3))
+}
 
   /**
    * Free the rtc handle.
