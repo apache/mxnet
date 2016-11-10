@@ -9,7 +9,7 @@ This page contains guidelines to use and develop MXNets.
 - [How To Setup MXNet on the AWS cloud using EC2 and S3](cloud.md)
 - [How to use pre-trained models](pretrained.md)
 - [How to use MXNet on variable input length/size (bucketing)](bucketing.md)
-- [How to improve MXNet Performance(perf.md)
+- [How to improve MXNet Performance](perf.md)
 
 ## Develop and Hack MXNet
 - [Guidelines for contributing to MXNet](http://mxnet.io/community/contribute.html)

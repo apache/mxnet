@@ -380,8 +380,8 @@ To install the required dependencies and install MXNet for R:
 5. Download and install [CuDNN V3](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user. Unpack the .zip file. You will see three folders: ```/bin```, ```/include```, and ```/lib```. Copy these folders into ```nocudnn/3rdparty/cudnn/```, replacing the folders that are there. You can also unpack the .zip file directly into the nocudnn/ folder.
 6. Create a folder called ```R-package/inst/libs/x64```. MXNet supports only 64-bit operating systems, so you need the x64 folder.
 7. Copy the following shared libraries (.dll files) into the ```R-package/inst/libs/x64``` folder:
-  * nocudnn/lib/libmxnet.dll.
-  * The *.dll files in all four subfolders of the nocudnn/3rdparty/ directory. The cudnn and openblas .dll files are in the /bin folders.
+    * nocudnn/lib/libmxnet.dll.
+    * The *.dll files in all four subfolders of the nocudnn/3rdparty/ directory. The cudnn and openblas .dll files are in the /bin folders.
 You should now have 11 .dll files in the R-package/inst/libs/x64 folder.
 8. Copy the ```nocudnn/include/``` folder into ```R-package/inst/```. You should now have a folder called ```R-package/inst/include/``` with three subfolders.
 9. Make sure that R is added to your ```PATH``` in the environment variables. Running the where R command at the command prompt should return the location.
