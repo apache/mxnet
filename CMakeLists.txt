@@ -11,6 +11,7 @@ mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_R
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
+mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -223,7 +224,7 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   add_library(mxnet SHARED ${SOURCE})
@@ -231,7 +232,7 @@ endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
 target_link_libraries(mxnet dmlccore)
 
-if(MSVC)
+if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 

@@ -165,5 +165,10 @@
       <artifactId>scrimage-filters_2.11</artifactId>
       <version>2.1.5</version>
     </dependency>
+    <dependency>
+      <groupId>nu.pattern</groupId>
+      <artifactId>opencv</artifactId>
+      <version>2.4.9-7</version>
+    </dependency>
   </dependencies>
 </project>

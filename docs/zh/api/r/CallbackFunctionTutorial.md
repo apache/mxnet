@@ -2,7 +2,7 @@
 
 本文将概述我们如何在模型训练的时候使用或者自定义一些回调函数。本教程使用 Rmarkdown 编写。
 
-- 你可以直接看我们在主站上的教程： [MXNet R Document](http://mxnet.io/api/r/CallbackFunctionTutorial.html)
+- 你可以直接看我们在主站上的教程： [MXNet R Document](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
 
 - 你可以在这里找到Rmarkdown的源码： [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CallbackFunctionTutorial.Rmd)
 
