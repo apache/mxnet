@@ -136,7 +136,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
               "-3         merge two     u_p = s_i * s_i+1\n"
               "-4,a,b     split two     u_p = a, u_p+1 = b | a * b = s_i\n"
               "The split directive (-4) in the target shape tuple is followed by "
-              "two dimensions, one of which can be 1, which means it will be "
+              "two dimensions, one of which can be -1, which means it will be "
               "inferred from the other one and the original dimension.\n"
               "The can only be one globally inferred dimension (-1), aside from "
               "any -1 occuring in a split directive.");
