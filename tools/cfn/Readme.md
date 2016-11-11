@@ -1,5 +1,5 @@
 # **Distributed Deep Learning Made Easy**
-Authors: Naveen Swamy, Joseph Spisak
+**Authors**: Naveen Swamy, Joseph Spisak
 
 Machine learning is a field of computer science that enables computers to learn without being explicitly programmed. It focuses on algorithms that can learn from and make predictions on data. 
 
