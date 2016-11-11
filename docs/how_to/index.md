@@ -17,5 +17,5 @@ This page contains guidelines to use and develop MXNets.
 - [Use Torch from MXNet](torch.md)
 - [Set environment variables of MXNet](env_var.md)
 
-## Frequently Ask Questions
+## Frequently Asked Questions
 - [FAQ](faq.md)
