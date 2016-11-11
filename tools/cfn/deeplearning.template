@@ -7,7 +7,7 @@
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "WorkerCount" : {
-      "Description" : "The number of worker instances.",
+      "Description" : "The number of worker instances (launches +1 instance for the Master).",
       "Type" : "Number",
       "MinValue" : "1",
       "Default" : "1"
