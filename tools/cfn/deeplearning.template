@@ -7,20 +7,20 @@
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "WorkerCount" : {
-      "Description" : "The number of worker instances",
+      "Description" : "The number of worker instances (launches +1 instance for the Master).",
       "Type" : "Number",
       "MinValue" : "1",
       "Default" : "1"
     },
     "InstanceType" : {
-      "Description" : "The EC2 instance type for all instances",      
+      "Description" : "The EC2 instance type for all instances.",
       "Type" : "String",
       "Default" : "g2.2xlarge",
       "AllowedValues" : [ "g2.2xlarge", "g2.8xlarge", "p2.xlarge", "p2.8xlarge", "p2.16xlarge" ],
       "ConstraintDescription" : "Must be a valid GPU EC2 instance type."
     },
     "SSHLocation": {
-      "Description": "Restrict SSH access to a valid CIDR range, This should be a valid CIDR IP address range that you want to allow access to your Master and Stack.",
+      "Description": "Restrict SSH access to a valid CIDR range, this should be a valid CIDR IP address range that you want to allow access to your Master and Stack.",
       "Type": "String",
       "MinLength": "9",
       "MaxLength": "18",
@@ -30,9 +30,9 @@
   },
   "Mappings" : {
     "AmazonLinux" : {
-      "us-east-1"      : { "AMI" : "ami-87174d90"  },
-      "us-west-2"      : { "AMI" : "ami-264bed46"  },
-      "eu-west-1"      : { "AMI" : "ami-38541e4b"  }
+      "us-east-1"      : { "AMI" : "ami-f34260e4"  },
+      "us-west-2"      : { "AMI" : "ami-a7ea49c7"  },
+      "eu-west-1"      : { "AMI" : "ami-00075173"  }
     }, 
     "SubnetConfig" : {
       "VPC"     : { "CIDR" : "10.0.0.0/16" },
@@ -79,7 +79,7 @@
     "AdminSSHSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "GroupDescription" : "Security group that controls SSH access to the Master instance",
+        "GroupDescription" : "Security group that controls SSH access to the Master instance.",
         "VpcId" : { "Ref" : "Vpc" },
           "Tags" : [
             { "Key" : "Name", "Value" : {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_SSH" ] ] } }
@@ -88,13 +88,13 @@
             { "IpProtocol" : "tcp", "FromPort" : "22",  "ToPort" : "22",  "CidrIp" : { "Ref" : "SSHLocation" } }
           ],          
         "SecurityGroupEgress" : [
-         ]        
+         ]
       }
     },        
     "MasterSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "GroupDescription" : "Enable Port access to and from the Master on the Private Interface",
+        "GroupDescription" : "Enable Port access to and from the Master on the Private Interface.",
         "VpcId" : { "Ref" : "Vpc" },
           "Tags" : [
             { "Key" : "Name", "Value" : {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_Master" ] ] } }
@@ -421,8 +421,10 @@
     },
     "PublicSubnet" : {
       "Type" : "AWS::EC2::Subnet",
+      "DependsOn" : ["PrivateSubnet"],
       "Properties" : {
         "VpcId" : {"Ref" : "Vpc"},
+        "AvailabilityZone" : { "Fn::GetAtt" : [ "PrivateSubnet", "AvailabilityZone" ] } ,
         "CidrBlock": { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]},
           "Tags" : [
             { "Key" : "Network", "Value" : "Public" },
