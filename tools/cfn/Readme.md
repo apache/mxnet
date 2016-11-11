@@ -1,5 +1,5 @@
 # **Distributed Deep Learning Made Easy**
-By Naveen Swamy, Joseph Spisak | 10 Nov 2016 | in Amazon EC2 Compute Blog
+Authors: Naveen Swamy, Joseph Spisak
 
 Machine learning is a field of computer science that enables computers to learn without being explicitly programmed. It focuses on algorithms that can learn from and make predictions on data. 
 
