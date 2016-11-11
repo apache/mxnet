@@ -725,3 +725,17 @@ dl.method, dl.attribute {
 dl.class p, dl.function p {
     color: #cc6600;
 }
+
+/*-------------tutorial page---------------*/
+div#tutorials h4 a {
+    color: #cc6600;
+    font-size: 14px;
+}
+
+div#tutorials h4 {
+    padding-top: 0.2em;
+}
+
+div#tutorials h3 {
+    padding-top: 0.2em;
+}
