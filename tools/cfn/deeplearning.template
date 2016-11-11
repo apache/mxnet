@@ -30,9 +30,9 @@
   },
   "Mappings" : {
     "AmazonLinux" : {
-      "us-east-1"      : { "AMI" : "ami-f34260e4"  },
-      "us-west-2"      : { "AMI" : "ami-a7ea49c7"  },
-      "eu-west-1"      : { "AMI" : "ami-00075173"  }
+      "us-east-1"      : { "AMI" : "ami-491f335e"  },
+      "us-west-2"      : { "AMI" : "ami-74208314"  },
+      "eu-west-1"      : { "AMI" : "ami-993362ea"  }
     }, 
     "SubnetConfig" : {
       "VPC"     : { "CIDR" : "10.0.0.0/16" },
