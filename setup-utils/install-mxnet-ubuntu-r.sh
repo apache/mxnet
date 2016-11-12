@@ -9,16 +9,21 @@
 ######################################################################
 set -e
 
-MXNET_HOME=..
+MXNET_HOME="$(dirname "$PWD")" 
+echo "MXNet root folder: $MXNET_HOME"
 
 echo "Building MXNet core. This can take few minutes..."
 cd $MXNET_HOME
 make -j$(nproc)
 
-echo "Installing R dependencies..."
-sudo Rscript -e “install.packages(‘devtools’, repo = ‘https://cran.rstudio.com’)”
-sudo Rscript -e “install.packages(c(‘Rcpp’, ‘DiagrammeR’, ‘data.table’, ‘jsonlite’, ‘magrittr’, ‘stringr’, ‘roxygen2’), repos = ‘https://cran.rstudio.com’)”
+echo "Installing R dependencies. This can take few minutes..."
+sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+sudo Rscript -e "install.packages(c('Rcpp', 'DiagrammeR', 'data.table', 'jsonlite', 'magrittr', 'stringr', 'roxygen2'), repos = 'https://cran.rstudio.com')"
+
+echo "Compiling R package. This can take few minutes..."
 make rpkg
+
+echo "Installing R package..."
 sudo R CMD INSTALL mxnet_0.7.tar.gz
 
 echo "Done! MXNet for R installation is complete. Go ahead and explore MXNet with R :-)"
