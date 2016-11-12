@@ -1,17 +1,60 @@
-# Introduction
-MXNet is an open source library for Deep Learning with following features:
-1. **Flexible** - Supports both imperative and symbolic programming.
-2. **Portable** - Runs on CPUs or GPUs, on clusters, servers, desktops, or mobile phones.
-3. **Multiple language support** - Supports over 7 programming languages, including C++, Python, R, Scala, Julia, Matlab, and Javascript.
-4. **Distributed** - Supports distributed training on multiple CPU/GPU machines, including AWS, GCE, Azure, and Yarn clusters.
-5. **Optimized for performance** - Optimized C++ backend engine parallelizes both I/O and computation.
+# MXNet: A Scalable Deep Learning Framework
+MXNet is an open-source deep learning framework that allows you to define, train, and deploy deep neural networks on a wide array of devices, from cloud infrastructure to mobile devices. 
+It is highly scalable, allowing for fast model training, and supports a flexible programming model and multiple languages. MXNet allows you to mix symbolic and imperative programming flavors to maximize both efficiency and productivity. 
+MXNet is built on a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly. 
+A graph optimization layer on top of that makes symbolic execution fast and memory efficient. The MXNet library is portable and lightweight, and it scales to multiple GPUs and multiple machines.
 
 
 &nbsp;
 
-# Setup and Installation
+**Flexible Programming Model**
+Supports both imperative and symbolic programming, maximizing efficiency and productivity
 
-Refer [Setup and Installation](http://mxnet.io/get_started/setup.html) guide for setting up MXNet.
+
+&nbsp;
+
+**Portable from the Cloud to the Client**
+Runs on CPUs or GPUs, and on clusters, servers, desktops, or mobile phones
+
+
+&nbsp;
+
+**Multi-Lingual**
+Supports over seven programming languages, including C++, Python, R, Scala, Julia, Matlab, and Javascript
+
+
+&nbsp;
+
+**Native Distributed Training**
+Supports distributed training on multiple CPU/GPU machines to take advantage of cloud scale 
+
+
+&nbsp;
+
+**Performance Optimized** 
+Parallelizes both I/O and computation with an optimized C++ backend engine, and performs optimally no matter which language you program in
+
+
+&nbsp;
+
+#MXNet Open Source Community 
+
+**Broad Model Support** – Train and deploy the latest deep convolutional neural networks (CNNs) and long short-term memory (LSTMs) models 
+
+
+&nbsp;
+
+**Extensive Library of Reference Examples** – Build on sample tutorials (with code), such as image classification, language modeling, neural Artart, and Speech speech recognition, and more.  
+
+
+&nbsp;
+
+**Open and Collaborative Community** – Support and contributions from many top tier universities and industry partners
+
+
+&nbsp;
+
+Refer [Setup and Installation](http://mxnet.io/get_started/setup.html) guide to set up and start using MXNet.
 
 
 &nbsp;
