@@ -26,6 +26,6 @@ echo "Installing Python package for MXNet..."
 cd python; sudo python setup.py install
 
 echo "Adding MXNet path to your ~/.bashrc file"
-echo "export PYTHONPATH=$MXNET_HOME/python" >> ~/.bashrc
+echo "export PYTHONPATH=$MXNET_HOME/python:PYTHONPATH" >> ~/.bashrc
 
 echo "Done! MXNet for Python installation is complete. Go ahead and explore MXNet with Python :-)"
