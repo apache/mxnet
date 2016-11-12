@@ -47,42 +47,6 @@ def test_elementwise_sum():
             shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
             check_elementwise_sum_with_shape(shape, np.random.randint(1, 8))
 
-def check_slice_channel(dim, num):
-    ins = []
-    if dim == 2:
-        shape = (2, 2)
-    else:
-        shape = (2, 2, 2 ,3)
-    ins = [np.ones(shape) * i for i in range(num)]
-    e = np.hstack(ins)
-
-    e_nd = mx.nd.empty(e.shape)
-    e_nd[:] = e
-    data = mx.sym.Variable('data')
-    op = mx.sym.SliceChannel(data=data, num_outputs=num)
-    arg_shape, output_shape, aux_shape = op.infer_shape(data=e_nd.shape)
-    grad_nd = [mx.nd.empty(shape) for shape in arg_shape]
-
-    exe = op.bind(default_context(), args=[e_nd], args_grad=grad_nd)
-    assert len(exe.outputs) == num
-    o_nd = [exe.outputs[i] for i in range(num)]
-    # test forward
-    exe.forward()
-    for i in range(num):
-        assert reldiff(o_nd[i].asnumpy(), ins[i]) < 1e-5
-    # test backward
-    for i in range(num):
-        o_nd[i] += i
-    exe.backward(o_nd)
-    assert reldiff(grad_nd[0].asnumpy(), np.hstack([ins[i] + i for i in range(num)])) < 1e-5
-
-    # test slice channel with squeeze_axis
-    op = mx.sym.SliceChannel(data=data, num_outputs=shape[1], squeeze_axis=1)
-    arg_shape, output_shape, aux_shape = op.infer_shape(data=shape)
-    assert len(output_shape) == shape[1]
-    for o_shape in output_shape:
-        assert len(o_shape) == len(shape) - 1
-        assert o_shape == tuple([shape[0]] + list(shape[2:]))
 
 def check_concat_with_shape(shapes, dimension, skip_second):
     # if skip_second is True, second argument will not have gradient.
@@ -175,9 +139,47 @@ def test_concat():
             check_concat_with_shape(shapes,dimension,False)
 
 def test_slice_channel():
-    check_slice_channel(2, 4)
-    check_slice_channel(4, 4)
-    check_slice_channel(2, 16)
+    def check_slice_channel(data_ndim, axis, num_outputs, squeeze_axis):
+        ins = []
+        if squeeze_axis:
+            shape = np.random.randint(2, 5, data_ndim).tolist()
+            shape[axis] = num_outputs
+            out_ele_shape = [ele for ele in shape]
+            del out_ele_shape[axis]
+        else:
+            shape = np.random.randint(1, 5, data_ndim).tolist()
+            shape[axis] *= num_outputs
+            out_ele_shape = [ele for ele in shape]
+            out_ele_shape[axis] /= num_outputs
+        data_npy = np.random.normal(size=shape)
+        out_grads_npy = [np.random.normal(size=out_ele_shape) for i in range(num_outputs)]
+        data = mx.sym.Variable('data')
+        sym = mx.sym.SliceChannel(data=data, num_outputs=num_outputs, axis=axis)
+        exe = sym.simple_bind(ctx=default_context(), data=data_npy.shape)
+        assert len(exe.outputs) == num_outputs
+        outputs = exe.forward(is_train=True, data=data_npy)
+        for i in range(num_outputs):
+            gt = data_npy.take(np.arange(i * shape[axis]/num_outputs,
+                                         (i+1) * shape[axis]/num_outputs).astype(np.int), axis=axis)
+            if squeeze_axis:
+
+                assert reldiff(outputs[i].asnumpy(), gt.reshape(outputs[i].shape)) < 1e-5
+            else:
+                assert reldiff(outputs[i].asnumpy(), gt) < 1e-5
+        # test backward
+        exe.backward(out_grads=[mx.nd.array(ele, ctx=default_context()) for ele in out_grads_npy])
+        if squeeze_axis:
+            assert reldiff(exe.grad_arrays[0].asnumpy(),
+                           np.concatenate([np.expand_dims(ele, axis=axis) for ele in out_grads_npy],
+                                          axis=axis)) < 1e-5
+        else:
+            assert reldiff(exe.grad_arrays[0].asnumpy(),
+                           np.concatenate(out_grads_npy, axis=axis)) < 1e-5
+    check_slice_channel(data_ndim=2, axis=1, num_outputs=3, squeeze_axis=True)
+    check_slice_channel(data_ndim=4, axis=2, num_outputs=3, squeeze_axis=False)
+    check_slice_channel(data_ndim=3, axis=-1, num_outputs=2, squeeze_axis=False)
+    check_slice_channel(data_ndim=5, axis=-2, num_outputs=3, squeeze_axis=True)
+
 
 def check_regression(symbol, forward, backward):
     data = mx.symbol.Variable('data')
@@ -729,10 +731,10 @@ def test_batchnorm_training():
 
         data = mx.symbol.Variable('data')
         test = mx.symbol.BatchNorm(data, fix_gamma=False)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=0.16)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, check_eps=0.16)
 
         test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-3, check_eps=0.16)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, check_eps=0.16)
 
 def test_convolution_grouping():
     num_filter = 4
@@ -819,7 +821,7 @@ def _check_broadcast_op_backward(symbol, baseline):
         err = lambda x, y: np.sum(np.abs(x-y)) / np.sum(np.abs(x))
         err_1 = err(x_1, y_1.asnumpy())
         err_2 = err(x_2, y_2.asnumpy())
-        assert err_1 < 1e-5 and err_2 < 1e-5, 'lhs error %f, rhs error %f, shapes are %s %s' % (
+        assert err_1 < 1e-3 and err_2 < 1e-3, 'lhs error %f, rhs error %f, shapes are %s %s' % (
             err_1, err_2, d[0].shape, d[1].shape)
 
 def test_broadcast_binary_op():
@@ -1459,6 +1461,114 @@ def test_roipooling():
                            grad_nodes={'data':'add', 'rois':'write'},
                            numeric_eps=1e-3, check_eps=1e-2)
 
+def check_pad_with_shape(shape, xpu, pad_width, mode):
+    # bind with label
+    X = mx.symbol.Variable('X')
+    Y = mx.symbol.Pad(data=X, mode=mode, pad_width=pad_width)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    # numpy result
+    pad_grouped = list(zip(*[iter(list(pad_width))] * 2))
+    np_out = np.pad(x.asnumpy(), pad_grouped, mode)
+    # mxnet result
+    grad = mx.nd.empty(shape, ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x], args_grad = {'X': grad})
+    exec1.forward()
+    out = exec1.outputs[0].asnumpy()
+    # compare numpy + mxnet
+    assert_allclose(out, np_out, rtol=1e-5)
+    # grad check
+    check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-3, check_eps=1e-2)
+
+def test_pad():
+    shape1 = (2, 3, 2, 3)
+    pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
+    shape2 = (2, 3, 2, 3, 3)
+    pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
+    check_pad_with_shape(shape1, default_context(), pad1, 'constant')
+    check_pad_with_shape(shape1, default_context(), pad1, 'edge')
+    check_pad_with_shape(shape2, default_context(), pad2, 'constant')
+    check_pad_with_shape(shape2, default_context(), pad2, 'edge')
+
+def np_instance_norm(data, weight, bias, eps):
+    spatial_dims = data.shape[2::]
+    num_spatial_vals = np.prod(np.array(spatial_dims))
+    scale = 1/float(num_spatial_vals)
+    sum_axis = tuple(range(2, data.ndim))
+    mean = scale * np.sum(data, axis = sum_axis)
+    mean = np.reshape(np.repeat(mean, num_spatial_vals), data.shape)
+    var = scale * np.sum((data - mean)**2, axis = sum_axis)
+    var = np.reshape(np.repeat(var, num_spatial_vals), data.shape)
+
+    weightBatch = np.tile(weight, (data.shape[0], 1))
+    weightBatch = np.reshape(np.repeat(weightBatch, num_spatial_vals), data.shape)
+    biasBatch = np.tile(bias, (data.shape[0], 1))
+    biasBatch = np.reshape(np.repeat(biasBatch, num_spatial_vals), data.shape)
+    return weightBatch * (data - mean)/np.sqrt(var + eps) + biasBatch
+
+def check_instance_norm_with_shape(shape, xpu):
+    # bind with label
+    eps = 0.0234
+    X = mx.symbol.Variable('X')
+    G = mx.symbol.Variable('G')
+    B = mx.symbol.Variable('B')
+
+    Y = mx.symbol.InstanceNorm(data=X, beta=B, gamma=G, eps=eps)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    gamma = mx.random.uniform(-1, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
+    beta = mx.random.uniform(-1, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
+
+    np_out = np_instance_norm(x.asnumpy(), gamma.asnumpy(), beta.asnumpy(), eps)
+    exec1 = Y.bind(xpu, args = {'X':x, 'G':gamma, 'B':beta})
+    exec1.forward(is_train=False)
+    out = exec1.outputs[0].asnumpy()
+    assert_allclose(out, np_out, rtol=1e-4)
+    check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()}, numeric_eps=1e-2, check_eps=0.16)
+
+def test_instance_normalization():
+    check_instance_norm_with_shape((2,4,5,6), default_context())
+    check_instance_norm_with_shape((3,3,2,3,2,1,1), default_context())
+
+def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10):
+    data = mx.symbol.Variable('data')
+    out = mx.symbol.L2Normalization(data=data, mode=mode, eps=norm_eps)
+    np.random.seed()
+    in_data = np.random.uniform(-1, 1, in_shape)
+    # calculate numpy results
+    if mode == 'channel':
+        assert in_data.ndim > 2
+        np_norm = np.linalg.norm(in_data, axis=1) + norm_eps
+        np_norm = np.repeat(1. / np.expand_dims(np_norm, axis=1), in_data.shape[1], axis=1)
+        np_out = np.multiply(in_data, np_norm)
+    elif mode == 'spatial':
+        assert in_data.ndim > 2
+        s = in_data.shape
+        np_norm = np.linalg.norm(in_data.reshape((s[0], s[1], -1)), axis=2) + norm_eps
+        np_norm = np.repeat(1. / np_norm[:, np.newaxis], in_data.size / s[0] / s[1], axis=2)
+        np_out = np.multiply(in_data, np_norm.reshape(s))
+    elif mode == 'instance':
+        assert in_data.ndim > 1
+        s = in_data.shape
+        np_norm = np.linalg.norm(in_data.reshape((s[0], -1)), axis=1) + norm_eps
+        np_norm = np.repeat(1. / np_norm[:, np.newaxis], in_data.size / s[0], axis=1)
+        np_out = np.multiply(in_data, np_norm.reshape(s))
+    else:
+        raise RuntimeError('Unknown l2 normalization mode')
+    exe = out.simple_bind(ctx=ctx, data=in_data.shape)
+    output = exe.forward(is_train=True, data=in_data)
+    # compare numpy + mxnet
+    assert_allclose(exe.outputs[0].asnumpy(), np_out, rtol=1e-5)
+    # check gradient
+    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, check_eps=1e-2)
+
+def test_l2_normalization():
+    for mode in ['channel', 'spatial', 'instance']:
+        for nbatch in [1, 4]:
+            for nchannel in [3, 5]:
+                for height in [4, 6]:
+                    check_l2_normalization((nbatch, nchannel, height), mode)
+                    for width in [5, 7]:
+                        check_l2_normalization((nbatch, nchannel, height, width), mode)
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1500,3 +1610,6 @@ if __name__ == '__main__':
     test_support_vector_machine_l1_svm()
     test_support_vector_machine_l2_svm()
     test_roipooling()
+    test_pad()
+    test_instance_normalization()
+    test_l2_normalization()

@@ -17,15 +17,16 @@
 * \brief
 * \author zhenlin.luo@intel.com
 *          lingyan.guo@intel.com
-*
+*         
 *
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_MKL_FULLY_CONNECTED_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_FULLY_CONNECTED_INL_H_
-
+#include <string>
 #include <algorithm>
 #include <vector>
 #include "../activation-inl.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -52,6 +53,9 @@ class MKLFullyConnectedOp : public Operator {
     dnnDelete<DType>(fullyConnectedBwdFilter);
     dnnDelete<DType>(fullyConnectedBwdBias);
   }
+  std::string getName() {
+    return "MKLFullyConnectedOp";
+  }
 
  private:
     void LayerSetUp(const mshadow::Tensor<xpu, 4, DType> &data,
@@ -76,6 +80,12 @@ class MKLFullyConnectedOp : public Operator {
 
     dst_sizes[0] = output_channels;
     dst_sizes[1] = output_batch_size;
+
+    // Names are for debugging only
+    fwd_bottom_data->name = "fwd_bottom_data   @ " + getName();
+    fwd_top_data->name = "fwd_top_data      @ " + getName();
+    bwd_bottom_diff->name = "bwd_bottom_diff   @ " + getName();
+    bwd_top_diff->name = "bwd_top_diff      @ " + getName();
 
     dnnPrimitiveAttributes_t attributes = NULL;
     status = dnnPrimitiveAttributesCreate<DType>(&attributes);
@@ -138,7 +148,7 @@ class MKLFullyConnectedOp : public Operator {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
-
+    int status;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data[fullc::kData].shape_;
     const TShape& oshape = out_data[fullc::kOut].shape_;
@@ -169,7 +179,8 @@ class MKLFullyConnectedOp : public Operator {
       res_fullyConnected[dnnResourceBias] = reinterpret_cast<void *>(in_data[fullc::kBias].dptr_);
     }
 
-    CHECK_EQ(dnnExecute<DType>(fullyConnectedFwd, res_fullyConnected), E_SUCCESS);
+    status = dnnExecute<DType>(fullyConnectedFwd, res_fullyConnected);
+    CHECK_EQ(status, 0) << "Forward FC failed with status " << status;
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -203,13 +214,13 @@ class MKLFullyConnectedOp : public Operator {
         reinterpret_cast<void *>(in_grad[fullc::kBias].dptr_);
     }
     status = dnnExecute<DType>(fullyConnectedBwdFilter, res_fullyConnected);
-    CHECK_EQ(status, 0) << "Backward Filter failed with status " << status;
+    CHECK_EQ(status, 0) << "Backward FC Filter failed with status " << status;
     if (!param_.no_bias) {
       status = dnnExecute<DType>(fullyConnectedBwdBias, res_fullyConnected);
-      CHECK_EQ(status, 0) << "Backward Bias failed with status " << status;
+      CHECK_EQ(status, 0) << "Backward FC Bias failed with status " << status;
     }
     status = dnnExecute<DType>(fullyConnectedBwdData, res_fullyConnected);
-    CHECK_EQ(status, 0) << "Backward Data failed with status " << status;
+    CHECK_EQ(status, 0) << "Backward FC Data failed with status " << status;
   }
 
  private:

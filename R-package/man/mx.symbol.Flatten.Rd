@@ -8,7 +8,7 @@ mx.symbol.Flatten(...)
 }
 \arguments{
 \item{data}{Symbol
-Input data to  flatten.}
+Input data to flatten.}
 
 \item{name}{string, optional
 Name of the resulting symbol.}

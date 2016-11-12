@@ -16,7 +16,9 @@
 #include <utility>
 #include <algorithm>
 #include "./base.h"
-
+#if MXNET_USE_MKL2017 == 1
+#include "./mkl_memory.h"
+#endif
 namespace mxnet {
 
 /*!
@@ -551,10 +553,19 @@ class TBlob {
   int dev_mask_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
+
+  /*! \brief storing mkl chunk buffer blob, use for experimental only */
+#if MKL_EXPERIMENTAL == 1
+  std::shared_ptr<MKLMemHolder> Mkl_mem_;
+#endif
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
       : dptr_(NULL), dev_mask_(cpu::kDevMask),
-        type_flag_(mshadow::DataType<real_t>::kFlag) {}
+        type_flag_(mshadow::DataType<real_t>::kFlag) {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = NULL;
+#endif
+  }
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
@@ -568,7 +579,12 @@ class TBlob {
       : dptr_(dptr), shape_(shape),
         stride_(shape[shape.ndim() - 1]),
         dev_mask_(dev_mask),
-        type_flag_(mshadow::DataType<DType>::kFlag) {}
+        type_flag_(mshadow::DataType<DType>::kFlag) {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = NULL;
+#endif
+  }
+
   /*!
    * \brief constructor that construct TBlob from contiguous memory
    * \param dptr the pointer to the memory
@@ -583,7 +599,11 @@ class TBlob {
       : dptr_(dptr), shape_(shape),
         stride_(shape[shape.ndim() - 1]),
         dev_mask_(dev_mask),
-        type_flag_(type_flag) {}
+        type_flag_(type_flag) {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = NULL;
+#endif
+  }
   /*!
    * \brief constructor from tensor
    * \param src source tensor
@@ -594,6 +614,9 @@ class TBlob {
   template<typename Device, int dim, typename DType>
   TBlob(const mshadow::Tensor<Device, dim, DType> &src) {  // NOLINT(*)
     *this = src;
+#if MKL_EXPERIMENTAL == 1
+    Mkl_mem_ = NULL;
+#endif
   }
   /*!
    * \brief assignment from tensor
@@ -628,12 +651,17 @@ class TBlob {
    */
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 2, DType> FlatTo2D(
-      mshadow::Stream<Device> *stream = NULL) const {
+    mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+    }
+#endif
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(), stride_, stream);
   }
@@ -682,6 +710,11 @@ class TBlob {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+    }
+#endif
     return mshadow::Tensor<Device, dim, DType>(static_cast<DType*>(dptr_),
                                                shape_.get<dim>(),
                                                stride_, stream);
@@ -708,6 +741,11 @@ class TBlob {
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
     CHECK_EQ(this->shape_.Size(), shape.Size())
       << "TBlob.get_with_shape: new and old shape do not match total elements";
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+    }
+#endif
     return mshadow::Tensor<Device, dim, DType>(static_cast<DType*>(dptr_),
                                                shape,
                                                shape[dim - 1],

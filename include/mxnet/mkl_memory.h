@@ -46,10 +46,76 @@ struct PrvMemDescr {
   virtual PrvDescrType get_descr_type() = 0;
 };
 
+#if MKL_EXPERIMENTAL == 1
+// Currently HEAD_AT_PRV do not free CPU data
+enum SyncedHead {
+  HEAD_AT_CPU,
+  HEAD_AT_PRV,
+};
+struct MKLMemHolder {
+  SyncedHead head_;
+  std::shared_ptr<PrvMemDescr> prv_descriptor_;
+  bool  b_disable_prv_2_cpu;
+  void disable_prv_2_cpu(bool flag) {
+    b_disable_prv_2_cpu = flag;
+  }
+  void set_prv_descriptor(std::shared_ptr<PrvMemDescr> descriptor, bool same_data = false) {
+    head_ = HEAD_AT_PRV;
+    prv_descriptor_ = descriptor;
+  }
+  std::shared_ptr<PrvMemDescr> get_prv_descriptor() {
+    return  prv_descriptor_;
+  }
+  bool head_at_prv() {
+    return (head_ == HEAD_AT_PRV) ? true : false;
+  }
+  void* prv_data() {
+    if (head_ != HEAD_AT_PRV) {
+      return NULL;
+    }
+    if (prv_descriptor_ == NULL) {
+      LOG(FATAL) << " prv_descriptor_  is NULL";
+    }
+    CHECK(prv_descriptor_.get());
+    return reinterpret_cast<void*>(prv_descriptor_->prv_ptr());
+  }
+
+  const int prv_count() {
+    if (head_ != HEAD_AT_PRV) {
+      return 0;
+    }
+    if (prv_descriptor_ == NULL) {
+      LOG(FATAL) << " prv_descriptor_  is NULL";
+    }
+    CHECK(prv_descriptor_.get());
+    return prv_descriptor_->prv_count();
+  }
+  static std::shared_ptr<MKLMemHolder> create() {
+    return std::make_shared<MKLMemHolder>();
+  }
+  void  check_and_prv_to_cpu(void *dptr_) {
+    if (!b_disable_prv_2_cpu && head_ == HEAD_AT_PRV) {
+      CHECK(prv_descriptor_ != nullptr);
+      prv_descriptor_->convert_from_prv(dptr_);
+      // Because operator use CPU & maybe change it, change to CPU Flag
+      head_ = HEAD_AT_CPU;
+    }
+    if (b_disable_prv_2_cpu) {
+      b_disable_prv_2_cpu = false;
+    }
+  }
+  MKLMemHolder() :
+    head_(HEAD_AT_CPU) {
+    prv_descriptor_ = NULL;
+    b_disable_prv_2_cpu = false;
+  }
+};
+#else
 struct MKLMemHolder {
  public:
   virtual std::shared_ptr<PrvMemDescr> get_prv_descriptor() = 0;
 };
+#endif
 
 }  // namespace mxnet
 #endif  // MXNET_MKL_MEMORY_H_

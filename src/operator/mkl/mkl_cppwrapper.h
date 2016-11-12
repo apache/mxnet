@@ -31,16 +31,6 @@
 #include "mkl_version.h"
 
 
-
-#if (__INTEL_MKL__ < 2017) || (__INTEL_MKL_BUILD_DATE <= 20160311)
-#error: To use the new MKL DNN API, you must install Intel(R) MKL 2017 Beta Update 1 or higher.
-#endif
-#ifdef ENABLE_MKL_DEBUG
-#define MKL_DLOG(severity) LOG(severity)
-#else
-#define MKL_DLOG(severity)  true ? (void)0 : dmlc::LogMessageVoidify() & LOG(severity)
-#endif
-
 extern int getMKLBuildDate();
 
 

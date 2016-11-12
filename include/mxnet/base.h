@@ -81,7 +81,7 @@ typedef mshadow::index_t index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
 
-/*! \brief Context information about the execution enviroment */
+/*! \brief Context information about the execution environment */
 struct Context {
   /*! \brief Type of device */
   enum DeviceType {
