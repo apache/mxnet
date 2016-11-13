@@ -5,7 +5,7 @@
 ######################################################################
 set -e
 
-MXNET_HOME="$(dirname "$PWD")" 
+MXNET_HOME="~/MXNet/mxnet/"  
 echo "MXNet root folder: $MXNET_HOME"
 
 echo "Installing build-essential, libatlas-base-dev, libopencv-dev..."

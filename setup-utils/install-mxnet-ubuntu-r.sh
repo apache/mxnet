@@ -9,7 +9,7 @@
 ######################################################################
 set -e
 
-MXNET_HOME="$(dirname "$PWD")" 
+MXNET_HOME="~/MXNet/mxnet/" 
 echo "MXNet root folder: $MXNET_HOME"
 
 echo "Building MXNet core. This can take few minutes..."
@@ -17,8 +17,10 @@ cd $MXNET_HOME
 make -j$(nproc)
 
 echo "Installing R dependencies. This can take few minutes..."
-sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
-sudo Rscript -e "install.packages(c('Rcpp', 'DiagrammeR', 'data.table', 'jsonlite', 'magrittr', 'stringr', 'roxygen2'), repos = 'https://cran.rstudio.com')"
+Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+cd R-package
+Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+cd ..
 
 echo "Compiling R package. This can take few minutes..."
 make rpkg
