@@ -8,7 +8,7 @@ We will show you how to do classification and regression tasks respectively. The
 Preface
 -------
 This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/api/r/fiveMinutesNeuralNetwork.html)
+- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd)
 
 ## Classification
