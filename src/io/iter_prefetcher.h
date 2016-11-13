@@ -12,6 +12,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/threadediter.h>
 #include <mshadow/tensor.h>
+#include <climits>
 #include <utility>
 #include <string>
 #include <vector>
@@ -36,7 +37,8 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
       .add_enum("float16", mshadow::kFloat16)
-      .set_default(mshadow::default_type_flag)
+      .add_enum("invalid", INT_MAX)
+      .set_default(INT_MAX)
       .describe("Data type.");
   }
 };
@@ -79,7 +81,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->data.resize(batch.data.size());
           (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
-            auto dtype = param_.dtype != mshadow::default_type_flag
+            auto dtype = param_.dtype != INT_MAX
                              ? param_.dtype
                              : batch.data[i].type_flag_;
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_,
