@@ -1616,3 +1616,98 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxOptimizerUpdate
                               wd);
   return ret;
 }
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcCreate
+  (JNIEnv *env, jobject obj, jstring jname, jobjectArray jinputNames,
+    jobjectArray joutputNames, jlongArray jinputs, jlongArray joutputs,
+    jstring jkernel, jobject jhandle) {
+  RtcHandle out;
+  char *name = const_cast<char *>(env->GetStringUTFChars(jname, 0));
+  int num_input = env->GetArrayLength(jinputNames);
+  char **inputNames = new char *[num_input];
+  for (size_t i = 0; i < num_input; i++) {
+    jstring jinname = reinterpret_cast<jstring>(env->GetObjectArrayElement(jinputNames, i));
+    char *inname = const_cast<char *>(env->GetStringUTFChars(jinname, 0));
+    inputNames[i] = inname;
+    env->DeleteLocalRef(jinname);
+  }
+  int num_output = env->GetArrayLength(joutputNames);
+  char **outputNames = new char *[num_output];
+  for (size_t i = 0; i < num_output; i++) {
+    jstring joutname = reinterpret_cast<jstring>(env->GetObjectArrayElement(joutputNames, i));
+    char *outname = const_cast<char *>(env->GetStringUTFChars(joutname, 0));
+    outputNames[i] = outname;
+    env->DeleteLocalRef(joutname);
+  }
+  jlong *inputs = env->GetLongArrayElements(jinputs, NULL);
+  jlong *outputs = env->GetLongArrayElements(joutputs, NULL);
+  char *kernel = const_cast<char *>(env->GetStringUTFChars(jkernel, 0));
+
+  int ret = MXRtcCreate(name,
+                        static_cast<mx_uint>(num_input),
+                        static_cast<mx_uint>(num_output),
+                        inputNames,
+                        outputNames,
+                        reinterpret_cast<NDArrayHandle *>(inputs),
+                        reinterpret_cast<NDArrayHandle *>(outputs),
+                        kernel,
+                        &out);
+
+  // release allocated memory
+  env->ReleaseStringUTFChars(jname, name);
+  env->ReleaseStringUTFChars(jkernel, kernel);
+  env->ReleaseLongArrayElements(jinputs, inputs, 0);
+  env->ReleaseLongArrayElements(joutputs, outputs, 0);
+  for (size_t i = 0; i < num_input; i++) {
+    jstring jinname = reinterpret_cast<jstring>(env->GetObjectArrayElement(jinputNames, i));
+    env->ReleaseStringUTFChars(jinname, inputNames[i]);
+    env->DeleteLocalRef(jinname);
+  }
+  delete[] inputNames;
+  for (size_t i = 0; i < num_output; i++) {
+    jstring joutname = reinterpret_cast<jstring>(env->GetObjectArrayElement(joutputNames, i));
+    env->ReleaseStringUTFChars(joutname, outputNames[i]);
+    env->DeleteLocalRef(joutname);
+  }
+  delete[] outputNames;
+
+  SetLongField(env, jhandle, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcPush
+  (JNIEnv *env, jobject obj, jlong jhandle, jlongArray jinputs,
+    jlongArray joutputs, jint gridDimX, jint gridDimY, jint gridDimZ,
+    jint blockDimX, jint blockDimY, jint blockDimZ) {
+
+  RtcHandle handle = reinterpret_cast<RtcHandle>(jhandle);
+  jlong *inputs = env->GetLongArrayElements(jinputs, NULL);
+  jlong *outputs = env->GetLongArrayElements(joutputs, NULL);
+  int num_input = env->GetArrayLength(jinputs);
+  int num_output = env->GetArrayLength(joutputs);
+
+  int ret = MXRtcPush(handle,
+                      static_cast<mx_uint>(num_input),
+                      static_cast<mx_uint>(num_output),
+                      reinterpret_cast<NDArrayHandle *>(inputs),
+                      reinterpret_cast<NDArrayHandle *>(outputs),
+                      static_cast<mx_uint>(gridDimX),
+                      static_cast<mx_uint>(gridDimY),
+                      static_cast<mx_uint>(gridDimZ),
+                      static_cast<mx_uint>(blockDimX),
+                      static_cast<mx_uint>(blockDimY),
+                      static_cast<mx_uint>(blockDimZ));
+
+  // release allocated memory
+  env->ReleaseLongArrayElements(jinputs, inputs, 0);
+  env->ReleaseLongArrayElements(joutputs, outputs, 0);
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcFree
+  (JNIEnv *env, jobject obj, jlong jhandle) {
+  RtcHandle handle = reinterpret_cast<RtcHandle>(jhandle);
+  int ret = MXRtcFree(handle);
+  return ret;
+}

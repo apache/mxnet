@@ -37,7 +37,7 @@ Parallelizes both I/O and computation with an optimized C++ backend engine, and 
 
 &nbsp;
 
-#MXNet Open Source Community 
+# MXNet Open Source Community 
 
 **Broad Model Support** – Train and deploy the latest deep convolutional neural networks (CNNs) and long short-term memory (LSTMs) models 
 
