@@ -55,7 +55,7 @@ Design Efficient Deep Learning Data Loading Module
 
 当对数据打包之后, 每个文件包含多条 record. 通过连续硬盘读的方式加载数据. 这个可以有效的避免随机硬盘读的低效.
 
-将每条数据储存为 `record` 的特别很大的好处就是每个 `record` 的长度是可以不同. 这样我们可以根据不同类型的数据特性采用不同的压缩算法来压缩数据. 比如说我们可以用 JPEG 格式来存储图像数据. 这样打包好的数据会比直接用 RBG 格式存储的情况紧凑很多. 我们拿 ImageNet_1K 数据集举个例子, 如果按照 `3*256*256` 原始的 RGB 格式存储, 数据集大小超过 **200G**, 当我们将数据集用 JPEG 格式存储, 只需要 **35G** 的硬盘空间. 它会极大的降低读取硬盘的开销. 
+将每条数据储存为 `record` 的特别很大的好处就是每个 `record` 的长度是可以不同. 这样我们可以根据不同类型的数据特性采用不同的压缩算法来压缩数据. 比如说我们可以用 JPEG 格式来存储图像数据. 这样打包好的数据会比直接用 RGB 格式存储的情况紧凑很多. 我们拿 ImageNet_1K 数据集举个例子, 如果按照 `3*256*256` 原始的 RGB 格式存储, 数据集大小超过 **200G**, 当我们将数据集用 JPEG 格式存储, 只需要 **35G** 的硬盘空间. 它会极大的降低读取硬盘的开销. 
 
 下面拿存储图像的二进制格式 `recordIO` 举个例子:
  
@@ -137,7 +137,7 @@ dataiter = mx.io.ImageRecordIter(
     data_shape=(3,28,28),
     # Batch Parameter, tells how many images in a batch
     batch_size=100,
-    # Augmentation Parameter, when offers mean_img, each image will substract the mean value at each pixel
+    # Augmentation Parameter, when offers mean_img, each image will subtract the mean value at each pixel
     mean_img="data/cifar/cifar10_mean.bin",
     # Augmentation Parameter, randomly crop a patch of the data_shape from the original image
     rand_crop=True,

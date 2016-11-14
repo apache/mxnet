@@ -20,7 +20,7 @@ Dependency Scheduling Problem
 While most of the users want to take advantage of parallel computation,
 most of us are more used to serial programs. So it is interesting to ask
 if we can write serial programs, and build a library to automatically parallelize
-operations for you in an asynchronized way.
+operations for you asynchronously.
 
 For example, in the following code snippet. We can actually run ```B = A + 1```
 and ```C = A + 2``` in any order, or in parallel.

@@ -24,7 +24,7 @@ def resize(im, target_size, max_size):
 def transform(im, pixel_means, need_mean=False):
     """
     transform into mxnet tensor
-    substract pixel size and transform to correct format
+    subtract pixel size and transform to correct format
     :param im: [height, width, channel] in BGR
     :param pixel_means: [[[R, G, B pixel means]]]
     :return: [batch, channel, height, width]
