@@ -215,7 +215,7 @@ def _parse_aux_states(sym, aux_states, ctx):
 def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_train=True):
     """Calculates a numeric gradient via finite difference method.
 
-    Class based on Theano's `theano.gradient.numeric_grad` [1]
+    Similar to Theano's `theano.gradient.numeric_grad` [1]. However, we use central difference instead of forward difference.
 
     Parameters
     ----------
@@ -230,7 +230,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
         Maps the name of aux_states to the corresponding numpy.ndarray.
         Value of all the auxiliary arguments must be provided.
     eps : float, optional
-        epsilon for the finite-difference method
+        epsilon for the central-difference method
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
     References
