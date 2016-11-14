@@ -42,18 +42,18 @@
 ## Language Tutorials 
 
 ### Python Tutorials
-#### [NDArray](http://mxnet.io/tutorials/python/ndarray.html)
-#### [Symbol](http://mxnet.io/tutorials/python/symbol.html)
-#### [KVStore](http://mxnet.io/tutorials/python/kvstore.html)
+* [NDArray](http://mxnet.io/tutorials/python/ndarray.html)
+* [Symbol](http://mxnet.io/tutorials/python/symbol.html)
+* [KVStore](http://mxnet.io/tutorials/python/kvstore.html)
 
 ### R Tutorials
-#### [NDArray](http://mxnet.io/tutorials/r/ndarray.html)
-#### [Symbol](http://mxnet.io/tutorials/r/symbol.html)
-#### [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
-#### [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-#### [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-#### [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-#### [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [NDArray](http://mxnet.io/tutorials/r/ndarray.html)
+* [Symbol](http://mxnet.io/tutorials/r/symbol.html)
+* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
+* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
 
 ## Other Resources
 - Collection of MXNet Tutorials for NVidia GTC 2016. [MXNet GTC 15 Tutorials](https://github.com/dmlc/mxnet-gtc-tutorial)
