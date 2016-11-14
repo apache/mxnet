@@ -70,7 +70,7 @@ Add
 #include <Accelerate/Accelerate.h>
 ```
 
-Comment all occurences of
+Comment all occurrences of
 ```
 #include <emmintrin.h>
 ```

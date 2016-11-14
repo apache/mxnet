@@ -18,6 +18,8 @@ from .context import Context, cpu
 from .initializer import Uniform
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
+from .io import DataDesc
+from .base import mx_real_t
 
 BASE_ESTIMATOR = object
 
@@ -517,7 +519,7 @@ class FeedForward(BASE_ESTIMATOR):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _init_predictor(self, input_shapes):
+    def _init_predictor(self, input_shapes, type_dict=None):
         """Initialize the predictor module for running prediction."""
         if self._pred_exec is not None:
             arg_shapes, _, _ = self.symbol.infer_shape(**dict(input_shapes))
@@ -527,7 +529,7 @@ class FeedForward(BASE_ESTIMATOR):
                 return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', **dict(input_shapes))
+            self.ctx[0], grad_req='null', type_dict=type_dict, **dict(input_shapes))
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
         _check_arguments(self.symbol)
@@ -596,7 +598,14 @@ class FeedForward(BASE_ESTIMATOR):
             X.reset()
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for x in X.provide_data:
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
+
+        self._init_predictor(data_shapes, type_dict)
         batch_size = X.batch_size
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
         output_list = [[] for _ in range(len(self._pred_exec.outputs))]
@@ -663,7 +672,14 @@ class FeedForward(BASE_ESTIMATOR):
 
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for x in X.provide_data:
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
+
+        self._init_predictor(data_shapes, type_dict)
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
 
         for i, batch in enumerate(X):

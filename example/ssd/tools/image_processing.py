@@ -47,7 +47,7 @@ def resize(im, target_size, interp_method=cv2.INTER_LINEAR):
 def transform(im, pixel_means):
     """
     transform into mxnet tensor
-    substract pixel size and transform to correct format
+    subtract pixel size and transform to correct format
 
     Parameters:
     ----------

@@ -7,7 +7,7 @@ and pull data out.
 ## Initialization
 
 Let's first consider a simple example: initialize
-a (`int`, `NDAarray`) pair into the store, and then pull the value out.
+a (`int`, `NDarray`) pair into the store, and then pulls the value out.
 
 ```python
 >>> kv = mx.kv.create('local') # create a local kv store.
