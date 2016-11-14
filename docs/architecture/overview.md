@@ -194,7 +194,7 @@ It is possible that one convolution has several implementations and users want t
   struct ResourceRequest {
     enum Type {
       kRandom,  // get an mshadow::Random<xpu> object
-      kTempSpace,  // request temporay space
+      kTempSpace,  // request temporary space
     };
     Type type;
   };
@@ -276,7 +276,7 @@ It is possible that one convolution has several implementations and users want t
 
 ### Create Operator from Operator Property
 
-As mentioned above `OperatorProperty` includes all *semantical* attributes of an operation. It is also in charge of creating `Operator` pointer for actual computation.
+As mentioned above, `OperatorProperty` includes all *semantic* attributes of an operation. It is also in charge of creating `Operator` pointer for actual computation.
 
 #### Create Operator
 Implement following interface in `OperatorProperty`:
@@ -487,7 +487,7 @@ void SmoothL1Forward_(const TBlob& src,
 After obtaining `mshadow::Stream` from `RunContext`, we get `mshadow::Tensor` from `mshadow::TBlob`. 
 `mshadow::F` is a shortcut to initiate a `mshadow` expression. The macro `MSHADOW_TYPE_SWITCH(type, DType, ...)` 
 handles details on different types and the macro `ASSIGN_DISPATCH(out, req, exp)` checks `OpReqType` and 
-performs actions accordingly. `sigma2` is a special parameter in this loss, which we will cover in addtional usages. 
+performs actions accordingly. `sigma2` is a special parameter in this loss, which we will cover in additional usages. 
 
 ### Define Gradients (optional)
 Create a gradient function with various types of inputs.

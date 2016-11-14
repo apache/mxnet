@@ -175,42 +175,42 @@ class NDArray {
   /*!
    * \brief elementwise subtract from current ndarray
    * this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator-=(const NDArray &src);
   /*!
    * \brief elementwise subtract from current ndarray
    * this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator-=(const real_t &src);
   /*!
    * \brief elementwise multiplication to current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator*=(const NDArray &src);
   /*!
    * \brief elementwise multiplication to current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator*=(const real_t &src);
   /*!
    * \brief elementwise division from current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator/=(const NDArray &src);
   /*!
    * \brief elementwise division from current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator/=(const real_t &src);
@@ -424,14 +424,14 @@ NDArray operator+(const NDArray &lhs, const NDArray &rhs);
  */
 NDArray operator+(const NDArray &lhs, const real_t &rhs);
 /*!
- * \brief elementwise substraction
+ * \brief elementwise subtraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
 NDArray operator-(const NDArray &lhs, const NDArray &rhs);
 /*!
- * \brief elementwise substraction
+ * \brief elementwise subtraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray

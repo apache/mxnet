@@ -74,7 +74,7 @@ Hopefully you are convinced that the computation graph is a good way to discuss 
 As you can see some memory saving can already been bought by using explicit backward graph. Let us discuss more about
 what optimization we can do, and what is the baseline.
 
-Asumme we want to build a neural net with ```n``` layers. A typical implementation of neural net will
+Assume we want to build a neural net with ```n``` layers. A typical implementation of neural net will
 need to allocate node space for output of each layer, as well as gradient values for back-propagation.
 This means we need roughly ```2 n``` memory cells. This is the same in the explicit backward graph case, as
 the number of nodes in backward pass in roughly the same as forward pass.

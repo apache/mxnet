@@ -60,7 +60,7 @@ Backward 的接口遵循 `Forward` 一样的设计原则, 除了 `out_grad`, `in
 Operator Property
 -----------------
 
-有这么一种可能, convolution 有好几种不同的实现, 用户可能想要在这些算法中选择能够获得最高性能的算法. 为了实现这个目的, 我们将 operator 的 *sematic* 接口从具体的实现 (`Operator` 类) 中分离出来, 独立为`OperatorProperty` 类.  `OperatorProperty`的接口包括以下内容:
+有这么一种可能, convolution 有好几种不同的实现, 用户可能想要在这些算法中选择能够获得最高性能的算法. 为了实现这个目的, 我们将 operator 的 *semantic* 接口从具体的实现 (`Operator` 类) 中分离出来, 独立为`OperatorProperty` 类.  `OperatorProperty`的接口包括以下内容:
 
 * **InferShape:**
   ```c++
@@ -83,12 +83,12 @@ Operator Property
   struct ResourceRequest {
     enum Type {
       kRandom,  // get an mshadow::Random<xpu> object
-      kTempSpace,  // request temporay space
+      kTempSpace,  // request temporary space
     };
     Type type;
   };
   ```
- 如果 `ForwardResource` 和 `BackwardResource` 返回的数组是非空的, 那么系统会通过`Operator` 的`Foward` 和`Backward` 接口中的 `ctx` 参数来提供相应的资源. 简单的举个例子, 如果要获取这些资源, 可以按照下面的写法来做:
+ 如果 `ForwardResource` 和 `BackwardResource` 返回的数组是非空的, 那么系统会通过`Operator` 的`Forward` 和`Backward` 接口中的 `ctx` 参数来提供相应的资源. 简单的举个例子, 如果要获取这些资源, 可以按照下面的写法来做:
   ```c++
   auto tmp_space_res = ctx.requested[kTempSpace].get_space(some_shape, some_stream);
   auto rand_res = ctx.requested[kRandom].get_random(some_stream);
@@ -113,7 +113,7 @@ Operator Property
       const std::vector<int> &out_data) const;
   ```
 
-这里的 vector 中的 `int` 元素一个区分不同的 arrays 的 id. 让我们来看看这个接口如何定义`FullyConnected`和`Poolling`的不同的依赖关系的:
+这里的 vector 中的 `int` 元素一个区分不同的 arrays 的 id. 让我们来看看这个接口如何定义`FullyConnected`和`Pooling`的不同的依赖关系的:
 
 
   ```c++
@@ -178,7 +178,7 @@ Operator Property
 
 Create Operator from Operator Property
 --------------------------------------
-我们在上面的内容中提到过 `OperatorProperty` 包括所有的一个操作的 *semantical*attributes. 它也包括需要创建一个`Operator` 指针指向真正的计算操作.
+我们在上面的内容中提到过 `OperatorProperty` 包括所有的一个操作的 *semantic*attributes. 它也包括需要创建一个`Operator` 指针指向真正的计算操作.
 
 ### Create Operator
 实现 `OperatorProperty`中下面的接口:

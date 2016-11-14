@@ -2,7 +2,7 @@
  * Copyright (c) 2015 by Contributors
  * \file graph_allocation_helper.h
  * \brief This header contains graph algorithms on StaticGraph.
- *  It is used  compute informations such as whether two
+ *  It is used  compute information such as whether two
  *  operations can run in parallel, and helps allocation.
 */
 #ifndef MXNET_SYMBOL_GRAPH_ALGORITHM_H_

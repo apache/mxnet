@@ -1,7 +1,7 @@
 # Measure communication bandwidth
 
 MXNet provides multiple ways to communicate data. The best choice depends on
-both the physical machines and neural network strcture. This folder provides
+both the physical machines and neural network structure. This folder provides
 tools to test the bandwidth under various setups, which can be used to debugging
 the performance.
 
@@ -19,9 +19,9 @@ measure.py --help` for more details.
      GPUs.
   - `dist_sync` : similar to `local`, but the data is further send to parameter
     servers, and run the optimizer on servers
-  - `dist_sync_device` : similar to `dist_sync` but try best to use GPU for communcation
-  - `dist_async` : similar to `dist_sync` but uses asynchoronous communication
-  - `dist_async_device` : similar to `dist_async` but try best to use GPU for communcation
+  - `dist_sync_device` : similar to `dist_sync` but try best to use GPU for communication
+  - `dist_async` : similar to `dist_sync` but uses asynchronous communication
+  - `dist_async_device` : similar to `dist_async` but try best to use GPU for communication
 
 ## Samples
 
@@ -44,7 +44,7 @@ The results are close to the unidirectional bandwidth, which is 13 GB/sec, repor
 `cuda/samples/1_Utilities/p2pBandwidthLatencyTest`. But our problem is harder
 because we do all-to-all communication.
 
-- Use 8 GPUs, it satruates the single 16x link between GPU 0,1,2,3 and GPU 4,5,6,7.
+- Use 8 GPUs, it saturates the single 16x link between GPU 0,1,2,3 and GPU 4,5,6,7.
 
 ```bash
 ~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1,2,3,4,5,6,7 --network resnet --depth 200
@@ -57,7 +57,7 @@ INFO:root:iter 4, 0.099873 sec, 4.520586 GB/sec per gpu, error 0.000000
 INFO:root:iter 5, 0.100774 sec, 4.480169 GB/sec per gpu, error 0.000000
 ```
 
-- Now let's only use GPU-CPU communication, it satruates the single 16x link
+- Now let's only use GPU-CPU communication, it saturates the single 16x link
 between all GPUs and the CPU.
 
 ```bash

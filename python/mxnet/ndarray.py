@@ -1098,7 +1098,7 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
     channels : int
         number of channels to output. Decode to grey scale when channels = 1.
     mean : NDArray
-        substract mean from decode image before outputing.
+        subtract mean from decode image before outputing.
     """
     # pylint: disable= no-member, protected-access, too-many-arguments
     if mean is None:
