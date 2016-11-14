@@ -26,6 +26,7 @@ object Base {
   type RecordIOHandle = CPtrAddress
   type OptimizerCreator = CPtrAddress
   type OptimizerHandle = CPtrAddress
+  type RtcHandle = CPtrAddress
 
   type MXUintRef = RefInt
   type MXFloatRef = RefFloat
@@ -39,7 +40,7 @@ object Base {
   type RecordIOHandleRef = RefLong
   type OptimizerCreatorRef = RefLong
   type OptimizerHandleRef = RefLong
-
+  type RtcHandleRef = RefLong
 
   try {
     try {

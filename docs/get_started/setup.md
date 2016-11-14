@@ -1,5 +1,5 @@
-Overview
-============
+Installation Overview
+=====================
 
 MXNet is an open source library for Deep Learning. It is designed to be flexible, powerful, and scalable. 
 This topic covers the following:
@@ -98,6 +98,7 @@ bash install-mxnet-ubuntu.sh
 # We have added MXNet Python package path in your ~/.bashrc. 
 # Run below command to refresh environment variables.
 $ source ~/.bashrc
+```
 
 You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu.sh).
 
@@ -114,7 +115,7 @@ Installing MXNet is a two-step process:
 1. Build the shared library from the MXNet C++ source code. 
 2. Install the supported language-specific packages for MXNet. 
 
-### 1. Build the Shared Library
+### Build the Shared Library
 
 The first step in installing MXNet is compiling the MXNet C++ source code and building the shared MXNet library. In this section, we provide operating system-specific instructions for compiling and building the MXNet shared library on the following operating systems:
 * Ubuntu/Debian
@@ -126,7 +127,7 @@ The first step in installing MXNet is compiling the MXNet C++ source code and bu
 
 **Note:** To change the compilation options for your build, edit the ```make/config.mk``` file and submit a build request with the ```make``` command.
 
-#### Build MXNet on Ubuntu/Debian
+### Build MXNet on Ubuntu/Debian
 On Ubuntu versions 13.10 or later, you need the following dependencies:
 * Git (to pull code from GitHub)
 * libatlas-base-dev (for linear algebraic operations)
@@ -167,6 +168,7 @@ Followed by installation of dependencies:
 ```bash
 brew update
 brew install git
+brew install pkg-config
 brew tap homebrew/science
 brew info opencv
 brew install opencv
@@ -243,7 +245,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug folder```.
 
-### 2. Install Language-specific Packages
+### Install Language-specific Packages
 Now install the packages for the programming language you want to use with MXNet. This section provides instructions for downloading and installing the following languages:
 * Python
 * R
@@ -378,8 +380,8 @@ To install the required dependencies and install MXNet for R:
 5. Download and install [CuDNN V3](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user. Unpack the .zip file. You will see three folders: ```/bin```, ```/include```, and ```/lib```. Copy these folders into ```nocudnn/3rdparty/cudnn/```, replacing the folders that are there. You can also unpack the .zip file directly into the nocudnn/ folder.
 6. Create a folder called ```R-package/inst/libs/x64```. MXNet supports only 64-bit operating systems, so you need the x64 folder.
 7. Copy the following shared libraries (.dll files) into the ```R-package/inst/libs/x64``` folder:
-  * nocudnn/lib/libmxnet.dll.
-  * The *.dll files in all four subfolders of the nocudnn/3rdparty/ directory. The cudnn and openblas .dll files are in the /bin folders.
+    * nocudnn/lib/libmxnet.dll.
+    * The *.dll files in all four subfolders of the nocudnn/3rdparty/ directory. The cudnn and openblas .dll files are in the /bin folders.
 You should now have 11 .dll files in the R-package/inst/libs/x64 folder.
 8. Copy the ```nocudnn/include/``` folder into ```R-package/inst/```. You should now have a folder called ```R-package/inst/include/``` with three subfolders.
 9. Make sure that R is added to your ```PATH``` in the environment variables. Running the where R command at the command prompt should return the location.

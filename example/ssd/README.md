@@ -39,7 +39,7 @@ Due to the permission issue, this example is maintained in this [repository](htt
 
 ### Getting started
 * You will need python modules: `easydict`, `cv2`, `matplotlib` and `numpy`.
-You can install them via pip or package manegers, such as `apt-get`:
+You can install them via pip or package managers, such as `apt-get`:
 ```
 sudo apt-get install python-opencv python-matplotlib python-numpy
 sudo pip install easydict

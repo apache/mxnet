@@ -50,7 +50,7 @@ while in matlab we often store images by
 width x height x channel x example
 ```
 
-So we should permuate the dimensions by `X = permute(X, [2, 1, 3, 4])` before
+So we should permute the dimensions by `X = permute(X, [2, 1, 3, 4])` before
 passing `X` into MXNet.
 
 ### FAQ
