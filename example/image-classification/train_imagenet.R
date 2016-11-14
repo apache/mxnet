@@ -46,8 +46,7 @@ parse_args <- function() {
                       choices = c('resnet', 'inception-bn', 'googlenet', 'inception-resnet-v1',
                                   'inception-resnet-v2'),
                       help = 'the cnn to use')
-  parser$add_argument('--data-dir', type='character', default='../../data',
-                      help='the input data directory')
+  parser$add_argument('--data-dir', type='character', help='the input data directory')
   parser$add_argument('--gpus', type='character',
                       help='the gpus will be used, e.g "0,1,2,3"')
   parser$add_argument('--batch-size', type='integer', default=128,
