@@ -237,27 +237,33 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    for k, v in location.items():
-        executor.arg_dict[k][:] = v
     approx_grads = {k: np.zeros(v.shape, dtype=np.float32)
                     for k, v in location.items()}
-
-    executor.forward(is_train=use_forward_train)
-    f_x = executor.outputs[0].asnumpy()[0]
+    for k, v in location.items():
+        executor.arg_dict[k][:] = v
     for k in location:
         location[k] = np.ascontiguousarray(location[k])
     for k, v in location.items():
         old_value = v.copy()
         for i in range(np.prod(v.shape)):
             # inplace update
-            v.ravel()[i] += eps
+            v.ravel()[i] += eps/2.0
             executor.arg_dict[k][:] = v
             if aux_states is not None:
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
             executor.forward(is_train=use_forward_train)
-            f_eps = executor.outputs[0].asnumpy()[0]
-            approx_grads[k].ravel()[i] = (f_eps - f_x) / eps
+            f_peps = executor.outputs[0].asnumpy()[0]
+
+            v.ravel()[i] -= eps
+            executor.arg_dict[k][:] = v
+            if aux_states is not None:
+                for key, val in aux_states.items():
+                    executor.aux_dict[key][:] = val
+            executor.forward(is_train=use_forward_train)
+            f_neps = executor.outputs[0].asnumpy()[0]
+
+            approx_grads[k].ravel()[i] = (f_peps - f_neps) / eps
             v.ravel()[i] = old_value.ravel()[i]
         # copy back the original value
         executor.arg_dict[k][:] = old_value
