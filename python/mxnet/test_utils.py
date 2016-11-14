@@ -690,6 +690,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
                 npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
                 traceback.print_exc()
+                raise
 
     #forward predict
     for exe in exe_list:
@@ -708,3 +709,5 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
                 npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
                 traceback.print_exc()
+                raise
+
