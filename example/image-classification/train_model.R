@@ -33,7 +33,7 @@ train_model.fit <- function(args, network, data_loader) {
     }
 
     # data
-    data <- data_loader(args)
+    data <- data_loader
     train <- data$train
     val <- data$value  
     
@@ -54,9 +54,9 @@ train_model.fit <- function(args, network, data_loader) {
         step.updated <- step - begin.round + 1
         step.updated <- step.updated[step.updated > 0]
         step_batch <- epoch_size*step.updated 
-        lr_scheduler <- MultiFactorScheduler(step=step_batch, factor_val=args$lr_factor)
+        lr_scheduler <- mx.lr_scheduler.MultiFactorScheduler(step=step_batch, factor_val=args$lr_factor)
       } else{
-        lr_scheduler <- mxnet:::FactorScheduler(
+        lr_scheduler <- mx.lr_scheduler.FactorScheduler(
           step = as.integer(max(epoch_size * args$lr_factor_epoch, 1)),
           factor_val = args$lr_factor)
       }
