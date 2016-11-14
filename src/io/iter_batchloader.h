@@ -81,8 +81,12 @@ class BatchLoader : public IIterator<TBlobBatch> {
       }
       for (size_t i = 0; i < d.data.size(); ++i) {
         CHECK_EQ(unit_size_[i], d.data[i].Size());
-        mshadow::Copy(data_[i].Slice(top * unit_size_[i], (top + 1) * unit_size_[i]),
-                      d.data[i].get_with_shape<cpu, 1, real_t>(mshadow::Shape1(unit_size_[i])));
+        MSHADOW_TYPE_SWITCH(data_[i].type_flag_, DType, {
+            mshadow::Copy(
+              data_[i].get<cpu, 1, DType>().Slice(top * unit_size_[i],
+                                                  (top + 1) * unit_size_[i]),
+              d.data[i].get_with_shape<cpu, 1, DType>(mshadow::Shape1(unit_size_[i])));
+          });
       }
       if (++top >= param_.batch_size) {
         return true;
@@ -99,8 +103,12 @@ class BatchLoader : public IIterator<TBlobBatch> {
           // copy data
           for (size_t i = 0; i < d.data.size(); ++i) {
             CHECK_EQ(unit_size_[i], d.data[i].Size());
-            mshadow::Copy(data_[i].Slice(top * unit_size_[i], (top + 1) * unit_size_[i]),
-                          d.data[i].get_with_shape<cpu, 1, real_t>(mshadow::Shape1(unit_size_[i])));
+            MSHADOW_TYPE_SWITCH(data_[i].type_flag_, DType, {
+                mshadow::Copy(
+                  data_[i].get<cpu, 1, DType>().Slice(top * unit_size_[i],
+                                                      (top + 1) * unit_size_[i]),
+                  d.data[i].get_with_shape<cpu, 1, DType>(mshadow::Shape1(unit_size_[i])));
+              });
           }
         }
         out_.num_batch_padd = num_overflow_;
@@ -131,7 +139,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
   /*! \brief unit size */
   std::vector<size_t> unit_size_;
   /*! \brief tensor to hold data */
-  std::vector<mshadow::TensorContainer<mshadow::cpu, 1, real_t> > data_;
+  std::vector<TBlobContainer> data_;
   // initialize the data holder by using from the first batch.
   inline void InitData(const DataInst& first_batch) {
     shape_.resize(first_batch.data.size());
@@ -139,6 +147,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
     unit_size_.resize(first_batch.data.size());
     for (size_t i = 0; i < first_batch.data.size(); ++i) {
       TShape src_shape = first_batch.data[i].shape_;
+      int src_type_flag = first_batch.data[i].type_flag_;
       // init object attributes
       std::vector<index_t> shape_vec;
       shape_vec.push_back(param_.batch_size);
@@ -147,9 +156,9 @@ class BatchLoader : public IIterator<TBlobBatch> {
       }
       TShape dst_shape(shape_vec.begin(), shape_vec.end());
       shape_[i] = dst_shape;
-      data_[i].Resize(mshadow::Shape1(dst_shape.Size()));
+      data_[i].resize(mshadow::Shape1(dst_shape.Size()), src_type_flag);
       unit_size_[i] = src_shape.Size();
-      out_.data.push_back(TBlob(data_[i].dptr_, dst_shape, cpu::kDevMask));
+      out_.data.push_back(TBlob(data_[i].dptr_, dst_shape, cpu::kDevMask, src_type_flag));
     }
   }
 };  // class BatchLoader

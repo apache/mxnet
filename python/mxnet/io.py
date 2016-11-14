@@ -3,7 +3,7 @@
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 import re
 import sys
@@ -15,6 +15,7 @@ from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import check_call, ctypes2docstring
+from .base import mx_real_t
 from .ndarray import NDArray
 from .ndarray import array
 from .ndarray import concatenate
@@ -301,8 +302,11 @@ class PrefetchingIter(DataIter):
         if self.rename_data is None:
             return sum([i.provide_data for i in self.iters], [])
         else:
-            return sum([[(r[n], s) for n, s in i.provide_data] \
-                       for r, i in zip(self.rename_data, self.iters)], [])
+            return sum([[
+                DataDesc(r[x.name], x.shape, x.dtype)
+                if isinstance(x, DataDesc) else DataDesc(*x)
+                for x in i.provide_data
+            ] for r, i in zip(self.rename_data, self.iters)], [])
 
     @property
     def provide_label(self):
@@ -310,8 +314,11 @@ class PrefetchingIter(DataIter):
         if self.rename_label is None:
             return sum([i.provide_label for i in self.iters], [])
         else:
-            return sum([[(r[n], s) for n, s in i.provide_label] \
-                       for r, i in zip(self.rename_label, self.iters)], [])
+            return sum([[
+                DataDesc(r[x.name], x.shape, x.dtype)
+                if isinstance(x, DataDesc) else DataDesc(*x)
+                for x in i.provide_label
+            ] for r, i in zip(self.rename_label, self.iters)], [])
 
     def reset(self):
         for e in self.data_ready:
@@ -451,13 +458,18 @@ class NDArrayIter(DataIter):
     @property
     def provide_data(self):
         """The name and shape of data provided by this iterator"""
-        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.data]
+        return [
+            DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
+            for k, v in self.label
+        ]
 
     @property
     def provide_label(self):
         """The name and shape of label provided by this iterator"""
-        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.label]
-
+        return [
+            DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
+            for k, v in self.label
+        ]
 
     def hard_reset(self):
         """Igore roll over data and set to start"""
@@ -516,7 +528,6 @@ class MXDataIter(DataIter):
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
 
-
         # load the first batch to get shape information
         self.first_batch = None
         self.first_batch = self.next()
@@ -524,8 +535,8 @@ class MXDataIter(DataIter):
         label = self.first_batch.label[0]
 
         # properties
-        self.provide_data = [(data_name, data.shape)]
-        self.provide_label = [(label_name, label.shape)]
+        self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
+        self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
         self.batch_size = data.shape[0]
 
 
@@ -596,6 +607,35 @@ class MXDataIter(DataIter):
         pad = ctypes.c_int(0)
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
+
+# pylint: disable=W0622
+class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
+    """Named data desc description contains name, shape, type and other extended attributes.
+    """
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
+        ret = super(cls, DataDesc).__new__(cls, name, shape)
+        ret.dtype = dtype
+        ret.layout = layout
+        return ret
+
+    def __repr__(self):
+        return "DataDesc[%s,%s,%s,%s]" % (self.name, self.shape, self.dtype,
+                                          self.layout)
+
+    @staticmethod
+    def get_list(shapes, types):
+        """Get DataDesc list from attribute lists.
+
+        Parameters
+        ----------
+        shapes : shape tuple list with (name, shape) tuples
+        types : type tuple list with (name, type) tuples
+        """
+        if types is not None:
+            type_dict = dict(types)
+            return [DataDesc(x[0], x[1], type_dict[x[0]]) for x in shapes]
+        else:
+            return [DataDesc(x[0], x[1]) for x in shapes]
 
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
