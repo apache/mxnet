@@ -112,7 +112,7 @@ as.array(d)
 ## [2,] -3.9375 -3.9375 -3.9375 -3.9375
 ```
 
-If two `NDArray`s sit on different divices, we need to explicitly move them
+If two `NDArray`s sit on different devices, we need to explicitly move them
 into the same one. For instance:
 
 

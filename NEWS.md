@@ -26,7 +26,7 @@ MXNet Change Log
 - Support bucketing API for variable length input by @pluskid
 - Support CuDNN v5 by @antinucleon
 - More applications
-  - Speech recoginition by @yzhang87
+  - Speech recognition by @yzhang87
   - [Neural art](https://github.com/dmlc/mxnet/tree/master/example/neural-style) by @antinucleon
   - [Detection](https://github.com/dmlc/mxnet/tree/master/example/rcnn), RCNN bt @precedenceguo
   - [Segmentation](https://github.com/dmlc/mxnet/tree/master/example/fcn-xs), FCN by @tornadomeet

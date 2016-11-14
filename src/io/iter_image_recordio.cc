@@ -146,6 +146,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
 };
 
 // parser to parse image recordio
+template<typename DType>
 class ImageRecordIOParser {
  public:
   // initialize the parser
@@ -157,7 +158,7 @@ class ImageRecordIOParser {
   }
   // parse next set of records, return an array of
   // instance vector to the user
-  inline bool ParseNext(std::vector<InstVector> *out);
+  inline bool ParseNext(std::vector<InstVector<DType>> *out);
 
  private:
   // magic nyumber to see prng
@@ -178,7 +179,8 @@ class ImageRecordIOParser {
   mshadow::TensorContainer<cpu, 3> img_;
 };
 
-inline void ImageRecordIOParser::Init(
+template<typename DType>
+inline void ImageRecordIOParser<DType>::Init(
     const std::vector<std::pair<std::string, std::string> >& kwargs) {
 #if MXNET_USE_OPENCV
   // initialize parameter
@@ -253,8 +255,9 @@ inline void ImageRecordIOParser::Init(
 #endif
 }
 
-inline bool ImageRecordIOParser::
-ParseNext(std::vector<InstVector> *out_vec) {
+template<typename DType>
+inline bool ImageRecordIOParser<DType>::
+ParseNext(std::vector<InstVector<DType>> *out_vec) {
   CHECK(source_ != nullptr);
   dmlc::InputSplit::Blob chunk;
   if (!source_->NextChunk(&chunk)) return false;
@@ -269,7 +272,7 @@ ParseNext(std::vector<InstVector> *out_vec) {
     ImageRecordIO rec;
     dmlc::InputSplit::Blob blob;
     // image data
-    InstVector &out = (*out_vec)[tid];
+    InstVector<DType> &out = (*out_vec)[tid];
     out.Clear();
     while (reader.NextRecord(&blob)) {
       // Opencv decode and augments
@@ -286,7 +289,7 @@ ParseNext(std::vector<InstVector> *out_vec) {
                mshadow::Shape3(n_channels, res.rows, res.cols),
                mshadow::Shape1(param_.label_width));
 
-      mshadow::Tensor<cpu, 3> data = out.data().Back();
+      mshadow::Tensor<cpu, 3, DType> data = out.data().Back();
 
       // For RGB or RGBA data, swap the B and R channel:
       // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
@@ -349,6 +352,7 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
 };
 
 // iterator on image recordio
+template<typename DType = real_t>
 class ImageRecordIter : public IIterator<DataInst> {
  public:
   ImageRecordIter() : data_(nullptr) { }
@@ -365,9 +369,9 @@ class ImageRecordIter : public IIterator<DataInst> {
     // prefetch at most 4 minbatches
     iter_.set_max_capacity(4);
     // init thread iter
-    iter_.Init([this](std::vector<InstVector> **dptr) {
+    iter_.Init([this](std::vector<InstVector<DType>> **dptr) {
         if (*dptr == nullptr) {
-          *dptr = new std::vector<InstVector>();
+          *dptr = new std::vector<InstVector<DType>>();
         }
         return parser_.ParseNext(*dptr);
       },
@@ -394,7 +398,7 @@ class ImageRecordIter : public IIterator<DataInst> {
         if (!iter_.Next(&data_)) return false;
         inst_order_.clear();
         for (unsigned i = 0; i < data_->size(); ++i) {
-          const InstVector& tmp = (*data_)[i];
+          const InstVector<DType>& tmp = (*data_)[i];
           for (unsigned j = 0; j < tmp.Size(); ++j) {
             inst_order_.push_back(std::make_pair(i, j));
           }
@@ -423,11 +427,11 @@ class ImageRecordIter : public IIterator<DataInst> {
   // internal instance order
   std::vector<std::pair<unsigned, unsigned> > inst_order_;
   // data
-  std::vector<InstVector> *data_;
+  std::vector<InstVector<DType>> *data_;
   // internal parser
-  ImageRecordIOParser parser_;
+  ImageRecordIOParser<DType> parser_;
   // backend thread
-  dmlc::ThreadedIter<std::vector<InstVector> > iter_;
+  dmlc::ThreadedIter<std::vector<InstVector<DType>> > iter_;
   // parameters
   ImageRecordParam param_;
   // random number generator
@@ -449,7 +453,20 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter)
     return new PrefetcherIter(
         new BatchLoader(
             new ImageNormalizeIter(
-                new ImageRecordIter())));
+                new ImageRecordIter<real_t>())));
+  });
+
+MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter)
+.describe("Create iterator for dataset packed in recordio.")
+.add_arguments(ImageRecParserParam::__FIELDS__())
+.add_arguments(ImageRecordParam::__FIELDS__())
+.add_arguments(BatchParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.add_arguments(ListDefaultAugParams())
+.set_body([]() {
+    return new PrefetcherIter(
+        new BatchLoader(
+            new ImageRecordIter<uint8_t>()));
   });
 }  // namespace io
 }  // namespace mxnet

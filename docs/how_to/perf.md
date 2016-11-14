@@ -2,7 +2,7 @@
 
 The following factors may significantly affect the performance:
 
-1. Use a fast back-end. A fast BLAS library, e.g. openblas, altas,
+1. Use a fast back-end. A fast BLAS library, e.g. openblas, atlas,
 and mkl, is necessary if only using CPU. While for Nvidia GPUs, we strongly
 recommend to use CUDNN.
 2. Three important things for the input data:
