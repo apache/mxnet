@@ -3,6 +3,7 @@
 # pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
 from __future__ import absolute_import, print_function, division
 import time
+import traceback
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
@@ -688,7 +689,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
             try:
                 npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
-                print(e)
+                traceback.print_exc()
 
     #forward predict
     for exe in exe_list:
@@ -706,4 +707,4 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
             try:
                 npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
-                print(e)
+                traceback.print_exc()
