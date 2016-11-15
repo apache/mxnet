@@ -1,14 +1,23 @@
 # Tutorials
 
-## Applications
+## Example Applications
 
 ### Computer Vision
 
-#### [Training Deep Net on 14 Million Images by Using A Single Machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
-#### [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html)
+#### [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html) 
+*A simple example of classifying images using a convolutional neural network.*
+
 #### [Image Segmentation](http://mxnet.io/tutorials/computer_vision/segmentation.html)
+*An example of segmenting various object out of an image using a convolutional neural network.*
+
 #### [Object Detection using Faster R-CNN](http://mxnet.io/tutorials/computer_vision/detection.html)
-#### [Neural Art](http://mxnet.io/tutorials/computer_vision/neural_art.html)
+*An example of detecting object bounding boxes in an image using a region proposal network.*
+
+#### [Neural Art: Adding Artistic Style to Images](http://mxnet.io/tutorials/computer_vision/neural_art.html)
+*An example of transferring styles of famous artists onto an image using a convolutional neural network.*
+
+#### [Large Scale Image Classification: Training With 14 Million Images on a Single Machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
+*An advanced example of training a deep convolutional network on the large ImageNet dataset efficiently.*
 
 ### Natural Language Processing
 
@@ -30,20 +39,22 @@
 
 #### [Recommendation Systems](http://mxnet.io/tutorials/general_ml/recommendation_systems.html)
 
-## Python Tutorials
-### [NDArray](http://mxnet.io/tutorials/python/ndarray.html)
-### [Symbol](http://mxnet.io/tutorials/python/symbol.html)
-### [KVStore](http://mxnet.io/tutorials/python/kvstore.html)
+## Language Tutorials 
 
-## R Tutorials
-### [NDArray](http://mxnet.io/tutorials/r/ndarray.html)
-### [Symbol](http://mxnet.io/tutorials/r/symbol.html)
-### [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
-### [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-### [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-### [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-### [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+### Python Tutorials
+* [NDArray](http://mxnet.io/tutorials/python/ndarray.html)
+* [Symbol](http://mxnet.io/tutorials/python/symbol.html)
+* [KVStore](http://mxnet.io/tutorials/python/kvstore.html)
 
-# Other Resources
+### R Tutorials
+* [NDArray](http://mxnet.io/tutorials/r/ndarray.html)
+* [Symbol](http://mxnet.io/tutorials/r/symbol.html)
+* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
+* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
+* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
+* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+
+## Other Resources
 - Collection of MXNet Tutorials for NVidia GTC 2016. [MXNet GTC 15 Tutorials](https://github.com/dmlc/mxnet-gtc-tutorial)
 - Collection of [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
