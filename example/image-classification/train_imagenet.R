@@ -1,9 +1,9 @@
 # 
 # This file shows how to train ImageNet dataset with several Convolutional Neural Network architectures in R.
-# More information: 
+# More information: https://blogs.technet.microsoft.com/machinelearning/2016/11/15/imagenet-deep-neural-network-training-using-microsoft-r-server-and-azure-gpu-vms/
 #
 # To train ResNet-18:
-# Rscript train_imagenet.R --network resnet --batch-size 512 --lr 0.1 --lr-factor 0.94 --gpu 0,1,2,3 --num-round 120 /
+# Rscript train_imagenet.R --network resnet --depth 18 --batch-size 512 --lr 0.1 --lr-factor 0.94 --gpu 0,1,2,3 --num-round 120 /
 # --data-dir /path/to/data --train-dataset train.rec --val-dataset val.rec --log-dir $PWD --log-file resnet18-log.txt /
 # --model-prefix resnet18 --kv-store device
 #
