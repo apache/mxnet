@@ -100,9 +100,9 @@ class Profiler {
 
  private:
   /*! \brief generate device information following chrome profile file format */
-  void EmitPid(std::ostream& os, const std::string& name, int pid);
+  void EmitPid(std::ostream *os, const std::string& name, int pid);
   /*! \brief generate event information following chrome profile file format */
-  void EmitEvent(std::ostream& os, const std::string& name,
+  void EmitEvent(std::ostream *os, const std::string& name,
           const std::string& category, const std::string& ph,
           uint64_t ts, int pid, int tid);
   /*! \brief Profiler instance */
