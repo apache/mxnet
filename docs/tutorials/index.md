@@ -20,7 +20,7 @@
 - [Recurrent Neural Networks](http://mxnet.io/tutorials/nlp/rnn.html)
 - [Text Classification using Convolutional Neural Network](http://mxnet.io/tutorials/nlp/cnn.html)
 - [NCE Loss](http://mxnet.io/tutorials/nlp/nce_loss.html) 
-*Using Noise Contrastive Estimation (NCE) \[[Mnih 2013](http://papers.nips.cc/paper/5165-learning-word-embeddings-efficiently-with-noise-contrastive-estimation.pdf)\] loss to scale efficiently when predicting against large vocabularies.*
+*Using Noise Contrastive Estimation (NCE) loss \[[Mnih 2013](http://papers.nips.cc/paper/5165-learning-word-embeddings-efficiently-with-noise-contrastive-estimation.pdf)\] to scale efficiently when predicting against large vocabularies.*
 
 ### Speech Recognition
 
