@@ -401,6 +401,7 @@ def _init_data(data, allow_empty, default_name):
 
 class NDArrayIter(DataIter):
     """NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
+
     Parameters
     ----------
     data: NDArray or numpy.ndarray, a list of them, or a dict of string to them.
@@ -413,6 +414,7 @@ class NDArrayIter(DataIter):
         Whether to shuffle the data
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
+
     Note
     ----
     This iterator will pad, discard or roll over the last batch if
@@ -517,6 +519,7 @@ class NDArrayIter(DataIter):
 
 class MXDataIter(DataIter):
     """DataIter built in MXNet. List all the needed functions here.
+
     Parameters
     ----------
     handle : DataIterHandle
@@ -668,10 +671,12 @@ def _make_io_iterator(handle):
     def creator(*args, **kwargs):
         """Create an iterator.
         The parameters listed below can be passed in as keyword arguments.
+
         Parameters
         ----------
         name : string, required.
             Name of the resulting data iterator.
+
         Returns
         -------
         dataiter: Dataiter
