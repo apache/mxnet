@@ -462,7 +462,7 @@ class NDArrayIter(DataIter):
         """The name and shape of data provided by this iterator"""
         return [
             DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
-            for k, v in self.label
+            for k, v in self.data
         ]
 
     @property
