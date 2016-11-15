@@ -5,12 +5,6 @@ This is the first tutorial for new users of the R package `mxnet`. You will lear
 
 We will show you how to do classification and regression tasks respectively. The data we use comes from the package `mlbench`.
 
-Preface
--------
-This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd)
-
 ## Classification
 
 First of all, let us load in the data and preprocess it:

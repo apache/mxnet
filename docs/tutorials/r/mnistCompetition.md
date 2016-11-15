@@ -4,9 +4,6 @@ Handwritten Digits Classification Competition
 [MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set.
 We will present the basic usage of [MXNet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
 
-This tutorial is written in Rmarkdown. You can download the source [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/mnistCompetition.Rmd) and view a
-hosted version of tutorial [here](http://mxnet.io/tutorials/r/mnistCompetition.html).
-
 ## Data Loading
 
 First, let us download the data from [here](https://www.kaggle.com/c/digit-recognizer/data), and put them under the `data/` folder in your working directory.

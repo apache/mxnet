@@ -58,6 +58,12 @@ html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+	cp api/r/mxnet-r-reference-manual.pdf $(BUILDDIR)/html/api/r
+
+copy-pdfs:
+	@echo
+	cp api/r/mxnet-r-reference-manual.pdf $(BUILDDIR)/html/api/r
+	@echo "Finished copying pdfs."
 
 dirhtml:
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml

@@ -5,12 +5,6 @@ This example aims to show how to use LSTM model to build a char level language m
 
 Data can be found at [here](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare) 
 
-Preface
--------
-This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/tutorials/r/charRnnModel.html)
-- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CharRnnModel.Rmd)
-
 Load Data 
 ---------
 First of all, load in the data and pre-process it.
