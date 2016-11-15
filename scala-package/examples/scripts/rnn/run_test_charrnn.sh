@@ -4,7 +4,7 @@ MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
 CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
 
 # you can get the training data file using the following command
-# wget http://data.dmlc.ml/mxnet/data/lab_data.zip
+# wget http://data.mxnet.io/mxnet/data/lab_data.zip
 # unzip -o lab_data.zip
 # for example ./datas/obama.txt
 DATA_PATH=$1

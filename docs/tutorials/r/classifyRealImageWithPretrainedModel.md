@@ -6,7 +6,7 @@ algorithm can do is to classify real world images.
 In this example we will show how to use a pre-trained Inception-BatchNorm Network to predict the class of
 real world image. The network architecture is described in [1].
 
-The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.dmlc.ml/mxnet/data/Inception.zip)
+The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
 Preface

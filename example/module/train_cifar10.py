@@ -55,7 +55,7 @@ def _download(data_dir):
         import urllib, zipfile, glob
         dirname = os.getcwd()
         zippath = os.path.join(dirname, "cifar10.zip")
-        urllib.urlretrieve("http://data.dmlc.ml/mxnet/data/cifar10.zip", zippath)
+        urllib.urlretrieve("http://data.mxnet.io/mxnet/data/cifar10.zip", zippath)
         zf = zipfile.ZipFile(zippath, "r")
         zf.extractall()
         zf.close()
