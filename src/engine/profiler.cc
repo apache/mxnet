@@ -75,28 +75,28 @@ OprExecStat *Profiler::AddOprStat(int dev_type, int dev_id) {
   return opr_stat;
 }
 
-void Profiler::EmitPid(std::ostream& os, const std::string& name, int pid) {
-  os << "        {\n"
-     << "            \"ph\": \"M\",\n"
-     << "            \"args\": {\n"
-     << "                \"name\": \"" << name << "\"\n"
-     << "            },\n"
-     << "            \"pid\": " << pid << ",\n"
-     << "            \"name\": \"process_name\"\n"
-     << "        }";
+void Profiler::EmitPid(std::ostream *os, const std::string& name, int pid) {
+  (*os) << "        {\n"
+        << "            \"ph\": \"M\",\n"
+        << "            \"args\": {\n"
+        << "                \"name\": \"" << name << "\"\n"
+        << "            },\n"
+        << "            \"pid\": " << pid << ",\n"
+        << "            \"name\": \"process_name\"\n"
+        << "        }";
 }
 
-void Profiler::EmitEvent(std::ostream& os, const std::string& name,
+void Profiler::EmitEvent(std::ostream *os, const std::string& name,
                        const std::string& category, const std::string& ph,
                        uint64_t ts, int pid, int tid) {
-  os << "        {\n"
-     << "            \"name\": \""  << name << "\",\n"
-     << "            \"cat\": " << "\"" << category << "\",\n"
-     << "            \"ph\": \""<< ph << "\",\n"
-     << "            \"ts\": "  << ts << ",\n"
-     << "            \"pid\": " << pid << ",\n"
-     << "            \"tid\": " << tid << "\n"
-     << "        }";
+  (*os) << "        {\n"
+        << "            \"name\": \""  << name << "\",\n"
+        << "            \"cat\": " << "\"" << category << "\",\n"
+        << "            \"ph\": \""<< ph << "\",\n"
+        << "            \"ts\": "  << ts << ",\n"
+        << "            \"pid\": " << pid << ",\n"
+        << "            \"tid\": " << tid << "\n"
+        << "        }";
 }
 
 
@@ -112,7 +112,7 @@ void Profiler::DumpProfile() {
 
   for (int i = 0; i < dev_num; ++i) {
     const DevStat &d = profile_stat[i];
-    this->EmitPid(file, d.dev_name, i);
+    this->EmitPid(&file, d.dev_name, i);
     file << ",\n";
   }
 
@@ -133,10 +133,10 @@ void Profiler::DumpProfile() {
         file << ",";
       }
       file << std::endl;
-      this->EmitEvent(file, opr_stat->opr_name, "category", "B",
+      this->EmitEvent(&file, opr_stat->opr_name, "category", "B",
             opr_stat->opr_start_rel_micros, pid, tid);
       file << ",\n";
-      this->EmitEvent(file, opr_stat->opr_name, "category", "E",
+      this->EmitEvent(&file, opr_stat->opr_name, "category", "E",
             opr_stat->opr_end_rel_micros,   pid, tid);
     }
   }
