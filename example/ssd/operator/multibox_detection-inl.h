@@ -112,7 +112,7 @@ struct MultiBoxDetectionParam : public dmlc::Parameter<MultiBoxDetectionParam> {
     .describe("Non-maximum suppression threshold.");
     DMLC_DECLARE_FIELD(force_suppress).set_default(false)
     .describe("Suppress all detections regardless of class_id.");
-    DMLC_DECLARE_FIELD(variances).set_default(VarInfo({0.1, 0.1, 0.2, 0.2}))
+    DMLC_DECLARE_FIELD(variances).set_default(VarInfo({0.1f, 0.1f, 0.2f, 0.2f}))
     .describe("Variances to be decoded from box regression output.");
   }
 };  // struct MultiBoxDetectionParam
