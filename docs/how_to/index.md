@@ -26,5 +26,5 @@ This topic provides links to guidelines for using MXNet.
 - [Symbol](http://mxnet.io/tutorials/r/symbol.html)
 - [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
 
-## Frequently Ask Questions
+## Frequently Asked Questions
 - [FAQ](faq.md)
