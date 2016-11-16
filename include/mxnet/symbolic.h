@@ -367,7 +367,7 @@ class Executor {
    * \param symbol the symbol that specifies the output of Forward pass.
    * \param in_args the NDArray that stores the input arguments to the symbol.
    * \param arg_grad_store NDArray that is used to store the gradient output of the input arguments.
-   * \param grad_req_type requirment type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
+   * \param grad_req_type requirement type of gradient saving. Can only be in {kNullOp, kAddTo, kWriteTo}.
    * \param aux_states NDArray that is used as internal state in op
    * \param shared_exec input executor to share memory with.
    * \return a new executor.

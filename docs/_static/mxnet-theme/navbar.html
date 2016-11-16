@@ -9,7 +9,7 @@
         <span class="icon-bar"></span>
       </button>
       <a href="{{ url_root }}" class="navbar-brand">
-        <img src="http://data.dmlc.ml/theme/mxnet.png">
+        <img src="http://data.mxnet.io/theme/mxnet.png">
       </a>
     </div>
     <div id="navbar" class="navbar-collapse collapse">
@@ -47,7 +47,7 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
   <div class="container" id="navContainer">
     <div id="header-inner" class="innder">
       <h1 id="logo-wrap">
-        <a href="{{ url_root }}" id="logo"><img src="http://data.dmlc.ml/theme/mxnet.png"></a>
+        <a href="{{ url_root }}" id="logo"><img src="http://data.mxnet.io/theme/mxnet.png"></a>
       </h1>
       <nav id="main-nav">
         {% for name in ['Get Started', 'Tutorials', 'How To'] %}
@@ -58,11 +58,17 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
         <span id="dropdown-menu-position-anchor">
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">{{name}} <span class="caret"></span></a>
           <ul id="package-dropdown-menu" class="dropdown-menu">
-            {% for lang in ['Python', 'R', 'Julia', 'C++', 'Scala'] %}
-            <li><a href="{{url_root}}{{name.lower()|replace(" ", "_")}}/{{lang.lower()}}/index.html">
-                {{lang}}
-            </a></li>
-            {% endfor %}
+            <li><a class="main-nav-link" href="{{url_root}}api/python/index.html">Python</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/python/module.html">- Module</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/python/model.html">- Model</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/python/symbol.html">- Symbol</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/python/io.html">- I/O</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/python/ndarray.html">- NDArray</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/python/kvstore.html">- KVStore</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/r/index.html">R</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/julia/index.html">Julia</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/c++/index.html">C++</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/scala/index.html">Scala</a></li>
           </ul>
           {% endfor %}
         </span>
