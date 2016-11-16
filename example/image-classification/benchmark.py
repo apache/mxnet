@@ -145,6 +145,7 @@ def main():
     args = parse_args()
     speedup_chart = pygal.Line(x_title ='gpus',y_title ='images/sec', logarithmic=True)
     speedup_chart.x_labels = map(str, series(args.worker_count* args.gpu_count))
+    speedup_chart.add('ideal speedup', series(128))
     networks= [
         Network('inception-v3',img_size=299, batch_size=32)
         ,Network('resnet', img_size=224, batch_size=2)
@@ -164,7 +165,8 @@ def main():
             net.gpus_img_processed_map[num_nodes * args.gpu_count] = imgs_per_sec
 
         d = OrderedDict(sorted(net.gpus_img_processed_map.items(), key=lambda t: t[0]))
-        speedup_chart.add(net.name + '/batch_per_gpu= ' + str(net.batch_size), d.values())
+        img_processed_on_single_gpu = d.values()[0]
+        speedup_chart.add(net.name , [ each/img_processed_on_single_gpu for each in d.values()], formatter=lambda x: 'speedup:%d, img/sec:%.2f, batch/gpu:%d' % (x, x*img_processed_on_single_gpu, net.batch_size))
         LOGGER.info('Network: %s (num_gpus, images_processed): %s', net.name, ','.join(map(str, d.items())))
         with open(log_loc + '/' + net.name + '.csv', 'wb') as f:
             w = csv.writer(f)
