@@ -461,7 +461,7 @@ class Symbol(object):
             print("infer_shape error. Arguments:")
             for i,arg in enumerate(args):
                 print("  #%d: %s" % (i,arg))
-            for k,v in kwargs.iteritems():
+            for k,v in kwargs.items():
                 print("  %s: %s" % (k,v))
             raise
 
