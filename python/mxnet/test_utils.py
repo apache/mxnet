@@ -688,7 +688,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
             arr2 = arr2.astype(dtypes[i])
             try:
                 npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except Exception:
                 traceback.print_exc()
                 raise
 
@@ -707,7 +707,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write'):
             arr2 = arr2.astype(dtypes[i])
             try:
                 npt.assert_allclose(arr1, arr2, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except Exception:
                 traceback.print_exc()
                 raise
 
