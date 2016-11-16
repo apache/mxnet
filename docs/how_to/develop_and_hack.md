@@ -5,4 +5,4 @@
 
 # Other Resources
 - [MXNet System Architecture Overview](http://mxnet.io/architecture/overview.html)
-- [How to contribute to MXNet](http://mxnet.io/community/contribute.html)
+- [Contributor Guidelines](http://mxnet.io/community/contribute.html)

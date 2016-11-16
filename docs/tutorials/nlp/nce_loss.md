@@ -1,42 +1,38 @@
 # NCE Loss
-You can get the source code for below example [here](https://github.com/dmlc/mxnet/tree/master/example/nce-loss)
+This tutorial shows how to use nce-loss to speed up multi-class classification when the number of classes is huge.
 
+You can get the source code for this example on [GitHub](https://github.com/dmlc/mxnet/tree/master/example/nce-loss).
 
-&nbsp;
+## Toy Examples
 
-nce-loss is used to speedup multi-class classification when class num is huge.
+* toy_softmax.py. A multi class example using softmax output
+* toy_nce.py. A multi-class example using nce loss
 
-## Toy example
+### Word2Vec
 
-* toy_softmax.py: a multi class example using softmax output
-* toy_nce.py: a multi-class example using nce loss
+* word2vec.py. A CBOW word2vec example using nce loss
 
-## Word2Vec
-
-* word2vec.py: a CBOW word2vec example using nce loss
-
-You can run it by
+Run word2vec.py with the following command:
 
 ```
-./get_text8.sh
-python word2vec.py
-
+    ./get_text8.sh
+    python word2vec.py
 ```
 
-## LSTM
+### LSTM
 
-* lstm_word.py: a lstm example use nce loss
+* lstm_word.py. An LSTM example using nce loss
 
-You can run it by
+Run lstm_word.py with the  following command:
 
 ```
-./get_text8.sh
-python lstm_word.py
+    ./get_text8.sh
+    python lstm_word.py
 ```
 
 ## References
 
-You can refer to [http://www.jianshu.com/p/e439b43ea464](http://www.jianshu.com/p/e439b43ea464) for more details. (In Chinese)
+For more details, see [http://www.jianshu.com/p/e439b43ea464](http://www.jianshu.com/p/e439b43ea464) (in Chinese).
 
-# Recommended Next Steps
+## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
