@@ -11,7 +11,7 @@ KVStore API
 
 ### Initialization
 
-首先让我们来考虑一个简单的例子. 首先初始化一个 (`int`, `NDAarray`) push 到 KVstore 里, 然后再将数据   pull 下来.
+首先让我们来考虑一个简单的例子. 首先初始化一个 (`int`, `NDarray`) push 到 KVstore 里, 然后再将数据   pull 下来.
 
 ```python
 >>> kv = mx.kv.create('local') # create a local kv store.

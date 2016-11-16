@@ -411,7 +411,7 @@ void GraphExecutor::AssignContext(const Context default_ctx,
         ctx_plan->at(e.source_id) = arg_grad_store[i].ctx();
       } else {
         CHECK(ctx_plan->at(e.source_id) == arg_grad_store[i].ctx())
-            << "Inconsistent gradient context requirment";
+            << "Inconsistent gradient context requirement";
       }
     }
   }

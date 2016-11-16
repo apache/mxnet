@@ -137,7 +137,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
       assert(end_of_read_chain->write == true);
       pending_write_ = end_of_read_chain;
       if (num_pending_reads_ == 0) {
-        // mark write as already actived in this var
+        // mark write as already activated in this var
         num_pending_reads_ = kWriteTriggered;
         trigger_write = end_of_read_chain->trigger;
       }

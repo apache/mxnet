@@ -584,6 +584,7 @@ div.content {
     div.content {
         left: 0;
         margin-left: 5%; 
+        overflow-x: auto;
     }
 }
 
@@ -704,3 +705,23 @@ div.informaltable {
   font-size: 16px;
   font-weight: bold;
   text-align: left; }
+
+/*----------------API class and function formatting---------------------*/
+dl.class > dt:before, dl.function > dt:before {
+    content: " ";
+    display: block;
+    height: 80px; /* fixed header height*/
+    margin: -50px 0 0; /* negative fixed header height */
+}
+
+dt {
+    background-color: white !important;
+}
+
+dl.method, dl.attribute {
+    padding-top: 15px;
+}
+
+dl.class p, dl.function p {
+    color: #cc6600;
+}

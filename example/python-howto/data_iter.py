@@ -21,7 +21,7 @@ dataiter = mx.io.ImageRecordIter(
         batch_size=100,
         # Augmentation Parameter
         # Optional
-        # when offers mean_img, each image will substract the mean value at each pixel
+        # when offers mean_img, each image will subtract the mean value at each pixel
         mean_img="data/cifar/cifar10_mean.bin",
         # Augmentation Parameter
         # Optional
