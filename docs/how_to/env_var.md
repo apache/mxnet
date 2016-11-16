@@ -1,59 +1,58 @@
 Environment Variables
 =====================
-MXNet have several settings that can be changed via environment variable.
-Usually you do not need to change these settings, but they are listed here for reference.
+MXNet has several settings that you can change with environment variables.
+Typically, you wouldn't need to change these settings, but they are listed here for reference.
 
-## Set the number of threads
+## Set the Number of Threads
 
 * MXNET_GPU_WORKER_NTHREADS (default=2)
-  - Maximum number of threads that do the computation job on each GPU.
+  - The maximum number of threads that do the the computation job on each GPU.
 * MXNET_GPU_COPY_NTHREADS (default=1)
-  - Maximum number of threads that do memory copy job on each GPU.
+  - The maximum number of threads that do the memory copy job on each GPU.
 * MXNET_CPU_WORKER_NTHREADS (default=1)
-  - Maximum number of threads that do the CPU computation job.
+  - The maximum number of threads that do the CPU computation job.
 * MXNET_CPU_PRIORITY_NTHREADS (default=4)
-	- Number of threads given to prioritized CPU jobs.
+	- The number of threads given to prioritized CPU jobs.
 
-## Memory options
+## Memory Options
 
 * MXNET_EXEC_ENABLE_INPLACE (default=true)
-  - Whether to enable in place optimization in symbolic execution.
+  - Whether to enable in-place optimization in symbolic execution.
 * MXNET_EXEC_MATCH_RANGE (default=10)
-  - The rough matching scale in symbolic execution memory allocator.
-  - Set this to 0 if we do not want to enable memory sharing between graph nodes(for debug purpose).
+  - The rough matching scale in the symbolic execution memory allocator.
+  - Set this to 0 if you don't want to enable memory sharing between graph nodes(for debugging purposes).
 * MXNET_EXEC_NUM_TEMP (default=1)
-  - Maximum number of temp workspace we can allocate to each device.
-  - Set this to small number can save GPU memory.
-  - It will also likely to decrease level of parallelism, which is usually OK.
+  - The maximum number of temp workspaces to allocate to each device.
+  - Setting this to a small number can save GPU memory. It will also likely decrease the level of parallelism, which is usually acceptable.
 * MXNET_GPU_MEM_POOL_RESERVE (default=5)
-  - Percentage of GPU memory to reserve for things other than gpu array, such as kernel launch or cudnn handle space.
-  - Try setting this to a larger value if you see strange out of memory error from kernel launch, after multiple iterations, etc.
+  - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
+  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.  
 
-## Engine type
+## Engine Type
 
 * MXNET_ENGINE_TYPE (default=ThreadedEnginePerDevice)
   - The type of underlying execution engine of MXNet.
-  - List of choices
-    - NaiveEngine: very simple engine that use master thread to do computation.
-    - ThreadedEngine: a threaded engine that uses global thread pool to schedule jobs.
-    - ThreadedEnginePerDevice: a threaded engine that allocates thread per GPU.
+  - Choices:
+    - NaiveEngine: A very simple engine that uses the master thread to do computation.
+    - ThreadedEngine: A threaded engine that uses a global thread pool to schedule jobs.
+    - ThreadedEnginePerDevice: A threaded engine that allocates thread per GPU.
 
-## Control the data communication
+## Control the Data Communication
 
 * MXNET_KVSTORE_REDUCTION_NTHREADS (default=4)
-	- Number of CPU threads used for summing of big arrays.
+	- The number of CPU threads used for summing big arrays.
 * MXNET_KVSTORE_BIGARRAY_BOUND (default=1e6)
-	- The minimum size of "big array".
-	- When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads will be used for reduction.
+	- The minimum size of a "big array."
+	- When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads are used for reduction.
 * MXNET_ENABLE_GPU_P2P (default=1)
-    - If true, mxnet will try to use GPU peer-to-peer communication if available
-      when kvstore's type is `device`
+    - If true, MXNet tries to use GPU peer-to-peer communication, if available,
+      when kvstore's type is `device`.
 
-## Others
+## Other Environment Variables
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT (default=0)
     - The default value of cudnn_tune for convolution layers.
-    - Auto tuning is turn off by default. Set to 1 to turn on by default for benchmarking.
+    - Auto tuning is turn off by default. For benchmarking, set this to 1 to turn it on by default.
 
 Settings for Minimum Memory Usage
 ---------------------------------
@@ -62,6 +61,6 @@ Settings for Minimum Memory Usage
 
 Settings for More GPU Parallelism
 ---------------------------------
-- Set ```MXNET_GPU_WORKER_NTHREADS``` to larger number (e.g. 2)
-  - You may want to set ```MXNET_EXEC_NUM_TEMP``` to reduce memory usage.
-- This may not speed things up, especially for image applications, because GPU is usually fully utilized even with serialized jobs.
+- Set ```MXNET_GPU_WORKER_NTHREADS``` to a larger number (e.g., 2)
+  - To reduce memory usage, consider setting ```MXNET_EXEC_NUM_TEMP```.
+- This might not speed things up, especially for image applications, because GPU is usually fully utilized even with serialized jobs.
