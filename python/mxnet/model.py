@@ -3,6 +3,7 @@
 """MXNet model module"""
 from __future__ import absolute_import
 
+import sys
 import time
 import logging
 from collections import namedtuple
@@ -260,6 +261,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 if epoch_size is not None and nbatch >= epoch_size:
                     do_reset = False
                     break
+
+            sys.stdout.write('\n')
 
             if do_reset:
                 logger.info('Epoch[%d] Resetting Data Iterator', epoch)
