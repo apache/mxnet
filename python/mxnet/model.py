@@ -124,6 +124,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         eval_batch_end_callback=None, sym_gen=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
+
     Parameters
     ----------
     symbol : Symbol
@@ -582,6 +583,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def predict(self, X, num_batch=None, return_data=False, reset=True):
         """Run the prediction, always only use one device.
+
         Parameters
         ----------
         X : mxnet.DataIter
@@ -650,6 +652,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def score(self, X, eval_metric='acc', num_batch=None, batch_end_callback=None, reset=True):
         """Run the model on X and calculate the score with eval_metric
+
         Parameters
         ----------
         X : mxnet.DataIter
