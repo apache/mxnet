@@ -22,6 +22,8 @@ if not os.path.exists('../recommonmark'):
 else:
     subprocess.call('cd ../recommonmark/; git pull', shell=True)
 
+subprocess.call('./build-notebooks.sh')
+
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 root_path = os.path.join(curr_path, '..')
 run_build_mxnet(root_path)
