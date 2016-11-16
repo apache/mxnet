@@ -8,7 +8,7 @@ download_ <- function(data_dir) {
         (!file.exists('train-labels-idx1-ubyte')) ||
         (!file.exists('t10k-images-idx3-ubyte')) ||
         (!file.exists('t10k-labels-idx1-ubyte'))) {
-        download.file(url='http://data.dmlc.ml/mxnet/data/mnist.zip',
+        download.file(url='http://data.mxnet.io/mxnet/data/mnist.zip',
                       destfile='mnist.zip', method='wget')
         unzip("mnist.zip")
         file.remove("mnist.zip")
