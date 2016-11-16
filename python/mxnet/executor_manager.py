@@ -14,6 +14,7 @@ from .io import DataDesc
 
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
+
     Parameters
     ----------
     batch_size : int
@@ -21,10 +22,12 @@ def _split_input_slice(batch_size, work_load_list):
     work_load_list : list of float or int, optional
         The list of work load for different devices,
         in the same order as ctx
+
     Returns
     -------
     slices : list of slice
         The split slices to get a specific slice.
+
     Raises
     ------
     ValueError
@@ -50,6 +53,7 @@ def _check_arguments(symbol):
     """Check the argument names of symbol.
     This function checks the duplication of arguments in Symbol.
     The check is done for feedforward net for now.
+
     Parameters
     ----------
     symbol : Symbol
@@ -271,6 +275,7 @@ class DataParallelExecutorGroup(object):
 
 class DataParallelExecutorManager(object):
     """ Helper class to manage multiple executors for data parallelism.
+
     Parameters
     ----------
     symbol : Symbol
@@ -335,6 +340,7 @@ class DataParallelExecutorManager(object):
 
     def set_params(self, arg_params, aux_params):
         """ set parameter and aux values
+
         Parameters
         ----------
         arg_params : list of NDArray
@@ -348,12 +354,14 @@ class DataParallelExecutorManager(object):
 
     def copy_to(self, arg_params, aux_params):
         """ Copy data from each executor to `arg_params` and `aux_params`
+
         Parameters
         ----------
         arg_params : list of NDArray
             target parameter arrays
         aux_params : list of NDArray
             target aux arrays
+
         Notes
         -----
         - This function will inplace update the NDArrays in arg_params and aux_params.

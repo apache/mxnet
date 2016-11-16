@@ -682,6 +682,7 @@ class RMSProp(Optimizer):
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
+
         Parameters
         ----------
         weight : NDArray
@@ -694,6 +695,7 @@ class RMSProp(Optimizer):
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
+
         Parameters
         ----------
         index : int
