@@ -11,4 +11,6 @@ We are working on MXNet for R API interface documentation. In the mean time you 
 
 Resources
 =========
-* [MXNet for R Tutorials](http://mxnet.io/tutorials/index.html#R-Tutorials)
+* [MXNet for R Tutorials](http://mxnet.io/tutorials/index.html#r-tutorials)
+* [MXNet R Reference Manual](http://mxnet.io/api/r/mxnet-r-reference-manual.pdf)
+

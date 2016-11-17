@@ -1,194 +1,187 @@
-Classify Real-World Images with Pre-trained Model
+Classify Images with a Pretrained Model
 =================================================
-MXNet is a flexible and efficient deep learning framework. One of the cool thing that a deep learning
-algorithm can do is to classify real world images.
+MXNet is a flexible and efficient deep learning framework. One of the interesting things that a deep learning
+algorithm can do is classify real world images.
 
-In this example we will show how to use a pre-trained Inception-BatchNorm Network to predict the class of
-real world image. The network architecture is described in [1].
+In this tutorial, we show how to use a pretrained Inception-BatchNorm network to predict the class of an
+image. For information about the network architecture, see  [1].
 
 The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
-Preface
--------
-This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
 
-Package Loading
+This tutorial is written in R Markdown. You can view the hosted version of the tutorial at [MXNet R Document](http://mxnet.io/api/r/classifyRealImageWithPretrainedModel.html). You can find the download the R Markdown source on [GitHub](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd).
+
+Load the MXNet Package
 ---------------
-To get started, we load the mxnet package by require mxnet.
+To get started, load the mxnet package:
 
-```r
-require(mxnet)
-```
+ ```r
+    require(mxnet)
+ ```
 
-```
-## Loading required package: mxnet
-## Loading required package: methods
-```
+ ```
+    ## Loading required package: mxnet
+    ## Loading required package: methods
+ ```
 
-In this example, we also need the imager package to load and pre-process the images in R.
+Now load the imager package to load and preprocess the images in R:
 
 
-```r
-require(imager)
-```
+ ```r
+    require(imager)
+ ```
 
-```
-## Loading required package: imager
-## Loading required package: plyr
-## Loading required package: magrittr
-## Loading required package: stringr
-## Loading required package: png
-## Loading required package: jpeg
-##
-## Attaching package: 'imager'
-##
-## The following object is masked from 'package:magrittr':
-##
-##     add
-##
-## The following object is masked from 'package:plyr':
-##
-##     liply
-##
-## The following objects are masked from 'package:stats':
-##
-##     convolve, spectrum
-##
-## The following object is masked from 'package:graphics':
-##
-##     frame
-##
-## The following object is masked from 'package:base':
-##
-##     save.image
-```
+ ```
+    ## Loading required package: imager
+    ## Loading required package: plyr
+    ## Loading required package: magrittr
+    ## Loading required package: stringr
+    ## Loading required package: png
+    ## Loading required package: jpeg
+    ##
+    ## Attaching package: 'imager'
+    ##
+    ## The following object is masked from 'package:magrittr':
+    ##
+    ##     add
+    ##
+    ## The following object is masked from 'package:plyr':
+    ##
+    ##     liply
+    ##
+    ## The following objects are masked from 'package:stats':
+    ##
+    ##     convolve, spectrum
+    ##
+    ## The following object is masked from 'package:graphics':
+    ##
+    ##     frame
+    ##
+    ## The following object is masked from 'package:base':
+    ##
+    ##     save.image
+ ```
 
-Load the Pre-trained Model
+Load the Pretrained Model
 -------------------------
-Make sure you unzip the pre-trained model in current folder. And we can use the model
-loading function to load the model into R.
+Make sure you unzip the pretrained model in the current folder. Use the model
+loading function to load the model into R:
+
+ ```r
+    model = mx.model.load("Inception/Inception_BN", iteration=39)
+ ```
+
+Load in the mean image, which is used for preprocessing using:
 
 
-```r
-model = mx.model.load("Inception/Inception_BN", iteration=39)
-```
+ ```r
+    mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
+ ```
 
-We also need to load in the mean image, which is used for preprocessing using ```mx.nd.load```.
-
-
-```r
-mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
-```
-
-Load and Pre-process the Image
+Load and Preprocess the Image
 -----------------------------
-Now we are ready to classify a real image. In this example, we simply take the parrots image
-from imager package. But you can always change it to other images.
+Now, we are ready to classify a real image. In this example, we simply take the parrots image
+from the imager package. You can use another image, if   you prefer.
 
 Load and plot the image:
 
 
 ```r
-im <- load.image(system.file("extdata/parrots.png", package="imager"))
-plot(im)
-```
+    im <- load.image(system.file("extdata/parrots.png", package="imager"))
+    plot(im)
+ ```
 
 ![plot of chunk unnamed-chunk-5](../../web-data/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png)
 
-Before feeding the image to the deep net, we need to do some preprocessing
-to make the image fit the input requirement of deepnet. The preprocessing
-include cropping, and subtraction of the mean.
-Because MXNet is deeply integrated with R, we can do all the processing in R function.
-
-The preprocessing function:
+Before feeding the image to the deep network, we need to perform some preprocessing
+to make the image meet the deep network input requirements. Preprocessing
+includes cropping  and subtracting the mean.
+Because MXNet is deeply integrated with R, we can do all the processing in an R function:
 
 
-```r
-preproc.image <- function(im, mean.image) {
-  # crop the image
-  shape <- dim(im)
-  short.edge <- min(shape[1:2])
-  xx <- floor((shape[1] - short.edge) / 2)
-  yy <- floor((shape[2] - short.edge) / 2)
-  croped <- crop.borders(im, xx, yy)
-  # resize to 224 x 224, needed by input of the model.
-  resized <- resize(croped, 224, 224)
-  # convert to array (x, y, channel)
-  arr <- as.array(resized) * 255
-  dim(arr) <- c(224, 224, 3)
-  # subtract the mean
-  normed <- arr - mean.img
-  # Reshape to format needed by mxnet (width, height, channel, num)
-  dim(normed) <- c(224, 224, 3, 1)
-  return(normed)
-}
-```
+ ```r
+    preproc.image <- function(im, mean.image) {
+      # crop the image
+      shape <- dim(im)
+      short.edge <- min(shape[1:2])
+      xx <- floor((shape[1] - short.edge) / 2)
+      yy <- floor((shape[2] - short.edge) / 2)
+      croped <- crop.borders(im, xx, yy)
+      # resize to 224 x 224, needed by input of the model.
+      resized <- resize(croped, 224, 224)
+      # convert to array (x, y, channel)
+      arr <- as.array(resized) * 255
+      dim(arr) <- c(224, 224, 3)
+      # substract the mean
+      normed <- arr - mean.img
+      # Reshape to format needed by mxnet (width, height, channel, num)
+      dim(normed) <- c(224, 224, 3, 1)
+      return(normed)
+    }
+ ```
 
-We use the defined preprocessing function to get the normalized image.
+Use the defined preprocessing function to get the normalized image:
 
 
-```r
-normed <- preproc.image(im, mean.img)
-```
+ ```r
+    normed <- preproc.image(im, mean.img)
+ ```
 
 Classify the Image
 ------------------
-Now we are ready to classify the image! We can use the predict function
-to get the probability over classes.
+Now we are ready to classify the image! Use the ```predict``` function
+to get the probability over classes:
 
 
-```r
-prob <- predict(model, X=normed)
-dim(prob)
-```
+ ```r
+    prob <- predict(model, X=normed)
+    dim(prob)
+ ```
 
-```
-## [1] 1000    1
-```
+ ```
+    ## [1] 1000    1
+ ```
 
-As you can see ```prob``` is a 1 times 1000 array, which gives the probability
+As you can see, ```prob``` is a 1 times 1000 array, which gives the probability
 over the 1000 image classes of the input.
 
-We can use the ```max.col``` on the transpose of prob. get the class index.
+Use the ```max.col``` on the transpose of ```prob``` to get the class index:
 
-```r
-max.idx <- max.col(t(prob))
-max.idx
-```
+ ```r
+    max.idx <- max.col(t(prob))
+    max.idx
+ ```
 
-```
-## [1] 89
-```
+ ```
+    ## [1] 89
+ ```
 
-The index do not make too much sense. So let us see what it really corresponds to.
-We can read the names of the classes from the following file.
-
-
-```r
-synsets <- readLines("Inception/synset.txt")
-```
-
-And let us see what it really is
+The index doesn't make much sense, so let's see what it really means.
+Read the names of the classes from the following file:
 
 
-```r
-print(paste0("Predicted Top-class: ", synsets[[max.idx]]))
-```
+ ```r
+    synsets <- readLines("Inception/synset.txt")
+ ```
 
-```
-## [1] "Predicted Top-class: n01818515 macaw"
-```
+Let's see what the image really is:
 
-Actually I do not know what does the word mean when I saw it.
-So I searched on the web to check it out.. and hmm it does get the right answer :)
+
+ ```r
+    print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
+ ```
+
+ ```
+    ## [1] "Predicted Top-class: n01818515 macaw"
+ ```
+
+It's a macaw!
 
 Reference
 ---------
 [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." arXiv preprint arXiv:1502.03167 (2015).
 
-# Recommended Next Steps
+## Next Steps
 * [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
 * [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
