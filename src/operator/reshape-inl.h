@@ -123,9 +123,23 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
               "and always fixed as input");
     DMLC_DECLARE_FIELD(shape)
     .set_default(ShapeInfo())
-    .describe("Target new shape. If the dim is same, set it to 0. If the dim is set "
-              "to be -1, it will be inferred from the rest of dims. One and only one dim "
-              "can be -1");
+    .describe("Target shape, a tuple, t=(t_1,t_2,..,t_m).\n"
+              "Let the input dims be s=(s_1,s_2,..,s_n).\n"
+              "The output dims u=(u_1,u_2,..,u_p) are computed from s and t.\n"
+              "The target shape tuple elements t_i are read in order, and used to "
+              " generate successive output dims u_p:\n"
+              "t_i:       meaning:      behavior:\n"
+              "+ve        explicit      u_p = t_i\n"
+              "0          copy          u_p = s_i\n"
+              "-1         infer         u_p = (Prod s_i) / (Prod u_j | j != p)\n"
+              "-2         copy all      u_p = s_i, u_p+1 = s_i+1, ...\n"
+              "-3         merge two     u_p = s_i * s_i+1\n"
+              "-4,a,b     split two     u_p = a, u_p+1 = b | a * b = s_i\n"
+              "The split directive (-4) in the target shape tuple is followed by "
+              "two dimensions, one of which can be -1, which means it will be "
+              "inferred from the other one and the original dimension.\n"
+              "The can only be one globally inferred dimension (-1), aside from "
+              "any -1 occuring in a split directive.");
     DMLC_DECLARE_FIELD(reverse)
       .set_default(false)
       .describe("Whether to match the shapes from the backward. If reverse is true, "
@@ -217,42 +231,69 @@ class ReshapeProp : public OperatorProperty {
       }
       std::vector<int> tmp;
       int src_idx = 0;
-      int neg_idx = -1;
+      int inf_idx = -1;
       size_t new_size = dshape.Size();
-      bool keep = true;
       if (param_.reverse) {
         std::reverse(dshape_vec.begin(), dshape_vec.end());
         std::reverse(param_shape_vec.begin(), param_shape_vec.end());
       }
-      for (index_t i = 0; i < param_shape_vec.size(); ++i) {
+      auto dshape_len = dshape_vec.size();
+      auto params_len = param_shape_vec.size();
+      for (index_t i = 0; i < params_len; ++i) {
         int proposed_dim = param_shape_vec[i];
         if (proposed_dim == 0) {
           // keep same
-          CHECK_EQ(keep, true) << "After set manual dim, can't keep original dim";
+          CHECK_LT(src_idx, dshape_len);
           tmp.push_back(dshape_vec[src_idx++]);
           new_size /= tmp.back();
-        } else if (proposed_dim < 0) {
+        } else if (proposed_dim == -1) {
           // infer
-          CHECK_LT(neg_idx, 0) << "One and only one dim can be inferred";
-          neg_idx = i;
+          CHECK_LT(inf_idx, 0) << "One and only one dim can be inferred";
+          inf_idx = i;
           tmp.push_back(0);
           src_idx++;
+        } else if (proposed_dim == -2) {
+          // copy all remaining dims from source
+          while (src_idx < dshape_len) {
+            size_t dn = dshape_vec[src_idx++];
+            new_size /= dn;
+            tmp.push_back(dn);
+          }
+        } else if (proposed_dim == -3) {
+          // merge two dims from source
+          CHECK_LT(src_idx, dshape_len-1);
+          size_t d1 = dshape_vec[src_idx++];
+          size_t d2 = dshape_vec[src_idx++];
+          size_t dn = d1 * d2;
+          new_size /= dn;
+          tmp.push_back(dn);
+        } else if (proposed_dim == -4) {
+          // split the source dim s into two dims
+          // read the left dim and then the right dim (either can be -1)
+          CHECK_LT(i + 2, params_len);
+          CHECK_LT(src_idx, dshape_len);
+          size_t d0 = dshape_vec[src_idx++];
+          int d1 = param_shape_vec[++i];
+          int d2 = param_shape_vec[++i];
+          CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
+          if (d1 == -1) d1 = d0 / d2;
+          if (d2 == -1) d2 = d0 / d1;
+          CHECK_EQ(d1 * d2, d0) <<
+            "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
+          new_size /= d0;
+          tmp.push_back(d1);
+          tmp.push_back(d2);
         } else {
           // greater than 0, new shape
           CHECK_EQ(new_size % proposed_dim, 0) << "Illegal dim setting, can't be divided.";
           tmp.push_back(proposed_dim);
           new_size /= proposed_dim;
-          // after set manual shape, can't keep same
-          if (param_shape_vec.size() != dshape_vec.size()) {
-            keep = false;
-          } else {
-            src_idx++;
-          }
+          src_idx++;
         }
       }
 
-      if (neg_idx >= 0) {
-        tmp[neg_idx] = new_size;
+      if (inf_idx >= 0) {
+        tmp[inf_idx] = new_size;
       }
       if (param_.reverse) {
         std::reverse(param_shape_vec.begin(), param_shape_vec.end());
@@ -262,15 +303,15 @@ class ReshapeProp : public OperatorProperty {
       TShape oshape(tmp.begin(), tmp.end());
       CHECK_EQ(oshape.Size(), dshape.Size())
         << "Target shape size is different to source. "
-        << "Target: " << param_.target_shape.Size()
-        << "\nSource: " << dshape.Size();
+        << "Target: " << oshape
+        << "\nSource: " << dshape;
       out_shape->clear();
       out_shape->push_back(oshape);
     } else {
       LOG(INFO) << "Using target_shape will be deprecated.";
       TShape oshape = param_.target_shape;
       int neg_count = 0;
-      index_t neg_idx = 0;
+      index_t inf_idx = 0;
       index_t start_idx = param_.keep_highest ? 1 : 0;
       if (param_.keep_highest) {
         oshape[0] = dshape[0];
@@ -278,12 +319,12 @@ class ReshapeProp : public OperatorProperty {
       for (index_t i = start_idx; i < oshape.ndim(); ++i) {
         if (oshape[i] == 0) {
           neg_count++;
-          neg_idx = i;
+          inf_idx = i;
         }
       }
       if (neg_count == 1) {
-        oshape[neg_idx] = 1;
-        oshape[neg_idx] = dshape.Size() / oshape.Size();
+        oshape[inf_idx] = 1;
+        oshape[inf_idx] = dshape.Size() / oshape.Size();
       }
 
       CHECK(oshape.Size() == dshape.Size())

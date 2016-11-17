@@ -1,5 +1,5 @@
-# Auto Encoders
-You can get the source code for Auto Encoders with MXNet example [here](https://github.com/dmlc/mxnet/tree/master/example/autoencoder)
+# Autoencoders
+Get the source code for an example of autoencoders running on MXNet on GitHub in the [autoencoder](https://github.com/dmlc/mxnet/tree/master/example/autoencoder) folder.
 
-# Recommended Next Steps
+## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

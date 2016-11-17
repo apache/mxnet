@@ -3,7 +3,6 @@ KVStore API
 
 * [Basic Push and Pull](#basic-push-and-pull)
 * [Interface for list key-value pairs](#interface-for-list-key-value-pairs)
-* [Multiple machines]() TODO
 
 ## Basic Push and Pull
 
@@ -12,7 +11,7 @@ Basic operation over multiple devices (gpus) on a single machine.
 ### Initialization
 
 Let's first consider a simple example. It initializes
-a (`int`, `NDAarray`) pair into the store, and then pull the value out.
+a (`int`, `NDarray`) pair into the store, and then pulls the value out.
 
 ```python
 >>> kv = mx.kv.create('local') # create a local kv store.

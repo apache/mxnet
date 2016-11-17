@@ -34,7 +34,7 @@ Data loading is to load the packed data into RAM. One ultimate goal is to load a
 
 Since the training of deep neural network always involves huge amount of data, the format we choose should works efficient and convenient in such scenario.
 
-To achieve the goals described in insight, we need to pack binary data into a splitable format. In MXNet, we use binary recordIO format implemented in dmlc-core as our basic data saving format.
+To achieve the goals described in insight, we need to pack binary data into a splittable format. In MXNet, we use binary recordIO format implemented in dmlc-core as our basic data saving format.
 
 ### Binary Record
 

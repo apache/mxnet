@@ -1,16 +1,20 @@
-# NDArray: Vectorized tensor computations on CPUs and GPUs
+# NDArray: Vectorized Tensor Computations on CPUs and GPUs
 
 `NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations.
-Users can perform usual calculations as on R"s array, but with two additional features:
+Users can perform usual calculations as on a R"s array, but with two additional features:
 
-1.  **multiple devices**: all operations can be run on various devices including
-CPU and GPU
-2. **automatic parallelization**: all operations are automatically executed in
-   parallel with each other
 
-## Create and Initialization
 
-Let"s create `NDArray` on either GPU or CPU
+- Multiple devices: All operations can be run on various devices including
+CPUs and GPUs.
+
+
+- Automatic parallelization: All operations are automatically executed in
+   parallel with each other.
+
+## Create and Initialize
+
+Let"s create `NDArray` on either a GPU or a CPU:
 
 
 ```r
@@ -28,8 +32,10 @@ b <- mx.nd.zeros(c(2, 3), mx.cpu()) # create a 2-by-3 matrix on cpu
 # c <- mx.nd.zeros(c(2, 3), mx.gpu(0)) # create a 2-by-3 matrix on gpu 0, if you have CUA enabled.
 ```
 
-As a side note, normally for CUDA enabled devices, the device id of GPU starts from 0.
-So that is why we passed in 0 to GPU id. We can also initialize an `NDArray` object in various ways:
+Typically for CUDA-enabled devices, the device id of a GPU starts from 0.
+That's why we passed in 0 to the GPU id. 
+
+We can initialize an `NDArray` object in various ways:
 
 
 ```r
@@ -38,7 +44,7 @@ b <- mx.rnorm(c(4, 5))
 c <- mx.nd.array(1:5)
 ```
 
-To check the numbers in an `NDArray`, we can simply run
+To check the numbers in an `NDArray`, we can simply run:
 
 
 ```r
@@ -61,11 +67,11 @@ b
 ## [2,]    1    1    1
 ```
 
-## Basic Operations
+## Performing Basic Operations
 
-### Elemental-wise operations
+### Elemental-wise Operations
 
-You can perform elemental-wise operations on `NDArray` objects:
+You can perform elemental-wise operations on `NDArray` objects, as follows:
 
 
 ```r
@@ -112,8 +118,7 @@ as.array(d)
 ## [2,] -3.9375 -3.9375 -3.9375 -3.9375
 ```
 
-If two `NDArray`s sit on different divices, we need to explicitly move them
-into the same one. For instance:
+If two `NDArray`s are located on different devices, we need to explicitly move them to the same one. For instance:
 
 
 ```r
@@ -123,7 +128,7 @@ c <- mx.nd.copyto(a, mx.gpu()) * b
 as.array(c)
 ```
 
-### Load and Save
+### Loading and Saving
 
 You can save a list of `NDArray` object to your disk with `mx.nd.save`:
 
@@ -133,7 +138,7 @@ a <- mx.nd.ones(c(2, 3))
 mx.nd.save(list(a), "temp.ndarray")
 ```
 
-You can also load it back easily:
+You can load it back easily:
 
 
 ```r
@@ -147,8 +152,7 @@ as.array(a[[1]])
 ## [2,]    1    1    1
 ```
 
-In case you want to save data to the distributed file system such as S3 and HDFS,
-we can directly save to and load from them. For example:
+We can directly save data to and load it from a distributed file system, such as Amazon S3 and HDFS:
 
 
 ```r
@@ -158,15 +162,14 @@ mx.nd.save(list(a), "hdfs///users/myname/mydata.bin")
 
 ## Automatic Parallelization
 
-`NDArray` can automatically execute operations in parallel. It is desirable when we
-use multiple resources such as CPU, GPU cards, and CPU-to-GPU memory bandwidth.
+`NDArray` can automatically execute operations in parallel. Automatic parallelization is useful when
+using multiple resources, such as CPU cards, GPU cards, and CPU-to-GPU memory bandwidth.
 
-For example, if we write `a <- a + 1` followed by `b <- b + 1`, and `a` is on CPU while
-`b` is on GPU, then want to execute them in parallel to improve the
-efficiency. Furthermore, data copy between CPU and GPU are also expensive, we
-hope to run it parallel with other computations as well.
+For example, if we write `a <- a + 1` followed by `b <- b + 1`, and `a` is on a CPU and 
+`b` is on a GPU, executing them in parallel improves
+efficiency. Furthermore, because copying data between CPUs and GPUs are also expensive, running in parallel with other computations further increases efficiency.
 
-However, finding the codes can be executed in parallel by eye is hard. In the
+It's hard to find the code that can be executed in parallel by eye. In the
 following example, `a <- a + 1` and `c <- c * 3` can be executed in parallel, but `a <- a + 1` and
 `b <- b * 3` should be in sequential.
 
@@ -181,24 +184,20 @@ c <- c * 3
 ```
 
 Luckily, MXNet can automatically resolve the dependencies and
-execute operations in parallel with correctness guaranteed. In other words, we
-can write program as by assuming there is only a single thread, while MXNet will
-automatically dispatch it into multi-devices, such as multi GPU cards or multi
-machines.
+execute operations in parallel accurately. This allows us to write our program assuming there is only a single thread. MXNet will
+automatically dispatch the program to multiple devices.
 
-It is achieved by lazy evaluation. Any operation we write down is issued into a
+MXNet achieves this with lazy evaluation. Each operation is issued to an
 internal engine, and then returned. For example, if we run `a <- a + 1`, it
 returns immediately after pushing the plus operator to the engine. This
-asynchronous allows us to push more operators to the engine, so it can determine
-the read and write dependency and find a best way to execute them in
+asynchronous processing allows us to push more operators to the engine. It determines
+the read and write dependencies and the best way to execute them in
 parallel.
 
-The actual computations are finished if we want to copy the results into some
-other place, such as `as.array(a)` or `mx.nd.save(a, "temp.dat")`. Therefore, if we
-want to write highly parallelized codes, we only need to postpone when we need
+The actual computations are finished, allowing us to copy the results someplace else, such as `as.array(a)` or `mx.nd.save(a, "temp.dat")`. To write highly parallelized codes, we only need to postpone when we need
 the results.
 
-# Recommended Next Steps
+## Next Steps
 * [Symbol](http://mxnet.io/tutorials/r/symbol.html)
 * [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
 * [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)

@@ -1,28 +1,30 @@
 # Speech LSTM
-You can get the source code for below example [here](https://github.com/dmlc/mxnet/tree/master/example/speech-demo)
+You can get the source code for these examples on [GitHub](https://github.com/dmlc/mxnet/tree/master/example/speech-demo).
 
-Speech Acoustic Modeling Example
-================================
-This folder contains examples for speech recognition.
+## Speech Acoustic Modeling Example
 
-- [lstm_proj.py](lstm.py): Functions for building a LSTM Network with/without projection layer.
+The examples folder contains examples for speech recognition:
+
+- [lstm_proj.py](lstm.py): Functions for building an LSTM network with and without a projection layer.
 - [io_util.py](io_util.py): Wrapper functions for `DataIter` over speech data.
-- [train_lstm_proj.py](train_lstm_proj.py): Script for training LSTM acoustic model.
-- [decode_mxnet.py](decode_mxnet.py): Script for decoding LSTMP acoustic model.
-- [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. Can be used as a template for writing other configuration files.
-- [python_wrap](python_wrap): C wrappers for Kaldi C++ code, this is built into a .so. Python code that loads the .so and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
+- [train_lstm_proj.py](train_lstm_proj.py): A script for training an LSTM acoustic model.
+- [decode_mxnet.py](decode_mxnet.py): A script for decoding an LSTMP acoustic model.
+- [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. You can use it as a template for writing other configuration files.
+- [python_wrap](python_wrap): C wrappers for Kaldi C++ code, built into an .so file. Python code that loads the .so file and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
 
 Connect to Kaldi:
-- [decode_mxnet.sh](decode_mxnet.sh): called by Kaldi to decode a acoustic model trained by mxnet (please select the `simple` method for decoding).
+
+- [decode_mxnet.sh](decode_mxnet.sh): Called by Kaldi to decode an acoustic model trained by MXNet (select the `simple` method for decoding).
 
 A full receipt:
-- [run_ami.sh](run_ami.sh): a full receipt to train and decode acoustic model on AMI. It takes features and alignment from Kaldi to train an acoustic model and decode it.
 
-To reproduce the results, use the following steps.
+- [run_ami.sh](run_ami.sh): A full receipt to train and decode an acoustic model on AMI. It takes features and alignment from Kaldi to train an acoustic model and decode it.
+
+To create the speech acoustic modeling example, use the following steps.
 
 ### Build Kaldi
 
-Build Kaldi as **shared libraties** if you have not already done so.
+Build Kaldi as shared libraies if you have not already done so.
 
 ```bash
 cd kaldi/src
@@ -31,10 +33,10 @@ make depend
 make
 ```
 
-### Build Python Wrapper
+### Build the Python Wrapper
 
 1. Copy or link the attached `python_wrap` folder to `kaldi/src`.
-2. Compile python_wrap/
+2. Compile python_wrap/.
 
 ```
 cd kaldi/src/python_wrap/
@@ -43,9 +45,9 @@ make
 
 ### Extract Features and Prepare Frame-level Labels
 
-The acoustic models use *Mel filter-bank* or *MFCC* as input features. It also need to use Kaldi to do force-alignment to generate frame-level labels from the text transcriptions. For example, if you want to work on the `AMI` data `SDM1`. You can run `kaldi/egs/ami/s5/run_sdm.sh`. You will need to do some configuration of paths in `kaldi/egs/ami/s5/cmd.sh` and `kaldi/egs/ami/s5/run_sdm.sh` before you can run the examples. Please refer to Kaldi's document for more details.
+The acoustic models use Mel filter-bank or MFCC as input features. They also need to use Kaldi to perform force-alignment to generate frame-level labels from the text transcriptions. For example, if you want to work on the `AMI` data `SDM1`, you can run `kaldi/egs/ami/s5/run_sdm.sh`. Before you can run the examples, you need to configure some paths in `kaldi/egs/ami/s5/cmd.sh` and `kaldi/egs/ami/s5/run_sdm.sh`. Refer to Kaldi's documentation for details.
 
-The default `run_sdm.sh` script generates the force-alignment labels in their stage 7, and saves the force-aligned labels in `exp/sdm1/tri3a_ali`. The default script generates MFCC features (13-dimensional). You can try training with the MFCC features, or you can create Mel filter bank features by your self. For example, a script like this can be used to compute Mel filter bank features using Kaldi.
+The default `run_sdm.sh` script generates the force-alignment labels in their stage 7, and saves the force-aligned labels in `exp/sdm1/tri3a_ali`. The default script generates MFCC features (13-dimensional). You can try training with the MFCC features, or you can create Mel filter-bank features by yourself. For example, you can use a script like this to compute Mel filter-bank features using Kaldi:
 
 ```bash
 #!/bin/bash -u
@@ -79,28 +81,29 @@ for dset in train dev eval; do
   mv $data_dir/$dset/feats-cmvn.scp $data_dir/$dset/feats.scp
 done
 ```
-Here `apply-cmvn` was for mean-variance normalization. The default setup was applied per speaker. A more common was doing mean-variance normalization for the whole corpus and then feed to the neural networks:
+`apply-cmvn` provides mean-variance normalization. The default setup was applied per speaker. It's more common to perform mean-variance normalization for the whole corpus, and then feed the results to the neural networks:
+
 ```
  compute-cmvn-stats scp:data/sdm1/train_fbank/feats.scp data/sdm1/train_fbank/cmvn_g.ark
  apply-cmvn --norm-vars=true data/sdm1/train_fbank/cmvn_g.ark scp:data/sdm1/train_fbank/feats.scp ark,scp:data/sdm1/train_fbank_gcmvn/feats.ark,data/sdm1/train_fbank_gcmvn/feats.scp
 ```
-Note that kaldi always try to find features in `feats.scp`. So make sure the normalized features organized as Kaldi way during decoding.
+Note that Kaldi always tries to find features in `feats.scp`. Ensure that the normalized features are organized as Kaldi expects them during decoding.
 
-Finally, you need to put the features and labels together in a file so that MXNet can find them. More specifically, for each data set (train, dev, eval), you will need to create a file like `train_mxnet.feats`, will the following contents:
+Finally, put the features and labels together in a file so that MXNet can find them. More specifically, for each data set (train, dev, eval), you will need to create a file similar to `train_mxnet.feats`, with the following contents:
 
 ```
 TRANSFORM scp:feat.scp
 scp:label.scp
 ```
 
-Here the `TRANSFORM` is the transformation you want to apply to the features. By default we use `NO_FEATURE_TRANSFORM`. The `scp:` syntax is from Kaldi. The `feat.scp` is typically the file from `data/sdm1/train/feats.scp`, and the `label.scp` is converted from the force-aligned labels located in `exp/sdm1/tri3a_ali`. Because the force-alignments are only generated on the training data, we split the training set into 90/10 parts, and use the 1/10 hold-out as the dev set (validation set). The script [run_ami.sh](run_ami.sh) will automatically do the spliting and format the file for MXNet. Please set the path in that script correctly before running. The [run_ami.sh](run_ami.sh) script will actually run the full pipeline including training the acoustic model and decoding. So you can skip the following steps if that scripts successfully runs.
+`TRANSFORM` is the transformation you want to apply to the features. By default, we use `NO_FEATURE_TRANSFORM`. The `scp:` syntax is from Kaldi. `feat.scp` is typically the file from `data/sdm1/train/feats.scp`, and `label.scp` is converted from the force-aligned labels located in `exp/sdm1/tri3a_ali`. Because the force-alignments are generated only on the training data, we split the training set in two, using a 90/10 ratio, and then use the 1/10 holdout as the dev set (validation set). The script [run_ami.sh](run_ami.sh) automatically splits and formats the file for MXNet. Before running it, set the path in the script correctly. The [run_ami.sh](run_ami.sh) script actually runs the full pipeline, including training the acoustic model and decoding. If the scripts ran successfully, you can skip the following sections.
 
 ### Run MXNet Acoustic Model Training
 
-1. Go back to this speech demo directory in MXNet. Make a copy of `default.cfg` and edit necessary items like the path to the dataset you just prepared.
-2. Run `python train_lstm.py --configfile=your-config.cfg`. You can do `python train_lstm.py --help` to see the helps. All the configuration parameters can be set in `default.cfg`, customized config file, and through command line (e.g. `--train_batch_size=50`), and the latter values overwrite the former ones.
+1. Return to the speech demo directory in MXNet. Make a copy of `default.cfg`, and edit the necessary parameters, such as the path to the dataset you just prepared.
+2. Run `python train_lstm.py --configfile=your-config.cfg`. For help, use `python train_lstm.py --help`. You can set all of the configuration parameters in `default.cfg`, the customized config file, and through the command line (e.g., using `--train_batch_size=50`). The latter values overwrite the former ones.
 
-Here are some example outputs that we got from training on the TIMIT dataset.
+Here are some example outputs from training on the TIMIT dataset:
 
 ```
 Example output for TIMIT:
@@ -133,21 +136,21 @@ bucket of len 800 : 0 samples
 2016-04-21 20:05:56,568 Epoch[2] Validation-Acc_exlude_padding=0.548100
 ```
 
-The final frame accuracy was around 62%.
+The final frame accuracy was approximately 62%.
 
-### Run decode on the trained acoustic model
+### Run Decode on the Trained Acoustic Model
 
-1. Estimate senone priors by run `python make_stats.py --configfile=your-config.cfg | copy-feats ark:- ark:label_mean.ark` (edit necessary items like the path to the training dataset). It will generate the label counts in `label_mean.ark`.
-2. Link to necessary Kaldi decode setup e.g. `local/` and `utils/` and Run `./run_ami.sh --model prefix model --num_epoch num`.
+1. Estimate senone priors by running `python make_stats.py --configfile=your-config.cfg | copy-feats ark:- ark:label_mean.ark` (edit necessary items, such as the path to the training dataset). This command generates the label counts in `label_mean.ark`.
+2. Link to the necessary Kaldi decode setup, e.g., `local/` and `utils/` and run `./run_ami.sh --model prefix model --num_epoch num`.
 
-Here are the results on TIMIT and AMI test set (using all default setup, 3 layer LSTM with projection layers):
+Here are the results for the TIMIT and AMI test sets (using the default setup, three-layer LSTM with projection layers):
 
-| Corpus | WER |
-|--------|-----|
-|TIMIT   | 18.9|
-|AMI     | 51.7 (42.2) |
+	| Corpus | WER |
+	|--------|-----|
+	|TIMIT   | 18.9|
+	|AMI     | 51.7 (42.2) |
 
-Note that for AMI 42.2 was evaluated non-overlapped speech. Kaldi-HMM baseline was 67.2% and DNN was 57.5%.
+For AMI 42.2 was evaluated non-overlapped speech. The Kaldi-HMM baseline was 67.2%, and DNN was 57.5%.
 
-# Recommended Next Steps
+## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

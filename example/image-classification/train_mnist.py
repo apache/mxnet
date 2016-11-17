@@ -14,7 +14,7 @@ def _download(data_dir):
        (not os.path.exists('t10k-labels-idx1-ubyte')):
         import urllib, zipfile
         zippath = os.path.join(os.getcwd(), "mnist.zip")
-        urllib.urlretrieve("http://data.dmlc.ml/mxnet/data/mnist.zip", zippath)
+        urllib.urlretrieve("http://data.mxnet.io/mxnet/data/mnist.zip", zippath)
         zf = zipfile.ZipFile(zippath, "r")
         zf.extractall()
         zf.close()
