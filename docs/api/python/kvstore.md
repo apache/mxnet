@@ -3,7 +3,6 @@ KVStore API
 
 * [Basic Push and Pull](#basic-push-and-pull)
 * [Interface for list key-value pairs](#interface-for-list-key-value-pairs)
-* [Multiple machines]() TODO
 
 ## Basic Push and Pull
 

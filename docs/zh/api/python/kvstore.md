@@ -3,7 +3,6 @@ KVStore API
 
 * [基本的 Push 和 Pull 操作](#basic-push-and-pull)
 * [key-value pairs 列表的接口](#interface-for-list-key-value-pairs)
-* [多机]() TODO
 
 ## Basic Push and Pull
 
@@ -117,7 +116,7 @@ update on key: 9
 ```eval_rst
 .. raw:: html
 
-    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+    <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 ```
 
 
