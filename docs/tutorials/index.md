@@ -9,7 +9,6 @@ Applications that intelligently modify, classify and segment images and video.
 #### Python
 
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/python/mnist.html)
-
 *A simple example of classifying handwritten digits from the MNIST dataset using a MLP and convolutional network*
 
 - [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html) 

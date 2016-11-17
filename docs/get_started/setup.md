@@ -165,11 +165,12 @@ Install the dependencies with the following commands:
 ```
 And then: 
 ```bash
-brew update
-brew install git
-brew tap homebrew/science
-brew info opencv
-brew install opencv
+	brew update
+	brew install pkg-config
+	brew install git
+	brew tap homebrew/science
+	brew info opencv
+	brew install opencv
 ```
 After you have installed the dependencies, use one of the following options to pull the MXNet source code from Git and build MXNet. Both options produce a library called ```libmxnet.so```.
 
