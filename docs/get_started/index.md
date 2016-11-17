@@ -54,7 +54,7 @@ Parallelizes both I/O and computation with an optimized C++ backend engine, and 
 
 &nbsp;
 
-Refer [Setup and Installation](http://mxnet.io/get_started/setup.html) guide to set up and start using MXNet.
+Refer [Setup and Installation](http://localhost:8008//get_started/setup.html) guide to set up and start using MXNet.
 
 
 &nbsp;
