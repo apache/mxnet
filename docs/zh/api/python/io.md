@@ -168,7 +168,7 @@ dataiter = mx.io.ImageRecordIter(
 ```eval_rst
 .. raw:: html
 
-    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+    <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 ```
 
 
