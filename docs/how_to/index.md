@@ -16,5 +16,15 @@ This topic provides links to guidelines for using MXNet.
 - [Use Torch from MXNet](torch.md)
 - [Set environment variables for MXNet](env_var.md)
 
+## Python Tutorials
+- [NDArray](http://mxnet.io/tutorials/python/ndarray.html)
+- [Symbol](http://mxnet.io/tutorials/python/symbol.html)
+- [KVStore](http://mxnet.io/tutorials/python/kvstore.html)
+
+## R Tutorials
+- [NDArray](http://mxnet.io/tutorials/r/ndarray.html)
+- [Symbol](http://mxnet.io/tutorials/r/symbol.html)
+- [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
+
 ## Frequently Ask Questions
 - [FAQ](faq.md)
