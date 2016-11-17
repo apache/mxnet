@@ -9,6 +9,7 @@ Applications that intelligently modify, classify and segment images and video.
 #### Python
 
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/python/mnist.html)
+
 *A simple example of classifying handwritten digits from the MNIST dataset using a MLP and convolutional network*
 
 - [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html) 
@@ -55,7 +56,7 @@ Applications that summarize, generate and understand text based data
 #### R
 
 - [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
-*A simple example using an LSTM network to generate text, charecter by charecter, in the style of Shakespeare*
+*A simple example of using an LSTM network to generate text, charecter by charecter, in the style of Shakespeare*
 
 ### Speech Recognition
 
