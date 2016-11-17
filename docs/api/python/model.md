@@ -8,7 +8,7 @@ modules to make neural network training easy.
 * [Save the Model](#save-the-model)
 * [Periodically Checkpoint](#periodically-checkpoint)
 * [Initializer API Reference](#initializer-api-reference)
-* [Evaluation Metric API Reference](#initializer-api-reference)
+* [Evaluation Metric API Reference](#evaluation-metric-api-reference)
 * [Optimizer API Reference](#optimizer-api-reference)
 
 ## Train a Model
