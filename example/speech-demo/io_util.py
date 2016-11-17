@@ -61,11 +61,12 @@ class SimpleIter(mx.io.DataIter):
         choose to ignore the padding by detecting the zero-labels.
     """
     def __init__(self, train_sets, batch_size,
-            init_states, delay=5, feat_dim=40, label_dim=1955, label_mean_sets=None,
-            data_name='data', label_name='softmax_label', has_label=True, load_label_mean=True):
+            init_states, delay=5, feat_dim=40, label_dim=1955,
+            label_mean_sets=None, data_name='data',
+            label_name='softmax_label', has_label=True, load_label_mean=True):
 
-        self.train_sets=train_sets
-        self.label_mean_sets=label_mean_sets
+        self.train_sets = train_sets
+        self.label_mean_sets = label_mean_sets
         self.train_sets.initialize_read()
 
         self.data_name = data_name
@@ -84,7 +85,7 @@ class SimpleIter(mx.io.DataIter):
             (feats, tgts, utt_id) = self.label_mean_sets.load_next_seq()
 
             self.label_mean = feats/np.sum(feats)
-            for i,v in enumerate(feats):
+            for i, v in enumerate(feats):
                 if v <= 1.0:
                     self.label_mean[i] = 1
 
@@ -132,7 +133,7 @@ class SimpleIter(mx.io.DataIter):
                     break
 
             if self.has_label:
-                self.data[i_bucket].append((feats,tgts))
+                self.data[i_bucket].append((feats, tgts))
             else:
                 self.data[i_bucket].append(feats)
             self.utt_id[i_bucket].append(utt_id)
@@ -395,7 +396,7 @@ class TruncatedSentenceIter(mx.io.DataIter):
                     # reset the states
                     for state in self.init_state_arrays:
                         if self.time_major:
-                            state[:,i:i+1,:] = 0.1
+                            state[:, i:i+1, :] = 0.1
                         else:
                             state[i:i+1] = 0.1
                     # load new sentence
@@ -427,19 +428,19 @@ class TruncatedSentenceIter(mx.io.DataIter):
                                          fea_utt.shape[0]))
                     n_take = idx_take.stop - idx_take.start
                     if self.time_major:
-                        np_data_buffer[:n_take,i,:] = fea_utt[idx_take]
-                        np_label_buffer[:n_take,i] = self.labels[idx][idx_take]
+                        np_data_buffer[:n_take, i, :] = fea_utt[idx_take]
+                        np_label_buffer[:n_take, i] = self.labels[idx][idx_take]
                     else:
-                        np_data_buffer[i,:n_take,:] = fea_utt[idx_take]
-                        np_label_buffer[i,:n_take] = self.labels[idx][idx_take]
+                        np_data_buffer[i, :n_take, :] = fea_utt[idx_take]
+                        np_label_buffer[i, :n_take] = self.labels[idx][idx_take]
  
                     if n_take < self.truncate_len:
                         if self.time_major:
-                            np_data_buffer[n_take:,i,:] = 0
-                            np_label_buffer[n_take:,i] = 0
+                            np_data_buffer[n_take:, i, :] = 0
+                            np_label_buffer[n_take:, i] = 0
                         else:
-                            np_data_buffer[i,n_take:,:] = 0
-                            np_label_buffer[i,n_take:] = 0
+                            np_data_buffer[i, n_take:, :] = 0
+                            np_label_buffer[i, n_take:] = 0
  
                         effective_sample_count -= self.truncate_len - n_take
 
@@ -454,7 +455,8 @@ class TruncatedSentenceIter(mx.io.DataIter):
             self.data[0][:] = np_data_buffer
             self.label[0][:] = np_label_buffer
  
-            data_batch = SimpleBatch(data_names, self.data + self.init_state_arrays,
+            data_batch = SimpleBatch(data_names, 
+                                     self.data + self.init_state_arrays,
                                      label_names, self.label, bucket_key=None,
                                      utt_id=utt_id_buffer,
                                      effective_sample_count=effective_sample_count)
@@ -488,7 +490,7 @@ class BucketSentenceIter(mx.io.DataIter):
         max_bucket = buckets[i_max_bucket]
 
         if has_label != True:
-            buckets = [ i for i in range(1,max_bucket) ]
+            buckets = [i for i in range(1, max_bucket)]
             i_max_bucket = len(buckets)-1
             max_bucket = buckets[i_max_bucket]
 
