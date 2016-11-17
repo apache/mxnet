@@ -7,7 +7,7 @@ You can get the source code for this example from [GitHub](https://github.com/dm
 
 ## Sample Results
 
-![fcn-xs pasval_voc result](https://github.com/dmlc/web-data/blob/master/mxnet/image/fcnxs-example-result.jpg)
+![fcn-xs pasval_voc result](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/fcnxs-example-result.jpg)
 
 We trained a simple fcn-xs model, using the following parameters:
 
