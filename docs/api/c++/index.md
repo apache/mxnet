@@ -1,6 +1,6 @@
 # MXNet - C++ API
 
-Please refer below for Namespaces, Classes and code files of MXNet C++ package.
+For namespaces, classes, and code files for the MXNet C++ package, see the  following:
 
 * [Namespaces](http://mxnet.io/doxygen/namespaces.html)
 * [Classes](http://mxnet.io/doxygen/annotated.html)
