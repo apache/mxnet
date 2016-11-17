@@ -68,10 +68,6 @@ For users of Python on Amazon Linux and Ubuntu operating systems, MXNet provides
 
 To contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/how_to/contribute.html).
 
-### Quick Installation on Amazon Linux
-
-```<Coming Soon>```
-
 ### Quick Installation on Ubuntu
 
 The simple installation scripts set up MXNet for Python on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/MXNet```.
