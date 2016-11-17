@@ -91,7 +91,7 @@ Then synchronize the folder to other the other computers `/tmp/mxnet` before run
 ```
 
 For more launch options, for example, using `YARN`, and information about how to write a distributed training
-program, see this [tutorial](http://mxnet.readthedocs.io/en/latest/how_to/multi_devices.html).
+program, see this [tutorial](http://mxnet.io/how_to/multi_devices.html).
 
 ## Generating Predictions
 You have several options for generating predictions:
@@ -106,7 +106,7 @@ You have several options for generating predictions:
 
 There are two ways to feed data into MXNet:
 
-- Pack all examples into one or more compact `recordio` files. For more information, see this [step-by-step tutorial](http://mxnet.readthedocs.io/en/latest/api/python/io.html#create-dataset-using-recordio) and [documentation](http://mxnet.readthedocs.io/en/latest/architecture/note_dat). Avoid the common mistake of neglecting to shuffle the image list during packing. This causes training to fail. For example, ```accuracy``` keeps 0.001 for several rounds.
+- Pack all examples into one or more compact `recordio` files. For more information, see this [step-by-step tutorial](http://mxnet.io/api/python/io.html#create-dataset-using-recordio) and [documentation](http://mxnet.io/architecture/note_data_loading.html). Avoid the common mistake of neglecting to shuffle the image list during packing. This causes training to fail. For example, ```accuracy``` keeps 0.001 for several rounds.
 
 	**Note:** We automatically download the small datasets, such as `mnist` and `cifar10`.
 
