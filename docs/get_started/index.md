@@ -82,7 +82,7 @@ Without a hidden layer, the MLP predicts the label probabilities as follows:
 
  ```eval_rst
     .. math ::
-    \textrm{softmax}(W x + b)
+		\textrm{softmax}(W x + b)
  ```
 
 *W* is a 784-by-10 weight matrix and *b* is a 10-length bias vector. The
