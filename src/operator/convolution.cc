@@ -6,6 +6,14 @@
 */
 
 #include "./convolution-inl.h"
+#if MXNET_USE_MKL2017 == 1
+#include <mxnet/mkl_memory.h>
+#include "./mkl/mkl_memory-inl.h"
+#include "./mkl/mkl_convolution-inl.h"
+#endif  // MXNET_USE_MKL2017
+#if MXNET_USE_NNPACK == 1
+#include "./nnpack/nnpack_convolution-inl.h"
+#endif  // MXNET_USE_NNPACK
 
 namespace mxnet {
 namespace op {
@@ -15,6 +23,31 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
+#if MXNET_USE_MKL2017 == 1
+  if ((param.dilate[0] == 1 && param.dilate[1] == 1)
+      && param.kernel.ndim() == 2) {
+    switch (dtype) {
+    case mshadow::kFloat32:
+      return new MKLConvolutionOp<cpu, float>(param);
+    case mshadow::kFloat64:
+      return new MKLConvolutionOp<cpu, double>(param);
+    default:
+      break;
+    }
+  }
+#endif
+#if MXNET_USE_NNPACK == 1
+  if ((param.dilate[0] == 1 && param.dilate[1] == 1)
+      && param.kernel.ndim() == 2 && (!param.no_bias)
+      && param.num_group == 1) {
+    switch (dtype) {
+    case mshadow::kFloat32:
+      return new NNPACKConvolutionOp<cpu, float>(param);
+    default:
+      break;
+    }
+  }
+#endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConvolutionOp<cpu, DType>(param);
   })

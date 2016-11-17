@@ -52,7 +52,7 @@ class FactorScheduler(LearningRateScheduler):
             Current iteration count
         """
 
-        if self.init == False:
+        if not self.init:
             self.init = True
             self.old_lr = self.base_lr
         lr = self.base_lr * math.pow(self.factor, int(iteration / self.step))
@@ -61,5 +61,3 @@ class FactorScheduler(LearningRateScheduler):
             logging.info("At Iteration [%d]: Swith to new learning rate %.5f",
                          iteration, lr)
         return lr
-
-

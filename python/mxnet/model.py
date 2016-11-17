@@ -3,9 +3,11 @@
 """MXNet model module"""
 from __future__ import absolute_import
 
-import numpy as np
 import time
 import logging
+from collections import namedtuple
+import numpy as np
+
 from . import io
 from . import nd
 from . import symbol as sym
@@ -14,9 +16,10 @@ from . import metric
 from . import kvstore as kvs
 from .context import Context, cpu
 from .initializer import Uniform
-from collections import namedtuple
 from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
+from .io import DataDesc
+from .base import mx_real_t
 
 BASE_ESTIMATOR = object
 
@@ -46,7 +49,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
     arg_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's weights.
     """
-
+    update_on_kvstore = True
     if kvstore is None:
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
@@ -57,21 +60,17 @@ def _create_kvstore(kvstore, num_device, arg_params):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            if kvstore is 'local':
-                # automatically select a proper local
-                max_size = max(np.prod(param.shape) for param in arg_params.values())
-                if max_size < 1024 * 1024 * 16:
-                    kvstore = 'local_update_cpu'
-                else:
-                    kvstore = 'local_allreduce_cpu'
-                logging.info('Auto-select kvstore type = %s', kvstore)
             kv = kvs.create(kvstore)
+            if kvstore is 'local':
+            # automatically select a proper local
+                max_size = max(np.prod(param.shape) for param in
+                               arg_params.values())
+                if max_size > 1024 * 1024 * 16:
+                    update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
-    # detect whether or not update weight on kvstore
-    update_on_kvstore = True
-    if not kv or 'local_allreduce' in kv.type:
+    if kv is None:
         update_on_kvstore = False
 
     return (kv, update_on_kvstore)
@@ -79,8 +78,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
                         update_on_kvstore):
     """ Initialize kvstore"""
-    for idx in range(len(param_arrays)):
-        param_on_devs = param_arrays[idx]
+    for idx, param_on_devs in enumerate(param_arrays):
         kvstore.init(idx, arg_params[param_names[idx]])
 
         if update_on_kvstore:
@@ -126,6 +124,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         eval_batch_end_callback=None, sym_gen=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
+
     Parameters
     ----------
     symbol : Symbol
@@ -262,7 +261,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                     do_reset = False
                     break
 
-            if do_reset == True:
+            if do_reset:
                 logger.info('Epoch[%d] Resetting Data Iterator', epoch)
                 train_data.reset()
 
@@ -329,9 +328,11 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
     - ``prefix-symbol.json`` will be saved for symbol.
     - ``prefix-epoch.params`` will be saved for parameters.
     """
-    symbol.save('%s-symbol.json' % prefix)
-    save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+    if symbol is not None:
+        symbol.save('%s-symbol.json' % prefix)
+
+    save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
+    save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
     param_name = '%s-%04d.params' % (prefix, epoch)
     nd.save(param_name, save_dict)
     logging.info('Saved checkpoint to \"%s\"', param_name)
@@ -519,7 +520,7 @@ class FeedForward(BASE_ESTIMATOR):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _init_predictor(self, input_shapes):
+    def _init_predictor(self, input_shapes, type_dict=None):
         """Initialize the predictor module for running prediction."""
         if self._pred_exec is not None:
             arg_shapes, _, _ = self.symbol.infer_shape(**dict(input_shapes))
@@ -529,7 +530,7 @@ class FeedForward(BASE_ESTIMATOR):
                 return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', **dict(input_shapes))
+            self.ctx[0], grad_req='null', type_dict=type_dict, **dict(input_shapes))
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
         _check_arguments(self.symbol)
@@ -582,6 +583,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def predict(self, X, num_batch=None, return_data=False, reset=True):
         """Run the prediction, always only use one device.
+
         Parameters
         ----------
         X : mxnet.DataIter
@@ -598,7 +600,14 @@ class FeedForward(BASE_ESTIMATOR):
             X.reset()
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for x in X.provide_data:
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
+
+        self._init_predictor(data_shapes, type_dict)
         batch_size = X.batch_size
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
         output_list = [[] for _ in range(len(self._pred_exec.outputs))]
@@ -643,6 +652,7 @@ class FeedForward(BASE_ESTIMATOR):
 
     def score(self, X, eval_metric='acc', num_batch=None, batch_end_callback=None, reset=True):
         """Run the model on X and calculate the score with eval_metric
+
         Parameters
         ----------
         X : mxnet.DataIter
@@ -665,7 +675,14 @@ class FeedForward(BASE_ESTIMATOR):
 
         data_shapes = X.provide_data
         data_names = [x[0] for x in data_shapes]
-        self._init_predictor(data_shapes)
+        type_dict = dict((key, value.dtype) for (key, value) in self.arg_params.items())
+        for x in X.provide_data:
+            if isinstance(x, DataDesc):
+                type_dict[x.name] = x.dtype
+            else:
+                type_dict[x[0]] = mx_real_t
+
+        self._init_predictor(data_shapes, type_dict)
         data_arrays = [self._pred_exec.arg_dict[name] for name in data_names]
 
         for i, batch in enumerate(X):
@@ -765,7 +782,7 @@ class FeedForward(BASE_ESTIMATOR):
         # init optmizer
         if isinstance(self.optimizer, str):
             batch_size = data.batch_size
-            if kvstore and kvstore.type == 'dist_sync':
+            if kvstore and 'dist' in kvstore.type and not '_async' in kvstore.type:
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(self.optimizer,
                                    rescale_grad=(1.0/batch_size),

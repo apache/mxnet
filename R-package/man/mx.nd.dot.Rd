@@ -2,18 +2,18 @@
 % Please edit documentation in R/mxnet_generated.R
 \name{mx.nd.dot}
 \alias{mx.nd.dot}
-\title{Calculate 2D matrix multiplication}
+\title{Calculate dot product of two matrices or two vectors}
 \arguments{
 \item{lhs}{NDArray
-Left operand to the function.}
+Left operand  to the function}
 
 \item{rhs}{NDArray
-Right operand to the function.}
+Right operand to the function}
 }
 \value{
 out The result mx.ndarray
 }
 \description{
-Calculate 2D matrix multiplication
+Calculate dot product of two matrices or two vectors
 }
 

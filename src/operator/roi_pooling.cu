@@ -10,13 +10,6 @@
 #include <algorithm>
 #include <vector>
 
-#define ROIPOOLING_CUDA_CHECK(condition) \
-  /* Code block avoids redefinition of cudaError_t error */ \
-  do { \
-    cudaError_t error = condition; \
-    CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
-  } while (0)
-
 namespace mshadow {
 namespace cuda {
 
@@ -117,16 +110,15 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
   ROIPoolForwardKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
       count, bottom_data, spatial_scale, channels, height, width,
       pooled_height, pooled_width, bottom_rois, top_data, argmax_data);
-  ROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
 }
 
 template<typename Dtype>
-__global__ void ROIPoolBackwardKernel(const int count, const Dtype* top_diff,
-                                      const Dtype* argmax_data, const int num_rois,
-                                      const float spatial_scale, const int channels,
-                                      const int height, const int width,
-                                      const int pooled_height, const int pooled_width,
-                                      Dtype* bottom_diff, const Dtype* bottom_rois) {
+__global__ void ROIPoolBackwardAccKernel(const int count, const Dtype* top_diff,
+                                         const Dtype* argmax_data, const int num_rois,
+                                         const float spatial_scale, const int channels,
+                                         const int height, const int width,
+                                         const int pooled_height, const int pooled_width,
+                                         Dtype* bottom_diff, const Dtype* bottom_rois) {
   for (int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
        index < count;
        index += blockDim.x * gridDim.x * gridDim.y) {
@@ -192,16 +184,16 @@ __global__ void ROIPoolBackwardKernel(const int count, const Dtype* top_diff,
         }
       }
     }
-    bottom_diff[index] = gradient;
+    bottom_diff[index] += gradient;
   }
 }
 
 template<typename Dtype>
-inline void ROIPoolBackward(const Tensor<gpu, 4, Dtype> &in_grad,
-                            const Tensor<gpu, 4, Dtype> &out_grad,
-                            const Tensor<gpu, 2, Dtype> &bbox,
-                            const Tensor<gpu, 4, Dtype> &max_idx,
-                            const float spatial_scale) {
+inline void ROIPoolBackwardAcc(const Tensor<gpu, 4, Dtype> &in_grad,
+                               const Tensor<gpu, 4, Dtype> &out_grad,
+                               const Tensor<gpu, 2, Dtype> &bbox,
+                               const Tensor<gpu, 4, Dtype> &max_idx,
+                               const float spatial_scale) {
   const Dtype *top_diff = out_grad.dptr_;
   const Dtype *bottom_rois = bbox.dptr_;
   Dtype *bottom_diff = in_grad.dptr_;
@@ -218,10 +210,9 @@ inline void ROIPoolBackward(const Tensor<gpu, 4, Dtype> &in_grad,
   dim3 dimBlock(kMaxThreadsPerBlock);
   CheckLaunchParam(dimGrid, dimBlock, "ROIPooling Backward");
   cudaStream_t stream = Stream<gpu>::GetStream(in_grad.stream_);
-  ROIPoolBackwardKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
+  ROIPoolBackwardAccKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
       count, top_diff, argmax_data, num_rois, spatial_scale, channels, height, width,
       pooled_height, pooled_width, bottom_diff, bottom_rois);
-  ROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
 }
 
 }  // namespace cuda
@@ -236,12 +227,12 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
 }
 
 template<typename Dtype>
-inline void ROIPoolBackward(const Tensor<gpu, 4, Dtype> &in_grad,
-                            const Tensor<gpu, 4, Dtype> &out_grad,
-                            const Tensor<gpu, 2, Dtype> &bbox,
-                            const Tensor<gpu, 4, Dtype> &max_idx,
-                            const float spatial_scale) {
-  cuda::ROIPoolBackward(in_grad, out_grad, bbox, max_idx, spatial_scale);
+inline void ROIPoolBackwardAcc(const Tensor<gpu, 4, Dtype> &in_grad,
+                               const Tensor<gpu, 4, Dtype> &out_grad,
+                               const Tensor<gpu, 2, Dtype> &bbox,
+                               const Tensor<gpu, 4, Dtype> &max_idx,
+                               const float spatial_scale) {
+  cuda::ROIPoolBackwardAcc(in_grad, out_grad, bbox, max_idx, spatial_scale);
 }
 
 }  // namespace mshadow
@@ -251,8 +242,13 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator* CreateOp<gpu>(ROIPoolingParam param) {
-  return new ROIPoolingOp<gpu>(param);
+Operator* CreateOp<gpu>(ROIPoolingParam param, int dtype) {
+  Operator* op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new ROIPoolingOp<gpu, DType>(param);
+  });
+  return op;
 }
+
 }  // namespace op
 }  // namespace mxnet

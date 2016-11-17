@@ -12,8 +12,13 @@ def _download(data_dir):
        (not os.path.exists('train-labels-idx1-ubyte')) or \
        (not os.path.exists('t10k-images-idx3-ubyte')) or \
        (not os.path.exists('t10k-labels-idx1-ubyte')):
-        os.system("wget http://data.dmlc.ml/mxnet/data/mnist.zip")
-        os.system("unzip -u mnist.zip; rm mnist.zip")
+        import urllib, zipfile
+        zippath = os.path.join(os.getcwd(), "mnist.zip")
+        urllib.urlretrieve("http://data.mxnet.io/mxnet/data/mnist.zip", zippath)
+        zf = zipfile.ZipFile(zippath, "r")
+        zf.extractall()
+        zf.close()
+        os.remove(zippath)
     os.chdir("..")
 
 def get_loc(data, attr={'lr_mult':'0.01'}):
@@ -77,8 +82,11 @@ def get_lenet(add_stn=False):
 def get_iterator(data_shape):
     def get_iterator_impl(args, kv):
         data_dir = args.data_dir
+        # if Windows
+        if os.name == "nt":
+            data_dir = data_dir[:-1] + "\\"
         if '://' not in args.data_dir:
-            _download(args.data_dir)
+            _download(data_dir)
         flat = False if len(data_shape) == 3 else True
 
         train           = mx.io.MNISTIter(

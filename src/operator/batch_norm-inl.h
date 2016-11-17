@@ -89,7 +89,7 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
-    if (ctx.is_train && param_.fix_gamma) slope = 1.f;
+    if (param_.fix_gamma) slope = 1.f;
 
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
@@ -153,6 +153,8 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
+    if (param_.fix_gamma) slope = 1.f;
+
     if (ctx.is_train && !param_.use_global_stats) {
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[batchnorm::kTempSpace].get_space<xpu>(
@@ -200,6 +202,7 @@ class BatchNormOp : public Operator {
       } else {
         Assign(gslope, req[batchnorm::kGamma], 0.0f);
       }
+      Assign(gbias, req[batchnorm::kBeta], sumall_except_dim<1>(grad));
       Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
              broadcast<1>(
                  1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
@@ -211,7 +214,7 @@ class BatchNormOp : public Operator {
 };  // class BatchNormOp
 
 template<typename xpu>
-Operator *CreateOp(BatchNormParam param);
+Operator *CreateOp(BatchNormParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -293,7 +296,13 @@ class BatchNormProp : public OperatorProperty {
     return {"moving_mean", "moving_var"};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+      LOG(FATAL) << "Not Implemented.";
+      return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+      std::vector<int> *in_type) const override;
 
  private:
   BatchNormParam param_;

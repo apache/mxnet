@@ -81,12 +81,7 @@ typedef mshadow::index_t index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
 
-/*! \brief dynamic shape type */
-typedef mshadow::TShape TShape;
-/*! \brief storage container type */
-typedef mshadow::TBlob TBlob;
-
-/*! \brief Context information about the execution enviroment */
+/*! \brief Context information about the execution environment */
 struct Context {
   /*! \brief Type of device */
   enum DeviceType {
@@ -155,23 +150,23 @@ struct Context {
   /*!
    * \brief Create a new context.
    * \param dev_type device type.
-   * \param dev_id device id.
+   * \param dev_id device id. -1 for current device.
    */
-  inline static Context Create(DeviceType dev_type, int32_t dev_id);
+  inline static Context Create(DeviceType dev_type, int32_t dev_id = -1);
   /*! \return CPU Context */
   inline static Context CPU();
   /*!
    * Create a GPU context.
    * \param dev_id the device id.
-   * \return GPU Context.
+   * \return GPU Context. -1 for current GPU.
    */
-  inline static Context GPU(int32_t dev_id);
+  inline static Context GPU(int32_t dev_id = -1);
   /*!
    * Create a pinned CPU context.
    * \param dev_id the device id for corresponding GPU.
-   * \return Pinned CPU context.
+   * \return Pinned CPU context. -1 for current GPU.
    */
-  inline static Context CPUPinned(int32_t dev_id);
+  inline static Context CPUPinned(int32_t dev_id = -1);
 };
 
 /*!
@@ -208,7 +203,16 @@ inline bool Context::operator<(const Context &b) const {
 inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   Context ctx;
   ctx.dev_type = dev_type;
-  ctx.dev_id = dev_id;
+  if (dev_id < 0) {
+    ctx.dev_id = 0;
+#if MXNET_USE_CUDA
+    if (dev_type != kCPU) {
+      CHECK_EQ(cudaGetDevice(&ctx.dev_id), cudaSuccess);
+    }
+#endif
+  } else {
+    ctx.dev_id = dev_id;
+  }
   return ctx;
 }
 inline Context Context::CPU() {
@@ -224,55 +228,6 @@ inline Context Context::GPU(int32_t dev_id) {
 }
 }  // namespace mxnet
 
-namespace dmlc {
-// Add a few patches to support TShape in dmlc/parameter.
-DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");
-
-namespace parameter {
-template<>
-class FieldEntry<mxnet::TShape>
-    : public FieldEntryBase<FieldEntry<mxnet::TShape>, mxnet::TShape> {
- public:
-  FieldEntry() : enforce_nonzero_(false), expect_ndim_(0) {}
-  // parent class
-  typedef FieldEntryBase<FieldEntry<mxnet::TShape>, mxnet::TShape> Parent;
-
-  virtual void Check(void *head) const {
-    Parent::Check(head);
-    mxnet::TShape &v = this->Get(head);
-    if (expect_ndim_ != 0 && v.ndim() != expect_ndim_) {
-      std::ostringstream os;
-        os << "value " << v << "for Parameter " << this->key_
-           << " has wrong dimensions, expected dimension=" << expect_ndim_;
-        throw dmlc::ParamError(os.str());
-    }
-    if (enforce_nonzero_) {
-      for (mxnet::index_t i = 0; i < v.ndim(); ++i) {
-        if (v[i] == 0U) {
-          std::ostringstream os;
-          os << "value " << v << "for Parameter " << this->key_
-             << " is invalid, the input shape must be nonzero in all dimensions";
-          throw dmlc::ParamError(os.str());
-        }
-      }
-    }
-  }
-  inline FieldEntry<mxnet::TShape> &enforce_nonzero() {
-    this->enforce_nonzero_ = true;
-    return this->self();
-  }
-  inline FieldEntry<mxnet::TShape> &set_expect_ndim(mshadow::index_t ndim) {
-    expect_ndim_ = ndim;
-    return this->self();
-  }
-
- private:
-  // whether all the entries need to be nonzero
-  bool enforce_nonzero_;
-  // expected number of dimension, default = 0 means no restriction.
-  mxnet::index_t expect_ndim_;
-};
-}  // namespace parameter
-}  // namespace dmlc
+#include "./tensor_blob.h"
 //! \endcond
 #endif  // MXNET_BASE_H_

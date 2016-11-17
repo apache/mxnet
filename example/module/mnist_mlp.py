@@ -1,4 +1,5 @@
 # pylint: skip-file
+import os
 import mxnet as mx
 import numpy as np
 import logging
@@ -13,14 +14,16 @@ softmax = mx.symbol.SoftmaxOutput(fc3, name = 'softmax')
 
 n_epoch = 2
 batch_size = 100
+
+basedir = os.path.dirname(__file__)
 train_dataiter = mx.io.MNISTIter(
-        image="../image-classification/mnist/train-images-idx3-ubyte",
-        label="../image-classification/mnist/train-labels-idx1-ubyte",
+        image=os.path.join(basedir, "../image-classification/mnist/train-images-idx3-ubyte"),
+        label=os.path.join(basedir, "../image-classification/mnist/train-labels-idx1-ubyte"),
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
-        image="../image-classification/mnist/t10k-images-idx3-ubyte",
-        label="../image-classification/mnist/t10k-labels-idx1-ubyte",
+        image=os.path.join(basedir, "../image-classification/mnist/t10k-images-idx3-ubyte"),
+        label=os.path.join(basedir, "../image-classification/mnist/t10k-labels-idx1-ubyte"),
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 

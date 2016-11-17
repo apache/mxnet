@@ -5,6 +5,7 @@
  */
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
+#include <dmlc/thread_local.h>
 #include <mxnet/base.h>
 #include <mxnet/engine.h>
 #include <mxnet/resource.h>
@@ -24,11 +25,6 @@ struct SpaceAllocator {
   Storage::Handle handle;
   // internal CPU handle
   Storage::Handle host_handle;
-  // The old handles that need to be kept valid
-  // until release is called.
-  // This API allows several CUDA calls using
-  // temp space to get valid space until all the calls finished.
-  std::vector<Storage::Handle> old_handles;
 
   SpaceAllocator() {
     handle.dptr = nullptr;
@@ -36,37 +32,31 @@ struct SpaceAllocator {
     host_handle.dptr = nullptr;
     host_handle.size = 0;
   }
-
-  inline void Release() {
-    for (const Storage::Handle& handle : old_handles) {
-      if (handle.size != 0) {
-        Storage::Get()->Free(handle);
-      }
-    }
-    old_handles.clear();
-  }
-
   inline void ReleaseAll() {
-    old_handles.push_back(handle);
-    old_handles.push_back(host_handle);
-    this->Release();
-    handle.size = 0;
-    host_handle.size = 0;
+    if (handle.size != 0) {
+      Storage::Get()->DirectFree(handle);
+      handle.size = 0;
+    }
+    if (host_handle.size != 0) {
+      Storage::Get()->DirectFree(host_handle);
+      host_handle.size = 0;
+    }
   }
-
   inline void* GetSpace(size_t size) {
     if (handle.size >= size) return handle.dptr;
-    old_handles.push_back(handle);
-    handle = Storage::Get()->Alloc(
-        std::max(size, handle.size * 2), ctx);
+    if (handle.size != 0) {
+      Storage::Get()->DirectFree(handle);
+    }
+    handle = Storage::Get()->Alloc(size, ctx);
     return handle.dptr;
   }
 
   inline void* GetHostSpace(size_t size) {
     if (host_handle.size >= size) return host_handle.dptr;
-    old_handles.push_back(host_handle);
-    host_handle = Storage::Get()->Alloc(
-        std::max(size, handle.size * 2), Context());
+    if (handle.size != 0) {
+      Storage::Get()->DirectFree(host_handle);
+    }
+    host_handle = Storage::Get()->Alloc(size, Context());
     return host_handle.dptr;
   }
 };
@@ -77,8 +67,8 @@ class ResourceManagerImpl : public ResourceManager {
  public:
   ResourceManagerImpl() noexcept(false)
       : global_seed_(0) {
-    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 16);
-    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 4);
+    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
+    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
@@ -260,12 +250,8 @@ void* Resource::get_host_space_internal(size_t size) const {
   return static_cast<resource::SpaceAllocator*>(ptr_)->GetHostSpace(size);
 }
 
-void Resource::release() const {
-  return static_cast<resource::SpaceAllocator*>(ptr_)->Release();
-}
-
 ResourceManager* ResourceManager::Get() {
-  static resource::ResourceManagerImpl inst;
-  return &inst;
+  typedef dmlc::ThreadLocalStore<resource::ResourceManagerImpl> inst;
+  return inst::Get();
 }
 }  // namespace mxnet

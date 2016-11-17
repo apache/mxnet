@@ -4,7 +4,7 @@
  * \brief Utility functions and registries to help quickly build new operators.
  *
  *  Use the register functions in this file when possible to simplify operator creations.
- *  Operators registred in this file will be exposed to both NDArray API and symbolic API.
+ *  Operators registered in this file will be exposed to both NDArray API and symbolic API.
  *
  * \author Tianqi Chen
  */
@@ -390,7 +390,7 @@ class SimpleOpRegEntry {
   /*!
    * \brief Describe the function.
    * \param args argument information.
-   *  Add addtional arguments to the function.
+   *  Add additional arguments to the function.
    * \return reference to self.
    */
   virtual TSelf& add_arguments(const std::vector<dmlc::ParamFieldInfo> &args) = 0;

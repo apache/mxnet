@@ -10,6 +10,11 @@ import ml.dmlc.mxnet.NDArrayConversions._
 class SGD(private val learningRate: Float = 0.01f, private val momentum: Float = 0.0f,
           private val wd: Float = 0.0001f, private val clipGradient: Float = 0f,
           private val lrScheduler: LRScheduler = null) extends Optimizer {
+
+  if (lrScheduler != null) {
+    lrScheduler.baseLR = learningRate
+  }
+
   /**
    * Update the parameters.
    * @param index An unique integer key used to index the parameters

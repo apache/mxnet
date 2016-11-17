@@ -59,6 +59,16 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
+# whether use MKL2017 library
+USE_MKL2017 = 0
+
+# whether use MKL2017 experimental feature for high performance
+USE_MKL2017_EXPERIMENTAL = 0
+
+# whether use NNPACK library
+USE_NNPACK = 0
+USE_NNPACK_NUM_THREADS = 4
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
@@ -78,6 +88,16 @@ ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
 else
 USE_STATIC_MKL = NONE
+endif
+
+#----------------------------
+# Settings for power and arm arch
+#----------------------------
+ARCH := $(shell uname -a)
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64))
+	USE_SSE=0
+else
+	USE_SSE=1
 endif
 
 #----------------------------
@@ -110,6 +130,11 @@ EXTRA_OPERATORS =
 #----------------------------
 # plugins
 #----------------------------
+
+# whether to use caffe integration. This requires installing caffe.
+# You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
+# CAFFE_PATH = $(HOME)/caffe
+# MXNET_PLUGINS += plugin/caffe/caffe.mk
 
 # whether to use torch integration. This requires installing torch.
 # You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH

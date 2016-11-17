@@ -25,6 +25,7 @@ namespace pool_enum {
 enum PoolingOpInputs {kData};
 enum PoolingOpOutputs {kOut};
 enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling};
+enum PoolingOpPadConventionType {kValid, kFull};
 }  // namespace pool_enum
 
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
@@ -32,6 +33,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   TShape stride;
   TShape pad;
   int pool_type;
+  int pooling_convention;
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
@@ -48,6 +50,13 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("sum", pool_enum::kSumPooling)
     .describe("Pooling type to be applied.");
 
+    DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
+    .add_enum("full", pool_enum::kFull)
+    .add_enum("valid", pool_enum::kValid)
+    .describe("Pooling convention to be applied."
+              "kValid is default setting of Mxnet and rounds down the output pooling size."
+              "kFull is compatible with Caffe and rounds up the output pooling size.");
+
     int stride_shape[] = {1, 1};
     DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
     .enforce_nonzero()
@@ -59,7 +68,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   }
 };
 
-template<typename xpu, typename Reducer>
+template<typename xpu, typename Reducer, typename DType>
 class PoolingOp : public Operator {
  public:
   explicit PoolingOp(PoolingParam p) {
@@ -79,8 +88,8 @@ class PoolingOp : public Operator {
     if (param_.kernel.ndim() == 3) {
       LOG(FATAL) << "Not implmented";
     }
-    Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> out = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> out = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
     if (param_.pool_type == pool_enum::kMaxPooling || param_.pool_type == pool_enum::kSumPooling) {
       Assign(out,
@@ -94,7 +103,7 @@ class PoolingOp : public Operator {
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(out,
              req[pool_enum::kOut],
-             (1.0f / (param_.global_pool ?
+             scalar<DType>(1.0f / (param_.global_pool ?
                       data.shape_[2] * data.shape_[3] :
                       param_.kernel[0] * param_.kernel[1])) * \
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
@@ -125,10 +134,10 @@ class PoolingOp : public Operator {
       LOG(FATAL) << "Not implmented";
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 4> grad = out_grad[pool_enum::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> data = in_data[pool_enum::kData].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> output_data = out_data[pool_enum::kOut].get<xpu, 4, real_t>(s);
-    Tensor<xpu, 4> input_grad = in_grad[pool_enum::kData].get<xpu, 4, real_t>(s);
+    Tensor<xpu, 4, DType> grad = out_grad[pool_enum::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> data = in_data[pool_enum::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> output_data = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> input_grad = in_grad[pool_enum::kData].get<xpu, 4, DType>(s);
 
     mshadow::Shape<2> in_shape = Shape2(data.shape_[2], data.shape_[3]);
 
@@ -146,7 +155,9 @@ class PoolingOp : public Operator {
                   param_.pad[1]));
     } else if (param_.pool_type == pool_enum::kAvgPooling) {
       Assign(input_grad, req[pool_enum::kData],
-             (1.0f / param_.kernel[0] / param_.kernel[1]) *\
+             scalar<DType>(1.0f / (param_.global_pool ?
+                      data.shape_[2] * data.shape_[3] :
+                      param_.kernel[0] * param_.kernel[1])) * \
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
@@ -165,8 +176,9 @@ class PoolingOp : public Operator {
 };  // class PoolingOp
 
 template<typename xpu>
-Operator* CreateOp(PoolingParam param);
-
+Operator* CreateOp(PoolingParam param, int dtype,
+                   std::vector<TShape> *in_shape,
+                   std::vector<TShape> *out_shape);
 
 #if DMLC_USE_CXX11
 class PoolingProp : public OperatorProperty {
@@ -194,27 +206,75 @@ class PoolingProp : public OperatorProperty {
         oshape[2] = 1;
         oshape[3] = 1;
       } else {
-        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
-        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
+        CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0]
+              && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
+            << "kernel size exceed input";
+        if (param_.pooling_convention == pool_enum::kValid) {
+          oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
+                              param_.stride[0];
+          oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
+                              param_.stride[1];
+        } else {
+          oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
+                              dshape[2] + 2 * param_.pad[0] -
+                              param_.kernel[0]) / param_.stride[0]));
+          oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
+                              dshape[3] + 2 * param_.pad[1] -
+                              param_.kernel[1]) / param_.stride[1]));
+        }
       }
-      CHECK(oshape[2] > 0 && oshape[3] > 0) << "Pooling: kernel size exceed input";
       out_shape->clear();
       out_shape->push_back(oshape);
     } else if (param_.kernel.ndim() == 3) {
       CHECK_EQ(dshape.ndim(), 5) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
+      CHECK(param_.kernel[0] < dshape[2] + 2 * param_.pad[0]
+            && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1]
+            && param_.kernel[2] <= dshape[4] + 2 * param_.pad[2])
+          << "kernel size exceed input";
       if (param_.global_pool) {
         oshape[2] = 1;
         oshape[3] = 1;
         oshape[4] = 1;
       } else {
-        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
-        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
-        oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) / param_.stride[2];
+        if (param_.pool_type == pool_enum::kValid) {
+          oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
+                              param_.stride[0];
+          oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
+                              param_.stride[1];
+          oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) /
+                              param_.stride[2];
+        } else {
+          oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
+                              dshape[2] + 2 * param_.pad[0] -
+                              param_.kernel[0]) / param_.stride[0]));
+          oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
+                              dshape[3] + 2 * param_.pad[1] -
+                              param_.kernel[1]) / param_.stride[1]));
+          oshape[4] = 1 + static_cast<int>(ceil(static_cast<float>(
+                              dshape[4] + 2 * param_.pad[2] -
+                              param_.kernel[2]) / param_.stride[2]));
+        }
       }
-      CHECK(oshape[2] > 0 && oshape[3] > 0 && oshape[4] > 0) << "Pooling: kernel size exceed input";
+
       out_shape->clear();
       out_shape->push_back(oshape);
     }
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+
+    if (dtype == -1) {
+      LOG(FATAL) << "Input type to pooling is not specified.";
+      return false;
+    }
+
+    out_type->clear();
+    out_type->push_back(dtype);
     return true;
   }
 
@@ -247,7 +307,13 @@ class PoolingProp : public OperatorProperty {
 #endif
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   PoolingParam param_;
@@ -257,4 +323,3 @@ class PoolingProp : public OperatorProperty {
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_POOLING_INL_H_
-

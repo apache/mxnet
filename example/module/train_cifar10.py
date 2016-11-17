@@ -52,9 +52,18 @@ def _download(data_dir):
     os.chdir(data_dir)
     if (not os.path.exists('train.rec')) or \
        (not os.path.exists('test.rec')) :
-           os.system("wget http://data.dmlc.ml/mxnet/data/cifar10.zip")
-        os.system("unzip -u cifar10.zip")
-        os.system("mv cifar/* .; rm -rf cifar; rm cifar10.zip")
+        import urllib, zipfile, glob
+        dirname = os.getcwd()
+        zippath = os.path.join(dirname, "cifar10.zip")
+        urllib.urlretrieve("http://data.mxnet.io/mxnet/data/cifar10.zip", zippath)
+        zf = zipfile.ZipFile(zippath, "r")
+        zf.extractall()
+        zf.close()
+        os.remove(zippath)
+        for f in glob.glob(os.path.join(dirname, "cifar", "*")):
+            name = f.split(os.path.sep)[-1]
+            os.rename(f, os.path.join(dirname, name))
+        os.rmdir(os.path.join(dirname, "cifar"))
     os.chdir(cwd)
 
 # network
@@ -64,12 +73,15 @@ net = importlib.import_module('symbol_' + args.network).get_symbol(10)
 # data
 def get_iterator(args, kv):
     data_shape = (3, 28, 28)
+    data_dir = args.data_dir
+    if os.name == "nt":
+        data_dir = data_dir[:-1] + "\\"
     if '://' not in args.data_dir:
-        _download(args.data_dir)
+        _download(data_dir)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "train.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        path_imgrec = data_dir + "train.rec",
+        mean_img    = data_dir + "mean.bin",
         data_shape  = data_shape,
         batch_size  = args.batch_size,
         rand_crop   = True,
@@ -78,8 +90,8 @@ def get_iterator(args, kv):
         part_index  = kv.rank)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = args.data_dir + "test.rec",
-        mean_img    = args.data_dir + "mean.bin",
+        path_imgrec = data_dir + "test.rec",
+        mean_img    = data_dir + "mean.bin",
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
@@ -109,6 +121,7 @@ logging.info('running on %s', platform.node())
 
 devs = mx.cpu() if (args.gpus is None or args.gpus == '') else [
     mx.gpu(int(i)) for i in args.gpus.split(',')]
+logging.info('Starting with devices %s', devs)
 
 mod = mx.mod.Module(net, context=devs)
 

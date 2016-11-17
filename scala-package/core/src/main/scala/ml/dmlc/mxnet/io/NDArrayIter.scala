@@ -6,6 +6,8 @@ import ml.dmlc.mxnet.Base._
 import ml.dmlc.mxnet._
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.ListMap
+
 /**
  * NDArrayIter object in mxnet. Taking NDArray to get dataiter.
  *
@@ -62,10 +64,10 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
   var cursor = -dataBatchSize
 
 
-  private val (_provideData: Map[String, Shape],
-  _provideLabel: Map[String, Shape]) = {
-    val pData = initData.map(getShape).toMap
-    val pLabel = initLabel.map(getShape).toMap
+  private val (_provideData: ListMap[String, Shape],
+               _provideLabel: ListMap[String, Shape]) = {
+    val pData = ListMap.empty[String, Shape] ++ initData.map(getShape)
+    val pLabel = ListMap.empty[String, Shape] ++ initLabel.map(getShape)
     (pData, pLabel)
   }
 
@@ -181,10 +183,10 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = _provideData
+  override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = _provideLabel
+  override def provideLabel: ListMap[String, Shape] = _provideLabel
 
   override def batchSize: Int = dataBatchSize
 }

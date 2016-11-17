@@ -6,12 +6,29 @@
 */
 
 #include "./concat-inl.h"
+#if MXNET_USE_MKL2017 == 1
+#include <mxnet/mkl_memory.h>
+#include "./mkl/mkl_memory-inl.h"
+#include "./mkl/mkl_concat-inl.h"
+#endif  // MXNET_USE_MKL2017
 
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
   Operator *op = NULL;
+#if MXNET_USE_MKL2017 == 1
+  if (1 == param.dim) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+      return new MKLConcatOp<cpu, float>(param);
+    case mshadow::kFloat64:
+      return new MKLConcatOp<cpu, double>(param);
+    default:
+      break;
+    }
+  }
+#endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConcatOp<cpu, DType>(param);
   });

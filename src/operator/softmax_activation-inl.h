@@ -70,14 +70,15 @@ class SoftmaxActivationOp : public Operator {
       Tensor<xpu, 2> out = out_data[softmax_activation::kOut].FlatTo2D<xpu, real_t>(s);
       Softmax(out, data);
     } else {
-      CHECK_EQ(in_data[softmax_activation::kData].ndim(), 4);
-      TShape src_shape = in_data[softmax_activation::kData].shape_;
-      Shape<3> dst_shape = Shape3(src_shape[0], src_shape[1],
-                                  src_shape[2] * src_shape[3]);
-      Tensor<xpu, 3> data =
-        in_data[softmax_activation::kData].get_with_shape<xpu, 3, real_t>(dst_shape, s);
-      Tensor<xpu, 3> out =
-        out_data[softmax_activation::kOut].get_with_shape<xpu, 3, real_t>(dst_shape, s);
+      CHECK_GE(in_data[softmax_activation::kData].ndim(), 3)
+        << "Input need to have a least 3 dimensions when mode=channel";
+      int n = in_data[softmax_activation::kData].size(0);
+      int k = in_data[softmax_activation::kData].size(1);
+      Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data[softmax_activation::kData].Size()/n/k));
+      Tensor<xpu, 3, real_t> data =
+        in_data[softmax_activation::kData].get_with_shape<xpu, 3, real_t>(s3, s);
+      Tensor<xpu, 3, real_t> out =
+        out_data[softmax_activation::kOut].get_with_shape<xpu, 3, real_t>(s3, s);
       Softmax(out, data);
     }
   }

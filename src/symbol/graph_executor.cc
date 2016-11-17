@@ -411,7 +411,7 @@ void GraphExecutor::AssignContext(const Context default_ctx,
         ctx_plan->at(e.source_id) = arg_grad_store[i].ctx();
       } else {
         CHECK(ctx_plan->at(e.source_id) == arg_grad_store[i].ctx())
-            << "Inconsistent gradient context requirment";
+            << "Inconsistent gradient context requirement";
       }
     }
   }
@@ -1081,7 +1081,7 @@ GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
   auto rtop = read_vars.begin();
   for (auto rit = read_vars.begin(); rit != read_vars.end(); ++rit) {
     while (wit != write_vars.end() && *wit < *rit) ++wit;
-    if (*wit != *rit) {
+    if (wit == write_vars.end() || *wit != *rit) {
       *rtop = *rit;
       ++rtop;
     }

@@ -3,6 +3,7 @@ package ml.dmlc.mxnet.spark.io
 import ml.dmlc.mxnet.{DataBatch, NDArray, Shape, DataIter}
 import org.apache.spark.mllib.regression.LabeledPoint
 
+import scala.collection.immutable.ListMap
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -97,13 +98,13 @@ class LabeledPointIter private[mxnet](
   }
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = {
-    Map(labelName -> Shape(_batchSize))
+  override def provideLabel: ListMap[String, Shape] = {
+    ListMap(labelName -> Shape(_batchSize))
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = {
-    Map(dataName -> dataShape)
+  override def provideData: ListMap[String, Shape] = {
+    ListMap(dataName -> dataShape)
   }
 
   /**

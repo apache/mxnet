@@ -310,7 +310,7 @@ MXNET_DLL int MXNDArrayWaitAll();
 MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
 /*!
  * \brief Slice the NDArray along axis 0.
- * \param handle the handle to the narraya
+ * \param handle the handle to the NDArray
  * \param slice_begin The beginning index of slice
  * \param slice_end The ending index of slice
  * \param out The NDArrayHandle of sliced NDArray
@@ -322,9 +322,9 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
                              NDArrayHandle *out);
 /*!
  * \brief Index the NDArray along axis 0.
- * \param handle the handle to the narraya
+ * \param handle the handle to the NDArray
  * \param idx the index
- * \param out The NDArrayHandle of sliced NDArray
+ * \param out The NDArrayHandle of output NDArray
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
@@ -406,7 +406,7 @@ MXNET_DLL int MXGetFunction(const char *name,
  * \param description The returned description of the function.
  * \param num_args Number of arguments.
  * \param arg_names Name of the arguments.
- * \param arg_type_infos Type informations about the arguments.
+ * \param arg_type_infos Type information about the arguments.
  * \param arg_descriptions Description information about the arguments.
  * \param return_type Return type of the function.
  * \return 0 when success, -1 when failure happens
@@ -1103,6 +1103,8 @@ MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
 MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
                           const char **keys,
                           const char **vals);
+
+
 /*!
  * \brief Create a kvstore
  * \param type the type of KVStore
@@ -1246,6 +1248,16 @@ MXNET_DLL int MXKVStoreIsSchedulerNode(int *ret);
 MXNET_DLL int MXKVStoreBarrier(KVStoreHandle handle);
 
 /**
+ * \brief whether to do barrier when finalize
+ *
+ * \param handle handle to the KVStore
+ * \param barrier_before_exit whether to do barrier when kvstore finalize
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetBarrierBeforeExit(KVStoreHandle handle,
+                                            const int barrier_before_exit);
+
+/**
  * \brief the prototype of a server controller
  * \param head the head of the command
  * \param body the body of the command
@@ -1280,6 +1292,21 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
                                              const char* cmd_body);
 
 /**
+ * \brief Get the number of ps dead node(s) specified by {node_id}
+ *
+ * \param handle handle to the KVStore
+ * \param node_id Can be a node group or a single node.
+ *                kScheduler = 1, kServerGroup = 2, kWorkerGroup = 4
+ * \param number Ouptut number of dead nodes
+ * \param timeout_sec A node fails to send heartbeart in {timeout_sec} seconds
+ *                    will be presumed as 'dead'
+ */
+MXNET_DLL int MXKVStoreGetNumDeadNode(KVStoreHandle handle,
+                                      const int node_id,
+                                      int *number,
+                                      const int timeout_sec = 60);
+
+/**
  * \brief Create a RecordIO writer object
  * \param uri path to file
  * \param out handle pointer to the created object
@@ -1305,6 +1332,14 @@ MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
                                           const char *buf, size_t size);
 
 /**
+ * \brief Get the current writer pointer position
+ * \param handle handle to RecordIO object
+ * \param pos handle to output position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos);
+
+/**
  * \brief Create a RecordIO reader object
  * \param uri path to file
  * \param out handle pointer to the created object
@@ -1328,6 +1363,14 @@ MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
 */
 MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
                                         char const **buf, size_t *size);
+
+/**
+ * \brief Set the current reader pointer position
+ * \param handle handle to RecordIO object
+ * \param pos target position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos);
 
 /**
  * \brief Create a MXRtc object

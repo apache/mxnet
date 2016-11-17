@@ -58,7 +58,7 @@ We can train a model using multiple machines.
   ../../tools/launch.py -n 2 python train_mnist.py --kv-store dist_sync
   ```
 
-  here we can either use synchronized SGD `dist_sync` or use asynchronized SGD
+  here we can either use synchronous SGD `dist_sync` or use asynchronous SGD
   `dist_async`
 
 - assume there are several ssh-able machines, and this mxnet folder is
@@ -93,7 +93,7 @@ We can train a model using multiple machines.
   ```
 
 See more launch options, e.g. by `Yarn`, and how to write a distributed training
-program on this [tutorial](http://mxnet.readthedocs.org/en/latest/distributed_training.html)
+program on this [tutorial](http://mxnet.readthedocs.io/en/latest/how_to/multi_devices.html)
 
 ### Predict
 
@@ -109,9 +109,9 @@ There are two commonly used way to feed data into MXNet.
 
 The first is packing all example into one or several compact `recordio`
 files. See a step-by-step
-[tutorial](http://mxnet.readthedocs.io/en/latest/packages/python/io.html#create-dataset-using-recordio)
+[tutorial](http://mxnet.readthedocs.io/en/latest/api/python/io.html#create-dataset-using-recordio)
 and the
-[document](http://mxnet.readthedocs.io/en/latest/system/note_data_loading.html)
+[document](http://mxnet.readthedocs.io/en/latest/architecture/note_data_loading.html)
 describing how it works.
 
 *Note: A commonly mistake is forgetting shuffle the image list during packing. This will lead fail of training, eg. ```accuracy``` keeps 0.001 for several rounds.*
@@ -147,7 +147,7 @@ model.fit(X = train_iter, eval_data = val_iter)
 
 The following factors may significant affect the performance:
 
-1. Use a fast backend. A fast BLAS library, e.g. openblas, altas,
+1. Use a fast backend. A fast BLAS library, e.g. openblas, atlas,
 and mkl, is necessary if only using CPU. While for Nvidia GPUs, we strongly
 recommend to use CUDNN.
 2. Three important things for the input data:
@@ -277,7 +277,7 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
   ```
 
   *Note: S3 is unstable sometimes, if your training hangs or getting error
-   freqently, you cant download data to `/mnt` first*
+   frequently, you cant download data to `/mnt` first*
 
   Accuracy vs epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
 

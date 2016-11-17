@@ -7,6 +7,7 @@ import time
 from .. import metric
 from .. import ndarray
 
+from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
 
@@ -117,6 +118,7 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
+        self.layout_mapper = None
 
     ################################################################################
     # High Level API
@@ -329,6 +331,9 @@ class BaseModule(object):
         """
         assert num_epoch is not None, 'please specify number of epochs'
 
+        if hasattr(train_data, 'layout_mapper'):
+            self.layout_mapper = train_data.layout_mapper
+
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
                   for_training=True, force_rebind=force_rebind)
         if monitor is not None:
@@ -486,8 +491,8 @@ class BaseModule(object):
             Path to output param file.
         """
         arg_params, aux_params = self.get_params()
-        save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
-        save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+        save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
+        save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
         ndarray.save(fname, save_dict)
 
     def load_params(self, fname):
@@ -603,7 +608,8 @@ class BaseModule(object):
     # module setup
     ################################################################################
     def bind(self, data_shapes, label_shapes=None, for_training=True,
-             inputs_need_grad=False, force_rebind=False, shared_module=None):
+             inputs_need_grad=False, force_rebind=False, shared_module=None,
+             grad_req='write'):
         """Bind the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
@@ -626,6 +632,10 @@ class BaseModule(object):
             Default is `None`. This is used in bucketing. When not `None`, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+        grad_req : str, list of str, dict of str to str
+            Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+            (default to 'write').
+            Can be specified globally (str) or for each argument (list, dict).
         """
         raise NotImplementedError()
 

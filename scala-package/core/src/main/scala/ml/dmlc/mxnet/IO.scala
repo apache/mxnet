@@ -4,6 +4,7 @@ import ml.dmlc.mxnet.Base._
 import ml.dmlc.mxnet.io.{MXDataPack, MXDataIter}
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -107,14 +108,20 @@ object IO {
   }
 }
 
-
 /**
  * class batch of data
  */
 class DataBatch(val data: IndexedSeq[NDArray],
                 val label: IndexedSeq[NDArray],
                 val index: IndexedSeq[Long],
-                val pad: Int) {
+                val pad: Int,
+                // the key for the bucket that should be used for this batch,
+                // for bucketing io only
+                val bucketKey: AnyRef = null,
+                // use ListMap to indicate the order of data/label loading
+                // (must match the order of input data/label)
+                private val providedData: ListMap[String, Shape] = null,
+                private val providedLabel: ListMap[String, Shape] = null) {
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
@@ -127,6 +134,12 @@ class DataBatch(val data: IndexedSeq[NDArray],
       label.foreach(arr => if (arr != null) arr.dispose())
     }
   }
+
+  // The name and shape of data
+  def provideData: ListMap[String, Shape] = providedData
+
+  // The name and shape of label
+  def provideLabel: ListMap[String, Shape] = providedLabel
 }
 
 /**
@@ -175,10 +188,14 @@ abstract class DataIter extends Iterator[DataBatch] {
   def getIndex(): IndexedSeq[Long]
 
   // The name and shape of data provided by this iterator
-  def provideData: Map[String, Shape]
+  def provideData: ListMap[String, Shape]
 
   // The name and shape of label provided by this iterator
-  def provideLabel: Map[String, Shape]
+  def provideLabel: ListMap[String, Shape]
+
+  // For bucketing io only
+  // The bucket key for the default symbol.
+  def defaultBucketKey: AnyRef = null
 }
 
 /**

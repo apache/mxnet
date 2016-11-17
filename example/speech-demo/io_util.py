@@ -68,19 +68,19 @@ class SimpleIter(mx.io.DataIter):
         self.data_name = data_name
         if has_label:
             self.label_name = label_name
-        
+
         features = []
         labels = []
         utt_lens = []
         utt_ids = []
         buckets = []
         self.has_label = has_label
-        
+
         if label_mean_sets is not None:
             self.label_mean_sets.initialize_read()
             (feats, tgts, utt_id) = self.label_mean_sets.load_next_seq()
 
-            self.label_mean = feats/np.sum(feats) 
+            self.label_mean = feats/np.sum(feats)
             for i,v in enumerate(feats):
                 if v <= 1.0:
                     self.label_mean[i] = 1
@@ -103,7 +103,7 @@ class SimpleIter(mx.io.DataIter):
                 labels.append(tgts+1)
             if feats.shape[0] not in buckets:
                 buckets_map[feats.shape[0]] = feats.shape[0]
-        
+
         for k, v in buckets_map.iteritems():
             buckets.append(k)
 
@@ -116,13 +116,13 @@ class SimpleIter(mx.io.DataIter):
         self.utt_lens = [[] for k in buckets]
         self.feat_dim = feat_dim
         self.default_bucket_key = max(buckets)
-        
+
         for i, feats in enumerate(features):
             if has_label:
                 tgts = labels[i]
             utt_len = utt_lens[i]
             utt_id = utt_ids[i]
-            
+
             for i, bkt in enumerate(buckets):
                 if bkt >= utt_len:
                     i_bucket = i
@@ -620,3 +620,4 @@ class BucketSentenceIter(mx.io.DataIter):
 
     def reset(self):
         self.bucket_curr_idx = [0 for x in self.data]
+

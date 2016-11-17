@@ -1,13 +1,13 @@
 Classify Real-World Images with Pre-trained Model
 =================================================
 
-MXNet is a flexible and efficient deep learning framework. One of the cool thing that a deep learning
+MXNet is a flexible and efficient deep learning framework. One of the cool things that a deep learning
 algorithm can do is to classify real world images.
 
 In this example we will show how to use a pretrained Inception-BatchNorm Network to predict the class of
-real world image. The network architecture is decribed in [1].
+real world image. The network architecture is described in [1].
 
-The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.dmlc.ml/mxnet/data/Inception.zip)
+The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
 Preface
@@ -16,7 +16,7 @@ This tutorial is written in Rmarkdown.
 - You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/classifyRealImageWithPretrainedModel.html)
 - You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd)
 
-Pacakge Loading
+Package Loading
 ---------------
 To get started, we load the mxnet package by require mxnet.
 ```{r}
@@ -58,7 +58,7 @@ plot(im)
 
 Before feeding the image to the deep net, we need to do some preprocessing
 to make the image fit the input requirement of deepnet. The preprocessing
-include cropping, and substraction of the mean.
+include cropping, and subtraction of the mean.
 Because mxnet is deeply integerated with R, we can do all the processing in R function.
 
 The preprocessing function:
@@ -76,7 +76,7 @@ preproc.image <- function(im, mean.image) {
   # convert to array (x, y, channel)
   arr <- as.array(resized) * 255
   dim(arr) <- c(224, 224, 3)
-  # substract the mean
+  # subtract the mean
   normed <- arr - mean.img
   # Reshape to format needed by mxnet (width, height, channel, num)
   dim(normed) <- c(224, 224, 3, 1)
