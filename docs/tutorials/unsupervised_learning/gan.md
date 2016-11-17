@@ -1,5 +1,5 @@
 # Generative Adversarial Network
-You can get the source code for GAN with MXNet example [here](https://github.com/dmlc/mxnet/tree/master/example/gan)
+Get the source code for an example of a generative adversarial network (GAN) running on MXNet on GitHub in the [gan](https://github.com/dmlc/mxnet/tree/master/example/gan) folder.
 
-# Recommended Next Steps
+## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
