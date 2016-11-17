@@ -43,8 +43,8 @@ Applications that summarize, generate and understand text based data
 
 #### Python
 
-- [Charecter Level LSTM](http://mxnet.io/tutorials/python/char_lstm.html)
-*A simple example using an LSTM network to generate text, charecter by charecter, in the style of Barack Obama's speeches*
+- [Character Level LSTM](http://mxnet.io/tutorials/python/char_lstm.html)
+*A simple example using an LSTM network to generate text, character by character, in the style of Barack Obama's speeches*
 
 - [Text Classification using Convolutional Neural Network](http://mxnet.io/tutorials/nlp/cnn.html)
 *A simple example of using a convolutional network to classify sentiment in text reviews*
@@ -55,7 +55,7 @@ Applications that summarize, generate and understand text based data
 #### R
 
 - [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
-*A simple example using an LSTM network to generate text, charecter by charecter, in the style of Shakespeare*
+*A simple example using an LSTM network to generate text, character by character, in the style of Shakespeare*
 
 ### Speech Recognition
 
@@ -85,7 +85,7 @@ Applications to uncover existing structure in data sets
 #### Python
 
 - [Matrix Factorization](http://mxnet.io/tutorials/python/matrix_factorization.html)
-*A simple example using maxtrix factorization to discover user preferences in the MovieLens dataset*
+*A simple example using matrix factorization to discover user preferences in the MovieLens dataset*
 
 - [Auto Encoders](http://mxnet.io/tutorials/unsupervised_learning/auto_encoders.html)
 *An example using a non-linear deep autoencoder to find low dimensional representations for the MNIST dataset*
@@ -101,11 +101,11 @@ Applications using traditional methods to model classification and regression pr
 #### R
 
 - [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-*Using a simple mulit-layer perceptron to do classification and regression tasks on the mlbench dataset*
+*Using a simple multi-layer perceptron to do classification and regression tasks on the mlbench dataset*
 
 ## Other Resources
 - Collection of MXNet Tutorials for NVidia GTC 2016. [MXNet GTC 15 Tutorials](https://github.com/dmlc/mxnet-gtc-tutorial)
 - Collection of [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
 
 ## Language Tutorials 
-*MXNet language specific features walkthrough for R and Python have been moved to the [How To](http://mxnet.io/how_to/index.html) section of this site.
+* MXNet language specific features walkthrough for R and Python have been moved to the [How To](http://mxnet.io/how_to/index.html) section of this site.
