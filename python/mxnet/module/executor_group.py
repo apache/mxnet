@@ -138,13 +138,16 @@ class DataParallelExecutorGroup(object):
         if not for_training:
             grad_req = 'null'
 
+        data_names = [x[0] for x in data_shapes]
         if isinstance(grad_req, str):
             self.grad_req = {}
             for k in self.arg_names:
                 if k in self.param_names:
                     self.grad_req[k] = 'null' if k in self.fixed_param_names else grad_req
-                else:
+                elif k in data_names:
                     self.grad_req[k] = grad_req if k in self.inputs_need_grad else 'null'
+                else:
+                    self.grad_req[k] = 'null'
         elif isinstance(grad_req, (list, tuple)):
             assert len(grad_req) == len(self.arg_names)
             self.grad_req = dict(zip(self.arg_names, grad_req))
@@ -153,8 +156,10 @@ class DataParallelExecutorGroup(object):
             for k in self.arg_names:
                 if k in self.param_names:
                     self.grad_req[k] = 'null' if k in self.fixed_param_names else 'write'
-                else:
+                elif k in data_names:
                     self.grad_req[k] = 'write' if k in self.inputs_need_grad else 'null'
+                else:
+                    self.grad_req[k] = 'null'
             self.grad_req.update(grad_req)
         else:
             raise ValueError("grad_req must be one of str, list, tuple, or dict.")
@@ -454,8 +459,6 @@ class DataParallelExecutorGroup(object):
             input_types = self.input_types
         arg_types, _, aux_types = self.symbol.infer_type(**input_types)
         assert arg_types is not None, "type inference failed"
-
-        data_names = [x[0] for x in data_shapes]
 
         arg_arrays = []
         grad_arrays = {} if self.for_training else None
