@@ -145,7 +145,7 @@ class DataParallelExecutorGroup(object):
                 if k in self.param_names:
                     self.grad_req[k] = 'null' if k in self.fixed_param_names else grad_req
                 elif k in data_names:
-                    self.grad_req[k] = grad_req if k in self.inputs_need_grad else 'null'
+                    self.grad_req[k] = grad_req if self.inputs_need_grad else 'null'
                 else:
                     self.grad_req[k] = 'null'
         elif isinstance(grad_req, (list, tuple)):
@@ -157,7 +157,7 @@ class DataParallelExecutorGroup(object):
                 if k in self.param_names:
                     self.grad_req[k] = 'null' if k in self.fixed_param_names else 'write'
                 elif k in data_names:
-                    self.grad_req[k] = 'write' if k in self.inputs_need_grad else 'null'
+                    self.grad_req[k] = 'write' if self.inputs_need_grad else 'null'
                 else:
                     self.grad_req[k] = 'null'
             self.grad_req.update(grad_req)
