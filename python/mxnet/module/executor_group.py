@@ -135,15 +135,32 @@ class DataParallelExecutorGroup(object):
         if self.fixed_param_names is None:
             self.fixed_param_names = []
 
-        self.grad_req = grad_req
-        if isinstance(self.grad_req, str):
-            self.grad_req = {k: self.grad_req for k in self.arg_names}
-        elif isinstance(self.grad_req, (list, tuple)):
-            assert len(self.grad_req, self.arg_names)
-            self.grad_req = dict(zip(self.arg_names, self.grad_req))
-        elif isinstance(self.grad_req, dict):
-            for name in self.arg_names:
-                assert name in self.grad_req, "argument %s not found in grad_req"%name
+        if not for_training:
+            grad_req = 'null'
+
+        data_names = [x[0] for x in data_shapes]
+        if isinstance(grad_req, str):
+            self.grad_req = {}
+            for k in self.arg_names:
+                if k in self.param_names:
+                    self.grad_req[k] = 'null' if k in self.fixed_param_names else grad_req
+                elif k in data_names:
+                    self.grad_req[k] = grad_req if self.inputs_need_grad else 'null'
+                else:
+                    self.grad_req[k] = 'null'
+        elif isinstance(grad_req, (list, tuple)):
+            assert len(grad_req) == len(self.arg_names)
+            self.grad_req = dict(zip(self.arg_names, grad_req))
+        elif isinstance(grad_req, dict):
+            self.grad_req = {}
+            for k in self.arg_names:
+                if k in self.param_names:
+                    self.grad_req[k] = 'null' if k in self.fixed_param_names else 'write'
+                elif k in data_names:
+                    self.grad_req[k] = 'write' if self.inputs_need_grad else 'null'
+                else:
+                    self.grad_req[k] = 'null'
+            self.grad_req.update(grad_req)
         else:
             raise ValueError("grad_req must be one of str, list, tuple, or dict.")
 
@@ -443,21 +460,8 @@ class DataParallelExecutorGroup(object):
         arg_types, _, aux_types = self.symbol.infer_type(**input_types)
         assert arg_types is not None, "type inference failed"
 
-        data_names = [x[0] for x in data_shapes]
-
         arg_arrays = []
         grad_arrays = {} if self.for_training else None
-        grad_req = {}
-        for name in self.arg_names:
-            if self.for_training:
-                if name in self.param_names and name not in self.fixed_param_names:
-                    grad_req[name] = self.grad_req[name]
-                elif name in data_names:
-                    grad_req[name] = self.grad_req[name] if self.inputs_need_grad else 'null'
-                else:
-                    grad_req[name] = 'null'
-            else:
-                grad_req[name] = 'null'
 
         def _get_or_reshape(name, shared_data_arrays, arg_shape, arg_type, context, logger):
             """Internal helper to get a memory block or re-use by re-shaping"""
@@ -492,21 +496,21 @@ class DataParallelExecutorGroup(object):
             if name in self.param_names: # model parameter
                 if shared_exec is None:
                     arg_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
-                    if grad_req[name] != 'null':
+                    if self.grad_req[name] != 'null':
                         grad_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
                         grad_arrays[name] = grad_arr
                 else:
                     arg_arr = shared_exec.arg_dict[name]
                     assert arg_arr.shape == arg_shapes[j]
                     assert arg_arr.dtype == arg_types[j]
-                    if grad_req[name] != 'null':
+                    if self.grad_req[name] != 'null':
                         grad_arrays[name] = shared_exec.grad_dict[name]
             else: # data or label
                 arg_arr = _get_or_reshape(name, shared_data_arrays, arg_shapes[j], arg_types[j],
                                           context, self.logger)
 
                 # data might also need grad if inputs_need_grad is True
-                if grad_req[name] != 'null':
+                if self.grad_req[name] != 'null':
                     grad_arrays[name] = _get_or_reshape('grad of ' + name, shared_data_arrays,
                                                         arg_shapes[j], arg_types[j], context,
                                                         self.logger)
@@ -524,7 +528,7 @@ class DataParallelExecutorGroup(object):
 
         executor = self.symbol.bind(ctx=context, args=arg_arrays,
                                     args_grad=grad_arrays, aux_states=aux_arrays,
-                                    grad_req=grad_req, shared_exec=shared_exec)
+                                    grad_req=self.grad_req, shared_exec=shared_exec)
         return executor
 
     def _sliced_shape(self, shapes, i, major_axis):
