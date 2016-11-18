@@ -6,8 +6,6 @@ MXNet supports the R programming language. The MXNet R package brings flexible a
 computing and state-of-art deep learning to R. It enables you to write seamless tensor/matrix computation with multiple GPUs in R. It also lets you construct and customize the state-of-art deep learning models in R,
   and apply them to tasks, such as image classification and data science challenges.
 
-## R
-
 You can perform tensor or matrix computation in R:
 
 ```r
@@ -23,7 +21,6 @@ You can perform tensor or matrix computation in R:
    [1,]    2    2    2
    [2,]    2    2    2
 ```
-
 ## Resources
 
 * [MXNet R Reference Manual](http://mxnet.io/api/r/mxnet-r-reference-manual.pdf)
