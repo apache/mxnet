@@ -674,7 +674,8 @@ def register(reg_name):
 
                     list_auxiliary_states_entry._ref_holder = [out]
                 except Exception:
-                    print('Error in %s.list_auxiliary_states: %s' % (reg_name, traceback.format_exc()))
+                    tb = traceback.format_exc()
+                    print('Error in %s.list_auxiliary_states: %s' % (reg_name, tb))
                     return False
                 return True
 
@@ -691,7 +692,8 @@ def register(reg_name):
 
                     declare_backward_dependency_entry._ref_holder = [deps]
                 except Exception:
-                    print('Error in %s.declare_backward_dependency: %s' % (reg_name, traceback.format_exc()))
+                    tb = traceback.format_exc()
+                    print('Error in %s.declare_backward_dependency: %s' % (reg_name, tb))
                     return False
                 return True
 

@@ -421,7 +421,8 @@ class NDArrayIter(DataIter):
     the size of data does not match batch_size. Roll over is intended
     for training and can cause problems if used for prediction.
     """
-    def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad', label_name='softmax_label'):
+    def __init__(self, data, label=None, batch_size=1, shuffle=False,
+                 last_batch_handle='pad', label_name='softmax_label'):
         # pylint: disable=W0201
 
         super(NDArrayIter, self).__init__()
