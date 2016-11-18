@@ -7,21 +7,18 @@
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
 #include <nnvm/c_api.h>
+#include <nnvm/pass.h>
 #include <nnvm/pass_functions.h>
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 
 namespace mxnet {
-namespace op {
-void RegisterLegacyOpProp();
-void RegisterLegacyNDFunc();
-void FixLegacyGraphBatchNorm(nnvm::Symbol* s);
-}
 
 // convert nnvm symbol to a nnvm graph.
 nnvm::Graph Symbol2Graph(const nnvm::Symbol &s) {
   nnvm::Graph g;
   g.outputs = s.outputs;
+  g.attrs["mxnet_version"] = std::make_shared<dmlc::any>(MXNET_VERSION);
   return g;
 }
 
@@ -42,15 +39,11 @@ std::vector<uint32_t> ReadOnlyArgIndices(const nnvm::IndexedGraph& idx) {
 // Redirect to NNVM's C API
 int MXListAllOpNames(nn_uint *out_size,
                      const char ***out_array) {
-  mxnet::op::RegisterLegacyOpProp();
-  mxnet::op::RegisterLegacyNDFunc();
   return NNListAllOpNames(out_size, out_array);
 }
 
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
-  mxnet::op::RegisterLegacyOpProp();
-  mxnet::op::RegisterLegacyNDFunc();
   return NNListUniqueOps(out_size, out_array);
 }
 
@@ -191,9 +184,10 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   API_BEGIN();
   std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
   dmlc::istream is(fi.get());
-  s->outputs = nnvm::pass::LoadJSON(
-     std::string(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>())).outputs;
-  op::FixLegacyGraphBatchNorm(s);
+  nnvm::Graph g;
+  g.attrs["json"] = std::make_shared<dmlc::any>(
+    std::string(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>()));
+  s->outputs = nnvm::ApplyPass(g, "LoadLegacyJSON").outputs;
   *out = s;
   is.set_stream(nullptr);
   API_END_HANDLE_ERROR(delete s);
@@ -202,8 +196,9 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
 int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
-  s->outputs = nnvm::pass::LoadJSON(json).outputs;
-  op::FixLegacyGraphBatchNorm(s);
+  nnvm::Graph g;
+  g.attrs["json"] = std::make_shared<dmlc::any>(std::string(json));
+  s->outputs = nnvm::ApplyPass(g, "LoadLegacyJSON").outputs;
   *out = s;
   API_END_HANDLE_ERROR(delete s);
 }
