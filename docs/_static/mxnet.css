@@ -6,6 +6,10 @@ html, body {
     background-color: #ffffff; 
 }
 
+body {
+    display: none;
+}
+
 body, div {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
     font-size: 16px;
@@ -602,12 +606,38 @@ div.sphinxsidebar {
 
 div.sphinxsidebar ul { 
     padding: 0;
+    list-style-type: none !important;
+}
+
+div.sphinxsidebarwrapper > ul { 
+    padding-left: 20px;
 }
 
 div.sphinxsidebar li {
     padding-top: 5px;
     margin-bottom: 10px;
     font: normal 14px "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+}
+
+div.sphinxsidebar li.opened .tocToggle:before {
+    font-family: 'FontAwesome';
+    content: "\f146";
+    margin: 0 5px 0 -15px;
+    color: #e47911;
+}
+
+div.sphinxsidebar li.closed .tocToggle:before {
+    font-family: 'FontAwesome';
+    content: "\f0fe";
+    margin: 0 5px 0 -15px;
+    color: #e47911;
+}
+
+div.sphinxsidebar li.leaf .tocToggle:before {
+    font-family: 'FontAwesome';
+    content: "\f096";
+    margin: 0 5px 0 -15px;
+    color: #e47911;
 }
 
 @media (min-width:1000px) {

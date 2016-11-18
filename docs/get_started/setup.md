@@ -66,7 +66,7 @@ If you are running Python on Amazon Linux or Ubuntu, you can use Git Bash script
 
 For users of Python on Amazon Linux and Ubuntu operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
-To contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/how_to/contribute.html).
+To contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/community/index.html).
 
 ### Quick Installation on Ubuntu
 
@@ -165,11 +165,12 @@ Install the dependencies with the following commands:
 ```
 And then: 
 ```bash
-brew update
-brew install git
-brew tap homebrew/science
-brew info opencv
-brew install opencv
+	brew update
+	brew install pkg-config
+	brew install git
+	brew tap homebrew/science
+	brew info opencv
+	brew install opencv
 ```
 After you have installed the dependencies, use one of the following options to pull the MXNet source code from Git and build MXNet. Both options produce a library called ```libmxnet.so```.
 
@@ -447,7 +448,7 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 Pkg.add("MXNet")
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://mxnetjl.readthedocs.org/en/latest/user-guide/install.html).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
 #### Installing the MXNet Package for Scala
 There are four ways to install the MXNet package for Scala:
