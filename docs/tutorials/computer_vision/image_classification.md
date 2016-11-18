@@ -57,7 +57,7 @@ To speed training, train a model using multiple computers.
   ../../tools/launch.py -n 2 python train_mnist.py --kv-store dist_sync
 ```
 
-You can use either synchronized SGD `dist_sync` or asynchronized SGD
+You can use either synchronous SGD `dist_sync` or asynchronous SGD
   `dist_async`.
 
 * If you have several computers that you can connect to using SSH, and if this mxnet folder is
@@ -138,7 +138,7 @@ There are two ways to feed data into MXNet:
 
 The following factors can significantly improve performance:
 
-* A fast back end. A fast BLAS library, e.g., openblas, altas,
+* A fast back end. A fast BLAS library, e.g., openblas, atlas,
 and mkl, is necessary only if you are using a CPU processor. For Nvidia GPUs, we strongly
 recommend using CUDNN.
 * Input data:

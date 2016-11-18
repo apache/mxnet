@@ -5,13 +5,13 @@ This topic demonstrates how to use MXNet as a front end to two of Torch's major 
 * Call Torch's tensor mathematical functions with MXNet.NDArray 
 
 * Embed Torch's neural network modules (layers) into MXNet's symbolic graph 
-
 ## Compile with Torch
 
 
-1. Install Torch using the [official guide](http://torch.ch/docs/getting-started.html).
-	* If you haven't already, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into the MXNet root folder as `config.mk`. In `config.mk` uncomment the lines `TORCH_PATH = $(HOME)/torch` and `MXNET_PLUGINS += plugin/torch/torch.mk`. By default, Torch should be installed in your home folder (so `TORCH_PATH = $(HOME)/torch`). Modify TORCH_PATH to point to your torch installation, if necessary. 
-	* Run `make clean && make` to build MXNet with Torch support.
+* Install Torch using the [official guide](http://torch.ch/docs/getting-started.html).
+	* If you haven't already done so, copy `make/config.mk` (Linux) or `make/osx.mk` (Mac) into the MXNet root folder as `config.mk`. In `config.mk` uncomment the lines `TORCH_PATH = $(HOME)/torch` and `MXNET_PLUGINS += plugin/torch/torch.mk`.
+    * By default, Torch should be installed in your home folder (so `TORCH_PATH = $(HOME)/torch`). Modify TORCH_PATH to point to your torch installation, if necessary. 
+* Run `make clean && make` to build MXNet with Torch support.
 
 ## Tensor Mathematics
 The mxnet.th module supports calling Torch's tensor mathematical functions with mxnet.nd.NDArray. See [complete code](https://github.com/dmlc/mxnet/blob/master/example/torch/torch_function.py):
