@@ -110,7 +110,7 @@ Because MXNet is deeply integrated with R, we can do all the processing in an R 
       # convert to array (x, y, channel)
       arr <- as.array(resized) * 255
       dim(arr) <- c(224, 224, 3)
-      # substract the mean
+      # subtract the mean
       normed <- arr - mean.img
       # Reshape to format needed by mxnet (width, height, channel, num)
       dim(normed) <- c(224, 224, 3, 1)
