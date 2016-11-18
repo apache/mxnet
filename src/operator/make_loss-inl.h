@@ -48,7 +48,7 @@ struct MakeLossParam : public dmlc::Parameter<MakeLossParam> {
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class MakeLossOp : public Operator {
  public:
   explicit MakeLossOp(MakeLossParam param) : param_(param) {}
@@ -64,8 +64,8 @@ class MakeLossOp : public Operator {
     CHECK_EQ(out_data.size(), 1);
     if (req[make_loss_enum::kOut] != kWriteInplace) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
-      Tensor<xpu, 2> data = in_data[make_loss_enum::kData].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> out = out_data[make_loss_enum::kOut].FlatTo2D<xpu, real_t>(s);
+      Tensor<xpu, 2, DType> data = in_data[make_loss_enum::kData].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> out = out_data[make_loss_enum::kOut].FlatTo2D<xpu, DType>(s);
       Assign(out, req[make_loss_enum::kOut], F<mshadow_op::identity>(data));
     }
   }
@@ -80,22 +80,22 @@ class MakeLossOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> grad = in_grad[make_loss_enum::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> grad = in_grad[make_loss_enum::kData].FlatTo2D<xpu, DType>(s);
     if (param_.normalization == make_loss_enum::kValid) {
-      Tensor<xpu, 2> data = in_data[make_loss_enum::kData].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 1> temp = ctx.requested[make_loss_enum::kTempSpace]
-        .get_space_typed<xpu, 1, real_t>(mshadow::Shape1(1), s);
+      Tensor<xpu, 2, DType> data = in_data[make_loss_enum::kData].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> temp = ctx.requested[make_loss_enum::kTempSpace]
+        .get_space_typed<xpu, 1, DType>(mshadow::Shape1(1), s);
       temp = sumall_except_dim<0>(reduce_keepdim<red::sum, false>(
-        F<mshadow_op::threshold>(ScalarExp<real_t>(param_.valid_thresh), data), 0));
-      temp = F<mshadow_op::maximum>(ScalarExp<real_t>(1.f), temp);  // avoid zero
+        F<mshadow_op::threshold>(ScalarExp<DType>(param_.valid_thresh), data), 0));
+      temp = F<mshadow_op::maximum>(ScalarExp<DType>(1.f), temp);  // avoid zero
       Assign(grad, req[make_loss_enum::kData],
-        ScalarExp<real_t>(param_.grad_scale) / broadcast<0>(
+        ScalarExp<DType>(param_.grad_scale) / broadcast<0>(
         broadcast_keepdim(temp, 0, grad.shape_[0]), grad.shape_));
     } else if (param_.normalization == make_loss_enum::kBatch) {
       Assign(grad, req[make_loss_enum::kData],
-        ScalarExp<real_t>(param_.grad_scale / grad.shape_[0]));
+        ScalarExp<DType>(param_.grad_scale / grad.shape_[0]));
     } else {
-      Assign(grad, req[make_loss_enum::kData], ScalarExp<real_t>(param_.grad_scale));
+      Assign(grad, req[make_loss_enum::kData], ScalarExp<DType>(param_.grad_scale));
     }
   }
 
@@ -104,7 +104,7 @@ class MakeLossOp : public Operator {
 };  // class MakeLossOp
 
 template <typename xpu>
-Operator *CreateOp(MakeLossParam param);
+Operator *CreateOp(MakeLossParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class MakeLossProp : public OperatorProperty {
@@ -126,6 +126,17 @@ class MakeLossProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "Input must have specified type";
+    out_type->clear();
+    out_type->push_back(dtype);
     return true;
   }
 
@@ -163,7 +174,13 @@ class MakeLossProp : public OperatorProperty {
     return {{in_data[make_loss_enum::kData], out_data[make_loss_enum::kOut]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   MakeLossParam param_;
