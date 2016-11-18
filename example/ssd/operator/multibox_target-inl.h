@@ -124,7 +124,7 @@ struct MultiBoxTargetParam : public dmlc::Parameter<MultiBoxTargetParam> {
     .describe("Threshold used for negative mining.");
     DMLC_DECLARE_FIELD(minimum_negative_samples).set_default(0)
     .describe("Minimum number of negative samples.");
-    DMLC_DECLARE_FIELD(variances).set_default(VarsInfo({0.1, 0.1, 0.2, 0.2}))
+    DMLC_DECLARE_FIELD(variances).set_default(VarsInfo({0.1f, 0.1f, 0.2f, 0.2f}))
     .describe("Variances to be encoded in box regression target.");
   }
 };  // struct MultiBoxTargetParam

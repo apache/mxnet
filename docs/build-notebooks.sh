@@ -8,7 +8,6 @@ notebook2markdown() {
     for f in $src/*.ipynb; do
         jupyter nbconvert $f --to markdown
         bname=$(basename "$f" .ipynb)
-        echo "\n\nThis page is converted from [${bname}.ipynb](https://github.com/dmlc/$f)." >>${src}/${bname}.md
         mv -f ${src}/${bname}.md ${dst}
         if [ -e ${src}/${bname}_files ]; then
             mv -f ${src}/${bname}_files ${dst}/
