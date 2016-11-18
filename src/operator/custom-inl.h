@@ -83,7 +83,7 @@ class CustomOpProp : public OperatorProperty {
       }
     }
     CHECK_NE(param_.op_type, "") << "Custom operator type missing";
-    CHECK_NE(registry_.find(param_.op_type), registry_.end())
+    CHECK(registry_.find(param_.op_type) != registry_.end())
       << "Cannot find custom operator type " << param_.op_type;
     CustomOpPropCreator creator = registry_[param_.op_type];
     info_.reset(new CustomOpPropInfo, [](CustomOpPropInfo* ptr){ptr->del(ptr->p_del);});
