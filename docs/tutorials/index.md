@@ -104,6 +104,6 @@ Applications using traditional methods to model classification and regression pr
 *Using a simple multi-layer perceptron to do classification and regression tasks on the mlbench dataset*
 
 ## Other Resources
-- Collection of MXNet Tutorials for NVidia GTC 2016. [MXNet GTC 15 Tutorials](https://github.com/dmlc/mxnet-gtc-tutorial)
 - Collection of [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
+- Collection of MXNet Tutorials for NVidia GTC 2016. [MXNet GTC 15 Tutorials](https://github.com/dmlc/mxnet-gtc-tutorial)
 
