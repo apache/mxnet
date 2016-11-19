@@ -320,38 +320,6 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
   return remap;
 }
 
-inline std::string DefaultVarName(const std::string &op_name,
-                                  const std::string &arg_name) {
-  if (op_name.length() == 0) {
-    return arg_name;
-  } else {
-    return op_name + '_' + arg_name;
-  }
-}
-
-void FixLegacyGraphBatchNorm(nnvm::Symbol* s) {
-  using nnvm::Symbol;
-  using nnvm::FListInputNames;
-
-  const nnvm::Op* bn = nnvm::Op::Get("BatchNorm");
-  nnvm::DFSVisit(s->outputs, [ bn](const std::shared_ptr<Node>& n) {
-      static auto& flist_inputs = Op::GetAttr<FListInputNames>("FListInputNames");
-      if (n->op() == bn && n->inputs.size() < n->num_inputs()) {
-        FListInputNames fn = flist_inputs.get(n->op(), nullptr);
-        CHECK(fn != nullptr);
-        auto arg_names = fn(n->attrs);
-        size_t begin = n->inputs.size();
-        size_t end = n->num_inputs();
-        CHECK_EQ(end, begin + 2);
-        for (size_t i = begin; i < end; ++i) {
-          n->inputs.push_back(
-              Symbol::CreateVariable(
-                  DefaultVarName(n->attrs.name, arg_names[i])).outputs[0]);
-        }
-      }
-    });
-}
-
 // register the legacy operator properties under NNVM registry.
 void RegisterLegacyOpProp() {
   for (auto reg : dmlc::Registry<OperatorPropertyReg>::List()) {
