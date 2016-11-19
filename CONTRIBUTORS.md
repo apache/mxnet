@@ -114,3 +114,4 @@ List of Contributors
 * [Sandeep Krishnamurthy] (https://github.com/sandeep-krishnamurthy)
 * [Andre Moeller] (https://github.com/andremoeller)
 * [Miguel Gonzalez-Fierro](https://github.com/miguelgfierro)
+* [Mingjie Xing] (https://github.com/EricFisher)

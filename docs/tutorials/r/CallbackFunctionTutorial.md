@@ -4,8 +4,6 @@ Callback Function
 This tutorial provides guidelines for using and writing callback functions,
 which can very useful in model training.
 
-This tutorial is written in R Markdown. You can see the hosted version of the tutorial in the [MXNet R document](http://mxnet.io/api/r/CallbackFunctionTutorial.html). You can find the R Markdown source on [GitHub](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CallbackFunctionTutorial.Rmd).
-
 Model Training Example
 ----------
 

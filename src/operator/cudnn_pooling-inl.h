@@ -27,7 +27,7 @@ class CuDNNPoolingOp : public Operator {
         mode_ = CUDNN_POOLING_MAX;
         break;
       case pool_enum::kAvgPooling:
-        mode_ = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+        mode_ = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
         break;
       default:
         LOG(FATAL) << "Not implmented";
