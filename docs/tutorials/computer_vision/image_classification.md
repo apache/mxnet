@@ -96,7 +96,7 @@ program, see this [tutorial](http://mxnet.io/how_to/multi_devices.html).
 ## Generating Predictions
 You have several options for generating predictions:
 
-- [Use a pre-trained model](../notebooks/predict-with-pretrained-model.ipynb). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
+- [Use a pre-trained model](http://mxnet.io/how_to/pretrained.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - Use your own datasets.
 - You can also easily run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html).
@@ -162,7 +162,7 @@ recommend using CUDNN.
 
 
 * If you are using more than one GPU, the right `kvstore`. For more information, see
-  [doc/developer-guide/multi_node.md](../../doc/developer-guide/multi_node.md).
+  [this guide](http://mxnet.io/how_to/multi_devices.html#distributed-training-with-multiple-machines).
 
 
 	- For a single computer, the default `local` is often sufficient. For models bigger than 100 MB, such as AlexNet
