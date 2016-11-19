@@ -1,6 +1,8 @@
 /* Initial sidebar toc toggle button*/
 $(document).ready(function () {
     var allEntry = $("div.sphinxsidebarwrapper li");
+    var subEntry = $("div.sphinxsidebarwrapper").children("ul").first().children("li");
+    if(subEntry.length == 1) allEntry = subEntry.find("li");
     allEntry.each(function () {
         $(this).prepend("<span class='tocToggle' onclick='toggle(this)'></span>");
         var childUL = $(this).find("ul");
