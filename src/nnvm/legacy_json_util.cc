@@ -61,7 +61,7 @@ Graph LoadLegacyJSONPass(Graph g) {
   Graph load = nnvm::ApplyPass(g, "LoadJSON");
   int version = MXNET_MAKE_VERSION(0, 8, 0);
   if (load.attrs.find("mxnet_version") != load.attrs.end()) {
-    version = nnvm::get<int>(load.attrs["mxnet_version"]);
+    version = nnvm::get<int>(*load.attrs["mxnet_version"]);
   }
   auto it = upgrader_list.begin();
   while (it != upgrader_list.end() && it->first <= version) ++it;
