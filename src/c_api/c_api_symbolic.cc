@@ -13,6 +13,11 @@
 #include "../operator/operator_common.h"
 
 namespace mxnet {
+namespace op {
+void RegisterLegacyOpProp();
+void RegisterLegacyNDFunc();
+}
+
 DMLC_JSON_ENABLE_ANY(int, int);
 
 // convert nnvm symbol to a nnvm graph.
@@ -40,11 +45,15 @@ std::vector<uint32_t> ReadOnlyArgIndices(const nnvm::IndexedGraph& idx) {
 // Redirect to NNVM's C API
 int MXListAllOpNames(nn_uint *out_size,
                      const char ***out_array) {
+  mxnet::op::RegisterLegacyOpProp();
+  mxnet::op::RegisterLegacyNDFunc();
   return NNListAllOpNames(out_size, out_array);
 }
 
 int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
                                      AtomicSymbolCreator **out_array) {
+  mxnet::op::RegisterLegacyOpProp();
+  mxnet::op::RegisterLegacyNDFunc();
   return NNListUniqueOps(out_size, out_array);
 }
 

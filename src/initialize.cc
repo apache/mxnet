@@ -6,17 +6,11 @@
 #include <dmlc/logging.h>
 
 namespace mxnet {
-namespace op {
-void RegisterLegacyOpProp();
-void RegisterLegacyNDFunc();
-}
 
 class LibraryInitializer {
  public:
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
-    mxnet::op::RegisterLegacyOpProp();
-    mxnet::op::RegisterLegacyNDFunc();
   }
 };
 
