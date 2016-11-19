@@ -9,9 +9,6 @@ image. For information about the network architecture, see  [1].
 The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip)
 This model gives the recent state-of-art prediction accuracy on image net dataset.
 
-
-This tutorial is written in R Markdown. You can view the hosted version of the tutorial at [MXNet R Document](http://mxnet.io/api/r/classifyRealImageWithPretrainedModel.html). You can find the download the R Markdown source on [GitHub](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/classifyRealImageWithPretrainedModel.Rmd).
-
 Load the MXNet Package
 ---------------
 To get started, load the mxnet package:
@@ -113,7 +110,7 @@ Because MXNet is deeply integrated with R, we can do all the processing in an R 
       # convert to array (x, y, channel)
       arr <- as.array(resized) * 255
       dim(arr) <- c(224, 224, 3)
-      # substract the mean
+      # subtract the mean
       normed <- arr - mean.img
       # Reshape to format needed by mxnet (width, height, channel, num)
       dim(normed) <- c(224, 224, 3, 1)
