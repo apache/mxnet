@@ -82,6 +82,16 @@
 #define PROFILER_MESSAGE(msg)     nullptr
 #endif
 
+/*! \brief major version */
+#define MXNET_MAJOR 0
+/*! \brief minor version */
+#define MXNET_MINOR 9
+/*! \brief patch version */
+#define MXNET_PATCH 0
+/*! \brief mxnet version */
+#define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
+/*! \brief helper for making version number */
+#define MXNET_MAKE_VERSION(major, minor, patch) ((major)*10000 + (minor)*100 + patch)
 /*!
  * \brief define function name as profiler message
  */
