@@ -1,7 +1,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file iter_normalize.h
- * \brief Iterator that substracts mean and do a few augmentations.
+ * \brief Iterator that subtracts mean and do a few augmentations.
  */
 #ifndef MXNET_IO_ITER_NORMALIZE_H_
 #define MXNET_IO_ITER_NORMALIZE_H_
@@ -182,7 +182,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
 
     if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
         param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
-      // substract mean per channel
+      // subtract mean per channel
       data[0] -= param_.mean_r;
       if (data.shape_[0] >= 3) {
         data[1] -= param_.mean_g;
@@ -197,7 +197,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
         outimg_ = (data * contrast + illumination) * param_.scale;
       }
     } else if (!meanfile_ready_ || param_.mean_img.length() == 0) {
-      // do not substract anything
+      // do not subtract anything
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
         outimg_ = mirror(data) * param_.scale;
       } else {

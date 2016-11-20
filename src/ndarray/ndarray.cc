@@ -784,7 +784,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
 #if MXNET_USE_OPENCV
   cv::Mat buf(1, size, CV_8U, str_img);
   cv::Mat res = cv::imdecode(buf, n_channels == 1 ? 0 : -1);
-  CHECK_NE(res.data, NULL) << "OpenCV Failed to decode image";
+  CHECK(res.data != NULL) << "OpenCV Failed to decode image";
   CHECK_LE(n_channels, static_cast<size_t>(res.channels()));
   if (y1 - y0 == 0) {
     x0 = 0;
@@ -886,7 +886,7 @@ MXNET_REGISTER_NDARRAY_FUN(_imdecode)
 .set_num_use_vars(1)
 .set_num_scalars(7)
 .set_num_mutate_vars(1)
-.describe("Decode an image, clip to (x0, y0, x1, y1), substract mean, and write to buffer")
+.describe("Decode an image, clip to (x0, y0, x1, y1), subtract mean, and write to buffer")
 .add_argument("mean", "NDArray", "image mean")
 .add_argument("index", "int", "buffer position for output")
 .add_argument("x0", "int", "x0")

@@ -46,7 +46,7 @@ who are willing to help maintaining and lead the project. Committers comes from 
 * Made substantial contribution to the project.
 * Willing to actively spent time on maintaining and lead the project.
 
-New committers will be proposed by current comitter memembers, with support from more than two of current comitters.
+New committers will be proposed by current committers, with support from more than two of current committers.
 
 List of Contributors
 --------------------
@@ -114,3 +114,4 @@ List of Contributors
 * [Sandeep Krishnamurthy] (https://github.com/sandeep-krishnamurthy)
 * [Andre Moeller] (https://github.com/andremoeller)
 * [Miguel Gonzalez-Fierro](https://github.com/miguelgfierro)
+* [Mingjie Xing] (https://github.com/EricFisher)

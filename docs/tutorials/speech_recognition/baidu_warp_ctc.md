@@ -1,12 +1,11 @@
-# Baidu Warp CTC with MXNet
-You can get the source code for below example [here](https://github.com/dmlc/mxnet/tree/master/example/warpctc)
+# Using Baidu Warp-CTC with MXNet
 
 
-&nbsp;
+Baidu-WarpCTC is a CTC implementation by Baidu that supports using GPU processors. It supports using CTC with LSTM to solve label alignment problems in many areas, such as OCR and speech recognition.
 
-Baidu-warpctc is a CTC implement by Baidu which support GPU. CTC can be used with LSTM to solve lable alignment problems in many areas such as OCR, speech recognition.
+You can get the source code for the example on [GitHub](https://github.com/dmlc/mxnet/tree/master/example/warpctc).
 
-## Install baidu warpctc
+## Install Baidu Warp-CTC
 
 ```
   cd ~/
@@ -19,7 +18,7 @@ Baidu-warpctc is a CTC implement by Baidu which support GPU. CTC can be used wit
   sudo make install
 ```
 
-## Enable warpctc in mxnet
+## Enable Warp-CTC in MXNet
 
 ```
   comment out following lines in make/config.mk
@@ -30,9 +29,9 @@ Baidu-warpctc is a CTC implement by Baidu which support GPU. CTC can be used wit
   make clean && make -j4
 ```
 
-## Run examples
+## Run Examples
 
-I implement two examples, one is just a toy example which can be used to prove ctc integration is right. The second is a OCR example with LSTM+CTC. You can run it by:
+There are two examples. One is a toy example that validates CTC integration. The second is an OCR example with LSTM and CTC. You can run it by typing the following code:
 
 ```
   cd examples/warpctc
@@ -41,11 +40,11 @@ I implement two examples, one is just a toy example which can be used to prove c
 
 The OCR example is constructed as follows:
   
-1. I generate 80x30 image for 4 digits captcha by an python captcha library
-2. The 80x30 image is used as 80 input for lstm and every input is one column of image (a 30 dim vector)
-3. The output layer use CTC loss
+1. It generates a 80x30-pixel image for a 4-digit captcha using a Python captcha library.
+2. The 80x30 image is used as 80 input for lstm, and every input is one column of the image (a 30 dim vector).
+3. The output layer use CTC loss.
 
-Following code show detail construction of the net:
+The following code shows detailed construction of the net:
 
 ```
   def lstm_unroll(num_lstm_layer, seq_len,
@@ -88,11 +87,11 @@ Following code show detail construction of the net:
     return sm
 ```
   
-## Support multi label length
+## Supporting Multi-label Length
 
-If you label length is smalled than or equal to b. You should provide labels with length b, and for those samples which label length is smaller than b, you should append 0 to label data to make it have length b.
+Provide labels with length b. For samples whose label length is smaller than b, append 0 to the label data to make it have length b.
 
-Here, 0 is reserved for blank label.
+0 is reserved for a blank label.
 
-# Recommended Next Steps
+## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

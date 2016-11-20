@@ -3,7 +3,6 @@ KVStore API
 
 * [基本的 Push 和 Pull 操作](#basic-push-and-pull)
 * [key-value pairs 列表的接口](#interface-for-list-key-value-pairs)
-* [多机]() TODO
 
 ## Basic Push and Pull
 
@@ -11,7 +10,7 @@ KVStore API
 
 ### Initialization
 
-首先让我们来考虑一个简单的例子. 首先初始化一个 (`int`, `NDAarray`) push 到 KVstore 里, 然后再将数据   pull 下来.
+首先让我们来考虑一个简单的例子. 首先初始化一个 (`int`, `NDarray`) push 到 KVstore 里, 然后再将数据   pull 下来.
 
 ```python
 >>> kv = mx.kv.create('local') # create a local kv store.
@@ -117,7 +116,7 @@ update on key: 9
 ```eval_rst
 .. raw:: html
 
-    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+    <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 ```
 
 

@@ -406,7 +406,7 @@ MXNET_DLL int MXGetFunction(const char *name,
  * \param description The returned description of the function.
  * \param num_args Number of arguments.
  * \param arg_names Name of the arguments.
- * \param arg_type_infos Type informations about the arguments.
+ * \param arg_type_infos Type information about the arguments.
  * \param arg_descriptions Description information about the arguments.
  * \param return_type Return type of the function.
  * \return 0 when success, -1 when failure happens

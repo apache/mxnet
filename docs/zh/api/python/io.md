@@ -110,7 +110,7 @@ RecordIO 实现了顺序存储 record 的数据格式. 我们建议图像数据�
 ```
 integer_image_index \t label_index \t path_to_image
 ```
-通常, 这个程序会读取一个包含所有图像文件名的列表文件,  shuffe 这些文件, 然后将 shuffe 后的图像文件名列表分为训练列表文件和测试列表文件. 按照下面给出的例子的格式存储.
+通常, 这个程序会读取一个包含所有图像文件名的列表文件,  shuffle 这些文件, 然后将 shuffle 后的图像文件名列表分为训练列表文件和测试列表文件. 按照下面给出的例子的格式存储.
 
 简单的例子文件
 
@@ -168,7 +168,7 @@ dataiter = mx.io.ImageRecordIter(
 ```eval_rst
 .. raw:: html
 
-    <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+    <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 ```
 
 

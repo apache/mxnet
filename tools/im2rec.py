@@ -13,7 +13,7 @@ import time
 
 
 def list_image(root, recursive, exts):
-    image_list = []
+    i = 0
     if recursive:
         cat = {}
         for path, subdirs, files in os.walk(root, followlinks=True):
@@ -25,13 +25,15 @@ def list_image(root, recursive, exts):
                 if os.path.isfile(fpath) and (suffix in exts):
                     if path not in cat:
                         cat[path] = len(cat)
-                    yield (len(image_list), os.path.relpath(fpath, root), cat[path])
+                    yield (i, os.path.relpath(fpath, root), cat[path])
+                    i += 1
     else:
         for fname in os.listdir(root):
             fpath = os.path.join(root, fname)
             suffix = os.path.splitext(fname)[1].lower()
             if os.path.isfile(fpath) and (suffix in exts):
-                yield (len(image_list), os.path.relpath(fpath, root), 0)
+                yield (i, os.path.relpath(fpath, root), 0)
+                i += 1
 
 def write_list(path_out, image_list):
     with open(path_out, 'w') as fout:

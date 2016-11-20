@@ -1,4 +1,4 @@
-# pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access
+# pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
 more `Executor` for data parallelization.
 """
@@ -14,6 +14,8 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..initializer import Uniform
 
 from .base_module import BaseModule
+from ..io import DataDesc
+from ..base import mx_real_t
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -162,11 +164,17 @@ class Module(BaseModule):
         assert self.binded, 'call bind before initializing the parameters'
 
         if self._arg_params is None:
-            param_arrays = [nd.zeros(x[0].shape) for x in self._exec_group.param_arrays]
+            param_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.param_arrays
+            ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
 
         if self._aux_params is None:
-            aux_arrays = [nd.zeros(x[0].shape) for x in self._exec_group.aux_arrays]
+            aux_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.aux_arrays
+            ]
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         def _impl(name, arr, cache):
@@ -255,6 +263,17 @@ class Module(BaseModule):
         else:
             shared_group = None
 
+        input_types = dict((x.name, x.dtype)
+                           if isinstance(x, DataDesc) else (x[0], mx_real_t)
+                           for x in data_shapes)
+
+        if label_shapes is not None:
+            for item in label_shapes:
+                if isinstance(item, DataDesc):
+                    input_types[item.name] = item.dtype
+                else:
+                    input_types[item[0]] = mx_real_t
+
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, data_shapes,
                                                      label_shapes, self._param_names,
@@ -262,7 +281,7 @@ class Module(BaseModule):
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
                                                      layout_mapper=self.layout_mapper,
-                                                     grad_req=grad_req)
+                                                     grad_req=grad_req, input_types=input_types)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
