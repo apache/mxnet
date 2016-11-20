@@ -307,7 +307,7 @@ It also makes things like random number generation easier because the operation 
 
 ## Source Code of the Generic Dependency Engine
 [MXNet](https://github.com/dmlc/mxnet) provides an implementation of the generic dependency engine described in this topic.
-You can find more details in [this topic](engine.md). We welcome your contributions. 
+You can find more details in [this topic](http://mxnet.io/architecture/note_engine.html). We welcome your contributions. 
 
 ## Next Steps
 

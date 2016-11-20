@@ -96,7 +96,7 @@ program, see this [tutorial](http://mxnet.io/how_to/multi_devices.html).
 ## Generating Predictions
 You have several options for generating predictions:
 
-- [Use a pre-trained model](http://mxnet.io/how_to/pretrained.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
+- Use a pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - Use your own datasets.
 - You can also easily run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html).
@@ -106,7 +106,7 @@ You have several options for generating predictions:
 
 There are two ways to feed data into MXNet:
 
-- Pack all examples into one or more compact `recordio` files. For more information, see this [step-by-step tutorial](http://mxnet.io/api/python/io.html#create-dataset-using-recordio) and [documentation](http://mxnet.io/architecture/note_data_loading.html). Avoid the common mistake of neglecting to shuffle the image list during packing. This causes training to fail. For example, ```accuracy``` keeps 0.001 for several rounds.
+- Pack all examples into one or more compact `recordio` files. For more information, see this [step-by-step tutorial](http://mxnet.io/api/python/io.html#create-a-dataset-using-recordio) and [documentation](http://mxnet.io/architecture/note_data_loading.html). Avoid the common mistake of neglecting to shuffle the image list during packing. This causes training to fail. For example, ```accuracy``` keeps 0.001 for several rounds.
 
 	**Note:** We automatically download the small datasets, such as `mnist` and `cifar10`.
 
