@@ -14,7 +14,7 @@ For the input data, mind the following:
 * Use a fast BLAS library: e.g., openblas, atlas, or MKL. This is necessary only if you are using a CPU processor. If you are using Nvidia GPUs, we strongly
 recommend using CUDNN.
 * If you are using more than one GPU, choose the proper `kvstore`. For more information, see
-  [doc/developer-guide/multi_node.md](../../doc/developer-guide/multi_node.md).
+  [doc/developer-guide/multi_node.md](http://mxnet.io/how_to/model_parallel_lstm.html).
 * For a single device, the default `local` is usually good enough. For models greater than 100 MB, such as AlexNet
   and VGG, you might want
   to use `local_allreduce_device`. `local_allreduce_device` takes more GPU memory than
