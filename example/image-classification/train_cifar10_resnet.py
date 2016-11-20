@@ -238,7 +238,7 @@ class Nesterov(mx.optimizer.SGD):
             setting multipler by index is supported for backward compatibility,
             but we recommend using name and symbol.
         """
-        self.wd_mult = {}
+        wd_mult = {}
         for n in self.idx2name.values():
             if not (
                 # Test accuracy 0.930288, 0.930889 and 0.929587 in last 3 epochs
@@ -253,13 +253,9 @@ class Nesterov(mx.optimizer.SGD):
                 or n.endswith('_gamma')
                 or n.endswith('_beta')
             ) or 'proj' in n or 'zscore' in n:
-                self.wd_mult[n] = 0.0
-        if self.sym is not None:
-            attr = self.sym.list_attr(recursive=True)
-            for k, v in attr.items():
-                if k.endswith('_wd_mult'):
-                    self.wd_mult[k[:-len('_wd_mult')]] = float(v)
-        self.wd_mult.update(args_wd_mult)
+                wd_mult[n] = 0.0
+        wd_mult.update(args_wd_mult)
+        super(Nesterov, self).set_wd_mult(wd_mult)
 
     def set_lr_mult(self, args_lr_mult):
         """Set individual learning rate multipler for parameters
@@ -271,16 +267,12 @@ class Nesterov(mx.optimizer.SGD):
             setting multipler by index is supported for backward compatibility,
             but we recommend using name and symbol.
         """
-        self.lr_mult = {}
+        lr_mult = {}
         for n in self.idx2name.values():
             if 'proj' in n or 'zscore' in n:
-                self.lr_mult[n] = 0.0
-        if self.sym is not None:
-            attr = self.sym.list_attr(recursive=True)
-            for k, v in attr.items():
-                if k.endswith('_lr_mult'):
-                    self.lr_mult[k[:-len('_lr_mult')]] = float(v)
-        self.lr_mult.update(args_lr_mult)
+                lr_mult[n] = 0.0
+        lr_mult.update(args_lr_mult)
+        super(Nesterov, self).set_lr_mult(lr_mult)
 
 
 def fit(args, network, data_loader, batch_end_callback=None):

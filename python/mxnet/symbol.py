@@ -261,20 +261,41 @@ class Symbol(SymbolBase):
     def list_attr(self, recursive=False):
         """Get all attributes from the symbol.
 
-        Parameters
-        ----------
-        recursive : bool
-            Default `False`. When `recursive` is `True`, list recursively all the
-            attributes in the descendents. The attribute names are pre-pended with
-            the symbol names to avoid conflicts. If `False`, then only attributes
-            that belongs to this symbol is returned, and the attribute names will
-            **not** be pre-pended with the symbol name.
+        Returns
+        -------
+        ret : dict of str to str
+            a dicitonary mapping attribute keys to values
+        """
+        if recursive:
+            raise DeprecationWarning("Symbol.list_attr with recursive=True has been deprecated. "
+                                     "Please use attr_dict instead.")
+        size = mx_uint()
+        pairs = ctypes.POINTER(ctypes.c_char_p)()
+        f_handle = _LIB.MXSymbolListAttrShallow
+        check_call(f_handle(self.handle, ctypes.byref(size), ctypes.byref(pairs)))
+        return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
+
+    def attr_dict(self):
+        """Recursively get all attributes from the symbol and its childrens
+
+        Returns
+        -------
+        ret : dict of str to dict
+            Returns a dict whose keys are names of the symbol and its children.
+            Values of the returned dict are dictionaries that map attribute keys to values
         """
         size = mx_uint()
         pairs = ctypes.POINTER(ctypes.c_char_p)()
-        f_handle = _LIB.MXSymbolListAttr if recursive else _LIB.MXSymbolListAttrShallow
+        f_handle = _LIB.MXSymbolListAttr
         check_call(f_handle(self.handle, ctypes.byref(size), ctypes.byref(pairs)))
-        return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
+        ret = {}
+        for i in range(size.value):
+            name, key = py_str(pairs[i*2]).split('$')
+            val = py_str(pairs[i*2+1])
+            if name not in ret:
+                ret[name] = {}
+            ret[name][key] = val
+        return ret
 
     def _set_attr(self, **kwargs):
         """Set the attribute of the symbol.
@@ -686,15 +707,13 @@ class Symbol(SymbolBase):
             raise ValueError("Input node is not complete")
 
         if group2ctx is not None:
-            attr_dict = {
-                k : group2ctx.get(v, ctx)
-                for k, v in self.list_attr(recursive=True).items()
-                if k.endswith('ctx_group')
-            } if group2ctx is not None else {}
-            arg_ctx = [attr_dict.get(name + '_ctx_group', ctx)
-                       for name in self.list_arguments()]
-            aux_ctx = [attr_dict.get(name + '_ctx_group', ctx)
-                       for name in self.list_auxiliary_states()]
+            attr_dict = self.attr_dict()
+            arg_ctx = [group2ctx.get(attr_dict[name]['__ctx_group__'], ctx) \
+                         if name in attr_dict and '__ctx_group__' in attr_dict[name] \
+                         else ctx for name in self.list_arguments()]
+            aux_ctx = [group2ctx.get(attr_dict[name]['__ctx_group__'], ctx) \
+                         if name in attr_dict and '__ctx_group__' in attr_dict[name] \
+                         else ctx for name in self.list_auxiliary_states()]
         else:
             arg_ctx = [ctx] * len(arg_shapes)
             aux_ctx = [ctx] * len(aux_shapes)
@@ -879,7 +898,7 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
 
-def Variable(name, attr=None, shape=None):
+def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None):
     """Create a symbolic variable with specified name.
 
     Parameters
@@ -904,11 +923,14 @@ def Variable(name, attr=None, shape=None):
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
     attr = AttrScope.current.get(attr)
+    attr = {} if attr is None else attr
     if shape is not None:
-        attr = {} if attr is None else attr
         attr['__shape__'] = str(shape)
-    if attr:
-        ret._set_attr(**attr)
+    if lr_mult is not None:
+        attr['__lr_mult__'] = str(lr_mult)
+    if wd_mult is not None:
+        attr['__wd_mult__'] = str(wd_mult)
+    ret._set_attr(**attr)
     return ret
 
 
