@@ -713,7 +713,7 @@ The gradient, which can be found in `src/operator/smooth_l1_unary-inl.h`, is sim
 
 ### Beyond Two Operands
 The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs, 
-more than one output, or that need more features, see the original [Operator API](operator.md).
+more than one output, or that need more features, see the original [Operator API](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
 
 ## KVStore: Multiple Devices and Multiple Computers
 
