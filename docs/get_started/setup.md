@@ -1,6 +1,6 @@
 Overview
 ============
-You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet currently supports the Python, R, Julia, and Scala languages. If you are running Python on Amazon Linux or Ubuntu, you can use Git Bash scripts to quickly install the MXNet libraries and all dependencies. To use the Git Bash scripts so you can get started with MXNet quickly, skip to [Quick Installation](#quick-installation).  If you are using other languages or operating systems, keep reading.
+You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet supports multiple programming languages. If you are running Python on Amazon Linux or Ubuntu, you can use Git Bash scripts to quickly install the MXNet libraries and all dependencies. To use the Git Bash scripts so you can get started with MXNet quickly, skip to [Quick Installation](#quick-installation).  If you are using other languages or operating systems, keep reading.
 
  
 This topic covers the following:
@@ -66,7 +66,7 @@ If you are running Python on Amazon Linux or Ubuntu, you can use Git Bash script
 
 For users of Python on Amazon Linux and Ubuntu operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
-To contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/how_to/contribute.html).
+To contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/community/index.html).
 
 ### Quick Installation on Ubuntu
 
@@ -448,7 +448,7 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 Pkg.add("MXNet")
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://mxnetjl.readthedocs.org/en/latest/user-guide/install.html).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
 #### Installing the MXNet Package for Scala
 There are four ways to install the MXNet package for Scala:

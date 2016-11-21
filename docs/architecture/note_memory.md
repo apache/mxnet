@@ -179,7 +179,7 @@ To parallelize computation, we need to take greater care.
 Being correct is our first principle. This means execute in a way that takes  implicit dependency
 memory sharing into consideration. You can do this by adding the implicit dependency edge to the execution graph.
 Or, even simpler, if the execution engine is mutate aware, as described in the
-[dependency engine topic](http://mxnet.readthedocs.org/en/latest/developer-guide/note_engine.html), push the operation
+[dependency engine topic](http://mxnet.io/architecture/note_engine.html), push the operation
 in sequence and write to the same variable tag that represents the same memory region.
 
 Always produce a safe memory allocation plan. This means never allocate the same memory to nodes that can

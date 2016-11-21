@@ -5,20 +5,20 @@ You can get the source code for these examples on [GitHub](https://github.com/dm
 
 The examples folder contains examples for speech recognition:
 
-- [lstm_proj.py](lstm.py): Functions for building an LSTM network with and without a projection layer.
-- [io_util.py](io_util.py): Wrapper functions for `DataIter` over speech data.
-- [train_lstm_proj.py](train_lstm_proj.py): A script for training an LSTM acoustic model.
-- [decode_mxnet.py](decode_mxnet.py): A script for decoding an LSTMP acoustic model.
-- [default.cfg](default.cfg): Configuration for training on the `AMI` SDM1 dataset. You can use it as a template for writing other configuration files.
-- [python_wrap](python_wrap): C wrappers for Kaldi C++ code, built into an .so file. Python code that loads the .so file and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
+- [lstm_proj.py](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/lstm_proj.py): Functions for building an LSTM network with and without a projection layer.
+- [io_util.py](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/io_util.py): Wrapper functions for `DataIter` over speech data.
+- [train_lstm_proj.py](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/train_lstm_proj.py): A script for training an LSTM acoustic model.
+- [decode_mxnet.py](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/decode_mxnet.py): A script for decoding an LSTMP acoustic model.
+- [default.cfg](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/default.cfg): Configuration for training on the `AMI` SDM1 dataset. You can use it as a template for writing other configuration files.
+- [python_wrap](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/python_wrap): C wrappers for Kaldi C++ code, built into an .so file. Python code that loads the .so file and calls the C wrapper functions in `io_func/feat_readers/reader_kaldi.py`.
 
 Connect to Kaldi:
 
-- [decode_mxnet.sh](decode_mxnet.sh): Called by Kaldi to decode an acoustic model trained by MXNet (select the `simple` method for decoding).
+- [decode_mxnet.sh](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/decode_mxnet.sh): Called by Kaldi to decode an acoustic model trained by MXNet (select the `simple` method for decoding).
 
 A full receipt:
 
-- [run_ami.sh](run_ami.sh): A full receipt to train and decode an acoustic model on AMI. It takes features and alignment from Kaldi to train an acoustic model and decode it.
+- [run_ami.sh](https://github.com/dmlc/mxnet/tree/master/example/speech-demo/run_ami.sh): A full receipt to train and decode an acoustic model on AMI. It takes features and alignment from Kaldi to train an acoustic model and decode it.
 
 To create the speech acoustic modeling example, use the following steps.
 
@@ -96,7 +96,7 @@ TRANSFORM scp:feat.scp
 scp:label.scp
 ```
 
-`TRANSFORM` is the transformation you want to apply to the features. By default, we use `NO_FEATURE_TRANSFORM`. The `scp:` syntax is from Kaldi. `feat.scp` is typically the file from `data/sdm1/train/feats.scp`, and `label.scp` is converted from the force-aligned labels located in `exp/sdm1/tri3a_ali`. Because the force-alignments are generated only on the training data, we split the training set in two, using a 90/10 ratio, and then use the 1/10 holdout as the dev set (validation set). The script [run_ami.sh](run_ami.sh) automatically splits and formats the file for MXNet. Before running it, set the path in the script correctly. The [run_ami.sh](run_ami.sh) script actually runs the full pipeline, including training the acoustic model and decoding. If the scripts ran successfully, you can skip the following sections.
+`TRANSFORM` is the transformation you want to apply to the features. By default, we use `NO_FEATURE_TRANSFORM`. The `scp:` syntax is from Kaldi. `feat.scp` is typically the file from `data/sdm1/train/feats.scp`, and `label.scp` is converted from the force-aligned labels located in `exp/sdm1/tri3a_ali`. Because the force-alignments are generated only on the training data, we split the training set in two, using a 90/10 ratio, and then use the 1/10 holdout as the dev set (validation set). The script [run_ami.sh](https://github.com/dmlc/mxnet/blob/master/example/speech-demo/run_ami.sh) automatically splits and formats the file for MXNet. Before running it, set the path in the script correctly. The [run_ami.sh](https://github.com/dmlc/mxnet/blob/master/example/speech-demo/run_ami.sh) script actually runs the full pipeline, including training the acoustic model and decoding. If the scripts ran successfully, you can skip the following sections.
 
 ### Run MXNet Acoustic Model Training
 

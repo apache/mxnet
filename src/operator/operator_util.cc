@@ -883,7 +883,7 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
 
     // no check if all of them are on cpu
     if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
-      CHECK_EQ(lhs.ctx(), rhs.ctx())
+      CHECK(lhs.ctx() == rhs.ctx())
         << "operands context mismatch " << lhs.ctx().dev_type << " " << lhs.ctx().dev_id << \
         " vs. " << rhs.ctx().dev_type << " " << rhs.ctx().dev_id;
     }

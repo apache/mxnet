@@ -6,12 +6,12 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 
 ## Guidelines
 
-* [Submitting a Pull Request](#submit-pull-request)
-* [Resolving a Conflict with the Master](#how-to-resolve-conflict-with-master)
-* [Combining Multiple Commits](#how-to-combine-multiple-commits-into-one)
-* [What Is the Consequence of Forcing a Push?](#what-is-the-consequence-of-force-push)
+* [Submitting a Pull Request](#submitting-a-pull-request)
+* [Resolving a Conflict with the Master](#resolving-a-conflict-with-the-master)
+* [Combining Multiple Commits](#combining-multiple-commits)
+* [What Is the Consequence of Forcing a Push?](#what-is-the-consequence-of-forcing-a-push)
 * [Document](#documents)
-* [Test Cases](#testcases)
+* [Test Cases](#test-cases)
 * [Examples](#examples)
 * [Core Library](#core-library)
 * [Python Package](#python-package)
