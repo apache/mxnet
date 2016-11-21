@@ -9,13 +9,13 @@
 
 namespace mxnet {
 namespace op {
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_plus)
-.add_alias("broadcast_plus").add_alias("_Plus")
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
+.add_alias("broadcast_plus").add_alias("_plus").add_alias("_Plus")
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_plus"});
 
-// specialized to elementwise plus, currently only used for gradient aggregation
-MXNET_OPERATOR_REGISTER_BINARY(_ewise_plus)
+// specialized to elementwise add, currently only used for gradient aggregation
+MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_plus"});
 
@@ -33,8 +33,8 @@ NNVM_REGISTER_OP(_backward_plus)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity,
                                                                 mshadow_op::identity>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_minus)
-.add_alias("broadcast_minus").add_alias("_Minus")
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
+.add_alias("broadcast_minus").add_alias("_minus").add_alias("_Minus")
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::minus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_minus"});
 
@@ -52,8 +52,8 @@ NNVM_REGISTER_OP(_backward_minus)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity,
                                                                 mshadow_op::negation>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_mul)
-.add_alias("broadcast_mul").add_alias("_Mul")
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_mul)
+.add_alias("_mul").add_alias("_Mul")
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::mul>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mul"});
 
@@ -71,8 +71,8 @@ NNVM_REGISTER_OP(_backward_mul)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::right,
                                                               mshadow_op::left>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_div)
-.add_alias("broadcast_div").add_alias("_Div")
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_div)
+.add_alias("_div").add_alias("_Div")
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::div>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
 
@@ -90,8 +90,8 @@ NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::div_grad,
                                                               mshadow_op::div_rgrad>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_power)
-.add_alias("broadcast_power").add_alias("_Power")
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_power)
+.add_alias("_power").add_alias("_Power")
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_power"});
 
