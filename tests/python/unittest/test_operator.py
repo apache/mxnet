@@ -1122,12 +1122,20 @@ def test_slice_axis():
         shape = np.random.randint(1, 11, size=(ndim,))
         for t in range(ndim):
             d = shape[t]
-            b = random.randint(0, d-1)
-            e = random.randint(b+1, d)
+            bt = random.randint(0, d-1)
+            et = random.randint(bt+1, d)
+
+            b = bt
+            e = et
+            if random.choice([True, False]):
+                b = bt - (d + 1)
+            if random.choice([True, False]):
+                e = et - (d + 1)
+
             idx = []
             for i in range(ndim):
                 idx.append(slice(0, shape[i]))
-            idx[t] = slice(b, e)
+            idx[t] = slice(bt, et)
 
             X = mx.symbol.Variable('X')
             x = mx.nd.array(np.random.normal(size=shape))

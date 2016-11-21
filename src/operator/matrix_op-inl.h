@@ -599,12 +599,16 @@ struct SliceParam : public dmlc::Parameter<SliceParam> {
   int begin;
   int end;
   DMLC_DECLARE_PARAMETER(SliceParam) {
-    DMLC_DECLARE_FIELD(axis).set_lower_bound(0)
-      .describe("The axis to be sliced");
-    DMLC_DECLARE_FIELD(begin).set_lower_bound(0)
-      .describe("The beginning index to be sliced");
-    DMLC_DECLARE_FIELD(end).set_lower_bound(0)
-      .describe("The end index to be sliced");
+    DMLC_DECLARE_FIELD(axis).set_lower_bound(0).describe(
+        "The axis to be sliced");
+    DMLC_DECLARE_FIELD(begin).describe(
+        "The beginning index to be sliced. If negative, index from the end. "
+        "For example, if the axis dimension is of size 5, then begin=-2 is "
+        "equivalent to begin=4.");
+    DMLC_DECLARE_FIELD(end).describe(
+        "The end index to be sliced. If negative, index from the end. For "
+        "example, if the axis dimension is of size 6, then end=-1 is "
+        "equivalent to end=6.");
   }
 };
 
@@ -612,11 +616,18 @@ inline TShape SliceShape(const TShape& ishape,
                          const EnvArguments& env) {
   SliceParam param;
   param.Init(env.kwargs);
-  CHECK(param.axis < static_cast<int>(ishape.ndim())) <<
-    "axis must be smaller than the source ndim! Recieved axis=" <<
-      param.axis << ", src_ndim=" << ishape.ndim();
+  CHECK(param.axis < static_cast<int>(ishape.ndim()))
+      << "axis must be smaller than the source ndim! Recieved axis="
+      << param.axis << ", src_ndim=" << ishape.ndim();
   int axis_size = static_cast<int>(ishape[param.axis]);
+
+  // canonicalize: possible negative begin and end to positive version
+  param.begin = (param.begin < 0) ? (param.begin + axis_size + 1) : param.begin;
+  param.end = (param.end < 0) ? (param.end + axis_size + 1) : param.end;
+  // check that canonicalized indices are in the correct range
   CHECK_LE(param.end, axis_size);
+  CHECK_GT(param.end, 0);
+  CHECK_GE(param.begin, 0);
   CHECK_LT(param.begin, param.end);
 
   std::vector<mshadow::index_t> shape;
@@ -642,6 +653,10 @@ void Slice(const TBlob &src,
   param.Init(env.kwargs);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   int ndim = static_cast<int>(ret->shape_.ndim());
+
+  int axis_size = static_cast<int>(src.shape_[param.axis]);
+  param.begin = (param.begin < 0) ? (param.begin + axis_size + 1) : param.begin;
+  param.end = (param.end < 0) ? (param.end + axis_size + 1) : param.end;
 
   if (param.axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
@@ -673,8 +688,12 @@ void SliceGrad_(const OutputGrad& out_grad,
   using namespace mshadow::expr;
   SliceParam param;
   param.Init(env.kwargs);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   int ndim = static_cast<int>(in_grad->shape_.ndim());
+
+  int axis_size = static_cast<int>(in_grad->shape_[param.axis]);
+  param.begin = (param.begin < 0) ? (param.begin + axis_size + 1) : param.begin;
+  param.end = (param.end < 0) ? (param.end + axis_size + 1) : param.end;
 
   if (param.axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
