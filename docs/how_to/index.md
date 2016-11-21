@@ -10,6 +10,8 @@ This topic provides links to guidelines for using MXNet.
 - [How to use pre-trained models](http://mxnet.io/tutorials/python/predict_imagenet.html)
 - [How to use MXNet on variable input length/size (bucketing)](bucketing.md)
 - [How to improve MXNet performance](perf.md)
+- [How to use MXNet within a Matlab environment](https://github.com/dmlc/mxnet/tree/master/matlab)
+- [How to use MXNet in a browser using Java Script](https://github.com/dmlc/mxnet.js/)
 
 ## Develop and Hack MXNet
 - [Create new operators](new_op.md)
