@@ -30,11 +30,13 @@ def test_mlp2_infer_error():
 
 def test_backward_infer():
     w = mx.sym.Variable("weight")
+    wshift = mx.sym.Variable("wshift", shape=(1,))
     data = mx.sym.Variable("data")
-    # broadcast add here
-    wt = w + 19
+    # broadcast add here, not being able to deduce shape correctly
+    wt = w + wshift
+    # shape constraint, this is what enables backward shape inference
+    wt = mx._symbol_internal._identity_with_attr_like_rhs(wt, w)
     net = mx.sym.FullyConnected(data=data, weight=wt, num_hidden=11, no_bias=True)
-
     data_shape = (7, 100)
     arg_shapes, out_shapes, aux_shapes = net.infer_shape(data=data_shape)
     arg_shape_dict = dict(zip(net.list_arguments(), arg_shapes))
