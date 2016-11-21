@@ -4,13 +4,13 @@ This topic provides answers to the frequently asked questions on [mxnet/issues](
 
 ## Building and Installation
 
-You can find answers to most questions the [build page](build.md).
+You can find answers to most questions the [build page](http://mxnet.io/get_started/setup.html).
 
 ## Speed
 
 #### It took a long time to start running on a GPU
 
-Try to disable opencv to use a GPU: [build opencv from source with GPU module disabled](build.md#build-opencv-from-source). 
+Try to disable opencv to use a GPU: [build opencv from source with GPU module disabled](http://mxnet.io/get_started/setup.html#build-opencv-from-source-code). 
 
 #### It's slow on a single GPU
 

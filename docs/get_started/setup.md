@@ -1,6 +1,6 @@
 Overview
 ============
-You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet currently supports the Python, R, Julia, and Scala languages. If you are running Python on Amazon Linux or Ubuntu, you can use Git Bash scripts to quickly install the MXNet libraries and all dependencies. To use the Git Bash scripts so you can get started with MXNet quickly, skip to [Quick Installation](#quick-installation).  If you are using other languages or operating systems, keep reading.
+You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet supports multiple programming languages. If you are running Python on Amazon Linux or Ubuntu, you can use Git Bash scripts to quickly install the MXNet libraries and all dependencies. To use the Git Bash scripts so you can get started with MXNet quickly, skip to [Quick Installation](#quick-installation).  If you are using other languages or operating systems, keep reading.
 
  
 This topic covers the following:

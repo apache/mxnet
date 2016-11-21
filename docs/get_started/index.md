@@ -20,7 +20,7 @@ Runs on CPUs or GPUs, and on clusters, servers, desktops, or mobile phones
 &nbsp;
 
 **Multi-Lingual**
-Supports over seven programming languages, including C++, Python, R, Scala, Julia, Matlab, and Javascript
+Supports multiple programming languages, including C++, Python, R, Scala, Julia, Matlab, and Javascript.
 
 
 &nbsp;
