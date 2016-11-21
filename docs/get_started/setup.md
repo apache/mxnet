@@ -80,12 +80,13 @@ sudo apt-get -y install git
 ```
 
 Clone the MXNet source code repository to your computer, run the installation script, and refresh the environment variables. In addition to installing MXNet, the script installs all MXNet dependencies: ```Numpy```, ```LibBLAS``` and ```OpenCV```.
+It takes around 5 minutes to complete the installation.
 
 ```bash
 # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
 git clone https://github.com/dmlc/mxnet.git ~/MXNet/mxnet --recursive
 
-# Install MXNet dependencies
+# Install MXNet for Python with all required dependencies
 cd ~/MXNet/mxnet/setup-utils
 bash install-mxnet-ubuntu.sh
 
@@ -96,7 +97,36 @@ $ source ~/.bashrc
 
 You can view the installation script [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu.sh).
 
-If you can't install MXNet with the Bash script, see the following detailed installation instructions.
+If you are unable to install MXNet with the Bash script, see the following detailed installation instructions.
+
+### Quick Installation on Amazon Linux
+
+The simple installation scripts set up MXNet for Python on computers running Amazon Linux. The scripts install MXNet in your home folder ```~/MXNet```.
+
+To clone the MXNet source code repository to your computer, use ```git```. 
+```bash
+# Install git if not already installed.
+sudo yum -y install git-all
+```
+
+Clone the MXNet source code repository to your computer, run the installation script, and refresh the environment variables. In addition to installing MXNet, the script installs all MXNet dependencies: ```Numpy```, ```OpenBLAS``` and ```OpenCV```.
+It takes around 5 minutes to complete the installation.
+
+```bash
+# Clone mxnet repository. In terminal, run the commands WITH "sudo"
+sudo git clone https://github.com/dmlc/mxnet.git ~/MXNet/mxnet --recursive
+
+# Install MXNet for Python with all required dependencies
+cd ~/MXNet/mxnet/setup-utils
+sudo bash install-mxnet-amz-linux.sh
+
+# We have added MXNet Python package path in your ~/.bashrc. 
+# Run the following command to refresh environment variables.
+$ source ~/.bashrc
+```
+
+You can view the installation script [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-amz-linux.sh).
+If you are unable to install MXNet with the Bash script, see the following detailed installation instructions.
 
 ## Standard Installation
 
