@@ -89,7 +89,7 @@ def test_symbol_infer_shape():
     x2h  = mx.symbol.FullyConnected(data=data, name='x2h', num_hidden=num_hidden)
     h2h  = mx.symbol.FullyConnected(data=prev, name='h2h', num_hidden=num_hidden)
 
-    out  = mx.symbol.Activation(data=x2h+h2h, name='out', act_type='relu')
+    out  = mx.symbol.Activation(data=mx.sym.elemwise_add(x2h, h2h), name='out', act_type='relu')
 
     # shape inference will fail because information is not available for h2h
     ret  = out.infer_shape(data=(num_sample, num_dim))
@@ -115,7 +115,7 @@ def test_symbol_infer_shape_var():
     shape = (2, 3)
     a = mx.symbol.Variable('a', shape=shape)
     b = mx.symbol.Variable('b')
-    c = a+b
+    c = mx.symbol.elemwise_add(a, b)
     arg_shapes, out_shapes, aux_shapes = c.infer_shape()
     assert arg_shapes[0] == shape
     assert arg_shapes[1] == shape
