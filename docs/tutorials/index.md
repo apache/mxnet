@@ -31,11 +31,16 @@ Applications that intelligently modify, classify and segment images and video.
 
 #### R
 
-- [Handwritten Digits Classification](http://mxnet.io/tutorials/r/mnistCompetition.html)
+- [Handwritten Digit Classification](http://mxnet.io/tutorials/r/mnistCompetition.html)
 *A simple example of classifying handwritten digits from the MNIST data set using a MLP and convolutional network*
 
 - [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 *An advanced example of using a large pre-trained model to classify the ImageNet data set*
+
+#### Scala
+
+- [Handwritten Digit Classification](http://mxnet.io/tutorials/scala/mnist.html)
+*A simple example of classifying handwritten digits from the MNIST dataset using a multilayer perceptron.*
 
 ### Natural Language Processing
 
