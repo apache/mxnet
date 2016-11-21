@@ -2,7 +2,12 @@
 $(document).ready(function () {
     var allEntry = $("div.sphinxsidebarwrapper li");
     var subEntry = $("div.sphinxsidebarwrapper").children("ul").first().children("li");
-    if(subEntry.length == 1) allEntry = subEntry.find("li");
+    if(subEntry.length == 1) {
+        allEntry = subEntry.find("li");
+        subEntry.children("a").hide();
+        subEntry.children("ul").css("padding-left", "0");
+        subEntry.parent().css("margin-left", "-20px");
+    }
     allEntry.each(function () {
         $(this).prepend("<span class='tocToggle' onclick='toggle(this)'></span>");
         var childUL = $(this).find("ul");
