@@ -28,4 +28,6 @@ You can perform tensor or matrix computation in pure Scala:
 ## Resources
 
 * [MXNet Scala API Documentation](http://mxnet.io/api/scala/docs/index.html)
+* [Handwritten Digit Classification in Scala](http://mxnet.io/tutorials/scala/mnist.html)
 * [Neural Style in Scala on MXNet](https://github.com/dmlc/mxnet/blob/master/scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples/neuralstyle/NeuralStyle.scala)
+* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples)
