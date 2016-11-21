@@ -118,7 +118,7 @@ Pass in `begin_epoch` so that `fit()` knows to resume from a saved epoch.
 
     .. raw:: html
 
-        <script>auto_index("mxnet.module.base_module");</script>
+        <script>auto_index("basemodule-interface-api");</script>
 ```
 
 ## Built-in Modules API
@@ -130,7 +130,7 @@ Pass in `begin_epoch` so that `fit()` knows to resume from a saved epoch.
 
     .. raw:: html
 
-        <script>auto_index("mxnet.module.module");</script>
+        <script>auto_index("built-in-modules-api");</script>
 ```
 
 ```eval_rst
@@ -160,7 +160,7 @@ Pass in `begin_epoch` so that `fit()` knows to resume from a saved epoch.
 
     .. raw:: html
 
-        <script>auto_index("mxnet.module.python_module");</script>
+        <script>auto_index("writing-modules-in-python");</script>
 ```
 
 ## Next Steps
