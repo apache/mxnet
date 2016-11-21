@@ -30,7 +30,7 @@ can use a large batch size for multiple GPUs.
 
 > To use GPUs, we need to compiled MXNet with GPU support. For
 > example, set `USE_CUDA=1` in `config.mk` before `make`. (see
-> [MXNet installation guide](build.html) for more options).
+> [MXNet installation guide](http://mxnet.io/get_started/setup.html) for more options).
 
 If a machine has one or more than one GPU cards installed, then each card is
 labelled by a number starting from 0. To use a particular GPU, one can often
@@ -49,7 +49,7 @@ python train_mnist.py --gpus 0,2 ...
 
 ### Advanced Usage
 
-If the GPUs have different computation power, we can partition the workload
+If the GPUs are have different computation power, we can partition the workload
 according to their powers. For example, if GPU 0 is 3 times faster than GPU 2,
 then we provide an additional workload option `work_load_list=[3, 1]`, see
 [model.fit](../api/python/model.html#mxnet.model.FeedForward.fit) for more
@@ -131,7 +131,7 @@ information about these two data consistency models.
 ### How to Launch a Job
 
 > To use distributed training, we need to compile with `USE_DIST_KVSTORE=1`
-> (see [MXNet installation guide](build.html) for more options).
+> (see [MXNet installation guide](http://mxnet.io/get_started/setup.html) for more options).
 
 Launching a distributed job is little bit different than running on a single
 machine. MXNet provides

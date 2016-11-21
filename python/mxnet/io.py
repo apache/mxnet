@@ -235,13 +235,13 @@ class ResizeIter(DataIter):
 
 class PrefetchingIter(DataIter):
     """Base class for prefetching iterators. Takes one or more DataIters (
-    or any class with "reset" and "read" methods) and combine them with
+    or any class with "reset" and "next" methods) and combine them with
     prefetching. For example:
 
     Parameters
     ----------
     iters : DataIter or list of DataIter
-        one or more DataIters (or any class with "reset" and "read" methods)
+        one or more DataIters (or any class with "reset" and "next" methods)
     rename_data : None or list of dict
         i-th element is a renaming map for i-th iter, in the form of
         {'original_name' : 'new_name'}. Should have one entry for each entry
