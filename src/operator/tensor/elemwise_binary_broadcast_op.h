@@ -24,15 +24,10 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   TShape& lhs = (*in_attrs)[0];
   TShape& rhs = (*in_attrs)[1];
-  if (lhs.ndim() == 0) {
-    if (rhs.ndim() == 0) {
-      if ((*out_attrs)[0].ndim() == 0) return false;
-      rhs = (*out_attrs)[0];
-    }
-    lhs = rhs;
-  } else if (rhs.ndim() == 0) {
-    rhs = lhs;
-  }
+
+  // avoid pre-mature shape inference.
+  if (lhs.ndim() == 0 || rhs.ndim() == 0) return false;
+
   if (lhs == rhs) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, lhs);
     return true;
