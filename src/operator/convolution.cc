@@ -7,7 +7,7 @@
 
 #include "./convolution-inl.h"
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_convolution-inl.h"
 #endif  // MXNET_USE_MKL2017
@@ -32,6 +32,7 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
     case mshadow::kFloat64:
       return new MKLConvolutionOp<cpu, double>(param);
     default:
+      LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
       break;
     }
   }

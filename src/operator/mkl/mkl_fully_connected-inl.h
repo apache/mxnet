@@ -53,7 +53,7 @@ class MKLFullyConnectedOp : public Operator {
     dnnDelete<DType>(fullyConnectedBwdFilter);
     dnnDelete<DType>(fullyConnectedBwdBias);
   }
-  std::string getName() {
+  static std::string getName() {
     return "MKLFullyConnectedOp";
   }
 

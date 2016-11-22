@@ -65,7 +65,7 @@ echo $VERSION_LINE  # Return Version Line
 DST=`dirname $0`
 OMP=0
 VERSION_MATCH=20120601
-ARCHIVE_BASENAME=mklml_lnx_2017.0.1.20161005.tgz
+ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20161115.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
 MKLURL="https://github.com/dmlc/web-data/raw/master/mxnet/mklml-release/$ARCHIVE_BASENAME"
 # there are diffrent MKL lib to be used for GCC and for ICC

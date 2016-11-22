@@ -7,7 +7,7 @@
 
 #include "./concat-inl.h"
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_concat-inl.h"
 #endif  // MXNET_USE_MKL2017
@@ -25,6 +25,7 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
     case mshadow::kFloat64:
       return new MKLConcatOp<cpu, double>(param);
     default:
+      LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
       break;
     }
   }

@@ -65,7 +65,7 @@ namespace op {
 template<typename xpu, typename DType>
 class MKLPoolingOp : public Operator {
  public:
-  std::string getName() {
+  static std::string getName() {
     return "MKLPoolingOp";
   }
   explicit MKLPoolingOp(PoolingParam p) {
@@ -130,23 +130,8 @@ class MKLPoolingOp : public Operator {
       CHECK_LT(pad_h_, kernel_h_);
       CHECK_LT(pad_w_, kernel_w_);
     }
-
-    pooled_height_ = static_cast<int>(ceil(static_cast<float>(
-                                      height_ + 2 * pad_h_ - kernel_h_) / stride_h_)) + 1;
-    pooled_width_ = static_cast<int>(ceil(static_cast<float>(
-                                     height_ + 2 * pad_w_ - kernel_w_) / stride_w_)) + 1;
-    if (pad_h_ || pad_w_) {
-      // If we have padding, ensure that the last pooling starts strictly
-      // inside the image (instead of at the padding); otherwise clip the last.
-      if ((pooled_height_ - 1) * stride_h_ >= height_ + pad_h_) {
-        --pooled_height_;
-      }
-      if ((pooled_width_ - 1) * stride_w_ >= height_ + pad_w_) {
-        --pooled_width_;
-      }
-      CHECK_LT((pooled_height_ - 1) * stride_h_, height_ + pad_h_);
-      CHECK_LT((pooled_width_ - 1) * stride_w_, height_ + pad_w_);
-    }
+    pooled_height_ = out.shape_[2];
+    pooled_width_ = out.shape_[3];
 
     size_t dim = 4;
     size_t src_sizes[4], src_strides[4];

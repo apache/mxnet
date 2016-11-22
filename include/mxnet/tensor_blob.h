@@ -17,7 +17,7 @@
 #include <algorithm>
 #include "./base.h"
 #if MXNET_USE_MKL2017 == 1
-#include "./mkl_memory.h"
+#include <mkl_memory.h>
 #endif
 namespace mxnet {
 
