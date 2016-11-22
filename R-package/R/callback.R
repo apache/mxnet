@@ -49,7 +49,7 @@ mx.callback.save.checkpoint <- function(prefix, period=1) {
 #' 
 #' @param train.metric Numeric. Hard threshold for the metric of the training data set (optional)
 #' @param eval.metric Numeric. Hard threshold for the metric of the evaluating data set (if set, optional) 
-#' @param bad.steps Integer. How much epochs should gone from the best score?
+#' @param bad.steps Integer. How much epochs should gone from the best score? Use this option with evaluation data set
 #' @param maximize Logical. Do your model use maximizing or minimizing optimization?
 #' @param verbose Logical
 #' 
@@ -57,14 +57,14 @@ mx.callback.save.checkpoint <- function(prefix, period=1) {
 #' 
 mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.steps = NULL, maximize = FALSE, verbose = FALSE) {
   
-  function(iteration, nbatch, env, verbose=verbose) {
+  function(iteration, nbatch, env, verbose = verbose) {
     
     # hard threshold for train metric
     if (!is.null(env$metric)) {
       if (!is.null(train.metric)) {
         result <- env$metric$get(env$train.metric)
         if (result$value < train.metric | (maximize == TRUE & result$value > train.metric)) {
-          return(NULL)
+          return(FALSE)
         }
       }
       
@@ -73,7 +73,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
           if (result$value < eval.metric | (maximize == TRUE & result$value > eval.metric)) {
-            return(NULL)
+            return(FALSE)
           }
         }
       }
