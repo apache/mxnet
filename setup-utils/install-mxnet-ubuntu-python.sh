@@ -5,7 +5,7 @@
 ######################################################################
 set -e
 
-MXNET_HOME="~/MXNet/mxnet/"  
+MXNET_HOME="~/mxnet/"  
 echo "MXNet root folder: $MXNET_HOME"
 
 echo "Installing build-essential, libatlas-base-dev, libopencv-dev..."
@@ -27,5 +27,6 @@ cd python; sudo python setup.py install
 
 echo "Adding MXNet path to your ~/.bashrc file"
 echo "export PYTHONPATH=$MXNET_HOME/python:PYTHONPATH" >> ~/.bashrc
+source ~/.bashrc
 
 echo "Done! MXNet for Python installation is complete. Go ahead and explore MXNet with Python :-)"

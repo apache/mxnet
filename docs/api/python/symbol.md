@@ -8,7 +8,7 @@ Topics:
 * [Executing Symbols](#executing-symbols) explains how to evaluate the symbols with data.
 * [Execution API Reference](#execution-api-reference) documents the execution APIs.
 * [Multiple Outputs](#multiple-outputs) explains how to configure multiple outputs.
-* [Symbol Creation API Reference](#symbol-creationapi-reference) documents functions.
+* [Symbol Creation API Reference](#symbol-creation-api-reference) documents functions.
 * [Symbol Object Document](#mxnet.symbol.Symbol) documents the Symbol object.
 * [Testing Utility Reference](#testing-utility-reference) documents the testing utilities.
 
@@ -173,7 +173,7 @@ The resulting executor will have two outputs, one for fc1_output and one for sof
 
     .. raw:: html
 
-        <script>auto_index("mxnet.symbol");</script>
+        <script>auto_index("symbol-creation-api-reference");</script>
 ```
 
 
@@ -186,7 +186,7 @@ The resulting executor will have two outputs, one for fc1_output and one for sof
 
     .. raw:: html
 
-        <script>auto_index("mxnet.executor");</script>
+        <script>auto_index("execution-api-reference");</script>
 ```
 
 
@@ -199,7 +199,7 @@ The resulting executor will have two outputs, one for fc1_output and one for sof
 
     .. raw:: html
 
-        <script>auto_index("mxnet.test_utils");</script>
+        <script>auto_index("testing-utility-reference");</script>
 ```
 
 ## Next Steps

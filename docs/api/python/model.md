@@ -12,6 +12,7 @@ Topics:
 * [Initializer API Reference](#initializer-api-reference)
 * [Evaluation Metric API Reference](#initializer-api-reference)
 * [Optimizer API Reference](#optimizer-api-reference)
+* [Model API Reference](#model-api-reference)
 
 ## Train the Model
 
@@ -111,7 +112,7 @@ Training occurs in parallel on the GPUs that you specify.
 
     .. raw:: html
 
-        <script>auto_index("mxnet.initializer");</script>
+        <script>auto_index("initializer-api-reference");</script>
 ```
 
 ## Evaluation Metric API Reference
@@ -123,7 +124,7 @@ Training occurs in parallel on the GPUs that you specify.
 
     .. raw:: html
 
-        <script>auto_index("mxnet.metric");</script>
+        <script>auto_index("evaluation-metric-api-reference");</script>
 ```
 
 ## Optimizer API Reference
@@ -135,7 +136,7 @@ Training occurs in parallel on the GPUs that you specify.
 
     .. raw:: html
 
-        <script>auto_index("mxnet.optimizer");</script>
+        <script>auto_index("optimizer-api-reference");</script>
 ```
 
 ## Model API Reference
@@ -147,7 +148,7 @@ Training occurs in parallel on the GPUs that you specify.
 
     .. raw:: html
 
-        <script>auto_index("mxnet.model");</script>
+        <script>auto_index("model-api-reference");</script>
 ```
 
 ## Next Steps

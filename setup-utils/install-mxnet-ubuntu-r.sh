@@ -9,7 +9,7 @@
 ######################################################################
 set -e
 
-MXNET_HOME="~/MXNet/mxnet/" 
+MXNET_HOME="~/mxnet/" 
 echo "MXNet root folder: $MXNET_HOME"
 
 echo "Building MXNet core. This can take few minutes..."

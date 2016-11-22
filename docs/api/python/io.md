@@ -179,7 +179,7 @@ For example, if you have four labels for a single image, you can use the followi
 
     .. raw:: html
 
-        <script>auto_index("mxnet.io");</script>
+        <script>auto_index("io-api-reference");</script>
 ```
 ## Next Steps
 * [NDArray API](ndarray.md) for vector/matrix/tensor operations
