@@ -2,6 +2,10 @@
 mx.metric.logger <- setRefClass("mx.metric.logger", fields = list(train = "numeric", eval="numeric"))
 
 #' Log training metric each period
+#'
+#' @param period The number of batch to log the training evaluation metric
+#' @param logger The logger class
+#'
 #' @export
 mx.callback.log.train.metric <- function(period, logger=NULL) {
   function(iteration, nbatch, env, verbose=TRUE) {
@@ -29,7 +33,7 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
 #' Calculate the training speed 
 #'
 #' @param batch_size The batch size
-#' @param frequcy The frequency of the training speed updated
+#' @param frequency The frequency of the training speed update
 #'
 #' @export
 mx.callback.log.speedometer <- function(batch.size, frequency=50){
