@@ -81,7 +81,8 @@ bool StaticGraph::InferNodeShapes(const std::vector<uint32_t> &topo_order,
         std::string arg_name = node.op->ListArguments()[err.index];
         std::ostringstream os;
         os << "InferShape Error in "
-           << op_name << "\'s" << ' ' << arg_name << " argument\n";
+           << op_name << "\'s" << ' ' << arg_name << " argument\n"
+           << err.msg;
         auto &source = nodes[node.inputs[err.index].source_id];
         if (source.is_variable()) {
           os << "Corresponding keyword of symbol: " << source.name << '\n' << err.msg;
