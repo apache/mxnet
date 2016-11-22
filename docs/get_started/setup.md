@@ -611,6 +611,16 @@ To build OpenCV from source code, you need the ```cmake``` library .
 	```bash
 		export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig/
 	```
+## Cloud Setup
+### Preconfigured Amazon Machine Images(AMI) for AWS Usage
+Here is a link to a blog by Jeff Barr illustrating how to setup an Amazon Machine Image(AMI) that supports both MXNet and other popular deep learning frameworks.
+* [P2 and Deep Learning Blog](https://aws.amazon.com/blogs/aws/new-p2-instance-type-for-amazon-ec2-up-to-16-gpus/)
+* [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
+
+### Using MXNet on multiple instances
+To scale up on AWS GPU instances using a CloudFormation template, you can follow the instructions linked in the blog below.
+* [CloudFormation Template AWS Blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
+
 # Common Installation Problems
 This section provides solutions for common installation problems.
 ## Mac OS X Error Message
