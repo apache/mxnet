@@ -4,7 +4,7 @@
 ######################################################################
 set -e
 # CMake is required for installing dependencies.
-yum install -y cmake
+sudo yum install -y cmake
 
 # Set appropriate library path env variables
 echo 'export PATH=/usr/local/bin:$PATH' >> ~/.profile
@@ -16,15 +16,15 @@ source ~/.profile
 # Install gcc-4.8/make and other development tools on Amazon Linux
 # Reference: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/compile-software.html
 # Install Python, Numpy, Scipy and set up tools.
-yum groupinstall -y "Development Tools"
-yum install -y python27 python27-setuptools python27-tools
-yum install -y python27-numpy python27-scipy python27-nose python27-matplotlib
+sudo yum groupinstall -y "Development Tools"
+sudo yum install -y python27 python27-setuptools python27-tools
+sudo yum install -y python27-numpy python27-scipy python27-nose python27-matplotlib
 
 # Install OpenBLAS at /usr/local/openblas
 git clone https://github.com/xianyi/OpenBLAS
 cd OpenBLAS
 make FC=gfortran -j $(($(nproc) + 1))
-make PREFIX=/usr/local install
+sudo make PREFIX=/usr/local install
 cd ..
 
 # Install OpenCV at /usr/local/opencv
@@ -33,27 +33,27 @@ cd opencv
 mkdir -p build
 cd build
 cmake -D BUILD_opencv_gpu=OFF -D WITH_EIGEN=ON -D WITH_TBB=ON -D WITH_CUDA=OFF -D WITH_1394=OFF -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
-make PREFIX=/usr/local install
+sudo make PREFIX=/usr/local install
 
 # Export env variables for pkg config
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 
 # Install MXNet Core without CUDA
-cd ~/MXNet/mxnet
+cd ~/mxnet
 cp make/config.mk .
 echo "USE_CUDA=0" >>config.mk
 echo "USE_CUDNN=0" >>config.mk
 echo "USE_BLAS=openblas" >>config.mk
 echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
 echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
-make -j$(nproc)
+sudo make -j$(nproc)
 
 # Install MXNet Python package
 cd python
-python setup.py install
+sudo python setup.py install
 
 # Add MXNet path to ~/.bashrc file
-echo "export PYTHONPATH=~/MXNet/mxnet/python:$PYTHONPATH" >> ~/.bashrc
+echo "export PYTHONPATH=~/mxnet/python:$PYTHONPATH" >> ~/.bashrc
 source ~/.bashrc
 
 echo "Done! MXNet for Python installation is complete. Go ahead and explore MXNet with Python :-)"
