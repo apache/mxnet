@@ -81,7 +81,7 @@ To contribute easy installation scripts for other operating systems and programm
 
 ### Quick Installation on Ubuntu
 
-The simple installation scripts set up MXNet for Python on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/MXNet```.
+The simple installation scripts set up MXNet for Python on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/mxnet```.
 
 To clone the MXNet source code repository to your computer, use ```git```. 
 ```bash
@@ -95,10 +95,10 @@ It takes around 5 minutes to complete the installation.
 
 ```bash
 # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
-git clone https://github.com/dmlc/mxnet.git ~/MXNet/mxnet --recursive
+git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
 
 # Install MXNet for Python with all required dependencies
-cd ~/MXNet/mxnet/setup-utils
+cd ~/mxnet/setup-utils
 bash install-mxnet-ubuntu.sh
 
 # We have added MXNet Python package path in your ~/.bashrc. 
@@ -112,7 +112,7 @@ If you are unable to install MXNet with the Bash script, see the following detai
 
 ### Quick Installation on Amazon Linux
 
-The simple installation scripts set up MXNet for Python on computers running Amazon Linux. The scripts install MXNet in your home folder ```~/MXNet```.
+The simple installation scripts set up MXNet for Python on computers running Amazon Linux. The scripts install MXNet in your home folder ```~/mxnet```.
 
 To clone the MXNet source code repository to your computer, use ```git```. 
 ```bash
