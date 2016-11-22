@@ -11,8 +11,8 @@ sudo apt-get update
 sudo apt-get install -y build-essential libatlas-base-dev libopencv-dev
 
 echo "Installing MXNet core. This can take few minutes..."
-cd ~/MXNet/mxnet/
-make -j$(nproc)
+cd ~/mxnet/
+sudo make -j$(nproc)
 
 echo "Installing Numpy..."
 sudo apt-get install python-numpy
@@ -24,6 +24,7 @@ echo "Installing Python package for MXNet..."
 cd python; sudo python setup.py install
 
 echo "Adding MXNet path to your ~/.bashrc file"
-echo "export PYTHONPATH=~/MXNet/mxnet/python" >> ~/.bashrc
+echo "export PYTHONPATH=~/mxnet/python:$PYTHONPATH" >> ~/.bashrc
+source ~/.bashrc
 
 echo "Done! MXNet for Python installation is complete. Go ahead and explore MXNet with Python :-)"

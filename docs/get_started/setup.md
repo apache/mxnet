@@ -57,6 +57,17 @@ If you need to support computer vision and image augmentation, you need
 [OpenCV](http://opencv.org/).
 The Open Source Computer Vision (OpenCV) library contains programming functions for computer vision and image augmentation. For more information, see [OpenCV](https://en.wikipedia.org/wiki/OpenCV).
 
+# Cloud Setup
+You can start using MXNet on cloud with MXNet pre-installed. Refer below for more details.
+## Preconfigured Amazon Machine Images(AMI) with AWS
+Here is a link to a blog by Jeff Barr illustrating how to setup an Amazon Machine Image(AMI) that supports both MXNet and other popular deep learning frameworks.
+* [P2 and Deep Learning Blog](https://aws.amazon.com/blogs/aws/new-p2-instance-type-for-amazon-ec2-up-to-16-gpus/)
+* [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
+
+## Using MXNet on multiple instances with AWS
+To scale up on AWS GPU instances using a CloudFormation template, you can follow the instructions linked in the blog below.
+* [CloudFormation Template AWS Blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
+
 # Installing MXNet
 
 You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet currently supports the Python, R, Julia, and Scala languages.
@@ -70,7 +81,7 @@ To contribute easy installation scripts for other operating systems and programm
 
 ### Quick Installation on Ubuntu
 
-The simple installation scripts set up MXNet for Python on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/MXNet```.
+The simple installation scripts set up MXNet for Python on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/mxnet```.
 
 To clone the MXNet source code repository to your computer, use ```git```. 
 ```bash
@@ -80,13 +91,14 @@ sudo apt-get -y install git
 ```
 
 Clone the MXNet source code repository to your computer, run the installation script, and refresh the environment variables. In addition to installing MXNet, the script installs all MXNet dependencies: ```Numpy```, ```LibBLAS``` and ```OpenCV```.
+It takes around 5 minutes to complete the installation.
 
 ```bash
 # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
-git clone https://github.com/dmlc/mxnet.git ~/MXNet/mxnet --recursive
+git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
 
-# Install MXNet dependencies
-cd ~/MXNet/mxnet/setup-utils
+# Install MXNet for Python with all required dependencies
+cd ~/mxnet/setup-utils
 bash install-mxnet-ubuntu.sh
 
 # We have added MXNet Python package path in your ~/.bashrc. 
@@ -96,7 +108,36 @@ $ source ~/.bashrc
 
 You can view the installation script [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu.sh).
 
-If you can't install MXNet with the Bash script, see the following detailed installation instructions.
+If you are unable to install MXNet with the Bash script, see the following detailed installation instructions.
+
+### Quick Installation on Amazon Linux
+
+The simple installation scripts set up MXNet for Python on computers running Amazon Linux. The scripts install MXNet in your home folder ```~/mxnet```.
+
+To clone the MXNet source code repository to your computer, use ```git```. 
+```bash
+# Install git if not already installed.
+sudo yum -y install git-all
+```
+
+Clone the MXNet source code repository to your computer, run the installation script, and refresh the environment variables. In addition to installing MXNet, the script installs all MXNet dependencies: ```Numpy```, ```OpenBLAS``` and ```OpenCV```.
+It takes around 5 minutes to complete the installation.
+
+```bash
+# Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
+git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+
+# Install MXNet for Python with all required dependencies
+cd ~/mxnet/setup-utils
+bash install-mxnet-amz-linux.sh
+
+# We have added MXNet Python package path in your ~/.bashrc. 
+# Run the following command to refresh environment variables.
+$ source ~/.bashrc
+```
+
+You can view the installation script [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-amz-linux.sh).
+If you are unable to install MXNet with the Bash script, see the following detailed installation instructions.
 
 ## Standard Installation
 
@@ -611,16 +652,6 @@ To build OpenCV from source code, you need the ```cmake``` library .
 	```bash
 		export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig/
 	```
-## Cloud Setup
-### Preconfigured Amazon Machine Images(AMI) for AWS Usage
-Here is a link to a blog by Jeff Barr illustrating how to setup an Amazon Machine Image(AMI) that supports both MXNet and other popular deep learning frameworks.
-* [P2 and Deep Learning Blog](https://aws.amazon.com/blogs/aws/new-p2-instance-type-for-amazon-ec2-up-to-16-gpus/)
-* [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
-
-### Using MXNet on multiple instances
-To scale up on AWS GPU instances using a CloudFormation template, you can follow the instructions linked in the blog below.
-* [CloudFormation Template AWS Blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
-
 # Common Installation Problems
 This section provides solutions for common installation problems.
 ## Mac OS X Error Message
