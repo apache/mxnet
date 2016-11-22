@@ -55,7 +55,7 @@ mx.callback.save.checkpoint <- function(prefix, period=1) {
 #' 
 #' @export
 #' 
-mx.callback.early.stop.soph <- function(train.metric = NULL, eval.metric = NULL, bad.steps = NULL, maximize = FALSE, verbose = FALSE) {
+mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.steps = NULL, maximize = FALSE, verbose = FALSE) {
   
   function(iteration, nbatch, env, verbose=verbose) {
     
