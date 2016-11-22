@@ -521,7 +521,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .section-tout .row div {
-    height: 120px;
+    height: 140px;
 }
 
 .section-tout .fa{
@@ -655,10 +655,6 @@ div.sphinxsidebarwrapper h3 {
     margin-left: 50px;
     padding-left: 15px;
     padding-right: 15px
-}
-
-div.content a[href="#module-mxnet.symbol"] + ul {
-    display: none;
 }
 
 /*-------------------- table styles --------------------*/
