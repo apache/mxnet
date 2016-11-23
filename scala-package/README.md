@@ -92,7 +92,7 @@ Change the arguments and have fun!
 
 Usage
 -------
-Here is a Scala example of how training a simple 3-layer MLP on MNIST looks like:
+Here is a Scala example of what training a simple 3-layer multilayer perceptron on MNIST looks like. You can download the MNIST dataset using [get_mnist_data script](https://github.com/dmlc/mxnet/blob/master/scala-package/core/scripts/get_mnist_data.sh).
 
 ```scala
 import ml.dmlc.mxnet._
@@ -113,7 +113,7 @@ val trainDataIter = IO.MNISTIter(Map(
   "label" -> "data/train-labels-idx1-ubyte",
   "data_shape" -> "(1, 28, 28)",
   "label_name" -> "sm_label",
-  "batch_size" -> batchSize.toString,
+  "batch_size" -> "50",
   "shuffle" -> "1",
   "flat" -> "0",
   "silent" -> "0",
@@ -124,7 +124,7 @@ val valDataIter = IO.MNISTIter(Map(
   "label" -> "data/t10k-labels-idx1-ubyte",
   "data_shape" -> "(1, 28, 28)",
   "label_name" -> "sm_label",
-  "batch_size" -> batchSize.toString,
+  "batch_size" -> "50",
   "shuffle" -> "1",
   "flat" -> "0", "silent" -> "0"))
 

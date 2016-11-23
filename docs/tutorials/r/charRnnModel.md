@@ -3,9 +3,6 @@ Char RNN Example
 
 This tutorial shows how to use an LSTM model to build a char-level language model, and generate text from it. For demonstration purposes, we use a Shakespearean text. You can find the data on [GitHub](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare). 
 
-
-This tutorial is written in R Markdown. You can view the hosted version of the tutorial at [MXNet R Document](http://mxnet.io/api/r/CharRnnModel.html). You can download the R Markdown source on [GitHub](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/CharRnnModel.Rmd).
-
 Load the Data 
 ---------
 Load in the data and preprocess it:
