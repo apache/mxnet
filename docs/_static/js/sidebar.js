@@ -17,6 +17,10 @@ $(document).ready(function () {
         }
         else 
             $(this).addClass("leaf");
+        var anchor = $(this).children("a").first();
+        anchor.click(function () {
+            autoExpand(anchor);
+        });
     });
     $('body').show();
 });
@@ -31,4 +35,10 @@ function toggle(elem) {
         $(elem).parent().find("ul").first().hide();
         $(elem).parent().removeClass("opened").addClass("closed");
     }
+}
+
+/*Automatically expand child level while cilcking an entry*/
+function autoExpand(elem) {
+    elem.parent().removeClass("closed").addClass("opened");
+    elem.parent().children("ul").first().show();
 }
