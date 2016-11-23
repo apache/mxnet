@@ -999,6 +999,85 @@ def concatenate(arrays, axis=0, always_copy=True):
 
     return ret
 
+# pylint: disable= no-member, protected-access, too-many-arguments
+def arange(start=None, stop=None, step=None, repeat=1, ctx=None, dtype=mx_real_t):
+    """Simlar function in the MXNet ndarray as numpy.arange
+        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value. The default start value is 0.
+    stop : number, optional
+        End of interval. The interval does not include this value.
+    step : number, optional
+        Spacing between values
+    repeat : number, optional
+        "The repeating time of all elements.
+        E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    ctx : Context, optional
+        The context of the NDArray, default to current default context.
+    dtype : type, optional
+        The value type of the NDArray, default to np.float32
+    Returns
+    -------
+    out : NDArray
+        The created NDArray
+    """
+    if stop is None:
+        if start is None:
+            raise ValueError("Required argument \"start\"")
+        stop = start
+        start = 0
+    if step is None:
+        step = 1
+    if start is None:
+        start = 0
+    if ctx is None:
+        ctx = Context.default_ctx
+    return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
+                             dtype=_DTYPE_NP_TO_MX[np.dtype(dtype).type], ctx=str(ctx))
+# pylint: enable= no-member, protected-access, too-many-arguments
+# pylint: disable= no-member, protected-access, too-many-arguments
+def topk(src, axis=None, k=1, ret_typ="indices", is_ascend=False):
+    """Return the top k element of an input tensor along a given axis.
+
+    Parameters
+    ----------
+    src : NDArray
+    axis : None or int, optional
+        Axis along which to choose the top k indices. If None, the flattened array is used.
+    k : int, optional
+        number of top elements to select.
+        "k" should be always smaller than or equal to the element number in the given axis.
+        A global sort is performed if set k < 1.
+    ret_typ : str, optional
+        Choose from "indices", "mask", "value", "both".
+        - "value" means returning the top k values.
+        - "indices" means returning the indices of the top k values.
+        - "mask" means to return a mask array containing 0 and 1. 1 ==> the index has been chosen.
+        - "both" means to return both value and indices.
+        Default is "indices"
+    is_ascend : bool, optional
+        Whether to sort the array in ascending order
+        Default is False
+
+    Returns
+    -------
+        One NDArray or Two NDArrays based on the "ret_typ".
+    """
+    if axis is not None:
+        if ret_typ == "value":
+            return _internal._topk(src, axis=axis, k=k, ret_typ=ret_typ, is_ascend=is_ascend)[0]
+        else:
+            return _internal._topk(src, axis=axis, k=k, ret_typ=ret_typ, is_ascend=is_ascend)
+    else:
+        if ret_typ == "value":
+            return _internal._topk(src, k=k, ret_typ=ret_typ, is_ascend=is_ascend)[0]
+        else:
+            return _internal._topk(src, k=k, ret_typ=ret_typ, is_ascend=is_ascend)
+# pylint: enable= no-member, protected-access, too-many-arguments
+
 def load(fname):
     """Load ndarray from binary file.
 

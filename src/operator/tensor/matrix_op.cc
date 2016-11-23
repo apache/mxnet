@@ -157,10 +157,9 @@ NNVM_REGISTER_OP(dot)
 .set_attr<nnvm::FInferShape>("FInferShape", DotShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_dot" })
 .add_argument("lhs", "NDArray", "Left input")
-.add_argument("rhs", "NDArray", "Right input")
-.add_arguments(FlipParam::__FIELDS__());
+.add_argument("rhs", "NDArray", "Right input");
 
 NNVM_REGISTER_OP(_backward_dot)
 .set_num_inputs(3)
@@ -185,8 +184,7 @@ NNVM_REGISTER_OP(batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
 .add_argument("lhs", "NDArray", "Left input")
-.add_argument("rhs", "NDArray", "Right input")
-.add_arguments(FlipParam::__FIELDS__());
+.add_argument("rhs", "NDArray", "Right input");
 
 NNVM_REGISTER_OP(_backward_batch_dot)
 .set_num_inputs(3)

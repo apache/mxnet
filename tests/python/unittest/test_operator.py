@@ -1874,6 +1874,86 @@ def test_init():
     exec1 = x.bind(default_context(), args=[], args_grad=[])
     exec1.forward()
     assert_allclose(exec1.outputs[0].asnumpy(), np.zeros((3,4)))
+    def test_arange():
+        for i in range(5):
+            start = np.random.rand() * 10
+            stop = start + np.random.rand() * 100
+            step = np.random.rand() * 4
+            repeat = int(np.random.rand() * 5) + 1
+            gt = np.arange(start=start, stop=stop, step=step)
+            gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
+            x = mx.sym.arange(start=start, stop=stop, step=step, repeat=repeat)
+            exe = x.simple_bind(ctx=default_context())
+            assert len(exe.grad_arrays) == 0
+            pred = exe.forward(is_train=False)[0].asnumpy()
+            assert_almost_equal(pred, gt, default_numerical_threshold())
+    test_arange()
+
+
+def test_topk(ctx=default_context()):
+    def gt_topk(dat, axis, ret_typ, k, is_ascend):
+        if ret_typ == "indices":
+            if is_ascend:
+                indices = np.arange(k)
+            else:
+                indices = np.arange(-1, -k-1, -1)
+            ret = np.take(dat.argsort(axis=axis), axis=axis, indices=indices, mode='wrap')
+        elif ret_typ == "value":
+            if is_ascend:
+                indices = np.arange(k)
+            else:
+                indices = np.arange(-1, -k-1, -1)
+            ret = np.take(np.sort(dat, axis=axis), axis=axis, indices=indices, mode='wrap')
+        else:
+            assert dat.shape == (5, 5, 5, 5)
+            assert axis is None or axis ==1
+            ret = np.zeros(dat.shape)
+            if is_ascend:
+                indices = np.arange(k)
+            else:
+                indices = np.arange(-1, -k-1, -1)
+            gt_argsort = np.take(dat.argsort(axis=axis), axis=axis, indices=indices, mode='wrap')
+            if axis is None:
+                ret.ravel()[gt_argsort] = 1
+            else:
+                for i in range(5):
+                    for j in range(5):
+                        for k in range(5):
+                            ret[i, gt_argsort[i, :, j, k], j, k] = 1
+        return ret
+    a_npy = np.random.normal(size=(5, 5, 5, 5))
+    a = mx.sym.Variable('a')
+    b = mx.sym.topk(a, axis=1, is_ascend=False, ret_typ="value", k=2)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
+    check_symbolic_forward(b, location={'a': a_npy},
+                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=2,
+                                             is_ascend=False)])
+    b = mx.sym.topk(a, is_ascend=True, ret_typ="value", k=10)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-4, ctx=ctx)
+    check_symbolic_forward(b, location={'a': a_npy},
+                           expected=[gt_topk(dat=a_npy, axis=None, ret_typ="value", k=10,
+                                             is_ascend=True)])
+    b = mx.sym.topk(a, axis=3, is_ascend=True, ret_typ="value", k=3)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx,
+                           grad_nodes={'a': 'add'})
+    check_symbolic_forward(b, location={'a': a_npy},
+                           expected=[gt_topk(dat=a_npy, axis=3, ret_typ="value", k=3,
+                                             is_ascend=True)])
+    b = mx.sym.topk(a, axis=3, is_ascend=False, ret_typ="indices", k=3)
+    check_symbolic_backward(sym=b, location={'a': a_npy},
+                            out_grads=[np.random.normal(size=(5, 5, 5, 3))],
+                            expected=[np.zeros((5, 5, 5, 5))])
+    check_symbolic_forward(b, location={'a': a_npy},
+                           expected=[gt_topk(dat=a_npy, axis=3, ret_typ="indices", k=3,
+                                             is_ascend=False)])
+    b = mx.sym.topk(a, axis=1, is_ascend=True, ret_typ="mask", k=3)
+    check_symbolic_backward(sym=b, location={'a': a_npy},
+                            out_grads=[np.random.normal(size=(5, 5, 5, 5))],
+                            expected=[np.zeros((5, 5, 5, 5))])
+    check_symbolic_forward(b, location={'a': a_npy},
+                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="mask", k=3,
+                                             is_ascend=True)])
 
 
 if __name__ == '__main__':
@@ -1923,3 +2003,4 @@ if __name__ == '__main__':
     test_l2_normalization()
     test_mathematical()
     test_special_functions_using_scipy()
+    test_topk()
