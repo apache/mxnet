@@ -124,3 +124,6 @@ lib
 
 # Visual Studio Code
 .vscode
+
+# Mac OS X
+.DS_Store
