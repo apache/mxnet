@@ -10,6 +10,7 @@ import random
 import argparse
 import cv2
 import time
+import traceback
 
 
 def list_image(root, recursive, exts):
@@ -75,13 +76,15 @@ def read_list(path_in):
             yield item
 
 def image_encode(args, item, q_out):
+    fullpath = os.path.join(args.root, item[1])
     try:
-        img = cv2.imread(os.path.join(args.root, item[1]), args.color)
+        img = cv2.imread(fullpath, args.color)
     except:
-        print('imread error:', item[1])
+        traceback.print_exc()
+        print('imread error trying to load file: %s ' % fullpath)
         return
     if img is None:
-        print('read none error:', item[1])
+        print('imread read blank (None) image for file: %s' % fullpath)
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
@@ -104,8 +107,9 @@ def image_encode(args, item, q_out):
     try:
         s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
         q_out.put((s, item))
-    except Exception, e:
-        print('pack_img error:', item[1], e)
+    except Exception:
+        traceback.print_exc()
+        print('pack_img error on file: %s' % fullpath)
         return
 
 def read_worker(args, q_in, q_out):
