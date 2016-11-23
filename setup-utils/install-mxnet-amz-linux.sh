@@ -39,7 +39,8 @@ sudo make PREFIX=/usr/local install
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 
 # Install MXNet Core without CUDA
-cd ~/mxnet
+MXNET_HOME="~/mxnet/"
+cd $MXNET_HOME
 cp make/config.mk .
 echo "USE_CUDA=0" >>config.mk
 echo "USE_CUDNN=0" >>config.mk
@@ -53,7 +54,7 @@ cd python
 sudo python setup.py install
 
 # Add MXNet path to ~/.bashrc file
-echo "export PYTHONPATH=~/mxnet/python:$PYTHONPATH" >> ~/.bashrc
+echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
 source ~/.bashrc
 
 echo "Done! MXNet for Python installation is complete. Go ahead and explore MXNet with Python :-)"

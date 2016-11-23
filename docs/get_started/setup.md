@@ -81,7 +81,7 @@ To contribute easy installation scripts for other operating systems and programm
 
 ### Quick Installation on Ubuntu
 
-The simple installation scripts set up MXNet for Python on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/mxnet```.
+The simple installation scripts set up MXNet for Python and R on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/mxnet```.
 
 To clone the MXNet source code repository to your computer, use ```git```. 
 ```bash
@@ -97,18 +97,30 @@ It takes around 5 minutes to complete the installation.
 # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
 git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
 
+
 # Install MXNet for Python with all required dependencies
 cd ~/mxnet/setup-utils
-bash install-mxnet-ubuntu.sh
+bash install-mxnet-ubuntu-python.sh
 
 # We have added MXNet Python package path in your ~/.bashrc. 
 # Run the following command to refresh environment variables.
 $ source ~/.bashrc
 ```
 
-You can view the installation script [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu.sh).
+You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu-python.sh).
+
+# Install MXNet for R with all required dependencies
+
+To install MXNet for R:
+
+```bash
+cd ~/mxnet/setup-utils
+bash install-mxnet-ubuntu-r.sh
+```
+The installation script to install MXNet for R can be found [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu-r.sh).
 
 If you are unable to install MXNet with the Bash script, see the following detailed installation instructions.
+
 
 ### Quick Installation on Amazon Linux
 
@@ -435,7 +447,7 @@ make rpkg
 These commands create the MXNet R package as a tar.gz file that you can install as an R package. To install the R package, run the following command, use your MXNet version number:
 
 ```bash
-R CMD INSTALL mxnet_0.5.tar.gz
+R CMD INSTALL mxnet_0.7.tar.gz
 ```
 
 ##### Installing MXNet on a Computer with a GPU Processor
