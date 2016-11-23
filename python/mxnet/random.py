@@ -43,7 +43,7 @@ def uniform(low, high, shape=None, ctx=None, out=None):
 
 
 def normal(loc, scale, shape=None, ctx=None, out=None):
-    """Generate normal(Gaussian) distribution N(mean, stdvar^2) with shape.
+    """Generate normal(Gaussian) distribution N(loc, scale^2) with shape.
 
     Parameters
     ----------
