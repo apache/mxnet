@@ -43,7 +43,8 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Numpy Operator Customization](https://github.com/dmlc/mxnet/tree/master/example/numpy-ops) - Example on quick customize new ops with numpy.
 * [Adversary Sample Generation](adversary) - Find adversary sample by using fast sign method.
 * [Neural Art](neural-style) -  Generate artistic style images.
-* [DQN and Double DQN](https://github.com/dmlc/mxnet/tree/master/example/dqn) -  Examples of training DQN and Double DQN to play Atari Games.
+* [DQN and Double DQN](https://github.com/dmlc/mxnet/tree/master/example/reinforcement-learning/dqn) -  Examples of training DQN and Double DQN to play Atari Games.
+* [DDPG](https://github.com/dmlc/mxnet/tree/master/example/reinforcement-learning/ddpg) - Example of training DDPG for CartPole.
 * [Kaggle 1st national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb1) - a MXnet example for Kaggle Nation Data Science Bowl 1
 * [Kaggle 2nd national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb2) - a tutorial for Kaggle Second Nation Data Science Bowl
 * [CNN for Text Classification](cnn_text_classification) - a MXnet example for text classification
