@@ -16,37 +16,48 @@ def test_attr_basic():
 
 def test_operator():
     data = mx.symbol.Variable('data')
-    with mx.AttrScope(group='4', data='great'):
+    with mx.AttrScope(__group__='4', __data__='great'):
         fc1 = mx.symbol.Activation(data, act_type='relu')
-        with mx.AttrScope(init_bias='0.0'):
+        with mx.AttrScope(__init_bias__='0.0'):
             fc2 = mx.symbol.FullyConnected(fc1, num_hidden=10, name='fc2')
-    assert fc1.attr('data') == 'great'
-    assert fc2.attr('data') == 'great'
-    assert fc2.attr('init_bias') == '0.0'
+    assert fc1.attr('__data__') == 'great'
+    assert fc2.attr('__data__') == 'great'
+    assert fc2.attr('__init_bias__') == '0.0'
     fc2copy = pkl.loads(pkl.dumps(fc2))
     assert fc2copy.tojson() == fc2.tojson()
     fc2weight = fc2.get_internals()['fc2_weight']
-
 
 def contain(x, y):
     for k, v in x.items():
         if k not in y:
             return False
-        if y[k] != v:
+        if isinstance(y[k], dict):
+            if not isinstance(v, dict):
+                return False
+            if not contain(v, y[k]):
+                return False
+        elif y[k] != v:
             return False
     return True
-
 
 def test_list_attr():
     data = mx.sym.Variable('data', attr={'mood': 'angry'})
     op = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
-                            num_filter=1, attr={'mood': 'so so'})
-    assert contain({'data_mood': 'angry', 'conv_mood': 'so so',
-                    'conv_weight_mood': 'so so', 'conv_bias_mood': 'so so'},
-                    op.list_attr(recursive=True))
-    assert contain({'mood': 'so so'}, op.list_attr())
+                            num_filter=1, attr={'__mood__': 'so so'})
+    assert contain({'__mood__': 'so so'}, op.list_attr())
+
+def test_attr_dict():
+    data = mx.sym.Variable('data', attr={'mood': 'angry'})
+    op = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
+                            num_filter=1, attr={'__mood__': 'so so'})
+    assert contain({
+        'data': {'mood': 'angry'},
+        'conv_weight': {'__mood__': 'so so'},
+        'conv': {'kernel': '(1, 1)', '__mood__': 'so so', 'num_filter': '1'},
+        'conv_bias': {'__mood__': 'so so'}}, op.attr_dict())
 
 if __name__ == '__main__':
     test_attr_basic()
     test_operator()
     test_list_attr()
+    test_attr_dict()

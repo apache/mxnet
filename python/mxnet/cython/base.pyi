@@ -62,16 +62,7 @@ cdef extern from "nnvm/c_api.h":
                     const char ***arg_type_infos,
                     const char ***arg_descriptions,
                     const char **return_type);
-    int NNSymbolCreateAtomicSymbol(OpHandle op,
-                                   nn_uint num_param,
-                                   const char **keys,
-                                   const char **vals,
-                                   SymbolHandle *out);
     int NNSymbolFree(SymbolHandle symbol);
-    int NNSymbolSetAttrs(SymbolHandle symbol,
-                         nn_uint num_param,
-                         const char** keys,
-                         const char** values);
     int NNSymbolCompose(SymbolHandle sym,
                         const char* name,
                         nn_uint num_args,
@@ -91,6 +82,14 @@ cdef extern from "mxnet/c_api.h":
                                     const char ***arg_descriptions,
                                     const char **key_var_args,
                                     const char **return_type);
+    int MXSymbolCreateAtomicSymbol(OpHandle op,
+                                   nn_uint num_param,
+                                   const char **keys,
+                                   const char **vals,
+                                   SymbolHandle *out);
+    int MXSymbolSetAttr(SymbolHandle symbol,
+                        const char* key,
+                        const char* value);
     int MXImperativeInvoke(OpHandle creator,
                            int num_inputs,
                            NDArrayHandle *inputs,

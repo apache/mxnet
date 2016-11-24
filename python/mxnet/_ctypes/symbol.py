@@ -87,7 +87,7 @@ class SymbolBase(object):
         vals = c_array(ctypes.c_char_p,
                        [c_str(str(val)) for val in kwargs.values()])
         num_args = mx_uint(len(kwargs))
-        check_call(_LIB.NNSymbolSetAttrs(
+        check_call(_LIB.MXSymbolSetAttrs(
             self.handle, num_args, keys, vals))
 
     def _set_handle(self, handle):
@@ -152,8 +152,10 @@ def _make_atomic_symbol_function(handle, name):
         param_keys = []
         param_vals = []
         symbol_kwargs = {}
-        name = kwargs.pop('name', None)
+
         attr = kwargs.pop('attr', None)
+        kwargs.update(AttrScope.current.get(attr))
+        name = kwargs.pop('name', None)
 
         if key_var_num_args and key_var_num_args not in kwargs:
             param_keys.append(c_str(key_var_num_args))
@@ -169,7 +171,7 @@ def _make_atomic_symbol_function(handle, name):
         param_keys = c_array(ctypes.c_char_p, param_keys)
         param_vals = c_array(ctypes.c_char_p, param_vals)
         sym_handle = SymbolHandle()
-        check_call(_LIB.NNSymbolCreateAtomicSymbol(
+        check_call(_LIB.MXSymbolCreateAtomicSymbol(
             handle,
             mx_uint(len(param_keys)),
             param_keys, param_vals,
@@ -180,9 +182,7 @@ def _make_atomic_symbol_function(handle, name):
                 '%s can only accept input'
                 'Symbols either as positional or keyword arguments, not both' % func_name)
         s = _symbol_cls(sym_handle)
-        attr = AttrScope.current.get(attr)
-        if attr:
-            s._set_attr(**attr)
+
         hint = func_name.lower()
         name = NameManager.current.get(name, hint)
         s._compose(*args, name=name, **symbol_kwargs)
