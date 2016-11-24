@@ -77,16 +77,24 @@ int MXNotifyShutdown() {
 }
 
 int MXSetProfilerConfig(int mode, const char* filename) {
-  API_BEGIN();
   // mode, kOnlySymbolic: 0, kAllOperator: 1
+  API_BEGIN();
+#if MXNET_USE_PROFILER
   engine::Profiler::Get()->SetConfig(engine::Profiler::ProfilerMode(mode), std::string(filename));
+#else
+  LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
+#endif
   API_END();
 }
 
 int MXSetProfilerState(int state) {
-  API_BEGIN();
   // state, kNotRunning: 0, kRunning: 1
+  API_BEGIN();
+#if MXNET_USE_PROFILER
   engine::Profiler::Get()->SetState(engine::Profiler::ProfilerState(state));
+#else
+  LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
+#endif
   API_END();
 }
 
