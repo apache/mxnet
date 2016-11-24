@@ -180,7 +180,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(
     if (node.is_variable()) return 0;
     const std::string& type = node.attrs.op->name;
     if (type == "Dropout") return false;
-    if (get_node_attr(node, "force_mirroring", false)) return true;
+    if (get_node_attr(node, "__force_mirroring__", false)) return true;
     if (do_mirror == 0) return false;
     if (type == "Convolution") return false;
     if (type == "FullyConnected") return false;
@@ -265,7 +265,7 @@ Graph AssignContext(Graph g,
     }
   }
   g.attrs["device"] = std::make_shared<dmlc::any>(std::move(device));
-  g = nnvm::pass::PlaceDevice(g, "ctx_group", device_map, "_CrossDeviceCopy");
+  g = nnvm::pass::PlaceDevice(g, "__ctx_group__", device_map, "_CrossDeviceCopy");
   const auto& assigned_device = g.GetAttr<nnvm::DeviceVector>("device");
 
   ContextVector vcontext;

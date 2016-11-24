@@ -9,6 +9,7 @@
 #include <nnvm/c_api.h>
 #include <nnvm/pass.h>
 #include <nnvm/pass_functions.h>
+#include <nnvm/symbolic.h>
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 
@@ -17,6 +18,7 @@ namespace op {
 void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
 }
+const std::vector<std::string> kHiddenKeys = {"ctx_group", "lr_mult", "wd_mult", "__force_mirroring__"};
 
 DMLC_JSON_ENABLE_ANY(int, int);
 
@@ -87,7 +89,33 @@ int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator creator,
                                const char **keys,
                                const char **vals,
                                SymbolHandle *out) {
-  return NNSymbolCreateAtomicSymbol(creator, num_param, keys, vals, out);
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  const nnvm::Op* op = static_cast<const nnvm::Op*>(creator);
+  std::unordered_map<std::string, std::string> kwargs;
+  for (nn_uint i = 0; i < num_param; ++i) {
+    bool flag = false;
+    for (const auto &k : kHiddenKeys) {
+      std::string tmp(keys[i]);
+      size_t pos = tmp.rfind(k);
+      if (pos == 0) {
+        kwargs.insert({"__" + tmp + "__", std::string(vals[i])});
+        flag = true;
+        break;
+      } else if (pos != std::string::npos && pos == tmp.length() - k.length()) {
+        std::ostringstream os;
+        os << "setting variable attributes with " << keys[i] << " is deprecated. "
+           << "please instead use\nw = Variable(" << k << "=" << vals[i] << ")\n"
+           << "sym = YourSymbolName(" << tmp.substr(0, pos-1) << "=w)";
+        throw dmlc::Error(os.str());
+      }
+    }
+    if (!flag)
+      kwargs.insert({std::string(keys[i]), std::string(vals[i])});
+  }
+  *s = nnvm::Symbol::CreateFunctor(op, std::move(kwargs));
+  *out = s;
+  API_END_HANDLE_ERROR(delete s;);
 }
 
 int MXSymbolCreateVariable(const char *name, SymbolHandle *out) {
@@ -139,7 +167,24 @@ int MXSymbolGetAttr(SymbolHandle symbol,
 int MXSymbolSetAttr(SymbolHandle symbol,
                     const char* key,
                     const char* value) {
+  API_BEGIN();
+  for (const auto &k : kHiddenKeys) {
+    std::string tmp(key);
+    size_t pos = tmp.rfind(k);
+    if (pos == 0) {
+      tmp = "__" + tmp + "__";
+      const char *tkey = tmp.c_str();
+      return NNSymbolSetAttrs(symbol, 1, &tkey, &value);
+    } else if (pos != std::string::npos && pos == tmp.length() - k.length()) {
+      std::ostringstream os;
+      os << "setting variable attributes with " << key << " is deprecated. "
+         << "please instead use\nw = Variable(" << k << "=" << value << ")\n"
+         << "sym = YourSymbolName(" << tmp.substr(0, pos-1) << "=w)";
+      throw dmlc::Error(os.str());
+    }
+  }
   return NNSymbolSetAttrs(symbol, 1, &key, &value);
+  API_END();
 }
 
 int MXSymbolListAttr(SymbolHandle symbol,
