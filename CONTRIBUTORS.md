@@ -117,3 +117,5 @@ List of Contributors
 * [Mingjie Xing](https://github.com/EricFisher)
 * [Sebastian Bodenstein](https://github.com/sbodenstein)
 * [Chi Zhang](https://github.com/WellyZhang)
+* [Wei Wu](https://github.com/lazyparser)
+
