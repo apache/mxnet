@@ -103,10 +103,10 @@ class Optimizer(object):
         """
         self.lr_mult = {}
         if self.sym is not None:
-            attr = self.sym.list_attr(recursive=True)
-            for k, v in attr.items():
-                if k.endswith('_lr_mult'):
-                    self.lr_mult[k[:-len('_lr_mult')]] = float(v)
+            attr = self.sym.attr_dict()
+            for name in self.sym.list_arguments():
+                if name in attr and '__lr_mult__' in attr[name]:
+                    self.lr_mult[name] = float(attr[name]['__lr_mult__'])
         self.lr_mult.update(args_lr_mult)
 
     def set_wd_mult(self, args_wd_mult):
@@ -126,10 +126,10 @@ class Optimizer(object):
             if not (n.endswith('_weight') or n.endswith('_gamma')):
                 self.wd_mult[n] = 0.0
         if self.sym is not None:
-            attr = self.sym.list_attr(recursive=True)
-            for k, v in attr.items():
-                if k.endswith('_wd_mult'):
-                    self.wd_mult[k[:-len('_wd_mult')]] = float(v)
+            attr = self.sym.attr_dict()
+            for name in self.sym.list_arguments():
+                if name in attr and '__wd_mult__' in attr[name]:
+                    self.wd_mult[name] = float(attr[name]['__wd_mult__'])
         self.wd_mult.update(args_wd_mult)
 
     def _update_count(self, index):

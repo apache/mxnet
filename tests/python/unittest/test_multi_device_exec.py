@@ -21,6 +21,7 @@ def test_ctx_group():
         'stage1' : mx.cpu(1),
         'stage2' : mx.cpu(2)
     }
+
     texec = mlp.simple_bind(mx.cpu(0),
                             group2ctx=group2ctx,
                             data=(1,200))

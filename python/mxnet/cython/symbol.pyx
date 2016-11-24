@@ -52,18 +52,16 @@ cdef class SymbolBase:
 
 
 cdef SymbolSetAttr(SymbolHandle handle, dict kwargs):
-    cdef vector[string] sparam_keys
-    cdef vector[string] sparam_vals
-    cdef nn_uint num_args
+    cdef string sparam_key
+    cdef string sparam_val
+    cdef const char* param_key
+    cdef const char* param_val
     for k, v in kwargs.items():
-        sparam_keys.push_back(c_str(k))
-        sparam_vals.push_back(c_str(str(v)))
-    # keep strings in vector
-    cdef vector[const char*] param_keys = SVec2Ptr(sparam_keys)
-    cdef vector[const char*] param_vals = SVec2Ptr(sparam_vals)
-    num_args = param_keys.size()
-    CALL(NNSymbolSetAttrs(
-        handle, num_args, CBeginPtr(param_keys), CBeginPtr(param_vals)))
+        sparam_key = c_str(k)
+        sparam_val = c_str(str(v))
+        param_key = sparam_key.c_str()
+        param_val = sparam_val.c_str()
+        CALL(MXSymbolSetAttr(handle, param_key, param_val))
 
 
 _symbol_cls = SymbolBase
@@ -114,8 +112,9 @@ cdef _make_atomic_symbol_function(OpHandle handle, string name):
         cdef vector[SymbolHandle] symbol_args
         cdef vector[string] ssymbol_keys
         cdef SymbolHandle ret_handle
-        name = kwargs.pop("name", None)
         attr = kwargs.pop("attr", None)
+        kwargs.update(AttrScope.current.get(attr))
+        name = kwargs.pop("name", None)
 
         if key_vargs:
             if key_vargs not in kwargs:
@@ -144,7 +143,7 @@ cdef _make_atomic_symbol_function(OpHandle handle, string name):
         cdef vector[const char*] param_vals = SVec2Ptr(sparam_vals)
         cdef vector[const char*] symbol_keys = SVec2Ptr(ssymbol_keys)
 
-        CALL(NNSymbolCreateAtomicSymbol(
+        CALL(MXSymbolCreateAtomicSymbol(
             handle,
             <nn_uint>param_keys.size(),
             CBeginPtr(param_keys),
@@ -152,9 +151,6 @@ cdef _make_atomic_symbol_function(OpHandle handle, string name):
             &ret_handle))
         num_args = <nn_uint>(symbol_args.size())
 
-        attr = AttrScope.current.get(attr)
-        if attr:
-            SymbolSetAttr(ret_handle, attr)
         name = NameManager.current.get(name, func_hint)
 
         cdef const char* c_name = NULL

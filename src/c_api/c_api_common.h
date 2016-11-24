@@ -101,6 +101,9 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
     out_attr->push_back(attr_vec[idx.entry_id(e)]);
   }
 }
+
+// stores keys that will be converted to __key__
+extern const std::vector<std::string> kHiddenKeys;
 }  // namespace mxnet
 
 #endif  // MXNET_C_API_C_API_COMMON_H_
