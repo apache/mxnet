@@ -127,7 +127,7 @@ def benchmark(mod, dry_run=10, iterations=10):
 
 def executor(num_iteration):
     sym, provide_data, provide_label = get_symbol()
-    ctx = [mx.gpu(0)]
+    ctx = [mx.cpu(0)]
     mod = get_module(ctx, sym, provide_data, provide_label, batch_size=128)
     return benchmark(mod, iterations=args.iter_num)
 
