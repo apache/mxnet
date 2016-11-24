@@ -38,7 +38,7 @@ def train_rcnn(image_set, year, root_path, devkit_path, pretrained, epoch,
     max_data_shape = [('data', (config.TRAIN.BATCH_IMAGES, 3, 1000, 1000))]
 
     # load pretrained
-    args, auxs = load_param(pretrained, epoch, convert=True)
+    args, auxs, _ = load_param(pretrained, epoch, convert=True)
 
     # initialize params
     if not resume:
