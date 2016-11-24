@@ -9,11 +9,11 @@
 ######################################################################
 set -e
 
-MXNET_HOME="~/mxnet/" 
+MXNET_HOME="$HOME/mxnet/"
 echo "MXNet root folder: $MXNET_HOME"
 
 echo "Building MXNet core. This can take few minutes..."
-cd $MXNET_HOME
+cd "$MXNET_HOME"
 make -j$(nproc)
 
 echo "Installing R dependencies. This can take few minutes..."
