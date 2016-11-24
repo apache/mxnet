@@ -114,6 +114,32 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             w, g = p
             updater(index*num_device+k, g, w)
 
+
+def _multiple_callbacks(callbacks, *args, **kwargs):
+    """Sends args and kwargs to any configured callbacks.
+    This handles the cases where the 'callbacks' variable
+    is None, a single function, or a list.
+    """
+    if isinstance(callbacks, list):
+        for cb in callbacks:
+            cb(*args, **kwargs)
+        return
+    if callbacks:
+        callbacks(*args, **kwargs)
+
+
+class LogValidationMetricsCallback(object):
+    """Just logs the eval metrics at the end of an epoch.
+    """
+
+    def __call__(self,param):
+        if not param.eval_metric:
+            return
+        name_value = param.eval_metric.get_name_value()
+        for name, value in name_value:
+            logger.info('Epoch[%d] Validation-%s=%f', param.epoch, name, value)
+    
+
 def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         arg_params, aux_params,
                         begin_epoch, end_epoch, epoch_size, optimizer,
@@ -121,6 +147,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         train_data, eval_data=None, eval_metric=None,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
+                        eval_end_callback=None,
                         eval_batch_end_callback=None, sym_gen=None):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
@@ -250,11 +277,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                                                      nbatch=nbatch,
                                                      eval_metric=eval_metric,
                                                      locals=locals())
-                    if isinstance(batch_end_callback, list):
-                        for call in batch_end_callback:
-                            call(batch_end_params)
-                    else:
-                        batch_end_callback(batch_end_params)
+                    _multiple_callbacks(batch_end_callback, batch_end_params)
 
                 # this epoch is done possibly earlier
                 if epoch_size is not None and nbatch >= epoch_size:
@@ -275,12 +298,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         if epoch_end_callback or epoch + 1 == end_epoch:
             executor_manager.copy_to(arg_params, aux_params)
 
-        if epoch_end_callback != None:
-            if isinstance(epoch_end_callback, list):
-                for call in epoch_end_callback:
-                    call(epoch, symbol, arg_params, aux_params)
-            else:
-                epoch_end_callback(epoch, symbol, arg_params, aux_params)
+        _multiple_callbacks(epoch_end_callback, epoch, symbol, arg_params, aux_params)
 
         # evaluation
         if eval_data:
@@ -295,14 +313,13 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                                                      nbatch=i,
                                                      eval_metric=eval_metric,
                                                      locals=locals())
-                    if isinstance(eval_batch_end_callback, list):
-                        for call in eval_batch_end_callback:
-                            call(batch_end_params)
-                    else:
-                        eval_batch_end_callback(batch_end_params)
-            name_value = eval_metric.get_name_value()
-            for name, value in name_value:
-                logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+                    _multiple_callbacks(eval_batch_end_callback, batch_end_params)
+            if eval_end_callback != None:
+                eval_end_params = BatchEndParam(epoch=epoch,
+                                                nbatch=i,
+                                                eval_metric=eval_metric,
+                                                locals=locals())
+                _multiple_callbacks(eval_end_callback, eval_end_params)
             eval_data.reset()
     # end of all epochs
     return
@@ -697,17 +714,15 @@ class FeedForward(BASE_ESTIMATOR):
                                                  nbatch=i,
                                                  eval_metric=eval_metric,
                                                  locals=locals())
-                if isinstance(batch_end_callback, list):
-                    for call in batch_end_callback:
-                        call(batch_end_params)
-                else:
-                    batch_end_callback(batch_end_params)
+                _multiple_callbacks(batch_end_callback, batch_end_params)
         return eval_metric.get()[1]
 
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
-            work_load_list=None, monitor=None, eval_batch_end_callback=None):
+            work_load_list=None, monitor=None, 
+            eval_end_callback=LogValidationMetricsCallback(),
+            eval_batch_end_callback=None):
         """Fit the model.
 
         Parameters
@@ -802,6 +817,7 @@ class FeedForward(BASE_ESTIMATOR):
                             batch_end_callback=batch_end_callback,
                             kvstore=kvstore, update_on_kvstore=update_on_kvstore,
                             logger=logger, work_load_list=work_load_list, monitor=monitor,
+                            eval_end_callback=eval_end_callback,
                             eval_batch_end_callback=eval_batch_end_callback,
                             sym_gen=self.sym_gen)
 
@@ -865,6 +881,7 @@ class FeedForward(BASE_ESTIMATOR):
                eval_data=None, eval_metric='acc',
                epoch_end_callback=None, batch_end_callback=None,
                kvstore='local', logger=None, work_load_list=None,
+               eval_end_callback=LogValidationMetricsCallback(),
                eval_batch_end_callback=None, **kwargs):
         """Functional style to create a model.
         This function will be more consistent with functional
@@ -920,5 +937,6 @@ class FeedForward(BASE_ESTIMATOR):
                   kvstore=kvstore,
                   logger=logger,
                   work_load_list=work_load_list,
+                  eval_end_callback=eval_end_callback,
                   eval_batch_end_callback=eval_batch_end_callback)
         return model
