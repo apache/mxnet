@@ -18,7 +18,16 @@ make -j$(nproc)
 echo "Installing R dependencies. This can take few minutes..."
 
 # make sure we have essential tools installed
-sudo apt-get install r-base-core libcurl4-openssl-dev libssl-dev
+is_rscript_installed=$(which Rscript | wc -l)
+if [ "$is_rscript_installed" = "0" ]; then
+	read -p "Seems like Rscript is not installed. Install Rscript? [Y/n]"
+	if [ x"$REPLY" = x"" -o x"$REPLY" = x"y" -o x"$REPLY" = x"Y" ]; then
+		sudo apt-get install -y r-base-core
+	fi
+fi
+
+# libcurl4-openssl-dev and libssl-dev are needed for devtools.
+sudo apt-get -y install libcurl4-openssl-dev libssl-dev
 
 sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package
