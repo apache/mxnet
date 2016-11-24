@@ -120,7 +120,7 @@ class RegressionOutputProp : public OperatorProperty {
       }
     } else if (lshape[0] != dshape[0] || lshape.Size() != dshape.Size()) {
       std::ostringstream os;
-      os << "Shape inconsistent, Provided " <<  '='<< lshape << ','
+      os << "Shape inconsistent, Provided=" << lshape << ','
          << " inferred shape=" << dshape;
       throw ::mxnet::op::InferShapeError(os.str(), 1);
     }
