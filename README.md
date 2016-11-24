@@ -60,7 +60,7 @@ Ask Questions
 
 License
 -------
-© Contributors, 2015. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
+© Contributors, 2015-2016. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
 
 Reference Paper
 ---------------
