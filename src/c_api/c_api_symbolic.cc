@@ -18,7 +18,9 @@ namespace op {
 void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
 }
-const std::vector<std::string> kHiddenKeys = {"ctx_group", "lr_mult", "wd_mult", "__force_mirroring__"};
+const std::vector<std::string> kHiddenKeys = {
+  "ctx_group", "lr_mult", "wd_mult", "__force_mirroring__"
+};
 
 DMLC_JSON_ENABLE_ANY(int, int);
 
