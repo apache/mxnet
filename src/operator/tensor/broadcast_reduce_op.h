@@ -450,14 +450,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   NNVM_REGISTER_OP(name)                                            \
   .set_num_outputs(1)                                               \
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)                \
-  .set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",   \
-    [](const NodeAttrs& attrs) {                                    \
-      return std::vector<uint32_t>{0};                              \
-    })                                                              \
-  .set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",     \
-    [](const NodeAttrs& attrs) {                                    \
-      return std::vector<uint32_t>{0};                              \
-    })
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                 \
 
 #define MXNET_OPERATOR_REGISTER_BROADCAST(name)                 \
   NNVM_REGISTER_OP(name)                                        \
