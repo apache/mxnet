@@ -80,7 +80,8 @@ def fit(args, network, data_loader, batch_end_callback=None):
         learning_rate      = args.lr,
         momentum           = 0.9,
         wd                 = 0.00001,
-        initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        sym_gen            = sym_gen,
+        initializer        = mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2.0),
         **model_args)
 
     eval_metrics = ['accuracy']
