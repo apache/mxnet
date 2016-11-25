@@ -8,6 +8,8 @@
 
 #ifdef __cplusplus
 #define MXNET_EXTERN_C extern "C"
+#else
+#define MXNET_EXTERN_C
 #endif
 
 #include <stdint.h>
