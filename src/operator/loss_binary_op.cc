@@ -30,10 +30,7 @@ NNVM_REGISTER_OP(_backward_softmax_cross_entropy)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyBackward<cpu>);
 
 }  // namespace op
