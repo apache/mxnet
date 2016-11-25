@@ -11,6 +11,7 @@
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 
 /*! \brief MXNET_DLL prefix for windows */
 #ifdef _WIN32
