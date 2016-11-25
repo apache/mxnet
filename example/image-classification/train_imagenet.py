@@ -7,10 +7,12 @@ import train_model
 
 # don't use -n and -s, which are resevered for the distributed training
 parser = argparse.ArgumentParser(description='train an image classifer on imagenet')
+mutually_exclusive_parser_group = parser.add_mutually_exclusive_group(required=True)
 parser.add_argument('--network', type=str, default='inception-bn',
-                    choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn', 'inception-bn-full', 'inception-v3'],
+                    choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn',
+                               'inception-bn-full', 'inception-v3', 'resnet'],
                     help = 'the cnn to use')
-parser.add_argument('--data-dir', type=str, required=True,
+mutually_exclusive_parser_group.add_argument('--data-dir', type=str,
                     help='the input data directory')
 parser.add_argument('--model-prefix', type=str,
                     help='the prefix of the model to load')
@@ -31,14 +33,14 @@ parser.add_argument('--load-epoch', type=int,
 parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size')
 parser.add_argument('--gpus', type=str,
-                    help='the gpus will be used, e.g "0,1,2,3"')
+                    help='gpus to be used, e.g "0,1,2,3"')
 parser.add_argument('--kv-store', type=str, default='local',
                     help='the kvstore type')
 parser.add_argument('--num-examples', type=int, default=1281167,
                     help='the number of training examples')
 parser.add_argument('--num-classes', type=int, default=1000,
                     help='the number of classes')
-parser.add_argument('--log-file', type=str, 
+parser.add_argument('--log-file', type=str,
 		    help='the name of log file')
 parser.add_argument('--log-dir', type=str, default="/tmp/",
                     help='directory of the log file')
@@ -48,13 +50,58 @@ parser.add_argument('--val-dataset', type=str, default="val.rec",
                     help="validation dataset name")
 parser.add_argument('--data-shape', type=int, default=224,
                     help='set image\'s shape')
+mutually_exclusive_parser_group.add_argument('--benchmark', default=False, action='store_true',
+                    help='benchmark for 50 iterations using randomly generated Synthetic data')
 args = parser.parse_args()
 
 # network
 import importlib
 net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes)
 
+
 # data
+import random
+from mxnet.io import DataBatch, DataIter
+import numpy as np
+class SyntheticDataIter(DataIter):
+    def __init__(self, num_classes, data_shape, max_iter):
+        self.batch_size = data_shape[0]
+        self.cur_iter = 0
+        self.max_iter = max_iter
+        label = np.random.randint(0, num_classes, [self.batch_size,])
+        data = np.random.uniform(-1, 1, data_shape)
+        self.data = mx.nd.array(data)
+        self.label = mx.nd.array(label)
+    def __iter__(self):
+        return self
+    @property
+    def provide_data(self):
+        return [('data',self.data.shape)]
+    @property
+    def provide_label(self):
+        return [('softmax_label',(self.batch_size,))]
+    def next(self):
+        self.cur_iter += 1
+        if self.cur_iter <= self.max_iter:
+            return DataBatch(data=(self.data,),
+                             label=(self.label,),
+                             pad=0,
+                             index=None,
+                             provide_data=self.provide_data,
+                             provide_label=self.provide_label)
+        else:
+            raise StopIteration
+    def __next__(self):
+        return self.next()
+    def reset(self):
+        self.cur_iter = 0
+
+def get_sythentic_data_iter(args, kv):
+    data_shape = (args.batch_size, 3, args.data_shape, args.data_shape)
+    train = SyntheticDataIter(args.num_classes, data_shape, 50)
+    val = SyntheticDataIter(args.num_classes, data_shape, 1)
+    return (train, val)
+
 def get_iterator(args, kv):
     data_shape = (3, args.data_shape, args.data_shape)
     train = mx.io.ImageRecordIter(
@@ -83,5 +130,7 @@ def get_iterator(args, kv):
 
     return (train, val)
 
-# train
-train_model.fit(args, net, get_iterator)
+if args.benchmark:
+    train_model.fit(args, net, get_sythentic_data_iter)
+else:
+    train_model.fit(args, net, get_iterator)
