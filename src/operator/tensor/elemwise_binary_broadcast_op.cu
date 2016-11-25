@@ -20,6 +20,9 @@ NNVM_REGISTER_OP(_backward_plus)
 NNVM_REGISTER_OP(elemwise_add)
 .set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow::op::plus>);
 
+NNVM_REGISTER_OP(_grad_add)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow::op::plus>);
+
 NNVM_REGISTER_OP(broadcast_sub)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow::op::minus>);
 

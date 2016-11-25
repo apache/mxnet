@@ -22,15 +22,14 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
     const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
   // identity constraints in the beginning for easier shape inference.
-  const nnvm::Op* backward_copy_op =
-      nnvm::Op::Get("_backward_copy");
+  const nnvm::Op* copy_op =
+      nnvm::Op::Get("identity");
   CHECK_EQ(ograds.size(), 1);
   std::vector<nnvm::NodeEntry> ret;
   nnvm::NodeEntry n_out{n, 0, 0};
   for (auto& h : n->inputs) {
     nnvm::NodePtr id_node = nnvm::Node::Create();
-    id_node->attrs.op = backward_copy_op;
-    id_node->control_deps.push_back(n);
+    id_node->attrs.op = copy_op;
     id_node->inputs = {ograds[0]};
     ret.push_back(nnvm::NodeEntry{id_node, 0, 0});
   }

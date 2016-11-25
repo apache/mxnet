@@ -18,7 +18,7 @@ Graph DetectInplaceAddTo(Graph g) {
       g.MoveCopyAttr<nnvm::StorageVector>("storage_id");
   std::vector<int> storage_inplace_index =
       g.MoveCopyAttr<std::vector<int> >("storage_inplace_index");
-  static const Op* ewise_plus_op = Op::Get("elemwise_add");
+  static const Op* ewise_plus_op = Op::Get("_grad_add");
   auto& idx = g.indexed_graph();
   // reference cont.
   std::vector<int> ref_count(idx.num_node_entries(), 0);
