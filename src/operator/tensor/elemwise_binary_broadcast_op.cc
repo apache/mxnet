@@ -19,6 +19,11 @@ MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_plus"});
 
+// specialized gradient add function to do add to optimization
+// this must differ from elemwise_add to prevent add to optimization in forward pass.
+MXNET_OPERATOR_REGISTER_BINARY(_grad_add)
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow::op::plus>);
+
 NNVM_REGISTER_OP(_backward_plus)
 .set_num_inputs(1)
 .set_num_outputs(2)
