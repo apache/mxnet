@@ -105,14 +105,7 @@ void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
   NNVM_REGISTER_OP(name)                                          \
   .set_num_inputs(1)                                              \
   .set_num_outputs(2)                                             \
-  .set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex", \
-    [](const NodeAttrs& attrs) {                                  \
-      return std::vector<uint32_t>{0, 1};                         \
-    })                                                            \
-  .set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",   \
-    [](const NodeAttrs& attrs) {                                  \
-      return std::vector<uint32_t>{0};                            \
-    })                                                            \
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)               \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",               \
     [](const NodeAttrs& attrs){                                   \
       return std::vector<std::pair<int, int> >{{0, 1}};           \
