@@ -421,7 +421,7 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
                             const char ***arg_names,
                             const char ***arg_type_infos,
                             const char ***arg_descriptions,
-                            const char **return_type = NULL);
+                            const char **return_type);
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
@@ -515,7 +515,7 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions,
                                           const char **key_var_num_args,
-                                          const char **return_type = NULL);
+                                          const char **return_type);
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
@@ -1307,7 +1307,7 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
 MXNET_DLL int MXKVStoreGetNumDeadNode(KVStoreHandle handle,
                                       const int node_id,
                                       int *number,
-                                      const int timeout_sec = 60);
+                                      const int timeout_sec);
 
 /**
  * \brief Create a RecordIO writer object
