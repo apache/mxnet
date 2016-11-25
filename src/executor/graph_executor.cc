@@ -69,6 +69,15 @@ const std::vector<NDArray>& GraphExecutor::outputs() const {
   return output_arrays_;
 }
 
+nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
+  static const Op* id_like = Op::Get("_identity_with_attr_like_rhs");
+  nnvm::NodePtr n = nnvm::Node::Create();
+  n->attrs.op = id_like;
+  n->attrs.name = src.node->attrs.name + "_id";
+  n->inputs = {src, like};
+  return nnvm::NodeEntry{n, 0, 0};
+}
+
 nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   using nnvm::Op;
   static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 8);
@@ -162,8 +171,9 @@ nnvm::Graph GraphExecutor::InitFullGraph(
   }
   if (!need_grad) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
-    head_grad_entry_.emplace_back(NodeEntry{nnvm::Node::Create(), 0, 0});
-    head_grad_map_[head_grad_entry_.back().node.get()] = i;
+    NodeEntry ngrad{nnvm::Node::Create(), 0, 0};
+    head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
+    head_grad_map_[ngrad.node.get()] = i;
   }
   std::vector<NodePtr> args = symbol.ListInputs(nnvm::Symbol::kReadOnlyArgs);
   std::vector<NodeEntry> xs;

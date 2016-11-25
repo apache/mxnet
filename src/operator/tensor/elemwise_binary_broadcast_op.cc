@@ -27,10 +27,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_grad_add)
 NNVM_REGISTER_OP(_backward_plus)
 .set_num_inputs(1)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
@@ -46,10 +43,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
 NNVM_REGISTER_OP(_backward_minus)
 .set_num_inputs(1)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
@@ -65,10 +59,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_mul)
 NNVM_REGISTER_OP(_backward_mul)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
@@ -84,10 +75,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_div)
 NNVM_REGISTER_OP(_backward_div)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
@@ -103,10 +91,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_power)
 NNVM_REGISTER_OP(_backward_power)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
@@ -122,10 +107,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_maximum)
 NNVM_REGISTER_OP(_backward_maximum)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
@@ -141,10 +123,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_minimum)
 NNVM_REGISTER_OP(_backward_minimum)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 1}};
@@ -160,10 +139,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_hypot)
 NNVM_REGISTER_OP(_backward_hypot)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-[](const NodeAttrs& attrs) { return std::vector<uint32_t> {0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
 [](const NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> > {{0, 1}};
