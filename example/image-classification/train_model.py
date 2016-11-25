@@ -94,6 +94,7 @@ def fit(args, network, data_loader, batch_end_callback=None):
     else:
         batch_end_callback = []
     batch_end_callback.append(mx.callback.Speedometer(args.batch_size, 50))
+    batch_end_callback.append(mx.callback.ProgressBar(args.num_examples / (args.batch_size+0.0001)))
 
     model.fit(
         X                  = train,

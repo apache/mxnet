@@ -86,6 +86,7 @@ class Speedometer(object):
         if self.init:
             if count % self.frequent == 0:
                 speed = self.frequent * self.batch_size / (time.time() - self.tic)
+                sys.stdout.write('\n')
                 if param.eval_metric is not None:
                     name_value = param.eval_metric.get_name_value()
                     param.eval_metric.reset()
