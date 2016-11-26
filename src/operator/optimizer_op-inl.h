@@ -158,14 +158,17 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> var = inputs[3].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
     if (param.clip_gradient >= 0.0f) {
-      auto clipped = F<clip>(scalar<DType>(param.rescale_grad)*grad,
-                             DType(param.clip_gradient));
-      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1)*clipped;
-      var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2)*F<square>(clipped);
+      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) *
+          F<clip>(scalar<DType>(param.rescale_grad)*grad,
+                  DType(param.clip_gradient));
+      var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2)*F<square>(
+          F<clip>(scalar<DType>(param.rescale_grad)*grad,
+                  DType(param.clip_gradient)));
     } else {
-      auto clipped = scalar<DType>(param.rescale_grad)*grad;
-      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1)*clipped;
-      var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2)*F<square>(clipped);
+      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) *
+          scalar<DType>(param.rescale_grad) * grad;
+      var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2) *
+          F<square>(scalar<DType>(param.rescale_grad)*grad);
     }
     Assign(out, req[0],
            scalar<DType>(1.f-param.lr*param.wd)*weight
