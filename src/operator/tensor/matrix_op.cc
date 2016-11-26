@@ -132,10 +132,7 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SliceParam>)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", SliceGrad_<cpu>);
 
 NNVM_REGISTER_OP(flip)
@@ -164,10 +161,7 @@ NNVM_REGISTER_OP(dot)
 NNVM_REGISTER_OP(_backward_dot)
 .set_num_inputs(3)
 .set_num_outputs(2)
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", DotBackward_<cpu>);
 
 NNVM_REGISTER_OP(batch_dot)
@@ -193,10 +187,7 @@ NNVM_REGISTER_OP(_backward_batch_dot)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FBackwardOutToInIndex>("FBackwardOutToInIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0, 1}; })
-.set_attr<nnvm::FBackwardInGradIndex>("FBackwardInGradIndex",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>{0}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
 }  // namespace op
