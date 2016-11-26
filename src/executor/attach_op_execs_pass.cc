@@ -197,7 +197,7 @@ Graph AttachOpExecs(Graph g) {
     } else if (is_layer_backward.get(inode.source->op(), false)) {
       uint32_t fwd_id = inode.control_deps[0];
       CHECK_GE(inode.control_deps.size(), 1);
-      CHECK_EQ(vctx[fwd_id], vctx[i]);
+      CHECK(vctx[fwd_id] == vctx[i]);
       CHECK(ret[fwd_id] != nullptr);
       ret[i] = std::make_shared<BackwardOpExecutor>(
           dynamic_cast<ForwardOpExecutor*>(ret[fwd_id].get())->op_,
