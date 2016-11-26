@@ -601,7 +601,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetNumDeadNode
   int number;
   int ret = MXKVStoreGetNumDeadNode(reinterpret_cast<KVStoreHandle>(kvStorePtr),
                                     static_cast<const int>(nodeId),
-                                    &number, 60); // default timeout is 60 seconds.
+                                    &number, 60);  // default timeout is 60 seconds.
   SetIntField(env, numberRef, number);
   return ret;
 }
