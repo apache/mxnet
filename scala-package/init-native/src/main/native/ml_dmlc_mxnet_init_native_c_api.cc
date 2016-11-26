@@ -43,7 +43,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_init_LibInfo_mxSymbolGetAtomicSymbolIn
   int ret = MXSymbolGetAtomicSymbolInfo(reinterpret_cast<AtomicSymbolCreator>(symbolPtr),
                                         &cName, &cDesc, &cNumArgs,
                                         &cArgNames, &cArgTypes, &cArgDescs,
-                                        &cKeyVarNumArgs);
+                                        &cKeyVarNumArgs, NULL);
 
   jclass refIntClass = env->FindClass("ml/dmlc/mxnet/init/Base$RefInt");
   jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
