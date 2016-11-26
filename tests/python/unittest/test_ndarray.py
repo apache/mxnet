@@ -351,7 +351,7 @@ def test_arange():
         assert_almost_equal(pred, gt, default_numerical_threshold())
 
 
-def test_topk(ctx=default_context()):
+def test_order(ctx=default_context()):
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
             if is_ascend:
@@ -427,6 +427,22 @@ def test_topk(ctx=default_context()):
     assert_almost_equal(nd_ret_topk_val, gt_val)
     assert_almost_equal(nd_ret_topk_ind, gt_ind)
 
+    # test for sort
+    nd_ret_sort = mx.nd.sort(a_nd, axis=1, is_ascend=True).asnumpy()
+    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=5, is_ascend=True)
+    assert_almost_equal(nd_ret_sort, gt)
+    nd_ret_sort = mx.nd.sort(a_nd, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=None, ret_typ="value", k=5*5*5*5, is_ascend=False)
+    assert_almost_equal(nd_ret_sort, gt)
+
+    # test for argsort
+    nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True).asnumpy()
+    gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=5, is_ascend=True)
+    assert_almost_equal(nd_ret_argsort, gt)
+    nd_ret_argsort = mx.nd.argsort(a_nd, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
+    assert_almost_equal(nd_ret_argsort, gt)
+
 
 if __name__ == '__main__':
     test_ndarray_setitem()
@@ -447,4 +463,4 @@ if __name__ == '__main__':
     test_ndarray_fill()
     test_reduce()
     test_arange()
-    test_topk()
+    test_order()

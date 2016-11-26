@@ -1890,7 +1890,7 @@ def test_init():
     test_arange()
 
 
-def test_topk(ctx=default_context()):
+def test_order(ctx=default_context()):
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
             if is_ascend:
@@ -1954,6 +1954,20 @@ def test_topk(ctx=default_context()):
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="mask", k=3,
                                              is_ascend=True)])
+    a = mx.sym.Variable('a')
+    b = mx.sym.sort(a, axis=1, is_ascend=False)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
+    check_symbolic_forward(b, location={'a': a_npy},
+                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=5,
+                                             is_ascend=False)])
+    a = mx.sym.Variable('a')
+    b = mx.sym.argsort(a, axis=1, is_ascend=False)
+    check_symbolic_backward(sym=b, location={'a': a_npy},
+                            out_grads=[np.random.normal(size=(5, 5, 5, 5))],
+                            expected=[np.zeros((5, 5, 5, 5))])
+    check_symbolic_forward(b, location={'a': a_npy},
+                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=5,
+                                             is_ascend=False)])
 
 
 if __name__ == '__main__':
@@ -2003,4 +2017,4 @@ if __name__ == '__main__':
     test_l2_normalization()
     test_mathematical()
     test_special_functions_using_scipy()
-    test_topk()
+    test_order()

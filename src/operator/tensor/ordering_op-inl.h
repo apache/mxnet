@@ -29,16 +29,16 @@ enum TopKReturnType {kReturnValue, kReturnIndices, kReturnMask, kReturnBoth};
 }  // topk_enum
 
 struct TopKParam : public dmlc::Parameter<TopKParam> {
-  TShape axis;  // TODO(sxjscience) Use Tuple<int> instead
+  int axis;
   int k;
   int ret_typ;
   bool is_ascend;
   DMLC_DECLARE_PARAMETER(TopKParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(TShape())
+    DMLC_DECLARE_FIELD(axis).set_default(INT_MIN)
     .describe("Axis along which to choose the top k indices."
-              " If None, the flattened array is used.");
+              " If not given, the flattened array is used.");
     DMLC_DECLARE_FIELD(k).set_default(1)
-    .describe("number of top elements to select,"
+    .describe("Number of top elements to select,"
               " should be always smaller than or equal to the element number in the given axis."
               " A global sort is performed if set k < 1.");
     DMLC_DECLARE_FIELD(ret_typ).set_default(topk_enum::kReturnIndices)
@@ -57,21 +57,43 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
   }
 };
 
+struct SortParam : public dmlc::Parameter<SortParam> {
+  int axis;
+  bool is_ascend;
+  DMLC_DECLARE_PARAMETER(SortParam) {
+    DMLC_DECLARE_FIELD(axis).set_default(INT_MIN)
+    .describe("Axis along which to choose sort the input tensor."
+              " If not given, the flattened array is used.");
+    DMLC_DECLARE_FIELD(is_ascend).set_default(true)
+      .describe("Whether sort in ascending or descending order.");
+  }
+};
+
+struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
+  int axis;
+  bool is_ascend;
+  DMLC_DECLARE_PARAMETER(ArgSortParam) {
+    DMLC_DECLARE_FIELD(axis).set_default(INT_MIN)
+    .describe("Axis along which to sort the input tensor."
+              " If not given, the flattened array is used.");
+    DMLC_DECLARE_FIELD(is_ascend).set_default(true)
+      .describe("Whether sort in ascending or descending order.");
+  }
+};
+
 inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TShape *target_shape,
                            int *batch_size, int *element_num, int *axis, int *k,
                            bool *do_transpose, bool *is_ascend) {
-  CHECK(param.axis.ndim() == 0 || param.axis.ndim() == 1)
-    << "axis must be empty or contains a single integer, get axis=";
-  *axis = 0;
+  *axis = param.axis;
   *do_transpose = false;
   *k = param.k;
   *is_ascend = param.is_ascend;
   // get batch_size, axis and element_num
-  if (param.axis.ndim() == 0) {
+  if (param.axis == INT_MIN) {
+    *axis = 0;
     *batch_size = 1;
     *element_num = src_shape.Size();
   } else {
-    *axis = static_cast<int>(param.axis[0]);
     if (*axis < 0) {
       *axis += src_shape.ndim();
     }
@@ -88,7 +110,7 @@ inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TSha
     *k = *element_num;
   }
   // get target_shape
-  if (param.axis.ndim() == 0) {
+  if (param.axis == INT_MIN) {
     if (param.ret_typ != topk_enum::kReturnMask) {
       *target_shape = mshadow::Shape1(*k);
     } else {
@@ -260,6 +282,37 @@ void TopK(const nnvm::NodeAttrs& attrs,
   TopKImpl<xpu>(ctx.run_ctx, ctx.requested[0], inputs[0], outputs, param);
 }
 
+template<typename xpu>
+void Sort(const nnvm::NodeAttrs& attrs,
+          const OpContext& ctx,
+          const std::vector<TBlob>& inputs,
+          const std::vector<OpReqType>& req,
+          const std::vector<TBlob>& outputs) {
+  const SortParam& param = nnvm::get<SortParam>(attrs.parsed);
+  CHECK_EQ(req[0], kWriteTo) << "Sort does not support inplace";
+  TopKParam topk_param;
+  topk_param.axis = param.axis;
+  topk_param.is_ascend = param.is_ascend;
+  topk_param.k = 0;
+  topk_param.ret_typ = topk_enum::kReturnValue;
+  TopKImpl<xpu>(ctx.run_ctx, ctx.requested[0], inputs[0], outputs, topk_param);
+}
+
+template<typename xpu>
+void ArgSort(const nnvm::NodeAttrs& attrs,
+             const OpContext& ctx,
+             const std::vector<TBlob>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<TBlob>& outputs) {
+  const ArgSortParam& param = nnvm::get<ArgSortParam>(attrs.parsed);
+  CHECK_EQ(req[0], kWriteTo) << "ArgSort does not support inplace";
+  TopKParam topk_param;
+  topk_param.axis = param.axis;
+  topk_param.is_ascend = param.is_ascend;
+  topk_param.k = 0;
+  topk_param.ret_typ = topk_enum::kReturnIndices;
+  TopKImpl<xpu>(ctx.run_ctx, ctx.requested[0], inputs[0], outputs, topk_param);
+}
 
 template<typename xpu>
 void TopKBackward_(const nnvm::NodeAttrs& attrs,
@@ -272,13 +325,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.run_ctx.get_stream<xpu>();
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
-  if (param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnMask) {
-    Tensor<xpu, 1, real_t> in_grad = outputs[0].FlatTo1D<xpu, real_t>(s);
-    if (kWriteTo == req[0]) {
-      in_grad = scalar<real_t>(0);
-    }
-    return;
-  }
+  CHECK(param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth);
   int batch_size, element_num;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
@@ -359,17 +406,15 @@ inline uint32_t TopKNumVisibleOutputs(const NodeAttrs& attrs) {
 inline bool TopKType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_attrs,
                      std::vector<int> *out_attrs) {
-  return ElemwiseAttr<int, type_is_none, true>(
-    attrs, in_attrs, out_attrs);
+  return ElemwiseAttr<int, type_is_none, true>(attrs, in_attrs, out_attrs);
 }
 
-inline bool TopKShape(const nnvm::NodeAttrs& attrs,
-                      std::vector<TShape> *in_attrs,
-                      std::vector<TShape> *out_attrs) {
-  const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
+inline bool TopKShapeImpl(const TopKParam& param,
+                          std::vector<TShape> *in_attrs,
+                          std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   if (param.ret_typ == topk_enum::kReturnIndices ||
-      param.ret_typ == topk_enum::kReturnMask) {
+    param.ret_typ == topk_enum::kReturnMask) {
     CHECK_EQ(out_attrs->size(), 1);
   } else {
     CHECK_EQ(out_attrs->size(), 2);
@@ -382,9 +427,9 @@ inline bool TopKShape(const nnvm::NodeAttrs& attrs,
   int k = 0;
   TShape target_shape;
   ParseTopKParam(in_shape, param,
-                 &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
+    &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
   if (param.ret_typ == topk_enum::kReturnIndices ||
-      param.ret_typ == topk_enum::kReturnMask) {
+    param.ret_typ == topk_enum::kReturnMask) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
   } else {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
@@ -393,6 +438,36 @@ inline bool TopKShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool TopKShape(const nnvm::NodeAttrs& attrs,
+                      std::vector<TShape> *in_attrs,
+                      std::vector<TShape> *out_attrs) {
+  const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
+  return TopKShapeImpl(param, in_attrs, out_attrs);
+}
+
+inline bool SortShape(const nnvm::NodeAttrs& attrs,
+                      std::vector<TShape> *in_attrs,
+                      std::vector<TShape> *out_attrs) {
+  const SortParam& param = nnvm::get<SortParam>(attrs.parsed);
+  TopKParam topk_param;
+  topk_param.axis = param.axis;
+  topk_param.is_ascend = param.is_ascend;
+  topk_param.k = 0;
+  topk_param.ret_typ = topk_enum::kReturnValue;
+  return TopKShapeImpl(topk_param, in_attrs, out_attrs);
+}
+
+inline bool ArgSortShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  const ArgSortParam& param = nnvm::get<ArgSortParam>(attrs.parsed);
+  TopKParam topk_param;
+  topk_param.axis = param.axis;
+  topk_param.is_ascend = param.is_ascend;
+  topk_param.k = 0;
+  topk_param.ret_typ = topk_enum::kReturnIndices;
+  return TopKShapeImpl(topk_param, in_attrs, out_attrs);
+}
 }  // namespace op
 }  // namespace mxnet
 

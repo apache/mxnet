@@ -40,6 +40,9 @@ NNVM_REGISTER_OP(argmax)
 NNVM_REGISTER_OP(argmin)
 .set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::minimum>);
 
+NNVM_REGISTER_OP(_backward_nograd)
+.set_attr<FCompute>("FCompute<gpu>", NoGradCompute<gpu>);
+
 // Legacy support
 NNVM_REGISTER_OP(argmax_channel)
 .set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);

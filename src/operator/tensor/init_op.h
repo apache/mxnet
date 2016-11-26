@@ -47,6 +47,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .set_default(0)
     .describe("Start of interval. The interval includes this value. The default start value is 0.");
     DMLC_DECLARE_FIELD(stop)
+    .set_default(0)
     .describe("End of interval. The interval does not include this value,"
               " except in some cases where step is not an integer and"
               " floating point round-off affects the length of out.");

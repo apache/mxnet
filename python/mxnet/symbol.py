@@ -1123,7 +1123,7 @@ def hypot(left, right):
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
 
-def arange(start=None, stop=None, step=None, repeat=1, name=None):
+def arange(start=None, stop=None, step=None, repeat=1, name=None, dtype=_numpy.float32):
     """Simlar function in the MXNet ndarray as numpy.arange
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
 
@@ -1138,8 +1138,6 @@ def arange(start=None, stop=None, step=None, repeat=1, name=None):
     repeat : number, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
-    ctx : Context, optional
-        The context of the NDArray, default to current default context.
     dtype : type, optional
         The value type of the NDArray, default to np.float32
     Returns
@@ -1156,37 +1154,5 @@ def arange(start=None, stop=None, step=None, repeat=1, name=None):
         step = 1
     if start is None:
         start = 0
-    return _internal._arange(start=start, stop=stop, step=step, repeat=repeat, name=name)
-
-
-def topk(src, axis=None, k=1, ret_typ="indices", is_ascend=False, name=None):
-    """Return the top k element of an input tensor along a given axis.
-
-    Parameters
-    ----------
-    src : Symbol
-    axis : None or int, optional
-        Axis along which to choose the top k indices. If None, the flattened array is used.
-    k : int, optional
-        number of top elements to select.
-        "k" should be always smaller than or equal to the element number in the given axis.
-        A global sort is performed if set k < 1.
-    ret_typ : str, optional
-        Choose from "indices", "mask", "value", "both".
-        - "value" means returning the top k values.
-        - "indices" means returning the indices of the top k values.
-        - "mask" means to return a mask array containing 0 and 1. 1 ==> the index has been chosen.
-        - "both" means to return both value and indices.
-        Default is "indices"
-    is_ascend : bool, optional
-        Whether to sort the array in ascending order
-        Default is False
-
-    Returns
-    -------
-        one Symbol or a group of two Symbols based on the "ret_typ".
-    """
-    if axis is not None:
-        return _internal._topk(src, axis=axis, k=k, ret_typ=ret_typ, is_ascend=is_ascend, name=name)
-    else:
-        return _internal._topk(src, k=k, ret_typ=ret_typ, is_ascend=is_ascend, name=name)
+    return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
+                             name=name, dtype=_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
