@@ -30,6 +30,7 @@ def check_elementwise_sum_with_shape(shape, n):
     exec1.forward()
     out1 = exec1.outputs[0].asnumpy()
     out = sum(a.asnumpy() for a  in arr)
+
     assert reldiff(out, out1) < 1e-6
     out_grad = mx.nd.empty(shape)
     out_grad[:] = np.random.uniform(-10, 10, shape)
@@ -1876,7 +1877,7 @@ def test_mathematical():
 
     # log10
     mathematical_core("log10", lambda x: mx.sym.log10(x), lambda x: np.log10(x),
-                      lambda x: (1 / x)) 
+                      lambda x: (1 / x))
 
     # log2
     mathematical_core("log2", lambda x: mx.sym.log2(x), lambda x: np.log2(x),
