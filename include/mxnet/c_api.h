@@ -130,9 +130,11 @@ MXNET_EXTERN_C struct CustomOpPropInfo {
   void* p_del;
 };
 
-typedef int (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
-                                   const char** /*keys*/, const char** /*values*/,
-                                   struct CustomOpPropInfo* /*ret*/);
+MXNET_EXTERN_C typedef int (*CustomOpPropCreator)(const char* /*op_type*/,
+                                                  const int /*num_kwargs*/,
+                                                  const char** /*keys*/,
+                                                  const char** /*values*/,
+                                                  struct CustomOpPropInfo* /*ret*/);
 
 /*!
  * \brief return str message of the last error
