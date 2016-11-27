@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format=head)
 
 # ----------------------------------------------------------------------------------------
 EMBEDDING_SIZE = 100
-BATCH_SIZE = 1024
+BATCH_SIZE = 256
 NUM_LABEL = 5
 NUM_EPOCH = 20
 MIN_COUNT = 5  # only works when doing nagative sampling, keep it same as nce-loss
@@ -24,7 +24,6 @@ PADDING_CHAR = '</s>'
 
 
 # ----------------------------------------------------------------------------------------
-
 def get_net(vocab_size, num_input, num_label):
     data = mx.sym.Variable('data')
     mask = mx.sym.Variable('mask')  # use mask to handle variable-length input.
@@ -52,20 +51,21 @@ def get_net(vocab_size, num_input, num_label):
     pred = datavec[0]
     for i in range(1, num_input):
         pred = pred + datavec[i]
-    loss = nce_loss(data=pred,
-                    label=label,
-                    label_mask=label_mask,
-                    label_weight=label_weight,
-                    embed_weight=embed_weight,
-                    vocab_size=vocab_size,
-                    num_hidden=EMBEDDING_SIZE,
-                    num_label=num_label)
-    return mx.sym.Group(loss)
+
+    return nce_loss_subwords(data=pred,
+                             label=label,
+                             label_mask=label_mask,
+                             label_weight=label_weight,
+                             embed_weight=embed_weight,
+                             vocab_size=vocab_size,
+                             num_hidden=EMBEDDING_SIZE,
+                             num_label=num_label)
 
 
 def get_subword_units(token, gram=GRAMS):
-    # somehow like padding.
-    if token == '</s>':
+    """Return subword-units presentation, given a word/token.
+    """
+    if token == '</s>':  # special token for padding purpose.
         return [token]
     t = '#' + token + '#'
     return [t[i:i + gram] for i in range(0, len(t) - gram + 1)]
