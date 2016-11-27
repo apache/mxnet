@@ -1,7 +1,10 @@
 # Image Classification
 
-This fold contains examples for image classification. The goal of image classifcation is to identify
-the objects contained in images. The following [example](http://mxnet.io/tutorials/python/predict_imagenet.html) shows recognized object classes with corresponding probabilities using a pre-traind model.
+This fold contains examples for image classification. The goal of image
+classifcation is to identify the objects contained in images. The following
+[example](http://mxnet.io/tutorials/python/predict_imagenet.html) shows
+recognized object classes with corresponding probabilities using a pre-traind
+model.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/predict-dog.png" width="600"/>
 
@@ -12,11 +15,12 @@ the objects contained in images. The following [example](http://mxnet.io/tutoria
 3. [A List of pre-trained models](#pre-trained-models)
 4. [How to fine-tune a dataset with a pre-trained model](#fine-tune-another-dataset)
 5. [How to train with multiple machines](#distributed-training)
-6. [Troubleshoot of common problems](#troubleshoot)
+6. [Frequently asked questions](#faq)
 
 ## Basic Usages
 
-Both python and R training programs are provided. Use `train_*.py` or `train_*.R` to train a network on a particular dataset. For example:
+Both python and R training programs are provided. Use `train_*.py` or
+`train_*.R` to train a network on a particular dataset. For example:
 
 - train a multilayer perception on the mnist dataset
 
@@ -47,17 +51,29 @@ commonly used options are listed as following:
 
 ## Prepare Datasets
 
-The recommended data format is [RecordIO](http://mxnet.io/architecture/note_data_loading.html), which concatenates multiple examples into seekable binary files for better read efficiency. We provide a tool `im2rec.py` located in `tools/`  to convert individual images into `.rec` files.
+The recommended data format is
+[RecordIO](http://mxnet.io/architecture/note_data_loading.html), which
+concatenates multiple examples into seekable binary files for better read
+efficiency. We provide a tool `im2rec.py` located in `tools/` to convert
+individual images into `.rec` files.
 
-For a simple tutorial, assume all images are stored as individual image files such as `.png` or `.jpg`, and images belonging to the same class are placed in the same directory. All these class directories are then in the same root `img_data` directory. Our goal is to generate two files, `mydata_train.rec` for training and `mydata_val.rec` for validation, and the former contains 95% images.
+For a simple tutorial, assume all images are stored as individual image files
+such as `.png` or `.jpg`, and images belonging to the same class are placed in
+the same directory. All these class directories are then in the same root
+`img_data` directory. Our goal is to generate two files, `mydata_train.rec` for
+training and `mydata_val.rec` for validation, and the former contains 95%
+images.
 
-We first prepare two `lst` files, which consist of the labels and image paths can be used for generating `rec` files.
+We first prepare two `lst` files, which consist of the labels and image paths
+can be used for generating `rec` files.
 
 ```bash
 python tools/im2rec.py --list True --recursive True --train-ratio 0.95 mydata img_data
 ```
 
-Then we generate the `.rec` files. We resize the images such that the short edge is at least 480px and save them with 90/100 quality. We also use 16 threads to accelerate the packing.
+Then we generate the `.rec` files. We resize the images such that the short edge
+is at least 480px and save them with 90/100 quality. We also use 16 threads to
+accelerate the packing.
 
 ```bash
 python tools/im2rec.py --resize 480 --quality 90 --num-thread 16 mydata img_data
@@ -65,9 +81,12 @@ python tools/im2rec.py --resize 480 --quality 90 --num-thread 16 mydata img_data
 
 Hints:
 
-- SSD is much faster than HDD when dealing with a large number of small files. (but HDD is good enough to read `rec` files).
-  - We can use a cloud storage instance to prepare the data. For example, AWS `i2.4xlarge` provides 4 x 800 GB SSDs.
-  - We can make a software RAID over multiple disks. For example, the following command create a RAID0 on 4 disks:
+- SSD is much faster than HDD when dealing with a large number of small
+  files. (but HDD is good enough to read `rec` files).
+  - We can use a cloud storage instance to prepare the data. For example, AWS
+    `i2.4xlarge` provides 4 x 800 GB SSDs.
+  - We can make a software RAID over multiple disks. For example, the following
+    command create a RAID0 on 4 disks:
 
     ```bash
     sudo mdadm --create --verbose /dev/md0 --level=stripe --raid-devices=4 \
@@ -79,11 +98,23 @@ Hints:
 
 ## Pre-trained Models
 
-We provide multiple pre-trained models on various datasets. Use [common/modelzone.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/common/modelzoo.py) to download these models. These models can be used in any front-end language MXNet supports. For example, [the tutorial](http://mxnet.io/tutorials/python/predict_imagenet.html) shows how to classify an image with jupyter notebook.
+We provide multiple pre-trained models on various datasets. Use
+[common/modelzone.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/common/modelzoo.py)
+to download these models. These models can be used in any front-end language
+MXNet supports. For example,
+[the tutorial](http://mxnet.io/tutorials/python/predict_imagenet.html) shows how
+to classify an image with jupyter notebook.
 
 ### ImageNet 1K
 
-It is first used by [ImageNet challenge 2012](http://mxnet.io/tutorials/python/predict_imagenet.html), which contains about 1.2M images with 1000 classes. To test these models, one can use [data/imagenet1k-val.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/imagenet1k-val.sh) to prepare the validation dataset and [score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/score.py) to calculate the accuracy.
+It is first used by
+[ImageNet challenge 2012](http://mxnet.io/tutorials/python/predict_imagenet.html),
+which contains about 1.2M images with 1000 classes. To test these models, one
+can use
+[data/imagenet1k-val.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/imagenet1k-val.sh)
+to prepare the validation dataset and
+[score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/score.py)
+to calculate the accuracy.
 
 #### Single Center Crop Accuracy
 
@@ -100,7 +131,8 @@ Note:
 - our Resnet dose not need to specify the RGB mean due the data batch
   normalization layer. While the inception models needs `--rgb-mean
   123.68,116.779,103.939`
-- Resnet training logs are available at [tornadomeet/ResNet](https://github.com/tornadomeet/ResNet/tree/master/log)
+- Resnet training logs are available at
+  [tornadomeet/ResNet](https://github.com/tornadomeet/ResNet/tree/master/log)
 
 #### Speed and Memory Footprint:
 
@@ -117,7 +149,12 @@ Single K80 GPU with batch size 32.
 
 ### Imagenet 11K
 
-It is generated from the complete Imagenet dataset, namely  `fall11_whole.tar` from [http://www.image-net.org/download-images](http://www.image-net.org/download-images). In addition, we removed classes which have less than 500 images, and then randomly picked 50 images from each class as the validation set. As a result, this dataset contains 11221 classes, with 11,797,630 images for training.
+It is generated from the complete Imagenet dataset, namely  `fall11_whole.tar`
+from
+[http://www.image-net.org/download-images](http://www.image-net.org/download-images). In
+addition, we removed classes which have less than 500 images, and then randomly
+picked 50 images from each class as the validation set. As a result, this
+dataset contains 11221 classes, with 11,797,630 images for training.
 
 ### Single Center Crop Accuracy
 
@@ -127,7 +164,10 @@ It is generated from the complete Imagenet dataset, namely  `fall11_whole.tar` 
 
 ### Imagenet 11K + Place365 Challenge
 
-This dataset combine the Imagenet 11K dataset with [the Place 365 challenge dataset](http://places2.csail.mit.edu/download.html). The latter contains 365 classes with 8 millions images. It results in a dataset with around 20 million images.
+This dataset combine the Imagenet 11K dataset with
+[the Place 365 challenge dataset](http://places2.csail.mit.edu/download.html). The
+latter contains 365 classes with 8 millions images. It results in a dataset with
+around 20 million images.
 
 ### Single Center Crop Accuracy
 
@@ -139,17 +179,36 @@ This dataset combine the Imagenet 11K dataset with [the Place 365 challenge data
 
 ## Fine-tune another Dataset
 
-Fine-tune refers training with parameters partially intialized with pre-trained model. One can use [fine-tune.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/fine-tune.py) to train another dataset with pre-trained models listed above. For example, first run [data/caltech256.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/caltech256.sh) to download and prepare the [Caltech-256](http://www.vision.caltech.edu/Image_Datasets/Caltech256/) dataset, then fine tune it with `imagenet11k-resnet-152` by using 8 GPUs:
+Fine-tune refers training with parameters partially intialized with pre-trained
+model. One can use
+[fine-tune.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/fine-tune.py)
+to train another dataset with pre-trained models listed above. For example,
+first run
+[data/caltech256.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/caltech256.sh)
+to download and prepare the
+[Caltech-256](http://www.vision.caltech.edu/Image_Datasets/Caltech256/) dataset,
+then fine tune it with `imagenet11k-resnet-152` by using 8 GPUs:
 
 ```bash
-python fine-tune.py --pretrained-model imagenet11k-resnet-152 --gpus 0,1,2,3,4,5,6,7 --data-train data/caltech256-train.rec --data-val data/caltech256-val.rec --batch-size 128 --num-classes 256 --num-examples 15240
+python fine-tune.py --pretrained-model imagenet11k-resnet-152 --gpus 0,1,2,3,4,5,6,7 \
+    --data-train data/caltech256-train.rec --data-val data/caltech256-val.rec \
+    --batch-size 128 --num-classes 256 --num-examples 15240
 ```
 
-We obtained 87.3% top-1 validation accuracy, and the training log is available [here](https://gist.github.com/mli/900b810258e2e0bc26fa606977a3b043#file-finetune-caltech265). See the [python notebook](http://mxnet.io/how_to/finetune.html) for more explanations.
+We obtained 87.3% top-1 validation accuracy, and the training log is available
+[here](https://gist.github.com/mli/900b810258e2e0bc26fa606977a3b043#file-finetune-caltech265). See
+the [python notebook](http://mxnet.io/how_to/finetune.html) for more
+explanations.
 
 ## Distributed Training
 
-The simplest way for distributing training is that both programs and data are placed on the a shared filesystem such as [NFS](https://en.wikipedia.org/wiki/Network_File_System) and [AWS EFS](https://aws.amazon.com/efs/), and there is one machine, we call it the root machine, can ssh to all others. Assume we save the hostnames (or IPs) of all machines will be used for training (might include the root machine) into a file named `hosts`. The outputs of `cat hosts` may be
+The simplest way for distributing training is that both programs and data are
+placed on the a shared filesystem such as
+[NFS](https://en.wikipedia.org/wiki/Network_File_System) and
+[AWS EFS](https://aws.amazon.com/efs/), and there is one machine, we call it the
+root machine, can ssh to all others. Assume we save the hostnames (or IPs) of
+all machines will be used for training (might include the root machine) into a
+file named `hosts`. The outputs of `cat hosts` may be
 
 ```bash
 172.30.0.172
@@ -159,42 +218,84 @@ The simplest way for distributing training is that both programs and data are pl
 Now we can run the previous cifar10 training on two machines:
 
 ```bash
-../../tools/launch.py -n 2 -H hosts python train_cifar10.py --network resnet --num-layers 110 --batch-size 128 --gpus 0,1 --kv-store dist_device_sync
+../../tools/launch.py -n 2 -H hosts \
+    python train_cifar10.py --network resnet --num-layers 110 --batch-size 128 --gpus 0,1 \
+    --kv-store dist_device_sync
 ```
 
-It differs the previous command in two aspects. First, we use `launch.py` to start the program, which creates two workers (given by `-n`) on the two machines specified in `hosts` . Second, we change the `--kv-store` from the default `device`, which means try to use GPU P2P, to `dist_device_sync`. The latter uses distributed synchronized communication.
+It differs the previous command in two aspects. First, we use `launch.py` to
+start the program, which creates two workers (given by `-n`) on the two machines
+specified in `hosts` . Second, we change the `--kv-store` from the default
+`device`, which means try to use GPU P2P, to `dist_device_sync`. The latter uses
+distributed synchronized communication.
 
 For more usages:
 
-- One can use [benchmark.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark.py) to run distributed benchmarks (also for multiple GPUs with single machine)
-- A how-to [tutorial](http://mxnet.io/how_to/multi_devices.html) with more explanation.
-- A [blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/) about setuping up a GPU cluster on AWS with cloud formation.
+- One can use
+  [benchmark.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark.py)
+  to run distributed benchmarks (also for multiple GPUs with single machine)
+- A how-to [tutorial](http://mxnet.io/how_to/multi_devices.html) with more
+  explanation.
+- A
+  [blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
+  about setuping up a GPU cluster on AWS with cloud formation.
 
 
-## Troubleshoot
+## FAQ
 
 ### Validation Accuracy
 
-It is often not hard to achieve a reasonable validation accuracy, but sometimes matching the state-of-the-art numbers reported in the papers is extremely hard. Here we list some aspects you may check to improve the validation accuracy:
+It is often straightforward to achieve a reasonable validation accuracy, but
+sometimes matching the state-of-the-art numbers reported in the papers is
+extremely hard. Here we list some aspects you may check to improve the
+validation accuracy:
 
-- Add more data argumentations, which often reduces the gap between training accuracy and validation accuracy. You may reduce the data argumentation close to end.
-- Increase the learning rate and keep large learning rate for a long time. For example, in CIFAR10 we keep `lr=0.1` for 200 epochs and then reduce to 0.01.
-- Do not use too large batch size, especially for batch size >> number of classes.
+- Add more data argumentations, which often reduces the gap between training
+  accuracy and validation accuracy. You may reduce the data argumentation close
+  to end.
+- Increase the learning rate and keep large learning rate for a long time. For
+  example, in CIFAR10 we keep `lr=0.1` for 200 epochs and then reduce to 0.01.
+- Do not use too large batch size, especially for batch size >> number of
+  classes.
 
-### Performance
+### Speed
 
-First check the workload is not too small (e.g. LeNet on MNIST) and also batch size is reasonable large. The performance bottleneck often happens in three aspects:
+First check the workload is not too small (e.g. LeNet on MNIST) and also batch
+size is reasonable large. The performance bottleneck often happens in three
+aspects:
 
 - Reading data. Use the `--test-io 1` flag to check how many images can be pre-processed per second
   - Increase `--data-nthreads` (default is 4) to use more threads for data augmentation can help.
-  - Data preprocessing is done by `opencv`.  If opencv is compiled from source codes, check if it is configured correctly.
+  - Data preprocessing is done by `opencv`.  If opencv is compiled from source
+    codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
-- Single GPU/CPU performance. For GPUs, check the recent CUDNN is used. While for CPUs, check MKL is used.
-- Multiple GPUs and multi-machine performance. The bottleneck is often on the communication bandwidth, you can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth) to find the communication cost per batch. A ideal situation is the cost is less than the time to compute a batch. We can
+- CPU performance. Check MKL DNN is used
+- Single GPU performace
+  - Check the recent CUDNN is used
+  - Check the environment variable `MXNET_CUDNN_AUTOTUNE_DEFAULT` is set
+    to 1. You can do it by `export MXNET_CUDNN_AUTOTUNE_DEFAULT=1; python
+    train_...`. Note that it is already enabled in default by
+    `common/find_mxnet.py`. Enabling it results 15% speedup in average, but it
+    may cause problems for RNN and bucketing, and also slow down the starting.
+- Multiple GPUs and multi-machine performance. The bottleneck is often on the
+  communication bandwidth, you can use
+  [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)
+  to find the communication cost per batch. A ideal situation is the cost is
+  less than the time to compute a batch. We can
   - Explore different `--kv-store` options to reduce the cost
   - Increase the batch size to improve the computation and communication ratio.
 
+### Memory
 
+An over sized batch size may result in out of GPU memory. The common error
+message is `cudaMalloc failed: out of memory`. Now we can
+
+- Reduce the batch size
+- Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It trades off
+  computation for memory consumption. For example, with batch size 64,
+  inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When
+  mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3
+  using batch size 128. The cost is that the speed reduces to 27 images/sec.
 
 ## History
 
