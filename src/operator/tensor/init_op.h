@@ -26,13 +26,17 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
     .describe("The shape of the output");
-    DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .describe("Target data type.");
   }
 };
 
@@ -63,8 +67,13 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32);
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .describe("Target data type.");
   }
 };
 
