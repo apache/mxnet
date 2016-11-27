@@ -65,12 +65,15 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeGradNode("_backward_nograd", n, {}, {});
-}
-);
+});
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 .MXNET_DESCRIBE("Compute argmin")
-.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>);
+.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeGradNode("_backward_nograd", n, {}, {});
+});
 
 // pass back zero gradient
 NNVM_REGISTER_OP(_backward_nograd)
