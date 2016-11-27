@@ -27,6 +27,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static auto& visible_out = nnvm::Op::GetAttr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs");
   static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
   static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
@@ -63,6 +64,11 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   } else {
     infered_num_outputs = op->num_outputs;
   }
+  int num_visible_outputs = infered_num_outputs;
+  if (visible_out.count(op)) {
+    num_visible_outputs = visible_out[op](attrs);
+    CHECK_LE(num_visible_outputs, infered_num_outputs);
+  }
 
   std::vector<NDArray> ndinputs, ndoutputs;
   ndinputs.reserve(num_inputs);
@@ -70,15 +76,17 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     ndinputs.emplace_back(*reinterpret_cast<NDArray*>(inputs[i]));
   }
   if (outarray == nullptr) {
-    *num_outputs = infered_num_outputs;
+    *num_outputs = num_visible_outputs;
     ndoutputs.resize(infered_num_outputs);
   } else {
-    CHECK_EQ(infered_num_outputs, *num_outputs)
-      << "Expecting " << infered_num_outputs << " outputs, got " << *num_outputs;
+    CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
+      << "Expecting " << infered_num_outputs << " (all) or "
+      << num_visible_outputs << " (visible only) outputs, got " << *num_outputs;
     ndoutputs.reserve(infered_num_outputs);
-    for (int i = 0; i < infered_num_outputs; ++i) {
+    for (int i = 0; i < num_visible_outputs; ++i) {
       ndoutputs.emplace_back(std::move(*outarray[i]));
     }
+    ndoutputs.resize(infered_num_outputs);
   }
 
   if (ndfunc.count(op)) {
@@ -88,7 +96,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     Context ctx;
     if (num_inputs) {
       ctx = ndinputs[0].ctx();
-    } else if (*num_outputs && !ndoutputs[0].is_none()) {
+    } else if (infered_num_outputs && !ndoutputs[0].is_none()) {
       ctx = ndoutputs[0].ctx();
     } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
       ctx = Context::FromString(attrs.dict["ctx"]);
@@ -267,13 +275,13 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
 
   if (outarray == nullptr) {
     ret->ret_handles.clear();
-    for (int i = 0; i < infered_num_outputs; ++i) {
+    for (int i = 0; i < num_visible_outputs; ++i) {
       ret->ret_handles.push_back(
         reinterpret_cast<NDArrayHandle>(new NDArray(std::move(ndoutputs[i]))));
     }
     *outputs = dmlc::BeginPtr(ret->ret_handles);
   } else {
-    for (int i = 0; i < infered_num_outputs; ++i) {
+    for (int i = 0; i < *num_outputs; ++i) {
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
