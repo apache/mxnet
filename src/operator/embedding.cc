@@ -35,7 +35,7 @@ embeddings are learnable parameters. For a input of shape `(d1, ..., dK)`, the
 output shape is `(d1, ..., dK, output_dim)`. All the input values should be
 integers in the range `[0, input_dim)`.)")
 .add_argument("data", "Symbol", "Input data to the EmbeddingOp.")
-.add_argument("weight", "Symbol", "Enbedding weight matrix.")
+.add_argument("weight", "Symbol", "Embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
