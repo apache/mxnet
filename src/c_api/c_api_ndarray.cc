@@ -68,7 +68,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   if (visible_out.count(op)) {
     num_visible_outputs = visible_out[op](attrs);
     CHECK_LE(num_visible_outputs, infered_num_outputs);
-  }  
+  }
 
   std::vector<NDArray> ndinputs, ndoutputs;
   ndinputs.reserve(num_inputs);
