@@ -64,7 +64,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeGradNode("_backward_nograd", n, {}, {});
+    return MakeGradNode("_backward_BlockGrad", n, {}, {});
 });
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
@@ -72,15 +72,8 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeGradNode("_backward_nograd", n, {}, {});
+    return MakeGradNode("_backward_BlockGrad", n, {}, {});
 });
-
-// pass back zero gradient
-NNVM_REGISTER_OP(_backward_nograd)
-.set_num_outputs(1)
-.set_attr<FCompute>("FCompute<cpu>", NoGradCompute<cpu>)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.describe("Used for OPs that pass back zero gradient");
 
 // Legacy support
 NNVM_REGISTER_OP(argmax_channel)

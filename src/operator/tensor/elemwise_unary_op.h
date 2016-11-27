@@ -58,6 +58,25 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+
+template<typename xpu>
+void ZeroGradCompute(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  if (kWriteTo == req[0]) {
+    Stream<xpu> *s = ctx.run_ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Tensor<xpu, 1, DType> in_grad = outputs[0].FlatTo1D<xpu, DType>(s);
+      in_grad = scalar<DType>(0);
+    });
+  }
+  return;
+}
+
 #define MXNET_OPERATOR_REGISTER_UNARY(name)                         \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(1)                                                \
