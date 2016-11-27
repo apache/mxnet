@@ -87,16 +87,20 @@ It is first used by [ImageNet challenge 2012](http://mxnet.io/tutorials/python/p
 
 #### Single Center Crop Accuracy
 
-| Model                     | Top-1  | Top-5  | Log  |
-| ------------------------- | ------ | ------ | ---- |
-| `imagenet1k-inception-bn` | 0.7245 | 0.9079 |      |
-| `imagenet1k-resnet-18`    | 0.6858 | 0.8866 |      |
-| `imagenet1k-resnet-34`    | 0.7244 | 0.9097 |      |
-| `imagenet1k-resnet-50`    | 0.7527 | 0.9258 |      |
-| `imagenet1k-resnet-101`   | 0.7684 | 0.9327 |      |
-| `imagenet1k-resnet-152`   | 0.7653 | 0.9312 |      |
+| Model                     | Top-1  | Top-5  |
+| ------------------------- | ------ | ------ |
+| `imagenet1k-inception-bn` | 0.7245 | 0.9079 |
+| `imagenet1k-resnet-18`    | 0.6858 | 0.8866 |
+| `imagenet1k-resnet-34`    | 0.7244 | 0.9097 |
+| `imagenet1k-resnet-50`    | 0.7527 | 0.9258 |
+| `imagenet1k-resnet-101`   | 0.7684 | 0.9327 |
+| `imagenet1k-resnet-152`   | 0.7653 | 0.9312 |
 
-Note that our Resnet dose not need to specify the RGB mean due the data batch normalization layer. While the inception models needs `--rgb-mean 123.68,116.779,103.939`
+Note:
+- our Resnet dose not need to specify the RGB mean due the data batch
+  normalization layer. While the inception models needs `--rgb-mean
+  123.68,116.779,103.939`
+- Resnet training logs are available at [tornadomeet/ResNet](https://github.com/tornadomeet/ResNet/tree/master/log)
 
 #### Speed and Memory Footprint:
 
@@ -185,9 +189,9 @@ First check the workload is not too small (e.g. LeNet on MNIST) and also batch s
   - Increase `--data-nthreads` (default is 4) to use more threads for data augmentation can help.
   - Data preprocessing is done by `opencv`.  If opencv is compiled from source codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
-- Single GPU/CPU performance. For GPUs, check the recent CUDNN is used. While for CPUs, check MKL is used. 
-- Multiple GPUs and multi-machine performance. The bottleneck is often on the communication bandwidth, you can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth) to find the communication cost per batch. A ideal situation is the cost is less than the time to compute a batch. We can 
-  - Explore different `--kv-store` options to reduce the cost 
+- Single GPU/CPU performance. For GPUs, check the recent CUDNN is used. While for CPUs, check MKL is used.
+- Multiple GPUs and multi-machine performance. The bottleneck is often on the communication bandwidth, you can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth) to find the communication cost per batch. A ideal situation is the cost is less than the time to compute a batch. We can
+  - Explore different `--kv-store` options to reduce the cost
   - Increase the batch size to improve the computation and communication ratio.
 
 
