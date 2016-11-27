@@ -1987,6 +1987,16 @@ def test_order(ctx=default_context()):
                                              is_ascend=True)])
 
 
+def test_blockgrad():
+    a = mx.sym.Variable('a')
+    b = mx.sym.BlockGrad(a)
+    exe = b.simple_bind(ctx=default_context(), a=(10, 10))
+    a_npy = np.random.rand(10, 10)
+    exe.forward(is_train=True, a=a_npy)
+    assert_almost_equal(exe.outputs[0].asnumpy(), a_npy)
+    exe.backward()  # No error if BlockGrad works
+
+
 if __name__ == '__main__':
     test_init()
     test_expand_dims()
@@ -2035,3 +2045,4 @@ if __name__ == '__main__':
     test_mathematical()
     test_special_functions_using_scipy()
     test_order()
+    test_blockgrad()
