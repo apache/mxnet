@@ -60,12 +60,26 @@ if [ -z $VERSION_LINE ]; then
 fi
 echo $VERSION_LINE  # Return Version Line
 }
-
+CheckMKLBuild()
+{
+  MKL_BAK_NAME=$2.$1
+  if [ -d "$MKL_BAK_NAME" ]; then
+    rm -rf $2
+  else
+    mv $2 $MKL_BAK_NAME
+  fi
+}
 # MKL
-DST=`dirname $0`
+HOME_MKL=$HOME/mklml_release
+
+if [ ! -d "$HOME_MKL" ]; then
+   mkdir $HOME_MKL
+fi
+DST=$HOME_MKL/mklml
+
 OMP=0
-VERSION_MATCH=20120601
-ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20161115.tgz
+VERSION_MATCH=20161123
+ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20161122.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
 MKLURL="https://github.com/dmlc/web-data/raw/master/mxnet/mklml-release/$ARCHIVE_BASENAME"
 # there are diffrent MKL lib to be used for GCC and for ICC
@@ -73,15 +87,19 @@ reg='^[0-9]+$'
 VERSION_LINE=`GetVersionName $MKLROOT`
 # Check if MKLROOT is set if positive then set one will be used..
 if [ -z $MKLROOT ] || [ $VERSION_LINE -lt $VERSION_MATCH ]; then
-	# ..if MKLROOT is not set then check if we have MKL downloaded in proper version
-    VERSION_LINE=`GetVersionName $DST/$MKL_CONTENT_DIR`
+  # ..if MKLROOT is not set then check if we have MKL downloaded in proper version
+    VERSION_LINE=`GetVersionName $DST`
     if [ $VERSION_LINE -lt $VERSION_MATCH ] ; then
       #...If it is not then downloaded and unpacked
-      wget --no-check-certificate -P $DST $MKLURL -O $DST/$ARCHIVE_BASENAME
-      tar -xzf $DST/$ARCHIVE_BASENAME -C $DST
+      #if [ -d "$DST" ]; then
+         CheckMKLBuild $VERSION_LINE $DST
+      #fi
+      wget --no-check-certificate -P $HOME_MKL $MKLURL -O $HOME_MKL/$ARCHIVE_BASENAME
+      tar -xzf $HOME_MKL/$ARCHIVE_BASENAME -C $HOME_MKL/
+      mv $HOME_MKL/$MKL_CONTENT_DIR $DST
     fi
   FindLibrary $1
-  MKLROOT=$PWD/`echo $LOCALMKL | sed -e 's/lib.*$//'`
+  MKLROOT=`echo $LOCALMKL | sed -e 's/lib.*$//'`
 fi
 
 # Check what MKL lib we have in MKLROOT
