@@ -85,7 +85,7 @@ MXNET_EXTERN_C struct NDArrayOpInfo {
   int (*list_outputs)(char***, void*);
   int (*list_arguments)(char***, void*);
   int (*declare_backward_dependency)(const int*, const int*, const int*,
-                                      int*, int**, void*);
+                                     int*, int**, void*);
   // all functions also pass a payload void* pointer
   void* p_forward;
   void* p_backward;
