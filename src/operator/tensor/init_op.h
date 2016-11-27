@@ -12,6 +12,7 @@
 #include <dmlc/parameter.h>
 #include <vector>
 #include <string>
+#include <limits>
 #include "../elemwise_op_common.h"
 
 namespace mxnet {
@@ -44,10 +45,10 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(RangeParam) {
     DMLC_DECLARE_FIELD(start)
-    .set_default(0)
+    .set_default(std::numeric_limits<real_t>::infinity())
     .describe("Start of interval. The interval includes this value. The default start value is 0.");
     DMLC_DECLARE_FIELD(stop)
-    .set_default(0)
+    .set_default(std::numeric_limits<real_t>::infinity())
     .describe("End of interval. The interval does not include this value,"
               " except in some cases where step is not an integer and"
               " floating point round-off affects the length of out.");
@@ -66,6 +67,23 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .set_default(mshadow::kFloat32);
   }
 };
+
+/*! \brief Parse keyword arguments as PType arguments and save to parsed */
+inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
+  RangeParam param;
+  param.Init(attrs->dict);
+  if (param.stop == std::numeric_limits<real_t>::infinity()) {
+    if (param.start == std::numeric_limits<real_t>::infinity()) {
+      LOG(FATAL) << "arange: Invalid input parameters! start and stop cannot be both empty!";
+    }
+    param.stop = param.start;
+    param.start = 0;
+  }
+  if (param.start == std::numeric_limits<real_t>::infinity()) {
+    param.start = 0;
+  }
+  attrs->parsed = std::move(param);
+}
 
 template<typename ParamType>
 inline bool InitShape(const nnvm::NodeAttrs& attrs,

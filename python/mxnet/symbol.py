@@ -1145,14 +1145,5 @@ def arange(start=None, stop=None, step=None, repeat=1, name=None, dtype=_numpy.f
     out : Symbol
         The created Symbol
     """
-    if stop is None:
-        if start is None:
-            raise ValueError("Required argument \"start\"")
-        stop = start
-        start = 0
-    if step is None:
-        step = 1
-    if start is None:
-        start = 0
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              name=name, dtype=_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])

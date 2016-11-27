@@ -1024,17 +1024,6 @@ def arange(start=None, stop=None, step=None, repeat=1, ctx=None, dtype=mx_real_t
     out : NDArray
         The created NDArray
     """
-    if stop is None:
-        if start is None:
-            raise ValueError("Required argument \"start\"")
-        stop = start
-        start = 0
-    if step is None:
-        step = 1
-    if start is None:
-        start = 0
-    if ctx is None:
-        ctx = Context.default_ctx
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              dtype=_DTYPE_NP_TO_MX[np.dtype(dtype).type], ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
