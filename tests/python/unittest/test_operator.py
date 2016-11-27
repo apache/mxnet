@@ -1930,7 +1930,7 @@ def test_order(ctx=default_context()):
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=2,
                                              is_ascend=False)])
     b = mx.sym.topk(a, is_ascend=True, ret_typ="value", k=10)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-4, check_eps=1E-2, ctx=ctx)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-4, check_eps=2E-2, ctx=ctx)
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=None, ret_typ="value", k=10,
                                              is_ascend=True)])
