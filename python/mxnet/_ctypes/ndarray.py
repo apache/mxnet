@@ -100,7 +100,7 @@ def _make_ndarray_function(handle, name):
             else:
                 pos_args.append(str(i))
 
-        if len(pos_args) > len(arguments)
+        if len(pos_args) > len(arguments):
             raise ValueError("Too many positional arguments")
         kwargs.update(zip(arguments[:len(pos_args)], pos_args))
         if 'dtype' in kwargs:
