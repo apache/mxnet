@@ -8,6 +8,8 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <map>
+#include <string>
 #include "./mshadow_op.h"
 
 #if defined(__CUDACC__)
@@ -612,10 +614,46 @@ struct SliceParam : public dmlc::Parameter<SliceParam> {
   }
 };
 
-inline TShape SliceShape(const TShape& ishape,
-                         const EnvArguments& env) {
+void parseSliceSpec(const EnvArguments& env, SliceParam* param,
+                    const TShape& input) {
+  std::map<std::string, std::string> store;
+  for (auto i : env.kwargs) {
+    store[i.first] = i.second;
+  }
+
+  try {
+    // get axis
+    CHECK_GT(store.count("axis"), 0)
+        << "need to specify the non-optional axis argument";
+    param->axis = std::stoi(store["axis"]);
+    CHECK_GE(param->axis, 0) << "axis argument cannot be negative";
+
+    // get axis size
+    int axis_size = static_cast<int>(input[param->axis]);
+
+    // get begin + end
+    if ((store.count("begin") == 0) || (store["begin"] == "None"))
+      param->begin = 0;
+    else
+      param->begin = std::stoi(store["begin"]);
+
+    if ((store.count("end") == 0) || (store["end"] == "None"))
+      param->end = axis_size;
+    else
+      param->end = std::stoi(store["end"]);
+
+    // canonicalize
+    param->begin =
+        (param->begin < 0) ? (param->begin + axis_size) : param->begin;
+    param->end = (param->end < 0) ? (param->end + axis_size) : param->end;
+  } catch (const std::invalid_argument& ia) {
+    throw dmlc::ParamError(ia.what());
+  }
+}
+
+inline TShape SliceShape(const TShape& ishape, const EnvArguments& env) {
   SliceParam param;
-  param.Init(env.kwargs);
+  parseSliceSpec(env, &param, ishape);
   CHECK(param.axis < static_cast<int>(ishape.ndim()))
       << "axis must be smaller than the source ndim! Recieved axis="
       << param.axis << ", src_ndim=" << ishape.ndim();
@@ -624,6 +662,7 @@ inline TShape SliceShape(const TShape& ishape,
   // canonicalize: possible negative begin and end to positive version
   param.begin = (param.begin < 0) ? (param.begin + axis_size + 1) : param.begin;
   param.end = (param.end < 0) ? (param.end + axis_size + 1) : param.end;
+
   // check that canonicalized indices are in the correct range
   CHECK_LE(param.end, axis_size);
   CHECK_GT(param.end, 0);
@@ -641,22 +680,15 @@ inline TShape SliceShape(const TShape& ishape,
   return TShape(shape.begin(), shape.end());
 }
 
-
-template<typename xpu>
-void Slice(const TBlob &src,
-           const EnvArguments& env,
-           TBlob *ret,
-           OpReqType req,
+template <typename xpu>
+void Slice(const TBlob& src, const EnvArguments& env, TBlob* ret, OpReqType req,
            RunContext ctx) {
   using namespace mshadow::expr;
-  SliceParam param;
-  param.Init(env.kwargs);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   int ndim = static_cast<int>(ret->shape_.ndim());
 
-  int axis_size = static_cast<int>(src.shape_[param.axis]);
-  param.begin = (param.begin < 0) ? (param.begin + axis_size + 1) : param.begin;
-  param.end = (param.end < 0) ? (param.end + axis_size + 1) : param.end;
+  SliceParam param;
+  parseSliceSpec(env, &param, src.shape_);
 
   if (param.axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
@@ -686,14 +718,11 @@ void SliceGrad_(const OutputGrad& out_grad,
                 RunContext ctx) {
   using namespace mshadow::op;
   using namespace mshadow::expr;
-  SliceParam param;
-  param.Init(env.kwargs);
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   int ndim = static_cast<int>(in_grad->shape_.ndim());
 
-  int axis_size = static_cast<int>(in_grad->shape_[param.axis]);
-  param.begin = (param.begin < 0) ? (param.begin + axis_size + 1) : param.begin;
-  param.end = (param.end < 0) ? (param.end + axis_size + 1) : param.end;
+  SliceParam param;
+  parseSliceSpec(env, &param, in_grad->shape_);
 
   if (param.axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(in_grad->type_flag_, DType, {
