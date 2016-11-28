@@ -5,13 +5,15 @@
 ######################################################################
 set -e
 
-echo "Installing build-essential, libatlas-base-dev, libopencv-dev..."
+MXNET_HOME="$HOME/mxnet/"
+echo "MXNet root folder: $MXNET_HOME"
 
+echo "Installing build-essential, libatlas-base-dev, libopencv-dev..."
 sudo apt-get update
 sudo apt-get install -y build-essential libatlas-base-dev libopencv-dev
 
-echo "Installing MXNet core. This can take few minutes..."
-cd ~/MXNet/mxnet/
+echo "Building MXNet core. This can take few minutes..."
+cd "$MXNET_HOME"
 make -j$(nproc)
 
 echo "Installing Numpy..."
@@ -24,6 +26,7 @@ echo "Installing Python package for MXNet..."
 cd python; sudo python setup.py install
 
 echo "Adding MXNet path to your ~/.bashrc file"
-echo "export PYTHONPATH=~/MXNet/mxnet/python" >> ~/.bashrc
+echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
+source ~/.bashrc
 
 echo "Done! MXNet for Python installation is complete. Go ahead and explore MXNet with Python :-)"

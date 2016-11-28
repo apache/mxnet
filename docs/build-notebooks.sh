@@ -8,7 +8,7 @@ notebook2markdown() {
     for f in $src/*.ipynb; do
         jupyter nbconvert $f --to markdown
         bname=$(basename "$f" .ipynb)
-        echo -e "\n\n## Next Steps\n* [MXNet tutorials index](http://mxnet.io/tutorials/index.html)" >>${src}/${bname}.md
+        echo -e "\n\n## Next Steps\n* [MXNet Tutorials Index](http://mxnet.io/tutorials/index.html)\n* [MXNet Notebooks on GitHub](https://github.com/dmlc/mxnet-notebooks)" >>${src}/${bname}.md
         mv -f ${src}/${bname}.md ${dst}
         if [ -e ${src}/${bname}_files ]; then
             mv -f ${src}/${bname}_files ${dst}/

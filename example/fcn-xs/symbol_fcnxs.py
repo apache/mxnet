@@ -114,7 +114,7 @@ def vgg16_score(input, numclass, workspace_default=1024):
     relu5_1 = mx.symbol.Activation(data=conv5_1, act_type="relu", name="relu5_1")
     conv5_2 = mx.symbol.Convolution(data=relu5_1, kernel=(3, 3), pad=(1, 1), num_filter=512,
                 workspace=workspace_default, name="conv5_2")
-    relu5_2 = mx.symbol.Activation(data=conv5_2, act_type="relu", name="conv1_2")
+    relu5_2 = mx.symbol.Activation(data=conv5_2, act_type="relu", name="relu5_2")
     conv5_3 = mx.symbol.Convolution(data=relu5_2, kernel=(3, 3), pad=(1, 1), num_filter=512,
                 workspace=workspace_default, name="conv5_3")
     relu5_3 = mx.symbol.Activation(data=conv5_3, act_type="relu", name="relu5_3")
