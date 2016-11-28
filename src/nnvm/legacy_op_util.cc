@@ -372,7 +372,7 @@ void RegisterLegacyNDFunc() {
         for (int i = 0; i < n_scalars; ++i) {
           const std::string& name = reg->arguments[i+reg->num_use_vars].name;
           auto s = dict.find(name);
-          CHECK_NE(s, dict.end()) << "Missing scalar param " << name;
+          CHECK(s != dict.end()) << "Missing scalar param " << name;
           scalars.push_back(std::stof(s->second));
           dict.erase(s);
         }
