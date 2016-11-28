@@ -28,8 +28,6 @@ def fit(args, network, data_loader, batch_end_callback=None):
 
     # load model
     model_prefix = args.model_prefix
-    if model_prefix is not None:
-        model_prefix += "-%d" % (kv.rank)
     model_args = {}
     if args.load_epoch is not None:
         assert model_prefix is not None
