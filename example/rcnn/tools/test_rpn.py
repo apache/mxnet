@@ -25,7 +25,7 @@ def test_rpn(image_set, year, root_path, devkit_path, prefix, epoch, ctx, vis=Fa
     test_data = ROIIter(roidb, batch_size=1, shuffle=False, mode='test')
 
     # load model
-    args, auxs = load_param(prefix, epoch, convert=True, ctx=ctx)
+    args, auxs, _ = load_param(prefix, epoch, convert=True, ctx=ctx)
 
     # start testing
     detector = Detector(sym, ctx, args, auxs)

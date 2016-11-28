@@ -83,22 +83,30 @@ def fit(args, network, data_loader, batch_end_callback=None):
         initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
         **model_args)
 
-    eval_metrics = ['accuracy']
-    ## TopKAccuracy only allows top_k > 1
-    for top_k in [5, 10, 20]:
-        eval_metrics.append(mx.metric.create('top_k_accuracy', top_k = top_k))
-
     if batch_end_callback is not None:
         if not isinstance(batch_end_callback, list):
             batch_end_callback = [batch_end_callback]
     else:
         batch_end_callback = []
-    batch_end_callback.append(mx.callback.Speedometer(args.batch_size, 50))
-
-    model.fit(
-        X                  = train,
-        eval_data          = val,
-        eval_metric        = eval_metrics,
-        kvstore            = kv,
-        batch_end_callback = batch_end_callback,
-        epoch_end_callback = checkpoint)
+    if hasattr(args, 'benchmark') and args.benchmark:
+        batch_end_callback.append(mx.callback.Speedometer(args.batch_size, 10))
+        # don't run evaluation for benchmark
+        model.fit(
+            X                  = train,
+            eval_data          = val,
+            kvstore            = kv,
+            batch_end_callback = batch_end_callback,
+            epoch_end_callback = checkpoint)
+    else:
+        eval_metrics = ['accuracy']
+        # TopKAccuracy only allows top_k > 1
+        for top_k in [5, 10, 20]:
+            eval_metrics.append(mx.metric.create('top_k_accuracy', top_k = top_k))
+        batch_end_callback.append(mx.callback.Speedometer(args.batch_size, 50))
+        model.fit(
+            X                  = train,
+            eval_data          = val,
+            eval_metric        = eval_metrics,
+            kvstore            = kv,
+            batch_end_callback = batch_end_callback,
+            epoch_end_callback = checkpoint)
