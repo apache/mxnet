@@ -147,7 +147,6 @@ def stop_old_processes(hosts_file):
     time.sleep(1)
 
 def run_imagenet(kv_store, data_shape, batch_size, num_gpus, num_nodes, network, args_workers_file):
-    ENABLE_CUDNN_AUTOTUNE = 'export MXNET_CUDNN_AUTOTUNE_DEFAULT=1; '
     imagenet_args=['python',  'train_imagenet.py',  '--gpus', ','.join(str(i) for i in xrange(num_gpus)), \
                    '--network', network, '--batch-size', str(batch_size * num_gpus), \
                    '--image-shape', '3,' + str(data_shape) + ',' + str(data_shape), '--num-epochs', '1' ,'--kv-store', kv_store, '--benchmark', '1', '--disp-batches', '10']
@@ -155,11 +154,10 @@ def run_imagenet(kv_store, data_shape, batch_size, num_gpus, num_nodes, network,
     hosts = log_loc + '/' + network + '_' + str(num_nodes*num_gpus) + '_workers'
     generate_hosts_file(num_nodes, hosts, args_workers_file)
     stop_old_processes(hosts)
-    launch_args = ['../../tools/launch.py', '-n', str(num_nodes), '-s', str(num_nodes*2), '-H', hosts, ENABLE_CUDNN_AUTOTUNE + ' '.join(imagenet_args) ]
+    launch_args = ['../../tools/launch.py', '-n', str(num_nodes), '-s', str(num_nodes*2), '-H', hosts, ' '.join(imagenet_args) ]
 
     #use train_imagenet when running on a single node
     if kv_store == 'device':
-        os.system(ENABLE_CUDNN_AUTOTUNE)
         imagenet = RunCmd(imagenet_args, log)
         imagenet.startCmd(timeout = 60 * 10)
     else:
