@@ -6,6 +6,11 @@
 \usage{
 mx.callback.log.train.metric(period, logger = NULL)
 }
+\arguments{
+\item{period}{The number of batch to log the training evaluation metric}
+
+\item{logger}{The logger class}
+}
 \description{
 Log training metric each period
 }

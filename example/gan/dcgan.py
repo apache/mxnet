@@ -6,7 +6,7 @@ import cv2
 from datetime import datetime
 
 def make_dcgan_sym(ngf, ndf, nc, no_bias=True, fix_gamma=True, eps=1e-5 + 1e-12):
-    BatchNorm = mx.sym.CuDNNBatchNorm
+    BatchNorm = mx.sym.BatchNorm
     rand = mx.sym.Variable('rand')
 
     g1 = mx.sym.Deconvolution(rand, name='g1', kernel=(4,4), num_filter=ngf*8, no_bias=no_bias)

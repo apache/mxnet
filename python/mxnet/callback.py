@@ -2,9 +2,9 @@
 """Callback functions that can be used to track various status during epoch."""
 from __future__ import absolute_import
 
-import sys
-import math
 import logging
+import math
+import sys
 import time
 from .model import save_checkpoint
 
@@ -59,14 +59,15 @@ def log_train_metric(period, auto_reset=False):
 
 
 class Speedometer(object):
-    """Calculate training speed in frequent
+    """Calculate and log training speed periodically.
 
     Parameters
     ----------
     batch_size: int
         batch_size of data
     frequent: int
-        calculation frequent
+        How many batches between calculations.
+        Defaults to calculating & logging every 50 batches.
     """
     def __init__(self, batch_size, frequent=50):
         self.batch_size = batch_size
@@ -121,3 +122,15 @@ class ProgressBar(object):
         percents = math.ceil(100.0 * count / float(self.total))
         prog_bar = '=' * filled_len + '-' * (self.bar_len - filled_len)
         sys.stdout.write('[%s] %s%s\r' % (prog_bar, percents, '%'))
+
+
+class LogValidationMetricsCallback(object):
+    """Just logs the eval metrics at the end of an epoch.
+    """
+
+    def __call__(self, param):
+        if not param.eval_metric:
+            return
+        name_value = param.eval_metric.get_name_value()
+        for name, value in name_value:
+            logging.info('Epoch[%d] Validation-%s=%f', param.epoch, name, value)

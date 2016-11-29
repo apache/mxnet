@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name, too-many-locals, fixme
 # pylint: disable=too-many-branches, too-many-statements
+# pylint: disable=too-many-arguments
 # pylint: disable=dangerous-default-value
 """Visualization module"""
 from __future__ import absolute_import
@@ -49,7 +50,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         show_shape = True
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
-        if out_shapes == None:
+        if out_shapes is None:
             raise ValueError("Input shape is incompete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
@@ -73,8 +74,8 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             void
         """
         line = ''
-        for i in range(len(fields)):
-            line += str(fields[i])
+        for i, field in enumerate(fields):
+            line += str(field)
             line = line[:positions[i]]
             line += ' ' * (positions[i] - len(line))
         print(line)
@@ -142,8 +143,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                 print_row(fields, positions)
         return cur_param
     total_params = 0
-    for i in range(len(nodes)):
-        node = nodes[i]
+    for i, node in enumerate(nodes):
         out_shape = []
         op = node["op"]
         if op == "null" and i > 0:
@@ -164,7 +164,8 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('Total params: %s' % total_params)
     print('_' * line_length)
 
-def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={}):
+def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
+                 hide_weights=True):
     """convert symbol to dot object for visualization
 
     Parameters
@@ -174,12 +175,18 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     symbol: Symbol
         symbol to be visualized
     shape: dict
-        dict of shapes, str->shape (tuple), given input shapes
+        If supplied, the visualization will include the shape
+        of each tensor on the edges between nodes.
+        This is a dict of shapes, str->shape (tuple), given input shapes
     node_attrs: dict
         dict of node's attributes
         for example:
             node_attrs={"shape":"oval","fixedsize":"fasle"}
             means to plot the network in "oval"
+    hide_weights: bool
+        if True (default) then inputs with names like `*_weight`
+        or `*_bias` will be hidden
+
     Returns
     ------
     dot: Diagraph
@@ -202,7 +209,6 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
-    heads = set(conf["heads"][0])  # TODO(xxx): check careful
     # default attributes of node
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
@@ -213,8 +219,18 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
           "#fdb462", "#b3de69", "#fccde5")
 
+    def looks_like_weight(name):
+        """Internal helper to figure out if node should be hidden with hide_weights
+        """
+        if name.endswith("_weight"):
+            return True
+        if name.endswith("_bias"):
+            return True
+        return False
+
     # make nodes
-    for i, node in enumerate(nodes):
+    hidden_nodes = set()
+    for node in nodes:
         op = node["op"]
         name = node["name"]
         # input data
@@ -222,11 +238,16 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         label = op
 
         if op == "null":
-            if i in heads:
-                label = node["name"]
-                attr["fillcolor"] = cm[0]
-            else:
+            if looks_like_weight(node["name"]):
+                if hide_weights:
+                    hidden_nodes.add(node["name"])
+                # else we don't render a node, but
+                # don't add it to the hidden_nodes set
+                # so it gets rendered as an empty oval
                 continue
+            attr["shape"] = "oval" # inputs get their own shape
+            label = node["name"]
+            attr["fillcolor"] = cm[0]
         elif op == "Convolution":
             label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
                                                     _str2tuple(node["param"]["kernel"])[1],
@@ -253,11 +274,13 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             attr["fillcolor"] = cm[6]
         else:
             attr["fillcolor"] = cm[7]
+            if op == "Custom":
+                label = node["param"]["op_type"]
 
         dot.node(name=name, label=label, **attr)
 
     # add edges
-    for i, node in enumerate(nodes):
+    for node in nodes:
         op = node["op"]
         name = node["name"]
         if op == "null":
@@ -267,7 +290,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             for item in inputs:
                 input_node = nodes[item[0]]
                 input_name = input_node["name"]
-                if input_node["op"] != "null" or item[0] in heads:
+                if input_name not in hidden_nodes:
                     attr = {"dir": "back", 'arrowtail':'open'}
                     # add shapes
                     if draw_shape:
@@ -284,5 +307,3 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                     dot.edge(tail_name=name, head_name=input_name, **attr)
 
     return dot
-
-

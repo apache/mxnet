@@ -1,17 +1,13 @@
 # MXNet Community
+## Questions about Using MXNet
+If you are not sure of how to use MXNet for something, or have questions about applying it to a particular kind of problem, please post a question at [Stackoverflow](http://stackoverflow.com/) with tag - ```mxnet```. You can view stackoverflow questions about mxnet [here](http://stackoverflow.com/questions/tagged/mxnet).
+
 ## Issue Tracker
-The project tracks bugs and new feature requests on MXNet Github repo issues folder - [mxnet/issues](https://github.com/dmlc/mxnet/issues)
+We track bugs and new feature requests in the MXNet Github repo in the issues folder: [mxnet/issues](https://github.com/dmlc/mxnet/issues).
+
 ## Contributors
-MXNet has been developed and used by a group of active community members. Everyone is more than welcome to contribute. It is a way to make the project better and more accessible to more users.
-
-
-&nbsp;
-Refer here for guide to [contributions](http://mxnet.io/community/contribute.html).
+MXNet has been developed and is used by a group of active community members. Contribute to improve it! For more information, see [contributions](http://mxnet.io/community/contribute.html).
 
 ## Roadmap
 
-MXNet is evolving fast with community contributions. To better understand what next in MXNet and what we are working on internally, refer here - [MXNet Roadmap](https://github.com/dmlc/mxnet/labels/Roadmap)
-
-
-&nbsp;
-We welcome community contributions. Refer here for guide to [contributions](http://mxnet.io/community/contribute.html).
+MXNet is evolving fast. To see what's next and what we are working on internally, go to the [MXNet Roadmap](https://github.com/dmlc/mxnet/labels/Roadmap).

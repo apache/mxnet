@@ -25,7 +25,7 @@ inline std::vector<index_t> ParseAxes_(const TShape& param_axis, index_t max_ndi
   for (index_t i = 0; i < param_axis.ndim(); i++) {
     CHECK(param_axis[i] < max_ndim) << "axes must be within the range, ndim of the source="
       << max_ndim << "axis=" << param_axis;
-    CHECK_EQ(axes_set_.find(param_axis[i]), axes_set_.end())
+    CHECK(axes_set_.find(param_axis[i]) == axes_set_.end())
       << "Duplicate value in 'axis', received:" << param_axis;
     axes_set_.insert(param_axis[i]);
   }

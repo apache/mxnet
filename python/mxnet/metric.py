@@ -364,6 +364,9 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
     ----------
     numpy_feval : callable(label, pred)
         Customized evaluation function.
+        This will get called with the labels and predictions
+        for a minibatch, each as numpy arrays.  This function
+        should return a single float.
     name : str, optional
         The name of the metric.
     allow_extra_outputs : bool
