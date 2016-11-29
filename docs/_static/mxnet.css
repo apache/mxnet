@@ -579,6 +579,19 @@ li.dropdown-submenu ul.dropdown-menu a {
 .section-inst p {
     margin-bottom:2em
 }
+
+@media (min-width: 1200px) {
+    .section-inst .row div.clear {
+        clear: both;
+    }
+}
+
+@media (max-width: 1199px) {
+    .section-inst .row div.smallClear {
+        clear: both;
+    }
+}
+
 .section-inst img {
     -webkit-filter: grayscale(90%); /* Chrome, Safari, Opera */
     filter: grayscale(90%);
