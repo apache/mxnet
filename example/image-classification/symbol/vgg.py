@@ -3,10 +3,9 @@
 Simonyan, Karen, and Andrew Zisserman. "Very deep convolutional networks for
 large-scale image recognition." arXiv preprint arXiv:1409.1556 (2014).
 """
-import find_mxnet
 import mxnet as mx
 
-def get_symbol(num_classes = 1000):
+def get_symbol(num_classes, **kwargs):
     ## define alexnet
     data = mx.symbol.Variable(name="data")
     # group 1

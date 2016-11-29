@@ -1,11 +1,11 @@
 """
-LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
-Haffner. "Gradient-based learning applied to document recognition."
+LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick Haffner.
+Gradient-based learning applied to document recognition.
 Proceedings of the IEEE (1998)
 """
 import mxnet as mx
 
-def get_symbol(num_classes = 1000, add_stn=False):
+def get_symbol(num_classes=10, **kwargs):
     data = mx.symbol.Variable('data')
     if(add_stn):
         data = mx.sym.SpatialTransformer(data=data, loc=get_loc(data), target_shape = (28,28),
