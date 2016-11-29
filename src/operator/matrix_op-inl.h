@@ -604,17 +604,19 @@ struct SliceParam : public dmlc::Parameter<SliceParam> {
     DMLC_DECLARE_FIELD(axis).set_lower_bound(0).describe(
         "The axis to be sliced");
     DMLC_DECLARE_FIELD(begin).describe(
-        "The beginning index to be sliced. If negative, index from the end. "
-        "For example, if the axis dimension is of size 5, then begin=-2 is "
-        "equivalent to begin=4.");
+        "The beginning index to be sliced. Following numpy slice semantics, "
+        "None is equivalent to begin=0, -1 is the second last value, etc. For "
+        "example, if the axis dimension is of size 5, then begin=-1 is "
+        "equivalent to end=4, begin=-2 equivalent to end=3, etc.");
     DMLC_DECLARE_FIELD(end).describe(
-        "The end index to be sliced. If negative, index from the end. For "
-        "example, if the axis dimension is of size 6, then end=-1 is "
-        "equivalent to end=6.");
+        "The end index to be sliced. Following numpy slice semantics, None is "
+        "equivalent to slicing up to the last value, -1 the second last "
+        "value, etc. For example, if the axis dimension is of size 5, then "
+        "end=None is equivalent to end=5, end=-1 equivalent to end=4, etc. ");
   }
 };
 
-void parseSliceSpec(const EnvArguments& env, SliceParam* param,
+inline void parseSliceSpec(const EnvArguments& env, SliceParam* param,
                     const TShape& input) {
   std::map<std::string, std::string> store;
   for (auto i : env.kwargs) {
