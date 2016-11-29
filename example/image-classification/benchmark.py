@@ -12,7 +12,6 @@ import importlib
 import collections
 import threading
 import copy
-import numpy as np
 
 '''
 Setup Logger and LogLevel
