@@ -240,6 +240,30 @@ For more usages:
   [blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
   about setuping up a GPU cluster on AWS with cloud formation.
 
+### Benchmark
+To run benchmark on imagenet networks, use **--benchmark 1** as the argument to `train_imagenet.py`, An example is shown below:  
+
+```
+python train_imagenet.py --benchmark 1 --gpus 0,1 --network inception-v3 --batch-size 64 \
+--data-shape 299 --num-epochs 1 --kv-store device
+```
+When running in benchmark mode, the script generates synthetic data of the given data shape and batch size.  
+
+The `benchmark.py` can be used to run a series of benchmarks against different image networks on a given set of workers and takes the following arguments:  
+**--worker_file**: file that contains a list of worker hostnames or list of worker ip addresses that have passwordless ssh enabled.
+**--worker_count**: number of workers to run benchmark on.  
+**--gpu_count**: number of gpus on each worker to use.  
+**--networks**: one or more networks in the format network_name:batch_size:image_size.  
+The network_name is a valid model defined as **network_name.py** in the image-classification/symbol folder. 
+
+The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using **kv-store=device** and after that running on variable number of nodes on all gpus starting with 1 node upto worker_count doubling the number of nodes used in each run using **kv-store=dist_sync_device**.  
+
+An example to run the benchmark script is shown below with 8 workers and 16 gpus on each worker:
+
+```
+python benchmark.py --worker_file /opt/deeplearning/workers --worker_count 8 \
+--gpu_count 16 --networks 'inception-v3:32:299'
+```
 
 ## FAQ
 
