@@ -803,3 +803,18 @@ dl.method, dl.attribute {
 dl.class p, dl.function p {
     color: #cc6600;
 }
+
+/*-----------------Style for R documentation----------------------*/
+div#mxnet-r-api-html-documentation h2 {
+    padding-top: 40px;
+}
+
+div#mxnet-r-api-html-documentation h3 {
+    padding-top: 0;
+    margin-top: 10px;
+}
+
+div#mxnet-r-api-html-documentation p {
+    margin-top: 0;
+    padding-left: 15px;
+}
