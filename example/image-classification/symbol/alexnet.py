@@ -3,10 +3,9 @@ Reference:
 
 Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. "Imagenet classification with deep convolutional neural networks." Advances in neural information processing systems. 2012.
 """
-import find_mxnet
 import mxnet as mx
 
-def get_symbol(num_classes = 1000):
+def get_symbol(num_classes, **kwargs):
     input_data = mx.symbol.Variable(name="data")
     # stage 1
     conv1 = mx.symbol.Convolution(
