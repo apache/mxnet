@@ -42,6 +42,9 @@ NNVM_REGISTER_OP(_minimum_scalar)
 NNVM_REGISTER_OP(_backward_minimum_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::le>);
 
+NNVM_REGISTER_OP(_equal_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::eq>);
+
 NNVM_REGISTER_OP(_power_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::power>);
 
