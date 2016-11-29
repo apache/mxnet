@@ -1116,7 +1116,7 @@ def test_crop():
             y = mx.nd.crop(x, begin=tuple(begin), end=tuple(end))
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
-def test_slice_axis_shape(shape, axis, begin, end):
+def check_slice_axis_shape(shape, axis, begin, end):
     X = mx.symbol.Variable('X')
     x = mx.nd.array(np.random.normal(size=shape))
     Y = mx.symbol.slice_axis(data=X, axis=axis, begin=begin, end=end)
@@ -1138,12 +1138,12 @@ def test_slice_axis_shape(shape, axis, begin, end):
     assert_allclose(xx, xgrad.asnumpy()) 
 
 def test_slice_axis():
-    test_slice_axis_shape((5, 1), 0, 1, 3)
-    test_slice_axis_shape((5, 1, 2, 3, 2, 3), 4, 0, 1)
-    test_slice_axis_shape((2, 3), 1, 0, -1)
-    test_slice_axis_shape((3, 4), 1, 1, None)
-    test_slice_axis_shape((3, 4), 1, None, None)
-    test_slice_axis_shape((1, 4, 5), 2, -2, -1)
+    check_slice_axis_shape((5, 1), 0, 1, 3)
+    check_slice_axis_shape((5, 1, 2, 3, 2, 3), 4, 0, 1)
+    check_slice_axis_shape((2, 3), 1, 0, -1)
+    check_slice_axis_shape((3, 4), 1, 1, None)
+    check_slice_axis_shape((3, 4), 1, None, None)
+    check_slice_axis_shape((1, 4, 5), 2, -2, -1)
 
 def test_flip():
     for ndim in range(1, 6):
