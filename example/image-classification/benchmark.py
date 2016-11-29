@@ -81,16 +81,18 @@ def parse_args():
         def validate(self, attrs):
             args = attrs.split(':')
             if len(args) != 3 or isinstance(args[0], str) == False:
-                print 'expected network attributes in format network_name:batch_size:image_size'
-                print 'exiting1'
+                print 'expected network attributes in format network_name:batch_size:image_size \
+                \nThe network_name is a valid model defined as network_name.py in the image-classification/symbol folder.'
+                sys.exit(1)
             try:
                 #check if the network exists
-                importlib.import_module('symbol_' + args[0]).get_symbol('1000')
+                importlib.import_module('symbol.'+ args[0])
                 batch_size = int(args[1])
                 img_size = int(args[2])
                 return Network(name=args[0], batch_size=batch_size, img_size=img_size)
             except Exception as e:
-                print 'expected network attributes in format network_name:batch_size:image_size'
+                print 'expected network attributes in format network_name:batch_size:image_size \
+                \nThe network_name is a valid model defined as network_name.py in the image-classification/symbol folder.'
                 print e
                 sys.exit(1)
         def __init__(self, *args, **kw):
@@ -103,7 +105,7 @@ def parse_args():
                 setattr(namespace, self.dest, self.validate(values))
     parser = argparse.ArgumentParser(description='Run Benchmark on various imagenet networks using train_imagenent.py')
     parser.add_argument('--networks', dest='networks', nargs= '+', type=str, help= 'one or more networks in the format network_name:batch_size:image_size \
-    \nThe network_name is a valid model defined as symbol_ network_name.py in the image-classification folder.',action=NetworkArgumentAction)
+    \nThe network_name is a valid model defined as network_name.py in the image-classification/symbol folder.',action=NetworkArgumentAction)
     parser.add_argument('--worker_file', type=str, help='file that contains a list of worker hostnames or list of worker ip addresses that can be sshed without a password.',required=True)
     parser.add_argument('--worker_count', type=int, help='number of workers to run benchmark on.', required=True)
     parser.add_argument('--gpu_count', type=int, help='number of gpus on each worker to use.', required=True)
@@ -148,7 +150,7 @@ def run_imagenet(kv_store, data_shape, batch_size, num_gpus, num_nodes, network,
     ENABLE_CUDNN_AUTOTUNE = 'export MXNET_CUDNN_AUTOTUNE_DEFAULT=1; '
     imagenet_args=['python',  'train_imagenet.py',  '--gpus', ','.join(str(i) for i in xrange(num_gpus)), \
                    '--network', network, '--batch-size', str(batch_size * num_gpus), \
-                   '--data-shape', str(data_shape), '--num-epochs', '1' ,'--kv-store', kv_store, '--benchmark']
+                   '--image-shape', '3,' + str(data_shape) + ',' + str(data_shape), '--num-epochs', '1' ,'--kv-store', kv_store, '--benchmark', '1', '--disp-batches', '10']
     log = log_loc + '/' + network + '_' + str(num_nodes*num_gpus) + '_log'
     hosts = log_loc + '/' + network + '_' + str(num_nodes*num_gpus) + '_workers'
     generate_hosts_file(num_nodes, hosts, args_workers_file)

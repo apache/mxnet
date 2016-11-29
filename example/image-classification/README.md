@@ -108,7 +108,7 @@ The `benchmark.py` can be used to run a series of benchmarks against different i
 **--worker_count**: number of workers to run benchmark on.  
 **--gpu_count**: number of gpus on each worker to use.  
 **--networks**: one or more networks in the format network_name:batch_size:image_size.  
-The network_name is a valid model defined as **symbol_network**.py in the image-classification/symbol folder. 
+The network_name is a valid model defined as **network_name.py** in the image-classification/symbol folder. 
 
 The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using **kv-store=device** and after that running on variable number of nodes on all gpus starting with 1 node upto worker_count doubling the number of nodes used in each run using **kv-store=dist_sync_device**.  
 
