@@ -170,7 +170,7 @@ void ObjectPool<T>::AllocateChunk() {
   void* new_chunk_ptr;
 #ifdef _MSC_VER
   new_chunk_ptr = _aligned_malloc(kPageSize, kPageSize);
-  CHECK_NE(new_chunk_ptr, NULL) << "Allocation failed";
+  CHECK(new_chunk_ptr != NULL) << "Allocation failed";
 #else
   int ret = posix_memalign(&new_chunk_ptr, kPageSize, kPageSize);
   CHECK_EQ(ret, 0) << "Allocation failed";

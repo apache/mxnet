@@ -5,6 +5,7 @@ from __future__ import absolute_import as _abs
 
 import ctypes
 import sys
+import numpy as _numpy
 from ..base import _LIB
 from ..base import c_array, c_str, mx_uint, py_str
 from ..base import SymbolHandle, OpHandle
@@ -156,6 +157,8 @@ def _make_atomic_symbol_function(handle, name):
         attr = kwargs.pop('attr', None)
         kwargs.update(AttrScope.current.get(attr))
         name = kwargs.pop('name', None)
+        if 'dtype' in kwargs:
+            kwargs['dtype'] = _numpy.dtype(kwargs['dtype']).name
 
         if key_var_num_args and key_var_num_args not in kwargs:
             param_keys.append(c_str(key_var_num_args))

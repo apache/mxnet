@@ -338,7 +338,6 @@ def test_broadcast():
             assert err < 1E-8
     test_broadcast_to()
 
-
 def test_arange():
     for i in range(5):
         start = np.random.rand() * 10
@@ -349,7 +348,6 @@ def test_arange():
         gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
         pred = mx.nd.arange(start=start, stop=stop, step=step, repeat=repeat).asnumpy()
         assert_almost_equal(pred, gt, default_numerical_threshold())
-
 
 def test_order(ctx=default_context()):
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
@@ -443,6 +441,13 @@ def test_order(ctx=default_context()):
     gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
 
+def test_ndarray_equal():
+    x = mx.nd.zeros((2, 3))
+    y = mx.nd.ones((2, 3))
+    z = x == y
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
+    z = 0 == x
+    assert (z.asnumpy() == np.ones((2, 3))).all()
 
 if __name__ == '__main__':
     test_ndarray_setitem()
@@ -464,3 +469,4 @@ if __name__ == '__main__':
     test_reduce()
     test_arange()
     test_order()
+    test_ndarray_equal()
