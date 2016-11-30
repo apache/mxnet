@@ -2,6 +2,8 @@ from __future__ import absolute_import as _abs
 
 import sys as _sys
 import ctypes as _ctypes
+import numpy as _numpy
+
 from numbers import Number as _Number
 from ..name import NameManager
 from ..attribute import AttrScope
@@ -126,6 +128,9 @@ cdef _make_atomic_symbol_function(OpHandle handle, string name):
                 if isinstance(v, SymbolBase):
                     ssymbol_keys.push_back(c_str(k))
                     symbol_args.push_back((<SymbolBase>v).chandle)
+                elif k == 'dtype':
+                    sparam_keys.push_back(c_str(k))
+                    sparam_vals.push_back(c_str(_numpy.dtype(v).name))
                 else:
                     sparam_keys.push_back(c_str(k))
                     sparam_vals.push_back(c_str(str(v)))
