@@ -187,6 +187,9 @@ class NDArray(NDArrayBase):
     def __rpow__(self, other):
         return power(other, self)
 
+    def __eq__(self, other):
+        return equal(self, other)
+
     def __getstate__(self):
         handle = self.handle
         this = {'handle' : None}
@@ -846,6 +849,32 @@ def minimum(lhs, rhs):
         _internal._minimum,
         lambda x, y: x if x < y else y,
         _internal._minimum_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def equal(lhs, rhs):
+    """Return (lhs == rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        _internal._equal,
+        lambda x, y: 1 if x == y else 0,
+        _internal._equal_scalar,
         None)
     # pylint: enable= no-member, protected-access
 
