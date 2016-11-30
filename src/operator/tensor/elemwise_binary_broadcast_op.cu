@@ -65,6 +65,9 @@ NNVM_REGISTER_OP(_backward_minimum)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::le,
                                                               mshadow_op::gt>);
 
+NNVM_REGISTER_OP(_equal)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::eq>);
+
 NNVM_REGISTER_OP(_hypot)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::hypot>);
 
