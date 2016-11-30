@@ -3,7 +3,7 @@ cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
 echo "USE_CUDNN=1" >> config.mk
-make -j 4 || exit -1
+make -j$(nproc) || exit -1
 
 echo "BUILD lint"
 make lint || exit -1
