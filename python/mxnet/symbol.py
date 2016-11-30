@@ -1146,4 +1146,4 @@ def arange(start=None, stop=None, step=None, repeat=1, name=None, dtype=_numpy.f
         The created Symbol
     """
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             name=name, dtype=_numpy.dtype(dtype).name)
+                             name=name, dtype=dtype)

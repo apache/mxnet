@@ -1054,7 +1054,7 @@ def arange(start=None, stop=None, step=None, repeat=1, ctx=Context.default_ctx, 
         The created NDArray
     """
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             dtype=np.dtype(dtype).name, ctx=str(ctx))
+                             dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
 
 
