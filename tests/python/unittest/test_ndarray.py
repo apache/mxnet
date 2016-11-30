@@ -338,6 +338,14 @@ def test_broadcast():
             assert err < 1E-8
     test_broadcast_to()
 
+def test_ndarray_equal():
+    x = mx.nd.zeros((2, 3))
+    y = mx.nd.ones((2, 3))
+    z = x == y
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
+    z = 0 == x
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+
 if __name__ == '__main__':
     test_ndarray_setitem()
     test_ndarray_crop()
@@ -356,3 +364,4 @@ if __name__ == '__main__':
     test_ndarray_onehot()
     test_ndarray_fill()
     test_reduce()
+    test_ndarray_equal()
