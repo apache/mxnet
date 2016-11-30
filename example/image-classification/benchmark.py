@@ -113,12 +113,14 @@ def parse_args():
     return args
 
 def series(max_count):
-    i=max_count
+    i=1
     s=[]
-    while i >= 1:
+    while i <= max_count:
         s.append(i)
-        i=i/2
-    return s[::-1]
+        i=i*2
+    if s[-1] < max_count:
+        s.append(max_count)
+    return s
 
 '''
 Choose the middle iteration to get the images processed per sec
