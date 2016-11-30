@@ -64,6 +64,10 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_minimum_scalar)
 .set_attr_parser([](NodeAttrs* attrs) {attrs->parsed = std::stod(attrs->dict["scalar"]);})
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::le>);
 
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_equal_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::eq>)
+.add_alias("_EqualScalar");
+
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_power_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_power_scalar"})
