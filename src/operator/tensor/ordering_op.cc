@@ -34,7 +34,7 @@ NNVM_REGISTER_OP(topk)
       }
       return MakeGradNode("_backward_topk", n, heads, n->attrs.dict);
     } else {
-      return MakeGradNode("_backward_BlockGrad", n, {}, {});
+      return MakeGradNode("_zeros", n, {}, {});
     }
   })
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -95,7 +95,7 @@ NNVM_REGISTER_OP(argsort)
 .set_attr<FCompute>("FCompute<cpu>", ArgSort<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeGradNode("_backward_BlockGrad", n, {}, {});
+    return MakeGradNode("_zeros", n, {}, {});
   })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
