@@ -14,7 +14,7 @@ import numpy as _numpy
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
-from .base import check_call, ctypes2docstring, MXNetError
+from .base import check_call, MXNetError
 from .context import Context
 from .ndarray import NDArray, zeros as _nd_zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
