@@ -2,6 +2,7 @@ from __future__ import absolute_import as _abs
 
 import sys as _sys
 import ctypes as _ctypes
+import numpy as np
 from ..ndarray_doc import _build_doc
 
 include "./base.pyi"
@@ -128,7 +129,10 @@ cdef _make_ndarray_function(OpHandle handle, string name):
             else:
                 if pos_param_arg >= num_param_args:
                     raise ValueError("Too many positional arguments")
-                sparam_vals.push_back(c_str(str(v)))
+                if arguments[pos_param_arg] == 'dtype':
+                    sparam_vals.push_back(c_str(np.dtype(v).name))
+                else:
+                    sparam_vals.push_back(c_str(str(v)))
                 sparam_keys.push_back(c_str(arguments[pos_param_arg]))
                 pos_param_arg = pos_param_arg + 1
 
@@ -143,6 +147,9 @@ cdef _make_ndarray_function(OpHandle handle, string name):
                         if not isinstance(item, NDArrayBase):
                             raise ValueError("out need to be of type NDArray")
                         output_vars.push_back((<NDArrayBase>v).chandle)
+            elif k == 'dtype':
+                sparam_vals.push_back(c_str(np.dtype(v).name))
+                sparam_keys.push_back(c_str(k))
             else:
                 sparam_vals.push_back(c_str(str(v)))
                 sparam_keys.push_back(c_str(k))
