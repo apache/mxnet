@@ -402,17 +402,15 @@ void GraphExecutor::AssignContext(const Context default_ctx,
     assigned[nid] = true;
     ctx_plan->at(nid) = in_args[i].ctx();
   }
-  if (arg_grads_.size() != 0) {
-    for (size_t i = 0; i < arg_grads_.size(); ++i) {
-      if (grad_req_type[i] == kNullOp) continue;
-      auto& e = arg_grads_[i];
-      if (!assigned[e.source_id]) {
-        assigned[e.source_id] = true;
-        ctx_plan->at(e.source_id) = arg_grad_store[i].ctx();
-      } else {
-        CHECK(ctx_plan->at(e.source_id) == arg_grad_store[i].ctx())
-            << "Inconsistent gradient context requirement";
-      }
+  for (size_t i = 0; i < arg_grads_.size(); ++i) {
+    if (grad_req_type[i] == kNullOp) continue;
+    auto& e = arg_grads_[i];
+    if (!assigned[e.source_id]) {
+      assigned[e.source_id] = true;
+      ctx_plan->at(e.source_id) = arg_grad_store[i].ctx();
+    } else {
+      CHECK(ctx_plan->at(e.source_id) == arg_grad_store[i].ctx())
+          << "Inconsistent gradient context requirement";
     }
   }
 
