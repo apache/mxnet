@@ -4,13 +4,9 @@ This topic walks through the process of creating new MXNet operations (or layers
 
 We've done our best to provide high speed operators for most common use cases. However, if you find yourself in need of custom layers, like a novel loss for your research, you have two options:
 
-* ~~(Deprecated) Use native language and it's matrix library (e.g., NumPy in Python). This requires the least effort and the least knowledge of MXNet. But it does impair performance because it's CPU based.~~
+* Use CustomOp to write new operators in the front-end language (i.e., Python) that run on CPUs or GPUs. Depending on your implementation, this can range from very fast to very slow.
 
-* ~~(Deprecated) Use native language, mxnet.rtc and mxnet.ndarray. This gives you most of the performance of 3) and most of the convenience of 1), but requires more knowledge of MXNet. You can write CUDA kernels in Python and compile with during runtime.~~
-
-* 1) Use CustomOp to write new operators in the front-end language (i.e., Python) that run on CPUs or GPUs. Depending on your implementation, this can range from very fast to very slow.
-
-* 2) Use C++/mshadow (CUDA). This can be difficult if you're not familiar with MXNet, mashadow, or Cuda, but it provides the best performance.
+* Use C++/mshadow (CUDA). This can be difficult if you're not familiar with MXNet, mashadow, or Cuda, but it provides the best performance.
 
 ## CustomOp
 Implementing an operator in Python is similar to creating one in C++, but simpler. As an example, let's create a softmax operator. Start by subclassing `mxnet.operator.CustomOp`, and then override a few methods:
@@ -100,4 +96,4 @@ mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')
 For the complete code for this example, see `examples/numpy-ops/custom_softmax.py`.
 
 ## C++/MShadow (CUDA)
-For information, see [Developer Guide - SimpleOp](../system/operator_util.md) and [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
+For information, see [Developer Guide - SimpleOp](http://mxnet.io/architecture/overview.html#simpleop-the-unified-operator-api) and [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet).

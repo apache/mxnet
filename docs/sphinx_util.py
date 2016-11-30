@@ -24,6 +24,17 @@ def build_r_docs(root_path):
     subprocess.call('mkdir -p ' + dest_path, shell = True)
     subprocess.call('mv ' + pdf_path + ' ' + dest_path, shell = True)
 
+def build_scala_docs(root_path):
+    scala_path = os.path.join(root_path, 'scala-package', 'core', 'src', 'main', 'scala', 'ml', 'dmlc', 'mxnet')
+    subprocess.call('cd ' + scala_path + '; scaladoc `find . | grep .*scala`', shell = True)
+
+    dest_path = os.path.join(root_path, 'docs', '_build', 'html', 'api', 'scala', 'docs')
+    subprocess.call('mkdir -p ' + dest_path, shell = True)
+
+    scaladocs = ['index', 'index.html', 'ml', 'lib', 'index.js', 'package.html']
+    for doc_file in scaladocs:
+        subprocess.call('cd ' + scala_path + ';mv ' + doc_file + ' ' + dest_path, shell = True)
+
 if not os.path.exists('../recommonmark'):
     subprocess.call('cd ..; rm -rf recommonmark;' +
                     'git clone https://github.com/tqchen/recommonmark', shell = True)
@@ -37,6 +48,8 @@ root_path = os.path.join(curr_path, '..')
 run_build_mxnet(root_path)
 
 build_r_docs(root_path)
+
+build_scala_docs(root_path)
 
 sys.path.insert(0, os.path.abspath('../recommonmark/'))
 

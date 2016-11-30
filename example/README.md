@@ -43,7 +43,8 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Numpy Operator Customization](https://github.com/dmlc/mxnet/tree/master/example/numpy-ops) - Example on quick customize new ops with numpy.
 * [Adversary Sample Generation](adversary) - Find adversary sample by using fast sign method.
 * [Neural Art](neural-style) -  Generate artistic style images.
-* [DQN and Double DQN](https://github.com/dmlc/mxnet/tree/master/example/dqn) -  Examples of training DQN and Double DQN to play Atari Games.
+* [DQN and Double DQN](https://github.com/dmlc/mxnet/tree/master/example/reinforcement-learning/dqn) -  Examples of training DQN and Double DQN to play Atari Games.
+* [DDPG](https://github.com/dmlc/mxnet/tree/master/example/reinforcement-learning/ddpg) - Example of training DDPG for CartPole.
 * [Kaggle 1st national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb1) - a MXnet example for Kaggle Nation Data Science Bowl 1
 * [Kaggle 2nd national data science bowl](https://github.com/dmlc/mxnet/tree/master/example/kaggle-ndsb2) - a tutorial for Kaggle Second Nation Data Science Bowl
 * [CNN for Text Classification](cnn_text_classification) - a MXnet example for text classification
@@ -113,6 +114,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Intro Guide to AWS (MXNet with Julia)](http://www.datasciencebowl.com/aws_guide/) - A step-by-step guide of using spot instances with Amazon Web Services (AWS) to help you save money when training DSB models on MXNet by [Mike Kim](http://www.datasciencebowl.com/author/mikekim/)
 * [Building Deep Neural Networks in the Cloud with Azure GPU VMs, MXNet and Microsoft R Server](https://blogs.technet.microsoft.com/machinelearning/2016/09/15/building-deep-neural-networks-in-the-cloud-with-azure-gpu-vms-mxnet-and-microsoft-r-server/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft
 * [Applying Deep Learning at Cloud Scale, with Microsoft R Server & Azure Data Lake](https://blogs.technet.microsoft.com/machinelearning/2016/10/31/applying-cloud-deep-learning-at-scale-with-microsoft-r-server-azure-data-lake/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft
+* [Training Deep Neural Neural Networks on ImageNet Using Microsoft R Server and Azure GPU VMs](https://blogs.technet.microsoft.com/machinelearning/2016/11/15/imagenet-deep-neural-network-training-using-microsoft-r-server-and-azure-gpu-vms/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft 
 * [Distributed Deep Learning Made Easy](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/) at AWS/Amazon for deploying deep learning clusters using MXNet
 
 ### <a name="kaggle-tutorials"></a>Kaggle tutorials

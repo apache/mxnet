@@ -4,6 +4,7 @@
  * \brief
  * \author Sebastian Bodenstein
 */
+#include <algorithm>
 #include "./pad-inl.h"
 #include "../common/cuda_utils.h"
 
