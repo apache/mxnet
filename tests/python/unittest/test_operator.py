@@ -1470,7 +1470,7 @@ def test_roipooling():
     x1 = np.random.rand(4, 3, 12, 8)
     x2 = np.array([[0, 1, 1, 6, 6], [2, 6, 2, 7, 11], [1, 3, 1, 5, 10], [0, 3, 3, 3, 3]])
 
-    check_numeric_gradient(test, [x1, x2], numeric_eps=1e-3, check_eps=1e-2)
+    check_numeric_gradient(test, [x1, x2], grad_nodes={'rois':'null'}, numeric_eps=1e-3, check_eps=1e-2)
     check_numeric_gradient(sym=test, location=[x1, x2],
                            grad_nodes={'data':'add', 'rois':'null'},
                            numeric_eps=1e-3, check_eps=1e-2)
