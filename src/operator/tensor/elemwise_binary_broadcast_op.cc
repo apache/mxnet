@@ -131,6 +131,10 @@ NNVM_REGISTER_OP(_backward_minimum)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le,
                                                               mshadow_op::gt>);
 
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_equal)
+.add_alias("broadcast_equal").add_alias("_Equal")
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::eq>);
+
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_hypot)
 .add_alias("broadcast_hypot").add_alias("_Hypot")
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::hypot>)
