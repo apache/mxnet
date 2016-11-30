@@ -5,6 +5,7 @@ from __future__ import absolute_import as _abs
 
 import ctypes
 import sys as _sys
+import numpy as np
 
 from ..base import _LIB
 from ..base import c_array, py_str, c_str, mx_uint
@@ -99,8 +100,11 @@ def _make_ndarray_function(handle, name):
             else:
                 pos_args.append(str(i))
 
-        assert len(pos_args) <= len(arguments)
+        if len(pos_args) > len(arguments):
+            raise ValueError("Too many positional arguments")
         kwargs.update(zip(arguments[:len(pos_args)], pos_args))
+        if 'dtype' in kwargs:
+            kwargs['dtype'] = np.dtype(kwargs['dtype']).name
 
         original_output = None
         if 'out' in kwargs:
