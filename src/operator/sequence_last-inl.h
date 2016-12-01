@@ -166,7 +166,8 @@ class SequenceLastProp : public OperatorProperty {
         << "Input:[data, sequence_length]";
 
     const TShape &dshape = (*in_shape)[seq_last::kData];
-    if (dshape.ndim() == 0) return false;
+    CHECK_GT(dshape.ndim(), 2)
+        << "The data array must be of rank 3 or greater.";
     // seq length vector is same as batch size
     if (param_.use_sequence_length)
       SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength,

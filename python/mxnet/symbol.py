@@ -14,7 +14,7 @@ import numpy as _numpy
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
-from .base import check_call
+from .base import check_call, MXNetError
 from .context import Context
 from .ndarray import NDArray, zeros as _nd_zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
@@ -482,7 +482,15 @@ class Symbol(SymbolBase):
             List of shapes of outputs.
             The order is in the same order as list_auxiliary()
         """
-        return self._infer_shape_impl(False, *args, **kwargs)
+        try:
+            return self._infer_shape_impl(False, *args, **kwargs)
+        except MXNetError:
+            print("infer_shape error. Arguments:")
+            for i, arg in enumerate(args):
+                print("  #%d: %s" % (i, arg))
+            for k, v in kwargs.items():
+                print("  %s: %s" % (k, v))
+            raise
 
     def infer_shape_partial(self, *args, **kwargs):
         """Partially infer the shape. The same as infer_shape, except that the partial
