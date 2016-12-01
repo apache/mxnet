@@ -61,11 +61,19 @@ NNVM_REGISTER_OP(_broadcast_backward)
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 .MXNET_DESCRIBE("Compute argmax")
-.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>);
+.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeGradNode("_zeros", n, {}, {});
+});
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 .MXNET_DESCRIBE("Compute argmin")
-.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>);
+.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeGradNode("_zeros", n, {}, {});
+});
 
 // Legacy support
 NNVM_REGISTER_OP(argmax_channel)
