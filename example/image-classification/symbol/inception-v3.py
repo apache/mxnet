@@ -1,16 +1,11 @@
 """
-
 Inception V3, suitable for images with around 299 x 299
 
 Reference:
 
 Szegedy, Christian, et al. "Rethinking the Inception Architecture for Computer Vision." arXiv preprint arXiv:1512.00567 (2015).
-
 """
-
-import find_mxnet
 import mxnet as mx
-
 
 def Conv(data, num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name=None, suffix=''):
     conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True, name='%s%s_conv2d' %(name, suffix))
@@ -109,7 +104,7 @@ def Inception7E(data,
 
 # In[49]:
 
-def get_symbol(num_classes=1000):
+def get_symbol(num_classes=1000, **kwargs):
     data = mx.symbol.Variable(name="data")
     # stage 1
     conv = Conv(data, 32, kernel=(3, 3), stride=(2, 2), name="conv")
@@ -171,4 +166,3 @@ def get_symbol(num_classes=1000):
     fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax
-
