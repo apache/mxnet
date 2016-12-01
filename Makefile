@@ -75,7 +75,7 @@ else
 endif
 ifneq ($(USE_BLAS), mkl)
 	ICC_ON=0
-	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON))
+	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON) $(MKLML_ROOT))
 	MKLROOT=$(firstword $(RETURN_STRING))
 	MKL_LDFLAGS=-l$(word 2, $(RETURN_STRING))
 	MKL_EXTERNAL=$(lastword $(RETURN_STRING))
