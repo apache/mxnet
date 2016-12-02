@@ -1,12 +1,12 @@
 function auto_index(module) {
   $(document).ready(function () {
     // find all classes or functions
-    var div_query = "div[class='section'][id='module-" + module + "']";
+    var div_query = "div[class='section'][id='" + module + "']";
     var class_query = div_query + " dl[class='class'] > dt";
     var func_query = div_query + " dl[class='function'] > dt";
     var targets = $(class_query + ',' + func_query);
 
-    var li_node = $("li a[href='#module-" + module + "']").parent();
+    var li_node = $("div.sphinxsidebarwrapper li a[href='#" + module + "']").parent();
     var html = "<ul>";
 
     for (var i = 0; i < targets.length; ++i) {

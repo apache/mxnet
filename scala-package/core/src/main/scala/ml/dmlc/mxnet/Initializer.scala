@@ -75,6 +75,28 @@ abstract class Initializer {
   }
 }
 
+/**
+ * Initialize the weight with mixed Initializer
+ *
+ * @param patterns List of regular expression patterns to match parameter names.
+ * @param initializers List of Initializer corrosponding to patterns
+ */
+class Mixed(protected val patterns: List[String],
+    protected val initializers: List[Initializer]) extends Initializer {
+  require(patterns.length == initializers.length)
+  private val map = patterns.map(_.r).zip(initializers)
+
+  override def apply(name: String, arr: NDArray): Unit = {
+    val matchR = map.filter { case (prog, init) => prog.findFirstIn(name) != None }
+    if (matchR.length == 0) {
+      throw new IllegalArgumentException(
+          s"Parameter $name did not match any pattern. Consider " +
+          "add a \".*\" pattern at the and with default Initializer.")
+    } else matchR(0)._2(name, arr)
+  }
+
+  override def initWeight(name: String, arr: NDArray): Unit = {}
+}
 
 /**
  * Initialize the weight with uniform [-scale, scale]

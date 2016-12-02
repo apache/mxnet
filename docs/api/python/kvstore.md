@@ -134,7 +134,7 @@ For multiple devices:
 
     .. raw:: html
 
-        <script>auto_index("mxnet.kvstore");</script>
+        <script>auto_index("api-reference");</script>
 ```
 
 ## Next Steps

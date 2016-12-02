@@ -283,8 +283,7 @@ class CuDNNBatchNormProp : public OperatorProperty {
             out_data[cudnnbatchnorm::kMean],
             out_data[cudnnbatchnorm::kInvVar],
             in_data[cudnnbatchnorm::kData],
-            in_data[cudnnbatchnorm::kGamma],
-            in_data[cudnnbatchnorm::kBeta]
+            in_data[cudnnbatchnorm::kGamma]
            };
   }
 

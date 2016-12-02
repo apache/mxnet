@@ -51,7 +51,7 @@ def train_rpn(image_set, year, root_path, devkit_path, pretrained, epoch,
     print 'providing maximum shape', max_data_shape, max_label_shape
 
     # load pretrained
-    args, auxs = load_param(pretrained, epoch, convert=True)
+    args, auxs, _ = load_param(pretrained, epoch, convert=True)
 
     # initialize params
     if not resume:

@@ -50,7 +50,7 @@ MXNET_REGISTER_OP_PROPERTY(Concat, ConcatProp)
 .add_argument("data", "Symbol[]", "List of tensors to concatenate")
 .add_arguments(ConcatParam::__FIELDS__())
 .set_key_var_num_args("num_args")
-.describe("Perform an feature concat on channel dim (defaut is 1) over all");
+.describe("Perform a feature concat on channel dim (defaut is 1) over all");
 
 }  // namespace op
 }  // namespace mxnet
