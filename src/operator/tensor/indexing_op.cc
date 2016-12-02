@@ -1,41 +1,43 @@
 /*!
- * Copyright (c) 2015 by Contributors
- * \file embedding.cc
+ * Copyright (c) 2016 by Contributors
+ * \file indexing_op.cc
  * \brief
- * \author Bing Xu
+ * \author Siyi Li
 */
 
 #include "./indexing_op.h"
 namespace mxnet {
 namespace op {
-template<>
-Operator* CreateOp<cpu>(EmbeddingParam param, int dtype) {
-  Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new EmbeddingOp<cpu, DType>(param);
-  });
-  return op;
-}
-
-// DO_BIND_DISPATCH comes from operator_common.h
-Operator *EmbeddingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                                     std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
-}
-
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
 
-MXNET_REGISTER_OP_PROPERTY(Embedding, EmbeddingProp)
-.describe(R"(Map integer index to vector representations (embeddings). Those
-embeddings are learnable parameters. For a input of shape `(d1, ..., dK)`, the
-output shape is `(d1, ..., dK, output_dim)`. All the input values should be
-integers in the range `[0, input_dim)`.)")
+NNVM_REGISTER_OP(Embedding)
+.MXNET_DESCRIBE(R"(Map integer index to vector representations (embeddings). Those
+                embeddings are learnable parameters. For a input of shape `(d1, ..., dK)`, the
+                output shape is `(d1, ..., dK, output_dim)`. All the input values should be
+                integers in the range `[0, input_dim)`.)")
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<EmbeddingParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape)
+.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_embedding"})
 .add_argument("data", "Symbol", "Input data to the EmbeddingOp.")
 .add_argument("weight", "Symbol", "Enbedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_embedding)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
 }  // namespace op
 }  // namespace mxnet

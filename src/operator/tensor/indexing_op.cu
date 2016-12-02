@@ -1,21 +1,18 @@
 /*!
- * Copyright (c) 2015 by Contributors
- * \file embedding.cu
+ * Copyright (c) 2016 by Contributors
+ * \file indexing_op.cu
  * \brief
- * \author Bing Xu
+ * \author Siyi Li
 */
 
 #include "./indexing_op.h"
 namespace mxnet {
 namespace op {
-template<>
-Operator* CreateOp<gpu>(EmbeddingParam param, int dtype) {
-  Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new EmbeddingOp<gpu, DType>(param);
-  });
-  return op;
-}
+NNVM_REGISTER_OP(Embedding)
+.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_embedding)
+.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpBackward<gpu>);
 }  // namespace op
 }  // namespace mxnet
 
