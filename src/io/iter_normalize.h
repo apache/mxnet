@@ -41,6 +41,9 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
   float mean_a;
   /*! \brief scale on color space */
   float scale;
+  float scale_r;
+  float scale_g;
+  float scale_b;
   /*! \brief maximum ratio of contrast variation */
   float max_random_contrast;
   /*! \brief maximum value of illumination variation */
@@ -66,7 +69,13 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
     DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
         .describe("Augmentation Param: Mean value on Alpha channel.");
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
-        .describe("Augmentation Param: Scale in color space.");
+		.describe("Augmentation Param: Scale in color space.");
+	DMLC_DECLARE_FIELD(scale_r).set_default(-1.0f)
+		.describe("Augmentation Param: Scale in color space.");
+	DMLC_DECLARE_FIELD(scale_g).set_default(-1.0f)
+		.describe("Augmentation Param: Scale in color space.");
+	DMLC_DECLARE_FIELD(scale_b).set_default(-1.0f)
+		.describe("Augmentation Param: Scale in color space.");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
         .describe("Augmentation Param: Maximum ratio of contrast variation.");
     DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
@@ -182,19 +191,26 @@ class ImageNormalizeIter : public IIterator<DataInst> {
 
     if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
         param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
+      if (param_.scale_r<0 || param_.scale_g<0 || param_.scale_b<0){
+        param_.scale_r = param_.scale_g = param_.scale_b = param_.scale;
+      }
       // subtract mean per channel
       data[0] -= param_.mean_r;
+      data[0] *= param_.scale_r;
       if (data.shape_[0] >= 3) {
         data[1] -= param_.mean_g;
+        data[1] *= param_.scale_g;
         data[2] -= param_.mean_b;
+        data[2] *= param_.scale_b;
       }
       if (data.shape_[0] == 4) {
         data[3] -= param_.mean_a;
+        data[3] *= param_.scale;
       }
       if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-        outimg_ = mirror(data * contrast + illumination) * param_.scale;
+        outimg_ = mirror(data * contrast + illumination);
       } else {
-        outimg_ = (data * contrast + illumination) * param_.scale;
+        outimg_ = (data * contrast + illumination);
       }
     } else if (!meanfile_ready_ || param_.mean_img.length() == 0) {
       // do not subtract anything

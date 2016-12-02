@@ -57,6 +57,9 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   int rotate;
   /*! \brief filled color while padding */
   int fill_value;
+  int fill_value_r;
+  int fill_value_g;
+  int fill_value_b;
   /*! \brief interpolation method 0-NN 1-bilinear 2-cubic 3-area 4-lanczos4 9-auto 10-rand  */
   int inter_method;
   /*! \brief padding size */
@@ -98,6 +101,12 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
         .describe("Augmentation Param: Rotate angle.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
+        .describe("Augmentation Param: Maximum value of illumination variation.");
+    DMLC_DECLARE_FIELD(fill_value_r).set_default(-1)
+        .describe("Augmentation Param: Maximum value of illumination variation.");
+    DMLC_DECLARE_FIELD(fill_value_g).set_default(-1)
+        .describe("Augmentation Param: Maximum value of illumination variation.");
+    DMLC_DECLARE_FIELD(fill_value_b).set_default(-1)
         .describe("Augmentation Param: Maximum value of illumination variation.");
     DMLC_DECLARE_FIELD(data_shape)
         .set_expect_ndim(3).enforce_nonzero()
@@ -213,10 +222,13 @@ class DefaultImageAugmenter : public ImageAugmenter {
           << "invalid inter_method: valid value 0,1,2,3,9,10";
       int interpolation_method = GetInterMethod(param_.inter_method,
                      src.cols, src.rows, new_width, new_height, prnd);
+	  if (param_.fill_value_r<0 || param_.fill_value_g<0 || param_.fill_value_b<0){
+		  param_.fill_value_r = param_.fill_value_g = param_.fill_value_b = param_.fill_value;
+      }
       cv::warpAffine(src, temp_, M, cv::Size(new_width, new_height),
                      interpolation_method,
                      cv::BORDER_CONSTANT,
-                     cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
+                     cv::Scalar(param_.fill_value_b, param_.fill_value_g, param_.fill_value_r));
       res = temp_;
     } else {
       res = src;
@@ -226,7 +238,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
     if (param_.pad > 0) {
       cv::copyMakeBorder(res, res, param_.pad, param_.pad, param_.pad, param_.pad,
                          cv::BORDER_CONSTANT,
-                         cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
+                         cv::Scalar(param_.fill_value_b, param_.fill_value_g, param_.fill_value_r));
     }
 
     // crop logic
