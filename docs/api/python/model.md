@@ -22,7 +22,7 @@ The following example creates a two-layer neural network.
 
 ```python
     # configure a two layer neuralnetwork
-    = mx.symbol.Variable('data')
+    data = mx.symbol.Variable('data')
     fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
     act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
     fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
