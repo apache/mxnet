@@ -11,7 +11,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
-#include "./operator_common.h"
+#include "../operator_common.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include <map>
@@ -28,10 +28,10 @@ enum EmbeddingOpOutputs {kOut};
 enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
-struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
+struct EmbeddingParamNNVM: public dmlc::Parameter<EmbeddingParamNNVM> {
   int input_dim;
   int output_dim;
-  DMLC_DECLARE_PARAMETER(EmbeddingParam) {
+  DMLC_DECLARE_PARAMETER(EmbeddingParamNNVM) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
     .describe("vocabulary size of the input indices.");
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
@@ -45,7 +45,7 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   const TShape &dshape = (*in_attrs)[embedding::kData];
   if (dshape.ndim() ==  0) return false;
-  const EmbeddingParam& param = nnvm::get<EmbeddingParam>(attrs.parsed);
+  const EmbeddingParamNNVM& param = nnvm::get<EmbeddingParamNNVM>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
                                                            param.output_dim));
   out_attrs->clear();
