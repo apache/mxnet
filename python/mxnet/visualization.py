@@ -274,6 +274,8 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             attr["fillcolor"] = cm[6]
         else:
             attr["fillcolor"] = cm[7]
+            if op == "Custom":
+                label = node["param"]["op_type"]
 
         dot.node(name=name, label=label, **attr)
 

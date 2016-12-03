@@ -76,13 +76,6 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
         <a class="main-nav-link" href="{{url_root}}architecture/index.html">Architecture</a>
 		<a class="main-nav-link" href="{{url_root}}community/index.html">Community</a>
         
-		<div id="search-input-wrap">
-          <div id="search-input-icon">
-            <i class="fa fa-search"></i>
-          </div>
-          <input type="search" id="search-input" placeholder="Search...">
-          {{searchform('', False)}}
-        </div>
 
       </nav>
       <script> function getRootPath(){ return "{{url_root}}" } </script>
@@ -106,6 +99,9 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
               <li><a href="{{url_root}}architecture/index.html">Architecture</a></li>
 		      <li><a href="{{url_root}}community/index.html">Community</a></li>
           </ul>
+      </div>
+      <div id="search-input-wrap">
+          {{searchform('', False)}}
       </div>
       <div id="lang-select-wrap"> 
         <label id="lang-select-label">

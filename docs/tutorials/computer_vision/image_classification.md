@@ -37,7 +37,7 @@ To train models on a particular dataset, use `train_dataset.py`. For example:
   python train_mnist.py --lr .1 --lr-factor .9 --lr-factor-epoch .5
 ```
 
-- To train a convolution neural network on mnist by using GPU 0, use this command:
+- To train a convolutional neural network on mnist by using GPU 0, use this command:
 
 ```bash
   python train_mnist.py --network lenet --gpus 0

@@ -16,6 +16,32 @@ def nce_loss(data, label, label_weight, embed_weight, vocab_size, num_hidden, nu
                                            label = label_weight)
 
 
+def nce_loss_subwords(data, label, label_mask, label_weight, embed_weight, vocab_size, num_hidden, num_label):
+    """NCE-Loss layer under subword-units input.
+    """
+    # get subword-units embedding.
+    label_units_embed = mx.sym.Embedding(data = label,
+                                         input_dim = vocab_size,
+                                         weight = embed_weight,
+                                         output_dim = num_hidden)
+    # get valid subword-units embedding with the help of label_mask
+    # it's achieve by multiply zeros to useless units in order to handle variable-length input.
+    label_units_embed = mx.sym.broadcast_mul(lhs = label_units_embed,
+                                             rhs = label_mask,
+                                             name = 'label_units_embed')
+    # sum over them to get label word embedding.
+    label_embed = mx.sym.sum(label_units_embed, axis=2, name = 'label_embed')
+
+    # by boardcast_mul and sum you can get prediction scores in all num_label inputs,
+    # which is easy to feed into LogisticRegressionOutput and make your code more concise.
+    data = mx.sym.Reshape(data = data, shape = (-1, 1, num_hidden))
+    pred = mx.sym.broadcast_mul(data, label_embed)
+    pred = mx.sym.sum(data = pred, axis = 2)
+
+    return mx.sym.LogisticRegressionOutput(data = pred,
+                                           label = label_weight)
+
+
 class NceAccuracy(mx.metric.EvalMetric):
     def __init__(self):
         super(NceAccuracy, self).__init__('nce-accuracy')
