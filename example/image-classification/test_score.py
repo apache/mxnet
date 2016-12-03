@@ -1,16 +1,24 @@
 """
 test pretrained models
 """
-import argparse
 import mxnet as mx
 from common import find_mxnet, modelzoo
 from common.util import download_file
 from score import score
+import subprocess
+
+def get_gpus():
+    try:
+        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
+    except OSError:
+        return ''
+    gpus = [i for i in re.split('\n') if 'GPU' in i]
+    return ','.join([str(i) for i in range(len(gpus))])
 
 def download_data():
     download_file('http://data.mxnet.io/data/val-5k-256.rec', 'data/val-5k-256.rec')
 
-def test_imagenet1k_resnet(args):
+def test_imagenet1k_resnet(**kwargs):
     models = ['imagenet1k-resnet-34',
               'imagenet1k-resnet-50',
               'imagenet1k-resnet-101',
@@ -19,28 +27,27 @@ def test_imagenet1k_resnet(args):
     for (m, g) in zip(models, accs):
         acc = mx.metric.create('acc')
         (speed,) = score(model=m, data_val='data/val-5k-256.rec',
-                         rgb_mean='0,0,0', metrics=acc, **vars(args))
+                         rgb_mean='0,0,0', metrics=acc, **kwargs)
         r = acc.get()[1]
         print('testing %s, acc = %f, speed = %f img/sec' % (m, r, speed))
         assert r > g and r < g + .1
 
-def test_imagenet1k_inception_bn(args):
+def test_imagenet1k_inception_bn(**kwargs):
     acc = mx.metric.create('acc')
     m = 'imagenet1k-inception-bn'
     g = 0.72
     (speed,) = score(model=m,
                      data_val='data/val-5k-256.rec',
-                     rgb_mean='123.68,116.779,103.939', metrics=acc, **vars(args))
+                     rgb_mean='123.68,116.779,103.939', metrics=acc, **kwargs)
     r = acc.get()[1]
     print('Tested %s acc = %f, speed = %f img/sec' % (m, r, speed))
     assert r > g and r < g + .1
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='test score.py')
-    parser.add_argument('--gpus', type=str, default='0')
-    parser.add_argument('--batch-size', type=int, default=32)
-    args = parser.parse_args()
+    gpus = get_gpus()
+    assert gpus is not ''
+    batch_size = 32
 
     download_data()
-    test_imagenet1k_resnet(args)
-    test_imagenet1k_inception_bn(args)
+    test_imagenet1k_resnet(gpus=gpus, batch_size=batch_size)
+    test_imagenet1k_inception_bn(gpus=gpus, batch_size=batch_size)
