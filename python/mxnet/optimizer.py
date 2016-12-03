@@ -28,7 +28,7 @@ class Optimizer(object):
         return klass
 
     @staticmethod
-    def create_optimizer(name, rescale_grad=1, **kwargs):
+    def create_optimizer(name, rescale_grad=1, loaded_states=None, **kwargs):
         """Create an optimizer with specified name.
 
         Parameters
@@ -39,6 +39,9 @@ class Optimizer(object):
 
         rescale_grad : float
             Rescaling factor on gradient.
+
+        loaded_states : map from str to NDArray.
+            Loaded optimizer states, e.g. momentum.
 
         kwargs: dict
             Parameters for optimizer
@@ -51,6 +54,7 @@ class Optimizer(object):
         if name.lower() in Optimizer.opt_registry:
             return Optimizer.opt_registry[name.lower()](
                 rescale_grad=rescale_grad,
+                loaded_states=loaded_states,
                 **kwargs)
         else:
             raise ValueError('Cannot find optimizer %s' % name)
@@ -90,7 +94,7 @@ class Optimizer(object):
 
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
-                 lr_scheduler=None, sym=None, begin_num_update=0):
+                 lr_scheduler=None, sym=None, begin_num_update=0, loaded_states=None):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -114,6 +118,9 @@ class Optimizer(object):
 
         self.set_lr_mult({})
         self.set_wd_mult({})
+        self.loaded_states = loaded_states
+        self.states = dict()
+
 
     def create_state(self, index, weight):
         """Create additional optimizer state such as momentum.
@@ -121,6 +128,24 @@ class Optimizer(object):
 
     def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
+
+    def copy_states_to(self, opt_params):
+        """ Copy optimizer states to opt_params
+
+        Parameters
+        ----------
+        opt_params : list of NDArray
+            target state arrays
+        """
+        if self.states is None :
+            return
+        for k, v in self.states :
+            if (str(k) not in opt_params) or (opt_params[str(k)] is None) :
+                opt_params[str(k)] = zeros(self.states[k].shape())
+            self.states[k].copyto(opt_params[str(k)])
+
+
+
 
     # pylint: disable=no-self-use
     def set_lr_scale(self, args_lrscale):
@@ -813,11 +838,13 @@ def get_updater(optimizer):
     updater: function
          The clossure of the updater
     """
-    states = dict()
 
     def updater(index, grad, weight):
         """updater for kvstore"""
-        if index not in states:
-            states[index] = optimizer.create_state(index, weight)
-        optimizer.update(index, weight, grad, states[index])
+        if index not in optimizer.states:
+            if not(optimizer.loaded_states is None) and (str(index) in optimizer.loaded_states) :
+                optimizer.states[index] = optimizer.loaded_states[str(index)].copyto(weight.context)
+            else :
+                optimizer.states[index] = optimizer.create_state(index, weight)
+        optimizer.update(index, weight, grad, optimizer.states[index])
     return updater

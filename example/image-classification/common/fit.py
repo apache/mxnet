@@ -23,15 +23,15 @@ def _get_lr_scheduler(args, kv):
 
 def _load_model(args, rank=0):
     if 'load_epoch' not in args or args.load_epoch is None:
-        return (None, None, None)
+        return (None, None, None, None)
     assert args.model_prefix is not None
     model_prefix = args.model_prefix
     if rank > 0 and os.path.exists("%s-%d-symbol.json" % (model_prefix, rank)):
         model_prefix += "-%d" % (rank)
-    sym, arg_params, aux_params = mx.model.load_checkpoint(
+    sym, arg_params, aux_params, opt_params = mx.model.load_checkpoint(
         model_prefix, args.load_epoch)
     logging.info('Loaded model %s_%04d.params', model_prefix, args.load_epoch)
-    return (sym, arg_params, aux_params)
+    return (sym, arg_params, aux_params, opt_params)
 
 def _save_model(args, rank=0):
     if args.model_prefix is None:
@@ -119,7 +119,7 @@ def fit(args, network, data_loader, **kwargs):
         arg_params = kwargs['arg_params']
         aux_params = kwargs['aux_params']
     else:
-        sym, arg_params, aux_params = _load_model(args, kv.rank)
+        sym, arg_params, aux_params, opt_params = _load_model(args, kv.rank)
         if sym is not None:
             assert sym.tojson() == network.tojson()
 
@@ -141,6 +141,7 @@ def fit(args, network, data_loader, **kwargs):
         num_epoch     = args.num_epochs,
         arg_params    = arg_params,
         aux_params    = aux_params,
+        opt_params    = opt_params,
         learning_rate = lr,
         lr_scheduler  = lr_scheduler,
         momentum      = args.mom,
