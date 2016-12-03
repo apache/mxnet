@@ -1,7 +1,6 @@
 """
 test pretrained models
 """
-import argparse
 import mxnet as mx
 from common import find_mxnet, modelzoo
 from common.util import download_file
