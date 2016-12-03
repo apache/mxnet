@@ -21,7 +21,7 @@ def test_imagenet1k_resnet(args):
         (speed,) = score(model=m, data_val='data/val-5k-256.rec',
                          rgb_mean='0,0,0', metrics=acc, **vars(args))
         r = acc.get()[1]
-        print 'testing %s, acc = %f, speed = %f img/sec' % (m, r, speed)
+        print('testing %s, acc = %f, speed = %f img/sec' % (m, r, speed))
         assert r > g and r < g + .1
 
 def test_imagenet1k_inception_bn(args):
@@ -32,7 +32,7 @@ def test_imagenet1k_inception_bn(args):
                      data_val='data/val-5k-256.rec',
                      rgb_mean='123.68,116.779,103.939', metrics=acc, **vars(args))
     r = acc.get()[1]
-    print 'Tested %s acc = %f, speed = %f img/sec' % (m, r, speed)
+    print('Tested %s acc = %f, speed = %f img/sec' % (m, r, speed))
     assert r > g and r < g + .1
 
 if __name__ == '__main__':
