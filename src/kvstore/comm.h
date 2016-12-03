@@ -278,7 +278,7 @@ class CommDevice : public Comm {
         cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);
         if (access) {
           cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
-          if (e == cudaSuccess) {
+          if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
             ++enabled;
             p2p[i*n+j] = 1;
           }
