@@ -4,20 +4,20 @@
  * \brief
  * \author Bing Xu, Siyi Li
 */
-#ifndef MXNET_OPERATOR_INDEXING_OP_H_
-#define MXNET_OPERATOR_INDEXING_OP_H_
+#ifndef MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
+#define MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
-#include "../operator_common.h"
-#include "../mshadow_op.h"
-#include "../elemwise_op_common.h"
 #include <map>
 #include <vector>
 #include <string>
 #include <utility>
+#include "../operator_common.h"
+#include "../mshadow_op.h"
+#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -28,10 +28,10 @@ enum EmbeddingOpOutputs {kOut};
 enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
-struct EmbeddingParamNNVM: public dmlc::Parameter<EmbeddingParamNNVM> {
+struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int input_dim;
   int output_dim;
-  DMLC_DECLARE_PARAMETER(EmbeddingParamNNVM) {
+  DMLC_DECLARE_PARAMETER(EmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
     .describe("vocabulary size of the input indices.");
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
@@ -40,12 +40,12 @@ struct EmbeddingParamNNVM: public dmlc::Parameter<EmbeddingParamNNVM> {
 };
 
 inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
   using namespace mshadow;
   const TShape &dshape = (*in_attrs)[embedding::kData];
   if (dshape.ndim() ==  0) return false;
-  const EmbeddingParamNNVM& param = nnvm::get<EmbeddingParamNNVM>(attrs.parsed);
+  const EmbeddingParam& param = nnvm::get<EmbeddingParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
                                                            param.output_dim));
   out_attrs->clear();
@@ -61,8 +61,8 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
-                             std::vector<int> *in_type,
-                             std::vector<int> *out_type) {
+                            std::vector<int> *in_type,
+                            std::vector<int> *out_type) {
   CHECK_GE(in_type->size(), 1);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
@@ -124,7 +124,7 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
           << "Embedding layer doesn't support calculate data gradient";
 
   const TShape& ishape = inputs[1].shape_;
-  const TShape& oshape = outputs[0].shape_;
+  const TShape& oshape = inputs[0].shape_;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -166,4 +166,4 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_INDEXING_OP_H_
+#endif  // MXNET_OPERATOR_TENSOR_INDEXING_OP_H_

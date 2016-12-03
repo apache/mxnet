@@ -8,7 +8,7 @@
 #include "./indexing_op.h"
 namespace mxnet {
 namespace op {
-NNVM_REGISTER_OP(Embedding_nnvm)
+NNVM_REGISTER_OP(Embedding)
 .set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_embedding)
