@@ -216,7 +216,7 @@ One convolution might have several implementations, and you might want to switch
            struct ResourceRequest {
              enum Type {
                kRandom,  // get an mshadow::Random<xpu> object
-               kTempSpace,  // request temporay space
+               kTempSpace,  // request temporary space
              };
              Type type;
            };
@@ -304,7 +304,7 @@ One convolution might have several implementations, and you might want to switch
 
 ### Create an Operator from the Operator Property
 
- `OperatorProperty` includes all *semantical* attributes of an operation. It's also responsible for creating the `Operator` pointer for actual computation.
+ `OperatorProperty` includes all *semantic* attributes of an operation. It's also responsible for creating the `Operator` pointer for actual computation.
 
 #### Create Operator
 Implement the following interface in `OperatorProperty`:
@@ -713,7 +713,7 @@ The gradient, which can be found in `src/operator/smooth_l1_unary-inl.h`, is sim
 
 ### Beyond Two Operands
 The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs, 
-more than one output, or that need more features, see the original [Operator API](operator.md).
+more than one output, or that need more features, see the original [Operator API](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
 
 ## KVStore: Multiple Devices and Multiple Computers
 

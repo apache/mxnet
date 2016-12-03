@@ -57,7 +57,7 @@ To speed training, train a model using multiple computers.
   ../../tools/launch.py -n 2 python train_mnist.py --kv-store dist_sync
 ```
 
-You can use either synchronized SGD `dist_sync` or asynchronized SGD
+You can use either synchronous SGD `dist_sync` or asynchronous SGD
   `dist_async`.
 
 * If you have several computers that you can connect to using SSH, and if this mxnet folder is
@@ -96,7 +96,7 @@ program, see this [tutorial](http://mxnet.io/how_to/multi_devices.html).
 ## Generating Predictions
 You have several options for generating predictions:
 
-- [Use a pre-trained model](../notebooks/predict-with-pretrained-model.ipynb). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
+- Use a pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - Use your own datasets.
 - You can also easily run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html).
@@ -106,7 +106,7 @@ You have several options for generating predictions:
 
 There are two ways to feed data into MXNet:
 
-- Pack all examples into one or more compact `recordio` files. For more information, see this [step-by-step tutorial](http://mxnet.io/api/python/io.html#create-dataset-using-recordio) and [documentation](http://mxnet.io/architecture/note_data_loading.html). Avoid the common mistake of neglecting to shuffle the image list during packing. This causes training to fail. For example, ```accuracy``` keeps 0.001 for several rounds.
+- Pack all examples into one or more compact `recordio` files. For more information, see this [step-by-step tutorial](http://mxnet.io/api/python/io.html#create-a-dataset-using-recordio) and [documentation](http://mxnet.io/architecture/note_data_loading.html). Avoid the common mistake of neglecting to shuffle the image list during packing. This causes training to fail. For example, ```accuracy``` keeps 0.001 for several rounds.
 
 	**Note:** We automatically download the small datasets, such as `mnist` and `cifar10`.
 
@@ -138,7 +138,7 @@ There are two ways to feed data into MXNet:
 
 The following factors can significantly improve performance:
 
-* A fast back end. A fast BLAS library, e.g., openblas, altas,
+* A fast back end. A fast BLAS library, e.g., openblas, atlas,
 and mkl, is necessary only if you are using a CPU processor. For Nvidia GPUs, we strongly
 recommend using CUDNN.
 * Input data:
@@ -162,7 +162,7 @@ recommend using CUDNN.
 
 
 * If you are using more than one GPU, the right `kvstore`. For more information, see
-  [doc/developer-guide/multi_node.md](../../doc/developer-guide/multi_node.md).
+  [this guide](http://mxnet.io/how_to/multi_devices.html#distributed-training-with-multiple-machines).
 
 
 	- For a single computer, the default `local` is often sufficient. For models bigger than 100 MB, such as AlexNet

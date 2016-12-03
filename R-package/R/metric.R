@@ -26,13 +26,15 @@ mx.metric.accuracy <- mx.metric.custom("accuracy", function(label, pred) {
   return(sum((as.array(label) + 1) == ypred) / length(label))
 })
 
-#' Top-k accuracy metric for classification
-#'
-#' @export
+#' Helper function for top-k accuracy
 is.num.in.vect <- function(vect, num){
   resp <- any(is.element(vect, num))
   return(resp)
 }
+
+#' Top-k accuracy metric for classification
+#'
+#' @export
 mx.metric.top_k_accuracy <- mx.metric.custom("top_k_accuracy", function(label, pred, top_k = 5) {
   if(top_k == 1){
     return(mx.metric.accuracy(label,pred))
@@ -44,6 +46,14 @@ mx.metric.top_k_accuracy <- mx.metric.custom("top_k_accuracy", function(label, p
   }
 })
 
+#' MSE (Mean Squared Error) metric for regression
+#'
+#' @export
+mx.metric.rmse <- mx.metric.custom("mse", function(label, pred) {
+  res <- mean((label-pred)^2)
+  return(res)
+})
+    
 #' RMSE (Root Mean Squared Error) metric for regression
 #'
 #' @export

@@ -1584,6 +1584,42 @@ def test_l2_normalization():
                     for width in [5, 7]:
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
+def sequence_mask_numpy(array, lengths, value):
+    arrayMask = array.copy()
+    shape = array.shape
+    batch = shape[1]
+    for i in range(batch):
+        arrayMask[int(lengths[i]):, i] = value 
+    return arrayMask
+
+def check_sequence_mask(shape, xpu, mask_value):
+    # bind with label
+    X = mx.symbol.Variable('X')
+    L = mx.symbol.Variable('L') # lengths
+    Y = mx.symbol.SequenceMask(data=X, use_sequence_length=True, sequence_length=L, value=mask_value)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    l = mx.nd.array(np.random.randint(1, shape[0] + 1, shape[1]), ctx=mx.cpu()).copyto(xpu)
+
+    # numpy result
+    np_out = sequence_mask_numpy(x.asnumpy(), l.asnumpy(), mask_value)
+    # mxnet result
+    gradX = mx.nd.empty(shape, ctx = xpu)
+    gradL = mx.nd.empty((shape[1]), ctx = xpu)
+    exec1 = Y.bind(xpu, args = [x, l], grad_req={'X':'write', 'L':'null'}, args_grad = {'X':gradX, 'L':gradL})
+    exec1.forward()
+    out = exec1.outputs[0].asnumpy()
+    # compare numpy + mxnet
+    assert_allclose(out, np_out, rtol=1e-5)
+    # grad check
+    check_numeric_gradient(Y, [x.asnumpy(), l.asnumpy()], grad_nodes={'X':'write'},
+        numeric_eps=1e-3, check_eps=1)
+
+def test_sequence_mask():
+    shape1 = (4, 2, 2, 3)
+    shape2 = (1, 2, 2, 3, 1, 1)
+    check_sequence_mask(shape1, default_context(), 2.1)
+    check_sequence_mask(shape2, default_context(), 0.1)
+
 def mathematical_core_binary(name,
                              forward_mxnet_call,
                              forward_numpy_call,
@@ -1629,7 +1665,6 @@ def mathematical_core_binary(name,
         name, arr_grad1, npout_grad)
     assert reldiff(arr_grad2, npout_grad2) < 1e-6, "%s mathematical backward2 failed\n%s\n\n%s" % (
         name, arr_grad2, npout_grad)
-
 
 def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
@@ -1922,5 +1957,6 @@ if __name__ == '__main__':
     test_pad()
     test_instance_normalization()
     test_l2_normalization()
+    test_sequence_mask()
     test_mathematical()
     test_special_functions_using_scipy()

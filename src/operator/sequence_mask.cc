@@ -10,11 +10,11 @@ namespace mshadow {
 
 template <typename DType>
 inline void SequenceMask(const Tensor<cpu, 3, DType> &dst,
-                         const Tensor<cpu, 1, DType> label) {
+                         const Tensor<cpu, 1, DType> label, DType value) {
   for (index_t b = 0; b < dst.size(1); ++b)
     for (index_t s = label[b]; s < dst.size(0); ++s)
       for (index_t r = 0; r < dst.size(2); ++r)
-        dst[s][b][r] = 0.;
+        dst[s][b][r] = value;
 }
 
 }  // namespace mshadow
@@ -44,7 +44,7 @@ DMLC_REGISTER_PARAMETER(SequenceMaskParam);
 
 MXNET_REGISTER_OP_PROPERTY(SequenceMask, SequenceMaskProp)
     .describe(
-"Sets all elements outside the sequence to zero. Takes an n-dimensional tensor of the "
+"Sets all elements outside the sequence to a constant value. Takes an n-dimensional tensor of the "
 "form [max sequence length, batchsize, other dims] and returns a tensor of the same "
 "shape. This operator takes an optional input tensor sequence_length of positive ints of "
 "dimension [batchsize] when the sequence_length option is set to true. This allows the "

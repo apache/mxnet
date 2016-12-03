@@ -6,9 +6,9 @@ In this topic, we provide a step-by-step tutorial on how to set up an AWS cluste
 MXNet. We show how to:
 
 - [Use Amazon S3 to host data](#use-amazon-s3-to-host-data)
-- [Set up an EC2 GPU instance with all dependencies installed](#setup-an-ec2-gpu-instance)
+- [Set up an EC2 GPU instance with all dependencies installed](#set-up-an-ec2-gpu-instance)
 - [Build and run MXNet on a single computer](#build-and-run-mxnet-on-a-gpu-instance)
-- [Set up an EC2 GPU cluster for distributed training](#setup-an-ec2-gpu-cluster)
+- [Set up an EC2 GPU cluster for distributed training](#set-up-an-ec2-gpu-cluster-for-distributed-training)
 
 ### Use Amazon S3 to Host Data
 

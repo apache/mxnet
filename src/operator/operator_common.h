@@ -82,7 +82,7 @@ struct InferTypeError {
     } else {                                                            \
       if (local_out != shape) {                                         \
         std::ostringstream os;                                          \
-        os << "Shape inconsistent, Provided " <<  '='<< local_out << ','\
+        os << "Shape inconsistent, Provided=" << local_out << ','       \
            << " inferred shape=" << shape;                              \
         throw ::mxnet::op::InferShapeError(os.str(), index);            \
       }                                                                 \
@@ -104,7 +104,7 @@ struct InferTypeError {
     } else {                                                            \
       if (local_out != type) {                                          \
         std::ostringstream os;                                          \
-        os << "Type inconsistent, Provided " <<  '='<< local_out << ',' \
+        os << "Type inconsistent, Provided=" << local_out << ','        \
            << " inferred type=" << type;                                \
         throw ::mxnet::op::InferTypeError(os.str(), index);             \
       }                                                                 \

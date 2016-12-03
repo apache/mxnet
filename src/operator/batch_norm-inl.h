@@ -266,8 +266,7 @@ class BatchNormProp : public OperatorProperty {
             out_data[batchnorm::kMean],
             out_data[batchnorm::kVar],
             in_data[batchnorm::kData],
-            in_data[batchnorm::kGamma],
-            in_data[batchnorm::kBeta]
+            in_data[batchnorm::kGamma]
            };
   }
 

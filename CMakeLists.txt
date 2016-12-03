@@ -236,6 +236,8 @@ if(USE_CUDA)
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
+  add_definitions(-DMXNET_USE_CUDA=1)
+  add_definitions(-DMXNET_USE_NVRTC=1)
 endif()
 
 # unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well

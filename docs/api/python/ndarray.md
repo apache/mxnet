@@ -128,7 +128,7 @@ Currently, we *do not* allow operations among arrays from different contexts. To
 
     .. raw:: html
 
-        <script>auto_index("mxnet.ndarray");</script>
+        <script>auto_index("ndarray-api-reference");</script>
 ```
 
 ## NDArray Random API Reference
@@ -140,7 +140,7 @@ Currently, we *do not* allow operations among arrays from different contexts. To
 
     .. raw:: html
 
-        <script>auto_index("mxnet.random");</script>
+        <script>auto_index("ndarray-random-api-reference");</script>
 ```
 
 
@@ -153,7 +153,7 @@ Currently, we *do not* allow operations among arrays from different contexts. To
 
     .. raw:: html
 
-        <script>auto_index("mxnet.context");</script>
+        <script>auto_index("context-api-reference");</script>
 ```
 
 ## Next Steps
