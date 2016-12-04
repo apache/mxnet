@@ -25,11 +25,10 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
       case mshadow::kFloat64:
           return new MKLReluOp<cpu, double>();
       default:
-          LOG(INFO) << MKLReluOp<cpu, float>::getName() << " Skip MKL optimization";
           break;
       }
   }
-
+  LOG(INFO) << MKLReluOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.act_type) {

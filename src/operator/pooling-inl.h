@@ -25,7 +25,6 @@ namespace pool_enum {
 enum PoolingOpInputs {kData};
 enum PoolingOpOutputs {kOut};
 enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling};
-enum PoolingOpPadConventionType {kValid, kFull};
 }  // namespace pool_enum
 
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
@@ -33,7 +32,6 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   TShape stride;
   TShape pad;
   int pool_type;
-  int pooling_convention;
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
@@ -49,13 +47,6 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("avg", pool_enum::kAvgPooling)
     .add_enum("sum", pool_enum::kSumPooling)
     .describe("Pooling type to be applied.");
-
-    DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
-    .add_enum("full", pool_enum::kFull)
-    .add_enum("valid", pool_enum::kValid)
-    .describe("Pooling convention to be applied."
-              "kValid is default setting of Mxnet and rounds down the output pooling size."
-              "kFull is compatible with Caffe and rounds up the output pooling size.");
 
     int stride_shape[] = {1, 1};
     DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
@@ -176,9 +167,8 @@ class PoolingOp : public Operator {
 };  // class PoolingOp
 
 template<typename xpu>
-Operator* CreateOp(PoolingParam param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape);
+Operator* CreateOp(PoolingParam param, int dtype);
+
 
 #if DMLC_USE_CXX11
 class PoolingProp : public OperatorProperty {
@@ -206,56 +196,28 @@ class PoolingProp : public OperatorProperty {
         oshape[2] = 1;
         oshape[3] = 1;
       } else {
-        CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0])
-            << "kernel size (" << param_.kernel[0] << ") exceeds input (" << dshape[2]
-            << " padded to " << (dshape[2] + 2*param_.pad[0]) << ")";
-        CHECK(param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
-            << "kernel size (" << param_.kernel[1] << ") exceeds input (" << dshape[3]
-            << " padded to " << (dshape[3] + 2*param_.pad[1]) << ")";
-        if (param_.pooling_convention == pool_enum::kValid) {
-          oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-                              param_.stride[0];
-          oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
-                              param_.stride[1];
-        } else {
-          oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
-                              dshape[2] + 2 * param_.pad[0] -
-                              param_.kernel[0]) / param_.stride[0]));
-          oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
-                              dshape[3] + 2 * param_.pad[1] -
-                              param_.kernel[1]) / param_.stride[1]));
-        }
+        CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0]
+              && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
+            << "kernel size exceed input";
+        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
+        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
       }
       out_shape->clear();
       out_shape->push_back(oshape);
     } else if (param_.kernel.ndim() == 3) {
       CHECK_EQ(dshape.ndim(), 5) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
-      CHECK_LT(param_.kernel[0], dshape[2] + 2 * param_.pad[0]) << "kernel size exceeds input";
-      CHECK_LE(param_.kernel[1], dshape[3] + 2 * param_.pad[1]) << "kernel size exceeds input";
-      CHECK_LE(param_.kernel[2], dshape[4] + 2 * param_.pad[2]) << "kernel size exceeds input";
+      CHECK(param_.kernel[0] < dshape[2] + 2 * param_.pad[0]
+            && param_.kernel[1] <= dshape[3] + 2 * param_.pad[1]
+            && param_.kernel[2] <= dshape[4] + 2 * param_.pad[2])
+          << "kernel size exceed input";
       if (param_.global_pool) {
         oshape[2] = 1;
         oshape[3] = 1;
         oshape[4] = 1;
       } else {
-        if (param_.pool_type == pool_enum::kValid) {
-          oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-                              param_.stride[0];
-          oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
-                              param_.stride[1];
-          oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) /
-                              param_.stride[2];
-        } else {
-          oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
-                              dshape[2] + 2 * param_.pad[0] -
-                              param_.kernel[0]) / param_.stride[0]));
-          oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
-                              dshape[3] + 2 * param_.pad[1] -
-                              param_.kernel[1]) / param_.stride[1]));
-          oshape[4] = 1 + static_cast<int>(ceil(static_cast<float>(
-                              dshape[4] + 2 * param_.pad[2] -
-                              param_.kernel[2]) / param_.stride[2]));
-        }
+        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) / param_.stride[0];
+        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) / param_.stride[1];
+        oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) / param_.stride[2];
       }
 
       out_shape->clear();

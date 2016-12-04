@@ -32,10 +32,10 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
     case mshadow::kFloat64:
       return new MKLConvolutionOp<cpu, double>(param);
     default:
-      LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
       break;
     }
   }
+  LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   if ((param.dilate[0] == 1 && param.dilate[1] == 1)

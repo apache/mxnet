@@ -24,11 +24,11 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
       return new MKLConcatOp<cpu, float>(param);
     case mshadow::kFloat64:
       return new MKLConcatOp<cpu, double>(param);
-    default:
-      LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
+    default:      
       break;
     }
   }
+  LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConcatOp<cpu, DType>(param);
