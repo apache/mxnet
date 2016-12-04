@@ -1131,7 +1131,7 @@ def hypot(left, right):
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
 
-def arange(start, stop=None, step=None, repeat=1, name=None, dtype=_numpy.float32):
+def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=_numpy.float32):
     """Simlar function in the MXNet ndarray as numpy.arange
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
 
@@ -1143,7 +1143,7 @@ def arange(start, stop=None, step=None, repeat=1, name=None, dtype=_numpy.float3
         End of interval. The interval does not include this value.
     step : number, optional
         Spacing between values
-    repeat : number, optional
+    repeat : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
     dtype : type, optional
