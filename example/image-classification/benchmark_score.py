@@ -56,8 +56,9 @@ if __name__ == '__main__':
     batch_sizes = [1, 2, 4, 8, 16, 32]
 
     for net in networks:
+        logging.info('network: %s', net)
         for d in devs:
+            logging.info('device: %s', d)
             for b in batch_sizes:
                 speed = score(network=net, dev=d, batch_size=b, num_batches=10)
-                logging.info('network %s, device %s, batch size %2d, image/sec: %f',
-                             net, d, b, speed)
+                logging.info('batch size %2d, image/sec: %f', b, speed)
