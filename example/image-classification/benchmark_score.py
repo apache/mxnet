@@ -49,6 +49,7 @@ def score(network, dev, batch_size, num_batches):
 
 if __name__ == '__main__':
     networks = ['alexnet', 'vgg', 'inception-bn', 'inception-v3'] # 'resnet-50', 'resnet-152'
+    # TODO(mli) resnet-50 cause core dump when USE_MKL2017_EXPERIMENTAL is enabled
 
     devs = [mx.gpu(0)] if len(get_gpus()) > 0 else []
     devs.append(mx.cpu())

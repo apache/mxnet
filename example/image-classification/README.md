@@ -242,22 +242,22 @@ For more usages:
 
 ### Benchmark
 
-To run benchmark on imagenet networks, use `--benchmark 1` as the argument to `train_imagenet.py`, An example is shown below:  
+To run benchmark on imagenet networks, use `--benchmark 1` as the argument to `train_imagenet.py`, An example is shown below:
 
 ```bash
 python train_imagenet.py --benchmark 1 --gpus 0,1 --network inception-v3 --batch-size 64 \
   --image-shape 3,299,299 --num-epochs 1 --kv-store device
 ```
 
-When running in benchmark mode, the script generates synthetic data of the given data shape and batch size.  
+When running in benchmark mode, the script generates synthetic data of the given data shape and batch size.
 
-The `benchmark.py` can be used to run a series of benchmarks against different image networks on a given set of workers and takes the following arguments:  
+The `benchmark.py` can be used to run a series of benchmarks against different image networks on a given set of workers and takes the following arguments:
 - `--worker_file`: file that contains a list of worker hostnames or list of worker ip addresses that have passwordless ssh enabled.
-- `--worker_count`: number of workers to run benchmark on.  
-- `--gpu_count`: number of gpus on each worker to use.  
-- `--networks`: one or more networks in the format network_name:batch_size:image_size.  
+- `--worker_count`: number of workers to run benchmark on.
+- `--gpu_count`: number of gpus on each worker to use.
+- `--networks`: one or more networks in the format network_name:batch_size:image_size.
 
-The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using `kv-store=device` and after that running on variable number of nodes on all gpus starting with 1 node upto `worker_count` doubling the number of nodes used in each run using `kv-store=dist_sync_device`.  
+The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using `kv-store=device` and after that running on variable number of nodes on all gpus starting with 1 node upto `worker_count` doubling the number of nodes used in each run using `kv-store=dist_sync_device`.
 
 An example to run the benchmark script is shown below with 8 workers and 16 gpus on each worker:
 ```
@@ -293,7 +293,8 @@ aspects:
   - Data preprocessing is done by `opencv`.  If opencv is compiled from source
     codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
-- CPU performance. Check MKL DNN is used
+- CPU performance. Check MKL DNN is used, namely set `USE_MKL2017 = 1` and
+  `USE_MKL2017_EXPERIMENTAL = 1` to compile
 - Single GPU performace
   - Check the recent CUDNN is used
   - Check the environment variable `MXNET_CUDNN_AUTOTUNE_DEFAULT` is set
