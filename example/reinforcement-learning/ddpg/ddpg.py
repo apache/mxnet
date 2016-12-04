@@ -254,12 +254,12 @@ class DDPG(object):
         # update target networks
         for name, arr in self.policy_target.arg_dict.items():
             if name not in self.policy_input_shapes:
-                arr = (1.0 - self.soft_target_tau) * arr + \
-                      self.soft_target_tau * self.policy.arg_dict[name]
+                arr[:] = (1.0 - self.soft_target_tau) * arr[:] + \
+                      self.soft_target_tau * self.policy.arg_dict[name][:]
         for name, arr in self.qfunc_target.arg_dict.items():
             if name not in self.qfunc_input_shapes:
-                arr = (1.0 - self.soft_target_tau) * arr + \
-                      self.soft_target_tau * self.qfunc.arg_dict[name]
+                arr[:] = (1.0 - self.soft_target_tau) * arr[:] + \
+                      self.soft_target_tau * self.qfunc.arg_dict[name][:]
 
         self.qfunc_loss_averages.append(qfunc_loss)
         self.policy_loss_averages.append(policy_loss)

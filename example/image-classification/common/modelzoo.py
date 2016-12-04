@@ -16,7 +16,11 @@ _default_model_info = {
     'imagenet1k-resnet-152': {'symbol':_base_model_url+'imagenet/resnet/152-layers/resnet-152-symbol.json',
                              'params':_base_model_url+'imagenet/resnet/152-layers/resnet-152-0000.params'},
     'imagenet11k-resnet-152': {'symbol':_base_model_url+'imagenet-11k/resnet-152/resnet-152-symbol.json',
-                             'params':_base_model_url+'imagenet-11k/resnet-152/resnet-152-0000.params'}
+                             'params':_base_model_url+'imagenet-11k/resnet-152/resnet-152-0000.params'},
+    'imagenet11k-place365ch-resnet-152': {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-152-symbol.json',
+                                          'params':_base_model_url+'imagenet-11k-place365-ch/resnet-152-0000.params'},
+    'imagenet11k-place365ch-resnet-50': {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-50-symbol.json',
+                                         'params':_base_model_url+'imagenet-11k-place365-ch/resnet-50-0000.params'},
 }
 
 def download_model(model_name, dst_dir='./', meta_info=None):
