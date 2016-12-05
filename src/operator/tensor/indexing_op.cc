@@ -29,13 +29,18 @@ NNVM_REGISTER_OP(Embedding)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_embedding"})
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[0]);
+    return MakeGradNode("_backward_Embedding", n, heads, n->attrs.dict);
+  })
 .add_argument("data", "Symbol", "Input data to the EmbeddingOp.")
-.add_argument("weight", "Symbol", "Enbedding weight matrix.")
+.add_argument("weight", "Symbol", "Embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_embedding)
-.set_num_inputs(3)
+NNVM_REGISTER_OP(_backward_Embedding)
+.set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {

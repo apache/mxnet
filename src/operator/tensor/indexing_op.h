@@ -118,7 +118,7 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  CHECK_EQ(inputs.size(), 3);
+  CHECK_EQ(inputs.size(), 2);
   CHECK_EQ(outputs.size(), 2);
   CHECK_EQ(req[embedding::kData], kNullOp)
           << "Embedding layer doesn't support calculate data gradient";
