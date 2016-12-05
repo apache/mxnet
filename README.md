@@ -22,6 +22,9 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Updated Image Classification with new Pre-trained Models](./example/image-classification)
+* [Python Notebooks for How to Use MXNet](https://github.com/dmlc/mxnet-notebooks)
+* [MKLDNN for Faster CPU Performance](./MKL_README.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [Embedding Torch layers and functions in MXNet](http://mxnet.io/how_to/torch.html)
