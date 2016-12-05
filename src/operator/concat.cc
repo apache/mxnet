@@ -24,7 +24,7 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
       return new MKLConcatOp<cpu, float>(param);
     case mshadow::kFloat64:
       return new MKLConcatOp<cpu, double>(param);
-    default:      
+    default:
       break;
     }
   }

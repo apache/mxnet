@@ -17,17 +17,17 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
-
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
-    if ((param.pool_type == pool_enum::kMaxPooling
-      || param.pool_type == pool_enum::kAvgPooling)) {
+    if ((param.pool_type == pool_enum::kMaxPooling)
+      || (param.pool_type == pool_enum::kAvgPooling
+      && UseMKLPooling(param))) {
       switch (dtype) {
       case mshadow::kFloat32:
         return new MKLPoolingOp<cpu, float>(param);
       case mshadow::kFloat64:
         return new MKLPoolingOp<cpu, double>(param);
-      default:        
+      default:
         break;
       }
     }

@@ -20,7 +20,7 @@ Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
   if (!param.use_global_stats)
     return new MKLBatchNormOp<cpu, float>(param);
   else
-  	LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() << " Skip MKL optimization";
+    LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   return new BatchNormOp<cpu>(param);
 }

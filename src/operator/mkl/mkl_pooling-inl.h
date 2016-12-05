@@ -31,7 +31,15 @@
 
 namespace mxnet {
 namespace op {
-
+bool UseMKLPooling(PoolingParam param) {
+  if (param.kernel.ndim() != 2) {
+    return false;
+  }
+  if (param.pooling_convention == pool_enum::kFull) {
+    return true;
+  }
+  return false;
+}
 
 
 template<typename xpu, typename DType>
@@ -347,7 +355,7 @@ class MKLPoolingOp : public Operator {
  private:
   size_t kernel_size[2],
          kernel_stride[4];
-  int src_offset[4]; // 2*(dimension šC 2)
+  int src_offset[4];  // 2*(dimension-2)
   dnnPrimitive_t poolingFwd, poolingBwd;
   DType *max_idx_data;
 
