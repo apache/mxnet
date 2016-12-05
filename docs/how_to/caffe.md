@@ -1,20 +1,20 @@
-# How to Start for Caffe Users
+# How to | Convert from Caffe to MXNet
 
-This document go through topics for Caffe users to use MXNet.
+Key topics covered include the following:
 
-- [Concepts difference between Caffe and MXNet]()
-- [How to convert models trained in Caffe to MXNet]()
-- [How to call Caffe opertor in MXNet]()
+- [Conceptual differences between Caffe and MXNet]()
+- [Converting Caffe trained models to MXNet]()
+- [Calling Caffe operators in MXNet]()
 
-## Concepts difference between Caffe and MXNet
+## Conceptual differences between Caffe and MXNet
 
-## How to convert models trained in Caffe to MXNet
+## Converting Caffe trained models to MXNet
 
 ### Build (Linux)
 
 Either [Caffe's python package](http://caffe.berkeleyvision.org/installation.html) or [Google protobuf](https://developers.google.com/protocol-buffers/?hl=en) is required. The latter is often much easier to install:
 
-1. We first install the protobuf compiler. If you compiled mxnet with `USE_DIST_KVSTORE = 1` then it is already built. Otherwise, install `protobuf-compiler` by your favor package manager, e.g. `sudo apt-get install protobuf-compiler` for ubuntu and `sudo yum install protobuf-compiler` for redhat/fedora.
+1. Install the protobuf compiler. If you compiled mxnet with `USE_DIST_KVSTORE = 1` then it is already built. Otherwise, install `protobuf-compiler` by your favorite package manager, e.g. `sudo apt-get install protobuf-compiler` for ubuntu and `sudo yum install protobuf-compiler` for redhat/fedora.
 
 2. Then install the protobuf's python binding. For example `sudo pip install protobuf`
 
@@ -28,7 +28,7 @@ We must make sure that the installed python binding and protobuf compiler are us
 so we install the bindings first, and then install the corresponding compiler.
 
 1. Install the protobuf bindings. At time of writing, the conda package manager has the most up to date version. Either run `conda install -c conda-forge protobuf` or `pip install protobuf`
-2. Download the win32 build of protoc from [Protocol Buffers Releases](https://github.com/google/protobuf/releases). Make sure to download the version that corresponds to the version of the bindings. Extract to any location then add that location to your `PATH`
+2. Download the win32 build of protobuf from [Protocol Buffers Releases](https://github.com/google/protobuf/releases). Make sure to download the version that corresponds to the version of the bindings. Extract to any location then add that location to your `PATH`
 3. Run `make_win32.bat` to build the package
 
 
@@ -49,7 +49,7 @@ For example: `python convert_model.py VGG_ILSVRC_16_layers_deploy.prototxt VGG_I
     * This importer doesn't handle this problem properly yet
     * And example of this failure is importing bvlc_Googlenet. The user needs to add padding to stride-2 pooling to make this work right now.
 
-## How to call Caffe opertor in MXNet
+## Calling Caffe operators in MXNet
 
 [Caffe](http://caffe.berkeleyvision.org/) is a well-known and widely used deep learning framework. MXNet supports calling most Caffe operators (layers) and loss functions directly in its symbolic graph. Using your own customized Caffe layer is also effortless.
 
