@@ -18,7 +18,7 @@
 #include "./operator_common.h"
 #include "./mshadow_op.h"
 
-#if defined(USE_STATIC_MKL) && defined(_OPENMP)
+#if defined(USE_MKL) && defined(_OPENMP)
 #include <omp.h>
 #include <sched.h>
 
@@ -35,9 +35,10 @@ enum DropoutOpForwardResource {kRandom};
 namespace mxnet {
 namespace op {
 
-#if defined(USE_STATIC_MKL) && defined(_OPENMP)
+#if defined(USE_MKL) && defined(_OPENMP)
+static unsigned int bernoulli_seed = 1;
 static void bernoulli_generate(int n, double p, int* r) {
-  int seed = 17 + rand_r() % 4096;
+  int seed = 17 + rand_r(&bernoulli_seed) % 4096;
   int nthr = omp_get_max_threads();
 # pragma omp parallel num_threads(nthr)
   {
@@ -89,7 +90,7 @@ class DropoutOp : public Operator {
     Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
     if (ctx.is_train) {
       Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
-#if defined(USE_STATIC_MKL) && defined(_OPENMP)
+#if defined(USE_MKL) && defined(_OPENMP)
       DType* outptr = out.dptr_;
       DType* dataptr = data.dptr_;
       int* maskptr = reinterpret_cast<int*>(mask.dptr_);
@@ -125,7 +126,7 @@ class DropoutOp : public Operator {
     Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
-#if defined(USE_STATIC_MKL) && defined(_OPENMP)
+#if defined(USE_MKL) && defined(_OPENMP)
       DType* ingradptr = gdata.dptr_;
       DType* outgradptr = grad.dptr_;
       int* maskptr = reinterpret_cast<int*>(mask.dptr_);
