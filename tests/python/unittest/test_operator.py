@@ -1926,7 +1926,7 @@ def test_init():
             pred = exe.forward(is_train=False)[0].asnumpy()
             assert_almost_equal(pred, gt, default_numerical_threshold())
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
-    test_basic_val_init(mx.sym.ones, np.ones, 3, np.int)
+    test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
     test_arange()
 
