@@ -14,6 +14,189 @@
 namespace mxnet {
 namespace op {
 
+struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
+  TShape target_shape;
+  bool keep_highest;
+  nnvm::Tuple<int> shape;
+  bool reverse;
+  DMLC_DECLARE_PARAMETER(ReshapeParam) {
+    int tmp[] = {0, 0};
+    DMLC_DECLARE_FIELD(target_shape)
+    .set_default(TShape(tmp, tmp + 2))
+    .describe("(Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, "
+              "in which case it will be inferred from the rest of dims");
+    DMLC_DECLARE_FIELD(keep_highest).set_default(false)
+    .describe("(Deprecated! Use shape instead.) Whether keep the highest dim unchanged."
+              "If set to true, then the first dim in target_shape is ignored,"
+              "and always fixed as input");
+    DMLC_DECLARE_FIELD(shape)
+    .set_default(nnvm::Tuple<int>())
+    .describe("Target shape, a tuple, t=(t_1,t_2,..,t_m).\n"
+              "Let the input dims be s=(s_1,s_2,..,s_n).\n"
+              "The output dims u=(u_1,u_2,..,u_p) are computed from s and t.\n"
+              "The target shape tuple elements t_i are read in order, and used to "
+              " generate successive output dims u_p:\n"
+              "t_i:       meaning:      behavior:\n"
+              "+ve        explicit      u_p = t_i\n"
+              "0          copy          u_p = s_i\n"
+              "-1         infer         u_p = (Prod s_i) / (Prod u_j | j != p)\n"
+              "-2         copy all      u_p = s_i, u_p+1 = s_i+1, ...\n"
+              "-3         merge two     u_p = s_i * s_i+1\n"
+              "-4,a,b     split two     u_p = a, u_p+1 = b | a * b = s_i\n"
+              "The split directive (-4) in the target shape tuple is followed by "
+              "two dimensions, one of which can be -1, which means it will be "
+              "inferred from the other one and the original dimension.\n"
+              "The can only be one globally inferred dimension (-1), aside from "
+              "any -1 occuring in a split directive.");
+    DMLC_DECLARE_FIELD(reverse)
+      .set_default(false)
+      .describe("Whether to match the shapes from the backward. If reverse is true, "
+      "0 values in the `shape` argument will be searched from the backward. E.g the "
+      "original shape is (10, 5, 4) and the shape argument is (-1, 0). If reverse is true, "
+      "the new shape should be (50, 4). Otherwise it will be (40, 5).");
+  }
+};
+
+inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(param_.target_shape.ndim() > 0 ||
+           param_.shape.ndim() > 0, true) << "targe_shape or shape must be present.";
+  const TShape &dshape = (*in_attrs)[0];
+  if (dshape.ndim() == 0) return false;
+  if (param_.shape.ndim() != 0) {
+    std::vector<int> dshape_vec;
+    std::vector<int> param_shape_vec(param_.shape.begin(), param_.shape.end());
+    for (index_t i = 0; i < dshape.ndim(); ++i) {
+      dshape_vec.push_back(dshape[i]);
+    }
+    std::vector<int> tmp;
+    int src_idx = 0;
+    int inf_idx = -1;
+    size_t new_size = dshape.Size();
+    if (param_.reverse) {
+      std::reverse(dshape_vec.begin(), dshape_vec.end());
+      std::reverse(param_shape_vec.begin(), param_shape_vec.end());
+    }
+    auto dshape_len = dshape_vec.size();
+    auto params_len = param_shape_vec.size();
+    for (index_t i = 0; i < params_len; ++i) {
+      int proposed_dim = param_shape_vec[i];
+      if (proposed_dim == 0) {
+        // keep same
+        CHECK_LT(src_idx, dshape_len);
+        tmp.push_back(dshape_vec[src_idx++]);
+        new_size /= tmp.back();
+      } else if (proposed_dim == -1) {
+        // infer
+        CHECK_LT(inf_idx, 0) << "One and only one dim can be inferred";
+        inf_idx = i;
+        tmp.push_back(0);
+        src_idx++;
+      } else if (proposed_dim == -2) {
+        // copy all remaining dims from source
+        while (src_idx < dshape_len) {
+          size_t dn = dshape_vec[src_idx++];
+          new_size /= dn;
+          tmp.push_back(dn);
+        }
+      } else if (proposed_dim == -3) {
+        // merge two dims from source
+        CHECK_LT(src_idx, dshape_len-1);
+        size_t d1 = dshape_vec[src_idx++];
+        size_t d2 = dshape_vec[src_idx++];
+        size_t dn = d1 * d2;
+        new_size /= dn;
+        tmp.push_back(dn);
+      } else if (proposed_dim == -4) {
+        // split the source dim s into two dims
+        // read the left dim and then the right dim (either can be -1)
+        CHECK_LT(i + 2, params_len);
+        CHECK_LT(src_idx, dshape_len);
+        size_t d0 = dshape_vec[src_idx++];
+        int d1 = param_shape_vec[++i];
+        int d2 = param_shape_vec[++i];
+        CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
+        if (d1 == -1) d1 = d0 / d2;
+        if (d2 == -1) d2 = d0 / d1;
+        CHECK_EQ(d1 * d2, d0) <<
+          "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
+        new_size /= d0;
+        tmp.push_back(d1);
+        tmp.push_back(d2);
+      } else {
+        // greater than 0, new shape
+        CHECK_EQ(new_size % proposed_dim, 0) << "Illegal dim setting, can't be divided.";
+        tmp.push_back(proposed_dim);
+        new_size /= proposed_dim;
+        src_idx++;
+      }
+    }
+
+    if (inf_idx >= 0) {
+      tmp[inf_idx] = new_size;
+    }
+    if (param_.reverse) {
+      std::reverse(param_shape_vec.begin(), param_shape_vec.end());
+      std::reverse(dshape_vec.begin(), dshape_vec.end());
+      std::reverse(tmp.begin(), tmp.end());
+    }
+    TShape oshape(tmp.begin(), tmp.end());
+    CHECK_EQ(oshape.Size(), dshape.Size())
+      << "Target shape size is different to source. "
+      << "Target: " << oshape
+      << "\nSource: " << dshape;
+    out_attrs->clear();
+    out_attrs->push_back(oshape);
+  } else {
+    LOG(INFO) << "Using target_shape will be deprecated.";
+    TShape oshape = param_.target_shape;
+    int neg_count = 0;
+    index_t inf_idx = 0;
+    index_t start_idx = param_.keep_highest ? 1 : 0;
+    if (param_.keep_highest) {
+      oshape[0] = dshape[0];
+    }
+    for (index_t i = start_idx; i < oshape.ndim(); ++i) {
+      if (oshape[i] == 0) {
+        neg_count++;
+        inf_idx = i;
+      }
+    }
+    if (neg_count == 1) {
+      oshape[inf_idx] = 1;
+      oshape[inf_idx] = dshape.Size() / oshape.Size();
+    }
+
+    CHECK(oshape.Size() == dshape.Size())
+        << "Target shape size is different to source. "
+        << "Target: " << param_.target_shape.Size()
+        << "\nSource: " << dshape.Size();
+    out_attrs->clear();
+    out_attrs->push_back(oshape);
+  }
+  return true;
+}
+
+inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1);
+  const TShape &dshape = (*in_attrs)[0];
+  if (dshape.ndim() == 0) return false;
+  out_attrs->clear();
+  uint32_t target_dim = 1;
+  for (uint32_t i = 1; i < dshape.ndim(); ++i) {
+    target_dim *= dshape[i];
+  }
+  out_attrs->push_back(mshadow::Shape2(dshape[0], target_dim));
+  return true;
+}
+
 struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   TShape axes;
   DMLC_DECLARE_PARAMETER(TransposeParam) {
