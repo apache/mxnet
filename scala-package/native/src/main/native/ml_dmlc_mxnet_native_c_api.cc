@@ -1882,9 +1882,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           globalEnv->SetIntArrayRegion(outDataArr, (jsize)0, (jsize)outLen, outData);
 
           auto obj = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midDeclareBkDep,
-                                                                                  outGradArr,
-                                                                                  inDataArr,
-                                                                                  outDataArr);
+                                                 outGradArr,
+                                                 inDataArr,
+                                                 outDataArr);
           jintArray jrdeps = (jintArray)obj;
           jint *rdepsArr = globalEnv->GetIntArrayElements(jrdeps, NULL);
 
@@ -1932,8 +1932,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             globalEnv->SetObjectArrayElement(tensorShapes, i, (jobject)(ts[i]));
           }
           jobjectArray ret = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midInferShape,
-                                                                                  numInput,
-                                                                                  tensorShapes));
+                                                                        numInput,
+                                                                        tensorShapes));
           for (int i=0; i<numInput; ++i) {
             jintArray jarr = reinterpret_cast<jintArray>(globalEnv->GetObjectArrayElement(ret, i));
             int len = globalEnv->GetArrayLength(jarr);
@@ -1982,9 +1982,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           globalEnv->SetIntArrayRegion(jdtypes, (jsize)0, (jsize)numInputs, dtypes);
           // get operator
           jobject jOp = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midCreateOp,
-                                                                                      jctx,
-                                                                                      inputShapes,
-                                                                                      jdtypes);
+		                                    jctx,
+		                                    inputShapes,
+		                                    jdtypes);
           globalEnv->DeleteLocalRef(jctx);
           for (int i=0; i<numInputs; ++i) {
             globalEnv->DeleteLocalRef(ts[i]);
@@ -2020,11 +2020,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 jlongArray ptrsArr = globalEnv->NewLongArray(size);
                 globalEnv->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
                 jint result = globalEnv->CallIntMethod(globalOpMap.at(key), midForward,
-                                                                                    size,
-                                                                                    ptrsArr,
-                                                                                    tagsArr,
-                                                                                    reqsArr,
-                                                                                    *(const_cast<bool*>(&isTrain)));
+                                                       size,
+                                                       ptrsArr,
+                                                       tagsArr,
+                                                       reqsArr,
+                                                       *(const_cast<bool*>(&isTrain)));
                 if ((int)result == 0) success = false;
                 globalEnv->DeleteLocalRef(tagsArr);
                 globalEnv->DeleteLocalRef(reqsArr);
@@ -2064,11 +2064,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 jlongArray ptrsArr = globalEnv->NewLongArray(size);
                 globalEnv->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
                 jint result = globalEnv->CallIntMethod(globalOpMap.at(key), midBackward,
-                                                                                    size,
-                                                                                    ptrsArr,
-                                                                                    tagsArr,
-                                                                                    reqsArr,
-                                                                                    *(const_cast<bool*>(&isTrain)));
+                                                       size,
+                                                       ptrsArr,
+                                                       tagsArr,
+                                                       reqsArr,
+                                                       *(const_cast<bool*>(&isTrain)));
                 if ((int)result == 0) success = false;
                 globalEnv->DeleteLocalRef(tagsArr);
                 globalEnv->DeleteLocalRef(reqsArr);
