@@ -1,20 +1,20 @@
-##MXNet Model Zoo
+# MXNet Model Zoo
 
 MXNet features fast implementations of most state-of-the-art models reported in the academic literature. Our Model Playground contains complete models, with python scripts, pre-trained weights as well as instructions on how to fine tune these models.  
 
-###How to Contribute a Pre-Trained Model
+## How to Contribute a Pre-Trained Model
 
 1. Issue a Pull Request containing the following: Gist Log, .json model definition, model param file
 2. Confirm trained model meets published accuracy from original paper 
 
-###Expected Information:
+## Expected Information:
 1. Technical Background (i.e. Model information, reference paper, network topology visualization, etc..)
 2. Step by step instructions on how to use
 3. Model Location, access instructions and files contained
 5. References to any other applicable docs or arxiv papers
 
 
-###[Convolutional Neural Networks](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
+## [Convolutional Neural Networks](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
 
 Convolutional neural networks are the state-of-art architecture for many image and video processing problems. Some available datasets include:
 
@@ -28,21 +28,21 @@ Convolutional neural networks are the state-of-art architecture for many image a
 
 
 
-Model Definition | Dataset | Model Weights | Research Basis | Contributors
---- | --- | --- | --- | ---
-CaffeNet | ImageNet | |   [Krizhevsky, 2012](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) | @..
-Network in Network (NiN) | CIFAR-10 | |  [Lin et al.., 2014](https://arxiv.org/pdf/1312.4400v3.pdf)
-SqueezeNet | ImageNet | | [Iandola et al.., 2016](https://arxiv.org/pdf/1602.07360v4.pdf)
-VGG16 | ImageNet | | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf)
-VGG19 | ImageNet | | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf)
-Inception v3 w/BatchNorm | ImageNet | | [Szegedy et al.., 2015](https://arxiv.org/pdf/1512.00567.pdf)
-ResidualNet152 | ImageNet | | [He et al.., 2015](https://arxiv.org/pdf/1512.03385v1.pdf)
-Fast-RCNN |PASCAL VOC | | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf)
-Faster-RCNN |PASCAL VOC |  | [Ren et al..,2016](https://arxiv.org/pdf/1506.01497v3.pdf)
-Single Shot Detection (SSD) | PASCAL VOC | | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf)
+| Model Definition | Dataset | Model Weights | Research Basis | Contributors |
+| --- | --- | --- | --- | --- |
+| CaffeNet | ImageNet | |   [Krizhevsky, 2012](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) | @.. |
+| Network in Network (NiN) | CIFAR-10 | |  [Lin et al.., 2014](https://arxiv.org/pdf/1312.4400v3.pdf) | |
+| SqueezeNet | ImageNet | | [Iandola et al.., 2016](https://arxiv.org/pdf/1602.07360v4.pdf) | |
+| VGG16 | ImageNet | | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | |
+| VGG19 | ImageNet | | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | |
+| Inception v3 w/BatchNorm | ImageNet | | [Szegedy et al.., 2015](https://arxiv.org/pdf/1512.00567.pdf) | |
+| ResidualNet152 | ImageNet | | [He et al.., 2015](https://arxiv.org/pdf/1512.03385v1.pdf) | |
+| Fast-RCNN | PASCAL VOC | | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf) | |
+| Faster-RCNN | PASCAL VOC |  | [Ren et al..,2016](https://arxiv.org/pdf/1506.01497v3.pdf) | |
+| Single Shot Detection (SSD) | PASCAL VOC | | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf) | |
 
 
-###[Recursive Neural Networks (Including LSTMs)](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf)
+## [Recursive Neural Networks (Including LSTMs)](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf)
 
 MXNet supports recurrent neural networks (RNNs), as well as Long short-term memory (LSTM) networks, and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
@@ -54,23 +54,23 @@ MXNet supports recurrent neural networks (RNNs), as well as Long short-term memo
 5. [Flickr8k, COCO](http://mscoco.org/): Images with associated caption (sentences). Flickr8k consists of 8,092 images captioned by AmazonTurkers with ~40,000 captions. COCO has 328,000 images, each with 5 captions. The COCO images also come with labeled objects using segmentation algorithms.
 
 
-Model Definition | Dataset | Model Weights | Research Basis | Contributors
---- | --- | --- | --- | ---
-LSTM - Image Captioning | Flickr8k, MS COCO | | [Vinyals et al.., 2015](https://arxiv.org/pdf/ 1411.4555v2.pdf) | @...
-LSTM - Q&A System| bAbl | | [Weston et al.., 2015](https://arxiv.org/pdf/1502.05698v10.pdf)
-LSTM - Sentiment Analysis| IMDB | | [Li et al.., 2015](http://arxiv.org/pdf/1503.00185v5.pdf)
+| Model Definition | Dataset | Model Weights | Research Basis | Contributors |
+| --- | --- | --- | --- | --- |
+| LSTM - Image Captioning | Flickr8k, MS COCO | | [Vinyals et al.., 2015](https://arxiv.org/pdf/ 1411.4555v2.pdf) | @... |
+| LSTM - Q&A System| bAbl | | [Weston et al.., 2015](https://arxiv.org/pdf/1502.05698v10.pdf) | |
+| LSTM - Sentiment Analysis| IMDB | | [Li et al.., 2015](http://arxiv.org/pdf/1503.00185v5.pdf) | |
 
 
-###[Generative Adversarial Networks](http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) 
-Model Definition | Dataset | Model Weights | Research Basis | Contributors
---- | --- | --- | --- | ---
-DCGANs |ImageNet | | [Radford et al..,2016](https://arxiv.org/pdf/1511.06434v2.pdf) | @...
-Text to Image Synthesis |MS COCO| | [Reed et al.., 2016](https://arxiv.org/pdf/1605.05396v2.pdf)
-Deep Jazz	|||[Deepjazz.io](https://deepjazz.io)
+## [Generative Adversarial Networks](http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) 
+| Model Definition | Dataset | Model Weights | Research Basis | Contributors |
+| --- | --- | --- | --- | --- |
+| DCGANs | ImageNet | | [Radford et al..,2016](https://arxiv.org/pdf/1511.06434v2.pdf) | @... |
+| Text to Image Synthesis |MS COCO| | [Reed et al.., 2016](https://arxiv.org/pdf/1605.05396v2.pdf) | | 
+| Deep Jazz	| | | [Deepjazz.io](https://deepjazz.io) | |
 
 
 
-###Other Models
+## Other Models
 
 MXNet Supports a variety of model types beyond the canonical CNN and LSTM model types. These include deep reinforcement learning, linear models, etc.. Some available datasets and sources include:
 
@@ -79,12 +79,12 @@ MXNet Supports a variety of model types beyond the canonical CNN and LSTM model 
 3. [Atari Video Game Emulator](http://stella.sourceforge.net/): Stella is a multi-platform Atari 2600 VCS emulator released under the GNU General Public License (GPL).
 
  
-Model Definition | Dataset | Model Weights | Research Basis | Contributors
---- | --- | --- | --- | ---
-Word2Vec | Google News | | [Mikolov et al.., 2013](https://arxiv.org/pdf/1310.4546v1.pdf) | @...
-Matrix Factorization | MovieLens 20M | | [Huang et al.., 2013](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/cikm2013_DSSM_fullversion.pdf)
-Deep Q-Network | Atari video games | | [Minh et al.., 2015](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html) 
-Asynchronous advantage actor-critic (A3C) | Atari video games | | [Minh et al.., 2016](https://arxiv.org/pdf/1602.01783.pdf) 
+| Model Definition | Dataset | Model Weights | Research Basis | Contributors |
+| --- | --- | --- | --- | --- |
+| Word2Vec | Google News | | [Mikolov et al.., 2013](https://arxiv.org/pdf/1310.4546v1.pdf) | @... |
+| Matrix Factorization | MovieLens 20M | | [Huang et al.., 2013](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/cikm2013_DSSM_fullversion.pdf) | |
+| Deep Q-Network | Atari video games | | [Minh et al.., 2015](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html) | |
+| Asynchronous advantage actor-critic (A3C) | Atari video games | | [Minh et al.., 2016](https://arxiv.org/pdf/1602.01783.pdf) | |
 
 
 
