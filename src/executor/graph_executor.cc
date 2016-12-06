@@ -118,6 +118,17 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
       // use a stream line of plus instead
       nnvm::NodeEntry ret = v[0];
       for (size_t i = 1; i < v.size(); ++i) {
+        // Add control flow dependency from to previous node
+        // This enforces the gradient sum order will be in the inverse
+        // order of forward traversal
+        // NOTE: adding control dependency can be dangerous and cause cycle in the dep.
+        // The curent usage is correct, because of the following invariant:
+        // assert: v[i-1] do not depend on v[i]
+        // To put in plain text: v is gradient vector that get pushed in the order
+        // that can generate them, which means if v[i] is not yet pushed,
+        // all previous gradient cannot depend on it.
+        v[i].node->control_deps.push_back(ret.node);
+
         std::ostringstream os;
         os << "sum_grad_" << i;
         nnvm::NodePtr x = nnvm::Node::Create();
