@@ -3,8 +3,7 @@ Adapted from https://github.com/tornadomeet/ResNet/blob/master/symbol_resnet.py
 Original author Wei Wu
 
 Implemented the following paper:
-
-Saining Xie, Ross Girshick, Piotr Dollár, Zhuowen Tu, Kaiming He. "Aggregated Residual Transformations for Deep Neural Networks"
+Saining Xie, Ross Girshick, Piotr Dollar, Zhuowen Tu, Kaiming He. "Aggregated Residual Transformations for Deep Neural Network"
 '''
 import mxnet as mx
 
@@ -81,8 +80,8 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, n
         eltwise = bn2 + shortcut
         return mx.sym.Activation(data=eltwise, act_type='relu', name=name + '_relu')
 
-def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck=True, bn_mom=0.9, workspace=256, memonger=False):
-    """Return ResNet symbol of
+def resnext(units, num_stages, filter_list, num_classes, num_group, image_shape, bottle_neck=True, bn_mom=0.9, workspace=256, memonger=False):
+    """Return ResNeXt symbol of
     Parameters
     ----------
     units : list
@@ -93,6 +92,8 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
         Channel size of each stage
     num_classes : int
         Ouput size of symbol
+    num_groupes: int
+    Number of conv groups
     dataset : str
         Dataset type, only cifar10 and imagenet supports
     workspace : int
@@ -115,18 +116,18 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
 
     for i in range(num_stages):
         body = residual_unit(body, filter_list[i+1], (1 if i==0 else 2, 1 if i==0 else 2), False,
-                             name='stage%d_unit%d' % (i + 1, 1), bottle_neck=bottle_neck, workspace=workspace,
-                             memonger=memonger)
+                             name='stage%d_unit%d' % (i + 1, 1), bottle_neck=bottle_neck, num_group=num_group, 
+                             bn_mom=bn_mom, workspace=workspace, memonger=memonger)
         for j in range(units[i]-1):
             body = residual_unit(body, filter_list[i+1], (1,1), True, name='stage%d_unit%d' % (i + 1, j + 2),
-                                 bottle_neck=bottle_neck, workspace=workspace, memonger=memonger)
+                                 bottle_neck=bottle_neck, num_group=num_group, bn_mom=bn_mom, workspace=workspace, memonger=memonger)
             
     pool1 = mx.symbol.Pooling(data=body, global_pool=True, kernel=(7, 7), pool_type='avg', name='pool1')
     flat = mx.symbol.Flatten(data=pool1)
-    fc1 = mx.symbol.FullyConnected(data=flat, num_hidden=num_class, name='fc1')
+    fc1 = mx.symbol.FullyConnected(data=flat, num_hidden=num_classes, name='fc1')
     return mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
 
-def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwargs):
+def get_symbol(num_classes, num_layers, image_shape, num_group=32, conv_workspace=256, **kwargs):
     """
     Adapted from https://github.com/tornadomeet/ResNet/blob/master/train_resnet.py
     Original author Wei Wu
@@ -171,10 +172,11 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
         else:
             raise ValueError("no experiments done on num_layers {}, you can do it youself".format(num_layers))
 
-    return resnet(units       = units,
+    return resnext(units      = units,
                   num_stages  = num_stages,
                   filter_list = filter_list,
                   num_classes = num_classes,
+                  num_group   = num_group, 
                   image_shape = image_shape,
                   bottle_neck = bottle_neck,
                   workspace   = conv_workspace)
