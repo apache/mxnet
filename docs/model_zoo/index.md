@@ -54,17 +54,17 @@ MXNet supports recurrent neural networks (RNNs), as well as Long short-term memo
 5. [Flickr8k, COCO](http://mscoco.org/): Images with associated caption (sentences). Flickr8k consists of 8,092 images captioned by AmazonTurkers with ~40,000 captions. COCO has 328,000 images, each with 5 captions. The COCO images also come with labeled objects using segmentation algorithms.
 
 
-Model Definition | Dataset | Model Weights | Research Basis
---- | --- | --- | ---
-LSTM - Image Captioning | Flickr8k, MS COCO | | [Vinyals et al.., 2015](https://arxiv.org/pdf/1411.4555v2.pdf) 
+Model Definition | Dataset | Model Weights | Research Basis | Contributors
+--- | --- | --- | --- | ---
+LSTM - Image Captioning | Flickr8k, MS COCO | | [Vinyals et al.., 2015](https://arxiv.org/pdf/ 1411.4555v2.pdf) | @...
 LSTM - Q&A System| bAbl | | [Weston et al.., 2015](https://arxiv.org/pdf/1502.05698v10.pdf)
 LSTM - Sentiment Analysis| IMDB | | [Li et al.., 2015](http://arxiv.org/pdf/1503.00185v5.pdf)
 
 
 ###[Generative Adversarial Networks](http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) 
-Model Definition | Dataset | Model Weights | Research Basis
---- | --- | --- | ---
-DCGANs |ImageNet | | [Radford et al..,2016](https://arxiv.org/pdf/1511.06434v2.pdf)
+Model Definition | Dataset | Model Weights | Research Basis | Contributors
+--- | --- | --- | --- | ---
+DCGANs |ImageNet | | [Radford et al..,2016](https://arxiv.org/pdf/1511.06434v2.pdf) | @...
 Text to Image Synthesis |MS COCO| | [Reed et al.., 2016](https://arxiv.org/pdf/1605.05396v2.pdf)
 Deep Jazz	|||[Deepjazz.io](https://deepjazz.io)
 
@@ -79,9 +79,9 @@ MXNet Supports a variety of model types beyond the canonical CNN and LSTM model 
 3. [Atari Video Game Emulator](http://stella.sourceforge.net/): Stella is a multi-platform Atari 2600 VCS emulator released under the GNU General Public License (GPL).
 
  
-Model Definition | Dataset | Model Weights | Research Basis
---- | --- | --- | ---
-Word2Vec | Google News | | [Mikolov et al.., 2013](https://arxiv.org/pdf/1310.4546v1.pdf)
+Model Definition | Dataset | Model Weights | Research Basis | Contributors
+--- | --- | --- | --- | ---
+Word2Vec | Google News | | [Mikolov et al.., 2013](https://arxiv.org/pdf/1310.4546v1.pdf) | @...
 Matrix Factorization | MovieLens 20M | | [Huang et al.., 2013](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/cikm2013_DSSM_fullversion.pdf)
 Deep Q-Network | Atari video games | | [Minh et al.., 2015](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html) 
 Asynchronous advantage actor-critic (A3C) | Atari video games | | [Minh et al.., 2016](https://arxiv.org/pdf/1602.01783.pdf) 
