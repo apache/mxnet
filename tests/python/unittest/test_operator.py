@@ -992,6 +992,16 @@ def test_reshape():
     net = mx.sym.load_json(js)
     _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
     assert(output_shape[0] == (2, 75))
+    # Test for Flatten
+    data = mx.sym.Variable("data")
+    net = mx.sym.Flatten(data)
+    exe = net.simple_bind(ctx=default_context(), data=(5, 4, 3, 7))
+    data_npy = np.random.normal(size=(5, 4, 3, 7))
+    out_grad_npy = np.random.normal(size=(5, 4 * 3 * 7))
+    outputs = exe.forward(is_train=True, data=data_npy)[0].asnumpy()
+    assert_allclose(outputs, data_npy.reshape((5, 4 * 3 * 7)))
+    exe.backward(out_grads=[mx.nd.array(out_grad_npy, ctx=default_context())])
+    assert_allclose(exe.grad_arrays[0].asnumpy(), out_grad_npy.reshape((5, 4, 3, 7)))
 
 def test_reduce():
     sample_num = 200
