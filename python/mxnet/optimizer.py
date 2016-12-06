@@ -139,13 +139,9 @@ class Optimizer(object):
         """
         if self.states is None :
             return
-        for k, v in self.states :
+        for k, v in self.states.items() :
             if (str(k) not in opt_params) or (opt_params[str(k)] is None) :
-                opt_params[str(k)] = zeros(self.states[k].shape())
-            self.states[k].copyto(opt_params[str(k)])
-
-
-
+                opt_params[str(k)] = zeros(v.shape)
 
     # pylint: disable=no-self-use
     def set_lr_scale(self, args_lrscale):
