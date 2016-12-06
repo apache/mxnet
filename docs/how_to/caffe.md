@@ -8,41 +8,64 @@ Key topics covered include the following:
 
 ## Conceptual differences between Caffe and MXNet
 
+
 ## Converting Caffe trained models to MXNet
 
-### Build (Linux)
+The converting tool is available at
+[tools/caffe_converter](https://github.com/dmlc/mxnet/tree/master/tools/caffe_converter). On
+the remaining of this section, we assume we are on the `tools/caffe_converter`
+directory.
 
-Either [Caffe's python package](http://caffe.berkeleyvision.org/installation.html) or [Google protobuf](https://developers.google.com/protocol-buffers/?hl=en) is required. The latter is often much easier to install:
+Note that this tools does not need Caffe to be installed.
 
-1. Install the protobuf compiler. If you compiled mxnet with `USE_DIST_KVSTORE = 1` then it is already built. Otherwise, install `protobuf-compiler` by your favorite package manager, e.g. `sudo apt-get install protobuf-compiler` for ubuntu and `sudo yum install protobuf-compiler` for redhat/fedora.
+### How to build
 
-2. Then install the protobuf's python binding. For example `sudo pip install protobuf`
+This tool requires
+[Google protobuf](https://developers.google.com/protocol-buffers/?hl=en)
+compiler and its python binding.
 
-Now we can build the tool by running `make` in the current directory.
+1. Install the compiler:
+  - Linux: install `protobuf-compiler` e.g. `sudo apt-get install
+    protobuf-compiler` for Ubuntu and `sudo yum install protobuf-compiler` for
+     Redhat/Fedora.
+  - Windows: Download the win32 build of
+    [protobuf](https://github.com/google/protobuf/releases). Make sure to
+    download the version that corresponds to the version of the python binding
+    on the next step. Extract to any location then add that location to your
+    `PATH`
+  - Mac OS X: `brew install protobuf`
 
-### Build (Windows)
+2. Install the python binding by either `conda install -c conda-forge protobuf`
+   or `pip install protobuf`.
 
-Note: this tool currently only works on python 2.
-
-We must make sure that the installed python binding and protobuf compiler are using the same version of protobuf,
-so we install the bindings first, and then install the corresponding compiler.
-
-1. Install the protobuf bindings. At time of writing, the conda package manager has the most up to date version. Either run `conda install -c conda-forge protobuf` or `pip install protobuf`
-2. Download the win32 build of protobuf from [Protocol Buffers Releases](https://github.com/google/protobuf/releases). Make sure to download the version that corresponds to the version of the bindings. Extract to any location then add that location to your `PATH`
-3. Run `make_win32.bat` to build the package
-
+3. Compile Caffe proto definition. Run `make` in Linux or Mac OS X, or
+   `make_win32.bat` in Windows
 
 ### How to use
 
-Linux: Use `./run.sh model_name` to download and convert a model. E.g. `./run.sh vgg19`
+There are three tools:
 
-Windows: Use `python convert_model.py prototxt caffemodel outputprefix`
-For example: `python convert_model.py VGG_ILSVRC_16_layers_deploy.prototxt VGG_ILSVRC_16_layers.caffemodel vgg16`
+- `convert_symbol.py` : convert Caffe model definition in protobuf into MXNet's
+  Symbol in JSON format.
+- `convert_model.py` : convert Caffe model parameters into MXNet's NDArray format
+- `convert_mean.py` : convert Caffe input mean file into MXNet's NDArray format
 
+The following example download a pre-trained VGG 16 model and then convert to
+MXNet's format:
 
-### Note
+```bash
+wget -c https://gist.githubusercontent.com/ksimonyan/211839e770f7b538e2d8/raw/c3ba00e272d9f48594acef1f67e5fd12aff7a806/VGG_ILSVRC_16_layers_deploy.prototxt
+wget -c http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel
+python convert_model.py VGG_ILSVRC_16_layers_deploy.prototxt VGG_ILSVRC_16_layers.caffemodel vgg16
+```
 
-* We have verified the results of VGG_16/VGG_19 model and BVLC_googlenet results from Caffe model zoo.
+In addition, there are two tools:
+- `convert_caffe_modelzoo.py` : download and convert models from Caffe model zoo
+- `test_converter.py` : test the converted models by checking the prediction
+  accuracy
+
+### Issues should be fixed
+
 * The tool only supports single input and single output network.
 * The tool can only work with the L2LayerParameter in Caffe.
 * Caffe uses a convention for multi-strided pooling output shape inconsistent with MXNet
@@ -51,54 +74,125 @@ For example: `python convert_model.py VGG_ILSVRC_16_layers_deploy.prototxt VGG_I
 
 ## Calling Caffe operators in MXNet
 
-[Caffe](http://caffe.berkeleyvision.org/) is a well-known and widely used deep learning framework. MXNet supports calling most Caffe operators (layers) and loss functions directly in its symbolic graph. Using your own customized Caffe layer is also effortless.
+Besides converting Caffe models, MXNet supports calling most Caffe operators,
+including network layer, data layer, and loss function, directly. It is
+particularly useful if there are customized operators implemented in Caffe, then
+we do not need to re-implement them in MXNet.
 
-MXNet also has embedded [Torch modules and its tensor mathematical functions](https://github.com/dmlc/mxnet/blob/master/docs/how_to/torch.md).
+### How to install
 
-This topic explains how to:
+This feature requires Caffe. In particular, we need to re-compile Caffe before
+[PR #4527](https://github.com/BVLC/caffe/pull/4527) is merged into Caffe. There
+are the steps of how to rebuild Caffe:
 
-* Install MXNet with Caffe support
+1. Download [Caffe](https://github.com/BVLC/caffe). E.g. `git clone
+   https://github.com/BVLC/caffe`
+2. Download the
+   [patch for the MXNet interface](https://github.com/BVLC/caffe/pull/4527.patch)
+   and apply to Caffe. E.g.
+   ```bash
+   cd caffe && wget https://github.com/BVLC/caffe/pull/4527.patch && git apply 4527.patch
+   ```
+3. Build and install Caffe by following the
+   [official guide](http://caffe.berkeleyvision.org/installation.html).
 
-* Embed Caffe operators into MXNet's symbolic graph
+Next we need to compile MXNet with Caffe supports
 
-## Install Caffe With MXNet
+1. Copy `make/config.mk` (for Linux) or `make/osx.mk`
+   (for Mac) into the MXNet root folder as `config.mk` if you have not done it yet
+2. Open the copied `config.mk` and uncomment these two lines
+   ```bash
+   CAFFE_PATH = $(HOME)/caffe
+   MXNET_PLUGINS += plugin/caffe/caffe.mk
+   ```
+   Modify `CAFFE_PATH` to your Caffe installation, if necessary.
+3. Then build with 8 threads `make clean && make -j8`.
 
+### How to use
 
-1. Download the official Caffe repository, [BVLC/Caffe](https://github.com/BVLC/caffe).
-2. Download the [Caffe patch for the MXNet interface](https://github.com/BVLC/caffe/pull/4527.patch). Move the patch file under your Caffe root folder, and apply the patch by using `git apply patch_file_name`.
-3. Install Caffe using the [official guide](http://caffe.berkeleyvision.org/installation.html).
+This Caffe plugin adds three components into MXNet:
 
-## Compile with Caffe
+- `sym.CaffeOp` : Caffe neural network layer
+- `sym.CaffeLoss` : Caffe loss functions
+- `io.CaffeDataIter` : Caffe data layer
 
-
-1. If you haven't already, copy `make/config.mk` (for Linux) or `make/osx.mk` (for Mac) into the MXNet root folder as `config.mk`.
-2. In the mxnet folder, open `config.mk` and uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk`. Modify `CAFFE_PATH` to your Caffe installation, if necessary.
-3. To build with Caffe support, run `make clean && make`.
-
-## Using the Caffe Operator (Layer)
-Caffe's neural network operator and loss functions are supported by MXNet through `mxnet.symbol.CaffeOp` and `mxnet.symbol.CaffeLoss`, respectively.
-For example, the following code shows a [multi-layer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) (MLP) network for classifying MNIST digits: [full code](https://github.com/dmlc/mxnet/blob/master/example/caffe/caffe_net.py):
-
-### Python
-
-```Python
-data = mx.symbol.Variable('data')
-fc1  = mx.symbol.CaffeOp(data_0=data, num_weight=2, name='fc1', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")
-act1 = mx.symbol.CaffeOp(data_0=fc1, prototxt="layer{type:\"TanH\"}")
-fc2  = mx.symbol.CaffeOp(data_0=act1, num_weight=2, name='fc2', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 64} }")
-act2 = mx.symbol.CaffeOp(data_0=fc2, prototxt="layer{type:\"TanH\"}")
-fc3 = mx.symbol.CaffeOp(data_0=act2, num_weight=2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
-mlp = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
-```
-
-Let's break it down. First, `data = mx.symbol.Variable('data')` defines a variable as a placeholder for input.
-Then, it's fed through Caffe operators with `fc1  = mx.symbol.CaffeOp(data_0=data, num_weight=2, name='fc1', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")`.
-
-The inputs to Caffe operators are named as data_i for i=0.  num_data-1 as `num_data` is the number of inputs. You can skip the argument, as the example does, if its value is 1. `num_weight` is the number of `blobs_`(weights). Its default value is 0 because many operators maintain no weight. `prototxt` is the configuration string.
-
-To use the loss function in Caffe, replace the last line with:
+#### Use `sym.CaffeOp`
+The following example shows the definition of a 10 classes multi-layer perceptron:
 
 ```Python
-label = mx.symbol.Variable('softmax_label')
-mlp = mx.symbol.CaffeLoss(data=fc3, label=label, grad_scale=1, name='softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+data = mx.sym.Variable('data')
+fc1  = mx.sym.CaffeOp(data_0=data, num_weight=2, name='fc1', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")
+act1 = mx.sym.CaffeOp(data_0=fc1, prototxt="layer{type:\"TanH\"}")
+fc2  = mx.sym.CaffeOp(data_0=act1, num_weight=2, name='fc2', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 64} }")
+act2 = mx.sym.CaffeOp(data_0=fc2, prototxt="layer{type:\"TanH\"}")
+fc3 = mx.sym.CaffeOp(data_0=act2, num_weight=2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
+mlp = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
+
+Let's break it down. First, `data = mx.sym.Variable('data')` defines a variable
+as a placeholder for input.  Then, it's fed through Caffe operators with `fc1 =
+mx.sym.CaffeOp(...)`. `CaffeOp` accepts several arguments:
+
+- The inputs to Caffe operators are named as `data_i` for *i=0, ..., num_data-1*
+- `num_data` is the number of inputs. In default it is 1, and therefore
+skipped in the above example.
+- `num_out` is the number of outputs. In default it is 1 and also skipped.
+- `num_weight` is the number of weights (`blobs_`).  Its default value is 0. We
+need to explicitly specify it for a non-zero value.
+- `prototxt` is the protobuf configuration string.
+
+#### Use `sym.CaffeLoss`
+
+Using Caffe loss is similar.
+We can replace the MXNet loss with Caffe loss.
+We can replace
+
+Replacing the last line of the above example with the following two lines we can
+call Caffe loss instead of MXNet loss.
+
+```Python
+label = mx.sym.Variable('softmax_label')
+mlp = mx.sym.CaffeLoss(data=fc3, label=label, grad_scale=1, name='softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
+```
+
+Similar to `CaffeOp`, `CaffeLoss` has arguments `num_data` (2 in default) and
+`num_out` (1 in default). But there are two differences
+
+1. Inputs are `data` and `label`. And we need to explicitly create a variable
+   placeholder for label, which is implicitly done in MXNet loss.
+2. `grad_scale` is the weight of this loss.
+
+#### Use `io.CaffeDataIter`
+
+We can also wrap a Caffe data layer into MXNet's data iterator. Below is an
+example for creating a data iterator for MNIST
+
+```python
+train = mx.io.CaffeDataIter(
+    prototxt =
+    'layer { \
+        name: "mnist" \
+        type: "Data" \
+        top: "data" \
+        top: "label" \
+        include { \
+            phase: TEST \
+        } \
+        transform_param { \
+            scale: 0.00390625 \
+        } \
+        data_param { \
+            source: "caffe/examples/mnist/mnist_test_lmdb" \
+            batch_size: 100 \
+            backend: LMDB \
+        } \
+    }',
+    flat           = flat,
+    num_examples   = 60000,
+)
+```
+
+### Put it all together
+
+The complete example is available at
+[example/caffe](https://github.com/dmlc/mxnet/blob/master/example/caffe/)
