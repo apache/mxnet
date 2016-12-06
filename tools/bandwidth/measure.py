@@ -1,12 +1,14 @@
 import os, sys
 curr_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(curr_path, "../../python"))
-sys.path.insert(0, os.path.join(curr_path, "../../example/image-classification"))
+sys.path.insert(0, os.path.join(curr_path, "../../example/image-classification/symbol"))
 import mxnet as mx
 import logging
 import argparse
 import time
 import numpy as np
+from importlib import import_module
+from collections import namedtuple
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -17,20 +19,18 @@ def parse_args():
                         help='the neural network to test')
     parser.add_argument('--gpus', type=str, default='0,1',
                         help='the gpus to be used, e.g "0,1,2,3"')
-    parser.add_argument('--depth', type=int, default=152,
-                        help='the depth of network, only valid for resnet')
+    parser.add_argument('--num-layers', type=int, default=152,
+                        help='number of layers, can be used for resnet')
     parser.add_argument('--kv-store', type=str, default='device',
                         help='the kvstore type')
-    parser.add_argument('--batch-size', type=int, default=128,
-                        help='batch size. should not affect the results')
     parser.add_argument('--num-batches', type=int, default=5,
                         help='number of batches to run')
     parser.add_argument('--disp-batches', type=int, default=1,
                         help='show averaged results for every n batches')
     parser.add_argument('--test-results', type=int, default=1,
                         help='if or not evalute the results correctness')
-    parser.add_argument('--data-shape', type=str, default='128,3,224,224',
-                        help='input data shape')
+    parser.add_argument('--image-shape', type=str, default='3,224,224',
+                        help='input images shape')
     parser.add_argument('--num-classes', type=int, default=1000,
                         help='number of classes')
     parser.add_argument('--optimizer', type=str, default='None',
@@ -38,33 +38,6 @@ def parse_args():
     args = parser.parse_args()
     logging.info(args)
     return args
-
-def get_resnet(args):
-    resnet_path = os.path.join(curr_path, "./ResNet")
-    if not os.path.isdir(resnet_path):
-        os.system("git clone https://github.com/tornadomeet/ResNet")
-    sys.path.insert(0, resnet_path)
-    from symbol_resnet import resnet
-    if args.depth == 18:
-        units = [2, 2, 2, 2]
-    elif args.depth == 34:
-        units = [3, 4, 6, 3]
-    elif args.depth == 50:
-        units = [3, 4, 6, 3]
-    elif args.depth == 101:
-        units = [3, 4, 23, 3]
-    elif args.depth == 152:
-        units = [3, 8, 36, 3]
-    elif args.depth == 200:
-        units = [3, 24, 36, 3]
-    else:
-        raise ValueError("no experiments done on detph {}, you can do it youself".format(args.depth))
-
-    filter_list=[64, 256, 512, 1024, 2048] if args.depth >=50 else [64, 64, 128, 256, 512]
-    bottle_neck = True if args.depth >= 50 else False
-    symbol = resnet(units=units, num_stage=4, filter_list=filter_list,
-                    num_class=args.num_classes, data_type="imagenet", bottle_neck=bottle_neck, bn_mom=.9, workspace=512)
-    return symbol
 
 def get_shapes(symbol, data_shape):
     arg_name = symbol.list_arguments()
@@ -80,25 +53,22 @@ def error(gpu_res, cpu_res):
     res /= sum([np.sum(np.abs(g.asnumpy())) for g in cpu_res])
     return res
 
-def run():
-    args = parse_args();
+def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
+        num_batches, test_results, **kwargs):
     # create kvstore and optimizer
-    devs = [mx.gpu(int(i)) for i in args.gpus.split(',')]
-    kv = mx.kv.create(args.kv_store)
-    if args.optimizer == 'None':
-        optimizer = None
+    devs = [mx.gpu(int(i)) for i in gpus.split(',')]
+    kv = mx.kv.create(kv_store)
+    if optimizer is None or optimizer == 'None':
+        opt = None
     else:
-        optimizer = mx.optimizer.Optimizer.create_optimizer(args.optimizer)
-        updater = mx.optimizer.get_updater(mx.optimizer.Optimizer.create_optimizer(args.optimizer))
-        kv.set_optimizer(optimizer)
+        opt = mx.optimizer.Optimizer.create_optimizer(optimizer)
+        kv.set_optimizer(opt)
+        updater = mx.optimizer.get_updater(mx.optimizer.Optimizer.create_optimizer(optimizer))
 
     # create network
-    if args.network == 'resnet':
-        symbol = get_resnet(args)
-    else:
-        import importlib
-        symbol = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes)
-    data_shape = tuple([int(s) for s in args.data_shape.split(',')])
+    symbol = import_module(network).get_symbol(image_shape=image_shape, **kwargs)
+    # a fake batch size 32, which does not affect the results
+    data_shape = (32,) + tuple([int(s) for s in image_shape.split(',')])
     shapes = get_shapes(symbol, data_shape)
 
     size = float(sum([reduce(lambda x,y : x*y, s, 1) for s in shapes])) * 4 / 1e6
@@ -114,7 +84,10 @@ def run():
     cpu_grads = [mx.nd.array(sum([g.asnumpy() for g in gs]))*kv.num_workers for gs in grads_val]
     cpu_weights = [mx.nd.zeros(s) for s in shapes]
     toc = 0
-    for b in range(0, args.num_batches+1):
+
+    Results = namedtuple('Results', ['iter', 'time', 'bandwidth', 'error'])
+    res = []
+    for b in range(0, num_batches+1):
         tic = time.time()
         for i,g in enumerate(grads):
             kv.push(i, g, i)
@@ -125,8 +98,8 @@ def run():
             for w in ws:
                 w.wait_to_read()
         toc += time.time() - tic
-        if args.test_results:
-            if optimizer == None:
+        if test_results:
+            if opt == None:
                 err = error(weights, cpu_grads)
             else:
                 for i, wg in enumerate(zip(cpu_weights, cpu_grads)):
@@ -135,13 +108,18 @@ def run():
         else:
             err = -1
 
-        if b % args.disp_batches == 0:
-            toc /= args.disp_batches
+        if b % disp_batches == 0:
+            toc /= disp_batches
             if b != 0:
                 # 0 is used for warmup, ignored
+                r = Results(iter=b, time=toc, error=err,
+                            bandwidth=size*2*(len(devs)-1)/len(devs)/toc/1e3)
                 logging.info('iter %d, %f sec, %f GB/sec per gpu, error %f' % (
-                    b, toc, size*2*(len(devs)-1)/len(devs)/toc/1e3, err))
+                    r.iter, r.time, r.bandwidth, r.error))
+                res.append(r)
             toc = 0
+    return res
 
 if __name__ == "__main__":
-    run()
+    args = parse_args();
+    run(**vars(args))

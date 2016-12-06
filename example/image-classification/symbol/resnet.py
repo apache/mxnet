@@ -124,11 +124,11 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
     if height <= 28:
         num_stages = 3
         if (num_layers-2) % 9 == 0 and num_layers >= 164:
-            per_unit = [(num_layers-2)/9]
+            per_unit = [(num_layers-2)//9]
             filter_list = [16, 64, 128, 256]
             bottle_neck = True
         elif (num_layers-2) % 6 == 0 and num_layers < 164:
-            per_unit = [(num_layers-2)/6]
+            per_unit = [(num_layers-2)//6]
             filter_list = [16, 16, 32, 64]
             bottle_neck = False
         else:
