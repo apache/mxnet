@@ -40,7 +40,7 @@ namespace op {
 template<typename xpu, typename DType>
 class MKLReluOp : public Operator {
  public:
-  std::string getName() {
+  static std::string getName() {
     return "MKLReluOp";
   }
   MKLReluOp():
