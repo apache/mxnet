@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
   python-pip \
   unzip
 
-RUN git clone --recursive https://github.com/dmlc/mxnet && cd mxnet && \
+RUN cd /root && git clone --recursive https://github.com/dmlc/mxnet && cd mxnet && \
   cp make/config.mk . && \
   sed -i 's/USE_BLAS = atlas/USE_BLAS = openblas/g' config.mk && \
   sed -i 's/USE_CUDA = 0/USE_CUDA = 1/g' config.mk && \
@@ -20,6 +20,6 @@ RUN git clone --recursive https://github.com/dmlc/mxnet && cd mxnet && \
   sed -i 's/USE_CUDNN = 0/USE_CUDNN = 1/g' config.mk && \
   make -j"$(nproc)"
 
-RUN cd /mxnet/python && python setup.py install
+ENV PYTHONPATH /root/mxnet/python
 
-WORKDIR /mxnet
+WORKDIR /root/mxnet
