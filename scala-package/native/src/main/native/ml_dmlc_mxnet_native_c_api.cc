@@ -8,6 +8,8 @@
 #include <mxnet/c_api.h>
 #include <iostream>
 #include <functional>
+#include <string>
+#include <unordered_map>
 #include "jni_helper_func.h"
 
 JavaVM *_jvm;
@@ -1709,5 +1711,438 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcFree
   (JNIEnv *env, jobject obj, jlong jhandle) {
   RtcHandle handle = reinterpret_cast<RtcHandle>(jhandle);
   int ret = MXRtcFree(handle);
+  return ret;
+}
+
+JNIEnv *globalEnv;
+std::unordered_map<std::string, jobject> globalOpPropMap;
+std::unordered_map<std::string, jobject> globalOpMap;
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
+  (JNIEnv *env, jobject obj, jstring jregName, jobject jopProp) {
+
+  globalEnv = env;
+
+  const char *regName = globalEnv->GetStringUTFChars(jregName, 0);
+  std::string key(regName);
+  globalOpPropMap.insert({ key, globalEnv->NewGlobalRef(jopProp) });
+
+  auto creatorLambda = [](const char *opType, const int numKwargs,
+    const char  **keys, const char **values, CustomOpPropInfo *ret) {
+    bool success = true;
+
+    // set CustomOpProp.kwargs
+    std::string opPropKey(opType);
+    if (globalOpPropMap.find(opPropKey) == globalOpPropMap.end()) {
+      std::cout << "CustomOpProp: " << opPropKey << " not found" << std::endl;
+      success = false;
+    } else {
+      jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(opPropKey));
+      jmethodID midInit = globalEnv->GetMethodID(opPropClass, "init", "([Ljava/lang/String;[Ljava/lang/String;)V");
+      if (NULL == midInit) {
+        std::cout << "could not find CustomOpProp method init.";
+        success = false;
+      } else {
+        // call init
+        jclass strCls = globalEnv->FindClass("Ljava/lang/String;");
+        jobjectArray keysArr = globalEnv->NewObjectArray(numKwargs, strCls, NULL);
+        jobjectArray valuesArr = globalEnv->NewObjectArray(numKwargs, strCls, NULL);
+        for(int i=0; i<numKwargs; ++i) {
+          jstring keyStr = globalEnv->NewStringUTF(keys[i]);
+          jstring valueStr = globalEnv->NewStringUTF(values[i]);
+          globalEnv->SetObjectArrayElement(keysArr, i, keyStr);
+          globalEnv->SetObjectArrayElement(valuesArr, i, valueStr);
+          globalEnv->DeleteLocalRef(keyStr);
+          globalEnv->DeleteLocalRef(valueStr);
+        }
+        globalEnv->CallVoidMethod(globalOpPropMap.at(opPropKey), midInit, keysArr, valuesArr);
+      }
+    }
+
+    // list_arguments callback
+    auto opPropListArgument = [](char ***args, void *state) {
+      bool success = true;
+      std::string key((char *)state);
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        success = false;
+      } else {
+        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
+        if (NULL == midListArguments) {
+          std::cout << "could not find opProp method listArguments.";
+          success = false;
+        } else {
+          jobjectArray jargs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
+          int len = globalEnv->GetArrayLength(jargs);
+          (*args) = new char *[len+1];
+          for (int i = 0; i < len; ++i) {
+            jstring jarg = reinterpret_cast<jstring>(globalEnv->GetObjectArrayElement(jargs, i));
+            const char *arg = globalEnv->GetStringUTFChars(jarg, 0);
+            (*args)[i] = const_cast<char *>(arg);
+            globalEnv->DeleteLocalRef(jarg);
+          }
+          (*args)[len] = NULL;
+        }
+      }
+      return success;
+    };
+
+    // list_outputs callback
+    auto opPropListOutputs = [](char ***outputs, void *state) {
+      bool success = true;
+      std::string key((char *)state);
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        success = false;
+      } else {
+        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midListOutputs = globalEnv->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
+        if (NULL == midListOutputs) {
+          std::cout << "could not find opProp method listOutputs.";
+          success = false;
+        } else {
+          jobjectArray joutputs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListOutputs));
+          int len = globalEnv->GetArrayLength(joutputs);
+          (*outputs) = new char *[len + 1];
+          for (int i = 0; i < len; ++i) {
+            jstring joutput = reinterpret_cast<jstring>(globalEnv->GetObjectArrayElement(joutputs, i));
+            const char *output = globalEnv->GetStringUTFChars(joutput, 0);
+            (*outputs)[i] = const_cast<char *>(output);
+            globalEnv->DeleteLocalRef(joutput);
+          }
+          (*outputs)[len] = NULL;
+        }
+      }
+      return success;
+    };
+
+    // list_auxiliary_states callback
+    auto opPropListAuxStates = [](char ***auxs, void *state) {
+      bool success = true;
+      std::string key((char *)state);
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        success = false;
+      } else {
+        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midListAuxStates = globalEnv->GetMethodID(opPropClass, "listAuxiliaryStates", "()[Ljava/lang/String;");
+        if (NULL == midListAuxStates) {
+          std::cout << "could not find opProp method listAuxiliaryStates.";
+          success = false;
+        } else {
+          auto obj = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListAuxStates);
+          if (obj != NULL) {
+            jobjectArray jauxs = (jobjectArray)obj;
+            int len = globalEnv->GetArrayLength(jauxs);
+            (*auxs) = new char *[len+1];
+            for (int i = 0; i < len; ++i) {
+              jstring jaux = reinterpret_cast<jstring>(globalEnv->GetObjectArrayElement(jauxs, i));
+              const char *aux = globalEnv->GetStringUTFChars(jaux, 0);
+              (*auxs)[i] = const_cast<char *>(aux);
+              globalEnv->DeleteLocalRef(jaux);
+            }
+            (*auxs)[len] = NULL;
+          } else { 
+            (*auxs) = new char *[1];
+            (*auxs)[0] = NULL;
+          }
+        }
+      }
+      return success;
+    };
+
+    // declare_backward_dependency callback
+    auto opPropDeclareBkDep = [](const int *outGrad, const int *inData,
+      const int *outData, int *numDeps, int **rdeps, void *state) {
+      bool success = true;
+      std::string key((char *)state);
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        success = false;
+      } else {
+        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midDeclareBkDep = globalEnv->GetMethodID(opPropClass, "declareBackwardDependency", "([I[I[I)[I");
+        if (NULL == midDeclareBkDep) {
+          std::cout << "could not find opProp method declareBackwardDependency.";
+          success = false;
+        } else {
+          jmethodID midListOutputs = globalEnv->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
+          jobjectArray joutputs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListOutputs));
+          int outLen = globalEnv->GetArrayLength(joutputs);
+          jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
+          jobjectArray jargs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
+          int intLen = globalEnv->GetArrayLength(jargs);
+
+          jintArray outGradArr = globalEnv->NewIntArray(outLen);
+          globalEnv->SetIntArrayRegion(outGradArr, (jsize)0, (jsize)outLen, outGrad);
+          jintArray inDataArr = globalEnv->NewIntArray(intLen);
+          globalEnv->SetIntArrayRegion(inDataArr, (jsize)0, (jsize)intLen, inData);
+          jintArray outDataArr = globalEnv->NewIntArray(outLen);
+          globalEnv->SetIntArrayRegion(outDataArr, (jsize)0, (jsize)outLen, outData);
+
+          auto obj = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midDeclareBkDep,
+                                                                                  outGradArr,
+                                                                                  inDataArr,
+                                                                                  outDataArr);
+          jintArray jrdeps = (jintArray)obj;
+          jint *rdepsArr = globalEnv->GetIntArrayElements(jrdeps, NULL);
+
+          (*numDeps) = globalEnv->GetArrayLength(jrdeps);
+          (* rdeps) = new int[(* numDeps)];
+          for (int i=0; i<(*numDeps); ++i) {
+            (* rdeps)[i] = rdepsArr[i];
+          }
+
+          globalEnv->DeleteLocalRef(outGradArr);
+          globalEnv->DeleteLocalRef(inDataArr);
+          globalEnv->DeleteLocalRef(outDataArr);
+          globalEnv->ReleaseIntArrayElements(jrdeps, rdepsArr, 0);
+        }
+      }
+      return success;
+    };
+
+    // infer_shape callback
+    auto opPropInferShape = [](int numInput, int *ndims,
+      unsigned **shapes, void *state) {
+      bool success = true;
+      std::string key((char *)state);
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        success = false;
+      } else {
+        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midInferShape = globalEnv->GetMethodID(opPropClass, "inferShapeEntry", "(I[[I)[[I");
+        if (NULL == midInferShape) {
+          std::cout << "could not find opProp method inferShapeEntry.";
+          success = false;
+        } else {
+          jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
+          jobjectArray jargs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
+          int intLen = globalEnv->GetArrayLength(jargs);
+          jintArray *ts = new jintArray[intLen];
+          auto tmp = globalEnv->NewIntArray(1);
+          jclass arrayClass = globalEnv->GetObjectClass(tmp);
+          globalEnv->DeleteLocalRef(tmp);
+          jobjectArray tensorShapes = globalEnv->NewObjectArray(intLen, arrayClass, NULL);
+          for (int i=0; i<intLen; ++i) {
+            ts[i] = globalEnv->NewIntArray(ndims[i]);
+            globalEnv->SetIntArrayRegion(ts[i], (jsize)0, (jsize)ndims[i], (int *)(shapes[i]));
+            globalEnv->SetObjectArrayElement(tensorShapes, i, (jobject)(ts[i]));
+          }
+          jobjectArray ret = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midInferShape,
+                                                                                  numInput,
+                                                                                  tensorShapes));
+          for (int i=0; i<numInput; ++i) {
+            jintArray jarr = reinterpret_cast<jintArray>(globalEnv->GetObjectArrayElement(ret, i));
+            int len = globalEnv->GetArrayLength(jarr);
+            jint *arr = globalEnv->GetIntArrayElements(jarr, NULL);
+            ndims[i] = len;
+            shapes[i] = new unsigned[len];
+            for (int j=0; j<len; ++j) shapes[i][j] = (unsigned)(arr[j]);
+            globalEnv->DeleteLocalRef(jarr);
+          }
+          for (int i=0; i<intLen; ++i) {
+            globalEnv->DeleteLocalRef(ts[i]);
+          }
+          delete[] ts;
+        }
+      }
+      return success;
+    };
+
+    // create_operator callback
+    auto opPropCreateOp = [](const char *ctx, int numInputs,
+      unsigned **shapes, int *ndims, int *dtypes, CustomOpInfo *ret, void *state) {
+      bool success = true;
+      std::string key((char *)state);
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        success = false;
+      } else {
+        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midCreateOp = globalEnv->GetMethodID(opPropClass, "createOperator", "(Ljava/lang/String;[[I[I)Lml/dmlc/mxnet/CustomOp;");
+        if (NULL == midCreateOp) {
+          std::cout << "could not find opProp method createOperator.";
+          success = false;
+        } else {
+          jstring jctx = globalEnv->NewStringUTF(ctx);
+          jintArray *ts = new jintArray[numInputs];
+          auto tmp = globalEnv->NewIntArray(1);
+          jclass arrayClass = globalEnv->GetObjectClass(tmp);
+          globalEnv->DeleteLocalRef(tmp);
+          jobjectArray inputShapes = globalEnv->NewObjectArray(numInputs, arrayClass, NULL);
+          for (int i=0; i<numInputs; ++i) {
+            ts[i] = globalEnv->NewIntArray(ndims[i]);
+            globalEnv->SetIntArrayRegion(ts[i], (jsize)0, (jsize)ndims[i], (int *)(shapes[i]));
+            globalEnv->SetObjectArrayElement(inputShapes, i, (jobject)(ts[i]));
+          }
+          jintArray jdtypes = globalEnv->NewIntArray(numInputs);
+          globalEnv->SetIntArrayRegion(jdtypes, (jsize)0, (jsize)numInputs, dtypes);
+          // get operator
+          jobject jOp = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midCreateOp,
+                                                                                      jctx,
+                                                                                      inputShapes,
+                                                                                      jdtypes);
+          globalEnv->DeleteLocalRef(jctx);
+          for (int i=0; i<numInputs; ++i) {
+            globalEnv->DeleteLocalRef(ts[i]);
+          }
+          delete[] ts;
+
+          globalOpMap.insert({ key, globalEnv->NewGlobalRef(jOp) });
+
+          // forward callback
+          auto forwardEntry = [](int size, void **ptrs, int *tags,
+            const int *reqs, const bool isTrain, void *state) {
+            std::string key((char *)state);
+            bool success = true;
+            if (globalOpMap.find(key) == globalOpMap.end()) {
+              std::cout << "op: " << key << " not found" << std::endl;
+              success = false;
+            } else {
+              _jvm->AttachCurrentThread((void **)&globalEnv, NULL);
+              jclass opClass =  globalEnv->GetObjectClass(globalOpMap.at(key));
+              jmethodID midForward = globalEnv->GetMethodID(opClass, "forwardEntry", "(I[J[I[IZ)I");
+              if (NULL == midForward) {
+                std::cout << "could not find op method forwardEntry.";
+                success = false;
+              } else {
+                jintArray tagsArr = globalEnv->NewIntArray(size);
+                globalEnv->SetIntArrayRegion(tagsArr, (jsize)0, (jsize)size, tags);
+                int reqSize = 0;
+                for (int i=0; i<size; ++i) {
+                  if (tags[i] == 1) reqSize ++;
+                }
+                jintArray reqsArr = globalEnv->NewIntArray(reqSize);
+                globalEnv->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
+                jlongArray ptrsArr = globalEnv->NewLongArray(size);
+                globalEnv->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
+                jint result = globalEnv->CallIntMethod(globalOpMap.at(key), midForward,
+                                                                                    size,
+                                                                                    ptrsArr,
+                                                                                    tagsArr,
+                                                                                    reqsArr,
+                                                                                    *(const_cast<bool*>(&isTrain)));
+                if ((int)result == 0) success = false;
+                globalEnv->DeleteLocalRef(tagsArr);
+                globalEnv->DeleteLocalRef(reqsArr);
+                globalEnv->DeleteLocalRef(ptrsArr);
+              }
+              _jvm->DetachCurrentThread();
+            }
+            return success;
+          };
+
+          // backward callback
+          auto backwardEntry = [](int size, void **ptrs, int *tags,
+            const int *reqs, const bool isTrain, void *state) {
+            std::string key((char *)state);
+            bool success = true;
+            // std::cout << "bkk" << std::endl;
+            if (globalOpMap.find(key) == globalOpMap.end()) {
+              std::cout << "op: " << key << " not found" << std::endl;
+              success = false;
+            } else {
+              _jvm->AttachCurrentThread((void **)&globalEnv, NULL);
+              jclass opClass = globalEnv->GetObjectClass(globalOpMap.at(key));
+              jmethodID midBackward = globalEnv->GetMethodID(opClass, "backwardEntry", "(I[J[I[IZ)I");
+              if (NULL == midBackward) {
+                std::cout << "could not find op method backwardEntry.";
+                success = false;
+              } else {
+                jintArray tagsArr = globalEnv->NewIntArray(size);
+                globalEnv->SetIntArrayRegion(tagsArr, (jsize)0, (jsize)size, tags);
+
+                int reqSize = 0;
+                for (int i=0; i<size; ++i) {
+                  if (tags[i] == 2) reqSize ++;
+                }
+                jintArray reqsArr = globalEnv->NewIntArray(reqSize);
+                globalEnv->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
+                jlongArray ptrsArr = globalEnv->NewLongArray(size);
+                globalEnv->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
+                jint result = globalEnv->CallIntMethod(globalOpMap.at(key), midBackward,
+                                                                                    size,
+                                                                                    ptrsArr,
+                                                                                    tagsArr,
+                                                                                    reqsArr,
+                                                                                    *(const_cast<bool*>(&isTrain)));
+                if ((int)result == 0) success = false;
+                globalEnv->DeleteLocalRef(tagsArr);
+                globalEnv->DeleteLocalRef(reqsArr);
+                globalEnv->DeleteLocalRef(ptrsArr);
+              }
+              _jvm->DetachCurrentThread();
+            }
+            return success;
+          };
+
+          // del callback
+          auto delEntry = [](void *state) {
+            std::string key((char *)state);
+            bool success = true;
+            // if (globalOpMap.find(key) == globalOpMap.end()) {
+            //   std::cout << "op: " << key << " not found" << std::endl;
+            //   success = false;
+            // } else {
+            //   globalEnv->DeleteGlobalRef(globalOpMap.at(key));
+            //   for(auto it = globalOpMap.begin(); it != globalOpMap.end(); ) {
+            //     if(it->first == key) it = globalOpMap.erase(it);
+            //     else ++it;
+            //   }
+            // }
+            return success;
+          };
+
+          ret->forward = static_cast<bool(*)(int, void**, int*, const int*, const bool, void*)>(forwardEntry);
+          ret->backward = static_cast<bool(*)(int, void**, int*, const int*, const bool, void*)>(backwardEntry);
+          ret->del = static_cast<bool(*)(void*)>(delEntry);
+          ret->p_forward = state;
+          ret->p_backward = state;
+          ret->p_del = state;
+        }
+      }
+      return success;
+    };
+
+    // del callback
+    auto opPropDel = [](void *state) {
+      std::string key((char *)state);
+      bool success = true;
+      // if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+      //   std::cout << "opProp: " << key << " not found" << std::endl;
+      //   success = false;
+      // } else {
+      //   globalEnv->DeleteGlobalRef(globalOpPropMap.at(key));
+      //   for(auto it = globalOpPropMap.begin(); it != globalOpPropMap.end(); ) {
+      //     if(it->first == key) it = globalOpPropMap.erase(it);
+      //     else ++it;
+      //   }
+      // }
+      return success;
+    };
+
+    ret->list_arguments = static_cast<bool(*)(char***, void*)>(opPropListArgument);
+    ret->list_outputs = static_cast<bool(*)(char***, void*)>(opPropListOutputs);
+    ret->infer_shape = static_cast<bool (*)(int, int*, unsigned**, void*)>(opPropInferShape);
+    ret->declare_backward_dependency = static_cast<bool(*)(const int*, const int*, const int*, int* num_deps, int**, void*)>(opPropDeclareBkDep);
+    ret->create_operator = static_cast<bool(*)(const char*, int, unsigned**, int*, int*, CustomOpInfo*, void*)>(opPropCreateOp);
+    ret->list_auxiliary_states = static_cast<bool(*)(char***, void*)>(opPropListAuxStates);
+    ret->del = static_cast<bool(*)(void*)>(opPropDel);
+    ret->p_list_arguments = (void *)(const_cast<char *>(opType));
+    ret->p_list_outputs = (void *)(const_cast<char *>(opType));
+    ret->p_infer_shape = (void *)(const_cast<char *>(opType));
+    ret->p_declare_backward_dependency = (void *)(const_cast<char *>(opType));
+    ret->p_create_operator = (void *)(const_cast<char *>(opType));
+    ret->p_list_auxiliary_states = (void *)(const_cast<char *>(opType));
+    ret->p_del = (void *)(const_cast<char *>(opType));
+
+    return success;
+  };
+
+  CustomOpPropCreator creator = static_cast<bool(*)(const char*, const int, const char**, const char**, CustomOpPropInfo*)>(creatorLambda);
+  int ret = MXCustomOpRegister(regName, creator);
   return ret;
 }
