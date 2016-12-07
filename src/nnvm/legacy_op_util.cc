@@ -32,7 +32,19 @@ class ParsedOpProp {
   void Init(const NodeAttrs& attrs) {
     std::vector<std::pair<std::string, std::string> > kwargs(
         attrs.dict.begin(), attrs.dict.end());
-    ptr->Init(kwargs);
+    try {
+      ptr->Init(kwargs);
+    } catch (const dmlc::ParamError& e) {
+      std::ostringstream os;
+      os << e.what();
+      os << ", in operator " << attrs.op->name << "("
+         << "name=\"" << attrs.name << "\"";
+      for (const auto& k : attrs.dict) {
+        os << ", " << k.first << "=\"" << k.second << "\"";
+      }
+      os << ")";
+      throw dmlc::ParamError(os.str());
+    }
     arguments = ptr->ListArguments();
     aux_states = ptr->ListAuxiliaryStates();
     outputs = ptr->ListOutputs();
