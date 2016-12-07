@@ -19,8 +19,8 @@
 *         zhenlin.luo@intel.com
 *
 *******************************************************************************/
-#ifndef MXNET_MKL_MEMORY_H_
-#define MXNET_MKL_MEMORY_H_
+#ifndef MXNET_OPERATOR_MKL_MKL_MEMORY_H_
+#define MXNET_OPERATOR_MKL_MKL_MEMORY_H_
 
 #include <string>
 #include <vector>
@@ -80,7 +80,7 @@ struct MKLMemHolder {
     return reinterpret_cast<void*>(prv_descriptor_->prv_ptr());
   }
 
-  const int prv_count() {
+  int prv_count() {
     if (head_ != HEAD_AT_PRV) {
       return 0;
     }
@@ -118,4 +118,4 @@ struct MKLMemHolder {
 #endif
 
 }  // namespace mxnet
-#endif  // MXNET_MKL_MEMORY_H_
+#endif  // MXNET_OPERATOR_MKL_MKL_MEMORY_H_
