@@ -9,6 +9,7 @@
 #include <mxnet/operator_util.h>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include <utility>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -332,17 +333,21 @@ void BinaryBroadcastBackwardUseOut(const nnvm::NodeAttrs& attrs,
   }
 }
 
-#define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)           \
-  NNVM_REGISTER_OP(name)                                         \
-  .set_num_inputs(2)                                             \
-  .set_num_outputs(1)                                            \
-  .set_attr<nnvm::FInferShape>("FInferShape", BinaryBroadcastShape)  \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)      \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                  \
-    [](const NodeAttrs& attrs){                                  \
-      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};  \
-    })                                                           \
-  .add_argument("lhs", "NDArray", "first input")                 \
+#define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                \
+  NNVM_REGISTER_OP(name)                                              \
+  .set_num_inputs(2)                                                  \
+  .set_num_outputs(1)                                                 \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                 \
+    [](const NodeAttrs& attrs) {                                      \
+      return std::vector<std::string>{"lhs", "rhs"};                  \
+    })                                                                \
+  .set_attr<nnvm::FInferShape>("FInferShape", BinaryBroadcastShape)   \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)       \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                   \
+    [](const NodeAttrs& attrs){                                       \
+      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};       \
+    })                                                                \
+  .add_argument("lhs", "NDArray", "first input")                      \
   .add_argument("rhs", "NDArray", "second input")
 
 }  // namespace op

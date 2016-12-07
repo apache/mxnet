@@ -105,14 +105,13 @@ NNVM_REGISTER_OP(transpose)
       for (index_t i = 0; i < axes.ndim(); ++i) {
         axes[param.axes[i]] = i;
       }
-      std::string str_axes;
-      std::stringstream ss(str_axes);
-      ss << axes;
-      return MakeGradNode("transpose", n, ograds, {{"axes", str_axes}});
+      std::ostringstream os;
+      os << axes;
+      return MakeGradNode("transpose", n, ograds, {{"axes", os.str()}});
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
-.add_argument("src", "NDArray", "Source input")
+.add_argument("data", "NDArray", "Source input")
 .add_arguments(TransposeParam::__FIELDS__());
 
 
@@ -129,7 +128,7 @@ NNVM_REGISTER_OP(expand_dims)
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
-.add_argument("src", "NDArray", "Source input")
+.add_argument("data", "NDArray", "Source input")
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(crop)
@@ -145,7 +144,7 @@ NNVM_REGISTER_OP(crop)
 .set_attr<nnvm::FInferShape>("FInferShape", CropShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Crop<cpu>)
-.add_argument("src", "NDArray", "Source input")
+.add_argument("data", "NDArray", "Source input")
 .add_arguments(SimpleCropParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_crop_assign)
@@ -157,6 +156,10 @@ NNVM_REGISTER_OP(_crop_assign)
 ")")
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"lhs", "rhs"};
+  })
 .set_attr_parser(ParamParser<SimpleCropParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", CropAssignShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
@@ -165,8 +168,8 @@ NNVM_REGISTER_OP(_crop_assign)
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .set_attr<FCompute>("FCompute<cpu>", CropAssign<cpu>)
-.add_argument("src", "NDArray", "Source input")
-.add_argument("val", "NDArray", "value to assign")
+.add_argument("lhs", "NDArray", "Source input")
+.add_argument("rhs", "NDArray", "value to assign")
 .add_arguments(SimpleCropParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_crop_assign_scalar)
@@ -185,7 +188,7 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .set_attr<FCompute>("FCompute<cpu>", CropAssignScalar<cpu>)
-.add_argument("src", "NDArray", "Source input")
+.add_argument("data", "NDArray", "Source input")
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
@@ -197,7 +200,7 @@ NNVM_REGISTER_OP(slice_axis)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_axis"})
-.add_argument("src", "NDArray", "Source input")
+.add_argument("data", "NDArray", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_slice_axis)
@@ -216,13 +219,17 @@ NNVM_REGISTER_OP(flip)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Flip<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"flip"})
-.add_argument("src", "NDArray", "Source input")
+.add_argument("data", "NDArray", "Source input")
 .add_arguments(FlipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(dot)
 .MXNET_DESCRIBE("Calculate dot product of two matrices or two vectors.")
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"lhs", "rhs"};
+  })
 .set_attr<nnvm::FInferShape>("FInferShape", DotShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
@@ -242,6 +249,10 @@ NNVM_REGISTER_OP(batch_dot)
                 " (batch, M, K) batch_dot (batch, K, N) --> (batch, M, N)")
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"lhs", "rhs"};
+  })
 .set_attr<nnvm::FInferShape>("FInferShape", BatchDotShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
