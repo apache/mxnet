@@ -68,7 +68,7 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
     })                                                              \
-  .add_argument("src", "NDArray", "Source input")
+  .add_argument("data", "NDArray", "Source input")
 
 }  // namespace op
 }  // namespace mxnet
