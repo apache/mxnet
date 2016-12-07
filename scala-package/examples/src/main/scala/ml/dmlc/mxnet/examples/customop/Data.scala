@@ -8,7 +8,6 @@ import ml.dmlc.mxnet.DataIter
  * @author Depeng Liang
  */
 object Data {
-
   // return train and val iterators for mnist
   def mnistIterator(dataPath: String, batchSize: Int, inputShape: Shape): (DataIter, DataIter) = {
     val flat = if (inputShape.length == 3) "False" else "True"
