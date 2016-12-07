@@ -161,7 +161,19 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
 template<typename PType>
 inline void ParamParser(nnvm::NodeAttrs* attrs) {
   PType param;
-  param.Init(attrs->dict);
+  try {
+    param.Init(attrs->dict);
+  } catch (const dmlc::ParamError& e) {
+    std::ostringstream os;
+    os << e.what();
+    os << ", in operator " << attrs->op->name << "("
+       << "name=\"" << attrs->name << "\"";
+    for (const auto& k : attrs->dict) {
+      os << ", " << k.first << "=\"" << k.second << "\"";
+    }
+    os << ")";
+    throw dmlc::ParamError(os.str());
+  }
   attrs->parsed = std::move(param);
 }
 
