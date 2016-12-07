@@ -35,6 +35,13 @@ def build_scala_docs(root_path):
     for doc_file in scaladocs:
         subprocess.call('cd ' + scala_path + ';mv ' + doc_file + ' ' + dest_path, shell = True)
 
+def convert_md_phase(phase):
+    try:
+        import pypandoc
+    except:
+        return phase
+    return pypandoc.convert(phase, 'rst', format='md')
+
 def build_table(table):
     if len(table) < 3:
         return ''
@@ -56,7 +63,7 @@ def build_table(table):
                     out += '   * - '
                 else:
                     out += '     - '
-                out += c + '\n'
+                out += convert_md_phase(c)+ '\n'
     out += '```\n'
     return out
 
@@ -91,7 +98,6 @@ def convert_md_table(root_path):
             print 'converted %d tables in %s' % (num_table, f)
             with codecs.open(f, 'w', 'utf-8') as i:
                 i.write(output)
-    print len(files)
 
 subprocess.call('./build-notebooks.sh')
 
