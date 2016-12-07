@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 import time
 import logging
-import warnings
 from collections import namedtuple
 import numpy as np
 
