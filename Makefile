@@ -67,6 +67,7 @@ endif
 ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 else
@@ -74,7 +75,7 @@ else
 endif
 ifneq ($(USE_BLAS), mkl)
 	ICC_ON=0
-	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON))
+	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON) $(MKLML_ROOT))
 	MKLROOT=$(firstword $(RETURN_STRING))
 	MKL_LDFLAGS=-l$(word 2, $(RETURN_STRING))
 	MKL_EXTERNAL=$(lastword $(RETURN_STRING))

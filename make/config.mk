@@ -59,6 +59,9 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
+#MKL ML Library folder
+MKLML_ROOT=/usr/local
+
 # whether use MKL2017 library
 USE_MKL2017 = 0
 
