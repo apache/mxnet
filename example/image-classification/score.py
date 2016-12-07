@@ -7,7 +7,7 @@ import logging
 
 
 def score(model, data_val, metrics, gpus, batch_size, rgb_mean,
-          image_shape='3,224,224', data_nthreads=4):
+          image_shape='3,224,224', data_nthreads=4, label_name='softmax_label'):
     # create data iterator
     rgb_mean = [float(i) for i in rgb_mean.split(',')]
     data_shape = tuple([int(i) for i in image_shape.split(',')])
@@ -20,22 +20,27 @@ def score(model, data_val, metrics, gpus, batch_size, rgb_mean,
         preprocess_threads = data_nthreads,
         batch_size         = batch_size,
         data_shape         = data_shape,
+        label_name = label_name,
         rand_crop          = False,
         rand_mirror        = False)
 
-    # download model
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    (prefix, epoch) = modelzoo.download_model(
-        model, os.path.join(dir_path, 'model'))
+    if isinstance(model, str):
+        # download model
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        (prefix, epoch) = modelzoo.download_model(
+            model, os.path.join(dir_path, 'model'))
+        sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+    elif isinstance(model, tuple) or isinstance(model, list) :
+        assert len(model) == 3
+        (sym, arg_params, aux_params) = model
 
     # create module
-    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
     if gpus == '':
         devs = mx.cpu()
     else:
         devs = [mx.gpu(int(i)) for i in gpus.split(',')]
 
-    mod = mx.mod.Module(symbol=sym, context=devs)
+    mod = mx.mod.Module(symbol=sym, context=devs, label_names=[label_name])
     mod.bind(for_training=False,
              data_shapes=data.provide_data,
              label_shapes=data.provide_label)

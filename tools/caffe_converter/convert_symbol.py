@@ -70,18 +70,18 @@ def proto2script(proto_file):
     elif len(proto.layers):
         layer = proto.layers
     else:
-        raise Exception('Invalid proto file.')   
+        raise Exception('Invalid proto file.')
     # Get input size to network
     input_dim = [1, 3, 224, 224] # default
     if len(proto.input_dim) > 0:
         input_dim = proto.input_dim
-    elif len(proto.input_shape) > 0: 
+    elif len(proto.input_shape) > 0:
         input_dim = proto.input_shape[0].dim
     elif (layer[0].type == "Input"):
         input_dim = layer[0].input_param.shape._values[0].dim
         layer.pop(0)
     else:
-        raise Exception('Invalid proto file.')   
+        raise Exception('Invalid proto file.')
 
     # We assume the first bottom blob of first layer is the output from data layer
     input_name = layer[0].bottom[0]

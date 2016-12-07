@@ -25,40 +25,32 @@ def get_iter(layers):
         layer_blobs = layer.blobs
         yield (layer_name, layer_type, layer_blobs)
 
-
-def main():
-    parser = argparse.ArgumentParser(description='Caffe prototxt to mxnet model parameter converter.\
-                    Note that only basic functions are implemented. You are welcomed to contribute to this file.')
-    parser.add_argument('caffe_prototxt', help='The prototxt file in Caffe format')
-    parser.add_argument('caffe_model', help='The binary model parameter file in Caffe format')
-    parser.add_argument('save_model_name', help='The name of the output model prefix')
-    args = parser.parse_args()
-
-    prob, input_dim = proto2symbol(args.caffe_prototxt)
+def convert_model(deploy_prototxt, caffemodel, save_model_name):
+    prob, input_dim = proto2symbol(deploy_prototxt)
 
     layers = ''
     layer_names = ''
 
     if caffe_flag:
         caffe.set_mode_cpu()
-        net_caffe = caffe.Net(args.caffe_prototxt, args.caffe_model, caffe.TEST)
+        net_caffe = caffe.Net(deploy_prototxt, caffemodel, caffe.TEST)
         layer_names = net_caffe._layer_names
         layers = net_caffe.layers
     else:
-        layers = parse.parse_caffemodel(args.caffe_model)
-    
+        layers = parse.parse_caffemodel(caffemodel)
+
     arg_shapes, output_shapes, aux_shapes = prob.infer_shape(data=tuple(input_dim))
     arg_names = prob.list_arguments()
     arg_shape_dic = dict(zip(arg_names, arg_shapes))
     arg_params = {}
-    
+
     iter = ''
     if caffe_flag:
         iter = get_caffe_iter(layer_names, layers)
     else:
         iter = get_iter(layers)
     first_conv = True
-    
+
     for layer_name, layer_type, layer_blobs in iter:
         if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14:
             assert(len(layer_blobs) == 2)
@@ -85,7 +77,7 @@ def main():
             bias = bias.reshape((bias.shape[0], 1))
             weight_name = layer_name + "_weight"
             bias_name = layer_name + "_bias"
-            
+
             if weight_name not in arg_shape_dic:
                 print weight_name + ' not found in arg_shape_dic.'
                 continue
@@ -101,10 +93,16 @@ def main():
                 first_conv = False
 
     model = mx.model.FeedForward(ctx=mx.cpu(), symbol=prob,
-            arg_params=arg_params, aux_params={}, num_epoch=1,
+            arg_params=arg_params, aux_params={}, num_epoch=0,
             learning_rate=0.05, momentum=0.9, wd=0.0001)
 
-    model.save(args.save_model_name)
+    model.save(save_model_name)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Caffe prototxt to mxnet model parameter converter')
+    parser.add_argument('caffe_prototxt', help='The prototxt file in Caffe format')
+    parser.add_argument('caffe_model', help='The binary model parameter file in Caffe format')
+    parser.add_argument('save_model_name', help='The name of the output model prefix')
+    args = parser.parse_args()
+
+    convert_model(args.caffe_prototxt, args.caffe_model, args.save_model_name)
