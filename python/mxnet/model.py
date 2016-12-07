@@ -317,7 +317,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     return
 
 
-def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, opt_params):
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, opt_params=None):
     """Checkpoint the model data into file.
 
     Parameters

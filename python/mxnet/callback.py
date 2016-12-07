@@ -24,7 +24,7 @@ def do_checkpoint(prefix, period=1):
         The callback function that can be passed as iter_end_callback to fit.
     """
     period = int(max(1, period))
-    def _callback(iter_no, sym, arg, aux, opt):
+    def _callback(iter_no, sym, arg, aux, opt=None):
         """The checkpoint function."""
         if (iter_no + 1) % period == 0:
             save_checkpoint(prefix, iter_no + 1, sym, arg, aux, opt)
