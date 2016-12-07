@@ -193,3 +193,8 @@ class MutableModule(BaseModule):
     def update_metric(self, eval_metric, labels):
         assert self.binded and self.params_initialized
         self._curr_module.update_metric(eval_metric, labels)
+
+    def install_monitor(self, mon):
+        """ Install monitor on all executors """
+        assert self.binded
+        self._curr_module.install_monitor(mon)
