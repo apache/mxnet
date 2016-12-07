@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 import time
 import logging
+import warnings
 from collections import namedtuple
 import numpy as np
 
@@ -428,6 +429,8 @@ class FeedForward(BASE_ESTIMATOR):
                  allow_extra_params=False,
                  begin_epoch=0,
                  **kwargs):
+        logging.warning('[Deprecation Warning] mxnet.model.FeedForward has been deprecated. ' + \
+                        'Please use mxnet.mod.Module instead.')
 
         if isinstance(symbol, sym.Symbol):
             self.symbol = symbol
