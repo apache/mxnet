@@ -252,7 +252,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["attr"]["kernel"])[0],
                                                     _str2tuple(node["attr"]["kernel"])[1],
                                                     _str2tuple(node["attr"]["stride"])[0]
-                                                        if "stride" in node["attr"] else '1',
+                                                    if "stride" in node["attr"] else '1',
                                                     node["attr"]["num_filter"])
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
@@ -268,7 +268,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                                                 _str2tuple(node["attr"]["kernel"])[0],
                                                 _str2tuple(node["attr"]["kernel"])[1],
                                                 _str2tuple(node["attr"]["stride"])[0]
-                                                    if "stride" in node["attr"] else '1')
+                                                if "stride" in node["attr"] else '1')
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]
