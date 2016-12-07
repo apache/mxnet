@@ -433,7 +433,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(ParamParser<ReduceAxisParam>)                \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("src", "NDArray", "Source input")               \
+  .add_argument("data", "NDArray", "Source input")               \
   .add_arguments(ReduceAxisParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE(name)                    \
@@ -443,14 +443,14 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("src", "NDArray", "Source input")               \
+  .add_argument("data", "NDArray", "Source input")               \
   .add_arguments(ReduceAxesParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_outputs(1)                                               \
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)                \
-  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                 \
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 
 #define MXNET_OPERATOR_REGISTER_BROADCAST(name)                 \
   NNVM_REGISTER_OP(name)                                        \
@@ -463,7 +463,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
       return MakeGradNode("_broadcast_backward", n, ograds,     \
                           {{"keepdims", "true"}});              \
     })                                                          \
-  .add_argument("src", "NDArray", "Source input")
+  .add_argument("data", "NDArray", "Source input")
 
 }  // namespace op
 }  // namespace mxnet

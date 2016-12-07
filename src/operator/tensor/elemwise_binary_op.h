@@ -92,6 +92,10 @@ void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(2)                                                \
   .set_num_outputs(1)                                               \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",               \
+    [](const NodeAttrs& attrs) {                                    \
+      return std::vector<std::string>{"lhs", "rhs"};                \
+    })                                                              \
   .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
