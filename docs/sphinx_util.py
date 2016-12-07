@@ -40,7 +40,7 @@ def convert_md_phase(phase):
         import pypandoc
     except:
         return phase
-    return pypandoc.convert(phase, 'rst', format='md')
+    return pypandoc.convert(phase, 'rst', format='md').replace('\n', ' ').replace('\r', '')
 
 def build_table(table):
     if len(table) < 3:
