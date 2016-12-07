@@ -46,5 +46,5 @@ if __name__ == '__main__':
     data = mx.nd.array(data)
     prob = model.forward(data)
     for k in range(len(tks)):        
-        print rvocab[np.argmax(prob, axis = 1)[k]]
+        print(rvocab[np.argmax(prob, axis = 1)[k]])
     

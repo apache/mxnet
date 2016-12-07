@@ -2,6 +2,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import logging
+from past.builtins import xrange
 
 
 class BiasXavier(mx.initializer.Xavier):

@@ -1,9 +1,11 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+from __future__ import print_function
 import sys
 sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
+from future.utils import viewitems
 
 # The interface of a data iter that works for bucketing
 #
@@ -62,7 +64,7 @@ def default_gen_buckets(sentences, batch_size, the_vocab):
 
     tl = 0
     buckets = []
-    for l, n in len_dict.iteritems(): # TODO: There are better heuristic ways to do this    
+    for l, n in viewitems(len_dict): # TODO: There are better heuristic ways to do this
         if n + tl >= batch_size:
             buckets.append(l)
             tl = 0
@@ -130,7 +132,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
         if len(buckets) == 0:
             buckets = default_gen_buckets(sentences, batch_size, vocab)
-        print buckets
+        print(buckets)
         self.vocab_size = len(vocab)
         self.data_name = data_name
         self.label_name = label_name

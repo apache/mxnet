@@ -1,6 +1,7 @@
 """
 test pretrained models
 """
+from __future__ import print_function
 import mxnet as mx
 from common import find_mxnet, modelzoo
 from common.util import download_file
