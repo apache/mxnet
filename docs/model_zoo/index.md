@@ -2,17 +2,19 @@
 
 MXNet features fast implementations of most state-of-the-art models reported in the academic literature. Our Model Playground contains complete models, with python scripts, pre-trained weights as well as instructions on how to fine tune these models.  
 
-## How to Contribute a Pre-Trained Model
+## How to Contribute a Pre-Trained Model (and what to include)
 
-1. Issue a Pull Request containing the following: Gist Log, .json model definition, model param file
-2. Confirm trained model meets published accuracy from original paper 
-
-## Expected Information:
-1. Technical Background (i.e. Model information, reference paper, network topology visualization, etc..)
-2. Step by step instructions on how to use
-3. Model Location, access instructions and files contained
-5. References to any other applicable docs or arxiv papers
-
+1. Issue a Pull Request containing the following: 
+ - Gist Log
+ - .json model definition
+ - Model parameter file
+ - Readme file (details below)
+ 
+2. Readme file should contain:
+ - Model Location, access instructions (wget)
+ - Confirmation the trained model meets published accuracy from original paper 
+ - Step by step instructions on how to use the trained model
+ - References to any other applicable docs or arxiv papers the model is based on
 
 ## [Convolutional Neural Networks](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
 
