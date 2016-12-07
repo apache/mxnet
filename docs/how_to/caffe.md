@@ -61,16 +61,11 @@ python convert_model.py VGG_ILSVRC_16_layers_deploy.prototxt VGG_ILSVRC_16_layer
 
 In addition, there are two tools:
 - `convert_caffe_modelzoo.py` : download and convert models from Caffe model zoo
-- `test_converter.py` : test the converted models by checking the prediction
-  accuracy
+- `test_converter.py` : test the converted models by checking the prediction accuracy
 
 ### Issues should be fixed
 
 * The tool only supports single input and single output network.
-* The tool can only work with the L2LayerParameter in Caffe.
-* Caffe uses a convention for multi-strided pooling output shape inconsistent with MXNet
-    * This importer doesn't handle this problem properly yet
-    * And example of this failure is importing bvlc_Googlenet. The user needs to add padding to stride-2 pooling to make this work right now.
 
 ## Calling Caffe operators in MXNet
 
