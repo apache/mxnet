@@ -5,7 +5,6 @@ import sys
 sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
-from future.utils import viewitems
 
 # The interface of a data iter that works for bucketing
 #
@@ -64,7 +63,7 @@ def default_gen_buckets(sentences, batch_size, the_vocab):
 
     tl = 0
     buckets = []
-    for l, n in viewitems(len_dict): # TODO: There are better heuristic ways to do this
+    for l, n in len_dict.items(): # TODO: There are better heuristic ways to do this
         if n + tl >= batch_size:
             buckets.append(l)
             tl = 0
@@ -216,7 +215,7 @@ class BucketSentenceIter(mx.io.DataIter):
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
             self.bucket_curr_idx[i_bucket] += self.batch_size
             data[:] = self.data[i_bucket][idx]
-            
+
             for k in range(len(data)):
                 label[k] = sorted(data[k])
                 #count = len(data[k]) / 2
@@ -233,7 +232,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all,
                                      self.buckets[i_bucket])
-            
+
             yield data_batch
 
     def reset(self):

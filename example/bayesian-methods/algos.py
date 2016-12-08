@@ -1,5 +1,4 @@
 from __future__ import print_function
-from past.builtins import xrange
 import mxnet as mx
 import mxnet.ndarray as nd
 import time
@@ -93,7 +92,7 @@ def HMC(sym, data_inputs, X, Y, X_test, Y_test, sample_num,
     sample_pool = []
     accept_num = 0
     start = time.time()
-    for i in xrange(sample_num):
+    for i in range(sample_num):
         sample_params, is_accept = step_HMC(exe, exe_params, exe_grads, label_key, noise_precision,
                                             prior_precision, L, learning_rate)
         accept_num += is_accept
@@ -128,7 +127,7 @@ def SGD(sym, data_inputs, X, Y, X_test, Y_test, total_iter_num,
                                     arg_names=params.keys())
     updater = mx.optimizer.get_updater(optimizer)
     start = time.time()
-    for i in xrange(total_iter_num):
+    for i in range(total_iter_num):
         indices = numpy.random.randint(X.shape[0], size=minibatch_size)
         X_batch = X[indices]
         Y_batch = Y[indices]
@@ -168,7 +167,7 @@ def SGLD(sym, X, Y, X_test, Y_test, total_iter_num,
     updater = mx.optimizer.get_updater(optimizer)
     sample_pool = []
     start = time.time()
-    for i in xrange(total_iter_num):
+    for i in range(total_iter_num):
         indices = numpy.random.randint(X.shape[0], size=minibatch_size)
         X_batch = X[indices]
         Y_batch = Y[indices]
@@ -244,7 +243,7 @@ def DistilledSGLD(teacher_sym, student_sym,
     teacher_updater = mx.optimizer.get_updater(teacher_optimizer)
     student_updater = mx.optimizer.get_updater(student_optimizer)
     start = time.time()
-    for i in xrange(total_iter_num):
+    for i in range(total_iter_num):
         # 1.1 Draw random minibatch
         indices = numpy.random.randint(X.shape[0], size=minibatch_size)
         X_batch = X[indices]
