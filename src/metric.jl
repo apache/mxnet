@@ -213,15 +213,14 @@ function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
             # Since we can only target labels right now this is the only thing we can do.
             target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
             p_k = pred[i, j, target, sample]
-
             metric.ace_sum += log(p_k)
             metric.n_sample += 1
           end
         end
       end
     elseif ndims(pred) == 2 # 1-dimensional case
-      for sample in 1:size(labels, 1)
-        target = Int(labels[sample]) + 1
+      for sample in 1:size(label, 1)
+        target = Int(label[sample]) + 1    # 0-based indexing => 1-based indexing
         p_k = pred[target, sample]
         metric.ace_sum += log(p_k)
         metric.n_sample += 1
