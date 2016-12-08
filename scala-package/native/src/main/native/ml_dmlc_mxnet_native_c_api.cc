@@ -10,6 +10,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <dmlc/logging.h>
 #include "jni_helper_func.h"
 
 JavaVM *_jvm;
@@ -1734,13 +1735,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
     // set CustomOpProp.kwargs
     std::string opPropKey(opType);
     if (globalOpPropMap.find(opPropKey) == globalOpPropMap.end()) {
-      std::cout << "CustomOpProp: " << opPropKey << " not found" << std::endl;
+      LOG(FATAL) << "CustomOpProp: " << opPropKey << " not found";
       success = false;
     } else {
       jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(opPropKey));
       jmethodID midInit = globalEnv->GetMethodID(opPropClass, "init", "([Ljava/lang/String;[Ljava/lang/String;)V");
       if (NULL == midInit) {
-        std::cout << "could not find CustomOpProp method init.";
+        LOG(FATAL) << "could not find CustomOpProp method init.";
         success = false;
       } else {
         // call init
@@ -1764,13 +1765,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       bool success = true;
       std::string key((char *)state);
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
         jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
         jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
         if (NULL == midListArguments) {
-          std::cout << "could not find opProp method listArguments.";
+          LOG(FATAL) << "could not find opProp method listArguments.";
           success = false;
         } else {
           jobjectArray jargs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
@@ -1793,13 +1794,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       bool success = true;
       std::string key((char *)state);
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
         jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
         jmethodID midListOutputs = globalEnv->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
         if (NULL == midListOutputs) {
-          std::cout << "could not find opProp method listOutputs.";
+          LOG(FATAL) << "could not find opProp method listOutputs.";
           success = false;
         } else {
           jobjectArray joutputs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListOutputs));
@@ -1822,13 +1823,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       bool success = true;
       std::string key((char *)state);
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
         jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
         jmethodID midListAuxStates = globalEnv->GetMethodID(opPropClass, "listAuxiliaryStates", "()[Ljava/lang/String;");
         if (NULL == midListAuxStates) {
-          std::cout << "could not find opProp method listAuxiliaryStates.";
+          LOG(FATAL) << "could not find opProp method listAuxiliaryStates.";
           success = false;
         } else {
           auto obj = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListAuxStates);
@@ -1858,13 +1859,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       bool success = true;
       std::string key((char *)state);
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
         jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
         jmethodID midDeclareBkDep = globalEnv->GetMethodID(opPropClass, "declareBackwardDependency", "([I[I[I)[I");
         if (NULL == midDeclareBkDep) {
-          std::cout << "could not find opProp method declareBackwardDependency.";
+          LOG(FATAL) << "could not find opProp method declareBackwardDependency.";
           success = false;
         } else {
           jmethodID midListOutputs = globalEnv->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
@@ -1909,13 +1910,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       bool success = true;
       std::string key((char *)state);
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
         jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
         jmethodID midInferShape = globalEnv->GetMethodID(opPropClass, "inferShapeEntry", "(I[[I)[[I");
         if (NULL == midInferShape) {
-          std::cout << "could not find opProp method inferShapeEntry.";
+          LOG(FATAL) << "could not find opProp method inferShapeEntry.";
           success = false;
         } else {
           jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
@@ -1958,13 +1959,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       bool success = true;
       std::string key((char *)state);
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-        std::cout << "CustomOpProp: " << key << " not found" << std::endl;
+        LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
         jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
         jmethodID midCreateOp = globalEnv->GetMethodID(opPropClass, "createOperator", "(Ljava/lang/String;[[I[I)Lml/dmlc/mxnet/CustomOp;");
         if (NULL == midCreateOp) {
-          std::cout << "could not find opProp method createOperator.";
+          LOG(FATAL) << "could not find opProp method createOperator.";
           success = false;
         } else {
           jstring jctx = globalEnv->NewStringUTF(ctx);
@@ -2042,14 +2043,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             bool success = true;
             // std::cout << "bkk" << std::endl;
             if (globalOpMap.find(key) == globalOpMap.end()) {
-              std::cout << "op: " << key << " not found" << std::endl;
+              LOG(FATAL) << "op: " << key << " not found";
               success = false;
             } else {
               _jvm->AttachCurrentThread((void **)&globalEnv, NULL);
               jclass opClass = globalEnv->GetObjectClass(globalOpMap.at(key));
               jmethodID midBackward = globalEnv->GetMethodID(opClass, "backwardEntry", "(I[J[I[IZ)I");
               if (NULL == midBackward) {
-                std::cout << "could not find op method backwardEntry.";
+                LOG(FATAL) << "could not find op method backwardEntry.";
                 success = false;
               } else {
                 jintArray tagsArr = globalEnv->NewIntArray(size);
@@ -2143,6 +2144,5 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   };
 
   CustomOpPropCreator creator = static_cast<bool(*)(const char*, const int, const char**, const char**, CustomOpPropInfo*)>(creatorLambda);
-  int ret = MXCustomOpRegister(regName, creator);
-  return ret;
+  return MXCustomOpRegister(regName, creator);
 }

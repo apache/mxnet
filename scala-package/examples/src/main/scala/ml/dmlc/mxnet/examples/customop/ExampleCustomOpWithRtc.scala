@@ -25,7 +25,7 @@ import ml.dmlc.mxnet.Rtc
  * @author Depeng Liang
  */
 object ExampleCustomOpWithRtc {
-  private val logger = LoggerFactory.getLogger(classOf[ExampleCustomOp])
+  private val logger = LoggerFactory.getLogger(classOf[ExampleCustomOpWithRtc])
 
   class Softmax(_param: Map[String, String]) extends CustomOp {
 
@@ -89,11 +89,11 @@ object ExampleCustomOpWithRtc {
 
     override def listOutputs(): Array[String] = Array("output")
 
-    override def inferShape(inShape: Array[Array[Int]]):
-      (Array[Array[Int]], Array[Array[Int]], Array[Array[Int]]) = {
+    override def inferShape(inShape: Array[Shape]):
+      (Array[Shape], Array[Shape], Array[Shape]) = {
       val dataShape = inShape(0)
-      val labelShape = Array(inShape(0)(0))
-      val outputShape = inShape(0)
+      val labelShape = Shape(dataShape(0))
+      val outputShape = dataShape
       (Array(dataShape, labelShape), Array(outputShape), null)
     }
 

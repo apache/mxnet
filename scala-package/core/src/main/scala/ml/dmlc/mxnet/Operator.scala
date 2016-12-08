@@ -135,8 +135,8 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
    *            array of aux shapes calculated from in_shape,
    *            in the same order as declared in listAuxiliaryStates().
    */
-  def inferShape(inShape: Array[Array[Int]]):
-    (Array[Array[Int]], Array[Array[Int]], Array[Array[Int]])
+  def inferShape(inShape: Array[Shape]):
+    (Array[Shape], Array[Shape], Array[Shape])
 
   /**
    * Scala Callback for CustomOp::InferShape
@@ -150,10 +150,13 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
       if (tmp == null) 0 else tmp.length
     }
     require(numTensor == (nIn + nOut + nAux))
-    val (inShapes, outShapes, auxShapes) = inferShape(intputShapes)
+    val (inShapes, outShapes, auxShapes) =
+      inferShape(intputShapes.map(Shape(_)))
     require(inShapes != null && inShapes.length != 0)
-    if (auxShapes != null && auxShapes.length != 0) inShapes ++ outShapes ++ auxShapes
-    else inShapes ++ outShapes
+    require(outShapes != null && outShapes.length != 0)
+    if (auxShapes != null && auxShapes.length != 0) {
+      inShapes.map(_.toArray) ++ outShapes.map(_.toArray) ++ auxShapes.map(_.toArray)
+    } else inShapes.map(_.toArray) ++ outShapes.map(_.toArray)
   }
 
   /**
