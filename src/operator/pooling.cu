@@ -13,9 +13,7 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<gpu>(PoolingParam param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape) {
+Operator *CreateOp<gpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
