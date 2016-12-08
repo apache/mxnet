@@ -13,6 +13,7 @@ DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
+.add_alias("sum_axis")
 .MXNET_DESCRIBE("Sum src along axis. If axis is empty, global reduction is performed")
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sum"});
@@ -22,6 +23,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(max)
+.add_alias("max_axis")
 .MXNET_DESCRIBE("Compute max along axis. If axis is empty, global reduction is performed")
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_max"});
@@ -31,6 +33,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_max)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::eq>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(min)
+.add_alias("min_axis")
 .MXNET_DESCRIBE("Compute min along axis. If axis is empty, global reduction is performed")
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_min"});

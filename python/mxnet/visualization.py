@@ -251,7 +251,8 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         elif op == "Convolution":
             label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["attr"]["kernel"])[0],
                                                     _str2tuple(node["attr"]["kernel"])[1],
-                                                    _str2tuple(node["attr"]["stride"])[0],
+                                                    _str2tuple(node["attr"]["stride"])[0]
+                                                    if "stride" in node["attr"] else '1',
                                                     node["attr"]["num_filter"])
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
@@ -266,7 +267,8 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = r"Pooling\n%s, %sx%s/%s" % (node["attr"]["pool_type"],
                                                 _str2tuple(node["attr"]["kernel"])[0],
                                                 _str2tuple(node["attr"]["kernel"])[1],
-                                                _str2tuple(node["attr"]["stride"])[0])
+                                                _str2tuple(node["attr"]["stride"])[0]
+                                                if "stride" in node["attr"] else '1')
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]
@@ -275,7 +277,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         else:
             attr["fillcolor"] = cm[7]
             if op == "Custom":
-                label = node["param"]["op_type"]
+                label = node["attr"]["op_type"]
 
         dot.node(name=name, label=label, **attr)
 
