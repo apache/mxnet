@@ -1396,7 +1396,7 @@ int MXRecordIOWriterFree(RecordIOHandle handle) {
   API_END();
 }
 
-int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
+int MXRecordIOWriterWriteRecord(RecordIOHandle handle,
                                 const char *buf, size_t size) {
   API_BEGIN();
   MXRecordIOContext *context =
@@ -1405,7 +1405,7 @@ int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
   API_END();
 }
 
-int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos) {
+int MXRecordIOWriterTell(RecordIOHandle handle, size_t *pos) {
   API_BEGIN();
   MXRecordIOContext *context =
     reinterpret_cast<MXRecordIOContext*>(handle);
@@ -1426,7 +1426,7 @@ int MXRecordIOReaderCreate(const char *uri,
   API_END();
 }
 
-int MXRecordIOReaderFree(RecordIOHandle *handle) {
+int MXRecordIOReaderFree(RecordIOHandle handle) {
   API_BEGIN();
   MXRecordIOContext *context =
     reinterpret_cast<MXRecordIOContext*>(handle);
@@ -1436,7 +1436,7 @@ int MXRecordIOReaderFree(RecordIOHandle *handle) {
   API_END();
 }
 
-int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
+int MXRecordIOReaderReadRecord(RecordIOHandle handle,
                               char const **buf, size_t *size) {
   API_BEGIN();
   MXRecordIOContext *context =
@@ -1451,7 +1451,7 @@ int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
   API_END();
 }
 
-int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos) {
+int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos) {
   API_BEGIN();
   MXRecordIOContext *context =
     reinterpret_cast<MXRecordIOContext*>(handle);
