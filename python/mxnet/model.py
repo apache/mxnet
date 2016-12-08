@@ -428,8 +428,9 @@ class FeedForward(BASE_ESTIMATOR):
                  allow_extra_params=False,
                  begin_epoch=0,
                  **kwargs):
-        logging.warning('[Deprecation Warning] mxnet.model.FeedForward has been deprecated. ' + \
-                        'Please use mxnet.mod.Module instead.')
+        logging.warning(
+            '\033[91m[Deprecation Warning] mxnet.model.FeedForward has been deprecated. ' + \
+            'Please use mxnet.mod.Module instead.\033[0m')
 
         if isinstance(symbol, sym.Symbol):
             self.symbol = symbol
