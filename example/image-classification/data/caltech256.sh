@@ -36,8 +36,8 @@ mv caltech256-val_train.lst caltech256-val.lst
 rm caltech256-val_*
 
 # generate rec files
-python ${MX_DIR}/tools/im2rec.py --resize 256 --quality 90 --num-thread 16 caltech256-val 256_ObjectCategories/
-python ${MX_DIR}/tools/im2rec.py --resize 256 --quality 90 --num-thread 16 caltech256-train ${TRAIN_DIR}/
+python ${MX_DIR}/tools/im2rec.py --resize 256 --quality 95 --num-thread 16 caltech256-val 256_ObjectCategories/
+python ${MX_DIR}/tools/im2rec.py --resize 256 --quality 95 --num-thread 16 caltech256-train ${TRAIN_DIR}/
 
 # clean
 rm -rf ${TRAIN_DIR} 256_ObjectCategories/

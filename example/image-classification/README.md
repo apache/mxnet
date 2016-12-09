@@ -72,11 +72,11 @@ python tools/im2rec.py --list True --recursive True --train-ratio 0.95 mydata im
 ```
 
 Then we generate the `.rec` files. We resize the images such that the short edge
-is at least 480px and save them with 90/100 quality. We also use 16 threads to
+is at least 480px and save them with 95/100 quality. We also use 16 threads to
 accelerate the packing.
 
 ```bash
-python tools/im2rec.py --resize 480 --quality 90 --num-thread 16 mydata img_data
+python tools/im2rec.py --resize 480 --quality 95 --num-thread 16 mydata img_data
 ```
 
 Hints:
