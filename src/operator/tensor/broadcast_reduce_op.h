@@ -315,10 +315,11 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 2, DType> ograd =
         inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
       Tensor<xpu, 2, DType> data =
-        inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+        inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
       Tensor<xpu, 2, DType> out =
-        inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
-      ASSIGN_DISPATCH(igrad, req[0], ograd*F<OP>(data, broadcast_to(out, src_shape)));
+        inputs[2].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+      ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
     } else {
       const int ndim = MXNET_SPECIAL_MAX_NDIM;
       Tensor<xpu, ndim, DType> igrad =
@@ -326,10 +327,11 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, ndim, DType> ograd =
         inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
       Tensor<xpu, ndim, DType> data =
-        inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+        inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
       Tensor<xpu, ndim, DType> out =
-        inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-      ASSIGN_DISPATCH(igrad, req[0], ograd*F<OP>(data, broadcast_to(out, src_shape)));
+        inputs[2].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+      ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
     }
   });
 }
