@@ -1,4 +1,5 @@
 # pylint:skip-file
+import logging
 import sys, random, time, math
 sys.path.insert(0, "../../python")
 import mxnet as mx
@@ -116,6 +117,9 @@ class DataIter(mx.io.DataIter):
         pass
 
 if __name__ == '__main__':
+    head = '%(asctime)-15s %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=head)
+
     parser = OptionParser()
     parser.add_option("-g", "--gpu", action = "store_true", dest = "gpu", default = False,
                       help = "use gpu")
@@ -138,9 +142,6 @@ if __name__ == '__main__':
                                  wd = 0.0000,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
 
-    import logging
-    head = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=head)
     
     metric = NceAuc()
     model.fit(X = data_train,

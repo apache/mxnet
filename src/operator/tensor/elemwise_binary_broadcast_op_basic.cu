@@ -44,36 +44,8 @@ NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::div_grad,
                                                               mshadow_op::div_rgrad>);
 
-NNVM_REGISTER_OP(broadcast_power)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::power>);
-
-NNVM_REGISTER_OP(_backward_power)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::power_grad,
-                                                              mshadow_op::power_rgrad>);
-
-NNVM_REGISTER_OP(_maximum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::maximum>);
-
-NNVM_REGISTER_OP(_backward_maximum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::ge,
-                                                              mshadow_op::lt>);
-
-NNVM_REGISTER_OP(_minimum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::minimum>);
-
-NNVM_REGISTER_OP(_backward_minimum)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::le,
-                                                              mshadow_op::gt>);
-
 NNVM_REGISTER_OP(_equal)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::eq>);
-
-NNVM_REGISTER_OP(_hypot)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::hypot>);
-
-NNVM_REGISTER_OP(_backward_hypot)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::hypot_grad_left,
-                    mshadow_op::hypot_grad_right>);
 
 }  // namespace op
 }  // namespace mxnet
