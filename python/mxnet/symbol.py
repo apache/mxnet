@@ -44,8 +44,9 @@ class Symbol(SymbolBase):
 
     def __repr__(self):
         """Get a string representation of the symbol."""
+        name = self.name
         return '<%s %s>' % (self.__class__.__name__,
-                            self.name)
+                            'Grouped' if name is None else name)
 
     def __add__(self, other):
         if isinstance(other, Symbol):
