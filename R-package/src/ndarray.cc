@@ -217,7 +217,7 @@ void NDArray::Save(const Rcpp::List& data_lst,
                    const std::string& filename) {
   std::vector<std::string> lst_names;
   if (HasName(data_lst)) {
-    lst_names = data_lst.names();
+    lst_names = Rcpp::as<std::vector<std::string> >(data_lst.names());
   }
   size_t num_args = data_lst.size();
   std::vector<NDArrayHandle> handles(num_args);
