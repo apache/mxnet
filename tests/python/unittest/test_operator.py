@@ -1034,8 +1034,12 @@ def test_reduce():
                 sum_groundtruth = np.array([sum_groundtruth])
             grad_nd = mx.nd.empty(shape)
             outgrad_npy = np.array(np.random.rand(*sum_groundtruth.shape))
+
+            keepdim_shape = np_reduce(dat_npy, axes, 1, np.sum).shape
             grad_groundtruth = numpy_reduce_grad_func(outgrad=outgrad_npy, data=dat_npy,
-                                                      axis=axes, keepdims=keepdims)
+                                                      outdata=sum_groundtruth,
+                                                      axis=axes, keepdims=keepdims,
+                                                      keepdim_shape=keepdim_shape)
             net = b.bind(default_context(), args={'a': mx.nd.array(dat_npy)},
                          args_grad={'a': grad_nd})
             net.forward(is_train=True)
@@ -1046,9 +1050,17 @@ def test_reduce():
             err_backward = reldiff(grad_nd.asnumpy(), grad_groundtruth)
             assert err_backward < 1E-4
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
-                      lambda outgrad, data, axis, keepdims:
-                        outgrad.reshape(np_reduce(data, axis, 1, np.sum).shape),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        outgrad.reshape(keepdim_shape),
                       mx.symbol.sum)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
+                      mx.symbol.max)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
+                      mx.symbol.min)
 
 def test_broadcast():
     sample_num = 200
