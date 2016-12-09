@@ -1715,18 +1715,15 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcFree
   return ret;
 }
 
-JNIEnv *globalEnv;
 std::unordered_map<std::string, jobject> globalOpPropMap;
 std::unordered_map<std::string, jobject> globalOpMap;
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   (JNIEnv *env, jobject obj, jstring jregName, jobject jopProp) {
 
-  globalEnv = env;
-
-  const char *regName = globalEnv->GetStringUTFChars(jregName, 0);
+  const char *regName = env->GetStringUTFChars(jregName, 0);
   std::string key(regName);
-  globalOpPropMap.insert({ key, globalEnv->NewGlobalRef(jopProp) });
+  globalOpPropMap.insert({ key, env->NewGlobalRef(jopProp) });
 
   auto creatorLambda = [](const char *opType, const int numKwargs,
     const char  **keys, const char **values, CustomOpPropInfo *ret) {
@@ -1738,26 +1735,29 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       LOG(FATAL) << "CustomOpProp: " << opPropKey << " not found";
       success = false;
     } else {
-      jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(opPropKey));
-      jmethodID midInit = globalEnv->GetMethodID(opPropClass, "init", "([Ljava/lang/String;[Ljava/lang/String;)V");
+      JNIEnv *env;
+      _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+      jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(opPropKey));
+      jmethodID midInit = env->GetMethodID(opPropClass, "init", "([Ljava/lang/String;[Ljava/lang/String;)V");
       if (NULL == midInit) {
         LOG(FATAL) << "could not find CustomOpProp method init.";
         success = false;
       } else {
         // call init
-        jclass strCls = globalEnv->FindClass("Ljava/lang/String;");
-        jobjectArray keysArr = globalEnv->NewObjectArray(numKwargs, strCls, NULL);
-        jobjectArray valuesArr = globalEnv->NewObjectArray(numKwargs, strCls, NULL);
+        jclass strCls = env->FindClass("Ljava/lang/String;");
+        jobjectArray keysArr = env->NewObjectArray(numKwargs, strCls, NULL);
+        jobjectArray valuesArr = env->NewObjectArray(numKwargs, strCls, NULL);
         for(int i=0; i<numKwargs; ++i) {
-          jstring keyStr = globalEnv->NewStringUTF(keys[i]);
-          jstring valueStr = globalEnv->NewStringUTF(values[i]);
-          globalEnv->SetObjectArrayElement(keysArr, i, keyStr);
-          globalEnv->SetObjectArrayElement(valuesArr, i, valueStr);
-          globalEnv->DeleteLocalRef(keyStr);
-          globalEnv->DeleteLocalRef(valueStr);
+          jstring keyStr = env->NewStringUTF(keys[i]);
+          jstring valueStr = env->NewStringUTF(values[i]);
+          env->SetObjectArrayElement(keysArr, i, keyStr);
+          env->SetObjectArrayElement(valuesArr, i, valueStr);
+          env->DeleteLocalRef(keyStr);
+          env->DeleteLocalRef(valueStr);
         }
-        globalEnv->CallVoidMethod(globalOpPropMap.at(opPropKey), midInit, keysArr, valuesArr);
+        env->CallVoidMethod(globalOpPropMap.at(opPropKey), midInit, keysArr, valuesArr);
       }
+      _jvm->DetachCurrentThread();
     }
 
     // list_arguments callback
@@ -1768,23 +1768,26 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
         LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
-        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
-        jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midListArguments = env->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
         if (NULL == midListArguments) {
           LOG(FATAL) << "could not find opProp method listArguments.";
           success = false;
         } else {
-          jobjectArray jargs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
-          int len = globalEnv->GetArrayLength(jargs);
+          jobjectArray jargs = (jobjectArray)(env->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
+          int len = env->GetArrayLength(jargs);
           (*args) = new char *[len+1];
           for (int i = 0; i < len; ++i) {
-            jstring jarg = reinterpret_cast<jstring>(globalEnv->GetObjectArrayElement(jargs, i));
-            const char *arg = globalEnv->GetStringUTFChars(jarg, 0);
+            jstring jarg = reinterpret_cast<jstring>(env->GetObjectArrayElement(jargs, i));
+            const char *arg = env->GetStringUTFChars(jarg, 0);
             (*args)[i] = const_cast<char *>(arg);
-            globalEnv->DeleteLocalRef(jarg);
+            env->DeleteLocalRef(jarg);
           }
           (*args)[len] = NULL;
         }
+        _jvm->DetachCurrentThread();
       }
       return success;
     };
@@ -1797,23 +1800,26 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
         LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
-        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
-        jmethodID midListOutputs = globalEnv->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midListOutputs = env->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
         if (NULL == midListOutputs) {
           LOG(FATAL) << "could not find opProp method listOutputs.";
           success = false;
         } else {
-          jobjectArray joutputs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListOutputs));
-          int len = globalEnv->GetArrayLength(joutputs);
+          jobjectArray joutputs = (jobjectArray)(env->CallObjectMethod(globalOpPropMap.at(key), midListOutputs));
+          int len = env->GetArrayLength(joutputs);
           (*outputs) = new char *[len + 1];
           for (int i = 0; i < len; ++i) {
-            jstring joutput = reinterpret_cast<jstring>(globalEnv->GetObjectArrayElement(joutputs, i));
-            const char *output = globalEnv->GetStringUTFChars(joutput, 0);
+            jstring joutput = reinterpret_cast<jstring>(env->GetObjectArrayElement(joutputs, i));
+            const char *output = env->GetStringUTFChars(joutput, 0);
             (*outputs)[i] = const_cast<char *>(output);
-            globalEnv->DeleteLocalRef(joutput);
+            env->DeleteLocalRef(joutput);
           }
           (*outputs)[len] = NULL;
         }
+        _jvm->DetachCurrentThread();
       }
       return success;
     };
@@ -1826,22 +1832,24 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
         LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
-        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
-        jmethodID midListAuxStates = globalEnv->GetMethodID(opPropClass, "listAuxiliaryStates", "()[Ljava/lang/String;");
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midListAuxStates = env->GetMethodID(opPropClass, "listAuxiliaryStates", "()[Ljava/lang/String;");
         if (NULL == midListAuxStates) {
           LOG(FATAL) << "could not find opProp method listAuxiliaryStates.";
           success = false;
         } else {
-          auto obj = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListAuxStates);
+          auto obj = env->CallObjectMethod(globalOpPropMap.at(key), midListAuxStates);
           if (obj != NULL) {
             jobjectArray jauxs = (jobjectArray)obj;
-            int len = globalEnv->GetArrayLength(jauxs);
+            int len = env->GetArrayLength(jauxs);
             (*auxs) = new char *[len+1];
             for (int i = 0; i < len; ++i) {
-              jstring jaux = reinterpret_cast<jstring>(globalEnv->GetObjectArrayElement(jauxs, i));
-              const char *aux = globalEnv->GetStringUTFChars(jaux, 0);
+              jstring jaux = reinterpret_cast<jstring>(env->GetObjectArrayElement(jauxs, i));
+              const char *aux = env->GetStringUTFChars(jaux, 0);
               (*auxs)[i] = const_cast<char *>(aux);
-              globalEnv->DeleteLocalRef(jaux);
+              env->DeleteLocalRef(jaux);
             }
             (*auxs)[len] = NULL;
           } else { 
@@ -1849,6 +1857,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             (*auxs)[0] = NULL;
           }
         }
+        _jvm->DetachCurrentThread();
       }
       return success;
     };
@@ -1862,44 +1871,47 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
         LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
-        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
-        jmethodID midDeclareBkDep = globalEnv->GetMethodID(opPropClass, "declareBackwardDependency", "([I[I[I)[I");
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midDeclareBkDep = env->GetMethodID(opPropClass, "declareBackwardDependency", "([I[I[I)[I");
         if (NULL == midDeclareBkDep) {
           LOG(FATAL) << "could not find opProp method declareBackwardDependency.";
           success = false;
         } else {
-          jmethodID midListOutputs = globalEnv->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
-          jobjectArray joutputs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListOutputs));
-          int outLen = globalEnv->GetArrayLength(joutputs);
-          jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
-          jobjectArray jargs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
-          int intLen = globalEnv->GetArrayLength(jargs);
+          jmethodID midListOutputs = env->GetMethodID(opPropClass, "listOutputs", "()[Ljava/lang/String;");
+          jobjectArray joutputs = (jobjectArray)(env->CallObjectMethod(globalOpPropMap.at(key), midListOutputs));
+          int outLen = env->GetArrayLength(joutputs);
+          jmethodID midListArguments = env->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
+          jobjectArray jargs = (jobjectArray)(env->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
+          int intLen = env->GetArrayLength(jargs);
 
-          jintArray outGradArr = globalEnv->NewIntArray(outLen);
-          globalEnv->SetIntArrayRegion(outGradArr, (jsize)0, (jsize)outLen, outGrad);
-          jintArray inDataArr = globalEnv->NewIntArray(intLen);
-          globalEnv->SetIntArrayRegion(inDataArr, (jsize)0, (jsize)intLen, inData);
-          jintArray outDataArr = globalEnv->NewIntArray(outLen);
-          globalEnv->SetIntArrayRegion(outDataArr, (jsize)0, (jsize)outLen, outData);
+          jintArray outGradArr = env->NewIntArray(outLen);
+          env->SetIntArrayRegion(outGradArr, (jsize)0, (jsize)outLen, outGrad);
+          jintArray inDataArr = env->NewIntArray(intLen);
+          env->SetIntArrayRegion(inDataArr, (jsize)0, (jsize)intLen, inData);
+          jintArray outDataArr = env->NewIntArray(outLen);
+          env->SetIntArrayRegion(outDataArr, (jsize)0, (jsize)outLen, outData);
 
-          auto obj = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midDeclareBkDep,
+          auto obj = env->CallObjectMethod(globalOpPropMap.at(key), midDeclareBkDep,
                                                  outGradArr,
                                                  inDataArr,
                                                  outDataArr);
           jintArray jrdeps = (jintArray)obj;
-          jint *rdepsArr = globalEnv->GetIntArrayElements(jrdeps, NULL);
+          jint *rdepsArr = env->GetIntArrayElements(jrdeps, NULL);
 
-          (*numDeps) = globalEnv->GetArrayLength(jrdeps);
+          (*numDeps) = env->GetArrayLength(jrdeps);
           (* rdeps) = new int[(* numDeps)];
           for (int i=0; i<(*numDeps); ++i) {
             (* rdeps)[i] = rdepsArr[i];
           }
 
-          globalEnv->DeleteLocalRef(outGradArr);
-          globalEnv->DeleteLocalRef(inDataArr);
-          globalEnv->DeleteLocalRef(outDataArr);
-          globalEnv->ReleaseIntArrayElements(jrdeps, rdepsArr, 0);
+          env->DeleteLocalRef(outGradArr);
+          env->DeleteLocalRef(inDataArr);
+          env->DeleteLocalRef(outDataArr);
+          env->ReleaseIntArrayElements(jrdeps, rdepsArr, 0);
         }
+        _jvm->DetachCurrentThread();
       }
       return success;
     };
@@ -1913,42 +1925,45 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
         LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
-        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
-        jmethodID midInferShape = globalEnv->GetMethodID(opPropClass, "inferShapeEntry", "(I[[I)[[I");
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midInferShape = env->GetMethodID(opPropClass, "inferShapeEntry", "(I[[I)[[I");
         if (NULL == midInferShape) {
           LOG(FATAL) << "could not find opProp method inferShapeEntry.";
           success = false;
         } else {
-          jmethodID midListArguments = globalEnv->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
-          jobjectArray jargs = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
-          int intLen = globalEnv->GetArrayLength(jargs);
+          jmethodID midListArguments = env->GetMethodID(opPropClass, "listArguments", "()[Ljava/lang/String;");
+          jobjectArray jargs = (jobjectArray)(env->CallObjectMethod(globalOpPropMap.at(key), midListArguments));
+          int intLen = env->GetArrayLength(jargs);
           jintArray *ts = new jintArray[intLen];
-          auto tmp = globalEnv->NewIntArray(1);
-          jclass arrayClass = globalEnv->GetObjectClass(tmp);
-          globalEnv->DeleteLocalRef(tmp);
-          jobjectArray tensorShapes = globalEnv->NewObjectArray(intLen, arrayClass, NULL);
+          auto tmp = env->NewIntArray(1);
+          jclass arrayClass = env->GetObjectClass(tmp);
+          env->DeleteLocalRef(tmp);
+          jobjectArray tensorShapes = env->NewObjectArray(intLen, arrayClass, NULL);
           for (int i=0; i<intLen; ++i) {
-            ts[i] = globalEnv->NewIntArray(ndims[i]);
-            globalEnv->SetIntArrayRegion(ts[i], (jsize)0, (jsize)ndims[i], (int *)(shapes[i]));
-            globalEnv->SetObjectArrayElement(tensorShapes, i, (jobject)(ts[i]));
+            ts[i] = env->NewIntArray(ndims[i]);
+            env->SetIntArrayRegion(ts[i], (jsize)0, (jsize)ndims[i], (int *)(shapes[i]));
+            env->SetObjectArrayElement(tensorShapes, i, (jobject)(ts[i]));
           }
-          jobjectArray ret = (jobjectArray)(globalEnv->CallObjectMethod(globalOpPropMap.at(key), midInferShape,
+          jobjectArray ret = (jobjectArray)(env->CallObjectMethod(globalOpPropMap.at(key), midInferShape,
                                                                         numInput,
                                                                         tensorShapes));
           for (int i=0; i<numInput; ++i) {
-            jintArray jarr = reinterpret_cast<jintArray>(globalEnv->GetObjectArrayElement(ret, i));
-            int len = globalEnv->GetArrayLength(jarr);
-            jint *arr = globalEnv->GetIntArrayElements(jarr, NULL);
+            jintArray jarr = reinterpret_cast<jintArray>(env->GetObjectArrayElement(ret, i));
+            int len = env->GetArrayLength(jarr);
+            jint *arr = env->GetIntArrayElements(jarr, NULL);
             ndims[i] = len;
             shapes[i] = new unsigned[len];
             for (int j=0; j<len; ++j) shapes[i][j] = (unsigned)(arr[j]);
-            globalEnv->DeleteLocalRef(jarr);
+            env->DeleteLocalRef(jarr);
           }
           for (int i=0; i<intLen; ++i) {
-            globalEnv->DeleteLocalRef(ts[i]);
+            env->DeleteLocalRef(ts[i]);
           }
           delete[] ts;
         }
+        _jvm->DetachCurrentThread();
       }
       return success;
     };
@@ -1962,37 +1977,41 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
         LOG(FATAL) << "CustomOpProp: " << key << " not found";
         success = false;
       } else {
-        jclass opPropClass = globalEnv->GetObjectClass(globalOpPropMap.at(key));
-        jmethodID midCreateOp = globalEnv->GetMethodID(opPropClass, "createOperator", "(Ljava/lang/String;[[I[I)Lml/dmlc/mxnet/CustomOp;");
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midCreateOp = env->GetMethodID(opPropClass, "createOperator", "(Ljava/lang/String;[[I[I)Lml/dmlc/mxnet/CustomOp;");
         if (NULL == midCreateOp) {
           LOG(FATAL) << "could not find opProp method createOperator.";
           success = false;
         } else {
-          jstring jctx = globalEnv->NewStringUTF(ctx);
+          jstring jctx = env->NewStringUTF(ctx);
           jintArray *ts = new jintArray[numInputs];
-          auto tmp = globalEnv->NewIntArray(1);
-          jclass arrayClass = globalEnv->GetObjectClass(tmp);
-          globalEnv->DeleteLocalRef(tmp);
-          jobjectArray inputShapes = globalEnv->NewObjectArray(numInputs, arrayClass, NULL);
+          auto tmp = env->NewIntArray(1);
+          jclass arrayClass = env->GetObjectClass(tmp);
+          env->DeleteLocalRef(tmp);
+          jobjectArray inputShapes = env->NewObjectArray(numInputs, arrayClass, NULL);
           for (int i=0; i<numInputs; ++i) {
-            ts[i] = globalEnv->NewIntArray(ndims[i]);
-            globalEnv->SetIntArrayRegion(ts[i], (jsize)0, (jsize)ndims[i], (int *)(shapes[i]));
-            globalEnv->SetObjectArrayElement(inputShapes, i, (jobject)(ts[i]));
+            ts[i] = env->NewIntArray(ndims[i]);
+            env->SetIntArrayRegion(ts[i], (jsize)0, (jsize)ndims[i], (int *)(shapes[i]));
+            env->SetObjectArrayElement(inputShapes, i, (jobject)(ts[i]));
           }
-          jintArray jdtypes = globalEnv->NewIntArray(numInputs);
-          globalEnv->SetIntArrayRegion(jdtypes, (jsize)0, (jsize)numInputs, dtypes);
+          jintArray jdtypes = env->NewIntArray(numInputs);
+          env->SetIntArrayRegion(jdtypes, (jsize)0, (jsize)numInputs, dtypes);
           // get operator
-          jobject jOp = globalEnv->CallObjectMethod(globalOpPropMap.at(key), midCreateOp,
+          jobject jOp = env->CallObjectMethod(globalOpPropMap.at(key), midCreateOp,
 		                                    jctx,
 		                                    inputShapes,
 		                                    jdtypes);
-          globalEnv->DeleteLocalRef(jctx);
+          env->DeleteLocalRef(jctx);
           for (int i=0; i<numInputs; ++i) {
-            globalEnv->DeleteLocalRef(ts[i]);
+            env->DeleteLocalRef(ts[i]);
           }
           delete[] ts;
 
-          globalOpMap.insert({ key, globalEnv->NewGlobalRef(jOp) });
+          globalOpMap.insert({ key, env->NewGlobalRef(jOp) });
+
+          _jvm->DetachCurrentThread();
 
           // forward callback
           auto forwardEntry = [](int size, void **ptrs, int *tags,
@@ -2003,33 +2022,34 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
               std::cout << "op: " << key << " not found" << std::endl;
               success = false;
             } else {
-              _jvm->AttachCurrentThread((void **)&globalEnv, NULL);
-              jclass opClass =  globalEnv->GetObjectClass(globalOpMap.at(key));
-              jmethodID midForward = globalEnv->GetMethodID(opClass, "forwardEntry", "(I[J[I[IZ)I");
+              JNIEnv *env;
+              _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+              jclass opClass =  env->GetObjectClass(globalOpMap.at(key));
+              jmethodID midForward = env->GetMethodID(opClass, "forwardEntry", "(I[J[I[IZ)I");
               if (NULL == midForward) {
                 std::cout << "could not find op method forwardEntry.";
                 success = false;
               } else {
-                jintArray tagsArr = globalEnv->NewIntArray(size);
-                globalEnv->SetIntArrayRegion(tagsArr, (jsize)0, (jsize)size, tags);
+                jintArray tagsArr = env->NewIntArray(size);
+                env->SetIntArrayRegion(tagsArr, (jsize)0, (jsize)size, tags);
                 int reqSize = 0;
                 for (int i=0; i<size; ++i) {
                   if (tags[i] == 1) reqSize ++;
                 }
-                jintArray reqsArr = globalEnv->NewIntArray(reqSize);
-                globalEnv->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
-                jlongArray ptrsArr = globalEnv->NewLongArray(size);
-                globalEnv->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
-                jint result = globalEnv->CallIntMethod(globalOpMap.at(key), midForward,
+                jintArray reqsArr = env->NewIntArray(reqSize);
+                env->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
+                jlongArray ptrsArr = env->NewLongArray(size);
+                env->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
+                jint result = env->CallIntMethod(globalOpMap.at(key), midForward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
                                                        *(const_cast<bool*>(&isTrain)));
                 if ((int)result == 0) success = false;
-                globalEnv->DeleteLocalRef(tagsArr);
-                globalEnv->DeleteLocalRef(reqsArr);
-                globalEnv->DeleteLocalRef(ptrsArr);
+                env->DeleteLocalRef(tagsArr);
+                env->DeleteLocalRef(reqsArr);
+                env->DeleteLocalRef(ptrsArr);
               }
               _jvm->DetachCurrentThread();
             }
@@ -2046,34 +2066,35 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
               LOG(FATAL) << "op: " << key << " not found";
               success = false;
             } else {
-              _jvm->AttachCurrentThread((void **)&globalEnv, NULL);
-              jclass opClass = globalEnv->GetObjectClass(globalOpMap.at(key));
-              jmethodID midBackward = globalEnv->GetMethodID(opClass, "backwardEntry", "(I[J[I[IZ)I");
+              JNIEnv *env;
+              _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+              jclass opClass = env->GetObjectClass(globalOpMap.at(key));
+              jmethodID midBackward = env->GetMethodID(opClass, "backwardEntry", "(I[J[I[IZ)I");
               if (NULL == midBackward) {
                 LOG(FATAL) << "could not find op method backwardEntry.";
                 success = false;
               } else {
-                jintArray tagsArr = globalEnv->NewIntArray(size);
-                globalEnv->SetIntArrayRegion(tagsArr, (jsize)0, (jsize)size, tags);
+                jintArray tagsArr = env->NewIntArray(size);
+                env->SetIntArrayRegion(tagsArr, (jsize)0, (jsize)size, tags);
 
                 int reqSize = 0;
                 for (int i=0; i<size; ++i) {
                   if (tags[i] == 2) reqSize ++;
                 }
-                jintArray reqsArr = globalEnv->NewIntArray(reqSize);
-                globalEnv->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
-                jlongArray ptrsArr = globalEnv->NewLongArray(size);
-                globalEnv->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
-                jint result = globalEnv->CallIntMethod(globalOpMap.at(key), midBackward,
+                jintArray reqsArr = env->NewIntArray(reqSize);
+                env->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
+                jlongArray ptrsArr = env->NewLongArray(size);
+                env->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
+                jint result = env->CallIntMethod(globalOpMap.at(key), midBackward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
                                                        *(const_cast<bool*>(&isTrain)));
                 if ((int)result == 0) success = false;
-                globalEnv->DeleteLocalRef(tagsArr);
-                globalEnv->DeleteLocalRef(reqsArr);
-                globalEnv->DeleteLocalRef(ptrsArr);
+                env->DeleteLocalRef(tagsArr);
+                env->DeleteLocalRef(reqsArr);
+                env->DeleteLocalRef(ptrsArr);
               }
               _jvm->DetachCurrentThread();
             }
