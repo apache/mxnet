@@ -60,6 +60,19 @@ softmax <- mx.symbol.SoftmaxOutput(fc3, name="sm")
 6. Here comes the output layer. Since there's only 10 digits, we set the number of neurons to 10.
 7. Finally we set the activation to softmax to get a probabilistic prediction.
 
+If you are a big fan of the `%>%` operator, you can also define the network as below:
+
+```{r, eval=FALSE}
+library(magrittr)
+softmax <- mx.symbol.Variable("data") %>%
+  mx.symbol.FullyConnected(name = "fc1", num_hidden = 128) %>%
+  mx.symbol.Activation(name = "relu1", act_type = "relu") %>%
+  mx.symbol.FullyConnected(name = "fc2", num_hidden = 64) %>%
+  mx.symbol.Activation(name = "relu2", act_type = "relu") %>%
+  mx.symbol.FullyConnected(name="fc3", num_hidden=10) %>%
+  mx.symbol.SoftmaxOutput(name="sm")
+```
+
 ## Training
 
 We are almost ready for the training process. Before we start the computation, let's decide what device should we use.
