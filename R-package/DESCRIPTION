@@ -9,7 +9,7 @@ Description: MXNet is a deep learning framework designed for both efficiency
     and flexibility. It allows you to mix the flavours of deep learning programs
     together to maximize the efficiency and your productivity.
 License: BSD
-URL: https://github.com/dmlc/mxnet/R-package
+URL: https://github.com/dmlc/mxnet/tree/master/R-package
 BugReports: https://github.com/dmlc/mxnet/issues
 Imports:
     methods,
