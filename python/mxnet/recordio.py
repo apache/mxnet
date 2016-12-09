@@ -241,7 +241,7 @@ def unpack_img(s, iscolor=-1):
     img = cv2.imdecode(img, iscolor)
     return header, img
 
-def pack_img(header, img, quality=80, img_fmt='.jpg'):
+def pack_img(header, img, quality=95, img_fmt='.jpg'):
     """pack an image into MXImageRecord
 
     Parameters

@@ -64,6 +64,9 @@ Here is a link to a blog by Jeff Barr illustrating how to setup an Amazon Machin
 * [P2 and Deep Learning Blog](https://aws.amazon.com/blogs/aws/new-p2-instance-type-for-amazon-ec2-up-to-16-gpus/)
 * [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
 
+Or you can use Bitfusion's MXNet AMI with a variety of deep learning and data science libraries and frameworks pre-installed, plus MXNet tutorial Jupyter notebook sample code.
+* [Bitfusion MXNet AMI](https://aws.amazon.com/marketplace/pp/B01NBF5O1N/ref=_ptnr_docs_mxnet)
+
 ## Using MXNet on multiple instances with AWS
 To scale up on AWS GPU instances using a CloudFormation template, you can follow the instructions linked in the blog below.
 * [CloudFormation Template AWS Blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)

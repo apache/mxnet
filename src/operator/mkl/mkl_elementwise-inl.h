@@ -45,7 +45,7 @@ enum EltwiseParameter_EltwiseOp {
 template<typename xpu, typename DType>
 class MKLElementWiseOp : public Operator {
  public:
-  std::string getName() {
+  static std::string getName() {
     return "MKLElementWiseOp";
   }
   explicit MKLElementWiseOp(ElementWiseSumParam param,
