@@ -179,7 +179,7 @@ def parse_args():
         be packed by default.')
     rgroup.add_argument('--center-crop', type=bool, default=False,
                         help='specify whether to crop the center image to make it rectangular.')
-    rgroup.add_argument('--quality', type=int, default=80,
+    rgroup.add_argument('--quality', type=int, default=95,
                         help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
     rgroup.add_argument('--num-thread', type=int, default=1,
                         help='number of thread to use for encoding. order of images will be different\
@@ -195,7 +195,7 @@ def parse_args():
     rgroup.add_argument('--shuffle', default=True, help='If this is set as True, \
         im2rec will randomize the image order in <prefix>.lst')
     rgroup.add_argument('--pack-label', default=False,
-        help='Whether to also pack multi dimensional label in the record file') 
+        help='Whether to also pack multi dimensional label in the record file')
     args = parser.parse_args()
     args.prefix = os.path.abspath(args.prefix)
     args.root = os.path.abspath(args.root)
