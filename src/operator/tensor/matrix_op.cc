@@ -99,7 +99,8 @@ NNVM_REGISTER_OP(transpose)
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TransposeParam& param = nnvm::get<TransposeParam>(n->attrs.parsed);
     if (param.axes.ndim() == 0) {
-      return MakeGradNode("transpose", n, ograds, {});
+      return MakeGradNode("transpose", n, ograds,
+                          std::unordered_map<std::string, std::string>());
     } else {
       TShape axes = TShape(param.axes.ndim());
       for (index_t i = 0; i < axes.ndim(); ++i) {
