@@ -1028,6 +1028,36 @@ def concatenate(arrays, axis=0, always_copy=True):
 
     return ret
 
+# pylint: disable= no-member, protected-access, too-many-arguments
+def arange(start=None, stop=None, step=None, repeat=1, ctx=Context.default_ctx, dtype=mx_real_t):
+    """Simlar function in the MXNet ndarray as numpy.arange
+        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value. The default start value is 0.
+    stop : number, optional
+        End of interval. The interval does not include this value.
+    step : number, optional
+        Spacing between values
+    repeat : number, optional
+        "The repeating time of all elements.
+        E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    ctx : Context, optional
+        The context of the NDArray, default to current default context.
+    dtype : type, optional
+        The value type of the NDArray, default to np.float32
+    Returns
+    -------
+    out : NDArray
+        The created NDArray
+    """
+    return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
+                             dtype=dtype, ctx=str(ctx))
+# pylint: enable= no-member, protected-access, too-many-arguments
+
+
 def load(fname):
     """Load ndarray from binary file.
 

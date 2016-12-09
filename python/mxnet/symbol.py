@@ -1129,3 +1129,29 @@ def hypot(left, right):
         return _numpy.hypot(left, right)
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+
+
+def arange(start=None, stop=None, step=None, repeat=1, name=None, dtype=_numpy.float32):
+    """Simlar function in the MXNet ndarray as numpy.arange
+        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value. The default start value is 0.
+    stop : number, optional
+        End of interval. The interval does not include this value.
+    step : number, optional
+        Spacing between values
+    repeat : number, optional
+        "The repeating time of all elements.
+        E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    dtype : type, optional
+        The value type of the NDArray, default to np.float32
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
+                             name=name, dtype=dtype)

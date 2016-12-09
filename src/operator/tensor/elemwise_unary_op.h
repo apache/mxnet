@@ -58,6 +58,7 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+
 #define MXNET_OPERATOR_REGISTER_UNARY(name)                         \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(1)                                                \
