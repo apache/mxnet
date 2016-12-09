@@ -13,7 +13,7 @@ NNVM_REGISTER_OP(softmax_cross_entropy)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxCrossEntropyShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

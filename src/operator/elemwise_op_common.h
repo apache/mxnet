@@ -74,7 +74,7 @@ template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), n_in) << attrs.name << in_attrs->size() << n_in;
+  CHECK_EQ(in_attrs->size(), n_in) << " in operator " << attrs.name;
   CHECK_EQ(out_attrs->size(), n_out);
   return ElemwiseAttr<TShape, shape_is_none, true>(
     attrs, in_attrs, out_attrs);
@@ -88,7 +88,7 @@ template<int n_in, int n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), n_in) << attrs.name << in_attrs->size() << n_in;
+  CHECK_EQ(in_attrs->size(), n_in) << " in operator " << attrs.name;
   CHECK_EQ(out_attrs->size(), n_out);
   return ElemwiseAttr<int, type_is_none, true>(
     attrs, in_attrs, out_attrs);
