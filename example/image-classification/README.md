@@ -274,31 +274,33 @@ with 256 GPUs in total.
 - Software:
   [AWS Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB) with
   CUDA 7.5 and CUDNN 5.1 installed
-- We fixed the batch size per GPU and then increase the number of
-  GPUs. Synchronized SGD is used, namely `--kv-store dist_device_sync`.
 
-  |  | `alexnet` | `inception-v3` | `resnet-152` |
-  | --- | --- | --- | --- |
-  | batch per GPU | 512 | 32 | 32 |
-  | model size (MB) | 203 | 95 | 240 |
+We fixed the batch size per GPU and then increase the number of
+GPUs. Synchronized SGD is used, namely `--kv-store dist_device_sync`. The
+following three CNNs (located in [symbol/](./symbol/)) are used
 
-- Images per second
+|  | `alexnet` | `inception-v3` | `resnet-152` |
+| --- | --- | --- | --- |
+| batch per GPU | 512 | 32 | 32 |
+| model size (MB) | 203 | 95 | 240 |
 
-  | #GPUs | `alexnet` | `inception-v3` | `resnet-152` |
-  | --- | --- | --- | --- |
-  | 1   | 457.07   | 30.4    | 20.08   |
-  | 2   | 870.43   | 59.61   | 38.76   |
-  | 4   | 1514.8   | 117.9   | 77.01   |
-  | 8   | 2852.5   | 233.39  | 153.07  |
-  | 16  | 4244.18  | 447.61  | 298.03  |
-  | 32  | 7945.57  | 882.57  | 595.53  |
-  | 64  | 15840.52 | 1761.24 | 1179.86 |
-  | 128 | 31334.88 | 3416.2  | 2333.47 |
-  | 256 | 61938.36 | 6660.98 | 4630.42 |
+Number of images proccessed per second is shown in the following table:
 
-- Speedup against ideal
+| #GPUs | `alexnet` | `inception-v3` | `resnet-152` |
+| --- | --- | --- | --- |
+| 1   | 457.07   | 30.4    | 20.08   |
+| 2   | 870.43   | 59.61   | 38.76   |
+| 4   | 1514.8   | 117.9   | 77.01   |
+| 8   | 2852.5   | 233.39  | 153.07  |
+| 16  | 4244.18  | 447.61  | 298.03  |
+| 32  | 7945.57  | 882.57  | 595.53  |
+| 64  | 15840.52 | 1761.24 | 1179.86 |
+| 128 | 31334.88 | 3416.2  | 2333.47 |
+| 256 | 61938.36 | 6660.98 | 4630.42 |
 
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/speedup-p2.png" width="800"/>
+The following figure shows the speedup against a single GPU compared to the ideal scalability.
+
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/speedup-p2.png" width="600"/>
 
 ## FAQ
 
