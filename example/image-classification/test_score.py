@@ -1,11 +1,12 @@
 """
 test pretrained models
 """
-import mxnet as mx
+import os
 from common import find_mxnet, modelzoo
 from common.util import download_file
 from score import score
 import subprocess
+import mxnet as mx
 
 def get_gpus():
     try:
@@ -16,7 +17,9 @@ def get_gpus():
     return ','.join([str(i) for i in range(len(gpus))])
 
 def download_data():
-    download_file('http://data.mxnet.io/data/val-5k-256.rec', 'data/val-5k-256.rec')
+    if not os.path.isdir('data'):
+        os.mkdir('data')
+    return download_file('http://data.mxnet.io/data/val-5k-256.rec', 'data/val-5k-256.rec')
 
 def test_imagenet1k_resnet(**kwargs):
     models = ['imagenet1k-resnet-34',

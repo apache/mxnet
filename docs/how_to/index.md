@@ -6,6 +6,7 @@ This topic provides links to guidelines for using MXNet.
 - [How to use pre-trained models](http://mxnet.io/tutorials/python/predict_imagenet.html)
 - [How to use Fine-tune with Pre-trained Models](http://mxnet.io/how_to/finetune.html)
 - [How to train with multiple CPU/GPUs with data parallelism](multi_devices.md)
+- [How to convert from Caffe to MXNet](caffe.md)
 - [How to train with multiple GPUs in model parallelism - train LSTM](model_parallel_lstm.md)
 - [How to run MXNet on smart or mobile devices](smart_device.md)
 - [How to set up MXNet on the AWS Cloud using Amazon EC2 and Amazon S3](cloud.md)

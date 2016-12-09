@@ -34,15 +34,15 @@ def protoBlobFileToND(protofile):
     img_mean_np[2] = img_mean_np2[0]
     return mx.nd.array(img_mean_np)
 
-def main():
+def convert_mean(protofile, save_name):
+    nd = protoBlobFileToND(protofile)
+    mx.nd.save(save_name, nd)
+    return save_name
+
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Caffe prototxt to mxnet model parameter converter.\
                     Note that only basic functions are implemented. You are welcomed to contribute to this file.')
     parser.add_argument('mean_image_proto', help='The protobuf file in Caffe format')
     parser.add_argument('save_name', help='The name of the output file prefix')
     args = parser.parse_args()
-    nd = protoBlobFileToND(args.mean_image_proto)
-    mx.nd.save(args.save_name + ".nd", {"mean_image": nd})
-
-
-if __name__ == '__main__':
-    main()
+    convert_mean(args.mea_image_proto, args.save_name)
