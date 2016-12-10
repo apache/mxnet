@@ -25,9 +25,8 @@ import threading
 import time
 import six
 
-import tensorflow as tf
-
 from . import event_pb2
+from .record_writer import RecordWriter
 
 
 def as_bytes(bytes_or_text, encoding='utf-8'):
@@ -64,6 +63,7 @@ def directory_check(path):
 
 class EventsWriter(object):
     '''Writes `Event` protocol buffers to an event file.'''
+
     def __init__(self, file_prefix):
         '''
         Events files have a name of the form
@@ -77,7 +77,7 @@ class EventsWriter(object):
 
         self._num_outstanding_events = 0
 
-        self._recordio_writer = tf.python_io.TFRecordWriter(self._file_prefix)
+        self._py_recordio_writer = RecordWriter(self._file_prefix)
 
         # Initialize an event instance.
         self._event = event_pb2.Event()
@@ -97,7 +97,7 @@ class EventsWriter(object):
 
     def _write_serialized_event(self, event_str):
         self._num_outstanding_events += 1
-        self._recordio_writer.write(event_str)
+        self._py_recordio_writer.write(event_str)
 
     def flush(self):
         '''Flushes the event file to disk.'''

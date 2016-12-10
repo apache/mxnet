@@ -2,3 +2,4 @@
 """
 
 from .writer import FileWriter
+from .record_writer import RecordWriter
