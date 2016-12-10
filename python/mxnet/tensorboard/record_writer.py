@@ -5,7 +5,6 @@ The code was borrow from https://github.com/TeamHG-Memex/tensorboard_logger
 
 import re
 import struct
-import time
 
 from .crc32c import crc32c
 

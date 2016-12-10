@@ -33,43 +33,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import logging
 import re as _re
 import bisect
 
-from google.protobuf import json_format as _json_format
-# exports Summary, SummaryDescription, Event, TaggedRunMetadata, SessionLog
 # pylint: disable=unused-import
 from .summary_pb2 import Summary
-from .summary_pb2 import SummaryDescription
 from .summary_pb2 import HistogramProto
-from .event_pb2 import Event
-from .event_pb2 import SessionLog
-from .event_pb2 import TaggedRunMetadata
-# pylint: enable=unused-import
-from tensorflow.python.framework import dtypes as _dtypes
-from tensorflow.python.framework import ops as _ops
-from tensorflow.python.ops import gen_logging_ops as _gen_logging_ops
-# exports tensor_summary
-# pylint: disable=unused-import
-from tensorflow.python.ops.summary_ops import tensor_summary
-# pylint: enable=unused-import
-from tensorflow.python.platform import tf_logging as _logging
-# exports FileWriter, FileWriterCache
-# pylint: disable=unused-import
-from .writer import FileWriter
-from .writer_cache import FileWriterCache
-# pylint: enable=unused-import
-from tensorflow.python.util import compat as _compat
-from tensorflow.python.util.all_util import remove_undocumented
-
-
-'''
-def _collect(val, collections, default_collections):
-  if collections is None:
-    collections = default_collections
-  for key in collections:
-    _ops.add_to_collection(key, val)
-'''
 
 
 _INVALID_TAG_CHARACTERS = _re.compile(r'[^-/\w\.]')
@@ -87,7 +57,7 @@ def _clean_tag(name):
     new_name = _INVALID_TAG_CHARACTERS.sub('_', name)
     new_name = new_name.lstrip('/')  # Remove leading slashes
     if new_name != name:
-      _logging.info(
+      logging.info(
           'Summary name %s is illegal; using %s instead.' %
           (name, new_name))
       name = new_name
@@ -172,7 +142,7 @@ def make_histogram(values):
                           bucket=bucket)
 
 
-'''
+'''TODO. support more summary types later.
 def image(name, tensor, max_outputs=3, collections=None):
   """Outputs a `Summary` protocol buffer with images.
   The summary has up to `max_images` summary values containing images. The
@@ -326,10 +296,3 @@ def get_summary_description(node_def):
   _json_format.Parse(description_str, summary_description)
   return summary_description
 '''
-
-
-_allowed_symbols = [
-    'Summary', 'SummaryDescription', 'Event', 'TaggedRunMetadata', 'SessionLog'
-]
-
-remove_undocumented(__name__, _allowed_symbols)
