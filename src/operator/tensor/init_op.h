@@ -25,6 +25,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(InitOpParam) {
     DMLC_DECLARE_FIELD(shape)
+    .set_default(TShape())
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
