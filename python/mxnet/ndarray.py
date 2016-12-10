@@ -888,6 +888,36 @@ def negative(arr):
     """ Return the negation of array values """
     return multiply(arr, -1.0)
 
+def zeros(shape, ctx=Context.default_ctx, dtype=mx_real_t):
+    """Create a new NDArray filled with 0, with specified shape.
+    Parameters
+    ----------
+    shape : tuple
+        shape of the NDArray.
+    ctx : Context, optional.
+        The context of the NDArray, default to current default context.
+    Returns
+    -------
+    out: Array
+        The created NDArray.
+    """
+    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
+
+def ones(shape, ctx=Context.default_ctx, dtype=mx_real_t):
+    """Create a new NDArray filled with 1, with specified shape.
+    Parameters
+    ----------
+    shape : tuple
+        shape of the NDArray.
+    ctx : Context, optional
+        The context of the NDArray, default to current default context.
+    Returns
+    -------
+    out: Array
+        The created NDArray.
+    """
+    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype)
+
 def full(shape, val, ctx=None):
     """Create a new NDArray filled with given value, with specified shape.
 

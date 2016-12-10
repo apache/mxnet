@@ -13,7 +13,6 @@ DMLC_REGISTER_PARAMETER(RangeParam);
 
 
 NNVM_REGISTER_OP(_zeros)
-.add_alias("zeros")
 .describe("fill target with zeros")
 .set_num_inputs(0)
 .set_num_outputs(1)
@@ -24,7 +23,6 @@ NNVM_REGISTER_OP(_zeros)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_ones)
-.add_alias("ones")
 .describe("fill target with ones")
 .set_num_inputs(0)
 .set_num_outputs(1)
