@@ -21,12 +21,12 @@ __version__ = libinfo['__version__']
 
 
 PROTO_FILES = [
-    'mxnet/tensorboard/types.proto',
-    'mxnet/tensorboard/tensor_shape.proto',
-    'mxnet/tensorboard/tensor.proto',
-    'mxnet/tensorboard/resource_handle.proto',
-    'mxnet/tensorboard/summary.proto',
-    'mxnet/tensorboard/event.proto',
+    'tensorboard/types.proto',
+    'tensorboard/tensor_shape.proto',
+    'tensorboard/tensor.proto',
+    'tensorboard/resource_handle.proto',
+    'tensorboard/summary.proto',
+    'tensorboard/event.proto',
     ]
 
 
@@ -59,7 +59,7 @@ def generate_proto(source):
           )
       sys.exit(-1)
 
-    protoc_command = [ protoc, "-I.", "--proto_path=mxnet/tensorboard", "--python_out=.", source ]  # TODO. prettify this
+    protoc_command = [ protoc, "-I.", "--proto_path=tensorboard", "--python_out=.", source ]
     if subprocess.call(protoc_command) != 0:
       sys.exit(-1)
 
@@ -90,7 +90,7 @@ setup(name='mxnet',
           'numpy',
       ],
       zip_safe=False,
-      packages=['mxnet', 'mxnet.module', 'mxnet.tensorboard'],
+      packages=['mxnet', 'mxnet.module', 'tensorboard'],
       cmdclass = {'clean': clean, 'build_py': build_py},
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet')
