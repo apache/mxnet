@@ -1328,7 +1328,7 @@ MXNET_DLL int MXRecordIOWriterFree(RecordIOHandle handle);
  * \param size size of buffer
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
+MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle handle,
                                           const char *buf, size_t size);
 
 /**
@@ -1337,7 +1337,7 @@ MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
  * \param pos handle to output position
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos);
+MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle handle, size_t *pos);
 
 /**
  * \brief Create a RecordIO reader object
@@ -1352,7 +1352,7 @@ MXNET_DLL int MXRecordIOReaderCreate(const char *uri, RecordIOHandle *out);
  * \param handle handle to RecordIO object
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
+MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle handle);
 
 /**
  * \brief Write a record to a RecordIO object
@@ -1361,7 +1361,7 @@ MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
  * \param size point to size of buffer
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
+MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle handle,
                                         char const **buf, size_t *size);
 
 /**
@@ -1370,7 +1370,7 @@ MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
  * \param pos target position
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos);
+MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos);
 
 /**
  * \brief Create a MXRtc object

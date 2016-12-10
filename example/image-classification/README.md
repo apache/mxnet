@@ -72,11 +72,11 @@ python tools/im2rec.py --list True --recursive True --train-ratio 0.95 mydata im
 ```
 
 Then we generate the `.rec` files. We resize the images such that the short edge
-is at least 480px and save them with 90/100 quality. We also use 16 threads to
+is at least 480px and save them with 95/100 quality. We also use 16 threads to
 accelerate the packing.
 
 ```bash
-python tools/im2rec.py --resize 480 --quality 90 --num-thread 16 mydata img_data
+python tools/im2rec.py --resize 480 --quality 95 --num-thread 16 mydata img_data
 ```
 
 Hints:
@@ -126,6 +126,8 @@ to calculate the accuracy.
 | `imagenet1k-resnet-50`    | 0.7527 | 0.9258 |
 | `imagenet1k-resnet-101`   | 0.7684 | 0.9327 |
 | `imagenet1k-resnet-152`   | 0.7653 | 0.9312 |
+| `imagenet1k-resnext-50`   | 0.7602 | 0.9286 |
+| `imagenet1k-resnext-101`  | 0.7828 | 0.9408 |
 
 Note:
 - our Resnet dose not need to specify the RGB mean due the data batch
@@ -242,28 +244,63 @@ For more usages:
 
 ### Benchmark
 
-To run benchmark on imagenet networks, use `--benchmark 1` as the argument to `train_imagenet.py`, An example is shown below:  
+To run benchmark on imagenet networks, use `--benchmark 1` as the argument to `train_imagenet.py`, An example is shown below:
 
 ```bash
 python train_imagenet.py --benchmark 1 --gpus 0,1 --network inception-v3 --batch-size 64 \
   --image-shape 3,299,299 --num-epochs 1 --kv-store device
 ```
 
-When running in benchmark mode, the script generates synthetic data of the given data shape and batch size.  
+When running in benchmark mode, the script generates synthetic data of the given data shape and batch size.
 
-The `benchmark.py` can be used to run a series of benchmarks against different image networks on a given set of workers and takes the following arguments:  
+The `benchmark.py` can be used to run a series of benchmarks against different image networks on a given set of workers and takes the following arguments:
 - `--worker_file`: file that contains a list of worker hostnames or list of worker ip addresses that have passwordless ssh enabled.
-- `--worker_count`: number of workers to run benchmark on.  
-- `--gpu_count`: number of gpus on each worker to use.  
-- `--networks`: one or more networks in the format network_name:batch_size:image_size.  
+- `--worker_count`: number of workers to run benchmark on.
+- `--gpu_count`: number of gpus on each worker to use.
+- `--networks`: one or more networks in the format network_name:batch_size:image_size.
 
-The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using `kv-store=device` and after that running on variable number of nodes on all gpus starting with 1 node upto `worker_count` doubling the number of nodes used in each run using `kv-store=dist_sync_device`.  
+The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using `kv-store=device` and after that running on variable number of nodes on all gpus starting with 1 node upto `worker_count` doubling the number of nodes used in each run using `kv-store=dist_sync_device`.
 
 An example to run the benchmark script is shown below with 8 workers and 16 gpus on each worker:
 ```
 python benchmark.py --worker_file /opt/deeplearning/workers --worker_count 8 \
   --gpu_count 16 --networks 'inception-v3:32:299'
 ```
+
+### Scalability Results
+
+- Hardware: 16x AWS [P2.16xlarge](https://aws.amazon.com/ec2/instance-types/p2/)
+with 256 GPUs in total.
+- Software:
+  [AWS Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB) with
+  CUDA 7.5 and CUDNN 5.1 installed
+
+We fixed the batch size per GPU and then increase the number of
+GPUs. Synchronized SGD is used, namely `--kv-store dist_device_sync`. The
+following three CNNs (located in [symbol/](./symbol/)) are used
+
+|  | `alexnet` | `inception-v3` | `resnet-152` |
+| --- | --- | --- | --- |
+| batch per GPU | 512 | 32 | 32 |
+| model size (MB) | 203 | 95 | 240 |
+
+Number of images proccessed per second is shown in the following table:
+
+| #GPUs | `alexnet` | `inception-v3` | `resnet-152` |
+| --- | --- | --- | --- |
+| 1   | 457.07   | 30.4    | 20.08   |
+| 2   | 870.43   | 59.61   | 38.76   |
+| 4   | 1514.8   | 117.9   | 77.01   |
+| 8   | 2852.5   | 233.39  | 153.07  |
+| 16  | 4244.18  | 447.61  | 298.03  |
+| 32  | 7945.57  | 882.57  | 595.53  |
+| 64  | 15840.52 | 1761.24 | 1179.86 |
+| 128 | 31334.88 | 3416.2  | 2333.47 |
+| 256 | 61938.36 | 6660.98 | 4630.42 |
+
+The following figure shows the speedup against a single GPU compared to the ideal scalability.
+
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/speedup-p2.png" width="600"/>
 
 ## FAQ
 

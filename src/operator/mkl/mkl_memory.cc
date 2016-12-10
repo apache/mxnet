@@ -22,7 +22,7 @@
 #include "../operator_common.h"
 
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "mkl_memory-inl.h"
 
 

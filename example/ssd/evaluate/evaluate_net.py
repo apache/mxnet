@@ -60,4 +60,4 @@ def evaluate_net(net, dataset, devkit_path, mean_pixels, data_shape,
         detections = detector.detect(data_iter)
         imdb.evaluate_detections(detections)
     else:
-        raise NotImplementedError, "No support for dataset: " + dataset
+        raise NotImplementedError("No support for dataset: " + dataset)

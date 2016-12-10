@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+from __future__ import print_function
 import sys,os
 import mxnet as mx
 import numpy as np
@@ -154,7 +154,7 @@ def train_cnn(model, X_train_batch, y_train_batch, X_dev_batch, y_dev_batch, bat
         # decay learning rate
         if iteration % 50 == 0 and iteration > 0:
             opt.lr *= 0.5
-            print >> logs, 'reset learning rate to %g' % opt.lr
+            print('reset learning rate to %g' % opt.lr,file=logs)
 
         # end of training loop
         toc = time.time()
@@ -169,7 +169,7 @@ def train_cnn(model, X_train_batch, y_train_batch, X_dev_batch, y_dev_batch, bat
             save_dict.update({('aux:%s' % k) : v for k, v in m.cnn_exec.aux_dict.items()})
             param_name = 'checkpoint/%s-%04d.params' % (prefix, iteration)
             mx.nd.save(param_name, save_dict)
-            print >> logs, 'Saved checkpoint to %s' % param_name
+            print('Saved checkpoint to %s' % param_name,file=logs)
 
 
         # evaluate on dev set
@@ -189,12 +189,12 @@ def train_cnn(model, X_train_batch, y_train_batch, X_dev_batch, y_dev_batch, bat
             num_total += len(batchY)
 
         dev_acc = num_correct * 100 / float(num_total)
-        print >> logs, 'Iter [%d] Train: Time: %.3fs, Training Accuracy: %.3f \
-                --- Dev Accuracy thus far: %.3f' % (iteration, train_time, train_acc, dev_acc)
+        print('Iter [%d] Train: Time: %.3fs, Training Accuracy: %.3f \
+                --- Dev Accuracy thus far: %.3f' % (iteration, train_time, train_acc, dev_acc), file=logs)
 
 
 def main():
-    print 'Loading data...'
+    print('Loading data...')
     # word2vec = data_helpers.load_google_word2vec('data/GoogleNews-vectors-negative300.bin')
     word2vec = data_helpers.load_pretrained_word2vec('data/rt.vec')
     x, y = data_helpers.load_data_with_word2vec(word2vec)
@@ -208,9 +208,9 @@ def main():
     # split train/dev set
     x_train, x_dev = x_shuffled[:-1000], x_shuffled[-1000:]
     y_train, y_dev = y_shuffled[:-1000], y_shuffled[-1000:]
-    print 'Train/Dev split: %d/%d' % (len(y_train), len(y_dev))
-    print 'train shape:', x_train.shape
-    print 'dev shape:', x_dev.shape
+    print('Train/Dev split: %d/%d' % (len(y_train), len(y_dev)))
+    print('train shape:', x_train.shape)
+    print('dev shape:', x_dev.shape)
 
     # reshpae for convolution input
     x_train = np.reshape(x_train, (x_train.shape[0], 1, x_train.shape[1], x_train.shape[2]))
@@ -218,8 +218,8 @@ def main():
 
     num_embed = x_train.shape[-1]
     sentence_size = x_train.shape[2]
-    print 'sentence max words', sentence_size
-    print 'embedding size', num_embed
+    print('sentence max words', sentence_size)
+    print('embedding size', num_embed)
     batch_size = 50
 
     cnn_model = setup_cnn_model(mx.gpu(1), batch_size, sentence_size, num_embed, dropout=0.5)
@@ -238,18 +238,18 @@ def train_without_pretrained_embedding():
     # split train/dev set
     x_train, x_dev = x_shuffled[:-1000], x_shuffled[-1000:]
     y_train, y_dev = y_shuffled[:-1000], y_shuffled[-1000:]
-    print 'Train/Dev split: %d/%d' % (len(y_train), len(y_dev))
-    print 'train shape:', x_train.shape
-    print 'dev shape:', x_dev.shape
-    print 'vocab_size', vocab_size
+    print('Train/Dev split: %d/%d' % (len(y_train), len(y_dev)))
+    print('train shape:', x_train.shape)
+    print('dev shape:', x_dev.shape)
+    print('vocab_size', vocab_size)
    
     batch_size = 50
     num_embed = 300
     sentence_size = x_train.shape[1]
 
-    print 'batch size', batch_size
-    print 'sentence max words', sentence_size
-    print 'embedding size', num_embed
+    print('batch size', batch_size)
+    print('sentence max words', sentence_size)
+    print('embedding size', num_embed)
 
     cnn_model = setup_cnn_model(mx.gpu(0), batch_size, sentence_size, num_embed, vocab_size, dropout=0.5, with_embedding=False)
     train_cnn(cnn_model, x_train, y_train, x_dev, y_dev, batch_size)
