@@ -1137,7 +1137,7 @@ def concatenate(arrays, axis=0, always_copy=True):
     return ret
 
 # pylint: disable= no-member, protected-access, too-many-arguments
-def arange(start=None, stop=None, step=None, repeat=1, ctx=Context.default_ctx, dtype=mx_real_t):
+def arange(start, stop=None, step=1.0, repeat=1, ctx=Context.default_ctx, dtype=mx_real_t):
     """Simlar function in the MXNet ndarray as numpy.arange
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
 
