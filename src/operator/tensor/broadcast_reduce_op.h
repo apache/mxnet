@@ -315,10 +315,11 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 2, DType> ograd =
         inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
       Tensor<xpu, 2, DType> data =
-        inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+        inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
       Tensor<xpu, 2, DType> out =
-        inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
-      ASSIGN_DISPATCH(igrad, req[0], ograd*F<OP>(data, broadcast_to(out, src_shape)));
+        inputs[2].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+      ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
     } else {
       const int ndim = MXNET_SPECIAL_MAX_NDIM;
       Tensor<xpu, ndim, DType> igrad =
@@ -326,10 +327,11 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, ndim, DType> ograd =
         inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
       Tensor<xpu, ndim, DType> data =
-        inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+        inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
       Tensor<xpu, ndim, DType> out =
-        inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-      ASSIGN_DISPATCH(igrad, req[0], ograd*F<OP>(data, broadcast_to(out, src_shape)));
+        inputs[2].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+      ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
     }
   });
 }
@@ -433,7 +435,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(ParamParser<ReduceAxisParam>)                \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("src", "NDArray", "Source input")               \
+  .add_argument("data", "NDArray", "Source input")               \
   .add_arguments(ReduceAxisParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE(name)                    \
@@ -443,14 +445,14 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("src", "NDArray", "Source input")               \
+  .add_argument("data", "NDArray", "Source input")               \
   .add_arguments(ReduceAxesParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_outputs(1)                                               \
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)                \
-  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                 \
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 
 #define MXNET_OPERATOR_REGISTER_BROADCAST(name)                 \
   NNVM_REGISTER_OP(name)                                        \
@@ -463,7 +465,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
       return MakeGradNode("_broadcast_backward", n, ograds,     \
                           {{"keepdims", "true"}});              \
     })                                                          \
-  .add_argument("src", "NDArray", "Source input")
+  .add_argument("data", "NDArray", "Source input")
 
 }  // namespace op
 }  // namespace mxnet

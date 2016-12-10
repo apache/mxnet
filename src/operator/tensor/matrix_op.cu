@@ -9,6 +9,12 @@
 
 namespace mxnet {
 namespace op {
+NNVM_REGISTER_OP(Reshape)
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+
+NNVM_REGISTER_OP(Flatten)
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+
 NNVM_REGISTER_OP(transpose)
 .set_attr<FCompute>("FCompute<gpu>", Transpose<gpu>);
 
