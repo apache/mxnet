@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <dmlc/logging.h>
+#include <dmlc/thread_local.h>
 #include "jni_helper_func.h"
 
 JavaVM *_jvm;
@@ -1718,6 +1719,24 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcFree
 std::unordered_map<std::string, jobject> globalOpPropMap;
 std::unordered_map<std::string, jobject> globalOpMap;
 
+template<typename T>
+class Ref {
+public:
+  void setData(T **ptrs) {
+    datas = ptrs;
+  }
+  ~Ref() {
+    if (datas != nullptr) {
+      for (int i = 0; datas[i] != NULL; ++i) {
+        delete datas[i];
+      }
+      delete[] datas;
+    }
+  }
+private:
+  T **datas = nullptr;
+};
+
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   (JNIEnv *env, jobject obj, jstring jregName, jobject jopProp) {
 
@@ -1756,6 +1775,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           env->DeleteLocalRef(valueStr);
         }
         env->CallVoidMethod(globalOpPropMap.at(opPropKey), midInit, keysArr, valuesArr);
+        env->DeleteLocalRef(keysArr);
+        env->DeleteLocalRef(valuesArr);
       }
       _jvm->DetachCurrentThread();
     }
@@ -1786,6 +1807,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             env->DeleteLocalRef(jarg);
           }
           (*args)[len] = NULL;
+          dmlc::ThreadLocalStore<Ref<char>>::Get()->setData(*args);
         }
         _jvm->DetachCurrentThread();
       }
@@ -1818,6 +1840,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             env->DeleteLocalRef(joutput);
           }
           (*outputs)[len] = NULL;
+          dmlc::ThreadLocalStore<Ref<char>>::Get()->setData(*outputs);
         }
         _jvm->DetachCurrentThread();
       }
@@ -1856,6 +1879,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             (*auxs) = new char *[1];
             (*auxs)[0] = NULL;
           }
+          dmlc::ThreadLocalStore<Ref<char>>::Get()->setData(*auxs);
         }
         _jvm->DetachCurrentThread();
       }
@@ -1905,7 +1929,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           for (int i=0; i<(*numDeps); ++i) {
             (* rdeps)[i] = rdepsArr[i];
           }
-
           env->DeleteLocalRef(outGradArr);
           env->DeleteLocalRef(inDataArr);
           env->DeleteLocalRef(outDataArr);
