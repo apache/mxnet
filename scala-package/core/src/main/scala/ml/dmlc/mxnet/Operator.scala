@@ -49,7 +49,7 @@ abstract class CustomOp {
    * Scala Callback for CustomOp::Forward
    */
   private[mxnet] def forwardEntry(numNdarray: Int, ndarraies: Array[NDArrayHandle],
-    tags: Array[Int], reqs: Array[Int], isTrain: Boolean): Int = {
+    tags: Array[Int], reqs: Array[Int], isTrain: Boolean): Boolean = {
     var success = true
     try {
       val tensors = (0 until 5).toArray.map( x => ArrayBuffer[NDArray]() )
@@ -71,14 +71,14 @@ abstract class CustomOp {
         new Throwable().printStackTrace()
       }
     }
-    if (success == true) 1 else 0
+    success
   }
 
   /**
    * Scala Callback for CustomOp::Backward
    */
   private[mxnet] def backwardEntry(numNdarray: Int, ndarraies: Array[NDArrayHandle],
-    tags: Array[Int], reqs: Array[Int], isTrain: Boolean): Int = {
+    tags: Array[Int], reqs: Array[Int], isTrain: Boolean): Boolean = {
     var success = true
     try {
       val tensors = (0 until 5).toArray.map( x => ArrayBuffer[NDArray]() )
@@ -101,7 +101,7 @@ abstract class CustomOp {
         new Throwable().printStackTrace()
       }
     }
-    if (success == true) 1 else 0
+    success
   }
 }
 

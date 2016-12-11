@@ -1717,6 +1717,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcFree
 }
 
 std::unordered_map<std::string, jobject> globalOpPropMap;
+std::unordered_map<std::string, int> globalOpPropCountMap;
 std::unordered_map<std::string, jobject> globalOpMap;
 
 template<typename T>
@@ -1743,6 +1744,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   const char *regName = env->GetStringUTFChars(jregName, 0);
   std::string key(regName);
   globalOpPropMap.insert({ key, env->NewGlobalRef(jopProp) });
+  globalOpPropCountMap.insert({ key, 0 });
 
   auto creatorLambda = [](const char *opType, const int numKwargs,
     const char  **keys, const char **values, CustomOpPropInfo *ret) {
@@ -2042,15 +2044,15 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             std::string key((char *)state);
             bool success = true;
             if (globalOpMap.find(key) == globalOpMap.end()) {
-              std::cout << "op: " << key << " not found" << std::endl;
+              LOG(FATAL) << "op: " << key << " not found";
               success = false;
             } else {
               JNIEnv *env;
               _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
               jclass opClass =  env->GetObjectClass(globalOpMap.at(key));
-              jmethodID midForward = env->GetMethodID(opClass, "forwardEntry", "(I[J[I[IZ)I");
+              jmethodID midForward = env->GetMethodID(opClass, "forwardEntry", "(I[J[I[IZ)Z");
               if (NULL == midForward) {
-                std::cout << "could not find op method forwardEntry.";
+                LOG(FATAL) << "could not find op method forwardEntry.";
                 success = false;
               } else {
                 jintArray tagsArr = env->NewIntArray(size);
@@ -2063,13 +2065,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 env->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
                 jlongArray ptrsArr = env->NewLongArray(size);
                 env->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
-                jint result = env->CallIntMethod(globalOpMap.at(key), midForward,
+                jboolean result = env->CallBooleanMethod(globalOpMap.at(key), midForward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
                                                        *(const_cast<bool*>(&isTrain)));
-                if ((int)result == 0) success = false;
+                if (result == false) success = false;
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
@@ -2084,7 +2086,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             const int *reqs, const bool isTrain, void *state) {
             std::string key((char *)state);
             bool success = true;
-            // std::cout << "bkk" << std::endl;
             if (globalOpMap.find(key) == globalOpMap.end()) {
               LOG(FATAL) << "op: " << key << " not found";
               success = false;
@@ -2092,7 +2093,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
               JNIEnv *env;
               _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
               jclass opClass = env->GetObjectClass(globalOpMap.at(key));
-              jmethodID midBackward = env->GetMethodID(opClass, "backwardEntry", "(I[J[I[IZ)I");
+              jmethodID midBackward = env->GetMethodID(opClass, "backwardEntry", "(I[J[I[IZ)Z");
               if (NULL == midBackward) {
                 LOG(FATAL) << "could not find op method backwardEntry.";
                 success = false;
@@ -2108,13 +2109,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 env->SetIntArrayRegion(reqsArr, (jsize)0, (jsize)reqSize, reqs);
                 jlongArray ptrsArr = env->NewLongArray(size);
                 env->SetLongArrayRegion(ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
-                jint result = env->CallIntMethod(globalOpMap.at(key), midBackward,
+                jboolean result = env->CallBooleanMethod(globalOpMap.at(key), midBackward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
                                                        *(const_cast<bool*>(&isTrain)));
-                if ((int)result == 0) success = false;
+                if (result == false) success = false;
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
@@ -2128,16 +2129,19 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           auto delEntry = [](void *state) {
             std::string key((char *)state);
             bool success = true;
-            // if (globalOpMap.find(key) == globalOpMap.end()) {
-            //   std::cout << "op: " << key << " not found" << std::endl;
-            //   success = false;
-            // } else {
-            //   globalEnv->DeleteGlobalRef(globalOpMap.at(key));
-            //   for(auto it = globalOpMap.begin(); it != globalOpMap.end(); ) {
-            //     if(it->first == key) it = globalOpMap.erase(it);
-            //     else ++it;
-            //   }
-            // }
+            if (globalOpMap.find(key) == globalOpMap.end()) {
+              LOG(FATAL) << "op: " << key << " not found";
+              success = false;
+            } else {
+              JNIEnv *env;
+              _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+              env->DeleteGlobalRef(globalOpMap.at(key));
+              _jvm->DetachCurrentThread();
+              for(auto it = globalOpMap.begin(); it != globalOpMap.end(); ) {
+                if(it->first == key) it = globalOpMap.erase(it);
+                else ++it;
+              }
+            }
             return success;
           };
 
@@ -2155,17 +2159,29 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
     // del callback
     auto opPropDel = [](void *state) {
       std::string key((char *)state);
+      int count_prop = globalOpPropCountMap.at(key);
+      if (count_prop < 2) {
+        globalOpPropCountMap[key] = ++count_prop;
+        return true;
+      }
       bool success = true;
-      // if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-      //   std::cout << "opProp: " << key << " not found" << std::endl;
-      //   success = false;
-      // } else {
-      //   globalEnv->DeleteGlobalRef(globalOpPropMap.at(key));
-      //   for(auto it = globalOpPropMap.begin(); it != globalOpPropMap.end(); ) {
-      //     if(it->first == key) it = globalOpPropMap.erase(it);
-      //     else ++it;
-      //   }
-      // }
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        LOG(FATAL) << "opProp: " << key << " not found";
+        success = false;
+      } else {
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        env->DeleteGlobalRef(globalOpPropMap.at(key));
+        _jvm->DetachCurrentThread();
+        for(auto it = globalOpPropMap.begin(); it != globalOpPropMap.end(); ) {
+          if(it->first == key) it = globalOpPropMap.erase(it);
+          else ++it;
+        }
+        for(auto it = globalOpPropCountMap.begin(); it != globalOpPropCountMap.end(); ) {
+          if(it->first == key) it = globalOpPropCountMap.erase(it);
+          else ++it;
+        }
+      }
       return success;
     };
 
