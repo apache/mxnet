@@ -30,8 +30,5 @@ NNVM_REGISTER_OP(_rdiv_scalar)
 NNVM_REGISTER_OP(_backward_rdiv_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarBackward<gpu, mshadow_op::rdiv_grad>);
 
-NNVM_REGISTER_OP(_equal_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarCompute<gpu, mshadow_op::eq>);
-
 }  // namespace op
 }  // namespace mxnet
