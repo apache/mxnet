@@ -346,6 +346,50 @@ def test_ndarray_equal():
     z = 0 == x
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
+def test_ndarray_not_equal():
+    x = mx.nd.zeros((2, 3))
+    y = mx.nd.ones((2, 3))
+    z = x != y
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+    z = 0 != x
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
+
+def test_ndarray_greater():
+    x = mx.nd.zeros((2, 3))
+    y = mx.nd.ones((2, 3))
+    z = x > y
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
+    z = y > 0
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+
+def test_ndarray_greater_equal():
+    x = mx.nd.zeros((2, 3))
+    y = mx.nd.ones((2, 3))
+    z = x >= y
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
+    z = y >= 0
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+    z = y >= 1
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+
+def test_ndarray_lesser():
+    x = mx.nd.zeros((2, 3))
+    y = mx.nd.ones((2, 3))
+    z = y < x
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
+    z = 0 < y
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+
+def test_ndarray_lesser_equal():
+    x = mx.nd.zeros((2, 3))
+    y = mx.nd.ones((2, 3))
+    z = y <= x
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
+    z = 0 <= y
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+    z = 1 <= y
+    assert (z.asnumpy() == np.ones((2, 3))).all()
+
 if __name__ == '__main__':
     test_ndarray_setitem()
     test_ndarray_crop()

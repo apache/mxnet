@@ -44,9 +44,5 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rdiv_scalar)
 .set_attr_parser([](NodeAttrs* attrs) {attrs->parsed = std::stod(attrs->dict["scalar"]);})
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarBackward<cpu, mshadow_op::rdiv_grad>);
 
-MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_equal_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarCompute<cpu, mshadow_op::eq>)
-.add_alias("_EqualScalar");
-
 }  // namespace op
 }  // namespace mxnet
