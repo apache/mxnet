@@ -83,9 +83,5 @@ NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::div_grad,
                                                               mshadow_op::div_rgrad>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_equal)
-.add_alias("broadcast_equal").add_alias("_Equal")
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::eq>);
-
 }  // namespace op
 }  // namespace mxnet

@@ -11,7 +11,7 @@ import os as _os
 import sys as _sys
 import numpy as _numpy
 
-from .base import _LIB
+from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, MXNetError
@@ -123,6 +123,54 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolCopy(self.handle,
                                      ctypes.byref(handle)))
         return Symbol(handle)
+
+    def __eq__(self, other):
+        if isinstance(other, Symbol):
+            return _internal._equal(self, other)
+        if isinstance(other, numeric_types):
+            return _internal._equal_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __ne__(self, other):
+        if isinstance(other, Symbol):
+            return _internal._not_equal(self, other)
+        if isinstance(other, numeric_types):
+            return _internal._not_equal_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __gt__(self, other):
+        if isinstance(other, Symbol):
+            return _internal._greater(self, other)
+        if isinstance(other, numeric_types):
+            return _internal._greater_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __ge__(self, other):
+        if isinstance(other, Symbol):
+            return _internal._greater_equal(self, other)
+        if isinstance(other, numeric_types):
+            return _internal._greater_equal_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __lt__(self, other):
+        if isinstance(other, Symbol):
+            return _internal._lesser(self, other)
+        if isinstance(other, numeric_types):
+            return _internal._lesser_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
+
+    def __le__(self, other):
+        if isinstance(other, Symbol):
+            return _internal._lesser_equal(self, other)
+        if isinstance(other, numeric_types):
+            return _internal._lesser_equal_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
 
     def __getstate__(self):
         handle = self.handle

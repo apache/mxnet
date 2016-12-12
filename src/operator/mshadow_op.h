@@ -531,6 +531,13 @@ struct eq {
   }
 };
 
+struct ne {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a != b ? DType(1) : DType(0);
+  }
+};
+
 /*!\ \brief used for generate element sqrt */
 struct square_root {
   template<typename DType>
