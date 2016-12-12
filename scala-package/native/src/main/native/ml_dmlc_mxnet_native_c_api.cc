@@ -1719,6 +1719,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcFree
 std::unordered_map<std::string, jobject> globalOpPropMap;
 std::unordered_map<std::string, int> globalOpPropCountMap;
 std::unordered_map<std::string, jobject> globalOpMap;
+std::mutex mutex_opprop;
+std::mutex mutex_op;
 
 template<typename T>
 class Ref {
@@ -1743,8 +1745,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
   const char *regName = env->GetStringUTFChars(jregName, 0);
   std::string key(regName);
+
+  std::unique_lock<std::mutex> lock(mutex_opprop);
   globalOpPropMap.insert({ key, env->NewGlobalRef(jopProp) });
   globalOpPropCountMap.insert({ key, 0 });
+  lock.unlock();
 
   auto creatorLambda = [](const char *opType, const int numKwargs,
     const char  **keys, const char **values, CustomOpPropInfo *ret) {
@@ -2034,7 +2039,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           }
           delete[] ts;
 
+          std::unique_lock<std::mutex> lock(mutex_op);
           globalOpMap.insert({ key, env->NewGlobalRef(jOp) });
+          lock.unlock();
 
           _jvm->DetachCurrentThread();
 
@@ -2129,6 +2136,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           auto delEntry = [](void *state) {
             std::string key((char *)state);
             bool success = true;
+            std::unique_lock<std::mutex> lock(mutex_op);
             if (globalOpMap.find(key) == globalOpMap.end()) {
               LOG(FATAL) << "op: " << key << " not found";
               success = false;
@@ -2142,6 +2150,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 else ++it;
               }
             }
+            lock.unlock();
             return success;
           };
 
@@ -2159,6 +2168,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
     // del callback
     auto opPropDel = [](void *state) {
       std::string key((char *)state);
+      std::unique_lock<std::mutex> lock(mutex_opprop);
       int count_prop = globalOpPropCountMap.at(key);
       if (count_prop < 2) {
         globalOpPropCountMap[key] = ++count_prop;
@@ -2182,6 +2192,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           else ++it;
         }
       }
+      lock.unlock();
       return success;
     };
 
