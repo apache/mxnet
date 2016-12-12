@@ -26,7 +26,7 @@ all: android libmxnet_predict.a ${MXNET_ROOT}/lib/libmxnet_predict.so
 
 mxnet_predict0.d: mxnet_predict0.cc
 	${CXX} ${CFLAGS} -MD -MF $@ \
-	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/mshadow/ -I ${MXNET_ROOT}/dmlc-core/include \
+	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/mshadow/ -I ${MXNET_ROOT}/dmlc-core/include -I ${MXNET_ROOT}/nnvm/include \
 	-I ${MXNET_ROOT}/include \
 	-D__MIN__=$(MIN) -c $+
 	rm mxnet_predict0.o
