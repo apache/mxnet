@@ -33,6 +33,6 @@ export PATH=$PATH:/opt/apache-maven/bin
 make scalapkg || exit -1
 make scalatest || exit -1
 
-echo "BUILD julia_test"
-export MXNET_HOME="${PWD}"
-/home/ubuntu/julia/bin/julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+# echo "BUILD julia_test"
+# export MXNET_HOME="${PWD}"
+# /home/ubuntu/julia/bin/julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
