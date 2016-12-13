@@ -367,6 +367,108 @@ def test_pow_fn():
     check_symbolic_forward(y, [x], [2**x])
     check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
+def test_equal():
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.symbol.Variable("y")
+
+    z = x == y
+
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
+    z = 0 == x
+
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+def test_not_equal():
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.symbol.Variable("y")
+
+    z = x != y
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+    z = 0 != x
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
+def test_greater():
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.symbol.Variable("y")
+
+    z = x > y
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
+    z = y > 0
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+def test_greater_equal():
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.symbol.Variable("y")
+
+    z = x >= y
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
+    z = y >= 0
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+    z = y >= 1
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+def test_lesser():
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.symbol.Variable("y")
+
+    z = y < x
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
+    z = 0 < y
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+def test_lesser_equal():
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.symbol.Variable("y")
+
+    z = y <= x
+    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
+    z = 0 <= y
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+    z = 1 <= y
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
 def test_embedding():
     in_dim = 10
     out_dim = 4

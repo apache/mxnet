@@ -190,6 +190,21 @@ class NDArray(NDArrayBase):
     def __eq__(self, other):
         return equal(self, other)
 
+    def __ne__(self, other):
+        return not_equal(self, other)
+
+    def __gt__(self, other):
+        return greater(self, other)
+
+    def __ge__(self, other):
+        return greater_equal(self, other)
+
+    def __lt__(self, other):
+        return lesser(self, other)
+
+    def __le__(self, other):
+        return lesser_equal(self, other)
+
     def __getstate__(self):
         handle = self.handle
         this = {'handle' : None}
@@ -875,6 +890,137 @@ def equal(lhs, rhs):
         _internal._equal,
         lambda x, y: 1 if x == y else 0,
         _internal._equal_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def not_equal(lhs, rhs):
+    """Return (lhs != rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        _internal._not_equal,
+        lambda x, y: 1 if x != y else 0,
+        _internal._not_equal_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def greater(lhs, rhs):
+    """Return (lhs > rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        _internal._greater,
+        lambda x, y: 1 if x > y else 0,
+        _internal._greater_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def greater_equal(lhs, rhs):
+    """Return (lhs >= rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        _internal._greater_equal,
+        lambda x, y: 1 if x >= y else 0,
+        _internal._greater_equal_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def lesser(lhs, rhs):
+    """Return (lhs < rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        _internal._lesser,
+        lambda x, y: 1 if x < y else 0,
+        _internal._lesser_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+
+def lesser_equal(lhs, rhs):
+    """Return (lhs <= rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        _internal._lesser_equal,
+        lambda x, y: 1 if x <= y else 0,
+        _internal._lesser_equal_scalar,
         None)
     # pylint: enable= no-member, protected-access
 
