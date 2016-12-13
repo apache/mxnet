@@ -90,8 +90,14 @@ Graph UpgradeJSON_FixParsing(Graph g) {
 
 Graph UpgradeJSON_Parse(Graph g) {
   nnvm::DFSVisit(g.outputs, [](const std::shared_ptr<Node>& n) {
-      if (n->op() != nullptr && n->op()->attr_parser != nullptr)
-        n->op()->attr_parser(&(n->attrs));
+      if (n->op() != nullptr) {
+        if (n->op()->attr_parser != nullptr)
+          n->op()->attr_parser(&(n->attrs));
+      } else {
+        // ugly workaround due to VariableParam is not exposed.
+        n->attrs.parsed =
+          nnvm::Symbol::CreateVariable("").outputs[0].node->attrs.parsed;
+      }
     });
   return g;
 }
