@@ -34,7 +34,7 @@ NNVM_REGISTER_OP(_hypot)
 
 NNVM_REGISTER_OP(_backward_hypot)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBackwardUseIn<gpu, mshadow_op::hypot_grad_left,
-                   											  mshadow_op::hypot_grad_right>);
+                                          mshadow_op::hypot_grad_right>);
 
 }  // namespace op
 }  // namespace mxnet
