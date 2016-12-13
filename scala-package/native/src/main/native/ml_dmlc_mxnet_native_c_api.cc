@@ -1920,9 +1920,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           env->SetIntArrayRegion(outDataArr, (jsize)0, (jsize)outLen, outData);
 
           auto obj = env->CallObjectMethod(globalOpPropMap.at(key), midDeclareBkDep,
-                                                                       outGradArr,
-                                                                       inDataArr,
-                                                                       outDataArr);
+                                                   outGradArr,
+                                                   inDataArr,
+                                                   outDataArr);
           jintArray jrdeps = (jintArray)obj;
           jint *rdepsArr = env->GetIntArrayElements(jrdeps, NULL);
 
@@ -2080,7 +2080,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                                                        tagsArr,
                                                        reqsArr,
                                                        *(const_cast<bool*>(&isTrain)));
-                // if (result == false) success = false;
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
@@ -2125,7 +2124,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                                                        tagsArr,
                                                        reqsArr,
                                                        *(const_cast<bool*>(&isTrain)));
-                // if (result == false) success = false;
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
