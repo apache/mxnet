@@ -153,7 +153,7 @@ class FComputeExecutor : public OpExecutor {
 
  private:
   FCompute fcompute_;
-  const NodeAttrs& attrs_;
+  NodeAttrs attrs_;
   std::vector<TBlob> in_data_, out_data_;
 };
 
