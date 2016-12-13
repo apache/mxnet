@@ -68,7 +68,7 @@ abstract class CustomOp {
     } catch {
       case ex: Throwable => {
         success = false
-        new Throwable().printStackTrace()
+        ex.printStackTrace()
       }
     }
     success
@@ -98,7 +98,7 @@ abstract class CustomOp {
     } catch {
       case ex: Throwable => {
         success = false
-        new Throwable().printStackTrace()
+        ex.printStackTrace()
       }
     }
     success
