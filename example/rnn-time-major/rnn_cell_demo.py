@@ -66,8 +66,8 @@ if __name__ == '__main__':
     contexts = [mx.context.gpu(i) for i in range(1)]
     vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
 
-    init_h = [('LSTM_state', (num_lstm_layer, batch_size, num_hidden))]
-    init_c = [('LSTM_state_cell', (num_lstm_layer, batch_size, num_hidden))]
+    init_h = [mx.io.DataDesc('LSTM_state', (num_lstm_layer, batch_size, num_hidden), layout='TNC')]
+    init_c = [mx.io.DataDesc('LSTM_state_cell', (num_lstm_layer, batch_size, num_hidden), layout='TNC')]
     init_states = init_c + init_h
 
     data_train = BucketSentenceIter(os.path.join(data_dir, 'ptb.train.txt'),
