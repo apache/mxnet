@@ -8,7 +8,7 @@ fast_rcnn_path = None
 sys.path.insert(0, os.path.join(fast_rcnn_path, 'caffe-fast-rcnn', 'python'))
 sys.path.insert(0, os.path.join(fast_rcnn_path, 'lib'))
 import caffe
-from rcnn.symbol import get_symbol_vgg_test
+from rcnn.symbol_vgg import get_vgg_test
 
 def load_model(caffeproto, caffemodel, arg_shape_dic):
     def get_caffe_iter(layer_names, layers):
@@ -62,7 +62,7 @@ def load_model(caffeproto, caffemodel, arg_shape_dic):
 proto_path = os.path.join(fast_rcnn_path, 'models', 'VGG16', 'test.prototxt')
 model_path = os.path.join(fast_rcnn_path, 'data', 'fast_rcnn_models', 'vgg16_fast_rcnn_iter_40000.caffemodel')
 
-symbol = get_symbol_vgg_test()
+symbol = get_vgg_test()
 arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(**{'data': (1, 3, 224, 224), 'rois': (1, 5)})
 arg_shape_dic = { name: shape for name, shape in zip(symbol.list_arguments(), arg_shapes) }
 
