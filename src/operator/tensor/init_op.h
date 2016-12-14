@@ -42,7 +42,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
 };
 
 struct RangeParam : public dmlc::Parameter<RangeParam> {
-  dmlc::optional<real_t> start;
+  real_t start;
   dmlc::optional<real_t> stop;
   real_t step;
   int repeat;
@@ -50,7 +50,6 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(RangeParam) {
     DMLC_DECLARE_FIELD(start)
-    .set_default(dmlc::optional<real_t>())
     .describe("Start of interval. The interval includes this value. The default start value is 0.");
     DMLC_DECLARE_FIELD(stop)
     .set_default(dmlc::optional<real_t>())
@@ -83,13 +82,7 @@ inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
   RangeParam param;
   param.Init(attrs->dict);
   if (!bool(param.stop)) {
-    if (!bool(param.start)) {
-      LOG(FATAL) << "arange: Invalid input parameters! start and stop cannot be both empty!";
-    }
     param.stop = param.start;
-    param.start = 0;
-  }
-  if (!bool(param.start)) {
     param.start = 0;
   }
   attrs->parsed = std::move(param);
@@ -147,7 +140,7 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    ASSIGN_DISPATCH(out, req[0], range<DType>(param.start.value(),
+    ASSIGN_DISPATCH(out, req[0], range<DType>(param.start,
                                               param.stop.value(),
                                               param.step,
                                               param.repeat));
@@ -166,18 +159,18 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   CHECK(param.repeat > 0)
     << "Range only supports repeat > 0, received " << param.repeat;
   if (param.step > 0) {
-    CHECK(param.start.value() < param.stop.value())
+    CHECK(param.start < param.stop.value())
       << "Range does not support (start, stop, step) = "
-      << "(" << param.start.value() << "," << param.stop.value() << "," << param.step << ")";
+      << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   } else {
-    CHECK(param.start.value() > param.stop.value())
+    CHECK(param.start > param.stop.value())
       << "Range does not support (start, stop, step)= "
-      << "(" << param.start << "," << param.stop << "," << param.step << ")";
+      << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      mshadow::Shape1(param.repeat *
                                      ceil((param.stop.value() -
-                                           param.start.value()) / param.step)));
+                                           param.start) / param.step)));
   return true;
 }
 
