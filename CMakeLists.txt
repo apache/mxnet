@@ -5,7 +5,7 @@ project(mxnet C CXX)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 include(cmake/Utils.cmake)
-mxnet_option(USE_NNPACK  "Build with NNPACK support" ON)
+mxnet_option(USE_NNPACK  "Build with NNPACK support" OFF)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
