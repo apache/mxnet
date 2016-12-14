@@ -36,7 +36,7 @@ class YoloFormat(Imdb):
                 classes = [l.strip() for l in f.readlines()]
                 num_classes = len(classes)
         else:
-            raise ValueError, "classes should be list/tuple or text file"
+            raise ValueError("classes should be list/tuple or text file")
         assert num_classes > 0, "number of classes must > 0"
         super(YoloFormat, self).__init__(name + '_' + str(num_classes))
         self.classes = classes

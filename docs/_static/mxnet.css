@@ -215,7 +215,7 @@ img {
     padding: 0 15px
 }
 
-@media screen and (max-width: 1300px) {
+@media screen and (max-width: 1410px) {
     #main-nav {
         display: block;
         font-size: 75%;
@@ -226,7 +226,7 @@ img {
     }
 }
 
-@media screen and (max-width: 1145px) {
+@media screen and (max-width: 1215px) {
     #main-nav {
         display: none;
     }
@@ -276,7 +276,7 @@ img {
     width: 40px;
 }
 
-@media screen and (max-width: 1145px) {
+@media screen and (max-width: 1215px) {
     #search-input-wrap {
         right: 215px;
     }
@@ -359,7 +359,7 @@ div .burgerIcon {
     display: none
 }
 
-@media screen and (max-width: 1145px) {
+@media screen and (max-width: 1215px) {
     div .burgerIcon {
         display: block;
     }
@@ -802,4 +802,13 @@ dl.method, dl.attribute {
 
 dl.class p, dl.function p {
     color: #cc6600;
+}
+
+/*----------------Model zoo page style------------------*/
+#mxnet-model-zoo table {
+    margin-top: 30px;
+}
+
+#mxnet-model-zoo th {
+    vertical-align: top;
 }

@@ -2,7 +2,7 @@
 #############################################################
 ## Please read the README.md document for better reference ##
 #############################################################
-
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 from sklearn.datasets import fetch_mldata
@@ -81,4 +81,4 @@ model.fit(
 # print 'Result:', model.predict(X_test[0:1])[0].argmax()
 
 # Now it prints how good did the network did for this configuration
-print 'Accuracy:', model.score(test_iter)*100, '%'
+print('Accuracy:', model.score(test_iter)*100, '%')

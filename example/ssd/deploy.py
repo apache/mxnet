@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import tools.find_mxnet
 import mxnet as mx
@@ -32,5 +33,5 @@ if __name__ == '__main__':
     tmp = args.prefix.rsplit('/', 1)
     save_prefix = '/deploy_'.join(tmp)
     mx.model.save_checkpoint(save_prefix, args.epoch, net, arg_params, aux_params)
-    print "Saved model: {}-{:04d}.param".format(save_prefix, args.epoch)
-    print "Saved symbol: {}-symbol.json".format(save_prefix)
+    print("Saved model: {}-{:04d}.param".format(save_prefix, args.epoch))
+    print("Saved symbol: {}-symbol.json".format(save_prefix))
