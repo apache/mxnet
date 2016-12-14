@@ -31,6 +31,9 @@ class NNPACKInitialize {
     if (nnp_status_success != status) {
       LOG(FATAL) << "nnp_initialize failed status=" << status;
     }
+#ifndef MXNET_USE_NNPACK_NUM_THREADS
+#define MXNET_USE_NNPACK_NUM_THREADS 4
+#endif
     int num_threads = MXNET_USE_NNPACK_NUM_THREADS;
     this->threadpool = pthreadpool_create(num_threads);
   }
