@@ -41,6 +41,9 @@ You must have the following:
   * [openblas](http://www.openblas.net/)
   * [Intel MKL](https://software.intel.com/en-us/node/528497)
 
+- [Graphviz](http://www.graphviz.org/) for visualizing the network graphs.
+- [Jupyter Notebook](http://jupyter.readthedocs.io/en/latest/) for running examples and tutorials of MXNet.
+
 ## Requirements for Using GPUs
 
 * A GPU with support for Compute Capability 2.0 or higher.
@@ -130,6 +133,30 @@ To build OpenCV from source code, you need the ```cmake``` library .
 	```
 # Common Installation Problems
 This section provides solutions for common installation problems.
+## General
+**Message:** ImportError: No module named _graphviz
+
+**Cause:** Graphviz is not installed.
+
+**Solution:**
+On Mac, You can install Graphviz with below command
+```bash
+  brew install graphviz
+```
+Or, using pip
+```bash
+  brew install python
+  pip install graphviz
+```
+**Message:** RuntimeError: failed to execute ['dot', '-Tsvg'], make sure the Graphviz executables are on your systems' path
+
+**Cause:** Graphviz executable (lib) path is currently not in the system path and program is unable to use Graphviz for plotting the graph
+
+**Solution:** Add Graphviz executable (lib) path to your system path.
+On Mac/Linux machines, Graphviz is generally installed in - ```/usr/local/lib/graphviz/``` or ```/usr/lib/graphviz/``` or ```/usr/lib64/graphviz/``` and on Windows - ```C:\Program Files (x86)\Graphviz2.38\bin```.
+
+**Note** If you are using Jupyter notebook, you may need to restart the kernel to refresh the system path and find Graphviz executable.
+
 ## Mac OS X Error Message
 **Message:** link error ld: library not found for -lgomp
 

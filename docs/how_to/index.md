@@ -5,6 +5,7 @@ This topic provides links to guidelines for using MXNet.
 ## Use MXNet on Specific Tasks
 - [How to use pre-trained models](http://mxnet.io/tutorials/python/predict_imagenet.html)
 - [How to use Fine-tune with Pre-trained Models](http://mxnet.io/how_to/finetune.html)
+- [How to visualize Neural Networks as computation graph](http://mxnet.io/how_to/visualize_graph.html)
 - [How to train with multiple CPU/GPUs with data parallelism](multi_devices.md)
 - [How to train with multiple GPUs in model parallelism - train LSTM](model_parallel_lstm.md)
 - [How to run MXNet on smart or mobile devices](smart_device.md)
