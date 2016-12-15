@@ -128,16 +128,14 @@ img {
     margin-bottom: 0px;
 }
 
-@media screen and (max-width: 480px) {
-    #navContainer {
-        position: fixed;
-        left: 0;
-    }
+.navbar .container {
+    position: fixed;
+    left: 20px;
 }
 
-@media screen and (max-width: 405px) {
+@media screen and (max-width: 510px) {
     .navbar {
-        height: 120px;
+        height: 100px;
     }
 }
 
@@ -173,6 +171,13 @@ img {
     -webkit-box-flex: 1;
    padding-top: 0;
     margin-top: 0;
+    width: 125px;
+}
+
+@media screen and (max-width: 405px) {  
+    #logo-wrap {
+        margin-left: -25px;
+    }
 }
 
 #logo {
@@ -209,16 +214,12 @@ img {
 }
 
 @media screen and (max-width: 1410px) {
-    #main-nav {
-        display: block;
-    }
-    
     .main-nav-link {
         padding: 0 10px;
     }
 }
 
-@media screen and (max-width: 1025px) {
+@media screen and (max-width: 1020px) {
     #main-nav {
         display: none;
     }
@@ -249,48 +250,48 @@ img {
 #search-input-wrap {
     display: block;
     position: fixed;
-    top: 55px;
-    right: 115px;
-    width: 200px;
-    z-index: -1;
+    top: 15px;
+    right: 155px;
+    width: 140px
 }
 
 .searchBox {
     position: absolute;
     top: 0;
     left: 0;
-    width: 160px;
+    width: 140px;
 }
 
 .searchBtn {
+    display: none;
     position: absolute;
     top: 0;
     right: 0;
     width: 40px;
 }
 
-@media screen and (max-width: 700px) {
+@media screen and (min-width: 1100px) {
     #search-input-wrap {
-        width: 150px;
+        width: 160px;
     }
     
     .searchBox {
-        width: 110px;
+        width: 160px;
     }
 }
 
-@media screen and (max-width: 645px) {
+@media screen and (max-width: 1020px) {
+    #search-input-wrap {
+        right: 185px;
+    }
+}
+
+@media screen and (max-width: 510px) {
     #search-input-wrap {
         top: 50px;
         left: 50%;
-        margin-left: -75px;
+        margin-left: -70px;
         right: initial;
-    }
-}
-
-@media screen and (max-width: 405px) {
-    #search-input-wrap {
-        top: 80px;
     }
 }
 
@@ -327,25 +328,18 @@ img {
     font-size: inherit
 }
 
-@media screen and (max-width: 405px) {
-    #lang-select-wrap {
-        position: fixed;
-        top: 40px;
-        left: 40px;
-        width: 75px
-    }
-}
+.github-btn { border: 0; overflow: hidden }
 
 /*burger icon*/
 div .burgerIcon {
     font-size: 25px;
     position: fixed;
-    right: 185px;
+    right: 155px;
     top: 10px;
     display: none
 }
 
-@media screen and (max-width: 1025px) {
+@media screen and (max-width: 1020px) {
     div .burgerIcon {
         display: block;
     }
@@ -353,13 +347,6 @@ div .burgerIcon {
 
 div .burgerIcon a {
     color: white;
-}
-
-@media screen and (max-width: 405px) {
-    div .burgerIcon {
-        top: 45px;
-        left: 20px;
-    }
 }
 
 /*burger menu*/
@@ -488,15 +475,9 @@ li.dropdown-submenu ul.dropdown-menu a {
     }
 }
 
-@media screen and (max-width:645px) {
+@media screen and (max-width:510px) {
     #splash #banner-title {
             padding-top: 60px;
-    }
-}
-
-@media screen and (max-width:405px) {
-    #splash #banner-title {
-            padding-top: 80px;
     }
 }
 
@@ -624,12 +605,6 @@ div.content {
     }
 }
 
-@media (max-width: 405px) {
-    div.content {
-        top: 140px;
-    }
-}
-
 /*------------------sidebar-----------------------*/
 div.sphinxsidebar {
     position: fixed;
@@ -685,15 +660,6 @@ div.sphinxsidebar li.leaf .tocToggle:before {
 
 div.sphinxsidebarwrapper h3 {
     padding-top: 0;
-}
-
-.github-btn { border: 0; overflow: hidden }
-
-.navbar .container {
-    margin-right: auto;
-    margin-left: 0;
-    padding-left: 15px;
-    padding-right: 15px
 }
 
 /*-------------------- table styles --------------------*/
