@@ -14,11 +14,11 @@ Install the dependencies, required for MXNet, with the following commands:
 - [Homebrew](http://brew.sh/) (to install dependencies)
 
 ```bash
-# Paste this command in Mac terminal to install Homebrew
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+	# Paste this command in Mac terminal to install Homebrew
+	/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-# Insert the Homebrew directory at the top of your PATH environment variable
-export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+	# Insert the Homebrew directory at the top of your PATH environment variable
+	export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 ```
 - openblas and homebrew/science (for linear algebraic operations)
 - OpenCV (for computer vision operations)
@@ -26,9 +26,16 @@ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 ```bash
 	brew update
 	brew install pkg-config
+	brew install graphviz
 	brew install openblas
 	brew tap homebrew/science
 	brew install opencv
+	# For getting pip
+	brew install python
+	# For visualization of network graphs
+	pip install graphviz
+	# Jupyter notebook
+	pip install jupyter
 ```
 After you have installed the dependencies, use one of the following options to pull the MXNet source code from Git and build MXNet. Both options produce a library called ```libmxnet.so```.
 
@@ -40,7 +47,7 @@ After you have installed the dependencies, use one of the following options to p
   cp make/osx.mk ./config.mk
   echo "USE_BLAS = openblas" >> ./config.mk
   echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
-  echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib" >> ./config.mk
+  echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib:/usr/local/lib/graphviz/" >> ./config.mk
   make -j$(sysctl -n hw.ncpu)
 ```
 **Note:** To change build parameters, edit ```config.mk```.
@@ -60,6 +67,15 @@ After running the ```cmake``` command, use Xcode to open ```mxnet.xcodeproj```, 
 2. Optimisation Level = Fastest[-O3]
 
 Both sets of commands produce a library called ```libmxnet.so```.
+
+
+&nbsp;
+
+We have installed MXNet core library. Next, we will install MXNet interface package for the programming language of your choice:
+- [Python](#install-the-mxnet-package-for-python)
+- [R](#install-the-mxnet-package-for-r)
+- [Julia](#install-the-mxnet-package-for-julia)
+- [Scala](#install-the-mxnet-package-for-scala)
 
 ## Install the MXNet Package for Python
 

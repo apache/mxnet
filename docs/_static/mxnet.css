@@ -627,7 +627,7 @@ div.content {
     left: 310px;
     right: 0;
     margin-right: 5%;
-    overflow-x: hidden;
+    z-index: -1;
 }
 
 @media (max-width: 999px) {
@@ -647,6 +647,7 @@ div.content {
 /*------------------sidebar-----------------------*/
 div.sphinxsidebar {
     position: fixed;
+    background-color: white;
     left: 30px;
     margin-left: 0;
     width: 250px;
@@ -805,10 +806,27 @@ dl.class p, dl.function p {
 }
 
 /*----------------Model zoo page style------------------*/
+#mxnet-model-zoo table, #mxnet-model-zoo td, #mxnet-model-zoo th {
+    border: 1px solid lightgray;
+}
+
 #mxnet-model-zoo table {
     margin-top: 30px;
+    border-collapse: collapse;
 }
 
 #mxnet-model-zoo th {
-    vertical-align: top;
+    vertical-align: middle;
+    text-align: center;
+    height: 50px;
+}
+
+#mxnet-model-zoo td {
+    vertical-align: middle;
+    height: 50px;
+    padding: 10px;
+}
+
+#mxnet-model-zoo tr:nth-child(even) {
+    background-color: #f2f2f2;
 }

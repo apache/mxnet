@@ -64,8 +64,8 @@ Install these dependencies using the following commands:
       # Reference: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/compile-software.html
       # Install Python, Numpy, Scipy and set up tools.
       sudo yum groupinstall -y "Development Tools"
-      sudo yum install -y python27 python27-setuptools python27-tools
-      sudo yum install -y python27-numpy python27-scipy python27-nose python27-matplotlib
+      sudo yum install -y python27 python27-setuptools python27-tools python-pip
+      sudo yum install -y python27-numpy python27-scipy python27-nose python27-matplotlib graphviz
 
       # Install OpenBLAS at /usr/local/openblas
       git clone https://github.com/xianyi/OpenBLAS
@@ -82,9 +82,21 @@ Install these dependencies using the following commands:
       cmake -D BUILD_opencv_gpu=OFF -D WITH_EIGEN=ON -D WITH_TBB=ON -D WITH_CUDA=OFF -D WITH_1394=OFF -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
       sudo make PREFIX=/usr/local install
 
+      # Install Graphviz for visualization and Jupyter notebook for running examples and tutorials
+      sudo pip install graphviz
+      sudo pip install jupyter
+      
       # Export env variables for pkg config
       export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 ```
+
+
+&nbsp;
+
+We have installed MXNet core library. Next, we will install MXNet interface package for the programming language of your choice:
+- [R](#install-the-mxnet-package-for-r)
+- [Julia](#install-the-mxnet-package-for-julia)
+- [Scala](#install-the-mxnet-package-for-scala)
 
 ### Install the MXNet Package for R
 Run the following commands to install the MXNet dependencies and build the MXNet R package.
