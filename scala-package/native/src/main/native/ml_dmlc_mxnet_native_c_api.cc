@@ -7,7 +7,7 @@
 #include <dmlc/base.h>
 #include <mxnet/c_api.h>
 #include <dmlc/logging.h>
-#include <dmlc/thread_local.h>
+#include <mutex>
 #include <iostream>
 #include <functional>
 #include <string>
