@@ -40,6 +40,23 @@ After you have installed all of the required dependencies, build the MXNet sourc
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug folder```.
 
+
+
+&nbsp;
+Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](jupyter.readthedocs.io) used for running MXNet tutorials and examples.
+- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](http://www.graphviz.org/Download_windows.php).
+**Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
+- Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.continuum.io/downloads)
+**Note** Do not install Anaconda for Python 3.5. MXNet has few compatibility issue with Python 3.5.
+
+&nbsp;
+
+We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
+- [Python](#install-the-mxnet-package-for-python)
+- [R](#install-the-mxnet-package-for-r)
+- [Julia](#install-the-mxnet-package-for-julia)
+- [Scala](#install-the-mxnet-package-for-scala)
+
 ## Install MXNet for Python
 
 1. Install ```Python``` using windows installer available [here](https://www.python.org/downloads/release/python-2712/).
