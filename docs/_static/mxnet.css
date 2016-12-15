@@ -51,7 +51,7 @@ h1, h2, h3 {
 h1 {
     font-size: 20px;
     font-weight: bold;
-    padding-top: 12px; 
+    padding-top: 25px; 
 }
 
 h2 {
@@ -75,7 +75,7 @@ h3.orange {
 h4 {
     color: #cc6600;
     font-size: 16px;
-    padding-top: 1.2em;
+    padding-top: 1.8em;
     font-style: italic;
     font-weight: bold; 
 }
@@ -124,8 +124,7 @@ img {
     background-color:#0079b2;
     opacity: 0.9;
     border: 0px;
-    height: 60px;
-    padding: 0 80px;
+    height: 100px;
     margin-bottom: 0px;
 }
 
@@ -133,12 +132,6 @@ img {
     #navContainer {
         position: fixed;
         left: 0;
-    }
-}
-
-@media screen and (max-width: 645px) {
-    .navbar {
-        height: 100px;
     }
 }
 
@@ -218,7 +211,6 @@ img {
 @media screen and (max-width: 1410px) {
     #main-nav {
         display: block;
-        font-size: 75%;
     }
     
     .main-nav-link {
@@ -226,7 +218,7 @@ img {
     }
 }
 
-@media screen and (max-width: 1215px) {
+@media screen and (max-width: 1025px) {
     #main-nav {
         display: none;
     }
@@ -257,9 +249,10 @@ img {
 #search-input-wrap {
     display: block;
     position: fixed;
-    top: 15px;
-    right: 185px;
+    top: 55px;
+    right: 115px;
     width: 200px;
+    z-index: -1;
 }
 
 .searchBox {
@@ -274,12 +267,6 @@ img {
     top: 0;
     right: 0;
     width: 40px;
-}
-
-@media screen and (max-width: 1215px) {
-    #search-input-wrap {
-        right: 215px;
-    }
 }
 
 @media screen and (max-width: 700px) {
@@ -298,7 +285,6 @@ img {
         left: 50%;
         margin-left: -75px;
         right: initial;
-        z-index: -1;
     }
 }
 
@@ -345,7 +331,7 @@ img {
     #lang-select-wrap {
         position: fixed;
         top: 40px;
-        left: 90px;
+        left: 40px;
         width: 75px
     }
 }
@@ -359,7 +345,7 @@ div .burgerIcon {
     display: none
 }
 
-@media screen and (max-width: 1215px) {
+@media screen and (max-width: 1025px) {
     div .burgerIcon {
         display: block;
     }
@@ -372,7 +358,7 @@ div .burgerIcon a {
 @media screen and (max-width: 405px) {
     div .burgerIcon {
         top: 45px;
-        left: 70px
+        left: 20px;
     }
 }
 
@@ -498,7 +484,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 @media screen and (max-width:768px) {
     #splash #banner-title {
             font-size: 30px;
-            padding: 20px 30px 10px 30px;
+            padding: 60px 30px 10px 30px;
     }
 }
 
@@ -619,7 +605,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 /*------------------content----------------------*/
 div.navbar + div.container {
-    padding-top: 80px;
+    padding-top: 85px;
 }
 
 div.content {
@@ -651,7 +637,7 @@ div.sphinxsidebar {
     left: 30px;
     margin-left: 0;
     width: 250px;
-    padding:0 30px 15px 0;
+    padding:20px 30px 15px 0;
     height: calc(100% - 80px);
     overflow: scroll;
     display: none;
@@ -705,7 +691,7 @@ div.sphinxsidebarwrapper h3 {
 
 .navbar .container {
     margin-right: auto;
-    margin-left: 50px;
+    margin-left: 0;
     padding-left: 15px;
     padding-right: 15px
 }
