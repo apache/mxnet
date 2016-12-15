@@ -330,7 +330,8 @@ aspects:
   - Data preprocessing is done by `opencv`.  If opencv is compiled from source
     codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
-- CPU performance. Check MKL DNN is used
+- CPU performance. Check MKL DNN is used, namely set `USE_MKL2017 = 1` and
+  `USE_MKL2017_EXPERIMENTAL = 1` to compile
 - Single GPU performace
   - Check the recent CUDNN is used
   - Check the environment variable `MXNET_CUDNN_AUTOTUNE_DEFAULT` is set

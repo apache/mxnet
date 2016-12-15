@@ -4,17 +4,8 @@ test pretrained models
 from __future__ import print_function
 import mxnet as mx
 from common import find_mxnet, modelzoo
-from common.util import download_file
+from common.util import download_file, get_gpus
 from score import score
-import subprocess
-
-def get_gpus():
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return ''
-    gpus = [i for i in re.split('\n') if 'GPU' in i]
-    return ','.join([str(i) for i in range(len(gpus))])
 
 def download_data():
     download_file('http://data.mxnet.io/data/val-5k-256.rec', 'data/val-5k-256.rec')
@@ -46,8 +37,9 @@ def test_imagenet1k_inception_bn(**kwargs):
 
 if __name__ == '__main__':
     gpus = get_gpus()
-    assert gpus is not ''
-    batch_size = 32
+    assert len(gpus) > 0
+    batch_size = 16 * len(gpus)
+    gpus = ','.join([str(i) for i in gpus])
 
     download_data()
     test_imagenet1k_resnet(gpus=gpus, batch_size=batch_size)
