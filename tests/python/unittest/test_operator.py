@@ -410,9 +410,14 @@ def test_greater():
     assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
 
     z = y > 0
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
     exec1.forward()
     assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+    z = 0 > y
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
 
 def test_greater_equal():
     shape = (3, 4)
@@ -425,12 +430,17 @@ def test_greater_equal():
     assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
 
     z = y >= 0
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
     exec1.forward()
     assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
 
-    z = y >= 1
+    z = 0 >= y
     exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
+    z = y >= 1
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
     exec1.forward()
     assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
 
@@ -449,6 +459,11 @@ def test_lesser():
     exec1.forward()
     assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
 
+    z = y < 0
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
+
 def test_lesser_equal():
     shape = (3, 4)
     x = mx.symbol.Variable("x")
@@ -460,9 +475,14 @@ def test_lesser_equal():
     assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
 
     z = 0 <= y
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
     exec1.forward()
     assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+
+    z = y <= 0
+    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
+    exec1.forward()
+    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
 
     z = 1 <= y
     exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
