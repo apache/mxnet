@@ -649,14 +649,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     Parameters
     ----------
-    sym : Symbol
-        symbol to run the consistency test
+    sym : Symbol or list of Symbols
+        symbol(s) to run the consistency test
     ctx_list : list
         running context. See example for more detail.
     scale : float, optional
         standard deviation of the inner normal distribution. Used in initialization
     grad_req : str or list of str or dict of str to str
         gradient requirement.
+
     Examples
     --------
     >>> # create the symbol

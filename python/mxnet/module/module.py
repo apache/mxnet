@@ -254,8 +254,11 @@ class Module(BaseModule):
 
         self._data_shapes = \
             [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
-        self._label_shapes = \
-            [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        if label_shapes is not None:
+            self._label_shapes = \
+                [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        else:
+            self._label_shapes = None
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
@@ -265,7 +268,8 @@ class Module(BaseModule):
             shared_group = None
 
         input_types = {x.name: x.dtype for x in self._data_shapes}
-        input_types.update({x.name: x.dtype for x in self._label_shapes})
+        if self._label_shapes is not None:
+            input_types.update({x.name: x.dtype for x in self._label_shapes})
 
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, self._data_shapes,

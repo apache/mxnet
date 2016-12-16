@@ -136,7 +136,8 @@ class DataParallelExecutorGroup(object):
             grad_req = 'null'
 
         data_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
-        label_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        if label_shapes is not None:
+            label_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
 
         data_names = [x.name for x in data_shapes]
 
