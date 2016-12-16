@@ -76,8 +76,8 @@ if [ ${TASK} == "r_test" ]; then
 
     wget http://data.mxnet.io/mxnet/data/Inception.zip
     unzip Inception.zip && rm -rf Inception.zip
-    wget https://s3-us-west-2.amazonaws.com/mxnet/train.csv -O train.csv
-    wget https://s3-us-west-2.amazonaws.com/mxnet/test.csv -O test.csv
+    wget http://data.mxnet.io/mxnet/data/mnist.zip
+    unzip mnist.zip && rm -rf mnist.zip
 
     cat CallbackFunctionTutorial.R \
     fiveMinutesNeuralNetwork.R \

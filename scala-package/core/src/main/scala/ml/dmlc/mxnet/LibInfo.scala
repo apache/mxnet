@@ -273,4 +273,7 @@ class LibInfo {
                         blockDimY: Int,
                         blockDimZ: Int): Int
   @native def mxRtcFree(handle: RtcHandle): Int
+
+  // CustomOp
+  @native def mxCustomOpRegister(regName: String, opProp: CustomOpProp): Int
 }
