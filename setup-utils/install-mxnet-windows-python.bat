@@ -201,6 +201,11 @@ if not "%MXNET_DEPENDENCIES%" == "" (
   conda install -n %MXNET_CONDA_ENV% -c conda-forge %MXNET_DEPENDENCIES% --yes
 )
 
+:: make symbolic link to workaround opencv cmakefile bug
+echo %ECHO_PREFIX% Install symblic link for opencv
+mklink /D %CONDA_DIR%\envs\x64\vc14\lib %MXNET_CONDA_LIBRARY%\lib
+mklink /D %CONDA_DIR%\envs\x64\vc14\bin %MXNET_CONDA_LIBRARY%\bin
+
 :NO_CONDA
 if exist "%MXNET_CONDA_INFO%" del /q %MXNET_CONDA_INFO%
 if exist "%MXNET_CONDA_PKGS%" del /q %MXNET_CONDA_PKGS%
