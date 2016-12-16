@@ -52,9 +52,9 @@ jni_libmxnet_predict.so: jni_libmxnet_predict.o
 
 ifneq ($(ANDROID), 1)
         ifneq ($(APPLE), 1)
-            LDFLAGS+= -lrt
-        else
             LDFLAGS+= # -lrt
+        else
+            LDFLAGS+= -lrt
         endif
         android:
 else
