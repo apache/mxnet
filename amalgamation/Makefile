@@ -11,6 +11,9 @@ ifndef ANDROID
     export ANDROID=0
 endif
 
+ifndef APPLE
+    export APPLE=0
+endif
 
 .PHONY: all clean
 
@@ -48,7 +51,11 @@ jni_libmxnet_predict.so: jni_libmxnet_predict.o
 	${CXX} ${CFLAGS} -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
 ifneq ($(ANDROID), 1)
-        LDFLAGS+= -lrt
+        ifneq ($(APPLE), 1)
+            LDFLAGS+= -lrt
+        else
+            LDFLAGS+= # -lrt
+        endif
         android:
 else
         CFLAGS+=  -mhard-float -D_NDK_MATH_NO_SOFTFP=1 -O3
