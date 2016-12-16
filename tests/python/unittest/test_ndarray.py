@@ -464,6 +464,8 @@ def test_ndarray_greater():
     assert (z.asnumpy() == np.zeros((2, 3))).all()
     z = y > 0
     assert (z.asnumpy() == np.ones((2, 3))).all()
+    z = 0 > y
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
 
 def test_ndarray_greater_equal():
     x = mx.nd.zeros((2, 3))
@@ -472,6 +474,8 @@ def test_ndarray_greater_equal():
     assert (z.asnumpy() == np.zeros((2, 3))).all()
     z = y >= 0
     assert (z.asnumpy() == np.ones((2, 3))).all()
+    z = 0 >= y
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
     z = y >= 1
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
@@ -482,6 +486,8 @@ def test_ndarray_lesser():
     assert (z.asnumpy() == np.zeros((2, 3))).all()
     z = 0 < y
     assert (z.asnumpy() == np.ones((2, 3))).all()
+    z = y < 0
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
 
 def test_ndarray_lesser_equal():
     x = mx.nd.zeros((2, 3))
@@ -490,6 +496,8 @@ def test_ndarray_lesser_equal():
     assert (z.asnumpy() == np.zeros((2, 3))).all()
     z = 0 <= y
     assert (z.asnumpy() == np.ones((2, 3))).all()
+    z = y <= 0
+    assert (z.asnumpy() == np.zeros((2, 3))).all()
     z = 1 <= y
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
