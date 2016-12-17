@@ -10,8 +10,11 @@ class LRScheduler(object):
         """
         base_lr : float
             the initial learning rate
+        lr_recovered : bool
+            whether learning rate is recovered for continuing training via load_epoch
         """
         self.base_lr = 0.01
+        self.lr_recovered = False
 
     def __call__(self, num_update):
         """
@@ -69,8 +72,26 @@ class FactorScheduler(LRScheduler):
             the maximal number of updates applied to a weight.
         """
 
-        # NOTE: use while rather than if  (for continuing training via load_epoch)
-        while num_update > self.count + self.step:
+        # recover learning rate for continuing training via load_epoch.
+        if not self.lr_recovered:
+            if num_update == 0:
+                pass
+            else:
+                while num_update > self.count + self.step:
+                    self.count += self.step
+                    self.base_lr *= self.factor
+                    if self.base_lr < self.stop_factor_lr:
+                        self.base_lr = self.stop_factor_lr
+                        logging.info("Update[%d]: now learning rate arrived at %0.5e, will not "
+                                     "change in the future", num_update, self.base_lr)
+                    else:
+                        logging.info("Update[%d]: Change learning rate to %0.5e",
+                                     num_update, self.base_lr)
+            self.lr_recovered = True
+
+        # NOTE: use while rather than if  ()
+        # update base_lr if necessary
+        if num_update > self.count + self.step:
             self.count += self.step
             self.base_lr *= self.factor
             if self.base_lr < self.stop_factor_lr:
@@ -128,6 +149,23 @@ class MultiFactorScheduler(LRScheduler):
             the maximal number of updates applied to a weight.
         """
 
+        # recover learning rate for continuing training via load_epoch.
+        if not self.lr_recovered:
+            if num_update == 0:
+                pass
+            else:
+                while self.cur_step_ind <= len(self.step)-1:
+                    if num_update > self.step[self.cur_step_ind]:
+                        self.count = self.step[self.cur_step_ind]
+                        self.cur_step_ind += 1
+                        self.base_lr *= self.factor
+                        logging.info("Update[%d]: Change learning rate to %0.5e",
+                                     num_update, self.base_lr)
+                    else:
+                        break
+            self.lr_recovered = True
+
+        # slow_step
         if self.slow_step and num_update <= self.slow_step:
             if self.slow_lr is None:
                 self.slow_lr = self.base_lr * self.factor
@@ -139,8 +177,8 @@ class MultiFactorScheduler(LRScheduler):
             logging.info("Update[%d]: Change learning rate to %0.5e (disable slow start)",
                          num_update, self.base_lr)
 
-        # NOTE: use while rather than if  (for continuing training via load_epoch)
-        while self.cur_step_ind <= len(self.step)-1:
+        # update base_lr if necessary
+        if self.cur_step_ind <= len(self.step)-1:
             if num_update > self.step[self.cur_step_ind]:
                 self.count = self.step[self.cur_step_ind]
                 self.cur_step_ind += 1
