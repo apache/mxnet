@@ -126,7 +126,7 @@ to calculate the accuracy.
 | `imagenet1k-resnet-50`    | 0.7527 | 0.9258 |
 | `imagenet1k-resnet-101`   | 0.7684 | 0.9327 |
 | `imagenet1k-resnet-152`   | 0.7653 | 0.9312 |
-| `imagenet1k-resnext-50`   | 0.7602 | 0.9286 |
+| `imagenet1k-resnext-50`   | 0.7689 | 0.9332 |
 | `imagenet1k-resnext-101`  | 0.7828 | 0.9408 |
 
 Note:
