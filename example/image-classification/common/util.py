@@ -1,12 +1,25 @@
 import requests
 import os
 import subprocess
+import errno
 
 def download_file(url, local_fname=None, force_write=False):
     if local_fname is None:
         local_fname = url.split('/')[-1]
     if not force_write and os.path.exists(local_fname):
         return local_fname
+
+    dir_name = os.path.dirname(local_fname)
+
+    if dir_name != "":
+        if not os.path.exists(dir_name):
+            try: # try to create the directory if it doesn't exists
+                os.makedirs(dir_name)
+            except OSError as exc: 
+                if exc.errno != errno.EEXIST:
+                    raise
+
+
 
     r = requests.get(url, stream=True)
     assert r.status_code == 200, "failed to open %s" % url
