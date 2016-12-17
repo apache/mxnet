@@ -17,7 +17,7 @@ source ~/.profile
 # Reference: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/compile-software.html
 # Install Python, Numpy, Scipy and set up tools.
 sudo yum groupinstall -y "Development Tools"
-sudo yum install -y python27 python27-setuptools python27-tools
+sudo yum install -y python27 python27-setuptools python27-tools python-pip graphviz
 sudo yum install -y python27-numpy python27-scipy python27-nose python27-matplotlib
 
 # Install OpenBLAS at /usr/local/openblas
@@ -56,5 +56,9 @@ sudo python setup.py install
 # Add MXNet path to ~/.bashrc file
 echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
 source ~/.bashrc
+
+# Install graphviz for visualizing network graph and jupyter notebook to run tutorials and examples
+sudo pip install graphviz
+sudo pip install jupyter
 
 echo "Done! MXNet for Python installation is complete. Go ahead and explore MXNet with Python :-)"

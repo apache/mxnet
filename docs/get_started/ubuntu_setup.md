@@ -76,6 +76,21 @@ After you have downloaded and installed the dependencies, use the following comm
 
 Executing these commands creates a library called ```libmxnet.so```.
 
+Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](jupyter.readthedocs.io) used for running MXNet tutorials and examples.
+
+```bash
+    sudo apt-get install -y python-pip
+    sudo pip install graphviz
+    sudo pip install Jupyter
+```
+
+&nbsp;
+
+We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
+- [R](#install-the-mxnet-package-for-r)
+- [Julia](#install-the-mxnet-package-for-julia)
+- [Scala](#install-the-mxnet-package-for-scala)
+
 ### Install the MXNet Package for R
 
 Run the following commands to install the MXNet dependencies and build the MXNet R package.

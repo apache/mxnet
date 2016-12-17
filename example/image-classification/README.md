@@ -126,7 +126,7 @@ to calculate the accuracy.
 | `imagenet1k-resnet-50`    | 0.7527 | 0.9258 |
 | `imagenet1k-resnet-101`   | 0.7684 | 0.9327 |
 | `imagenet1k-resnet-152`   | 0.7653 | 0.9312 |
-| `imagenet1k-resnext-50`   | 0.7602 | 0.9286 |
+| `imagenet1k-resnext-50`   | 0.7689 | 0.9332 |
 | `imagenet1k-resnext-101`  | 0.7828 | 0.9408 |
 
 Note:
@@ -330,7 +330,8 @@ aspects:
   - Data preprocessing is done by `opencv`.  If opencv is compiled from source
     codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
-- CPU performance. Check MKL DNN is used
+- CPU performance. Check MKL DNN is used, namely set `USE_MKL2017 = 1` and
+  `USE_MKL2017_EXPERIMENTAL = 1` to compile
 - Single GPU performace
   - Check the recent CUDNN is used
   - Check the environment variable `MXNET_CUDNN_AUTOTUNE_DEFAULT` is set
