@@ -47,7 +47,8 @@ After you have installed the dependencies, use one of the following options to p
   cp make/osx.mk ./config.mk
   echo "USE_BLAS = openblas" >> ./config.mk
   echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
-  echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib:/usr/local/lib/graphviz/" >> ./config.mk
+  echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib" >> ./config.mk
+  echo "ADD_LDFLAGS += -L/usr/local/lib/graphviz/" >> ./config.mk
   make -j$(sysctl -n hw.ncpu)
 ```
 **Note:** To change build parameters, edit ```config.mk```.
