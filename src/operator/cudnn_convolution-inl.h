@@ -51,6 +51,17 @@ class CuDNNAlgoReg {
                 cudnnConvolutionBwdDataAlgo_t bwd,
                 cudnnConvolutionBwdFilterAlgo_t flt) {
     std::lock_guard<std::mutex> guard(lock_);
+    if (reg_.size() % 50 == 0) {
+      LOG(INFO)
+        << "Running performance tests to find the best convolution algorithm, "
+           "this can take a while...";
+      if (reg_.size() >= 1000) {
+        LOG(INFO)
+          << "If you see this message in the middle of training, you are "
+             "probably using bucketing. Consider setting env variable "
+             "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable tests.";
+      }
+    }
     reg_[key].fwd = fwd;
     reg_[key].bwd = bwd;
     reg_[key].flt = flt;
@@ -94,6 +105,10 @@ class CuDNNConvolutionOp : public Operator {
 #endif
 
     InitDescriptors(ctx, in_shape, out_shape);
+
+    if (!param_.cudnn_tune) {
+      param_.cudnn_tune = dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", 1);
+    }
     SelectAlgo(ctx, in_shape, out_shape);
   }
 
@@ -461,7 +476,7 @@ class CuDNNConvolutionOp : public Operator {
       mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
-      if (!param_.cudnn_tune) {
+      if (!param_.cudnn_tune.value()) {
         CHECK_EQ(cudnnGetConvolutionForwardAlgorithm(s->dnn_handle_,
                  in_desc_,
                  filter_desc_,
@@ -503,7 +518,7 @@ class CuDNNConvolutionOp : public Operator {
         i = 0;
         while (i < nalgo
                && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
-               || (param_.cudnn_tune == conv::kLimited
+               || (param_.cudnn_tune.value() == conv::kLimited
                && fwd_algo[i].memory > workspace_byte))) ++i;
         if (i == nalgo) {
           LOG(FATAL) << "Failed to find an convolution algorithm.";
@@ -523,7 +538,7 @@ class CuDNNConvolutionOp : public Operator {
         i = 0;
         while (i < nalgo
                && (bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
-               || (param_.cudnn_tune == conv::kLimited
+               || (param_.cudnn_tune.value() == conv::kLimited
                && bwd_filter_algo[i].memory > workspace_byte))) ++i;
         if (i == nalgo) {
           LOG(FATAL) << "Failed to find an convolution algorithm.";
@@ -543,7 +558,7 @@ class CuDNNConvolutionOp : public Operator {
         i = 0;
         while (i < nalgo
                && (bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
-               || (param_.cudnn_tune == conv::kLimited
+               || (param_.cudnn_tune.value() == conv::kLimited
                && bwd_data_algo[i].memory > workspace_byte))) ++i;
         if (i == nalgo) {
           LOG(FATAL) << "Failed to find an convolution algorithm.";

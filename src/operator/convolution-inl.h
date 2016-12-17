@@ -38,7 +38,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   uint32_t num_group;
   uint64_t workspace;
   bool no_bias;
-  int cudnn_tune;
+  dmlc::optional<int> cudnn_tune;
   bool cudnn_off;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
@@ -52,31 +52,36 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-    .describe("Number of groups partition. "
-              "This option is not supported by CuDNN, you can use SliceChannel to num_group,"
-              "apply convolution and concat instead to achieve the same need.");
+    .describe("Number of group partitions. Equivalent to slicing input into num_group\n    "
+              "partitions, apply convolution on each, then concatenate the results");
     DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
-    .describe("Tmp workspace for convolution (MB).");
+    .describe("Maximum tmp workspace allowed for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)
     .add_enum("off", conv::kOff)
     .add_enum("limited_workspace", conv::kLimited)
     .add_enum("fastest", conv::kFastest)
-    .set_default(dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", 0))
-    .describe("Whether to find convolution algo by running performance test."
-              "Leads to higher startup time but may give better speed."
-              "auto tune is turned off by default."
-              "Set environment varialbe MXNET_CUDNN_AUTOTUNE_DEFAULT=1 to turn on by default.");
+    .set_default(dmlc::optional<int>())
+    .describe("Whether to pick convolution algo by running performance test.\n    "
+              "Leads to higher startup time but may give faster speed. Options are:\n    "
+              "\'off\': no tuning\n    "
+              "\'limited_workspace\': run test and pick the fastest algorithm "
+              "that doesn't exceed workspace limit.\n    "
+              "\'fastest\': pick the fastest algorithm and ignore workspace limit.\n    "
+              "If set to None (default), behavior is determined by environment\n    "
+              "variable MXNET_CUDNN_AUTOTUNE_DEFAULT: 0 for off,\n    "
+              "1 for limited workspace (default), 2 for fastest.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
-    .describe("Turn off cudnn.");
+    .describe("Turn off cudnn for this layer.");
     DMLC_DECLARE_FIELD(layout)
     .add_enum("NCHW", mshadow::kNCHW)
     .add_enum("NHWC", mshadow::kNHWC)
     .add_enum("NCDHW", mshadow::kNCDHW)
     .add_enum("NDHWC", mshadow::kNDHWC)
     .set_default(dmlc::optional<int>())
-    .describe("Set layout for input/output (but not weight). Empty for default layout");
+    .describe("Set layout for input, output and weight. Empty for\n    "
+              "default layout: NCHW for 2d and NCDHW for 3d.");
   }
 };
 
