@@ -10,7 +10,7 @@
 #include "./cudnn_lrn-inl.h"
 #endif
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_lrn-inl.h"
 #endif
@@ -21,9 +21,8 @@ template<>
 Operator* CreateOp<cpu>(LRNParam param, int dtype) {
 #if MXNET_USE_MKL2017 == 1
   return new MKLLRNOp<cpu, float>(param);
-#else
-  return new LocalResponseNormOp<cpu>(param);
 #endif
+  return new LocalResponseNormOp<cpu>(param);
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h

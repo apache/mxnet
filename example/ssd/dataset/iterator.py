@@ -100,7 +100,7 @@ class DetIter(mx.io.DataIter):
             raise StopIteration
 
     def getindex(self):
-        return self._current / self.batch_size
+        return self._current // self.batch_size
 
     def getpad(self):
         pad = self._current + self.batch_size - self._size
@@ -117,7 +117,7 @@ class DetIter(mx.io.DataIter):
                 if not self.is_train:
                     continue
                 # use padding from middle in each epoch
-                idx = (self._current + i + self._size / 2) % self._size
+                idx = (self._current + i + self._size // 2) % self._size
                 index = self._index[idx]
             else:
                 index = self._index[self._current + i]
