@@ -242,7 +242,7 @@ Operator*(const NodeAttrs& attrs,
           const std::vector<TShape>& ishape,
           const std::vector<int>& itype)
 ```
-that returns pointer to an Operator.
+that returns pointer to an `Operator` object, which is defined in [include/mxnet/operator.h](https://github.com/dmlc/mxnet/blob/master/include/mxnet/operator.h).
 
 
 ### Example: abs operator
