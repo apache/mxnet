@@ -251,5 +251,11 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     assert(batchCount === nBatch1)
+
+
+    // test empty label (for prediction)
+    val dataIter2 = new NDArrayIter(data)
+
+    assert(dataIter2.initLabel == IndexedSeq.empty)
   }
 }

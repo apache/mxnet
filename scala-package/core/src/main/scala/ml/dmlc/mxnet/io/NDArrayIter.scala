@@ -23,7 +23,7 @@ import scala.collection.immutable.ListMap
  * the size of data does not match batch_size. Roll over is intended
  * for training and can cause problems if used for prediction.
  */
-class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
+class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
                   private val dataBatchSize: Int = 1, shuffle: Boolean = false,
                   lastBatchHandle: String = "pad") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
@@ -45,11 +45,11 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
         "batch_size need to be smaller than data size when not padding.")
       val keepSize = dataSize - dataSize % dataBatchSize
       val dataList = data.map(ndArray => {ndArray.slice(0, keepSize)})
-      if (label != null) {
+      if (!label.isEmpty) {
         val labelList = label.map(ndArray => {ndArray.slice(0, keepSize)})
         (dataList, labelList)
       } else {
-        (dataList, null)
+        (dataList, label)
       }
     } else {
       (data, label)
