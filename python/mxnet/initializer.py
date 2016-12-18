@@ -160,6 +160,13 @@ class Mixed(object):
 
 
 class Constant(Initializer):
+    """Initialize the parameter with a constant value
+
+    Parameters
+    ----------
+    value : float, optional
+        The constant value to initialize for the paramter
+    """
     def __init__(self, value=0.0):
         self.value = value
 
@@ -181,6 +188,9 @@ class Constant(Initializer):
 
         logging.info('Init (Constant) %s with value %s', name, self.value)
         arr[:] = self.value
+
+    def _init_weight(self, _, arr):
+        self.__call__(_, arr)
 
 
 class Uniform(Initializer):
@@ -294,7 +304,8 @@ class Xavier(Initializer):
             random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
-        logging.info('Init (Xavier %s %s) %s with scale %s', self.rnd_type, self.magnitude, _, scale)
+        logging.info('Init (Xavier %s %s) %s with scale %s', self.rnd_type,
+                     self.magnitude, _, scale)
 
 
 class MSRAPrelu(Xavier):
@@ -328,24 +339,27 @@ def get_initializer(initializer):
     """
 
     def get_initializer_from_string(key):
-        # 'xavier', 'msra', 'default'
+        """Create single initializer from a string"""
+        # 'xavier', 'xavier-gaussian', 'msra', 'default'
+        initializer_inst = None
         if key == 'xavier':
-            return Xavier(factor_type="in", magnitude=3.0)
+            initializer_inst = Xavier(factor_type="in", magnitude=3.0)
         elif key == 'xavier-gaussian':
-            return Xavier(factor_type="in", rnd_type="gaussian", magnitude=1.0)
+            initializer_inst = Xavier(factor_type="in", rnd_type="gaussian", magnitude=1.0)
         elif key == 'msra':
-            return Xavier(factor_type="in", rnd_type="gaussian", magnitude=2.0)
+            initializer_inst = Xavier(factor_type="in", rnd_type="gaussian", magnitude=2.0)
         elif key == 'default':
-            return Xavier(factor_type="in", magnitude=2.34)
+            initializer_inst = Xavier(factor_type="in", magnitude=2.34)
         # 'normal', 'uniform', 'const'
         elif key.startswith('normal'):
-            return Normal(sigma=float(key[len('normal'):]))
+            initializer_inst = Normal(sigma=float(key[len('normal'):]))
         elif key.startswith('uniform'):
-            return Uniform(scale=float(key[len('uniform'):]))
+            initializer_inst = Uniform(scale=float(key[len('uniform'):]))
         elif key.startswith('const'):
-            return Constant(value=float(key[len('const'):]))
+            initializer_inst = Constant(value=float(key[len('const'):]))
         else:
             raise ValueError('Invalid initializer: %s' % key)
+        return initializer_inst
 
     if initializer in ['xavier', 'xavier-gaussian', 'msra', 'default']:
         # single initializer
