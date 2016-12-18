@@ -60,7 +60,15 @@ def main():
     first_conv = True
     
     for layer_name, layer_type, layer_blobs in iter:
-        if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14:
+        if layer_type == 'Convolution' or layer_type == 'InnerProduct' or layer_type == 4 or layer_type == 14 \
+                or layer_type == 'PReLU':
+            if layer_type == 'PReLU':
+                assert(len(layer_blobs) == 1)
+                wmat = layer_blobs[0].data
+                weight_name = layer_name + '_gamma'
+                arg_params[weight_name] = mx.nd.zeros(wmat.shape)
+                arg_params[weight_name][:] = wmat
+                continue
             assert(len(layer_blobs) == 2)
             wmat_dim = []
             if getattr(layer_blobs[0].shape, 'dim', None) is not None:
