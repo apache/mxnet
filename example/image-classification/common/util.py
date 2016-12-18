@@ -1,5 +1,6 @@
 import requests
 import os
+import subprocess
 
 def download_file(url, local_fname=None, force_write=False):
     if local_fname is None:
@@ -14,3 +15,13 @@ def download_file(url, local_fname=None, force_write=False):
             if chunk: # filter out keep-alive new chunks
                 f.write(chunk)
     return local_fname
+
+def get_gpus():
+    """
+    return a list of GPUs
+    """
+    try:
+        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
+    except OSError:
+        return []
+    return range(len([i for i in re.split('\n') if 'GPU' in i]))
