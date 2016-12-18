@@ -28,11 +28,10 @@ def find_lib_path():
         dll_path.extend([p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")])
     if os.name == 'nt':
         dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
+    elif platform.system()=='Darwin':
+        dll_path = [os.path.join(p, 'libmxnet.dylib') for p in dll_path]+[os.path.join(p, 'libmxnet.so') for p in dll_path]
     else:
-        if platform.system()=='Darwin':
-            dll_path = [os.path.join(p, 'libmxnet.dylib') for p in dll_path]
-        else:
-            dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
+        dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
     lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
     if len(lib_path) == 0:
         raise RuntimeError('Cannot find the files.\n' +
