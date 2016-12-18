@@ -248,30 +248,30 @@ that returns pointer to an `Operator` object, which is defined in [include/mxnet
 ### Example: abs operator
 
 ```c++
-  NNVM_REGISTER_OP(abs)
-  .MXNET_DESCRIBE("Take absolute value of the src")
-  .set_num_inputs(1)
-  .set_num_outputs(1)
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-    [](const NodeAttrs& attrs){
-      return std::vector<std::pair<int, int> >{{0, 0}};
-    })
-  .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::abs>)
-  .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});              
-  .add_argument("data", "NDArray", "Source input")
+NNVM_REGISTER_OP(abs)
+.MXNET_DESCRIBE("Take absolute value of the src")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::abs>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});              
+.add_argument("data", "NDArray", "Source input")
 
-  NNVM_REGISTER_OP(_bacward_abs)
-  .set_num_inputs(2)
-  .set_num_outputs(1)
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-    [](const NodeAttrs& attrs){
-      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
-    })
-  .set_attr<FCompute>("FCompute<cpu>",
-    BinaryCompute<cpu, unary_bwd<mshadow_op::sign> >);
+NNVM_REGISTER_OP(_bacward_abs)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+  return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>",
+BinaryCompute<cpu, unary_bwd<mshadow_op::sign> >);
 ```
 
