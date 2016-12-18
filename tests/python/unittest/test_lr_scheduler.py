@@ -1,5 +1,5 @@
 from mxnet.lr_scheduler import FactorScheduler, MultiFactorScheduler
-from check_utils import reldiff
+from mxnet.test_utils import reldiff
 
 def test_factor_scheduler():
     # normal training
