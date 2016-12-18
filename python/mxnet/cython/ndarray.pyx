@@ -164,7 +164,7 @@ cdef _make_ndarray_function(OpHandle handle, string name):
         cdef vector[const char*] param_keys = SVec2Ptr(sparam_keys)
         cdef vector[const char*] param_vals = SVec2Ptr(sparam_vals)
 
-        MXImperativeInvoke(
+        CALL(MXImperativeInvoke(
             handle,
             <int>nd_args.size(),
             &nd_args[0] if nd_args.size() != 0 else NULL,
@@ -172,7 +172,8 @@ cdef _make_ndarray_function(OpHandle handle, string name):
             &p_output_vars,
             <int>param_keys.size(),
             CBeginPtr(param_keys),
-            CBeginPtr(param_vals))
+            CBeginPtr(param_vals)))
+
         if original_output is not None:
             return original_output
 
