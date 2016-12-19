@@ -1,17 +1,23 @@
 # Tutorials
 
+The tutorials provide step-by-step instructions for creating models for specific types of applications.
+
+They explain what each step accomplishes and why, and some include related information to enrich your understanding. Instead of procedures for creating your own model, some of the tutorials provide fully trained models or examples of models that you can use to create your own output.
+
 ## Example Applications
+
+These tutorials cover use cases and applications of MXNet, organized by type and by language. To create your own applications, you can customize the commands provided.
 
 ### Computer Vision
 
-Applications that intelligently modify, classify and segment images and video.
+The following tutorials explain how to develop applications that use machine learning to modify, classify, and segment images and video.
 
 #### Python
 
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/python/mnist.html)
 *A simple example of classifying handwritten digits from the MNIST dataset using a MLP and convolutional network*
 
-- [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html) 
+- [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html)
 *An example of classifying various images of real-world objects using a convolutional neural network.*
 
 - [Image Segmentation](http://mxnet.io/tutorials/computer_vision/segmentation.html)
@@ -32,10 +38,10 @@ Applications that intelligently modify, classify and segment images and video.
 #### R
 
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/r/mnistCompetition.html)
-*A simple example of classifying handwritten digits from the MNIST data set using a MLP and convolutional network*
+*An example of classifying handwritten digits from the MNIST dataset using an MLP and convolutional network*
 
 - [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-*An advanced example of using a large pre-trained model to classify the ImageNet data set*
+*An advanced example of using a large pre-trained model to classify the ImageNet dataset*
 
 #### Scala
 
@@ -44,27 +50,27 @@ Applications that intelligently modify, classify and segment images and video.
 
 ### Natural Language Processing
 
-Applications that summarize, generate and understand text based data
+The following tutorials explain how to develop applications that understand, generate, and summarize text-based data.
 
 #### Python
 
 - [Character Level LSTM](http://mxnet.io/tutorials/python/char_lstm.html)
-*A simple example using an LSTM network to generate text, character by character, in the style of Barack Obama's speeches*
+*An example using an LSTM network to generate text, character by character, in the style of Barack Obama's speeches*
 
 - [Text Classification using Convolutional Neural Network](http://mxnet.io/tutorials/nlp/cnn.html)
-*A simple example of using a convolutional network to classify sentiment in text reviews*
+*An example of using a convolutional network to classify sentiment in text reviews*
 
 - [NCE Loss](http://mxnet.io/tutorials/nlp/nce_loss.html)
-*An advanced example of using nce loss to speed up text classification with an LSTM model*
+*An advanced example of using NCE loss to speed up text classification with an LSTM model*
 
 #### R
 
 - [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
-*A simple example using an LSTM network to generate text, character by character, in the style of Shakespeare*
+*An example using an LSTM network to generate text, character by character, in the style of Shakespeare*
 
 ### Speech Recognition
 
-Applications that map natural speech to text
+The following tutorials explain how to develop applications that map natural speech to text.
 
 #### Python
 
@@ -76,39 +82,38 @@ Applications that map natural speech to text
 
 ### Generative Networks
 
-Applications that generate novel data sets, such as images, text, music etc.
+The following tutorial explains how to develop applications that generate content as data sets, such as images, text, music, and more.
 
 #### Python
 
 - [Generative Adversarial Network](http://mxnet.io/tutorials/unsupervised_learning/gan.html)
-*A simple example of using a GAN trained on the MNIST dataset on generate handwritten digits*
+*An example of using a GAN trained on the MNIST dataset on generate handwritten digits*
 
 ### Unsupervised Machine Learning
 
-Applications to uncover existing structure in data sets
+The following tutorials explain how to develop applications for discovering existing structures and relationships in datasets.
 
 #### Python
 
 - [Matrix Factorization](http://mxnet.io/tutorials/python/matrix_factorization.html)
-*A simple example using matrix factorization to discover user preferences in the MovieLens dataset*
+*An example using matrix factorization to discover user preferences in the MovieLens dataset*
 
 - [Auto Encoders](http://mxnet.io/tutorials/unsupervised_learning/auto_encoders.html)
 *An example using a non-linear deep autoencoder to find low dimensional representations for the MNIST dataset*
 
 - [Recommendation Systems](http://mxnet.io/tutorials/general_ml/recommendation_systems.html)
-*An example of using an autoencoder and matrix factorization to make a full end to end reccomender system*
+*An example of using an autoencoder and matrix factorization to make a complete end to end recommendation system*
 
 
 ### Supervised Machine Learning
 
-Applications using traditional methods to model classification and regression problems 
+Applications that use traditional methods to model classification and regression problems.
 
 #### R
 
 - [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-*Using a simple multi-layer perceptron to do classification and regression tasks on the mlbench dataset*
+*Using a multi-layer perceptron to do classification and regression tasks on the mlbench dataset*
 
 ## Other Resources
-- Collection of [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
-- Collection of MXNet Tutorials for NVidia GTC 2016. [MXNet GTC 15 Tutorials](https://github.com/dmlc/mxnet-gtc-tutorial)
-
+- [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
+- [MXNet Tutorials for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
