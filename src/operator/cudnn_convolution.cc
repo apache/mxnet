@@ -229,12 +229,15 @@ void TuneCudnnConvolution(ConvolutionParam param,
            && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
            || (param.cudnn_tune == conv::kLimited
            && fwd_algo[i].memory > workspace_byte))) {
-      if(param.cudnn_tune == conv::kLimited
-         && fwd_algo[i].memory > workspace_byte
-         && !workspace_size_warning_shown) {
-        LOG(WARNING) << "cuDNN algorithm omitted during auto-tuning due to workspace size limitation (currently " << param.workspace << "MB). " 
-                        "This uses less GPU memory but may lead to suboptimal performance. Consider setting \"workspace\" parameter in mx.symbol.Convolution "
-                        "to higher value or setting MXNET_CUDNN_AUTOTUNE_DEFAULT environment variable to 2 (which will omit the memory size check).";
+      if (param.cudnn_tune == conv::kLimited
+          && fwd_algo[i].memory > workspace_byte
+          && !workspace_size_warning_shown) {
+        LOG(WARNING) << "cuDNN algorithm omitted during auto-tuning due to workspace size "
+                        "limitation (currently " << param.workspace << "MB). This uses less "
+                        "GPU memory but may lead to suboptimal performance. Consider setting "
+                        "\"workspace\" parameter in mx.symbol.Convolution to higher value or "
+                        "setting MXNET_CUDNN_AUTOTUNE_DEFAULT environment variable to 2 "
+                        "(which will omit the memory size check).";
         workspace_size_warning_shown = true;
       }
         ++i;
@@ -259,12 +262,15 @@ void TuneCudnnConvolution(ConvolutionParam param,
            && (bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
            || (param.cudnn_tune == conv::kLimited
            && bwd_filter_algo[i].memory > workspace_byte))) {
-      if(param.cudnn_tune == conv::kLimited
-         && bwd_filter_algo[i].memory > workspace_byte
-         && !workspace_size_warning_shown) {
-        LOG(WARNING) << "cuDNN algorithm omitted during auto-tuning due to workspace size limitation (currently " << param.workspace << "MB). " 
-                        "This uses less GPU memory but may lead to suboptimal performance. Consider setting \"workspace\" parameter in mx.symbol.Convolution "
-                        "to higher value or setting MXNET_CUDNN_AUTOTUNE_DEFAULT environment variable to 2 (which will omit the memory size check).";
+      if (param.cudnn_tune == conv::kLimited
+          && bwd_filter_algo[i].memory > workspace_byte
+          && !workspace_size_warning_shown) {
+        LOG(WARNING) << "cuDNN algorithm omitted during auto-tuning due to workspace size "
+                        "limitation (currently " << param.workspace << "MB). This uses less "
+                        "GPU memory but may lead to suboptimal performance. Consider setting "
+                        "\"workspace\" parameter in mx.symbol.Convolution to higher value or "
+                        "setting MXNET_CUDNN_AUTOTUNE_DEFAULT environment variable to 2 "
+                        "(which will omit the memory size check).";
         workspace_size_warning_shown = true;
       }
         ++i;
@@ -289,12 +295,15 @@ void TuneCudnnConvolution(ConvolutionParam param,
            && (bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
            || (param.cudnn_tune == conv::kLimited
            && bwd_data_algo[i].memory > workspace_byte))) {
-      if(param.cudnn_tune == conv::kLimited
-         && bwd_data_algo[i].memory > workspace_byte
-         && !workspace_size_warning_shown) {
-        LOG(WARNING) << "cuDNN algorithm omitted during auto-tuning due to workspace size limitation (currently " << param.workspace << "MB). " 
-                        "This uses less GPU memory but may lead to suboptimal performance. Consider setting \"workspace\" parameter in mx.symbol.Convolution "
-                        "to higher value or setting MXNET_CUDNN_AUTOTUNE_DEFAULT environment variable to 2 (which will omit the memory size check).";
+      if (param.cudnn_tune == conv::kLimited
+          && bwd_data_algo[i].memory > workspace_byte
+          && !workspace_size_warning_shown) {
+        LOG(WARNING) << "cuDNN algorithm omitted during auto-tuning due to workspace size "
+                        "limitation (currently " << param.workspace << "MB). This uses less "
+                        "GPU memory but may lead to suboptimal performance. Consider setting "
+                        "\"workspace\" parameter in mx.symbol.Convolution to higher value or "
+                        "setting MXNET_CUDNN_AUTOTUNE_DEFAULT environment variable to 2 "
+                        "(which will omit the memory size check).";
         workspace_size_warning_shown = true;
       }
         ++i;
