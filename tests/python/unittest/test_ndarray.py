@@ -101,9 +101,8 @@ def test_ndarray_elementwise():
             check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
 def test_ndarray_elementwisesum():
-    ones = mx.nd.ones((10,))
+    ones = mx.nd.ones((10,), dtype=np.int32)
     res = mx.nd.ElementWiseSum(ones, ones*2, ones*4, ones*8)
-    import pdb;pdb.set_trace()
     assert same(res.asnumpy(), ones.asnumpy()*15)
 
 def test_ndarray_negate():
