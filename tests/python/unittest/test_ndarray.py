@@ -100,6 +100,11 @@ def test_ndarray_elementwise():
             check_with_uniform(mx.nd.square, 1, dim, np.square, rmin=0)
             check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
+def test_ndarray_elementwisesum():
+    ones = mx.nd.ones((10,), dtype=np.int32)
+    res = mx.nd.ElementWiseSum(ones, ones*2, ones*4, ones*8)
+    assert same(res.asnumpy(), ones.asnumpy()*15)
+
 def test_ndarray_negate():
     npy = np.random.uniform(-10, 10, (2,3,4))
     arr = mx.nd.array(npy)
@@ -404,6 +409,7 @@ if __name__ == '__main__':
     test_ndarray_concatenate()
     test_broadcast()
     test_ndarray_elementwise()
+    test_ndarray_elementwisesum()
     test_ndarray_slice()
     test_ndarray_pickle()
     test_ndarray_saveload()

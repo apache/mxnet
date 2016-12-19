@@ -44,6 +44,14 @@ bool ElementWiseSumShape(const nnvm::NodeAttrs& attrs,
       attrs, in_attrs, out_attrs);
 }
 
+bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
+                        std::vector<int> *in_attrs,
+                        std::vector<int> *out_attrs) {
+  CHECK_EQ(out_attrs->size(), 1);
+  return ElemwiseAttr<int, type_is_none, true>(
+      attrs, in_attrs, out_attrs);
+}
+
 NNVM_REGISTER_OP(ElementWiseSum)
 .MXNET_DESCRIBE("Perform element sum of inputs")
 .set_attr_parser(ParamParser<ElementWiseSumParam>)
@@ -67,7 +75,9 @@ NNVM_REGISTER_OP(ElementWiseSum)
       return std::vector<std::pair<int, int> >{{0, 0}};
     })
 .set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
-.set_attr<nnvm::FGradient>("FGradient", ElementWiseSumGrad);
+.set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
+.set_attr<nnvm::FGradient>("FGradient", ElementWiseSumGrad)
+.add_argument("args", "NDArray[]", "List of input tensors");
 
 
 
