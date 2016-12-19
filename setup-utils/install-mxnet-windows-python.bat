@@ -25,7 +25,7 @@ REM  set BLAS_LIBRARIES=D:\\Libraries\\lib\libopenblas.dll.a
 REM  set LAPACK_LIBRARIES=D:\\Libraries\\lib\libopenblas.dll.a
 
 :: where to find cudnn library
-REM  set CUDNN_PATH=D:\NVIDIA\CUDNN\v5.1\bin\cudnn64_5.dll
+REM  set CUDNN_ROOT=D:\NVIDIA\CUDNN\v5.1\
 
 :: whether update dependencies if already setup, default to not update
 REM  set MXNET_UPDATE_DEPS=
@@ -98,8 +98,8 @@ echo %ECHO_PREFIX% Inc: %MXNET_INSTALL_INC%
 ::::   Setup dependencies   ::::
 
 :: has blas/lapack?
-if not "%INTEL_MKL_DIR%" == "" if exist %INTEL_MKL_DIR% set MXNET_BLAS=MKL
-if not "%BLAS_LIBRARIES%" == "" if exist %BLAS_LIBRARIES% set MXNET_BLAS=Open
+if exist %INTEL_MKL_DIR% set MXNET_BLAS=MKL
+if "%MXNET_BLAS%" == "" set MXNET_BLAS=Open
 
 :: has cuda?
 for /f "delims=" %%i in ('where nvcc') do (
@@ -108,6 +108,9 @@ for /f "delims=" %%i in ('where nvcc') do (
 )
 :AFTER_NVCC
 if not "%NVCC_CMD%" == "" set MXNET_SETUP_HAS_CUDA=1
+
+:: has cudnn
+if exist %CUDNN_ROOT% set MXNET_SETUP_HAS_CUDNN=1
 
 :: has conda?
 for /f "delims=" %%i in ('where conda') do (
@@ -169,30 +172,39 @@ if "%CMAKE_CMD%" == "" (
 :AFTER_CMAKE
 
 :: need openblas?
-if not "%MXNET_BLAS%" == "Open" goto :CONDA_INSTALL_OPENBLAS
+if "%MXNET_BLAS%" == "Open" goto :CONDA_INSTALL_OPENBLAS
 goto :AFTER_OPENBLAS
 
 :CONDA_INSTALL_OPENBLAS
 findstr "openblas" "%MXNET_CONDA_PKGS%" >nul
 if errorlevel 1 (
-  echo %ECHO_PREFIX% Installing openblas by conda, since there is no blas library specified
-  if "%MXNET_VS_TARGET%" == "x64" conda install -n %MXNET_CONDA_ENV% -c mutirri openblas --yes || goto :Fail
+  echo %ECHO_PREFIX% Installing openblas by conda
+  if "%MXNET_VS_TARGET%" == "x64" conda install -n %MXNET_CONDA_ENV% -c ukoethe openblas --yes || goto :Fail
 )
-set MXNET_BLAS=Open
 
-:AFTER_OPENBLAS
 if "%MXNET_VS_TARGET%" == "x64" (
   if "%OpenBLAS_INCLUDE_DIR%" == "" set OpenBLAS_INCLUDE_DIR=%MXNET_CONDA_LIBRARY%\\include\\
-  if "%OpenBLAS_LIB%" == "" set OpenBLAS_LIB=%MXNET_CONDA_LIBRARY%\\lib\\libopenblas.dll.a
+  if "%OpenBLAS_LIB%" == "" set OpenBLAS_LIB=%MXNET_CONDA_LIBRARY%\\lib\\libopenblas.lib
 )
+:AFTER_OPENBLAS
+
+if "%MXNET_BLAS%" == "MKL" goto:CONDA_INSTALL_MKL
+goto :AFTER_MKL
+
+:CONDA_INSTALL_MKL
+if "%MKL_INCLUDE_DIR%" == "" set MKL_INCLUDE_DIR=%INTEL_MKL_DIR%\\include\\
+if "%MKL_LIB%" == "" set MKL_LIB=%INTEL_MKL_DIR%\\lib\\
+:AFTER_MKL
 
 :: other dependencies
 findstr "opencv" "%MXNET_CONDA_PKGS%" >nul
 if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% opencv
 findstr "numpy" "%MXNET_CONDA_PKGS%" >nul
 if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% numpy
-REM findstr "7za" "%MXNET_CONDA_PKGS%" >nul
-REM if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% 7za
+findstr "cython" "%MXNET_CONDA_PKGS%" >nul
+if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% cython
+findstr "numpy" "%MXNET_CONDA_PKGS%" >nul
+if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% numpy
 findstr "ninja" "%MXNET_CONDA_PKGS%" >nul
 if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% ninja
 
@@ -227,7 +239,16 @@ REM set NEW_PATH=%NEW_PATH%;%MXNET_INSTALL_BIN%\graphviz
 echo %ECHO_PREFIX% Build libmxnet.dll
 cd %MXNET_DISTRO%
 
-cmake -Wno-dev -DUSE_CUDNN=%MXNET_SETUP_HAS_CUDNN% -DUSE_CUDA=%MXNET_SETUP_HAS_CUDA% -DCMAKE_PREFIX_PATH=%MXNET_CONDA_LIBRARY% -DBLAS="%MXNET_BLAS%" -DOpenBLAS_HOME=%MXNET_CONDA_LIBRARY% -DOpenBLAS_INCLUDE_DIR=%OpenBLAS_INCLUDE_DIR% -DOpenBLAS_LIB=%OpenBLAS_LIB% -DOpenCV_LIB_PATH=%MXNET_CONDA_LIBRARY%\\lib\\ -DOpenCV_INCLUDE_DIRS=%MXNET_CONDA_LIBRARY%\\include\\ -DOpenCV_CONFIG_PATH=%MXNET_CONDA_LIBRARY% -G "Ninja" -DCMAKE_BUILD_TYPE=Release -H. -Bbuild
+SET CMAKE_OPT=%CMAKE_OPT% -DUSE_CUDA=%MXNET_SETUP_HAS_CUDA%
+SET CMAKE_OPT=%CMAKE_OPT% -DUSE_CUDNN=%MXNET_SETUP_HAS_CUDNN%
+if %MXNET_SETUP_HAS_CUDNN%=="1" SET CMAKE_OPT=%CMAKE_OPT% -DCUDNN_ROOT="%CUDNN_ROOT%"
+SET CMAKE_OPT=%CMAKE_OPT% -DBLAS="%MXNET_BLAS%"
+if "%MXNET_BLAS%"=="Open" SET CMAKE_OPT=%CMAKE_OPT% -DOpenBLAS_HOME="%MXNET_CONDA_LIBRARY%" -DOpenBLAS_INCLUDE_DIR="%OpenBLAS_INCLUDE_DIR%" -DOpenBLAS_LIB="%OpenBLAS_LIB%"
+if "%MXNET_BLAS%"=="MKL" SET CMAKE_OPT=%CMAKE_OPT% -DMKL_HOME="%INTEL_MKL_DIR%" -DMKL_INCLUDE_DIR="%MKL_INCLUDE_DIR%" -DMKL_LIB="%MKL_LIB%"
+
+SET CMAKE_OPT=%CMAKE_OPT% -DOpenCV_LIB_PATH="%MXNET_CONDA_LIBRARY%\\lib\\" -DOpenCV_INCLUDE_DIRS="%MXNET_CONDA_LIBRARY%\\include\\" -DOpenCV_CONFIG_PATH="%MXNET_CONDA_LIBRARY%"
+
+cmake -Wno-dev %CMAKE_OPT% -DCMAKE_PREFIX_PATH="%MXNET_CONDA_LIBRARY%" -G "Ninja" -DCMAKE_BUILD_TYPE=Release -H. -Bbuild
 if errorlevel 1 goto :FAIL
 cmake --build build --config Release
 if errorlevel 1 goto :FAIL
@@ -237,9 +258,11 @@ cd %MXNET_DISTRO%\python
 python setup.py install
 if errorlevel 1 goto :FAIL
 
+set NEW_PATH=%NEW_PATH:\\=\%
 echo %ECHO_PREFIX% Setup succeed!
-echo %ECHO_PREFIX% Add the following path to your system path
+echo %ECHO_PREFIX% Add the following path to your system path or Run env.cmd per cmd window
 echo %NEW_PATH%
+echo @SET PATH=%%PATH%%;%NEW_PATH%>%MXNET_DISTRO%\env.cmd
 goto :END
 
 :FAIL
