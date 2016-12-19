@@ -167,7 +167,8 @@ def proto2script(proto_file):
             param_string = 'use_global_stats=%s' % param.use_global_stats
         if layer[i].type == 'PReLU':
             type_string = 'mx.symbol.LeakyReLU'
-            param_string = "act_type='prelu'"
+            param = layer[i].prelu_param
+            param_string = "act_type='prelu', slope=%f" % param.filler.value
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
         if type_string == '':
             raise Exception('Unknown Layer %s!' % layer[i].type)
