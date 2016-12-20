@@ -33,7 +33,7 @@ def test_backward_infer():
     wshift = mx.sym.Variable("wshift", shape=(1,))
     data = mx.sym.Variable("data")
     # broadcast add here, not being able to deduce shape correctly
-    wt = w + wshift
+    wt = mx.sym.broadcast_add(w, wshift)
     # shape constraint, this is what enables backward shape inference
     wt = mx._symbol_internal._identity_with_attr_like_rhs(wt, w)
     net = mx.sym.FullyConnected(data=data, weight=wt, num_hidden=11, no_bias=True)
