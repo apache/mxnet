@@ -806,7 +806,7 @@ namespace isnan_typed {
   MSHADOW_XINLINE bool IsNan(volatile mshadow::half::half_t val) {
     return (val.half_ & 0x7fff) > 0x7c00;
   }
-};
+};  // namespace isnan_typed
 
 /*! \brief sum reducer that ignores NaN values in the input */
 struct nansum {
@@ -854,8 +854,7 @@ struct nanprod {
       } else {
         dst = src;
       }
-    }
-    else {
+    } else {
       if (isnan_typed::IsNan(src)) {
         dst = dst;
       } else {
