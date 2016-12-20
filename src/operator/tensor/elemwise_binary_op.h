@@ -106,16 +106,6 @@ void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
   .add_argument("lhs", "NDArray", "first input")                    \
   .add_argument("rhs", "NDArray", "second input")
 
-#define MXNET_OPERATOR_REGISTER_BINARY_BACKWARD(name)             \
-  NNVM_REGISTER_OP(name)                                          \
-  .set_num_inputs(1)                                              \
-  .set_num_outputs(2)                                             \
-  .set_attr<nnvm::TIsBackward>("TIsBackward", true)               \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",               \
-    [](const NodeAttrs& attrs){                                   \
-      return std::vector<std::pair<int, int> >{{0, 1}};           \
-    })
-
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_H_
