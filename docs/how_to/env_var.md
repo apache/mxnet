@@ -51,9 +51,9 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 ## Memonger
 
 * MXNET_BACKWARD_DO_MIRROR (default=0)
-    - whether using `memonger` during training for saving device memonry.
-    - when set to `1`, then during backward propagation, it will use [memonger technology](https://arxiv.org/abs/1604.06174) to recompute some feature maps to save much memory.
-    - `memonger` used for balancing computation and memory consumption, for example with batchsize=128, we can train ResNet-200 ImageNet-1k on a signle K80 GPU when `MXNET_BACKWARD_DO_MIRROR=1`.
+    - whether do `mirror` during training for saving device memory.
+    - when set to `1`, then during forward propagation, graph exector will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed. `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
+    - one extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will save O(sqrt(N)) memory at 75% running speed.
 
 ## Other Environment Variables
 
