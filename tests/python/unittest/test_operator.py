@@ -889,7 +889,7 @@ def test_convolution_grouping():
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
 
-def _gen_broadcast_data():
+def gen_broadcast_data():
     # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
     ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
@@ -907,21 +907,24 @@ def _gen_broadcast_data():
     r_shape[np.where(r_axis_flags == 0)] = 1
     return [np.random.random(l_shape), np.random.random(r_shape)]
 
-def _check_broadcast_op_forward(symbol, baseline):
+def gen_binary_data():
+    ndim = np.random.randint(1, 6)
+    shape = np.random.randint(1, 6, size=(ndim,))
+    return [np.random.random(shape), np.random.random(shape)]
+
+def check_binary_op_forward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
-        d = _gen_broadcast_data()
+        d = gen_data()
         x = baseline(d[0], d[1])
         y = symbol.bind(default_context(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward()
-        err = np.sum(np.abs(x - y.outputs[0].asnumpy())) / np.sum(np.abs(x))
-        assert err < 1e-4, 'error %f, shapes are %s, %s' % (
-            err, d[0].shape, d[1].shape)
+        assert_allclose(x, y.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
 
-def _check_broadcast_op_backward(symbol, baseline):
+def check_binary_op_backward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
-        d = _gen_broadcast_data()
+        d = gen_data()
         out = np.random.random((d[0] + d[1]).shape)
         def reduce_op(shape, x):
             if shape == x.shape:
@@ -941,11 +944,44 @@ def _check_broadcast_op_backward(symbol, baseline):
                         args_grad=[y_1, y_2])
         y.forward()
         y.backward([mx.nd.array(out)])
-        err = lambda x, y: np.sum(np.abs(x-y)) / np.sum(np.abs(x))
-        err_1 = err(x_1, y_1.asnumpy())
-        err_2 = err(x_2, y_2.asnumpy())
-        assert err_1 < 1e-3 and err_2 < 1e-3, 'lhs error %f, rhs error %f, shapes are %s %s' % (
-            err_1, err_2, d[0].shape, d[1].shape)
+        assert_allclose(x_1, y_1.asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_allclose(x_2, y_2.asnumpy(), rtol=1e-3, atol=1e-5)
+
+def test_binary_op():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+
+    def test_bplus(a, b):
+        c = a + b
+        check_binary_op_forward(c, lambda a, b: a + b, gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, g_out), gen_binary_data)
+
+    def test_bminus(a, b):
+        c = a - b
+        check_binary_op_forward(c, lambda a, b: a - b, gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out), gen_binary_data)
+
+    def test_bmul(a, b):
+        c = a * b
+        check_binary_op_forward(c, lambda a, b: a * b, gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out * b, g_out * a), gen_binary_data)
+
+    def test_bdiv(a, b):
+        c = a / b
+        check_binary_op_forward(c, lambda a, b: a / b, gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_binary_data)
+
+    def test_bpow(a, b):
+        c = a ** b
+        check_binary_op_forward(c, lambda a, b: a ** b, gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
+                                        g_out * a ** b * np.log(a)), gen_binary_data)
+
+    test_bplus(a, b)
+    test_bminus(a, b)
+    test_bmul(a, b)
+    test_bdiv(a, b)
+    test_bpow(a, b)
 
 def test_broadcast_binary_op():
     a = mx.sym.Variable('a')
@@ -953,29 +989,29 @@ def test_broadcast_binary_op():
 
     def test_bplus(a, b):
         c = mx.sym.broadcast_plus(a, b)
-        _check_broadcast_op_forward(c, lambda a, b: a + b)
-        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out, g_out))
+        check_binary_op_forward(c, lambda a, b: a + b, gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, g_out), gen_broadcast_data)
 
     def test_bminus(a, b):
         c = mx.sym.broadcast_minus(a, b)
-        _check_broadcast_op_forward(c, lambda a, b: a - b)
-        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out, - g_out))
+        check_binary_op_forward(c, lambda a, b: a - b, gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out), gen_broadcast_data)
 
     def test_bmul(a, b):
         c = mx.sym.broadcast_mul(a, b)
-        _check_broadcast_op_forward(c, lambda a, b: a * b)
-        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out * b, g_out * a))
+        check_binary_op_forward(c, lambda a, b: a * b, gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out * b, g_out * a), gen_broadcast_data)
 
     def test_bdiv(a, b):
         c = mx.sym.broadcast_div(a, b)
-        _check_broadcast_op_forward(c, lambda a, b: a / b)
-        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)))
+        check_binary_op_forward(c, lambda a, b: a / b, gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_broadcast_data)
 
     def test_bpow(a, b):
         c = mx.sym.broadcast_power(a, b)
-        _check_broadcast_op_forward(c, lambda a, b: a ** b)
-        _check_broadcast_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
-                                                             g_out * a ** b * np.log(a)))
+        check_binary_op_forward(c, lambda a, b: a ** b, gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
+                                        g_out * a ** b * np.log(a)), gen_broadcast_data)
 
     test_bplus(a, b)
     test_bminus(a, b)

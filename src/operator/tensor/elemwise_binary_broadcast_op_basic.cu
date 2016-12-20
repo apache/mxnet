@@ -12,37 +12,30 @@ namespace op {
 NNVM_REGISTER_OP(broadcast_add)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow::op::plus>);
 
-NNVM_REGISTER_OP(_backward_plus)
-.set_attr<FCompute>("FCompute<gpu>",
-                    BinaryBroadcastBackwardUseNone<gpu,
-                    mshadow_op::identity, mshadow_op::identity>);
-
-NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow::op::plus>);
-
-NNVM_REGISTER_OP(_grad_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow::op::plus>);
+NNVM_REGISTER_OP(_backward_broadcast_add)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
+                                                                mshadow_op::identity>);
 
 NNVM_REGISTER_OP(broadcast_sub)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow::op::minus>);
 
-NNVM_REGISTER_OP(_backward_minus)
+NNVM_REGISTER_OP(_backward_broadcast_sub)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
                                                                 mshadow_op::negation>);
 
 NNVM_REGISTER_OP(broadcast_mul)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow::op::mul>);
 
-NNVM_REGISTER_OP(_backward_mul)
+NNVM_REGISTER_OP(_backward_broadcast_mul)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::right,
-                                                              mshadow_op::left>);
+                                                                mshadow_op::left>);
 
 NNVM_REGISTER_OP(broadcast_div)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow::op::div>);
 
-NNVM_REGISTER_OP(_backward_div)
+NNVM_REGISTER_OP(_backward_broadcast_div)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::div_grad,
-                                                              mshadow_op::div_rgrad>);
+                                                                mshadow_op::div_rgrad>);
 
 }  // namespace op
 }  // namespace mxnet
