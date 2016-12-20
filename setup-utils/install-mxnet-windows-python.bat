@@ -11,24 +11,12 @@ setlocal
 :: conda environment name for MXNET, default to MXNET-vcversion
 REM  set MXNET_CONDA_ENV=mxnet
 
-:: which blas/lapack libraries will be used, default to openblas installed by conda
-:: [1] mkl: download from https://software.intel.com/intel-mkl, install and set following two variables
+:: which to find MKL, default to openblas installed by conda
+:: mkl: download from https://software.intel.com/intel-mkl, install and set following two variables
 REM  set INTEL_MKL_DIR=D:\\Intel\\SWTools\\compilers_and_libraries\\windows\\mkl\\
-REM  set INTEL_COMPILER_DIR=D:\\Intel\\SWTools\\compilers_and_libraries\\windows\\compiler\\
-:: [2] other: set path to the blas library and path to the laback library
-:: both BLAS and LAPACK should be set even if they refer to the same library
-:: take openblas for example: download latest release from https://github.com/xianyi/OpenBLAS/releases/latest
-:: use mingw cross compiler tools in cygwin, since mingw windows native gfortrain is available in cygwin but not in msys2
-:: compilation command in cygwin: make CC=x86_64-w64-mingw32-gcc FC=x86_64-w64-mingw32-gfortran CROSS_SUFFIX=x86_64-w64-mingw32-
-:: please refer to openblas's README for detailed installation instructions
-REM  set BLAS_LIBRARIES=D:\\Libraries\\lib\libopenblas.dll.a
-REM  set LAPACK_LIBRARIES=D:\\Libraries\\lib\libopenblas.dll.a
 
 :: where to find cudnn library
 REM  set CUDNN_ROOT=D:\NVIDIA\CUDNN\v5.1\
-
-:: whether update dependencies if already setup, default to not update
-REM  set MXNET_UPDATE_DEPS=
 
 ::::  End of customization  ::::
 
@@ -41,15 +29,18 @@ set MXNET_SETUP_HAS_CUDNN=0
 
 if "%VisualStudioVersion%" == "" (
   if not "%VS140COMNTOOLS%" == "" ( call "%VS140COMNTOOLS%..\..\VC\vcvarsall.bat" x64 && goto :VS_SETUP)
-  if not "%VS120COMNTOOLS%" == "" ( call "%VS120COMNTOOLS%..\..\VC\vcvarsall.bat" x64 && goto :VS_SETUP)
-  if not "%VS110COMNTOOLS%" == "" ( call "%VS110COMNTOOLS%..\..\VC\vcvarsall.bat" x64 && goto :VS_SETUP)
-  if not "%VS100COMNTOOLS%" == "" ( call "%VS100COMNTOOLS%..\..\VC\vcvarsall.bat" x64 && goto :VS_SETUP)
-  if not "%VS90COMNTOOLS%"  == "" ( call "%VS90COMNTOOLS%..\..\VC\vcvarsall.bat"  x64 && goto :VS_SETUP)
+REM  Not Supported yet due to dependencies
+REM  if not "%VS120COMNTOOLS%" == "" ( call "%VS120COMNTOOLS%..\..\VC\vcvarsall.bat" x64 && goto :VS_SETUP)
+REM  if not "%VS110COMNTOOLS%" == "" ( call "%VS110COMNTOOLS%..\..\VC\vcvarsall.bat" x64 && goto :VS_SETUP)
+REM  if not "%VS100COMNTOOLS%" == "" ( call "%VS100COMNTOOLS%..\..\VC\vcvarsall.bat" x64 && goto :VS_SETUP)
+REM  if not "%VS90COMNTOOLS%"  == "" ( call "%VS90COMNTOOLS%..\..\VC\vcvarsall.bat"  x64 && goto :VS_SETUP)
 )
 :VS_SETUP
 
 if "%VisualStudioVersion%" == "" (
   echo %ECHO_PREFIX% Can not find environment variable VisualStudioVersion, msvc is not setup porperly
+  echo %ECHO_PREFIX% Please Install Visual Studio from:
+  echo %ECHO_PREFIX% https://go.microsoft.com/fwlink/?LinkId=691978&clcid=0x409
   goto :FAIL
 )
 
@@ -81,19 +72,8 @@ if     "%MXNET_VS_TARGET%"   == ""                          set MXNET_VS_TARGET=
 set MXNET_DISTRO=%~dp0.
 set MXNET_DISTRO=%MXNET_DISTRO%\..
 if "%MXNET_INSTALL_DIR%" == "" set MXNET_INSTALL_DIR=%MXNET_DISTRO%\build
-set MXNET_INSTALL_BIN=%MXNET_INSTALL_DIR%\bin
-set MXNET_INSTALL_LIB=%MXNET_INSTALL_DIR%\lib
-set MXNET_INSTALL_INC=%MXNET_INSTALL_DIR%\include
-set MXNET_INSTALL_ROC=%MXNET_INSTALL_DIR%\luarocks
-set MXNET_INSTALL_TOOLS=%MXNET_INSTALL_DIR%\tools
-if not exist %MXNET_INSTALL_BIN% md %MXNET_INSTALL_BIN%
-if not exist %MXNET_INSTALL_LIB% md %MXNET_INSTALL_LIB%
-if not exist %MXNET_INSTALL_INC% md %MXNET_INSTALL_INC%
 
-echo %ECHO_PREFIX% MXNET will be installed under %MXNET_INSTALL_DIR% with %MXNET_LUA_SOURCE%, vs%MXNET_VS_VERSION% %MXNET_VS_PLATFORM%
-echo %ECHO_PREFIX% Bin: %MXNET_INSTALL_BIN%
-echo %ECHO_PREFIX% Lib: %MXNET_INSTALL_LIB%
-echo %ECHO_PREFIX% Inc: %MXNET_INSTALL_INC%
+echo %ECHO_PREFIX% MXNET will be installed under %MXNET_INSTALL_DIR%, vs%MXNET_VS_VERSION% %MXNET_VS_PLATFORM%
 
 ::::   Setup dependencies   ::::
 
@@ -121,11 +101,10 @@ for /f "delims=" %%i in ('where conda') do (
 
 if "%CONDA_CMD%" == "" (
   echo %ECHO_PREFIX% Can not find conda, some dependencies can not be resolved
-  if not "%MXNET_SETUP_HAS_BLAS%" == "1" (
-    echo %ECHO_PREFIX% Can not install MXNET, please either specify the blas library or install conda
-    goto :FAIL
-  )
-  goto :NO_CONDA
+  echo %ECHO_PREFIX% Please install Miniconda with Python 3.5 from here:
+  echo %ECHO_PREFIX% http://conda.pydata.org/miniconda.html
+
+  goto :FAIL
 )
 
 set MXNET_CONDA_INFO=%TEMP%\check_conda_info_for_MXNET.txt
@@ -180,6 +159,7 @@ findstr "openblas" "%MXNET_CONDA_PKGS%" >nul
 if errorlevel 1 (
   echo %ECHO_PREFIX% Installing openblas by conda
   if "%MXNET_VS_TARGET%" == "x64" conda install -n %MXNET_CONDA_ENV% -c ukoethe openblas --yes || goto :Fail
+  CALL :PATCH_OPENBLAS
 )
 
 if "%MXNET_VS_TARGET%" == "x64" (
@@ -223,7 +203,7 @@ mklink /D %CONDA_DIR%\envs\x64\vc14\bin %MXNET_CONDA_LIBRARY:\\=\%\bin
 if exist "%MXNET_CONDA_INFO%" del /q %MXNET_CONDA_INFO%
 if exist "%MXNET_CONDA_PKGS%" del /q %MXNET_CONDA_PKGS%
 
-SET PATH=%PATH%;%MXNET_CONDA_LIBRARY%\bin
+SET PATH=%PATH%;%MXNET_CONDA_LIBRARY:\\=\%\bin
 set NEW_PATH=%NEW_PATH%;%MXNET_CONDA_LIBRARY%\bin
 
 ::::   download graphviz   ::::
@@ -238,7 +218,7 @@ REM copy /y %MXNET_DISTRO%\build\graphviz-2.38_x64\bin\ %MXNET_INSTALL_BIN%\grap
 REM set NEW_PATH=%NEW_PATH%;%MXNET_INSTALL_BIN%\graphviz
 
 echo %ECHO_PREFIX% Build libmxnet.dll
-cd %MXNET_DISTRO%
+cd /D %MXNET_DISTRO%
 
 SET CMAKE_OPT=%CMAKE_OPT% -DUSE_CUDA=%MXNET_SETUP_HAS_CUDA%
 SET CMAKE_OPT=%CMAKE_OPT% -DUSE_CUDNN=%MXNET_SETUP_HAS_CUDNN%
@@ -255,7 +235,7 @@ cmake --build build --config Release
 if errorlevel 1 goto :FAIL
 
 echo %ECHO_PREFIX% Install libmxnet.dll
-cd %MXNET_DISTRO%\python
+cd /D %MXNET_DISTRO%\python
 python setup.py install
 if errorlevel 1 goto :FAIL
 
@@ -266,7 +246,27 @@ echo %NEW_PATH%
 echo @SET PATH=%%PATH%%;%NEW_PATH%>%MXNET_DISTRO%\env.cmd
 goto :END
 
+:PATCH_OPENBLAS
+echo %ECHO_PREFIX% Apply patch to fix openblas 2.15
+
+echo --- openblas_config.h   2016-12-20 11:09:11.722445000 +0800>%TEMP%\openblas.diff
+echo +++ openblas_config.h   2016-12-20 11:01:21.347244600 +0800>>%TEMP%\openblas.diff
+echo @@ -109,7 +109,7 @@>>%TEMP%\openblas.diff
+echo     structure as fallback (see Clause 6.2.5.13 of the C99 standard). */>>%TEMP%\openblas.diff
+echo  #if (defined(__STDC_IEC_559_COMPLEX__) ^|^| __STDC_VERSION__ ^>= 199901L ^|^| \>>%TEMP%\openblas.diff
+echo       (__GNUC__ ^>= 3 ^&^& !defined(__cplusplus)) ^|^| \>>%TEMP%\openblas.diff
+echo -     _MSC_VER ^>= 1800) // Visual Studio 2013 supports complex>>%TEMP%\openblas.diff
+echo +     (_MSC_VER ^>= 1800 ^&^& !defined(__cplusplus))) // Visual Studio 2013 supports complex>>%TEMP%\openblas.diff
+echo    #define OPENBLAS_COMPLEX_C99>>%TEMP%\openblas.diff
+echo  #ifndef __cplusplus>>%TEMP%\openblas.diff
+echo    #include ^<complex.h^>>>%TEMP%\openblas.diff
+cd /D %MXNET_CONDA_LIBRARY:\\=\%\include
+patch -p0 -i %TEMP%\openblas.diff
+DEL %TEMP%\openblas.diff
+GOTO :eof
+
 :FAIL
 echo %ECHO_PREFIX% Setup fail!
 
 :END
+
