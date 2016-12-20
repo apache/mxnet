@@ -23,7 +23,8 @@ if __name__ == '__main__':
         num_classes      = 1000,
         num_examples     = 1281167,
         image_shape      = '3,224,224',
-        min_random_scale = 0.533, # assume input image has min size 480, 0.533 = 256/480
+        min_random_scale = 1, # if input image has min size k, suggest to use
+                              # 256.0/x, e.g. 0.533 for 480
         # train
         num_epochs       = 80,
         lr_step_epochs   = '30,60',
