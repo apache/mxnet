@@ -46,7 +46,14 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 	- When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads are used for reduction.
 * MXNET_ENABLE_GPU_P2P (default=1)
     - If true, MXNet tries to use GPU peer-to-peer communication, if available,
-      when kvstore's type is `device`.
+      when kvstore's type is `device`
+
+## Memonger
+
+* MXNET_BACKWARD_DO_MIRROR (default=0)
+    - whether using `memonger` during training for saving device memonry.
+    - when set to `1`, then during backward propagation, it will use [memonger technology](https://arxiv.org/abs/1604.06174) to recompute some feature maps to save much memory.
+    - `memonger` used for balancing computation and memory consumption, for example with batchsize=128, we can train ResNet-200 ImageNet-1k on a signle K80 GPU when `MXNET_BACKWARD_DO_MIRROR=1`.
 
 ## Other Environment Variables
 
