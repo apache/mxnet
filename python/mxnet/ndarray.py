@@ -942,7 +942,7 @@ def greater(lhs, rhs):
         _internal._greater,
         lambda x, y: 1 if x > y else 0,
         _internal._greater_scalar,
-        None)
+        _internal._lesser_scalar)
     # pylint: enable= no-member, protected-access
 
 def greater_equal(lhs, rhs):
@@ -968,7 +968,7 @@ def greater_equal(lhs, rhs):
         _internal._greater_equal,
         lambda x, y: 1 if x >= y else 0,
         _internal._greater_equal_scalar,
-        None)
+        _internal._lesser_equal_scalar)
     # pylint: enable= no-member, protected-access
 
 def lesser(lhs, rhs):
@@ -994,7 +994,7 @@ def lesser(lhs, rhs):
         _internal._lesser,
         lambda x, y: 1 if x < y else 0,
         _internal._lesser_scalar,
-        None)
+        _internal._greater_scalar)
     # pylint: enable= no-member, protected-access
 
 
@@ -1021,7 +1021,7 @@ def lesser_equal(lhs, rhs):
         _internal._lesser_equal,
         lambda x, y: 1 if x <= y else 0,
         _internal._lesser_equal_scalar,
-        None)
+        _internal._greater_equal_scalar)
     # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
