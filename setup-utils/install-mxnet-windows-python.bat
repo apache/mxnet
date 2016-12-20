@@ -133,7 +133,7 @@ conda create -n %MXNET_CONDA_ENV% -c conda-forge vc=%CONDA_VS_VERSION% --yes
 set CONDA_DIR=%CONDA_CMD:\Scripts\conda.exe=%
 set MXNET_CONDA_LIBRARY=%CONDA_DIR%\envs\%MXNET_CONDA_ENV%\Library
 set MXNET_CONDA_LIBRARY=%MXNET_CONDA_LIBRARY:\=\\%
-set PATH=%MXNET_CONDA_LIBRARY%\bin;%PATH%;
+set PATH=%MXNET_CONDA_LIBRARY:\\=\%\bin;%PATH%;
 set NEW_PATH=%CONDA_DIR%\Scripts;%MXNET_CONDA_LIBRARY%\bin;%NEW_PATH%
 
 set MXNET_CONDA_PKGS=%TEMP%\check_conda_packages_for_MXNET.txt
@@ -149,6 +149,17 @@ if "%CMAKE_CMD%" == "" (
   conda install -n %MXNET_CONDA_ENV% -c conda-forge cmake --yes
 )
 :AFTER_CMAKE
+
+:: has patch?
+for /f "delims=" %%i in ('where patch') do (
+  set PATCH_CMD=%%i
+  goto :AFTER_PATCH
+)
+if "%PATCH_CMD%" == "" (
+  echo %ECHO_PREFIX% Installing patch by conda
+  conda install -n %MXNET_CONDA_ENV% patch --yes
+)
+:AFTER_PATCH
 
 :: need openblas?
 if "%MXNET_BLAS%" == "Open" goto :CONDA_INSTALL_OPENBLAS
@@ -202,9 +213,6 @@ mklink /D %CONDA_DIR%\envs\x64\vc14\bin %MXNET_CONDA_LIBRARY:\\=\%\bin
 :NO_CONDA
 if exist "%MXNET_CONDA_INFO%" del /q %MXNET_CONDA_INFO%
 if exist "%MXNET_CONDA_PKGS%" del /q %MXNET_CONDA_PKGS%
-
-SET PATH=%PATH%;%MXNET_CONDA_LIBRARY:\\=\%\bin
-set NEW_PATH=%NEW_PATH%;%MXNET_CONDA_LIBRARY%\bin
 
 ::::   download graphviz   ::::
 
