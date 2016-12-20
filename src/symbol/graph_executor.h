@@ -16,6 +16,11 @@
 #include "./static_graph.h"
 #include "./graph_memory_allocator.h"
 
+#if MKL_EXPERIMENTAL == 1
+#include <mkl_memory.h>
+#endif
+
+
 namespace mxnet {
 /*!
  * \brief Executor of a computation graph.
@@ -89,6 +94,10 @@ class GraphExecutor : public Executor {
   struct DataEntryInfo {
     // the actual data for the entry
     NDArray data;
+    // mkl private memory holder
+#if MKL_EXPERIMENTAL == 1
+    std::shared_ptr<MKLMemHolder> mkl_mem_;
+#endif
     // write request to this entry
     OpReqType op_req;
     // the operatio node that will take
@@ -114,7 +123,11 @@ class GraphExecutor : public Executor {
           inplace_op_id(-1),
           type(kNotInitialized),
           storage_id(GraphStorageAllocator::kBadStorageID),
-          temp_ref_count(0), ref_count(0) {}
+          temp_ref_count(0), ref_count(0) {
+#if MKL_EXPERIMENTAL == 1
+            mkl_mem_ = MKLMemHolder::create();
+#endif
+          }
   };
   // all the information needed to push the op to engine
   struct OpExecEntry {

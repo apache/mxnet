@@ -1108,7 +1108,11 @@ GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
       aux_data.clear();
       for (const DataEntryInfo& out : op_node.outputs) {
         req.push_back(out.op_req);
-        out_data.push_back(out.data.data());
+        TBlob out_blob = out.data.data();
+#if MKL_EXPERIMENTAL == 1
+        out_blob.Mkl_mem_ = out.mkl_mem_;
+#endif        
+        out_data.push_back(out_blob);
       }
       for (size_t i = 0; i < gnode.addto_index.size(); ++i) {
         CHECK_EQ(req[gnode.addto_index[i]], kWriteInplace);
@@ -1119,13 +1123,21 @@ GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
       }
       // aux
       for (const DataEntryInfo& aux : op_node.aux_states) {
-        aux_data.push_back(aux.data.data());
+        TBlob aux_blob = aux.data.data();
+#if MKL_EXPERIMENTAL == 1
+        aux_blob.Mkl_mem_ = aux.mkl_mem_;
+#endif 
+        aux_data.push_back(aux_blob);
       }
       // input
       for (size_t i = 0; i < ninput; ++i) {
         const StaticGraph::DataEntry& e = graph_.nodes[nid].inputs[i];
         const DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
-        in_data.push_back(info.data.data());
+        TBlob info_blob = info.data.data();
+#if MKL_EXPERIMENTAL == 1
+        info_blob.Mkl_mem_ = info.mkl_mem_;
+#endif 
+        in_data.push_back(info_blob);
       }
       // run the function.
       Operator* op = op_node.op.get();
