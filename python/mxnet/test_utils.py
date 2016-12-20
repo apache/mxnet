@@ -134,6 +134,36 @@ def assert_almost_equal(a, b, threshold=None):
         raise Exception(msg)
     return rel
 
+def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
+    """Test that two numpy arrays are almost equal (ignoring NaN in either array).
+    Combines a relative and absolute measure of approximate eqality.
+    If either the relative or absolute check passes, the arrays are considered equal.
+    Including an absolute check resolves issues with the relative check where all
+    array values are close to zero.
+
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to None
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to None
+    """
+    a = np.copy(a)
+    b = np.copy(b)
+    nan_mask = np.logical_or(np.isnan(a), np.isnan(b))
+    a[nan_mask] = 0
+    b[nan_mask] = 0
+
+    rtol = rtol or default_numerical_threshold()
+    atol = atol or default_numerical_threshold()
+
+    rel_approx_equal = reldiff(a, b) <= rtol
+    abs_approx_equal = np.sum(np.abs(a - b) > atol) == 0
+
+    return rel_approx_equal or abs_approx_equal
+
 
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
     """A simple forward function for a symbol.

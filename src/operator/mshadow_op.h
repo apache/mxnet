@@ -767,6 +767,124 @@ struct smooth_l1_gradient {
   }
 };  // struct smooth_l1_derivative
 
+/*! \brief product reducer */
+struct product {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
+    dst *= src;
+  }
+  /*!
+  *\brief calculate gradient of redres with respect to redsrc,
+  * redres: reduced result, redsrc: one of reduction element
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return redres / redsrc;
+  }
+  /*!
+  *\brief set the initial value during reduction
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv = 1;
+  }
+};
+
+namespace isnan_typed {
+  template<typename DType>
+  MSHADOW_XINLINE bool IsNan(volatile DType val) {
+    return false;
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile float val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile double val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile long double val) {
+    return isnan(val);
+  }
+
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile mshadow::half::half_t val) {
+    return (val.half_ & 0x7fff) > 0x7c00;
+  }
+};  // namespace isnan_typed
+
+/*! \brief sum reducer that ignores NaN values in the input */
+struct nansum {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
+    if (isnan_typed::IsNan(dst)) {
+      if (isnan_typed::IsNan(src)) {
+        dst = DType(0);
+      } else {
+        dst = src;
+      }
+    } else {
+      if (isnan_typed::IsNan(src)) {
+        dst = dst;
+      } else {
+        dst += src;
+      }
+    }
+  }
+  /*!
+  *\brief set the initial value during reduction
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
+      initv = 0;
+  }
+};
+
+struct nansum_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return isnan_typed::IsNan(a) ? DType(0) : DType(1);
+  }
+};
+
+/*! \brief product reducer that ignores NaN values in the input */
+struct nanprod {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
+    if (isnan_typed::IsNan(dst)) {
+      if (isnan_typed::IsNan(src)) {
+        dst = DType(1);
+      } else {
+        dst = src;
+      }
+    } else {
+      if (isnan_typed::IsNan(src)) {
+        dst = dst;
+      } else {
+        dst *= src;
+      }
+    }
+  }
+  /*!
+  *\brief set the initial value during reduction
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
+    initv = 1;
+  }
+};
+
+struct nanprod_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return isnan_typed::IsNan(a) ? DType(0) : b / a;
+  }
+};
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet

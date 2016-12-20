@@ -1163,9 +1163,10 @@ def test_reshape():
 
 def test_reduce():
     sample_num = 200
-    def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym):
+    def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob = 0):
         for i in range(sample_num):
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
+            # Insert a NaN with probability equal to nan_prob
             ndim = np.random.randint(1, 6)
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
@@ -1187,6 +1188,8 @@ def test_reduce():
             else:
                 b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
             dat_npy = np.random.rand(*shape)
+            if nan_prob > 0:
+                dat_npy[np.random.rand(*shape) < nan_prob] = np.nan
             sum_groundtruth = np.array(numpy_reduce_func(dat_npy, axis=axes, keepdims=keepdims))
             if sum_groundtruth.shape == ():
                 sum_groundtruth = np.array([sum_groundtruth])
@@ -1202,15 +1205,29 @@ def test_reduce():
                          args_grad={'a': grad_nd})
             net.forward(is_train=True)
 
-            err_forward = reldiff(net.outputs[0].asnumpy(), sum_groundtruth)
-            assert err_forward < 1E-4
+            equal_forward = almost_equal_ignore_nan(net.outputs[0].asnumpy(), sum_groundtruth, 1E-4, 1E-4)
+            assert equal_forward
+
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            err_backward = reldiff(grad_nd.asnumpy(), grad_groundtruth)
-            assert err_backward < 1E-4
+            bc_grad_groundtruth = np.broadcast_to(grad_groundtruth, grad_nd.shape)
+            equal_backward = almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, 1E-4, 1E-4)
+            assert equal_backward
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
                       lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
                         outgrad.reshape(keepdim_shape),
                       mx.symbol.sum)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
+                      mx.symbol.prod)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nansum),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape)),
+                      mx.symbol.nansum, 0.3)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nanprod),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data)),
+                      mx.symbol.nanprod, 0.3)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
                       lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
                         outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
