@@ -22,6 +22,36 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
 .set_num_inputs(1)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
 
+MXNET_OPERATOR_REGISTER_REDUCE(prod)
+.MXNET_DESCRIBE("Compute product of src along axis. "
+"If axis is empty, global reduction is performed")
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute< cpu, mshadow_op::product>)
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_prod" });
+
+MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_prod)
+.set_num_inputs(3)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut< cpu, mshadow_op::rdiv>);
+
+MXNET_OPERATOR_REGISTER_REDUCE(nansum)
+.MXNET_DESCRIBE("Sum src along axis, ignoring NaN values. "
+"If axis is empty, global reduction is performed")
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nansum>)
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nansum" });
+
+MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)
+.set_num_inputs(3)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nansum_grad>);
+
+MXNET_OPERATOR_REGISTER_REDUCE(nanprod)
+.MXNET_DESCRIBE("Compute product of src along axis, ignoring NaN values. "
+"If axis is empty, global reduction is performed")
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nanprod>)
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nanprod" });
+
+MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nanprod)
+.set_num_inputs(3)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nanprod_grad>);
+
 MXNET_OPERATOR_REGISTER_REDUCE(max)
 .add_alias("max_axis")
 .MXNET_DESCRIBE("Compute max along axis. If axis is empty, global reduction is performed")
