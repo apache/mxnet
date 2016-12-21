@@ -21,6 +21,7 @@ extern "C" {
 #include <THC/THCStorage.h>
 #include <THC/THCTensor.h>
 #include <THC/THCTensorCopy.h>
+#include <THC/THCStream.h>
 }
 #endif  // MXNET_USE_CUDA
 
