@@ -8,11 +8,45 @@ import sys
 import mxnet as mx
 import logging
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import get_data
+
 import sd_module
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "image-classification")))
-from train_mnist import get_iterator
-from symbol_resnet import get_conv
+def get_conv(
+    name,
+    data,
+    num_filter,
+    kernel,
+    stride,
+    pad,
+    with_relu,
+    bn_momentum
+):
+    conv = mx.symbol.Convolution(
+        name=name,
+        data=data,
+        num_filter=num_filter,
+        kernel=kernel,
+        stride=stride,
+        pad=pad,
+        no_bias=True
+    )
+    bn = mx.symbol.BatchNorm(
+        name=name + '_bn',
+        data=conv,
+        fix_gamma=False,
+        momentum=bn_momentum,
+        # Same with https://github.com/soumith/cudnn.torch/blob/master/BatchNormalization.lua
+        # cuDNN v5 don't allow a small eps of 1e-5
+        eps=2e-5
+    )
+    return (
+        # It's better to remove ReLU here
+        # https://github.com/gcr/torch-residual-networks
+        mx.symbol.Activation(name=name + '_relu', data=bn, act_type='relu')
+        if with_relu else bn
+    )
 
 death_rates = [0.3]
 contexts = [mx.context.cpu()]
@@ -69,15 +103,17 @@ mod_seq.add(mx.mod.Module(softmax, context=contexts, data_names=['data_final']),
 n_epoch = 2
 batch_size = 100
 
+basedir = os.path.dirname(__file__)
+get_data.get_mnist(os.path.join(basedir, "data"))
 
 train = mx.io.MNISTIter(
-        image="../image-classification/mnist/train-images-idx3-ubyte",
-        label="../image-classification/mnist/train-labels-idx1-ubyte",
+        image=os.path.join(basedir, "data", "train-images-idx3-ubyte"),
+        label=os.path.join(basedir, "data", "train-labels-idx1-ubyte"),
         input_shape=(1, 28, 28), flat=False,
         batch_size=batch_size, shuffle=True, silent=False, seed=10)
 val = mx.io.MNISTIter(
-        image="../image-classification/mnist/t10k-images-idx3-ubyte",
-        label="../image-classification/mnist/t10k-labels-idx1-ubyte",
+        image=os.path.join(basedir, "data", "t10k-images-idx3-ubyte"),
+        label=os.path.join(basedir, "data", "t10k-labels-idx1-ubyte"),
         input_shape=(1, 28, 28), flat=False,
         batch_size=batch_size, shuffle=True, silent=False)
 

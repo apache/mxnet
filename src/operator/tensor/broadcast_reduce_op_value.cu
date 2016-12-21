@@ -13,6 +13,24 @@ NNVM_REGISTER_OP(sum)
 NNVM_REGISTER_OP(_backward_sum)
 .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu>);
 
+NNVM_REGISTER_OP(prod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow_op::product>);
+
+NNVM_REGISTER_OP(_backward_prod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
+
+NNVM_REGISTER_OP(nansum)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow_op::nansum>);
+
+NNVM_REGISTER_OP(_backward_nansum)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nansum_grad>);
+
+NNVM_REGISTER_OP(nanprod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow_op::nanprod>);
+
+NNVM_REGISTER_OP(_backward_nanprod)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseInOut<gpu, mshadow_op::nanprod_grad>);
+
 NNVM_REGISTER_OP(max)
 .set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow::red::maximum>);
 
