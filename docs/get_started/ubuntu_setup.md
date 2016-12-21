@@ -49,9 +49,7 @@ It takes around 5 minutes to complete the installation.
     echo "USE_CUDA=1" >>config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
     echo "USE_CUDNN=1" >>config.mk
-    echo "USE_BLAS=openblas" >>config.mk
     echo "USE_DIST_KVSTORE=1" >>config.mk
-    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
 
     # Install MXNet for Python with all required dependencies
     cd ~/mxnet/setup-utils
@@ -113,9 +111,7 @@ If building with GPU, add configurations to config.mk file:
     echo "USE_CUDA=1" >>config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
     echo "USE_CUDNN=1" >>config.mk
-    echo "USE_BLAS=openblas" >>config.mk
     echo "USE_DIST_KVSTORE=1" >>config.mk
-    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
 ```
 
 Then build mxnet:
