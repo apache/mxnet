@@ -50,7 +50,7 @@ def get_iterator(data_shape, use_caffe_data):
                     scale: 0.00390625 \
                 } \
                 data_param { \
-                    source: "caffe/examples/mnist/mnist_train_lmdb" \
+                    source: "mnist_train_lmdb" \
                     batch_size: 64 \
                     backend: LMDB \
                 } \
@@ -74,7 +74,7 @@ def get_iterator(data_shape, use_caffe_data):
                     scale: 0.00390625 \
                 } \
                 data_param { \
-                    source: "caffe/examples/mnist/mnist_test_lmdb" \
+                    source: "mnist_test_lmdb" \
                     batch_size: 100 \
                     backend: LMDB \
                 } \
