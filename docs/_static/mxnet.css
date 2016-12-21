@@ -219,7 +219,7 @@ img {
     }
 }
 
-@media screen and (max-width: 1020px) {
+@media screen and (max-width: 1138px) {
     #main-nav {
         display: none;
     }
@@ -280,7 +280,7 @@ img {
     }
 }
 
-@media screen and (max-width: 1020px) {
+@media screen and (max-width: 1138px) {
     #search-input-wrap {
         right: 185px;
     }
@@ -339,7 +339,7 @@ div .burgerIcon {
     display: none
 }
 
-@media screen and (max-width: 1020px) {
+@media screen and (max-width: 1138px) {
     div .burgerIcon {
         display: block;
     }
