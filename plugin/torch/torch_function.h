@@ -68,7 +68,7 @@ void TorchRunOp(std::vector<NDArray> arr_in,
 template<typename OP>
 void TorchOp(NDArray **u, real_t *s, NDArray **out,
              const std::map<std::string, std::string>& param) {
-  std::vector<mshadow::TShape> shapes = OP::GetShape(u, param);
+  std::vector<TShape> shapes = OP::GetShape(u, param);
   CHECK_EQ(shapes.size(), OP::num_outputs)
     << "Too many output shapes for TorchOp " << OP::fname;
   Context ctx;
@@ -141,14 +141,14 @@ void TorchOp(NDArray **u, real_t *s, NDArray **out,
 }
 
 struct TorchFirstShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
+  static std::vector<TShape> GetShape(NDArray **u,
     const std::map<std::string, std::string>& param) {
     return {u[0]->shape()};
   }
 };
 
 struct TorchConstructorShape {
-  static std::vector<mshadow::TShape> GetShape(NDArray **u,
+  static std::vector<TShape> GetShape(NDArray **u,
     const std::map<std::string, std::string>& param) {
     std::vector<index_t> shape;
     std::string format = param.at("format");
@@ -161,7 +161,7 @@ struct TorchConstructorShape {
       std::getline(args, val, ',');
       shape.push_back(std::stoi(val));
     }
-    mshadow::TShape tshape(shape.begin(), shape.end());
+    TShape tshape(shape.begin(), shape.end());
     return {tshape};
   }
   static const int num_inputs = 0;
