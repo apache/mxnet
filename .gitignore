@@ -76,6 +76,7 @@ R-package/inst/*
 *.tar.gz
 *.tgz
 R-package/man/*.Rd
+R-package/R/mxnet_generated.R
 
 # data
 *.rec
