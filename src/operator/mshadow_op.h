@@ -102,7 +102,7 @@ struct tanh {
 struct tanh_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) - a * a);
+    return DType(DType(1.0f) - tanhf(a) * tanhf(a));
   }
 };
 
@@ -261,7 +261,7 @@ struct square_root {
 struct square_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(0.5f) / a);
+    return DType(DType(0.5f) / sqrtf(a));
   }
 };
 
