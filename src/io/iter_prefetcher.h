@@ -11,6 +11,7 @@
 #include <mxnet/ndarray.h>
 #include <dmlc/logging.h>
 #include <dmlc/threadediter.h>
+#include <dmlc/optional.h>
 #include <mshadow/tensor.h>
 #include <climits>
 #include <utility>
@@ -27,7 +28,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   /*! \brief number of prefetched batches */
   size_t prefetch_buffer;
   /*! \brief data type */
-  int dtype;
+  dmlc::optional<int> dtype;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
@@ -37,9 +38,11 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
       .add_enum("float16", mshadow::kFloat16)
-      .add_enum("invalid", INT_MAX)
-      .set_default(INT_MAX)
-      .describe("Data type.");
+      .add_enum("int32", mshadow::kInt32)
+      .add_enum("uint8", mshadow::kUint8)
+      .set_default(dmlc::optional<int>())
+      .describe("Output data type. Leave as None to use"
+                "internal data iterator's output type");
   }
 };
 
@@ -81,8 +84,8 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->data.resize(batch.data.size());
           (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
-            auto dtype = param_.dtype != INT_MAX
-                             ? param_.dtype
+            auto dtype = param_.dtype
+                             ? param_.dtype.value()
                              : batch.data[i].type_flag_;
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_,
                                           Context::CPU(), false,
