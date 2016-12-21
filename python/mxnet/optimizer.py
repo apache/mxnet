@@ -5,7 +5,6 @@ import pickle
 from .ndarray import NDArray, zeros, clip, sqrt
 from .ndarray import sgd_update, sgd_mom_update, adam_update
 from .random import normal
-import logging
 
 
 class Optimizer(object):
@@ -276,6 +275,9 @@ class SGD(Optimizer):
 @register
 class DCASGD(Optimizer):
     """ DCASGD optimizer with momentum and weight regularization.
+
+    implement paper "Asynchronous Stochastic Gradient Descent with
+                    Delay Compensation for Distributed Deep Learning"
 
     Parameters
     ----------
