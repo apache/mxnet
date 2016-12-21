@@ -109,25 +109,25 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                     if show_shape:
                         if input_node["op"] != "null":
                             key = input_name + "_output"
-                            shape = shape_dict[key][1:]
-                            pre_filter = pre_filter + int(shape[0])
                         else:
                             key = input_name
+                        if key in shape_dict:
                             shape = shape_dict[key][1:]
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
         if op == 'Convolution':
             cur_param = pre_filter \
-                * int(_str2tuple(node["param"]["kernel"])[0]) \
-                * int(_str2tuple(node["param"]["kernel"])[1]) \
-                * int(node["param"]["num_filter"]) \
-                + int(node["param"]["num_filter"])
+                * int(_str2tuple(node["attr"]["kernel"])[0]) \
+                * int(_str2tuple(node["attr"]["kernel"])[1]) \
+                * int(node["attr"]["num_filter"]) \
+                + int(node["attr"]["num_filter"])
         elif op == 'FullyConnected':
-            cur_param = pre_filter * (int(node["param"]["num_hidden"]) + 1)
+            cur_param = pre_filter * (int(node["attr"]["num_hidden"]) + 1)
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
-            num_filter = shape_dict[key][1]
-            cur_param = int(num_filter) * 2
+            if show_shape:
+                num_filter = shape_dict[key][1]
+                cur_param = int(num_filter) * 2
         if not pre_node:
             first_connection = ''
         else:
@@ -152,9 +152,9 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             if show_shape:
                 if op != "null":
                     key = node["name"] + "_output"
-                    out_shape = shape_dict[key][1:]
                 else:
                     key = node["name"]
+                if key in shape_dict:
                     out_shape = shape_dict[key][1:]
         total_params += print_layer_summary(nodes[i], out_shape)
         if i == len(nodes) - 1:
