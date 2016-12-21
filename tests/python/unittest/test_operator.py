@@ -1576,7 +1576,7 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     forward_result,tmp1,tmp2 = correlation_forward(img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
     # forward error
-    assert np.abs(exe1.outputs[0].asnumpy()-forward_result).mean()<1e-4
+    assert np.abs(exe1.outputs[0].asnumpy()-forward_result).mean() < 1e-4
 
     # out_grad
     a = np.ones(forward_result.shape)
@@ -1587,8 +1587,8 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     grad1,grad2 = correlation_backward(a,tmp1,tmp2,img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
     # backward error
-    assert np.abs(exe1.grad_dict['img1'].asnumpy() - grad1).mean() < 1e-4
-    assert np.abs(exe1.grad_dict['img2'].asnumpy() - grad2).mean() < 1e-4
+    assert np.abs(exe1.grad_dict['img1'].asnumpy() - grad1).mean() < 1e-3
+    assert np.abs(exe1.grad_dict['img2'].asnumpy() - grad2).mean() < 1e-3
 
 def test_correlation():
 
