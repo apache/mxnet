@@ -219,7 +219,7 @@ img {
     }
 }
 
-@media screen and (max-width: 1020px) {
+@media screen and (max-width: 1138px) {
     #main-nav {
         display: none;
     }
@@ -252,7 +252,8 @@ img {
     position: fixed;
     top: 15px;
     right: 155px;
-    width: 140px
+    width: 140px;
+    z-index: -1;
 }
 
 .searchBox {
@@ -280,7 +281,7 @@ img {
     }
 }
 
-@media screen and (max-width: 1020px) {
+@media screen and (max-width: 1138px) {
     #search-input-wrap {
         right: 185px;
     }
@@ -339,7 +340,7 @@ div .burgerIcon {
     display: none
 }
 
-@media screen and (max-width: 1020px) {
+@media screen and (max-width: 1138px) {
     div .burgerIcon {
         display: block;
     }
