@@ -1111,7 +1111,7 @@ GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
         TBlob out_blob = out.data.data();
 #if MKL_EXPERIMENTAL == 1
         out_blob.Mkl_mem_ = out.mkl_mem_;
-#endif        
+#endif
         out_data.push_back(out_blob);
       }
       for (size_t i = 0; i < gnode.addto_index.size(); ++i) {
@@ -1126,7 +1126,7 @@ GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
         TBlob aux_blob = aux.data.data();
 #if MKL_EXPERIMENTAL == 1
         aux_blob.Mkl_mem_ = aux.mkl_mem_;
-#endif 
+#endif
         aux_data.push_back(aux_blob);
       }
       // input
@@ -1136,7 +1136,7 @@ GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
         TBlob info_blob = info.data.data();
 #if MKL_EXPERIMENTAL == 1
         info_blob.Mkl_mem_ = info.mkl_mem_;
-#endif 
+#endif
         in_data.push_back(info_blob);
       }
       // run the function.
