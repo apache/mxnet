@@ -34,7 +34,7 @@ class CuDNNActivationOp : public Operator {
         LOG(FATAL) << "Not implmented";
         break;
     }
-    #if CUDNN_MAJOR == 5
+    #if CUDNN_MAJOR >= 5
     nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
     CHECK_EQ(cudnnCreateActivationDescriptor(&desc_),
              CUDNN_STATUS_SUCCESS);
@@ -46,7 +46,7 @@ class CuDNNActivationOp : public Operator {
   ~CuDNNActivationOp() {
     if (init_cudnn_) {
       CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
-      #if CUDNN_MAJOR == 5
+      #if CUDNN_MAJOR >= 5
       CHECK_EQ(cudnnDestroyActivationDescriptor(desc_), CUDNN_STATUS_SUCCESS);
       #endif
     }
@@ -107,7 +107,7 @@ class CuDNNActivationOp : public Operator {
                                     &beta,
                                     shape_desc_,
                                     out.dptr_), CUDNN_STATUS_SUCCESS);
-    #elif CUDNN_MAJOR == 5
+    #elif CUDNN_MAJOR >= 5
     CHECK_EQ(cudnnActivationForward(s->dnn_handle_,
                                      desc_,
                                     &alpha,
@@ -178,7 +178,7 @@ class CuDNNActivationOp : public Operator {
                                      &beta,
                                      shape_desc_,
                                      input_grad.dptr_), CUDNN_STATUS_SUCCESS);
-    #elif CUDNN_MAJOR == 5
+    #elif CUDNN_MAJOR >= 5
     CHECK_EQ(cudnnActivationBackward(s->dnn_handle_,
                                      desc_,
                                      &alpha,
@@ -200,7 +200,7 @@ class CuDNNActivationOp : public Operator {
   cudnnActivationMode_t mode_;
   cudnnTensorDescriptor_t shape_desc_;
   ActivationParam param_;
-#if CUDNN_MAJOR == 5
+#if CUDNN_MAJOR >= 5
   cudnnActivationDescriptor_t desc_;
   cudnnNanPropagation_t nan_prop_;
   double relu_ceil_;

@@ -345,6 +345,7 @@ class CuDNNConvolutionOp : public Operator {
     wshape[0] /= param_.num_group;
     if (param_.kernel.ndim() == 2) {
       // 2d conv
+#if CUDNN_MAJOR < 6
       CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
                                                param_.pad[0],
                                                param_.pad[1],
@@ -353,6 +354,17 @@ class CuDNNConvolutionOp : public Operator {
                                                1,
                                                1,
                                                CUDNN_CROSS_CORRELATION), CUDNN_STATUS_SUCCESS);
+#else
+      CHECK_EQ(cudnnSetConvolution2dDescriptor(conv_desc_,
+                                               param_.pad[0],
+                                               param_.pad[1],
+                                               param_.stride[0],
+                                               param_.stride[1],
+                                               1,
+                                               1,
+                                               CUDNN_CROSS_CORRELATION,
+                                               dtype_), CUDNN_STATUS_SUCCESS);
+#endif
 
       #if CUDNN_MAJOR >= 5
       wshape = ConvertLayout(wshape.get<4>(), param_.layout.value(), kNCHW);
