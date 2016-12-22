@@ -43,10 +43,8 @@ void TorchState::SetStream(mshadow::Stream<mshadow::cpu>* s) {
 
 template<>
 void TorchState::SetStream(mshadow::Stream<mshadow::gpu>* s) {
-  // CudaState()->currentStream = mshadow::Stream<gpu>::GetStream(s);
-    auto* thc_stream = THCState_getStream(CudaState());
-    thc_stream->stream = mshadow::Stream<gpu>::GetStream(s);
-    THCState_setStream(CudaState(), thc_stream);
+  cudaStream_t cs = THCState_getCurrentStream(CudaState());
+  cs = mshadow::Stream<gpu>::GetStream(s);
 }
 #endif  // MXNET_USE_CUDA
 }  // namespace mxnet
