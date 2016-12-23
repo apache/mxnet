@@ -64,7 +64,7 @@ the same directory. All these class directories are then in the same root
 training and `mydata_val.rec` for validation, and the former contains 95%
 images.
 
-We first prepare two `lst` files, which consist of the labels and image paths
+We first prepare two `.lst` files, which consist of the labels and image paths
 can be used for generating `rec` files.
 
 ```bash
