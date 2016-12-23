@@ -17,6 +17,7 @@ def find_lib_path():
     cmake_build_path = os.path.join(curr_path, '../../build/Release/')
     dll_path = [curr_path, api_path, cmake_build_path]
     if os.name == 'nt':
+        dll_path.append(os.path.join(curr_path, '../../build'))
         vs_configuration = 'Release'
         if platform.architecture()[0] == '64bit':
             dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
