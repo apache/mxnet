@@ -1,10 +1,16 @@
 # Performance
 
-Here are some tips to get the most out of MXNet.
+The performance is mainly affected by 4 aspects:
 
-- [Intel CPU](#intel-cpu)
-- [Nvidia GPU](#nvidia-gpu)
-- [Multiple devices](#)
+1. Optimized implementation of operators (Convolution, Pooling) for specific devices:
+   - [Intel CPU](#intel-cpu)
+   - [Nvidia GPU](#nvidia-gpu)
+2. Efficient input data loading and augmentation
+   - [Input Data](#input-data)
+3. Efficient workload optimization and scheduling
+   - [Profiler](#profiler)
+4. Efficient data communication for multi-devices training
+   - [Multiple Devices](#multiple-devices)
 
 ## Intel CPU
 
@@ -18,6 +24,9 @@ Also setting the following two environment variables may help:
 - `KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
 - `OMP_NUM_THREADS=vCPUs / 2` in which `vGPUs` is the number of virtual CPUs.
   For linux we can get it by `cat /proc/cpuinfo  | grep processor | wc -l`
+
+Note that MXNet treats all GPU in a single machine as a single device. So when
+specify `gpu(0)` or `gpu()`, all GPU cores in the machine will be used.
 
 ### Scoring results
 The following table shows the scoring performance, namely number of images can
@@ -93,14 +102,15 @@ and MXNet commit `0a03417`, with CUDNN 5.1. The benchmark script is available at
 where the batch size for Alexnet is increased by 8x.
 
 - K80 (single GPU)
+
   | Batch | Alexnet(*8) | Inception-v3 | Resnet 50 |
   | --- | --- | --- | --- |
-  |   1 | 809.94  | 15.14  | 27.20  |
-  |   2 | 1202.93 | 30.34  | 49.55  |
-  |   4 | 1631.37 | 50.59  | 78.31  |
-  |   8 | 1882.74 | 77.75  | 122.45 |
-  |  16 | 2012.04 | 111.11 | 156.79 |
-  |  32 | 1869.69 | 129.98 | 181.53 |
+  |   1 | 230.69 | 9.81  | 13.83 |
+  |   2 | 348.10 | 15.31 | 21.85 |
+  |   4 | 457.28 | 20.48 | 29.58 |
+  |   8 | 533.51 | 24.47 | 36.83 |
+  |  16 | 582.36 | 28.46 | 43.60 |
+  |  32 | 483.37 | 29.62 | 45.52 |
 
 - M40
 
@@ -117,16 +127,29 @@ where the batch size for Alexnet is increased by 8x.
 
   | Batch | Alexnet(*8) | Inception-v3 | Resnet 50 |
   | --- | --- | --- | --- |
-  |   1 | 230.69 | 9.81  | 13.83 |
-  |   2 | 348.10 | 15.31 | 21.85 |
-  |   4 | 457.28 | 20.48 | 29.58 |
-  |   8 | 533.51 | 24.47 | 36.83 |
-  |  16 | 582.36 | 28.46 | 43.60 |
-  |  32 | 483.37 | 29.62 | 45.52 |
+  |   1 | 809.94  | 15.14  | 27.20  |
+  |   2 | 1202.93 | 30.34  | 49.55  |
+  |   4 | 1631.37 | 50.59  | 78.31  |
+  |   8 | 1882.74 | 77.75  | 122.45 |
+  |  16 | 2012.04 | 111.11 | 156.79 |
+  |  32 | 1869.69 | 129.98 | 181.53 |
 
 ## Multiple Devices
 
-## Data
+If more than one GPU or machine is used, MXNet uses `kvstore` to communicate
+data. A proper type of `kvstore` is critical to get the best performance. We can
+refer to [mutli_device.md](http://mxnet.io/how_to/multi_devices.html) for more
+details.
+
+Besides, we can use
+[tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth) to
+find the communication cost per batch. A ideal situation is the cost is less
+than the time to compute a batch. We can
+
+- Explore different `--kv-store` options to reduce the cost
+- Increase the batch size to improve the computation and communication ratio.
+
+## Input Data
 
 For the input data, mind the following:
 
@@ -135,9 +158,6 @@ For the input data, mind the following:
 * Storage location. Any local or distributed file system (HDFS, Amazon S3) should be fine. If multiple devices read the data from the network shared file system (NFS) at the same time, problems might occur.
 * Use a large batch size. We often choose the largest one that fits into GPU memory. A value that's too large can slow down convergence. For example, the safe batch size for CIFAR 10 is approximately 200, while for ImageNet 1K, the batch size can exceed 1K.
 
-## Backend
-* Use a fast BLAS library: e.g., openblas, atlas, or MKL. This is necessary only if you are using a CPU processor. If you are using Nvidia GPUs, we strongly
-recommend using CUDNN.
 * If you are using more than one GPU, choose the proper `kvstore`. For more information, see
   [doc/developer-guide/multi_node.md](http://mxnet.io/how_to/model_parallel_lstm.html).
 * For a single device, the default `local` is usually good enough. For models greater than 100 MB, such as AlexNet
@@ -146,3 +166,8 @@ recommend using CUDNN.
   other settings.
 * For multiple devices, try using `dist_sync` first. If the
   size of the model is quite large or if you use a large number of devices, you might want to use `dist_async`.
+
+## Profiler
+
+See [example/profiler](https://github.com/dmlc/mxnet/tree/nnvm/example/profiler)
+on the nnvm branch.

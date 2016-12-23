@@ -302,9 +302,9 @@ The following figure shows the speedup against a single GPU compared to the idea
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/speedup-p2.png" width="600"/>
 
-### Convergence 
+### Convergence
 
-We show the convergence of training ResNet-152 on Imagenet 1K. The single machine with 8 GPUs results are from [Wei Wu](https://github.com/tornadomeet/ResNet/tree/master/log). We then trained the model using 10 machines, each machine has 8 GPUs, with the same hyper-parameters, except for we changed the total batch size from 8\*32 to 80\*32 and the initial learning rate to 0.5 instead of 0.1. The validationn accuracy versus data epoch is shown as following. Both models have almost identical convergence rate. 
+We show the convergence of training ResNet-152 on Imagenet 1K. The single machine with 8 GPUs results are from [Wei Wu](https://github.com/tornadomeet/ResNet/tree/master/log). We then trained the model using 10 machines, each machine has 8 GPUs, with the same hyper-parameters, except for we changed the total batch size from 8\*32 to 80\*32 and the initial learning rate to 0.5 instead of 0.1. The validation accuracy versus data epoch is shown as following. Both models have almost identical convergence rate.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/dist_converge.png" width="600"/>
 
@@ -336,22 +336,9 @@ aspects:
   - Data preprocessing is done by `opencv`.  If opencv is compiled from source
     codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
-- CPU performance. Check MKL DNN is used, namely set `USE_MKL2017 = 1` and
-  `USE_MKL2017_EXPERIMENTAL = 1` to compile
-- Single GPU performace
-  - Check the recent CUDNN is used
-  - Check the environment variable `MXNET_CUDNN_AUTOTUNE_DEFAULT` is set
-    to 1. You can do it by `export MXNET_CUDNN_AUTOTUNE_DEFAULT=1; python
-    train_...`. Note that it is already enabled in default by
-    `common/find_mxnet.py`. Enabling it results 15% speedup in average, but it
-    may cause problems for RNN and bucketing, and also slow down the starting.
-- Multiple GPUs and multi-machine performance. The bottleneck is often on the
-  communication bandwidth, you can use
-  [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)
-  to find the communication cost per batch. A ideal situation is the cost is
-  less than the time to compute a batch. We can
-  - Explore different `--kv-store` options to reduce the cost
-  - Increase the batch size to improve the computation and communication ratio.
+
+Refer to [how_to/performance](http://mxnet.io/how_to/perf.html) for more details
+about CPU, GPU and multi-device performance.
 
 ### Memory
 
