@@ -158,15 +158,6 @@ For the input data, mind the following:
 * Storage location. Any local or distributed file system (HDFS, Amazon S3) should be fine. If multiple devices read the data from the network shared file system (NFS) at the same time, problems might occur.
 * Use a large batch size. We often choose the largest one that fits into GPU memory. A value that's too large can slow down convergence. For example, the safe batch size for CIFAR 10 is approximately 200, while for ImageNet 1K, the batch size can exceed 1K.
 
-* If you are using more than one GPU, choose the proper `kvstore`. For more information, see
-  [doc/developer-guide/multi_node.md](http://mxnet.io/how_to/model_parallel_lstm.html).
-* For a single device, the default `local` is usually good enough. For models greater than 100 MB, such as AlexNet
-  and VGG, you might want
-  to use `local_allreduce_device`. `local_allreduce_device` takes more GPU memory than
-  other settings.
-* For multiple devices, try using `dist_sync` first. If the
-  size of the model is quite large or if you use a large number of devices, you might want to use `dist_async`.
-
 ## Profiler
 
 See [example/profiler](https://github.com/dmlc/mxnet/tree/nnvm/example/profiler)
