@@ -96,7 +96,7 @@ Graph UpgradeJSON_Parse(Graph g) {
       } else {
         // ugly workaround due to VariableParam is not exposed.
         n->attrs.parsed =
-          nnvm::Symbol::CreateVariable("").outputs[0].node->attrs.parsed;
+          nnvm::Symbol::CreateVariable(n->attrs.name).outputs[0].node->attrs.parsed;
       }
     });
   return g;
