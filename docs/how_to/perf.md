@@ -1,15 +1,15 @@
 # Performance
 
-The performance is mainly affected by 4 aspects:
+Performance is mainly affected by the following 4 factors:
 
-1. Optimized implementation of operators (Convolution, Pooling) for specific devices:
+1. Implementation of operators (Convolution, Pooling, ..)
    - [Intel CPU](#intel-cpu)
    - [Nvidia GPU](#nvidia-gpu)
-2. Efficient input data loading and augmentation
+2. Input data loading and augmentation
    - [Input Data](#input-data)
-3. Efficient workload optimization and scheduling
+3. Workloads (computation graph) optimization and scheduling
    - [Profiler](#profiler)
-4. Efficient data communication for multi-devices training
+4. Communication for multi-devices training
    - [Multiple Devices](#multiple-devices)
 
 ## Intel CPU
