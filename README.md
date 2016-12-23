@@ -35,6 +35,7 @@ What's New
 * [Distributed Training](http://mxnet.io/how_to/multi_devices.html)
 * [Guide to Creating New Operators (Layers)](http://mxnet.io/how_to/new_op.html)
 * [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
+* [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/) - Outdated
 * [Training Deep Net on 14 Million Images on A Single Machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
 
 Contents
