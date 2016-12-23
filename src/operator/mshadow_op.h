@@ -17,6 +17,7 @@ namespace mshadow_op {
 __constant__ const float PI = 3.14159265358979323846;
 #else
 const float PI = 3.14159265358979323846;
+using std::isnan;
 #endif
 
 /*! \brief identity Operation */
