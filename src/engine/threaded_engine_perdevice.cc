@@ -26,10 +26,11 @@ namespace engine {
 class ThreadedEnginePerDevice : public ThreadedEngine {
  public:
   static auto constexpr kFIFO = dmlc::ConcurrentQueueType::kFIFO;
+  static auto constexpr kFILO = dmlc::ConcurrentQueueType::kFILO;
   static auto constexpr kPriority = dmlc::ConcurrentQueueType::kPriority;
   static auto constexpr kCopyQueue = kPriority;
   static auto constexpr kPriorityQueue = kPriority;
-  static auto constexpr kWorkerQueue = kFIFO;
+  static auto constexpr kWorkerQueue = kFILO;
 
   ThreadedEnginePerDevice() noexcept(false) {
     gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
@@ -79,6 +80,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
             })->task_queue.Push(opr_block, opr_block->priority);
         }
       } else {
+
+        LOG(INFO) << "Push: " << opr_block;
         CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
         // GPU execution.
         FnProperty prop = opr_block->opr->prop;
@@ -159,6 +162,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     OprBlock* opr_block;
     auto* task_queue = &(block->task_queue);
     while (task_queue->Pop(&opr_block)) {
+      LOG(INFO) << "Pop: " << opr_block;
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
     // Catch exception for CUDA driver shutdown

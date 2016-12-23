@@ -325,6 +325,7 @@ class ThreadedEngine : public Engine {
         if (debug_info) {
           LOG(INFO) << "ExecuteOprFn ";
         }
+        LOG(INFO) << "Run: " << opr_block;
         threaded_opr->fn(run_ctx, callback);
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
