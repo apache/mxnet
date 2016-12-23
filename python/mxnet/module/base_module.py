@@ -46,7 +46,7 @@ class BaseModule(object):
       of the module can be updated according to the optimizer after gradients are computed
       (forward-backward).
 
-    In order for a module to interactive with others, a module should be able to report the
+    In order for a module to interact with others, a module should be able to report the
     following information in its raw stage (before binded)
 
     - `data_names`: list of string indicating the names of required data.
