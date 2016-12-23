@@ -59,6 +59,7 @@ class MXRecordIO(object):
             check_call(_LIB.MXRecordIOWriterFree(self.handle))
         else:
             check_call(_LIB.MXRecordIOReaderFree(self.handle))
+        self.is_open = False
 
     def reset(self):
         """Reset pointer to first item. If record is opened with 'w',
@@ -135,6 +136,8 @@ class MXIndexedRecordIO(MXRecordIO):
                 self.keys.append(key)
 
     def close(self):
+        if not self.is_open:
+            return
         super(MXIndexedRecordIO, self).close()
         self.fidx.close()
 
