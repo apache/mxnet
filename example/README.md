@@ -31,6 +31,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [MXNetR](http://mxnet.readthedocs.io/en/latest/api/r/index.html) - R library
 * [MXNet.jl](http://mxnetjl.readthedocs.org/en/latest/) - Julia library
 * [go-mxnet-predictor](https://github.com/songtianyi/go-mxnet-predictor) - Go binding for inference
+* [gomxnet](https://github.com/jdeng/gomxnet) - Go binding [Outdated]
 * [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library
 * [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)
 * [MXNet Javascript](https://github.com/dmlc/mxnet.js/) - MXNetJS: Javascript Package for Deep Learning in Browser (without server)
