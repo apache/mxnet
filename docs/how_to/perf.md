@@ -1,6 +1,41 @@
 # Performance
 
-Here are some tips to get the most out of MXNet:
+Here are some tips to get the most out of MXNet.
+
+- [Intel CPU](#intel-cpu)
+- [Nvidia GPU](#nvidia-gpu)
+- [Multiple devices](#)
+
+## Intel CPU
+
+When using CPUs for training and inference, we suggest to use `MKL2017` by
+enabling both `USE_MKL2017 = 1` and `USE_MKL2017_EXPERIMENTAL = 1` in
+`config.mk`. Check
+[MKL_README.md](https://github.com/dmlc/mxnet/blob/master/MKL_README.md) for
+details
+
+Also setting the following two environment variables may help:
+- `KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
+- `OMP_NUM_THREADS=vCPUs / 2` in which `vGPUs` is the number of virtual CPUs,
+  on linux we can get it by `cat /proc/cpuinfo  | grep processor | wc -l`
+
+The following table shows the scoring performance, namely number of images can
+be predicted per second. We used AWS EC2 C4.8xlarge (dual Intel(R) Xeon(R) CPU
+E5-2666 v3 @ 2.90GHz) and
+[example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
+with commit `0a03417` ## Nvidia GPU
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  98.441 | 24.66 |  27.43 |  11.91 |  38.74 | 14.95 |
+|   2 | 121.676 | 27.07 |  24.78 |  11.61 |  44.27 | 15.62 |
+|   4 | 254.394 | 38.51 |  28.76 |  12.86 |  40.88 | 19.01 |
+|   8 | 237.733 | 36.97 |  25.57 |  12.68 |  43.00 | 16.11 |
+|  16 | 280.822 | 40.00 |  20.85 |  11.77 |  55.00 | 16.93 |
+|  32 | 285.417 | 44.40 |  31.03 |  12.45 |  55.70 | 17.02 |
+
+## Multiple Devices
+
 ## Data
 
 For the input data, mind the following:
