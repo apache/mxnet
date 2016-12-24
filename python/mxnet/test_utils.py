@@ -79,6 +79,7 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     return ret
 
 def print_max_err_loc(a, b, rtol=1e-7, atol=0):
+    """print location of maximum violation"""
     diff = np.abs(a-b)
     tol = atol + rtol*np.abs(b)
     violation = diff/(tol+1e-20)
