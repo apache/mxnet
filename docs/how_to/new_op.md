@@ -221,7 +221,7 @@ Use utility functions `ElemwiseGradUseIn{op_name}`, `ElemwiseGradUseOut{op_name}
 
 For more complicated pattern, use `MakeGradNode(op_name, n, heads, dict)` to create gradient entries, where heads are input entries to backward op, composed from ograds and n->inputs.
 
-#### FCompute\<xpu\> or FCreateLayerOp
+#### FCompute\<xpu\>
 
 Simple operators can register FCompute<xpu> with `.set_attr<FCompute>("FCompute<cpu>", ...)` and `.set_attr<FCompute>("FCompute<gpu>", ...)` for both cpu and (optionally) gpu computation.
 
@@ -235,15 +235,18 @@ void(const nnvm::NodeAttrs& attrs,
      const std::vector<TBlob>& outputs)
 ```
 
-More complex operators that has shared states between forward and backward can instead use the old operator interface by registering FCreateLayerOp with prototype 
-```c++
-Operator*(const NodeAttrs& attrs,
-          Context ctx,
-          const std::vector<TShape>& ishape,
-          const std::vector<int>& itype)
-```
-that returns pointer to an `Operator` object, which is defined in [include/mxnet/operator.h](https://github.com/dmlc/mxnet/blob/master/include/mxnet/operator.h).
+`req` has the same length with `outputs`. Each entry of `req` specifies how the corresponding `output` should be written to. `OpReqType` is defined as:
 
+```c++
+enum OpReqType {
+  kNullOp,
+  kWriteTo,
+  kWriteInplace,
+  kAddTo
+};
+```
+
+Normally, the `req` of all `outputs` should be `kWriteTo`, meaning that the provided `outputs` tensor is a *raw* memory block, so the operator should write results directly into it. In some cases, for example when calculating the gradient tensor, it would be great if we could accumulate the result, rather than directly overwrite the tensor contents so that no extra space needs to be created each time. In such cases, the corresponding `req` is set to `kAddTo`, indicating that a `+=` should be use.
 
 ### Example: abs operator
 
@@ -271,7 +274,11 @@ NNVM_REGISTER_OP(_bacward_abs)
 [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
 })
-.set_attr<FCompute>("FCompute<cpu>",
-BinaryCompute<cpu, unary_bwd<mshadow_op::sign> >);
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::sign> >);
 ```
 
+### Legacy Operators
+
+For the lagecy (pre 0.9) way of defining operators with C++, please see:
+- [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet)
+- [Developer Guide - SimpleOp](http://mxnet.io/architecture/overview.html#simpleop-the-unified-operator-api)
