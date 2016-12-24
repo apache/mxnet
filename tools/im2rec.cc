@@ -22,6 +22,8 @@
 #include <opencv2/opencv.hpp>
 #include "../src/io/image_recordio.h"
 #include <random>
+#include <stdio.h>
+
 /*!
  *\brief get interpolation method with given inter_method, 0-CV_INTER_NN 1-CV_INTER_LINEAR 2-CV_INTER_CUBIC
  *\ 3-CV_INTER_AREA 4-CV_INTER_LANCZOS4 9-AUTO(cubic for enlarge, area for shrink, bilinear for others) 10-RAND(0-4)
@@ -56,7 +58,10 @@ int main(int argc, char *argv[]) {
            "\tquality=QUALITY[default=95] JPEG quality for encoding (1-100, default: 95) or PNG compression for encoding (1-9, default: 3).\n"\
            "\tencoding=ENCODING[default='.jpg'] Encoding type. Can be '.jpg' or '.png'\n"\
            "\tinter_method=INTER_METHOD[default=1] NN(0) BILINEAR(1) CUBIC(2) AREA(3) LANCZOS4(4) AUTO(9) RAND(10).\n"\
-           "\tunchanged=UNCHANGED[default=0] Keep the original image encoding, size and color. If set to 1, it will ignore the others parameters.\n");
+           "\tunchanged=UNCHANGED[default=0] Keep the original image encoding, size and color. If set to 1, it will ignore the others parameters.\n" \
+           "\tlast_max_index=LAST_ID[default=0] the image count of the last package.\n" \
+           "\tlast_max_label=LAST_LABLE[default=0] the max label of the last package.\n" \
+           "\tout_image_list=PATH[default=""] img1.lst + img2.lst image list.\n");
     return 0;
   }
   int label_width = 1;
@@ -69,6 +74,12 @@ int main(int argc, char *argv[]) {
   int color_mode = CV_LOAD_IMAGE_COLOR;
   int unchanged = 0;
   int inter_method = CV_INTER_LINEAR;
+  int last_max_index = 0;
+  int last_max_label = 0;
+  int cur_max_index = 0;
+  int cur_max_label = 0;
+  FILE* fp_out_imglist = NULL;
+  std::string out_image_list("");
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
@@ -92,6 +103,9 @@ int main(int argc, char *argv[]) {
       if (!strcmp(key, "encoding")) encoding = std::string(val);
       if (!strcmp(key, "unchanged")) unchanged = atoi(val);
       if (!strcmp(key, "inter_method")) inter_method = atoi(val);
+      if (!strcmp(key, "last_max_index")) last_max_index = atoi(val);
+      if (!strcmp(key, "last_max_label")) last_max_label = atoi(val);
+      if (!strcmp(key, "out_image_list")) out_image_list = std::string(val);
     }
   }
   // Check parameters ranges
@@ -122,6 +136,12 @@ int main(int argc, char *argv[]) {
 
   if (encoding == std::string(".png") && quality > 9) {
       quality = 3;
+  }
+  if (out_image_list != "") {
+      fp_out_imglist = fopen(out_image_list.c_str(),"a+");
+      if (fp_out_imglist){
+         LOG(INFO) << "fp_out_imglist open success " << fp_out_imglist;
+      }
   }
   if (inter_method != 1) {
       switch (inter_method) {
@@ -165,7 +185,12 @@ int main(int argc, char *argv[]) {
     os << argv[3] << ".part" << std::setw(3) << std::setfill('0') << partid;
   }
   LOG(INFO) << "Write to output: " << os.str();
-  dmlc::Stream *fo = dmlc::Stream::Create(os.str().c_str(), "w");
+  dmlc::Stream *fo = NULL;
+  if (last_max_index == 0 && last_max_label == 0) {
+      fo = dmlc::Stream::Create(os.str().c_str(), "w");
+  } else {
+      fo = dmlc::Stream::Create(os.str().c_str(), "a");
+  }
   LOG(INFO) << "Output: " << os.str();
   dmlc::RecordIOWriter writer(fo);
   std::string fname, path, blob;
@@ -194,6 +219,14 @@ int main(int argc, char *argv[]) {
           << "Invalid ImageList, did you provide the correct label_width?";
     }
     if (pack_label) rec.header.flag = label_width;
+    rec.header.image_id[0] += last_max_index;
+    rec.header.label += last_max_label;
+    if (cur_max_index < rec.header.image_id[0] ) {
+        cur_max_index = rec.header.image_id[0];
+    }
+    if (cur_max_label < rec.header.label) {
+        cur_max_label = rec.header.label;
+    }
     rec.SaveHeader(&blob);
     if (pack_label) {
       size_t bsize = blob.size();
@@ -210,6 +243,11 @@ int main(int argc, char *argv[]) {
     // eliminate invalid chars in beginning.
     const char *p = fname.c_str();
     while (isspace(*p)) ++p;
+    std::cout<<rec.header.image_id[0]<<"\t"<<rec.header.label<<"\t"<<p<<std::endl;
+    if (fp_out_imglist) {
+        fprintf(fp_out_imglist,"%d\t%d\t%s\n",rec.header.image_id[0], (int)rec.header.label, p);
+        fflush(fp_out_imglist);
+    }
     path = root + p;
     // use "r" is equal to rb in dmlc::Stream
     dmlc::Stream *fi = dmlc::Stream::Create(path.c_str(), "r");
@@ -223,7 +261,6 @@ int main(int argc, char *argv[]) {
       if (nread != kBufferSize) break;
     }
     delete fi;
-
 
     if (unchanged != 1) {
       cv::Mat img = cv::imdecode(decode_buf, color_mode);
@@ -277,7 +314,11 @@ int main(int argc, char *argv[]) {
       LOG(INFO) << imcnt << " images processed, " << GetTime() - tstart << " sec elapsed";
     }
   }
+  if (fp_out_imglist) {
+      fclose(fp_out_imglist);
+  }
   LOG(INFO) << "Total: " << imcnt << " images processed, " << GetTime() - tstart << " sec elapsed";
+  LOG(INFO) << "max index: " << cur_max_index << " max label, " <<cur_max_label;
   delete fo;
   delete flist;
   return 0;

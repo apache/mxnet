@@ -125,6 +125,67 @@ class InstVector {
   TensorVector<1, real_t> label_;
 };
 
+
+/*!
+ * \brief a list of (label, example) pairs, examples must be an array.
+ */
+class InstVectorFea {
+ public:
+  /*! \brief return the number of (label, example) pairs */
+  inline size_t Size(void) const {
+    return index_.size();
+  }
+  // get index
+  inline unsigned Index(unsigned i) const {
+    return index_[i];
+  }
+  // instance
+  /* \brief get the i-th (label, example) pair */
+  inline DataInst operator[](size_t i) const {
+    DataInst inst;
+    inst.index = index_[i];
+    inst.data.push_back(TBlob(data_[i]));
+    inst.data.push_back(TBlob(label_[i]));
+    return inst;
+  }
+  /* \brief get the last (label, example) pair */
+  inline DataInst Back() const {
+    return (*this)[Size() - 1];
+  }
+  inline void Clear(void) {
+    index_.clear();
+    data_.Clear();
+    label_.Clear();
+  }
+  /*
+   * \brief push a (label, example) pair
+   * only reserved the space, while the data is not copied
+   */
+  inline void Push(unsigned index,
+                   mshadow::Shape<1> dshape,
+                   mshadow::Shape<1> lshape) {
+    index_.push_back(index);
+    data_.Push(dshape);
+    label_.Push(lshape);
+  }
+  /*! \return the data content */
+  inline const TensorVector<1, real_t>& data() const {
+    return data_;
+  }
+  /*! \return the label content */
+  inline const TensorVector<1, real_t>& label() const {
+    return label_;
+  }
+
+ private:
+  /*! \brief index of the data */
+  std::vector<unsigned> index_;
+  // feature data(feature array)
+  TensorVector<1, real_t> data_;
+  // label
+  TensorVector<1, real_t> label_;
+};
+
 /*!
  * \brief tblob batch
  *
