@@ -723,6 +723,7 @@ int MXRecordIOWriterFree(RecordIOHandle handle) {
     reinterpret_cast<MXRecordIOContext*>(handle);
   delete context->writer;
   delete context->stream;
+  delete context;
   API_END();
 }
 
@@ -763,6 +764,7 @@ int MXRecordIOReaderFree(RecordIOHandle handle) {
   delete context->reader;
   delete context->stream;
   delete context->read_buff;
+  delete context;
   API_END();
 }
 
