@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable= too-many-lines, redefined-builtin, protected-access
-# pylint: disable=import-error, no-name-in-module
+# pylint: disable=import-error, no-name-in-module, undefined-variable
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
@@ -705,7 +705,7 @@ def add(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._plus,
+        broadcast_add,
         operator.add,
         _internal._plus_scalar,
         None)
@@ -731,7 +731,7 @@ def subtract(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._minus,
+        broadcast_sub,
         operator.sub,
         _internal._minus_scalar,
         _internal._rminus_scalar)
@@ -757,7 +757,7 @@ def multiply(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._mul,
+        broadcast_mul,
         operator.mul,
         _internal._mul_scalar,
         None)
@@ -783,7 +783,7 @@ def divide(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._div,
+        broadcast_div,
         operator.truediv,
         _internal._div_scalar,
         _internal._rdiv_scalar)
@@ -809,7 +809,7 @@ def power(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._power,
+        broadcast_power,
         operator.pow,
         _internal._power_scalar,
         _internal._rpower_scalar)
@@ -835,7 +835,7 @@ def maximum(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._maximum,
+        broadcast_maximum,
         lambda x, y: x if x > y else y,
         _internal._maximum_scalar,
         None)
@@ -861,7 +861,7 @@ def minimum(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._minimum,
+        broadcast_minimum,
         lambda x, y: x if x < y else y,
         _internal._minimum_scalar,
         None)
@@ -887,7 +887,7 @@ def equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._equal,
+        broadcast_equal,
         lambda x, y: 1 if x == y else 0,
         _internal._equal_scalar,
         None)
@@ -913,7 +913,7 @@ def not_equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._not_equal,
+        broadcast_not_equal,
         lambda x, y: 1 if x != y else 0,
         _internal._not_equal_scalar,
         None)
@@ -939,7 +939,7 @@ def greater(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._greater,
+        broadcast_greater,
         lambda x, y: 1 if x > y else 0,
         _internal._greater_scalar,
         _internal._lesser_scalar)
@@ -965,7 +965,7 @@ def greater_equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._greater_equal,
+        broadcast_greater_equal,
         lambda x, y: 1 if x >= y else 0,
         _internal._greater_equal_scalar,
         _internal._lesser_equal_scalar)
@@ -991,7 +991,7 @@ def lesser(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._lesser,
+        broadcast_lesser,
         lambda x, y: 1 if x < y else 0,
         _internal._lesser_scalar,
         _internal._greater_scalar)
@@ -1018,7 +1018,7 @@ def lesser_equal(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._lesser_equal,
+        broadcast_lesser_equal,
         lambda x, y: 1 if x <= y else 0,
         _internal._lesser_equal_scalar,
         _internal._greater_equal_scalar)
