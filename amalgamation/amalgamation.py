@@ -12,12 +12,13 @@ blacklist = [
     ]
 
 if len(sys.argv) < 4:
-    print("Usage: <source.d> <source.cc> <output> [minimum=0] [android=0]\n"
+    print("Usage: <source.d> <source.cc> <output> [minimum=0] [android=0] [nnpack=0]\n"
           "Minimum means no blas, no sse, no dependency, may run twice slower.")
     exit(0)
 
 minimum = int(sys.argv[4]) if len(sys.argv) > 4 else 0
 android = int(sys.argv[5]) if len(sys.argv) > 5 else 0
+nnpack = int(sys.argv[6]) if len(sys.argv) > 6 else 0
 
 if minimum:
     blacklist += ['packet/sse-inl.h', 'emmintrin.h', 'cblas.h']
@@ -126,6 +127,9 @@ print >>f, '''
 
 if minimum != 0 and android != 0 and 'complex.h' not in sysheaders:
     sysheaders.append('complex.h')
+
+if nnpack != 0:
+    sysheaders.append('nnpack.h')
 
 for k in sorted(sysheaders):
     print >>f, "#include <%s>" % k

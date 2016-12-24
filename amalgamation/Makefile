@@ -1,6 +1,9 @@
 export MXNET_ROOT=`pwd`/..
 # Change this to path of openblas
 export OPENBLAS_ROOT=${MXNET_ROOT}/../OpenBLAS
+# Change this to NNPACK path if you need
+USE_NNPACK_NUM_THREADS=4
+export NNPACK_ROOT=${MXNET_ROOT}/../NNPACK
 
 # Whether use minimum build without blas and SSE, this will make the library super slow
 ifndef MIN
@@ -11,6 +14,10 @@ ifndef ANDROID
     export ANDROID=0
 endif
 
+ifndef NNPACK
+	export NNPACK=0
+endif
+
 
 .PHONY: all clean
 
@@ -19,6 +26,15 @@ CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall
 ifneq ($(MIN), 1)
 	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
 	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib -lopenblas
+endif
+
+ifneq ($(NNPACK), 0)
+	CFLAGS += -I${NNPACK_ROOT}/include
+	CFLAGS += -I${NNPACK_ROOT}/third-party/FXdiv/include
+	CFLAGS += -I${NNPACK_ROOT}/third-party/pthreadpool/include
+	CFLAGS += -DMXNET_USE_NNPACK=1
+	CFLAGS += -DMXNET_USE_NNPACK_NUM_THREADS=$(USE_NNPACK_NUM_THREADS)
+	LDFLAGS += -L${NNPACK_ROOT}/lib -lnnpack
 endif
 
 
@@ -33,7 +49,7 @@ mxnet_predict0.d: mxnet_predict0.cc
 
 mxnet_predict-all.cc:  mxnet_predict0.d mxnet_predict0.cc
 	@echo "Generating amalgamation to " $@
-	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID)
+	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID) $(NNPACK)
 
 mxnet_predict-all.o: mxnet_predict-all.cc
 	${CXX} ${CFLAGS} -fPIC -o $@ -c $+
@@ -46,6 +62,7 @@ jni_libmxnet_predict.o: mxnet_predict-all.cc
 
 jni_libmxnet_predict.so: jni_libmxnet_predict.o
 	${CXX} ${CFLAGS} -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
+
 
 ifneq ($(ANDROID), 1)
         LDFLAGS+= -lrt
