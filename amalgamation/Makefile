@@ -1,6 +1,9 @@
 export MXNET_ROOT=`pwd`/..
 # Change this to path of openblas
 export OPENBLAS_ROOT=${MXNET_ROOT}/../OpenBLAS
+# Change this to NNPACK path if you need
+USE_NNPACK_NUM_THREADS=4
+export NNPACK_ROOT=${MXNET_ROOT}/../NNPACK
 
 # Whether use minimum build without blas and SSE, this will make the library super slow
 ifndef MIN
@@ -9,6 +12,14 @@ endif
 
 ifndef ANDROID
     export ANDROID=0
+endif
+
+ifndef NNPACK
+	export NNPACK=0
+endif
+
+ifndef MKL2017
+	export MKL2017=0
 endif
 
 
@@ -21,19 +32,34 @@ ifneq ($(MIN), 1)
 	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib -lopenblas
 endif
 
+ifneq ($(NNPACK), 0)
+	CFLAGS += -I${NNPACK_ROOT}/include
+	CFLAGS += -I${NNPACK_ROOT}/third-party/FXdiv/include
+	CFLAGS += -I${NNPACK_ROOT}/third-party/pthreadpool/include
+	CFLAGS += -DMXNET_USE_NNPACK=1
+	CFLAGS += -DMXNET_USE_NNPACK_NUM_THREADS=$(USE_NNPACK_NUM_THREADS)
+	LDFLAGS += -L${NNPACK_ROOT}/lib -lnnpack
+endif
+
+ifneq ($(MKL2017), 0)
+	CFLAGS += -DMXNET_USE_MKL2017=1
+	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(MXNET_ROOT)/src/operator/mkl/
+	CFLAGS += -DMKL_EXPERIMENTAL=0
+endif
 
 all: android libmxnet_predict.a ${MXNET_ROOT}/lib/libmxnet_predict.so
 
 mxnet_predict0.d: mxnet_predict0.cc
 	${CXX} ${CFLAGS} -MD -MF $@ \
-	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/mshadow/ -I ${MXNET_ROOT}/dmlc-core/include \
+	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/mshadow/ -I ${MXNET_ROOT}/dmlc-core/include -I ${MXNET_ROOT}/nnvm/include \
 	-I ${MXNET_ROOT}/include \
 	-D__MIN__=$(MIN) -c $+
 	rm mxnet_predict0.o
 
 mxnet_predict-all.cc:  mxnet_predict0.d mxnet_predict0.cc
 	@echo "Generating amalgamation to " $@
-	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID)
+	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID) $(NNPACK) $(MKL2017)
 
 mxnet_predict-all.o: mxnet_predict-all.cc
 	${CXX} ${CFLAGS} -fPIC -o $@ -c $+
@@ -46,6 +72,7 @@ jni_libmxnet_predict.o: mxnet_predict-all.cc
 
 jni_libmxnet_predict.so: jni_libmxnet_predict.o
 	${CXX} ${CFLAGS} -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
+
 
 ifneq ($(ANDROID), 1)
         LDFLAGS+= -lrt
