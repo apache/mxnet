@@ -15,7 +15,6 @@ from ..initializer import Uniform
 
 from .base_module import BaseModule
 from ..io import DataDesc
-from ..base import mx_real_t
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -253,8 +252,13 @@ class Module(BaseModule):
             # that consumes the labels
             # assert label_shapes is not None
 
-        self._data_shapes = data_shapes
-        self._label_shapes = label_shapes
+        self._data_shapes = \
+            [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
+        if label_shapes is not None:
+            self._label_shapes = \
+                [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        else:
+            self._label_shapes = None
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
@@ -263,24 +267,16 @@ class Module(BaseModule):
         else:
             shared_group = None
 
-        input_types = dict((x.name, x.dtype)
-                           if isinstance(x, DataDesc) else (x[0], mx_real_t)
-                           for x in data_shapes)
-
-        if label_shapes is not None:
-            for item in label_shapes:
-                if isinstance(item, DataDesc):
-                    input_types[item.name] = item.dtype
-                else:
-                    input_types[item[0]] = mx_real_t
+        input_types = {x.name: x.dtype for x in self._data_shapes}
+        if self._label_shapes is not None:
+            input_types.update({x.name: x.dtype for x in self._label_shapes})
 
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
-                                                     self._work_load_list, data_shapes,
-                                                     label_shapes, self._param_names,
+                                                     self._work_load_list, self._data_shapes,
+                                                     self._label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
-                                                     layout_mapper=self.layout_mapper,
                                                      grad_req=grad_req, input_types=input_types)
         if shared_module is not None:
             self.params_initialized = True

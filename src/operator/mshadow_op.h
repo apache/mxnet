@@ -235,7 +235,7 @@ struct tan {
 struct tan_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(powf(a, 2) + 1);
+    return DType(a * a + 1);
   }
 };
 
