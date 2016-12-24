@@ -7,10 +7,13 @@
 #ifndef MXNET_OPERATOR_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_CONVOLUTION_INL_H_
 
-#include <dmlc/logging.h>
-#include <dmlc/parameter.h>
-#include <dmlc/optional.h>
+#include <mxnet/io.h>
+#include <mxnet/base.h>
+#include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
+#include <dmlc/logging.h>
+#include <dmlc/threadediter.h>
+#include <dmlc/optional.h>
 #include <algorithm>
 #include <map>
 #include <vector>
