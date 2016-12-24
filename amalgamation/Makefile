@@ -18,6 +18,10 @@ ifndef NNPACK
 	export NNPACK=0
 endif
 
+ifndef MKL2017
+	export MKL2017=0
+endif
+
 
 .PHONY: all clean
 
@@ -37,6 +41,12 @@ ifneq ($(NNPACK), 0)
 	LDFLAGS += -L${NNPACK_ROOT}/lib -lnnpack
 endif
 
+ifneq ($(MKL2017), 0)
+	CFLAGS += -DMXNET_USE_MKL2017=1
+	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(MXNET_ROOT)/src/operator/mkl/
+	CFLAGS += -DMKL_EXPERIMENTAL=0
+endif
 
 all: android libmxnet_predict.a ${MXNET_ROOT}/lib/libmxnet_predict.so
 
@@ -49,7 +59,7 @@ mxnet_predict0.d: mxnet_predict0.cc
 
 mxnet_predict-all.cc:  mxnet_predict0.d mxnet_predict0.cc
 	@echo "Generating amalgamation to " $@
-	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID) $(NNPACK)
+	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID) $(NNPACK) $(MKL2017)
 
 mxnet_predict-all.o: mxnet_predict-all.cc
 	${CXX} ${CFLAGS} -fPIC -o $@ -c $+
