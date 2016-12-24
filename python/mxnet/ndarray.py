@@ -611,10 +611,50 @@ def empty(shape, ctx=None, dtype=mx_real_t):
         ctx = Context.default_ctx
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
+def _get_broadcast_shape(lshape, rshape):
+    """Helper function for computing broadcasting shape given the shapes of two operand.
+
+    Parameters
+    ----------
+    lshape : tuple of int
+        left hand side shape
+
+    rshape : tuple of int
+        right hand side shape
+
+    Returns
+    -------
+        Result shape after broadcasting.
+
+    Throws
+    ------
+        ValueError if there is no valid broadcasting shape.
+    """
+    pad_lshape = lshape
+    pad_rshape = rshape
+    # Left pad dimension of size 1 to align shapes.
+    while len(pad_lshape) < len(pad_rshape):
+        pad_lshape = (1,) + pad_lshape
+    while len(pad_rshape) < len(pad_lshape):
+        pad_rshape = (1,) + pad_rshape
+    # Compute broadcast shape.
+    err_str = 'cannot find valid broadcasting shape for {} and {}'.format(lshape, rshape)
+    bcast_shape = []
+    for d1, d2 in zip(pad_lshape, pad_rshape):
+        if d1 == 1:
+            bcast_shape.append(d2)
+        elif d2 == 1:
+            bcast_shape.append(d1)
+        elif d1 == d2:
+            bcast_shape.append(d1)
+        else:
+            raise ValueError(err_str)
+    return tuple(bcast_shape)
+
 #pylint: disable= too-many-arguments, no-member, protected-access
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
-    """ Helper function for element-wise operation
-    The function will perform numpy-like broadcasting if needed and call different functions
+    """Helper function for element-wise operation.
+    The function will perform numpy-like broadcasting if needed and call different functions.
 
     Parameters
     ----------
@@ -652,15 +692,17 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
             else:
                 return rfn_scalar(rhs, float(lhs))
     elif isinstance(rhs, numeric_types):
+        # Right hand side is numeric value. Short cut to call scalar function.
         return lfn_scalar(lhs, float(rhs))
     elif isinstance(rhs, NDArray):
-        # check whether broadcasting is needed
-        lsize = functools.reduce(operator.mul, lhs.shape)
-        rsize = functools.reduce(operator.mul, rhs.shape)
-        if lsize < rsize:
-            lhs = lhs.broadcast_to(rhs.shape)
-        elif lsize > rsize:
-            rhs = rhs.broadcast_to(lhs.shape)
+        # Check whether broadcasting is needed.
+        bcast_shape = _get_broadcast_shape(lhs.shape, rhs.shape)
+        if lhs.shape != bcast_shape:
+            # Broadcasting on left hand side.
+            lhs = lhs.broadcast_to(bcast_shape)
+        if rhs.shape != bcast_shape:
+            # Broadcasting on right hand side.
+            rhs = rhs.broadcast_to(bcast_shape)
         return fn_array(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
