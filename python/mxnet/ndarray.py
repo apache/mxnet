@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable= too-many-lines, redefined-builtin, protected-access
-# pylint: disable=import-error, no-name-in-module
+# pylint: disable=import-error, no-name-in-module, undefined-variable
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division

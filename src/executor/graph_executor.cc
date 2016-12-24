@@ -236,6 +236,14 @@ Graph AssignContext(Graph g,
   if (ctx_map.size() == 0) {
     g.attrs["context"] = std::make_shared<nnvm::any>(
         ContextVector(idx.num_nodes(), default_ctx));
+    for (const auto& x : in_args) {
+      CHECK(x.ctx() == default_ctx)
+        << "All arguments must be in global context unless group2ctx is specified";
+    }
+    for (const auto& x : grad_store) {
+      CHECK(x.second.ctx() == default_ctx)
+        << "All gradient must be in global context unless group2ctx is specified";
+    }
     return g;
   }
   // otherwise, use context assignment.
