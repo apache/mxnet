@@ -118,7 +118,6 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
-        self.layout_mapper = None
 
     ################################################################################
     # High Level API
@@ -348,9 +347,6 @@ class BaseModule(object):
             Number of epochs to run training.
         """
         assert num_epoch is not None, 'please specify number of epochs'
-
-        if hasattr(train_data, 'layout_mapper'):
-            self.layout_mapper = train_data.layout_mapper
 
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
                   for_training=True, force_rebind=force_rebind)

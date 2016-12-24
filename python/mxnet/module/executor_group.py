@@ -8,9 +8,8 @@ import numpy as np
 from ..base import mx_real_t
 from .. import context as ctx
 from .. import ndarray as nd
-
+from ..io import DataDesc
 from ..executor_manager import _split_input_slice
-from ..io import DefaultLayoutMapper
 
 
 def _load_general(data, targets, major_axis):
@@ -107,8 +106,6 @@ class DataParallelExecutorGroup(object):
     fixed_param_names: list of str
         Indicate parameters to be fixed during training. Parameters in this list will not allocate
         space for gradient, nor do gradient calculation.
-    layout_mapper : LayoutMapper
-        A helper to decide the data layout of data, label and outputs.
     grad_req : str, list of str, dict of str to str
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
@@ -116,7 +113,7 @@ class DataParallelExecutorGroup(object):
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
                  for_training, inputs_need_grad, shared_group=None, input_types=None,
-                 logger=logging, fixed_param_names=None, layout_mapper=None, grad_req='write'):
+                 logger=logging, fixed_param_names=None, grad_req='write'):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -138,7 +135,12 @@ class DataParallelExecutorGroup(object):
         if not for_training:
             grad_req = 'null'
 
-        data_names = [x[0] for x in data_shapes]
+        data_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
+        if label_shapes is not None:
+            label_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+
+        data_names = [x.name for x in data_shapes]
+
         if isinstance(grad_req, str):
             self.grad_req = {}
             for k in self.arg_names:
@@ -180,12 +182,12 @@ class DataParallelExecutorGroup(object):
         self.aux_arrays = None
 
         # calculate workload and bind executors
-        self.layout_mapper = layout_mapper or DefaultLayoutMapper()
         self.data_layouts = self.decide_slices(data_shapes)
         if label_shapes is not None:
             # call it to make sure labels has the same batch size as data
             self.label_layouts = self.decide_slices(label_shapes)
-        self.output_layouts = [self.layout_mapper.get_batch_axis(name)
+
+        self.output_layouts = [DataDesc.get_batch_axis(self.symbol[name].attr('__layout__'))
                                for name in self.symbol.list_outputs()]
 
         self.bind_exec(data_shapes, label_shapes, shared_group)
@@ -199,8 +201,7 @@ class DataParallelExecutorGroup(object):
             list of (name, shape) specifying the shapes for the input data or label.
         """
         assert len(data_shapes) > 0
-        major_axis = [self.layout_mapper.get_batch_axis(name)
-                      for (name, _) in data_shapes]
+        major_axis = [DataDesc.get_batch_axis(x.layout) for x in data_shapes]
 
         for (name, shape), axis in zip(data_shapes, major_axis):
             if axis == -1:

@@ -27,6 +27,9 @@ export NVCC = nvcc
 # whether compile with debug
 DEBUG = 0
 
+# whether compiler with profiler
+USE_PROFILER =
+
 # the additional link flags you want to add
 ADD_LDFLAGS =
 

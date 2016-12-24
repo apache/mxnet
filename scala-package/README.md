@@ -58,6 +58,12 @@ make scalapkg
 make scalatest
 ```
 
+Or run a subset of unit tests by, e.g.,
+
+```bash
+make SCALA_TEST_ARGS=-Dsuites=ml.dmlc.mxnet.NDArraySuite scalatest
+```
+
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
 Also it produces the native library in `native/{your-architecture}/target`, which you can use to cooperate with the `core` module.
 
@@ -157,7 +163,7 @@ while (valDataIter.hasNext) {
 val y = NDArray.concatenate(labels)
 
 // get predicted labels
-val py = NDArray.argmaxChannel(prob)
+val py = NDArray.argmax_channel(prob)
 require(y.shape == py.shape)
 
 // calculate accuracy

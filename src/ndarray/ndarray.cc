@@ -66,7 +66,8 @@ void TernaryOp(const NDArray &lhs,
       ret.CheckAndAlloc();
       TBlob tmp = ret.data();
       ndarray::Eval<cpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
-    }, lhs.ctx(), const_vars, { ret.var() });
+    }, lhs.ctx(), const_vars, { ret.var() },
+    FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
     break;
   }
 #if MXNET_USE_CUDA
@@ -77,7 +78,8 @@ void TernaryOp(const NDArray &lhs,
       ndarray::Eval<gpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
       // Wait GPU kernel to complete
       ctx.get_stream<gpu>()->Wait();
-    }, lhs.ctx(), const_vars, { ret.var() });
+    }, lhs.ctx(), const_vars, { ret.var() },
+    FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
     break;
   }
 #endif
@@ -126,7 +128,8 @@ void BinaryOp(const NDArray &lhs,
           ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-        }, lhs.ctx(), const_vars, {ret.var()});
+        }, lhs.ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -137,7 +140,8 @@ void BinaryOp(const NDArray &lhs,
           ndarray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, lhs.ctx(), const_vars, {ret.var()});
+        }, lhs.ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -155,7 +159,8 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
           ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu>(rhs, &tmp, ctx);
-        }, ret.ctx(), {}, {ret.var()});
+        }, ret.ctx(), {}, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -166,7 +171,8 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
           ndarray::Eval<gpu>(rhs, &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, ret.ctx(), {}, {ret.var()});
+        }, ret.ctx(), {}, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -204,7 +210,8 @@ void ScalarOp(const NDArray &lhs,
           ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::Eval<cpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
-        }, lhs.ctx(), const_vars, {ret.var()});
+        }, lhs.ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -215,7 +222,8 @@ void ScalarOp(const NDArray &lhs,
           ndarray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, lhs.ctx(), const_vars, {ret.var()});
+        }, lhs.ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -229,7 +237,8 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
     return;
   }
   CHECK(from.shape() == to->shape())
-      << "operands shape mismatch";
+      << "operands shape mismatch"
+      << "from.shape = " << from.shape() << " to.shape=" << to->shape();
   CHECK(from.shape().ndim() != 0)
       << "source operands have zero dimension shape";
   // important: callback must always capture by value
@@ -247,7 +256,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
                                 from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, priority);
+      FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
@@ -259,7 +268,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, ret.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyToGPU, priority);
+        FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE_FUNCNAME);
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -269,7 +278,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority);
+        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE_FUNCNAME);
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -279,7 +288,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority);
+        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE_FUNCNAME);
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -320,7 +329,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           TBlob tmp = ret.data();
           ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
         }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority);
+        FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -336,7 +345,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority);
+        FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -362,7 +371,8 @@ void ClipOp(const NDArray &src,
           ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalClip<cpu>(src.data(), a_min, a_max, &tmp, ctx);
-        }, src.ctx(), const_vars, {ret.var()});
+        }, src.ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
     #if MXNET_USE_CUDA
@@ -371,7 +381,8 @@ void ClipOp(const NDArray &src,
           ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalClip<gpu>(src.data(), a_min, a_max, &tmp, ctx);
-        }, src.ctx(), const_vars, {ret.var()});
+        }, src.ctx(), const_vars, {ret.var()},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
     #endif
@@ -399,7 +410,8 @@ void SampleOP(const real_t &a,
           ret.CheckAndAlloc();
           TBlob tmp = ret.data();
           ndarray::EvalRandom<cpu, Distribution>(a, b, resource, &tmp, ctx);
-        }, out->ctx(), {}, {ret.var(), resource.var});
+        }, out->ctx(), {}, {ret.var(), resource.var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -410,7 +422,8 @@ void SampleOP(const real_t &a,
           ndarray::EvalRandom<gpu, Distribution>(a, b, resource, &tmp, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, out->ctx(), {}, {ret.var(), resource.var});
+        }, out->ctx(), {}, {ret.var(), resource.var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -553,7 +566,8 @@ void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
           NDArray inter_out = ret.Reshape(mshadow::Shape3(before, size, after));
           TBlob tmp = inter_out.data();
           ndarray::EvalBroadcast<cpu>(inter_in.data(), &tmp, size, ctx);
-      }, src.ctx(), const_vars, {ret.var()});
+      }, src.ctx(), const_vars, {ret.var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #if MXNET_USE_CUDA
@@ -566,7 +580,8 @@ void Broadcast(const NDArray& src, int dim, int size, NDArray *out) {
           ndarray::EvalBroadcast<gpu>(inter_in.data(), &tmp, size, ctx);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-      }, src.ctx(), const_vars, {ret.var()});
+      }, src.ctx(), const_vars, {ret.var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
       break;
     }
 #endif
@@ -720,10 +735,12 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
-MXNET_REGISTER_NDARRAY_FUN(_set_value).set_function(SetValueOp);
+MXNET_REGISTER_NDARRAY_FUN(_set_value)
+.set_function(SetValueOp);
 
 
-MXNET_REGISTER_NDARRAY_FUN(_onehot_encode).set_function(BinaryOp<ndarray::OneHotEncode>);
+MXNET_REGISTER_NDARRAY_FUN(_onehot_encode)
+.set_function(BinaryOp<ndarray::OneHotEncode>);
 
 MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
 .set_function(BinaryOp<ndarray::MatChooseRowElem>)
@@ -746,23 +763,6 @@ MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromToSimple)
 .set_type_mask(kNDArrayArgBeforeScalar);
-
-// register random number generators
-MXNET_REGISTER_NDARRAY_FUN(_random_uniform)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    SampleUniform(s[0], s[1], out[0]);
-  })
-.set_num_scalars(2)
-.set_num_mutate_vars(1);
-
-MXNET_REGISTER_NDARRAY_FUN(_random_gaussian)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    SampleGaussian(s[0], s[1], out[0]);
-  })
-.set_num_scalars(2)
-.set_num_mutate_vars(1);
 
 MXNET_REGISTER_NDARRAY_FUN(clip)
 .set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
