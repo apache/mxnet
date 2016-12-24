@@ -3,7 +3,7 @@ import mxnet as mx
 import numpy as np
 import pickle as pkl
 from mxnet.test_utils import *
-
+from numpy.testing import assert_allclose
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
@@ -343,6 +343,37 @@ def test_broadcast():
             assert err < 1E-8
     test_broadcast_to()
 
+def test_broadcast_binary():
+    N = 100
+    def check_broadcast_binary(fn):
+        for _ in range(N):
+            ndim = np.random.randint(1, 6)
+            oshape = np.random.randint(1, 6, size=(ndim,))
+            bdim = np.random.randint(1, ndim+1)
+            lshape = list(oshape)
+            rshape = list(oshape[ndim-bdim:])
+            for i in range(bdim):
+                sep = np.random.uniform(0, 1)
+                if sep < 0.33:
+                    lshape[ndim-i-1] = 1
+                elif sep < 0.66:
+                    rshape[bdim-i-1] = 1
+            lhs = np.random.normal(0, 1, size=lshape)
+            rhs = np.random.normal(0, 1, size=rshape)
+            assert_allclose(fn(lhs, rhs),
+                            fn(mx.nd.array(lhs), mx.nd.array(rhs)).asnumpy(),
+                            rtol=1e-4, atol=1e-4)
+
+    check_broadcast_binary(lambda x, y: x + y)
+    check_broadcast_binary(lambda x, y: x - y)
+    check_broadcast_binary(lambda x, y: x * y)
+    check_broadcast_binary(lambda x, y: x / y)
+    check_broadcast_binary(lambda x, y: x > y)
+    check_broadcast_binary(lambda x, y: x < y)
+    check_broadcast_binary(lambda x, y: x >= y)
+    check_broadcast_binary(lambda x, y: x <= y)
+    check_broadcast_binary(lambda x, y: x == y)
+
 def test_ndarray_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -404,6 +435,7 @@ def test_ndarray_lesser_equal():
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
 if __name__ == '__main__':
+    test_broadcast_binary()
     test_ndarray_setitem()
     test_ndarray_crop()
     test_ndarray_concatenate()
