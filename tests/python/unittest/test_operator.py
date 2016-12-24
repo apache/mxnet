@@ -1970,7 +1970,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp)
-    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
+    assert reldiff(out, npout) < 1e-5, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = grad_init
@@ -1982,7 +1982,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     # print(name)
     # print(arr_grad)
     # print(npout_grad)
-    assert reldiff(arr_grad, npout_grad) < 1e-6, "%s mathematical backward failed\n%s\n\n%s" % (
+    assert reldiff(arr_grad, npout_grad) < 1e-5, "%s mathematical backward failed\n%s\n\n%s" % (
         name, arr_grad, npout_grad)
 
 
