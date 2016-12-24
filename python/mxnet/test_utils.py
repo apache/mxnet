@@ -78,6 +78,15 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
         ret = ret.reshape(tuple(keepdims_shape))
     return ret
 
+def print_max_err_loc(a, b, rtol=1e-7, atol=0):
+    """print location of maximum violation"""
+    diff = np.abs(a-b)
+    tol = atol + rtol*np.abs(b)
+    violation = diff/(tol+1e-20)
+    loc = np.argmax(violation)
+    idx = np.unravel_index(loc, violation.shape)
+    print('Maximum err at ', idx, ':', a.flat[loc], ' vs ', b.flat[loc])
+    return idx
 
 def same(a, b):
     """Test if two numpy arrays are the same
@@ -649,14 +658,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     Parameters
     ----------
-    sym : Symbol
-        symbol to run the consistency test
+    sym : Symbol or list of Symbols
+        symbol(s) to run the consistency test
     ctx_list : list
         running context. See example for more detail.
     scale : float, optional
         standard deviation of the inner normal distribution. Used in initialization
     grad_req : str or list of str or dict of str to str
         gradient requirement.
+
     Examples
     --------
     >>> # create the symbol
@@ -746,6 +756,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 npt.assert_allclose(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                print_max_err_loc(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                 traceback.print_exc()
                 if raise_on_err:
                     raise e
@@ -770,6 +781,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                     npt.assert_allclose(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                 except Exception as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                    print_max_err_loc(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                     print(e)
                     if raise_on_err:
                         raise e
