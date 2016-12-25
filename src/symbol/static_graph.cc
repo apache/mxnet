@@ -361,7 +361,7 @@ bool StaticGraph::InferType(std::vector<int> *in_type,
 StaticGraph::Node StaticGraph::CreateGradSumNode(
     const std::vector<DataEntry> &grad_source) {
   // start to use inplace gradient sum when it is greater than cap.
-  static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 8);
+  static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 88);
   // find multiple gradients, need aggregate
   std::vector<DataEntry> gsource;
   if (grad_source.size() < inplace_sum_cap) {
