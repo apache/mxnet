@@ -163,7 +163,7 @@ class PadProp : public OperatorProperty {
     const TShape &dshape = (*in_shape)[pad_enum::kData];
     if (dshape.ndim() == 0) return false;
     TShape oshape = dshape;
-    for (int i = 0; i < dshape.ndim(); ++i) {
+    for (size_t i = 0; i < dshape.ndim(); ++i) {
       oshape[i] =
           param_.pad_width[2 * i] + param_.pad_width[2 * i + 1] + dshape[i];
     }

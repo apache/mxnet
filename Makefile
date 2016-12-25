@@ -31,6 +31,10 @@ include $(DMLC_CORE)/make/dmlc.mk
 WARNFLAGS= -Wall
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
+ifeq ($(DEV), 1)
+	CFLAGS += -g -Werror
+endif
+
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -O0 -DDMLC_LOG_FATAL_THROW=0
