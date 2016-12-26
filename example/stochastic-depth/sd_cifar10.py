@@ -178,7 +178,7 @@ kv_store = 'local'
 initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
 num_epochs = 500
 
-epoch_size = num_examples / batch_size
+epoch_size = num_examples // batch_size
 lr_scheduler = mx.lr_scheduler.FactorScheduler(step=max(int(epoch_size * lr_factor_epoch), 1), factor=lr_factor)
 
 batch_end_callbacks = [mx.callback.Speedometer(batch_size, 50)]

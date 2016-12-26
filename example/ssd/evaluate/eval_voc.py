@@ -1,10 +1,13 @@
 """
 given a pascal voc imdb, compute mAP
 """
-
+from __future__ import print_function
 import numpy as np
 import os
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 
 def parse_voc_rec(filename):
@@ -88,13 +91,13 @@ def voc_eval(detpath, annopath, imageset_file, classname, cache_dir, ovthresh=0.
         for ind, image_filename in enumerate(image_filenames):
             recs[image_filename] = parse_voc_rec(annopath.format(image_filename))
             if ind % 100 == 0:
-                print 'reading annotations for {:d}/{:d}'.format(ind + 1, len(image_filenames))
-        print 'saving annotations cache to {:s}'.format(cache_file)
+                print('reading annotations for {:d}/{:d}'.format(ind + 1, len(image_filenames)))
+        print('saving annotations cache to {:s}'.format(cache_file))
         with open(cache_file, 'w') as f:
-            cPickle.dump(recs, f)
+            pickle.dump(recs, f)
     else:
         with open(cache_file, 'r') as f:
-            recs = cPickle.load(f)
+            recs = pickle.load(f)
 
     # extract objects in :param classname:
     class_recs = {}

@@ -21,6 +21,6 @@ setup(name='mxnet',
           'numpy',
       ],
       zip_safe=False,
-      packages=['mxnet', 'mxnet.module'],
+      packages=['mxnet', 'mxnet.module', 'mxnet.notebook'],
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet')

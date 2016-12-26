@@ -176,9 +176,8 @@ class PoolingOp : public Operator {
 };  // class PoolingOp
 
 template<typename xpu>
-Operator* CreateOp(PoolingParam param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape);
+Operator* CreateOp(PoolingParam param, int dtype);
+
 
 #if DMLC_USE_CXX11
 class PoolingProp : public OperatorProperty {

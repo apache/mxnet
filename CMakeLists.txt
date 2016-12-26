@@ -27,6 +27,7 @@ include_directories("mshadow")
 include_directories("dmlc-core/include")
 
 if(MSVC)
+  add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-DDMLC_USE_CXX11)
   add_definitions(-DMSHADOW_IN_CXX11)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)

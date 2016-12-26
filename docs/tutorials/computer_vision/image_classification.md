@@ -96,7 +96,7 @@ program, see this [tutorial](http://mxnet.io/how_to/multi_devices.html).
 ## Generating Predictions
 You have several options for generating predictions:
 
-- Use a pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
+- Use a [pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - Use your own datasets.
 - You can also easily run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html).

@@ -46,10 +46,10 @@ class Monitor(object):
         self.sort = sort
         def stat_helper(name, array):
             """wrapper for executor callback"""
-            if not self.activated or not self.re_prog.match(py_str(name)):
-                return
             array = ctypes.cast(array, NDArrayHandle)
             array = NDArray(array, writable=False)
+            if not self.activated or not self.re_prog.match(py_str(name)):
+                return
             self.queue.append((self.step, py_str(name), self.stat_func(array)))
         self.stat_helper = stat_helper
 

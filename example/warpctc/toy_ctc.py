@@ -1,5 +1,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+from __future__ import print_function
 import sys
 sys.path.insert(0, "../../python")
 import numpy as np
@@ -37,7 +38,7 @@ def gen_rand():
         buf = "0" + buf
     ret = np.array([])
     for i in range(80):
-        c = int(buf[i / 20])
+        c = int(buf[i // 20])
         ret = np.concatenate([ret, gen_feature(c)])
     return buf, ret
 
@@ -154,7 +155,7 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     
-    print 'begin fit'
+    print('begin fit')
 
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Accuracy),
