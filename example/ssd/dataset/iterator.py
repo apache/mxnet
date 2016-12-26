@@ -1,7 +1,6 @@
 import mxnet as mx
 import numpy as np
 import cv2
-from tools.image_processing import resize, transform
 from tools.rand_sampler import RandSampler
 
 class DetIter(mx.io.DataIter):
@@ -110,7 +109,7 @@ class DetIter(mx.io.DataIter):
         """
         Load data/label from dataset
         """
-        batch_data = []
+        batch_data = mx.nd.zeros((self.batch_size, 3, self._data_shape[0], self._data_shape[1]))
         batch_label = []
         for i in range(self.batch_size):
             if (self._current + i) >= self._size:
@@ -123,17 +122,15 @@ class DetIter(mx.io.DataIter):
                 index = self._index[self._current + i]
             # index = self.debug_index
             im_path = self._imdb.image_path_from_index(index)
-            img = cv2.imread(im_path)
+            with open(im_path, 'rb') as fp:
+                img_content = fp.read()
+            img = mx.img.imdecode(img_content)
             gt = self._imdb.label_from_index(index).copy() if self.is_train else None
             data, label = self._data_augmentation(img, gt)
-            batch_data.append(data)
+            batch_data[i] = data
             if self.is_train:
                 batch_label.append(label)
-        # pad data if not fully occupied
-        for i in range(self.batch_size - len(batch_data)):
-            assert len(batch_data) > 0
-            batch_data.append(batch_data[0] * 0)
-        self._data = {'data': mx.nd.array(np.array(batch_data))}
+        self._data = {'data': batch_data}
         if self.is_train:
             self._label = {'label': mx.nd.array(np.array(batch_label))}
         else:
@@ -159,21 +156,22 @@ class DetIter(mx.io.DataIter):
                 xmax = int(crop[2] * width)
                 ymax = int(crop[3] * height)
                 if xmin >= 0 and ymin >= 0 and xmax <= width and ymax <= height:
-                    data = data[ymin:ymax, xmin:xmax, :]
+                    data = mx.img.fixed_crop(data, xmin, ymin, xmax-xmin, ymax-ymin)
                 else:
                     # padding mode
                     new_width = xmax - xmin
                     new_height = ymax - ymin
                     offset_x = 0 - xmin
                     offset_y = 0 - ymin
-                    data_bak = data
+                    #TODO need ndarray to support this
+                    data_bak = data.asnumpy()
                     data = np.full((new_height, new_width, 3), 128.)
                     data[offset_y:offset_y+height, offset_x:offset_x + width, :] = data_bak
+                    data = mx.nd.array(data)
                 label = rand_crops[index][1]
-
         if self.is_train and self._rand_mirror:
             if np.random.uniform(0, 1) > 0.5:
-                data = cv2.flip(data, 1)
+                data = mx.nd.flip(data, axis=1)
                 valid_mask = np.where(label[:, 0] > -1)[0]
                 tmp = 1.0 - label[valid_mask, 1]
                 label[valid_mask, 1] = 1.0 - label[valid_mask, 3]
@@ -185,6 +183,10 @@ class DetIter(mx.io.DataIter):
         else:
             interp_methods = [cv2.INTER_LINEAR]
         interp_method = interp_methods[int(np.random.uniform(0, 1) * len(interp_methods))]
-        data = resize(data, self._data_shape, interp_method)
-        data = transform(data, self._mean_pixels)
+        data = mx.img.imresize(data, self._data_shape[0], self._data_shape[1], interp_method)
+        data = mx.nd.transpose(data, (2,0,1))
+        data = data.astype('float32')
+        data[0] -= self._mean_pixels[0]
+        data[1] -= self._mean_pixels[1]
+        data[2] -= self._mean_pixels[2]
         return data, label
