@@ -44,7 +44,7 @@ Parallelizes both I/O and computation with an optimized C++ backend engine, and 
 
 &nbsp;
 
-**Extensive Library of Reference Examples** – Build on sample tutorials (with code), such as image classification, language modeling, neural Art, and Speech speech recognition, and more.  
+**Extensive Library of Reference Examples** – Build on sample tutorials (with code), such as image classification, language modeling, neural art, and speech recognition, and more.  
 
 
 &nbsp;
@@ -69,6 +69,18 @@ Now let's take a look at the tensor computation interface. The tensor computatio
 flexible than the symbolic interface. It is often used to
 implement the layers, define weight updating rules, and debug.
 
+## Julia
+```julia
+julia> using MXNet
+
+julia> a = mx.ones((2,3), mx.gpu())
+mx.NDArray{Float32}(2,3)
+
+julia> Array{Float32}(a * 2)
+2×3 Array{Float32,2}:
+ 2.0  2.0  2.0
+ 2.0  2.0  2.0
+```
 
 ## Python
 

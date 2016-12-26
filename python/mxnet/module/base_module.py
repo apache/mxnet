@@ -395,8 +395,11 @@ class BaseModule(object):
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
 
+            # sync aux params across devices
+            arg_params, aux_params = self.get_params()
+            self.set_params(arg_params, aux_params)
+
             if epoch_end_callback is not None:
-                arg_params, aux_params = self.get_params()
                 for callback in _as_list(epoch_end_callback):
                     callback(epoch, self.symbol, arg_params, aux_params)
 

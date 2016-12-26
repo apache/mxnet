@@ -64,7 +64,7 @@ the same directory. All these class directories are then in the same root
 training and `mydata_val.rec` for validation, and the former contains 95%
 images.
 
-We first prepare two `lst` files, which consist of the labels and image paths
+We first prepare two `.lst` files, which consist of the labels and image paths
 can be used for generating `rec` files.
 
 ```bash
@@ -301,6 +301,12 @@ Number of images proccessed per second is shown in the following table:
 The following figure shows the speedup against a single GPU compared to the ideal scalability.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/speedup-p2.png" width="600"/>
+
+### Convergence 
+
+We show the convergence of training ResNet-152 on Imagenet 1K. The single machine with 8 GPUs results are from [Wei Wu](https://github.com/tornadomeet/ResNet/tree/master/log). We then trained the model using 10 machines, each machine has 8 GPUs, with the same hyper-parameters, except for we changed the total batch size from 8\*32 to 80\*32 and the initial learning rate to 0.5 instead of 0.1. The validationn accuracy versus data epoch is shown as following. Both models have almost identical convergence rate. 
+
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/dist_converge.png" width="600"/>
 
 ## FAQ
 
