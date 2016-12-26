@@ -31,7 +31,7 @@ class NNPACKInitialize {
     if (nnp_status_success != status) {
       LOG(FATAL) << "nnp_initialize failed status=" << status;
     }
-    int num_threads = MXNET_USE_NNPACK_NUM_THREADS;
+    int num_threads = dmlc::GetEnv("MXNET_CPU_NNPACK_NTHREADS", 4);
     this->threadpool = pthreadpool_create(num_threads);
   }
   virtual ~NNPACKInitialize() {
