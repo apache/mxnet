@@ -88,7 +88,7 @@ def center_crop(src, size, interp=2):
     out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
     return out, (x0, y0, new_w, new_h)
 
-def color_normalize(src, mean, std):
+def color_normalize(src, mean, std=None):
     """Normalize src with mean and std"""
     src -= mean
     if std is not None:

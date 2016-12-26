@@ -72,7 +72,7 @@ if __name__ == '__main__':
     ctx = mx.cpu() if not ctx else ctx
     train_net(args.network, args.dataset, args.image_set, args.year,
               args.devkit_path, args.batch_size,
-              args.data_shape, (args.mean_r, args.mean_g, args.mean_b),
+              args.data_shape, [args.mean_r, args.mean_g, args.mean_b],
               args.resume, args.finetune, args.pretrained,
               args.epoch, args.prefix, ctx, args.begin_epoch, args.end_epoch,
               args.frequent, args.learning_rate, args.momentum, args.weight_decay,
