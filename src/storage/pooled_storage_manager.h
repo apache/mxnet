@@ -71,7 +71,8 @@ void* GPUPooledStorageManager::Alloc(size_t size) {
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
     size_t free, total;
     cudaMemGetInfo(&free, &total);
-    if (size > free - total*reserve_/100) ReleaseAll();
+    if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
+      ReleaseAll();
 
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
