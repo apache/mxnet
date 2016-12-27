@@ -1,11 +1,19 @@
 # MXNet How To
 
-The How-tos provide a range of information from basic concepts and general guidance to demos complete with pre-trained models, instructions, and commands.
+The How-tos provide a range of information from installation, basic concepts and general guidance to demos complete with pre-trained models, instructions, and commands.
 
 
 &nbsp;
 
 The following topics explain basic concepts and provide procedures for specific tasks. Some include demos complete with pre-trained models.
+
+## Setup and Installation
+You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet can also be run on Docker and on Cloud like AWS. MXNet currently supports the Python, R, Julia and Scala languages.
+
+If you are running Python/R on Amazon Linux or Ubuntu, you can use Git Bash scripts to quickly install the MXNet libraries and all its dependencies.
+
+* [Step by step instruction guide for installing MXNet](http://mxnet.io/get_started/setup.html#overview)
+* [Common installation problems](http://mxnet.io/get_started/setup.html#common-installation-problems)
 
 ## Use MXNet to Perform Specific Tasks
 * [How to use pre-trained models](http://mxnet.io/tutorials/python/predict_imagenet.html)
