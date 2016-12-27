@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
+#include "special_functions-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -127,6 +128,13 @@ struct exp {
   }
 };
 
+struct expm1 {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(expm1f(a));
+  }
+};
+
 struct log {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
@@ -138,6 +146,20 @@ struct log_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(DType(1.0f) / a);
+  }
+};
+
+struct log1p {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(log1pf(a));
+  }
+};
+
+struct log1p_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(DType(1.0f) / (1.0f + a));
   }
 };
 
@@ -311,6 +333,64 @@ struct minus_sign {
     return DType(a-b > DType(0.0f) ? DType(1.0f) : -DType(1.0f));
   }
 };
+
+/***** gamma ******/
+
+struct gamma {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(tgammaf(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double gamma::Map<double>(double a) {
+  return double(tgamma(a));
+}
+
+struct gamma_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(tgammaf(a) * special_functions::cephes::psi<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double gamma_grad::Map<double>(double a) {
+  return double(tgamma(a) * special_functions::cephes::psi<double>(a));
+}
+
+
+/***** gammaln ******/
+
+struct gammaln {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(lgammaf(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double gammaln::Map<double>(double a) {
+  return double(lgamma(a));
+}
+
+struct gammaln_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(special_functions::cephes::psi<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
+  return double(special_functions::cephes::psi<double>(a));
+}
+
 
 }  // namespace mshadow_op
 }  // namespace op

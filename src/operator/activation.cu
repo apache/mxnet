@@ -39,6 +39,9 @@ Operator *CreateOp<gpu>(ActivationParam param, int dtype) {
       case activation::kTanh:
         op = new ActivationOp<gpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>();
         break;
+      case activation::kLinear:
+        op = new ActivationOp<gpu, mshadow_op::identity, mshadow_op::identity_grad, DType>();
+        break;
       default:
         LOG(FATAL) << "unknown activation";
     }

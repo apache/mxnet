@@ -8,6 +8,7 @@
 
 #include <mxnet/operator_util.h>
 #include "./mshadow_op.h"
+#include "./special_functions-inl.h"
 
 #if defined(__CUDACC__)
 #define XPU gpu
@@ -128,6 +129,26 @@ MXNET_REGISTER_SIMPLE_OP(log, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::log>, kInplaceInOut)
 .set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::log_grad>, kInplaceOutIn)
 .describe("Take log of the src");
+// log1p
+MXNET_REGISTER_SIMPLE_OP(log1p, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::log1p>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::log1p_grad>, kInplaceOutIn)
+.describe("Take log1p of the src");
+// expm1
+MXNET_REGISTER_SIMPLE_OP(expm1, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::expm1>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::exp>, kInplaceOutIn)
+.describe("Take expm1 of the src");
+// gamma
+MXNET_REGISTER_SIMPLE_OP(gamma, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::gamma>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::gamma_grad>, kInplaceOutIn)
+.describe("Take gamma of the src");
+// lngamma
+MXNET_REGISTER_SIMPLE_OP(gammaln, XPU)
+.set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::gammaln>, kInplaceInOut)
+.set_gradient(XPU::kDevMask, UnaryBackwardUseIn_<XPU, mshadow_op::gammaln_grad>, kInplaceOutIn)
+.describe("Take lngamma (log of the absolute value of gamma(x)) of the src");
 // cos
 MXNET_REGISTER_SIMPLE_OP(cos, XPU)
 .set_function(XPU::kDevMask, UnaryForward_<XPU, mshadow_op::cos>, kInplaceInOut)

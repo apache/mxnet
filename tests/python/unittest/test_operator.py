@@ -1,6 +1,7 @@
 # pylint: skip-file
 import numpy as np
 import mxnet as mx
+import math
 import random
 from numpy.testing import assert_allclose
 from mxnet.test_utils import *
@@ -472,6 +473,148 @@ def test_rsqrt_cos_sin():
     exe_test.backward(out_grad)
     assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
 
+
+def test_gamma_gammaln():
+    try:
+        from scipy import special as scipy_special
+    except:
+        print "Cannot load scipy skipping unittest for special functions"
+        return
+
+    pi = np.pi
+    data_points = np.array([
+        [-1.0E10, -1000.0, -100.0, -35.3124, -10.5, -pi, -1.0, -1.0 / pi, -1.0E-5, -1.0E-10, 0.0 ],
+        [ 1.0E10,  1000.0,  100.0,  35.3124,  10.5,  pi,  1.0,  1.0 / pi,  1.0E-5,  1.0E-10, 0.0 ],
+        np.linspace(0, 1, 11),
+        np.linspace(-1, 0, 11),
+        ], dtype=np.float32)
+
+    data = mx.symbol.Variable('data')
+    shape = data_points.shape
+
+    test_functions = {
+        'gamma': (
+            mx.sym.gamma,
+            lambda x: scipy_special.gamma(x), # f
+            lambda x: scipy_special.gamma(x) * scipy_special.psi(x) # df/dx
+        ),
+        'gammaln': (
+            mx.sym.gammaln,
+            scipy_special.gammaln, # f
+            lambda x: scipy_special.psi(x) # df/dx
+        )
+    }
+
+    def allclose_nan_inf(a, b, rtol=1E-5, atol=1E-8):
+        '''
+        Like np.allclose except it considers `nan` and `inf` equal.
+
+        The reference scipy implementation differs slightly in the
+        return values nan and inf from the implementations here.
+        E.g. for gamma(-1E10) scipy returns `inf` while the C++ tgammaf
+        function returns `nan`
+        '''
+        a = a.copy()
+        b = b.copy()
+        a_mask = np.isinf(a) | np.isnan(a)
+        b_mask = np.isinf(b) | np.isnan(b)
+
+        if not (a_mask == b_mask).all():
+            return False
+        a[a_mask] = 0.0
+        b[b_mask] = 0.0
+        return np.allclose(a, b, rtol=rtol, atol=atol)
+
+    for op_name, tup in test_functions.items():
+        symbol, f_ref, dfdx_ref = tup
+        arr_data = mx.nd.array(data_points)
+        arr_grad = mx.nd.empty(shape)
+
+        test = symbol(data)
+        exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+        exe_test.forward()
+        out = exe_test.outputs[0].asnumpy()
+        assert allclose_nan_inf(out, f_ref(data_points)), 'output value of `%s` did not match expected value' % op_name
+
+        grad_value = 2.3
+        out_grad = mx.nd.empty(shape)
+        out_grad[:] = grad_value
+        exe_test.backward(out_grad)
+        grad_result = arr_grad.asnumpy()
+        assert allclose_nan_inf(grad_result, grad_value * dfdx_ref(data_points)), 'gradient of `%s` did not match expected value' % op_name
+
+def test_activations():
+    data = mx.symbol.Variable('data')
+
+    data_points = np.array([
+            np.linspace(-10, 10, 21),
+            np.linspace(-1, 1, 21)
+        ],
+        dtype=np.float32)
+
+    shape = data_points.shape
+
+    def sigmoid_scalar(x):
+        if x >= 0:
+            z = math.exp(-x)
+            return 1.0 / (1.0 + z)
+        else:
+            z = math.exp(x)
+            return z / (1.0 + z)
+
+    sigmoid = np.vectorize(sigmoid_scalar)
+
+    test_functions = {
+        'softrelu': (
+            lambda x: mx.sym.Activation(x, act_type='softrelu'),
+            lambda x: np.log1p(np.exp(x)), # f
+            sigmoid
+        ),
+        'linear': (
+            lambda x: mx.sym.Activation(x, act_type='linear'),
+            lambda x: x, # f
+            lambda x: np.ones(x.shape, dtype=np.float32) # df/dx
+        ),
+        'tanh': (
+            lambda x: mx.sym.Activation(x, act_type='tanh'),
+            lambda x: np.tanh(x), # f
+            lambda x: 1.0 - np.tanh(x)**2 # df/dx
+        ),
+        'sigmoid': (
+            lambda x: mx.sym.Activation(x, act_type='sigmoid'),
+            sigmoid, # f
+            lambda x: (1.0 - sigmoid(x)) * sigmoid(x) # df/dx
+        ),
+        'relu': (
+            lambda x: mx.sym.Activation(x, act_type='relu'),
+            np.vectorize(lambda u: u if u > 0.0 else 0.0), # f
+            np.vectorize(lambda u: 1.0 if u > 0.0 else 0.0) # df/dx
+        )
+
+    }
+
+    rtol = 1E-6
+    atol = 1E-6
+
+    for op_name, tup in test_functions.items():
+        symbol, f_ref, dfdx_ref = tup
+        arr_data = mx.nd.array(data_points)
+        arr_grad = mx.nd.empty(shape)
+
+        test = symbol(data)
+        exe_test = test.bind(mx.cpu(), args=[arr_data], args_grad=[arr_grad])
+        exe_test.forward()
+        out = exe_test.outputs[0].asnumpy()
+        assert np.allclose(out, f_ref(data_points), rtol=rtol, atol=atol, equal_nan=True), 'output value of `%s` did not match expected value' % op_name
+
+        grad_value = 2.3
+        out_grad = mx.nd.empty(shape)
+        out_grad[:] = grad_value
+        exe_test.backward(out_grad)
+        grad_result = arr_grad.asnumpy()
+        assert np.allclose(grad_result, grad_value * dfdx_ref(data_points), rtol=rtol, atol=atol, equal_nan=True), 'gradient of `%s` did not match expected value' % op_name
+
+
 def test_maximum_minimum():
     data1 = mx.symbol.Variable('data')
     data2 = mx.symbol.Variable('data')
@@ -484,10 +627,8 @@ def test_maximum_minimum():
     arr_data1 = mx.nd.array(data_tmp1)
     arr_data2 = mx.nd.array(data_tmp2)
 
-
     arr_grad1 = mx.nd.empty(shape)
     arr_grad2 = mx.nd.empty(shape)
-
 
     test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2);
     exe_test = test.bind(default_context(), args=[arr_data1,arr_data2], args_grad=[arr_grad1,arr_grad2])
@@ -1642,6 +1783,8 @@ if __name__ == '__main__':
     test_pow_fn()
     test_embedding()
     test_rsqrt_cos_sin()
+    test_gamma_gammaln()
+    test_activations()
     test_maximum_minimum()
     test_maximum_minimum_scalar()
     test_abs()
