@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member
+# pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member, too-many-branches
 """Monitor outputs, weights, and gradients for debugging."""
 from __future__ import absolute_import
 
@@ -72,6 +72,8 @@ class Monitor(object):
             for exe in self.exes:
                 for array in exe.arg_arrays:
                     array.wait_to_read()
+                for array in exe.aux_arrays:
+                    array.wait_to_read()
             self.queue = []
             self.activated = True
         self.step += 1
@@ -89,8 +91,13 @@ class Monitor(object):
         for exe in self.exes:
             for array in exe.arg_arrays:
                 array.wait_to_read()
+            for array in exe.aux_arrays:
+                array.wait_to_read()
         for exe in self.exes:
             for name, array in zip(exe._symbol.list_arguments(), exe.arg_arrays):
+                if self.re_prog.match(name):
+                    self.queue.append((self.step, name, self.stat_func(array)))
+            for name, array in zip(exe._symbol.list_auxiliary_states(), exe.aux_arrays):
                 if self.re_prog.match(name):
                     self.queue.append((self.step, name, self.stat_func(array)))
         self.activated = False
