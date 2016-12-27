@@ -7,14 +7,12 @@
 
 #if MXNET_USE_NNPACK == 1
 #include "nnpack_util.h"
-#endif
 
 namespace mxnet {
 namespace op {
 
-#if MXNET_USE_NNPACK == 1
 NNPACKInitialize nnpackinitialize;
-#endif
 
+#endif  // MXNET_USE_NNPACK
 }  // namespace op
 }  // namespace mxnet

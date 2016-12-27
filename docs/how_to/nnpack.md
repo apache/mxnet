@@ -12,9 +12,9 @@ The following table will tell you which satisfaction will NNPACK work.
 
 | operation      | conditions |
 |:---------      |:---------- |
-|convolution     |2d convoltuion `and` no-bias=False `and` dilate=(1,1) `and` num_group=1 `and` batch size = 1 or batch size > 1 && stride = (1,1);|
+|convolution     |2d convoltuion `and` no-bias=False `and` dilate=(1,1) `and` num_group=1 `and` batch-size = 1 or batch-size > 1 && stride = (1,1);|
 |pooling         | max-pooling `and` kernel=(2,2) `and` stride=(2,2) `and` pooling_convention=full    |
-|fully-connected| unlimited (but `bias add` part comes from MXNet) |
+|fully-connected| batch-size = 2^n |
 
 ### Build/Install NNPACK with MXNet
 
