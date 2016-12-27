@@ -17,33 +17,10 @@
 #include <utility>
 #include "../convolution-inl.h"
 #include "nnpack.h"
+#include "nnpack_util.h"
 
 namespace mxnet {
 namespace op {
-
-class NNPACKInitialize {
- public:
-  pthreadpool_t threadpool;
-
- public:
-  NNPACKInitialize() {
-    nnp_status status = nnp_initialize();
-    if (nnp_status_success != status) {
-      LOG(FATAL) << "nnp_initialize failed status=" << status;
-    }
-    int num_threads = dmlc::GetEnv("MXNET_CPU_NNPACK_NTHREADS", 4);
-    this->threadpool = pthreadpool_create(num_threads);
-  }
-  virtual ~NNPACKInitialize() {
-    nnp_status status = nnp_deinitialize();
-    if (nnp_status_success != status) {
-      LOG(FATAL) << "nnp_deinitialize failed status=" << status;
-    }
-    pthreadpool_destroy(threadpool);
-  }
-};
-
-static NNPACKInitialize nnpackinitialize;
 
 template <typename xpu, typename DType>
 class NNPACKConvolutionOp : public ConvolutionOp<xpu, DType> {
@@ -99,6 +76,7 @@ class NNPACKConvolutionOp : public ConvolutionOp<xpu, DType> {
 
       nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_auto;
       nnp_convolution_transform_strategy kts = nnp_convolution_transform_strategy_tuple_based;
+    //   extern NNPACKInitialize nnpackinitialize;
       nnp_status status = nnp_status_success;
       if (batch_size == 1) {
         status = nnp_convolution_inference(
