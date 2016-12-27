@@ -76,7 +76,6 @@ class NNPACKConvolutionOp : public ConvolutionOp<xpu, DType> {
 
       nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_auto;
       nnp_convolution_transform_strategy kts = nnp_convolution_transform_strategy_tuple_based;
-    //   extern NNPACKInitialize nnpackinitialize;
       nnp_status status = nnp_status_success;
       if (batch_size == 1) {
         status = nnp_convolution_inference(
