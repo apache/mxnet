@@ -13,6 +13,6 @@ namespace op {
 
 NNPACKInitialize nnpackinitialize;
 
-#endif  // MXNET_USE_NNPACK
 }  // namespace op
 }  // namespace mxnet
+#endif  // MXNET_USE_NNPACK
