@@ -12,7 +12,9 @@
 namespace mxnet {
 namespace op {
 
+#if MXNET_USE_NNPACK == 1
 NNPACKInitialize nnpackinitialize;
+#endif
 
 }  // namespace op
 }  // namespace mxnet
