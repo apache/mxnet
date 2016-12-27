@@ -22,11 +22,11 @@ details
 
 Also setting the following two environment variables may help:
 - `KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
-- `OMP_NUM_THREADS=vCPUs / 2` in which `vGPUs` is the number of virtual CPUs.
+- `OMP_NUM_THREADS=vCPUs / 2` in which `vCPUs` is the number of virtual CPUs.
   For linux we can get it by `cat /proc/cpuinfo  | grep processor | wc -l`
 
-Note that MXNet treats all GPU in a single machine as a single device. So when
-specify `gpu(0)` or `gpu()`, all GPU cores in the machine will be used.
+Note that MXNet treats all CPU in a single machine as a single device. So when
+specify `cpu(0)` or `cpu()`, all CPU cores in the machine will be used.
 
 ### Scoring results
 The following table shows the scoring performance, namely number of images can
@@ -46,13 +46,13 @@ with MXNet commit `0a03417`
 
 ## Nvidia GPU
 
-`CUDNN` often greatly accelerate performance on Nvidia GPUs, check a recent
-CUDNN version is used.
+`cuDNN` often greatly accelerate performance on Nvidia GPUs, especially for
+convolution layers. Please check a recent CUDNN version is used.
 
 Setting the environment `export MXNET_CUDNN_AUTOTUNE_DEFAULT=1` sometimes also helps.
 
-We show performance results various GPUs including K80 (EC2 p2.2xlarge), M40,
-P100 (DGX-1).
+We show performance results of various GPUs including K80 (EC2 p2.2xlarge), M40,
+and P100 (DGX-1).
 
 ### Scoring results
 
@@ -136,7 +136,7 @@ where the batch size for Alexnet is increased by 8x.
 
 ## Multiple Devices
 
-If more than one GPU or machine is used, MXNet uses `kvstore` to communicate
+If more than one GPU or machine are used, MXNet uses `kvstore` to communicate
 data. A proper type of `kvstore` is critical to get the best performance. We can
 refer to [mutli_device.md](http://mxnet.io/how_to/multi_devices.html) for more
 details.
