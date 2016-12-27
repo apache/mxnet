@@ -145,7 +145,8 @@ def fit(args, network, data_loader, **kwargs):
     optimizer_params = {
             'learning_rate': lr,
             'momentum' : args.mom,
-            'wd' : args.wd}
+            'wd' : args.wd,
+            'lr_scheduler': lr_scheduler}
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 
@@ -178,4 +179,5 @@ def fit(args, network, data_loader, **kwargs):
         aux_params         = aux_params,
         batch_end_callback = batch_end_callbacks,
         epoch_end_callback = checkpoint,
+        allow_missing      = True,
         monitor            = monitor)
