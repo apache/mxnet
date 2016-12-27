@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member
+# pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member, too-many-branches
 """Monitor outputs, weights, and gradients for debugging."""
 from __future__ import absolute_import
 
