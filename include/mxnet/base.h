@@ -185,7 +185,7 @@ struct Context {
    */
   inline static Context Create(DeviceType dev_type, int32_t dev_id = -1);
   /*! \return CPU Context */
-  inline static Context CPU();
+  inline static Context CPU(int32_t dev_id = 0);
   /*!
    * Create a GPU context.
    * \param dev_id the device id.
@@ -252,8 +252,8 @@ inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   }
   return ctx;
 }
-inline Context Context::CPU() {
-  return Create(kCPU, 0);
+inline Context Context::CPU(int32_t dev_id) {
+  return Create(kCPU, dev_id);
 }
 
 inline Context Context::CPUPinned(int32_t dev_id) {
@@ -275,7 +275,7 @@ inline Context Context::FromString(std::string str) {
     std::string type = str.substr(0, l);
     int id = std::stoi(str.substr(l+1, r-l-1));
     if (type == "cpu") {
-      ret = CPU();
+      ret = CPU(id);
     } else if (type == "gpu") {
       ret = GPU(id);
     } else if (type == "cpu_pinned") {
