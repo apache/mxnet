@@ -74,7 +74,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
       dshape_vec.push_back(dshape[i]);
     }
     std::vector<int> tmp;
-    int src_idx = 0;
+    size_t src_idx = 0;
     int inf_idx = -1;
     size_t new_size = dshape.Size();
     if (param_.reverse) {
