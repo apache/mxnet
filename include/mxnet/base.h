@@ -275,7 +275,7 @@ inline Context Context::FromString(std::string str) {
     std::string type = str.substr(0, l);
     int id = std::stoi(str.substr(l+1, r-l-1));
     if (type == "cpu") {
-      ret = CPU();
+      ret = CPU(id);
     } else if (type == "gpu") {
       ret = GPU(id);
     } else if (type == "cpu_pinned") {
