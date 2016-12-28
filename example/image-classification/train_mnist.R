@@ -93,7 +93,7 @@ parse_args <- function() {
                         help='the gpus will be used, e.g "0,1,2,3"')
     parser$add_argument('--batch-size', type='integer', default=128,
                         help='the batch size')
-    parser$add_argument('--lr', type='double', default=.1,
+    parser$add_argument('--lr', type='double', default=.05,
                         help='the initial learning rate')
     parser$add_argument('--model-prefix', type='character',
                         help='the prefix of the model to load/save')
