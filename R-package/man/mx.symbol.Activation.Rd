@@ -2,7 +2,10 @@
 % Please edit documentation in R/mxnet_generated.R
 \name{mx.symbol.Activation}
 \alias{mx.symbol.Activation}
-\title{Apply activation function to input.Softmax Activation is only available with CUDNN on GPUand will be computed at each location across channel if input is 4D.}
+\title{Apply Activation Function to Input}
+\description{
+Apply activation function to input. Softmax Activation is only available with CUDNN on GPU and will be computed at each location across channel if input is 4D.
+}
 \usage{
 mx.symbol.Activation(...)
 }
@@ -19,7 +22,3 @@ Name of the resulting symbol.}
 \value{
 out The result mx.symbol
 }
-\description{
-Apply activation function to input.Softmax Activation is only available with CUDNN on GPUand will be computed at each location across channel if input is 4D.
-}
-
