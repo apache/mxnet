@@ -5,7 +5,7 @@ These are used to generate the index used in search.
 - [Python Documents](api/python/index.md)
 - [R Documents](api/r/index.md)
 - [Julia Documents](api/julia/index.md)
-- [Julia Documents](api/c++/index.md)
+- [C++ Documents](api/c++/index.md)
 - [Scala Documents](api/scala/index.md)
 - [Howto Documents](how_to/index.md)
 - [Get Started Documents](get_started/index.md)

@@ -1,9 +1,10 @@
-import requests
-import os
 import subprocess
+import os
 import errno
 
 def download_file(url, local_fname=None, force_write=False):
+    # requests is not default installed
+    import requests
     if local_fname is None:
         local_fname = url.split('/')[-1]
     if not force_write and os.path.exists(local_fname):
@@ -15,7 +16,7 @@ def download_file(url, local_fname=None, force_write=False):
         if not os.path.exists(dir_name):
             try: # try to create the directory if it doesn't exists
                 os.makedirs(dir_name)
-            except OSError as exc: 
+            except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise
 

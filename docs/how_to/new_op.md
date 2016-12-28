@@ -6,7 +6,7 @@ We've done our best to provide high speed operators for most common use cases. H
 
 * Use CustomOp to write new operators in the front-end language (i.e., Python) that run on CPUs or GPUs. Depending on your implementation, this can range from very fast to very slow.
 
-* Use C++/mshadow (CUDA). This can be difficult if you're not familiar with MXNet, mashadow, or Cuda, but it provides the best performance.
+* Use C++/mshadow (CUDA). This can be difficult if you're not familiar with MXNet, mshadow, or Cuda, but it provides the best performance.
 
 ## CustomOp
 Implementing an operator in Python is similar to creating one in C++, but simpler. As an example, let's create a softmax operator. Start by subclassing `mxnet.operator.CustomOp`, and then override a few methods:
