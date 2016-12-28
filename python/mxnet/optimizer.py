@@ -1,6 +1,7 @@
 # pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
 """Common Optimization algorithms with regularizations."""
 import math
+import pickle
 from .ndarray import NDArray, zeros, clip, sqrt
 from .ndarray import sgd_update, sgd_mom_update, adam_update
 from .random import normal
@@ -678,6 +679,25 @@ class Test(Optimizer):
 # backward compatibility wrapper for Optimizer.CreateOptimizer
 create = Optimizer.create_optimizer
 
+class Updater(object):
+    """updater for kvstore"""
+    def __init__(self, optimizer):
+        self.optimizer = optimizer
+        self.states = {}
+
+    def __call__(self, index, grad, weight):
+        """Update weight given gradient and index"""
+        if index not in self.states:
+            self.states[index] = self.optimizer.create_state(index, weight)
+        self.optimizer.update(index, weight, grad, self.states[index])
+
+    def set_states(self, states):
+        """set updater states"""
+        self.states = pickle.loads(states)
+
+    def get_states(self):
+        """get updater states"""
+        return pickle.dumps(self.states)
 
 def get_updater(optimizer):
     """Return a clossure of the updater needed for kvstore
@@ -692,11 +712,4 @@ def get_updater(optimizer):
     updater: function
          The clossure of the updater
     """
-    states = dict()
-
-    def updater(index, grad, weight):
-        """updater for kvstore"""
-        if index not in states:
-            states[index] = optimizer.create_state(index, weight)
-        optimizer.update(index, weight, grad, states[index])
-    return updater
+    return Updater(optimizer)

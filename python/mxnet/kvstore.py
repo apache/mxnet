@@ -58,6 +58,7 @@ class KVStore(object):
         """
         assert isinstance(handle, KVStoreHandle)
         self.handle = handle
+        self._updater = None
         self._updater_func = None
 
     def __del__(self):
@@ -294,6 +295,29 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreGetGroupSize(self.handle, ctypes.byref(size)))
         return size.value
 
+    def save_optimizer_states(self, fname):
+        """Save optimizer (updater) state to file
+
+        Parameters
+        ----------
+        fname : str
+            Path to output states file.
+        """
+        assert self._updater is not None, "Cannot save states for distributed training"
+        with open(fname, 'wb') as fout:
+            fout.write(self._updater.get_states())
+
+    def load_optimizer_states(self, fname):
+        """Load optimizer (updater) state from file
+
+        Parameters
+        ----------
+        fname : str
+            Path to input states file.
+        """
+        assert self._updater is not None, "Cannot save states for distributed training"
+        self._updater.set_states(open(fname, 'rb').read())
+
     def _set_updater(self, updater):
         """Set a push updater into the store.
 
@@ -322,6 +346,7 @@ class KVStore(object):
         [[ 6.  6.  6.]
         [ 6.  6.  6.]]
         """
+        self._updater = updater
         _updater_proto = ctypes.CFUNCTYPE(
             None, ctypes.c_int, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
         self._updater_func = _updater_proto(_updater_wrapper(updater))

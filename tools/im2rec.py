@@ -196,7 +196,7 @@ def parse_args():
                         help='If true recursively walk through subdirs and assign an unique label\
         to images in each folder. Otherwise only include images in the root folder\
         and give them label 0.')
-    cgroup.add_argument('--shuffle', default=True, help='If this is set as True, \
+    cgroup.add_argument('--shuffle', type=bool, default=True, help='If this is set as True, \
         im2rec will randomize the image order in <prefix>.lst')
 
     rgroup = parser.add_argument_group('Options for creating database')
@@ -220,7 +220,7 @@ def parse_args():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
                         help='specify the encoding of the images.')
-    rgroup.add_argument('--pack-label', default=False,
+    rgroup.add_argument('--pack-label', type=bool, default=False,
         help='Whether to also pack multi dimensional label in the record file')
     args = parser.parse_args()
     args.prefix = os.path.abspath(args.prefix)
