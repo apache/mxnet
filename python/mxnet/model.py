@@ -344,7 +344,8 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, opt_params=No
 
     save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
     save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
-    save_dict.update({('opt:%s' % k) : v.as_in_context(cpu()) for k, v in opt_params.items()})
+    if opt_params is not None:
+        save_dict.update({('opt:%s' % k) : v.as_in_context(cpu()) for k, v in opt_params.items()})
     param_name = '%s-%04d.params' % (prefix, epoch)
     nd.save(param_name, save_dict)
     logging.info('Saved checkpoint to \"%s\"', param_name)
@@ -389,6 +390,8 @@ def load_checkpoint(prefix, epoch):
             aux_params[name] = v
         if tp == 'opt':
             opt_params[name] = v
+    if len(opt_params) == 0:
+        opt_params = None
     return (symbol, arg_params, aux_params, opt_params)
 
 from .callback import LogValidationMetricsCallback
