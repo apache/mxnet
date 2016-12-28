@@ -18,6 +18,7 @@ Unzip the file and change to cudnn root directory. Move the header and libraries
     sudo cp -P cuda/include/cudnn.h /usr/local/cuda/include
     sudo cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
     sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
+    sudo ldconfig
 ```
 
 Finally add configurations to config.mk file:

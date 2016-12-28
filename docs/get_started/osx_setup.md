@@ -41,7 +41,7 @@ After you have installed the dependencies, use one of the following options to p
 
 ### Prepare Environment for GPU Installation
 
-If you plan to build with GPU, you need to set up environemtn for CUDA and CUDNN.
+If you plan to build with GPU, you need to set up environemtn for CUDA and cuDNN.
 
 First download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
 
@@ -60,9 +60,9 @@ Reload ~/.bash_profile file and install dependecies:
     brew tap caskroom/cask
 ```
 
-Then download [cudnn 5](https://developer.nvidia.com/cudnn).
+Then download [cuDNN 5](https://developer.nvidia.com/cudnn).
 
-Unzip the file and change to cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
+Unzip the file and change to cudnn root directory. Move the header files and libraries to your local CUDA Toolkit folder:
 
 ```bash
     $ sudo mv include/cudnn.h /Developer/NVIDIA/CUDA-8.0/include/
