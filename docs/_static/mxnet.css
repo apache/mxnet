@@ -293,6 +293,7 @@ img {
         left: 50%;
         margin-left: -70px;
         right: initial;
+        z-index: -1;
     }
 }
 

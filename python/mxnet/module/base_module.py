@@ -109,6 +109,20 @@ class BaseModule(object):
     - `fit`: train the module parameters on a data set
     - `predict`: run prediction on a data set and collect outputs
     - `score`: run prediction on a data set and evaluate performance
+    
+    Examples
+    --------
+    >>> import mxnet as mx
+    
+    >>> data = mx.symbol.Variable('data')
+    >>> fc1  = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+    >>> act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+    >>> fc2  = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
+    >>> act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+    >>> fc3  = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
+    >>> out  = mx.symbol.SoftmaxOutput(fc3, name = 'softmax')
+    
+    >>> mod = mx.mod.Module(out)
     """
     def __init__(self, logger=logging):
         self.logger = logger
@@ -150,6 +164,12 @@ class BaseModule(object):
         epoch : int
             Default 0. For compatibility, this will be passed to callbacks (if any). During
             training, this will correspond to the training epoch number.
+            
+        Examples
+        --------
+        >>> #Evaluate accuracy on val_dataiter
+        >>> metric = mx.metric.Accuracy()
+        >>> mod.score(val_dataiter, metric)
         """
         assert self.binded and self.params_initialized
 
@@ -250,6 +270,11 @@ class BaseModule(object):
 
         The objects in the results are `NDArray`s. If you need to work with numpy array,
         just call `.asnumpy()` on each of the `NDArray`.
+        
+        Examples
+        --------
+        >>> #Predict on the first 10 batches of val_dataiter
+        >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
         assert self.binded and self.params_initialized
 
@@ -346,6 +371,13 @@ class BaseModule(object):
             this value as N+1.
         num_epoch : int
             Number of epochs to run training.
+            
+        Examples
+        --------
+        #Assume training dataIter and validation dataIter are ready
+        mod.fit(train_data=train_dataiter, eval_data=val_dataiter,
+                optimizer_params={'learning_rate':0.01, 'momentum': 0.9},
+                num_epoch=10)
         """
         assert num_epoch is not None, 'please specify number of epochs'
 
@@ -461,6 +493,11 @@ class BaseModule(object):
         Returns
         -------
         `(arg_params, aux_params)`, a pair of dictionary of name to value mapping.
+        
+        Examples
+        --------
+        >>> print mod.get_params()
+        ({'fc2_weight': <NDArray 64x128 @cpu(0)>, 'fc1_weight': <NDArray 128x100 @cpu(0)>, 'fc3_bias': <NDArray 10 @cpu(0)>, 'fc3_weight': <NDArray 10x64 @cpu(0)>, 'fc2_bias': <NDArray 64 @cpu(0)>, 'fc1_bias': <NDArray 128 @cpu(0)>}, {})
         """
         raise NotImplementedError()
 
@@ -483,6 +520,10 @@ class BaseModule(object):
             called to fill those missing params.
         force_init : bool
             If true, will force re-initialize even if already initialized.
+            
+        Examples
+        --------
+        >>> mod.init_params()
         """
         raise NotImplementedError()
 
@@ -501,6 +542,11 @@ class BaseModule(object):
         force_init : bool
             If true, will force re-initialize even if already initialized.
 
+        Examples
+        --------
+        >>> sym, arg_params, aux_params = \
+        >>>     mx.model.load_checkpoint(model_prefix, n_epoch_load)
+        >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
                          allow_missing=allow_missing, force_init=force_init)
@@ -512,6 +558,10 @@ class BaseModule(object):
         ----------
         fname : str
             Path to output param file.
+        
+        Examples
+        --------
+        >>> mod.save_params('myfile')
         """
         arg_params, aux_params = self.get_params()
         save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
@@ -525,6 +575,10 @@ class BaseModule(object):
         ----------
         fname : str
             Path to input param file.
+            
+        Examples
+        --------
+        >>> mod.load_params('myfile')
         """
         save_dict = ndarray.load(fname)
         arg_params = {}
@@ -555,6 +609,20 @@ class BaseModule(object):
             Could be anything with similar API implemented.
         is_train : bool
             Default is `None`, which means `is_train` takes the value of `self.for_training`.
+            
+        Ezamples
+        --------
+        >>> from collections import namedtuple
+        >>> Batch = namedtuple('Batch', ['data'])
+        
+        >>> mod.bind(data_shapes=[('data', (1, 10, 10))])
+        >>> mod.init_params()
+        
+        >>> data1 = [mx.nd.ones([1, 10, 10])]
+        >>> mod.forward(Batch(data1))
+        >>> print mod.get_outputs()[0].asnumpy()
+        [[ 0.09999977  0.10000153  0.10000716  0.10000195  0.09999853  0.09999743
+        0.10000272  0.10000113  0.09999088  0.09999888]]
         """
         raise NotImplementedError()
 
@@ -567,6 +635,15 @@ class BaseModule(object):
             Gradient on the outputs to be propagated back.
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
+            
+        Examples
+        --------
+        >>> mod.backward()
+        >>> print mod.get_input_grads()[0].asnumpy()
+        [[[  1.10182791e-05   5.12257748e-06   4.01927764e-06   8.32566820e-06
+            -1.59775993e-06   7.24269375e-06   7.28067835e-06  -1.65902311e-05
+             5.46342608e-06   8.44196393e-07]
+          ...]]
         """
         raise NotImplementedError()
 
@@ -587,6 +664,12 @@ class BaseModule(object):
         is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
         elements are `NDArray`. When `merge_multi_context` is `False`, those `NDArray`
         might live on different devices.
+        
+        Ezamples
+        --------
+        >>> print mod.get_outputs()[0].asnumpy()
+        [[ 0.09999977  0.10000153  0.10000716  0.10000195  0.09999853  0.09999743
+        0.10000272  0.10000113  0.09999088  0.09999888]]
         """
         raise NotImplementedError()
 
@@ -607,12 +690,31 @@ class BaseModule(object):
         is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
         elements are `NDArray`. When `merge_multi_context` is `False`, those `NDArray`
         might live on different devices.
+        
+        Examples
+        --------
+        >>> print mod.get_input_grads()[0].asnumpy()
+        [[[  1.10182791e-05   5.12257748e-06   4.01927764e-06   8.32566820e-06
+        -1.59775993e-06   7.24269375e-06   7.28067835e-06  -1.65902311e-05
+        5.46342608e-06   8.44196393e-07]
+        ...]]
         """
         raise NotImplementedError()
 
     def update(self):
         """Update parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
+        
+        Examples
+        --------
+        >>> mod.init_optimizer(kvstore='local', optimizer='sgd', optimizer_params=(('learning_rate', 0.01), ))
+        >>> mod.backward()
+        >>> mod.update()
+        >>> print mod.get_params()[0]['fc3_weight'].asnumpy()
+        [[  5.86930104e-03   5.28078526e-03  -8.88729654e-03  -1.08308345e-03
+            6.13054074e-03   4.27560415e-03   1.53817423e-03   4.62131854e-03
+            4.69872449e-03  -2.42400169e-03   9.94111411e-04   1.12386420e-03
+            ...]]
         """
         raise NotImplementedError()
 
@@ -624,6 +726,11 @@ class BaseModule(object):
         eval_metric : EvalMetric
         labels : list of NDArray
             Typically `data_batch.label`.
+            
+        Examples
+        --------
+        >>> mod.forward(data_batch)
+        >>> mod.update_metric(metric, data_batch.label)
         """
         raise NotImplementedError()
 
@@ -659,6 +766,10 @@ class BaseModule(object):
             Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
             (default to 'write').
             Can be specified globally (str) or for each argument (list, dict).
+            
+        Examples
+        --------
+        >>> mod.bind(data_shapes=[('data', (1, 10, 10))])
         """
         raise NotImplementedError()
 
@@ -678,6 +789,10 @@ class BaseModule(object):
         force_init : bool
             Default `False`, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.
+        
+        Examples
+        --------
+        >>> mod.init_optimizer(optimizer='sgd', optimizer_params=(('learning_rate', 0.005),))
         """
         raise NotImplementedError()
 
