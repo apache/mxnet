@@ -847,7 +847,11 @@ class FeedForward(BASE_ESTIMATOR):
         if epoch is None:
             epoch = self.num_epoch
         assert epoch is not None
-        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params, self.optimizer.states)
+        if isinstance(self.optimizer, opt.Optimizer):
+            save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params, self.optimizer.states)
+        else :
+            save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
+
 
     @staticmethod
     def load(prefix, epoch, ctx=None, **kwargs):
