@@ -256,7 +256,7 @@ class NDArray {
   inline NDArray At(index_t idx) const {
     NDArray ret = *this;
     CHECK(!is_none()) << "NDArray is not initialized";
-    CHECK_GE(shape_[0], idx) << "index out of range";
+    CHECK_GT(shape_[0], idx) << "index out of range";
     size_t length = shape_.ProdShape(1, shape_.ndim());
     ret.offset_ += idx * length;
     if (shape_.ndim() > 1) {
