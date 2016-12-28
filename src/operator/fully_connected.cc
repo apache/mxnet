@@ -22,7 +22,8 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   case mshadow::kFloat64:
     return new MKLFullyConnectedOp<cpu, double>(param);
   default:
-    LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
+    if (enableMKLWarnGenerated())
+      LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
     break;
   }
 #endif
