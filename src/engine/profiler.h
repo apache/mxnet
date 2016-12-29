@@ -19,7 +19,7 @@ namespace engine {
  */
 struct OprExecStat {
   /*! \brief operation name */
-  std::string opr_name;
+  char opr_name[32];
   /*!
    * \brief operation execution start relative timestamp
    *        time unit is microsecond (10^-6 s)
@@ -92,7 +92,7 @@ class Profiler {
   }
   /*! \brief add one operation execution record in
    *   corresponding device statistics */
-  OprExecStat* AddOprStat(int dev_type, int dev_id);
+  OprExecStat* AddOprStat(int dev_type, uint32_t dev_id);
 
  protected:
   /*! \brief make constructor protected. */
@@ -100,11 +100,11 @@ class Profiler {
 
  private:
   /*! \brief generate device information following chrome profile file format */
-  void EmitPid(std::ostream *os, const std::string& name, int pid);
+  void EmitPid(std::ostream *os, const std::string& name, uint32_t pid);
   /*! \brief generate event information following chrome profile file format */
   void EmitEvent(std::ostream *os, const std::string& name,
           const std::string& category, const std::string& ph,
-          uint64_t ts, int pid, int tid);
+          uint64_t ts, uint32_t pid, uint32_t tid);
   /*! \brief Profiler instance */
   static Profiler* instance_;
   /*! \brief internal mutex of the profiler */
