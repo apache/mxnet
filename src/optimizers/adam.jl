@@ -63,11 +63,11 @@ function update(self :: ADAM, index :: Int, weight :: NDArray, grad :: NDArray, 
   state.mt = self.opts.beta1 * state.mt + (1 - self.opts.beta1) * grad
   state.vt = self.opts.beta2 * state.vt + (1 - self.opts.beta2) * (grad .* grad)
 
-  mt = state.mt / (1 - state.beta1Power)
-  vt = state.vt / (1 - state.beta2Power)
+  at = sqrt(1.0 - state.beta2Power)/(1.0 - state.beta1Power)
 
   state.beta1Power *= self.opts.beta1
   state.beta2Power *= self.opts.beta2
 
-  @inplace weight .+= -lr * mt ./ (sqrt(vt) + self.opts.epsilon)
+  @inplace weight .+= -lr * at * state.mt ./
+    (sqrt(state.vt) + self.opts.epsilon)
 end

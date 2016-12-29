@@ -158,6 +158,42 @@ type Fixed <: AbstractMomentumScheduler
   momentum :: Float64
 end
 get_momentum(self :: Fixed, state :: OptimizationState) = self.momentum
+
+"""
+    Momentum.NadamScheduler
+
+Nesterov-accelerated adaptive momentum scheduler.
+
+Description in "Incorporating Nesterov Momentum into Adam."
+[http://cs229.stanford.edu/proj2015/054_report.pdf]
+(http://cs229.stanford.edu/proj2015/054_report.pdf)
+
+``\mu_t = \mu_0 * (1 - \gamma * \alpha^{t * \delta})``.
+Here
+* ``t`` is the iteration count
+* ``\delta``: default `0.004` is scheduler decay,
+* ``\gamma``: default `0.5`
+* ``\alpha``: default `0.96`
+* ``\mu_0``: default `0.99`
+"""
+type NadamScheduler <: AbstractMomentumScheduler
+  mu0 :: Float64
+  delta :: Float64
+  gamma :: Float64
+  alpha :: Float64
+end
+function NadamScheduler(;mu0::Real=0.99, delta::Real=0.004,
+                gamma::Real=0.5, alpha::Real=0.96)
+  @assert(0.0 <= delta)
+  @assert(0.0 <= alpha <= 1.0)
+  @assert(0.0 <= mu0 <= 1.0)
+  @assert(0.0 <= gamma <= 1.0)
+  NadamScheduler(Float64(mu0), Float64(delta), Float64(gamma), Float64(alpha))
+end
+get_momentum(self :: NadamScheduler, state :: OptimizationState) =
+  self.mu0 * (1.0 - self.gamma*self.alpha^(state.curr_iter * self.delta)),
+  self.mu0 * (1.0 - self.gamma*self.alpha^((state.curr_iter + 1) * self.delta))
+
 end # module Momentum
 ################################################################################
 function get_momentum_scheduler(scheduler :: Any, momentum :: Real)
@@ -170,6 +206,15 @@ function get_momentum_scheduler(scheduler :: Any, momentum :: Real)
   end
 end
 
+function get_momentum_scheduler(scheduler :: Any,
+  another_scheduler :: AbstractMomentumScheduler)
+
+  if isa(scheduler, AbstractMomentumScheduler)
+    return scheduler
+  else
+    return another_scheduler
+  end
+end
 
 """
     get_updater(optimizer)
@@ -198,10 +243,10 @@ Base class for all optimizer options.
 abstract AbstractOptimizerOptions
 
 """
-    normalized_gradient(opts, state, grad)
+    normalized_gradient(opts, state, weight, grad)
 
 * `opts::AbstractOptimizerOptions`: options for the optimizer, should contain the field
-          `grad_scale`, `grad_clip` and `weight_decay`.
+`grad_clip` and `weight_decay`.
 * `state::OptimizationState`: the current optimization state.
 * `weight::NDArray`: the trainable weights.
 * `grad::NDArray`: the original gradient of the weights.
@@ -216,10 +261,17 @@ function normalized_gradient(opts::AbstractOptimizerOptions, state::Optimization
   if opts.grad_clip > 0
     grad = clip(grad, -opts.grad_clip, opts.grad_clip)
   end
-  @inplace grad += opts.weight_decay * weight
+  if opts.weight_decay > 0
+    @inplace grad += opts.weight_decay * weight
+  end
 
   return grad
 end
 
 include("optimizers/sgd.jl")
 include("optimizers/adam.jl")
+include("optimizers/adagrad.jl")
+include("optimizers/adadelta.jl")
+include("optimizers/adamax.jl")
+include("optimizers/rmsprop.jl")
+include("optimizers/nadam.jl")
