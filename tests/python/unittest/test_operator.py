@@ -1116,34 +1116,34 @@ def test_crop():
             y = mx.nd.crop(x, begin=tuple(begin), end=tuple(end))
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
+def check_slice_axis_shape(shape, axis, begin, end):
+    X = mx.symbol.Variable('X')
+    x = mx.nd.array(np.random.normal(size=shape))
+    Y = mx.symbol.slice_axis(data=X, axis=axis, begin=begin, end=end)
+
+    idx = []
+    for i in range(len(shape)):
+        idx.append(slice(0, shape[i]))
+    idx[axis] = slice(begin, end)
+
+    xgrad = mx.nd.empty(shape)
+    exec1 = Y.bind(default_context(), args = [x], args_grad = {'X': xgrad})
+    exec1.forward()
+    y = exec1.outputs[0]
+    assert_allclose(x.asnumpy()[idx], y.asnumpy())
+    exec1.backward([y])
+    xx = x.asnumpy()
+    xx[:] = 0.0
+    xx[idx] = x.asnumpy()[idx]
+    assert_allclose(xx, xgrad.asnumpy()) 
 
 def test_slice_axis():
-    for ndim in range(1, 6):
-        shape = np.random.randint(1, 11, size=(ndim,))
-        for t in range(ndim):
-            d = shape[t]
-            b = random.randint(0, d-1)
-            e = random.randint(b+1, d)
-            idx = []
-            for i in range(ndim):
-                idx.append(slice(0, shape[i]))
-            idx[t] = slice(b, e)
-
-            X = mx.symbol.Variable('X')
-            x = mx.nd.array(np.random.normal(size=shape))
-            Y = mx.symbol.slice_axis(data=X, axis=t, begin=b, end=e)
-
-            xgrad = mx.nd.empty(x.shape)
-            exec1 = Y.bind(default_context(), args = [x], args_grad = {'X': xgrad})
-            exec1.forward()
-            y = exec1.outputs[0]
-            assert_allclose(x.asnumpy()[idx], y.asnumpy())
-            exec1.backward([y])
-            xx = x.asnumpy()
-            xx[:] = 0.0
-            xx[idx] = x.asnumpy()[idx]
-            assert_allclose(xx, xgrad.asnumpy())
-
+    check_slice_axis_shape((5, 1), 0, 1, 3)
+    check_slice_axis_shape((5, 1, 2, 3, 2, 3), 4, 0, 1)
+    check_slice_axis_shape((2, 3), 1, 0, -1)
+    check_slice_axis_shape((3, 4), 1, 1, None)
+    check_slice_axis_shape((3, 4), 1, None, None)
+    check_slice_axis_shape((1, 4, 5), 2, -2, -1)
 
 def test_flip():
     for ndim in range(1, 6):
