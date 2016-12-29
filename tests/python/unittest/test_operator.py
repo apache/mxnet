@@ -4,6 +4,7 @@ import mxnet as mx
 import random
 from numpy.testing import assert_allclose
 from mxnet.test_utils import *
+from math import *
 
 def np_softmax(x):
     # fix for old numpy on Travis not supporting keepdims
@@ -1619,6 +1620,193 @@ def test_sequence_mask():
     check_sequence_mask(shape1, default_context(), 2.1)
     check_sequence_mask(shape2, default_context(), 0.1)
 
+def unittest_warp(data_shape, only_grid, check_gradient_shape):
+    
+    def warp_forward_numpy(data, grid, only_grid):
+
+        batchsize = data.shape[0]
+        height = data.shape[1]
+        width = data.shape[2]
+        num_channel = data.shape[3]
+        out = np.zeros(data.shape)
+
+        for i in range(batchsize):
+            for yout in range(height):
+                for xout in range(width):
+
+                    x_displacement = grid[i,yout,xout,0]
+                    y_displacement = grid[i,yout,xout,1]
+
+                    xcoord = x_displacement + xout
+                    ycoord = y_displacement + yout
+
+                    xInTopLeft = int(floor(xcoord))
+                    xWeightTopLeft = max(0, 1-abs(xcoord - xInTopLeft))
+
+                    yInTopLeft = int(floor(ycoord))
+                    yWeightTopLeft = max(0, 1-abs(ycoord - yInTopLeft))
+
+                    TopLefIsIn = xInTopLeft >= 0 and xInTopLeft <= width-1 and yInTopLeft >= 0 and yInTopLeft <= height-1;
+                    TopRightIsIn = xInTopLeft + 1>= 0 and xInTopLeft + 1 <= width-1 and yInTopLeft >= 0 and yInTopLeft <= height-1;
+                    BottomLeftIsIn = xInTopLeft >= 0 and xInTopLeft <= width-1 and yInTopLeft+1 >= 0 and yInTopLeft+1 <= height-1;
+                    BottomRightIsIn = xInTopLeft+1 >= 0 and xInTopLeft+1 <= width-1 and yInTopLeft+1 >= 0 and yInTopLeft+1 <= height-1;
+
+                    inTopLeft = 0
+                    inTopRight = 0
+                    inBottomLeft = 0
+                    inBottomRight = 0
+
+                    for channel in range(num_channel):
+
+                        if (TopLefIsIn): inTopLeft = data[i,yInTopLeft, xInTopLeft,channel]
+                        if (TopRightIsIn): inTopRight = data[i,yInTopLeft, xInTopLeft+1, channel]
+                        if (BottomLeftIsIn): inBottomLeft = data[i,yInTopLeft+1, xInTopLeft, channel]
+                        if (BottomRightIsIn): inBottomRight = data[i,yInTopLeft+1, xInTopLeft+1, channel]
+
+                        out[i,yout,xout,channel] = xWeightTopLeft * yWeightTopLeft * inTopLeft\
+                             +  (1-xWeightTopLeft)*yWeightTopLeft * inTopRight\
+                             +  xWeightTopLeft * (1-yWeightTopLeft) * inBottomLeft\
+                            +(1-xWeightTopLeft) * (1-yWeightTopLeft) * inBottomRight
+        return out
+
+
+    def warp_backward_numpy(out_grad, data, grid, only_grid):
+
+        data_grad = np.zeros(data.shape)
+        grid_grad = np.zeros(grid.shape)
+
+        batchsize = data.shape[0]
+        height = data.shape[1]
+        width = data.shape[2]
+        num_channel = data.shape[3]
+
+        for i in range(batchsize):
+            for yout in range(height):
+                for xout in range(width):
+
+                    x_displacement = grid[i,yout,xout,0]
+                    y_displacement = grid[i,yout,xout,1]
+
+                    xcoord = x_displacement + xout
+                    ycoord = y_displacement + yout
+
+                    xInTopLeft = int(floor(xcoord))
+                    xWeightTopLeft = max(0, 1-abs(xcoord - xInTopLeft))
+
+                    yInTopLeft = int(floor(ycoord))
+                    yWeightTopLeft = max(0, 1-abs(ycoord - yInTopLeft))
+
+                    TopLefIsIn = xInTopLeft >= 0 and xInTopLeft <= width-1 and yInTopLeft >= 0 and yInTopLeft <= height-1;
+                    TopRightIsIn = xInTopLeft + 1>= 0 and xInTopLeft + 1 <= width-1 and yInTopLeft >= 0 and yInTopLeft <= height-1;
+                    BottomLeftIsIn = xInTopLeft >= 0 and xInTopLeft <= width-1 and yInTopLeft+1 >= 0 and yInTopLeft+1 <= height-1;
+                    BottomRightIsIn = xInTopLeft+1 >= 0 and xInTopLeft+1 <= width-1 and yInTopLeft+1 >= 0 and yInTopLeft+1 <= height-1;
+
+                    inTopLeft = 0
+                    inTopRight = 0
+                    inBottomLeft = 0
+                    inBottomRight = 0
+
+                    topLeftDotProduct = 0
+                    topRightDotProduct = 0
+                    bottomLeftDotProduct = 0
+                    bottomRightDotProduct = 0
+                    for channel in range(num_channel):
+
+                        if (TopLefIsIn):
+                            topLeftDotProduct += data[i,yInTopLeft, xInTopLeft, channel] * out_grad[i,yout,xout,channel]
+                            if (only_grid==False):
+                                data_grad[i,yInTopLeft, xInTopLeft, channel] += xWeightTopLeft * yWeightTopLeft * out_grad[i,yout,xout,channel]
+
+                        if (TopRightIsIn):
+                            topRightDotProduct += data[i,yInTopLeft,xInTopLeft+1, channel]* out_grad[i,yout,xout,channel]
+                            if (only_grid==False):
+                                data_grad[i,yInTopLeft, xInTopLeft+1, channel] += (1-xWeightTopLeft) * yWeightTopLeft * out_grad[i,yout,xout,channel]
+
+                        if (BottomLeftIsIn):
+                            bottomLeftDotProduct += data[i,yInTopLeft+1, xInTopLeft,channel] * out_grad[i,yout,xout,channel]
+                            if (only_grid==False):
+                                data_grad[i,yInTopLeft+1,xInTopLeft, channel]+=xWeightTopLeft * (1-yWeightTopLeft)* out_grad[i,yout,xout,channel]
+
+                        if (BottomRightIsIn):
+                            bottomRightDotProduct += data[i,yInTopLeft+1, xInTopLeft+1,channel] * out_grad[i,yout,xout,channel]
+                            if (only_grid==False):
+                                data_grad[i,yInTopLeft+1,xInTopLeft+1, channel]+= (1-xWeightTopLeft)*(1-yWeightTopLeft)*out_grad[i,yout,xout,channel]
+
+                    yf = -xWeightTopLeft * topLeftDotProduct + xWeightTopLeft*bottomLeftDotProduct - (1-xWeightTopLeft)* topRightDotProduct + (1-xWeightTopLeft)*bottomRightDotProduct
+                    xf = -yWeightTopLeft * topLeftDotProduct + yWeightTopLeft*topRightDotProduct -(1-yWeightTopLeft)*bottomLeftDotProduct + (1-yWeightTopLeft)*bottomRightDotProduct
+                    grid_grad[i,yout,xout,0] = xf
+                    grid_grad[i,yout,xout,1] = yf
+                    
+        return data_grad, grid_grad
+    
+    # input shape
+    img2_shape = data_shape
+    flow_shape = data_shape[:3] + (2,)
+    # symbol
+    img2 = mx.sym.Variable('img2')
+    flow = mx.sym.Variable('flow')
+    net = mx.sym.Warp(data=img2,grid=flow,only_grid=only_grid)
+
+    #gradient check   
+    if only_grid==False:
+        
+        img2 = mx.random.uniform(-100,100,check_gradient_shape)
+        flow = mx.random.uniform(-2,2,check_gradient_shape[:3] + (2,))
+        
+        # the gradient isn't a continuous function, please refer to Supplementary Material for FlowNet 2.0: Evolution of Optical Flow Estimation with Deep Networks
+        # therefore we use a big check_eps 
+        mx.test_utils.check_numeric_gradient(net,{'img2':img2.asnumpy(),'flow':flow.asnumpy()},ctx=mx.gpu(),numeric_eps=1e-2, check_eps=1e-1)
+        mx.test_utils.check_numeric_gradient(net,{'img2':img2.asnumpy(),'flow':flow.asnumpy()},ctx=mx.cpu(),numeric_eps=1e-2, check_eps=1e-1)
+
+    exe_gpu = net.simple_bind(ctx=mx.gpu(),img2 =img2_shape, flow=flow_shape)
+    exe_cpu = net.simple_bind(ctx=mx.cpu(),img2 =img2_shape, flow=flow_shape)
+
+    img2 = np.random.randint(-100,100,size=img2_shape)
+    flow = np.random.randint(-100,100,size=flow_shape)
+
+    exe_gpu.arg_dict['img2'][:] = img2.copy()
+    exe_gpu.arg_dict['flow'][:] = flow.copy()
+
+    exe_cpu.arg_dict['img2'][:] = img2.copy()
+    exe_cpu.arg_dict['flow'][:] = flow.copy()
+
+    # gpu forward
+    exe_gpu.forward()
+    # cpu forward
+    exe_cpu.forward()
+    # numpy forward
+    numpy_output = warp_forward_numpy(data=img2, grid=flow, only_grid=only_grid)
+
+    assert mx.test_utils.reldiff(exe_gpu.outputs[0].asnumpy(), exe_cpu.outputs[0].asnumpy())<1e-6
+    assert mx.test_utils.reldiff(exe_gpu.outputs[0].asnumpy(), numpy_output)<1e-6
+
+    out_grad = np.random.uniform(-100,100,img2_shape)
+
+    # gpu backward
+    exe_gpu.backward(mx.nd.array(out_grad,ctx=mx.gpu()))
+    # cpu backward
+    exe_cpu.backward(mx.nd.array(out_grad,ctx=mx.cpu()))
+    # numpy backward
+    data_grad,grid_grad = warp_backward_numpy(out_grad,img2,flow,only_grid)
+
+    assert mx.test_utils.reldiff(exe_gpu.grad_dict['img2'].asnumpy(),exe_cpu.grad_dict['img2'].asnumpy())<1e-6
+    assert mx.test_utils.reldiff(exe_gpu.grad_dict['img2'].asnumpy(), data_grad) <1e-6
+    assert mx.test_utils.reldiff(exe_gpu.grad_dict['flow'].asnumpy(),grid_grad)<1e-6
+
+def test_warp():
+    
+    test_case =[
+        [(1,12,24,3), False, (1,12,15,10)],
+        [(1,35,48,15), False, (1, 4, 8, 11)],
+        [(1,32,10,21), True, (1, 4, 8, 15)],
+        [(1,10,13,1), True, (1, 4, 8, 12)],
+        [(1,2,4,1),False,(1,3,3,3)],
+        [(1,3,5,2),False,(1,10,10,1)]
+    ]
+    
+    for item in test_case:
+        unittest_warp(data_shape=item[0], only_grid=item[1], check_gradient_shape=item[2])
+
 if __name__ == '__main__':
     test_expand_dims()
     test_slice_axis()
@@ -1664,3 +1852,4 @@ if __name__ == '__main__':
     test_instance_normalization()
     test_l2_normalization()
     test_sequence_mask()
+    test_warp()
