@@ -7,10 +7,16 @@ def test_attr_basic():
     with mx.AttrScope(group='4', data='great'):
         data = mx.symbol.Variable('data',
                                   attr={'dtype':'data',
-                                        'group': '1'})
+                                        'group': '1',
+                                        'force_mirroring': 'True'},
+                                  lr_mult=1)
         gdata = mx.symbol.Variable('data2')
     assert gdata.attr('group') == '4'
     assert data.attr('group') == '1'
+    assert data.attr('lr_mult') == '1'
+    assert data.attr('__lr_mult__') == '1'
+    assert data.attr('force_mirroring') == 'True'
+    assert data.attr('__force_mirroring__') == 'True'
     data2 = pkl.loads(pkl.dumps(data))
     assert data.attr('dtype') == data2.attr('dtype')
 
@@ -43,17 +49,17 @@ def contain(x, y):
 def test_list_attr():
     data = mx.sym.Variable('data', attr={'mood': 'angry'})
     op = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
-                            num_filter=1, attr={'__mood__': 'so so'})
-    assert contain({'__mood__': 'so so'}, op.list_attr())
+                            num_filter=1, attr={'__mood__': 'so so', 'wd_mult': 'x'})
+    assert contain({'__mood__': 'so so', 'wd_mult': 'x', '__wd_mult__': 'x'}, op.list_attr())
 
 def test_attr_dict():
     data = mx.sym.Variable('data', attr={'mood': 'angry'})
     op = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
-                            num_filter=1, attr={'__mood__': 'so so'})
+                            num_filter=1, attr={'__mood__': 'so so'}, lr_mult=1)
     assert contain({
         'data': {'mood': 'angry'},
         'conv_weight': {'__mood__': 'so so'},
-        'conv': {'kernel': '(1, 1)', '__mood__': 'so so', 'num_filter': '1'},
+        'conv': {'kernel': '(1, 1)', '__mood__': 'so so', 'num_filter': '1', 'lr_mult': '1', '__lr_mult__': '1'},
         'conv_bias': {'__mood__': 'so so'}}, op.attr_dict())
 
 if __name__ == '__main__':

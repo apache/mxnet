@@ -3,7 +3,6 @@
  * \file c_api_symbolic.cc
  * \brief C API of mxnet
  */
-
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
 #include <nnvm/c_api.h>
@@ -19,8 +18,13 @@ void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
 }
 const std::vector<std::string> kHiddenKeys = {
-  "ctx_group", "lr_mult", "wd_mult", "__force_mirroring__"
+  "ctx_group", "lr_mult", "wd_mult", "force_mirroring"
 };
+const std::vector<std::string> kReplacedHiddenKeys = {
+  "__ctx_group__", "__lr_mult__", "__wd_mult__", "__force_mirroring__"
+};
+const char *kNamespaceSeparator = "$";
+
 
 DMLC_JSON_ENABLE_ANY(int, int);
 
@@ -163,42 +167,108 @@ int MXSymbolGetAttr(SymbolHandle symbol,
                     const char* key,
                     const char** out,
                     int* success) {
-  return NNSymbolGetAttr(symbol, key, out, success);
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  if (s->GetAttr(key, &(ret->ret_str))) {
+    *out = (ret->ret_str).c_str();
+    *success = 1;
+  } else {
+    *out = nullptr;
+    *success = 0;
+    if (std::find(kHiddenKeys.begin(), kHiddenKeys.end(), key) != kHiddenKeys.end()) {
+      std::string skey = "__" + std::string(key) + "__";
+      if (s->GetAttr(skey, &(ret->ret_str))) {
+        *out = (ret->ret_str).c_str();
+        *success = 1;
+      }
+    }
+  }
+  API_END();
 }
 
 int MXSymbolSetAttr(SymbolHandle symbol,
                     const char* key,
                     const char* value) {
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
   API_BEGIN();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  std::string skey(key), sval(value);
   for (const auto &k : kHiddenKeys) {
-    std::string tmp(key);
-    size_t pos = tmp.rfind(k);
-    if (pos == 0) {
-      tmp = "__" + tmp + "__";
-      const char *tkey = tmp.c_str();
-      return NNSymbolSetAttrs(symbol, 1, &tkey, &value);
-    } else if (pos != std::string::npos && pos == tmp.length() - k.length()) {
+    size_t pos = skey.rfind(k);
+    if (pos == 0 && k.length() == skey.length()) {
+      skey = "__" + skey + "__";
+      break;
+    } else if (pos != std::string::npos && pos + k.length() == skey.length()) {
       std::ostringstream os;
       os << "setting variable attributes with " << key << " is deprecated. "
          << "please instead use\nw = Variable(" << k << "=" << value << ")\n"
-         << "sym = YourSymbolName(" << tmp.substr(0, pos-1) << "=w)";
+         << "sym = YourSymbolName(" << skey.substr(0, pos-1) << "=w)";
       throw dmlc::Error(os.str());
     }
   }
-  return NNSymbolSetAttrs(symbol, 1, &key, &value);
+  kwargs.emplace_back(std::make_pair(std::move(skey), std::move(sval)));
+  s->SetAttrs(kwargs);
   API_END();
 }
 
 int MXSymbolListAttr(SymbolHandle symbol,
                      mx_uint *out_size,
                      const char*** out) {
-  return NNSymbolListAttrs(symbol, 0, out_size, out);
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::vector<std::tuple<std::string, std::string, std::string> > attr =
+      s->ListAttrsRecursive();
+
+  std::vector<std::string>& attr_list = ret->ret_vec_str;
+  attr_list.clear();
+  for (const auto& tp : attr) {
+    attr_list.emplace_back(std::get<0>(tp) + kNamespaceSeparator + std::get<1>(tp));
+    attr_list.emplace_back(std::get<2>(tp));
+    if (find(kReplacedHiddenKeys.begin(), kReplacedHiddenKeys.end(), std::get<1>(tp))
+          != kReplacedHiddenKeys.end()) {
+      attr_list.push_back(std::get<0>(tp) + kNamespaceSeparator +
+                          std::get<1>(tp).substr(2, std::get<1>(tp).length() - 4));
+      attr_list.push_back(std::get<2>(tp));
+    }
+  }
+  *out_size = attr_list.size()/2;
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < attr_list.size(); ++i) {
+    ret->ret_vec_charp.push_back(attr_list[i].c_str());
+  }
+  *out = dmlc::BeginPtr(ret->ret_vec_charp);
+  API_END();
 }
 
 int MXSymbolListAttrShallow(SymbolHandle symbol,
                             mx_uint *out_size,
                             const char*** out) {
-  return NNSymbolListAttrs(symbol, 1, out_size, out);
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::unordered_map<std::string, std::string> attr =
+      s->ListAttrs(static_cast<nnvm::Symbol::ListAttrOption>(1));  // NOLINT(*)
+
+  std::vector<std::string>& attr_list = ret->ret_vec_str;
+  attr_list.clear();
+  for (const auto& kv : attr) {
+    attr_list.push_back(kv.first);
+    attr_list.push_back(kv.second);
+    if (find(kReplacedHiddenKeys.begin(), kReplacedHiddenKeys.end(), kv.first)
+          != kReplacedHiddenKeys.end()) {
+      attr_list.push_back(kv.first.substr(2, kv.first.length() - 4));
+      attr_list.push_back(kv.second);
+    }
+  }
+  *out_size = attr_list.size()/2;
+  ret->ret_vec_charp.clear();
+  for (size_t i = 0; i < attr_list.size(); ++i) {
+    ret->ret_vec_charp.push_back(attr_list[i].c_str());
+  }
+  *out = dmlc::BeginPtr(ret->ret_vec_charp);
+  API_END();
 }
 
 int MXSymbolListOutputs(SymbolHandle symbol,
@@ -444,7 +514,7 @@ int MXSymbolInferType(SymbolHandle sym,
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
   }
 
-  g = nnvm::pass::InferType(std::move(g), arg_types);
+  g = nnvm::pass::InferType(std::move(g), arg_types, "__dtype__");
   // copy back
   CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::DTypeVector>("dtype"),
            &(ret->arg_types), &(ret->out_types), &(ret->aux_types));
