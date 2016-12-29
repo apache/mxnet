@@ -955,7 +955,7 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
 
-def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None):
+def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None):
     """Create a symbolic variable with specified name.
 
     Parameters
@@ -968,6 +968,12 @@ def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None):
         Optionally, one can specify the shape of a variable. This will be used during
         shape inference. If user specified a different shape for this variable using
         keyword argument when calling shape inference, this shape information will be ignored.
+    lr_mult : float
+        Specify learning rate muliplier for this variable.
+    wd_mult : float
+        Specify weight decay muliplier for this variable.
+    dtype : str or numpy.dtype
+        Similar to shape, we can specify dtype for this variable.
 
     Returns
     -------
@@ -987,6 +993,8 @@ def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None):
         attr['__lr_mult__'] = str(lr_mult)
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
+    if dtype is not None:
+        attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     ret._set_attr(**attr)
     return ret
 
