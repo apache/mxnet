@@ -182,7 +182,6 @@ class BucketingModule(BaseModule):
         symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list)
-        module.layout_mapper = self.layout_mapper
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None, grad_req=grad_req)
         self._curr_module = module
@@ -210,7 +209,6 @@ class BucketingModule(BaseModule):
             module = Module(symbol, data_names, label_names,
                             logger=self.logger, context=self._context,
                             work_load_list=self._work_load_list)
-            module.layout_mapper = self.layout_mapper
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
                         force_rebind=False, shared_module=self._curr_module)

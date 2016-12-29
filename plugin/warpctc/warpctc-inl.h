@@ -120,7 +120,7 @@ class WarpCTCOp : public Operator {
     TBlob data = in_data[warpctc_enum::kData];
     TBlob label = in_data[warpctc_enum::kLabel];
     CHECK_EQ(data.shape_.ndim(), 2) << "input data shape should be 2 (t*n, p)";
-    ctcComputeInfo info;
+    ctcComputeInfo info; // please build warp-ctc with commit 5bfb46e (cd warp-ctc && git checkout 5bfb46e) NOLINT(*)
     if (data.dev_mask_ == cpu::kDevMask) {
       info.loc = CTC_CPU;
       info.num_threads = 1;

@@ -39,7 +39,7 @@ if __name__ == '__main__':
         # train
         batch_size     = 128,
         num_epochs     = 300,
-        lr             = .1,
+        lr             = .05,
         lr_step_epochs = '200,250',
     )
     args = parser.parse_args()

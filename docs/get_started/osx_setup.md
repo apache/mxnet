@@ -39,17 +39,58 @@ Install the dependencies, required for MXNet, with the following commands:
 ```
 After you have installed the dependencies, use one of the following options to pull the MXNet source code from Git and build MXNet. Both options produce a library called ```libmxnet.so```.
 
+### Prepare Environment for GPU Installation
+
+If you plan to build with GPU, you need to set up environemtn for CUDA and cuDNN.
+
+First download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
+
+Once you have the CUDA Toolkit installed you will need to setup the required environment variables by adding the following to your ~/.bash_profile file:
+
+```bash
+    export CUDA_HOME=/usr/local/cuda
+    export DYLD_LIBRARY_PATH="$CUDA_HOME/lib:$DYLD_LIBRARY_PATH"
+    export PATH="$CUDA_HOME/bin:$PATH"
+```
+
+Reload ~/.bash_profile file and install dependecies:
+```bash
+    . ~/.bash_profile
+    brew install coreutils
+    brew tap caskroom/cask
+```
+
+Then download [cuDNN 5](https://developer.nvidia.com/cudnn).
+
+Unzip the file and change to cudnn root directory. Move the header files and libraries to your local CUDA Toolkit folder:
+
+```bash
+    $ sudo mv include/cudnn.h /Developer/NVIDIA/CUDA-8.0/include/
+    $ sudo mv lib/libcudnn* /Developer/NVIDIA/CUDA-8.0/lib
+    $ sudo ln -s /Developer/NVIDIA/CUDA-8.0/lib/libcudnn* /usr/local/cuda/lib/
+```
+
+Now we can start to build MXNet.
+
 **Option 1** Use the following commands to pull MXNet source code and build MXNet. The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
 
 ```bash
-  git clone --recursive https://github.com/dmlc/mxnet
-  cd mxnet
-  cp make/osx.mk ./config.mk
-  echo "USE_BLAS = openblas" >> ./config.mk
-  echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
-  echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib" >> ./config.mk
-  echo "ADD_LDFLAGS += -L/usr/local/lib/graphviz/" >> ./config.mk
-  make -j$(sysctl -n hw.ncpu)
+    git clone --recursive https://github.com/dmlc/mxnet
+    cd mxnet
+    cp make/osx.mk ./config.mk
+    echo "USE_BLAS = openblas" >> ./config.mk
+    echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
+    echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib" >> ./config.mk
+    echo "ADD_LDFLAGS += -L/usr/local/lib/graphviz/" >> ./config.mk
+    make -j$(sysctl -n hw.ncpu)
+```
+
+If building with GPU, add the following configuration to config.mk and build:
+```bash
+    echo "USE_CUDA = 1" >> ./config.mk
+    echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
+    echo "USE_CUDNN = 1" >> ./config.mk
+    make
 ```
 **Note:** To change build parameters, edit ```config.mk```.
 
@@ -57,9 +98,9 @@ After you have installed the dependencies, use one of the following options to p
 To generate an [Xcode](https://en.wikipedia.org/wiki/Xcode) project from MXNet source code, use the ```cmake``` command. Then, build MXNet using the Xcode IDE.
 
 ```bash
-  mkdir build; cd build
+    mkdir build; cd build
 
-  cmake -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_CONFIGURATION_TYPES="Release" -DUSE_OPENMP="OFF" -DUSE_CUDNN="OFF" -DUSE_CUDA="OFF" -DBLAS=MKL ..
+    cmake -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_CONFIGURATION_TYPES="Release" -DUSE_OPENMP="OFF" -DUSE_CUDNN="OFF" -DUSE_CUDA="OFF" -DBLAS=MKL ..
 ```
 
 After running the ```cmake``` command, use Xcode to open ```mxnet.xcodeproj```, change the following build settings flags, and build the project:
@@ -137,13 +178,13 @@ For OS X (Mac) users, MXNet provides a prebuilt binary package for CPUs. The pre
 Run the following commands to install the MXNet dependencies and build the MXNet R package.
 
 ```r
-  Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 ```
 ```bash
-  cd R-package
-  Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
-  cd ..
-  make rpkg
+    cd R-package
+    Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+    cd ..
+    make rpkg
 ```
 
 **Note:** R-package is a folder in the MXNet source.
@@ -179,7 +220,7 @@ For more details about installing and using MXNet with Julia, see the [MXNet Jul
 Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
 
 ```bash
-  make scalapkg
+    make scalapkg
 ```
 
 This command creates the JAR files for the assembly, core, and example modules. It also creates the native library in the ```native/{your-architecture}/target directory```, which you can use to cooperate with the core module.
@@ -187,7 +228,7 @@ This command creates the JAR files for the assembly, core, and example modules. 
 To install the MXNet Scala package into your local Maven repository, run the following command from the MXNet source root directory:
 
 ```bash
-  make scalainstall
+    make scalainstall
 ```
 
 ## Next Steps
