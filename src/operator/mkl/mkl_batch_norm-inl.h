@@ -143,15 +143,16 @@ class MKLBatchNormOp : public Operator {
       out = mkl_experimental_direct_get<xpu, 4, DType>(out_data[batchnorm::kOut], s);
     }
 
-    const real_t scale = static_cast<real_t>(in_data[batchnorm::kData].shape_[1]) /
-      static_cast<real_t>(in_data[batchnorm::kData].shape_.Size());
+    // const real_t scale = static_cast<real_t>(in_data[batchnorm::kData].shape_[1]) /
+    //   static_cast<real_t>(in_data[batchnorm::kData].shape_.Size());
 
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> bias = in_data[batchnorm::kBeta].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, DType>(s);
 
-    if (param_.fix_gamma)   slope = 1.f;
+    if (param_.fix_gamma)
+      slope = 1.f;
 
     dnnError_t e;
     if (!init_mkldnn_) {
