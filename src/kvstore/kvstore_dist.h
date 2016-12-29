@@ -283,8 +283,8 @@ class KVStoreDist : public KVStoreLocal {
         pskv.size = 0;
         for (int i = 0; i < num_servers; ++i) {
           size_t part_size =
-              static_cast<size_t>(static_cast<double>(size)/num_servers*(i+1)) -
-              static_cast<size_t>(static_cast<double>(size)/num_servers*i);
+              static_cast<size_t>(round(static_cast<double>(size)/num_servers*(i+1))) -
+              static_cast<size_t>(round(static_cast<double>(size)/num_servers*i));
           ps::Key ps_key = krs[i].begin() + key;
           CHECK_LT(ps_key, krs[i].end());
           pskv.keys.push_back(ps_key);
