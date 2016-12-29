@@ -46,3 +46,5 @@ and decoding will be automatically run in parallel.
 - Layout support is added. Use `mx.io.DataDesc(..., layout='NHWC')` in provide_data to specify data layout. use `mx.sym.YourSymbol(..., __layout__='NHWC')` to specify output layout. `layout` option is now available for Convolution layer.
 - element_mask is removed. Please use src*mask.reshape((mask.size, 1, 1, ..., 1)) directly as binary ops now support broadcasting.
 - sum_axis, max_axis, and min_axis are deprecated. Please use mx.nd.max(src, axis=n) instead.
+- symbol attributes are now limited to ctx_group, lr_mult, wd_mult, force_mirroring. All other custom attributes need to be in __xxx__ format (start and end with double underscore) or error will be triggered during attribute parsing.
+
