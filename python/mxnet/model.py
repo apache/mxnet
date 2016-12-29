@@ -208,6 +208,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         executor_manager.install_monitor(monitor)
 
     executor_manager.set_params(arg_params, aux_params)
+    opt_params = dict()
 
     if not update_on_kvstore:
         updater = get_updater(optimizer)
@@ -285,8 +286,9 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
         if epoch_end_callback or epoch + 1 == end_epoch:
             executor_manager.copy_to(arg_params, aux_params)
+            optimizer.copy_states_to(opt_params)
 
-        _multiple_callbacks(epoch_end_callback, epoch, symbol, arg_params, aux_params)
+        _multiple_callbacks(epoch_end_callback, epoch, symbol, arg_params, aux_params, opt_params)
 
         # evaluation
         if eval_data:
@@ -315,7 +317,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     return
 
 
-def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, opt_params=None):
     """Checkpoint the model data into file.
 
     Parameters
@@ -330,6 +332,8 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
+    opt_params : dict of str to NDArray
+        Optimizer states, dict of name to NDArray of optimizer's states.
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
@@ -340,6 +344,8 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
 
     save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
     save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
+    if opt_params is not None:
+        save_dict.update({('opt:%s' % k) : v.as_in_context(cpu()) for k, v in opt_params.items()})
     param_name = '%s-%04d.params' % (prefix, epoch)
     nd.save(param_name, save_dict)
     logging.info('Saved checkpoint to \"%s\"', param_name)
@@ -363,6 +369,8 @@ def load_checkpoint(prefix, epoch):
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
+    opt_params : dict of str to NDArray
+        Optimizer states, dict of name to NDArray of optimizer's states, e.g. momentum.
 
     Notes
     -----
@@ -373,13 +381,18 @@ def load_checkpoint(prefix, epoch):
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
     arg_params = {}
     aux_params = {}
+    opt_params = {}
     for k, v in save_dict.items():
         tp, name = k.split(':', 1)
         if tp == 'arg':
             arg_params[name] = v
         if tp == 'aux':
             aux_params[name] = v
-    return (symbol, arg_params, aux_params)
+        if tp == 'opt':
+            opt_params[name] = v
+    if len(opt_params) == 0:
+        opt_params = None
+    return (symbol, arg_params, aux_params, opt_params)
 
 from .callback import LogValidationMetricsCallback
 
@@ -410,6 +423,8 @@ class FeedForward(BASE_ESTIMATOR):
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray, optional
         Model parameter, dict of name to NDArray of net's auxiliary states.
+    opt_params : dict of str to NDArray, optional
+        Optimizer states, dict of name to NDArray of optimizer's states, e.g. momentum.
     allow_extra_params : boolean, optional
         Whether allow extra parameters that are not needed by symbol
         to be passed by aux_params and arg_params.
@@ -424,7 +439,7 @@ class FeedForward(BASE_ESTIMATOR):
                  num_epoch=None, epoch_size=None, optimizer='sgd',
                  initializer=Uniform(0.01),
                  numpy_batch_size=128,
-                 arg_params=None, aux_params=None,
+                 arg_params=None, aux_params=None, opt_params=None,
                  allow_extra_params=False,
                  begin_epoch=0,
                  **kwargs):
@@ -441,6 +456,9 @@ class FeedForward(BASE_ESTIMATOR):
         self.arg_params = arg_params
         self.aux_params = aux_params
         self.allow_extra_params = allow_extra_params
+
+        # optimizer states
+        self.opt_params = opt_params
 
         self.argument_checked = False
         if self.sym_gen is None:
@@ -790,6 +808,7 @@ class FeedForward(BASE_ESTIMATOR):
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(self.optimizer,
                                    rescale_grad=(1.0/batch_size),
+                                   loaded_states = self.opt_params,
                                    **(self.kwargs))
         elif isinstance(self.optimizer, opt.Optimizer):
             optimizer = self.optimizer
@@ -831,7 +850,11 @@ class FeedForward(BASE_ESTIMATOR):
         if epoch is None:
             epoch = self.num_epoch
         assert epoch is not None
-        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
+        if isinstance(self.optimizer, opt.Optimizer):
+            save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params, self.optimizer.states)
+        else :
+            save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
+
 
     @staticmethod
     def load(prefix, epoch, ctx=None, **kwargs):
@@ -858,9 +881,9 @@ class FeedForward(BASE_ESTIMATOR):
         - ``prefix-symbol.json`` will be saved for symbol.
         - ``prefix-epoch.params`` will be saved for parameters.
         """
-        symbol, arg_params, aux_params = load_checkpoint(prefix, epoch)
+        symbol, arg_params, aux_params, opt_params = load_checkpoint(prefix, epoch)
         return FeedForward(symbol, ctx=ctx,
-                           arg_params=arg_params, aux_params=aux_params,
+                           arg_params=arg_params, aux_params=aux_params, opt_params=opt_params,
                            begin_epoch=epoch,
                            **kwargs)
 
