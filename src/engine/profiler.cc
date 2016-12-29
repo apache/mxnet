@@ -68,7 +68,22 @@ OprExecStat *Profiler::AddOprStat(int dev_type, int dev_id) {
   opr_stat->dev_type = dev_type;
   opr_stat->dev_id   = dev_id;
 
-  int idx = (dev_type-1) * cpu_num_ + dev_id;
+  int idx;
+  switch (dev_type) {
+    case Context::kCPU:
+      idx = dev_id;
+      break;
+    case Context::kGPU:
+      idx = cpu_num_ + dev_id;
+      break;
+    case Context::kCPUPinned:
+      idx = cpu_num_ + gpu_num_;
+      break;
+    default:
+      LOG(FATAL) << "Unkown dev_type";
+      return NULL;
+  }
+
   DevStat& dev_stat = profile_stat[idx];
   dev_stat.opr_exec_stats.push_back(opr_stat);
 
