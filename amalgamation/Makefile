@@ -1,4 +1,5 @@
-export MXNET_ROOT=`pwd`/..
+export MXNET_ROOT=$(CURDIR)/..
+export NNVM_ROOT=$(CURDIR)/../nnvm
 # Change this to path of openblas
 export OPENBLAS_ROOT=${MXNET_ROOT}/../OpenBLAS
 # Change this to NNPACK path if you need
@@ -61,7 +62,14 @@ mxnet_predict-all.cc:  mxnet_predict0.d mxnet_predict0.cc
 	@echo "Generating amalgamation to " $@
 	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID) $(NNPACK) $(MKL2017)
 
-mxnet_predict-all.o: mxnet_predict-all.cc
+mxnet_predict-all.o:  mxnet_predict-all.cc
+	${CXX} ${CFLAGS} -fPIC -o $@ -c $+
+
+nnvm-all.cc:
+	cd ${NNVM_ROOT}/amalgamation/ && make nnvm-all.cc  && cd ${MXNET_ROOT}/amalgamation/ && cp ${NNVM_ROOT}/amalgamation/nnvm-all.cc ${MXNET_ROOT}/amalgamation/nnvm-all.cc  
+
+
+nnvm.o: nnvm-all.cc
 	${CXX} ${CFLAGS} -fPIC -o $@ -c $+
 
 libmxnet_predict.a: mxnet_predict-all.o
@@ -89,10 +97,10 @@ libmxnet_predict.js: mxnet_predict-all.cc
 	-s ALLOW_MEMORY_GROWTH=1
 
 
-${MXNET_ROOT}/lib/libmxnet_predict.so:  mxnet_predict-all.o
+${MXNET_ROOT}/lib/libmxnet_predict.so:  mxnet_predict-all.o nnvm.o
 	@mkdir -p ${MXNET_ROOT}/lib
 	${CXX} ${CFLAGS} -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 	ls -alh $@
 
 clean:
-	rm -f *.d *.o *.so *.a mxnet_predict-all.cc
+	rm -f *.d *.o *.so *.a mxnet_predict-all.cc nnvm-all.cc

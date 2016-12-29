@@ -4,7 +4,6 @@ sys.path.append("../../../amalgamation/python/")
 sys.path.append("../../../python/")
 
 from mxnet_predict import Predictor, load_ndarray_file
-import mxnet as mx
 import logging
 import numpy as np
 from skimage import io, transform

@@ -38,6 +38,7 @@
 #include "src/executor/inplace_addto_detect_pass.cc"
 
 // Operators
+#include "src/operator/operator.cc"
 #include "src/nnvm/legacy_json_util.cc"
 #include "src/nnvm/legacy_op_util.cc"
 
@@ -76,3 +77,9 @@
 //  C_API
 #include "src/c_api/c_predict_api.cc"
 #include "src/c_api/c_api_error.cc"
+
+//  MKLDNN
+#if MXNET_USE_MKL2017==1
+#include "mkl_cppwrapper.cc"
+#include "mkl_memory.cc"
+#endif
