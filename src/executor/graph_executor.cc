@@ -398,7 +398,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   arg_types.resize(idx.input_nodes().size(), -1);
   // other initializations
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
-  g = nnvm::pass::InferType(g, arg_types);
+  g = nnvm::pass::InferType(g, arg_types, "__dtype__");
   g = nnvm::ApplyPass(g, "PlanMemory");
   g = DetectInplaceAddTo(g);
   return g;
