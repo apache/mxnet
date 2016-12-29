@@ -196,7 +196,7 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
       return this->internal_ptr;
     }
 #if MKL_EXPERIMENTAL == 1
-    if (this->convert_to_int == NULL)  {
+    if (prv_ptr != NULL)  {
       // This section helps if padding needs to be added (or removed...)
       // TODO(intel): consider removing when no longer needed.
       std::shared_ptr<PrvMemDescr> prv_mem_descriptor = dnn_chunk->get_prv_descriptor();

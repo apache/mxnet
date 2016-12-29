@@ -37,7 +37,8 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
       break;
     }
   }
-  LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
+  if (enableMKLWarnGenerated())
+    LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   if ((param.dilate[0] == 1 && param.dilate[1] == 1)
