@@ -1,0 +1,36 @@
+
+libdc1394 error: Failed to initialize libdc1394
+INFO:root:Namespace(aug_level=1, batch_size=56, bn_mom=0.9, data_dir='/home/ubuntu/train/imagenet/data/lowq256/', data_type='imagenet', depth=34, frequent=50, gpus='0', kv_store='device', list_dir='./', lr=0.1, memonger=False, model_load_epoch=0, mom=0.9, num_classes=1000, num_examples=1281167, retrain=False, wd=0.0001, workspace=512)
+[02:17:00] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/train_256_q90.rec, use 4 threads for decoding..
+[02:17:01] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/val_256_q90.rec, use 4 threads for decoding..
+INFO:root:Start training with [gpu(0)]
+INFO:root:Epoch[0] Resetting Data Iterator
+INFO:root:Epoch[0] Time cost=18.378
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0001.params"
+INFO:root:Epoch[1] Resetting Data Iterator
+INFO:root:Epoch[1] Time cost=18.131
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0002.params"
+INFO:root:Epoch[2] Resetting Data Iterator
+INFO:root:Epoch[2] Time cost=18.121
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0003.params"
+INFO:root:Epoch[3] Resetting Data Iterator
+INFO:root:Epoch[3] Time cost=18.123
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0004.params"
+INFO:root:Epoch[4] Resetting Data Iterator
+INFO:root:Epoch[4] Time cost=18.117
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0005.params"
+INFO:root:Epoch[5] Resetting Data Iterator
+INFO:root:Epoch[5] Time cost=18.148
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0006.params"
+INFO:root:Epoch[6] Resetting Data Iterator
+INFO:root:Epoch[6] Time cost=18.142
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0007.params"
+INFO:root:Epoch[7] Resetting Data Iterator
+INFO:root:Epoch[7] Time cost=18.111
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0008.params"
+INFO:root:Epoch[8] Resetting Data Iterator
+INFO:root:Epoch[8] Time cost=18.141
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0009.params"
+INFO:root:Epoch[9] Resetting Data Iterator
+INFO:root:Epoch[9] Time cost=18.106
+INFO:root:Saved checkpoint to "model/resnet-imagenet-34-0-0010.params"

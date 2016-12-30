@@ -1,0 +1,218 @@
+Linux ip-172-31-25-9 3.13.0-100-generic #147-Ubuntu SMP Tue Oct 18 16:48:51 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+Linux ip-172-31-41-157 3.13.0-100-generic #147-Ubuntu SMP Tue Oct 18 16:48:51 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+Linux ip-172-31-41-156 3.13.0-100-generic #147-Ubuntu SMP Tue Oct 18 16:48:51 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+Linux ip-172-31-41-158 3.13.0-100-generic #147-Ubuntu SMP Tue Oct 18 16:48:51 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+Linux ip-172-31-41-155 3.13.0-100-generic #147-Ubuntu SMP Tue Oct 18 16:48:51 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+Linux ip-172-31-41-151 3.13.0-100-generic #147-Ubuntu SMP Tue Oct 18 16:48:51 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+Running on 6 machines
+libdc1394 error: Failed to initialize libdc1394
+libdc1394 error: Failed to initialize libdc1394
+libdc1394 error: Failed to initialize libdc1394
+libdc1394 error: Failed to initialize libdc1394
+libdc1394 error: Failed to initialize libdc1394
+INFO:root:Namespace(aug_level=1, batch_size=26, bn_mom=0.9, data_dir='/home/ubuntu/train/imagenet/data/lowq256/', data_type='imagenet', depth=50, frequent=50, gpus='0', kv_store='dist_sync_device', list_dir='./', lr=0.1, memonger=False, model_load_epoch=0, mom=0.9, num_classes=1000, num_examples=1281167, retrain=False, wd=0.0001, workspace=512)
+libdc1394 error: Failed to initialize libdc1394
+libdc1394 error: Failed to initialize libdc1394
+libdc1394 error: Failed to initialize libdc1394
+INFO:root:Namespace(aug_level=1, batch_size=26, bn_mom=0.9, data_dir='/home/ubuntu/train/imagenet/data/lowq256/', data_type='imagenet', depth=50, frequent=50, gpus='0', kv_store='dist_sync_device', list_dir='./', lr=0.1, memonger=False, model_load_epoch=0, mom=0.9, num_classes=1000, num_examples=1281167, retrain=False, wd=0.0001, workspace=512)
+INFO:root:Namespace(aug_level=1, batch_size=26, bn_mom=0.9, data_dir='/home/ubuntu/train/imagenet/data/lowq256/', data_type='imagenet', depth=50, frequent=50, gpus='0', kv_store='dist_sync_device', list_dir='./', lr=0.1, memonger=False, model_load_epoch=0, mom=0.9, num_classes=1000, num_examples=1281167, retrain=False, wd=0.0001, workspace=512)
+INFO:root:Namespace(aug_level=1, batch_size=26, bn_mom=0.9, data_dir='/home/ubuntu/train/imagenet/data/lowq256/', data_type='imagenet', depth=50, frequent=50, gpus='0', kv_store='dist_sync_device', list_dir='./', lr=0.1, memonger=False, model_load_epoch=0, mom=0.9, num_classes=1000, num_examples=1281167, retrain=False, wd=0.0001, workspace=512)
+INFO:root:Namespace(aug_level=1, batch_size=26, bn_mom=0.9, data_dir='/home/ubuntu/train/imagenet/data/lowq256/', data_type='imagenet', depth=50, frequent=50, gpus='0', kv_store='dist_sync_device', list_dir='./', lr=0.1, memonger=False, model_load_epoch=0, mom=0.9, num_classes=1000, num_examples=1281167, retrain=False, wd=0.0001, workspace=512)
+INFO:root:Namespace(aug_level=1, batch_size=26, bn_mom=0.9, data_dir='/home/ubuntu/train/imagenet/data/lowq256/', data_type='imagenet', depth=50, frequent=50, gpus='0', kv_store='dist_sync_device', list_dir='./', lr=0.1, memonger=False, model_load_epoch=0, mom=0.9, num_classes=1000, num_examples=1281167, retrain=False, wd=0.0001, workspace=512)
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/train_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/train_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/train_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/train_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/train_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/train_256_q90.rec, use 4 threads for decoding..
+[03:56:19] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/val_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/val_256_q90.rec, use 4 threads for decoding..
+[03:56:19] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/val_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/val_256_q90.rec, use 4 threads for decoding..
+[03:56:18] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/val_256_q90.rec, use 4 threads for decoding..
+[03:56:19] src/io/iter_image_recordio.cc:221: ImageRecordIOParser: /home/ubuntu/train/imagenet/data/lowq256/val_256_q90.rec, use 4 threads for decoding..
+INFO:root:Start training with [gpu(0)]
+INFO:root:Start training with [gpu(0)]
+INFO:root:Start training with [gpu(0)]
+INFO:root:Start training with [gpu(0)]
+INFO:root:Start training with [gpu(0)]
+INFO:root:Start training with [gpu(0)]
+INFO:root:Epoch[0] Resetting Data Iterator
+INFO:root:Epoch[0] Time cost=18.782
+INFO:root:Epoch[0] Resetting Data Iterator
+INFO:root:Epoch[0] Time cost=18.770
+INFO:root:Epoch[0] Resetting Data Iterator
+INFO:root:Epoch[0] Time cost=18.762
+INFO:root:Epoch[0] Resetting Data Iterator
+INFO:root:Epoch[0] Time cost=18.950
+INFO:root:Epoch[0] Resetting Data Iterator
+INFO:root:Epoch[0] Time cost=18.986
+INFO:root:Epoch[0] Resetting Data Iterator
+INFO:root:Epoch[0] Time cost=18.996
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0001.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0001.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0001.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0001.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0001.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0001.params"
+INFO:root:Epoch[1] Resetting Data Iterator
+INFO:root:Epoch[1] Time cost=19.116
+INFO:root:Epoch[1] Resetting Data Iterator
+INFO:root:Epoch[1] Time cost=18.885
+INFO:root:Epoch[1] Resetting Data Iterator
+INFO:root:Epoch[1] Time cost=19.105
+INFO:root:Epoch[1] Resetting Data Iterator
+INFO:root:Epoch[1] Time cost=19.110
+INFO:root:Epoch[1] Resetting Data Iterator
+INFO:root:Epoch[1] Time cost=19.015
+INFO:root:Epoch[1] Resetting Data Iterator
+INFO:root:Epoch[1] Time cost=18.946
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0002.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0002.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0002.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0002.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0002.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0002.params"
+INFO:root:Epoch[2] Resetting Data Iterator
+INFO:root:Epoch[2] Time cost=19.058
+INFO:root:Epoch[2] Resetting Data Iterator
+INFO:root:Epoch[2] Time cost=19.020
+INFO:root:Epoch[2] Resetting Data Iterator
+INFO:root:Epoch[2] Time cost=19.021
+INFO:root:Epoch[2] Resetting Data Iterator
+INFO:root:Epoch[2] Time cost=19.010
+INFO:root:Epoch[2] Resetting Data Iterator
+INFO:root:Epoch[2] Time cost=19.012
+INFO:root:Epoch[2] Resetting Data Iterator
+INFO:root:Epoch[2] Time cost=18.952
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0003.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0003.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0003.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0003.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0003.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0003.params"
+INFO:root:Epoch[3] Resetting Data Iterator
+INFO:root:Epoch[3] Time cost=18.995
+INFO:root:Epoch[3] Resetting Data Iterator
+INFO:root:Epoch[3] Time cost=19.005
+INFO:root:Epoch[3] Resetting Data Iterator
+INFO:root:Epoch[3] Resetting Data Iterator
+INFO:root:Epoch[3] Time cost=19.006
+INFO:root:Epoch[3] Time cost=19.007
+INFO:root:Epoch[3] Resetting Data Iterator
+INFO:root:Epoch[3] Time cost=18.802
+INFO:root:Epoch[3] Resetting Data Iterator
+INFO:root:Epoch[3] Time cost=19.151
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0004.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0004.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0004.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0004.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0004.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0004.params"
+INFO:root:Epoch[4] Resetting Data Iterator
+INFO:root:Epoch[4] Time cost=18.892
+INFO:root:Epoch[4] Resetting Data Iterator
+INFO:root:Epoch[4] Time cost=18.931
+INFO:root:Epoch[4] Resetting Data Iterator
+INFO:root:Epoch[4] Time cost=18.939
+INFO:root:Epoch[4] Resetting Data Iterator
+INFO:root:Epoch[4] Time cost=18.945
+INFO:root:Epoch[4] Resetting Data Iterator
+INFO:root:Epoch[4] Time cost=18.923
+INFO:root:Epoch[4] Resetting Data Iterator
+INFO:root:Epoch[4] Time cost=18.950
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0005.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0005.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0005.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0005.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0005.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0005.params"
+INFO:root:Epoch[5] Resetting Data Iterator
+INFO:root:Epoch[5] Time cost=18.801
+INFO:root:Epoch[5] Resetting Data Iterator
+INFO:root:Epoch[5] Resetting Data Iterator
+INFO:root:Epoch[5] Resetting Data Iterator
+INFO:root:Epoch[5] Time cost=18.824
+INFO:root:Epoch[5] Time cost=18.823
+INFO:root:Epoch[5] Resetting Data Iterator
+INFO:root:Epoch[5] Time cost=19.069
+INFO:root:Epoch[5] Resetting Data Iterator
+INFO:root:Epoch[5] Time cost=18.954
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0006.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0006.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0006.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0006.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0006.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0006.params"
+INFO:root:Epoch[6] Resetting Data Iterator
+INFO:root:Epoch[6] Time cost=18.647
+INFO:root:Epoch[6] Resetting Data Iterator
+INFO:root:Epoch[6] Time cost=18.785
+INFO:root:Epoch[6] Resetting Data Iterator
+INFO:root:Epoch[6] Time cost=18.894
+INFO:root:Epoch[6] Resetting Data Iterator
+INFO:root:Epoch[6] Time cost=19.057
+INFO:root:Epoch[6] Resetting Data Iterator
+INFO:root:Epoch[6] Time cost=19.003
+INFO:root:Epoch[6] Resetting Data Iterator
+INFO:root:Epoch[6] Time cost=18.953
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0007.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0007.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0007.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0007.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0007.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0007.params"
+INFO:root:Epoch[7] Resetting Data Iterator
+INFO:root:Epoch[7] Time cost=18.918
+INFO:root:Epoch[7] Resetting Data Iterator
+INFO:root:Epoch[7] Time cost=18.746
+INFO:root:Epoch[7] Resetting Data Iterator
+INFO:root:Epoch[7] Time cost=18.926
+INFO:root:Epoch[7] Resetting Data Iterator
+INFO:root:Epoch[7] Time cost=18.932
+INFO:root:Epoch[7] Resetting Data Iterator
+INFO:root:Epoch[7] Time cost=18.907
+INFO:root:Epoch[7] Resetting Data Iterator
+INFO:root:Epoch[7] Time cost=19.144
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0008.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0008.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0008.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0008.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0008.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0008.params"
+INFO:root:Epoch[8] Resetting Data Iterator
+INFO:root:Epoch[8] Time cost=18.852
+INFO:root:Epoch[8] Resetting Data Iterator
+INFO:root:Epoch[8] Time cost=18.856
+INFO:root:Epoch[8] Resetting Data Iterator
+INFO:root:Epoch[8] Resetting Data Iterator
+INFO:root:Epoch[8] Time cost=18.853
+INFO:root:Epoch[8] Time cost=18.851
+INFO:root:Epoch[8] Resetting Data Iterator
+INFO:root:Epoch[8] Time cost=19.045
+INFO:root:Epoch[8] Resetting Data Iterator
+INFO:root:Epoch[8] Time cost=18.958
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0009.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0009.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0009.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0009.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0009.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0009.params"
+INFO:root:Epoch[9] Resetting Data Iterator
+INFO:root:Epoch[9] Time cost=18.922
+INFO:root:Epoch[9] Resetting Data Iterator
+INFO:root:Epoch[9] Time cost=18.914
+INFO:root:Epoch[9] Resetting Data Iterator
+INFO:root:Epoch[9] Time cost=18.916
+INFO:root:Epoch[9] Resetting Data Iterator
+INFO:root:Epoch[9] Time cost=18.922
+INFO:root:Epoch[9] Resetting Data Iterator
+INFO:root:Epoch[9] Time cost=18.918
+INFO:root:Epoch[9] Resetting Data Iterator
+INFO:root:Epoch[9] Time cost=18.952
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-5-0010.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-0-0010.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-1-0010.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-2-0010.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-4-0010.params"
+INFO:root:Saved checkpoint to "model/resnet-imagenet-50-3-0010.params"
