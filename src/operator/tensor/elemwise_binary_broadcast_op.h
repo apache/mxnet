@@ -98,6 +98,67 @@ inline bool BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rsha
   return true;
 }
 
+#ifdef __CUDACC__
+
+template<int ndim, typename DType, typename OP, bool addto>
+__global__ void binary_broadcast_kernel(const int N, const DType *lhs,
+                                        const DType *rhs, DType *out,
+                                        const mshadow::Shape<ndim> lshape,
+                                        const mshadow::Shape<ndim> rshape,
+                                        const mshadow::Shape<ndim> oshape) {
+  for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += blockDim.x * gridDim.x) {
+    int i, j, k;
+    mshadow::Shape<ndim> coord;
+    for (i = ndim-1, j = idx; i >=0; --i) {
+      coord[i] = j % oshape[i];
+      j /= oshape[i];
+    }
+    for (i = 0, j = 0, k = 0; i < ndim; ++i) {
+      j = j * lshape[i] + (lshape[i] > 1) * coord[i];
+      k = k * rshape[i] + (rshape[i] > 1) * coord[i];
+    }
+    if (addto) {
+      out[idx] += OP::Map(lhs[j], rhs[k]);
+    } else {
+      out[idx] = OP::Map(lhs[j], rhs[k]);
+    }
+  }
+}
+
+
+template<typename xpu, int ndim, typename DType, typename OP>
+inline void BinaryBroadcastComputeImpl(const OpContext& ctx,
+                                              const std::vector<TBlob>& inputs,
+                                              const std::vector<OpReqType>& req,
+                                              const std::vector<TBlob>& outputs,
+                                              const TShape& new_lshape,
+                                              const TShape& new_rshape,
+                                              const TShape& new_oshape) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mshadow::cuda;
+  if (req[0] == kNullOp) return;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Shape<ndim> oshape = new_oshape.get<ndim>();
+  mshadow::Shape<ndim> lshape = new_lshape.get<ndim>();
+  mshadow::Shape<ndim> rshape = new_rshape.get<ndim>();
+  Tensor<gpu, ndim, DType> out = outputs[0].get_with_shape<xpu, ndim, DType>(oshape, s);
+  Tensor<gpu, ndim, DType> lhs = inputs[0].get_with_shape<xpu, ndim, DType>(lshape, s);
+  Tensor<gpu, ndim, DType> rhs = inputs[1].get_with_shape<xpu, ndim, DType>(rshape, s);
+  cudaStream_t stream = Stream<xpu>::GetStream(s);
+  int N = oshape.Size();
+  int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+  if (req[0] == kAddTo) {
+    binary_broadcast_kernel<ndim, DType, OP, true><<<ngrid, kBaseThreadNum, 0, stream>>>(
+      N, lhs.dptr_, rhs.dptr_, out.dptr_, lshape, rshape, oshape);
+  } else {
+    binary_broadcast_kernel<ndim, DType, OP, false><<<ngrid, kBaseThreadNum, 0, stream>>>(
+      N, lhs.dptr_, rhs.dptr_, out.dptr_, lshape, rshape, oshape);
+  }
+}
+
+#else
+
 template<typename xpu, int ndim, typename DType, typename OP>
 inline void BinaryBroadcastComputeImpl(const OpContext& ctx,
                                               const std::vector<TBlob>& inputs,
@@ -117,6 +178,7 @@ inline void BinaryBroadcastComputeImpl(const OpContext& ctx,
     inputs[1].get_with_shape<xpu, ndim, DType>(new_rshape.get<ndim>(), s);
   ASSIGN_DISPATCH(out, req[0], F<OP>(broadcast_to(lhs, new_oshape), broadcast_to(rhs, new_oshape)));
 }
+#endif
 
 template<typename xpu, typename OP>
 void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
