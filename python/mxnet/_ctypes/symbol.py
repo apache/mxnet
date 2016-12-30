@@ -193,6 +193,7 @@ def _make_atomic_symbol_function(handle, name):
 
     creator.__name__ = func_name
     creator.__doc__ = doc_str
+    creator.__module__ = 'mxnet.symbol'
     return creator
 
 
