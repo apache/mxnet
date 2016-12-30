@@ -38,7 +38,8 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
-      auto lhs = MakeGradNode("_backward_copy", n, ograds, {});
+      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+                              std::unordered_map<std::string, std::string>());
       nnvm::NodePtr ng = nnvm::Node::Create();
       ng->attrs.op = nnvm::Op::Get("_zeros");
       ng->attrs.name = "zeros";
