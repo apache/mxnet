@@ -99,8 +99,8 @@ Another way to attach attributes is to use ```AttrScope```. ```AttrScope``` auto
 **Components that use attributes**: More and more components are using symbol attributes to collect useful annotations for the computational graph. Here is a (probably incomplete) list:
 
 - ```Variable``` uses attributes to store (optional) shape information for a variable.
-- Optimizers read `lr_mult` and `wd_mult` attributes for each symbol in a computational graph. This is useful to control per-layer learning rate and decay.
-- The model parallelism LSTM example uses the `ctx_group` attribute to divide the operators into groups that correspond to GPU devices.
+- Optimizers read `__lr_mult__` and `__wd_mult__` attributes for each symbol in a computational graph. This is useful to control per-layer learning rate and decay.
+- The model parallelism LSTM example uses the `__ctx_group__` attribute to divide the operators into groups that correspond to GPU devices.
 
 ## Serialization
 

@@ -1,7 +1,6 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
-import ml.dmlc.mxnet.NDArray.{randomGaussian, randomUniform, empty}
 
 /**
  * Random Number interface of mxnet.
@@ -28,9 +27,10 @@ object Random {
       require(shape == null && ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      outCopy = empty(shape, ctx)
+      outCopy = NDArray.empty(shape, ctx)
     }
-    randomUniform(low, high, outCopy)
+    NDArray.genericNDArrayFunctionInvoke("_sample_uniform", Seq(low, high),
+      Map("shape" -> outCopy.shape, "out" -> outCopy))
   }
 
 
@@ -54,9 +54,10 @@ object Random {
       require(shape == null & ctx == null, "shape and ctx is not needed when out is specified.")
     } else {
       require(shape != null, "shape is required when out is not specified")
-      outCopy = empty(shape, ctx)
+      outCopy = NDArray.empty(shape, ctx)
     }
-    randomGaussian(loc, scale, outCopy)
+    NDArray.genericNDArrayFunctionInvoke("_sample_normal", Seq.empty[NDArray],
+      Map("loc" -> loc, "scale" -> scale, "shape" -> outCopy.shape, "out" -> outCopy))
   }
 
 

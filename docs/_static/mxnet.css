@@ -253,7 +253,6 @@ img {
     top: 15px;
     right: 155px;
     width: 140px;
-    z-index: -1;
 }
 
 .searchBox {
@@ -293,6 +292,7 @@ img {
         left: 50%;
         margin-left: -70px;
         right: initial;
+        z-index: -1;
     }
 }
 

@@ -19,7 +19,7 @@ def run_build_mxnet(folder):
 def build_r_docs(root_path):
     r_root = os.path.join(root_path, 'R-package')
     pdf_path = os.path.join(root_path, 'docs', 'api', 'r', 'mxnet-r-reference-manual.pdf')
-    subprocess.call('cd ' + r_root +'; R CMD Rd2pdf . --no-preview -o ' + pdf_path, shell = True)
+    subprocess.call('cd ' + r_root +'; R -e "roxygenize2::roxygenize()"; R CMD Rd2pdf . --no-preview -o ' + pdf_path, shell = True)
     dest_path = os.path.join(root_path, 'docs', '_build', 'html', 'api', 'r')
     subprocess.call('mkdir -p ' + dest_path, shell = True)
     subprocess.call('mv ' + pdf_path + ' ' + dest_path, shell = True)

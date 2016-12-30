@@ -28,7 +28,8 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
       break;
     }
   }
-  LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
+  if (enableMKLWarnGenerated())
+    LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConcatOp<cpu, DType>(param);

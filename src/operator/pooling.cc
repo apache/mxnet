@@ -31,7 +31,8 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
         break;
       }
     }
-    LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
+    if (enableMKLWarnGenerated())
+      LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.pool_type) {

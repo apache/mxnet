@@ -76,7 +76,7 @@ class UpSamplingNearestOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), param_.num_args);
+    CHECK_EQ(in_data.size(), static_cast<size_t>(param_.num_args));
     CHECK_EQ(out_data.size(), 1);
     if (req[up_enum::kOut] == kNullOp) {
       return;
@@ -116,7 +116,7 @@ class UpSamplingNearestOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_grad.size(), param_.num_args);
+    CHECK_EQ(in_grad.size(), static_cast<size_t>(param_.num_args));
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> grad = out_grad[up_enum::kOut].get<xpu, 4, DType>(s);
     if (param_.num_args > 1) {
@@ -316,4 +316,3 @@ class UpSamplingProp : public OperatorProperty {
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_UPSAMPLING_INL_H_
-
