@@ -10,6 +10,36 @@ These tutorials cover use cases and applications of MXNet, organized by type and
 
 ### Python
 
+#### Basics
+
+The following tutorials walks throught the basic usage of MXNet, including manipulating arrays, building networks, loading and preprocessing data, etc.
+
+- [CPU/GPU Array Manipulation](http://mxnet.io/tutorials/python/ndarray.html)
+*How to use `mxnet.ndarray` (similar to numpy array but supports GPU) for tensor computation. Also explains MXNet's powerful automatic parallelization feature.
+
+- [Neural Network Graphs](http://mxnet.io/tutorials/python/ndarray.html)
+*How to use `mxnet.symbol` for building neural network graphs. Introduces usage of basic operators (layers) and shows how to build new ones.
+
+- [Training and Inference with Module](http://mxnet.io/tutorials/python/module.html)
+*Train a simple deep neural network with the Module interface. The Module package provides intermediate-level and high-level interface for executing predefined networks.
+
+- [Mixing Array and Graphs (Advanced)](http://mxnet.io/tutorials/python/ndarray.html)
+*Show cases MXNet's signature support for mixing imperative and symbolic programming. Note that Module already provides a high-level interface by wrapping around these functionalities. So this tutorial is mainly for users who want to build things from scratches for extra flexibility.
+
+#### IO
+
+- [Data Loading](http://mxnet.io/tutorials/python/data.html)
+*How to write a data iterator to feed your custom data to Module (and other interfaces)
+
+- [Image IO](http://mxnet.io/tutorials/python/image_io.html)
+*How to prepare, load, and pre-process images for training image classification networks.
+
+- [Record IO (Advanced)](http://mxnet.io/tutorials/python/record_io.html)
+*How to pack free format data into a single binary file using MXNet's RecordIO format for easy and efficient IO.
+
+- [Custom Image IO (Advanced)](http://mxnet.io/tutorials/python/advanced_img_io.html)
+*How to use `mxnet.image` package to easily write high performance and flexible data pipeline. `mxnet.image` uses MXNet's dependency engine to bypass python's slowness so you don't have to use multiprocessing.
+
 #### Computer Vision
 
 The following tutorials explain how to develop applications that use machine learning to modify, classify, and segment images and video.
