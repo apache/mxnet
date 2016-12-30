@@ -99,7 +99,7 @@ class NDArray(NDArrayBase):
     NDArray is basic ndarray/Tensor like data structure in mxnet.
     """
     __slots__ = []
-    # pylint: disable= no-member
+    # pylint: disable= no-member, undefined-variable
     def __repr__(self):
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
