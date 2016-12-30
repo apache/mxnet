@@ -28,6 +28,7 @@ The committers are the granted write access to the project.
   - Chuntao is the initiator and provides the initial design of engine.
 * [Chiyuan Zhang](https://github.com/pluskid)
   - Chiyuan is the creator of MXNet Julia Package.
+* [Junyuan Xie](https://github.com/piiswrong)
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he makes mxnet available for R users.
 * [Tong He](https://github.com/hetong007)
@@ -45,7 +46,7 @@ who are willing to help maintaining and lead the project. Committers comes from 
 * Made substantial contribution to the project.
 * Willing to actively spent time on maintaining and lead the project.
 
-New committers will be proposed by current comitter memembers, with support from more than two of current comitters.
+New committers will be proposed by current committers, with support from more than two of current committers.
 
 List of Contributors
 --------------------
@@ -64,7 +65,6 @@ List of Contributors
 * [Shuzhe Wu](https://github.com/II-Matto)
 * [Xiaodong](https://github.com/XD-DENG)
 * [Nan Xiao](https://github.com/road2stat)
-* [Junyuan Xie](https://github.com/piiswrong)
 * [Wei Wu](https://github.com/tornadomeet)
 * [Michaël Benesty](https://github.com/pommedeterresautee)
   -Michaël contributes the R visualization module of mxnet
@@ -108,3 +108,15 @@ List of Contributors
 * [Depeng Liang](https://github.com/Ldpe2G)
 * [Kiko Qiu](https://github.com/kikoqiu)
 * [Yang Bo](https://github.com/Atry)
+* [Jonas Amaro](https://github.com/jonasrla)
+* [Yan Li](https://github.com/Godricly)
+* [Yuance Li](https://github.com/liyuance)
+* [Sandeep Krishnamurthy](https://github.com/sandeep-krishnamurthy)
+* [Andre Moeller](https://github.com/andremoeller)
+* [Miguel Gonzalez-Fierro](https://github.com/miguelgfierro)
+* [Mingjie Xing](https://github.com/EricFisher)
+* [Sebastian Bodenstein](https://github.com/sbodenstein)
+* [Chi Zhang](https://github.com/WellyZhang)
+* [Wei Wu](https://github.com/lazyparser)
+* [Shishi Duan](https://github.com/burness)
+* [Yu Du](https://github.com/Answeror)

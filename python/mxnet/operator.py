@@ -3,14 +3,18 @@
 """numpy interface for operators."""
 from __future__ import absolute_import
 
+import traceback
+
 from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
-from ctypes import c_void_p, cast, c_int, c_char, c_char_p, cast, c_bool
-c_int_p = POINTER(c_int)
+from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
+
 from .base import _LIB, check_call
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol
 from .ndarray import NDArray
+
+c_int_p = POINTER(c_int)
 
 class PythonOp(object):
     """Base class for operators implemented in python
@@ -211,10 +215,10 @@ class NumpyOp(PythonOp):
                                  None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
-        sym = symbol.Symbol._Native(*args,
-                                    info=cb_ptr,
-                                    need_top_grad=self.need_top_grad(),
-                                    **kwargs)
+        sym = symbol._internal._Native(*args,
+                                       info=cb_ptr,
+                                       need_top_grad=self.need_top_grad(),
+                                       **kwargs)
         # keep a reference of ourself in PythonOp so we don't get garbage collected.
         PythonOp._ref_holder.append(self)
         return sym
@@ -266,8 +270,8 @@ class NDArrayOp(PythonOp):
                         tensors[tags[i]].append(NDArray(cast(ndarraies[i], NDArrayHandle),
                                                         writable=False))
                 self.forward(in_data=tensors[0], out_data=tensors[1])
-            except Exception as e:
-                print('Error in NDArrayOp.forward: ', str(e))
+            except Exception:
+                print('Error in NDArrayOp.forward: %s' % traceback.format_exc())
                 return False
             return True
 
@@ -284,8 +288,8 @@ class NDArrayOp(PythonOp):
                                                         writable=False))
                 self.backward(in_data=tensors[0], out_data=tensors[1],
                               in_grad=tensors[2], out_grad=tensors[3])
-            except Exception as e:
-                print('Error in NDArrayOp.backward: ', str(e))
+            except Exception:
+                print('Error in NDArrayOp.backward: %s' % traceback.format_exc())
                 return False
             return True
 
@@ -305,8 +309,8 @@ class NDArrayOp(PythonOp):
                 for i in range(n_in+n_out):
                     tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
                     tensor_dims[i] = len(rshape[i])
-            except Exception as e:
-                print('Error in NDArrayOp.infer_shape: ', str(e))
+            except Exception:
+                print('Error in NDArrayOp.infer_shape: %s' % traceback.format_exc())
                 return False
             return True
 
@@ -317,8 +321,8 @@ class NDArrayOp(PythonOp):
                 ret = [c_str(i) for i in ret] + [c_char_p(0)]
                 ret = c_array(c_char_p, ret)
                 out[0] = cast(ret, POINTER(POINTER(c_char)))
-            except Exception as e:
-                print('Error in NDArrayOp.list_outputs: ', str(e))
+            except Exception:
+                print('Error in NDArrayOp.list_outputs: %s' % traceback.format_exc())
                 return False
             return True
 
@@ -329,8 +333,8 @@ class NDArrayOp(PythonOp):
                 ret = [c_str(i) for i in ret] + [c_char_p(0)]
                 ret = c_array(c_char_p, ret)
                 out[0] = cast(ret, POINTER(POINTER(c_char)))
-            except Exception as e:
-                print('Error in NDArrayOp.list_arguments: ', str(e))
+            except Exception:
+                print('Error in NDArrayOp.list_arguments: %s' % traceback.format_exc())
                 return False
             return True
 
@@ -344,8 +348,8 @@ class NDArrayOp(PythonOp):
                 num_dep[0] = len(rdeps)
                 rdeps = cast(c_array(c_int, rdeps), c_int_p)
                 deps[0] = rdeps
-            except Exception as e:
-                print('Error in NDArrayOp.declare_backward_dependency: ', str(e))
+            except Exception:
+                print('Error in NDArrayOp.declare_backward_dependency: %s' % traceback.format_exc())
                 return False
             return True
 
@@ -358,9 +362,9 @@ class NDArrayOp(PythonOp):
                                    None, None, None, None, None, None)
         cb_ptr = format(cast(pointer(self.info_), c_void_p).value, 'x')
         # pylint: disable=E1101
-        sym = symbol.Symbol._NDArray(*args,
-                                     info=cb_ptr,
-                                     **kwargs)
+        sym = symbol._internal._NDArray(*args,
+                                        info=cb_ptr,
+                                        **kwargs)
         # keep a reference of ourself in PythonOp so we don't get garbage collected.
         PythonOp._ref_holder.append(self)
         return sym
@@ -596,7 +600,7 @@ def register(reg_name):
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
             assert py_str(op_type) == reg_name
-            kwargs = dict([(keys[i], vals[i]) for i in range(argc)])
+            kwargs = dict([(py_str(keys[i]), py_str(vals[i])) for i in range(argc)])
             op_prop = prop_cls(**kwargs)
 
             def infer_shape_entry(num_tensor, tensor_dims,
@@ -627,8 +631,8 @@ def register(reg_name):
                         tensor_dims[i] = len(rshape[i])
 
                     infer_shape_entry._ref_holder = [tensor_shapes]
-                except Exception as e:
-                    print('Error in %s.infer_shape: '%reg_name, str(e))
+                except Exception:
+                    print('Error in %s.infer_shape: %s' % (reg_name, traceback.format_exc()))
                     return False
                 return True
 
@@ -641,8 +645,8 @@ def register(reg_name):
                     out[0] = cast(ret, POINTER(POINTER(c_char)))
 
                     list_outputs_entry._ref_holder = [out]
-                except Exception as e:
-                    print('Error in %s.list_outputs: '%reg_name, str(e))
+                except Exception:
+                    print('Error in %s.list_outputs: %s' % (reg_name, traceback.format_exc()))
                     return False
                 return True
 
@@ -655,8 +659,8 @@ def register(reg_name):
                     out[0] = cast(ret, POINTER(POINTER(c_char)))
 
                     list_arguments_entry._ref_holder = [out]
-                except Exception as e:
-                    print('Error in %s.list_arguments: '%reg_name, str(e))
+                except Exception:
+                    print('Error in %s.list_arguments: %s' % (reg_name, traceback.format_exc()))
                     return False
                 return True
 
@@ -669,8 +673,9 @@ def register(reg_name):
                     out[0] = cast(ret, POINTER(POINTER(c_char)))
 
                     list_auxiliary_states_entry._ref_holder = [out]
-                except Exception as e:
-                    print('Error in %s.list_auxiliary_states: '%reg_name, str(e))
+                except Exception:
+                    tb = traceback.format_exc()
+                    print('Error in %s.list_auxiliary_states: %s' % (reg_name, tb))
                     return False
                 return True
 
@@ -686,8 +691,9 @@ def register(reg_name):
                     deps[0] = rdeps
 
                     declare_backward_dependency_entry._ref_holder = [deps]
-                except Exception as e:
-                    print('Error in %s.declare_backward_dependency: '%reg_name, str(e))
+                except Exception:
+                    tb = traceback.format_exc()
+                    print('Error in %s.declare_backward_dependency: %s' % (reg_name, tb))
                     return False
                 return True
 
@@ -716,8 +722,8 @@ def register(reg_name):
                             op.forward(is_train=is_train, req=reqs,
                                        in_data=tensors[0], out_data=tensors[1],
                                        aux=tensors[4])
-                        except Exception as e:
-                            print('Error in CustomOp.forward: ', str(e))
+                        except Exception:
+                            print('Error in CustomOp.forward: %s' % traceback.format_exc())
                             return False
                         return True
 
@@ -740,8 +746,8 @@ def register(reg_name):
                                         in_data=tensors[0], out_data=tensors[1],
                                         in_grad=tensors[2], out_grad=tensors[3],
                                         aux=tensors[4])
-                        except Exception as e:
-                            print('Error in CustomOp.backward: ', str(e))
+                        except Exception:
+                            print('Error in CustomOp.backward: %s' % traceback.format_exc())
                             return False
                         return True
 
@@ -751,8 +757,8 @@ def register(reg_name):
                         """C Callback for CustomOp::del"""
                         try:
                             del _registry.ref_holder[cur]
-                        except Exception as e:
-                            print('Error in CustomOp.delete: ', str(e))
+                        except Exception:
+                            print('Error in CustomOp.delete: %s' % traceback.format_exc())
                             return False
                         return True
 
@@ -762,8 +768,8 @@ def register(reg_name):
                                           None, None, None)
                     op._ref_holder = [ret]
                     _registry.ref_holder[cur] = op
-                except Exception as e:
-                    print('Error in %s.create_operator: '%reg_name, str(e))
+                except Exception:
+                    print('Error in %s.create_operator: %s' % (reg_name, traceback.format_exc()))
                     return False
                 return True
 
@@ -773,8 +779,8 @@ def register(reg_name):
                 """C Callback for CustomOpProp::del"""
                 try:
                     del _registry.ref_holder[cur]
-                except Exception as e:
-                    print('Error in CustomOpProp.delete: ', str(e))
+                except Exception:
+                    print('Error in CustomOpProp.delete: %s' % traceback.format_exc())
                     return False
                 return True
 

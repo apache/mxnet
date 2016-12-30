@@ -18,7 +18,9 @@
 #include "./base.h"
 #include "./storage.h"
 #include "./engine.h"
-
+#if MKL_EXPERIMENTAL == 1
+#include <mkl_memory.h>
+#endif
 // check c++11
 #if DMLC_USE_CXX11 == 0
 #error "cxx11 was required for ndarray module"
@@ -31,7 +33,11 @@ namespace mxnet {
 class NDArray {
  public:
   /*! \brief default cosntructor */
-  NDArray() {}
+  NDArray() {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = MKLMemHolder::create();
+#endif
+  }
   /*!
    * \brief constructing a new dynamic NDArray
    * \param shape the shape of array
@@ -43,6 +49,9 @@ class NDArray {
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
         shape_(shape), offset_(0), dtype_(dtype) {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+#endif
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -54,6 +63,9 @@ class NDArray {
   NDArray(const TBlob &data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
         dtype_(data.type_flag_) {
+#if MKL_EXPERIMENTAL == 1
+      Mkl_mem_ = std::make_shared<MKLMemHolder>();
+#endif
   }
   /*!
    * \return the shape of current NDArray
@@ -65,11 +77,31 @@ class NDArray {
    * \return the data TBlob
    */
   inline TBlob data() const {
+    TBlob res;
     MSHADOW_TYPE_SWITCH(dtype_, DType, {
-      return TBlob(static_cast<DType*>(ptr_->shandle.dptr)
+      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
         + offset_, shape_, ptr_->shandle.ctx.dev_mask());
     });
-    return TBlob();
+#if MKL_EXPERIMENTAL == 1
+    res.Mkl_mem_ = Mkl_mem_;
+#endif
+    return res;
+  }
+  /*!
+   * \return a chunk of raw data in TBlob
+   */
+  inline TBlob raw_data(index_t offset, index_t length) const {
+    TBlob res;
+    TShape raw_shape(1);
+    raw_shape[0] = length;
+    MSHADOW_TYPE_SWITCH(dtype_, DType, {
+      res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
+        + offset_ + offset, raw_shape, ptr_->shandle.ctx.dev_mask());
+    });
+#if MKL_EXPERIMENTAL == 1
+    res.Mkl_mem_ = Mkl_mem_;
+#endif
+    return res;
   }
   /*!
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
@@ -146,42 +178,42 @@ class NDArray {
   /*!
    * \brief elementwise subtract from current ndarray
    * this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator-=(const NDArray &src);
   /*!
    * \brief elementwise subtract from current ndarray
    * this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator-=(const real_t &src);
   /*!
    * \brief elementwise multiplication to current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator*=(const NDArray &src);
   /*!
    * \brief elementwise multiplication to current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator*=(const real_t &src);
   /*!
    * \brief elementwise division from current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator/=(const NDArray &src);
   /*!
    * \brief elementwise division from current ndarray
    *  this mutate the current NDArray
-   * \param src the data to substract
+   * \param src the data to subtract
    * \return reference of self
    */
   NDArray &operator/=(const real_t &src);
@@ -241,10 +273,36 @@ class NDArray {
   inline NDArray At(index_t idx) const {
     NDArray ret = *this;
     CHECK(!is_none()) << "NDArray is not initialized";
-    CHECK_GE(shape_[0], idx) << "index out of range";
+    CHECK_GT(shape_[0], idx) << "index out of range";
     size_t length = shape_.ProdShape(1, shape_.ndim());
     ret.offset_ += idx * length;
-    ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
+    if (shape_.ndim() > 1) {
+      ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
+    } else {
+      ret.shape_ = mshadow::Shape1(1);
+    }
+    return ret;
+  }
+  /*!
+   * \brief Create a NDArray that shares memory with current one
+   *  The new array must have smaller memory size than the current array.
+   * \param shape new shape
+   * \param dtype The data type.
+   * \return NDArray in new shape and type.
+   */
+  inline NDArray AsArray(const TShape &shape, int dtype) const {
+    CHECK_GE(shape_.Size() * mshadow::mshadow_sizeof(dtype_),
+             shape.Size() * mshadow::mshadow_sizeof(dtype))
+        << "NDArray.AsArray: target memory size is bigger";
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      // convert prv to cpu
+      Mkl_mem_->check_and_prv_to_cpu(ptr_->shandle.dptr);
+    }
+#endif
+    NDArray ret = *this;
+    ret.shape_ = shape;
+    ret.dtype_ = dtype;
     return ret;
   }
   /*!
@@ -344,6 +402,10 @@ class NDArray {
       }
     }
   };
+
+#if MKL_EXPERIMENTAL == 1
+  std::shared_ptr<MKLMemHolder> Mkl_mem_;
+#endif
   /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_;
   /*! \brief shape of current NDArray */
@@ -351,7 +413,7 @@ class NDArray {
   /*! \brief offset in chunk */
   size_t offset_;
   /*! \brief type of data */
-  int dtype_;
+  int dtype_ = -1;
 };
 
 /*!
@@ -366,6 +428,7 @@ class NDArray {
  *     due to different possible convention carried by copy function.
  */
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
+
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
@@ -390,14 +453,14 @@ NDArray operator+(const NDArray &lhs, const NDArray &rhs);
  */
 NDArray operator+(const NDArray &lhs, const real_t &rhs);
 /*!
- * \brief elementwise substraction
+ * \brief elementwise subtraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
  */
 NDArray operator-(const NDArray &lhs, const NDArray &rhs);
 /*!
- * \brief elementwise substraction
+ * \brief elementwise subtraction
  * \param lhs left operand
  * \param rhs right operand
  * \return a new result ndarray
@@ -455,6 +518,7 @@ void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------
+
 /*! \brief definition of NDArray function */
 typedef std::function<void (NDArray **used_vars,
                             real_t *scalars,

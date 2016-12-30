@@ -95,7 +95,6 @@ def voc_eval(detpath, annopath, imageset_file, classname, cache_dir, ovthresh=0.
     else:
         with open(cache_file, 'r') as f:
             recs = cPickle.load(f)
-        print 'ground truth annotations loaded from cache file {}'.format(cache_file)
 
     # extract objects in :param classname:
     class_recs = {}

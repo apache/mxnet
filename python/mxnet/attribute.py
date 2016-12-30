@@ -43,7 +43,7 @@ class AttrScope(object):
                 ret.update(attr)
             return ret
         else:
-            return attr
+            return attr if attr else {}
 
     def __enter__(self):
         # pylint: disable=protected-access
@@ -59,4 +59,3 @@ class AttrScope(object):
         AttrScope.current = self._old_scope
 
 AttrScope.current = AttrScope()
-

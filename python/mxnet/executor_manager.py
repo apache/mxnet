@@ -3,15 +3,18 @@
 """Executor manager"""
 from __future__ import absolute_import
 
-from .base import mx_real_t
-from . import ndarray as nd
-from .context import cpu
-
 import logging
 import numpy as np
 
+from .base import mx_real_t
+from . import ndarray as nd
+from .context import cpu
+from .io import DataDesc
+
+
 def _split_input_slice(batch_size, work_load_list):
     """Get input slice from the input shape.
+
     Parameters
     ----------
     batch_size : int
@@ -19,10 +22,12 @@ def _split_input_slice(batch_size, work_load_list):
     work_load_list : list of float or int, optional
         The list of work load for different devices,
         in the same order as ctx
+
     Returns
     -------
     slices : list of slice
         The split slices to get a specific slice.
+
     Raises
     ------
     ValueError
@@ -48,6 +53,7 @@ def _check_arguments(symbol):
     """Check the argument names of symbol.
     This function checks the duplication of arguments in Symbol.
     The check is done for feedforward net for now.
+
     Parameters
     ----------
     symbol : Symbol
@@ -79,6 +85,9 @@ def _load_general(data, targets):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
         else:
+            assert d_targets[-1][0].stop == d_src.shape[0], \
+                "Batch size miss match. Expected %d, got %d"%( \
+                    d_targets[-1][0].stop, d_src.shape[0])
             for slice_idx, d_dst in d_targets:
                 d_src[slice_idx].copyto(d_dst)
 
@@ -106,11 +115,11 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
     arg_names = sym.list_arguments()
 
-    if need_grad == False:
+    if need_grad is False:
         need_grad = set()
-    elif need_grad == True:
+    elif need_grad is True:
         need_grad = set(arg_names) - set(input_shapes.keys())
-    elif need_grad is set:
+    elif isinstance(need_grad, set):
         pass
     else:
         raise AssertionError("need_grad must be boolean or set.")
@@ -118,8 +127,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
 
     # create or borrow arguments and gradients
-    for i in range(len(arg_names)):
-        name = arg_names[i]
+    for i, name in enumerate(arg_names):
         if not name in param_names:
             # data or label
             if shared_data_arrays is not None and \
@@ -215,13 +223,20 @@ class DataParallelExecutorGroup(object):
         self.param_names = [arg_names[i] for i in self.param_idx]
 
         self.train_execs = []
-        for i in range(len(ctx)):
-            data_shapes = {k: tuple([slices[i].stop-slices[i].start] + list(v[1:]))
-                           for k, v in train_data.provide_data + train_data.provide_label}
+        for i, ctxi in enumerate(ctx):
+            data_shapes = {}
+            data_types = {}
+            for x in train_data.provide_data + train_data.provide_label:
+                data_shapes[x[0]] = tuple([slices[i].stop - slices[i].start] + list(x[1][1:]))
+                if isinstance(x, DataDesc):
+                    data_types[x.name] = x.dtype
+                else:
+                    data_types[x[0]] = mx_real_t
             shared_exec = None if shared_group is None else shared_group.train_execs[i]
-            train_exec = _bind_exec(sym, ctx[i], data_shapes, self.param_names,
+            train_exec = _bind_exec(sym, ctxi, data_shapes, self.param_names,
                                     need_grad=True, base_exec=shared_exec,
-                                    shared_data_arrays=self.shared_data_arrays[i])
+                                    shared_data_arrays=self.shared_data_arrays[i],
+                                    input_types=data_types)
             self.train_execs.append(train_exec)
 
         # data structure
@@ -263,6 +278,7 @@ class DataParallelExecutorGroup(object):
 
 class DataParallelExecutorManager(object):
     """ Helper class to manage multiple executors for data parallelism.
+
     Parameters
     ----------
     symbol : Symbol
@@ -327,6 +343,7 @@ class DataParallelExecutorManager(object):
 
     def set_params(self, arg_params, aux_params):
         """ set parameter and aux values
+
         Parameters
         ----------
         arg_params : list of NDArray
@@ -340,12 +357,14 @@ class DataParallelExecutorManager(object):
 
     def copy_to(self, arg_params, aux_params):
         """ Copy data from each executor to `arg_params` and `aux_params`
+
         Parameters
         ----------
         arg_params : list of NDArray
             target parameter arrays
         aux_params : list of NDArray
             target aux arrays
+
         Notes
         -----
         - This function will inplace update the NDArrays in arg_params and aux_params.

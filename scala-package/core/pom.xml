@@ -5,13 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
-    <artifactId>mxnet-parent_2.10</artifactId>
+    <artifactId>mxnet-parent_2.11</artifactId>
     <version>0.1.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-core_2.10</artifactId>
+  <artifactId>mxnet-core_2.11</artifactId>
   <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Core</name>
 
@@ -75,6 +75,18 @@
   </build>
   <dependencies>
     <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-init_${scala.binary.version}</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-macros_${scala.binary.version}</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
     </dependency>
@@ -101,6 +113,10 @@
     <dependency>
       <groupId>org.scalacheck</groupId>
       <artifactId>scalacheck_${scala.binary.version}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-parser-combinators_${scala.binary.version}</artifactId>
     </dependency>
   </dependencies>
 </project>

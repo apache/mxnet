@@ -6,6 +6,8 @@ import ml.dmlc.mxnet.Base._
 import ml.dmlc.mxnet._
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.ListMap
+
 /**
  * NDArrayIter object in mxnet. Taking NDArray to get dataiter.
  *
@@ -21,7 +23,7 @@ import org.slf4j.LoggerFactory
  * the size of data does not match batch_size. Roll over is intended
  * for training and can cause problems if used for prediction.
  */
-class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
+class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
                   private val dataBatchSize: Int = 1, shuffle: Boolean = false,
                   lastBatchHandle: String = "pad") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
@@ -33,6 +35,9 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
     require(data != null && data.size > 0,
       "data should not be null and data.size should not be zero")
 
+    require(label != null,
+      "label should not be null. Use IndexedSeq.empty if there are no labels")
+
     // shuffle is not supported currently
     require(shuffle == false, "shuffle is not supported currently")
 
@@ -43,11 +48,11 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
         "batch_size need to be smaller than data size when not padding.")
       val keepSize = dataSize - dataSize % dataBatchSize
       val dataList = data.map(ndArray => {ndArray.slice(0, keepSize)})
-      if (label != null) {
+      if (!label.isEmpty) {
         val labelList = label.map(ndArray => {ndArray.slice(0, keepSize)})
         (dataList, labelList)
       } else {
-        (dataList, null)
+        (dataList, label)
       }
     } else {
       (data, label)
@@ -62,10 +67,10 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
   var cursor = -dataBatchSize
 
 
-  private val (_provideData: Map[String, Shape],
-  _provideLabel: Map[String, Shape]) = {
-    val pData = initData.map(getShape).toMap
-    val pLabel = initLabel.map(getShape).toMap
+  private val (_provideData: ListMap[String, Shape],
+               _provideLabel: ListMap[String, Shape]) = {
+    val pData = ListMap.empty[String, Shape] ++ initData.map(getShape)
+    val pLabel = ListMap.empty[String, Shape] ++ initLabel.map(getShape)
     (pData, pLabel)
   }
 
@@ -181,10 +186,10 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = null,
   }
 
   // The name and shape of data provided by this iterator
-  override def provideData: Map[String, Shape] = _provideData
+  override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
-  override def provideLabel: Map[String, Shape] = _provideLabel
+  override def provideLabel: ListMap[String, Shape] = _provideLabel
 
   override def batchSize: Int = dataBatchSize
 }

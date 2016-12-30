@@ -27,7 +27,7 @@
 # 基本背景知识<a id="orgheadline1"></a>
 
 MXNET中有一个依赖引擎，这个引擎是用来分析计算过程的依赖关系，把不依赖的计算并行
-化，以达到提高性能的目的。它的基本原理可以看官方的[文档](https://mxnet-bing.readthedocs.io/en/latest/system/note_engine.html)。 简单的说就是给每一个对
+化，以达到提高性能的目的。它的基本原理可以看官方的[文档](http://mxnet.io/architecture/note_engine.html)。 简单的说就是给每一个对
 象打上一个tag，这个tag叫做Var，每一个计算(op)都会依赖一个或者多个Var，依赖有两种
 类型：写依赖和读依赖。依赖引擎为每一个Var都维护一个队列，然后根据op的依赖关系向
 队列中添加ReadDependency和WriteDependency，当各个依赖完成后要更新队列的状态。
@@ -250,15 +250,15 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
       assert(end_of_read_chain->write == true);
       pending_write_ = end_of_read_chain;
       if (num_pending_reads_ == 0) {
-        // mark write as already actived in this var
+        // mark write as already activated in this var
         num_pending_reads_ = kWriteTriggered;
         trigger_write = end_of_read_chain->trigger;
       }
     }
   }
   // This is outside of lock scope
-  // Be very carful, pending_write_ and num_pending_reads_
-  // can change now, do not reply ont the two variables.
+  // Be very careful, pending_write_ and num_pending_reads_
+  // can change now, do not reply on the two variables.
   // The linked list \in [old_pending_write, end_of_read_chain)
   // is already detached from this Var.
   // So it is safe to modify these
@@ -400,7 +400,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
     finished_cv_.notify_all();
   }
 
-  // delte operator if it is temperory
+  // delta operator if it is temporary
   if (threaded_opr->temporary) {
     ThreadedOpr::Delete(threaded_opr);
   }

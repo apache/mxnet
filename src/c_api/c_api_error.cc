@@ -3,19 +3,13 @@
  * \file c_api_error.cc
  * \brief C error handling
  */
-#include "./c_api_error.h"
-#include "../common/thread_local.h"
-
-struct ErrorEntry {
-  std::string last_error;
-};
-
-typedef mxnet::common::ThreadLocalStore<ErrorEntry> MXAPIErrorStore;
+#include <nnvm/c_api.h>
+#include "./c_api_common.h"
 
 const char *MXGetLastError() {
-  return MXAPIErrorStore::Get()->last_error.c_str();
+  return NNGetLastError();
 }
 
 void MXAPISetLastError(const char* msg) {
-  MXAPIErrorStore::Get()->last_error = msg;
+  NNAPISetLastError(msg);
 }

@@ -1,11 +1,11 @@
 The following is an overview of MXNet in Chinese. For english readers, please
-refer to our [NIPS learnsys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
+refer to our [NIPS LearningSys paper](http://learningsys.org/papers/LearningSys_2015_paper_1.pdf)
 
 # MXNet设计和实现简介
 
 神经网络本质上是一种语言，我们通过它来表达对应用问题的理解。例如我们用卷积层来表达空间相关性，RNN来表达时间连续性。根据问题的复杂性和信息如何从输入到输出一步步提取，我们将不同大小的层按一定原则连接起来。近年来随着数据的激增和计算能力的大幅提升，神经网络也变得越来越深和大。例如最近几次imagnet竞赛的冠军都使用有数十至百层的网络。对于这一类神经网络我们通常称之为深度学习。从应用的角度而言，对深度学习最重要的是如何方便地表述神经网络，以及如何快速训练得到模型。
 
-对于一个优秀的深度学习系统，或者更广来说优秀的科学计算系统，最重要的是编程接口的设计。他们都采用将一个*领域特定语言(domain specific language)*嵌入到一个主语言中。例如numpy将矩阵运算嵌入到python中。这类嵌入一般分为两种，其中一种嵌入的较浅，其中每个语句都按原来的意思执行，且通常采用*命令式编程(imperative programming)*，其中numpy和Torch就是属于这种。而另一种则用一种深的嵌入方式，提供一整套针对具体应用的迷你语言。这一种通常使用*声明式语言(declarative programing)*，既用户只需要声明要做什么，而具体执行则由系统完成。这类系统包括Caffe，theano和刚公布的TensorFlow。
+对于一个优秀的深度学习系统，或者更广来说优秀的科学计算系统，最重要的是编程接口的设计。他们都采用将一个*领域特定语言(domain specific language)*嵌入到一个主语言中。例如numpy将矩阵运算嵌入到python中。这类嵌入一般分为两种，其中一种嵌入的较浅，其中每个语句都按原来的意思执行，且通常采用*命令式编程(imperative programming)*，其中numpy和Torch就是属于这种。而另一种则用一种深的嵌入方式，提供一整套针对具体应用的迷你语言。这一种通常使用*声明式语言(declarative programming)*，既用户只需要声明要做什么，而具体执行则由系统完成。这类系统包括Caffe，theano和刚公布的TensorFlow。
 
 这两种方式各有利弊，总结如下
 
@@ -229,5 +229,5 @@ MXNet是DMLC第一个结合了所有成员努力的项目，也同时吸引了�
 ## 扩展阅读
 
 1. 此文大部分内容已经发表在NIPS LearningSys 2015上，[paper link](http://www.cs.cmu.edu/~muli/file/MXNet-learning-sys.pdf)
-2. 本文只是对MXNet各个部件做了初步的介绍，更多文档参见 [MXNet/doc](http://MXNet.readthedocs.org/en/latest/index.html)
+2. 本文只是对MXNet各个部件做了初步的介绍，更多文档参见 [MXNet/doc](http://mxnet.io/)
 3. 本文实验代码均在 [MXNet/example](https://github.com/dmlc/mxnet/tree/master/example)

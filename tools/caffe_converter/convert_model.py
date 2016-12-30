@@ -72,9 +72,11 @@ def main():
                 wmat_dim = list(layer_blobs[0].shape)
             wmat = np.array(layer_blobs[0].data).reshape(wmat_dim)
             bias = np.array(layer_blobs[1].data)
-            if first_conv:
-                print 'Swapping BGR of caffe into RGB in mxnet'
-                wmat[:, [0, 2], :, :] = wmat[:, [2, 0], :, :]
+            channels = layer_blobs[0].channels;
+            if channels == 3 or channels == 4: # RGB or RGBA
+                if first_conv:
+                    print 'Swapping BGR of caffe into RGB in mxnet'
+                    wmat[:, [0, 2], :, :] = wmat[:, [2, 0], :, :]
 
             assert(wmat.flags['C_CONTIGUOUS'] is True)
             assert(bias.flags['C_CONTIGUOUS'] is True)

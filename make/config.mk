@@ -24,8 +24,14 @@ export CC = gcc
 export CXX = g++
 export NVCC = nvcc
 
+# whether compile with options for MXNet developer
+DEV = 0
+
 # whether compile with debug
 DEBUG = 0
+
+# whether compiler with profiler
+USE_PROFILER =
 
 # the additional link flags you want to add
 ADD_LDFLAGS =
@@ -48,6 +54,13 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+# CUDA architecture setting: going with all of them.
+# For CUDA < 6.0, comment the *_50 lines for compatibility.
+CUDA_ARCH := -gencode arch=compute_30,code=sm_30 \
+		-gencode arch=compute_35,code=sm_35 \
+		-gencode arch=compute_50,code=sm_50 \
+		-gencode arch=compute_50,code=compute_50
+
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 USE_NVRTC = 0
 
@@ -58,6 +71,26 @@ USE_OPENCV = 1
 
 # use openmp for parallelization
 USE_OPENMP = 1
+
+
+# MKL ML Library for Intel CPU/Xeon Phi
+# Please refer to MKL_README.md for details
+
+# MKL ML Library folder, need to be root for /usr/local
+# Change to User Home directory for standard user
+# For USE_BLAS!=mkl only
+MKLML_ROOT=/usr/local
+
+# whether use MKL2017 library
+USE_MKL2017 = 0
+
+# whether use MKL2017 experimental feature for high performance
+# Prerequisite USE_MKL2017=1
+USE_MKL2017_EXPERIMENTAL = 0
+
+# whether use NNPACK library
+USE_NNPACK = 0
+USE_NNPACK_NUM_THREADS = 4
 
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
@@ -78,6 +111,16 @@ ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
 else
 USE_STATIC_MKL = NONE
+endif
+
+#----------------------------
+# Settings for power and arm arch
+#----------------------------
+ARCH := $(shell uname -a)
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64))
+	USE_SSE=0
+else
+	USE_SSE=1
 endif
 
 #----------------------------
@@ -110,6 +153,11 @@ EXTRA_OPERATORS =
 #----------------------------
 # plugins
 #----------------------------
+
+# whether to use caffe integration. This requires installing caffe.
+# You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
+# CAFFE_PATH = $(HOME)/caffe
+# MXNET_PLUGINS += plugin/caffe/caffe.mk
 
 # whether to use torch integration. This requires installing torch.
 # You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH
