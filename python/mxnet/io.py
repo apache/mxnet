@@ -5,7 +5,6 @@
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 
-import re
 import sys
 import ctypes
 import logging
@@ -14,74 +13,60 @@ import numpy as np
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
-from .base import check_call, ctypes2docstring
 from .base import mx_real_t
+from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
 from .ndarray import array
 from .ndarray import concatenate
 
+# pylint: disable=W0622
+class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
+    """Named data desc description contains name, shape, type and other extended attributes.
+    """
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
+        ret = super(cls, DataDesc).__new__(cls, name, shape)
+        ret.dtype = dtype
+        ret.layout = layout
+        return ret
 
-class LayoutMapper(object):
-    """A helper class to decide data layouts (which axis is batch_size dimension)."""
-    def get_layout_string(self, name):
-        """Get layout string for the given data name.
+    def __repr__(self):
+        return "DataDesc[%s,%s,%s,%s]" % (self.name, self.shape, self.dtype,
+                                          self.layout)
 
-        Paramseters
-        -----------
-        name : str
-            The name of a data, label or output tensor.
-
-        Returns
-        -------
-        The layout string. For example "NCHW". Returns None if
-        not known.
-        """
-        raise NotImplementedError()
-
-    def get_batch_axis(self, name):
+    @staticmethod
+    def get_batch_axis(layout):
         """Get the dimension that corresponds to the batch size.
 
         Parameters
         ----------
-        name : str
-            The name of the blob (could be data, label or output names).
+        layout : str
+            layout string. For example, "NCHW".
 
         Returns
         -------
         An axis indicating the batch_size dimension. When data-parallelism is
         used, the data will be automatically split and concatenate along the batch_size
-        dimension. Axis can be -1, which means the array thing will be copied for each
+        dimension. Axis can be -1, which means the whole array will be copied for each
         data-parallelism device.
         """
-        raise NotImplementedError()
-
-
-class DefaultLayoutMapper(LayoutMapper):
-    """A default data layout mapper.
-
-    It decides the data layout by information encoded in name.
-    If a name contains the string :__layout_XXXXX__, then XXXXX
-    will be parsed as the layout string.
-    """
-    def __init__(self, default_batch_axis=0):
-        super(DefaultLayoutMapper, self).__init__()
-        self._default_batch_axis = default_batch_axis
-
-    LAYOUT_PATTERN = re.compile(r':__layout_([^_*])__')
-    def get_layout_string(self, name):
-        ret = DefaultLayoutMapper.LAYOUT_PATTERN.search(name)
-        if ret is None:
-            return None
-        return ret.group(1)
-
-    def get_batch_axis(self, name):
-        layout = self.get_layout_string(name)
         if layout is None:
-            return self._default_batch_axis
-        # N indicate batch size. Note when N is not found,
-        # it returns -1, which is what we expect
+            return 0
         return layout.find('N')
 
+    @staticmethod
+    def get_list(shapes, types):
+        """Get DataDesc list from attribute lists.
+
+        Parameters
+        ----------
+        shapes : shape tuple list with (name, shape) tuples
+        types : type tuple list with (name, type) tuples
+        """
+        if types is not None:
+            type_dict = dict(types)
+            return [DataDesc(x[0], x[1], type_dict[x[0]]) for x in shapes]
+        else:
+            return [DataDesc(x[0], x[1]) for x in shapes]
 
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
@@ -612,35 +597,6 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
 
-# pylint: disable=W0622
-class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
-    """Named data desc description contains name, shape, type and other extended attributes.
-    """
-    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
-        ret = super(cls, DataDesc).__new__(cls, name, shape)
-        ret.dtype = dtype
-        ret.layout = layout
-        return ret
-
-    def __repr__(self):
-        return "DataDesc[%s,%s,%s,%s]" % (self.name, self.shape, self.dtype,
-                                          self.layout)
-
-    @staticmethod
-    def get_list(shapes, types):
-        """Get DataDesc list from attribute lists.
-
-        Parameters
-        ----------
-        shapes : shape tuple list with (name, shape) tuples
-        types : type tuple list with (name, type) tuples
-        """
-        if types is not None:
-            type_dict = dict(types)
-            return [DataDesc(x[0], x[1], type_dict[x[0]]) for x in shapes]
-        else:
-            return [DataDesc(x[0], x[1]) for x in shapes]
-
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
     name = ctypes.c_char_p()
@@ -657,7 +613,12 @@ def _make_io_iterator(handle):
             ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
     iter_name = py_str(name.value)
-    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
+
+    narg = int(num_args.value)
+    param_str = _build_param_doc(
+        [py_str(arg_names[i]) for i in range(narg)],
+        [py_str(arg_types[i]) for i in range(narg)],
+        [py_str(arg_descs[i]) for i in range(narg)])
 
     doc_str = ('%s\n\n' +
                '%s\n' +

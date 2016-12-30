@@ -5,7 +5,7 @@
 */
 #include "./fully_connected-inl.h"
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_fully_connected-inl.h"
 #endif  // MXNET_USE_MKL2017
@@ -22,9 +22,11 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   case mshadow::kFloat64:
     return new MKLFullyConnectedOp<cpu, double>(param);
   default:
+    if (enableMKLWarnGenerated())
+      LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
     break;
   }
-#else
+#endif
   switch (dtype) {
   case mshadow::kFloat32:
     op = new FullyConnectedOp<cpu, float>(param);
@@ -39,7 +41,7 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   default:
     LOG(FATAL) << "Unsupported type " << dtype;
   }
-#endif
+
   return op;
 }
 

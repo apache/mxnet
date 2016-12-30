@@ -1,4 +1,5 @@
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
+# pylint: disable=too-many-public-methods
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
 more `Executor` for data parallelization.
 """
@@ -11,11 +12,11 @@ from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
+from ..model import load_checkpoint
 from ..initializer import Uniform
 
 from .base_module import BaseModule
 from ..io import DataDesc
-from ..base import mx_real_t
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -72,10 +73,68 @@ class Module(BaseModule):
         self._kvstore = None
         self._update_on_kvstore = None
         self._updater = None
+        self._preload_opt_states = None
 
         self._exec_group = None
         self._data_shapes = None
         self._label_shapes = None
+
+    @staticmethod
+    def load(prefix, epoch, load_optimizer_states=False, **kwargs):
+        """Create a model from previously saved checkpoint.
+
+        Parameters
+        ----------
+        prefix : str
+            path prefix of saved model files. You should have
+            "prefix-symbol.json", "prefix-xxxx.params", and
+            optionally "prefix-xxxx.states", where xxxx is the
+            epoch number.
+        epoch : int
+            epoch to load.
+        load_optimizer_states : bool
+            whether to load optimizer states. Checkpoint needs
+            to have been made with save_optimizer_states=True.
+        data_names : list of str
+            Default is `('data')` for a typical model used in image classification.
+        label_names : list of str
+            Default is `('softmax_label')` for a typical model used in image
+            classification.
+        logger : Logger
+            Default is `logging`.
+        context : Context or list of Context
+            Default is `cpu()`.
+        work_load_list : list of number
+            Default `None`, indicating uniform workload.
+        fixed_param_names: list of str
+            Default `None`, indicating no network parameters are fixed.
+        """
+        sym, args, auxs = load_checkpoint(prefix, epoch)
+        mod = Module(symbol=sym, **kwargs)
+        mod._arg_params = args
+        mod._aux_params = auxs
+        mod.params_initialized = True
+        if load_optimizer_states:
+            mod._preload_opt_states = '%s-%04d.states'%(prefix, epoch)
+        return mod
+
+    def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
+        """Save current progress to checkpoint.
+        Use mx.callback.module_checkpoint as epoch_end_callback to save during training.
+
+        Parameters
+        ----------
+        prefix : str
+            The file prefix to checkpoint to
+        epoch : int
+            The current epoch number
+        save_optimizer_states : bool
+            Whether to save optimizer states for continue training
+        """
+        self._symbol.save('%s-symbol.json'%prefix)
+        self.save_params('%s-%04d.params'%(prefix, epoch))
+        if save_optimizer_states:
+            self.save_optimizer_states('%s-%04d.states'%(prefix, epoch))
 
     def _reset_bind(self):
         """Internal function to reset binded state."""
@@ -253,8 +312,13 @@ class Module(BaseModule):
             # that consumes the labels
             # assert label_shapes is not None
 
-        self._data_shapes = data_shapes
-        self._label_shapes = label_shapes
+        self._data_shapes = \
+            [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
+        if label_shapes is not None:
+            self._label_shapes = \
+                [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        else:
+            self._label_shapes = None
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
@@ -263,24 +327,16 @@ class Module(BaseModule):
         else:
             shared_group = None
 
-        input_types = dict((x.name, x.dtype)
-                           if isinstance(x, DataDesc) else (x[0], mx_real_t)
-                           for x in data_shapes)
-
-        if label_shapes is not None:
-            for item in label_shapes:
-                if isinstance(item, DataDesc):
-                    input_types[item.name] = item.dtype
-                else:
-                    input_types[item[0]] = mx_real_t
+        input_types = {x.name: x.dtype for x in self._data_shapes}
+        if self._label_shapes is not None:
+            input_types.update({x.name: x.dtype for x in self._label_shapes})
 
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
-                                                     self._work_load_list, data_shapes,
-                                                     label_shapes, self._param_names,
+                                                     self._work_load_list, self._data_shapes,
+                                                     self._label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
-                                                     layout_mapper=self.layout_mapper,
                                                      grad_req=grad_req, input_types=input_types)
         if shared_module is not None:
             self.params_initialized = True
@@ -345,8 +401,6 @@ class Module(BaseModule):
         self._update_on_kvstore = update_on_kvstore
         self._updater = None
 
-        if not update_on_kvstore:
-            self._updater = opt.get_updater(optimizer)
         if kvstore:
             # copy initialized local parameters to kvstore
             _initialize_kvstore(kvstore=kvstore,
@@ -356,8 +410,14 @@ class Module(BaseModule):
                                 update_on_kvstore=update_on_kvstore)
         if update_on_kvstore:
             kvstore.set_optimizer(self._optimizer)
+        else:
+            self._updater = opt.get_updater(optimizer)
 
         self.optimizer_initialized = True
+
+        if self._preload_opt_states is not None:
+            self.load_optimizer_states(self._preload_opt_states)
+            self._preload_opt_states = None
 
     def borrow_optimizer(self, shared_module):
         """Borrow optimizer from a shared module. Used in bucketing, where exactly the same
@@ -475,6 +535,37 @@ class Module(BaseModule):
         latest parameters from `self._arg_params` and `self._aux_params`.
         """
         self._exec_group.get_params(self._arg_params, self._aux_params)
+
+    def save_optimizer_states(self, fname):
+        """Save optimizer (updater) state to file
+
+        Parameters
+        ----------
+        fname : str
+            Path to output states file.
+        """
+        assert self.optimizer_initialized
+
+        if self._update_on_kvstore:
+            self._kvstore.save_optimizer_states(fname)
+        else:
+            with open(fname, 'wb') as fout:
+                fout.write(self._updater.get_states())
+
+    def load_optimizer_states(self, fname):
+        """Load optimizer (updater) state from file
+
+        Parameters
+        ----------
+        fname : str
+            Path to input states file.
+        """
+        assert self.optimizer_initialized
+
+        if self._update_on_kvstore:
+            self._kvstore.load_optimizer_states(fname)
+        else:
+            self._updater.set_states(open(fname, 'rb').read())
 
     def install_monitor(self, mon):
         """ Install monitor on all executors """

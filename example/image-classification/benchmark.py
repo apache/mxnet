@@ -1,3 +1,4 @@
+from __future__ import print_function
 import logging
 import argparse
 import os
@@ -12,7 +13,6 @@ import importlib
 import collections
 import threading
 import copy
-
 '''
 Setup Logger and LogLevel
 '''
@@ -81,8 +81,8 @@ def parse_args():
         def validate(self, attrs):
             args = attrs.split(':')
             if len(args) != 3 or isinstance(args[0], str) == False:
-                print 'expected network attributes in format network_name:batch_size:image_size \
-                \nThe network_name is a valid model defined as network_name.py in the image-classification/symbol folder.'
+                print('expected network attributes in format network_name:batch_size:image_size \
+                \nThe network_name is a valid model defined as network_name.py in the image-classification/symbol folder.')
                 sys.exit(1)
             try:
                 #check if the network exists
@@ -91,9 +91,9 @@ def parse_args():
                 img_size = int(args[2])
                 return Network(name=args[0], batch_size=batch_size, img_size=img_size)
             except Exception as e:
-                print 'expected network attributes in format network_name:batch_size:image_size \
-                \nThe network_name is a valid model defined as network_name.py in the image-classification/symbol folder.'
-                print e
+                print('expected network attributes in format network_name:batch_size:image_size \
+                \nThe network_name is a valid model defined as network_name.py in the image-classification/symbol folder.')
+                print(e)
                 sys.exit(1)
         def __init__(self, *args, **kw):
             kw['nargs'] = '+'
@@ -149,7 +149,7 @@ def stop_old_processes(hosts_file):
     time.sleep(1)
 
 def run_imagenet(kv_store, data_shape, batch_size, num_gpus, num_nodes, network, args_workers_file):
-    imagenet_args=['python',  'train_imagenet.py',  '--gpus', ','.join(str(i) for i in xrange(num_gpus)), \
+    imagenet_args=['python',  'train_imagenet.py',  '--gpus', ','.join(str(i) for i in range(num_gpus)), \
                    '--network', network, '--batch-size', str(batch_size * num_gpus), \
                    '--image-shape', '3,' + str(data_shape) + ',' + str(data_shape), '--num-epochs', '1' ,'--kv-store', kv_store, '--benchmark', '1', '--disp-batches', '10']
     log = log_loc + '/' + network + '_' + str(num_nodes*num_gpus) + '_log'

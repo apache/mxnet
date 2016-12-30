@@ -81,7 +81,8 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
   // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
   Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {
       ctx.async_on_complete();
-    }, ndctx, ndvar, {});
+    }, ndctx, ndvar, {},
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpForward"));
 }
 
 template<typename xpu>
@@ -139,7 +140,8 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
   // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
   Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){
       ctx.async_on_complete();
-    }, ndctx, ndvar, {});
+    }, ndctx, ndvar, {},
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpBackward"));
 }
 
 Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,

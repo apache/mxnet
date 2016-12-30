@@ -84,7 +84,7 @@ class CommCPU : public Comm {
     Engine::Get()->PushSync([reduce, this](RunContext rctx) {
         ReduceSumCPU(reduce);
       }, Context::CPU(), const_vars, {reduce[0].var()},
-      FnProperty::kCPUPrioritized, priority);
+      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
 
     return buf.merged;
   }
@@ -278,7 +278,7 @@ class CommDevice : public Comm {
         cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);
         if (access) {
           cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
-          if (e == cudaSuccess) {
+          if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
             ++enabled;
             p2p[i*n+j] = 1;
           }
@@ -289,7 +289,7 @@ class CommDevice : public Comm {
       // print warning info if not fully enabled
       LOG(WARNING) << "only " << enabled <<  " out of "
                    << n*(n-1) << " GPU pairs are enabled direct access. "
-                   << "It may affect the perofmrance. "
+                   << "It may affect the performance. "
                    << "You can set MXNET_ENABLE_GPU_P2P=0 to turn it off";
       std::string access(n, '.');
       for (int i = 0; i < n; ++i) {

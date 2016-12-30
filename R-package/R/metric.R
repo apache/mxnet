@@ -49,7 +49,7 @@ mx.metric.top_k_accuracy <- mx.metric.custom("top_k_accuracy", function(label, p
 #' MSE (Mean Squared Error) metric for regression
 #'
 #' @export
-mx.metric.rmse <- mx.metric.custom("mse", function(label, pred) {
+mx.metric.mse <- mx.metric.custom("mse", function(label, pred) {
   res <- mean((label-pred)^2)
   return(res)
 })

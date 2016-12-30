@@ -46,7 +46,7 @@ class BaseModule(object):
       of the module can be updated according to the optimizer after gradients are computed
       (forward-backward).
 
-    In order for a module to interactive with others, a module should be able to report the
+    In order for a module to interact with others, a module should be able to report the
     following information in its raw stage (before binded)
 
     - `data_names`: list of string indicating the names of required data.
@@ -118,7 +118,6 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
-        self.layout_mapper = None
 
     ################################################################################
     # High Level API
@@ -349,9 +348,6 @@ class BaseModule(object):
         """
         assert num_epoch is not None, 'please specify number of epochs'
 
-        if hasattr(train_data, 'layout_mapper'):
-            self.layout_mapper = train_data.layout_mapper
-
         self.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label,
                   for_training=True, force_rebind=force_rebind)
         if monitor is not None:
@@ -395,8 +391,11 @@ class BaseModule(object):
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
 
+            # sync aux params across devices
+            arg_params, aux_params = self.get_params()
+            self.set_params(arg_params, aux_params)
+
             if epoch_end_callback is not None:
-                arg_params, aux_params = self.get_params()
                 for callback in _as_list(epoch_end_callback):
                     callback(epoch, self.symbol, arg_params, aux_params)
 

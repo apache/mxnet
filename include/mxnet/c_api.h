@@ -52,10 +52,6 @@ typedef void *KVStoreHandle;
 typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
-/*! \brief handle to a function that takes param and creates optimizer*/
-typedef void *OptimizerCreator;
-/*! \brief handle to Optimizer*/
-typedef void *OptimizerHandle;
 
 MXNET_EXTERN_C typedef void (*ExecutorMonitorCallback)(const char*,
                                                        NDArrayHandle,
@@ -160,6 +156,24 @@ MXNET_DLL int MXRandomSeed(int seed);
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXNotifyShutdown();
+/*!
+ * \brief Set up configuration of profiler
+ * \param mode indicate the working mode of profiler,
+ *  record anly symbolic operator when mode == 0,
+ *  record all operator when mode == 1
+ * \param filename where to save trace file
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
+/*!
+ * \brief Set up state of profiler
+ * \param state indicate the working state of profiler,
+ *  profiler not running when state == 0,
+ *  profiler running when state == 1
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerState(int state);
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
@@ -468,9 +482,38 @@ MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
                              int num_params,
                              char **param_keys,
                              char **param_vals);
+/*!
+ * \brief invoke a nnvm op and imperative function
+ * \param creator the op
+ * \param num_inputs number of input NDArrays
+ * \param inputs input NDArrays
+ * \param num_outputs number of output NDArrays
+ * \param outputs output NDArrays
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
+                                 int num_inputs,
+                                 NDArrayHandle *inputs,
+                                 int *num_outputs,
+                                 NDArrayHandle **outputs,
+                                 int num_params,
+                                 const char **param_keys,
+                                 const char **param_vals);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
+/*!
+ * \brief list all the available operator names, include entries.
+ * \param out_size the size of returned array
+ * \param out_array the output operator name array.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListAllOpNames(mx_uint *out_size,
+                               const char ***out_array);
 /*!
  * \brief list all the available AtomicSymbolEntry
  * \param out_size the size of returned array
@@ -1328,7 +1371,7 @@ MXNET_DLL int MXRecordIOWriterFree(RecordIOHandle handle);
  * \param size size of buffer
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
+MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle handle,
                                           const char *buf, size_t size);
 
 /**
@@ -1337,7 +1380,7 @@ MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
  * \param pos handle to output position
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos);
+MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle handle, size_t *pos);
 
 /**
  * \brief Create a RecordIO reader object
@@ -1352,7 +1395,7 @@ MXNET_DLL int MXRecordIOReaderCreate(const char *uri, RecordIOHandle *out);
  * \param handle handle to RecordIO object
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
+MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle handle);
 
 /**
  * \brief Write a record to a RecordIO object
@@ -1361,7 +1404,7 @@ MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
  * \param size point to size of buffer
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
+MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle handle,
                                         char const **buf, size_t *size);
 
 /**
@@ -1370,7 +1413,7 @@ MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
  * \param pos target position
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos);
+MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos);
 
 /**
  * \brief Create a MXRtc object
@@ -1396,24 +1439,6 @@ MXNET_DLL int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
  * \brief Delete a MXRtc object
 */
 MXNET_DLL int MXRtcFree(RtcHandle handle);
-
-MXNET_DLL int MXOptimizerFindCreator(const char *key,
-                                     OptimizerCreator *out);
-
-MXNET_DLL int MXOptimizerCreateOptimizer(OptimizerCreator creator,
-                                         mx_uint num_param,
-                                         const char **keys,
-                                         const char **vals,
-                                         OptimizerHandle *out);
-
-MXNET_DLL int MXOptimizerFree(OptimizerHandle handle);
-
-MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
-                                int index,
-                                NDArrayHandle weight,
-                                NDArrayHandle grad,
-                                mx_float lr,
-                                mx_float wd);
 
 MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
 

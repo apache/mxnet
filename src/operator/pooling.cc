@@ -6,7 +6,7 @@
 */
 #include "./pooling-inl.h"
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_pooling-inl.h"
 #endif  // MXNET_USE_MKL2017
@@ -16,14 +16,12 @@ namespace op {
 
 
 template<>
-Operator* CreateOp<cpu>(PoolingParam param, int dtype,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape) {
+Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
-    if ((param.pool_type == pool_enum::kMaxPooling
-      || param.pool_type == pool_enum::kAvgPooling)
-      && UseMKLPooling(param, in_shape, out_shape)) {
+    if ((param.pool_type == pool_enum::kMaxPooling)
+      || (param.pool_type == pool_enum::kAvgPooling
+      && UseMKLPooling(param))) {
       switch (dtype) {
       case mshadow::kFloat32:
         return new MKLPoolingOp<cpu, float>(param);
@@ -33,6 +31,8 @@ Operator* CreateOp<cpu>(PoolingParam param, int dtype,
         break;
       }
     }
+    if (enableMKLWarnGenerated())
+      LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.pool_type) {
@@ -61,7 +61,7 @@ Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape);
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(PoolingParam);

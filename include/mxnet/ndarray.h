@@ -19,7 +19,7 @@
 #include "./storage.h"
 #include "./engine.h"
 #if MKL_EXPERIMENTAL == 1
-#include "./mkl_memory.h"
+#include <mkl_memory.h>
 #endif
 // check c++11
 #if DMLC_USE_CXX11 == 0
@@ -98,6 +98,9 @@ class NDArray {
       res = TBlob(static_cast<DType*>(ptr_->shandle.dptr)
         + offset_ + offset, raw_shape, ptr_->shandle.ctx.dev_mask());
     });
+#if MKL_EXPERIMENTAL == 1
+    res.Mkl_mem_ = Mkl_mem_;
+#endif
     return res;
   }
   /*!
@@ -270,10 +273,36 @@ class NDArray {
   inline NDArray At(index_t idx) const {
     NDArray ret = *this;
     CHECK(!is_none()) << "NDArray is not initialized";
-    CHECK_GE(shape_[0], idx) << "index out of range";
+    CHECK_GT(shape_[0], idx) << "index out of range";
     size_t length = shape_.ProdShape(1, shape_.ndim());
     ret.offset_ += idx * length;
-    ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
+    if (shape_.ndim() > 1) {
+      ret.shape_ = TShape(shape_.data()+1, shape_.data()+shape_.ndim());
+    } else {
+      ret.shape_ = mshadow::Shape1(1);
+    }
+    return ret;
+  }
+  /*!
+   * \brief Create a NDArray that shares memory with current one
+   *  The new array must have smaller memory size than the current array.
+   * \param shape new shape
+   * \param dtype The data type.
+   * \return NDArray in new shape and type.
+   */
+  inline NDArray AsArray(const TShape &shape, int dtype) const {
+    CHECK_GE(shape_.Size() * mshadow::mshadow_sizeof(dtype_),
+             shape.Size() * mshadow::mshadow_sizeof(dtype))
+        << "NDArray.AsArray: target memory size is bigger";
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      // convert prv to cpu
+      Mkl_mem_->check_and_prv_to_cpu(ptr_->shandle.dptr);
+    }
+#endif
+    NDArray ret = *this;
+    ret.shape_ = shape;
+    ret.dtype_ = dtype;
     return ret;
   }
   /*!
@@ -384,7 +413,7 @@ class NDArray {
   /*! \brief offset in chunk */
   size_t offset_;
   /*! \brief type of data */
-  int dtype_;
+  int dtype_ = -1;
 };
 
 /*!
@@ -489,6 +518,7 @@ void SampleGaussian(real_t mu, real_t sigma, NDArray *out);
 //--------------------------------------------------------------
 // The following part are API Registration of NDArray functions.
 //--------------------------------------------------------------
+
 /*! \brief definition of NDArray function */
 typedef std::function<void (NDArray **used_vars,
                             real_t *scalars,

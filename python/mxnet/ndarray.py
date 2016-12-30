@@ -1,22 +1,39 @@
 # coding: utf-8
 # pylint: disable= too-many-lines, redefined-builtin, protected-access
+# pylint: disable=import-error, no-name-in-module, undefined-variable
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
 
 import ctypes
 import warnings
-import sys
-import functools
+
+import os as _os
+import sys as _sys
+
 import operator
 import numpy as np
 from .base import _LIB, string_types, numeric_types
-from .base import c_array, mx_float, py_str, c_str, mx_real_t
-from .base import mx_uint, NDArrayHandle, FunctionHandle
+from .base import c_array, py_str, c_str, mx_real_t
+from .base import mx_uint, NDArrayHandle, check_call
 from .base import ctypes2buffer
-from .base import check_call, ctypes2docstring
 from .context import Context
 from . import _ndarray_internal as _internal
+
+# Use different verison of SymbolBase
+# When possible, use cython to speedup part of computation.
+try:
+    if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
+        from ._ctypes.ndarray import NDArrayBase, _init_ndarray_module
+    elif _sys.version_info >= (3, 0):
+        from ._cy3.ndarray import NDArrayBase, _init_ndarray_module
+    else:
+        from ._cy2.ndarray import NDArrayBase, _init_ndarray_module
+except ImportError:
+    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
+        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
+    from ._ctypes.ndarray import NDArrayBase, _init_ndarray_module
+
 
 # pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
@@ -76,31 +93,17 @@ def waitall():
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
-class NDArray(object):
+class NDArray(NDArrayBase):
     """NDArray object in mxnet.
 
     NDArray is basic ndarray/Tensor like data structure in mxnet.
     """
-    # pylint: disable= no-member
-    def __init__(self, handle, writable=True):
-        """initialize a new NDArray
-
-        Parameters
-        ----------
-        handle : NDArrayHandle
-            NDArray handle of C API
-        """
-        assert isinstance(handle, NDArrayHandle)
-        self.handle = handle
-        self.writable = writable
-
+    __slots__ = []
+    # pylint: disable= no-member, undefined-variable
     def __repr__(self):
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
                                 shape_info, self.context)
-
-    def __del__(self):
-        check_call(_LIB.MXNDArrayFree(self.handle))
 
     def __add__(self, other):
         return add(self, other)
@@ -109,7 +112,7 @@ class NDArray(object):
         if not self.writable:
             raise ValueError('trying to add to a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._plus(self, other, out=self)
+            return broadcast_add(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._plus_scalar(self, float(other), out=self)
         else:
@@ -125,7 +128,7 @@ class NDArray(object):
         if not self.writable:
             raise ValueError('trying to subtract from a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._minus(self, other, out=self)
+            return broadcast_sub(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._minus_scalar(self, float(other), out=self)
         else:
@@ -144,7 +147,7 @@ class NDArray(object):
         if not self.writable:
             raise ValueError('trying to multiply to a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._mul(self, other, out=self)
+            return broadcast_mul(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._mul_scalar(self, float(other), out=self)
         else:
@@ -163,7 +166,7 @@ class NDArray(object):
         if not self.writable:
             raise ValueError('trying to divide from a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._div(self, other, out=self)
+            return broadcast_div(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._div_scalar(self, float(other), out=self)
         else:
@@ -184,9 +187,27 @@ class NDArray(object):
     def __rpow__(self, other):
         return power(other, self)
 
+    def __eq__(self, other):
+        return equal(self, other)
+
+    def __ne__(self, other):
+        return not_equal(self, other)
+
+    def __gt__(self, other):
+        return greater(self, other)
+
+    def __ge__(self, other):
+        return greater_equal(self, other)
+
+    def __lt__(self, other):
+        return lesser(self, other)
+
+    def __le__(self, other):
+        return lesser_equal(self, other)
+
     def __getstate__(self):
-        this = self.__dict__.copy()
-        handle = this['handle']
+        handle = self.handle
+        this = {'handle' : None}
         if handle is not None:
             length = ctypes.c_size_t()
             cptr = ctypes.POINTER(ctypes.c_char)()
@@ -197,6 +218,7 @@ class NDArray(object):
         return this
 
     def __setstate__(self, state):
+        # pylint: disable=assigning-non-slot
         handle = state['handle']
         if handle is not None:
             buf = handle
@@ -204,8 +226,9 @@ class NDArray(object):
             ptr = (ctypes.c_char * len(buf)).from_buffer(buf)
             length = ctypes.c_size_t(len(buf))
             check_call(_LIB.MXNDArrayLoadFromRawBytes(ptr, length, ctypes.byref(handle)))
-            state['handle'] = handle
-        self.__dict__.update(state)
+            self.handle = handle
+        else:
+            self.handle = None
 
     def __setitem__(self, in_slice, value):
         """Set ndarray value.
@@ -568,6 +591,9 @@ class NDArray(object):
         return self.copyto(context)
 
 
+_init_ndarray_module(NDArray, "mxnet")
+
+
 def onehot_encode(indices, out):
     """One hot encoding indices into matrix out.
 
@@ -654,13 +680,6 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
     elif isinstance(rhs, numeric_types):
         return lfn_scalar(lhs, float(rhs))
     elif isinstance(rhs, NDArray):
-        # check whether broadcasting is needed
-        lsize = functools.reduce(operator.mul, lhs.shape)
-        rsize = functools.reduce(operator.mul, rhs.shape)
-        if lsize < rsize:
-            lhs = lhs.broadcast_to(rhs.shape)
-        elif lsize > rsize:
-            rhs = rhs.broadcast_to(lhs.shape)
         return fn_array(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
@@ -686,7 +705,7 @@ def add(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._plus,
+        broadcast_add,
         operator.add,
         _internal._plus_scalar,
         None)
@@ -712,7 +731,7 @@ def subtract(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._minus,
+        broadcast_sub,
         operator.sub,
         _internal._minus_scalar,
         _internal._rminus_scalar)
@@ -738,7 +757,7 @@ def multiply(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._mul,
+        broadcast_mul,
         operator.mul,
         _internal._mul_scalar,
         None)
@@ -764,7 +783,7 @@ def divide(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._div,
+        broadcast_div,
         operator.truediv,
         _internal._div_scalar,
         _internal._rdiv_scalar)
@@ -790,7 +809,7 @@ def power(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._power,
+        broadcast_power,
         operator.pow,
         _internal._power_scalar,
         _internal._rpower_scalar)
@@ -816,7 +835,7 @@ def maximum(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._maximum,
+        broadcast_maximum,
         lambda x, y: x if x > y else y,
         _internal._maximum_scalar,
         None)
@@ -842,10 +861,167 @@ def minimum(lhs, rhs):
     return _ufunc_helper(
         lhs,
         rhs,
-        _internal._minimum,
+        broadcast_minimum,
         lambda x, y: x if x < y else y,
         _internal._minimum_scalar,
         None)
+    # pylint: enable= no-member, protected-access
+
+def equal(lhs, rhs):
+    """Return (lhs == rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        broadcast_equal,
+        lambda x, y: 1 if x == y else 0,
+        _internal._equal_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def not_equal(lhs, rhs):
+    """Return (lhs != rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        broadcast_not_equal,
+        lambda x, y: 1 if x != y else 0,
+        _internal._not_equal_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def greater(lhs, rhs):
+    """Return (lhs > rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        broadcast_greater,
+        lambda x, y: 1 if x > y else 0,
+        _internal._greater_scalar,
+        _internal._lesser_scalar)
+    # pylint: enable= no-member, protected-access
+
+def greater_equal(lhs, rhs):
+    """Return (lhs >= rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        broadcast_greater_equal,
+        lambda x, y: 1 if x >= y else 0,
+        _internal._greater_equal_scalar,
+        _internal._lesser_equal_scalar)
+    # pylint: enable= no-member, protected-access
+
+def lesser(lhs, rhs):
+    """Return (lhs < rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        broadcast_lesser,
+        lambda x, y: 1 if x < y else 0,
+        _internal._lesser_scalar,
+        _internal._greater_scalar)
+    # pylint: enable= no-member, protected-access
+
+
+def lesser_equal(lhs, rhs):
+    """Return (lhs <= rhs) element-wise.
+
+    Parameters
+    ----------
+    lhs : Array or float value
+        left hand side operand
+
+    rhs : Array of float value
+        right hand side operand
+
+    Returns
+    -------
+    out: Array
+        result array
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        broadcast_lesser_equal,
+        lambda x, y: 1 if x <= y else 0,
+        _internal._lesser_equal_scalar,
+        _internal._greater_equal_scalar)
     # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
@@ -1123,185 +1299,3 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
                                    len(str_img),
                                    str_img=str_img,
                                    out=out)
-
-# pylint: disable=too-many-locals, invalid-name
-def _make_ndarray_function(handle):
-    """Create a NDArray function from the FunctionHandle."""
-    NDARRAY_ARG_BEFORE_SCALAR = 1
-    ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
-    # Get the property of NDArray
-    n_used_vars = mx_uint()
-    n_scalars = mx_uint()
-    n_mutate_vars = mx_uint()
-    type_mask = ctypes.c_int()
-    check_call(_LIB.MXFuncDescribe(
-        handle,
-        ctypes.byref(n_used_vars),
-        ctypes.byref(n_scalars),
-        ctypes.byref(n_mutate_vars),
-        ctypes.byref(type_mask)))
-    n_mutate_vars = n_mutate_vars.value
-    n_used_vars = n_used_vars.value
-    n_scalars = n_scalars.value
-    type_mask = type_mask.value
-    accept_empty_mutate = (type_mask & ACCEPT_EMPTY_MUTATE_TARGET) != 0
-    # infer type of the function
-    if (type_mask & NDARRAY_ARG_BEFORE_SCALAR) != 0:
-        use_vars_range = range(0, n_used_vars)
-        scalar_range = range(n_used_vars, n_used_vars + n_scalars)
-    else:
-        scalar_range = range(0, n_scalars)
-        use_vars_range = range(n_scalars, n_used_vars + n_scalars)
-
-    # Get the information from the function
-    name = ctypes.c_char_p()
-    desc = ctypes.c_char_p()
-    num_args = mx_uint()
-    arg_names = ctypes.POINTER(ctypes.c_char_p)()
-    arg_types = ctypes.POINTER(ctypes.c_char_p)()
-    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
-    ret_type = ctypes.c_char_p()
-
-    check_call(_LIB.MXFuncGetInfo(
-        handle, ctypes.byref(name), ctypes.byref(desc),
-        ctypes.byref(num_args),
-        ctypes.byref(arg_names),
-        ctypes.byref(arg_types),
-        ctypes.byref(arg_descs),
-        ctypes.byref(ret_type)))
-    func_name = py_str(name.value)
-    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
-    doc_str = ('%s\n\n' +
-               '%s\n' +
-               'out : NDArray, optional\n' +
-               '    The output NDArray to hold the result.\n\n'+
-               'Returns\n' +
-               '-------\n' +
-               'out : NDArray\n'+
-               '    The output of binary function.')
-    doc_str = doc_str % (py_str(desc.value), param_str)
-
-    # Definition of internal functions.
-    def binary_ndarray_function(lhs, rhs, out=None, **kwargs):
-        """Internal binary function
-        """
-        if out:
-            if not isinstance(out, NDArray):
-                raise TypeError('out must be NDArray')
-            if not out.writable:
-                raise TypeError('out must be writable')
-        else:
-            if not accept_empty_mutate:
-                raise TypeError('argument out is required to call %s' % func_name)
-            out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvokeEx( \
-                handle, \
-                c_array(NDArrayHandle, (lhs.handle, rhs.handle)), \
-                c_array(mx_float, ()), \
-                c_array(NDArrayHandle, (out.handle,)), \
-                ctypes.c_int(len(kwargs)), \
-                c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]), \
-                c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
-        return out
-
-    def unary_ndarray_function(src, out=None, *args, **kwargs):
-        """internal NDArray function"""
-        if out:
-            if not isinstance(out, NDArray):
-                raise TypeError('out must be NDArray')
-            if not out.writable:
-                raise TypeError('out must be writable')
-        else:
-            if not accept_empty_mutate:
-                raise TypeError('argument out is required to call %s' % func_name)
-            out = NDArray(_new_empty_handle())
-        check_call(_LIB.MXFuncInvokeEx( \
-                handle, \
-                c_array(NDArrayHandle, (src.handle,)), \
-                c_array(mx_float, [args[i] for i in scalar_range]), \
-                c_array(NDArrayHandle, (out.handle,)), \
-                ctypes.c_int(len(kwargs)), \
-                c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]), \
-                c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
-        return out
-
-    def generic_ndarray_function(*args, **kwargs):
-        """Invoke this function by passing in parameters
-
-        Parameters
-        ----------
-        *args
-            Positional arguments of input scalars and NDArray
-        out : NDArray or tuple of NDArray, optional
-            Output NDArray, used to hold the output result.
-
-        Returns
-        -------
-        out : NDArray
-            The result NDArray(tuple) of result of computation.
-        """
-        if 'out' in kwargs:
-            mutate_vars = kwargs['out']
-            if isinstance(mutate_vars, NDArray):
-                mutate_vars = (mutate_vars,)
-            if len(mutate_vars) != n_mutate_vars:
-                raise TypeError('expect %d out in %s', n_mutate_vars, func_name)
-            del kwargs['out']
-        else:
-            if accept_empty_mutate:
-                mutate_vars = tuple(
-                    NDArray(_new_empty_handle()) for i in range(n_mutate_vars))
-            else:
-                raise TypeError('argument out is required to call %s' % func_name)
-        check_call(_LIB.MXFuncInvokeEx( \
-            handle, \
-            c_array(NDArrayHandle, [args[i].handle for i in use_vars_range]), \
-            c_array(mx_float, [args[i] for i in scalar_range]), \
-            c_array(NDArrayHandle, [v.handle for v in mutate_vars]), \
-            ctypes.c_int(len(kwargs)), \
-            c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]), \
-            c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
-        if n_mutate_vars == 1:
-            return mutate_vars[0]
-        else:
-            return mutate_vars
-    # End of function declaration
-    if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
-        ret_function = binary_ndarray_function
-    elif n_mutate_vars == 1 and n_used_vars == 1 and n_scalars == 0:
-        ret_function = unary_ndarray_function
-    else:
-        ret_function = generic_ndarray_function
-    ret_function.__name__ = func_name
-    ret_function.__doc__ = doc_str
-    return ret_function
-
-
-
-# pylint: enable=too-many-locals, invalid-name
-
-def _init_ndarray_module():
-    """List and add all the ndarray functions to current module."""
-    plist = ctypes.POINTER(FunctionHandle)()
-    size = ctypes.c_uint()
-    check_call(_LIB.MXListFunctions(ctypes.byref(size),
-                                    ctypes.byref(plist)))
-
-    module_obj = sys.modules[__name__]
-    module_internal = sys.modules["mxnet._ndarray_internal"]
-    for i in range(size.value):
-        hdl = FunctionHandle(plist[i])
-        function = _make_ndarray_function(hdl)
-        # if function name starts with underscore, register as internal namespace
-        if function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            fname = function.__name__
-            fn_obj = getattr(module_obj, fname, None)
-            if fn_obj is None:
-                setattr(module_obj, fname, function)
-            else:
-                setattr(module_obj, fname + '_internal', function)
-
-# Initialize the NDArray module
-_init_ndarray_module()

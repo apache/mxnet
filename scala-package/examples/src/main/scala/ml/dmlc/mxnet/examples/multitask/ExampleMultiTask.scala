@@ -116,7 +116,7 @@ object ExampleMultiTask {
 
       for (i <- labels.indices) {
         val (pred, label) = (preds(i), labels(i))
-        val predLabel = NDArray.argmaxChannel(pred)
+        val predLabel = NDArray.argmax_channel(pred)
         require(label.shape == predLabel.shape,
           s"label ${label.shape} and prediction ${predLabel.shape}" +
           s"should have the same length.")

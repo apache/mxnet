@@ -37,7 +37,7 @@ To train models on a particular dataset, use `train_dataset.py`. For example:
   python train_mnist.py --lr .1 --lr-factor .9 --lr-factor-epoch .5
 ```
 
-- To train a convolution neural network on mnist by using GPU 0, use this command:
+- To train a convolutional neural network on mnist by using GPU 0, use this command:
 
 ```bash
   python train_mnist.py --network lenet --gpus 0
@@ -96,7 +96,7 @@ program, see this [tutorial](http://mxnet.io/how_to/multi_devices.html).
 ## Generating Predictions
 You have several options for generating predictions:
 
-- Use a pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
+- Use a [pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - Use your own datasets.
 - You can also easily run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html).

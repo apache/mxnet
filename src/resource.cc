@@ -171,7 +171,8 @@ class ResourceManagerImpl : public ResourceManager {
       Engine::Get()->PushSync([r, seed](RunContext rctx) {
           r->set_stream(rctx.get_stream<xpu>());
           r->Seed(seed);
-        }, ctx, {}, {resource.var});
+        }, ctx, {}, {resource.var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
     }
   };
 

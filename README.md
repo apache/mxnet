@@ -22,6 +22,11 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Version 0.9.1 Release (NNVM refactor)](./docs/architecture/release_note_0_9.md) - NNVM branch is merged into master now. An official release will be made soon.
+* [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
+* [Updated Image Classification with new Pre-trained Models](./example/image-classification)
+* [Python Notebooks for How to Use MXNet](https://github.com/dmlc/mxnet-notebooks)
+* [MKLDNN for Faster CPU Performance](./MKL_README.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [Embedding Torch layers and functions in MXNet](http://mxnet.io/how_to/torch.html)
@@ -31,7 +36,8 @@ What's New
 * [MXNet on Mobile Device](http://mxnet.io/how_to/smart_device.html)
 * [Distributed Training](http://mxnet.io/how_to/multi_devices.html)
 * [Guide to Creating New Operators (Layers)](http://mxnet.io/how_to/new_op.html)
-* [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/)
+* [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
+* [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/) - Outdated
 * [Training Deep Net on 14 Million Images on A Single Machine](http://mxnet.io/tutorials/computer_vision/imagenet_full.html)
 
 Contents

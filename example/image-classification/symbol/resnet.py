@@ -89,7 +89,7 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     data = mx.sym.Variable(name='data')
     data = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=bn_mom, name='bn_data')
     (nchannel, height, width) = image_shape
-    if height <= 28:            # such as cifar10
+    if height <= 32:            # such as cifar10
         body = mx.sym.Convolution(data=data, num_filter=filter_list[0], kernel=(3, 3), stride=(1,1), pad=(1, 1),
                                   no_bias=True, name="conv0", workspace=workspace)
     else:                       # often expected to be 224 such as imagenet
@@ -124,11 +124,11 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
     if height <= 28:
         num_stages = 3
         if (num_layers-2) % 9 == 0 and num_layers >= 164:
-            per_unit = [(num_layers-2)/9]
+            per_unit = [(num_layers-2)//9]
             filter_list = [16, 64, 128, 256]
             bottle_neck = True
         elif (num_layers-2) % 6 == 0 and num_layers < 164:
-            per_unit = [(num_layers-2)/6]
+            per_unit = [(num_layers-2)//6]
             filter_list = [16, 16, 32, 64]
             bottle_neck = False
         else:
