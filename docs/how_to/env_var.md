@@ -55,6 +55,17 @@ Typically, you wouldn't need to change these settings, but they are listed here 
     - when set to `1`, then during forward propagation, graph exector will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed. `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
     - one extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will save O(sqrt(N)) memory at 75% running speed.
 
+## Control the profiler
+
+When USE_PROFILER is enabled in Makefile or CMake, the following enviroments can be used to profile the application without changing code.
+
+* MXNET_PROFILER_AUTOSTART (default=0)
+	- Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the work directory.
+
+* MXNET_PROFILER_MODE (default=0)
+	- If set to '0', profiler records the events of the symbolic operators.
+	- If set to '1', profiler records the events of all operators.
+
 ## Other Environment Variables
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT (default=0)
