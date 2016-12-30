@@ -2,6 +2,9 @@ RNN Example
 ===========
 This folder contains RNN examples using low level symbol interface.
 
+## Data
+Run `get_ptb_data.sh` to download PenTreeBank data.
+
 ## Python
 
 - [lstm.py](lstm.py) Functions for building a LSTM Network

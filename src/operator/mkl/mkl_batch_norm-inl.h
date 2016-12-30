@@ -142,12 +142,17 @@ class MKLBatchNormOp : public Operator {
       data = mkl_experimental_direct_get<xpu, 4, DType>(in_data[batchnorm::kData], s);
       out = mkl_experimental_direct_get<xpu, 4, DType>(out_data[batchnorm::kOut], s);
     }
+
+    const real_t scale = static_cast<real_t>(in_data[batchnorm::kData].shape_[1]) /
+      static_cast<real_t>(in_data[batchnorm::kData].shape_.Size());
+
     Tensor<xpu, 1, DType> slope = in_data[batchnorm::kGamma].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> bias = in_data[batchnorm::kBeta].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, DType>(s);
-    if (param_.fix_gamma)
-      slope = 1.f;
+
+    if (param_.fix_gamma)   slope = 1.f;
+
     dnnError_t e;
     if (!init_mkldnn_) {
       LayerSetUp(data, out);
@@ -170,13 +175,17 @@ class MKLBatchNormOp : public Operator {
           = std::static_pointer_cast<MKLData<DType>>(bottom_prv_desc);
         CHECK(mem_descr != NULL);
         fwd_bottom_data = mem_descr;
+
         e = dnnBatchNormalizationCreateForward_v2<DType>(
-              &batchNormFwdInference, NULL, mem_descr->layout_int, eps_, dnnUseScaleShift);
+             &batchNormFwdInference, NULL, mem_descr->layout_int, eps_,
+             dnnUseInputMeanVariance | dnnUseScaleShift);
         CHECK_EQ(e, E_SUCCESS);
+
         e = dnnBatchNormalizationCreateForward_v2<DType>(
               &batchNormFwdTraining, NULL, mem_descr->layout_int, eps_,
-              dnnUseInputMeanVariance | dnnUseScaleShift);
+              dnnUseScaleShift);
         CHECK_EQ(e, E_SUCCESS);
+
         fwd_top_data->create_internal_layout(batchNormFwdInference, dnnResourceDst);
         bwd_top_diff->create_internal_layout(batchNormFwdInference, dnnResourceDst);
         bwd_bottom_diff->create_internal_layout(batchNormFwdInference, dnnResourceSrc);
@@ -190,12 +199,12 @@ class MKLBatchNormOp : public Operator {
     if (NULL == bottom_data) {
       if (batchNormFwdInference == NULL) {
         e = dnnBatchNormalizationCreateForward_v2<DType>(
-              &batchNormFwdTraining, NULL, layout_usr_, eps_, dnnUseScaleShift);
+          &batchNormFwdInference, NULL, layout_usr_, eps_,
+          dnnUseInputMeanVariance | dnnUseScaleShift);
         CHECK_EQ(e, E_SUCCESS);
 
         e = dnnBatchNormalizationCreateForward_v2<DType>(
-              &batchNormFwdInference, NULL, layout_usr_, eps_,
-              dnnUseInputMeanVariance | dnnUseScaleShift);
+              &batchNormFwdTraining, NULL, layout_usr_, eps_, dnnUseScaleShift);
         CHECK_EQ(e, E_SUCCESS);
 
         e = dnnBatchNormalizationCreateBackward_v2<DType>(
@@ -223,10 +232,11 @@ class MKLBatchNormOp : public Operator {
 #endif
       BatchNorm_res[dnnResourceDst] = fwd_top_data->prv_ptr();
     } else {
-      BatchNorm_res[dnnResourceDst] = reinterpret_cast<void *>(out.dptr_);
+      BatchNorm_res[dnnResourceDst] =
+        reinterpret_cast<void *>(out.dptr_);
     }
 
-    if (ctx.is_train && !param_.use_global_stats) {
+    if (ctx.is_train) {
       Tensor<xpu, 1, DType> mean = out_data[batchnorm::kMean].get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> var = out_data[batchnorm::kVar].get<xpu, 1, DType>(s);
       CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
@@ -288,9 +298,7 @@ class MKLBatchNormOp : public Operator {
     Tensor<xpu, 1, DType> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, DType>(s);
 
-    if (param_.fix_gamma) {
-      slope = 1.f;
-    }
+    if (param_.fix_gamma)  slope = 1.f;
 
     void* bottom_data = NULL;
 #if MKL_EXPERIMENTAL == 1
@@ -303,7 +311,7 @@ class MKLBatchNormOp : public Operator {
     void* BatchNorm_res[dnnResourceNumber];
     BatchNorm_res[dnnResourceSrc] = bottom_data;
     BatchNorm_res[dnnResourceScaleShift] = scaleShift_space.dptr;
-    if (ctx.is_train && !param_.use_global_stats) {
+    if (ctx.is_train) {
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
     }

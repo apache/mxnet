@@ -69,7 +69,7 @@ if [ ${TASK} == "r_test" ]; then
     cd ..
 
     make rpkg
-    R CMD check --no-examples --no-manual --no-vignettes --no-build-vignettes mxnet_*.tar.gz
+#    R CMD check --no-examples --no-manual --no-vignettes --no-build-vignettes mxnet_*.tar.gz
     R CMD INSTALL mxnet_*.tar.gz
 
     Rscript tests/travis/r_vignettes.R
@@ -82,7 +82,6 @@ if [ ${TASK} == "r_test" ]; then
     cat CallbackFunctionTutorial.R \
     fiveMinutesNeuralNetwork.R \
     mnistCompetition.R \
-    classifyRealImageWithPretrainedModel.R \
     ndarrayAndSymbolTutorial.R > r_test.R
 
     Rscript r_test.R || exit -1
@@ -99,12 +98,14 @@ if [ ${TASK} == "python_test" ]; then
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         python -m nose tests/python/unittest || exit -1
-        # python -m nose tests/python/train || exit -1
+        python3 -m nose tests/python/unittest || exit -1
+        make cython3
+        # cython tests
+        export MXNET_ENFORCE_CYTHON=1
         python3 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/train || exit -1
     else
         nosetests tests/python/unittest || exit -1
-        # nosetests tests/python/train || exit -1
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
     fi

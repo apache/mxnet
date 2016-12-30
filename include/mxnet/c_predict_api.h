@@ -198,8 +198,8 @@ MXNET_DLL int MXNDListGet(NDListHandle handle,
                           const mx_uint** out_shape,
                           mx_uint* out_ndim);
 /*!
- * \brief Free a predictor handle.
- * \param handle The handle of the predictor.
+ * \brief Free a MXAPINDList
+ * \param handle The handle of the MXAPINDList.
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXNDListFree(NDListHandle handle);

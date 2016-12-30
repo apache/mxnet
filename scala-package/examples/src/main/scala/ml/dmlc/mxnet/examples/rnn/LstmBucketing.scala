@@ -32,15 +32,7 @@ object LstmBucketing {
   private val logger: Logger = LoggerFactory.getLogger(classOf[LstmBucketing])
 
   def perplexity(label: NDArray, pred: NDArray): Float = {
-    val batchSize = label.shape(0)
-    // TODO: NDArray transpose
-    val labelArr = Array.fill(label.size)(0)
-    (0 until batchSize).foreach(row => {
-      val labelRow = label.slice(row)
-      labelRow.toArray.zipWithIndex.foreach { case (l, col) =>
-        labelArr(col * batchSize + row) = l.toInt
-      }
-    })
+    val labelArr = label.T.toArray.map(_.toInt)
     var loss = .0
     (0 until pred.shape(0)).foreach(i =>
       loss -= Math.log(Math.max(1e-10f, pred.slice(i).toArray(labelArr(i))))
