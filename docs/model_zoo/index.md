@@ -32,16 +32,16 @@ Convolutional neural networks are the state-of-art architecture for many image a
 
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
-| CaffeNet | ImageNet | |   [Krizhevsky, 2012](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) | @.. |
-| Network in Network (NiN) | CIFAR-10 | |  [Lin et al.., 2014](https://arxiv.org/pdf/1312.4400v3.pdf) | |
-| SqueezeNet | ImageNet | | [Iandola et al.., 2016](https://arxiv.org/pdf/1602.07360v4.pdf) | |
-| VGG16 | ImageNet | | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | |
-| VGG19 | ImageNet | | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | |
-| Inception v3 w/BatchNorm | ImageNet | | [Szegedy et al.., 2015](https://arxiv.org/pdf/1512.00567.pdf) | |
-| ResidualNet152 | ImageNet | | [He et al.., 2015](https://arxiv.org/pdf/1512.03385v1.pdf) | |
-| Fast-RCNN | PASCAL VOC | | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf) | |
-| Faster-RCNN | PASCAL VOC |  | [Ren et al..,2016](https://arxiv.org/pdf/1506.01497v3.pdf) | |
-| Single Shot Detection (SSD) | PASCAL VOC | | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf) | |
+| [CaffeNet](http://data.dmlc.ml/models/imagenet/caffenet/caffenet-0000.params) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/caffenet/caffenet-0000.params) |   [Krizhevsky, 2012](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) | @jspisak |
+| [Network in Network (NiN)](http://data.dmlc.ml/models/imagenet/nin/nin-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/nin/nin-0000.params) |  [Lin et al.., 2014](https://arxiv.org/pdf/1312.4400v3.pdf) | @jspisak |
+| [SqueezeNet v1.1](http://data.dmlc.ml/models/imagenet/squeezenet/squeezenet_v1.1-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/squeezenet/squeezenet_v1.1-0000.params) | [Iandola et al.., 2016](https://arxiv.org/pdf/1602.07360v4.pdf) | @jspisak |
+| [VGG16](http://data.dmlc.ml/models/imagenet/vgg/vgg16-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/vgg/vgg16-0000.params)| [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | @jspisak |
+| [VGG19](http://data.dmlc.ml/models/imagenet/vgg/vgg19-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/vgg/vgg19-0000.params) | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | @jspisak |
+| [Inception v3 w/BatchNorm](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params) | [Szegedy et al.., 2015](https://arxiv.org/pdf/1512.00567.pdf) | @jspisak |
+| [ResidualNet152](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-0000.params) | [He et al.., 2015](https://arxiv.org/pdf/1512.03385v1.pdf) | @jspisak |
+| Fast-RCNN | PASCAL VOC | [Param File] | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf) | |
+| Faster-RCNN | PASCAL VOC | [Param File] | [Ren et al..,2016](https://arxiv.org/pdf/1506.01497v3.pdf) | |
+| Single Shot Detection (SSD) | PASCAL VOC | [Param File] | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf) | |
 
 
 ## [Recursive Neural Networks (Including LSTMs)](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf)
