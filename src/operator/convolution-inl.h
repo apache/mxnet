@@ -12,7 +12,6 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
 #include <dmlc/logging.h>
-#include <dmlc/threadediter.h>
 #include <dmlc/optional.h>
 #include <algorithm>
 #include <map>
