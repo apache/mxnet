@@ -38,7 +38,7 @@ echo "Compiling R package. This can take few minutes..."
 make rpkg
 
 echo "Installing R package..."
-sudo R CMD INSTALL mxnet_0.9.1.tar.gz
+sudo R CMD INSTALL mxnet_current.tar.gz
 
 echo "Done! MXNet for R installation is complete. Go ahead and explore MXNet with R :-)"
 
