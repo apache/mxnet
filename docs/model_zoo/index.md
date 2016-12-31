@@ -32,7 +32,7 @@ Convolutional neural networks are the state-of-art architecture for many image a
 
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
-| [CaffeNet](http://data.dmlc.ml/models/imagenet/caffenet/caffenet-0000.params) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/caffenet/caffenet-0000.params) |   [Krizhevsky, 2012](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) | @jspisak |
+| [CaffeNet](http://data.dmlc.ml/mxnet/models/imagenet/caffenet/caffenet-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/caffenet/caffenet-0000.params) |   [Krizhevsky, 2012](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) | @jspisak |
 | [Network in Network (NiN)](http://data.dmlc.ml/models/imagenet/nin/nin-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/nin/nin-0000.params) |  [Lin et al.., 2014](https://arxiv.org/pdf/1312.4400v3.pdf) | @jspisak |
 | [SqueezeNet v1.1](http://data.dmlc.ml/models/imagenet/squeezenet/squeezenet_v1.1-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/squeezenet/squeezenet_v1.1-0000.params) | [Iandola et al.., 2016](https://arxiv.org/pdf/1602.07360v4.pdf) | @jspisak |
 | [VGG16](http://data.dmlc.ml/models/imagenet/vgg/vgg16-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/vgg/vgg16-0000.params)| [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | @jspisak |
