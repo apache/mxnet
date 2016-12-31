@@ -335,7 +335,8 @@ jnilint:
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
+		R-package/inst R-package/src/*.o R-package/src/*.so
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
 	cd $(NNVM_PATH); make clean; cd -
@@ -343,7 +344,8 @@ clean: cyclean
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: cyclean
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
+		R-package/inst R-package/src/*.o R-package/src/*.so
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
 	cd $(NNVM_PATH); make clean; cd -
