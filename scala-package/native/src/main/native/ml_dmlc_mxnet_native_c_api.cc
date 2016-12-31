@@ -132,7 +132,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncGetInfo
   const char **cArgDescs;
   int ret = MXFuncGetInfo(reinterpret_cast<FunctionHandle>(funcPtr),
                           &cName, &cDesc, &cNumArgs,
-                          &cArgNames, &cArgTypes, &cArgDescs);
+                          &cArgNames, &cArgTypes, &cArgDescs, NULL);
 
   jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
   jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
@@ -727,7 +727,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreGetNumDeadNode
   int number;
   int ret = MXKVStoreGetNumDeadNode(reinterpret_cast<KVStoreHandle>(kvStorePtr),
                                     static_cast<const int>(nodeId),
-                                    &number);
+                                    &number, 60);  // default timeout is 60 seconds.
   SetIntField(env, numberRef, number);
   return ret;
 }
@@ -1037,7 +1037,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
   int ret = MXSymbolGetAtomicSymbolInfo(reinterpret_cast<AtomicSymbolCreator>(symbolPtr),
                                         &cName, &cDesc, &cNumArgs,
                                         &cArgNames, &cArgTypes, &cArgDescs,
-                                        &cKeyVarNumArgs);
+                                        &cKeyVarNumArgs, NULL);
 
   jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
   jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");

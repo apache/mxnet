@@ -8,9 +8,12 @@
 
 #ifdef __cplusplus
 #define MXNET_EXTERN_C extern "C"
+#else
+#define MXNET_EXTERN_C
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 
 /*! \brief MXNET_DLL prefix for windows */
 #ifdef _WIN32
@@ -57,8 +60,7 @@ MXNET_EXTERN_C typedef void (*ExecutorMonitorCallback)(const char*,
                                                        NDArrayHandle,
                                                        void *);
 
-MXNET_EXTERN_C {
-struct NativeOpInfo {
+MXNET_EXTERN_C struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
   void (*backward)(int, float**, int*, unsigned**, int*, void*);
   void (*infer_shape)(int, int*, unsigned**, void*);
@@ -72,14 +74,14 @@ struct NativeOpInfo {
   void* p_list_arguments;
 };
 
-struct NDArrayOpInfo {
-  bool (*forward)(int, void**, int*, void*);
-  bool (*backward)(int, void**, int*, void*);
-  bool (*infer_shape)(int, int*, unsigned**, void*);
-  bool (*list_outputs)(char***, void*);
-  bool (*list_arguments)(char***, void*);
-  bool (*declare_backward_dependency)(const int*, const int*, const int*,
-                                      int*, int**, void*);
+MXNET_EXTERN_C struct NDArrayOpInfo {
+  int (*forward)(int, void**, int*, void*);
+  int (*backward)(int, void**, int*, void*);
+  int (*infer_shape)(int, int*, unsigned**, void*);
+  int (*list_outputs)(char***, void*);
+  int (*list_arguments)(char***, void*);
+  int (*declare_backward_dependency)(const int*, const int*, const int*,
+                                     int*, int**, void*);
   // all functions also pass a payload void* pointer
   void* p_forward;
   void* p_backward;
@@ -89,31 +91,31 @@ struct NDArrayOpInfo {
   void* p_declare_backward_dependency;
 };
 
-struct CustomOpInfo {
-  bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
-                  const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
-  bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
-                   const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
-  bool (*del)(void* /*state*/);
+MXNET_EXTERN_C struct CustomOpInfo {
+  int (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
+                 const int* /*reqs*/, const int /*is_train*/, void* /*state*/);
+  int (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
+                  const int* /*reqs*/, const int /*is_train*/, void* /*state*/);
+  int (*del)(void* /*state*/);
   // all functions also pass a payload void* pointer
   void* p_forward;
   void* p_backward;
   void* p_del;
 };
 
-struct CustomOpPropInfo {
-  bool (*list_arguments)(char*** /*args*/, void* /*state*/);
-  bool (*list_outputs)(char*** /*outputs*/, void* /*state*/);
-  bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/,
-                      void* /*state*/);
-  bool (*declare_backward_dependency)(const int* /*out_grad*/, const int* /*in_data*/,
-                                      const int* /*out_data*/, int* /*num_deps*/,
-                                      int** /*rdeps*/, void* /*state*/);
-  bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
-                          int* /*ndims*/, int* /*dtypes*/,
-                          CustomOpInfo* /*ret*/, void* /*state*/);
-  bool (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
-  bool (*del)(void* /*state*/);
+MXNET_EXTERN_C struct CustomOpPropInfo {
+  int (*list_arguments)(char*** /*args*/, void* /*state*/);
+  int (*list_outputs)(char*** /*outputs*/, void* /*state*/);
+  int (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/,
+                     void* /*state*/);
+  int (*declare_backward_dependency)(const int* /*out_grad*/, const int* /*in_data*/,
+                                     const int* /*out_data*/, int* /*num_deps*/,
+                                     int** /*rdeps*/, void* /*state*/);
+  int (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
+                         int* /*ndims*/, int* /*dtypes*/,
+                         struct CustomOpInfo* /*ret*/, void* /*state*/);
+  int (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
+  int (*del)(void* /*state*/);
   // all functions also pass a payload void* pointer
   void* p_list_arguments;
   void* p_list_outputs;
@@ -124,10 +126,12 @@ struct CustomOpPropInfo {
   void* p_del;
 };
 
-typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
-                                    const char** /*keys*/, const char** /*values*/,
-                                    CustomOpPropInfo* /*ret*/);
-}
+MXNET_EXTERN_C typedef int (*CustomOpPropCreator)(const char* /*op_type*/,
+                                                  const int /*num_kwargs*/,
+                                                  const char** /*keys*/,
+                                                  const char** /*values*/,
+                                                  struct CustomOpPropInfo* /*ret*/);
+
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
@@ -432,7 +436,7 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
                             const char ***arg_names,
                             const char ***arg_type_infos,
                             const char ***arg_descriptions,
-                            const char **return_type = NULL);
+                            const char **return_type);
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
@@ -555,7 +559,7 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions,
                                           const char **key_var_num_args,
-                                          const char **return_type = NULL);
+                                          const char **return_type);
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
@@ -902,7 +906,7 @@ MXNET_DLL int MXExecutorPrint(ExecutorHandle handle, const char **out_str);
  * \brief Executor forward method
  *
  * \param handle executor handle
- * \param is_train bool value to indicate whether the forward pass is for evaluation
+ * \param is_train int value to indicate whether the forward pass is for evaluation
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXExecutorForward(ExecutorHandle handle, int is_train);
@@ -1347,7 +1351,7 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
 MXNET_DLL int MXKVStoreGetNumDeadNode(KVStoreHandle handle,
                                       const int node_id,
                                       int *number,
-                                      const int timeout_sec = 60);
+                                      const int timeout_sec);
 
 /**
  * \brief Create a RecordIO writer object

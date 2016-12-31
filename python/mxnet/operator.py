@@ -7,7 +7,7 @@ import traceback
 
 from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
-from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
+from ctypes import c_void_p, c_int, c_char, c_char_p, cast
 
 from .base import _LIB, check_call
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
@@ -236,11 +236,11 @@ class NDArrayOp(PythonOp):
         super(NDArrayOp, self).__init__(need_top_grad)
 
     def get_symbol(self, *args, **kwargs):
-        fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
-        infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
+        fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
+        infer_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
                                    POINTER(POINTER(mx_uint)), c_void_p)
-        list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))), c_void_p)
-        deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
+        list_functype = CFUNCTYPE(c_int, POINTER(POINTER(POINTER(c_char))), c_void_p)
+        deps_functype = CFUNCTYPE(c_int, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
         class NDArrayOpInfo(Structure):
             """Structure that holds Callback information. Passed to NDArrayOpProp"""
@@ -555,9 +555,9 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
-        fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int),
-                                POINTER(c_int), c_bool, c_void_p)
-        del_functype = CFUNCTYPE(c_bool, c_void_p)
+        fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int),
+                                POINTER(c_int), c_int, c_void_p)
+        del_functype = CFUNCTYPE(c_int, c_void_p)
         class CustomOpInfo(Structure):
             """Structure that holds Callback information. Passed to CustomOpProp"""
             _fields_ = [
@@ -569,12 +569,12 @@ def register(reg_name):
                 ('p_delete', c_void_p)
                 ]
 
-        infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
+        infer_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
                                    POINTER(POINTER(mx_uint)), c_void_p)
-        list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))), c_void_p)
-        deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
+        list_functype = CFUNCTYPE(c_int, POINTER(POINTER(POINTER(c_char))), c_void_p)
+        deps_functype = CFUNCTYPE(c_int, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
-        createop_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(POINTER(mx_uint)),
+        createop_functype = CFUNCTYPE(c_int, c_char_p, c_int, POINTER(POINTER(mx_uint)),
                                       POINTER(c_int), POINTER(c_int),
                                       POINTER(CustomOpInfo), c_void_p)
         class CustomOpPropInfo(Structure):
@@ -796,7 +796,7 @@ def register(reg_name):
             _registry.ref_holder[cur] = op_prop
             return True
 
-        creator_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(c_char_p),
+        creator_functype = CFUNCTYPE(c_int, c_char_p, c_int, POINTER(c_char_p),
                                      POINTER(c_char_p), POINTER(CustomOpPropInfo))
         creator_func = creator_functype(creator)
         check_call(_LIB.MXCustomOpRegister(c_str(reg_name), creator_func))
