@@ -41,6 +41,50 @@ mx.init.normal <- function(sd) {
   }
 }
 
+#' @title Xavier initializer
+#'
+#' @description Create a initializer which initialize weight with Xavier or
+#' similar initialization scheme.
+#'
+#' @param rnd_type A string of \code{character} indicating the type of
+#' distribution from which the weights are initialized.
+#' @param factor_type A string of \code{character}.
+#' @param magnitude A \code{numeric} number indicating the scale of random
+#' number range.
+#' @export
+mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
+                           magnitude = 3){
+  function(name, shape, ctx, allow.unknown = FALSE){
+    if (!mx.util.str.endswith(name, "weight")) {
+      return (mx.init.internal.default(name, shape, ctx, allow.unknown))
+    }
+
+    fan_out = shape[length(shape)]
+    fan_in  = prod(shape[-length(shape)])
+    factor_val  = 1
+    if (factor_type == "avg") {
+      factor_val = (fan_in + fan_out) / 2
+    } else if (factor_type == "in"){
+      factor_val = fan_in
+    } else if (factor_type == "out"){
+      factor_val = fan_out
+    } else {
+      stop("Not supported factor type. See usage of function mx.init.Xavier")
+    }
+
+    scale = sqrt(magnitude / factor_val)
+
+    if (rnd_type == "uniform"){
+      return(mx.runif(shape, -scale, scale, ctx))
+    } else if (rnd_type == "gaussian"){
+      return(mx.rnorm(shape, 0, scale, ctx))
+    } else {
+      stop("Not supported random type. See usage of function mx.init.Xavier")
+    }
+  }
+}
+
+
 #' Create initialization of argument  like arg.array
 #'
 #' @param initializer The initializer.

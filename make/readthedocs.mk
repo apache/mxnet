@@ -11,8 +11,8 @@ export NVCC = nvcc
 # whether use CUDA during compile
 USE_CUDA = 0
 
-# add the path to CUDA libary to link and compile flag
-# if you have already add them to enviroment variable, leave it as NONE
+# add the path to CUDA library to link and compile flag
+# if you have already add them to environment variable, leave it as NONE
 USE_CUDA_PATH = NONE
 
 # whether use opencv during compilation
@@ -33,19 +33,19 @@ USE_OPENMP = 0
 USE_STATIC_MKL = NONE
 USE_BLAS = NONE
 #
-# add path to intel libary, you may need it
-# for MKL, if you did not add the path to enviroment variable
+# add path to intel library, you may need it
+# for MKL, if you did not add the path to environment variable
 #
 USE_INTEL_PATH = NONE
 
 
 # the additional link flags you want to add
-ADD_LDFLAGS =
+ADD_LDFLAGS = -lgomp
 
 # the additional compile flags you want to add
-ADD_CFLAGS = -DMSHADOW_STAND_ALONE=1
+ADD_CFLAGS = -DMSHADOW_STAND_ALONE=1 -DMSHADOW_USE_SSE=0
 #
-# If use MKL, choose static link automaticly to fix python wrapper
+# If use MKL, choose static link automatically to fix python wrapper
 #
 ifeq ($(USE_BLAS), mkl)
 	USE_STATIC_MKL = 1
@@ -64,3 +64,6 @@ USE_S3 = 0
 
 # path to libjvm.so
 LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
+
+# uses O0 instead of O3 for better performance
+DEBUG = 1

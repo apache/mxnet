@@ -1,17 +1,32 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals
+# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
 """Symbolic Executor component of MXNet."""
 from __future__ import absolute_import
 
 import ctypes
+import copy
+import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
 from .base import check_call, c_array, py_str
 from .ndarray import NDArray
+from . import ndarray as nd
+
+# those functions are not used here, we just import them to keep backward compatibility
+# in case the end user calls them, as they originally lives here
+# pylint: disable=unused-import
+from .executor_manager import _split_input_slice, _check_arguments, _load_data, _load_label
+
+def _monitor_callback_wrapper(callback):
+    """ a wrapper for the user-defined handle """
+    def callback_handle(name, array, _):
+        """ ctypes function """
+        callback(name, array)
+    return callback_handle
 
 class Executor(object):
     """ Executor is the actual executing object of MXNet."""
-    def __init__(self, handle, symbol):
+    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
         Parameters
@@ -30,10 +45,15 @@ class Executor(object):
         self.grad_arrays = []
         self.aux_arrays = []
         self.outputs = self._get_outputs()
-        self._symbol = symbol
+        self._symbol = copy.deepcopy(symbol)
         self._arg_dict = None
         self._grad_dict = None
         self._aux_dict = None
+        self._output_dict = None
+        self._monitor_callback = None
+        self._ctx = copy.deepcopy(ctx)
+        self._grad_req = copy.deepcopy(grad_req)
+        self._group2ctx = copy.deepcopy(group2ctx)
 
     def __del__(self):
         check_call(_LIB.MXExecutorFree(self.handle))
@@ -53,7 +73,7 @@ class Executor(object):
 
         Returns
         -------
-        A list of ndarray binded to the heads of executor.
+        A list of ndarray bound to the heads of executor.
         """
         out_size = mx_uint()
         handles = ctypes.POINTER(NDArrayHandle)()
@@ -62,7 +82,7 @@ class Executor(object):
         return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
 
     def forward(self, is_train=False, **kwargs):
-        """Calculate the outputs specified by the binded symbol.
+        """Calculate the outputs specified by the bound symbol.
 
         Parameters
         ----------
@@ -79,26 +99,33 @@ class Executor(object):
         >>> # doing forward by not specifying things, but copy to the executor before hand
         >>> mydata.copyto(texec.arg_dict['data'])
         >>> texec.forward(is_train=True)
+        >>> # doing forward by specifying data and get outputs
+        >>> outputs = texec.forward(is_train=True, data=mydata)
+        >>> print(outputs[0].asnumpy())
         """
         if len(kwargs) != 0:
             arg_dict = self.arg_dict
             for name, array in kwargs.items():
-                if not isinstance(array, NDArray):
-                    raise ValueError('only accept keyword argument of NDArrays')
+                if not isinstance(array, (NDArray, np.ndarray)):
+                    raise ValueError('only accept keyword argument of NDArrays and numpy.ndarray')
                 if name not in arg_dict:
                     raise TypeError('Unknown argument %s' % name)
-                array.copyto(arg_dict[name])
+                if arg_dict[name].shape != array.shape:
+                    raise ValueError('Shape not match! Argument %s, need: %s, received: %s'
+                                     %(name, str(arg_dict[name].shape), str(array.shape)))
+                arg_dict[name][:] = array
 
         check_call(_LIB.MXExecutorForward(
             self.handle,
             ctypes.c_int(int(is_train))))
+        return self.outputs
 
     def backward(self, out_grads=None):
         """Do backward pass to get the gradient of arguments.
 
         Parameters
         ----------
-        out_grads : NDArray or list of NDArray, optional
+        out_grads : NDArray or list of NDArray or dict of str to NDArray, optional
             Gradient on the outputs to be propagated back.
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
@@ -107,6 +134,8 @@ class Executor(object):
             out_grads = []
         elif isinstance(out_grads, NDArray):
             out_grads = [out_grads]
+        elif isinstance(out_grads, dict):
+            out_grads = [out_grads[k] for k in self._symbol.list_outputs()]
 
         for obj in out_grads:
             if not isinstance(obj, NDArray):
@@ -116,6 +145,21 @@ class Executor(object):
             self.handle,
             mx_uint(len(out_grads)),
             ndarray))
+
+    def set_monitor_callback(self, callback):
+        """Install callback.
+
+        Parameters
+        ----------
+        callback : function
+            Takes a string and an NDArrayHandle.
+        """
+        cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
+        self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
+        check_call(_LIB.MXExecutorSetMonitorCallback(
+            self.handle,
+            self._monitor_callback,
+            None))
 
     @property
     def arg_dict(self):
@@ -136,6 +180,20 @@ class Executor(object):
         return self._arg_dict
 
     @property
+    def grad_dict(self):
+        """Get dictionary representation of gradient arrays.
+
+        Returns
+        -------
+        grad_dict : dict of str to NDArray
+            The dictionary that maps name of arguments to gradient arrays.
+        """
+        if self._grad_dict is None:
+            self._grad_dict = Executor._get_dict(
+                self._symbol.list_arguments(), self.grad_arrays)
+        return self._grad_dict
+
+    @property
     def aux_dict(self):
         """Get dictionary representation of auxiliary states arrays.
 
@@ -152,6 +210,24 @@ class Executor(object):
             self._aux_dict = Executor._get_dict(
                 self._symbol.list_auxiliary_states(), self.aux_arrays)
         return self._aux_dict
+
+    @property
+    def output_dict(self):
+        """Get dictionary representation of output arrays.
+
+        Returns
+        -------
+        output_dict : dict of str to NDArray
+            The dictionary that maps name of output names to NDArrays.
+
+        Raises
+        ------
+        ValueError : if there are duplicated names in the outputs.
+        """
+        if self._output_dict is None:
+            self._output_dict = Executor._get_dict(
+                self._symbol.list_outputs(), self.outputs)
+        return self._output_dict
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
         """Copy parameters from arg_params, aux_params into executor's internal array.
@@ -176,7 +252,8 @@ class Executor(object):
         """
         for name, array in arg_params.items():
             if name in self.arg_dict:
-                array.copyto(self.arg_dict[name])
+                dst = self.arg_dict[name]
+                array.astype(dst.dtype).copyto(dst)
             else:
                 if not allow_extra_params:
                     raise ValueError('Find name \"%s\" that is not in the arguments' % name)
@@ -184,10 +261,89 @@ class Executor(object):
             aux_params = {}
         for name, array in aux_params.items():
             if name in self.aux_dict:
-                array.copyto(self.aux_dict[name])
+                dst = self.aux_dict[name]
+                array.astype(dst.dtype).copyto(dst)
             else:
                 if not allow_extra_params:
                     raise ValueError('Find name %s that is not in the auxiliary states' % name)
+
+    def reshape(self, partial_shaping=False, allow_up_sizing=False, **kwargs):
+        """Return a new executor with the same symbol and shared memory,
+        but different input/output shapes.
+        For runtime reshaping, variable length sequences, etc.
+        The returned executor shares state with the current one,
+        and cannot be used in parallel with it.
+
+        Parameters
+        ----------
+        partial_shaping : bool
+            Whether to allow changing the shape of unspecified arguments.
+        allow_up_sizing : bool
+            Whether to allow allocating new ndarrays that's larger than the original.
+        kwargs : dict of string to tuple of int
+            new shape for arguments.
+        Returns
+        -------
+        exec : Executor
+            A new executor that shares memory with self.
+        """
+        # pylint: disable=too-many-branches
+        arg_shapes, _, aux_shapes = self._symbol.infer_shape(**kwargs)
+        if arg_shapes is None:
+            raise ValueError("Insufficient argument shapes provided.")
+
+        new_arg_dict = {}
+        new_grad_dict = {}
+        for i, name in enumerate(self._symbol.list_arguments()):
+            new_shape = arg_shapes[i]
+            arr = self.arg_arrays[i]
+            darr = None if self.grad_arrays is None else self.grad_arrays[i]
+            if partial_shaping or name in kwargs or new_shape == arr.shape:
+                if np.prod(new_shape) > np.prod(arr.shape):
+                    assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
+                        "First making a big executor and then down sizing it " + \
+                        "is more efficient than the reverse." + \
+                        "If you really want to up size, set allow_up_sizing=True " + \
+                        "to enable allocation of new arrays."
+                    new_arg_dict[name] = nd.empty(new_shape, ctx=arr.context)
+                    if darr is not None:
+                        new_grad_dict[name] = nd.empty(new_shape, ctx=darr.context)
+                else:
+                    new_arg_dict[name] = arr.reshape(new_shape)
+                    if darr is not None:
+                        new_grad_dict[name] = darr.reshape(new_shape)
+            else:
+                raise AssertionError("Shape of unspecified array arg:%s changed. "%name + \
+                    "This can cause the new executor to not share parameters " + \
+                    "with the old one. Please check for error in network." +\
+                    "If this is intended, set partial_shaping=True to suppress this warning.")
+
+        new_aux_dict = {}
+        for name, new_shape, arr in zip(self._symbol.list_auxiliary_states(),
+                                        aux_shapes, self.aux_arrays):
+            if partial_shaping or new_shape == arr.shape:
+                if np.prod(new_shape) > np.prod(arr.shape):
+                    assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
+                        "First making a big executor and then down sizing it " + \
+                        "is more efficient than the reverse." + \
+                        "If you really want to up size, set allow_up_sizing=True " + \
+                        "to enable allocation of new arrays."
+                    new_aux_dict[name] = nd.empty(new_shape, ctx=arr.context)
+                else:
+                    new_aux_dict[name] = arr.reshape(new_shape)
+            else:
+                raise AssertionError("Shape of unspecified array aux:%s changed. "%name + \
+                    "This can cause the new executor to not share parameters " + \
+                    "with the old one. Please check for error in network." +\
+                    "If this is intended, set partial_shaping=True to suppress this warning.")
+
+        return self._symbol.bind(self._ctx,
+                                 args=new_arg_dict,
+                                 args_grad=new_grad_dict,
+                                 grad_req=self._grad_req,
+                                 aux_states=new_aux_dict,
+                                 group2ctx=self._group2ctx,
+                                 shared_exec=self)
 
     def debug_str(self):
         """Get a debug string about internal execution plan.

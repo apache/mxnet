@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import ctypes
 import sys
 import pickle
+import logging
 from .base import _LIB, check_call
 from .kvstore import create
 
@@ -18,11 +19,20 @@ class KVStoreServer(object):
         """
         self.kvstore = kvstore
         self.handle = kvstore.handle
+        self.init_logginig = False
 
     def _controller(self):
         """return the server controller"""
-        def server_controller(cmd_id, cmd_body):
+        def server_controller(cmd_id, cmd_body, _):
             """server controler"""
+            if not self.init_logginig:
+                # the reason put the codes here is because we cannot get
+                # kvstore.rank earlier
+                head = '%(asctime)-15s Server[' + str(
+                    self.kvstore.rank) + '] %(message)s'
+                logging.basicConfig(level=logging.DEBUG, format=head)
+                self.init_logginig = True
+
             if cmd_id == 0:
                 try:
                     optimizer = pickle.loads(cmd_body)
@@ -42,9 +52,8 @@ class KVStoreServer(object):
         ...     if is_command x: controller(x)
         ...     else if is_key_value x: updater(x)
         """
-        _ctrl_proto = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
-        check_call(_LIB.MXKVStoreRunServer(self.handle, _ctrl_proto(self._controller())))
-
+        _ctrl_proto = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p)
+        check_call(_LIB.MXKVStoreRunServer(self.handle, _ctrl_proto(self._controller()), None))
 
 def _init_kvstore_server_module():
     """Start server/scheduler"""

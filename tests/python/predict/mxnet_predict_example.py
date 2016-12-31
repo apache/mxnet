@@ -1,6 +1,6 @@
 import sys, os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append("../../../predict/python/")
+sys.path.append("../../../amalgamation/python/")
 sys.path.append("../../../python/")
 
 from mxnet_predict import Predictor, load_ndarray_file
@@ -35,10 +35,8 @@ def PreprocessImage(path, show_img=False):
     if show_img:
         io.imshow(resized_img)
     # convert to numpy.ndarray
-    sample = np.asarray(resized_img) * 256
-    # swap channel from RGB to BGR
-    sample = sample[:, :, [2,1,0]]
-    # swap axes to make image from (224, 224, 4) to (3, 224, 224)
+    sample = np.asarray(resized_img) * 255
+    # swap axes to make image from (224, 224, 3) to (3, 224, 224)
     sample = np.swapaxes(sample, 0, 2)
     sample = np.swapaxes(sample, 1, 2)
 

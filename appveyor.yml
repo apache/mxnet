@@ -1,0 +1,63 @@
+version: 1.0.{build}
+
+environment:
+    MXNET_VS: "Visual Studio 12 2013 Win64"
+    MXNET_OPENBLAS_FILE: openblas.7z
+    MXNET_OPENBLAS_DIR: openblas
+    MXNET_OPENBLAS_PKG: https://github.com/hjk41/MiscFiles/blob/master/openblas.7z?raw=true
+    MXNET_OPENCV_FILE: opencv.7z
+    MXNET_OPENCV_DIR: opencv
+    MXNET_OPENCV_PKG: https://github.com/hjk41/MiscFiles/blob/master/opencv.7z?raw=true
+
+install:
+    - ps: >-
+        git submodule init
+
+        git submodule update
+
+        if (!(Test-Path ${env:MXNET_OPENBLAS_FILE})) {
+
+            echo "Downloading openblas from ${env:MXNET_OPENBLAS_PKG} ..."
+
+            appveyor DownloadFile "${env:MXNET_OPENBLAS_PKG}" -FileName ${env:MXNET_OPENBLAS_FILE} -Timeout 1200000
+        }
+
+        if (!(Test-Path ${env:MXNET_OPENCV_FILE})) {
+
+            echo "Downloading opencv from ${env:MXNET_OPENCV_PKG} ..."
+
+            appveyor DownloadFile "${env:MXNET_OPENCV_PKG}" -FileName ${env:MXNET_OPENCV_FILE} -Timeout 1200000
+        }
+
+    - cmd: >-
+        echo "Extracting openblas to %APPVEYOR_BUILD_FOLDER% ..."
+
+        7z x %MXNET_OPENBLAS_FILE% -y -o"%APPVEYOR_BUILD_FOLDER%" >NUL
+
+        echo "Extracting opencv to %APPVEYOR_BUILD_FOLDER% ..."
+
+        7z x %MXNET_OPENCV_FILE% -y -o"%APPVEYOR_BUILD_FOLDER%" >NUL
+        
+cache:
+    - openblas.7z -> appveyor.yml
+    - opencv.7z -> appveyor.yml
+
+before_build:
+    - cmd: >-        
+        mkdir build
+
+        cd .\build
+
+        set OpenBLAS_HOME=%APPVEYOR_BUILD_FOLDER%/%MXNET_OPENBLAS_DIR%
+
+        set OpenCV_DIR=%APPVEYOR_BUILD_FOLDER%/%MXNET_OPENCV_DIR%/build
+
+        cmake .. -DOPENCV_DIR=%OpenCV_DIR% -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_DIST_KVSTORE=0 -G "Visual Studio 12 2013 Win64"
+
+build_script:
+    - cmd: >-
+        msbuild mxnet.sln /t:Rebuild /p:Configuration=Release;Platform=x64
+        
+test_script:
+    - cmd: >-
+        echo "test not enabled yet"

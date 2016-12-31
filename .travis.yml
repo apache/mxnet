@@ -3,32 +3,38 @@ sudo: false
 language: cpp
 
 os:
-  - linux
+  # - linux
   - osx
 
 env:
   # code analysis
-  - TASK=lint
-  # test doc build
-  - TASK=doc
+  # - TASK=lint
   # build mxnet.so with CUDA
-  - TASK=build
+  # - TASK=build
   # run tests/cpp
   - TASK=cpp_test
   # run tests/python
   - TASK=python_test
   - TASK=r_test
+  # - TASK=julia JULIA_VER=0.4
+  # - TASK=scala_test
 
   # TODO, R test, distributed test, clang, more g++ versions
 
-matrix:
-  exclude:
-    - os: osx
-      env: TASK=lint
-    - os: osx
-      env: TASK=doc
-    - os: linux
-      env: TASK=r_test
+# matrix:
+#   exclude:
+#     - os: osx
+#       env: TASK=julia JULIA_VER=0.4
+#     - os: linux
+#       env: TASK=build
+#     - os: linux
+#       env: TASK=cpp_test
+#     - os: linux
+#       env: TASK=python_test
+#     - os: linux
+#       env: TASK=r_test
+#     - os: linux
+#       env: TASK=scala_test
 
 # dependent apt packages
 addons:
@@ -56,6 +62,8 @@ before_install:
   - export NVCC_PREFIX=${HOME}
   - source dmlc-core/scripts/travis/travis_setup_env.sh
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
+  - export MAVEN_SKIP_RC=true
+  - export MAVEN_OPTS="-Xmx512m -XX:MaxPermSize=256m -XX:-UseGCOverheadLimit -XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC"
 
 install:
   - source tests/travis/setup.sh
@@ -69,7 +77,7 @@ cache:
 
 before_cache:
   - dmlc-core/scripts/travis/travis_before_cache.sh
-  
+
 after_failure:
   - tests/travis/travis_after_failure.sh
 

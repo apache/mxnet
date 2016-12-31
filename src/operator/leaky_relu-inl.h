@@ -24,7 +24,7 @@ namespace op {
 namespace leakyrelu {
 enum LeakyReLUOpInputs {kData, kGamma};
 enum LeakyReLUOpOutputs {kOut, kMask};
-enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU};
+enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU};
 enum LeakyReLUOpResource {kRandom};
 }  // namespace leakyrelu
 
@@ -39,9 +39,10 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     .add_enum("rrelu", leakyrelu::kRReLU)
     .add_enum("leaky", leakyrelu::kLeakyReLU)
     .add_enum("prelu", leakyrelu::kPReLU)
+    .add_enum("elu", leakyrelu::kELU)
     .describe("Activation function to be applied.");
     DMLC_DECLARE_FIELD(slope).set_default(0.25f)
-    .describe("Init slope for the activation. (For leaky only)");
+    .describe("Init slope for the activation. (For leaky and elu only)");
     DMLC_DECLARE_FIELD(lower_bound).set_default(0.125f)
     .describe("Lower bound of random slope. (For rrelu only)");
     DMLC_DECLARE_FIELD(upper_bound).set_default(0.334f)
@@ -104,7 +105,7 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kRReLU: {
         if (ctx.is_train) {
-          Random<xpu>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu>(s);
+          Random<xpu>* prnd = ctx.requested[leakyrelu::kRandom].get_random<xpu, real_t>(s);
           mask = prnd->uniform(mask.shape_);
           mask = mask * (param_.upper_bound - param_.lower_bound) + param_.lower_bound;
           Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, mask));
@@ -112,6 +113,10 @@ class LeakyReLUOp : public Operator {
           const float slope = (param_.lower_bound + param_.upper_bound) / 2.0f;
           Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, slope));
         }
+        break;
+      }
+      case leakyrelu::kELU: {
+        Assign(out, req[leakyrelu::kOut], F<mshadow_op::elu>(data, param_.slope));
         break;
       }
       default:
@@ -172,11 +177,15 @@ class LeakyReLUOp : public Operator {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         grad_weight = sumall_except_dim<1>(F<prelu_grad>(data) * grad);
-        gdata = F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad;
+        gdata = F<mshadow_op::xelu_grad>(data, broadcast<1>(weight, data.shape_)) * grad;
         break;
       }
       case leakyrelu::kRReLU: {
         Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, mask) * grad);
+        break;
+      }
+      case leakyrelu::kELU: {
+        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::elu_grad>(output, param_.slope) * grad);
         break;
       }
       default:

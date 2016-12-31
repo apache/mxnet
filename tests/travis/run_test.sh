@@ -1,13 +1,20 @@
 #!/bin/bash
 
-if [ ${TASK} == "lint" ]; then
-    make lint
-    exit $?
+if ! tests/travis/is_core_changed.sh
+then
+  exit 0
 fi
 
-if [ ${TASK} == "doc" ]; then
-    make doc | tee 2>log.txt
-    (cat log.txt|grep warning) && exit -1
+if [ ${TASK} == "lint" ]; then
+    make lint || exit -1
+    echo "Check documentations of c++ code..."
+    make doc 2>log.txt
+    (cat log.txt| grep -v ENABLE_PREPROCESSING |grep -v "unsupported tag") > logclean.txt
+    echo "---------Error Log----------"
+    cat logclean.txt
+    echo "----------------------------"
+    (cat logclean.txt|grep warning) && exit -1
+    (cat logclean.txt|grep error) && exit -1
     exit 0
 fi
 
@@ -54,14 +61,31 @@ if [ ${TASK} == "r_test" ]; then
 
     set -e
     export _R_CHECK_TIMINGS_=0
-
     wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
     sudo installer -pkg "/tmp/R-latest.pkg" -target /
-    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')" 
+    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
-    R CMD check --no-examples --no-vignettes --no-manual R-package
+
+    make rpkg
+#    R CMD check --no-examples --no-manual --no-vignettes --no-build-vignettes mxnet_*.tar.gz
+    R CMD INSTALL mxnet_*.tar.gz
+
+    Rscript tests/travis/r_vignettes.R
+
+    wget http://data.mxnet.io/mxnet/data/Inception.zip
+    unzip Inception.zip && rm -rf Inception.zip
+    wget http://data.mxnet.io/mxnet/data/mnist.zip
+    unzip mnist.zip && rm -rf mnist.zip
+
+    cat CallbackFunctionTutorial.R \
+    fiveMinutesNeuralNetwork.R \
+    mnistCompetition.R \
+    ndarrayAndSymbolTutorial.R > r_test.R
+
+    Rscript r_test.R || exit -1
+
     exit 0
 fi
 
@@ -74,14 +98,47 @@ if [ ${TASK} == "python_test" ]; then
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         python -m nose tests/python/unittest || exit -1
-        # python -m nose tests/python/train || exit -1
+        python3 -m nose tests/python/unittest || exit -1
+        make cython3
+        # cython tests
+        export MXNET_ENFORCE_CYTHON=1
         python3 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/train || exit -1
     else
         nosetests tests/python/unittest || exit -1
-        # nosetests tests/python/train || exit -1
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
     fi
+    exit 0
+fi
+
+if [ ${TASK} == "julia" ]; then
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    export MXNET_HOME="${PWD}"
+    julia -e 'Pkg.clone("MXNet"); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+    exit 0
+fi
+
+if [ ${TASK} == "scala_test" ]; then
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        LIB_GOMP_PATH=`find /usr/local/lib -name libgomp.dylib | grep -v i386 | head -n1`
+        ln -sf $LIB_GOMP_PATH /usr/local/lib/libgomp.dylib
+    fi
+    make all || exit -1
+    # use cached dir for storing data
+    rm -rf ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+
+    export JAVA_HOME=$(/usr/libexec/java_home)
+
+    make scalapkg || exit -1
+    make scalatest || exit -1
+
     exit 0
 fi

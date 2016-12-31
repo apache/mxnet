@@ -32,6 +32,7 @@
 doc/html
 doc/latex
 doc/doc
+docs/web-data
 
 #dmlc
 config.mk
@@ -41,15 +42,18 @@ config.mk
 *log
 Debug
 *suo
+tracker
 
 # vim
 *.swp
 *.swo
 *.swn
+.vimrc
 .ycm_extra_conf.py
 .ycm_extra_conf.pyc
 
 # Emacs
+.#*
 .clang_complete
 .dir-locals.el
 __pycache__
@@ -68,3 +72,58 @@ deps
 *.rds
 *.Rproj
 .Rproj.user
+R-package/inst/*
+*.tar.gz
+*.tgz
+R-package/man/*.Rd
+
+# data
+*.rec
+*.lst
+*.zip
+*ubyte
+*.bin
+*.txt
+
+# ipython notebook
+*_pb2.py
+*.ipynb_checkpoints*
+input.txt*
+
+# Jetbrain
+.idea
+
+# ctags
+tags
+
+# Scala package
+*.class
+scala-package/*/target/
+scala-package/*/*/target/
+*.scala_dependencies
+*.worksheet
+*.idea
+*.iml
+*.classpath
+*.project
+*.settings
+!scala-package/*/bin
+*.bak
+*/node_modules/
+
+# Eclipse project config
+.project
+.cproject
+.pydevproject
+CMakeFiles
+cmake_install.cmake
+dmlc-core
+ps-lite
+nnvm
+lib
+
+# Visual Studio Code
+.vscode
+
+# Mac OS X
+.DS_Store

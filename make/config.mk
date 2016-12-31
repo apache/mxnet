@@ -24,8 +24,14 @@ export CC = gcc
 export CXX = g++
 export NVCC = nvcc
 
+# whether compile with options for MXNet developer
+DEV = 0
+
 # whether compile with debug
 DEBUG = 0
+
+# whether compiler with profiler
+USE_PROFILER =
 
 # the additional link flags you want to add
 ADD_LDFLAGS =
@@ -40,13 +46,23 @@ ADD_CFLAGS =
 # whether use CUDA during compile
 USE_CUDA = 0
 
-# add the path to CUDA libary to link and compile flag
-# if you have already add them to enviroment variable, leave it as NONE
+# add the path to CUDA library to link and compile flag
+# if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
 USE_CUDA_PATH = NONE
 
-# whether use CUDNN R3 library
+# whether use CuDNN R3 library
 USE_CUDNN = 0
+
+# CUDA architecture setting: going with all of them.
+# For CUDA < 6.0, comment the *_50 lines for compatibility.
+CUDA_ARCH := -gencode arch=compute_30,code=sm_30 \
+		-gencode arch=compute_35,code=sm_35 \
+		-gencode arch=compute_50,code=sm_50 \
+		-gencode arch=compute_50,code=compute_50
+
+# whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
+USE_NVRTC = 0
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
@@ -56,25 +72,62 @@ USE_OPENCV = 1
 # use openmp for parallelization
 USE_OPENMP = 1
 
+
+# MKL ML Library for Intel CPU/Xeon Phi
+# Please refer to MKL_README.md for details
+
+# MKL ML Library folder, need to be root for /usr/local
+# Change to User Home directory for standard user
+# For USE_BLAS!=mkl only
+MKLML_ROOT=/usr/local
+
+# whether use MKL2017 library
+USE_MKL2017 = 0
+
+# whether use MKL2017 experimental feature for high performance
+# Prerequisite USE_MKL2017=1
+USE_MKL2017_EXPERIMENTAL = 0
+
+# whether use NNPACK library
+USE_NNPACK = 0
+USE_NNPACK_NUM_THREADS = 4
+
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
-USE_STATIC_MKL = NONE
-USE_BLAS = blas
+# in default use atlas for linux while apple for osx
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S), Darwin)
+USE_BLAS = apple
+else
+USE_BLAS = atlas
+endif
 
-# add path to intel libary, you may need it for MKL, if you did not add the path
-# to enviroment variable
+# add path to intel library, you may need it for MKL, if you did not add the path
+# to environment variable
 USE_INTEL_PATH = NONE
 
-# If use MKL, choose static link automaticly to allow python wrapper
+# If use MKL, choose static link automatically to allow python wrapper
 ifeq ($(USE_BLAS), mkl)
-	USE_STATIC_MKL = 1
+USE_STATIC_MKL = 1
+else
+USE_STATIC_MKL = NONE
+endif
+
+#----------------------------
+# Settings for power and arm arch
+#----------------------------
+ARCH := $(shell uname -a)
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64))
+	USE_SSE=0
+else
+	USE_SSE=1
 endif
 
 #----------------------------
 # distributed computing
 #----------------------------
 
-# whether or not to enable mullti-machine supporting
+# whether or not to enable multi-machine supporting
 USE_DIST_KVSTORE = 0
 
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
@@ -88,3 +141,33 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # libcurl4-openssl-dev is required, it can be installed on Ubuntu by
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
+
+#----------------------------
+# additional operators
+#----------------------------
+
+# path to folders containing projects specific operators that you don't want to put in src/operators
+EXTRA_OPERATORS =
+
+
+#----------------------------
+# plugins
+#----------------------------
+
+# whether to use caffe integration. This requires installing caffe.
+# You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
+# CAFFE_PATH = $(HOME)/caffe
+# MXNET_PLUGINS += plugin/caffe/caffe.mk
+
+# whether to use torch integration. This requires installing torch.
+# You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH
+# TORCH_PATH = $(HOME)/torch
+# MXNET_PLUGINS += plugin/torch/torch.mk
+
+# WARPCTC_PATH = $(HOME)/warp-ctc
+# MXNET_PLUGINS += plugin/warpctc/warpctc.mk
+
+# whether to use sframe integration. This requires build sframe
+# git@github.com:dato-code/SFrame.git
+# SFRAME_PATH = $(HOME)/SFrame
+# MXNET_PLUGINS += plugin/sframe/plugin.mk

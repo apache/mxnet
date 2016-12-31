@@ -7,9 +7,14 @@
 #define MXNET_KVSTORE_H_
 #include <dmlc/io.h>
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <functional>
+#include <atomic>
 #include "./ndarray.h"
+#if MXNET_USE_DIST_KVSTORE
+#include "ps/ps.h"
+#endif  // MXNET_USE_DIST_KVSTORE
 
 namespace mxnet {
 /*!
@@ -147,13 +152,29 @@ class KVStore {
    ******************************************************/
 
   /**
+   * \brief initalize ps-lite environment variables
+   * \param envs key-value environment variables
+   */
+  static void InitPSEnv(const std::unordered_map<std::string, std::string>& envs) {
+#if MXNET_USE_DIST_KVSTORE
+    ps::Environment::Init(envs);
+#else
+    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to init parameter server's environment";
+#endif  // MXNET_USE_DIST_KVSTORE
+  }
+
+  /**
    * \return whether or not this process is a worker node.
    *
    * Always returns true when type == "local"
    */
   static bool IsWorkerNode() {
-    char* role_str = getenv("DMLC_ROLE");
+#if MXNET_USE_DIST_KVSTORE
+    const char* role_str = ps::Environment::Get()->find("DMLC_ROLE");
     return (role_str == nullptr) || (!strcmp(role_str, "worker"));
+#else
+    return true;
+#endif  // MXNET_USE_DIST_KVSTORE
   }
 
   /**
@@ -162,10 +183,22 @@ class KVStore {
    * Always returns false when type == "local"
    */
   static bool IsServerNode() {
-    char* role_str = getenv("DMLC_ROLE");
+#if MXNET_USE_DIST_KVSTORE
+    const char* role_str = ps::Environment::Get()->find("DMLC_ROLE");
     return (role_str != nullptr) && (!strcmp(role_str, "server"));
+#else
+    return false;
+#endif  // MXNET_USE_DIST_KVSTORE
   }
 
+  void set_barrier_before_exit(const bool barrier_before_exit) {
+#if MXNET_USE_DIST_KVSTORE
+    if (!IsWorkerNode()) LOG(FATAL) << "barrier_before_exit takes effect only on worker nodes";
+    barrier_before_exit_ = barrier_before_exit;
+#else
+    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to enable barrier";
+#endif
+  }
 
   /**
    * \return whether or not this process is a scheduler node.
@@ -173,8 +206,12 @@ class KVStore {
    * Always returns false when type == "local"
    */
   static bool IsSchedulerNode() {
-    char* role_str = getenv("DMLC_ROLE");
+#if MXNET_USE_DIST_KVSTORE
+    const char* role_str = ps::Environment::Get()->find("DMLC_ROLE");
     return (role_str != nullptr) && (!strcmp(role_str, "scheduler"));
+#else
+    return false;
+#endif  // MXNET_USE_DIST_KVSTORE
   }
 
   /*!
@@ -192,6 +229,18 @@ class KVStore {
    */
   virtual int get_group_size() const {
     return 1;
+  }
+
+  /*!
+   * \return the number of dead node(s) specified by {node_id}
+   * \param node_id can be a node group or a single node
+   * \param timeout a node fails to send heartbeart in {timeout} seconds
+   *        will be presumed as 'dead'
+   *
+   * Always return 0 when type == "local"
+   */
+  virtual int get_num_dead_node(int node_id, int timeout = 60) const {
+    return 0;
   }
 
   /*!
@@ -246,6 +295,11 @@ class KVStore {
    * \brief the kvstore type
    */
   std::string type_;
+
+  /**
+   * \brief whether to do barrier when finalize
+   */
+  std::atomic<bool> barrier_before_exit_{true};
 };
 
 }  // namespace mxnet

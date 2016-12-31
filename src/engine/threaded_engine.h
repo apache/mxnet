@@ -16,7 +16,9 @@
 #include <atomic>
 #include <mutex>
 #include <string>
+#include <thread>
 #include "./engine_impl.h"
+#include "./profiler.h"
 #include "../common/object_pool.h"
 
 namespace mxnet {
@@ -50,6 +52,10 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
   Context ctx;
   /*! \brief priority of the function */
   int priority;
+  /*! \brief indicate whether to profile this operator */
+  bool profiling{false};
+  /*! \brief operator execution statistics */
+  OprExecStat *opr_stat;
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(OprBlock);
   /*!
@@ -199,8 +205,10 @@ struct ThreadedOpr final : public Opr,
   std::vector<ThreadedVar*> const_vars;
   /*! \brief The variable this operation will mutate. */
   std::vector<ThreadedVar*> mutable_vars;
-  /*! \brief the property of the operator */
+  /*! \brief The property of the operator */
   FnProperty prop;
+  /*! \brief The name of the operator */
+  const char* opr_name{nullptr};
   /*!
    * \brief Whether this is an temporary operator
    *        that can be deleted right after the operation completed.
@@ -234,14 +242,16 @@ class ThreadedEngine : public Engine {
   ThreadedOpr* NewOperator(AsyncFn fn,
                            std::vector<VarHandle> const& const_vars,
                            std::vector<VarHandle> const& mutable_vars,
-                           FnProperty prop) override;
+                           FnProperty prop = FnProperty::kNormal,
+                           const char* opr_name = nullptr) override;
   void DeleteOperator(OprHandle op) override;
-  void Push(OprHandle op, Context exec_ctx, int priority) override;
+  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
-                 FnProperty prop,
-                 int priority) override;
+                 FnProperty prop = FnProperty::kNormal,
+                 int priority = 0,
+                 const char* opr_name = nullptr) override;
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
@@ -258,6 +268,13 @@ class ThreadedEngine : public Engine {
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
   }
   ~ThreadedEngine() {
+#if MXNET_USE_PROFILER
+    // dump trace file if profiler is enabled when engine is destructed.
+    Profiler* profiler = Profiler::Get();
+    if (profiler->IsEnableOutput()) {
+      profiler->DumpProfile();
+    }
+#endif
     {
       std::unique_lock<std::mutex> lock{finished_m_};
       kill_.store(true);
@@ -283,23 +300,53 @@ class ThreadedEngine : public Engine {
    */
   void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
+#if MXNET_USE_PROFILER
+    if (opr_block->profiling && threaded_opr->opr_name) {
+      const Context& ctx = opr_block->ctx;
+      opr_block->opr_stat = Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
+      uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
+      opr_block->opr_stat->thread_id = id;
+      strncpy(opr_block->opr_stat->opr_name,
+        threaded_opr->opr_name,
+        sizeof(opr_block->opr_stat->opr_name) - 1);
+      // record operator start timestamp
+      SetOprStart(opr_block->opr_stat);
+    }
+#endif
     CallbackOnComplete callback = this->CreateCallback(
-        ThreadedEngine::OnCompleteStatic, threaded_opr);
+        ThreadedEngine::OnCompleteStatic, opr_block);
+    bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
+    if (debug_info) {
+      LOG(INFO) << "ExecuteOprBlock " << opr_block
+                << "shutdown_phase=" << shutdown_phase_;
+    }
     if (!shutdown_phase_) {
       try {
+        if (debug_info) {
+          LOG(INFO) << "ExecuteOprFn ";
+        }
         threaded_opr->fn(run_ctx, callback);
+        if (debug_info) {
+          LOG(INFO) << "Fin ExecuteOprFn ";
+        }
       } catch(dmlc::Error &e) {
         std::string what = e.what();
         if (what.find("driver shutting down") == std::string::npos &&
             !shutdown_phase_) {
-          LOG(FATAL) << e.what();
+          LOG(FATAL) << e.what() << "\n" <<
+            "An fatal error occurred in asynchronous engine operation. "
+            "If you do not know what caused this error, "
+            "you can try set environment variable MXNET_ENGINE_TYPE "
+            "to NaiveEngine and run with debugger (i.e. gdb). "
+            "This will force all operations to be synchronous and "
+            "backtrace will give you the series of calls that lead "
+            "to this error. Remember to set MXNET_ENGINE_TYPE back to "
+            "empty after debugging.";
         }
       }
     } else {
       callback();
     }
-
-    OprBlock::Delete(opr_block);
   }
 
  private:
@@ -328,6 +375,10 @@ class ThreadedEngine : public Engine {
   std::atomic<bool> shutdown_phase_{false};
   /*!\brief show more information from engine actions */
   bool engine_info_{false};
+  /*! \brief debug information about wait for var. */
+  std::atomic<ThreadedVar*> debug_wait_var_{nullptr};
+  /*! \brief debug information about wait for var. */
+  std::atomic<OprBlock*> debug_push_opr_{nullptr};
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.

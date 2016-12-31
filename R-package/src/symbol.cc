@@ -64,7 +64,7 @@ void Symbol::Compose(const Rcpp::List& kwargs, const std::string &name) {
   for (size_t i = 0; i < kwargs.size(); ++i) {
     handles[i] = Symbol::XPtr(kwargs[i])->handle_;
   }
-  MX_CALL(MXSymbolCompose(
+  MX_CALL(NNSymbolCompose(
       handle_, name.c_str(),
       static_cast<mx_uint>(handles.size()),
       dmlc::BeginPtr(c_keys), dmlc::BeginPtr(handles)));
@@ -109,7 +109,7 @@ Symbol::RObjectType Symbol::GetInternals() const {
 
 Symbol::RObjectType Symbol::GetOutput(mx_uint index) const {
   SymbolHandle out;
-  MX_CALL(MXSymbolGetOutput(handle_, index, &out));
+  MX_CALL(MXSymbolGetOutput(handle_, index - 1, &out));
   return Symbol::RObject(out);
 }
 
@@ -213,20 +213,21 @@ Symbol::RObjectType Symbol::Group(const Rcpp::List& symbols) {
   return Symbol::RObject(out);
 }
 
-SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
+SymbolFunction::SymbolFunction(OpHandle handle, std::string name)
     : handle_(handle) {
-  const char* name;
+  const char* real_name;
   const char* description;
   mx_uint num_args;
   const char **arg_names;
   const char **arg_type_infos;
   const char **arg_descriptions;
   const char *key_var_num_args;
+  const char *ret_type;
 
   MX_CALL(MXSymbolGetAtomicSymbolInfo(
-      handle_, &name, &description, &num_args,
+      handle_, &real_name, &description, &num_args,
       &arg_names, &arg_type_infos, &arg_descriptions,
-      &key_var_num_args));
+      &key_var_num_args, &ret_type));
   if (key_var_num_args != nullptr) {
     key_var_num_args_ = key_var_num_args;
   }
@@ -234,12 +235,12 @@ SymbolFunction::SymbolFunction(AtomicSymbolCreator handle)
   std::transform(name_hint_.begin(), name_hint_.end(),
                  name_hint_.begin(), ::tolower);
   if (name[0] == '_') {
-    name_ = std::string("mx.varg.symbol.internal.") + (name + 1);
+    name_ = std::string("mx.varg.symbol.internal.") + (name.c_str() + 1);
   } else {
     name_ = std::string("mx.varg.symbol.") + name;
   }
   std::ostringstream os;
-  os << description << "\n\n"
+  os << name << ':' << description << "\n\n"
      << MakeDocString(num_args, arg_names, arg_type_infos, arg_descriptions)
      << "@param name  string, optional\n"
      << "    Name of the resulting symbol.\n"
@@ -281,7 +282,7 @@ SEXP SymbolFunction::operator() (SEXP* args) {
   SymbolHandle shandle;
   std::vector<const char*> c_str_keys = CKeys(str_keys);
   std::vector<const char*> c_str_vals = CKeys(str_vals);
-  MX_CALL(MXSymbolCreateAtomicSymbol(
+  MX_CALL(NNSymbolCreateAtomicSymbol(
       handle_, static_cast<mx_uint>(str_keys.size()),
       dmlc::BeginPtr(c_str_keys),
       dmlc::BeginPtr(c_str_vals),
@@ -296,6 +297,7 @@ SEXP SymbolFunction::operator() (SEXP* args) {
 }
 
 void Symbol::InitRcppModule() {
+  RLOG_INFO << "Init Rcpp";
   using namespace Rcpp;  // NOLINT(*)
   class_<Symbol>("MXSymbol")
       .method("debug.str", &Symbol::DebugStr,
@@ -315,6 +317,8 @@ void Symbol::InitRcppModule() {
       .method("get.internals", &Symbol::GetInternals,
               "Get a symbol that contains all the internals")
       .method("get.output", &Symbol::GetOutput,
+              "Get index-th output symbol of current one")
+      .method("[[", &Symbol::GetOutput,
               "Get index-th output symbol of current one")
       .method("infer.shape", &Symbol::InferShape,
               "Inference the shape information given unknown ones");
@@ -342,10 +346,17 @@ void SymbolFunction::InitRcppModule() {
   RCHECK(scope != nullptr)
       << "Init Module need to be called inside scope";
   mx_uint out_size;
-  AtomicSymbolCreator *arr;
-  MX_CALL(MXSymbolListAtomicSymbolCreators(&out_size, &arr));
+  const char** op_name_ptrs;
+  std::vector<std::string> op_names;
+  MX_CALL(MXListAllOpNames(&out_size, &op_name_ptrs));
+  for (size_t i = 0; i < out_size; ++i) {
+    op_names.push_back(std::string(op_name_ptrs[i]));
+  }
+
   for (int i = 0; i < out_size; ++i) {
-    SymbolFunction *f = new SymbolFunction(arr[i]);
+    OpHandle handle;
+    MX_CALL(NNGetOpHandle(op_names[i].c_str(), &handle));
+    SymbolFunction *f = new SymbolFunction(handle, op_names[i]);
     scope->Add(f->get_name(), f);
   }
 }

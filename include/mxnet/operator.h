@@ -11,6 +11,7 @@
 #include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
+#include <nnvm/node.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -46,6 +47,8 @@ struct OpContext {
   int is_train;
   /*! \brief RunContext related resources */
   RunContext run_ctx;
+  /*! \brief the callback when operation completes, used by asynchronize ops */
+  engine::CallbackOnComplete async_on_complete;
   /*! \brief Resources requested by the operator */
   std::vector<Resource> requested;
   /*!
@@ -73,6 +76,23 @@ struct OpContext {
  */
 class Operator {
  public:
+  /*! \brief the execution type of the operator */
+  enum ExecType {
+    /*! \brief Forward/Backward are synchronize calls */
+    kSync,
+    /*!
+     * \brief Forward/Backward are asynchronize,
+     *  will call OpContext.async_on_complete when operation finishes.
+     */
+    kAsync,
+    /*!
+     * \brief Cross device copy operation, this is a special operator
+     *  That indicates copy across devices, the input and output can sit on different device.
+     *  In current implementation, copy operator is specially handled by executor.
+     *  This flag is used for special case treatment and future extension of different copy ops.
+     */
+    kCrossDeviceCopy
+  };
   /*! \brief destructor */
   virtual ~Operator() {}
   /*!
@@ -128,6 +148,10 @@ class Operator {
                         const std::vector<TBlob> &aux_states) {
     LOG(FATAL) << "Backward is not implemented";
   }
+  /*! \return execution type of the operator */
+  virtual ExecType exec_type() const {
+    return kSync;
+  }
 };
 
 #if DMLC_USE_CXX11
@@ -179,7 +203,7 @@ class OperatorProperty {
   }
   /*! \return number of real return values of the Operator */
   virtual int NumOutputs() const {
-    return 1;
+    return this->ListOutputs().size();
   }
   /*!
    * \brief get number of visible return values during Symbol creation.
@@ -204,7 +228,7 @@ class OperatorProperty {
    *     For unknown shapes, InferShape will try to fill in the correct Shape in in_shape
    *     For known shapes, InferShape will check shape consistency
    *
-   *     common practice: set the shape of data input, and usually weight's shape can be infered
+   *     common practice: set the shape of data input, and usually weight's shape can be inferred
    *
    * \param out_shape the shape of outputs of the operator
    *     InferShape will modify the vector to fill output TShape
@@ -217,6 +241,44 @@ class OperatorProperty {
                           std::vector<TShape> *out_shape,
                           std::vector<TShape> *aux_shape) const = 0;
   /*!
+   * \brief infer the data types of outputs and unknown input arguments
+   * \param in_type the type of input arguments of the operator
+   *     this should be of same length as the vector returned by DescribeArgs
+   *     in_type allows unknown elements, which are checked by type.ndim() == 0.
+   *     For unknown types, Infertype will try to fill in the correct type in in_type
+   *     For known types, Infertype will check type consistency
+   *
+   *     common practice: set the type of data input, and usually weight's type can be inferred
+   *
+   * \param out_type the type of outputs of the operator
+   *     Infertype will modify the vector to fill output Ttype
+   * \param aux_type the type of auxiliary states of the operator
+   *     Infertype will modify the vector to fill output Ttype
+   * \return true if the type inference is successful, false if there is not enough information.
+   * \throws dmlc::Error if the known arg_types are inconsistent.
+   */
+  virtual bool InferType(std::vector<int> *in_type,
+                          std::vector<int> *out_type,
+                          std::vector<int> *aux_type) const {
+    CHECK_LE(in_type->size(), this->ListArguments().size());
+    int n_in = this->ListArguments().size();
+    for (unsigned i = 0; i < in_type->size(); ++i) {
+      CHECK(in_type->at(i) == mshadow::default_type_flag ||
+            in_type->at(i) == -1) << "Unsupported data type " << in_type->at(i);
+    }
+    in_type->clear();
+    for (int i = 0; i < n_in; ++i ) in_type->push_back(mshadow::default_type_flag);
+
+    int n_out = this->ListOutputs().size();
+    out_type->clear();
+    for (int i = 0; i < n_out; ++i ) out_type->push_back(mshadow::default_type_flag);
+
+    int n_aux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (int i = 0; i < n_aux; ++i ) aux_type->push_back(mshadow::default_type_flag);
+    return true;
+  }
+  /*!
    * \brief Copy this OperatorProperty.
    * \return a pointer to the copied OperatorProperty
    */
@@ -225,6 +287,25 @@ class OperatorProperty {
    * \brief Create a Operator on specific context
    */
   virtual Operator* CreateOperator(Context ctx) const = 0;
+  /*!
+   * \brief Create a Operator on specific context and input shape/type
+   * \param ctx context of this operator
+   * \param in_shape shape of the input ndarrays
+   * \param in_type dtype of the input ndarrays
+   * \return the created operator
+   */
+  virtual Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                                     std::vector<int> *in_type) const {
+    std::vector<int> out_type, aux_type;
+    std::vector<TShape> out_shape, aux_shape;
+    out_type.resize(this->ListOutputs().size());
+    out_shape.resize(this->ListOutputs().size());
+    aux_type.resize(this->ListAuxiliaryStates().size());
+    aux_shape.resize(this->ListAuxiliaryStates().size());
+    CHECK(InferType(in_type, &out_type, &aux_type));
+    CHECK(InferShape(in_shape, &out_shape, &aux_shape));
+    return CreateOperator(ctx);
+  }
   /*!
    * \brief return the type string of the Operator
    *  subclasses override this function.
@@ -440,9 +521,10 @@ struct OperatorPropertyReg
   std::string key_var_num_args;
 };
 
-//--------------------------------------------------------------
+//---------------------------------------------------------------------------------
 // The following part are API Registration of Operators
-//--------------------------------------------------------------
+// See also MXNET_REGISTER_SIMPLE_OP in operator_util.h for registering simple ops.
+//---------------------------------------------------------------------------------
 /*!
  * \brief Macro to register OperatorProperty
  *
@@ -456,6 +538,7 @@ struct OperatorPropertyReg
 #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
   DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
   .set_body([]() { return new OperatorPropertyType(); })                \
+  .set_return_type("Symbol") \
   .check_name()
 
 #endif  // DMLC_USE_CXX11

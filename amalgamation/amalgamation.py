@@ -7,31 +7,39 @@ blacklist = [
     'glog/logging.h', 'io/azure_filesys.h', 'io/hdfs_filesys.h', 'io/s3_filesys.h',
     'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
     'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h',
-    'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h'
+    'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h', 'cuda.h', 'cuda_fp16.h',
+    'omp.h'
     ]
 
 if len(sys.argv) < 4:
-    print("Usage: <source.d> <source.cc> <output> [minumum=0]\n"
+    print("Usage: <source.d> <source.cc> <output> [minimum=0] [android=0]\n"
           "Minimum means no blas, no sse, no dependency, may run twice slower.")
     exit(0)
 
 minimum = int(sys.argv[4]) if len(sys.argv) > 4 else 0
+android = int(sys.argv[5]) if len(sys.argv) > 5 else 0
 
 if minimum:
-    blacklist += ['packet/sse-inl.h', 'emmintrin.h']
+    blacklist += ['packet/sse-inl.h', 'emmintrin.h', 'cblas.h']
+
+if android:
+    blacklist += ['config.h']
+    if 'packet/sse-inl.h' not in blacklist:
+        blacklist += ['packet/sse-inl.h']
 
 def get_sources(def_file):
     sources = []
     files = []
     visited = set()
+    mxnet_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))
     for line in open(def_file):
         files = files + line.strip().split(' ')
 
     for f in files:
         f = f.strip()
-        if not f or f.endswith('.o') or f == '\\': continue
+        if not f or f.endswith('.o:') or f == '\\': continue
         fn = os.path.relpath(f)
-        if fn.find('/usr/') < 0 and fn not in visited:
+        if os.path.abspath(f).startswith(mxnet_path) and fn not in visited:
             sources.append(fn)
             visited.add(fn)
     return sources
@@ -64,7 +72,7 @@ def expand(x, pending):
         #print 'loop found: %s in ' % x, pending
         return
 
-    print >>out, "//===== EXPANDIND: %s =====\n" %x
+    print >>out, "//===== EXPANDING: %s =====\n" %x
     for line in open(x):
         if line.find('#include') < 0:
             out.write(line)
@@ -80,7 +88,10 @@ def expand(x, pending):
         h = m.groups()[0].strip('./')
         source = find_source(h, x)
         if not source:
-            if h not in blacklist and h not in sysheaders: sysheaders.append(h)
+            if (h not in blacklist and
+                h not in sysheaders and
+                'mkl' not in h and
+                'nnpack' not in h): sysheaders.append(h)
         else:
             expand(source, pending + [x])
     print >>out, "//===== EXPANDED: %s =====\n" %x
@@ -112,6 +123,9 @@ print >>f, '''
 
 #endif
 '''
+
+if minimum != 0 and android != 0 and 'complex.h' not in sysheaders:
+    sysheaders.append('complex.h')
 
 for k in sorted(sysheaders):
     print >>f, "#include <%s>" % k

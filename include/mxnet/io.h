@@ -60,6 +60,8 @@ struct DataInst {
 struct DataBatch {
   /*! \brief content of dense data, if this DataBatch is dense */
   std::vector<NDArray> data;
+  /*! \brief index of image data */
+  std::vector<uint64_t> index;
   /*! \brief extra data to be fed to the network */
   std::string extra_data;
   /*! \brief num of example padded to batch */

@@ -10,6 +10,16 @@
 #include "./ndarray_function.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
+
+#ifndef DECL_TERNARY
+#define DECL_TERNARY(XPU, OP, FUN)                                       \
+  template<>                                                            \
+  void Eval<XPU, OP>(const TBlob &lhs, const TBlob &mhs, \
+                                       const TBlob &rhs, TBlob *ret, RunContext ctx) { \
+    FUN<XPU, OP>(lhs, mhs, rhs, ret, ctx);                                   \
+  }
+#endif
+
 #ifndef DECL_BINARY
 #define DECL_BINARY(XPU, OP, FUN)                                       \
   template<>                                                            \
@@ -40,29 +50,33 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
                         TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  ret->FlatTo2D<xpu, real_t>(s)
-      = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s),
-                                   rhs.FlatTo2D<xpu, real_t>(s));
+  CHECK_EQ(ret->type_flag_, lhs.type_flag_)
+    << "Only support input/output with the same data type";
+  CHECK_EQ(ret->type_flag_, rhs.type_flag_)
+    << "Only support input/output with the same data type";
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    ret->FlatTo2D<xpu, DType>(s)
+      = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, DType>(s),
+                                   rhs.FlatTo2D<xpu, DType>(s));
+  });
 }
 
-template<typename xpu, typename OP>
-inline void EvalDot_(const TBlob &lhs, const TBlob &rhs,
-                     TBlob *ret, RunContext ctx) {
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  ret->FlatTo2D<xpu, real_t>(s)
-    = dot(lhs.FlatTo2D<xpu, real_t>(s),
-          rhs.FlatTo2D<xpu, real_t>(s));
-}
 
 template<typename xpu, typename OP>
 inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
                         TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  ret->get<xpu, 2, real_t>(s)
-      = one_hot_encode(index.get<xpu, 1, real_t>(s),
-                       rhs.shape_[1]);
+  // TODO(eric): support mixed type encoding, i.e. int index and float rhs.
+  CHECK_EQ(ret->type_flag_, mshadow::default_type_flag)
+    << "one_hot_encode only support float32 as input/output";
+  CHECK_EQ(rhs.type_flag_, mshadow::default_type_flag)
+    << "one_hot_encode only support float32 as input/output";
+  CHECK_EQ(index.type_flag_, mshadow::default_type_flag)
+    << "one_hot_encode only support float32 as input/output";
+  ret->get<xpu, 2, real_t>(s) =
+    one_hot_encode(index.get<xpu, 1, real_t>(s),
+                   rhs.shape_[1]);
 }
 
 template<typename xpu, typename OP>
@@ -70,9 +84,27 @@ inline void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
                                   TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  // TODO(eric): support mixed type choose, i.e. int index and float rhs.
+  CHECK_EQ(ret->type_flag_, mshadow::default_type_flag)
+    << "mat_choose_row_element only support float32 as input/output";
+  CHECK_EQ(rhs.type_flag_, mshadow::default_type_flag)
+    << "mat_choose_row_element only support float32 as input/output";
+  CHECK_EQ(lhs.type_flag_, mshadow::default_type_flag)
+    << "mat_choose_row_element only support float32 as input/output";
   ret->get<xpu, 1, real_t>(s)
       = mat_choose_row_element(lhs.get<xpu, 2, real_t>(s),
                                rhs.get<xpu, 1, real_t>(s));
+}
+
+template<typename xpu, typename OP>
+inline void EvalMatFillRowElem_(const TBlob &lhs, const TBlob &mhs, const TBlob &rhs,
+                                  TBlob *ret, RunContext ctx) {
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  ret->get<xpu, 2, real_t>(s)
+          = mat_fill_row_element(lhs.get<xpu, 2, real_t>(s),
+                                 mhs.get<xpu, 1, real_t>(s),
+                                 rhs.get<xpu, 1, real_t>(s));
 }
 
 template<typename xpu, typename OP, bool reverse>
@@ -80,15 +112,20 @@ inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
                         TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(ret->type_flag_, lhs.type_flag_)
+    << "Only support input/output with the same data type";
   if (reverse) {
-    ret->FlatTo2D<xpu, real_t>(s)
-      = F<typename OP::mshadow_op>(rhs, lhs.FlatTo2D<xpu, real_t>(s));
+    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+      ret->FlatTo2D<xpu, DType>(s)
+        = F<typename OP::mshadow_op>(scalar(DType(rhs)), lhs.FlatTo2D<xpu, DType>(s));
+    });
   } else {
-    ret->FlatTo2D<xpu, real_t>(s)
-      = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, real_t>(s), rhs);
+    MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+      ret->FlatTo2D<xpu, DType>(s)
+        = F<typename OP::mshadow_op>(lhs.FlatTo2D<xpu, DType>(s), scalar(DType(rhs)));
+    });
   }
 }
-
 
 template<>
 void EvalClip<DEVICE>(const TBlob &src, const real_t &a_min, const real_t &a_max,
@@ -96,10 +133,14 @@ void EvalClip<DEVICE>(const TBlob &src, const real_t &a_min, const real_t &a_max
   typedef DEVICE xpu;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  ret->FlatTo2D<xpu, real_t>(s)
-    = F<ClipMax::mshadow_op>(
-        F<ClipMin::mshadow_op>(src.FlatTo2D<xpu, real_t>(s), a_min),
-        a_max);
+  CHECK_EQ(ret->type_flag_, src.type_flag_)
+    << "Only support input/output with the same data type";
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    ret->FlatTo2D<xpu, DType>(s)
+      = F<ClipMax::mshadow_op>(
+          F<ClipMin::mshadow_op>(src.FlatTo2D<xpu, DType>(s), scalar(DType(a_min))),
+          scalar(DType(a_max)));
+  });
 }
 
 template<>
@@ -111,9 +152,24 @@ void EvalRandom<DEVICE, UniformDistribution>(
     RunContext ctx) {
   typedef DEVICE xpu;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2, real_t> tmp = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Random<xpu> *prnd = resource.get_random<xpu>(s);
-  prnd->SampleUniform(&tmp, a, b);
+  switch (ret->type_flag_) {
+  case mshadow::kFloat32:
+    {
+      mshadow::Random<xpu, float> *prnd = resource.get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleUniform(&tmp, float(a), float(b));  // NOLINT(*)
+      break;
+    }
+  case mshadow::kFloat64:
+    {
+      mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleUniform(&tmp, double(a), double(b));  // NOLINT(*)
+      break;
+    }
+  default:
+    LOG(FATAL) << "Random only support float32 and float64";
+  }
 }
 
 template<>
@@ -125,15 +181,32 @@ void EvalRandom<DEVICE, GaussianDistribution>(
     RunContext ctx) {
   typedef DEVICE xpu;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  mshadow::Tensor<xpu, 2, real_t> tmp = ret->FlatTo2D<xpu, real_t>(s);
-  mshadow::Random<xpu> *prnd = resource.get_random<xpu>(s);
-  prnd->SampleGaussian(&tmp, mu, sigma);
+  switch (ret->type_flag_) {
+  case mshadow::kFloat32:
+    {
+      mshadow::Random<xpu, float> *prnd = resource.get_random<xpu, float>(s);
+      mshadow::Tensor<xpu, 2, float> tmp = ret->FlatTo2D<xpu, float>(s);
+      prnd->SampleGaussian(&tmp, float(mu), float(sigma));  // NOLINT(*)
+      break;
+    }
+  case mshadow::kFloat64:
+    {
+      mshadow::Random<xpu, double> *prnd = resource.get_random<xpu, double>(s);
+      mshadow::Tensor<xpu, 2, double> tmp = ret->FlatTo2D<xpu, double>(s);
+      prnd->SampleGaussian(&tmp, double(mu), double(sigma));  // NOLINT(*)
+      break;
+    }
+  default:
+    LOG(FATAL) << "Random only support float32 and float64";
+  }
 }
 
 template<>
 void Eval<DEVICE>(const real_t &rhs, TBlob *ret, RunContext ctx) {
   mshadow::Stream<DEVICE> *s = ctx.get_stream<DEVICE>();
-  ret->FlatTo2D<DEVICE, real_t>(s) = rhs;
+  MSHADOW_TYPE_SWITCH(ret->type_flag_, DType, {
+    ret->FlatTo2D<DEVICE, DType>(s) = DType(rhs);
+  });
 }
 
 template<>
@@ -144,44 +217,59 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  Tensor<xpu, 2> out = dst->FlatTo2D<xpu, real_t>(s);
-
-  switch (source.size()) {
-    case 2: {
-      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> in_1 = source[1].FlatTo2D<xpu, real_t>(s);
-      out = in_0 + in_1;
-      break;
-    }
-    case 3: {
-      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> in_1 = source[1].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> in_2 = source[2].FlatTo2D<xpu, real_t>(s);
-      out = in_0 + in_1 + in_2;
-      break;
-    }
-    case 4: {
-      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> in_1 = source[1].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> in_2 = source[2].FlatTo2D<xpu, real_t>(s);
-      Tensor<xpu, 2> in_3 = source[3].FlatTo2D<xpu, real_t>(s);
-      out = in_0 + in_1 + in_2 + in_3;
-      break;
-    }
-    default: {
-      Tensor<xpu, 2> in_0 = source[0].FlatTo2D<xpu, real_t>(s);
-      out = F<mshadow::op::identity>(in_0);
-      for (size_t i = 1; i < source.size(); ++i) {
-        out += source[i].FlatTo2D<xpu, real_t>(s);
-      }
-      break;
-    }
+  for (size_t i = 1; i < source.size(); ++i) {
+    CHECK_EQ(source[i].type_flag_, dst->type_flag_)
+      << "Only support input/output with the same data type";
   }
+  MSHADOW_TYPE_SWITCH(dst->type_flag_, DType, {
+    Tensor<xpu, 2, DType> out = dst->FlatTo2D<xpu, DType>(s);
+
+    switch (source.size()) {
+      case 2: {
+        Tensor<xpu, 2, DType> in_0 = source[0].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_1 = source[1].FlatTo2D<xpu, DType>(s);
+        out = in_0 + in_1;
+        break;
+      }
+      case 3: {
+        Tensor<xpu, 2, DType> in_0 = source[0].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_1 = source[1].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_2 = source[2].FlatTo2D<xpu, DType>(s);
+        out = in_0 + in_1 + in_2;
+        break;
+      }
+      case 4: {
+        Tensor<xpu, 2, DType> in_0 = source[0].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_1 = source[1].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_2 = source[2].FlatTo2D<xpu, DType>(s);
+        Tensor<xpu, 2, DType> in_3 = source[3].FlatTo2D<xpu, DType>(s);
+        out = in_0 + in_1 + in_2 + in_3;
+        break;
+      }
+      default: {
+        Tensor<xpu, 2, DType> in_0 = source[0].FlatTo2D<xpu, DType>(s);
+        out = F<mshadow::op::identity>(in_0);
+        for (size_t i = 1; i < source.size(); ++i) {
+          out += source[i].FlatTo2D<xpu, DType>(s);
+        }
+        break;
+      }
+    }
+  });
+}
+
+template <>
+void EvalBroadcast<DEVICE>(TBlob const& src, TBlob* ret, int size, RunContext ctx) {
+  typedef DEVICE xpu;
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  mshadow::Tensor<xpu, 3> out = ret->get<xpu, 3, real_t>(s);
+  mshadow::Tensor<xpu, 2> in = src.get<xpu, 2, real_t>(s);
+  out = mshadow::expr::broadcast_with_axis(in, 0, size);
 }
 
 // declarations
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
-DECL_BINARY(DEVICE, Dot, EvalDot_)
+DECL_TERNARY(DEVICE, MatFillRowElem, EvalMatFillRowElem_)
 DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
 DECL_BINARY(DEVICE, Plus, EvalBinary_)
 DECL_BINARY(DEVICE, Minus, EvalBinary_)

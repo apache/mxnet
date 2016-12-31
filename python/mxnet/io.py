@@ -1,25 +1,92 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201
+# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201, no-self-use, no-member
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
+from collections import OrderedDict, namedtuple
 
-import ctypes
 import sys
-import numpy as np
+import ctypes
 import logging
+import threading
+import numpy as np
 from .base import _LIB
 from .base import c_array, c_str, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
-from .base import check_call, ctypes2docstring
+from .base import mx_real_t
+from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
 from .ndarray import array
+from .ndarray import concatenate
+
+# pylint: disable=W0622
+class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
+    """Named data desc description contains name, shape, type and other extended attributes.
+    """
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
+        ret = super(cls, DataDesc).__new__(cls, name, shape)
+        ret.dtype = dtype
+        ret.layout = layout
+        return ret
+
+    def __repr__(self):
+        return "DataDesc[%s,%s,%s,%s]" % (self.name, self.shape, self.dtype,
+                                          self.layout)
+
+    @staticmethod
+    def get_batch_axis(layout):
+        """Get the dimension that corresponds to the batch size.
+
+        Parameters
+        ----------
+        layout : str
+            layout string. For example, "NCHW".
+
+        Returns
+        -------
+        An axis indicating the batch_size dimension. When data-parallelism is
+        used, the data will be automatically split and concatenate along the batch_size
+        dimension. Axis can be -1, which means the whole array will be copied for each
+        data-parallelism device.
+        """
+        if layout is None:
+            return 0
+        return layout.find('N')
+
+    @staticmethod
+    def get_list(shapes, types):
+        """Get DataDesc list from attribute lists.
+
+        Parameters
+        ----------
+        shapes : shape tuple list with (name, shape) tuples
+        types : type tuple list with (name, type) tuples
+        """
+        if types is not None:
+            type_dict = dict(types)
+            return [DataDesc(x[0], x[1], type_dict[x[0]]) for x in shapes]
+        else:
+            return [DataDesc(x[0], x[1]) for x in shapes]
+
+class DataBatch(object):
+    """Default object for holding a mini-batch of data and related information."""
+    def __init__(self, data, label, pad=None, index=None,
+                 bucket_key=None, provide_data=None, provide_label=None):
+        self.data = data
+        self.label = label
+        self.pad = pad
+        self.index = index
+
+        # the following properties are only used when bucketing is used
+        self.bucket_key = bucket_key
+        self.provide_data = provide_data
+        self.provide_label = provide_label
 
 class DataIter(object):
     """DataIter object in mxnet. """
 
     def __init__(self):
-        pass
+        self.batch_size = 0
 
     def __iter__(self):
         return self
@@ -29,17 +96,20 @@ class DataIter(object):
         pass
 
     def next(self):
-        """Get next data batch from iterator
+        """Get next data batch from iterator. Equivalent to
+        self.iter_next()
+        DataBatch(self.getdata(), self.getlabel(), self.getpad(), None)
 
         Returns
         -------
-        data : NDArray
+        data : DataBatch
             The data of next batch.
-
-        label : NDArray
-            The label of next batch.
         """
-        pass
+        if self.iter_next():
+            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+                    pad=self.getpad(), index=self.getindex())
+        else:
+            raise StopIteration
 
     def __next__(self):
         return self.next()
@@ -54,13 +124,8 @@ class DataIter(object):
         """
         pass
 
-    def getdata(self, index=0):
+    def getdata(self):
         """Get data of current batch.
-
-        Parameters
-        ----------
-        index : int
-            The index of data source to retrieve.
 
         Returns
         -------
@@ -77,7 +142,17 @@ class DataIter(object):
         label : NDArray
             The label of current batch.
         """
-        return self.getdata(-1)
+        pass
+
+    def getindex(self):
+        """Get index of the current batch.
+
+        Returns
+        -------
+        index : numpy.array
+            The index of current batch
+        """
+        return None
 
     def getpad(self):
         """Get the number of padding examples in current batch.
@@ -89,27 +164,239 @@ class DataIter(object):
         """
         pass
 
+class ResizeIter(DataIter):
+    """Resize a DataIter to given number of batches per epoch.
+    May produce incomplete batch in the middle of an epoch due
+    to padding from internal iterator.
+
+    Parameters
+    ----------
+    data_iter : DataIter
+        Internal data iterator.
+    size : number of batches per epoch to resize to.
+    reset_internal : whether to reset internal iterator on ResizeIter.reset
+    """
+
+    def __init__(self, data_iter, size, reset_internal=True):
+        super(ResizeIter, self).__init__()
+        self.data_iter = data_iter
+        self.size = size
+        self.reset_internal = reset_internal
+        self.cur = 0
+        self.current_batch = None
+
+        self.provide_data = data_iter.provide_data
+        self.provide_label = data_iter.provide_label
+        self.batch_size = data_iter.batch_size
+
+    def reset(self):
+        self.cur = 0
+        if self.reset_internal:
+            self.data_iter.reset()
+
+    def iter_next(self):
+        if self.cur == self.size:
+            return False
+        try:
+            self.current_batch = self.data_iter.next()
+        except StopIteration:
+            self.data_iter.reset()
+            self.current_batch = self.data_iter.next()
+
+        self.cur += 1
+        return True
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
+
+class PrefetchingIter(DataIter):
+    """Base class for prefetching iterators. Takes one or more DataIters (
+    or any class with "reset" and "next" methods) and combine them with
+    prefetching. For example:
+
+    Parameters
+    ----------
+    iters : DataIter or list of DataIter
+        one or more DataIters (or any class with "reset" and "next" methods)
+    rename_data : None or list of dict
+        i-th element is a renaming map for i-th iter, in the form of
+        {'original_name' : 'new_name'}. Should have one entry for each entry
+        in iter[i].provide_data
+    rename_label : None or list of dict
+        Similar to rename_data
+
+    Examples
+    --------
+    iter = PrefetchingIter([NDArrayIter({'data': X1}), NDArrayIter({'data': X2})],
+                           rename_data=[{'data': 'data1'}, {'data': 'data2'}])
+    """
+    def __init__(self, iters, rename_data=None, rename_label=None):
+        super(PrefetchingIter, self).__init__()
+        if not isinstance(iters, list):
+            iters = [iters]
+        self.n_iter = len(iters)
+        assert self.n_iter > 0
+        self.iters = iters
+        self.rename_data = rename_data
+        self.rename_label = rename_label
+        self.batch_size = self.provide_data[0][1][0]
+        self.data_ready = [threading.Event() for i in range(self.n_iter)]
+        self.data_taken = [threading.Event() for i in range(self.n_iter)]
+        for e in self.data_taken:
+            e.set()
+        self.started = True
+        self.current_batch = [None for i in range(self.n_iter)]
+        self.next_batch = [None for i in range(self.n_iter)]
+        def prefetch_func(self, i):
+            """Thread entry"""
+            while True:
+                self.data_taken[i].wait()
+                if not self.started:
+                    break
+                try:
+                    self.next_batch[i] = self.iters[i].next()
+                except StopIteration:
+                    self.next_batch[i] = None
+                self.data_taken[i].clear()
+                self.data_ready[i].set()
+        self.prefetch_threads = [threading.Thread(target=prefetch_func, args=[self, i]) \
+                                 for i in range(self.n_iter)]
+        for thread in self.prefetch_threads:
+            thread.setDaemon(True)
+            thread.start()
+
+    def __del__(self):
+        self.started = False
+        for e in self.data_taken:
+            e.set()
+        for thread in self.prefetch_threads:
+            thread.join()
+
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        if self.rename_data is None:
+            return sum([i.provide_data for i in self.iters], [])
+        else:
+            return sum([[
+                DataDesc(r[x.name], x.shape, x.dtype)
+                if isinstance(x, DataDesc) else DataDesc(*x)
+                for x in i.provide_data
+            ] for r, i in zip(self.rename_data, self.iters)], [])
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        if self.rename_label is None:
+            return sum([i.provide_label for i in self.iters], [])
+        else:
+            return sum([[
+                DataDesc(r[x.name], x.shape, x.dtype)
+                if isinstance(x, DataDesc) else DataDesc(*x)
+                for x in i.provide_label
+            ] for r, i in zip(self.rename_label, self.iters)], [])
+
+    def reset(self):
+        for e in self.data_ready:
+            e.wait()
+        for i in self.iters:
+            i.reset()
+        for e in self.data_ready:
+            e.clear()
+        for e in self.data_taken:
+            e.set()
+
+    def iter_next(self):
+        for e in self.data_ready:
+            e.wait()
+        if self.next_batch[0] is None:
+            for i in self.next_batch:
+                assert i is None, "Number of entry mismatches between iterators"
+            return False
+        else:
+            for batch in self.next_batch:
+                assert batch.pad == self.next_batch[0].pad, \
+                    "Number of entry mismatches between iterators"
+            self.current_batch = DataBatch(sum([batch.data for batch in self.next_batch], []),
+                                           sum([batch.label for batch in self.next_batch], []),
+                                           self.next_batch[0].pad,
+                                           self.next_batch[0].index,
+                                           provide_data=self.provide_data,
+                                           provide_label=self.provide_label)
+            for e in self.data_ready:
+                e.clear()
+            for e in self.data_taken:
+                e.set()
+            return True
+
+    def next(self):
+        if self.iter_next():
+            return self.current_batch
+        else:
+            raise StopIteration
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
+
+def _init_data(data, allow_empty, default_name):
+    """Convert data into canonical form."""
+    assert (data is not None) or allow_empty
+    if data is None:
+        data = []
+
+    if isinstance(data, (np.ndarray, NDArray)):
+        data = [data]
+    if isinstance(data, list):
+        if not allow_empty:
+            assert(len(data) > 0)
+        if len(data) == 1:
+            data = OrderedDict([(default_name, data[0])])
+        else:
+            data = OrderedDict([('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
+    if not isinstance(data, dict):
+        raise TypeError("Input must be NDArray, numpy.ndarray, " + \
+                "a list of them or dict with them as values")
+    for k, v in data.items():
+        if not isinstance(v, NDArray):
+            try:
+                data[k] = array(v)
+            except:
+                raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
+                    "should be NDArray or numpy.ndarray")
+
+    return list(data.items())
 
 class NDArrayIter(DataIter):
     """NDArrayIter object in mxnet. Taking NDArray or numpy array to get dataiter.
 
     Parameters
     ----------
-    data_list or data, label: a list of, or two separate NDArray or numpy.ndarray
-        list of NDArray for data. The last one is treated as label.
-
+    data: NDArray or numpy.ndarray, a list of them, or a dict of string to them.
+        NDArrayIter supports single or multiple data and label.
+    label: NDArray or numpy.ndarray, a list of them, or a dict of them.
+        Same as data, but is not fed to the model during testing.
     batch_size: int
         Batch Size
-
     shuffle: bool
         Whether to shuffle the data
-
-    data_pad_value: float, optional
-        Padding value for data
-
-    label_pad_value: float, optionl
-        Padding value for label
-
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
 
@@ -119,45 +406,58 @@ class NDArrayIter(DataIter):
     the size of data does not match batch_size. Roll over is intended
     for training and can cause problems if used for prediction.
     """
-    def __init__(self, *args, **kwargs):
-        super(NDArrayIter, self).__init__()
-        if isinstance(args[0], list) or isinstance(args[0], tuple):
-            self._init(*args, **kwargs)
-        else:
-            self._init((args[0], args[1]), *args[2:], **kwargs)
-
-    def _init(self, data_list,
-              batch_size=1,
-              shuffle=False,
-              last_batch_handle='pad'):
-        """Actual constructor"""
+    def __init__(self, data, label=None, batch_size=1, shuffle=False,
+                 last_batch_handle='pad', label_name='softmax_label'):
         # pylint: disable=W0201
-        self.num_source = len(data_list)
-        assert self.num_source > 0, "Need at least one data source."
-        data_list = list(data_list)
-        for i in range(self.num_source):
-            if isinstance(data_list[i], NDArray):
-                data_list[i] = data_list[i].asnumpy()
+
+        super(NDArrayIter, self).__init__()
+
+        self.data = _init_data(data, allow_empty=False, default_name='data')
+        self.label = _init_data(label, allow_empty=True, default_name=label_name)
+
         # shuffle data
         if shuffle:
-            idx = np.arange(data_list[0].shape[0])
+            idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
-            for i in range(self.num_source):
-                assert data_list[i].shape[0] == len(idx)
-                data_list[i] = data_list[i][idx]
+            self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
+            self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
 
         # batching
         if last_batch_handle == 'discard':
-            new_n = data_list[0].shape[0] - data_list[0].shape[0] % batch_size
-            for i in range(self.num_source):
-                data_list[i] = data_list[i][:new_n]
-        self.num_data = data_list[0].shape[0]
-        assert self.num_data > batch_size, \
-            "batch_size need to be smaller than data size when not padding."
+            new_n = self.data[0][1].shape[0] - self.data[0][1].shape[0] % batch_size
+            data_dict = OrderedDict(self.data)
+            label_dict = OrderedDict(self.label)
+            for k, _ in self.data:
+                data_dict[k] = data_dict[k][:new_n]
+            for k, _ in self.label:
+                label_dict[k] = label_dict[k][:new_n]
+            self.data = data_dict.items()
+            self.label = label_dict.items()
+
+        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
+        self.num_source = len(self.data_list)
+        self.num_data = self.data_list[0].shape[0]
+        assert self.num_data >= batch_size, \
+            "batch_size need to be smaller than data size."
         self.cursor = -batch_size
-        self.data_list = data_list
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
+
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        return [
+            DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
+            for k, v in self.data
+        ]
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        return [
+            DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
+            for k, v in self.label
+        ]
 
     def hard_reset(self):
         """Igore roll over data and set to start"""
@@ -171,30 +471,29 @@ class NDArrayIter(DataIter):
 
     def iter_next(self):
         self.cursor += self.batch_size
-        if self.cursor < self.num_data:
-            return True
-        else:
-            return False
+        return self.cursor < self.num_data
 
     def next(self):
         if self.iter_next():
-            return (self.getdata(i) for i in range(self.num_source))
+            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+                    pad=self.getpad(), index=None)
         else:
             raise StopIteration
 
-    def getdata(self, index=0):
-        assert(index < self.num_source)
+    def _getdata(self, data_source):
+        """Load data from underlying arrays, internal use only"""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return array(self.data_list[index][self.cursor:self.cursor+self.batch_size])
+            return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return array(np.concatenate((self.data_list[index][self.cursor:],
-                                         self.data_list[index][:pad]),
-                                        axis=0))
+            return [concatenate([x[1][self.cursor:], x[1][:pad]]) for x in data_source]
+
+    def getdata(self):
+        return self._getdata(self.data)
 
     def getlabel(self):
-        return self.getdata(-1)
+        return self._getdata(self.label)
 
     def getpad(self):
         if self.last_batch_handle == 'pad' and \
@@ -212,19 +511,29 @@ class MXDataIter(DataIter):
     handle : DataIterHandle
         the handle to the underlying C++ Data Iterator
     """
-    def __init__(self, handle):
+    def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
         self.handle = handle
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
-        self._debug_at_begin = True
+
+        # load the first batch to get shape information
+        self.first_batch = None
+        self.first_batch = self.next()
+        data = self.first_batch.data[0]
+        label = self.first_batch.label[0]
+
+        # properties
+        self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
+        self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
+        self.batch_size = data.shape[0]
+
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
 
     def debug_skip_load(self):
         """Set the iterator to simply return always first batch.
-
         Notes
         -----
         This can be used to test the speed of network without taking
@@ -235,20 +544,29 @@ class MXDataIter(DataIter):
 
     def reset(self):
         self._debug_at_begin = True
+        self.first_batch = None
         check_call(_LIB.MXDataIterBeforeFirst(self.handle))
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
-            return  self.getdata(), self.getlabel()
+            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+                              index=self.getindex())
+        if self.first_batch is not None:
+            batch = self.first_batch
+            self.first_batch = None
+            return batch
         self._debug_at_begin = False
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            return self.getdata(), self.getlabel()
+            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+                             index=self.getindex())
         else:
             raise StopIteration
 
     def iter_next(self):
+        if self.first_batch is not None:
+            return True
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         return next_res.value
@@ -262,6 +580,17 @@ class MXDataIter(DataIter):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
         return NDArray(hdl, False)
+
+    def getindex(self):
+        index_size = ctypes.c_uint64(0)
+        index_data = ctypes.POINTER(ctypes.c_uint64)()
+        check_call(_LIB.MXDataIterGetIndex(self.handle,
+                                           ctypes.byref(index_data),
+                                           ctypes.byref(index_size)))
+        address = ctypes.addressof(index_data.contents)
+        dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
+        np_index = np.frombuffer(dbuffer, dtype=np.uint64)
+        return np_index.copy()
 
     def getpad(self):
         pad = ctypes.c_int(0)
@@ -284,7 +613,12 @@ def _make_io_iterator(handle):
             ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
     iter_name = py_str(name.value)
-    param_str = ctypes2docstring(num_args, arg_names, arg_types, arg_descs)
+
+    narg = int(num_args.value)
+    param_str = _build_param_doc(
+        [py_str(arg_names[i]) for i in range(narg)],
+        [py_str(arg_types[i]) for i in range(narg)],
+        [py_str(arg_descs[i]) for i in range(narg)])
 
     doc_str = ('%s\n\n' +
                '%s\n' +
@@ -329,7 +663,7 @@ def _make_io_iterator(handle):
         if len(args):
             raise TypeError('%s can only accept keyword arguments' % iter_name)
 
-        return MXDataIter(iter_handle)
+        return MXDataIter(iter_handle, **kwargs)
 
     creator.__name__ = iter_name
     creator.__doc__ = doc_str

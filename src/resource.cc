@@ -5,9 +5,11 @@
  */
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
+#include <dmlc/thread_local.h>
 #include <mxnet/base.h>
 #include <mxnet/engine.h>
 #include <mxnet/resource.h>
+#include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
 #include "./common/lazy_alloc_array.h"
@@ -15,17 +17,63 @@
 namespace mxnet {
 namespace resource {
 
-// implements resource manager
+// internal structure for space allocator
+struct SpaceAllocator {
+  // internal context
+  Context ctx;
+  // internal handle
+  Storage::Handle handle;
+  // internal CPU handle
+  Storage::Handle host_handle;
+
+  SpaceAllocator() {
+    handle.dptr = nullptr;
+    handle.size = 0;
+    host_handle.dptr = nullptr;
+    host_handle.size = 0;
+  }
+  inline void ReleaseAll() {
+    if (handle.size != 0) {
+      Storage::Get()->DirectFree(handle);
+      handle.size = 0;
+    }
+    if (host_handle.size != 0) {
+      Storage::Get()->DirectFree(host_handle);
+      host_handle.size = 0;
+    }
+  }
+  inline void* GetSpace(size_t size) {
+    if (handle.size >= size) return handle.dptr;
+    if (handle.size != 0) {
+      Storage::Get()->DirectFree(handle);
+    }
+    handle = Storage::Get()->Alloc(size, ctx);
+    return handle.dptr;
+  }
+
+  inline void* GetHostSpace(size_t size) {
+    if (host_handle.size >= size) return host_handle.dptr;
+    if (handle.size != 0) {
+      Storage::Get()->DirectFree(host_handle);
+    }
+    host_handle = Storage::Get()->Alloc(size, Context());
+    return host_handle.dptr;
+  }
+};
+
+
+// Implements resource manager
 class ResourceManagerImpl : public ResourceManager {
  public:
   ResourceManagerImpl() noexcept(false)
       : global_seed_(0) {
-    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 16);
-    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 4);
+    cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
+    gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     engine_ref_ = Engine::_GetSharedRef();
+    storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
         Context::CPU(), global_seed_));
-    cpu_space_.reset(new ResourceTempSpace<cpu>(
+    cpu_space_.reset(new ResourceTempSpace(
         Context::CPU(), cpu_temp_space_copy_));
   }
   ~ResourceManagerImpl() {
@@ -37,8 +85,10 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_space_.Clear();
 #endif
     if (engine_ref_ != nullptr) {
-      // release the reference to engine.
       engine_ref_ = nullptr;
+    }
+    if (storage_ref_ != nullptr) {
+      storage_ref_ = nullptr;
     }
   }
 
@@ -61,7 +111,7 @@ class ResourceManagerImpl : public ResourceManager {
         }
         case ResourceRequest::kTempSpace: {
           return gpu_space_.Get(ctx.dev_id, [ctx, this]() {
-              return new ResourceTempSpace<gpu>(ctx, gpu_temp_space_copy_);
+              return new ResourceTempSpace(ctx, gpu_temp_space_copy_);
             })->GetNext();
         }
         default: LOG(FATAL) << "Unknown supported type " << req.type;
@@ -121,16 +171,17 @@ class ResourceManagerImpl : public ResourceManager {
       Engine::Get()->PushSync([r, seed](RunContext rctx) {
           r->set_stream(rctx.get_stream<xpu>());
           r->Seed(seed);
-        }, ctx, {}, {resource.var});
+        }, ctx, {}, {resource.var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
     }
   };
+
   // temporal space resource.
-  template<typename xpu>
   struct ResourceTempSpace {
     /*! \brief the context of the device */
     Context ctx;
     /*! \brief the underlying space */
-    std::vector<mshadow::TensorContainer<xpu, 1, real_t>*> space;
+    std::vector<SpaceAllocator> space;
     /*! \brief resource representation */
     std::vector<Resource> resource;
     /*! \brief current pointer to the round roubin alloator */
@@ -138,21 +189,22 @@ class ResourceManagerImpl : public ResourceManager {
     /*! \brief constructor */
     explicit ResourceTempSpace(Context ctx, size_t ncopy)
         : ctx(ctx), space(ncopy), resource(ncopy), curr_ptr(0) {
-      mshadow::SetDevice<xpu>(ctx.dev_id);
       for (size_t i = 0; i < space.size(); ++i) {
-        space[i] = new mshadow::TensorContainer<xpu, 1, real_t>();
         resource[i].var = Engine::Get()->NewVariable();
         resource[i].id = static_cast<int32_t>(i);
-        resource[i].ptr_ = space[i];
+        resource[i].ptr_ = &space[i];
         resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
+        space[i].ctx = ctx;
+        CHECK_EQ(space[i].handle.size, 0);
       }
     }
     ~ResourceTempSpace() {
       for (size_t i = 0; i < space.size(); ++i) {
-        mshadow::TensorContainer<xpu, 1, real_t>* r = space[i];
+        SpaceAllocator r = space[i];
         Engine::Get()->DeleteVariable(
             [r](RunContext rctx){
-              MSHADOW_CATCH_ERROR(r->Release());
+              SpaceAllocator rcpy = r;
+              MSHADOW_CATCH_ERROR(rcpy.ReleaseAll());
             }, ctx, resource[i].var);
       }
     }
@@ -174,23 +226,33 @@ class ResourceManagerImpl : public ResourceManager {
   int gpu_temp_space_copy_;
   /*! \brief Reference to the engine */
   std::shared_ptr<Engine> engine_ref_;
+  /*! \brief Reference to the storage */
+  std::shared_ptr<Storage> storage_ref_;
   /*! \brief internal seed to the random number generator */
   uint32_t global_seed_;
   /*! \brief CPU random number resources */
   std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
-  std::unique_ptr<ResourceTempSpace<cpu> > cpu_space_;
+  std::unique_ptr<ResourceTempSpace> cpu_space_;
 #if MXNET_USE_CUDA
   /*! \brief random number generator for GPU */
   common::LazyAllocArray<ResourceRandom<gpu> > gpu_rand_;
   /*! \brief temp space for GPU */
-  common::LazyAllocArray<ResourceTempSpace<gpu> > gpu_space_;
+  common::LazyAllocArray<ResourceTempSpace> gpu_space_;
 #endif
 };
 }  // namespace resource
 
+void* Resource::get_space_internal(size_t size) const {
+  return static_cast<resource::SpaceAllocator*>(ptr_)->GetSpace(size);
+}
+
+void* Resource::get_host_space_internal(size_t size) const {
+  return static_cast<resource::SpaceAllocator*>(ptr_)->GetHostSpace(size);
+}
+
 ResourceManager* ResourceManager::Get() {
-  static resource::ResourceManagerImpl inst;
-  return &inst;
+  typedef dmlc::ThreadLocalStore<resource::ResourceManagerImpl> inst;
+  return inst::Get();
 }
 }  // namespace mxnet

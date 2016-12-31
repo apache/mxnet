@@ -1,7 +1,0 @@
-html
-latex
-*.sh
-_*
-doxygen
-*.pyc
-doc-image

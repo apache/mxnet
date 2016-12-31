@@ -30,9 +30,8 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;
   DMLC_DECLARE_PARAMETER(FullyConnectedParam) {
-    // TODO(bing) change to only set lower bound
-    // add support for boolean
-    DMLC_DECLARE_FIELD(num_hidden).set_range(1, 100000)
+    // TODO(bing) add support for boolean
+    DMLC_DECLARE_FIELD(num_hidden).set_lower_bound(1)
     .describe("Number of hidden nodes of the output.");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
@@ -43,7 +42,7 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
  * \brief This is the implementation of fully connected operator.
  * \tparam xpu The device that the op will be executed on.
  */
-template<typename xpu>
+template<typename xpu, typename DType>
 class FullyConnectedOp : public Operator {
  public:
   explicit FullyConnectedOp(FullyConnectedParam p) {
@@ -57,6 +56,7 @@ class FullyConnectedOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    if (req[fullc::kOut] == kNullOp) return;
     CHECK_EQ(req[fullc::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
@@ -69,12 +69,17 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-    Tensor<xpu, 2> data = in_data[fullc::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> wmat = in_data[fullc::kWeight].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> out = out_data[fullc::kOut].FlatTo2D<xpu, real_t>(s);
+    const TShape& ishape = in_data[fullc::kData].shape_;
+    const TShape& oshape = out_data[fullc::kOut].shape_;
+
+    Tensor<xpu, 2, DType> data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
+        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
+    Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
+    Tensor<xpu, 2, DType> out = out_data[fullc::kOut].get_with_shape<xpu, 2, DType>(
+        Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
     out = dot(data, wmat.T());
     if (!param_.no_bias) {
-      Tensor<xpu, 1> bias = in_data[fullc::kBias].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
       out += repmat(bias, data.size(0));
     }
   }
@@ -95,9 +100,15 @@ class FullyConnectedOp : public Operator {
     // TODO(bing): check the BLAS Handle, be careful
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2> data = in_data[fullc::kData].FlatTo2D<xpu, real_t>(s);
-    Tensor<xpu, 2> wmat = in_data[fullc::kWeight].get<xpu, 2, real_t>(s);
-    Tensor<xpu, 2> grad = out_grad[fullc::kOut].FlatTo2D<xpu, real_t>(s);
+    const TShape& ishape = in_data[fullc::kData].shape_;
+    const TShape& oshape = out_grad[fullc::kOut].shape_;
+
+    Tensor<xpu, 2, DType> data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
+        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
+    Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
+    Tensor<xpu, 2, DType> grad = out_grad[fullc::kOut].get_with_shape<xpu, 2, DType>(
+        Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
+
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
         << "Must init CuBLAS handle in stream";
@@ -105,15 +116,16 @@ class FullyConnectedOp : public Operator {
     //  backprop
     CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
     // gradient of weight
-    Tensor<xpu, 2> gwmat = in_grad[fullc::kWeight].get<xpu, 2, real_t>(s);
+    Tensor<xpu, 2, DType> gwmat = in_grad[fullc::kWeight].get<xpu, 2, DType>(s);
     Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
     // gradient of bias
     if (!param_.no_bias) {
-      Tensor<xpu, 1> gbias = in_grad[fullc::kBias].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
       Assign(gbias, req[fullc::kBias], sum_rows(grad));
     }
     // gradient of data
-    Tensor<xpu, 2> gdata = in_grad[fullc::kData].FlatTo2D<xpu, real_t>(s);
+    Tensor<xpu, 2, DType> gdata = in_grad[fullc::kData].get_with_shape<xpu, 2, DType>(
+        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
     Assign(gdata, req[fullc::kData], dot(grad, wmat));
   }
 
@@ -123,7 +135,7 @@ class FullyConnectedOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(FullyConnectedParam param);
+Operator* CreateOp(FullyConnectedParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class FullyConnectedProp : public OperatorProperty {
@@ -157,15 +169,33 @@ class FullyConnectedProp : public OperatorProperty {
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
-    index_t num_input = 0;
-    mshadow::Shape<2> ishape = dshape.FlatTo2D();
-    num_input = ishape[1];
+    index_t num_input = dshape.ProdShape(1, dshape.ndim());
     SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param_.num_hidden, num_input));
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));
     }
     out_shape->clear();
     out_shape->push_back(Shape2(dshape[0], param_.num_hidden));
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_GE(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    for (index_t i = 0; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
+                                       << "Expected " << dtype << " v.s. given "
+                                       << (*in_type)[i] << " at " << ListArguments()[i];
+      }
+    }
+    out_type->clear();
+    out_type->push_back(dtype);
     return true;
   }
 
@@ -195,7 +225,13 @@ class FullyConnectedProp : public OperatorProperty {
     return {{in_data[fullc::kData], in_grad[fullc::kData]}};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   FullyConnectedParam param_;
