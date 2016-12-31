@@ -113,7 +113,7 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
       CTensor<DType> lhs = inputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_lshape.get<MAX_DIM>());
       CTensor<DType> rhs = inputs[1].get_with_shape<xpu, MAX_DIM, DType>(new_rshape.get<MAX_DIM>());
       CTensor<DType> out = outputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_oshape.get<MAX_DIM>());
-      BinaryBroadcastComputeImpl<DType, OP>(s, ndim, req[0], lhs, rhs, out);
+      BinaryBroadcastComputeImpl<DType, OP>(s, req[0], lhs, rhs, out);
     });
   }
 }
@@ -188,8 +188,8 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
         outputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_lshape.get<MAX_DIM>(), s);
       CTensor<DType> rgrad =
         outputs[1].get_with_shape<xpu, MAX_DIM, DType>(new_rshape.get<MAX_DIM>(), s);
-      Reduce<red::sum, DType, LOP>(s, ndim, lgrad, req[0], ograd);
-      Reduce<red::sum, DType, ROP>(s, ndim, rgrad, req[1], ograd);
+      Reduce<red::sum, DType, LOP>(s, lgrad, req[0], ograd);
+      Reduce<red::sum, DType, ROP>(s, rgrad, req[1], ograd);
     });
   }
 }
