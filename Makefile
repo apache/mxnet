@@ -200,8 +200,7 @@ endif
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/src/$*.o $< >build/src/$*.d
-	$(CXX) -std=c++11 -c $(CFLAGS) -c $< -o $@
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
 build/src/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
@@ -217,8 +216,7 @@ build/plugin/%_gpu.o: plugin/%.cu
 
 build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*.o $< >build/plugin/$*.d
-	$(CXX) -std=c++11 -c $(CFLAGS) -c $< -o $@
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
 %_gpu.o: %.cu
 	@mkdir -p $(@D)
@@ -227,8 +225,7 @@ build/plugin/%.o: plugin/%.cc
 
 %.o: %.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -Isrc/operator -MM -MT $*.o $< >$*.d
-	$(CXX) -std=c++11 -c $(CFLAGS) -Isrc/operator -c $< -o $@
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
