@@ -9,6 +9,7 @@ mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
+mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
@@ -276,6 +277,10 @@ if(USE_DIST_KVSTORE)
 	target_link_libraries(mxnet pslite)
 	target_link_libraries(mxnet ${pslite_LINKER_LIBS})
 	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+endif()
+
+if(USE_PROFILER)
+	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
 # ---[ Linter target

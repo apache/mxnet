@@ -7,11 +7,9 @@ Installing MXNet is a two-step process:
 
 **Note:** To change the compilation options for your build, edit the ```make/config.mk``` file and submit a build request with the ```make``` command.
 
-## Build the Shared Library
+## Using the installation script
 
-Install the dependencies, required for MXNet, with the following commands:
-
-- [Homebrew](http://brew.sh/) (to install dependencies)
+Install [Homebrew](http://brew.sh/)  to get the dependencies required for MXNet, with the following commands:
 
 ```bash
 	# Paste this command in Mac terminal to install Homebrew
@@ -20,6 +18,33 @@ Install the dependencies, required for MXNet, with the following commands:
 	# Insert the Homebrew directory at the top of your PATH environment variable
 	export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 ```
+
+Initialize the git submodules and fetch them:
+
+```
+  git submodule init
+  git submodule update
+```
+
+Then you can execute the `setup-utils/install-mxnet-macosx.sh` script
+[1](https://github.com/dmlc/mxnet/tree/master/setup-utils/setup-utils/install-mxnet-macosx.sh).
+
+After that, you should have the mxnet library in the `lib` directory:
+```
+  mxnet$ ls lib/
+  libmxnet.a  libmxnet.so
+```
+
+Now you can skip to "Install the MXNet Package for Python" down below if you plan to use mxnet with Python.
+
+--
+
+## Manual installation steps
+
+Alternatively you can follow through with the following manual instructions:
+
+You will need to install:
+
 - openblas and homebrew/science (for linear algebraic operations)
 - OpenCV (for computer vision operations)
 

@@ -99,7 +99,7 @@ class NDArray(NDArrayBase):
     NDArray is basic ndarray/Tensor like data structure in mxnet.
     """
     __slots__ = []
-    # pylint: disable= no-member
+    # pylint: disable= no-member, undefined-variable
     def __repr__(self):
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
@@ -112,7 +112,7 @@ class NDArray(NDArrayBase):
         if not self.writable:
             raise ValueError('trying to add to a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._plus(self, other, out=self)
+            return broadcast_add(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._plus_scalar(self, float(other), out=self)
         else:
@@ -128,7 +128,7 @@ class NDArray(NDArrayBase):
         if not self.writable:
             raise ValueError('trying to subtract from a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._minus(self, other, out=self)
+            return broadcast_sub(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._minus_scalar(self, float(other), out=self)
         else:
@@ -147,7 +147,7 @@ class NDArray(NDArrayBase):
         if not self.writable:
             raise ValueError('trying to multiply to a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._mul(self, other, out=self)
+            return broadcast_mul(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._mul_scalar(self, float(other), out=self)
         else:
@@ -166,7 +166,7 @@ class NDArray(NDArrayBase):
         if not self.writable:
             raise ValueError('trying to divide from a readonly NDArray')
         if isinstance(other, NDArray):
-            return _internal._div(self, other, out=self)
+            return broadcast_div(self, other, out=self)
         elif isinstance(other, numeric_types):
             return _internal._div_scalar(self, float(other), out=self)
         else:
