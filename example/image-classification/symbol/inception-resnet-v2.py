@@ -61,8 +61,8 @@ def block17(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', 
 def block8(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', mirror_attr={}):
     tower_conv = ConvFactory(net, 192, (1, 1))
     tower_conv1_0 = ConvFactory(net, 192, (1, 1))
-    tower_conv1_1 = ConvFactory(net, 224, (1, 3), pad=(0, 1))
-    tower_conv1_2 = ConvFactory(net, 256, (3, 1), pad=(1, 0))
+    tower_conv1_1 = ConvFactory(tower_conv1_0, 224, (1, 3), pad=(0, 1))
+    tower_conv1_2 = ConvFactory(tower_conv1_1, 256, (3, 1), pad=(1, 0))
     tower_mixed = mx.symbol.Concat(*[tower_conv, tower_conv1_2])
     tower_out = ConvFactory(
         tower_mixed, input_num_channels, (1, 1), with_act=False)
@@ -136,7 +136,7 @@ def get_symbol(num_classes=1000, **kwargs):
     net = mx.symbol.Pooling(net, kernel=(
         1, 1), global_pool=True, stride=(2, 2), pool_type='avg')
     net = mx.symbol.Flatten(net)
-    net = mx.symbol.Dropout(data=net, p=0.8)
+    net = mx.symbol.Dropout(data=net, p=0.2)
     net = mx.symbol.FullyConnected(data=net, num_hidden=num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=net, name='softmax')
     return softmax
