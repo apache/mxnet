@@ -305,7 +305,7 @@ rpkg:
 	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
-	mv mxnet_*.tar.gz mxnet_current.tar.gz
+	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
