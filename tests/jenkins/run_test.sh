@@ -5,6 +5,7 @@ echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
 echo "USE_CUDNN=1" >> config.mk
 echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
+echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 make -j$(nproc) || exit -1
 
 echo "BUILD lint"
