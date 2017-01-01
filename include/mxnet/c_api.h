@@ -66,8 +66,8 @@ typedef void *RecordIOHandle;
 typedef void *RtcHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
-                                                       NDArrayHandle,
-                                                       void *);
+                                        NDArrayHandle,
+                                        void *);
 
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
