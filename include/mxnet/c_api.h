@@ -6,13 +6,19 @@
 #ifndef MXNET_C_API_H_
 #define MXNET_C_API_H_
 
+/*! \brief Inhibit C++ name-mangling for MXNet functions. */
 #ifdef __cplusplus
-#define MXNET_EXTERN_C extern "C"
+extern "C" {
+#endif // __cplusplus
+
+/*! \brief Keep the default value in C++ */
+#ifdef __cplusplus
 #define DEFAULT(x) = x
 #else
-#define MXNET_EXTERN_C
 #define DEFAULT(x)
-#endif
+#endif // __cplusplus
+
+#include <stdint.h>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -21,12 +27,12 @@
 /*! \brief MXNET_DLL prefix for windows */
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
+#define MXNET_DLL __declspec(dllexport)
 #else
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllimport)
+#define MXNET_DLL __declspec(dllimport)
 #endif
 #else
-#define MXNET_DLL MXNET_EXTERN_C
+#define MXNET_DLL
 #endif
 
 /*! \brief manually define unsigned int */
@@ -59,11 +65,11 @@ typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
 
-MXNET_EXTERN_C typedef void (*ExecutorMonitorCallback)(const char*,
+typedef void (*ExecutorMonitorCallback)(const char*,
                                                        NDArrayHandle,
                                                        void *);
 
-MXNET_EXTERN_C struct NativeOpInfo {
+struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
   void (*backward)(int, float**, int*, unsigned**, int*, void*);
   void (*infer_shape)(int, int*, unsigned**, void*);
@@ -77,7 +83,7 @@ MXNET_EXTERN_C struct NativeOpInfo {
   void* p_list_arguments;
 };
 
-MXNET_EXTERN_C struct NDArrayOpInfo {
+struct NDArrayOpInfo {
   bool (*forward)(int, void**, int*, void*);
   bool (*backward)(int, void**, int*, void*);
   bool (*infer_shape)(int, int*, unsigned**, void*);
@@ -94,7 +100,7 @@ MXNET_EXTERN_C struct NDArrayOpInfo {
   void* p_declare_backward_dependency;
 };
 
-MXNET_EXTERN_C struct CustomOpInfo {
+struct CustomOpInfo {
   bool (*forward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
                   const int* /*reqs*/, const bool /*is_train*/, void* /*state*/);
   bool (*backward)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
@@ -106,7 +112,7 @@ MXNET_EXTERN_C struct CustomOpInfo {
   void* p_del;
 };
 
-MXNET_EXTERN_C struct CustomOpPropInfo {
+struct CustomOpPropInfo {
   bool (*list_arguments)(char*** /*args*/, void* /*state*/);
   bool (*list_outputs)(char*** /*outputs*/, void* /*state*/);
   bool (*infer_shape)(int /*num_input*/, int* /*ndims*/, unsigned** /*shapes*/,
@@ -129,11 +135,9 @@ MXNET_EXTERN_C struct CustomOpPropInfo {
   void* p_del;
 };
 
-MXNET_EXTERN_C typedef bool (*CustomOpPropCreator)(const char* /*op_type*/,
-                                                   const int /*num_kwargs*/,
-                                                   const char** /*keys*/,
-                                                   const char** /*values*/,
-                                                   struct CustomOpPropInfo* /*ret*/);
+typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
+                                    const char** /*keys*/, const char** /*values*/,
+                                    struct CustomOpPropInfo* /*ret*/);
 
 /*!
  * \brief return str message of the last error
@@ -1448,5 +1452,9 @@ MXNET_DLL int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
 MXNET_DLL int MXRtcFree(RtcHandle handle);
 
 MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif  // MXNET_C_API_H_
