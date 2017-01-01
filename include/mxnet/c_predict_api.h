@@ -10,7 +10,7 @@
 /*! \brief Inhibit C++ name-mangling for MXNet functions. */
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif  // __cplusplus
 
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
@@ -205,6 +205,6 @@ MXNET_DLL int MXNDListFree(NDListHandle handle);
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif  // __cplusplus
 
 #endif  // MXNET_C_PREDICT_API_H_

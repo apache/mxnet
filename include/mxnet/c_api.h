@@ -9,14 +9,14 @@
 /*! \brief Inhibit C++ name-mangling for MXNet functions. */
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif  // __cplusplus
 
 /*! \brief Keep the default value in C++ */
 #ifdef __cplusplus
 #define DEFAULT(x) = x
 #else
 #define DEFAULT(x)
-#endif // __cplusplus
+#endif  // __cplusplus
 
 #include <stdint.h>
 
@@ -1455,6 +1455,6 @@ MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creato
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif  // __cplusplus
 
 #endif  // MXNET_C_API_H_
