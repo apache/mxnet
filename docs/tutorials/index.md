@@ -23,7 +23,7 @@ The following tutorials walks throught the basic usage of MXNet, including manip
 - [Training and Inference with Module](http://mxnet.io/tutorials/python/module.html)
 *Train a simple deep neural network with the Module interface. The Module package provides intermediate-level and high-level interface for executing predefined networks.*
 
-- [Mixing Array and Graphs (Advanced)](http://mxnet.io/tutorials/python/ndarray.html)
+- [Mixing Array and Graphs (Advanced)](http://mxnet.io/tutorials/python/mixed.html)
 *Show cases MXNet's signature support for mixing imperative and symbolic programming. Note that Module already provides a high-level interface by wrapping around these functionalities. So this tutorial is mainly for users who want to build things from scratches for extra flexibility.*
 
 #### IO
