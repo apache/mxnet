@@ -91,6 +91,33 @@ std::vector<std::string> Symbol::ListOuputs() const {
   return std::vector<std::string>(ret, ret + size);
 }
 
+Rcpp::List Symbol::getAttrs() const {
+  mx_uint size;
+  const char **ret;
+  MX_CALL(MXSymbolListAttrShallow(handle_, &size, &ret));
+  std::vector<std::string> key_values(ret, ret + 2*size);
+
+  // fill return list
+  Rcpp::List list;
+  for (size_t i = 0; i < size; i++) {
+    list[key_values[2*i]] = key_values[2*i+1];
+  }
+  return list;
+}
+
+void Symbol::setAttrs(Rcpp::List attr) {
+  RCHECK(HasName(attr))
+        << "Need to pass parameters in list of key=value style.\n";
+  std::vector<std::string> keys = attr.names();
+  for (size_t i = 0; i < attr.size(); i++) {
+    RCHECK(TYPEOF(attr[i]) == STRSXP) << "Attribute values must be characters.\n";
+  }
+  for (size_t i = 0; i < attr.size(); i++) {
+    MX_CALL(MXSymbolSetAttr(handle_, keys[i].c_str(),
+                            Rcpp::as<std::string>(attr[i]).c_str() ));
+  }
+}
+
 void Symbol::Save(const std::string& fname) const {
   MX_CALL(MXSymbolSaveToFile(handle_, fname.c_str()));
 }
@@ -310,6 +337,8 @@ void Symbol::InitRcppModule() {
               "Save symbol to file")
       .property("arguments", &Symbol::ListArguments,
               "List the arguments names of the symbol")
+      .property("attributes", &Symbol::getAttrs, &Symbol::setAttrs,
+              "Attributes of the symbol. Specified as named list.")
       .property("outputs", &Symbol::ListOuputs,
               "List the outputs names of the symbol")
       .property("auxiliary.states", &Symbol::ListAuxiliaryStates,
