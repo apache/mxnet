@@ -223,7 +223,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxImperativeInvoke
     jclass listClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
     jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
         "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
-    for (size_t i = 0; i < numOutputs; ++i) {
+    for (int i = 0; i < numOutputs; ++i) {
       env->CallObjectMethod(outputs, listAppend,
                             env->NewObject(longCls, longConst,
                             reinterpret_cast<uint64_t>(cOutputs[i])));
@@ -1328,7 +1328,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolInferType
 
   // release allocated memory
   if (jkeys != NULL) {
-    for (size_t i = 0; i < numArgs; i++) {
+    for (int i = 0; i < numArgs; i++) {
       jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
       env->ReleaseStringUTFChars(jkey, keys[i]);
       env->DeleteLocalRef(jkey);
@@ -1397,7 +1397,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSymbolInferShape
   const char **keys = NULL;
   if (jkeys != NULL) {
     keys = new const char *[jnumArgs];
-    for (size_t i = 0; i < jnumArgs; i++) {
+    for (int i = 0; i < jnumArgs; i++) {
       jstring jkey = (jstring) env->GetObjectArrayElement(jkeys, i);
       const char *key = env->GetStringUTFChars(jkey, 0);
       keys[i] = key;
@@ -1667,7 +1667,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcCreate
   char *name = const_cast<char *>(env->GetStringUTFChars(jname, 0));
   int num_input = env->GetArrayLength(jinputNames);
   char **inputNames = new char *[num_input];
-  for (size_t i = 0; i < num_input; i++) {
+  for (int i = 0; i < num_input; i++) {
     jstring jinname = reinterpret_cast<jstring>(env->GetObjectArrayElement(jinputNames, i));
     char *inname = const_cast<char *>(env->GetStringUTFChars(jinname, 0));
     inputNames[i] = inname;
@@ -1675,7 +1675,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcCreate
   }
   int num_output = env->GetArrayLength(joutputNames);
   char **outputNames = new char *[num_output];
-  for (size_t i = 0; i < num_output; i++) {
+  for (int i = 0; i < num_output; i++) {
     jstring joutname = reinterpret_cast<jstring>(env->GetObjectArrayElement(joutputNames, i));
     char *outname = const_cast<char *>(env->GetStringUTFChars(joutname, 0));
     outputNames[i] = outname;
@@ -1700,13 +1700,13 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxRtcCreate
   env->ReleaseStringUTFChars(jkernel, kernel);
   env->ReleaseLongArrayElements(jinputs, inputs, 0);
   env->ReleaseLongArrayElements(joutputs, outputs, 0);
-  for (size_t i = 0; i < num_input; i++) {
+  for (int i = 0; i < num_input; i++) {
     jstring jinname = reinterpret_cast<jstring>(env->GetObjectArrayElement(jinputNames, i));
     env->ReleaseStringUTFChars(jinname, inputNames[i]);
     env->DeleteLocalRef(jinname);
   }
   delete[] inputNames;
-  for (size_t i = 0; i < num_output; i++) {
+  for (int i = 0; i < num_output; i++) {
     jstring joutname = reinterpret_cast<jstring>(env->GetObjectArrayElement(joutputNames, i));
     env->ReleaseStringUTFChars(joutname, outputNames[i]);
     env->DeleteLocalRef(joutname);
