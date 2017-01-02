@@ -120,6 +120,7 @@ cmake_install.cmake
 dmlc-core
 ps-lite
 nnvm
+!src/nnvm
 lib
 
 # Visual Studio Code
