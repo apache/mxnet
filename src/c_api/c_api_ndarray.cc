@@ -213,7 +213,6 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
                           engine::CallbackOnComplete(),
                           requested};
           std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-          std::cout << ">>>" << opname << std::endl;
           fn(attrs, opctx, input_blobs, req, output_blobs);
           if (ctx.dev_mask() == gpu::kDevMask) {
             rctx.get_stream<gpu>()->Wait();
