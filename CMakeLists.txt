@@ -21,6 +21,8 @@ include(mshadow/cmake/Utils.cmake)
 include(mshadow/cmake/Cuda.cmake)
 
 set(mxnet_LINKER_LIBS "")
+set(mxnet_LINKER_LIBS_DEBUG "")
+set(mxnet_LINKER_LIBS_RELEASE "")
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
 
 include_directories("include")
@@ -173,7 +175,11 @@ list(APPEND SOURCE ${MSHADOWSOURCE})
 
 if(USE_PLUGINS_WARPCTC)
 	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
-	set(WARPCTC_LIB  "" CACHE FILEPATH "WARPCTC lib")
+    set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
+    set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
+    set(mxnet_LINKER_LIBS_RELEASE ${WARPCTC_LIB_RELEASE})
+    set(mxnet_LINKER_LIBS_DEBUG ${WARPCTC_LIB_DEBUG})
+
 	include_directories(SYSTEM ${WARPCTC_INCLUDE})
 	list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
 	mxnet_source_group("Include\\plugin\\warpctc"   GLOB "plugin/warpctc/*.h")
@@ -274,7 +280,14 @@ else()
   add_library(mxnet SHARED ${SOURCE})
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
+
+if(USE_PLUGINS_WARPCTC)
+  target_link_libraries(mxnet debug ${mxnet_LINKER_LIBS_DEBUG})
+  target_link_libraries(mxnet optimized ${mxnet_LINKER_LIBS_RELEASE})
+endif()
+
 target_link_libraries(mxnet dmlccore)
+
 
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
