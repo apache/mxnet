@@ -56,7 +56,9 @@
       };
     </script>
 
-    {% for name in ['jquery.js', 'underscore.js', 'doctools.js', 'searchtools.js', 'selectlang.js'] %}
+    <script type="text/javascript" src="{{ pathto('_static/jquery-1.11.1.js', 1) }}"></script>
+
+    {% for name in ['underscore.js', 'doctools.js', 'searchtools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
 
