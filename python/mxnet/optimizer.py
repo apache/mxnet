@@ -302,7 +302,7 @@ class DCASGD(Optimizer):
     param_idx2name : dict of string/int to float, optional
         special treat weight decay in parameter ends with bias, gamma, and beta
     """
-    def __init__(self, momentum=0.0, lamda = 0.04, **kwargs):
+    def __init__(self, momentum=0.0, lamda=0.04, **kwargs):
         super(DCASGD, self).__init__(**kwargs)
         self.momentum = momentum
         self.weight_previous = {}
