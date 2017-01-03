@@ -50,12 +50,13 @@ class SequentialModule(BaseModule):
         -------
         This function returns `self` to allow us to easily chain a
         series of `add` calls.
-        
+
         Examples
         --------
-        >>> seq_mod = mx.mod.SequentialModule()
-        >>> seq_mod.add(mod1)
-        >>> seq_mod.add(mod2)
+        An example of addinging two modules to a chain::
+            >>> seq_mod = mx.mod.SequentialModule()
+            >>> seq_mod.add(mod1)
+            >>> seq_mod.add(mod2)
         """
         self._modules.append(module)
 
