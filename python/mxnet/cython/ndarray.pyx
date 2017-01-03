@@ -185,6 +185,7 @@ cdef _make_ndarray_function(OpHandle handle, string name):
     # End of function declaration
     generic_ndarray_function.__name__ = func_name
     generic_ndarray_function.__doc__ = doc_str
+    generic_ndarray_function.__module__ = 'mxnet.ndarray'
     return generic_ndarray_function
 
 

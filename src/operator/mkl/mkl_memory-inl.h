@@ -32,8 +32,8 @@ namespace mxnet {
 
 template <typename DType>
 struct MKLMemoryDescriptorBase : public PrvMemDescr,
-  public std::enable_shared_from_this<MKLMemoryDescriptorBase<DType> > {
-  MKLMemoryDescriptorBase() : layout_usr(NULL), layout_int(NULL),
+ public std::enable_shared_from_this<MKLMemoryDescriptorBase<DType> > {
+    MKLMemoryDescriptorBase() : layout_usr(NULL), layout_int(NULL),
     convert_to_int(NULL), convert_from_int(NULL), convert_prv2prv(NULL),
     name("UNKNOWN"), internal_ptr(NULL) {}
   virtual ~MKLMemoryDescriptorBase() {
