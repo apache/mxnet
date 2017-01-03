@@ -719,7 +719,8 @@ class BaseModule(object):
         Examples
         --------
         An example of updating module parameters::
-            >>> mod.init_optimizer(kvstore='local', optimizer='sgd', optimizer_params=(('learning_rate', 0.01), ))
+            >>> mod.init_optimizer(kvstore='local', optimizer='sgd',
+            >>>                    optimizer_params=(('learning_rate', 0.01), ))
             >>> mod.backward()
             >>> mod.update()
             >>> print mod.get_params()[0]['fc3_weight'].asnumpy()
