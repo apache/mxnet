@@ -272,6 +272,7 @@ def test_clip():
         assert B1[i] <= 2
 
 def test_dot():
+    # Test normal dot
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (4, 5))
     c = np.dot(a, b)
@@ -279,6 +280,31 @@ def test_dot():
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B)
     assert reldiff(c, C.asnumpy()) < 1e-5
+    # Test dot with transpose kargs
+    a = np.random.uniform(-3, 3, (3, 4))
+    b = np.random.uniform(-3, 3, (3, 5))
+    c = np.dot(a.T, b)
+    A = mx.nd.array(a)
+    B = mx.nd.array(b)
+    C = mx.nd.dot(A, B, transpose_a=True)
+    assert reldiff(c, C.asnumpy()) < 1e-5
+    # Test dot with transpose kargs
+    a = np.random.uniform(-3, 3, (3, 4))
+    b = np.random.uniform(-3, 3, (5, 4))
+    c = np.dot(a, b.T)
+    A = mx.nd.array(a)
+    B = mx.nd.array(b)
+    C = mx.nd.dot(A, B, transpose_b=True)
+    assert reldiff(c, C.asnumpy()) < 1e-5
+    # Test dot with transpose kargs
+    a = np.random.uniform(-3, 3, (4, 3))
+    b = np.random.uniform(-3, 3, (5, 4))
+    c = np.dot(a.T, b.T)
+    A = mx.nd.array(a)
+    B = mx.nd.array(b)
+    C = mx.nd.dot(A, B, transpose_a=True, transpose_b=True)
+    assert reldiff(c, C.asnumpy()) < 1e-5
+
 
 def test_reduce():
     sample_num = 200
