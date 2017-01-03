@@ -400,15 +400,27 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
     mshadow::Tensor<xpu, 2, real_t> mlhs_grad = outputs[0].get<xpu, 2, real_t>(s);
     mshadow::Tensor<xpu, 2, real_t> mrhs_grad = outputs[1].get<xpu, 2, real_t>(s);
     if (param.transpose_a && param.transpose_b) {
-      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data, mout_grad));
-      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data));
+      // Gradient of z = dot(x.T, y.T)
+      // dy = dot(x, dz).T = dot(dz.T, x.T)
+      // dx = dot(dz, y).T = dot(y.T, dz.T)
+      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mout_grad.T(), mlhs_data.T()));
+      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mrhs_data.T(), mout_grad.T()));
     } else if (!param.transpose_a && param.transpose_b) {
-      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data.T(), mout_grad));
+      // Gradient of z = dot(x, y.T)
+      // dy = dot(x.T, dz).T = dot(dz.T, x)
+      // dx = dot(dz, y)
+      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mout_grad.T(), mlhs_data));
       ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data));
     } else if (param.transpose_a && !param.transpose_b) {
+      // Gradient of z = dot(x.T, y)
+      // dy = dot(x, dz)
+      // dx = dot(dz, y.T).T = dot(y, dz.T)
       ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data, mout_grad));
-      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data.T()));
+      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mrhs_data, mout_grad.T()));
     } else {
+      // Gradient of z = dot(x, y)
+      // dy = dot(x.T, dz)
+      // dx = dot(dz, y.T)
       ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data.T(), mout_grad));
       ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data.T()));
     }

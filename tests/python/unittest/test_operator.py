@@ -1396,6 +1396,7 @@ def test_stn():
 
 
 def test_dot(ctx=default_context()):
+    # Test normal dot.
     for m in range(1, 5):
         for k in range(1, 5):
             for n in range(1, 5):
@@ -1417,7 +1418,29 @@ def test_dot(ctx=default_context()):
                 exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
                 assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
                 assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
-
+    # Test dot with transpose flag using gradient checker.
+    m1_npy = np.random.normal(0, 1, (3, 4))
+    m2_npy = np.random.normal(0, 1, (4, 5))
+    def dot_sym():
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        return mx.sym.dot(x, y)
+    def dot_sym_xT():
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        return mx.sym.dot(x, y, transpose_a=True)
+    def dot_sym_yT():
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        return mx.sym.dot(x, y, transpose_b=True)
+    def dot_sym_xT_yT():
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
+    check_numeric_gradient(dot_sym(), [m1_npy, m2_npy])
+    check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy])
+    check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T])
+    check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T])
 
 def test_batch_dot(ctx=default_context()):
     for batch_size in range(1, 5):
