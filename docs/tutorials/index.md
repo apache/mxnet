@@ -17,13 +17,13 @@ The following tutorials walks throught the basic usage of MXNet, including manip
 - [CPU/GPU Array Manipulation](http://mxnet.io/tutorials/python/ndarray.html)
 *How to use `mxnet.ndarray` (similar to numpy array but supports GPU) for tensor computation. Also explains MXNet's powerful automatic parallelization feature.*
 
-- [Neural Network Graphs](http://mxnet.io/tutorials/python/ndarray.html)
+- [Neural Network Graphs](http://mxnet.io/tutorials/python/symbol.html)
 *How to use `mxnet.symbol` for building neural network graphs. Introduces usage of basic operators (layers) and shows how to build new ones.*
 
 - [Training and Inference with Module](http://mxnet.io/tutorials/python/module.html)
 *Train a simple deep neural network with the Module interface. The Module package provides intermediate-level and high-level interface for executing predefined networks.*
 
-- [Mixing Array and Graphs (Advanced)](http://mxnet.io/tutorials/python/ndarray.html)
+- [Mixing Array and Graphs (Advanced)](http://mxnet.io/tutorials/python/mixed.html)
 *Show cases MXNet's signature support for mixing imperative and symbolic programming. Note that Module already provides a high-level interface by wrapping around these functionalities. So this tutorial is mainly for users who want to build things from scratches for extra flexibility.*
 
 #### IO

@@ -9,17 +9,13 @@ It uses opencv for image reading
 1. Edit image-classification-predict.cc file, change the following lines to your model paths:
   ```bash
     // Models path for your model, you have to modify it
-    BufferFile json_data("model/Inception/Inception_BN-symbol.json");
-    BufferFile param_data("model/Inception/Inception_BN-0039.params");
+    std::string json_file = "model/Inception/Inception_BN-symbol.json";
+    std::string param_file = "model/Inception/Inception_BN-0039.params";
+    std::string synset_file = "model/Inception/synset.txt";
+    std::string nd_file = "model/Inception/mean_224.nd";
   ```
 
-2. Edit synset file path if you have it:
-  ```bash
-    // Synset path for your model, you have to modify it
-    std::vector<std::string> synset = LoadSynset("model/Inception/synset.txt");
-  ```
-  
-3. You may also want to change the image size and channels:  
+2. You may also want to change the image size and channels:
   ```bash
     // Image size and channels
     int width = 224;
@@ -27,13 +23,13 @@ It uses opencv for image reading
     int channels = 3;
   ```
   
-4. Simply just use our Makefile to build:
+3. Simply just use our Makefile to build:
   ```bash
   make
   ```
 
 ## Usage
-* Run:
+Run:
   ```bash
   ./image-classification-predict apple.jpg
   ```
@@ -42,6 +38,8 @@ The only parameter is the path of the test image.
 ## Tips
 * The model used in the sample can be downloaded here:
 http://pan.baidu.com/s/1sjXKrqX
+or here:
+http://data.mxnet.io/mxnet/models/imagenet/
 
 * If you don't run it in the mxnet root path, maybe you will need to copy lib folder here.
 
