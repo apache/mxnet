@@ -45,6 +45,14 @@ class Symbol {
   /*! \return the outputs in the symbol */
   std::vector<std::string> ListOuputs() const;
 
+  /*! \return the attributes of the symbol */
+  Rcpp::List getAttrs() const;
+  /*!
+   * \brief sets the attributes of the symbol
+   * \param attr list of keyword arguments
+   */
+  void setAttrs(Rcpp::List attr);
+
   /*!
    * \brief Save the symbol to file
    * \param fname the file name we need to save to
