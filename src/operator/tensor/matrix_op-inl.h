@@ -330,6 +330,19 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+struct DotParam : public dmlc::Parameter<DotParam> {
+  bool transpose_a;
+  bool transpose_b;
+  DMLC_DECLARE_PARAMETER(DotParam) {
+    DMLC_DECLARE_FIELD(transpose_a)
+      .describe("True if the first matrix is transposed.")
+      .set_default(false);
+    DMLC_DECLARE_FIELD(transpose_b)
+      .describe("True if the second matrix is tranposed.")
+      .set_default(false);
+  }
+};
+
 template<typename xpu>
 void DotForward_(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,
@@ -337,6 +350,7 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
   using namespace mshadow::expr;
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)
       << "Binary function only support input/output with the same type";
@@ -346,10 +360,18 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
       << "dot only support 32 bit float so far";
 
   if (inputs[0].ndim() == 2 && inputs[1].ndim() == 2) {
+    mshadow::Tensor<xpu, 2, real_t> input0 = inputs[0].get<xpu, 2, real_t>(s);
+    mshadow::Tensor<xpu, 2, real_t> input1 = inputs[1].get<xpu, 2, real_t>(s);
     mshadow::Tensor<xpu, 2, real_t> out = outputs[0].FlatTo2D<xpu, real_t>(s);
-    ASSIGN_DISPATCH(out, req[0],
-                    dot(inputs[0].get<xpu, 2, real_t>(s),
-                        inputs[1].get<xpu, 2, real_t>(s)));
+    if (param.transpose_a && param.transpose_b) {
+      ASSIGN_DISPATCH(out, req[0], dot(input0.T(), input1.T()));
+    } else if (!param.transpose_a && param.transpose_b) {
+      ASSIGN_DISPATCH(out, req[0], dot(input0, input1.T()));
+    } else if (param.transpose_a && !param.transpose_b) {
+      ASSIGN_DISPATCH(out, req[0], dot(input0.T(), input1));
+    } else {
+      ASSIGN_DISPATCH(out, req[0], dot(input0, input1));
+    }
   } else {
     CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
     mshadow::Tensor<xpu, 1, real_t> out = outputs[0].get<xpu, 1, real_t>(s);
@@ -366,6 +388,7 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {
   using namespace mshadow::expr;
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_NE(req[0], kWriteInplace);
   CHECK_NE(req[1], kWriteInplace);
@@ -376,8 +399,31 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
     mshadow::Tensor<xpu, 2, real_t> mrhs_data = inputs[2].get<xpu, 2, real_t>(s);
     mshadow::Tensor<xpu, 2, real_t> mlhs_grad = outputs[0].get<xpu, 2, real_t>(s);
     mshadow::Tensor<xpu, 2, real_t> mrhs_grad = outputs[1].get<xpu, 2, real_t>(s);
-    ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data.T(), mout_grad));
-    ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data.T()));
+    if (param.transpose_a && param.transpose_b) {
+      // Gradient of z = dot(x.T, y.T)
+      // dy = dot(x, dz).T = dot(dz.T, x.T)
+      // dx = dot(dz, y).T = dot(y.T, dz.T)
+      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mout_grad.T(), mlhs_data.T()));
+      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mrhs_data.T(), mout_grad.T()));
+    } else if (!param.transpose_a && param.transpose_b) {
+      // Gradient of z = dot(x, y.T)
+      // dy = dot(x.T, dz).T = dot(dz.T, x)
+      // dx = dot(dz, y)
+      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mout_grad.T(), mlhs_data));
+      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data));
+    } else if (param.transpose_a && !param.transpose_b) {
+      // Gradient of z = dot(x.T, y)
+      // dy = dot(x, dz)
+      // dx = dot(dz, y.T).T = dot(y, dz.T)
+      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data, mout_grad));
+      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mrhs_data, mout_grad.T()));
+    } else {
+      // Gradient of z = dot(x, y)
+      // dy = dot(x.T, dz)
+      // dx = dot(dz, y.T)
+      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data.T(), mout_grad));
+      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data.T()));
+    }
   } else {
     mshadow::Tensor<xpu, 1, real_t> mout_grad = inputs[0].get<xpu, 1, real_t>(s);
     mshadow::Tensor<xpu, 1, real_t> mlhs_data = inputs[1].get<xpu, 1, real_t>(s);
@@ -394,13 +440,25 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
 inline bool DotShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
                      std::vector<TShape> *out_attrs) {
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 2 && rshape.ndim() == 2) {
-    CHECK_EQ(lshape[1], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[0], rshape[1]));
+    if (param.transpose_a && param.transpose_b) {
+      CHECK_EQ(lshape[0], rshape[1]) << "dot shape error: " << lshape << " X " << rshape;
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[1], rshape[0]));
+    } else if (!param.transpose_a && param.transpose_b) {
+      CHECK_EQ(lshape[1], rshape[1]) << "dot shape error: " << lshape << " X " << rshape;
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[0], rshape[0]));
+    } else if (param.transpose_a && !param.transpose_b) {
+      CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[1], rshape[1]));
+    } else {
+      CHECK_EQ(lshape[1], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[0], rshape[1]));
+    }
   } else if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));

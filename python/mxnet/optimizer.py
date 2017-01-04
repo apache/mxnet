@@ -602,7 +602,7 @@ class RMSProp(Optimizer):
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
         g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
-        delta[:] = (self.gamma2) * delta - lr * (grad/sqrt(n - g*g + 1e-4) + wd * weight)
+        delta[:] = (self.gamma2) * delta - lr * (grad/(sqrt(n - g*g) + 1e-8) + wd * weight)
         weight[:] += delta
 
 
