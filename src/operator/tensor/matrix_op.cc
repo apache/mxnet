@@ -16,6 +16,7 @@ DMLC_REGISTER_PARAMETER(SimpleCropParam);
 DMLC_REGISTER_PARAMETER(SimpleCropAssignScalarParam);
 DMLC_REGISTER_PARAMETER(SliceParam);
 DMLC_REGISTER_PARAMETER(FlipParam);
+DMLC_REGISTER_PARAMETER(DotParam);
 
 NNVM_REGISTER_OP(Reshape)
 .MXNET_DESCRIBE("Reshape input according to a target shape spec.\n"
@@ -227,6 +228,7 @@ NNVM_REGISTER_OP(dot)
 .MXNET_DESCRIBE("Calculate dot product of two matrices or two vectors.")
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr_parser(ParamParser<DotParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"lhs", "rhs"};
@@ -237,13 +239,15 @@ NNVM_REGISTER_OP(dot)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
 .add_argument("lhs", "NDArray", "Left input")
 .add_argument("rhs", "NDArray", "Right input")
-.add_arguments(FlipParam::__FIELDS__());
+.add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_dot)
 .set_num_inputs(3)
 .set_num_outputs(2)
+.set_attr_parser(ParamParser<DotParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", DotBackward_<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", DotBackward_<cpu>)
+.add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(batch_dot)
 .MXNET_DESCRIBE("Calculate batched dot product of two matrices."
