@@ -84,7 +84,9 @@ class NaiveEngine final : public Engine {
           opr->opr_stat = Profiler::Get()->AddOprStat(exec_ctx.dev_type, exec_ctx.dev_id);
           uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
           opr->opr_stat->thread_id = id;
-          opr->opr_stat->opr_name  = std::string(opr->opr_name);
+          strncpy(opr->opr_stat->opr_name,
+            opr->opr_name,
+            sizeof(opr->opr_stat->opr_name) - 1);
           CallbackOnComplete callback = CreateCallback(NaiveEngine::OnComplete, opr);
           // record operator start timestamp
           SetOprStart(opr->opr_stat);
