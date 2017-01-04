@@ -44,6 +44,10 @@ with MXNet commit `0a03417`
 |  16 | 280.82 | 40.00 |  20.85 |  11.77 |  55.00 | 16.93 |
 |  32 | 285.41 | 44.40 |  31.03 |  12.45 |  55.70 | 17.02 |
 
+## Other CPU
+
+if using cpus(not just intel cpus, such as ARMs), NNAPCK will also imporve the running performance with 2x~7x, plese check [nnpack.md](./nnpack.md) for details.
+
 ## Nvidia GPU
 
 `cuDNN` often greatly accelerate performance on Nvidia GPUs, especially for

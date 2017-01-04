@@ -9,6 +9,9 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_fully_connected-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_NNPACK == 1
+#include "./nnpack/nnpack_fully_connected-inl.h"
+#endif  // MXNET_USE_NNPACK
 
 namespace mxnet {
 namespace op {
@@ -22,8 +25,15 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   case mshadow::kFloat64:
     return new MKLFullyConnectedOp<cpu, double>(param);
   default:
-    if (enableMKLWarnGenerated())
-      LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
+    LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
+    break;
+  }
+#endif
+#if MXNET_USE_NNPACK == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new NNPACKFullyConnectedOp<cpu, float>(param);
+  default:
     break;
   }
 #endif
