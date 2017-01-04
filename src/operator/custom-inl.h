@@ -16,6 +16,11 @@
 #include <string>
 #include <utility>
 #include <sstream>
+#include <thread>
+#include <mutex>
+#include <functional>
+#include <condition_variable>
+#include <queue>
 #include "./operator_common.h"
 
 namespace mxnet {
@@ -31,6 +36,26 @@ class CustomOp : public Operator {
  public:
   explicit CustomOp(CustomOpInfo* op_info) {
     op_info_.reset(op_info, [](CustomOpInfo *ptr){ ptr->del(ptr->p_del); });
+    destructing_ = false;
+    worker_ = std::thread([&]() {
+        std::unique_lock<std::mutex> lock(mtx_);
+        while (!q_.empty() || !destructing_) {
+          cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
+          while (!q_.empty()) {
+            q_.front()();
+            q_.pop();
+          }
+        }
+      });
+  }
+
+  ~CustomOp() {
+    {
+      std::unique_lock<std::mutex> lock(mtx_);
+      destructing_ = true;
+      cv_.notify_all();
+    }
+    worker_.join();
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -54,6 +79,11 @@ class CustomOp : public Operator {
  private:
   Context get_ctx();
   std::shared_ptr<CustomOpInfo> op_info_;
+  std::mutex mtx_;
+  std::condition_variable cv_;
+  std::thread worker_;
+  std::queue<std::function<void(void)> > q_;
+  bool destructing_;
 };  // CustomOp
 
 template<typename xpu>
