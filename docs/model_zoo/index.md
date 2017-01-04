@@ -1,6 +1,6 @@
 # MXNet Model Zoo
 
-MXNet features fast implementations of most state-of-the-art models reported in the academic literature. Our Model Playground contains complete models, with python scripts, pre-trained weights as well as instructions on how to fine tune these models.  
+MXNet features fast implementations of most state-of-the-art models reported in the academic literature. Our Model Zoo contains complete models, with python scripts, pre-trained weights as well as instructions on how to fine tune these models.  
 
 ## How to Contribute a Pre-Trained Model (and what to include)
 
