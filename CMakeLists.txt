@@ -162,6 +162,15 @@ mxnet_source_group("NNVM\\Source\\pass"   GLOB "nnvm/src/pass/*.cc")
 FILE(GLOB_RECURSE NNVMSOURCE "nnvm/src/*.cc" "nnvm/src/*.h" "nnvm/include/*.h")
 list(APPEND SOURCE ${NNVMSOURCE})
 
+# add mshadow file
+mxnet_source_group("mshadow\\Include"   GLOB "mshadow/mshadow/*.h")
+mxnet_source_group("mshadow\\Include\\cuda"   GLOB "mshadow/mshadow/cuda/*.h")
+mxnet_source_group("mshadow\\Include\\extension"   GLOB "mshadow/mshadow/extension/*.h")
+mxnet_source_group("mshadow\\Include\\packet"   GLOB "mshadow/mshadow/packet/*.h")
+
+FILE(GLOB_RECURSE MSHADOWSOURCE "mshadow/mshadow/*.h")
+list(APPEND SOURCE ${MSHADOWSOURCE})
+
 if(USE_PLUGINS_WARPCTC)
 	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
 	set(WARPCTC_LIB  "" CACHE FILEPATH "WARPCTC lib")
@@ -285,10 +294,8 @@ endif()
 
 # ---[ Linter target
 if(MSVC)
-  find_package(PythonInterp 2)
-  set(PYTHON2_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 2.x executable")
-  find_package(PythonInterp 3)
-  set(PYTHON3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 3.x executable")
+  find_package(PythonInterp)
+  set(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python executable")
 endif()
 set(LINT_DIRS include src scripts python)
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
