@@ -76,8 +76,9 @@ class NaiveEngine final : public Engine {
   }
 
   void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override {
+    Profiler *profiler = Profiler::Get();
     NaiveOpr *opr = op->Cast<NaiveOpr>();
-    opr->profiling = profiling;
+    opr->profiling = profiling && (profiler->GetMode() == Profiler::kOnlySymbolic);
     this->PushAsync([&](RunContext ctx, CallbackOnComplete on_complete) {
 #if MXNET_USE_PROFILER
         if (opr->profiling) {
@@ -116,7 +117,26 @@ class NaiveEngine final : public Engine {
     CallbackOnComplete callback = CreateCallback(
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;
-
+#if MXNET_USE_PROFILER
+      Profiler *profiler = Profiler::Get();
+      bool profiling = (profiler->GetState() == Profiler::kRunning) &&
+                       (profiler->GetMode() == Profiler::kAllOperator) &&
+                       opr_name;
+      if (profiling) {
+        NaiveOpr *opr = NewOperator(exec_fun, const_vars, mutable_vars,
+                                    prop, opr_name)->Cast<NaiveOpr>();
+        opr->profiling = profiling;
+        opr->opr_stat = Profiler::Get()->AddOprStat(exec_ctx.dev_type, exec_ctx.dev_id);
+        uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
+        opr->opr_stat->thread_id = id;
+        strncpy(opr->opr_stat->opr_name,
+                opr->opr_name,
+                sizeof(opr->opr_stat->opr_name) - 1);
+        callback = CreateCallback(NaiveEngine::OnComplete, opr);
+        // record operator start timestamp
+        SetOprStart(opr->opr_stat);
+      }
+#endif
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
