@@ -132,9 +132,13 @@ class Module(BaseModule):
             Whether to save optimizer states for continue training
         """
         self._symbol.save('%s-symbol.json'%prefix)
-        self.save_params('%s-%04d.params'%(prefix, epoch))
+        param_name = '%s-%04d.params' % (prefix, epoch)
+        self.save_params(param_name)
+        logging.info('Saved checkpoint to \"%s\"', param_name)
         if save_optimizer_states:
-            self.save_optimizer_states('%s-%04d.states'%(prefix, epoch))
+            state_name = '%s-%04d.states' % (prefix, epoch)
+            self.save_optimizer_states(state_name)
+            logging.info('Saved optimizer state to \"%s\"', state_name)
 
     def _reset_bind(self):
         """Internal function to reset binded state."""
