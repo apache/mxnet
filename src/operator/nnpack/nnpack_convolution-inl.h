@@ -53,65 +53,50 @@ class NNPACKConvolutionOp : public ConvolutionOp<xpu, DType> {
     Tensor<xpu, 3, DType> wmat =
         in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
     Tensor<xpu, 4, DType> out = out_data[conv::kOut].get<xpu, 4, DType>(s);
+    nnp_size input_size = {input_w, input_h};
+    nnp_padding input_padding = {param_.pad[0], param_.pad[1], param_.pad[0],
+                               param_.pad[1]};
+    nnp_size kernel_size = {param_.kernel[1], param_.kernel[0]};
+    nnp_size output_subsampling = {param_.stride[1], param_.stride[0]};
+    Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
 
-    bool use_nnpack{false};
-    // nnp_convolution_inference will do optimization for batch-size = 1
+    nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_auto;
+    nnp_convolution_transform_strategy kts = nnp_convolution_transform_strategy_tuple_based;
+    nnp_status status = nnp_status_success;
     if (batch_size == 1) {
-      use_nnpack = true;
-    }
-    // nnp_convolution_output will do optimization for batch-size > 1
-    if ((batch_size > 1) && (param_.stride[0] == 1) &&
-        (param_.stride[1] == 1)) {
-      use_nnpack = true;
-    }
-    if (!use_nnpack) {
-      ConvolutionOp<xpu, DType>::Forward(ctx, in_data, req, out_data, aux_args);
+      status = nnp_convolution_inference(
+      algorithm,                    // enum nnp_convolution_algorithm,
+      kts,                          // enum nnp_convolution_transform_strategy,
+      input_c,                      // size_t input_channels,
+      param_.num_filter,            // size_t output_channels,
+      input_size,                   // struct nnp_size input_size,
+      input_padding,                // struct nnp_padding input_padding,
+      kernel_size,                  // struct nnp_size kernel_size,
+      output_subsampling,           // struct nnp_size output_subsampling,
+      data.dptr_,                   // const float input[],
+      wmat.dptr_,                   // const float kernel[],
+      bias.dptr_,                   // const float bias[],
+      out.dptr_,                    // float output[],
+      nnpackinitialize.threadpool,  // pthreadpool_t threadpool,
+      nullptr);
     } else {
-      nnp_size input_size = {input_w, input_h};
-      nnp_padding input_padding = {param_.pad[0], param_.pad[1], param_.pad[0],
-                                   param_.pad[1]};
-      nnp_size kernel_size = {param_.kernel[1], param_.kernel[0]};
-      nnp_size output_subsampling = {param_.stride[1], param_.stride[0]};
-      Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
-
-      nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_auto;
-      nnp_convolution_transform_strategy kts = nnp_convolution_transform_strategy_tuple_based;
-      nnp_status status = nnp_status_success;
-      if (batch_size == 1) {
-        status = nnp_convolution_inference(
-        algorithm,                    // enum nnp_convolution_algorithm,
-        kts,                          // enum nnp_convolution_transform_strategy,
-        input_c,                      // size_t input_channels,
-        param_.num_filter,            // size_t output_channels,
-        input_size,                   // struct nnp_size input_size,
-        input_padding,                // struct nnp_padding input_padding,
-        kernel_size,                  // struct nnp_size kernel_size,
-        output_subsampling,           // struct nnp_size output_subsampling,
-        data.dptr_,                   // const float input[],
-        wmat.dptr_,                   // const float kernel[],
-        bias.dptr_,                   // const float bias[],
-        out.dptr_,                    // float output[],
-        nnpackinitialize.threadpool,  // pthreadpool_t threadpool,
-        nullptr);
-      } else {
-        status = nnp_convolution_output(
-        algorithm,                    // enum nnp_convolution_algorithm algorithm,
-        batch_size,                   // size_t batch size of input tensor
-        input_c,                      // size_t input_channels,
-        param_.num_filter,            // size_t output_channels,
-        input_size,                   // struct nnp_size input_size,
-        input_padding,                // struct nnp_padding input_padding,
-        kernel_size,                  // struct nnp_size kernel_size,
-        data.dptr_,                   // const float input[],
-        wmat.dptr_,                   // const float kernel[],
-        bias.dptr_,                   // const float bias[],
-        out.dptr_,                    // float output[],
-        nnpackinitialize.threadpool,  // pthreadpool_t threadpool,
-        nullptr);
-      }
-      if (nnp_status_success != status) {
-        LOG(FATAL) << "nnpack convolution feedforward failed status=" << status;
-      }
+      status = nnp_convolution_output(
+      algorithm,                    // enum nnp_convolution_algorithm algorithm,
+      batch_size,                   // size_t batch size of input tensor
+      input_c,                      // size_t input_channels,
+      param_.num_filter,            // size_t output_channels,
+      input_size,                   // struct nnp_size input_size,
+      input_padding,                // struct nnp_padding input_padding,
+      kernel_size,                  // struct nnp_size kernel_size,
+      data.dptr_,                   // const float input[],
+      wmat.dptr_,                   // const float kernel[],
+      bias.dptr_,                   // const float bias[],
+      out.dptr_,                    // float output[],
+      nnpackinitialize.threadpool,  // pthreadpool_t threadpool,
+      nullptr);
+    }
+    if (nnp_status_success != status) {
+      LOG(FATAL) << "nnpack convolution feedforward failed status=" << status;
     }
   }
 };  // class NNPACKConvolutionOp
