@@ -1,8 +1,8 @@
 /*!
- * Copyright (c) 2016 by Contributors
+ * Copyright (c) 2017 by Contributors
  * \file indexing_op.cc
  * \brief
- * \author Siyi Li
+ * \author Siyi Li, Chi Zhang
 */
 
 #include "./indexing_op.h"
@@ -48,5 +48,43 @@ NNVM_REGISTER_OP(_backward_Embedding)
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
+
+NNVM_REGISTER_OP(take)
+.MXNET_DESCRIBE("Take row vectors from a 2D matrix according to the indices"
+                " For an input of index with shape (d1, ..., dK), the output"
+                " shape is (d1, ..., dK, row_vector_length).All the input"
+                " values should be integers in the range"
+                " [0, column_vector_length).")
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "idx"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", TakeOpShape)
+.set_attr<nnvm::FInferType>("FInferType", TakeOpType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", TakeOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[1]);
+    return MakeGradNode("_backward_take", n, heads, n->attrs.dict);
+  })
+.add_argument("data", "Symbol", "2D matrix to be taken.")
+.add_argument("idx", "Symbol", "Tensor that records the indices to be taken in data.");
+
+NNVM_REGISTER_OP(_backward_take)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", TakeOpBackward<cpu>);
 }  // namespace op
 }  // namespace mxnet
