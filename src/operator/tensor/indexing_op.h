@@ -22,11 +22,11 @@
 namespace mxnet {
 namespace op {
 
-namespace embedding {
-enum EmbeddingOpInputs {kData, kWeight};
-enum EmbeddingOpOutputs {kOut};
-enum EmbeddingOpResource {kTempSpace};
-}  // namespace embedding
+namespace indexing {
+enum IndexingOpInputs {kIdx, kData};
+enum IndexingOpOutputs {kOut};
+enum IndexingOpResource {kTempSpace};
+}  // namespace indexing
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int input_dim;
@@ -43,11 +43,11 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   using namespace mshadow;
-  const TShape &dshape = (*in_attrs)[embedding::kData];
+  const TShape &dshape = (*in_attrs)[indexing::kIdx];
   if (dshape.ndim() ==  0) return false;
   const EmbeddingParam& param = nnvm::get<EmbeddingParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
-                                                           param.output_dim));
+  SHAPE_ASSIGN_CHECK(*in_attrs, indexing::kData, Shape2(param.input_dim,
+                                                        param.output_dim));
   out_attrs->clear();
 
   TShape oshape(dshape.ndim()+1);
@@ -80,98 +80,25 @@ inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<typename xpu>
-void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  CHECK_EQ(req[embedding::kOut], kWriteTo);
-  CHECK_EQ(inputs.size(), 2);
-  CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(inputs[embedding::kWeight].ndim(), 2)
-          << "Embedding layer expects its weight to be two-dimensional. "
-          << inputs[embedding::kWeight].ndim()
-          << " dimensional input is given instead";
-
-  const TShape& ishape = inputs[embedding::kData].shape_;
-  const TShape& oshape = outputs[embedding::kOut].shape_;
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor<xpu, 1, DType> data = inputs[embedding::kData].get_with_shape<xpu, 1, DType>(
-      Shape1(ishape.ProdShape(0, ishape.ndim())), s);
-    Tensor<xpu, 2, DType> wmat = inputs[embedding::kWeight].get<xpu, 2, DType>(s);
-    Tensor<xpu, 2, DType> out = outputs[embedding::kOut].get_with_shape<xpu, 2, DType>(
-      Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-    out = take(data, wmat);
-  });
-}
-
-template<typename xpu>
-void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  CHECK_EQ(inputs.size(), 2);
-  CHECK_EQ(outputs.size(), 2);
-  CHECK_EQ(req[embedding::kData], kNullOp)
-          << "Embedding layer doesn't support calculate data gradient";
-
-  const TShape& ishape = inputs[1].shape_;
-  const TShape& oshape = inputs[0].shape_;
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor < xpu, 1, DType > data = inputs[1].get_with_shape<xpu, 1, DType>(
-      Shape1(ishape.ProdShape(0, ishape.ndim())), s);
-    Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
-    Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-    Tensor<xpu, 2, DType> grad_in = outputs[1].get<xpu, 2, DType>(s);
-
-
-    if (req[embedding::kWeight] == kWriteTo || req[embedding::kWeight] == kAddTo) {
-      if (req[embedding::kWeight] == kWriteTo) {
-        grad_in = scalar<DType>(0.0f);
-      }
-      if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
-        AddTakeGrad(grad_in, data, grad_out);
-      } else {
-        Tensor<xpu, 2, int> workspace =
-          ctx.requested[embedding::kTempSpace].get_space_typed<xpu, 2, int>(
-            mshadow::Shape2(2, data.shape_.Size()), s);
-        Tensor<xpu, 1, int> sorted_data = workspace[0];
-        Tensor<xpu, 1, int> original_index = workspace[1];
-        sorted_data = tcast<int>(data);
-        original_index = range<int>(0, data.shape_.Size());
-        SortByKey(sorted_data, original_index, true);
-        AddTakeGradLargeBatch(grad_in, sorted_data, original_index, grad_out);
-      }
-    } else {
-      LOG(FATAL) << "wrong req";
-    }
-  });
-}
-
-
-namespace take_ {  // in case of name conflict
-    enum TakeOpInputs {kDataArr, kDataIdx};
-    enum TakeOpOutputs {kOut};
-    enum TakeOpResource {kTempSpace};
-}  // namespace take_
+// TODO(somebody): behaviors specified by params
+struct TakeParam: public dmlc::Parameter<TakeParam> {
+  int axis;
+  std::string mode;
+  DMLC_DECLARE_PARAMETER(TakeParam) {
+    DMLC_DECLARE_FIELD(axis).set_lower_bound(0).set_default(0)
+    .describe("the axis of data tensor to be taken.");
+    DMLC_DECLARE_FIELD(mode).set_default("raise")
+    .describe("specify how out-of-bound indices bahave.");
+  }
+};
 
 inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
     using namespace mshadow;
-    const TShape &arrshape = (*in_attrs)[take_::kDataArr];
-    const TShape &idxshape = (*in_attrs)[take_::kDataIdx];
-    if (arrshape.ndim() != 2 || idxshape == 0) return false;
+    const TShape &arrshape = (*in_attrs)[indexing::kData];
+    const TShape &idxshape = (*in_attrs)[indexing::kIdx];
+    if (arrshape.ndim() != 2 || idxshape.ndim() == 0) return false;
     out_attrs->clear();
 
     TShape oshape(idxshape.ndim() + 1);
@@ -189,7 +116,7 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *out_type) {
   // using single dtype ("float32") for safety reason
   CHECK_GE(in_type->size(), 2);
-  int dtype = (*in_type)[0];
+  int dtype = (*in_type)[1];
   CHECK_NE(dtype, -1) << "idx must have specified type";
   for (index_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
@@ -213,24 +140,23 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[take_::kOut], kWriteTo);
+    CHECK_EQ(req[indexing::kOut], kWriteTo);
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
-    CHECK_EQ(inputs[take_::kDataArr].ndim(), 2)
-        << "Take layer expects its data array to be two-dimensional. "
-        << inputs[take_::kDataArr].ndim()
+    CHECK_EQ(inputs[indexing::kData].ndim(), 2)
+        << "Indexing layer expects its array to be two-dimensional. "
+        << inputs[indexing::kData].ndim()
         << " dimensional input is given instead";
 
-    const TShape& idxshape = inputs[take_::kDataIdx].shape_;
-    const TShape& arrshape = inputs[take_::kDataArr].shape_;
-    const TShape& oshape = outputs[take_::kOut].shape_;
+    const TShape& idxshape = inputs[indexing::kIdx].shape_;
+    const TShape& oshape = outputs[indexing::kOut].shape_;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        Tensor<xpu, 1, DType> idx = inputs[take_::kDataIdx].get_with_shape<xpu, 1, DType>(
+        Tensor<xpu, 1, DType> idx = inputs[indexing::kIdx].get_with_shape<xpu, 1, DType>(
             Shape1(idxshape.ProdShape(0, idxshape.ndim())), s);
-        Tensor<xpu, 2, DType> data = inputs[take_::kDataArr].get<xpu, 2, DType>(s);
-        Tensor<xpu, 2, DType> out = outputs[take_::kOut].get_with_shape<xpu, 2, DType>(
+        Tensor<xpu, 2, DType> data = inputs[indexing::kData].get<xpu, 2, DType>(s);
+        Tensor<xpu, 2, DType> out = outputs[indexing::kOut].get_with_shape<xpu, 2, DType>(
             Shape2(oshape.ProdShape(0, oshape.ndim() - 1), oshape[oshape.ndim() - 1]), s);
         out = take(idx, data);
     });
@@ -246,8 +172,8 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 2);
-    CHECK_EQ(req[take_::kDataIdx], kNullOp)
-        << "Take layer doesn't support index gradient";
+    CHECK_EQ(req[indexing::kIdx], kNullOp)
+        << "Indexing op doesn't support gradient into index";
 
     // inputs are specified in the .cc file, which are the gradients from
     // the upper layer and the input index
@@ -263,17 +189,17 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
             Shape1(idxshape.ProdShape(0, idxshape.ndim())), s);
         Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
             Shape2(oshape.ProdShape(0, oshape.ndim() - 1), oshape[oshape.ndim() - 1]), s);
-        Tensor<xpu, 2, DType> grad_in = outputs[0].get<xpu, 2, DType>(s);
+        Tensor<xpu, 2, DType> grad_in = outputs[1].get<xpu, 2, DType>(s);
 
-        if (req[take_::kDataArr] == kWriteTo || req[take_::kDataArr] == kAddTo) {
-            if (req[take_::kDataArr] == kWriteTo) {
+        if (req[indexing::kData] == kWriteTo || req[indexing::kData] == kAddTo) {
+            if (req[indexing::kData] == kWriteTo) {
                 grad_in = scalar<DType>(0.0f);
             }
             if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
                 AddTakeGrad(grad_in, idx, grad_out);
             } else {
                 Tensor<xpu, 2, int> workspace =
-                    ctx.requested[take_::kTempSpace].get_space_typed<xpu, 2, int>(
+                    ctx.requested[indexing::kTempSpace].get_space_typed<xpu, 2, int>(
                         mshadow::Shape2(2, idx.shape_.Size()), s);
                 Tensor<xpu, 1, int> sorted_idx = workspace[0];
                 Tensor<xpu, 1, int> original_idx = workspace[1];
