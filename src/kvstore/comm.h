@@ -49,6 +49,7 @@ class Comm {
   Context pinned_ctx() const {
     return pinned_ctx_;
   }
+
  protected:
   Context pinned_ctx_;
 };
