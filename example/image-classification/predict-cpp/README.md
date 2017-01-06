@@ -9,8 +9,8 @@ It uses opencv for image reading
 1. Edit image-classification-predict.cc file, change the following lines to your model paths:
   ```bash
     // Models path for your model, you have to modify it
-    std::string json_file = "model/Inception/Inception_BN-symbol.json";
-    std::string param_file = "model/Inception/Inception_BN-0039.params";
+    std::string json_file = "model/Inception/Inception-BN-symbol.json";
+    std::string param_file = "model/Inception/Inception-BN-0126.params";
     std::string synset_file = "model/Inception/synset.txt";
     std::string nd_file = "model/Inception/mean_224.nd";
   ```

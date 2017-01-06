@@ -81,10 +81,17 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
   MXAPIPredictor* ret = new MXAPIPredictor();
   API_BEGIN();
   Symbol sym;
+  // make sure symbols are registered
+  {
+  mx_uint outSize;
+  const char **outArray;
+  MXListAllOpNames(&outSize, &outArray);
+  }
   // load in the symbol.
   {
-    std::string json = symbol_json_str;
-    sym.outputs = nnvm::pass::LoadJSON(json).outputs;
+    nnvm::Graph g;
+    g.attrs["json"] = std::make_shared<nnvm::any>(std::string(symbol_json_str));
+    sym.outputs = nnvm::ApplyPass(g, "LoadLegacyJSON").outputs;
   }
   // looks likely to output the internal results
   if (num_output_nodes != 0) {
@@ -206,6 +213,7 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
                                    arg_arrays,
                                    grad_store, grad_req,
                                    aux_arrays));
+    ret->out_shapes = out_shapes;
     ret->out_arrays = ret->exec->outputs();
   }
   *out = ret;
