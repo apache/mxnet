@@ -159,11 +159,11 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
 }
 
 
-namespace take_ { // in case of name conflict 
+namespace take_ {  // in case of name conflict
     enum TakeOpInputs {kDataArr, kDataIdx};
     enum TakeOpOutputs {kOut};
     enum TakeOpResource {kTempSpace};
-}  // namespace take
+}  // namespace take_
 
 inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
@@ -187,7 +187,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
 inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_type,
                        std::vector<int> *out_type) {
-  // using single dtype ("float32") for safety reason 
+  // using single dtype ("float32") for safety reason
   CHECK_GE(in_type->size(), 2);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "idx must have specified type";
@@ -249,7 +249,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(req[take_::kDataIdx], kNullOp)
         << "Take layer doesn't support index gradient";
 
-    // inputs are specified in the .cc file, which are the gradients from 
+    // inputs are specified in the .cc file, which are the gradients from
     // the upper layer and the input index
     // outputs are the gradients of inputs in the feed-forward pass
     const TShape& idxshape = inputs[1].shape_;
@@ -271,8 +271,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
             }
             if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
                 AddTakeGrad(grad_in, idx, grad_out);
-            }
-            else {
+            } else {
                 Tensor<xpu, 2, int> workspace =
                     ctx.requested[take_::kTempSpace].get_space_typed<xpu, 2, int>(
                         mshadow::Shape2(2, idx.shape_.Size()), s);
@@ -283,8 +282,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
                 SortByKey(sorted_idx, original_idx, true);
                 AddTakeGradLargeBatch(grad_in, sorted_idx, original_idx, grad_out);
             }
-        }
-        else {
+        } else {
             LOG(FATAL) << "wrong req";
         }
     });
