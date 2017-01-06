@@ -43,14 +43,13 @@ It takes around 5 minutes to complete the installation.
 ```bash
     # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
     git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
-  
+
     # If building with GPU, add configurations to config.mk file:
     cd ~/mxnet
     cp make/config.mk .
     echo "USE_CUDA=1" >>config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
     echo "USE_CUDNN=1" >>config.mk
-    echo "USE_DIST_KVSTORE=1" >>config.mk
 
     # Install MXNet for Python with all required dependencies
     cd ~/mxnet/setup-utils
@@ -99,20 +98,24 @@ Install these dependencies using the following commands:
     sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
 ```
 
-After you have downloaded and installed the dependencies, use the following commands to pull the MXNet source code from GitHub
+After installing the dependencies, use the following command to pull the MXNet source code from GitHub
 
 ```bash
-    git clone --recursive https://github.com/dmlc/mxnet
-```
-
-If building with GPU, add configurations to config.mk file:
-```bash
-    cd mxnet
+    # Get MXNet source code
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+    # Move to source code parent directory
+    cd ~/mxnet
     cp make/config.mk .
+    echo "USE_BLAS=openblas" >>config.mk
+    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
+    echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
+```
+If building with ```GPU``` support, run below commands to add GPU dependency configurations to config.mk file:
+
+```bash
     echo "USE_CUDA=1" >>config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
     echo "USE_CUDNN=1" >>config.mk
-    echo "USE_DIST_KVSTORE=1" >>config.mk
 ```
 
 Then build mxnet:
