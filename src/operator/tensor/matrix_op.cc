@@ -267,8 +267,7 @@ NNVM_REGISTER_OP(batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
 .add_argument("lhs", "NDArray", "Left input")
-.add_argument("rhs", "NDArray", "Right input")
-.add_arguments(FlipParam::__FIELDS__());
+.add_argument("rhs", "NDArray", "Right input");
 
 NNVM_REGISTER_OP(_backward_batch_dot)
 .set_num_inputs(3)
