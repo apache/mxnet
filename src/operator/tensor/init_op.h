@@ -81,7 +81,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
 inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
   RangeParam param;
   param.Init(attrs->dict);
-  if (!bool(param.stop)) {
+  if (!static_cast<bool>(param.stop)) {
     param.stop = param.start;
     param.start = 0;
   }

@@ -89,7 +89,7 @@ inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TSha
   *k = param.k;
   *is_ascend = param.is_ascend;
   // get batch_size, axis and element_num
-  if (!bool(param.axis)) {  // No axis given
+  if (!static_cast<bool>(param.axis)) {  // No axis given
     *axis = 0;
     *batch_size = 1;
     *element_num = src_shape.Size();
@@ -111,7 +111,7 @@ inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TSha
     *k = *element_num;
   }
   // get target_shape
-  if (!bool(param.axis)) {
+  if (!static_cast<bool>(param.axis)) {
     if (param.ret_typ != topk_enum::kReturnMask) {
       *target_shape = mshadow::Shape1(*k);
     } else {
