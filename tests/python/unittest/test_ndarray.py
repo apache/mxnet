@@ -563,6 +563,25 @@ def test_ndarray_lesser_equal():
     z = 1 <= y
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
+def test_ndarray_take():
+    data = np.random.normal(size=(10, 5)).astype('float32')
+    idx = np.array([5, 4, 1, 2])
+
+    data_mx = mx.nd.array(data)
+    idx_mx = mx.nd.array(idx)
+
+    assert reldiff(mx.nd.take(data_mx, idx_mx).asnumpy(), data[idx]) < 1e-6
+
+    idx = np.array([5, 5, 4, 5])
+    idx_mx = mx.nd.array(idx)
+
+    assert reldiff(mx.nd.take(data_mx, idx_mx).asnumpy(), data[idx]) < 1e-6
+
+    idx = np.array([[1, 2], [2, 4]])
+    idx_mx = mx.nd.array(idx)
+
+    assert reldiff(mx.nd.take(data_mx, idx_mx).asnumpy(), data[idx]) < 1e-6
+
 if __name__ == '__main__':
     test_broadcast_binary()
     test_ndarray_setitem()
@@ -586,3 +605,4 @@ if __name__ == '__main__':
     test_arange()
     test_order()
     test_ndarray_equal()
+    test_ndarray_take()

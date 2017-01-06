@@ -2256,6 +2256,75 @@ def test_blockgrad():
     assert_almost_equal(exe.outputs[0].asnumpy(), a_npy)
     exe.backward()  # No error if BlockGrad works
 
+def test_take():
+    data = mx.sym.Variable('data')
+    idx = mx.sym.Variable('idx')
+    idx = mx.sym.BlockGrad(idx)
+
+    result = mx.sym.take(data=data, idx=idx)
+
+    exe = result.simple_bind(default_context(), data=(10, 5), idx=(4, ))
+
+    data_real = np.random.normal(size=(10, 5)).astype('float32')
+    idx_real = np.array([5, 4, 1, 7])
+    grad_out = np.ones((4, 5), dtype='float32')
+
+    grad_in = np.zeros((10, 5), dtype='float32')
+    grad_in[idx_real] = 1.0
+
+    data_real_mx = mx.nd.array(data_real)
+    idx_real_mx = mx.nd.array(idx_real)
+    grad_out_mx = mx.nd.array(grad_out)
+
+    exe.arg_dict['data'][:] = data_real_mx
+    exe.arg_dict['idx'][:] = idx_real_mx
+
+    exe.forward()
+
+    assert reldiff(exe.outputs[0].asnumpy(), data_real[idx_real]) < 1e-6
+
+    exe.backward([grad_out_mx])
+
+    assert reldiff(exe.grad_dict['data'].asnumpy(), grad_in) < 1e-6
+
+    idx_real = np.array([5, 5, 4, 5])
+    idx_real_mx = mx.nd.array(idx_real)
+
+    grad_in = np.zeros((10, 5), dtype='float32')
+    grad_in[5] = 3.0
+    grad_in[4] = 1.0
+
+    exe.arg_dict['idx'][:] = idx_real_mx
+
+    exe.forward()
+
+    assert reldiff(exe.outputs[0].asnumpy(), data_real[idx_real]) < 1e-6
+
+    exe.backward([grad_out_mx])
+
+    assert reldiff(exe.grad_dict['data'].asnumpy(), grad_in) < 1e-6
+
+    idx_real = np.array([[1, 2], [2, 4]])
+    idx_real_mx = mx.nd.array(idx_real)
+
+    grad_in = np.zeros((10, 5), dtype='float32')
+    grad_in[1] = 1.0
+    grad_in[2] = 2.0
+    grad_in[4] = 1.0
+
+    exe = exe.reshape(data=(10, 5), idx=(2, 2))
+
+    exe.arg_dict['idx'][:] = idx_real_mx
+
+    exe.forward()
+
+    assert reldiff(exe.outputs[0].asnumpy(), data_real[idx_real]) < 1e-6
+
+    grad_out = np.ones((2, 2, 5), dtype='float32')
+    grad_out_mx = mx.nd.array(grad_out)
+    exe.backward([grad_out_mx])
+
+    assert reldiff(exe.grad_dict['data'].asnumpy(), grad_in) < 1e-6
 
 if __name__ == '__main__':
     test_init()
@@ -2307,3 +2376,4 @@ if __name__ == '__main__':
     test_special_functions_using_scipy()
     test_order()
     test_blockgrad()
+    test_take()
