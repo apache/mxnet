@@ -11,8 +11,6 @@ MXNet Change Log
   - New operators are encouraged to register their property to NNVM op registry attribute
 - Known features removed limitations to be fixed
   - Bulk segment execution not yet added.
-  - The gradient aggregation optimization hack by switching to addto is not yet added,
-    can harm LSTM if it is constructed by unrolling the graph
 
 ## v0.8
 This is the last release before the NNVM refactor.

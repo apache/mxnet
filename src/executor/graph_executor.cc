@@ -54,6 +54,8 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
   nnvm::Symbol s; s.outputs = graph_.outputs;
   s.Print(os);
+  size_t storage;
+
   // message to be backward compatible with the memonger
   size_t total_bytes = graph_.GetAttr<size_t>("storage_allocated_bytes");
   os << "Total " << (total_bytes >> 20UL) <<" MB allocated\n";
@@ -399,7 +401,18 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   // other initializations
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
   g = nnvm::pass::InferType(g, arg_types, "__dtype__");
-  g = nnvm::ApplyPass(g, "PlanMemory");
+
+  {
+    // memory allocator
+    const int kBadStorageID = -1;
+    const int kExternalStorageID = -2;
+    nnvm::StorageVector arg_storage_id(idx.num_node_entries(), kBadStorageID);
+    for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
+      arg_storage_id[idx.entry_id(idx.outputs()[j])] = kExternalStorageID;
+    }
+    g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(arg_storage_id));
+    g = nnvm::ApplyPass(g, "PlanMemory");
+  }
   g = DetectInplaceAddTo(g);
   return g;
 }
