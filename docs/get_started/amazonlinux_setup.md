@@ -85,10 +85,38 @@ Install these dependencies using the following commands:
       # Install Graphviz for visualization and Jupyter notebook for running examples and tutorials
       sudo pip install graphviz
       sudo pip install jupyter
-      
+
       # Export env variables for pkg config
       export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 ```
+After installing the dependencies, use the following command to pull the MXNet source code from GitHub
+
+```bash
+    # Get MXNet source code
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+    # Move to source code parent directory
+    cd ~/mxnet
+    cp make/config.mk .
+    echo "USE_BLAS=openblas" >>config.mk
+    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
+    echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
+```
+
+If building with ```GPU``` support, run below commands to add GPU dependency configurations to config.mk file:
+
+```bash
+    echo "USE_CUDA=1" >>config.mk
+    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
+    echo "USE_CUDNN=1" >>config.mk
+```
+
+Then build mxnet:
+
+```bash
+    make -j$(nproc)
+```
+
+Executing these commands creates a library called ```libmxnet.so```
 
 
 &nbsp;
