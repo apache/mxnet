@@ -54,8 +54,6 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads) {
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
   nnvm::Symbol s; s.outputs = graph_.outputs;
   s.Print(os);
-  size_t storage;
-
   // message to be backward compatible with the memonger
   size_t total_bytes = graph_.GetAttr<size_t>("storage_allocated_bytes");
   os << "Total " << (total_bytes >> 20UL) <<" MB allocated\n";
