@@ -135,7 +135,10 @@ class FullyConnectedOp : public Operator {
 
 // Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(FullyConnectedParam param, int dtype);
+Operator* CreateOp(FullyConnectedParam param, int dtype,
+                   std::vector<TShape> *in_shape,
+                   std::vector<TShape> *out_shape,
+                   Context ctx);
 
 #if DMLC_USE_CXX11
 class FullyConnectedProp : public OperatorProperty {

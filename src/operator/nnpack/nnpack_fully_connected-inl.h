@@ -55,47 +55,32 @@ class NNPACKFullyConnectedOp : public FullyConnectedOp<xpu, DType> {
         Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
     const size_t batch_size = data.shape_[0];
     const size_t input_c = data.shape_[1];
-    bool use_nnpack{false};
-    // nnp_fully_connected_inference will do optimization for batch-size = 1
+    nnp_status status = nnp_status_success;
     if (batch_size == 1) {
-      use_nnpack = true;
-    }
-    // nnp_fully_connected_output will do optimization for batch-size > 1
-    // but just found FullyConnected in NNPACK result is wrong when batch_size != 2^n
-    // so here only using NNPACK when batch_size = 2^n.
-    if ((batch_size > 1) && (!(batch_size & (batch_size - 1)))) {
-      use_nnpack = true;
-    }
-    if (!use_nnpack) {
-      FullyConnectedOp<xpu, DType>::Forward(ctx, in_data, req, out_data, aux_args);
+      status = nnp_fully_connected_inference(
+      input_c,                       // size_t input_channels,
+      param_.num_hidden,             // size_t output_channels,
+      data.dptr_,                    // const float input[],
+      wmat.dptr_,                    // const float kernel[],
+      out.dptr_,                     // float output[],
+      nnpackinitialize.threadpool);  // pthreadpool_t threadpool,
     } else {
-      nnp_status status = nnp_status_success;
-      if (batch_size == 1) {
-        status = nnp_fully_connected_inference(
-          input_c,                       // size_t input_channels,
-          param_.num_hidden,             // size_t output_channels,
-          data.dptr_,                    // const float input[],
-          wmat.dptr_,                    // const float kernel[],
-          out.dptr_,                     // float output[],
-          nnpackinitialize.threadpool);  // pthreadpool_t threadpool,
-      } else {
-        status = nnp_fully_connected_output(
-          batch_size,                    // size_t batch size of input tensor
-          input_c,                       // size_t input_channels,
-          param_.num_hidden,             // size_t output_channels,
-          data.dptr_,                    // const float input[],
-          wmat.dptr_,                    // const float kernel[],
-          out.dptr_,                     // float output[],
-          nnpackinitialize.threadpool,   // pthreadpool_t threadpool,
-          nullptr);
-      }
-      if (nnp_status_success != status) {
-        LOG(FATAL) << "nnpack fully conneted feedforward failed status=" << status;
-      }
-      if (!param_.no_bias) {
-        Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
-        out += repmat(bias, data.size(0));
-      }
+      status = nnp_fully_connected_output(
+      batch_size,                    // size_t batch size of input tensor
+      input_c,                       // size_t input_channels,
+      param_.num_hidden,             // size_t output_channels,
+      data.dptr_,                    // const float input[],
+      wmat.dptr_,                    // const float kernel[],
+      out.dptr_,                     // float output[],
+      nnpackinitialize.threadpool,   // pthreadpool_t threadpool,
+      nullptr);
+    }
+    if (nnp_status_success != status) {
+      LOG(FATAL) << "nnpack fully conneted feedforward failed status=" << status;
+    }
+    if (!param_.no_bias) {
+      Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
+      out += repmat(bias, data.size(0));
     }
   }
 };  // class NNPACKFullyConnectedOp
