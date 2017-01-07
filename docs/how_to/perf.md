@@ -160,5 +160,33 @@ For the input data, mind the following:
 
 ## Profiler
 
-See [example/profiler](https://github.com/dmlc/mxnet/tree/nnvm/example/profiler)
-on the nnvm branch.
+As of v0.9.1 (with the NNVM merge) MXNet has a built-in profiler that gives detailed information about 
+execution time at the symbol level. 
+This feature compliments general profiling tools like nvprof and gprof by summarizing at the operator 
+level, instead of function, kernel, or instruction level.
+
+To be able to use the profiler, you must compile MXNet with the `USE_PROFILER=1` flag in `config.mk`.
+Once enabled, the profiler can be enabled with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler) for an entire program run, or 
+programmatically for just part of a run.
+See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler) for complete examples
+of how to use the profiler in code, but briefly the python code looks like
+
+```
+    mx.profiler.profiler_set_config(mode='all', filename='profile_output.json')
+    mx.profiler.profiler_set_state('run')
+
+    # Code to be profiled goes here...
+
+    mx.profiler.profiler_set_state('stop')
+```
+
+The `mode` parameter can be set to 
+
+* `symbolic` to only include symbolic operations
+* `all` to include all operations
+
+After program finishes, navigate to chrome://tracing in a Chrome browser and load profiler output `.json` file to see the results.
+
+![MLP Profile](https://cloud.githubusercontent.com/assets/17693755/18035938/0a43484a-6d93-11e6-80d4-241c6ca552ea.png)
+
+Note that the output file can quickly grow to become extremely large, so it is not recommended for general use.

@@ -1,8 +1,11 @@
 # MXNet Model Zoo
 
-MXNet features fast implementations of most state-of-the-art models reported in the academic literature. Our Model Zoo contains complete models, with python scripts, pre-trained weights as well as instructions on how to fine tune these models.  
+MXNet features fast implementations of many state-of-the-art models reported in the academic literature. This Model Zoo is an
+ongoing project to collect complete models, with python scripts, pre-trained weights as well as instructions on how to build and fine tune these models.
 
 ## How to Contribute a Pre-Trained Model (and what to include)
+
+The Model Zoo has good entries for CNNs but is seeking content in other areas.
 
 Issue a Pull Request containing the following: 
 * Gist Log
@@ -16,7 +19,7 @@ Readme file should contain:
 * Step by step instructions on how to use the trained model
 * References to any other applicable docs or arxiv papers the model is based on
 
-## [Convolutional Neural Networks](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
+## Convolutional Neural Networks (CNNs)
 
 Convolutional neural networks are the state-of-art architecture for many image and video processing problems. Some available datasets include:
 
@@ -28,7 +31,7 @@ Convolutional neural networks are the state-of-art architecture for many image a
 * ImageNet 11k
 * [Places2](http://places2.csail.mit.edu/download.html): There are 1.6 million train images from 365 scene categories in the Places365-Standard, which are used to train the Places365 CNNs. There are 50 images per category in the validation set and 900 images per category in the testing set. Compared to the train set of Places365-Standard, the train set of Places365-Challenge has 6.2 million extra images, leading to totally 8 million train images for the Places365 challenge 2016. The validation set and testing set are the same as the Places365-Standard.
 
-
+For instructions on using these models, see [the python tutorial on using pre-trained ImageNet models](http://mxnet.io/tutorials/python/predict_imagenet.html).
 
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
@@ -44,10 +47,10 @@ Convolutional neural networks are the state-of-art architecture for many image a
 | Single Shot Detection (SSD) | PASCAL VOC | [Param File] | [Liu et al.., 2016](https://arxiv.org/pdf/1512.02325v4.pdf) | |
 
 
-## [Recursive Neural Networks (Including LSTMs)](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf)
+## Recurrent Neural Networks (RNNs) including LSTMs
 
-MXNet supports recurrent neural networks (RNNs), as well as Long short-term memory (LSTM) networks, and Gated Recurrent Units (GRU) networks. Some available datasets include:
-
+MXNet supports many types of recurrent neural networks (RNNs), including Long Short-Term Memory ([LSTM](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf))
+and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
 * [Penn Treebank (PTB)](https://www.cis.upenn.edu/~treebank/): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
 * [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare’s works.
@@ -63,7 +66,13 @@ MXNet supports recurrent neural networks (RNNs), as well as Long short-term memo
 | LSTM - Sentiment Analysis| IMDB | | [Li et al.., 2015](http://arxiv.org/pdf/1503.00185v5.pdf) | |
 
 
-## [Generative Adversarial Networks](http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) 
+## Generative Adversarial Networks (GANs)
+
+[Generative Adversarial Networks](http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) train a competing pair of 
+neural networks: a generator network which transforms a latent vector into content like an image, and a discriminator
+network that tries to distinguish between generated content and supplied "real" training content.  When properly
+trained the two achieve a [Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium).
+
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
 | DCGANs | ImageNet | | [Radford et al..,2016](https://arxiv.org/pdf/1511.06434v2.pdf) | @... |
@@ -87,9 +96,6 @@ MXNet Supports a variety of model types beyond the canonical CNN and LSTM model 
 | Matrix Factorization | MovieLens 20M | | [Huang et al.., 2013](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/cikm2013_DSSM_fullversion.pdf) | |
 | Deep Q-Network | Atari video games | | [Minh et al.., 2015](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html) | |
 | Asynchronous advantage actor-critic (A3C) | Atari video games | | [Minh et al.., 2016](https://arxiv.org/pdf/1602.01783.pdf) | |
-
-
-
 
 
 

@@ -7,9 +7,13 @@ Installing MXNet is a two-step process:
 
 **Note:** To change the compilation options for your build, edit the ```make/config.mk``` file and submit a build request with the ```make``` command.
 
-## Using the installation script
+## Build the Shared Library
 
-Install [Homebrew](http://brew.sh/)  to get the dependencies required for MXNet, with the following commands:
+### Install MXNet dependencies
+Install the dependencies, required for MXNet, with the following commands:
+- [Homebrew](http://brew.sh/)
+- OpenBLAS and homebrew/science (for linear algebraic operations)
+- OpenCV (for computer vision operations)
 
 ```bash
 	# Paste this command in Mac terminal to install Homebrew
@@ -18,35 +22,6 @@ Install [Homebrew](http://brew.sh/)  to get the dependencies required for MXNet,
 	# Insert the Homebrew directory at the top of your PATH environment variable
 	export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 ```
-
-Initialize the git submodules and fetch them:
-
-```
-  git submodule init
-  git submodule update
-```
-
-Then you can execute the `setup-utils/install-mxnet-macosx.sh` script
-[1](https://github.com/dmlc/mxnet/tree/master/setup-utils/setup-utils/install-mxnet-macosx.sh).
-
-After that, you should have the mxnet library in the `lib` directory:
-```
-  mxnet$ ls lib/
-  libmxnet.a  libmxnet.so
-```
-
-Now you can skip to "Install the MXNet Package for Python" down below if you plan to use mxnet with Python.
-
---
-
-## Manual installation steps
-
-Alternatively you can follow through with the following manual instructions:
-
-You will need to install:
-
-- openblas and homebrew/science (for linear algebraic operations)
-- OpenCV (for computer vision operations)
 
 ```bash
 	brew update
@@ -62,11 +37,10 @@ You will need to install:
 	# Jupyter notebook
 	pip install jupyter
 ```
-After you have installed the dependencies, use one of the following options to pull the MXNet source code from Git and build MXNet. Both options produce a library called ```libmxnet.so```.
 
 ### Prepare Environment for GPU Installation
 
-If you plan to build with GPU, you need to set up environemtn for CUDA and cuDNN.
+If you plan to build with GPU, you need to set up environment for CUDA and cuDNN.
 
 First download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
 
@@ -97,11 +71,14 @@ Unzip the file and change to cudnn root directory. Move the header files and lib
 
 Now we can start to build MXNet.
 
-**Option 1** Use the following commands to pull MXNet source code and build MXNet. The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
+### Build MXNet Shared Library
+After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce a MXNet library called ```libmxnet.so```.
+
+The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
 
 ```bash
-    git clone --recursive https://github.com/dmlc/mxnet
-    cd mxnet
+    git clone --recursive https://github.com/dmlc/mxnet ~/mxnet
+    cd ~/mxnet
     cp make/osx.mk ./config.mk
     echo "USE_BLAS = openblas" >> ./config.mk
     echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
@@ -110,7 +87,7 @@ Now we can start to build MXNet.
     make -j$(sysctl -n hw.ncpu)
 ```
 
-If building with GPU, add the following configuration to config.mk and build:
+If building with ```GPU``` support, add the following configuration to config.mk and build:
 ```bash
     echo "USE_CUDA = 1" >> ./config.mk
     echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
@@ -118,22 +95,6 @@ If building with GPU, add the following configuration to config.mk and build:
     make
 ```
 **Note:** To change build parameters, edit ```config.mk```.
-
-**Option 2**
-To generate an [Xcode](https://en.wikipedia.org/wiki/Xcode) project from MXNet source code, use the ```cmake``` command. Then, build MXNet using the Xcode IDE.
-
-```bash
-    mkdir build; cd build
-
-    cmake -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_CONFIGURATION_TYPES="Release" -DUSE_OPENMP="OFF" -DUSE_CUDNN="OFF" -DUSE_CUDA="OFF" -DBLAS=MKL ..
-```
-
-After running the ```cmake``` command, use Xcode to open ```mxnet.xcodeproj```, change the following build settings flags, and build the project:
-
-1. Link-Time Optimization = Yes
-2. Optimisation Level = Fastest[-O3]
-
-Both sets of commands produce a library called ```libmxnet.so```.
 
 
 &nbsp;

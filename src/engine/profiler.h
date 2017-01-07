@@ -49,6 +49,8 @@ struct DevStat {
   std::string dev_name;
   /*! \brief operation execution statistics on this device */
   std::vector<OprExecStat*> opr_exec_stats;
+  /*! \brief internal mutex of the execution state */
+  std::mutex m_;
 };
 
 
@@ -71,23 +73,23 @@ class Profiler {
   /*! \brief set state of profiler */
   void SetState(ProfilerState state);
   /*! \return state of profiler */
-  inline ProfilerState GetState() {
+  inline ProfilerState GetState() const {
     return this->state_;
   }
   /*! \brief set configure of profiler */
   void SetConfig(ProfilerMode mode, std::string output_filename);
   /*! \return mode of profiler */
-  inline ProfilerMode GetMode() {
+  inline ProfilerMode GetMode() const {
     return this->mode_;
   }
   /*! \return whether the profiler is enabled to output */
-  inline bool IsEnableOutput() {
+  inline bool IsEnableOutput() const {
     return this->enable_output_;
   }
   /*! \brief dump the profile file */
   void DumpProfile();
   /*! \return the profiler init time, time unit is microsecond (10^-6) s */
-  inline uint64_t GetInitTime() {
+  inline uint64_t GetInitTime() const {
     return init_time_;
   }
   /*! \brief add one operation execution record in
@@ -108,7 +110,7 @@ class Profiler {
   /*! \brief Profiler instance */
   static Profiler* instance_;
   /*! \brief internal mutex of the profiler */
-  static std::mutex m_;
+  std::mutex m_;
   /*! \brief indicate whether the profiler is running */
   ProfilerState state_;
   /*! \brief once running, enable profiler to output */
