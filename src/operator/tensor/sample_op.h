@@ -21,6 +21,7 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
   float high;
   TShape shape;
   std::string ctx;
+  int dtype;
   DMLC_DECLARE_PARAMETER(SampleUniformParam) {
     DMLC_DECLARE_FIELD(low).set_default(0.0f)
     .describe("The lower bound of distribution");
@@ -33,6 +34,9 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(mshadow::kFloat32)
+    .describe("DType of the output");
   }
 };
 
@@ -41,6 +45,7 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
   float scale;
   TShape shape;
   std::string ctx;
+  int dtype;
   DMLC_DECLARE_PARAMETER(SampleNormalParam) {
     DMLC_DECLARE_FIELD(loc).set_default(0.0f)
     .describe("Mean of the distribution.");
@@ -53,6 +58,9 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(mshadow::kFloat32)
+    .describe("DType of the output");
   }
 };
 
@@ -100,7 +108,7 @@ inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
   .set_num_outputs(1)                                                   \
   .set_attr_parser(ParamParser<ParamType>)                              \
   .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)     \
-  .set_attr<nnvm::FInferType>("FInferType", InitType)                   \
+  .set_attr<nnvm::FInferType>("FInferType", InitType<ParamType>)                   \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)       \
   .add_arguments(ParamType::__FIELDS__())
 }  // namespace op
