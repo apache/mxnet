@@ -52,7 +52,7 @@ macro _list_symbol_info(self, func_name)
     ref_sz    = Ref{MX_uint}(0)
     ref_names = Ref{char_pp}(0)
     @mxcall($func_name, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
-            $self, ref_sz, ref_names)
+            $(esc(self)), ref_sz, ref_names)
     narg = ref_sz[]
     names = unsafe_wrap(Array, ref_names[], narg)
     names = [Symbol(unsafe_wrap(String, x)) for x in names]
