@@ -1049,7 +1049,9 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
+    # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
+    # pylint: enable= no-member, protected-access
 
 def ones(shape, ctx=None, dtype=mx_real_t):
     """Create a new NDArray filled with 1, with specified shape.
@@ -1066,7 +1068,9 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
+    # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype)
+    # pylint: enable= no-member, protected-access
 
 def full(shape, val, ctx=None, dtype=mx_real_t):
     """Create a new NDArray filled with given value, with specified shape.
