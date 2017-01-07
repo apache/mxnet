@@ -191,7 +191,7 @@ end
     for copying mini-batches of data. Since there is no concern about convergence in prediction, it is better
     to set the mini-batch size as large as possible (limited by your device memory) if prediction speed is a
     concern.
-    
+
     For the same reason, currently prediction will only use the first device even if multiple devices are
     provided to construct the model.
 
@@ -290,6 +290,7 @@ end
   kvstore     :: Union{Base.Symbol, KVStore} = :local,
   force_init  :: Bool = false,
   callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
+  verbosity   :: Int = 3
 )
 
 function _invoke_callbacks{T<:Real}(self::FeedForward, callbacks::Vector{AbstractCallback},
@@ -340,24 +341,30 @@ Train the `model` on `data` with the `optimizer`.
           this option is set, it will always do random initialization at the begining of training.
 * `callbacks::Vector{AbstractCallback}`: keyword argument, default `[]`. Callbacks to be invoked at each epoch or mini-batch,
           see `AbstractCallback`.
+* `verbosity::Int`: Determines the verbosity of the print messages. Higher numbers
+          leads to more verbose printing. Acceptable values are
+          - `0`: Do not print anything during training
+          - `1`: Print starting and final messages
+          - `2`: Print one time messages and a message at the start of each epoch
+          - `3`: Print a summary of the training and validation accuracy for each epoch
 """
 function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
   opts = TrainingOptions(; kwargs...)
 
-  info("Start training on $(self.ctx)")
+  opts.verbosity >= 1 && info("Start training on $(self.ctx)")
 
   batch_size  = get_batch_size(data)
   num_dev     = length(self.ctx)
   slices      = _split_inputs(batch_size, num_dev)
 
   # initialize parameters
-  info("Initializing parameters...")
+  opts.verbosity >= 2 && info("Initializing parameters...")
   arg_names, param_names, aux_names = _init_model(self, data, opts.initializer, opts.force_init)
 
   # setup kvstore
   kvstore = opts.kvstore
   if isa(kvstore, Base.Symbol)
-    info("Creating KVStore...")
+    opts.verbosity >= 2 && info("Creating KVStore...")
     kvstore, update_on_kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params)
   end
 
@@ -388,7 +395,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     label_shapes = Dict([k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_label(data)])
     train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=grad_req, data_shapes..., label_shapes...)
     dbg_str = mx.debug_str(train_execs[i])
-    info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
+    opts.verbosity >= 2 && info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
 
     copy_params_from(train_execs[i], self.arg_params, self.aux_params)
   end
@@ -420,7 +427,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
       set_optimizer(kvstore, optimizer)
     end
 
-    info("Initializing KVStore...")
+    opts.verbosity >= 2 && info("Initializing KVStore...")
     # init kv with gradients
     for idx = 1:length(param_arrays)
       param_on_devs = param_arrays[idx]
@@ -443,7 +450,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   # invoke callbacks on epoch 0
   _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
 
-  info("Start training...")
+  opts.verbosity >= 2 && info("Start training...")
   for i_epoch = 1:opts.n_epoch
     time_start = time()
     reset!(opts.eval_metric)
@@ -515,12 +522,14 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
     time_stop = time()
     metric = get(opts.eval_metric)
-    info(format("== Epoch {1:0>3d} ==========", i_epoch))
-    info("## Training summary")
-    for (name, value) in metric
-      info(format("{1:>18s} = {2:.4f}", string(name), value))
+    opts.verbosity >= 2 && info(format("== Epoch {1:0>3d}/{1:0>3d} ==========", i_epoch, opts.n_epoch))
+    if opts.verbosity >= 3
+        info("## Training summary")
+        for (name, value) in metric
+            info(format("{1:>18s} = {2:.4f}", string(name), value))
+        end
+        info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
     end
-    info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
 
     # evaluation on validation set
     if !isa(opts.eval_data, Void)
@@ -546,9 +555,11 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
         update!(opts.eval_metric, cpu_label_arrays, cpu_output_arrays)
       end
 
-      info("## Validation summary")
-      for (name, value) in get(opts.eval_metric)
-        info(format("{1:>18s} = {2:.4f}", string(name), value))
+      if opts.verbosity >= 3
+          info("## Validation summary")
+          for (name, value) in get(opts.eval_metric)
+            info(format("{1:>18s} = {2:.4f}", string(name), value))
+          end
       end
     end
 
@@ -566,6 +577,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     end
     _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback; metric=metric)
   end # end of all epochs
+
+  opts.verbosity >= 1 && info("Finish training on $(self.ctx)")
 end
 
 function save_checkpoint(self :: FeedForward, prefix :: AbstractString, state :: OptimizationState)
