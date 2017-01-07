@@ -98,11 +98,12 @@ inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TSha
     if (*axis < 0) {
       *axis += src_shape.ndim();
     }
-    CHECK(*axis >= 0 && *axis < src_shape.ndim()) << "Invalid axis! axis should be between 0 and "
+    CHECK(*axis >= 0 && *axis < static_cast<int>(src_shape.ndim()))
+                                                  << "Invalid axis! axis should be between 0 and "
                                                   << src_shape.ndim() << ", found axis=" << *axis;
     *batch_size = src_shape.Size() / src_shape[*axis];
     *element_num = src_shape[*axis];
-    if (*axis != src_shape.ndim() - 1) {
+    if (*axis != static_cast<int>(src_shape.ndim()) - 1) {
       *do_transpose = true;
     }
   }
