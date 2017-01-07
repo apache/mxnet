@@ -58,7 +58,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     infered_num_inputs = op->num_inputs;
   }
   CHECK_EQ(num_inputs, infered_num_inputs)
-    << "Expecting " << infered_num_inputs << " inputs, got " << num_inputs;
+    << "Expecting " << infered_num_inputs << " inputs, got "
+    << num_inputs << " in operator " << op->name;
   int infered_num_outputs;
   if (op->get_num_outputs != nullptr) {
     infered_num_outputs = op->get_num_outputs(attrs);
@@ -82,7 +83,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   } else {
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
-      << num_visible_outputs << " (visible only) outputs, got " << *num_outputs;
+      << num_visible_outputs << " (visible only) outputs, got "
+      << *num_outputs << " in operator " << op->name;
     ndoutputs.reserve(infered_num_outputs);
     for (int i = 0; i < num_visible_outputs; ++i) {
       ndoutputs.emplace_back(std::move(*outarray[i]));
@@ -120,7 +122,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     for (auto& i : ndoutputs) {
       out_shapes.emplace_back(i.shape());
     }
-    CHECK(infershape.count(op)) << "Op must have FInferShape registered";
+    CHECK(infershape.count(op))
+      << "Operator " << op->name << " is missing FInferShape attribute";
     CHECK(infershape[op](attrs, &in_shapes, &out_shapes));
     CHECK_EQ(out_shapes.size(), static_cast<size_t>(infered_num_outputs));
 
@@ -135,7 +138,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     for (auto& i : ndoutputs) {
       out_types.push_back(i.dtype());
     }
-    CHECK(infertype.count(op)) << "Op must have FInferShape registered";
+    CHECK(infertype.count(op))
+      << "Operator " << op->name << " is missing FInferType attribute";
     CHECK(infertype[op](attrs, &in_types, &out_types));
     CHECK_EQ(out_types.size(), static_cast<size_t>(infered_num_outputs));
 
@@ -146,11 +150,11 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
         CHECK_EQ(ndoutputs[i].shape(), out_shapes[i])
           << i << "th output has invalid shape. "
           << "Expecting " << out_shapes[i] << " got "
-          << ndoutputs[i].shape();
+          << ndoutputs[i].shape() << " in operator " << op->name;
         CHECK_EQ(ndoutputs[i].dtype(), out_types[i])
           << i << "th output has invalid shape. "
           << "Expecting " << out_types[i] << " got "
-          << ndoutputs[i].dtype();
+          << ndoutputs[i].dtype()  << " in operator " << op->name;
       }
     }
 

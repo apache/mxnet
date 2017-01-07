@@ -67,6 +67,57 @@ struct InferTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
+/*! \brief check if shape is empty or contains unkown (0) dim. */
+inline bool shape_is_none(const TShape& x) {
+  return x.ndim() == 0 || x.Size() == 0;
+}
+
+/*! \brief check if type is none (-1) */
+inline bool type_is_none(const int& x) {
+  return x == -1;
+}
+
+/*!
+ * \brief Assign x to y. Checks for compatiblity when y is not empty.
+ *  Allow missing dim in both x and y (as 0).
+ * \param y target shape.
+ * \param x source shape.
+ * \return whether x and y are compatible.
+ */
+inline bool shape_assign(TShape *y, const TShape& x) {
+  if (y->ndim() == 0) {
+    *y = x;
+    return true;
+  } else if (y->ndim() != x.ndim()) {
+    return x.ndim() == 0;
+  } else {
+    for (size_t i = 0; i < y->ndim(); ++i) {
+      if ((*y)[i] == 0) {
+        (*y)[i] = x[i];
+      } else if ((*y)[i] != x[i] && x[i] != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
+/*!
+ * \brief Assign x to y. Checks for compatiblity when y is not -1.
+ * \param y target type.
+ * \param x source type.
+ * \return whether x and y are compatible.
+ */
+inline bool type_assign(int *y, const int& x) {
+  if (*y == -1) {
+    *y = x;
+    return true;
+  } else if (*y != x && x != -1) {
+    return false;
+  }
+  return true;
+}
+
 /*!
  * \brief macro assign shape to out if out is unknown otherwise check consistency
  *  Use macro so we can see the error file more clearly
@@ -74,19 +125,14 @@ struct InferTypeError : public dmlc::Error {
  * \param index the index of in the array
  * \param shape the inferred shape
  */
-#define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                   \
-  {                                                                     \
-    auto &local_out = (shape_array)[index];                             \
-    if (local_out.ndim() == 0) {                                        \
-      local_out = shape;                                                \
-    } else {                                                            \
-      if (local_out != shape) {                                         \
-        std::ostringstream os;                                          \
-        os << "Shape inconsistent, Provided=" << local_out << ','       \
-           << " inferred shape=" << shape;                              \
-        throw ::mxnet::op::InferShapeError(os.str(), index);            \
-      }                                                                 \
-    }                                                                   \
+#define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                       \
+  {                                                                         \
+    if (!shape_assign(&(shape_array)[index], TShape(shape))) {             \
+      std::ostringstream os;                                                \
+      os << "Shape inconsistent, Provided=" << (shape_array)[index]<< ','  \
+         << " inferred shape=" << shape;                                    \
+      throw ::mxnet::op::InferShapeError(os.str(), index);                  \
+    }                                                                       \
   }
 
 /*!
@@ -96,19 +142,14 @@ struct InferTypeError : public dmlc::Error {
  * \param index the index of in the array
  * \param type the inferred type
  */
-#define TYPE_ASSIGN_CHECK(type_array, index, type)                      \
-  {                                                                     \
-    auto &local_out = (type_array)[index];                              \
-    if (local_out == -1) {                                              \
-      local_out = type;                                                 \
-    } else {                                                            \
-      if (local_out != type) {                                          \
-        std::ostringstream os;                                          \
-        os << "Type inconsistent, Provided=" << local_out << ','        \
-           << " inferred type=" << type;                                \
-        throw ::mxnet::op::InferTypeError(os.str(), index);             \
-      }                                                                 \
-    }                                                                   \
+#define TYPE_ASSIGN_CHECK(type_array, index, type)                          \
+  {                                                                         \
+    if (!type_assign(&(type_array)[index], type)) {                        \
+      std::ostringstream os;                                                \
+      os << "Type inconsistent, Provided=" << (type_array)[index] << ','   \
+         << " inferred type=" << type;                                      \
+      throw ::mxnet::op::InferTypeError(os.str(), index);                   \
+    }                                                                       \
   }
 
 // helper macro to implement bind dispatch
