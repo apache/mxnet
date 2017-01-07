@@ -26,6 +26,7 @@ namespace indexing {
 enum IndexingOpInputs {kIdx, kData};
 enum IndexingOpOutputs {kOut};
 enum IndexingOpResource {kTempSpace};
+enum IndexingOpMode {kRaise, kWrap, kClip};
 }  // namespace indexing
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
@@ -83,11 +84,17 @@ inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
 // TODO(somebody): behaviors specified by params
 struct TakeParam: public dmlc::Parameter<TakeParam> {
   int axis;
-  std::string mode;
+  int mode;
   DMLC_DECLARE_PARAMETER(TakeParam) {
-    DMLC_DECLARE_FIELD(axis).set_lower_bound(0).set_default(0)
+    DMLC_DECLARE_FIELD(axis)
+    .set_lower_bound(0)
+    .set_default(0)
     .describe("the axis of data tensor to be taken.");
-    DMLC_DECLARE_FIELD(mode).set_default("raise")
+    DMLC_DECLARE_FIELD(mode)
+    .add_enum("raise", indexing::kRaise)
+    .add_enum("wrap", indexing::kWrap)
+    .add_enum("clip", indexing::kClip)
+    .set_default(indexing::kRaise)
     .describe("specify how out-of-bound indices bahave.");
   }
 };
@@ -155,7 +162,7 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         Tensor<xpu, 1, DType> idx = inputs[indexing::kIdx].get_with_shape<xpu, 1, DType>(
             Shape1(idxshape.ProdShape(0, idxshape.ndim())), s);
-        Tensor<xpu, 2, DType> data = inputs[indexing::kData].get<xpu, 2, DType>(s);
+        Tensor<xpu, 2, DType> data = inputs[indexing::kData].FlatTo2D<xpu, DType>(s);
         Tensor<xpu, 2, DType> out = outputs[indexing::kOut].get_with_shape<xpu, 2, DType>(
             Shape2(oshape.ProdShape(0, oshape.ndim() - 1), oshape[oshape.ndim() - 1]), s);
         out = take(idx, data);

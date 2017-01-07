@@ -2261,7 +2261,7 @@ def test_take():
     idx = mx.sym.Variable('idx')
     idx = mx.sym.BlockGrad(idx)
 
-    result = mx.sym.Take(idx=idx, data=data)
+    result = mx.sym.take(idx=idx, data=data)
 
     exe = result.simple_bind(default_context(), data=(10, 5), idx=(4, ))
 

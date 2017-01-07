@@ -11,10 +11,10 @@ namespace op {
 NNVM_REGISTER_OP(Embedding)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpForward<gpu>);
 
-NNVM_REGISTER_OP(Take)
+NNVM_REGISTER_OP(take)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_Take)
+NNVM_REGISTER_OP(_backward_take)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpBackward<gpu>);
 }  // namespace op
 }  // namespace mxnet

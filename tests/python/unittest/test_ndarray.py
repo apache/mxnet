@@ -570,17 +570,17 @@ def test_ndarray_take():
     data_mx = mx.nd.array(data)
     idx_mx = mx.nd.array(idx)
 
-    assert reldiff(mx.nd.Take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
+    assert reldiff(mx.nd.take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
 
     idx = np.array([5, 5, 4, 5])
     idx_mx = mx.nd.array(idx)
 
-    assert reldiff(mx.nd.Take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
+    assert reldiff(mx.nd.take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
 
     idx = np.array([[1, 2], [2, 4]])
     idx_mx = mx.nd.array(idx)
 
-    assert reldiff(mx.nd.Take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
+    assert reldiff(mx.nd.take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
 
 if __name__ == '__main__':
     test_broadcast_binary()
