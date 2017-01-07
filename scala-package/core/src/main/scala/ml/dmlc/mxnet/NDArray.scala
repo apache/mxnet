@@ -815,6 +815,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   // Get size of current NDArray.
   def size: Int = shape.product
 
+  /**
+   * Return an `NDArray` that lives in the target context. If the array
+   * is already in that context, `self` is returned. Otherwise, a copy is made.
+   * @param context The target context we want the return value to live in.
+   * @return A copy or `self` as an `NDArray` that lives in the target context.
+   */
+  def asInContext(context: Context): NDArray = {
+    if (this.context == context) this else this.copyTo(context)
+  }
+
   override def equals(o: Any): Boolean = o match {
     case that: NDArray =>
       that != null && that.shape == this.shape && that.toArray.sameElements(this.toArray)
