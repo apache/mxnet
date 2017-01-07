@@ -1186,3 +1186,68 @@ def hypot(left, right):
         return _numpy.hypot(left, right)
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
+
+
+def zeros(shape, dtype=_numpy.float32):
+    """Create a Tensor filled with zeros, similar to numpy.zeros
+        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.zeros.html.
+
+    Parameters
+    ----------
+    shape :  int or sequence of ints
+        Shape of the new array.
+    dtype : type, optional
+        The value type of the NDArray, default to np.float32
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    return _internal._zeros(shape=shape, dtype=dtype)
+
+
+def ones(shape, dtype=_numpy.float32):
+    """Create a Tensor filled with ones, similar to numpy.ones
+        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html.
+
+    Parameters
+    ----------
+    shape :  int or sequence of ints
+        Shape of the new array.
+    dtype : type, optional
+        The value type of the NDArray, default to np.float32
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    return _internal._ones(shape=shape, dtype=dtype)
+
+
+def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=_numpy.float32):
+    """Simlar function in the MXNet ndarray as numpy.arange
+        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
+
+    Parameters
+    ----------
+    start : number
+        Start of interval. The interval includes this value. The default start value is 0.
+    stop : number, optional
+        End of interval. The interval does not include this value.
+    step : number, optional
+        Spacing between values
+    repeat : int, optional
+        "The repeating time of all elements.
+        E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    dtype : type, optional
+        The value type of the NDArray, default to np.float32
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
+                             name=name, dtype=dtype)
