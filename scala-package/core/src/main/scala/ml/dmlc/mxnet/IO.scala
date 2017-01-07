@@ -18,6 +18,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet.io.{MXDataPack, MXDataIter}
 import org.slf4j.LoggerFactory
 
@@ -227,4 +228,10 @@ abstract class DataPack() extends Iterable[DataBatch] {
   def iterator: DataIter
 }
 
-
+// Named data desc description contains name, shape, type and other extended attributes.
+class DataDesc(val name: String,  val shape: Shape,
+               val dtype: DType = Base.MX_REAL_TYPE, val layout: String = "NCHW") {
+  override def toString(): String = {
+    s"DataDesc[$name,$shape,$dtype,$layout]"
+  }
+}
