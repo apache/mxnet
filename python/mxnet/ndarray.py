@@ -1036,12 +1036,14 @@ def negative(arr):
 
 def zeros(shape, ctx=None, dtype=mx_real_t):
     """Create a new NDArray filled with 0, with specified shape.
+
     Parameters
     ----------
     shape : tuple
         shape of the NDArray.
     ctx : Context, optional.
         The context of the NDArray, default to current default context.
+
     Returns
     -------
     out: Array
@@ -1055,12 +1057,14 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
 
 def ones(shape, ctx=None, dtype=mx_real_t):
     """Create a new NDArray filled with 1, with specified shape.
+
     Parameters
     ----------
     shape : tuple
         shape of the NDArray.
     ctx : Context, optional
         The context of the NDArray, default to current default context.
+
     Returns
     -------
     out: Array
@@ -1194,6 +1198,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
         The context of the NDArray, default to current default context.
     dtype : type, optional
         The value type of the NDArray, default to np.float32
+
     Returns
     -------
     out : NDArray
