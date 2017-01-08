@@ -283,12 +283,12 @@ class RMSE(EvalMetric):
 
 class CrossEntropy(EvalMetric):
     """Calculate Cross Entropy loss"""
-    def __init__(self):
+    def __init__(self, eps = 1e-8):
         super(CrossEntropy, self).__init__('cross-entropy')
+        self.eps = eps
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
-        eps = 1e-8
 
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -298,7 +298,7 @@ class CrossEntropy(EvalMetric):
             assert label.shape[0] == pred.shape[0]
 
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
-            self.sum_metric += (-numpy.log(prob + eps)).sum()
+            self.sum_metric += (-numpy.log(prob + self.eps)).sum()
             self.num_inst += label.shape[0]
 
 class Torch(EvalMetric):
