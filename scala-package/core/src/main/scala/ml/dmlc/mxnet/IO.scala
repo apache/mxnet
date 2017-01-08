@@ -235,3 +235,16 @@ class DataDesc(val name: String,  val shape: Shape,
     s"DataDesc[$name,$shape,$dtype,$layout]"
   }
 }
+object DataDesc {
+  /**
+   * Get the dimension that corresponds to the batch size.
+   * @param layout layout string. For example, "NCHW".
+   * @return An axis indicating the batch_size dimension. When data-parallelism is used,
+   *         the data will be automatically split and concatenate along the batch_size dimension.
+   *         Axis can be -1, which means the whole array will be copied
+   *         for each data-parallelism device.
+   */
+  def getBatchAxis(layout: Option[String]): Int = {
+    layout.map(_.indexOf('N')).getOrElse(0)
+  }
+}
