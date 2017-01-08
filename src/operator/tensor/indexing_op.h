@@ -105,15 +105,16 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
     using namespace mshadow;
     const TShape &arrshape = (*in_attrs)[indexing::kData];
     const TShape &idxshape = (*in_attrs)[indexing::kIdx];
-    if (arrshape.ndim() != 2 || idxshape.ndim() == 0) return false;
+    if (idxshape.ndim() == 0) return false;
     out_attrs->clear();
 
-    TShape oshape(idxshape.ndim() + 1);
+    TShape oshape(idxshape.ndim() + arrshape.ndim() - 1);
     for (size_t i = 0; i < idxshape.ndim(); ++i) {
         oshape[i] = idxshape[i];
     }
-    oshape[idxshape.ndim()] = arrshape[1];
-
+    for (size_t i = 0; i < arrshape.ndim() - 1; i++) {
+        oshape[i + idxshape.ndim()] = arrshape[i + 1];
+    }
     out_attrs->push_back(oshape);
     return true;
 }
@@ -150,21 +151,25 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(req[indexing::kOut], kWriteTo);
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
-    CHECK_EQ(inputs[indexing::kData].ndim(), 2)
-        << "Indexing layer expects its array to be two-dimensional. "
+    CHECK_GE(inputs[indexing::kData].ndim(), 2)
+        << "Indexing layer expects its array's size to be at least 2. "
         << inputs[indexing::kData].ndim()
         << " dimensional input is given instead";
 
     const TShape& idxshape = inputs[indexing::kIdx].shape_;
+    const TShape& arrshape = inputs[indexing::kData].shape_;
     const TShape& oshape = outputs[indexing::kOut].shape_;
+
+    int idxndim = idxshape.ndim();
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         Tensor<xpu, 1, DType> idx = inputs[indexing::kIdx].get_with_shape<xpu, 1, DType>(
-            Shape1(idxshape.ProdShape(0, idxshape.ndim())), s);
-        Tensor<xpu, 2, DType> data = inputs[indexing::kData].FlatTo2D<xpu, DType>(s);
+            Shape1(idxshape.ProdShape(0, idxndim)), s);
+        Tensor<xpu, 2, DType> data = inputs[indexing::kData].get_with_shape<xpu, 2, DType>(
+            Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
         Tensor<xpu, 2, DType> out = outputs[indexing::kOut].get_with_shape<xpu, 2, DType>(
-            Shape2(oshape.ProdShape(0, oshape.ndim() - 1), oshape[oshape.ndim() - 1]), s);
+            Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
         out = take(idx, data);
     });
 }
@@ -186,17 +191,21 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
     // the upper layer and the input index
     // outputs are the gradients of inputs in the feed-forward pass
     const TShape& idxshape = inputs[1].shape_;
+    const TShape& arrshape = outputs[1].shape_;
     const TShape& oshape = inputs[0].shape_;
+
+    int idxndim = idxshape.ndim();
 
     // grad_out is the gradient of the outputs in the feed-forward
     // grad_in is the gradient of the inputs in the feed-forward
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         Tensor<xpu, 1, DType> idx = inputs[1].get_with_shape<xpu, 1, DType>(
-            Shape1(idxshape.ProdShape(0, idxshape.ndim())), s);
+            Shape1(idxshape.ProdShape(0, idxndim)), s);
         Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
-            Shape2(oshape.ProdShape(0, oshape.ndim() - 1), oshape[oshape.ndim() - 1]), s);
-        Tensor<xpu, 2, DType> grad_in = outputs[1].get<xpu, 2, DType>(s);
+            Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
+        Tensor<xpu, 2, DType> grad_in = outputs[1].get_with_shape<xpu, 2, DType>(
+            Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
 
         if (req[indexing::kData] == kWriteTo || req[indexing::kData] == kAddTo) {
             if (req[indexing::kData] == kWriteTo) {

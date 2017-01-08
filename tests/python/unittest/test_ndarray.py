@@ -564,23 +564,20 @@ def test_ndarray_lesser_equal():
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
 def test_ndarray_take():
-    data = np.random.normal(size=(10, 5)).astype('float32')
-    idx = np.array([5, 4, 1, 2])
-
-    data_mx = mx.nd.array(data)
-    idx_mx = mx.nd.array(idx)
-
-    assert reldiff(mx.nd.take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
-
-    idx = np.array([5, 5, 4, 5])
-    idx_mx = mx.nd.array(idx)
-
-    assert reldiff(mx.nd.take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
-
-    idx = np.array([[1, 2], [2, 4]])
-    idx_mx = mx.nd.array(idx)
-
-    assert reldiff(mx.nd.take(idx_mx, data_mx).asnumpy(), data[idx]) < 1e-6
+    for data_ndim in range(2, 5):
+        for idx_ndim in range(1, 4):
+            data_shape = ()
+            for _ in range(data_ndim):
+                data_shape += (np.random.randint(low=3, high=6), )
+            data_real = np.random.normal(size=data_shape).astype('float32')
+            idx_shape = ()
+            for _ in range(idx_ndim):
+                idx_shape += (np.random.randint(low=3, high=5), )
+            idx_real = np.random.randint(low=0, high=data_shape[0], size=idx_shape)
+            data_real_mx = mx.nd.array(data_real)
+            idx_real_mx = mx.nd.array(idx_real)
+            result = mx.nd.take(idx_real_mx, data_real_mx)
+            assert reldiff(result.asnumpy(), data_real[idx_real]) < 1e-6
 
 if __name__ == '__main__':
     test_broadcast_binary()
