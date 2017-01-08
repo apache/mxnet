@@ -283,7 +283,7 @@ class RMSE(EvalMetric):
 
 class CrossEntropy(EvalMetric):
     """Calculate Cross Entropy loss"""
-    def __init__(self, eps = 1e-8):
+    def __init__(self, eps=1e-8):
         super(CrossEntropy, self).__init__('cross-entropy')
         self.eps = eps
 
