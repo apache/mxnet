@@ -13,7 +13,7 @@ from .. import optimizer as opt
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import load_checkpoint
-from ..initializer import Uniform
+from ..initializer import Uniform, InitDesc
 
 from .base_module import BaseModule
 from ..io import DataDesc
@@ -258,11 +258,14 @@ class Module(BaseModule):
             else:
                 initializer(name, arr)
 
+        attrs = self._symbol.attr_dict()
         for name, arr in self._arg_params.items():
-            _impl(name, arr, arg_params)
+            desc = InitDesc(name, attrs.get(name, None))
+            _impl(desc, arr, arg_params)
 
         for name, arr in self._aux_params.items():
-            _impl(name, arr, aux_params)
+            desc = InitDesc(name, attrs.get(name, None))
+            _impl(desc, arr, aux_params)
 
         self.params_initialized = True
         self._params_dirty = False
