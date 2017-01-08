@@ -4,14 +4,17 @@
 * \brief ThreadedEngine that uses fix amount of thread for each device.
 */
 #include <dmlc/base.h>
-#include <dmlc/omp.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
-#include <dmlc/concurrency.h>
 #include "./threaded_engine.h"
-#include "./thread_pool.h"
-#include "../common/lazy_alloc_array.h"
 #include "../common/utils.h"
+#include <vector>
+#include <utility>
+#include <thread>
+#include <chrono>
+#include <functional>
+#include <queue>
+#include <atomic>
 
 namespace mxnet {
   namespace engine {
@@ -28,17 +31,24 @@ namespace mxnet {
       ThreadedEngineScale() noexcept(false) : abort(false) {
         int threads = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 16);
         for (int i = 0; i < threads; i++) {
+          Queues.push_back(new std::priority_queue<OprBlock*, std::deque<OprBlock*>, PriorityComparer>());
+          QueueMutex.push_back(new std::mutex());
+        }
+        for (int i = 0; i < threads; i++) {
           std::thread *thread = new std::thread([this] { this->CPUWorker(); });
           auto id = thread->get_id();
           IndexMap[id] = i;
           Threads.push_back(thread);
-          Queues.push_back(new std::priority_queue<OprBlock*, std::deque<OprBlock*>, PriorityComparer>());
-          QueueMutex.push_back(new std::mutex());
         }
       }
       ~ThreadedEngineScale() noexcept(false) {
         abort = true;
-        for (int i = 0; i < Threads.size(); i++) {
+        {
+        std::unique_lock<std::mutex> lk(WaitMutex);
+        WaitCV.notify_all();
+        lk.unlock();
+        }
+        for (size_t i = 0; i < Threads.size(); i++) {
           Threads[i]->join();
           delete Threads[i];
           delete QueueMutex[i];
@@ -49,7 +59,7 @@ namespace mxnet {
     protected:
       void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
         const Context& ctx = opr_block->ctx;
-        if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
+        if (false && opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
           RunContext run_ctx;
           run_ctx.stream = nullptr;
           this->ExecuteOprBlock(run_ctx, opr_block);
@@ -57,13 +67,15 @@ namespace mxnet {
         else {
           int index = IndexFromCurrentThread();
           if (index == -1) {
+            {
             // push to worker[0]
             std::lock_guard<std::mutex> lock(*QueueMutex[0]);
             Queues[0]->push(opr_block);
+            }
             {
               // notify if there is anyone is waiting
               std::unique_lock<std::mutex> lk(WaitMutex);
-              WaitCV.wait(lk);
+              WaitCV.notify_one();
               lk.unlock();
             }
           }
@@ -74,7 +86,7 @@ namespace mxnet {
         }
       }
 
-      int IndexFromCurrentThread() {
+      size_t IndexFromCurrentThread() {
         std::thread::id id = std::this_thread::get_id();
         auto iter = IndexMap.find(id);
         if (iter != IndexMap.end())
@@ -84,12 +96,25 @@ namespace mxnet {
       }
 
       void CPUWorker() {
-        int index = IndexFromCurrentThread();
+        size_t index;
+        do {
+           index = IndexFromCurrentThread();
+        } while(index == (size_t)-1);
+
         auto myQueue = Queues[index];
         RunContext run_ctx;
         run_ctx.stream = nullptr;
         OprBlock* opr_block;
+        bool hasMoreWork;
+        pthread_t thread;
+        cpu_set_t cpuset;
 
+        thread = pthread_self();
+
+        CPU_ZERO(&cpuset);
+        CPU_SET(index, &cpuset);
+
+        pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
         for (;!this->abort;)
         {
           opr_block = nullptr;
@@ -103,34 +128,38 @@ namespace mxnet {
 
               if (!myQueue->empty()) {
                 // since we have more workitem in queues, try to wake up other threads
-                std::lock_guard<std::mutex> lock(WaitMutex);
-                WaitCV.notify_one();
+                hasMoreWork = true;
               }
             }
+          }
 
-            if (opr_block == NULL) {
-              // check if we get one work item
-              for (int i = 0; i < Queues.size(); i++) {
-                if (i == index) continue; // skip self
-                std::lock_guard<std::mutex> lock(*QueueMutex[i]);
-                auto otherQueue = Queues[i];
-                if (!otherQueue->empty()) {
-                  opr_block = otherQueue->top();
-                  otherQueue->pop();
-                  break;
-                }
+          if (hasMoreWork) {
+              hasMoreWork = false;
+              std::lock_guard<std::mutex> lock(WaitMutex);
+              WaitCV.notify_one();
+          }
+          if (opr_block == NULL) {
+            // check if we get one work item
+            for (size_t i = 1; i < Queues.size(); i++) {
+              size_t other = (index + i ) % Queues.size();
+              std::lock_guard<std::mutex> lock(*QueueMutex[other]);
+              auto otherQueue = Queues[other];
+              if (!otherQueue->empty()) {
+                opr_block = otherQueue->top();
+                otherQueue->pop();
+                break;
               }
             }
+          }
 
-            if (opr_block != NULL) {
-              // excute work item otherwise wait
-              this->ExecuteOprBlock(run_ctx, opr_block);
-            }
-            else {
-              std::unique_lock<std::mutex> lock(WaitMutex);
-              WaitCV.wait(lock);
-              lock.unlock();
-            }
+          if (opr_block != NULL) {
+            // excute work item otherwise wait
+            this->ExecuteOprBlock(run_ctx, opr_block);
+          }
+          else {
+            std::unique_lock<std::mutex> lock(WaitMutex);
+            WaitCV.wait(lock);
+            lock.unlock();
           }
         }
       }

@@ -13,7 +13,7 @@ namespace engine {
 inline Engine* CreateEngine() {
   const char *type = getenv("MXNET_ENGINE_TYPE");
   const bool default_engine = (type == nullptr);
-  if (type == nullptr) type = "CreateThreadedEngineScale";
+  if (type == nullptr) type = "ThreadedEnginePerDevice";
   std::string stype = type;
 
   Engine *ret = nullptr;
@@ -24,7 +24,7 @@ inline Engine* CreateEngine() {
     ret = CreateThreadedEnginePooled();
   } else if (stype == "ThreadedEnginePerDevice") {
     ret = CreateThreadedEnginePerDevice();
-  } else if (stype == "CreateThreadedEngineScale") {
+  } else if (stype == "ThreadedEngineScale") {
     ret = CreateThreadedEngineScale();
  }
   #else
