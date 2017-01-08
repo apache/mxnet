@@ -12,7 +12,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeGradNode("_zeros", n, {}, {});
+    return MakeGradNode("_zeros", n, {}, std::unordered_map<std::string, std::string>());
 });
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
@@ -20,7 +20,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeGradNode("_zeros", n, {}, {});
+    return MakeGradNode("_zeros", n, {}, std::unordered_map<std::string, std::string>());
 });
 
 // Legacy support
