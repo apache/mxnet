@@ -478,6 +478,7 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
                       const std::vector<TBlob>& outputs) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
@@ -491,9 +492,23 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
   mshadow::Tensor<xpu, 1, real_t*> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, real_t*>(mshadow::Shape1(3 * out.size(0)), s);
   if (kNullOp != req[0]) {
-    mshadow::BatchGEMM<false, false>(out, mlhs, mrhs, 1.0f,
+    if (param.transpose_a && param.transpose_b) {
+      mshadow::BatchGEMM<true, true>(out, mlhs, mrhs, 1.0f,
                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
                                      workspace);
+    } else if (!param.transpose_a && param.transpose_b) {
+      mshadow::BatchGEMM<false, true>(out, mlhs, mrhs, 1.0f,
+                                     (kAddTo == req[0]) ? 1.0f : 0.0f,
+                                     workspace);
+    } else if (param.transpose_a && !param.transpose_b) {
+      mshadow::BatchGEMM<true, false>(out, mlhs, mrhs, 1.0f,
+                                     (kAddTo == req[0]) ? 1.0f : 0.0f,
+                                     workspace);
+    } else {
+      mshadow::BatchGEMM<false, false>(out, mlhs, mrhs, 1.0f,
+                                     (kAddTo == req[0]) ? 1.0f : 0.0f,
+                                     workspace);
+    }
   }
 }
 
@@ -505,6 +520,7 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& outputs) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_NE(req[1], kWriteInplace);
   CHECK_NE(req[0], kWriteInplace);
 
@@ -518,15 +534,62 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
       mshadow::Shape2(2, 3 * mout_grad.size(0)), s);
   mshadow::Tensor<xpu, 1, real_t*> rhs_workspace = workspace[0];
   mshadow::Tensor<xpu, 1, real_t*> lhs_workspace = workspace[1];
-  if (kNullOp != req[1]) {
-    mshadow::BatchGEMM<true, false>(mrhs_grad, mlhs_data, mout_grad, 1.0f,
-                                    (kAddTo == req[1]) ? 1.0f : 0.0f,
-                                    rhs_workspace);
-  }
-  if (kNullOp != req[0]) {
-    mshadow::BatchGEMM<false, true>(mlhs_grad, mout_grad, mrhs_data, 1.0f,
-                                    (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                    lhs_workspace);
+  if (param.transpose_a && param.transpose_b) {
+    // Gradient of z = dot(x.T, y.T)
+    // dy = dot(x, dz).T = dot(dz.T, x.T)
+    // dx = dot(dz, y).T = dot(y.T, dz.T)
+    if (kNullOp != req[1]) {
+      mshadow::BatchGEMM<true, true>(mrhs_grad, mout_grad, mlhs_data, 1.0f,
+                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
+                                      rhs_workspace);
+    }
+    if (kNullOp != req[0]) {
+      mshadow::BatchGEMM<true, true>(mlhs_grad, mrhs_data, mout_grad, 1.0f,
+                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
+                                      lhs_workspace);
+    }
+  } else if (!param.transpose_a && param.transpose_b) {
+    // Gradient of z = dot(x, y.T)
+    // dy = dot(x.T, dz).T = dot(dz.T, x)
+    // dx = dot(dz, y)
+    if (kNullOp != req[1]) {
+      mshadow::BatchGEMM<true, false>(mrhs_grad, mout_grad, mlhs_data, 1.0f,
+                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
+                                      rhs_workspace);
+    }
+    if (kNullOp != req[0]) {
+      mshadow::BatchGEMM<false, false>(mlhs_grad, mout_grad, mrhs_data, 1.0f,
+                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
+                                      lhs_workspace);
+    }
+  } else if (param.transpose_a && !param.transpose_b) {
+    // Gradient of z = dot(x.T, y)
+    // dy = dot(x, dz)
+    // dx = dot(dz, y.T).T = dot(y, dz.T)
+    if (kNullOp != req[1]) {
+      mshadow::BatchGEMM<false, false>(mrhs_grad, mlhs_data, mout_grad, 1.0f,
+                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
+                                      rhs_workspace);
+    }
+    if (kNullOp != req[0]) {
+      mshadow::BatchGEMM<false, true>(mlhs_grad, mrhs_data, mout_grad, 1.0f,
+                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
+                                      lhs_workspace);
+    }
+  } else {
+    // Gradient of z = dot(x, y)
+    // dy = dot(x.T, dz)
+    // dx = dot(dz, y.T)
+    if (kNullOp != req[1]) {
+      mshadow::BatchGEMM<true, false>(mrhs_grad, mlhs_data, mout_grad, 1.0f,
+                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
+                                      rhs_workspace);
+    }
+    if (kNullOp != req[0]) {
+      mshadow::BatchGEMM<false, true>(mlhs_grad, mout_grad, mrhs_data, 1.0f,
+                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
+                                      lhs_workspace);
+    }
   }
 }
 
@@ -535,12 +598,21 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
+  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 3 && rshape.ndim() == 3) {
-    CHECK(lshape[0] == rshape[0] && lshape[2] == rshape[1])
-      << "batch_dot shape error: " << lshape << " X " << rshape;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape3(lshape[0], lshape[1], rshape[2]));
+    CHECK(lshape[0] == rshape[0])
+      << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape
+      << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
+    index_t out_m = param.transpose_a ? lshape[2] : lshape[1];
+    index_t lshape_k = param.transpose_a ? lshape[1] : lshape[2];
+    index_t out_n = param.transpose_b ? rshape[1] : rshape[2];
+    index_t rshape_k = param.transpose_b ? rshape[2] : rshape[1];
+    CHECK(lshape_k == rshape_k)
+      << "batch_dot shape error(shape mismatch): " << lshape << " X " << rshape
+      << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape3(lshape[0], out_m, out_n));
   } else {
     LOG(FATAL) << "batch_dot currently only support 3D*3D array"
                << lshape << " v.s. " << rshape;
