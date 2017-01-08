@@ -48,6 +48,10 @@ class Symbol(SymbolBase):
         return '<%s %s>' % (self.__class__.__name__,
                             'Grouped' if name is None else name)
 
+    def __iter__(self):
+        """Return all outputs in a list"""
+        return (self[i] for i in self.list_outputs())
+
     def __add__(self, other):
         if isinstance(other, Symbol):
             return _internal._Plus(self, other)
