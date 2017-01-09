@@ -1,5 +1,6 @@
 import os
-os.environ["MXNET_CPU_WORKER_NTHREADS"] = "4"
+# uncomment to set the number of worker threads.
+# os.environ["MXNET_CPU_WORKER_NTHREADS"] = "4"
 import time
 import mxnet as mx
 import numpy as np
@@ -23,5 +24,5 @@ def run_imageiter(path_rec, n, batch_size = 32):
 if __name__ == '__main__':
     mx.profiler.profiler_set_config(mode='all', filename='profile_imageiter.json')
     mx.profiler.profiler_set_state('run')
-    run_imageiter('test.rec', 20)
+    run_imageiter('test.rec', 20)  # See http://mxnet.io/tutorials/python/image_io.html for how to create .rec files.
     mx.profiler.profiler_set_state('stop')
