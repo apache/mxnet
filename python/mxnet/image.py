@@ -412,8 +412,8 @@ class ImageIter(io.DataIter):
     def next(self):
         batch_size = self.batch_size
         c, h, w = self.data_shape
-        batch_data = nd.zeros((batch_size, h, w, c))
-        batch_label = nd.zeros(self.provide_label[0][1])
+        batch_data = nd.empty((batch_size, c, h, w))
+        batch_label = nd.empty(self.provide_label[0][1])
         i = 0
         try:
             while i < batch_size:
@@ -426,12 +426,11 @@ class ImageIter(io.DataIter):
                     data = [ret for src in data for ret in aug(src)]
                 for d in data:
                     assert i < batch_size, 'Batch size must be multiples of augmenter output length'
-                    batch_data[i][:] = d
+                    batch_data[i][:] = nd.transpose(d, axes=(2, 0, 1))
                     batch_label[i][:] = label
                     i += 1
         except StopIteration:
             if not i:
                 raise StopIteration
 
-        batch_data = nd.transpose(batch_data, axes=(0, 3, 1, 2))
         return io.DataBatch([batch_data], [batch_label], batch_size-1-i)
