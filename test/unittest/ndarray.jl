@@ -7,8 +7,9 @@ using ..Main: rand_dims, reldiff
 ################################################################################
 # Test Implementations
 ################################################################################
-function rand_tensors{N}(dims::NTuple{N, Int})
-  tensor = rand(mx.MX_float, dims)
+rand_tensors{N}(dims::NTuple{N, Int}) = rand_tensors(mx.MX_float, dims)
+function rand_tensors{N, T}(::Type{T}, dims::NTuple{N, Int})
+  tensor = rand(T, dims)
   array  = copy(tensor, mx.cpu())
   return (tensor, array)
 end
@@ -80,53 +81,99 @@ function test_plus()
   t1, a1 = rand_tensors(dims)
   t2, a2 = rand_tensors(dims)
   t3, a3 = rand_tensors(dims)
+  thresh = 1e-6
 
   info("NDArray::plus::dims = $dims")
 
-  @test reldiff(t1+t2, copy(a1+a2)) < 1e-6
-  @test reldiff(t1.+t2, copy(a1.+a2)) < 1e-6
+  @test reldiff(t1+t2, copy(a1+a2)) < thresh
+  @test reldiff(t1.+t2, copy(a1.+a2)) < thresh
 
-  @test reldiff(t1+t2+t3, copy(a1+a2+a3)) < 1e-6
+  @test reldiff(t1+t2+t3, copy(a1+a2+a3)) < thresh
 
   # test inplace += operation
   a0 = a1               # keep a reference to a1
   @mx.inplace a1 += a2  # perform inplace +=
   @test a0 == a1        # make sure they are still the same object
-  @test reldiff(copy(a0), copy(a1)) < 1e-6
-  @test reldiff(copy(a1), t1+t2) < 1e-6
+  @test reldiff(copy(a0), copy(a1)) < thresh
+  @test reldiff(copy(a1), t1+t2) < thresh
 
   # test scalar
   scalar = rand()
-  @test reldiff(t3 + scalar, copy(a3 + scalar)) < 1e-6
-  @test reldiff(t2+scalar+t3, copy(a2+scalar+a3)) < 1e-6
+  @test reldiff(t3 + scalar, copy(a3 + scalar)) < thresh
+  @test reldiff(t2+scalar+t3, copy(a2+scalar+a3)) < thresh
+
+  # test small and large scalar
+  t4 = zeros(Float32, dims)
+  a4 = copy(t4, mx.cpu())
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t4 + scalar_small, copy(a4 .+ scalar_small)) < thresh
+  @test reldiff(t4 + scalar_large, copy(a4 .+ scalar_large)) < thresh
+  
+  t5 = zeros(Float64, dims)
+  a5 = copy(t5, mx.cpu())
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t5 + scalar_small, copy(a5 .+ scalar_small)) < thresh
+  @test reldiff(t5 + scalar_large, copy(a5 .+ scalar_large)) < thresh
+
+  t6 = zeros(Float16, dims)
+  a6 = copy(t6, mx.cpu())
+  scalar_small = Float16(1e-5)
+  scalar_large = Float16(1e4)
+  @test reldiff(t6 + scalar_small, copy(a6 .+ scalar_small)) < 1e-2
+  @test reldiff(t6 + scalar_large, copy(a6 .+ scalar_large)) < 1e-2
 end
 
 function test_minus()
   dims   = rand_dims()
   t1, a1 = rand_tensors(dims)
   t2, a2 = rand_tensors(dims)
+  thresh = 1e-6
 
   info("NDArray::minus::dims = $dims")
 
-  @test reldiff(t1-t2, copy(a1-a2)) < 1e-6
-  @test reldiff(t1.-t2, copy(a1.-a2)) < 1e-6
+  @test reldiff(t1-t2, copy(a1-a2)) < thresh
+  @test reldiff(t1.-t2, copy(a1.-a2)) < thresh
 
-  @test reldiff(-t1, copy(-a1)) < 1e-6
+  @test reldiff(-t1, copy(-a1)) < thresh
 
   # make sure the negation is not in-place, so a1 is not changed after previous
   # statement is executed
-  @test reldiff(t1, copy(a1)) < 1e-6
+  @test reldiff(t1, copy(a1)) < thresh
 
   # test inplace -= operation
   a0 = a1              # keep a reference to a1
   @mx.inplace a1 -= a2 # perform inplace -=
   @test a0 == a1       # make sure they are still the same object
-  @test reldiff(copy(a0), copy(a1)) < 1e-6
-  @test reldiff(copy(a1), t1-t2) < 1e-6
+  @test reldiff(copy(a0), copy(a1)) < thresh
+  @test reldiff(copy(a1), t1-t2) < thresh
 
   # test scalar
   scalar = rand()
-  @test reldiff(t2 - scalar, copy(a2 - scalar)) < 1e-6
+  @test reldiff(t2 - scalar, copy(a2 - scalar)) < thresh
+
+  # test small and large scalar
+  t4 = zeros(Float32, dims)
+  a4 = copy(t4, mx.cpu())
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t4 - scalar_small, copy(a4 .- scalar_small)) < thresh
+  @test reldiff(t4 - scalar_large, copy(a4 .- scalar_large)) < thresh
+  
+  t5 = zeros(Float64, dims)
+  a5 = copy(t5, mx.cpu())
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t5 - scalar_small, copy(a5 .- scalar_small)) < thresh
+  @test reldiff(t5 - scalar_large, copy(a5 .- scalar_large)) < thresh
+
+  t6 = zeros(Float16, dims)
+  a6 = copy(t6, mx.cpu())
+  scalar_small = Float16(1e-5)
+  scalar_large = Float16(1e4)
+  @test reldiff(t6 - scalar_small, copy(a6 .- scalar_small)) < 1e-2
+  @test reldiff(t6 - scalar_large, copy(a6 .- scalar_large)) < 1e-2
 end
 
 function test_mul()
@@ -134,44 +181,80 @@ function test_mul()
   t1, a1 = rand_tensors(dims)
   t2, a2 = rand_tensors(dims)
   t3, a3 = rand_tensors(dims)
+  thresh = 1e-6
 
   info("NDArray::mul::dims = $dims")
 
-  @test reldiff(t1.*t2, copy(a1.*a2)) < 1e-6
+  @test reldiff(t1.*t2, copy(a1.*a2)) < thresh
 
   # test inplace .*= operation
   a0 = a1               # keep a reference to a1
   @mx.inplace a1 .*= a2 # perform inplace .*=
   @test a0 == a1        # make sure they are still the same object
-  @test reldiff(copy(a0), copy(a1)) < 1e-6
-  @test reldiff(copy(a1), t1.*t2) < 1e-6
+  @test reldiff(copy(a0), copy(a1)) < thresh
+  @test reldiff(copy(a1), t1.*t2) < thresh
 
   # test scalar
-  scalar = rand()
-  @test reldiff(t3 * scalar, copy(a3 .* scalar)) < 1e-6
+  scalar = mx.MX_float(rand())
+  @test reldiff(t3 * scalar, copy(a3 .* scalar)) < thresh
+
+  # test small and large scalar
+  t4, a4 = rand_tensors(Float32, dims)
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t4 * scalar_small, copy(a4 .* scalar_small)) < thresh
+  @test reldiff(t4 * scalar_large, copy(a4 .* scalar_large)) < thresh
+  
+  t5, a5 = rand_tensors(Float64, dims)
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t5 * scalar_small, copy(a5 .* scalar_small)) < thresh
+  @test reldiff(t5 * scalar_large, copy(a5 .* scalar_large)) < thresh
+
+  t6, a6 = rand_tensors(Float16, dims)
+  scalar_small = Float16(1e-5)
+  @test reldiff(t6 * scalar_small, copy(a6 .* scalar_small)) < 1e-2
 end
 
 function test_div()
   dims   = rand_dims()
   t1, a1 = rand_tensors(dims)
   t2, a2 = rand_tensors(dims)
+  thresh = 1e-6
 
   info("NDArray::div::dims = $dims")
   t2             .+= 2  # avoid numerical instability
   @mx.inplace a2 .+= 2
 
-  @test reldiff(t1 ./ t2, copy(a1 ./ a2)) < 1e-6
+  @test reldiff(t1 ./ t2, copy(a1 ./ a2)) < thresh
 
   # test inplace -= operation
   a0 = a1                # keep a reference to a2
   @mx.inplace a1 ./= a2  # perform inplace ./=
   @test a0 == a1         # make sure they are still the same object
-  @test reldiff(copy(a0), copy(a1)) < 1e-6
-  @test reldiff(copy(a1), t1 ./ t2) < 1e-6
+  @test reldiff(copy(a0), copy(a1)) < thresh
+  @test reldiff(copy(a1), t1 ./ t2) < thresh
 
   # test scalar
   scalar = rand() + 2
-  @test reldiff(t2./scalar, copy(a2./scalar)) < 1e-6
+  @test reldiff(t2./scalar, copy(a2./scalar)) < thresh
+
+  # test small and large scalar
+  t4, a4 = rand_tensors(Float32, dims)
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t4 / scalar_small, copy(a4 ./ scalar_small)) < thresh
+  @test reldiff(t4 / scalar_large, copy(a4 ./ scalar_large)) < thresh
+  
+  t5, a5 = rand_tensors(Float64, dims)
+  scalar_small = 1e-8
+  scalar_large = 1e8
+  @test reldiff(t5 / scalar_small, copy(a5 ./ scalar_small)) < thresh
+  @test reldiff(t5 / scalar_large, copy(a5 ./ scalar_large)) < thresh
+
+  t6, a6 = rand_tensors(Float16, dims)
+  scalar_large = 1e4
+  @test reldiff(t6 / scalar_large, copy(a6 ./ scalar_large)) < 1e-2
 end
 
 function test_gd()
