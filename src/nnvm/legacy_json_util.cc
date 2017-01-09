@@ -135,7 +135,8 @@ Graph UpgradeJSON_000800_000900(Graph g) {
 // Refactor initializer in v0.9.2
 Graph UpgradeJSON_000901_000902(Graph g) {
   nnvm::DFSVisit(g.outputs, [](const std::shared_ptr<Node>& n) {
-      static auto& fset_attrs = Op::GetAttr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose");
+      static auto& fset_attrs =
+        Op::GetAttr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose");
 
       if (n->op() != nullptr) {
         nnvm::FSetInputVarAttrOnCompose fn = fset_attrs.get(n->op(), nullptr);
