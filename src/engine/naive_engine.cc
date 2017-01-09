@@ -88,12 +88,11 @@ class NaiveEngine final : public Engine {
           strncpy(opr->opr_stat->opr_name,
             opr->opr_name,
             sizeof(opr->opr_stat->opr_name) - 1);
-          CallbackOnComplete callback = CreateCallback(NaiveEngine::OnComplete, opr);
-          // record operator start timestamp
           SetOprStart(opr->opr_stat);
-          opr->fn(ctx, callback);
-        } else {
-          opr->fn(ctx, on_complete);
+        }
+        opr->fn(ctx, on_complete);
+        if (opr->profiling) {
+          SetOprEnd(opr->opr_stat);
         }
 #else
         opr->fn(ctx, on_complete);
@@ -118,24 +117,23 @@ class NaiveEngine final : public Engine {
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;
 #if MXNET_USE_PROFILER
-      Profiler *profiler = Profiler::Get();
-      bool profiling = (profiler->GetState() == Profiler::kRunning) &&
-                       (profiler->GetMode() == Profiler::kAllOperator) &&
-                       opr_name;
-      if (profiling) {
-        NaiveOpr *opr = NewOperator(exec_fun, const_vars, mutable_vars,
-                                    prop, opr_name)->Cast<NaiveOpr>();
-        opr->profiling = profiling;
-        opr->opr_stat = Profiler::Get()->AddOprStat(exec_ctx.dev_type, exec_ctx.dev_id);
-        uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
-        opr->opr_stat->thread_id = id;
-        strncpy(opr->opr_stat->opr_name,
-                opr->opr_name,
-                sizeof(opr->opr_stat->opr_name) - 1);
-        callback = CreateCallback(NaiveEngine::OnComplete, opr);
-        // record operator start timestamp
-        SetOprStart(opr->opr_stat);
-      }
+    Profiler *profiler = Profiler::Get();
+    NaiveOpr *opr = nullptr;
+    bool profiling = (profiler->GetState() == Profiler::kRunning) &&
+                   (profiler->GetMode() == Profiler::kAllOperator) &&
+                   opr_name;
+    if (profiling) {
+      opr = NewOperator(exec_fun, const_vars, mutable_vars,
+                        prop, opr_name)->Cast<NaiveOpr>();
+      opr->profiling = profiling;
+      opr->opr_stat = Profiler::Get()->AddOprStat(exec_ctx.dev_type, exec_ctx.dev_id);
+      uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
+      opr->opr_stat->thread_id = id;
+      strncpy(opr->opr_stat->opr_name,
+              opr->opr_name,
+              sizeof(opr->opr_stat->opr_name) - 1);
+      SetOprStart(opr->opr_stat);
+    }
 #endif
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
@@ -158,6 +156,11 @@ class NaiveEngine final : public Engine {
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
+#if MXNET_USE_PROFILER
+    if (profiling) {
+      SetOprEnd(opr->opr_stat);
+    }
+#endif
   }
 
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
@@ -179,15 +182,6 @@ class NaiveEngine final : public Engine {
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param) {
     static_cast<NaiveEngine*>(engine)->req_completed_ = true;
-#if MXNET_USE_PROFILER
-    if (param != nullptr) {
-      NaiveOpr *opr = static_cast<NaiveOpr*>(param);
-      if (opr->profiling && opr->opr_name) {
-        // record operator end timestamp
-        SetOprEnd(opr->opr_stat);
-      }
-    }
-#endif
   }
   // runtime contetxt
   RunContext ctx_;
