@@ -101,10 +101,8 @@ You can load the model checkpoint later using ```Model.loadCheckpoint(modelPrefi
 Set ```ctx``` to the list of devices that you want to train on. You can create list of devices in any way you want.
 
 ```scala
-    val devices =
-        if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
-        else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
-        else Array(Context.cpu(0))
+    val devices = Array(Context.gpu(0), Context.gpu(1))
+
     val model = new FeedForward(ctx = devices,
              symbol = network,
              numEpoch = numEpochs,
