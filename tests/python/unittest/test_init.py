@@ -7,7 +7,7 @@ def test_default_init():
     mod = mx.mod.Module(sym)
     mod.bind(data_shapes=[('data', (10,10))])
     mod.init_params()
-    assert (mod.get_params()[0].values()[0].asnumpy() == 0.25).all()
+    assert (list(mod.get_params()[0].values())[0].asnumpy() == 0.25).all()
 
 def test_variable_init():
     data = mx.sym.Variable('data')
@@ -16,7 +16,7 @@ def test_variable_init():
     mod = mx.mod.Module(sym)
     mod.bind(data_shapes=[('data', (10,10))])
     mod.init_params()
-    assert (mod.get_params()[0].values()[0].asnumpy() == 1).all()
+    assert (list(mod.get_params()[0].values())[0].asnumpy() == 1).all()
 
 def test_aux_init():
     data = mx.sym.Variable('data')
