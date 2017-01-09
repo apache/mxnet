@@ -32,7 +32,7 @@ MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // pass back zero gradient
-    return MakeGradNode("_zeros", n, {}, {});
+    return MakeGradNode("_zeros", n, {}, std::unordered_map<std::string, std::string>());
 });
 
 // identity output as first input, but attributes are constrainted to be like rhs

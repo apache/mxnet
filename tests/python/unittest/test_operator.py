@@ -1442,28 +1442,40 @@ def test_dot(ctx=default_context()):
     check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T])
     check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T])
 
-def test_batch_dot(ctx=default_context()):
+def test_batch_dot():
     for batch_size in range(1, 5):
         for m in range(1, 5):
             for k in range(1, 5):
                 for n in range(1, 5):
+                    transpose_a = (np.random.rand() > 0.5)
+                    transpose_b = (np.random.rand() > 0.5)
                     a_npy = np.random.normal(0, 1, (batch_size, m, k))
                     b_npy = np.random.normal(0, 1, (batch_size, k, n))
                     c_npy = np.empty((batch_size, m, n))
                     ograd_npy = np.random.normal(0, 1, (batch_size, m, n))
                     agrad_npy = np.empty((batch_size, m, k))
                     bgrad_npy = np.empty((batch_size, k, n))
+                    a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
+                    b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
                     for i in range(batch_size):
                         c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
                         bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
                         agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
                     a = mx.sym.Variable('a')
                     b = mx.sym.Variable('b')
-                    c = mx.sym.batch_dot(a, b)
-                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape, grad_req='write')
-                    exe_add = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape, grad_req='add')
-                    a_init_grad_npy = np.random.normal(size=(batch_size, m, k))
-                    b_init_grad_npy = np.random.normal(size=(batch_size, k, n))
+                    c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
+                    if transpose_a:
+                        a_npy = np.transpose(a_npy, axes=(0, 2, 1))
+                        agrad_npy = np.transpose(agrad_npy, axes=(0, 2, 1))
+                        a_init_grad_npy = np.transpose(a_init_grad_npy, axes=(0, 2, 1))
+                    if transpose_b:
+                        b_npy = np.transpose(b_npy, axes=(0, 2, 1))
+                        bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
+                        b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
+                    exe = c.simple_bind(ctx=default_context(),
+                                        a=a_npy.shape, b=b_npy.shape, grad_req='write')
+                    exe_add = c.simple_bind(ctx=default_context(),
+                                            a=a_npy.shape, b=b_npy.shape, grad_req='add')
                     exe_add.grad_dict['a'][:] = a_init_grad_npy
                     exe_add.grad_dict['b'][:] = b_init_grad_npy
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
@@ -2256,6 +2268,40 @@ def test_blockgrad():
     assert_almost_equal(exe.outputs[0].asnumpy(), a_npy)
     exe.backward()  # No error if BlockGrad works
 
+def test_take():
+    def check_output_n_grad(data_shape, idx_shape):
+        exe = result.simple_bind(default_context(), data=data_shape, 
+                                 idx=idx_shape)
+        data_real = np.random.normal(size=data_shape).astype('float32')
+        idx_real = np.random.randint(low=0, high=data_shape[0], size=idx_shape)
+        grad_out = np.ones(idx_shape + data_shape[1:], dtype='float32')
+        grad_in = np.zeros(data_shape, dtype='float32')
+
+        exe.arg_dict['data'][:] = mx.nd.array(data_real)
+        exe.arg_dict['idx'][:] = mx.nd.array(idx_real)
+        exe.forward()
+        assert reldiff(exe.outputs[0].asnumpy(), data_real[idx_real]) < 1e-6
+
+        for i in np.nditer(idx_real):
+            grad_in[i] += 1.0
+
+        exe.backward([mx.nd.array(grad_out)])
+        assert reldiff(exe.grad_dict['data'].asnumpy(), grad_in) < 1e-6
+
+    data = mx.sym.Variable('data')
+    idx = mx.sym.Variable('idx')
+    idx = mx.sym.BlockGrad(idx)
+    result = mx.sym.take(idx=idx, data=data)
+
+    for data_ndim in range(2, 5):
+        for idx_ndim in range(1, 4):
+            data_shape = ()
+            for _ in range(data_ndim):
+                data_shape += (np.random.randint(low=3, high=6), )
+            idx_shape = ()
+            for _ in range(idx_ndim):
+                idx_shape += (np.random.randint(low=3, high=5), ) 
+            check_output_n_grad(data_shape, idx_shape)
 
 if __name__ == '__main__':
     test_init()
@@ -2307,3 +2353,4 @@ if __name__ == '__main__':
     test_special_functions_using_scipy()
     test_order()
     test_blockgrad()
+    test_take()
