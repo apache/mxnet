@@ -637,7 +637,11 @@ bool NDArray::Load(dmlc::Stream *strm) {
   if (ctx.dev_mask() == cpu::kDevMask) {
     *this = std::move(temp); return true;
   } else {
+#if MXNET_USE_CUDA
     *this = temp.Copy(ctx); return true;
+#else
+    *this = std::move(temp); return true;
+#endif
   }
 }
 
