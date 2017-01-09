@@ -76,7 +76,7 @@ class UpSamplingNearestOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), param_.num_args);
+    CHECK_EQ(in_data.size(), static_cast<size_t>(param_.num_args));
     CHECK_EQ(out_data.size(), 1);
     if (req[up_enum::kOut] == kNullOp) {
       return;
@@ -116,7 +116,7 @@ class UpSamplingNearestOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_grad.size(), param_.num_args);
+    CHECK_EQ(in_grad.size(), static_cast<size_t>(param_.num_args));
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> grad = out_grad[up_enum::kOut].get<xpu, 4, DType>(s);
     if (param_.num_args > 1) {
@@ -204,7 +204,7 @@ class UpSamplingProp : public OperatorProperty {
         int oh = dshape[2]*param_.scale, ow = dshape[3]*param_.scale;
         CHECK_EQ(oh%shape[2], 0) << "UpSamplingNearest: input height of " << shape[2] << \
           "does not divide output height of " << oh;
-        CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input weight of " << shape[3] << \
+        CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input width of " << shape[3] << \
           "does not divide output width of " << ow;
         if (param_.multi_input_mode == up_enum::kSum) {
           CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
@@ -316,4 +316,3 @@ class UpSamplingProp : public OperatorProperty {
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_UPSAMPLING_INL_H_
-

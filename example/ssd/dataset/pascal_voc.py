@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import numpy as np
 from imdb import Imdb
@@ -129,7 +130,7 @@ class PascalVoc(Imdb):
         full path of annotation file
         """
         label_file = os.path.join(self.data_path, 'Annotations', index + '.xml')
-        assert os.path.exists(label_file), 'Path does not exist: {}'.format(image_file)
+        assert os.path.exists(label_file), 'Path does not exist: {}'.format(label_file)
         return label_file
 
     def _load_image_labels(self):
@@ -235,7 +236,7 @@ class PascalVoc(Imdb):
         None
         """
         for cls_ind, cls in enumerate(self.classes):
-            print 'Writing {} VOC results file'.format(cls)
+            print('Writing {} VOC results file'.format(cls))
             filename = self.get_result_file_template().format(cls)
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_set_index):
@@ -265,7 +266,7 @@ class PascalVoc(Imdb):
         aps = []
         # The PASCAL VOC metric changed in 2010
         use_07_metric = True if int(self.year) < 2010 else False
-        print 'VOC07 metric? ' + ('Y' if use_07_metric else 'No')
+        print('VOC07 metric? ' + ('Y' if use_07_metric else 'No'))
         for cls_ind, cls in enumerate(self.classes):
             filename = self.get_result_file_template().format(cls)
             rec, prec, ap = voc_eval(filename, annopath, imageset_file, cls, cache_dir,

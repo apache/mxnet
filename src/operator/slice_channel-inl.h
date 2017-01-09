@@ -157,7 +157,7 @@ class SliceChannelProp : public OperatorProperty {
     TShape dshape = in_shape->at(slice_enum::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.axis >= 0) {
-      CHECK_LT(param_.axis, dshape.ndim());
+      CHECK_LT(static_cast<size_t>(param_.axis), dshape.ndim());
     } else {
       CHECK_LT(param_.axis + dshape.ndim(), dshape.ndim());
     }

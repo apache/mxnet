@@ -6,21 +6,33 @@
 #ifndef MXNET_C_API_H_
 #define MXNET_C_API_H_
 
+/*! \brief Inhibit C++ name-mangling for MXNet functions. */
 #ifdef __cplusplus
-#define MXNET_EXTERN_C extern "C"
-#endif
+extern "C" {
+#endif  // __cplusplus
+
+/*! \brief Keep the default value in C++ */
+#ifdef __cplusplus
+#define DEFAULT(x) = x
+#else
+#define DEFAULT(x)
+#endif  // __cplusplus
 
 #include <stdint.h>
+
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 
 /*! \brief MXNET_DLL prefix for windows */
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
+#define MXNET_DLL __declspec(dllexport)
 #else
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllimport)
+#define MXNET_DLL __declspec(dllimport)
 #endif
 #else
-#define MXNET_DLL MXNET_EXTERN_C
+#define MXNET_DLL
 #endif
 
 /*! \brief manually define unsigned int */
@@ -52,16 +64,11 @@ typedef void *KVStoreHandle;
 typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
-/*! \brief handle to a function that takes param and creates optimizer*/
-typedef void *OptimizerCreator;
-/*! \brief handle to Optimizer*/
-typedef void *OptimizerHandle;
 
-MXNET_EXTERN_C typedef void (*ExecutorMonitorCallback)(const char*,
-                                                       NDArrayHandle,
-                                                       void *);
+typedef void (*ExecutorMonitorCallback)(const char*,
+                                        NDArrayHandle,
+                                        void *);
 
-MXNET_EXTERN_C {
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
   void (*backward)(int, float**, int*, unsigned**, int*, void*);
@@ -115,7 +122,7 @@ struct CustomOpPropInfo {
                                       int** /*rdeps*/, void* /*state*/);
   bool (*create_operator)(const char* /*ctx*/, int /*num_inputs*/, unsigned** /*shapes*/,
                           int* /*ndims*/, int* /*dtypes*/,
-                          CustomOpInfo* /*ret*/, void* /*state*/);
+                          struct CustomOpInfo* /*ret*/, void* /*state*/);
   bool (*list_auxiliary_states)(char*** /*aux*/, void* /*state*/);
   bool (*del)(void* /*state*/);
   // all functions also pass a payload void* pointer
@@ -130,8 +137,8 @@ struct CustomOpPropInfo {
 
 typedef bool (*CustomOpPropCreator)(const char* /*op_type*/, const int /*num_kwargs*/,
                                     const char** /*keys*/, const char** /*values*/,
-                                    CustomOpPropInfo* /*ret*/);
-}
+                                    struct CustomOpPropInfo* /*ret*/);
+
 /*!
  * \brief return str message of the last error
  *  all function in this file will return 0 when success
@@ -160,6 +167,24 @@ MXNET_DLL int MXRandomSeed(int seed);
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXNotifyShutdown();
+/*!
+ * \brief Set up configuration of profiler
+ * \param mode indicate the working mode of profiler,
+ *  record anly symbolic operator when mode == 0,
+ *  record all operator when mode == 1
+ * \param filename where to save trace file
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
+/*!
+ * \brief Set up state of profiler
+ * \param state indicate the working state of profiler,
+ *  profiler not running when state == 0,
+ *  profiler running when state == 1
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerState(int state);
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
@@ -418,7 +443,7 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
                             const char ***arg_names,
                             const char ***arg_type_infos,
                             const char ***arg_descriptions,
-                            const char **return_type = NULL);
+                            const char **return_type DEFAULT(NULL));
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
@@ -468,9 +493,38 @@ MXNET_DLL int MXFuncInvokeEx(FunctionHandle fun,
                              int num_params,
                              char **param_keys,
                              char **param_vals);
+/*!
+ * \brief invoke a nnvm op and imperative function
+ * \param creator the op
+ * \param num_inputs number of input NDArrays
+ * \param inputs input NDArrays
+ * \param num_outputs number of output NDArrays
+ * \param outputs output NDArrays
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
+                                 int num_inputs,
+                                 NDArrayHandle *inputs,
+                                 int *num_outputs,
+                                 NDArrayHandle **outputs,
+                                 int num_params,
+                                 const char **param_keys,
+                                 const char **param_vals);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
+/*!
+ * \brief list all the available operator names, include entries.
+ * \param out_size the size of returned array
+ * \param out_array the output operator name array.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListAllOpNames(mx_uint *out_size,
+                               const char ***out_array);
 /*!
  * \brief list all the available AtomicSymbolEntry
  * \param out_size the size of returned array
@@ -512,7 +566,7 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions,
                                           const char **key_var_num_args,
-                                          const char **return_type = NULL);
+                                          const char **return_type DEFAULT(NULL));
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
@@ -859,7 +913,7 @@ MXNET_DLL int MXExecutorPrint(ExecutorHandle handle, const char **out_str);
  * \brief Executor forward method
  *
  * \param handle executor handle
- * \param is_train bool value to indicate whether the forward pass is for evaluation
+ * \param is_train int value to indicate whether the forward pass is for evaluation
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXExecutorForward(ExecutorHandle handle, int is_train);
@@ -1304,7 +1358,7 @@ MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
 MXNET_DLL int MXKVStoreGetNumDeadNode(KVStoreHandle handle,
                                       const int node_id,
                                       int *number,
-                                      const int timeout_sec = 60);
+                                      const int timeout_sec DEFAULT(60));
 
 /**
  * \brief Create a RecordIO writer object
@@ -1328,7 +1382,7 @@ MXNET_DLL int MXRecordIOWriterFree(RecordIOHandle handle);
  * \param size size of buffer
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
+MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle handle,
                                           const char *buf, size_t size);
 
 /**
@@ -1337,7 +1391,7 @@ MXNET_DLL int MXRecordIOWriterWriteRecord(RecordIOHandle *handle,
  * \param pos handle to output position
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle *handle, size_t *pos);
+MXNET_DLL int MXRecordIOWriterTell(RecordIOHandle handle, size_t *pos);
 
 /**
  * \brief Create a RecordIO reader object
@@ -1352,7 +1406,7 @@ MXNET_DLL int MXRecordIOReaderCreate(const char *uri, RecordIOHandle *out);
  * \param handle handle to RecordIO object
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
+MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle handle);
 
 /**
  * \brief Write a record to a RecordIO object
@@ -1361,7 +1415,7 @@ MXNET_DLL int MXRecordIOReaderFree(RecordIOHandle *handle);
  * \param size point to size of buffer
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
+MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle handle,
                                         char const **buf, size_t *size);
 
 /**
@@ -1370,7 +1424,7 @@ MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle *handle,
  * \param pos target position
  * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle *handle, size_t pos);
+MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos);
 
 /**
  * \brief Create a MXRtc object
@@ -1397,24 +1451,10 @@ MXNET_DLL int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
 */
 MXNET_DLL int MXRtcFree(RtcHandle handle);
 
-MXNET_DLL int MXOptimizerFindCreator(const char *key,
-                                     OptimizerCreator *out);
-
-MXNET_DLL int MXOptimizerCreateOptimizer(OptimizerCreator creator,
-                                         mx_uint num_param,
-                                         const char **keys,
-                                         const char **vals,
-                                         OptimizerHandle *out);
-
-MXNET_DLL int MXOptimizerFree(OptimizerHandle handle);
-
-MXNET_DLL int MXOptimizerUpdate(OptimizerHandle handle,
-                                int index,
-                                NDArrayHandle weight,
-                                NDArrayHandle grad,
-                                mx_float lr,
-                                mx_float wd);
-
 MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
+
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
 
 #endif  // MXNET_C_API_H_

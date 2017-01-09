@@ -32,6 +32,7 @@
 
 
 extern int getMKLBuildDate();
+extern bool enableMKLWarnGenerated();
 
 
 template <typename Dtype> inline dnnError_t dnnLayoutCreate(
@@ -818,75 +819,60 @@ template <> inline dnnError_t dnnSumCreate<double>(
                layout, coefficients);
 }
 
-template <typename Dtype> inline dnnError_t dnnBatchNormalizationCreateForward(
+template <typename Dtype> inline dnnError_t dnnBatchNormalizationCreateForward_v2(
     dnnPrimitive_t* pBatchNormalization,
     dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps);
-template <> inline dnnError_t dnnBatchNormalizationCreateForward<float>(
+    const dnnLayout_t dataLayout, float eps,
+    int flags);
+
+template <> inline dnnError_t dnnBatchNormalizationCreateForward_v2<float>(
     dnnPrimitive_t* pBatchNormalization,
     dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps) {
-    return dnnBatchNormalizationCreateForward_F32(
+    const dnnLayout_t dataLayout, float eps,
+    int flags) {
+    return dnnBatchNormalizationCreateForward_v2_F32(
                pBatchNormalization,
                attributes,
-               dataLayout, eps);
+               dataLayout, eps, flags);
 }
-template <> inline dnnError_t dnnBatchNormalizationCreateForward<double>(
+template <> inline dnnError_t dnnBatchNormalizationCreateForward_v2<double>(
     dnnPrimitive_t* pBatchNormalization,
     dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps) {
-    return dnnBatchNormalizationCreateForward_F64(
+    const dnnLayout_t dataLayout, float eps,
+    int flags) {
+    return dnnBatchNormalizationCreateForward_v2_F64(
                pBatchNormalization,
                attributes,
-               dataLayout, eps);
+               dataLayout, eps, flags);
 }
 
 
-template <typename Dtype> inline dnnError_t dnnBatchNormalizationCreateBackwardData(
+template <typename Dtype> inline dnnError_t dnnBatchNormalizationCreateBackward_v2(
     dnnPrimitive_t* pBatchNormalization,
     dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps);
-template <> inline  dnnError_t dnnBatchNormalizationCreateBackwardData<float>(
+    const dnnLayout_t dataLayout, float eps,
+    int flags);
+
+template <> inline  dnnError_t dnnBatchNormalizationCreateBackward_v2<float>(
     dnnPrimitive_t* pBatchNormalization,
     dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps) {
-    return dnnBatchNormalizationCreateBackwardData_F32(
+    const dnnLayout_t dataLayout, float eps,
+    int flags) {
+    return dnnBatchNormalizationCreateBackward_v2_F32(
                pBatchNormalization,
                attributes,
-               dataLayout, eps);
+               dataLayout, eps, flags);
 }
 
-template <> inline dnnError_t dnnBatchNormalizationCreateBackwardData<double>(
+template <> inline dnnError_t dnnBatchNormalizationCreateBackward_v2<double>(
     dnnPrimitive_t* pBatchNormalization,
     dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps) {
-    return dnnBatchNormalizationCreateBackwardData_F64(
+    const dnnLayout_t dataLayout, float eps,
+    int flags) {
+    return dnnBatchNormalizationCreateBackward_v2_F64(
                pBatchNormalization,
                attributes,
-               dataLayout, eps);
-}
-
-template <typename Dtype> inline dnnError_t dnnBatchNormalizationCreateBackwardScaleShift(
-    dnnPrimitive_t* pBatchNormalization,
-    dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps);
-template <> inline dnnError_t dnnBatchNormalizationCreateBackwardScaleShift<float>(
-    dnnPrimitive_t* pBatchNormalization,
-    dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps) {
-    return dnnBatchNormalizationCreateBackwardScaleShift_F32(
-               pBatchNormalization,
-               attributes,
-               dataLayout, eps);
-}
-template <> inline dnnError_t dnnBatchNormalizationCreateBackwardScaleShift<double>(
-    dnnPrimitive_t* pBatchNormalization,
-    dnnPrimitiveAttributes_t attributes,
-    const dnnLayout_t dataLayout, float eps) {
-    return dnnBatchNormalizationCreateBackwardScaleShift_F64(
-               pBatchNormalization,
-               attributes,
-               dataLayout, eps);
+               dataLayout, eps, flags);
 }
 
 template <typename Dtype> inline dnnError_t dnnInnerProductCreateForward(

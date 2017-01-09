@@ -95,8 +95,9 @@ object IO {
   private[mxnet] def initData(data: IndexedSeq[NDArray],
                               allowEmpty: Boolean,
                               defaultName: String): IndexedSeq[(String, NDArray)] = {
-    require(data != null || allowEmpty)
-    if (data == null) {
+    require(data != null)
+    require(data != IndexedSeq.empty || allowEmpty)
+    if (data == IndexedSeq.empty) {
       IndexedSeq()
     } else if (data.length == 1) {
       IndexedSeq((defaultName, data(0)))

@@ -76,6 +76,7 @@ R-package/inst/*
 *.tar.gz
 *.tgz
 R-package/man/*.Rd
+R-package/R/mxnet_generated.R
 
 # data
 *.rec
@@ -120,6 +121,7 @@ cmake_install.cmake
 dmlc-core
 ps-lite
 nnvm
+!src/nnvm
 lib
 
 # Visual Studio Code

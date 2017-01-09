@@ -7,7 +7,7 @@
 
 #include "./batch_norm-inl.h"
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_batch_norm-inl.h"
 #endif  // MXNET_USE_MKL2017
@@ -17,10 +17,14 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
 #if MXNET_USE_MKL2017 == 1
-  return new MKLBatchNormOp<cpu, float>(param);
-#else
-  return new BatchNormOp<cpu>(param);
+  if (!param.use_global_stats) {
+    return new MKLBatchNormOp<cpu, float>(param);
+  } else {
+    if (enableMKLWarnGenerated())
+      LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() << " Skip MKL optimization";
+  }
 #endif
+  return new BatchNormOp<cpu>(param);
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h

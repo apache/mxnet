@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 import logging
 import argparse
 import os
@@ -13,7 +13,6 @@ import importlib
 import collections
 import threading
 import copy
-from past.builtins import xrange
 '''
 Setup Logger and LogLevel
 '''
@@ -150,7 +149,7 @@ def stop_old_processes(hosts_file):
     time.sleep(1)
 
 def run_imagenet(kv_store, data_shape, batch_size, num_gpus, num_nodes, network, args_workers_file):
-    imagenet_args=['python',  'train_imagenet.py',  '--gpus', ','.join(str(i) for i in xrange(num_gpus)), \
+    imagenet_args=['python',  'train_imagenet.py',  '--gpus', ','.join(str(i) for i in range(num_gpus)), \
                    '--network', network, '--batch-size', str(batch_size * num_gpus), \
                    '--image-shape', '3,' + str(data_shape) + ',' + str(data_shape), '--num-epochs', '1' ,'--kv-store', kv_store, '--benchmark', '1', '--disp-batches', '10']
     log = log_loc + '/' + network + '_' + str(num_nodes*num_gpus) + '_log'

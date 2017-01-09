@@ -12,14 +12,18 @@ import cv2
 import time
 import traceback
 
+try:
+    import multiprocessing
+except ImportError:
+    multiprocessing = None
 
 def list_image(root, recursive, exts):
     i = 0
     if recursive:
         cat = {}
-        for path, subdirs, files in os.walk(root, followlinks=True):
-            subdirs.sort()
-            print(len(cat), path)
+        for path, dirs, files in os.walk(root, followlinks=True):
+            dirs.sort()
+            files.sort()
             for fname in files:
                 fpath = os.path.join(path, fname)
                 suffix = os.path.splitext(fname)[1].lower()
@@ -28,8 +32,10 @@ def list_image(root, recursive, exts):
                         cat[path] = len(cat)
                     yield (i, os.path.relpath(fpath, root), cat[path])
                     i += 1
+        for k, v in sorted(cat.items(), key=lambda x: x[1]):
+            print(os.path.relpath(k, root), v)
     else:
-        for fname in os.listdir(root):
+        for fname in sorted(os.listdir(root)):
             fpath = os.path.join(root, fname)
             suffix = os.path.splitext(fname)[1].lower()
             if os.path.isfile(fpath) and (suffix in exts):
@@ -61,9 +67,14 @@ def make_list(args):
             str_chunk = ''
         sep = int(chunk_size * args.train_ratio)
         sep_test = int(chunk_size * args.test_ratio)
-        write_list(args.prefix + str_chunk + '_test.lst', chunk[:sep_test])
-        write_list(args.prefix + str_chunk + '_train.lst', chunk[sep_test:sep_test + sep])
-        write_list(args.prefix + str_chunk + '_val.lst', chunk[sep_test + sep:])
+        if args.train_ratio == 1.0:
+            write_list(args.prefix + str_chunk + '.lst', chunk)
+        else:
+            if args.test_ratio:
+                write_list(args.prefix + str_chunk + '_test.lst', chunk[:sep_test])
+            if args.train_ratio + args.test_ratio < 1.0:
+                write_list(args.prefix + str_chunk + '_val.lst', chunk[sep_test + sep:])
+            write_list(args.prefix + str_chunk + '_train.lst', chunk[sep_test:sep_test + sep])
 
 def read_list(path_in):
     with open(path_in) as fin:
@@ -75,8 +86,25 @@ def read_list(path_in):
             item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
             yield item
 
-def image_encode(args, item, q_out):
+def image_encode(args, i, item, q_out):
     fullpath = os.path.join(args.root, item[1])
+
+    if len(item) > 3 and args.pack_label:
+        header = mx.recordio.IRHeader(0, item[2:], item[0], 0)
+    else:
+        header = mx.recordio.IRHeader(0, item[2], item[0], 0)
+
+    if args.pass_through:
+        try:
+            with open(fullpath) as fin:
+                img = fin.read()
+            s = mx.recordio.pack(header, img)
+            q_out.put((i, s, item))
+        except Exception, e:
+            traceback.print_exc()
+            print('pack_img error:', item[1], e)
+        return
+
     try:
         img = cv2.imread(fullpath, args.color)
     except:
@@ -99,54 +127,50 @@ def image_encode(args, item, q_out):
         else:
             newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
         img = cv2.resize(img, newsize)
-    if len(item) > 3 and args.pack_label:
-        header = mx.recordio.IRHeader(0, item[2:], item[0], 0)
-    else:
-        header = mx.recordio.IRHeader(0, item[2], item[0], 0)
 
     try:
         s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
-        q_out.put((s, item))
-    except Exception:
+        q_out.put((i, s, item))
+    except Exception, e:
         traceback.print_exc()
-        print('pack_img error on file: %s' % fullpath)
+        print('pack_img error on file: %s' % fullpath, e)
         return
 
 def read_worker(args, q_in, q_out):
     while True:
-        item = q_in.get()
-        if item is None:
+        deq = q_in.get()
+        if deq is None:
             break
-        image_encode(args, item, q_out)
+        i, item = deq
+        image_encode(args, i, item, q_out)
 
 def write_worker(q_out, fname, working_dir):
     pre_time = time.time()
     count = 0
-    fname_rec = os.path.basename(fname)
+    fname = os.path.basename(fname)
     fname_rec = os.path.splitext(fname)[0] + '.rec'
-    fout = open(fname+'.tmp', 'w')
-    record = mx.recordio.MXRecordIO(os.path.join(working_dir, fname_rec), 'w')
-    while True:
+    fname_idx = os.path.splitext(fname)[0] + '.idx'
+    record = mx.recordio.MXIndexedRecordIO(os.path.join(working_dir, fname_idx),
+                                           os.path.join(working_dir, fname_rec), 'w')
+    buf = {}
+    more = True
+    while more:
         deq = q_out.get()
-        if deq is None:
-            break
-        s, item = deq
-        record.write(s)
+        if deq is not None:
+            i, s, item = deq
+            buf[i] = (s, item)
+        else:
+            more = False
+        while count in buf:
+            s, item = buf[count]
+            del buf[count]
+            record.write_idx(item[0], s)
 
-        line = '%d\t' % item[0]
-        for j in item[2:]:
-            line += '%f\t' % j
-        line += '%s\n' % item[1]
-        fout.write(line)
-
-        if count % 1000 == 0:
-            cur_time = time.time()
-            print('time:', cur_time - pre_time, ' count:', count)
-            pre_time = cur_time
-        count += 1
-    fout.close()
-    os.remove(fname)
-    os.rename(fname+'.tmp', fname)
+            if count % 1000 == 0:
+                cur_time = time.time()
+                print('time:', cur_time - pre_time, ' count:', count)
+                pre_time = cur_time
+            count += 1
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -172,14 +196,18 @@ def parse_args():
                         help='If true recursively walk through subdirs and assign an unique label\
         to images in each folder. Otherwise only include images in the root folder\
         and give them label 0.')
+    cgroup.add_argument('--shuffle', type=bool, default=True, help='If this is set as True, \
+        im2rec will randomize the image order in <prefix>.lst')
 
     rgroup = parser.add_argument_group('Options for creating database')
+    rgroup.add_argument('--pass-through', type=bool, default=False,
+                        help='whether to skip transformation and save image as is')
     rgroup.add_argument('--resize', type=int, default=0,
                         help='resize the shorter edge of image to the newsize, original images will\
         be packed by default.')
     rgroup.add_argument('--center-crop', type=bool, default=False,
                         help='specify whether to crop the center image to make it rectangular.')
-    rgroup.add_argument('--quality', type=int, default=80,
+    rgroup.add_argument('--quality', type=int, default=95,
                         help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
     rgroup.add_argument('--num-thread', type=int, default=1,
                         help='number of thread to use for encoding. order of images will be different\
@@ -192,10 +220,8 @@ def parse_args():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
                         help='specify the encoding of the images.')
-    rgroup.add_argument('--shuffle', default=True, help='If this is set as True, \
-        im2rec will randomize the image order in <prefix>.lst')
-    rgroup.add_argument('--pack-label', default=False,
-        help='Whether to also pack multi dimensional label in the record file') 
+    rgroup.add_argument('--pack-label', type=bool, default=False,
+        help='Whether to also pack multi dimensional label in the record file')
     args = parser.parse_args()
     args.prefix = os.path.abspath(args.prefix)
     args.root = os.path.abspath(args.root)
@@ -219,8 +245,7 @@ if __name__ == '__main__':
                 count += 1
                 image_list = read_list(fname)
                 # -- write_record -- #
-                try:
-                    import multiprocessing
+                if args.num_thread > 1 and multiprocessing is not None:
                     q_in = [multiprocessing.Queue(1024) for i in range(args.num_thread)]
                     q_out = multiprocessing.Queue(1024)
                     read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out)) \
@@ -231,7 +256,7 @@ if __name__ == '__main__':
                     write_process.start()
 
                     for i, item in enumerate(image_list):
-                        q_in[i % len(q_in)].put(item)
+                        q_in[i % len(q_in)].put((i, item))
                     for q in q_in:
                         q.put(None)
                     for p in read_process:
@@ -239,21 +264,23 @@ if __name__ == '__main__':
 
                     q_out.put(None)
                     write_process.join()
-                except ImportError:
+                else:
                     print('multiprocessing not available, fall back to single threaded encoding')
                     import Queue
                     q_out = Queue.Queue()
-                    fname_rec = os.path.basename(fname)
+                    fname = os.path.basename(fname)
                     fname_rec = os.path.splitext(fname)[0] + '.rec'
-                    record = mx.recordio.MXRecordIO(os.path.join(working_dir, fname_rec), 'w')
+                    fname_idx = os.path.splitext(fname)[0] + '.idx'
+                    record = mx.recordio.MXIndexedRecordIO(os.path.join(working_dir, fname_idx),
+                                                           os.path.join(working_dir, fname_rec), 'w')
                     cnt = 0
                     pre_time = time.time()
-                    for item in image_list:
-                        image_encode(args, item, q_out)
+                    for i, item in enumerate(image_list):
+                        image_encode(args, i, item, q_out)
                         if q_out.empty():
                             continue
                         _, s, _ = q_out.get()
-                        record.write(s)
+                        record.write_idx(item[0], s)
                         if cnt % 1000 == 0:
                             cur_time = time.time()
                             print('time:', cur_time - pre_time, ' count:', cnt)

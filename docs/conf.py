@@ -55,8 +55,8 @@ source_parsers = {
 }
 os.environ['MXNET_BUILD_DOC'] = '1'
 # Version information.
-version = '0.7.0'
-release = '0.7.0'
+version = '0.9.1'
+release = '0.9.1'
 # import mxnet
 # version = mxnet.__version__
 # release = mxnet.__version__

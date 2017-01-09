@@ -4,7 +4,7 @@ In this tutorial, we assign
 labels to an image with confidence scores. The following figure ([source](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)) shows an example:
 
 <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/image-classification.png
-width=400/>
+width=600/>
 
 Get the source code for the tutorial from [GitHub](https://github.com/dmlc/mxnet/tree/master/example/image-classification).
 
@@ -96,7 +96,7 @@ program, see this [tutorial](http://mxnet.io/how_to/multi_devices.html).
 ## Generating Predictions
 You have several options for generating predictions:
 
-- Use a pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
+- Use a [pre-trained model](http://mxnet.io/tutorials/python/predict_imagenet.html). More pre-trained models are provided in the [model gallery](https://github.com/dmlc/mxnet-model-gallery).
 - Use your own datasets.
 - You can also easily run the prediction on various devices, such as
 [Android/iOS](http://dmlc.ml/mxnet/2015/11/10/deep-learning-in-a-single-file-for-smart-device.html).
@@ -208,7 +208,7 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
 - Accuracy vs epoch ([interactive figure](https://docs.google.com/spreadsheets/d/1kV2aDUXNyPn3t5nj8UdPA61AdRF4_w1UNmxaqu-cRBA/pubchart?oid=761035336&format=interactive)):
 
-  <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-cifar10.png width=600px/>
+  <img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-cifar10.png width=400px/>
 
 ### ILSVRC 12
 
@@ -279,9 +279,9 @@ python train_cifar10.py --batch-size 128 --lr 0.1 --lr-factor .94 --num-epoch 50
 
   **Note:** Occasional instability in Amazon S3 might cause training to hang or generate frequent errors, preventing downloading data to `/mnt` first.
 
-  Accuracy vs. epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
+- Accuracy vs. epoch ([the interactive figure](https://docs.google.com/spreadsheets/d/1AEesHjWUZOzCN0Gp_PYI1Cw4U1kZMKot360p9Fowmjw/pubchart?oid=1740787404&format=interactive)):
 
-  	<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-imagnet1k.png width=600px/>
+  	<img src=https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/inception-with-bn-imagnet1k.png width=400px/>
 
 ## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

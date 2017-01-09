@@ -16,7 +16,7 @@ def RMSE(label, pred):
     return math.sqrt(ret / n)
 
 
-def train(network, data_pair, num_epoch, learning_rate, optimizer='sgd', opt_args=None):
+def train(network, data_pair, num_epoch, learning_rate, optimizer='sgd', opt_args=None, ctx=[mx.gpu(0)]):
     np.random.seed(123)  # Fix random seed for consistent demos
     mx.random.seed(123)  # Fix random seed for consistent demos
     if not opt_args:
@@ -25,7 +25,7 @@ def train(network, data_pair, num_epoch, learning_rate, optimizer='sgd', opt_arg
         opt_args['momentum'] = 0.9
 
     model = mx.model.FeedForward(
-        ctx = [mx.gpu(0)],  # can be change to [mx.gpu(0), mx.gpu(1)] if there are 2 gpus
+        ctx = ctx,
         symbol = network,
         num_epoch = num_epoch,
         optimizer = optimizer,
@@ -37,7 +37,7 @@ def train(network, data_pair, num_epoch, learning_rate, optimizer='sgd', opt_arg
     train, test = (data_pair)
 
     lc = mxnet.notebook.callback.LiveLearningCurve('RMSE', 1)
-    model.fit(X = train, 
+    model.fit(X = train,
               eval_data = test,
               eval_metric = RMSE,
               **mxnet.notebook.callback.args_wrapper(lc)

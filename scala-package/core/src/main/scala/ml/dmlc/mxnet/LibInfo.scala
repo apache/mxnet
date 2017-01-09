@@ -10,16 +10,27 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  */
 class LibInfo {
   @native def nativeLibInit(): Int
-  // NDArray
-  @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
+  // Operators
+  @native def mxListAllOpNames(names: ListBuffer[String]): Int
+  @native def nnGetOpHandle(opName: String, opHandle: RefLong): Int
+  // NDArray
+  @native def mxImperativeInvoke(creator: FunctionHandle,
+                                 inputs: Array[NDArrayHandle],
+                                 outputsGiven: Array[NDArrayHandle],
+                                 outputs: ArrayBuffer[NDArrayHandle],
+                                 numParams: Int,
+                                 paramKeys: Array[String],
+                                 paramVals: Array[String]): Int
+  @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
-  @native def mxNDArrayCreate(shape: Array[Int],
-                              ndim: Int,
-                              devType: Int,
-                              devId: Int,
-                              delayAlloc: Int,
-                              out: NDArrayHandleRef): Int
+  @native def mxNDArrayCreateEx(shape: Array[Int],
+                                ndim: Int,
+                                devType: Int,
+                                devId: Int,
+                                delayAlloc: Int,
+                                dtype: Int,
+                                out: NDArrayHandleRef): Int
   @native def mxNDArrayWaitAll(): Int
   @native def mxNDArrayWaitToRead(handle: NDArrayHandle): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int
@@ -50,12 +61,15 @@ class LibInfo {
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
   @native def mxNDArraySyncCopyToCPU(handle: NDArrayHandle,
-                                     data: Array[MXFloat],
+                                     data: Array[Byte],
                                      size: Int): Int
   @native def mxNDArraySlice(handle: NDArrayHandle,
                              start: MXUint,
                              end: MXUint,
                              sliceHandle: NDArrayHandleRef): Int
+  @native def mxNDArrayAt(handle: NDArrayHandle,
+                          idx: MXUint,
+                          out: NDArrayHandleRef): Int
   @native def mxNDArrayReshape(handle: NDArrayHandle,
                                nDim: Int,
                                dims: Array[Int],
@@ -74,6 +88,7 @@ class LibInfo {
   @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
   @native def mxNDArraySaveRawBytes(handle: NDArrayHandle, buf: ArrayBuffer[Byte]): Int
   @native def mxNDArrayLoadFromRawBytes(bytes: Array[Byte], handle: NDArrayHandleRef): Int
+  @native def mxNDArrayGetDType(handle: NDArrayHandle, dtype: RefInt): Int
 
   // KVStore Server
   @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int
@@ -241,20 +256,6 @@ class LibInfo {
   @native def mxRecordIOWriterTell(handle: RecordIOHandle, pos: RefInt): Int
   @native def mxRecordIOReaderSeek(handle: RecordIOHandle, pos: Int): Int
 
-  @native def mxOptimizerFindCreator(key: String, out: OptimizerCreatorRef): Int
-  @native def mxOptimizerCreateOptimizer(creator: OptimizerCreator,
-                                         numParam: Int,
-                                         keys: Array[String],
-                                         vals: Array[String],
-                                         out: OptimizerHandleRef): Int
-  @native def mxOptimizerFree(handle: OptimizerHandle): Int
-  @native def mxOptimizerUpdate(handle: OptimizerHandle,
-                                index: Int,
-                                weight: NDArrayHandle,
-                                grad: NDArrayHandle,
-                                lr: Float,
-                                wd: Float): Int
-
   // Rtc
   @native def mxRtcCreate(name: String,
                           inputNames: Array[String],
@@ -273,4 +274,7 @@ class LibInfo {
                         blockDimY: Int,
                         blockDimZ: Int): Int
   @native def mxRtcFree(handle: RtcHandle): Int
+
+  // CustomOp
+  @native def mxCustomOpRegister(regName: String, opProp: CustomOpProp): Int
 }

@@ -61,11 +61,10 @@ import sys
 import mxnet as mx
 import logging
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import get_data
+
 import sd_module
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "image-classification")))
-from train_cifar10 import get_iterator
-
 
 def residual_module(death_rate, n_channel, name_scope, context, stride=1, bn_momentum=0.9):
     data = mx.sym.Variable(name_scope + '_data')
@@ -174,11 +173,10 @@ lr_factor_epoch = 100
 momentum = 0.9
 weight_decay = 0.00001
 kv_store = 'local'
-
 initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
 num_epochs = 500
 
-epoch_size = num_examples / batch_size
+epoch_size = num_examples // batch_size
 lr_scheduler = mx.lr_scheduler.FactorScheduler(step=max(int(epoch_size * lr_factor_epoch), 1), factor=lr_factor)
 
 batch_end_callbacks = [mx.callback.Speedometer(batch_size, 50)]
@@ -187,9 +185,10 @@ epoch_end_callbacks = [mx.callback.do_checkpoint('sd-%d' % (n_residual_blocks * 
 
 args = type('', (), {})()
 args.batch_size = batch_size
-args.data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "image-classification", "cifar10")) + '/'
+args.data_dir = os.path.join(os.path.dirname(__file__), "data")
 kv = mx.kvstore.create(kv_store)
-train, val = get_iterator(args, kv)
+
+train, val = get_data.get_cifar10_iterator(args, kv)
 
 logging.basicConfig(level=logging.DEBUG)
 mod_seq.fit(train, val,

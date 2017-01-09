@@ -40,7 +40,7 @@ namespace op {
 template<typename xpu, typename DType>
 class MKLReluOp : public Operator {
  public:
-  std::string getName() {
+  static std::string getName() {
     return "MKLReluOp";
   }
   MKLReluOp():
@@ -172,12 +172,17 @@ class MKLReluOp : public Operator {
         in_data[activation::kData].Mkl_mem_;
       bottom_prv_descriptor = bottom_data_mem->get_prv_descriptor();
 #endif
+#if MKL_EXPERIMENTAL == 1
+        std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].Mkl_mem_;
+#endif
       if (NULL != bottom_prv_descriptor) {
         relu_res[dnnResourceDst] =
           reinterpret_cast<void *>(fwd_bottom_data_->prv_ptr());
+#if MKL_EXPERIMENTAL == 1
+        top_mem->set_prv_descriptor(fwd_bottom_data_);
+#endif
       } else {
 #if MKL_EXPERIMENTAL == 1
-        std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].Mkl_mem_;
         top_mem->set_prv_descriptor(fwd_top_data_);
 #endif
         relu_res[dnnResourceDst] =

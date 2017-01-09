@@ -1,6 +1,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -138,11 +139,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    *            List of types of outputs.
    *            The order is in the same order as list_auxiliary()
    */
-  def inferType(args: Class[_ >: Float with Int with Double]*)
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
-    val sdata: Array[Int] = args.map(NDArray.DTYPE_NATIVE_TO_MX.getOrElse(_, -1)).toArray
+  def inferType(args: DType*) : (Seq[DType], Seq[DType], Seq[DType]) = {
+    val sdata: Array[Int] = args.map { dtype =>
+      if (dtype == null) -1
+      else dtype.id
+    }.toArray
     inferType(null, sdata)
   }
 
@@ -162,22 +163,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    *            List of types of outputs.
    *            The order is in the same order as list_auxiliary()
    */
-  def inferType(kwargs: Map[String, Class[_ >: Float with Int with Double]])
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
-    val filteredArgs = kwargs.filter { case (key, value) =>
-      NDArray.DTYPE_NATIVE_TO_MX.contains(value)
-    }
-    val keys = filteredArgs.keys.toArray
-    val sdata = filteredArgs.values.map(NDArray.DTYPE_NATIVE_TO_MX(_)).toArray
+  def inferType(kwargs: Map[String, DType]) : (Seq[DType], Seq[DType], Seq[DType]) = {
+    val keys = kwargs.keys.toArray
+    val sdata = kwargs.values.map(_.id).toArray
     inferType(keys, sdata)
   }
 
   private def inferType(keys: Array[String], values: Array[Int])
-    : (Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]],
-       Seq[Class[_ >: Float with Int with Double]]) = {
+    : (Seq[DType], Seq[DType], Seq[DType]) = {
     val argTypeData = ListBuffer.empty[Int]
     val outTypeData = ListBuffer.empty[Int]
     val auxTypeData = ListBuffer.empty[Int]
@@ -185,9 +178,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     checkCall(_LIB.mxSymbolInferType(
       handle, keys, values, argTypeData, outTypeData, auxTypeData, complete))
     if (complete.value != 0) {
-      (argTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
-        outTypeData.map(NDArray.DTYPE_MX_TO_NATIVE),
-        auxTypeData.map(NDArray.DTYPE_MX_TO_NATIVE))
+      (argTypeData.map(DType(_)), outTypeData.map(DType(_)), auxTypeData.map(DType(_)))
     } else {
       (null, null, null)
     }
@@ -359,11 +350,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
    */
   def simpleBind(ctx: Context, gradReq: String = "write",
                  shapeDict: Map[String, Shape],
-                 typeDict: Map[String, Class[_ >: Float with Int with Double]] = null)
+                 typeDict: Map[String, DType] = null)
                  : Executor = {
     val types =
       if (typeDict == null) {
-        listArguments().map((_, classOf[Float])).toMap
+        listArguments().map((_, MX_REAL_TYPE)).toMap
       } else {
         typeDict
       }
@@ -372,15 +363,13 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
     require(argShapes != null && argTypes != null, "Input node is not complete")
     // alloc space
     val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
-      // TODO: NDArray dtype
-      NDArray.zeros(shape, ctx)
+      NDArray.zeros(shape, ctx, dtype = t)
     }
     val gradNDArrays =
       if (gradReq != "null") {
         (((listArguments() zip argShapes) zip argTypes) flatMap { case ((name, shape), t) =>
           if (!(name.endsWith("data") || name.endsWith("label"))) {
-            // TODO: NDArray dtype
-            Map(name -> NDArray.zeros(shape, ctx))
+            Map(name -> NDArray.zeros(shape, ctx, dtype = t))
           } else {
             Map.empty[String, NDArray]
           }
@@ -389,8 +378,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
         null
       }
     val auxNDArrays = (auxShapes zip auxTypes) map { case (shape, t) =>
-      // TODO: NDArray dtype
-      NDArray.zeros(shape, ctx)
+      NDArray.zeros(shape, ctx, dtype = t)
     }
     bind(ctx, argNDArrays, gradNDArrays, gradReq, auxNDArrays, null, null)
   }
@@ -843,27 +831,29 @@ object Symbol {
 
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): Map[String, SymbolFunction] = {
-    val symbolList = ListBuffer.empty[SymbolHandle]
-    checkCall(_LIB.mxSymbolListAtomicSymbolCreators(symbolList))
-    symbolList.map(makeAtomicSymbolFunction).toMap
+    val opNames = ListBuffer.empty[String]
+    checkCall(_LIB.mxListAllOpNames(opNames))
+    opNames.map(opName => {
+      val opHandle = new RefLong
+      checkCall(_LIB.nnGetOpHandle(opName, opHandle))
+      makeAtomicSymbolFunction(opHandle.value, opName)
+    }).toMap
   }
 
   // Create an atomic symbol function by handle and function name.
-  private def makeAtomicSymbolFunction(handle: SymbolHandle): (String, SymbolFunction) = {
+  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
+      : (String, SymbolFunction) = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
-    val numArgs = new MXUintRef
+    val numArgs = new RefInt
     val argNames = ListBuffer.empty[String]
     val argTypes = ListBuffer.empty[String]
     val argDescs = ListBuffer.empty[String]
 
     checkCall(_LIB.mxSymbolGetAtomicSymbolInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
-    val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
-    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
-    logger.debug("Atomic Symbol function defination:\n{}", docStr)
-    (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
+    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 
   // Used by SymbolMacro
@@ -1099,7 +1089,7 @@ class SymbolConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 
   def *(other: Symbol): Symbol = {
-    other + value
+    other * value
   }
 
   def /(other: Symbol): Symbol = {

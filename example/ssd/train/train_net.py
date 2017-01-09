@@ -149,6 +149,9 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
         fh = logging.FileHandler(log_file)
         logger.addHandler(fh)
 
+    # kvstore
+    kv = mx.kvstore.create("device")
+
     # check args
     if isinstance(data_shape, int):
         data_shape = (data_shape, data_shape)
@@ -167,7 +170,7 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
         else:
             val_imdb = None
     else:
-        raise NotImplementedError, "Dataset " + dataset + " not supported"
+        raise NotImplementedError("Dataset " + dataset + " not supported")
 
     # init data iterator
     train_iter = DetIter(imdb, batch_size, data_shape, mean_pixels,
@@ -177,7 +180,7 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
     # save per N epoch, avoid saving too frequently
     resize_epoch = int(cfg.TRAIN.RESIZE_EPOCH)
     if resize_epoch > 1:
-        batches_per_epoch = ((imdb.num_images - 1) / batch_size + 1) * resize_epoch
+        batches_per_epoch = ((imdb.num_images - 1) // batch_size + 1) * resize_epoch
         train_iter = mx.io.ResizeIter(train_iter, batches_per_epoch)
     train_iter = mx.io.PrefetchingIter(train_iter)
     if val_imdb:
@@ -235,7 +238,7 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
     # fit
     batch_end_callback = mx.callback.Speedometer(train_iter.batch_size, frequent=frequent)
     epoch_end_callback = mx.callback.do_checkpoint(prefix)
-    iter_refactor = lr_refactor_epoch * imdb.num_images / train_iter.batch_size
+    iter_refactor = lr_refactor_epoch * imdb.num_images // train_iter.batch_size
     lr_scheduler = mx.lr_scheduler.FactorScheduler(iter_refactor, lr_refactor_ratio)
     optimizer_params={'learning_rate':learning_rate,
                       'momentum':momentum,
@@ -254,6 +257,7 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
             epoch_end_callback=epoch_end_callback,
             optimizer='sgd',
             optimizer_params=optimizer_params,
+            kvstore = kv,
             begin_epoch=begin_epoch,
             num_epoch=end_epoch,
             initializer=initializer,

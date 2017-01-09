@@ -5,7 +5,7 @@ Proceedings of the IEEE (1998)
 """
 import mxnet as mx
 
-def get_symbol(num_classes=10, **kwargs):
+def get_symbol(num_classes=10, add_stn=False, **kwargs):
     data = mx.symbol.Variable('data')
     if(add_stn):
         data = mx.sym.SpatialTransformer(data=data, loc=get_loc(data), target_shape = (28,28),

@@ -39,7 +39,7 @@ namespace op {
 template<typename xpu, typename DType>
 class MKLConvolutionOp : public Operator {
  public:
-  std::string getName() {
+  static std::string getName() {
     return "MKLConvolutionOp";
   }
   void SetupBuffer() {

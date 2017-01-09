@@ -3,7 +3,10 @@ cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
 echo "USE_CUDNN=1" >> config.mk
-make -j 4 || exit -1
+echo "USE_PROFILER=1" >> config.mk
+echo "DEV=1" >> config.mk
+echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
+make -j$(nproc) || exit -1
 
 echo "BUILD lint"
 make lint || exit -1
@@ -28,11 +31,11 @@ nosetests3 --verbose tests/python/gpu/test_operator_gpu.py || exit -1
 nosetests3 --verbose tests/python/gpu/test_forward.py || exit -1
 nosetests3 --verbose tests/python/train || exit -1
 
-echo "BUILD julia_test"
-export MXNET_HOME="${PWD}"
-/home/ubuntu/julia/bin/julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
-
 echo "BUILD scala_test"
 export PATH=$PATH:/opt/apache-maven/bin
 make scalapkg || exit -1
 make scalatest || exit -1
+
+# echo "BUILD julia_test"
+# export MXNET_HOME="${PWD}"
+# /home/ubuntu/julia/bin/julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1

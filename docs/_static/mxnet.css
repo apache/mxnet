@@ -51,7 +51,7 @@ h1, h2, h3 {
 h1 {
     font-size: 20px;
     font-weight: bold;
-    padding-top: 12px; 
+    padding-top: 25px; 
 }
 
 h2 {
@@ -75,7 +75,7 @@ h3.orange {
 h4 {
     color: #cc6600;
     font-size: 16px;
-    padding-top: 1.2em;
+    padding-top: 1.8em;
     font-style: italic;
     font-weight: bold; 
 }
@@ -124,27 +124,18 @@ img {
     background-color:#0079b2;
     opacity: 0.9;
     border: 0px;
-    height: 60px;
-    padding: 0 80px;
+    height: 80px;
     margin-bottom: 0px;
 }
 
-@media screen and (max-width: 480px) {
-    #navContainer {
-        position: fixed;
-        left: 0;
-    }
+.navbar .container {
+    position: fixed;
+    left: 20px;
 }
 
-@media screen and (max-width: 645px) {
+@media screen and (max-width: 510px) {
     .navbar {
         height: 100px;
-    }
-}
-
-@media screen and (max-width: 405px) {
-    .navbar {
-        height: 120px;
     }
 }
 
@@ -180,6 +171,13 @@ img {
     -webkit-box-flex: 1;
    padding-top: 0;
     margin-top: 0;
+    width: 125px;
+}
+
+@media screen and (max-width: 405px) {  
+    #logo-wrap {
+        margin-left: -25px;
+    }
 }
 
 #logo {
@@ -215,18 +213,13 @@ img {
     padding: 0 15px
 }
 
-@media screen and (max-width: 1300px) {
-    #main-nav {
-        display: block;
-        font-size: 75%;
-    }
-    
+@media screen and (max-width: 1410px) {
     .main-nav-link {
         padding: 0 10px;
     }
 }
 
-@media screen and (max-width: 1145px) {
+@media screen and (max-width: 1138px) {
     #main-nav {
         display: none;
     }
@@ -258,53 +251,48 @@ img {
     display: block;
     position: fixed;
     top: 15px;
-    right: 185px;
-    width: 200px;
+    right: 155px;
+    width: 140px;
 }
 
 .searchBox {
     position: absolute;
     top: 0;
     left: 0;
-    width: 160px;
+    width: 140px;
 }
 
 .searchBtn {
+    display: none;
     position: absolute;
     top: 0;
     right: 0;
     width: 40px;
 }
 
-@media screen and (max-width: 1145px) {
+@media screen and (min-width: 1100px) {
     #search-input-wrap {
-        right: 215px;
-    }
-}
-
-@media screen and (max-width: 700px) {
-    #search-input-wrap {
-        width: 150px;
+        width: 160px;
     }
     
     .searchBox {
-        width: 110px;
+        width: 160px;
     }
 }
 
-@media screen and (max-width: 645px) {
+@media screen and (max-width: 1138px) {
+    #search-input-wrap {
+        right: 185px;
+    }
+}
+
+@media screen and (max-width: 510px) {
     #search-input-wrap {
         top: 50px;
         left: 50%;
-        margin-left: -75px;
+        margin-left: -70px;
         right: initial;
         z-index: -1;
-    }
-}
-
-@media screen and (max-width: 405px) {
-    #search-input-wrap {
-        top: 80px;
     }
 }
 
@@ -341,25 +329,18 @@ img {
     font-size: inherit
 }
 
-@media screen and (max-width: 405px) {
-    #lang-select-wrap {
-        position: fixed;
-        top: 40px;
-        left: 90px;
-        width: 75px
-    }
-}
+.github-btn { border: 0; overflow: hidden }
 
 /*burger icon*/
 div .burgerIcon {
     font-size: 25px;
     position: fixed;
-    right: 185px;
+    right: 155px;
     top: 10px;
     display: none
 }
 
-@media screen and (max-width: 1145px) {
+@media screen and (max-width: 1138px) {
     div .burgerIcon {
         display: block;
     }
@@ -367,13 +348,6 @@ div .burgerIcon {
 
 div .burgerIcon a {
     color: white;
-}
-
-@media screen and (max-width: 405px) {
-    div .burgerIcon {
-        top: 45px;
-        left: 70px
-    }
 }
 
 /*burger menu*/
@@ -498,19 +472,13 @@ li.dropdown-submenu ul.dropdown-menu a {
 @media screen and (max-width:768px) {
     #splash #banner-title {
             font-size: 30px;
-            padding: 20px 30px 10px 30px;
+            padding: 60px 30px 10px 30px;
     }
 }
 
-@media screen and (max-width:645px) {
+@media screen and (max-width:510px) {
     #splash #banner-title {
             padding-top: 60px;
-    }
-}
-
-@media screen and (max-width:405px) {
-    #splash #banner-title {
-            padding-top: 80px;
     }
 }
 
@@ -619,7 +587,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 /*------------------content----------------------*/
 div.navbar + div.container {
-    padding-top: 80px;
+    padding-top: 85px;
 }
 
 div.content {
@@ -627,7 +595,7 @@ div.content {
     left: 310px;
     right: 0;
     margin-right: 5%;
-    overflow-x: hidden;
+    z-index: -1;
 }
 
 @media (max-width: 999px) {
@@ -638,19 +606,14 @@ div.content {
     }
 }
 
-@media (max-width: 405px) {
-    div.content {
-        top: 140px;
-    }
-}
-
 /*------------------sidebar-----------------------*/
 div.sphinxsidebar {
     position: fixed;
+    background-color: white;
     left: 30px;
     margin-left: 0;
     width: 250px;
-    padding:0 30px 15px 0;
+    padding:20px 30px 15px 0;
     height: calc(100% - 80px);
     overflow: scroll;
     display: none;
@@ -698,15 +661,6 @@ div.sphinxsidebar li.leaf .tocToggle:before {
 
 div.sphinxsidebarwrapper h3 {
     padding-top: 0;
-}
-
-.github-btn { border: 0; overflow: hidden }
-
-.navbar .container {
-    margin-right: auto;
-    margin-left: 50px;
-    padding-left: 15px;
-    padding-right: 15px
 }
 
 /*-------------------- table styles --------------------*/
@@ -802,4 +756,30 @@ dl.method, dl.attribute {
 
 dl.class p, dl.function p {
     color: #cc6600;
+}
+
+/*----------------Model zoo page style------------------*/
+#mxnet-model-zoo table, #mxnet-model-zoo td, #mxnet-model-zoo th {
+    border: 1px solid lightgray;
+}
+
+#mxnet-model-zoo table {
+    margin-top: 30px;
+    border-collapse: collapse;
+}
+
+#mxnet-model-zoo th {
+    vertical-align: middle;
+    text-align: center;
+    height: 50px;
+}
+
+#mxnet-model-zoo td {
+    vertical-align: middle;
+    height: 50px;
+    padding: 10px;
+}
+
+#mxnet-model-zoo tr:nth-child(even) {
+    background-color: #f2f2f2;
 }

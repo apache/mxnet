@@ -7,7 +7,7 @@
 #include "./activation-inl.h"
 #include "./mshadow_op.h"
 #if MXNET_USE_MKL2017 == 1
-#include <mxnet/mkl_memory.h>
+#include <mkl_memory.h>
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_relu-inl.h"
 #endif  // MXNET_USE_MKL2017
@@ -28,7 +28,8 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
           break;
       }
   }
-
+  if (enableMKLWarnGenerated())
+    LOG(INFO) << MKLReluOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.act_type) {

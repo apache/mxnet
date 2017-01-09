@@ -1,4 +1,4 @@
-#Awesome MXNet 
+#Awesome MXNet
 
 This page contains a curated list of awesome MXnet examples, tutorials and blogs. It is inspired by [awesome-php](https://github.com/ziadoz/awesome-php) and [awesome-machine-learning](https://github.com/josephmisiti/awesome-machine-learning).
 
@@ -26,11 +26,12 @@ If you want to contribute to this list and the examples, please open a new pull 
 
 ###<a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
-* [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
+* [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/image-classification/predict-cpp/) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [MXNet Python](http://mxnet.readthedocs.io/en/latest/api/python/index.html) - Python library
 * [MXNetR](http://mxnet.readthedocs.io/en/latest/api/r/index.html) - R library
 * [MXNet.jl](http://mxnetjl.readthedocs.org/en/latest/) - Julia library
-* [gomxnet](https://github.com/jdeng/gomxnet) - Go binding
+* [go-mxnet-predictor](https://github.com/songtianyi/go-mxnet-predictor) - Go binding for inference
+* [gomxnet](https://github.com/jdeng/gomxnet) - Go binding [Outdated]
 * [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library
 * [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)
 * [MXNet Javascript](https://github.com/dmlc/mxnet.js/) - MXNetJS: Javascript Package for Deep Learning in Browser (without server)
@@ -65,7 +66,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Learning similarity among images in MXNet](http://www.jianshu.com/p/70a66c8f73d3) by xlvector in Chinese. Github [link](https://github.com/xlvector/learning-dl/tree/master/mxnet/triple-loss)
 * [Matrix decomposition (SVD) with MXNet](http://www.jianshu.com/p/ebf7bf53ed3e) by xlvector in Chinese. Github [link](https://github.com/xlvector/mxnet/blob/svd/example/svd/svd.py)
 * [MultiGPU enabled image generative models (GAN and DCGAN)](https://github.com/tqchen/mxnet-gan) by [Tianqi Chen](https://github.com/tqchen)
-* [Baidu Warp CTC with Mxnet](https://github.com/dmlc/mxnet/tree/master/example/warpctc) by xlvector
+* [Baidu Warp CTC with MXNet](https://github.com/dmlc/mxnet/tree/master/example/warpctc) by xlvector
 * [Deep reinforcement learning for playing flappybird by mxnet](https://github.com/li-haoran/DRL-FlappyBird) by LIHaoran
 * [Neural Style in Markov Random Field (MRF) and Perceptual Losses Realtime transfer](https://github.com/zhaw/neural_style) by [zhaw](https://github.com/zhaw)
 * [MTCNN Face keypoints detection and alignment](https://pangyupo.github.io/2016/10/22/mxnet-mtcnn/) ([github](https://github.com/pangyupo/mxnet_mtcnn_face_detection)) in Chinese by [pangyupo](https://github.com/pangyupo)
@@ -76,13 +77,13 @@ If you want to contribute to this list and the examples, please open a new pull 
 
 ###<a name="ipython-notebooks"></a>IPython Notebooks
 -----------------
-* [Predict with Pre-trained model](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb) - Notebook on how to predict with pretrained model.
-* [composite symbol](notebooks/composite_symbol.ipynb) - A demo of how to composite a symbolic Inception-BatchNorm Network
-* [cifar-10 recipe](notebooks/cifar10-recipe.ipynb) - A step by step demo of how to use MXNet
-* [cifar-100](notebooks/cifar-100.ipynb) - A demo of how to train a 75.68% accuracy CIFAR-100 model
-* [simple bind](notebooks/simple_bind.ipynb) - A demo of low level training API.
+* [Predict with Pre-trained model](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/predict-with-pretrained-model.ipynb) - Notebook on how to predict with pretrained model.
+* [composite symbol](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/composite_symbol.ipynb) - A demo of how to composite a symbolic Inception-BatchNorm Network
+* [cifar-10 recipe](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/cifar10-recipe.ipynb) - A step by step demo of how to use MXNet
+* [cifar-100](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/cifar-100.ipynb) - A demo of how to train a 75.68% accuracy CIFAR-100 model
+* [simple bind](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/simple_bind.ipynb) - A demo of low level training API.
 * [Multi task tutorial](https://github.com/haria/mxnet-multi-task-example/blob/master/multi-task.ipynb) - A demo of how to train and predict multi-task network on both MNIST and your own dataset.
-* [class active maps](https://github.com/dmlc/mxnet/blob/master/example/notebooks/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
+* [class active maps](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
 * [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of MXNet to state-of-the-art deep learning applications.
 
 ###<a name="mobile-apps-examples"></a>Mobile App Examples
@@ -94,15 +95,15 @@ If you want to contribute to this list and the examples, please open a new pull 
 ###<a name="web-predictive-services"></a>Web Predictive Services
 -----------------------
 * [MXNet Shinny](https://github.com/thirdwing/mxnet_shiny) - Source code for quickly creating a Shiny R app to host online image classification.
-* [Machine Eye] (http://rupeshs.github.io/machineye/) - Web service for local image file/image URL classification without uploading.
+* [Machine Eye](http://rupeshs.github.io/machineye/) - Web service for local image file/image URL classification without uploading.
 
 ##<a name="list-of-tutorials"></a>List of tutorials
 
 ###<a name="gtc2016-hands-on"></a>GPU Technology Conference 2016 Hands-on session
 
-* [Video on GTC 2016 site] (http://on-demand.gputechconf.com/gtc/2016/video/L6143.html) 
-* [Video backup in Mainland China](http://pan.baidu.com/s/1eS58Gue) 
-* [iPython Notebook](https://github.com/dmlc/mxnet-gtc-tutorial) 
+* [Video on GTC 2016 site](http://on-demand.gputechconf.com/gtc/2016/video/L6143.html)
+* [Video backup in Mainland China](http://pan.baidu.com/s/1eS58Gue)
+* [iPython Notebook](https://github.com/dmlc/mxnet-gtc-tutorial)
 
 ###<a name="deep-learning-for-hackers"></a>Deep learning for hackers with MXNet
 
@@ -114,7 +115,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Intro Guide to AWS (MXNet with Julia)](http://www.datasciencebowl.com/aws_guide/) - A step-by-step guide of using spot instances with Amazon Web Services (AWS) to help you save money when training DSB models on MXNet by [Mike Kim](http://www.datasciencebowl.com/author/mikekim/)
 * [Building Deep Neural Networks in the Cloud with Azure GPU VMs, MXNet and Microsoft R Server](https://blogs.technet.microsoft.com/machinelearning/2016/09/15/building-deep-neural-networks-in-the-cloud-with-azure-gpu-vms-mxnet-and-microsoft-r-server/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft
 * [Applying Deep Learning at Cloud Scale, with Microsoft R Server & Azure Data Lake](https://blogs.technet.microsoft.com/machinelearning/2016/10/31/applying-cloud-deep-learning-at-scale-with-microsoft-r-server-azure-data-lake/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft
-* [Training Deep Neural Neural Networks on ImageNet Using Microsoft R Server and Azure GPU VMs](https://blogs.technet.microsoft.com/machinelearning/2016/11/15/imagenet-deep-neural-network-training-using-microsoft-r-server-and-azure-gpu-vms/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft 
+* [Training Deep Neural Neural Networks on ImageNet Using Microsoft R Server and Azure GPU VMs](https://blogs.technet.microsoft.com/machinelearning/2016/11/15/imagenet-deep-neural-network-training-using-microsoft-r-server-and-azure-gpu-vms/) by [Cortana Intelligence and ML Blog Team](https://social.technet.microsoft.com/profile/Cortana+Intelligence+and+ML+Blog+Team) at Microsoft
 * [Distributed Deep Learning Made Easy](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/) at AWS/Amazon for deploying deep learning clusters using MXNet
 
 ### <a name="kaggle-tutorials"></a>Kaggle tutorials
@@ -122,8 +123,8 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Kaggle 2nd Annual Data Science Bowl End-to-End Deep Learning Tutorial (R)](https://www.kaggle.com/c/second-annual-data-science-bowl/forums/t/18122/deep-learning-model-in-r) - an end-to-end R tutorial for Kaggle heart disease diagnose competition
 
 ### <a name="learning-note"></a>Learning Note
-* [Learning Note in Chinese](https://github.com/zhubuntu/MXNet-Learning-Note) - Mxnet learning note in Chinese.
-* [Getting Started with MXNet](https://indico.io/blog/getting-started-with-mxnet/) by [indico.io](https://indico.io) (Chinese Translation [MXnet实践](http://www.infoq.com/cn/articles/practise-of-mxnet) by [侠天](http://www.infoq.com/cn/author/%E4%BE%A0%E5%A4%A9) )
+* [Learning Note in Chinese](https://github.com/zhubuntu/MXNet-Learning-Note) - MXNet learning note in Chinese.
+* [Getting Started with MXNet](https://indico.io/blog/getting-started-with-mxnet/) by [indico.io](https://indico.io) (Chinese Translation [MXNet实践](http://www.infoq.com/cn/articles/practise-of-mxnet) by [侠天](http://www.infoq.com/cn/author/%E4%BE%A0%E5%A4%A9) )
 * [{mxnet} R package from MXnet, an intuitive Deep Learning framework including CNN & RNN] (http://tjo-en.hatenablog.com/entry/2016/03/30/233848) by [TJO](http://tjo-en.hatenablog.com/)
 * [MXnet with R: combined power of deep learning](http://cos.name/2016/04/mxnet-r/) in Chinese by Tong He
 * [Understand MXNet dependency engine](http://yuyang0.github.io/articles/mxnet-engine.html) in Chinese by [Yu Yang](https://github.com/yuyang0)
