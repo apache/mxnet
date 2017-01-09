@@ -166,13 +166,16 @@ class ThreadedVar final : public Var,
   int num_pending_reads_{0};
   /*!
    * \brief Points to the last VersionedVarBlock in the queue.
-   *  head_ always points to a empty VersionedVarBlock.
+   *  head_ always points to an empty VersionedVarBlock.
    *  So when we want to append an operation to the queue:
    *    1) update head_->trigger to be new op
    *    2) update head_->next to be a new VersionedVarBlock
    *    3) move head to head->next.
    */
   VersionedVarBlock* head_{nullptr};
+
+  bool is_last_write_{false};
+  int latest_priority_{0};
   /*!
    * \brief The pointer to next write to perform.
    *  This pointer will only be updated when the write completes.
@@ -237,24 +240,42 @@ struct ThreadedOpr final : public Opr,
  */
 class ThreadedEngine : public Engine {
  public:
+  /*!\brief Priority range (1 ~ kWorkerPriority) for worker thread. */
+  static constexpr int kWorkerPriority = 100000;
+
   // implementing all the functions from Engine.
   ThreadedVar* NewVariable() override;
+
   ThreadedOpr* NewOperator(AsyncFn fn,
                            std::vector<VarHandle> const& const_vars,
                            std::vector<VarHandle> const& mutable_vars,
                            FnProperty prop = FnProperty::kNormal,
                            const char* opr_name = nullptr) override;
+
   void DeleteOperator(OprHandle op) override;
-  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override;
+
+  // Push an operator to the engine. If priority is not specified, the operator
+  // will be assigned a decreasing priority based on their push order. This makes
+  // earlier operator pushed higher priority, so the engine will try follow
+  // the programming order if all operators pushed could be executed in parallel.
+  void Push(OprHandle op,
+            Context exec_ctx,
+            int priority = Engine::kNoPriority,
+            bool profiling = false) override;
+
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop = FnProperty::kNormal,
-                 int priority = 0,
+                 int priority = Engine::kNoPriority,
                  const char* opr_name = nullptr) override;
+
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
+
   void WaitForVar(VarHandle var) override;
+
   void WaitForAll() override;
+
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
   }
@@ -394,6 +415,11 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
+
+  /*! \brief Priority counter used to assign to pushed operators. */
+  std::mutex priority_m_;
+  int priority_counter_{ThreadedEngine::kWorkerPriority};
+
   /*!
    * \brief Disallow copy construction and assignment.
    */

@@ -84,6 +84,8 @@ class MXNET_API Engine {
   typedef engine::VarHandle VarHandle;
   /*! \brief Operator pointer */
   typedef engine::OprHandle OprHandle;
+  /*! \brief Value for not specified priority. */
+  static constexpr int kNoPriority = 0;
   /*!
    * \brief Notify the engine about a shutdown,
    *  This can help engine to print less messages into display.
@@ -130,7 +132,7 @@ class MXNET_API Engine {
    * \param priority Priority of the action, as hint to the engine.
    * \param profiling The variable indicate whether to profile this operator.
    */
-  virtual void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) = 0;
+  virtual void Push(OprHandle op, Context exec_ctx, int priority = kNoPriority, bool profiling = false) = 0;
   /*!
    * \brief Push an asynchronous operation to the engine.
    * \param exec_fun Execution function, this function takes a parameter
@@ -148,7 +150,7 @@ class MXNET_API Engine {
                          std::vector<VarHandle> const& const_vars,
                          std::vector<VarHandle> const& mutable_vars,
                          FnProperty prop = FnProperty::kNormal,
-                         int priority = 0,
+                         int priority = kNoPriority,
                          const char* opr_name = nullptr) = 0;
   /*!
    * \brief Schedule the deletion of a variable.
@@ -205,7 +207,7 @@ class MXNET_API Engine {
                        std::vector<VarHandle> const& const_vars,
                        std::vector<VarHandle> const& mutable_vars,
                        FnProperty prop = FnProperty::kNormal,
-                       int priority = 0,
+                       int priority = kNoPriority,
                        const char* opr_name = nullptr) {
     this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
         exec_fn(ctx);

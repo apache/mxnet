@@ -195,9 +195,10 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     } else if (ctx.dev_mask() == gpu::kDevMask && fgpu.count(op)) {
       fn = fgpu[op];
     }
+    const auto& opname = op->name;
     if (fn) {
       Engine::Get()->PushAsync(
-        [ctx, attrs, fn, ndinputs, ndoutputs, requested](
+        [ctx, attrs, fn, ndinputs, ndoutputs, requested, opname](
             RunContext rctx,
             engine::CallbackOnComplete on_complete) {
           std::vector<TBlob> input_blobs, output_blobs;

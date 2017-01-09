@@ -264,7 +264,15 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool pro
       threaded_opr->const_vars.size() +
       threaded_opr->mutable_vars.size() + 1));
   opr_block->ctx = exec_ctx;
-  opr_block->priority = priority;
+  if (priority == Engine::kNoPriority) {
+    std::lock_guard<std::mutex> lock(priority_m_);
+    opr_block->priority = --priority_counter_;
+    if (priority_counter_ == 1) {
+      priority_counter_ = ThreadedEngine::kWorkerPriority;  // Wraparound.
+    }
+  } else {
+    opr_block->priority = priority;
+  }
   opr_block->profiling = profiling;
   ++pending_;
   // Add read dependencies.

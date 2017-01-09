@@ -59,7 +59,10 @@ class NaiveEngine final : public Engine {
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     delete opr;
   }
-  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override {
+  void Push(OprHandle op,
+            Context exec_ctx,
+            int priority = Engine::kNoPriority,
+            bool profiling = false) override {
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     this->PushAsync(opr->fn,
                     exec_ctx,
@@ -74,7 +77,7 @@ class NaiveEngine final : public Engine {
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop = FnProperty::kNormal,
-                 int priority = 0,
+                 int priority = Engine::kNoPriority,
                  const char* opr_name = nullptr) override {
     CallbackOnComplete callback = CreateCallback(
         NaiveEngine::OnComplete, nullptr);
