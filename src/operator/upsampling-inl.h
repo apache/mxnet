@@ -204,7 +204,7 @@ class UpSamplingProp : public OperatorProperty {
         int oh = dshape[2]*param_.scale, ow = dshape[3]*param_.scale;
         CHECK_EQ(oh%shape[2], 0) << "UpSamplingNearest: input height of " << shape[2] << \
           "does not divide output height of " << oh;
-        CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input weight of " << shape[3] << \
+        CHECK_EQ(ow%shape[3], 0) << "UpSamplingNearest: input width of " << shape[3] << \
           "does not divide output width of " << ow;
         if (param_.multi_input_mode == up_enum::kSum) {
           CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
