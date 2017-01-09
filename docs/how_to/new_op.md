@@ -126,7 +126,7 @@ As long as all attributes registered with the same key have the same type, we ca
 In this section, we will go through the basic attributes MXNet expect for all operators. You can find the definition for them in the following two files:
 
 - [nnvm/op_attr_types.h](https://github.com/dmlc/nnvm/blob/master/include/nnvm/op_attr_types.h)
-- [mxnet/op_attr_types.h](https://github.com/dmlc/mxnet/blob/nnvm/include/mxnet/op_attr_types.h)
+- [mxnet/op_attr_types.h](https://github.com/dmlc/mxnet/blob/master/include/mxnet/op_attr_types.h)
 
 #### Descriptions (Optional)
 
