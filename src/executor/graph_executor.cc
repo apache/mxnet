@@ -399,7 +399,18 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   // other initializations
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
   g = nnvm::pass::InferType(g, arg_types, "__dtype__");
-  g = nnvm::ApplyPass(g, "PlanMemory");
+
+  {
+    // memory allocator
+    const int kBadStorageID = -1;
+    const int kExternalStorageID = -2;
+    nnvm::StorageVector arg_storage_id(idx.num_node_entries(), kBadStorageID);
+    for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
+      arg_storage_id[idx.entry_id(idx.outputs()[j])] = kExternalStorageID;
+    }
+    g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(arg_storage_id));
+    g = nnvm::ApplyPass(g, "PlanMemory");
+  }
   g = DetectInplaceAddTo(g);
   return g;
 }

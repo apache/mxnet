@@ -12,7 +12,9 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 * MXNET_CPU_WORKER_NTHREADS (default=1)
   - The maximum number of threads that do the CPU computation job.
 * MXNET_CPU_PRIORITY_NTHREADS (default=4)
-	- The number of threads given to prioritized CPU jobs.
+ - The number of threads given to prioritized CPU jobs.
+* MXNET_CPU_NNPACK_NTHREADS (default=4)
+ - The number of threads used for NNPACK.
 
 ## Memory Options
 

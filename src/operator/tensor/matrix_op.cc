@@ -251,9 +251,10 @@ NNVM_REGISTER_OP(_backward_dot)
 
 NNVM_REGISTER_OP(batch_dot)
 .MXNET_DESCRIBE("Calculate batched dot product of two matrices."
-                " (batch, M, K) batch_dot (batch, K, N) --> (batch, M, N)")
+                " (batch, M, K) X (batch, K, N) --> (batch, M, N).")
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr_parser(ParamParser<DotParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"lhs", "rhs"};
@@ -268,11 +269,12 @@ NNVM_REGISTER_OP(batch_dot)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
 .add_argument("lhs", "NDArray", "Left input")
 .add_argument("rhs", "NDArray", "Right input")
-.add_arguments(FlipParam::__FIELDS__());
+.add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_batch_dot)
 .set_num_inputs(3)
 .set_num_outputs(2)
+.set_attr_parser(ParamParser<DotParam>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

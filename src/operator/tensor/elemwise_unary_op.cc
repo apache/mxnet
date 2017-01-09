@@ -26,6 +26,15 @@ NNVM_REGISTER_OP(_backward_copy)
   })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
 
+MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
+.MXNET_DESCRIBE("Get output from a symbol and pass 0 gradient back")
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // pass back zero gradient
+    return MakeGradNode("_zeros", n, {}, std::unordered_map<std::string, std::string>());
+});
+
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_num_inputs(2)
