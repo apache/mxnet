@@ -7,20 +7,19 @@
 #ifndef MXNET_C_PREDICT_API_H_
 #define MXNET_C_PREDICT_API_H_
 
+/*! \brief Inhibit C++ name-mangling for MXNet functions. */
 #ifdef __cplusplus
-#define MXNET_EXTERN_C extern "C"
-#else
-#define MXNET_EXTERN_C
-#endif
+extern "C" {
+#endif  // __cplusplus
 
 #ifdef _WIN32
 #ifdef MXNET_EXPORTS
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllexport)
+#define MXNET_DLL __declspec(dllexport)
 #else
-#define MXNET_DLL MXNET_EXTERN_C __declspec(dllimport)
+#define MXNET_DLL __declspec(dllimport)
 #endif
 #else
-#define MXNET_DLL MXNET_EXTERN_C
+#define MXNET_DLL
 #endif
 
 /*! \brief manually define unsigned int */
@@ -198,10 +197,14 @@ MXNET_DLL int MXNDListGet(NDListHandle handle,
                           const mx_uint** out_shape,
                           mx_uint* out_ndim);
 /*!
- * \brief Free a predictor handle.
- * \param handle The handle of the predictor.
+ * \brief Free a MXAPINDList
+ * \param handle The handle of the MXAPINDList.
  * \return 0 when success, -1 when failure.
  */
 MXNET_DLL int MXNDListFree(NDListHandle handle);
+
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
 
 #endif  // MXNET_C_PREDICT_API_H_

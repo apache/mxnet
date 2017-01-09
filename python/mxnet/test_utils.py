@@ -78,6 +78,15 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
         ret = ret.reshape(tuple(keepdims_shape))
     return ret
 
+def print_max_err_loc(a, b, rtol=1e-7, atol=0):
+    """print location of maximum violation"""
+    diff = np.abs(a-b)
+    tol = atol + rtol*np.abs(b)
+    violation = diff/(tol+1e-20)
+    loc = np.argmax(violation)
+    idx = np.unravel_index(loc, violation.shape)
+    print('Maximum err at ', idx, ':', a.flat[loc], ' vs ', b.flat[loc])
+    return idx
 
 def same(a, b):
     """Test if two numpy arrays are the same
@@ -88,7 +97,6 @@ def same(a, b):
     b : np.ndarray
     """
     return np.array_equal(a, b)
-
 
 def reldiff(a, b):
     """Calculate the relative difference between two input arrays
@@ -134,6 +142,36 @@ def assert_almost_equal(a, b, threshold=None):
                                 names=["a", "b"])
         raise Exception(msg)
     return rel
+
+def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
+    """Test that two numpy arrays are almost equal (ignoring NaN in either array).
+    Combines a relative and absolute measure of approximate eqality.
+    If either the relative or absolute check passes, the arrays are considered equal.
+    Including an absolute check resolves issues with the relative check where all
+    array values are close to zero.
+
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to None
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to None
+    """
+    a = np.copy(a)
+    b = np.copy(b)
+    nan_mask = np.logical_or(np.isnan(a), np.isnan(b))
+    a[nan_mask] = 0
+    b[nan_mask] = 0
+
+    rtol = rtol or default_numerical_threshold()
+    atol = atol or default_numerical_threshold()
+
+    rel_approx_equal = reldiff(a, b) <= rtol
+    abs_approx_equal = np.sum(np.abs(a - b) > atol) == 0
+
+    return rel_approx_equal or abs_approx_equal
 
 
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
@@ -620,14 +658,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     Parameters
     ----------
-    sym : Symbol
-        symbol to run the consistency test
+    sym : Symbol or list of Symbols
+        symbol(s) to run the consistency test
     ctx_list : list
         running context. See example for more detail.
     scale : float, optional
         standard deviation of the inner normal distribution. Used in initialization
     grad_req : str or list of str or dict of str to str
         gradient requirement.
+
     Examples
     --------
     >>> # create the symbol
@@ -717,6 +756,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 npt.assert_allclose(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                print_max_err_loc(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                 traceback.print_exc()
                 if raise_on_err:
                     raise e
@@ -741,6 +781,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                     npt.assert_allclose(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                 except Exception as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                    print_max_err_loc(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                     print(e)
                     if raise_on_err:
                         raise e

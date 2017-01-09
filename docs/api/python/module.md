@@ -40,7 +40,7 @@ Modules provide high-level APIs for training, predicting, and evaluating. To fit
 
 ```python
     mod = mx.mod.Module(softmax)
-    mod.fit(train_dataiter, eval_data=val_dataiter,
+    mod.fit(train_dataiter, eval_data=eval_dataiter,
             optimizer_params={'learning_rate':0.01, 'momentum': 0.9},
             num_epoch=n_epoch)
 ```

@@ -14,6 +14,10 @@ ifndef DMLC_CORE
 	DMLC_CORE = $(ROOTDIR)/dmlc-core
 endif
 
+ifndef NNVM_PATH
+	NNVM_PATH = $(ROOTDIR)/nnvm
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -27,18 +31,27 @@ include $(DMLC_CORE)/make/dmlc.mk
 WARNFLAGS= -Wall
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
+ifeq ($(DEV), 1)
+	CFLAGS += -g -Werror
+endif
+
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -O0 -DDMLC_LOG_FATAL_THROW=0
 else
 	CFLAGS += -O3
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+endif
+
+# CFLAGS for profiler
+ifeq ($(USE_PROFILER), 1)
+	CFLAGS += -DMXNET_USE_PROFILER=1
 endif
 
 ifndef LINT_LANG
@@ -60,7 +73,6 @@ endif
 
 ifeq ($(USE_NNPACK), 1)
 	CFLAGS += -DMXNET_USE_NNPACK=1
-	CFLAGS += -DMXNET_USE_NNPACK_NUM_THREADS=$(USE_NNPACK_NUM_THREADS)
 	LDFLAGS += -lnnpack
 endif
 
@@ -118,13 +130,14 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen
+.PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen\
+	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN)
 
-SRC = $(wildcard src/*.cc src/*/*.cc src/*/*/*.cc)
+SRC = $(wildcard src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
-CUSRC = $(wildcard src/*/*.cu)
+CUSRC = $(wildcard src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
@@ -152,15 +165,20 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
+		WHOLE_ARCH= -all_load
+		NO_WHOLE_ARCH= -noall_load
 		SCALA_PKG_PROFILE := osx-x86_64
 	else
 		SCALA_PKG_PROFILE := linux-x86_64
+		WHOLE_ARCH= --whole-archive
+		NO_WHOLE_ARCH= --no-whole-archive
 	endif
 endif
 
 # all dep
-LIB_DEP += $(DMLC_CORE)/libdmlc.a
+LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
+
 ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda
@@ -168,6 +186,9 @@ ifeq ($(USE_CUDA), 1)
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
+
+# For quick compile test, used smaller subset
+ALLX_DEP= $(ALL_DEP)
 
 ifeq ($(USE_NVRTC), 1)
 	LDFLAGS += -lnvrtc
@@ -178,8 +199,7 @@ endif
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/src/$*.o $< >build/src/$*.d
-	$(CXX) -std=c++11 -c $(CFLAGS) -c $< -o $@
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
 build/src/%_gpu.o: src/%.cu
 	@mkdir -p $(@D)
@@ -195,8 +215,7 @@ build/plugin/%_gpu.o: plugin/%.cu
 
 build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*.o $< >build/plugin/$*.d
-	$(CXX) -std=c++11 -c $(CFLAGS) -c $< -o $@
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
 %_gpu.o: %.cu
 	@mkdir -p $(@D)
@@ -205,18 +224,18 @@ build/plugin/%.o: plugin/%.cc
 
 %.o: %.cc
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -Isrc/operator -MM -MT $*.o $< >$*.d
-	$(CXX) -std=c++11 -c $(CFLAGS) -Isrc/operator -c $< -o $@
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
-lib/libmxnet.a: $(ALL_DEP)
+lib/libmxnet.a: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	ar crv $@ $(filter %.o, $?)
 
-lib/libmxnet.so: $(ALL_DEP)
-	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
+lib/libmxnet.so: $(ALLX_DEP)
+	 @mkdir -p $(@D)
+	 $(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
+	 -Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -228,7 +247,12 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); make libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-bin/im2rec: tools/im2rec.cc $(ALL_DEP)
+$(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
+
+LIBNNVM:
+	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
+
+bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
@@ -246,24 +270,40 @@ doc: doxygen
 doxygen:
 	doxygen docs/Doxyfile
 
+# Cython build
+cython:
+	cd python; python setup.py build_ext --inplace
+
+cython2:
+	cd python; python2 setup.py build_ext --inplace
+
+cython3:
+	cd python; python3 setup.py build_ext --inplace
+
+cyclean:
+	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
+
 # R related shortcuts
 rcpplint:
 	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
-rcppexport:
-	Rscript -e "require(mxnet); mxnet::mxnet.export(\"R-package\")"
-
-roxygen:
-	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
-
-rpkg:	roxygen
+rpkg:
 	mkdir -p R-package/inst
 	mkdir -p R-package/inst/libs
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
 	cp -rf dmlc-core/include/* R-package/inst/include/
+	cp -rf nnvm/include/* R-package/inst/include
+	echo "import(Rcpp)" > R-package/NAMESPACE
+	echo "import(methods)" >> R-package/NAMESPACE
+	R CMD INSTALL R-package
+	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
+	rm -rf R-package/NAMESPACE
+	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
+	rm -rf mxnet_current_r.tar.gz
+	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
@@ -293,17 +333,21 @@ jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
-clean:
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
+clean: cyclean
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
+		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
+	cd $(NNVM_PATH); make clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean:
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
+clean: cyclean
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
+		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); make clean; cd -
 	cd $(PS_PATH); make clean; cd -
+	cd $(NNVM_PATH); make clean; cd -
 endif
 
 clean_all: clean
@@ -311,6 +355,7 @@ clean_all: clean
 -include build/*.d
 -include build/*/*.d
 -include build/*/*/*.d
+-include build/*/*/*/*.d
 ifneq ($(EXTRA_OPERATORS),)
 	-include $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 endif

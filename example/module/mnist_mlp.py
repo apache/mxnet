@@ -1,5 +1,7 @@
 # pylint: skip-file
-import os
+import os, sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import get_data
 import mxnet as mx
 import numpy as np
 import logging
@@ -16,14 +18,16 @@ n_epoch = 2
 batch_size = 100
 
 basedir = os.path.dirname(__file__)
+get_data.get_mnist(os.path.join(basedir, "data"))
+
 train_dataiter = mx.io.MNISTIter(
-        image=os.path.join(basedir, "../image-classification/mnist/train-images-idx3-ubyte"),
-        label=os.path.join(basedir, "../image-classification/mnist/train-labels-idx1-ubyte"),
+        image=os.path.join(basedir, "data", "train-images-idx3-ubyte"),
+        label=os.path.join(basedir, "data", "train-labels-idx1-ubyte"),
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
-        image=os.path.join(basedir, "../image-classification/mnist/t10k-images-idx3-ubyte"),
-        label=os.path.join(basedir, "../image-classification/mnist/t10k-labels-idx1-ubyte"),
+        image=os.path.join(basedir, "data", "t10k-images-idx3-ubyte"),
+        label=os.path.join(basedir, "data", "t10k-labels-idx1-ubyte"),
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
