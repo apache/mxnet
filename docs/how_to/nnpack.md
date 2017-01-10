@@ -8,6 +8,7 @@ MXNet(nnvm branch) has integrate NNPACK for forward propagation(only inference) 
 ### Conditions
 The underlying implementation of NNPACK utilize some other acceleration methods, such as [fft](https://arxiv.org/abs/1312.5851), [winograd](https://arxiv.org/abs/1509.09308), but these algorithms work better on some specical `batch size`, `kernel size`, `stride` etc., so not all convolution/max-pooling/fully-connected can be powed by NNPACK. If some conditions are not met, it will change to the default implementation with MXNet automatically.  
 
+nnpack only support Linux or OS X host system, that is to say, Windows is not supported at present.
 The following table will tell you which satisfaction will NNPACK work.
 
 | operation      | conditions |
