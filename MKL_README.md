@@ -33,5 +33,8 @@ This README shows the user how to setup and install MKL2017 library with mxnet.
   4. Set LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<MKLML_ROOT>/lib
 
   5. Run 'sudo python setup.py install'
+  
+  6. When performing pooling operations please add the "pooling_convention='full'" argument to enable MKL accelerated pooling
+
 
 
