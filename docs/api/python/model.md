@@ -6,7 +6,7 @@ modules that makes neural network training easy.
 
 Topics:
 
-* [Train a Model](#train-a-model) 
+* [Train a Model](#train-a-model)
 * [Save the Model](#save-the-model)
 * [Periodic Checkpoint](#periodically-checkpoint)
 * [Initializer API Reference](#initializer-api-reference)
