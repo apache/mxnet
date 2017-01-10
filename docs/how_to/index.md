@@ -47,6 +47,9 @@ In particular, the popular task of using a ConvNet to figure out what is in an i
 * [How to improve MXNet performance](http://mxnet.io/how_to/perf.html)
 *Explains how to improve MXNet performance by using the recommended data format, storage locations, batch sizes, libraries, and parameters, and more.*
 
+* [How to use nnpack improve cpu performance of MXNet](http://mxnet.io/how_to/nnpack.html)
+*Explains how to improve cpu performance of MXNet by using [nnpack](https://github.com/Maratyszcza/NNPACK). currently, nnpack support convolution, max-pooling, fully-connected operator.*
+
 * [How to use MXNet within a Matlab environment](https://github.com/dmlc/mxnet/tree/master/matlab)
 *Provides the commands to load a model and data, get predictions, and do feature extraction in Matlab using the MXNet library. It includes an implementation difference between the two that can cause issues, and some basic troubleshooting.*
 

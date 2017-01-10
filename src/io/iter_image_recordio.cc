@@ -161,7 +161,7 @@ class ImageRecordIOParser {
   inline bool ParseNext(std::vector<InstVector<DType>> *out);
 
  private:
-  // magic nyumber to see prng
+  // magic number to see prng
   static const int kRandMagic = 111;
   /*! \brief parameters */
   ImageRecParserParam param_;

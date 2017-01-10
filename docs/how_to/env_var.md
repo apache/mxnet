@@ -55,7 +55,7 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 * MXNET_BACKWARD_DO_MIRROR (default=0)
     - whether do `mirror` during training for saving device memory.
     - when set to `1`, then during forward propagation, graph exector will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed. `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
-    - one extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will save O(sqrt(N)) memory at 75% running speed.
+    - one extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will only use O(sqrt(N)) memory at 75% running speed.
 
 ## Control the profiler
 
