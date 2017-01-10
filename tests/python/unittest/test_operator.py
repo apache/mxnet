@@ -2197,7 +2197,7 @@ def test_order(ctx=default_context()):
     a_npy = np.random.normal(size=(5, 5, 5, 5))
     a = mx.sym.Variable('a')
     b = mx.sym.topk(a, axis=1, is_ascend=False, ret_typ="value", k=2)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx, check_eps=1.5e-2)
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=2,
                                              is_ascend=False)])
@@ -2207,9 +2207,9 @@ def test_order(ctx=default_context()):
                            expected=[gt_topk(dat=a_npy, axis=None, ret_typ="value", k=10,
                                              is_ascend=True)])
     b = mx.sym.topk(a, axis=3, is_ascend=True, ret_typ="value", k=3)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx, check_eps=1.5e-2)
     check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx,
-                           grad_nodes={'a': 'add'})
+                           grad_nodes={'a': 'add'}, check_eps=1.5e-2)
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=3, ret_typ="value", k=3,
                                              is_ascend=True)])
@@ -2229,7 +2229,7 @@ def test_order(ctx=default_context()):
                                              is_ascend=True)])
     a = mx.sym.Variable('a')
     b = mx.sym.sort(a, axis=1, is_ascend=False)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
+    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx, check_eps=1.5e-2)
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=5,
                                              is_ascend=False)])
