@@ -64,6 +64,17 @@ You can view the installation script we just used to install MXNet for Python [h
 
 ### Install MXNet for R
 
+MXNet requires R-version to be 3.2.0 and above. If you are running earlier version of R, run below commands to update your R version, before running the installation script.
+
+```bash
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+    sudo add-apt-repository ppa:marutter/rdev
+
+    sudo apt-get update
+    sudo apt-get upgrade
+    sudo apt-get install r-base r-base-dev
+```
+
 To install MXNet for R:
 
 ```bash
