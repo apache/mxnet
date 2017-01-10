@@ -28,7 +28,7 @@ namespace mxnet {
     class ThreadedEngineScale : public ThreadedEngine {
     public:
  
-      ThreadedEngineScale() noexcept(false) : abort(false) {
+      ThreadedEngineScale() noexcept(false) : abort(false), NextQueue(0) {
         int threads = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 16);
         for (int i = 0; i < threads; i++) {
           Queues.push_back(new std::priority_queue<OprBlock*, std::deque<OprBlock*>, PriorityComparer>());
@@ -59,7 +59,7 @@ namespace mxnet {
     protected:
       void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
         const Context& ctx = opr_block->ctx;
-        if (false && opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
+        if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
           RunContext run_ctx;
           run_ctx.stream = nullptr;
           this->ExecuteOprBlock(run_ctx, opr_block);
@@ -68,9 +68,12 @@ namespace mxnet {
           int index = IndexFromCurrentThread();
           if (index == -1) {
             {
-            // push to worker[0]
-            std::lock_guard<std::mutex> lock(*QueueMutex[0]);
-            Queues[0]->push(opr_block);
+            // push to worker,
+            // roundrobin the queue
+            size_t next = NextQueue++;
+            next = next % QueueMutex.size();
+            std::lock_guard<std::mutex> lock(*QueueMutex[next]);
+            Queues[next]->push(opr_block);
             }
             {
               // notify if there is anyone is waiting
@@ -106,6 +109,7 @@ namespace mxnet {
         run_ctx.stream = nullptr;
         OprBlock* opr_block;
         bool hasMoreWork;
+#if 1
         pthread_t thread;
         cpu_set_t cpuset;
 
@@ -115,6 +119,7 @@ namespace mxnet {
         CPU_SET(index, &cpuset);
 
         pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+#endif
         for (;!this->abort;)
         {
           opr_block = nullptr;
@@ -126,7 +131,7 @@ namespace mxnet {
               opr_block = myQueue->top();
               myQueue->pop();
 
-              if (!myQueue->empty()) {
+              if (myQueue->size() > 1) {
                 // since we have more workitem in queues, try to wake up other threads
                 hasMoreWork = true;
               }
@@ -181,6 +186,7 @@ namespace mxnet {
 
       std::mutex WaitMutex;
       std::condition_variable WaitCV;
+      std::atomic<size_t> NextQueue;
     };
 
     Engine *CreateThreadedEngineScale() {
