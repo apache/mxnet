@@ -14,14 +14,15 @@
 #include <future>
 #include <vector>
 #include "ps/ps.h"
-#include "mxnet/kvstore.h"
-
+#include "../../include/mxnet/kvstore.h"
+#include "../../ps-lite/src/DIME.h"
+#include <time.h>
+#pragma once
 namespace mxnet {
 namespace kvstore {
 
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
-
 /**
  * \brief executor runs a function using the thread called \ref Start
  */
@@ -110,6 +111,11 @@ class KVStoreDistServer {
     updater_ = updater;
   }
 
+  void set_synch_mode(bool async)
+  {
+    sync_mode_ = !async;
+  }
+
   /**
    * \brief blocked until received the command \a kSyncMode
    */
@@ -145,23 +151,30 @@ class KVStoreDistServer {
 
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
-
+    //if (Postoffice::Get()->verbose() >= 2) {
+    //}
     // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
     if (req_meta.push) {
+      //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << " is a push";
       size_t ds[] = {(size_t)req_data.lens[0]};
+      //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << " is a push1";
       TShape dshape(ds, ds + 1);
+      //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << " is a push2";
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
+      //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << " is a push3";
       NDArray recved = NDArray(recv_blob, 0);
       if (stored.is_none()) {
+        //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << "is an initialization";
         // initialization
         stored = NDArray(dshape, Context());
         CopyFromTo(recved, &stored, 0);
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
+        //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << " is a synchronized push";
         // synced push
         auto& merged = merge_buf_[key];
         if (merged.array.is_none()) {
@@ -175,28 +188,49 @@ class KVStoreDistServer {
         }
 
         merged.request.push_back(req_meta);
-
+        //printf("[CUSTOM INSPECTION] (%d,%d) %d/%d\n",req_meta.sender ,req_meta.timestamp ,merged.request.size() ,(size_t)ps::NumWorkers());                
         if (merged.request.size() == (size_t)ps::NumWorkers()) {
+        //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << "has enough votes.";                
+
           // let the main thread to execute updater_, which is necessary for
           // python
+
+          //remove this:
+          //CopyFromTo(merged.array, &stored);
+
           if (updater_) {
+            //std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+            //restore this
             exec_.Exec([this, key, &merged, &stored](){
                 CHECK(updater_);
                 updater_(key, merged.array, &stored);
               });
+            //auto endNow = std::chrono::system_clock::now();
+
+            //double delayms = std::chrono::duration_cast<std::chrono::microseconds>(endNow - now).count();
+ 
+            //DIMELOG::Get()->DimeLogMetric1(delayms);
           } else {
             // if no updater, just copy
+            //timespec tim, tim2;
+            //tim.tv_sec = 0;
+            //tim.tv_nsec = 337000;
+            //nanosleep(&tim, &tim2);
+            //restore this:
             CopyFromTo(merged.array, &stored);
           }
           for (const auto& req : merged.request) {
             server->Response(req);
           }
           merged.request.clear();
+
+
           stored.WaitToRead();
         } else {
           merged.array.WaitToRead();
         }
       } else {
+        //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << " is an asynchronized push";
         // async push
         exec_.Exec([this, key, &recved, &stored](){
             CHECK(updater_);
@@ -207,6 +241,7 @@ class KVStoreDistServer {
       }
     } else {
       // pull
+      //PS_VLOG(2) <<"[CUSTOM INSPECTION]"<< req_meta.sender << "," << req_meta.timestamp << " is a pull";
       ps::KVPairs<real_t> response;
       CHECK(!stored.is_none()) << "init " << key << " first";
       int len = stored.shape()[0];
