@@ -1,10 +1,13 @@
 # pylint: skip-file
+import os, sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import get_data
 import mxnet as mx
 import numpy as np
 import logging
 
 # whether to demo model-parallelism + data parallelism
-demo_data_model_parallelism = False
+demo_data_model_parallelism = True
 
 if demo_data_model_parallelism:
     contexts = [[mx.context.gpu(0), mx.context.gpu(1)], [mx.context.gpu(2), mx.context.gpu(3)]]
@@ -43,14 +46,17 @@ mod_seq.add(mod1).add(mod2, take_labels=True, auto_wiring=True)
 #--------------------------------------------------------------------------------
 n_epoch = 2
 batch_size = 100
+basedir = os.path.dirname(__file__)
+get_data.get_mnist(os.path.join(basedir, "data"))
+
 train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image=os.path.join(basedir, "data", "train-images-idx3-ubyte"),
+        label=os.path.join(basedir, "data", "train-labels-idx1-ubyte"),
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
+        image=os.path.join(basedir, "data", "t10k-images-idx3-ubyte"),
+        label=os.path.join(basedir, "data", "t10k-labels-idx1-ubyte"),
         data_shape=(784,),
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 

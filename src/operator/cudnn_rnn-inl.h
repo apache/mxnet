@@ -55,7 +55,7 @@ class CuDNNRNNOp : public Operator {
 
   ~CuDNNRNNOp() {
     if (init_cudnn_) {
-      for (int i = 0; i < x_desc_vec_.size(); ++i) {
+      for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
         CHECK_EQ(cudnnDestroyTensorDescriptor(x_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnDestroyTensorDescriptor(y_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]), CUDNN_STATUS_SUCCESS);

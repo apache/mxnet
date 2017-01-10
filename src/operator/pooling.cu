@@ -4,7 +4,7 @@
  * \brief
  * \author Bing Xu
 */
-
+#include <vector>
 #include "./pooling-inl.h"
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn_pooling-inl.h"

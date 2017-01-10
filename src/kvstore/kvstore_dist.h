@@ -116,7 +116,9 @@ class KVStoreDist : public KVStoreLocal {
           pinned_ctx_,
           {},
           {recv_buf.var()},
-          FnProperty::kNormal, priority);
+          FnProperty::kNormal,
+          priority,
+          PROFILER_MESSAGE("KVStoreDistPull"));
 
       comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
     }
@@ -221,7 +223,9 @@ class KVStoreDist : public KVStoreLocal {
           pinned_ctx_,
           {send_buf.var()},
           {},
-          FnProperty::kNormal, priority);
+          FnProperty::kNormal,
+          priority,
+          PROFILER_MESSAGE("KVStoreDistPush"));
     }
   }
 
@@ -283,8 +287,8 @@ class KVStoreDist : public KVStoreLocal {
         pskv.size = 0;
         for (int i = 0; i < num_servers; ++i) {
           size_t part_size =
-              static_cast<size_t>(static_cast<double>(size)/num_servers*(i+1)) -
-              static_cast<size_t>(static_cast<double>(size)/num_servers*i);
+              static_cast<size_t>(round(static_cast<double>(size)/num_servers*(i+1))) -
+              static_cast<size_t>(round(static_cast<double>(size)/num_servers*i));
           ps::Key ps_key = krs[i].begin() + key;
           CHECK_LT(ps_key, krs[i].end());
           pskv.keys.push_back(ps_key);

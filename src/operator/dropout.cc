@@ -31,7 +31,11 @@ Operator *DropoutProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
 DMLC_REGISTER_PARAMETER(DropoutParam);
 
 MXNET_REGISTER_OP_PROPERTY(Dropout, DropoutProp)
-.describe("Apply dropout to input")
+.describe(R"(Apply dropout to input.
+During training, each element of the input is randomly set to zero with probability p.
+And then the whole tensor is rescaled by 1/(1-p) to keep the expectation the same as
+before applying dropout. During the test time, this behaves as an identity map.
+)")
 .add_argument("data", "Symbol", "Input data to dropout.")
 .add_arguments(DropoutParam::__FIELDS__());
 

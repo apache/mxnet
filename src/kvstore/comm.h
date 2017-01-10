@@ -17,7 +17,14 @@ namespace kvstore {
 class Comm {
  public:
   Comm() {
-    pinned_ctx_ = (MXNET_USE_CUDA != 0) ? Context::CPUPinned(0) : Context::CPU();
+#if MXNET_USE_CUDA
+    int gpu_num;
+    int ret = cudaGetDeviceCount(&gpu_num);
+    pinned_ctx_ = (ret == 0 && gpu_num > 0) ?
+                  Context::CPUPinned(0) : Context::CPU();
+#else
+    pinned_ctx_ = Context::CPU();
+#endif
   }
   virtual ~Comm() { }
   /**
@@ -35,6 +42,13 @@ class Comm {
   virtual void Broadcast(
       int key, const NDArray& src,
       const std::vector<NDArray*> dst, int priority) = 0;
+
+  /**
+   * \brief return a pinned contex
+   */
+  Context pinned_ctx() const {
+    return pinned_ctx_;
+  }
 
  protected:
   Context pinned_ctx_;
@@ -84,7 +98,7 @@ class CommCPU : public Comm {
     Engine::Get()->PushSync([reduce, this](RunContext rctx) {
         ReduceSumCPU(reduce);
       }, Context::CPU(), const_vars, {reduce[0].var()},
-      FnProperty::kCPUPrioritized, priority);
+      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
 
     return buf.merged;
   }
@@ -163,7 +177,7 @@ class CommCPU : public Comm {
       }
     }
   }
-  /// \brief temperal space for pushing and pull
+  /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the merged value
     NDArray merged;
@@ -278,7 +292,7 @@ class CommDevice : public Comm {
         cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);
         if (access) {
           cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
-          if (e == cudaSuccess) {
+          if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
             ++enabled;
             p2p[i*n+j] = 1;
           }
@@ -289,7 +303,7 @@ class CommDevice : public Comm {
       // print warning info if not fully enabled
       LOG(WARNING) << "only " << enabled <<  " out of "
                    << n*(n-1) << " GPU pairs are enabled direct access. "
-                   << "It may affect the perofmrance. "
+                   << "It may affect the performance. "
                    << "You can set MXNET_ENABLE_GPU_P2P=0 to turn it off";
       std::string access(n, '.');
       for (int i = 0; i < n; ++i) {
@@ -334,7 +348,7 @@ class CommDevice : public Comm {
   }
 
   std::vector<KeyShape> sorted_key_shape_;
-  /// \brief temperal space for pushing and pull
+  /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the merged value
     NDArray merged;

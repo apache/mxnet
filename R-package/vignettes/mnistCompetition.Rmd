@@ -13,7 +13,7 @@ First, let us download the data from [here](https://www.kaggle.com/c/digit-recog
 
 Then we can read them in R and convert to matrices.
 
-```{r}
+```{r, eval=FALSE}
 require(mxnet)
 train <- read.csv("train.csv", header=TRUE)
 test <- read.csv("test.csv", header=TRUE)
@@ -24,9 +24,40 @@ train.x <- train[,-1]
 train.y <- train[,1]
 ```
 
+Besides using the csv files from kaggle, you can also read the orginal MNIST dataset into R.
+
+```{r, eval=FALSE}
+load_image_file <- function(filename) {
+  f = file(filename, 'rb')
+  readBin(f, 'integer', n = 1, size = 4, endian = 'big')
+  n = readBin(f,'integer', n = 1, size = 4, endian = 'big')
+  nrow = readBin(f,'integer', n = 1, size = 4, endian = 'big')
+  ncol = readBin(f,'integer', n = 1, size = 4, endian = 'big')
+  x = readBin(f, 'integer', n = n * nrow * ncol, size = 1, signed = F)
+  x = matrix(x, ncol = nrow * ncol, byrow = T)
+  close(f)
+  x
+}
+
+load_label_file <- function(filename) {
+  f = file(filename, 'rb')
+  readBin(f,'integer', n = 1, size = 4, endian = 'big')
+  n = readBin(f,'integer', n = 1, size = 4, endian = 'big')
+  y = readBin(f,'integer', n = n, size = 1, signed = F)
+  close(f)
+  y
+}
+
+train.x <- load_image_file('mnist/train-images-idx3-ubyte')
+test.y <- load_image_file('mnist/t10k-images-idx3-ubyte')
+
+train.y <- load_label_file('mnist/train-labels-idx1-ubyte')
+test.y <- load_label_file('mnist/t10k-labels-idx1-ubyte')
+```
+
 Here every image is represented as a single row in train/test. The greyscale of each image falls in the range [0, 255], we can linearly transform it into [0,1] by
 
-```{r}
+```{r, eval=FALSE}
 train.x <- t(train.x/255)
 test <- t(test/255)
 ```
@@ -34,7 +65,7 @@ We also transpose the input matrix to npixel x nexamples, which is the column ma
 
 In the label part, we see the number of each digit is fairly even:
 
-```{r}
+```{r, eval=FALSE}
 table(train.y)
 ```
 
@@ -42,7 +73,7 @@ table(train.y)
 
 Now we have the data. The next step is to configure the structure of our network.
 
-```{r}
+```{r, eval=FALSE}
 data <- mx.symbol.Variable("data")
 fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=128)
 act1 <- mx.symbol.Activation(fc1, name="relu1", act_type="relu")
@@ -60,17 +91,30 @@ softmax <- mx.symbol.SoftmaxOutput(fc3, name="sm")
 6. Here comes the output layer. Since there's only 10 digits, we set the number of neurons to 10.
 7. Finally we set the activation to softmax to get a probabilistic prediction.
 
+If you are a big fan of the `%>%` operator, you can also define the network as below:
+
+```{r, eval=FALSE}
+library(magrittr)
+softmax <- mx.symbol.Variable("data") %>%
+  mx.symbol.FullyConnected(name = "fc1", num_hidden = 128) %>%
+  mx.symbol.Activation(name = "relu1", act_type = "relu") %>%
+  mx.symbol.FullyConnected(name = "fc2", num_hidden = 64) %>%
+  mx.symbol.Activation(name = "relu2", act_type = "relu") %>%
+  mx.symbol.FullyConnected(name="fc3", num_hidden=10) %>%
+  mx.symbol.SoftmaxOutput(name="sm")
+```
+
 ## Training
 
 We are almost ready for the training process. Before we start the computation, let's decide what device should we use.
 
-```{r}
+```{r, eval=FALSE}
 devices <- mx.cpu()
 ```
 
 Here we assign CPU to `mxnet`. After all these preparation, you can run the following command to train the neural network! Note that `mx.set.seed` is the correct function to control the random process in `mxnet`.
 
-```{r}
+```{r, eval=FALSE}
 mx.set.seed(0)
 model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
                                      ctx=devices, num.round=10, array.batch.size=100,
@@ -83,32 +127,34 @@ model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
 
 To make prediction, we can simply write
 
-```{r}
+```{r, eval=FALSE}
 preds <- predict(model, test)
 dim(preds)
 ```
 
 It is a matrix with 28000 rows and 10 cols, containing the desired classification probabilities from the output layer. To extract the maximum label for each row, we can use the `max.col` in R:
 
-```{r}
+```{r, eval=FALSE}
 pred.label <- max.col(t(preds)) - 1
 table(pred.label)
 ```
 
 With a little extra effort in the csv format, we can have our submission to the competition!
 
-```{r}
+```{r, eval=FALSE}
 submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
-#write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
+write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 
 ## LeNet
 
 Next we are going to introduce a new network structure: [LeNet](http://yann.lecun.com/exdb/lenet/). It is proposed by Yann LeCun to recognize handwritten digits. Now we are going to demonstrate how to construct and train an LeNet in `mxnet`.
 
+
 First we construct the network:
 
 ```{r}
+require(mxnet)
 # input
 data <- mx.symbol.Variable('data')
 # first conv
@@ -133,16 +179,16 @@ lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 
 Then let us reshape the matrices into arrays:
 
-```{r}
+```{r, eval=FALSE}
 train.array <- train.x
 dim(train.array) <- c(28, 28, 1, ncol(train.x))
-test.array <- test
-dim(test.array) <- c(28, 28, 1, ncol(test))
+test.array <- test.x
+dim(test.array) <- c(28, 28, 1, ncol(test.x))
 ```
 
 Next we are going to compare the training speed on different devices, so the definition of the devices goes first:
 
-```{r}
+```{r, eval=FALSE}
 n.gpu <- 1
 device.cpu <- mx.cpu()
 device.gpu <- lapply(0:(n.gpu-1), function(i) {

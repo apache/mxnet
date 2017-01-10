@@ -11,6 +11,7 @@ from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
 from . import symbol
+from . import symbol_doc
 from . import io
 from . import recordio
 from . import operator
@@ -44,7 +45,14 @@ from . import monitor as mon
 from . import torch
 from . import torch as th
 
+from . import profiler
+
 from . import module
 from . import module as mod
+
+from . import image
+from . import image as img
+
+from . import test_utils
 
 __version__ = base.__version__

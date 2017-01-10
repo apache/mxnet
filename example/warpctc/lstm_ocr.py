@@ -1,5 +1,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+from __future__ import print_function
 import sys, random
 sys.path.insert(0, "../../python")
 import numpy as np
@@ -57,7 +58,7 @@ class OCRIter(mx.io.DataIter):
         self.provide_label = [('label', (self.batch_size, 4))]
 
     def __iter__(self):
-        print 'iter'
+        print('iter')
         init_state_names = [x[0] for x in self.init_states]
         for k in range(self.count):
             data = []
@@ -167,7 +168,7 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     
-    print 'begin fit'
+    print('begin fit')
 
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Accuracy),

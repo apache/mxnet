@@ -135,7 +135,9 @@ class Accuracy(EvalMetric):
         check_label_shapes(labels, preds)
 
         for label, pred_label in zip(labels, preds):
-            pred_label = ndarray.argmax_channel(pred_label).asnumpy().astype('int32')
+            if pred_label.shape != label.shape:
+                pred_label = ndarray.argmax_channel(pred_label)
+            pred_label = pred_label.asnumpy().astype('int32')
             label = label.asnumpy().astype('int32')
 
             check_label_shapes(label, pred_label)
@@ -364,6 +366,9 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
     ----------
     numpy_feval : callable(label, pred)
         Customized evaluation function.
+        This will get called with the labels and predictions
+        for a minibatch, each as numpy arrays.  This function
+        should return a single float.
     name : str, optional
         The name of the metric.
     allow_extra_outputs : bool

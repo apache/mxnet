@@ -13,6 +13,8 @@ import ml.dmlc.mxnet.Context
 import ml.dmlc.mxnet.Xavier
 import ml.dmlc.mxnet.optimizer.RMSProp
 
+import scala.collection.immutable.ListMap
+
 /**
  * Example of multi-task
  * @author Depeng Liang
@@ -81,11 +83,11 @@ object ExampleMultiTask {
     override def getIndex(): IndexedSeq[Long] = this.dataIter.getIndex()
 
     // The name and shape of label provided by this iterator
-    override def provideLabel: Map[String, Shape] = {
+    override def provideLabel: ListMap[String, Shape] = {
       val provideLabel = this.dataIter.provideLabel.toArray
       // Different labels should be used here for actual application
-      Map("softmax1_label" -> provideLabel(0)._2,
-          "softmax2_label" -> provideLabel(0)._2)
+      ListMap("softmax1_label" -> provideLabel(0)._2,
+              "softmax2_label" -> provideLabel(0)._2)
     }
 
     /**
@@ -96,7 +98,7 @@ object ExampleMultiTask {
     override def getPad(): Int = this.dataIter.getPad()
 
     // The name and shape of data provided by this iterator
-    override def provideData: Map[String, Shape] = this.dataIter.provideData
+    override def provideData: ListMap[String, Shape] = this.dataIter.provideData
 
     override def hasNext: Boolean = this.dataIter.hasNext
   }
@@ -114,7 +116,7 @@ object ExampleMultiTask {
 
       for (i <- labels.indices) {
         val (pred, label) = (preds(i), labels(i))
-        val predLabel = NDArray.argmaxChannel(pred)
+        val predLabel = NDArray.argmax_channel(pred)
         require(label.shape == predLabel.shape,
           s"label ${label.shape} and prediction ${predLabel.shape}" +
           s"should have the same length.")

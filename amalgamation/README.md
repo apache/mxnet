@@ -18,6 +18,8 @@ Dependency
 ----------
 The only dependency is a BLAS library.
 
+Make sure to disable all other dependencies in the `config.mk` file.
+
 Acknowledgement
 ---------------
 This module is created by [Jack Deng](https://github.com/jdeng).
@@ -70,7 +72,7 @@ Add
 #include <Accelerate/Accelerate.h>
 ```
 
-Comment all occurences of
+Comment all occurrences of
 ```
 #include <emmintrin.h>
 ```

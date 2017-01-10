@@ -71,17 +71,22 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
   std::sort(ndvar.begin(), ndvar.end());
   ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
 
-  CHECK(
-    op_info_->forward(ptrs.size(),
-    ptrs.data(), tags.data(),
-    reqs.data(),
-    ctx.is_train,
-    op_info_->p_forward));
+  std::unique_lock<std::mutex> lock(mtx_);
+  q_.push([=]() mutable {
+      CHECK(
+        op_info_->forward(ptrs.size(),
+        ptrs.data(), tags.data(),
+        reqs.data(),
+        ctx.is_train,
+        op_info_->p_forward));
 
-  // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
-  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {
-      ctx.async_on_complete();
-    }, ndctx, ndvar, {});
+      // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
+      Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {
+          ctx.async_on_complete();
+        }, ndctx, ndvar, {},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpForward"));
+    });
+  cv_.notify_all();
 }
 
 template<typename xpu>
@@ -129,17 +134,22 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
     tags.push_back(3);
   }
 
-  CHECK(
-    op_info_->backward(ptrs.size(),
-    ptrs.data(),
-    tags.data(),
-    reqs.data(),
-    true,
-    op_info_->p_backward));
-  // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
-  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){
-      ctx.async_on_complete();
-    }, ndctx, ndvar, {});
+  std::unique_lock<std::mutex> lock(mtx_);
+  q_.push([=]() mutable {
+      CHECK(
+        op_info_->backward(ptrs.size(),
+        ptrs.data(),
+        tags.data(),
+        reqs.data(),
+        true,
+        op_info_->p_backward));
+      // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
+      Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){
+          ctx.async_on_complete();
+        }, ndctx, ndvar, {},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpBackward"));
+    });
+  cv_.notify_all();
 }
 
 Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
