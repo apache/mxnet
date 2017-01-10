@@ -125,6 +125,8 @@ void Profiler::EmitEvent(std::ostream *os, const std::string& name,
 
 
 void Profiler::DumpProfile() {
+  SetState(kNotRunning);
+
   std::lock_guard<std::mutex> lock{this->m_};
   std::ofstream file;
   file.open(filename_);
@@ -170,6 +172,8 @@ void Profiler::DumpProfile() {
   file << "    ]," << std::endl;
   file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
   file << "}" << std::endl;
+
+  enable_output_ = false;
 }
 
 
