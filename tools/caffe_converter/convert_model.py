@@ -72,7 +72,7 @@ def main():
                 wmat_dim = list(layer_blobs[0].shape)
             wmat = np.array(layer_blobs[0].data).reshape(wmat_dim)
             bias = np.array(layer_blobs[1].data)
-            channels = layer_blobs[0].channels;
+            channels = wmat_dim[1]
             if channels == 3 or channels == 4: # RGB or RGBA
                 if first_conv:
                     print 'Swapping BGR of caffe into RGB in mxnet'
