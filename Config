@@ -1,0 +1,91 @@
+package.DeepMXNet = {
+  interfaces = (0.9);
+
+  build-system = brazilcmake;
+
+  build-environment = {
+    chroot = basic;
+    network-access = blocked;
+  };
+
+  build-tools = {
+    0.9 = {
+      BrazilPath = 1.1;
+      CFlagsGCC = 4.9.x;
+      Chrpath = 1.0;
+      GnuMake = 3.81;
+      GCC = 4.9.x;
+      CMake = 3.5.x;
+      Cuda = 7.x;
+      DeepBrazilCmakeBuildSystem = 2.0;
+      DeepMShadow = 2.x;
+      BrazilPython = 2.0;
+      Python27 = 1.0;
+      Python34 = 1.0;
+      Python-setuptools = 2.x;
+    };
+  };
+
+  dependencies = {
+    0.9 = {
+      LibStdCppNoCFlags = 4.9;
+      CMake = 3.5.x;
+      OpenBLAS = 0.2.x;
+      DeepDmlc-core = 0.9;
+      DeepMShadow = 2.x;
+      CRuntime = 1.0;
+      Cuda = 7.x;
+      DeepCudnn = 5.x;
+#      DeepOpenCV = 2.4.x;
+      DeepNNVM = 0.9;
+      DeepMKL = 1.0;
+    };
+  };
+
+  runtime-dependencies = {
+    0.9 = {
+      CRuntime = 1.0;
+      Python27 = 1.0;
+      Python34 = 1.0;
+      NumPy = 1.9.x;
+      Scikit-image = 0.11.x;
+      Scikit-learn = 0.17.x;
+      SciPy = 0.15.x;
+      Requests = 2.x.x;
+    };
+  };
+
+  python = {
+        default-version = "2.7";
+        setup-type = setuptools;
+        unittesttype = pytest;
+        # this test line must be modified by adding --cov
+        # YOUR_PYTHON_MODULE and uncommented in order to enable
+        # coverage.  You really, really should create tests.
+        #
+        # You must specify the python module or package root you wish to
+        # cover using the --cov command line flag. As an example, "--cov
+        # bender.core" would collect coverage for every module and
+        # package in the bender.core namespace.
+
+        testargs_release = "--cov-report html --cov-report xml -v";
+        testargs = "--cov-report term-missing";
+  };
+
+  targets = {
+    libmxnet = {
+      type = clibrary;
+      visibility = external;
+      builtLibraries = ("libmxnet");
+      libraryLinkageMode = {
+        all = preferDynamic;
+      };
+    };
+
+    # This target is needed for upstream python packages to include opencv
+    # in the PYTHONPATH correctly.
+    python = { type = python };
+  };
+
+};
+# vim: set ft=perl ts=2 sw=2 tw=79 :

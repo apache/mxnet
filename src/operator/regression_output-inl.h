@@ -45,8 +45,8 @@ class RegressionOutputOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2) << "RegressionOutputOp Input: [data, label]";
-    CHECK_EQ(out_data.size(), 1) << "RegressionOutputOp Output: [output]";
+    CHECK_EQ(in_data.size(), 2U) << "RegressionOutputOp Input: [data, label]";
+    CHECK_EQ(out_data.size(), 1U) << "RegressionOutputOp Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[reg_enum::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[reg_enum::kOut].FlatTo2D<xpu, real_t>(s);
@@ -62,10 +62,10 @@ class RegressionOutputOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_GE(in_grad.size(), 1);
-    CHECK_GE(req.size(), 1);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_GE(in_grad.size(), 1U);
+    CHECK_GE(req.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     real_t num_output =
       in_data[reg_enum::kLabel].Size()/in_data[reg_enum::kLabel].shape_[0];
