@@ -34,9 +34,11 @@ I implement two examples, one is just a toy example which can be used to prove c
   cd examples/warpctc
   python lstm_ocr.py
 ```
-Note:
-* Please modify ```contexts = [mx.context.gpu(1)]``` in this file according to your hardware. If you only have one GPU pelase change 1 to 0(which GPU is selected.)
-* Please copy your font file to current folder. And instend of './data/Xerox.ttf' by your font file name. Maybe you can get a font from /usr/share/fonts/truetype/ in ubuntu.
+
+Notes:
+* Please modify ```contexts = [mx.context.gpu(0)]``` in this file according to your hardware.
+* Please review the code ```'./font/Ubuntu-M.ttf'```. Copy your font to here font/yourfont.ttf. To get a free font from [here](http://font.ubuntu.com/).
+* The checkpoint will be auto saved in each epoch. And then you can use this checkpoint to do a predict.
 
 The OCR example is constructed as follows:
   
@@ -92,3 +94,15 @@ Following code show detail construction of the net:
 If you label length is smaller than or equal to b. You should provide labels with length b, and for those samples which label length is smaller than b, you should append 0 to label data to make it have length b.
 
 Here, 0 is reserved for blank label.
+
+## Do a predict
+
+Pelase run:
+
+```
+python ocr_predict.py
+```
+
+Notes:
+* Change the code following the name of your params and json file.
+* You have to do a ```make``` in amalgamation folder.(a libmxnet_predict.so will be created in lib folder.)
