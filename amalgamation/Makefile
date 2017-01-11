@@ -1,6 +1,6 @@
 export MXNET_ROOT=`pwd`/..
 # Change this to path of openblas
-export OPENBLAS_ROOT=${MXNET_ROOT}/../OpenBLAS
+export OPENBLAS_ROOT=/usr/local/opt/openblas
 
 # Whether use minimum build without blas and SSE, this will make the library super slow
 ifndef MIN
@@ -24,14 +24,27 @@ endif
 
 all: android libmxnet_predict.a ${MXNET_ROOT}/lib/libmxnet_predict.so
 
-mxnet_predict0.d: mxnet_predict0.cc
+nnvm.d:
+	./prep_nnvm.sh
+
+dmlc.d: dmlc-minimum0.cc
+	${CXX} ${CFLAGS} -MD -MF $@ \
+	-I ${MXNET_ROOT}/dmlc-core/include \
+	-D__MIN__=$(MIN) -c $+
+	rm dmlc-minimum0.o
+
+
+mxnet_predict0.d: mxnet_predict0.cc nnvm.d dmlc.d
 	${CXX} ${CFLAGS} -MD -MF $@ \
 	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/mshadow/ -I ${MXNET_ROOT}/dmlc-core/include \
+	-I ${MXNET_ROOT}/nnvm/include \
 	-I ${MXNET_ROOT}/include \
-	-D__MIN__=$(MIN) -c $+
+	-D__MIN__=$(MIN) -c mxnet_predict0.cc
+	cat dmlc.d >> mxnet_predict0.d
+	cat nnvm.d >> mxnet_predict0.d
 	rm mxnet_predict0.o
 
-mxnet_predict-all.cc:  mxnet_predict0.d mxnet_predict0.cc
+mxnet_predict-all.cc:  mxnet_predict0.d dmlc-minimum0.cc nnvm.cc mxnet_predict0.cc
 	@echo "Generating amalgamation to " $@
 	python ./amalgamation.py $+ $@ $(MIN) $(ANDROID)
 
@@ -68,4 +81,4 @@ ${MXNET_ROOT}/lib/libmxnet_predict.so:  mxnet_predict-all.o
 	ls -alh $@
 
 clean:
-	rm -f *.d *.o *.so *.a mxnet_predict-all.cc
+	rm -f *.d *.o *.so *.a mxnet_predict-all.cc nnvm.cc
