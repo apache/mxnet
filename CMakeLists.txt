@@ -115,7 +115,9 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/dmlc-core/cmake)
 endif()
 
 if(USE_DIST_KVSTORE)
-	add_subdirectory("ps-lite")
+  if(EXISTS ${PROJECT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
+	  add_subdirectory("ps-lite")
+  endif()
 endif()
 
 mxnet_source_group("Include\\common"   GLOB "src/common/*.h")
@@ -330,28 +332,15 @@ if(USE_PROFILER)
 endif()
 
 if(INSTALL_PYTHON_VERSIONS)
+  message(WARNING " INSTALL_PYTHON_VERSIONS: ${INSTALL_PYTHON_VERSIONS}")
   foreach(version ${INSTALL_PYTHON_VERSIONS})
     set(outdir ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python${version}/site-packages/mxnet)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND mkdir -p ${outdir}
-      COMMAND cp -ru ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
+      COMMAND cp -rul ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
       )
   endforeach()
 endif()
-
-#if(INSTALL_PYTHON27_DIR)
-#  add_custom_command(TARGET mxnet POST_BUILD
-#    COMMAND mkdir -p ${INSTALL_PYTHON27_DIR}/mxnet
-#    COMMAND cp -ru ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${INSTALL_PYTHON27_DIR}/mxnet/
-#  )
-#endif()
-#
-#if(INSTALL_PYTHON34_DIR)
-#  add_custom_command(TARGET mxnet POST_BUILD
-#    COMMAND mkdir -p ${INSTALL_PYTHON34_DIR}/mxnet
-#    COMMAND cp -ru ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${INSTALL_PYTHON34_DIR}/mxnet/
-#  )
-#endif()
 
 # ---[ Linter target
 if(MSVC)
