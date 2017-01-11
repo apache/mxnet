@@ -290,10 +290,6 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
   list(APPEND mxnet_LINKER_LIBS nnvm)
 endif()
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
-  list(APPEND mxnet_LINKER_LIBS nnvm)
-endif()
-
 if(NOT MSVC)
   # Only add c++11 flags and definitions after cuda compiling
   add_definitions(-DDMLC_USE_CXX11)
