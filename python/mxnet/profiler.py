@@ -17,7 +17,7 @@ def profiler_set_config(mode='symbolic', filename='profile.json'):
         be 'symbolic' or 'all'. Default is `symbolic`.
     filename : string, optional
         The name of output trace file. Default is
-        'trace.json'.
+        'profile.json'.
     """
     mode2int = {'symbolic': 0, 'all': 1}
     check_call(_LIB.MXSetProfilerConfig(
@@ -35,3 +35,8 @@ def profiler_set_state(state='stop'):
     """
     state2int = {'stop': 0, 'run': 1}
     check_call(_LIB.MXSetProfilerState(ctypes.c_int(state2int[state])))
+
+def dump_profile():
+    """Dump profile and stop profiler. Use this to save profile
+    in advance in case your program cannot exit normally"""
+    check_call(_LIB.MXDumpProfile())

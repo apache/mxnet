@@ -6,11 +6,9 @@ Topics:
 * [Symbol Attributes](#symbol-attributes) describes how to attach attributes to symbols.
 * [Serialization](#serialization) explains how to save and load symbols.
 * [Executing Symbols](#executing-symbols) explains how to evaluate the symbols with data.
-* [Execution API Reference](#execution-api-reference) documents the execution APIs.
+* [Execution API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Executor) documents the execution APIs.
 * [Multiple Outputs](#multiple-outputs) explains how to configure multiple outputs.
-* [Symbol Creation API Reference](#symbol-creation-api-reference) documents functions.
-* [Symbol Object Document](#mxnet.symbol.Symbol) documents the Symbol object.
-* [Testing Utility Reference](#testing-utility-reference) documents the testing utilities.
+* [Symbol Creation API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Symbol) documents functions.
 
 We also highly encouraged you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
 
