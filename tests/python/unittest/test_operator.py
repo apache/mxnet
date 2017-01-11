@@ -2303,8 +2303,16 @@ def test_take():
                 idx_shape += (np.random.randint(low=3, high=5), ) 
             check_output_n_grad(data_shape, idx_shape)
 
+def test_index2d():
+    data = mx.nd.array([[0,1],[2,3]])
+    x = mx.nd.array([0, 1], dtype=np.int32)
+    y = mx.nd.array([1, 0], dtype=np.int32)
+    out = mx.nd.index2d(data, x, y)
+    print out.asnumpy()
+
 
 if __name__ == '__main__':
+    test_index2d()
     test_init()
     test_expand_dims()
     test_slice_axis()

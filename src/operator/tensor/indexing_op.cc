@@ -9,6 +9,7 @@
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
+DMLC_REGISTER_PARAMETER(TakeParam);
 
 NNVM_REGISTER_OP(Embedding)
 .MXNET_DESCRIBE("Map integer index to vector representations (embeddings)."
@@ -49,7 +50,6 @@ NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
 
-DMLC_REGISTER_PARAMETER(TakeParam);
 
 NNVM_REGISTER_OP(take)
 .MXNET_DESCRIBE("Take row vectors from an NDArray according to the indices"
@@ -90,5 +90,23 @@ NNVM_REGISTER_OP(_backward_take)
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", TakeOpBackward<cpu>);
+
+
+NNVM_REGISTER_OP(index2d)
+.MXNET_DESCRIBE("Index a 2 dimensional ndarray with two 1 dimensional "
+                "ndarrays, i.e. out[i] = data[x[i], y[i]]")
+.set_num_outputs(1)
+.set_num_inputs(3)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "x", "y"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", Index2DOpShape)
+.set_attr<nnvm::FInferType>("FInferType", Index2DOpType)
+.set_attr<FCompute>("FCompute<cpu>", Index2DOpForward<cpu>)
+.add_argument("data", "NDArray", "Input data array")
+.add_argument("x", "NDArray", "first index array")
+.add_argument("y", "NDArray", "second index array");
+
 }  // namespace op
 }  // namespace mxnet

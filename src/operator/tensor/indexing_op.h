@@ -327,6 +327,53 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
     });
 }
 
+inline bool Index2DOpShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3) << "Index2D op requires three inputs";
+  if ((*in_attrs)[0].ndim() == 0) return false;
+  CHECK_EQ((*in_attrs)[0].ndim(), 2);
+  TShape shape;
+  if ((*in_attrs)[1].ndim() != 0) shape = (*in_attrs)[1];
+  if ((*in_attrs)[2].ndim() != 0) shape = (*in_attrs)[2];
+  if ((*out_attrs)[0].ndim() != 0) shape = (*out_attrs)[0];
+  if (shape.ndim() == 0) return false;
+  SHAPE_ASSIGN_CHECK(*in_attrs, 1, shape);
+  SHAPE_ASSIGN_CHECK(*in_attrs, 2, shape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  return true;
+}
+
+inline bool Index2DOpType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_type,
+                          std::vector<int> *out_type) {
+  using namespace mshadow;
+  CHECK_EQ(in_type->size(), 3);
+  if ((*in_type)[0] == -1) return false;
+  TYPE_ASSIGN_CHECK(*in_type, 1, kInt32);
+  TYPE_ASSIGN_CHECK(*in_type, 2, kInt32);
+  TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
+  return true;
+}
+
+template<typename xpu>
+void Index2DOpForward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> data = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
+    Tensor<xpu, 1, int> x = inputs[1].FlatTo1D<xpu, int>(s);
+    Tensor<xpu, 1, int> y = inputs[2].FlatTo1D<xpu, int>(s);
+    out = index2d(data, x, y);
+  });
+}
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
