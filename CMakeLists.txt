@@ -286,11 +286,8 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-# unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
-if(USE_PLUGIN_CAFFE)
-  if(EXISTS ${PROJECT_SOURCE_DIR}/caffe)
-    add_subdirectory(caffe)
-  endif()
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
+  list(APPEND mxnet_LINKER_LIBS nnvm)
 endif()
 
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
@@ -339,7 +336,6 @@ if(USE_PROFILER)
 endif()
 
 if(INSTALL_PYTHON_VERSIONS)
-  message(WARNING " INSTALL_PYTHON_VERSIONS: ${INSTALL_PYTHON_VERSIONS}")
   foreach(version ${INSTALL_PYTHON_VERSIONS})
     set(outdir ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python${version}/site-packages/mxnet)
     add_custom_command(TARGET mxnet POST_BUILD
