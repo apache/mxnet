@@ -337,7 +337,7 @@ if(INSTALL_PYTHON_VERSIONS)
     set(outdir ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python${version}/site-packages/mxnet)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND mkdir -p ${outdir}
-      COMMAND cp -rul ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
+      COMMAND cp -ru ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
       )
   endforeach()
 endif()
