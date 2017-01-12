@@ -353,7 +353,8 @@ class DCASGD(Optimizer):
             mom = state
             mom[:] *= self.momentum
             if self.weight_previous.has_key(index):
-                mom[:] += -lr * (grad + wd * weight + self.lamda * grad * grad * (weight - self.weight_previous[index]))
+                mom[:] += -lr * (grad + wd * weight + self.lamda \
+                                    * grad * grad * (weight - self.weight_previous[index]))
                 self.weight_previous[index] = weight
             else:
                 mom[:] += -lr * (grad + wd * weight)
@@ -362,7 +363,8 @@ class DCASGD(Optimizer):
         else:
             assert self.momentum == 0.0
             if self.weight_previous.has_key(index):
-                weight[:] += -lr * (grad + wd * weight + self.lamda * grad * grad * (weight - self.weight_previous[index]))
+                weight[:] += -lr * (grad + wd * weight + self.lamda \
+                                    * grad * grad * (weight - self.weight_previous[index]))
                 self.weight_previous[index] = weight
             else:
                 weight[:] += -lr * (grad + wd * weight)
