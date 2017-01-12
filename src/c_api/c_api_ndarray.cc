@@ -40,6 +40,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
 
   API_BEGIN();
   nnvm::NodeAttrs attrs;
+  attrs.op = op;
   for (int i = 0; i < num_params; ++i) {
     attrs.dict.emplace(param_keys[i], param_vals[i]);
   }
