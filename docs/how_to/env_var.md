@@ -73,6 +73,8 @@ When USE_PROFILER is enabled in Makefile or CMake, the following enviroments can
 * MXNET_CUDNN_AUTOTUNE_DEFAULT (default=0)
     - The default value of cudnn_tune for convolution layers.
     - Auto tuning is turn off by default. For benchmarking, set this to 1 to turn it on by default.
+* MXNET_USE_NNPACK_NTHREADS (default=4)
+    - The number of threads used by NNPACK inside pthreadpool for parallel processing
 
 Settings for Minimum Memory Usage
 ---------------------------------

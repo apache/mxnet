@@ -22,6 +22,30 @@
 namespace mxnet {
 namespace op {
 
+class NNPACKInitialize {
+ public:
+  pthreadpool_t threadpool;
+
+ public:
+  NNPACKInitialize() {
+    nnp_status status = nnp_initialize();
+    if (nnp_status_success != status) {
+      LOG(FATAL) << "nnp_initialize failed status=" << status;
+    }
+    int num_threads = dmlc::GetEnv("MXNET_USE_NNPACK_NTHREADS", 4);
+    this->threadpool = pthreadpool_create(num_threads);
+  }
+  virtual ~NNPACKInitialize() {
+    nnp_status status = nnp_deinitialize();
+    if (nnp_status_success != status) {
+      LOG(FATAL) << "nnp_deinitialize failed status=" << status;
+    }
+    pthreadpool_destroy(threadpool);
+  }
+};
+
+static NNPACKInitialize nnpackinitialize;
+
 template <typename xpu, typename DType>
 class NNPACKConvolutionOp : public ConvolutionOp<xpu, DType> {
  private:
