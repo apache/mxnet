@@ -29,7 +29,8 @@ else
 end
 
 function __init__()
-  _populate_symbol_creator_cache!()
+  # TODO: bug in nnvm, if do not call this, call get handle "_copyto" will fail
+  _get_libmx_op_names()
   _populate_iter_creator_cache!()
 
   atexit() do
@@ -102,7 +103,7 @@ macro mx_define_handle_t(name, destructor)
 end
 
 @mx_define_handle_t(MX_NDArrayHandle, MXNDArrayFree)
-@mx_define_handle_t(MX_FunctionHandle, nop)
+@mx_define_handle_t(MX_OpHandle, nop)
 @mx_define_handle_t(MX_SymbolHandle, MXSymbolFree)
 @mx_define_handle_t(MX_ExecutorHandle, MXExecutorFree)
 @mx_define_handle_t(MX_DataIterHandle, MXDataIterFree)

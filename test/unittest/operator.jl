@@ -1,6 +1,11 @@
 module TestOperator
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 using ..Main: rand_dims, reldiff
 
@@ -31,6 +36,9 @@ end
 ################################################################################
 # Run tests
 ################################################################################
-test_scalar_op()
+
+@testset "Operator Test" begin
+  test_scalar_op()
+end
 
 end

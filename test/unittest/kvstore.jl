@@ -1,6 +1,11 @@
 module TestKVStore
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 using ..Main: rand_dims
 
@@ -62,8 +67,10 @@ function test_aggregator()
   end
 end
 
-test_kv_basic()
-test_single_kv_pair()
-test_aggregator()
+@testset "KVStore Test" begin
+  test_kv_basic()
+  test_single_kv_pair()
+  test_aggregator()
+end
 
 end

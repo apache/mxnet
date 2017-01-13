@@ -25,9 +25,9 @@ function lstm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMPara
     data = mx.Dropout(data, p=dropout)
   end
 
-  i2h = mx.FullyConnected(data=data, weight=param.i2h_W, bias=param.i2h_b,
+  i2h = mx.FullyConnected(data, weight=param.i2h_W, bias=param.i2h_b,
                           num_hidden=4num_hidden, name=symbol(name, "_i2h"))
-  h2h = mx.FullyConnected(data=prev_state.h, weight=param.h2h_W, bias=param.h2h_b,
+  h2h = mx.FullyConnected(prev_state.h, weight=param.h2h_W, bias=param.h2h_b,
                           num_hidden=4num_hidden, name=symbol(name, "_h2h"))
 
   gates = mx.SliceChannel(i2h + h2h, num_outputs=4, name=symbol(name, "_gates"))
@@ -71,7 +71,7 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
   for t = 1:seq_len
     data   = mx.Variable(symbol(name, "_data_$t"))
     label  = mx.Variable(symbol(name, "_label_$t"))
-    hidden = mx.FullyConnected(data=data, weight=embed_W, num_hidden=dim_embed,
+    hidden = mx.FullyConnected(data, weight=embed_W, num_hidden=dim_embed,
                                no_bias=true, name=symbol(name, "_embed_$t"))
 
     # stack LSTM cells
@@ -88,7 +88,7 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
     if dropout > 0
       hidden = mx.Dropout(hidden, p=dropout)
     end
-    pred = mx.FullyConnected(data=hidden, weight=pred_W, bias=pred_b, num_hidden=n_class,
+    pred = mx.FullyConnected(hidden, weight=pred_W, bias=pred_b, num_hidden=n_class,
                              name=symbol(name, "_pred_$t"))
     smax = mx.SoftmaxOutput(pred, label, name=symbol(name, "_softmax_$t"))
     push!(outputs, smax)

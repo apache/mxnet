@@ -10,3 +10,4 @@ deps/deps.jl
 docs/_build
 docs/build/
 docs/site/
+.vscode

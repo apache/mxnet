@@ -51,6 +51,14 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
     attr  = deepcopy(node_attr)
     label = op
 
+    # Up to 0.8 version of mxnet additional info was stored in 
+    # node["param"]. Staring from pre0.9 `param` was changed to `attr`.
+    if haskey(node, "param")
+      node_info = node["param"]
+    elseif haskey(node, "attr")
+      node_info = node["attr"]
+    end
+
     if op == "null"
       if i ∈ heads
         # heads are output nodes
@@ -62,23 +70,23 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
       end
     elseif op == "Convolution"
       label = format("Convolution\nkernel={1}\nstride={2}\nn-filter={3}",
-                     _extract_shape(node["param"]["kernel"]),
-                     _extract_shape(node["param"]["stride"]),
-                     node["param"]["num_filter"])
+                     _extract_shape(node_info["kernel"]),
+                     _extract_shape(node_info["stride"]),
+                     node_info["num_filter"])
       colorkey = 2
     elseif op == "FullyConnected"
-      label = format("FullyConnected\nnum-hidden={1}", node["param"]["num_hidden"])
+      label = format("FullyConnected\nnum-hidden={1}", node_info["num_hidden"])
       colorkey = 2
     elseif op == "Activation"
-      label = format("Activation\nact-type={1}", node["param"]["act_type"])
+      label = format("Activation\nact-type={1}", node_info["act_type"])
       colorkey = 3
     elseif op == "BatchNorm"
       colorkey = 4
     elseif op == "Pooling"
       label = format("Pooling\ntype={1}\nkernel={2}\nstride={3}",
-                     node["param"]["pool_type"],
-                     _extract_shape(node["param"]["kernel"]),
-                     _extract_shape(node["param"]["stride"]))
+                     node_info["pool_type"],
+                     _extract_shape(node_info["kernel"]),
+                     _extract_shape(node_info["stride"]))
       colorkey = 5
     elseif op ∈ ("Concat", "Flatten", "Reshape")
       colorkey = 6

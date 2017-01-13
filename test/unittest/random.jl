@@ -1,6 +1,11 @@
 module TestRandom
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 function test_uniform()
   dims = (100, 100, 2)
@@ -37,7 +42,9 @@ function test_gaussian()
   @test abs(std(copy(ret1)) - σ) < 0.1
 end
 
-test_uniform()
-test_gaussian()
+@testset "Random Test" begin
+  test_uniform()
+  test_gaussian()
+end
 
 end

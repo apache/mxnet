@@ -1,6 +1,11 @@
 module TestIO
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 using ..Main: rand_dims, reldiff
 
@@ -117,8 +122,10 @@ function test_arrays_shuffle()
   @test reldiff(data_got, data[:,Int[label_got...]]) < 1e-6
 end
 
-test_arrays_shuffle()
-test_arrays()
-test_mnist()
+@testset "IO Test" begin
+  test_arrays_shuffle()
+  test_arrays()
+  test_mnist()
+end
 
 end

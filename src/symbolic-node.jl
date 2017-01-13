@@ -493,6 +493,9 @@ end
 function /(self :: SymbolicNode, arg :: Real)
   ./(self, arg)
 end
+function /(arg :: Real, self :: SymbolicNode)
+  _RDivScalar(self, scalar=arg)
+end
 function ./(arg :: Real, self :: SymbolicNode)
   _RDivScalar(self, scalar=arg)
 end
@@ -587,59 +590,33 @@ end
 ################################################################################
 # Atomic SymbolicNode functions dynamically imported from libmxnet
 ################################################################################
-function _define_atomic_symbol_creator(hdr :: MX_handle)
-  ref_name      = Ref{char_p}(0)
-  ref_desc      = Ref{char_p}(0)
-  ref_kv_nargs  = Ref{char_p}(0)
-  ref_nargs     = Ref{MX_uint}(0)
-  ref_arg_names = Ref{char_pp}(0)
-  ref_arg_types = Ref{char_pp}(0)
-  ref_arg_descs = Ref{char_pp}(0)
-  ref_ret_type  = Ref{char_p}(0)
+function _define_atomic_symbol_creator(name :: String)
+  handle = _get_libmx_op_handle(name)
+  f_desc, key_narg = _get_libmx_op_description(name, handle)
 
-  @mxcall(:MXSymbolGetAtomicSymbolInfo,
-          (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp},
-           Ref{char_pp}, Ref{char_p}, Ref{char_p}),
-          hdr, ref_name, ref_desc, ref_nargs, ref_arg_names, ref_arg_types, ref_arg_descs,
-          ref_kv_nargs, ref_ret_type)
-
-  func_name_s = unsafe_wrap(String, ref_name[])
-  func_name   = Symbol(func_name_s)
-  kv_nargs_s  = unsafe_wrap(String, ref_kv_nargs[])
-  kv_nargs    = Symbol(kv_nargs_s)
-
-  signature = _format_signature(Int(ref_nargs[]), ref_arg_names)
-  f_desc = "    " * func_name_s * "(" * signature * ")\n\n"
-  f_desc *= unsafe_wrap(String, ref_desc[]) * "\n\n"
-  if !isempty(kv_nargs_s)
-    f_desc *= "This function support variable length positional `SymbolicNode` inputs.\n\n"
-  end
-  f_desc *= "# Arguments\n"
-  f_desc *= _format_docstring(Int(ref_nargs[]), ref_arg_names, ref_arg_types, ref_arg_descs)
   f_desc *= "* `name::Symbol`: The name of the `SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
   f_desc *= "* `attrs::Dict{Symbol, AbstractString}`: The attributes associated with this `SymbolicNode`.\n\n"
-  f_desc *= "Returns `$(_format_typestring(unsafe_wrap(String, ref_ret_type[])))`."
 
+  func_name = Symbol(name)
   func_def = quote
-  @doc $f_desc ->
-  function $func_name(args::SymbolicNode...; kwargs...)
+  function $func_name(::Type{SymbolicNode}, args::SymbolicNode...; kwargs...)
     idx = findfirst(x -> x[1] == :name, kwargs)
     if idx > 0
       name = kwargs[idx][2]
     else
       name = ""
     end
-    
+
     # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
     # See https://github.com/dmlc/MXNet.jl/issues/55
-    if $func_name_s == "dot"
+    if $name == "dot"
       args = reverse(args)
     end
 
     # XXX: hacky way of solving the semantic difference of the axes parameter in Julia
     # and in libmxnet.
     # See https://github.com/dmlc/MXNet.jl/pull/123
-    if $func_name_s == "transpose"
+    if $name == "transpose"
       kwargs = Any[key != :axes ? (key, arg) : (key, reverse(map(i->length(arg)-i, arg))) for (key, arg) in kwargs]
     end
 
@@ -648,10 +625,10 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     symbol_kws = Dict{Symbol, SymbolicNode}()
     attrs = Dict{Symbol, String}()
 
-    $(if kv_nargs != Symbol("")
+    $(if key_narg != ""
       quote
-        if !in($kv_nargs_s, param_keys)
-          push!(param_keys, $kv_nargs_s)
+        if !in(Symbol($key_narg), param_keys)
+          push!(param_keys, Symbol($key_narg))
           push!(param_vals, string(length(args)))
         end
       end
@@ -674,18 +651,18 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     end
 
     if length(args) != 0 && length(symbol_kws) != 0
-      @assert(false, $func_name_s * " only accepts Symbols either as positional or keyword arguments, not both.")
+      @assert(false, $name * " only accepts SymbolicNode either as positional or keyword arguments, not both.")
     end
-    $(if kv_nargs != Symbol("")
+    $(if key_narg != ""
       quote
         if length(symbol_kws) > 0
-          @assert(false, $func_name_s * " takes variable number of SymbolicNode arguments, " *
+          @assert(false, $name * " takes variable number of SymbolicNode arguments, " *
                          "please pass input Symbols via positional arguments, instead of keyword arguments.")
         end
       end
     end)
 
-    local hdr = _get_symbol_creator($(QuoteNode(func_name)))
+    local hdr = _get_cached_libmx_op_handle($name)
 
     # create the SymbolicNode
     ref_sym_hdr = Ref{MX_handle}()
@@ -695,7 +672,7 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     sym_hdr = ref_sym_hdr[]
 
     node = SymbolicNode(MX_SymbolHandle(sym_hdr))
-    hint = lowercase($func_name_s)
+    hint = lowercase($name)
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
 
     # set attrs
@@ -712,46 +689,35 @@ function _define_atomic_symbol_creator(hdr :: MX_handle)
     return node
   end # function
   end # quote
-  return func_def
-end
 
-function _get_atomic_symbol_creators()
-  n_ref = Ref{MX_uint}(0)
-  h_ref = Ref{Ptr{MX_handle}}(0)
-  @mxcall(:MXSymbolListAtomicSymbolCreators, (Ref{MX_uint}, Ref{Ptr{MX_handle}}), n_ref, h_ref)
+  func_def2 = quote
+  @doc $f_desc ->
+  function $func_name(args::SymbolicNode...; kwargs...)
+    $func_name(SymbolicNode, args...; kwargs...)
+  end # function
+  end # quote
 
-  return unsafe_wrap(Array, h_ref[], n_ref[])
-end
-
-function _get_atomic_symbol_name(handle :: MX_handle)
-  name_r = Ref{char_p}(0)
-  @mxcall(:MXSymbolGetAtomicSymbolName, (MX_handle, Ref{char_p}), handle, name_r)
-  return unsafe_wrap(String, name_r[])
-end
-
-const _symbol_creator_cache = Dict{Symbol, MX_handle}()
-function _populate_symbol_creator_cache!()
-  empty!(_symbol_creator_cache)
-  h_creators = _get_atomic_symbol_creators()
-  for handle in h_creators
-    name = Symbol(_get_atomic_symbol_name(handle))
-    _symbol_creator_cache[name] = handle
+  return quote
+    $func_def
+    $func_def2
   end
 end
 
-_get_symbol_creator(name :: Symbol) = _symbol_creator_cache[name]
-
 macro _import_atomic_symbol_creators()
-  h_creators = _get_atomic_symbol_creators()
+  # XXX: those are operators defined for NDArray, we exclude them here
+  # because the calling convention for the type signature is not strong
+  # enough to disambiguate the method for NDArray and SymbolicNode
+  const ignored_ops = ["_set_value"]
 
-  exprs = Expr[]
-  for creator_hdr in h_creators
-    expr = _define_atomic_symbol_creator(creator_hdr)
-    push!(exprs, expr)
+  op_names = _get_libmx_op_names()
+  func_exprs = map(op_names) do name
+    if name ∉ ignored_ops
+      expr = _define_atomic_symbol_creator(name)
+    end
   end
 
   esc(quote
-    $(exprs...)
+    $(func_exprs...)
   end)
 end
 
