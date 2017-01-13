@@ -46,25 +46,25 @@ namespace op {
 
 
 /*! \brief exception throwed by InferShape error */
-struct InferShapeError {
+struct InferShapeError : public dmlc::Error {
   /*! \brief analyze message */
   std::string msg;
   /*! \brief corresponding input index */
   int index;
   // constructor
-  InferShapeError(std::string msg, int index)
-    : msg(msg), index(index) {}
+  InferShapeError(const std::string& msg_, int index)
+    : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
 /*! \brief exception throwed by InferShape error */
-struct InferTypeError {
+struct InferTypeError : public dmlc::Error {
   /*! \brief analyze message */
   std::string msg;
   /*! \brief corresponding input index */
   int index;
   // constructor
-  InferTypeError(std::string msg, int index)
-    : msg(msg), index(index) {}
+  InferTypeError(const std::string& msg_, int index)
+    : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
 /*!
