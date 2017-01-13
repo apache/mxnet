@@ -1,6 +1,11 @@
 module TestSymbolicNode
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 using ..Main: mlp2, reldiff
 
@@ -128,14 +133,16 @@ end
 ################################################################################
 # Run tests
 ################################################################################
-test_basic()
-test_internal()
-test_compose()
-test_infer_shape()
-test_infer_shape_error()
-test_saveload()
-test_attrs()
-test_functions()
-test_dot()
+@testset "SymbolicNode Test" begin
+  test_basic()
+  test_internal()
+  test_compose()
+  test_infer_shape()
+  test_infer_shape_error()
+  test_saveload()
+  test_attrs()
+  test_functions()
+  test_dot()
+end
 
 end

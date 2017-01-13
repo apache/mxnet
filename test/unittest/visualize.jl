@@ -1,6 +1,11 @@
 module TestVisualize
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 using ..Main: mlp2
 
@@ -30,5 +35,8 @@ end
 ################################################################################
 # Run tests
 ################################################################################
-test_basic()
+
+@testset "Visualize Test" begin
+  test_basic()
+end
 end

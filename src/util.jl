@@ -15,7 +15,7 @@ function get_mnist_ubyte()
                    :train_label => "train-labels-idx1-ubyte",
                    :test_data   => "t10k-images-idx3-ubyte",
                    :test_label  => "t10k-labels-idx1-ubyte")
-  filenames = Dict([k => joinpath(mnist_dir, v) for (k,v) in filenames])
+  filenames = Dict(map((x) -> x[1] => joinpath(mnist_dir, x[2]), filenames))
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
       mnist_dir = download("http://data.dmlc.ml/mxnet/data/mnist.zip", "mnist.zip")
@@ -38,7 +38,7 @@ function get_cifar10()
   cifar10_dir = joinpath(data_dir, "cifar10")
   mkpath(cifar10_dir)
   filenames = Dict(:train => "cifar/train.rec", :test => "cifar/test.rec")
-  filenames = Dict([k => joinpath(cifar10_dir, v) for (k,v) in filenames])
+  filenames = Dict(map((x) -> x[1] => joinpath(cifar10_dir, x[2]), filenames))
   if !all(isfile, values(filenames))
     cd(cifar10_dir) do
       run(`http://data.dmlc.ml/mxnet/data/cifar10.zip`)

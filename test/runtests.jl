@@ -1,5 +1,10 @@
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 # run test in the whole directory, latest modified files
 # are run first, this makes waiting time shorter when writing
@@ -12,9 +17,13 @@ function test_dir(dir)
 end
 
 include(joinpath(dirname(@__FILE__), "common.jl"))
-test_dir(joinpath(dirname(@__FILE__), "unittest"))
+@testset "MXNet Test" begin
+  test_dir(joinpath(dirname(@__FILE__), "unittest"))
 
-# run the basic MNIST mlp example
-if haskey(ENV, "CONTINUOUS_INTEGRATION")
-  include(joinpath(Pkg.dir("MXNet"), "examples", "mnist", "mlp-test.jl"))
+  # run the basic MNIST mlp example
+  if haskey(ENV, "CONTINUOUS_INTEGRATION")
+    @testset "MNIST Test" begin
+      include(joinpath(Pkg.dir("MXNet"), "examples", "mnist", "mlp-test.jl"))
+    end
+  end
 end

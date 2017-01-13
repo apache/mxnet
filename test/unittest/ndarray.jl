@@ -1,6 +1,11 @@
 module TestNDArray
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 using ..Main: rand_dims, reldiff
 
@@ -121,8 +126,8 @@ function test_plus()
   a6 = copy(t6, mx.cpu())
   scalar_small = Float16(1e-5)
   scalar_large = Float16(1e4)
-  @test reldiff(t6 + scalar_small, copy(a6 .+ scalar_small)) < 1e-2
-  @test reldiff(t6 + scalar_large, copy(a6 .+ scalar_large)) < 1e-2
+  @test reldiff(t6 + scalar_small, copy(a6 .+ scalar_small)) < 1e-1
+  @test reldiff(t6 + scalar_large, copy(a6 .+ scalar_large)) < 1e-1
 end
 
 function test_minus()
@@ -172,8 +177,8 @@ function test_minus()
   a6 = copy(t6, mx.cpu())
   scalar_small = Float16(1e-5)
   scalar_large = Float16(1e4)
-  @test reldiff(t6 - scalar_small, copy(a6 .- scalar_small)) < 1e-2
-  @test reldiff(t6 - scalar_large, copy(a6 .- scalar_large)) < 1e-2
+  @test reldiff(t6 - scalar_small, copy(a6 .- scalar_small)) < 1e-1
+  @test reldiff(t6 - scalar_large, copy(a6 .- scalar_large)) < 1e-1
 end
 
 function test_mul()
@@ -213,7 +218,7 @@ function test_mul()
 
   t6, a6 = rand_tensors(Float16, dims)
   scalar_small = Float16(1e-5)
-  @test reldiff(t6 * scalar_small, copy(a6 .* scalar_small)) < 1e-2
+  @test reldiff(t6 * scalar_small, copy(a6 .* scalar_small)) < 1e-1
 end
 
 function test_div()
@@ -254,7 +259,7 @@ function test_div()
 
   t6, a6 = rand_tensors(Float16, dims)
   scalar_large = 1e4
-  @test reldiff(t6 / scalar_large, copy(a6 ./ scalar_large)) < 1e-2
+  @test reldiff(t6 / scalar_large, copy(a6 ./ scalar_large)) < 1e-1
 end
 
 function test_gd()
@@ -300,7 +305,7 @@ function test_saveload()
 
   # save and load dictionary of ndarrays
   names = [Symbol("array$i") for i = 1:n_arrays]
-  dict = Dict([n => v for (n,v) in zip(names, nd_arrays)])
+  dict = Dict([(n, v) for (n,v) in zip(names, nd_arrays)])
   mx.save(fname, dict)
   data = mx.load(fname, mx.NDArray)
   @test isa(data, Dict{Symbol, mx.NDArray})
@@ -397,20 +402,22 @@ end
 ################################################################################
 # Run tests
 ################################################################################
-test_assign()
-test_copy()
-test_slice()
-test_plus()
-test_minus()
-test_mul()
-test_div()
-test_gd()
-test_saveload()
-test_clip()
-test_sqrt()
-test_eltype()
-test_nd_as_jl()
-test_dot()
-test_kwargs()
+@testset "NDArray Test" begin
+  test_assign()
+  test_copy()
+  test_slice()
+  test_plus()
+  test_minus()
+  test_mul()
+  test_div()
+  test_gd()
+  test_saveload()
+  test_clip()
+  test_sqrt()
+  test_eltype()
+  test_nd_as_jl()
+  test_dot()
+  test_kwargs()
+end
 
 end

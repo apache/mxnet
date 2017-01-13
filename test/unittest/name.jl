@@ -1,6 +1,11 @@
 module TestNameManager
 using MXNet
-using Base.Test
+if VERSION ≥ v"0.5.0-dev+7720"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 function test_default()
   info("NameManager::default")
@@ -25,7 +30,9 @@ function test_prefix()
   @test get!(prefix_manager, "", name) == Symbol("$prefix$(name)0")
 end
 
-test_default()
-test_prefix()
+@testset "Name Test" begin
+  test_default()
+  test_prefix()
+end
 
 end

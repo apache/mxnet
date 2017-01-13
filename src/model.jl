@@ -384,8 +384,8 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   train_execs = Array(Executor, num_dev)
   for i = 1:num_dev
-    data_shapes = Dict([k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_data(data)])
-    label_shapes = Dict([k => tuple(v[1:end-1]...,length(slices[i])) for (k,v) in provide_label(data)])
+    data_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_data(data)))
+    label_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_label(data)))
     train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=grad_req, data_shapes..., label_shapes...)
     dbg_str = mx.debug_str(train_execs[i])
     info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
@@ -574,8 +574,8 @@ end
 function save_checkpoint(sym :: SymbolicNode, arg_params :: Dict{Base.Symbol, NDArray},
                          aux_params :: Dict{Base.Symbol, NDArray}, prefix :: AbstractString, epoch :: Int)
   save("$prefix-symbol.json", sym)
-  save_dict = merge(Dict([Symbol("arg:$k") => v for (k,v) in arg_params]),
-                    Dict([Symbol("aux:$k") => v for (k,v) in aux_params]))
+  save_dict = merge(Dict{Base.Symbol, NDArray}(map((x) -> Symbol("arg:$(x[1])") => x[2], arg_params)),
+                    Dict{Base.Symbol, NDArray}(map((x) -> Symbol("aux:$(x[1])") => x[2], aux_params)))
   save_filename = format("{1}-{2:04d}.params", prefix, epoch)
   save(save_filename, save_dict)
   info("Saved checkpoint to '$save_filename'")
