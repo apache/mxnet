@@ -2304,12 +2304,15 @@ def test_take():
             check_output_n_grad(data_shape, idx_shape)
 
 def test_index2d():
-    data = mx.nd.array([[0,1],[2,3]])
-    x = mx.nd.array([0, 1], dtype=np.int32)
-    y = mx.nd.array([1, 0], dtype=np.int32)
-    out = mx.nd.index2d(data, x, y)
-    print out.asnumpy()
-
+    for i in [1, 10, 100]:
+        for _ in range(10):
+            n = np.random.randint(1, 100)
+            m = np.random.randint(1, 100)
+            data = mx.random.uniform(-1, 1, shape=(n, m), ctx=default_context())
+            x = mx.nd.array(np.random.randint(0, n, size=i), ctx=default_context(), dtype='int32')
+            y = mx.nd.array(np.random.randint(0, m, size=i), ctx=default_context(), dtype='int32')
+            r = mx.nd.index2d(data, x, y)
+            assert_almost_equal(r.asnumpy(), data.asnumpy()[x.asnumpy(), y.asnumpy()])
 
 if __name__ == '__main__':
     test_index2d()
