@@ -1,7 +1,7 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import time
 import logging
@@ -428,8 +428,7 @@ class FeedForward(BASE_ESTIMATOR):
                  allow_extra_params=False,
                  begin_epoch=0,
                  **kwargs):
-        logging.warning(
-            '\033[91m[Deprecation Warning] mxnet.model.FeedForward has been deprecated. ' + \
+        print('\033[91m[Deprecation Warning] mxnet.model.FeedForward has been deprecated. ' + \
             'Please use mxnet.mod.Module instead.\033[0m')
 
         if isinstance(symbol, sym.Symbol):
