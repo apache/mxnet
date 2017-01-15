@@ -522,7 +522,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
     time_stop = time()
     metric = get(opts.eval_metric)
-    opts.verbosity >= 2 && info(format("== Epoch {1:0>3d}/{1:0>3d} ==========", i_epoch, opts.n_epoch))
+    opts.verbosity >= 2 && info(format("== Epoch {1:0>3d}/{2:0>3d} ==========", i_epoch, opts.n_epoch))
     if opts.verbosity >= 3
         info("## Training summary")
         for (name, value) in metric
@@ -579,6 +579,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   end # end of all epochs
 
   opts.verbosity >= 1 && info("Finish training on $(self.ctx)")
+  nothing
 end
 
 function save_checkpoint(self :: FeedForward, prefix :: AbstractString, state :: OptimizationState)
