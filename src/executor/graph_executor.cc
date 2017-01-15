@@ -244,8 +244,8 @@ Graph AssignContext(Graph g,
     }
     for (const auto& x : grad_store) {
       CHECK(x.second.ctx() == default_ctx)
-        << "Gradient array is in " << x.ctx() << " while binding with ctx=" << default_ctx
-        << ". All gradients must be in global context (" << default_ctx
+        << "Gradient array is in " << x.second.ctx() << " while binding with ctx="
+        << default_ctx << ". All gradients must be in global context (" << default_ctx
         << ") unless group2ctx is specified for cross-device graph.";
     }
     return g;
