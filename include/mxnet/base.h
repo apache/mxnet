@@ -288,6 +288,20 @@ inline Context Context::FromString(std::string str) {
   }
   return ret;
 }
+
+inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
+  if (ctx.dev_type == Context::kCPU) {
+    out << "cpu(";
+  } else if (ctx.dev_type == Context::kGPU) {
+    out << "gpu(";
+  } else if (ctx.dev_type == Context::kCPUPinned) {
+    out << "cpu_pinned(";
+  } else {
+    out << "unknown(";
+  }
+  out << ctx.dev_id << ")";
+  return out;
+}
 }  // namespace mxnet
 
 #include "./tensor_blob.h"
