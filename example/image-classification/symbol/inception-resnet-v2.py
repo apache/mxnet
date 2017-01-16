@@ -5,7 +5,6 @@ Inception-v4, Inception-ResNet and the Impact of Residual Connections
 on Learning		
 Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke, Alex Alemi		
 """
-import find_mxnet
 import mxnet as mx
 
 
@@ -130,7 +129,7 @@ def get_symbol(num_classes=1000, **kwargs):
         *[tower_conv0_1, tower_conv1_1, tower_conv2_2, tower_pool])
 
     net = repeat(net, 9, block8, scale=0.2, input_num_channels=2080)
-    net = block8(net, with_act=False, input_num_channel=2080)
+    net = block8(net, with_act=False, input_num_channels=2080)
 
     net = ConvFactory(net, 1536, (1, 1))
     net = mx.symbol.Pooling(net, kernel=(
