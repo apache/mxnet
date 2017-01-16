@@ -537,7 +537,7 @@ function _get_iter_name(hdr :: MX_handle)
           (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
           hdr, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
 
-  return Symbol(unsafe_wrap(String, ref_name[]))
+  return Symbol(unsafe_string(ref_name[]))
 end
 
 const _iter_creator_cache = Dict{Symbol, MX_handle}()
@@ -564,7 +564,7 @@ function _define_data_iter_creator(hdr :: MX_handle)
           (MX_handle, Ref{char_p}, Ref{char_p}, Ref{MX_uint}, Ref{char_pp}, Ref{char_pp}, Ref{char_pp}),
           hdr, ref_name, ref_desc, ref_narg, ref_arg_names, ref_arg_types, ref_arg_descs)
 
-  iter_name = Symbol(unsafe_wrap(String, ref_name[]))
+  iter_name = Symbol(unsafe_string(ref_name[]))
 
   isprovider =  endswith(string(iter_name), "Iter")
   signature = _format_signature(Int(ref_narg[]), ref_arg_names)

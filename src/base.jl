@@ -208,11 +208,11 @@ function _defstruct_impl(is_immutable, name, fields)
     name       = esc(name.args[1])
   end
 
-  field_defs     = Array(Expr, length(fields))        # :(field2 :: Int)
-  field_names    = Array(Expr, length(fields))        # :field2
-  field_defaults = Array(Expr, length(fields))        # :(field2 = 0)
-  field_types    = Array(Expr, length(fields))        # Int
-  field_asserts  = Array(Expr, length(fields))        # :(field2 >= 0)
+  field_defs     = Vector{Expr}(length(fields))        # :(field2 :: Int)
+  field_names    = Vector{Expr}(length(fields))        # :field2
+  field_defaults = Vector{Expr}(length(fields))        # :(field2 = 0)
+  field_types    = Vector{Expr}(length(fields))        # Int
+  field_asserts  = Vector{Expr}(length(fields))        # :(field2 >= 0)
   required_field = Symbol[]
 
   for i = 1:length(fields)
@@ -249,7 +249,7 @@ function _defstruct_impl(is_immutable, name, fields)
     f_name, f_type = param
     :($f_name = convert($f_type, $f_name))
   end
-  asserts = map(filter(i -> isdefined(field_asserts,i), 1:length(fields))) do i
+  asserts = map(filter(i -> isassigned(field_asserts,i), 1:length(fields))) do i
     :(@assert($(field_asserts[i])))
   end
   construct = Expr(:call, name, field_names...)

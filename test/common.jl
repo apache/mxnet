@@ -2,8 +2,8 @@
 # Common models used in testing
 ################################################################################
 function reldiff(a, b)
-  diff = sum(abs(a - b))
-  norm = sum(abs(a))
+  diff = sum(abs.(a .- b))
+  norm = sum(abs.(a))
   return diff / (norm + 1e-10)
 end
 

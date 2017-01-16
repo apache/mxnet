@@ -882,7 +882,7 @@ function load(filename::AbstractString, ::Type{NDArray})
     return [NDArray(MX_NDArrayHandle(hdr)) for hdr in unsafe_wrap(Array, out_hdrs[], out_size)]
   else
     @assert out_size == out_name_size
-    return Dict([(Symbol(unsafe_wrap(String, k)), NDArray(MX_NDArrayHandle(hdr))) for (k,hdr) in
+    return Dict([(Symbol(unsafe_string(k)), NDArray(MX_NDArrayHandle(hdr))) for (k,hdr) in
                  zip(unsafe_wrap(Array, out_names[], out_size), unsafe_wrap(Array, out_hdrs[], out_size))])
   end
 end

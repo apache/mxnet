@@ -322,7 +322,7 @@ function test_clip()
   info("NDArray::clip::dims = $dims")
 
   j_array, nd_array = rand_tensors(dims)
-  clip_up   = maximum(abs(j_array)) / 2
+  clip_up   = maximum(abs.(j_array)) / 2
   clip_down = 0
   clipped   = mx.clip(nd_array, a_min=clip_down, a_max=clip_up)
 
@@ -338,7 +338,7 @@ function test_sqrt()
 
   j_array, nd_array = rand_tensors(dims)
   sqrt_ed = sqrt(nd_array)
-  @test reldiff(copy(sqrt_ed), sqrt(j_array)) < 1e-6
+  @test reldiff(copy(sqrt_ed), sqrt.(j_array)) < 1e-6
 end
 
 function test_nd_as_jl()

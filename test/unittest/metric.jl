@@ -49,7 +49,11 @@ function test_ace()
     metric         = mx.ACE()    # For categorical variables, ACE == -LL
     mx._update_single_output(metric, mx.NDArray(labels), mx.NDArray(probs))
     LL_v2 = metric.ace_sum / metric.n_sample
-    @test_approx_eq_eps LL LL_v2 1e-12
+    @static if VERSION >= v"0.6.0-dev.2075"
+      @test LL ≈ LL_v2 atol=1e-12
+    else
+      @test_approx_eq_eps LL LL_v2 1e-12
+    end
 end
 
 

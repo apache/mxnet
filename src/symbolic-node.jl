@@ -55,7 +55,7 @@ macro _list_symbol_info(self, func_name)
             $(esc(self)), ref_sz, ref_names)
     narg = ref_sz[]
     names = unsafe_wrap(Array, ref_names[], narg)
-    names = [Symbol(unsafe_wrap(String, x)) for x in names]
+    names = [Symbol(unsafe_string(x)) for x in names]
     return names
   end
 end
@@ -151,7 +151,7 @@ function list_attr(self :: SymbolicNode)
   strings = unsafe_wrap(Array, ref_strings[], narg)
   out = Dict{Symbol, String}()
   for i in 1:2:narg
-    key = Symbol(unsafe_wrap(String, strings[i]))
+    key = Symbol(unsafe_string(strings[i]))
     value = unsafe_string(strings[i+1]) # Creates a copy of string
     out[key] = value
   end
@@ -174,7 +174,7 @@ function list_all_attr(self :: SymbolicNode)
   strings = unsafe_wrap(Array, ref_strings[], narg)
   out = Dict{Symbol, String}()
   for i in 1:2:narg
-    key = Symbol(unsafe_wrap(String, strings[i]))
+    key = Symbol(unsafe_string(strings[i]))
     value = unsafe_string(strings[i+1])
     out[key] = value
   end

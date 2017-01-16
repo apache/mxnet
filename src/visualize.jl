@@ -136,7 +136,7 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
   end
   println(io, "}")
 
-  return takebuf_string(io)
+  return String(take!(io))
 end
 
 function _format_graphviz_attr(io::IOBuffer, attrs)
