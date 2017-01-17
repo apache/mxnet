@@ -18,6 +18,7 @@
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -364,13 +365,12 @@ void Index2DOpForward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor<xpu, 2, DType> data = inputs[0].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    Tensor<xpu, 1, int> x = inputs[1].FlatTo1D<xpu, int>(s);
-    Tensor<xpu, 1, int> y = inputs[2].FlatTo1D<xpu, int>(s);
-    out = index2d(data, x, y);
+    Kernel<index2d, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                 inputs[0].dptr<DType>(), inputs[1].dptr<int>(), 
+                                 inputs[2].dptr<int>(), inputs[0].shape_[1]);
   });
 }
 
