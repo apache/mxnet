@@ -8,6 +8,7 @@ endif()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
+include(CTest)
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" OFF)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
@@ -275,7 +276,12 @@ if(USE_CUDA)
   add_definitions(-DMXNET_USE_CUDA=1)
   add_definitions(-DMXNET_USE_NVRTC=1)
   if(CUDA_LIBRARY_PATH)
-    link_directories(${CUDA_LIBRARY_PATH}/stubs)
+    if(IS_CONTAINER_BUILD)
+      # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
+      # so use the stub cuda driver shared library
+      #set(mxnet_BUILD_ONLY_CUDA_DRIVER ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+      #link_directories(${CUDA_LIBRARY_PATH}/stubs)
+    endif()
   endif()
 endif()
 
@@ -306,6 +312,7 @@ else()
   add_library(mxnet SHARED ${SOURCE})
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
+#target_link_libraries(mxnet ${mxnet_BUILD_ONLY_CUDA_DRIVER})
 
 if(USE_PLUGINS_WARPCTC)
   target_link_libraries(mxnet debug ${mxnet_LINKER_LIBS_DEBUG})
@@ -331,8 +338,10 @@ if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
+add_subdirectory(tests)
+
 if(INSTALL_PYTHON_VERSIONS)
-  message(WARNING " INSTALL_PYTHON_VERSIONS: ${INSTALL_PYTHON_VERSIONS}")
+  message(STATUS "Installing for python versions: ${INSTALL_PYTHON_VERSIONS}")
   foreach(version ${INSTALL_PYTHON_VERSIONS})
     set(outdir ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python${version}/site-packages/mxnet)
     add_custom_command(TARGET mxnet POST_BUILD
