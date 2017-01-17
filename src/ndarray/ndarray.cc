@@ -686,17 +686,20 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst = this->data();
   TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
+    this->WaitToWrite();
+    this->CheckAndAlloc();
     RunContext rctx;
     rctx.stream = nullptr;
-    this->WaitToWrite();
+    TBlob dst = this->data();
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
+        this->CheckAndAlloc();
+        TBlob dst = this->data();
         ndarray::Copy<cpu, gpu>(src, &dst,
                                 Context::CPU(), this->ctx(), rctx);
         // Wait GPU kernel to complete
@@ -717,9 +720,9 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
+    this->WaitToRead();
     RunContext rctx;
     rctx.stream = nullptr;
-    this->WaitToRead();
     ndarray::Copy<cpu, cpu>(this->data(), &dst,
                             Context::CPU(), Context::CPU(), rctx);
   } else {
@@ -730,7 +733,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
         // Wait GPU kernel to complete
         rctx.get_stream<gpu>()->Wait();
       }, this->ctx(), {this->var()}, {},
-      FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyCPU2GPU"));
+      FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyGPU2CPU"));
     this->WaitToWrite();
 #else
     LOG(FATAL) << "GPU is not enabled";
