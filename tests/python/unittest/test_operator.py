@@ -2268,40 +2268,6 @@ def test_blockgrad():
     assert_almost_equal(exe.outputs[0].asnumpy(), a_npy)
     exe.backward()  # No error if BlockGrad works
 
-def test_take():
-    def check_output_n_grad(data_shape, idx_shape):
-        exe = result.simple_bind(default_context(), data=data_shape, 
-                                 idx=idx_shape)
-        data_real = np.random.normal(size=data_shape).astype('float32')
-        idx_real = np.random.randint(low=0, high=data_shape[0], size=idx_shape)
-        grad_out = np.ones(idx_shape + data_shape[1:], dtype='float32')
-        grad_in = np.zeros(data_shape, dtype='float32')
-
-        exe.arg_dict['data'][:] = mx.nd.array(data_real)
-        exe.arg_dict['idx'][:] = mx.nd.array(idx_real)
-        exe.forward()
-        assert reldiff(exe.outputs[0].asnumpy(), data_real[idx_real]) < 1e-6
-
-        for i in np.nditer(idx_real):
-            grad_in[i] += 1.0
-
-        exe.backward([mx.nd.array(grad_out)])
-        assert reldiff(exe.grad_dict['data'].asnumpy(), grad_in) < 1e-6
-
-    data = mx.sym.Variable('data')
-    idx = mx.sym.Variable('idx')
-    idx = mx.sym.BlockGrad(idx)
-    result = mx.sym.take(idx=idx, data=data)
-
-    for data_ndim in range(2, 5):
-        for idx_ndim in range(1, 4):
-            data_shape = ()
-            for _ in range(data_ndim):
-                data_shape += (np.random.randint(low=3, high=6), )
-            idx_shape = ()
-            for _ in range(idx_ndim):
-                idx_shape += (np.random.randint(low=3, high=5), ) 
-            check_output_n_grad(data_shape, idx_shape)
 
 if __name__ == '__main__':
     test_init()
@@ -2353,4 +2319,3 @@ if __name__ == '__main__':
     test_special_functions_using_scipy()
     test_order()
     test_blockgrad()
-    test_take()

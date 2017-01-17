@@ -8,11 +8,9 @@ Topics:
 
 * [Train a Model](#train-a-model)
 * [Save the Model](#save-the-model)
-* [Periodic Checkpoint](#periodically-checkpoint)
-* [Initializer API Reference](#initializer-api-reference)
-* [Evaluation Metric API Reference](#initializer-api-reference)
-* [Optimizer API Reference](#optimizer-api-reference)
-* [Model API Reference](#model-api-reference)
+* [Periodic Checkpoint](#periodic-checkpointing)
+* [Multiple Devices](#use-multiple-devices)
+* [Model API Reference](#http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Model)
 
 ## Train the Model
 

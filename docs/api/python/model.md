@@ -8,7 +8,7 @@ Topics:
 
 * [Train a Model](#train-a-model)
 * [Save the Model](#save-the-model)
-* [Periodic Checkpoint](#periodically-checkpoint)
+* [Periodic Checkpoint](#periodic-checkpointing)
 * [Initializer API Reference](#initializer-api-reference)
 * [Evaluation Metric API Reference](#initializer-api-reference)
 * [Optimizer API Reference](#optimizer-api-reference)

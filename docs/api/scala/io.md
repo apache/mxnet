@@ -8,7 +8,7 @@ Topics:
 * [Data Iterator Parameters](#parameters-for-data-iterator) clarifies the different usages for dataiter parameters.
 * [Create a Data Iterator](#create-a-data-iterator) introduces how to create a data iterator in MXNet for Scala.
 * [How to Get Data](#how-to-get-data) introduces the data resource and data preparation tools.
-* [IO API Reference](#io-api-reference) explains the IO API.
+* [IO API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.IO$) explains the IO API.
 
 
 ## Data Iterator Parameters

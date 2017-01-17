@@ -119,7 +119,8 @@ directory of the root computer, such as `~/train`, and MXNet is built as `~/mxne
   And then copy the training program:
 
   ```bash
-  cp ~/mxnet/example/image-classification/*.py 
+  cp ~/mxnet/example/image-classification/*.py .
+  cp -r ~/mxnet/example/image-classification/common .
   ```
 
 2. Prepare a host file with all slaves's private IPs. For example, `cat hosts`:
