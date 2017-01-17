@@ -5,6 +5,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+extern bool unitTestsWithCuda;
+
 TEST(Storage, Basic_CPU) {
   constexpr size_t kSize = 1024;
   auto&& storage = mxnet::Storage::Get();
@@ -35,12 +37,12 @@ static bool checkForWorkingCuda()
       }
     }
   }
-  std::fprintf(stderr, "Could not find workinbg CUDA driver\n");
+  std::fprintf(stderr, "Warning: Could not find working CUDA driver\n");
   return false;
 }
 
 TEST(Storage, Basic_GPU) {
-  if(checkForWorkingCuda()) {
+  if(unitTestsWithCuda || checkForWorkingCuda()) {
     constexpr size_t kSize = 1024;
     mxnet::Context context_gpu = mxnet::Context::GPU(0);
     auto &&storage = mxnet::Storage::Get();

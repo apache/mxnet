@@ -279,8 +279,9 @@ if(USE_CUDA)
     if(IS_CONTAINER_BUILD)
       # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
       # so use the stub cuda driver shared library
-      #set(mxnet_BUILD_ONLY_CUDA_DRIVER ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
-      #link_directories(${CUDA_LIBRARY_PATH}/stubs)
+      if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+        set(mxnet_BUILD_ONLY_CUDA_DRIVER ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+      endif()
     endif()
   endif()
 endif()
@@ -312,7 +313,6 @@ else()
   add_library(mxnet SHARED ${SOURCE})
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
-#target_link_libraries(mxnet ${mxnet_BUILD_ONLY_CUDA_DRIVER})
 
 if(USE_PLUGINS_WARPCTC)
   target_link_libraries(mxnet debug ${mxnet_LINKER_LIBS_DEBUG})
@@ -321,10 +321,12 @@ endif()
 
 target_link_libraries(mxnet dmlccore)
 
+if(mxnet_BUILD_ONLY_CUDA_DRIVER)
+  target_link_libraries(mxnet ${mxnet_BUILD_ONLY_CUDA_DRIVER})
+endif()
 
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
-
 endif()
 
 if(USE_DIST_KVSTORE)
