@@ -64,7 +64,7 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
 inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int> *in_type,
                             std::vector<int> *out_type) {
-  CHECK_GE(in_type->size(), 1);
+  CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
   for (index_t i = 0; i < in_type->size(); ++i) {
@@ -123,7 +123,7 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_type,
                        std::vector<int> *out_type) {
   // using single dtype ("float32") for safety reason
-  CHECK_GE(in_type->size(), 2);
+  CHECK_GE(in_type->size(), 2U);
   int dtype = (*in_type)[1];
   CHECK_NE(dtype, -1) << "idx must have specified type";
   for (index_t i = 0; i < in_type->size(); ++i) {
@@ -149,8 +149,8 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[indexing::kOut], kWriteTo);
-    CHECK_EQ(inputs.size(), 2);
-    CHECK_EQ(outputs.size(), 1);
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
     CHECK_GE(inputs[indexing::kData].ndim(), 2)
         << "Indexing layer expects its array's size to be at least 2. "
         << inputs[indexing::kData].ndim()
@@ -182,8 +182,8 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(inputs.size(), 2);
-    CHECK_EQ(outputs.size(), 2);
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 2U);
     CHECK_EQ(req[indexing::kIdx], kNullOp)
         << "Indexing op doesn't support gradient into index";
 

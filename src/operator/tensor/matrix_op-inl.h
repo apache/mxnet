@@ -61,8 +61,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
   CHECK_EQ(param_.target_shape.ndim() > 0 ||
            param_.shape.ndim() > 0, true) << "targe_shape or shape must be present.";
   const TShape &dshape = (*in_attrs)[0];
@@ -122,14 +122,14 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
         if (d1 == -1) d1 = d0 / d2;
         if (d2 == -1) d2 = d0 / d1;
-        CHECK_EQ(d1 * d2, d0) <<
+        CHECK_EQ(d1 * d2, (int)d0) <<
           "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
         new_size /= d0;
         tmp.push_back(d1);
         tmp.push_back(d2);
       } else {
         // greater than 0, new shape
-        CHECK_EQ(new_size % proposed_dim, 0) << "Illegal dim setting, can't be divided.";
+        CHECK_EQ(new_size % proposed_dim, 0U) << "Illegal dim setting, can't be divided.";
         tmp.push_back(proposed_dim);
         new_size /= proposed_dim;
         src_idx++;
@@ -184,8 +184,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
 inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *in_attrs,
                          std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
   const TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
   out_attrs->clear();
@@ -283,10 +283,10 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 5) << "Transpose support at most 5 dimensions";
+  CHECK_LE(shp.ndim(), 5U) << "Transpose support at most 5 dimensions";
   TShape ret(shp.ndim());
   if (param.axes.ndim() == 0) {
     for (index_t i = 0; i < shp.ndim(); ++i) {
@@ -317,8 +317,8 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
                            std::vector<TShape> *in_attrs,
                            std::vector<TShape> *out_attrs) {
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
   CHECK_LE(param.axis, shp.ndim())
       << "axis exceeds the dimension of the array";
@@ -441,8 +441,8 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
                      std::vector<TShape> *out_attrs) {
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 2 && rshape.ndim() == 2) {

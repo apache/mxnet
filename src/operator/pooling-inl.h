@@ -193,14 +193,14 @@ class PoolingProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     const TShape &dshape = (*in_shape)[0];
-    CHECK_GE(dshape.ndim(), 4) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
+    CHECK_GE(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
                                << "Or 5D in (batch, channel, d, y, x)";
     TShape oshape = dshape;
     if (dshape.ndim() ==  0) return false;
     if (param_.kernel.ndim() == 2) {
-      CHECK_EQ(dshape.ndim(), 4) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
+      CHECK_EQ(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
       if (param_.global_pool) {
         oshape[2] = 1;
         oshape[3] = 1;
@@ -228,7 +228,7 @@ class PoolingProp : public OperatorProperty {
       out_shape->clear();
       out_shape->push_back(oshape);
     } else if (param_.kernel.ndim() == 3) {
-      CHECK_EQ(dshape.ndim(), 5) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
+      CHECK_EQ(dshape.ndim(), 5U) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
       CHECK_LT(param_.kernel[0], dshape[2] + 2 * param_.pad[0]) << "kernel size exceeds input";
       CHECK_LE(param_.kernel[1], dshape[3] + 2 * param_.pad[1]) << "kernel size exceeds input";
       CHECK_LE(param_.kernel[2], dshape[4] + 2 * param_.pad[2]) << "kernel size exceeds input";
@@ -266,7 +266,7 @@ class PoolingProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 1);
+    CHECK_EQ(in_type->size(), 1U);
     int dtype = (*in_type)[0];
 
     if (dtype == -1) {

@@ -164,9 +164,9 @@ class FullyConnectedProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
     const TShape &dshape = (*in_shape)[fullc::kData];
     // require data to be known

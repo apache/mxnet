@@ -348,13 +348,13 @@ class DeconvolutionProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
     const TShape &dshape = (*in_shape)[deconv::kData];
     if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 4) \
+    CHECK_EQ(dshape.ndim(), 4U) \
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
                        deconv::kWeight,
@@ -374,9 +374,9 @@ class DeconvolutionProp : public OperatorProperty {
         << "input num_filter must divide group size";
     CHECK_EQ(param_.num_filter % param_.num_group, 0) \
         << "output num_filter must divide group size";
-    CHECK_GT(param_.kernel.Size(), 0) \
+    CHECK_GT(param_.kernel.Size(), 0U) \
         << "incorrect kernel size: " << param_.kernel;
-    CHECK_GT(param_.stride.Size(), 0) \
+    CHECK_GT(param_.stride.Size(), 0U) \
         << "incorrect stride size: " << param_.stride;
     CHECK_GE(ksize_y-1, adj_y) << "adj(y) must be samller than kernel(h)";
     CHECK_GE(ksize_x-1, adj_x) << "adj(x) must be samller than kernel(w)";
@@ -399,7 +399,7 @@ class DeconvolutionProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

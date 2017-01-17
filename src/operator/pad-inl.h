@@ -158,7 +158,7 @@ class PadProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "Can only be one input to symbol.";
+    CHECK_EQ(in_shape->size(), 1U) << "Can only be one input to symbol.";
 
     const TShape &dshape = (*in_shape)[pad_enum::kData];
     if (dshape.ndim() == 0) return false;

@@ -152,16 +152,16 @@ class ROIPoolingProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2) << "Input:[data, rois]";
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, rois]";
 
     // data: [batch_size, c, h, w]
     TShape dshape = in_shape->at(roipool::kData);
-    CHECK_EQ(dshape.ndim(), 4) << "data should be a 4D tensor";
+    CHECK_EQ(dshape.ndim(), 4U) << "data should be a 4D tensor";
 
     // bbox: [num_rois, 5]
     TShape bshape = in_shape->at(roipool::kBox);
-    CHECK_EQ(bshape.ndim(), 2) << "bbox should be a 2D tensor of shape [batch, 5]";
-    CHECK_EQ(bshape[1], 5) << "bbox should be a 2D tensor of shape [batch, 5]";
+    CHECK_EQ(bshape.ndim(), 2U) << "bbox should be a 2D tensor of shape [batch, 5]";
+    CHECK_EQ(bshape[1], 5U) << "bbox should be a 2D tensor of shape [batch, 5]";
 
     // out: [num_rois, c, pooled_h, pooled_w]
     // max_idx: [num_rois, c, pooled_h, pooled_w]
@@ -176,7 +176,7 @@ class ROIPoolingProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 2);
+    CHECK_EQ(in_type->size(), 2U);
     int dtype = (*in_type)[0];
     CHECK_EQ(dtype, (*in_type)[1]);
     CHECK_NE(dtype, -1) << "Input must have specified type";

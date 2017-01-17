@@ -53,7 +53,7 @@ class SliceChannelOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3> > outputs(size_);
@@ -153,7 +153,7 @@ class SliceChannelProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     TShape dshape = in_shape->at(slice_enum::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.axis >= 0) {
@@ -165,7 +165,7 @@ class SliceChannelProp : public OperatorProperty {
     if (real_axis < 0) {
       real_axis += dshape.ndim();
     }
-    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0)
+    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0U)
       << "num_outputs (" << param_.num_outputs
       << ") does not divide input dimension "
       << real_axis << " (" << dshape[real_axis] << ").";

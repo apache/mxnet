@@ -351,7 +351,7 @@ class ConvolutionProp : public OperatorProperty {
       if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
       if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
     } else {
-      CHECK_EQ(param_.kernel.ndim(), 3) << param_.kernel.ndim() << "D convolution not supported";
+      CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D convolution not supported";
       param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
       if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
       if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
@@ -368,9 +368,9 @@ class ConvolutionProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
     // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
     out_shape->resize(1, TShape());
@@ -396,11 +396,11 @@ class ConvolutionProp : public OperatorProperty {
           << "input num_filter must divide group size";
       CHECK_EQ(param_.num_filter % param_.num_group, 0) \
           << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0) \
+      CHECK_GT(param_.kernel.Size(), 0U) \
           << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0) \
+      CHECK_GT(param_.stride.Size(), 0U) \
           << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0) \
+      CHECK_GT(param_.dilate.Size(), 0U) \
           << "incorrect dilate size: " << param_.dilate;
       CHECK(ksize_y <= dshape[2] + 2 * param_.pad[0]
             && ksize_x <= dshape[3] + 2 * param_.pad[1])
@@ -416,7 +416,7 @@ class ConvolutionProp : public OperatorProperty {
       return true;
     } else if (param_.kernel.ndim() == 3) {
       // 3d conv
-      CHECK_EQ(dshp.ndim(), 5) \
+      CHECK_EQ(dshp.ndim(), 5U) \
         << "Input data should be 5D in batch-num_filter-depth-y-x";
       Shape<5> dshape = ConvertLayout(dshp.get<5>(), param_.layout.value(), kNCDHW);
       Shape<5> wshape = Shape5(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
@@ -467,7 +467,7 @@ class ConvolutionProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

@@ -100,7 +100,7 @@ class CastProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
+    CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
     const TShape &dshape = in_shape->at(cast::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();

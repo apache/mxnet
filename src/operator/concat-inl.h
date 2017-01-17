@@ -50,7 +50,7 @@ class ConcatOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(static_cast<int>(in_data.size()), size_);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     CHECK_LT(dimension_, in_data[concat_enum::kData0].ndim());
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3, DType> > data(size_);
@@ -139,7 +139,7 @@ class ConcatProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     TShape dshape = in_shape->at(concat_enum::kData0);
     if (dshape.ndim() == 0) return false;
-    CHECK_GE(dshape.ndim(), 1);
+    CHECK_GE(dshape.ndim(), 1U);
     CHECK_LT(static_cast<index_t>(param_.dim), dshape.ndim())
         <<"the dimension to be concated is not in the range of input's dimension";
     for (int i = 1; i < param_.num_args; ++i) {

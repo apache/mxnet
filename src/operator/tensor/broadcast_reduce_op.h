@@ -67,8 +67,8 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
 inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   if (ishape.ndim() == 0) return false;
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
@@ -101,8 +101,8 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
 inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   if ((*in_attrs)[0].ndim() == 0) return false;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape &ishape = (*in_attrs)[0];
@@ -148,7 +148,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
   TShape &ishape = (*in_attrs)[0];
   TShape oshape = ishape;
   for (index_t i = 0; i < param.axis.ndim(); ++i) {
-    CHECK_EQ(oshape[param.axis[i]], 1) << "Broadcasting axis must have size 1";
+    CHECK_EQ(oshape[param.axis[i]], 1U) << "Broadcasting axis must have size 1";
     oshape[param.axis[i]] = param.size[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);

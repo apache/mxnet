@@ -157,7 +157,7 @@ class CropProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     TShape data_shape = in_shape->at(crop_enum::kData);
     if (data_shape.ndim() == 0) return false;
-    CHECK_EQ(data_shape.ndim(), 4) << \
+    CHECK_EQ(data_shape.ndim(), 4U) << \
         "Input data should be 4D in batch-num_filter-y-x";
     std::vector<int> crop_shape;
     if (param_.num_args == 1) {
@@ -177,7 +177,7 @@ class CropProp : public OperatorProperty {
       crop_shape.push_back(crop_like_shape[3]);
     }
     if (crop_shape.size() == 0) return false;
-    CHECK_EQ(crop_shape.size(), 2) << \
+    CHECK_EQ(crop_shape.size(), 2U) << \
         "Input crop_like should be 2D in height-width";
     out_shape->clear();
     data_shape[2] = crop_shape[0];
