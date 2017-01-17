@@ -23,11 +23,13 @@
 #define MXNET_PREDICT_ONLY  1
 #define DISABLE_OPENMP 1
 
+
 #include "src/ndarray/ndarray_function.cc"
 #include "src/ndarray/ndarray.cc"
 
 #include "src/engine/engine.cc"
 #include "src/engine/naive_engine.cc"
+#include "src/engine/profiler.cc"
 
 #include "src/executor/graph_executor.cc"
 #include "src/executor/attach_op_execs_pass.cc"

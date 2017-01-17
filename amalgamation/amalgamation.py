@@ -11,8 +11,8 @@ blacklist = [
     'omp.h'
     ]
 
-minimum = int(sys.argv[5]) if len(sys.argv) > 5 else 0
-android = int(sys.argv[6]) if len(sys.argv) > 6 else 0
+minimum = int(sys.argv[6]) if len(sys.argv) > 5 else 0
+android = int(sys.argv[7]) if len(sys.argv) > 6 else 0
 
 def pprint(lst):
     for item in lst:
@@ -100,12 +100,13 @@ def expand(x, pending, stage):
     print >>out, "//===== EXPANDED: %s =====\n" %x
     history.add(x)
 
-expand(sys.argv[2], [], "nnvm")
-expand(sys.argv[3], [], "src")
+expand(sys.argv[2], [], "dmlc")
+expand(sys.argv[3], [], "nnvm")
+expand(sys.argv[4], [], "src")
 
 
 
-f = open(sys.argv[4], 'wb')
+f = open(sys.argv[5], 'wb')
 
 if minimum != 0:
     print >>f, "#define MSHADOW_STAND_ALONE 1"
