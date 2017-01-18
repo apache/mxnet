@@ -31,10 +31,10 @@ if(GTEST_FOUND)
 
   add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
 
-  add_custom_target(check
-    COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests
-    DEPENDS ${PROJECT_NAME}_unit_tests
-    COMMENT "Unit tests"
-  )
+#  add_custom_target(check
+#    COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests
+#    DEPENDS ${PROJECT_NAME}_unit_tests
+#    COMMENT "Unit tests"
+#  )
 endif(GTEST_FOUND)
 
