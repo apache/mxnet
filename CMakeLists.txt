@@ -8,7 +8,7 @@ endif()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
-include(CTest)
+#include(CTest)
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" OFF)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
