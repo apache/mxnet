@@ -277,15 +277,15 @@ if(USE_CUDA)
   add_definitions(-DMXNET_USE_NVRTC=1)
   if(CUDA_LIBRARY_PATH)
     if(IS_CONTAINER_BUILD)
+      # In case of building on a production-like build container which may not have Cuda installed
       if(NOT CMAKE_SYSTEM_HAS_CUDA)
-        message(WARNING " NOT CMAKE_SYSTEM_HAS_CUDA")
+        message(STATUS " NOT CMAKE_SYSTEM_HAS_CUDA")
         # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
-	# so use the stub cuda driver shared library
-	if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
-          message(WARNING " ADDING CUDA PATH TO LINK DIRS: ${CUDA_LIBRARY_PATH}/stubs") 
-	  #link_directories(${CUDA_LIBRARY_PATH}/stubs)	
-	  set(mxnet_BUILD_ONLY_CUDA_DRIVER ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
-	endif()
+	      # so use the stub cuda driver shared library
+	      if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+          message(STATUS " ADDING CUDA PATH TO LINK DIRS: ${CUDA_LIBRARY_PATH}/stubs")
+	        set(mxnet_BUILD_ONLY_CUDA_DRIVER ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+	      endif()
       endif()
     endif()
   endif()
@@ -327,12 +327,13 @@ endif()
 target_link_libraries(mxnet dmlccore)
 
 if(mxnet_BUILD_ONLY_CUDA_DRIVER)
-  message(WARNING " Setting stubs libraries: ${mxnet_BUILD_ONLY_CUDA_DRIVER}")
+  message(STATUS " Setting stubs libraries: ${mxnet_BUILD_ONLY_CUDA_DRIVER}")
   target_link_libraries(mxnet ${mxnet_BUILD_ONLY_CUDA_DRIVER})
 endif()
 
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
+
 endif()
 
 if(USE_DIST_KVSTORE)
