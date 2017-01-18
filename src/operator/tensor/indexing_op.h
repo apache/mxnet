@@ -364,10 +364,10 @@ void Index2DOpForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Kernel<index2d, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                 inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                 inputs[0].dptr<DType>(), inputs[1].dptr<int>(), 
                                  inputs[2].dptr<int>(), inputs[0].shape_[1]);
   });
 }
