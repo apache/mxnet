@@ -7,6 +7,8 @@
 #include <nnvm/c_api.h>
 #include <mxnet/c_api.h>
 #include <dmlc/logging.h>
+#include <mxnet/ndarray.h>
+#include "../../../../../src/common/cuda_utils.h"
 #include <mutex>
 #include <iostream>
 #include <functional>
@@ -2112,6 +2114,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 jlongArray ptrsArr = env->NewLongArray(size);
                 env->SetLongArrayRegion(
                   ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
+                mxnet::NDArray* tmp = reinterpret_cast<mxnet::NDArray*>(ptrs[0]);
+                CUDA_CALL(cudaSetDevice(tmp->ctx().dev_id));
                 success = env->CallBooleanMethod(globalOpMap.at(key), midForward,
                                                        size,
                                                        ptrsArr,
