@@ -16,6 +16,9 @@ if(NOT GTEST_ROOT)
 endif()
 
 if(GTEST_FOUND)
+
+  enable_testing()
+
   file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
 
   link_directories(${C_CXX_LINK_DIRECTORIES})
@@ -25,6 +28,8 @@ if(GTEST_FOUND)
     gtest
     mxnet
     )
+
+  add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
 
   add_custom_target(check
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests

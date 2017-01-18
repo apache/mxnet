@@ -23,6 +23,7 @@ package.DeepMXNet = {
       Python27 = 1.0;
       Python34 = 1.0;
       Python-setuptools = 2.x;
+      C-ares = 1.x;
     };
   };
 
