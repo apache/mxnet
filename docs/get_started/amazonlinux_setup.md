@@ -1,4 +1,4 @@
-# Installing MXNet on Ubuntu
+# Installing MXNet on Amazon Linux
 For users of Python on Amazon Linux operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
 The simple installation scripts set up MXNet for Python on computers running Amazon Linux. The scripts install MXNet in your home folder ```~/mxnet```.
