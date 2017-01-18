@@ -26,7 +26,7 @@ if(GTEST_FOUND)
     mxnet
     )
 
-  add_custom_command(TARGET check
+  add_custom_target(check
     COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests
     DEPENDS ${PROJECT_NAME}_unit_tests
     COMMENT "Unit tests"
