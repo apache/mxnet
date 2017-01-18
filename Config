@@ -54,6 +54,7 @@ package.DeepMXNet = {
       Scikit-learn = 0.17.x;
       SciPy = 0.15.x;
       Requests = 2.x.x;
+      C-ares = 1.x;
     };
   };
 
