@@ -8,6 +8,7 @@
 #define MXNET_OPERATOR_MXNET_OP_H_
 
 #include <mxnet/base.h>
+#include <algorithm>
 
 namespace mxnet {
 namespace op {
