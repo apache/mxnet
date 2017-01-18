@@ -29,7 +29,8 @@ if(GTEST_FOUND)
     mxnet
     )
 
-  add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
+  add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests
+)
 
 endif(GTEST_FOUND)
 
