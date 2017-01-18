@@ -36,6 +36,7 @@ package.DeepMXNet = {
       DeepMShadow = 2.x;
       CRuntime = 1.0;
       Cuda = 7.x;
+      C-ares = 1.x;
       DeepCudnn = 5.x;
 #      DeepOpenCV = 2.4.x;
       DeepNNVM = 0.9;
