@@ -58,12 +58,12 @@ struct Kernel<OP, gpu> {
 };
 #endif  // __CUDACC__
 
-/*! \brief indexing 2d array */
-struct index2d {
+/*! \brief take scalar value from 2d data array */
+struct batch_take {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
-                                  const int *x, const int *y, int M) {
-    out[i] = a[x[i]*M+y[i]];
+                                  const int *idx, int M) {
+    out[i] = a[i*M+idx[i]];
   }
 };
 

@@ -328,37 +328,38 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
     });
 }
 
-inline bool Index2DOpShape(const nnvm::NodeAttrs& attrs,
+inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 3) << "Index2D op requires three inputs";
+  CHECK_EQ(in_attrs->size(), 2) << "BatchTake op requires three inputs";
+  if ((*in_attrs)[1].ndim() != 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
+  } else if ((*out_attrs)[0].ndim() != 0) {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, (*out_attrs)[0]);
+  }
   if ((*in_attrs)[0].ndim() == 0) return false;
-  CHECK_EQ((*in_attrs)[0].ndim(), 2);
-  TShape shape;
-  if ((*in_attrs)[1].ndim() != 0) shape = (*in_attrs)[1];
-  if ((*in_attrs)[2].ndim() != 0) shape = (*in_attrs)[2];
-  if ((*out_attrs)[0].ndim() != 0) shape = (*out_attrs)[0];
-  if (shape.ndim() == 0) return false;
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, shape);
-  SHAPE_ASSIGN_CHECK(*in_attrs, 2, shape);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  CHECK_EQ((*in_attrs)[0].ndim(), 2) << "Data array must by 2 dimensional";
+  if ((*out_attrs)[0].ndim() == 0) return false;
+  CHECK_EQ((*in_attrs)[0][0], (*out_attrs)[0][0])
+    << "Index array's size must be the same as data array's first dimension";
   return true;
 }
 
-inline bool Index2DOpType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_type,
-                          std::vector<int> *out_type) {
-  using namespace mshadow;
-  CHECK_EQ(in_type->size(), 3);
-  if ((*in_type)[0] == -1) return false;
-  TYPE_ASSIGN_CHECK(*in_type, 1, kInt32);
-  TYPE_ASSIGN_CHECK(*in_type, 2, kInt32);
-  TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
+inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  if ((*in_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else if ((*out_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  }
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kInt32);
   return true;
 }
 
 template<typename xpu>
-void Index2DOpForward(const nnvm::NodeAttrs& attrs,
+void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
@@ -366,9 +367,9 @@ void Index2DOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<index2d, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                 inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
-                                 inputs[2].dptr<int>(), inputs[0].shape_[1]);
+    Kernel<batch_take, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                    inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                    inputs[0].Size()/inputs[0].shape_[0]);
   });
 }
 

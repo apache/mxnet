@@ -191,6 +191,8 @@ class TBlob {
   /*! \brief get pointer in dtype */
   template<typename DType>
   inline DType* dptr() const {
+    CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
+      << "TBlob.dptr(): data type do not match specified type.";
     return static_cast<DType*>(dptr_);
   }
   /*!

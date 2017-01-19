@@ -20,8 +20,8 @@ NNVM_REGISTER_OP(take)
 NNVM_REGISTER_OP(_backward_take)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpBackward<gpu>);
 
-NNVM_REGISTER_OP(index2d)
-.set_attr<FCompute>("FCompute<gpu>", Index2DOpForward<gpu>);
+NNVM_REGISTER_OP(batch_take)
+.set_attr<FCompute>("FCompute<gpu>", BatchTakeOpForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
