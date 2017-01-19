@@ -1,6 +1,6 @@
 # coding: utf-8
 """Definition of various recurrent neural network cells."""
-
+from __future__ import print_function
 import copy
 
 from .. import symbol
@@ -8,10 +8,12 @@ from .. import ndarray
 from ..base import numeric_types, string_types
 
 class RNNParams(object):
-    def __init__(self):
+    def __init__(self, prefix=''):
+        self._prefix = prefix
         self._params = {}
 
     def get(self, name, **kwargs):
+        name = self._prefix + name
         if name not in self._params:
             self._params[name] = symbol.Variable(name, **kwargs)
         return self._params[name]
@@ -19,9 +21,26 @@ class RNNParams(object):
 
 class BaseRNNCell(object):
     """Abstract base class for RNN cells"""
-    def __call__(self, inputs, states, params, prefix=''):
+    def __init__(self, prefix='', params=None):
+        if params is None:
+            params = RNNParams(prefix)
+            self._own_params = True
+        else:
+            self._own_params = False
+        self._prefix = prefix
+        self._params = params
+        self._init_counter = -1
+        self._counter = -1
+
+    def __call__(self, inputs, states):
         """construct symbol"""
         raise NotImplementedError()
+
+    @property
+    def params(self):
+        """Parameters of this cell"""
+        self._own_params = False
+        return self._params
 
     @property
     def state_shape(self):
@@ -33,22 +52,20 @@ class BaseRNNCell(object):
         """shape(s) of output"""
         raise NotImplementedError()
 
-    def begin_state(self, prefix='', init_sym=symbol.zeros, **kwargs):
+    def begin_state(self, init_sym=symbol.zeros, **kwargs):
         """initial state"""
         state_shape = self.state_shape
-        def recursive(shape, c):
-            if shape is None:
-                c[0] += 1
-                return init_sym(name='%sbegin_state_%d'%(prefix, c[0]), **kwargs)
-            elif isinstance(shape, tuple):
+        def recursive(shape):
+            if isinstance(shape, tuple):
                 assert len(shape) == 0 or isinstance(shape[0], numeric_types)
-                c[0] += 1
-                return init_sym(name='%sbegin_state_%d'%(prefix, c[0]), shape=shape, **kwargs)
+                self._init_counter += 1
+                return init_sym(name='%sinit_%d'%(self._prefix, self._init_counter),
+                                shape=shape, **kwargs)
             else:
                 assert isinstance(shape, list)
-                return [recursive(i, c) for i in shape]
+                return [recursive(i) for i in shape]
 
-        return recursive(state_shape, [-1])
+        return recursive(state_shape)
 
     def _get_activation(self, x, activation, **kwargs):
         if isinstance(activation, string_types):
@@ -58,10 +75,14 @@ class BaseRNNCell(object):
 
 class RNNCell(BaseRNNCell):
     """Simple recurrent neural network cell"""
-    def __init__(self, num_hidden, activation='tanh'):
+    def __init__(self, num_hidden, activation='tanh', prefix='rnn_', params=None):
+        super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
         self._activation = activation
-        self._counter = 0
+        self._iW = self.params.get('i2h_weight')
+        self._iB = self.params.get('i2h_bias')
+        self._hW = self.params.get('h2h_weight')
+        self._hB = self.params.get('h2h_bias')
 
     @property
     def state_shape(self):
@@ -71,28 +92,29 @@ class RNNCell(BaseRNNCell):
     def output_shape(self):
         return (0, self._num_hidden)
 
-    def __call__(self, inputs, states, params, prefix=''):
-        W = params.get('%si2h_weight'%prefix)
-        B = params.get('%si2h_bias'%prefix)
-        U = params.get('%sh2h_weight'%prefix)
-        name = '%st%d_'%(prefix, self._counter)
-        i2h = symbol.FullyConnected(data=inputs, weight=W, bias=B,
+    def __call__(self, inputs, states):
+        self._counter += 1
+        name = '%st%d_'%(self._prefix, self._counter)
+        i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
                                     num_hidden=self._num_hidden,
                                     name='%si2h'%name)
-        h2h = symbol.FullyConnected(data=states, weight=U, no_bias=True,
+        h2h = symbol.FullyConnected(data=states, weight=self._hW, bias=self._hB,
                                     num_hidden=self._num_hidden,
                                     name='%sh2h'%name)
         output = self._get_activation(i2h + h2h, self._activation,
                                       name='%sout'%name)
 
-        self._counter += 1
         return output, output
 
 class LSTMCell(BaseRNNCell):
     """LSTM cell"""
-    def __init__(self, num_hidden):
+    def __init__(self, num_hidden, prefix='lstm_', params=None):
+        super(LSTMCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
-        self._counter = 0
+        self._iW = self.params.get('i2h_weight')
+        self._iB = self.params.get('i2h_bias')
+        self._hW = self.params.get('h2h_weight')
+        self._hB = self.params.get('h2h_bias')
 
     @property
     def state_shape(self):
@@ -102,15 +124,13 @@ class LSTMCell(BaseRNNCell):
     def output_shape(self):
         return (0, self._num_hidden)
 
-    def __call__(self, inputs, states, params, prefix=''):
-        iW = params.get('%si2h_weight'%prefix)
-        iB = params.get('%si2h_bias'%prefix)
-        hW = params.get('%sh2h_weight'%prefix)
-        name = '%st%d_'%(prefix, self._counter)
-        i2h = symbol.FullyConnected(data=inputs, weight=iW, bias=iB,
+    def __call__(self, inputs, states):
+        self._counter += 1
+        name = '%st%d_'%(self._prefix, self._counter)
+        i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
                                     num_hidden=self._num_hidden*4,
                                     name='%si2h'%name)
-        h2h = symbol.FullyConnected(data=states[0], weight=hW, no_bias=True,
+        h2h = symbol.FullyConnected(data=states[0], weight=self._hW, bias=self._hB,
                                     num_hidden=self._num_hidden*4,
                                     name='%sh2h'%name)
         gates = i2h + h2h
@@ -129,15 +149,24 @@ class LSTMCell(BaseRNNCell):
         next_h = symbol._internal._mul(out_gate, symbol.Activation(next_c, act_type="tanh"),
                                         name='%sout'%name)
 
-        self._counter += 1
         return next_h, [next_h, next_c]
 
 
-class StackedRNNCell(BaseRNNCell):
+class SequentialRNNCell(BaseRNNCell):
     """Stacked multple rnn cels"""
-    def __init__(self, cells):
-        self._cells = [copy.copy(c) for c in cells]
-        self._counter = 0
+    def __init__(self, params=None):
+        super(SequentialRNNCell, self).__init__(prefix='', params=params)
+        self._override_cell_params = params is not None
+        self._cells = []
+
+    def add(self, cell):
+        self._cells.append(cell)
+        if self._override_cell_params:
+            assert cell._own_params, \
+                "Either specify params for SequentialRNNCell " \
+                "or child cells, not both."
+            cell.params._params.update(self.params._params)
+        self.params._params.update(cell.params._params)
 
     @property
     def state_shape(self):
@@ -147,14 +176,14 @@ class StackedRNNCell(BaseRNNCell):
     def output_shape(self):
         return self._cells[-1].output_shape
 
-    def begin_state(self, prefix='', **kwargs):
-        return [c.begin_state(prefix='%sstack%d_'%(prefix, i)) for i, c in enumerate(self._cells)]
+    def begin_state(self, **kwargs):
+        return [c.begin_state(**kwargs) for c in self._cells]
 
-
-    def __call__(self, inputs, states, params, prefix=''):
+    def __call__(self, inputs, states):
+        self._counter += 1
         next_states = []
-        for i, (cell, state) in enumerate(zip(self._cells, states)):
-            inputs, state = cell(inputs, state, params, prefix='%sstack%d_'%(prefix, i))
+        for cell, state in zip(self._cells, states):
+            inputs, state = cell(inputs, state)
             next_states.append(state)
         return inputs, next_states
 
