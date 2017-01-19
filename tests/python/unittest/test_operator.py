@@ -367,127 +367,60 @@ def test_pow_fn():
     check_symbolic_forward(y, [x], [2**x])
     check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
-def test_equal():
-    shape = (3, 4)
-    x = mx.symbol.Variable("x")
-    y = mx.symbol.Variable("y")
-
-    z = x == y
-
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-    z = 0 == x
-
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
-
-def test_not_equal():
-    shape = (3, 4)
-    x = mx.symbol.Variable("x")
-    y = mx.symbol.Variable("y")
-
-    z = x != y
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
-
-    z = 0 != x
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-def test_greater():
-    shape = (3, 4)
-    x = mx.symbol.Variable("x")
-    y = mx.symbol.Variable("y")
-
-    z = x > y
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-    z = y > 0
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
-
-    z = 0 > y
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-def test_greater_equal():
-    shape = (3, 4)
-    x = mx.symbol.Variable("x")
-    y = mx.symbol.Variable("y")
-
-    z = x >= y
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-    z = y >= 0
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
-
-    z = 0 >= y
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-    z = y >= 1
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
-
-def test_lesser():
-    shape = (3, 4)
-    x = mx.symbol.Variable("x")
-    y = mx.symbol.Variable("y")
-
-    z = y < x
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-    z = 0 < y
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
-
-    z = y < 0
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-def test_lesser_equal():
-    shape = (3, 4)
-    x = mx.symbol.Variable("x")
-    y = mx.symbol.Variable("y")
-
-    z = y <= x
-    exec1 = z.bind(default_context(),args={'x': mx.nd.zeros(shape), 'y' : mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-    z = 0 <= y
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
-
-    z = y <= 0
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape)})
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.zeros(shape)).all()
-
-    z = 1 <= y
-    exec1 = z.bind(default_context(),args={'y': mx.nd.ones(shape) })
-    exec1.forward()
-    assert (exec1.outputs[0].asnumpy()== np.ones(shape)).all()
+def test_binary_logic():
+    def _inner_test(forward_gt, logic_sym, x_shape, y_shape, test_scalar=True):
+        x = mx.symbol.Variable("x")
+        y = mx.symbol.Variable("y")
+        z = logic_sym(x, y)
+        x_npy = np.random.randint(0, 4, size=x_shape).astype(np.float32)
+        y_npy = np.random.randint(0, 4, size=y_shape).astype(np.float32)
+        exe = z.simple_bind(ctx=default_context(), x=x_shape, y=y_shape)
+        mx_out = exe.forward(is_train=True, x=x_npy, y=y_npy)[0].asnumpy()
+        assert_allclose(mx_out, forward_gt(x_npy, y_npy))
+        exe.backward()
+        if test_scalar:
+            z_lscalar = logic_sym(1, y)
+            z_rscalar = logic_sym(x, 1)
+            exe_lscalar = z_lscalar.simple_bind(ctx=default_context(), y=y_shape)
+            exe_rscalar = z_rscalar.simple_bind(ctx=default_context(), x=x_shape)
+            mx_lscalar_out = exe_lscalar.forward(is_train=True, y=y_npy)[0].asnumpy()
+            mx_rscalar_out = exe_rscalar.forward(is_train=True, x=x_npy)[0].asnumpy()
+            assert_allclose(mx_lscalar_out, forward_gt(1, y_npy))
+            assert_allclose(mx_rscalar_out, forward_gt(x_npy, 1))
+            exe_lscalar.backward()
+            exe_rscalar.backward()
+    # Test the no-broadcasting binary logic ops + scalar logic ops
+    _inner_test(forward_gt=lambda x, y: x == y,
+                logic_sym=lambda x, y: x == y, x_shape=(10, 10), y_shape=(10, 10))
+    _inner_test(forward_gt=lambda x, y: x > y,
+                logic_sym=lambda x, y: x > y, x_shape=(10, 10), y_shape=(10, 10))
+    _inner_test(forward_gt=lambda x, y: x >= y,
+                logic_sym=lambda x, y: x >= y, x_shape=(10, 10), y_shape=(10, 10))
+    _inner_test(forward_gt=lambda x, y: x < y,
+                logic_sym=lambda x, y: x < y, x_shape=(10, 10), y_shape=(10, 10))
+    _inner_test(forward_gt=lambda x, y: x <= y,
+                logic_sym=lambda x, y: x <= y, x_shape=(10, 10), y_shape=(10, 10))
+    _inner_test(forward_gt=lambda x, y: x != y,
+                logic_sym=lambda x, y: x != y, x_shape=(10, 10), y_shape=(10, 10))
+    # Test the broadcasting binary logic ops
+    _inner_test(forward_gt=lambda x, y: x == y,
+                logic_sym=lambda x, y: mx.sym.broadcast_equal(x, y),
+                x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
+    _inner_test(forward_gt=lambda x, y: x > y,
+                logic_sym=lambda x, y: mx.sym.broadcast_greater(x, y),
+                x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
+    _inner_test(forward_gt=lambda x, y: x >= y,
+                logic_sym=lambda x, y: mx.sym.broadcast_greater_equal(x, y),
+                x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
+    _inner_test(forward_gt=lambda x, y: x < y,
+                logic_sym=lambda x, y: mx.sym.broadcast_lesser(x, y),
+                x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
+    _inner_test(forward_gt=lambda x, y: x <= y,
+                logic_sym=lambda x, y: mx.sym.broadcast_lesser_equal(x, y),
+                x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
+    _inner_test(forward_gt=lambda x, y: x != y,
+                logic_sym=lambda x, y: mx.sym.broadcast_not_equal(x, y),
+                x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
 
 def test_embedding():
     in_dim = 10
@@ -2355,3 +2288,4 @@ if __name__ == '__main__':
     test_order()
     test_blockgrad()
     test_take()
+    test_binary_logic()
