@@ -45,12 +45,7 @@ class DetIter(mx.io.DataIter):
         if isinstance(data_shape, int):
             data_shape = (data_shape, data_shape)
         self._data_shape = data_shape
-        if isinstance(mean_pixels, list):
-            self._mean_pixels = mx.nd.Reshape(
-                    mx.nd.array(mean_pixels),
-                    shape = (3,1,1))
-        else:
-            self._mean_pixels = mean_pixels
+        self._mean_pixels = mx.nd.array(mean_pixels).reshape((3,1,1))
         if not rand_samplers:
             self._rand_samplers = []
         else:
