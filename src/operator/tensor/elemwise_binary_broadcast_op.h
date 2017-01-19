@@ -27,7 +27,8 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   TShape& rhs = (*in_attrs)[1];
 
   // avoid pre-mature shape inference.
-  if (lhs.ndim() == 0 || rhs.ndim() == 0) return false;
+  if (lhs.ndim() == 0 || rhs.ndim() == 0 ||
+      lhs.Size() == 0 || rhs.Size() == 0) return false;
 
   if (lhs == rhs) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, lhs);
