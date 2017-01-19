@@ -1,0 +1,6 @@
+#Testing folder, seperated by comma
+#If test_path is empty, by default all the notebooks under root directory will be tested.
+#If test_ignored is set to "@@@ IGNORE_ALL", no notebook will be tested.
+[Folder Path]
+test_path =
+test_ignored =
