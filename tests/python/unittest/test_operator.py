@@ -2303,6 +2303,200 @@ def test_take():
                 idx_shape += (np.random.randint(low=3, high=5), ) 
             check_output_n_grad(data_shape, idx_shape)
 
+def test_grid_generator():
+    # transform_type =  affine
+    test_case = [(20,21),(4,3),(6,12),(15,17)]
+    for target_shape in test_case:
+        affine_matrix =  mx.sym.Variable('affine')
+        grid = mx.sym.GridGenerator(data=affine_matrix,transform_type='affine', target_shape=target_shape)
+        exe = grid.simple_bind(ctx=mx.cpu(), affine=(1,6), grad_req='write')
+        
+        # check forward
+        exe.arg_dict['affine'][:] = np.array([[1.0,0,0,0,1.0,0]])
+        exe.forward()
+        output = exe.outputs[0].asnumpy()
+        output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
+        output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
+        xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
+        reldiff(output[0,0], yv.T) < 1E-6
+        reldiff(output[0,1], xv.T) < 1E-6
+        
+        # check backward
+        out_grad = np.random.normal(size=(1,2)+target_shape)
+        exe.backward(mx.nd.array(out_grad))
+        tmp = np.zeros((3,target_shape[0]*target_shape[1]))
+        tmp[0] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) % target_shape[1]) * (2.0 / (target_shape[1]-1))
+        tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
+        tmp[2] = 1
+        
+        grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
+        assert reldiff(exe.grad_dict['affine'].asnumpy()[0], grad_est) < 1E-6
+    
+    # transform_type = warp
+    test_case = [(12,21),(4,3),(6,12)]
+    for target_shape in test_case:
+        flow = mx.sym.Variable('flow')
+        grid = mx.sym.GridGenerator(data=flow,transform_type='warp', target_shape=target_shape)
+        exe = grid.simple_bind(ctx=mx.cpu(), flow=(1,2)+target_shape, grad_req='write')
+        # check forward
+        exe.arg_dict['flow'][:] = np.ones((1,2)+target_shape)
+        exe.forward()
+        output = exe.outputs[0].asnumpy()
+        output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
+        output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
+        xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
+        reldiff(output[0,0], yv.T) < 1E-6
+        reldiff(output[0,1], xv.T) < 1E-6
+        # check backward
+        out_grad = np.random.normal(size=(1,2)+target_shape)
+        exe.backward(mx.nd.array(out_grad))
+        grad_est = np.zeros((1,2)+target_shape)
+        grad_est[0,0] = out_grad[0,0] / ((target_shape[1]-1.0) / 2.0)
+        grad_est[0,1] = out_grad[0,1] / ((target_shape[0]-1.0) / 2.0)
+        assert reldiff(exe.grad_dict['flow'].asnumpy(), grad_est) < 1E-6
+
+def test_bilinear_sampling():
+    
+    from math import floor
+    
+    def bilinear_forward_numpy(data, grid):
+
+        batchsize = data.shape[0]
+        input_height = data.shape[2]
+        input_width = data.shape[3]
+        num_channel = data.shape[1]
+
+        output_height = grid.shape[2]
+        output_width = grid.shape[3]
+        out = np.zeros(data.shape[:2] + grid.shape[2:])
+
+        for i in range(batchsize):
+            for yout in range(output_height):
+                for xout in range(output_width):
+                    
+                    xcoord = (grid[i, 0, yout, xout]+1) * (input_width-1) / 2.0
+                    ycoord = (grid[i, 1, yout, xout]+1) * (input_height-1) / 2.0
+
+                    if xcoord>=0 and xcoord<=input_width-1 and ycoord>=0 and ycoord<=input_height-1:
+                        # within the boundaries
+                        xInTopLeft = int(floor(xcoord))
+                        xWeightTopLeft = 1-abs(xcoord - xInTopLeft)
+
+                        yInTopLeft = int(floor(ycoord))
+                        yWeightTopLeft = 1-abs(ycoord - yInTopLeft)
+
+                        # interpolation
+                        for channel in range(num_channel):
+
+                            inTopLeft = data[i,channel,yInTopLeft, xInTopLeft]
+                            inTopRight = data[i,channel,yInTopLeft, xInTopLeft+1]
+                            inBottomLeft = data[i,channel,yInTopLeft+1, xInTopLeft]
+                            inBottomRight = data[i,channel,yInTopLeft+1, xInTopLeft+1]
+
+                            out[i,channel,yout,xout] = xWeightTopLeft * yWeightTopLeft * inTopLeft\
+                                 +  (1-xWeightTopLeft)*yWeightTopLeft * inTopRight\
+                                 +  xWeightTopLeft * (1-yWeightTopLeft) * inBottomLeft\
+                                +(1-xWeightTopLeft) * (1-yWeightTopLeft) * inBottomRight
+        return out
+
+
+    def warp_backward_numpy(out_grad, data, grid):
+
+        data_grad = np.zeros(data.shape)
+        grid_grad = np.zeros(grid.shape)
+
+        batchsize = data.shape[0]
+        input_height = data.shape[2]
+        input_width = data.shape[3]
+        num_channel = data.shape[1]
+        output_height = grid.shape[2]
+        output_width = grid.shape[3]
+        out = np.zeros(data.shape)
+
+        for i in range(batchsize):
+            for yout in range(output_height):
+                for xout in range(output_width):
+
+                    xcoord = (grid[i, 0, yout, xout]+1) * (input_width-1) / 2.0
+                    ycoord = (grid[i, 1, yout, xout]+1) * (input_height-1) / 2.0
+
+                    if xcoord>=0 and xcoord<=input_width-1 and ycoord>=0 and ycoord<=input_height-1:
+
+                        xInTopLeft = int(floor(xcoord))
+                        xWeightTopLeft = 1-abs(xcoord - xInTopLeft)
+
+                        yInTopLeft = int(floor(ycoord))
+                        yWeightTopLeft = 1-abs(ycoord - yInTopLeft)
+
+                        topLeftDotProduct = 0
+                        topRightDotProduct = 0
+                        bottomLeftDotProduct = 0
+                        bottomRightDotProduct = 0
+
+                        for channel in range(num_channel):
+                            # left top
+                            topLeftDotProduct += data[i,channel,yInTopLeft, xInTopLeft] * \
+                                out_grad[i,channel,yout,xout]
+                            data_grad[i, channel, yInTopLeft, xInTopLeft] += xWeightTopLeft * \
+                                yWeightTopLeft * out_grad[i,channel,yout,xout]
+                            # right top
+                            topRightDotProduct += data[i, channel, yInTopLeft,xInTopLeft+1] * \
+                                out_grad[i, channel, yout,xout] 
+                            data_grad[i, channel,yInTopLeft, xInTopLeft+1] += (1-xWeightTopLeft) * \
+                                yWeightTopLeft * out_grad[i,channel,yout,xout]
+                            # left bottom
+                            bottomLeftDotProduct += data[i, channel,yInTopLeft+1, xInTopLeft] * \
+                                out_grad[i,channel,yout,xout]
+                            data_grad[i,channel,yInTopLeft+1,xInTopLeft]+=xWeightTopLeft * \
+                                (1-yWeightTopLeft)* out_grad[i,channel,yout,xout]
+                            # right bottom
+                            bottomRightDotProduct += data[i,channel,yInTopLeft+1, xInTopLeft+1] * \
+                                out_grad[i,channel,yout,xout]
+                            data_grad[i,channel,yInTopLeft+1,xInTopLeft+1]+= (1-xWeightTopLeft) * \
+                                (1-yWeightTopLeft)*out_grad[i,channel,yout,xout]
+
+                        yf = -xWeightTopLeft * topLeftDotProduct + xWeightTopLeft*bottomLeftDotProduct - \
+                            (1-xWeightTopLeft)* topRightDotProduct + (1-xWeightTopLeft)*bottomRightDotProduct
+                        xf = -yWeightTopLeft * topLeftDotProduct + yWeightTopLeft*topRightDotProduct - \
+                            (1-yWeightTopLeft)*bottomLeftDotProduct + (1-yWeightTopLeft)*bottomRightDotProduct
+                        grid_grad[i,0,yout,xout] = xf * (input_width-1) / 2.0
+                        grid_grad[i,1,yout,xout] = yf * (input_height-1) / 2.0
+
+        return data_grad, grid_grad
+    
+    data = mx.sym.Variable('data')
+    grid = mx.sym.Variable('grid')
+    net = mx.sym.BilinearSampling(data=data,grid=grid)
+    
+    test_case = [[(1,3,15,16),(1,2,10,10)],
+                 [(1,6,7,16),(1,2,10,4)],
+                 [(1,7,3,16),(1,2,8,11)],
+                 [(1,9,50,50),(1,2,50,50)]]
+    
+    for ctx in [mx.cpu()]:
+        for item in test_case:
+            data_shape, grid_shape = item
+            exe = net.simple_bind(data=data_shape,grid=grid_shape,ctx=ctx,grad_req='write')
+            
+            # check forward
+            tmp = np.zeros(grid_shape)
+            xv, yv = np.meshgrid(np.arange(grid_shape[2]), np.arange(grid_shape[3]))
+            tmp[0,0] = yv.T
+            tmp[0,1] = xv.T
+            exe.arg_dict['data'][:] = np.random.normal(0,100,size=data_shape) 
+            exe.arg_dict['grid'][:] = tmp + np.random.normal(0,100,size=grid_shape) 
+            exe.forward()
+            out = bilinear_forward_numpy(exe.arg_dict['data'].asnumpy(), exe.arg_dict['grid'].asnumpy())
+            assert reldiff(exe.outputs[0].asnumpy(),out) < 1E-5
+
+            # check backward
+            out_grad = np.random.normal(size=data_shape[:2] + grid_shape[2:])
+            exe.backward(mx.nd.array(out_grad))
+            data_grad, grid_grad = warp_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(), 
+                                                       exe.arg_dict['grid'].asnumpy())
+            
+            assert  reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 1E-5
+            assert  reldiff(exe.grad_dict['grid'].asnumpy(),grid_grad) < 1E-5
 
 if __name__ == '__main__':
     test_init()
@@ -2355,3 +2549,5 @@ if __name__ == '__main__':
     test_order()
     test_blockgrad()
     test_take()
+    test_grid_generator()
+    test_bilinear_sampling()
