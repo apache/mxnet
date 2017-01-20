@@ -35,6 +35,7 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", mshadow::kFloat32)
     .set_default(mshadow::kFloat32)
     .describe("DType of the output");
   }
@@ -59,6 +60,7 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", mshadow::kFloat32)
     .set_default(mshadow::kFloat32)
     .describe("DType of the output");
   }
