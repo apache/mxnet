@@ -157,6 +157,28 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
   return ret;
 }
 
+// quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
+inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
+    const nnvm::NodePtr& n,
+    const std::vector<nnvm::NodeEntry>& ograds) {
+  std::vector<nnvm::NodeEntry> ret;
+  for (index_t i = 0; i < n->num_inputs(); ++i) {
+    nnvm::NodePtr p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("_zeros");
+    std::ostringstream os;
+    if (1 == n->num_inputs()) {
+      os << n->attrs.name << "_backward";
+    } else {
+      os << n->attrs.name << "_in" << i << "_backward";
+    }
+    p->attrs.name = os.str();
+    p->attrs.dict = std::unordered_map<std::string, std::string>();
+    p->control_deps.emplace_back(n);
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+  }
+  return ret;
+}
+
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */
 template<typename PType>
 inline void ParamParser(nnvm::NodeAttrs* attrs) {
