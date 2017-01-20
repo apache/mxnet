@@ -25,9 +25,7 @@
 #include <string>
 #include <vector>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 
 const mx_float DEFAULT_MEAN = 117.0;
 
