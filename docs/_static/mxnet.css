@@ -286,6 +286,12 @@ img {
     }
 }
 
+@media screen and (min-width: 511px) {
+    #search-input-wrap {
+        display: block !important;
+    }
+}
+
 #lang-select-wrap {
     display: block;
     position: fixed;
