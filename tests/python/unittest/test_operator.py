@@ -2236,8 +2236,17 @@ def test_take():
                 idx_shape += (np.random.randint(low=3, high=5), ) 
             check_output_n_grad(data_shape, idx_shape)
 
+def test_index2d():
+    for _ in range(30):
+        n = np.random.randint(1, 100)
+        m = np.random.randint(1, 500)
+        data = mx.random.uniform(-1, 1, shape=(n, m), ctx=default_context())
+        x = mx.nd.array(np.random.randint(0, m, size=n), ctx=default_context(), dtype='int32')
+        r = mx.nd.batch_take(data, x)
+        assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
 if __name__ == '__main__':
+    test_index2d()
     test_init()
     test_expand_dims()
     test_slice_axis()
