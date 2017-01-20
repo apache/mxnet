@@ -24,11 +24,18 @@ if !libmxnet_detected
   ################################################################################
   # If not found, try to build automatically using BinDeps
   ################################################################################
-  if is_windows()
-    info("Please follow the libmxnet documentation on how to build manually")
-    info("or to install pre-build packages:")
-    info("http://mxnet.readthedocs.io/en/latest/how_to/build.html#building-on-windows")
-    error("Automatic building libxmnet on Windows is currently not supported yet.")
+  if is_windows()  
+	DOWNLOAD_URL = "https://github.com/dmlc/mxnet/releases/download/20160531/20160531_win10_x64_cpu.7z"
+	run(download_cmd(DOWNLOAD_URL, "mxnet.7z"))
+	run(`7z x mxnet.7z -y -ousr`)
+	run(`usr\\setupenv.cmd`)
+	run(`cmd /c copy "usr\\3rdparty\\openblas\\bin\\*.dll" "usr\\lib"`)
+	
+	DOWNLOAD_URL = "https://github.com/yajiedesign/mxnet/releases/download/20161125/20161125_mxnet_x64_cpu.7z"
+	run(download_cmd(DOWNLOAD_URL, "mxnet.7z"))
+	run(`7z x mxnet.7z -y -ousr`)
+
+	return
   end
 
   blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
