@@ -55,6 +55,4 @@ from . import image as img
 
 from . import test_utils
 
-from . import rnn
-
 __version__ = base.__version__
