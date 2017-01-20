@@ -281,11 +281,11 @@ if(USE_CUDA)
       if(NOT CMAKE_SYSTEM_HAS_CUDA)
         message(STATUS " NOT CMAKE_SYSTEM_HAS_CUDA")
         # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
-	# so use the stub cuda driver shared library
-	if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+      	# so use the stub cuda driver shared library
+      	if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
           message(STATUS " ADDING CUDA PATH TO LINK DIRS: ${CUDA_LIBRARY_PATH}/stubs")
-	  link_directories(${CUDA_LIBRARY_PATH}/stubs)
-	endif()
+      	  link_directories(${CUDA_LIBRARY_PATH}/stubs)
+      	endif()
       endif()
     endif()
   endif()
@@ -326,14 +326,8 @@ endif()
 
 target_link_libraries(mxnet dmlccore)
 
-if(mxnet_BUILD_ONLY_CUDA_DRIVER)
-  message(STATUS " Setting stubs libraries: ${mxnet_BUILD_ONLY_CUDA_DRIVER}")
-  target_link_libraries(mxnet ${mxnet_BUILD_ONLY_CUDA_DRIVER})
-endif()
-
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
-
 endif()
 
 if(USE_DIST_KVSTORE)
@@ -345,6 +339,18 @@ endif()
 
 if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
+endif()
+
+if(IS_CONTAINER_BUILD)
+  find_program(CHRPATH_EXE chrpath HINTS ${PATH})
+  if(CHRPATH_EXE)
+    add_custom_command(TARGET mxnet
+      COMMAND echo "Removing rpath from mxnet library"
+      COMMAND chrpath -d ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmxnet.so
+    )
+  else()
+    message(ERROR "Unable to find chrpath executable")
+  endif()
 endif()
 
 add_subdirectory(tests)
