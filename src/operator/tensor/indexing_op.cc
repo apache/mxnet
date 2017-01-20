@@ -9,6 +9,7 @@
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
+DMLC_REGISTER_PARAMETER(TakeParam);
 
 NNVM_REGISTER_OP(Embedding)
 .MXNET_DESCRIBE("Map integer index to vector representations (embeddings)."
@@ -49,7 +50,6 @@ NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
 
-DMLC_REGISTER_PARAMETER(TakeParam);
 
 NNVM_REGISTER_OP(take)
 .MXNET_DESCRIBE("Take row vectors from an NDArray according to the indices"
@@ -90,5 +90,22 @@ NNVM_REGISTER_OP(_backward_take)
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", TakeOpBackward<cpu>);
+
+
+NNVM_REGISTER_OP(batch_take)
+.MXNET_DESCRIBE("Take scalar value from a batch of data vectos according to "
+                "an index vector, i.e. out[i] = a[i, indices[i]]")
+.set_num_outputs(1)
+.set_num_inputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a", "indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", BatchTakeOpShape)
+.set_attr<nnvm::FInferType>("FInferType", BatchTakeOpType)
+.set_attr<FCompute>("FCompute<cpu>", BatchTakeOpForward<cpu>)
+.add_argument("a", "NDArray", "Input data array")
+.add_argument("indices", "NDArray", "index array");
+
 }  // namespace op
 }  // namespace mxnet

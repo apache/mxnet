@@ -111,7 +111,7 @@ object ExampleCustomOp {
 
       val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
       val argNames = mlp.listArguments()
-      val argDict = argNames.zip(argShapes.map(NDArray.empty(_, ctx))).toMap
+      val argDict = argNames.zip(argShapes.map(s => NDArray.empty(s, ctx))).toMap
 
       val gradDict = argNames.zip(argShapes).filter { case (name, shape) =>
         !datasAndLabels.contains(name)
