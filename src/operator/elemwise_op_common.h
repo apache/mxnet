@@ -94,6 +94,7 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs);
 }
 
+// Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -106,6 +107,7 @@ struct ElemwiseGradUseIn {
   }
 };
 
+// Transfer gradient and output to FGradient function
 struct ElemwiseGradUseOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -119,6 +121,7 @@ struct ElemwiseGradUseOut {
   }
 };
 
+// Transfer only gradient to FGradient function
 struct ElemwiseGradUseNone {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,

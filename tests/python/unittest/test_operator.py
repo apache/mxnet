@@ -1876,84 +1876,6 @@ def test_special_functions_using_scipy():
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
 
-
-def mathematical_core_binary(name,
-                             forward_mxnet_call,
-                             forward_numpy_call,
-                             backward_numpy_call1,
-                             backward_numpy_call2,
-                             data1_init=2.,
-                             data2_init=3.,
-                             grad_init=2.):
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
-    shape = (3, 4)
-    data_tmp1 = np.random.rand(3, 4)
-    data_tmp2 = np.random.rand(3, 4)
-    data_tmp1[:] = data1_init
-    data_tmp2[:] = data2_init
-
-    arr_data1 = mx.nd.array(data_tmp1)
-    arr_data2 = mx.nd.array(data_tmp2)
-
-    arr_grad1 = mx.nd.empty(shape)
-    arr_grad2 = mx.nd.empty(shape)
-
-    test = forward_mxnet_call(data1, data2)
-    exe_test = test.bind(default_context(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
-    exe_test.forward()
-    out = exe_test.outputs[0].asnumpy()
-    npout = forward_numpy_call(data_tmp1, data_tmp2)
-    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
-
-    out_grad = mx.nd.empty(shape)
-    out_grad[:] = grad_init
-    exe_test.backward(out_grad)
-
-    npout_grad = np.ones(shape)
-    npout_grad[:] = grad_init
-
-    npout_grad1 = npout_grad * backward_numpy_call1(data_tmp1, data_tmp2)
-    npout_grad2 = npout_grad * backward_numpy_call2(data_tmp1, data_tmp2)
-    arr_grad1 = arr_grad1.asnumpy()
-    arr_grad2 = arr_grad2.asnumpy()
-
-    assert reldiff(arr_grad1, npout_grad1) < 1e-6, "%s mathematical backward1 failed\n%s\n\n%s" % (
-        name, arr_grad1, npout_grad)
-    assert reldiff(arr_grad2, npout_grad2) < 1e-6, "%s mathematical backward2 failed\n%s\n\n%s" % (
-        name, arr_grad2, npout_grad)
-
-
-def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
-    data = mx.symbol.Variable('data')
-    shape = (3, 4)
-    data_tmp = np.ones(shape)
-    data_tmp[:] = data_init
-    arr_data = mx.nd.array(data_tmp)
-    arr_grad = mx.nd.empty(shape)
-    arr_grad[:] = 3
-
-    test = forward_mxnet_call(data)
-    exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
-    exe_test.forward()
-    out = exe_test.outputs[0].asnumpy()
-    npout = forward_numpy_call(data_tmp)
-    assert reldiff(out, npout) < 1e-5, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
-
-    out_grad = mx.nd.empty(shape)
-    out_grad[:] = grad_init
-    npout_grad = out_grad.asnumpy()
-    temp = backward_numpy_call(data_tmp)
-    npout_grad = npout_grad * temp
-    exe_test.backward(out_grad)
-    arr_grad = arr_grad.asnumpy()
-    # print(name)
-    # print(arr_grad)
-    # print(npout_grad)
-    assert reldiff(arr_grad, npout_grad) < 1e-5, "%s mathematical backward failed\n%s\n\n%s" % (
-        name, arr_grad, npout_grad)
-
-
 def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -2069,6 +1991,15 @@ def test_special_functions_using_scipy():
     mathematical_core("gammaln", lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
+def test_clip():
+    data = mx.symbol.Variable('data')
+    shape = (30, 30)
+    data_tmp = np.random.uniform(-1, 1, shape)
+    test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
+    check_numeric_gradient(test, [data_tmp])
+    check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
+    check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
+                            [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
 
 def test_init():
     def test_basic_val_init(sym_func, np_func, shape, dtype):
@@ -2246,6 +2177,7 @@ def test_index2d():
         assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
 if __name__ == '__main__':
+    test_clip()
     test_index2d()
     test_init()
     test_expand_dims()
