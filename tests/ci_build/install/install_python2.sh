@@ -16,5 +16,3 @@ fi
 ln -s -f /usr/local/bin/pip /usr/bin/pip
 for i in ipython[all] jupyter pandas scikit-image h5py pandas sklearn sympy; do echo "${i}..."; pip install -U $i >/dev/null; done
 
-yum install graphviz
-pip install graphviz
