@@ -26,6 +26,7 @@ Profiler::Profiler()
   // TODO(ziheng) get device number during execution
   int kMaxNumCpus = 64;
   this->cpu_num_ = kMaxNumCpus;
+  this->gpu_num_ = 0;
 
 #if MXNET_USE_CUDA
   cudaError_t ret = cudaGetDeviceCount(reinterpret_cast<int*>(&this->gpu_num_));
