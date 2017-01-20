@@ -1,11 +1,11 @@
 /*!
  * Copyright (c) 2017 by Contributors
- * \file bilinear_sampling-inl.h
+ * \file bilinear_Sampler-inl.h
  * \brief
  * \author Xu Dong
 */
-#ifndef MXNET_OPERATOR_BILINEAR_SAMPLING_INL_H_
-#define MXNET_OPERATOR_BILINEAR_SAMPLING_INL_H_
+#ifndef MXNET_OPERATOR_BILINEAR_SAMPLER_INL_H_
+#define MXNET_OPERATOR_BILINEAR_SAMPLER_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -20,19 +20,19 @@ namespace mxnet {
 namespace op {
 
 namespace bs {
-enum BilinearSamplingOpInputs {kData, kGrid};
-enum BilinearSamplingOpOutputs {kOut, kTmp};
+enum BilinearSamplerOpInputs {kData, kGrid};
+enum BilinearSamplerOpOutputs {kOut, kTmp};
 }
 
-struct BilinearSamplingParam : public dmlc::Parameter<BilinearSamplingParam> {
-  DMLC_DECLARE_PARAMETER(BilinearSamplingParam) {
+struct BilinearSamplerParam : public dmlc::Parameter<BilinearSamplerParam> {
+  DMLC_DECLARE_PARAMETER(BilinearSamplerParam) {
   }
 };
 
 template<typename xpu, typename DType>
-class BilinearSamplingOp : public Operator {
+class BilinearSamplerOp : public Operator {
  public:
-  explicit BilinearSamplingOp(BilinearSamplingParam p) {
+  explicit BilinearSamplerOp(BilinearSamplerParam p) {
     this->param_ = p;
   }
 
@@ -50,7 +50,7 @@ class BilinearSamplingOp : public Operator {
     Tensor<xpu, 4, DType> grid = in_data[bs::kGrid].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[bs::kOut].get<xpu, 4, DType>(s);
 
-    BilinearSamplingForward(out, data, grid);
+    BilinearSamplerForward(out, data, grid);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -72,18 +72,18 @@ class BilinearSamplingOp : public Operator {
     Tensor<xpu, 4, DType> grad = out_grad[bs::kOut].get<xpu, 4, DType>(s);
     gdata = 0.0f;
     ggrid = 0.0f;
-    BilinearSamplingBackward(gdata, ggrid, grad, data, grid);
+    BilinearSamplerBackward(gdata, ggrid, grad, data, grid);
   }
 
  private:
-  BilinearSamplingParam param_;
-};  // class BilinearSamplingOp
+  BilinearSamplerParam param_;
+};  // class BilinearSamplerOp
 
 template<typename xpu>
-Operator* CreateOp(BilinearSamplingParam param, int dtype);
+Operator* CreateOp(BilinearSamplerParam param, int dtype);
 
 #if DMLC_USE_CXX11
-class BilinearSamplingProp : public OperatorProperty {
+class BilinearSamplerProp : public OperatorProperty {
  public:
   int NumVisibleOutputs() const override {
     return 1;
@@ -121,7 +121,7 @@ class BilinearSamplingProp : public OperatorProperty {
         << "input data should be 4D in batch-num_filter-y-x";
     if (lshape.ndim() ==  0) return false;
     CHECK_EQ(lshape.ndim(), 4) \
-      << "sampling grid should be 4D in batch-2-y-x";
+      << "Sampler grid should be 4D in batch-2-y-x";
     CHECK_EQ(dshape[0], lshape[0]);
     CHECK_EQ(lshape[1], 2) << "incorrect grid shape[1], should be 2";
     // target height
@@ -149,11 +149,11 @@ class BilinearSamplingProp : public OperatorProperty {
         } else {
           CHECK(in_type->at(i) == dtype ||
                 in_type->at(i) == -1) <<
-                "Non-uniform data type in BilinearSampling";
+                "Non-uniform data type in BilinearSampler";
         }
       }
       if (dtype == -1) {
-        LOG(FATAL) << "Not enough information to infer type in BilinearSampling.";
+        LOG(FATAL) << "Not enough information to infer type in BilinearSampler.";
         return false;
       }
       size_t nin = this->ListArguments().size();
@@ -169,13 +169,13 @@ class BilinearSamplingProp : public OperatorProperty {
     }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new BilinearSamplingProp();
+    auto ptr = new BilinearSamplerProp();
     ptr->param_ = param_;
     return ptr;
   }
 
   std::string TypeString() const override {
-    return "BilinearSampling";
+    return "BilinearSampler";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -197,9 +197,9 @@ class BilinearSamplingProp : public OperatorProperty {
                              std::vector<int> *in_type) const override;
 
  private:
-  BilinearSamplingParam param_;
-};  // class BilinearSamplingProp
+  BilinearSamplerParam param_;
+};  // class BilinearSamplerProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_BILINEAR_SAMPLING_INL_H_
+#endif  // MXNET_OPERATOR_BILINEAR_SAMPLER_INL_H_

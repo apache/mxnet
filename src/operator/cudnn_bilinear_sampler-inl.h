@@ -1,29 +1,29 @@
 /*!
  * Copyright (c) 2016 by Contributors
- * \file cudnn_bilinear_sampling-inl.h
+ * \file cudnn_bilinear_sampler-inl.h
  * \brief
  * \author Xu Dong
 */
-#ifndef MXNET_OPERATOR_CUDNN_BILINEAR_SAMPLING_INL_H_
-#define MXNET_OPERATOR_CUDNN_BILINEAR_SAMPLING_INL_H_
+#ifndef MXNET_OPERATOR_CUDNN_BILINEAR_SAMPLER_INL_H_
+#define MXNET_OPERATOR_CUDNN_BILINEAR_SAMPLER_INL_H_
 
 #include <algorithm>
 #include <vector>
-#include "./bilinear_sampling-inl.h"
+#include "./bilinear_sampler-inl.h"
 namespace mxnet {
 namespace op {
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR == 5
 template<typename DType>
-class CuDNNBilinearSamplingOp : public Operator {
+class CuDNNBilinearSamplerOp : public Operator {
  public:
-  explicit CuDNNBilinearSamplingOp(BilinearSamplingParam param) {
+  explicit CuDNNBilinearSamplerOp(BilinearSamplerParam param) {
     this->param_ = param;
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
     sampler_ = CUDNN_SAMPLER_BILINEAR;
   }
 
-  ~CuDNNBilinearSamplingOp() {
+  ~CuDNNBilinearSamplerOp() {
     if (init_cudnn_) {
       CHECK_EQ(cudnnDestroySpatialTransformerDescriptor(st_desc_), CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnDestroyTensorDescriptor(in_desc_), CUDNN_STATUS_SUCCESS);
@@ -156,10 +156,10 @@ class CuDNNBilinearSamplingOp : public Operator {
   #if CUDNN_MAJOR == 5
   cudnnTensorFormat_t format_;
   #endif
-  BilinearSamplingParam param_;
+  BilinearSamplerParam param_;
 };
 #endif  // __CUDACC__ && CUDNN
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CUDNN_BILINEAR_SAMPLING_INL_H_
+#endif  // MXNET_OPERATOR_CUDNN_BILINEAR_SAMPLER_INL_H_

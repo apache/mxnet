@@ -22,7 +22,7 @@ namespace op {
 
 namespace grid {
 enum GridGeneratorOpInputs {kData};
-enum GridGeneratorOpOutputs {kOut, kGridDst, kTmp};
+enum GridGeneratorOpOutputs {kOut, kGridDst};
 enum GridGeneratorOpResource {kTempSpace};
 enum GridGeneratorTransformType {kAffine, kWarp};
 }
@@ -59,35 +59,29 @@ class GridGeneratorOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     switch (param_.transform_type) {
       case grid::kAffine: {
         // if transform_type is affine, data is affine matrix, input shape : (batch, 2, 3)
-        Tensor<xpu, 4, DType> out = out_data[grid::kOut].get<xpu, 4, DType>(s);
+        Tensor<xpu, 2, DType> out = out_data[grid::kOut].
+          get_with_shape<xpu, 2, DType>(Shape2(out_data[grid::kOut].shape_[0] * 2,
+                            out_data[grid::kOut].shape_[2] * out_data[grid::kOut].shape_[3]), s);
         Tensor<xpu, 2, DType> grid_dst = out_data[grid::kGridDst].get<xpu, 2, DType>(s);
-        Shape<3> data_shape = Shape3(out.size(0), 2, 3);
-        Tensor<xpu, 3, DType> data = in_data[grid::kData]
-          .get_with_shape<xpu, 3, DType>(data_shape, s);
-        Tensor<cpu, 2, DType> workspace =
-              ctx.requested[grid::kTempSpace].get_host_space_typed<2, DType>(
-              grid_dst.shape_);
-        Tensor<xpu, 3, DType> tmp = out_data[grid::kTmp].get<xpu, 3, DType>(s);
-        for (index_t i = 1; i <= workspace.size(1); i++) {
-          // grid dst coordinate is (x, y, 1)
-          workspace[0][i-1] = -1.0 + (i-1) % param_.target_shape[1] * 2.0 /
-                              (param_.target_shape[1] - 1);
-          workspace[1][i-1] = -1.0 + (i-1) / param_.target_shape[1] * 2.0 /
-                              (param_.target_shape[0] - 1);
-          workspace[2][i-1] = 1.0;
-        }
-        // create a sampling grid, tmp : (batch, 2, H x W)
-        Copy(grid_dst, workspace, grid_dst.stream_);
-        for (index_t batch = 0; batch < data.size(0); batch++) {
-              tmp[batch] = dot(data[batch], grid_dst);
-        }
-        // out : (batch, 2, H, W)
-        out = reshape(tmp, out.shape_);
+        Shape<2> data_shape = Shape2(out_data[grid::kOut].shape_[0] * 2, 3);
+        Tensor<xpu, 2, DType> data = in_data[grid::kData]
+          .get_with_shape<xpu, 2, DType>(data_shape, s);
+        // x, y, 1
+        grid_dst[0] = range<DType>(0, grid_dst.shape_[1]);
+        grid_dst[0] = grid_dst[0] - tcast<DType>(tcast<int>(grid_dst[0] /
+          scalar<DType>(param_.target_shape[1]))) * scalar<DType>(param_.target_shape[1]);
+        grid_dst[0] = scalar<DType>(-1.0) + grid_dst[0] *
+          scalar<DType>(2.0 / (param_.target_shape[1] - 1));
+        grid_dst[1] = range<DType>(0, grid_dst.shape_[1]);
+        grid_dst[1] = scalar<DType>(-1.0) + tcast<DType>(tcast<int>(grid_dst[1] /
+          scalar<DType>(param_.target_shape[1]))) * scalar<DType>(2.0/(param_.target_shape[0] - 1));
+        grid_dst[2] = 1.0;
+        Assign(out, req[grid::kOut], dot(data, grid_dst));
         break;
       }
       // Warping transformation
@@ -96,22 +90,19 @@ class GridGeneratorOp : public Operator {
         // grid_src = grid_dst + optical flow
         Tensor<xpu, 4, DType> data = in_data[grid::kData].get<xpu, 4, DType>(s);
         Tensor<xpu, 4, DType> out = out_data[grid::kOut].get<xpu, 4, DType>(s);
-        // grid_dst : (2, H, W) similar to the results of numpy.meshgrid
+        // grid_dst : (2, H, W)
         Tensor<xpu, 3, DType> grid_dst = out_data[grid::kGridDst].get<xpu, 3, DType>(s);
-        Tensor<xpu, 1, DType> tmp = out_data[grid::kTmp].get<xpu, 1, DType>(s);
-        Tensor<xpu, 1, DType> workspace =
-              ctx.requested[grid::kTempSpace]
-                .get_space_typed<xpu, 1, DType>(Shape1(data.size(3)), s);
-        workspace = range<DType>(0, data.size(3));
-        grid_dst[0] = repmat(workspace, data.size(2));
-        tmp = range<DType>(0, data.size(2), 1, data.size(3));
-        grid_dst[1] = reshape(tmp, Shape2(data.size(2), data.size(3)));
+        grid_dst[0] = repmat(range<DType>(0, data.size(3)), data.size(2));
+        grid_dst[1] = reshape(range<DType>(0, data.size(2), 1, data.size(3)),
+                              Shape2(data.size(2), data.size(3)));
         for (index_t batch = 0; batch < data.size(0); batch++) {
-          // bilinear sampling op assume that grid has been nomalized
-          out[batch][0] = (data[batch][0] + grid_dst[0]) /
-            scalar<DType>((data.size(3) - 1) / 2.0) - scalar<DType>(1);
-          out[batch][1] = (data[batch][1] + grid_dst[1]) /
-            scalar<DType>((data.size(2) - 1) / 2.0) - scalar<DType>(1);
+          // bilinear sampler op assume that grid has been nomalized
+          Assign(out[batch][0], req[grid::kOut],
+            (data[batch][0] + grid_dst[0]) / scalar<DType>((data.size(3) - 1) / 2.0)
+            - scalar<DType>(1));
+          Assign(out[batch][1], req[grid::kOut],
+            (data[batch][1] + grid_dst[1]) / scalar<DType>((data.size(2) - 1) / 2.0)
+            - scalar<DType>(1));
         }
         break;
       }
@@ -128,30 +119,30 @@ class GridGeneratorOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     switch (param_.transform_type) {
       case grid::kAffine: {
-        Tensor<xpu, 4, DType> grad = out_grad[grid::kOut].get<xpu, 4, DType>(s);
         Tensor<xpu, 2, DType> grid_dst = out_data[grid::kGridDst].get<xpu, 2, DType>(s);
-        Shape<3> data_shape = Shape3(grad.size(0), 2, 3);
-        Tensor<xpu, 3, DType> gdata = in_grad[grid::kData]
-        .get_with_shape<xpu, 3, DType>(data_shape, s);
-        Tensor<xpu, 3, DType> tmp = out_data[grid::kTmp].get<xpu, 3, DType>(s);
-        tmp = reshape(grad, tmp.shape_);
-        for (index_t batch = 0; batch < gdata.size(0); batch++) {
-            // tmp : (2, H X W)  grid_dst.T : (H x W, 3)
-            gdata[batch] = dot(tmp[batch], grid_dst.T());
-        }
+        Shape<2> data_shape = Shape2(in_grad[grid::kData].shape_[0] * 2, 3);
+        Tensor<xpu, 2, DType> gdata = in_grad[grid::kData]
+          .get_with_shape<xpu, 2, DType>(data_shape, s);
+        Shape<2> grad_shape = Shape2(out_grad[grid::kOut].shape_[0] * 2,
+          param_.target_shape[0] * param_.target_shape[1]);
+        Tensor<xpu, 2, DType> grad = out_grad[grid::kOut]
+          .get_with_shape<xpu, 2, DType>(grad_shape, s);
+        // grad : (batch * 2, H * W)   grid_dst.T : (H * W, 3)
+        Assign(gdata, req[grid::kData] , dot(grad, grid_dst.T()));
         break;
       }
       case grid::kWarp: {
         Tensor<xpu, 4, DType> grad = out_grad[grid::kOut].get<xpu, 4, DType>(s);
         Tensor<xpu, 4, DType> gdata = in_grad[grid::kData].get<xpu, 4, DType>(s);
-        for (index_t batch = 0; batch < gdata.size(0); batch++) {
-            gdata[batch][0] = grad[batch][0] / scalar<DType>((gdata.size(3)-1) / 2.0);
-            gdata[batch][1] = grad[batch][1] / scalar<DType>((gdata.size(2)-1) / 2.0);
-        }
+        Tensor<xpu, 1, DType> workspace = ctx.requested[grid::kTempSpace]
+          .get_space_typed<xpu, 1, DType>(Shape1(2), s);
+        workspace[0] = (gdata.size(3) - 1) / 2.0;
+        workspace[1] = (gdata.size(2) - 1) / 2.0;
+        Assign(gdata, req[grid::kData], grad / broadcast<1>(workspace, gdata.shape_));
         break;
       }
     }
@@ -172,7 +163,7 @@ class GridGeneratorProp : public OperatorProperty {
   }
 
   int NumOutputs() const override {
-    return 3;
+    return 2;
   }
 
   std::vector<std::string> ListArguments() const override {
@@ -180,7 +171,7 @@ class GridGeneratorProp : public OperatorProperty {
   }
 
   std::vector<std::string> ListOutputs() const override {
-    return {"output", "grid_dst", "tmp"};
+    return {"output", "grid_dst"};
   }
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -211,7 +202,6 @@ class GridGeneratorProp : public OperatorProperty {
             << "incorrect target_shape: " << param_.target_shape[1];
         out_shape->push_back(Shape4(lshape[0], 2, param_.target_shape[0], param_.target_shape[1]));
         out_shape->push_back(Shape2(3, param_.target_shape[0] * param_.target_shape[1]));
-        out_shape->push_back(Shape3(lshape[0], 2, param_.target_shape[0] * param_.target_shape[1]));
         break;
       }
       case grid::kWarp: {
@@ -221,7 +211,6 @@ class GridGeneratorProp : public OperatorProperty {
         CHECK_EQ(lshape[1], 2) << "incorrect data shape[1], should be 2";
         out_shape->push_back(lshape);
         out_shape->push_back(Shape3(2, lshape[2], lshape[3]));
-        out_shape->push_back(Shape1(lshape[2]*lshape[3]));
         break;
       }
     }
@@ -274,8 +263,7 @@ class GridGeneratorProp : public OperatorProperty {
     switch (param_.transform_type) {
       case grid::kAffine: {
         return {out_grad[grid::kOut],
-                out_data[grid::kGridDst],
-                out_data[grid::kTmp]};
+                out_data[grid::kGridDst]};
       }
       case grid::kWarp: {
         return {out_grad[grid::kOut]};
@@ -284,11 +272,11 @@ class GridGeneratorProp : public OperatorProperty {
     return {};
   }
 
-  std::vector<ResourceRequest> ForwardResource(
+  std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const override {
     switch (param_.transform_type) {
       case grid::kAffine: {
-        return {ResourceRequest::kTempSpace};
+        return {};
       }
       case grid::kWarp: {
         return {ResourceRequest::kTempSpace};
