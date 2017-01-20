@@ -193,12 +193,13 @@ img {
   width: 110px;
 }
 
-#main-nav {
+.nav-bar {
     display: block;
     -webkit-box-flex: 1;
     flex: 1 auto;
     position: relative;
     top: -5px;
+    white-space: nowrap;
 }
 
 .main-nav-link {
@@ -210,19 +211,7 @@ img {
     transition: .2s;
     font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
     display: inline-block;
-    padding: 0 15px
-}
-
-@media screen and (max-width: 1410px) {
-    .main-nav-link {
-        padding: 0 10px;
-    }
-}
-
-@media screen and (max-width: 1138px) {
-    #main-nav {
-        display: none;
-    }
+    padding: 0 15px;
 }
 
 .main-nav-link:hover {
@@ -255,6 +244,14 @@ img {
     width: 140px;
 }
 
+#searchIcon {
+    display: none;
+    position: fixed;
+    top: 20px;
+    right: 155px;
+    color: white;
+}
+
 .searchBox {
     position: absolute;
     top: 0;
@@ -270,29 +267,28 @@ img {
     width: 40px;
 }
 
-@media screen and (min-width: 1100px) {
-    #search-input-wrap {
-        width: 160px;
-    }
-    
-    .searchBox {
-        width: 160px;
-    }
-}
-
-@media screen and (max-width: 1138px) {
-    #search-input-wrap {
-        right: 185px;
-    }
-}
-
 @media screen and (max-width: 510px) {
     #search-input-wrap {
+        display: none;
         top: 50px;
         left: 50%;
-        margin-left: -70px;
         right: initial;
-        z-index: -1;
+        margin-left: -100px;
+        width: 200px;
+    }
+    
+    div .searchBox {
+        width: 200px;
+    }
+    
+    #searchIcon {
+        display: block;
+    }
+}
+
+@media screen and (min-width: 511px) {
+    #search-input-wrap {
+        display: block !important;
     }
 }
 
@@ -340,28 +336,27 @@ div .burgerIcon {
     display: none
 }
 
-@media screen and (max-width: 1138px) {
-    div .burgerIcon {
-        display: block;
-    }
-}
-
 div .burgerIcon a {
     color: white;
 }
 
+@media screen and (max-width: 405px) { 
+    div .burgerIcon {
+        margin-left: -25px;
+    }
+}
+
 /*burger menu*/
-#burgerMenu {
+#burgerMenu, #plusMenu {
     list-style-type: none;
-    margin: 0;
+    margin-top: 10px;
     padding: 0;
     background-color: white;
     list-style-position: inside;
-    border-radius: 8px;
     min-width: 100px;
 }
 
-#burgerMenu a {
+#burgerMenu a, #plusMenu a {
     display: table-cell;
     font-size: 15px;
     color: #0079b2;
@@ -372,7 +367,7 @@ div .burgerIcon a {
     max-width: 200px
 }
 
-#burgerMenu li {
+#burgerMenu li, #plusMenu li {
     height: 30px;
     list-style-position: inside;
 }
@@ -439,6 +434,31 @@ li.dropdown-submenu ul.dropdown-menu a {
     border-radius: 6px 0 6px 6px
 }
 
+/*Plus icon*/
+.plusIcon {
+    display: none;
+    position: fixed;
+    top: 20px;
+    right: 285px;
+    width: 30px;
+}
+
+.glyphicon-plus {
+    color: white;
+}
+
+@media screen and (max-width:600px) {
+    div .plusIcon, .nav-bar {
+        display: none !important;
+    }
+    
+    div .burgerIcon {
+        display: block;
+        position: fixed;
+        top: 10px;
+        left: 150px;
+    }
+}
 /*--------------------------banner---------------------------*/
 #splash{
     padding:60px 0 0 0;
