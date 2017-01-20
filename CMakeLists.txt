@@ -344,9 +344,10 @@ endif()
 if(IS_CONTAINER_BUILD)
   find_program(CHRPATH_EXE chrpath HINTS ${PATH})
   if(CHRPATH_EXE)
+    message(STATUS " Found chrpath executable: ${CHRPATH_EXE}")
     add_custom_command(TARGET mxnet
       COMMAND echo "Removing rpath from mxnet library"
-      COMMAND chrpath -d ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmxnet.so
+      COMMAND ${CHRPATH_EXE} -d ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmxnet.so
     )
   else()
     message(ERROR "Unable to find chrpath executable")
