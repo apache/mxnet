@@ -208,6 +208,49 @@ def test_embedding_with_type():
     check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
                       arg_params=arg_params)
 
+def test_take_with_type():
+    sym = mx.sym.take(name='take')
+    for data_ndim in range(2, 5):
+        for idx_ndim in range(1, 4):
+            data_shape = ()
+            for _ in range(data_ndim):
+                data_shape += (np.random.randint(low=3, high=6), )
+            idx_shape = ()
+            for _ in range(idx_ndim):
+                idx_shape += (np.random.randint(low=3, high=5), ) 
+            ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape, 
+                         'take_a': data_shape, 
+                         'type_dict': {'take_indices': np.float64, 
+                                       'take_a': np.float64}},
+                        {'ctx': mx.gpu(0), 'take_indices': idx_shape, 
+                         'take_a': data_shape, 
+                         'type_dict': {'take_indices': np.float32, 
+                                       'take_a': np.float32}},
+                        {'ctx': mx.gpu(0), 'take_indices': idx_shape, 
+                         'take_a': data_shape, 
+                         'type_dict': {'take_indices': np.float16, 
+                                       'take_a': np.float16}},
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
+                         'take_a': data_shape, 
+                         'type_dict': {'take_indices': np.float64, 
+                                       'take_a': np.float64}},
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
+                         'take_a': data_shape, 
+                         'type_dict': {'take_indices': np.float32, 
+                                       'take_a': np.float32}},
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
+                         'take_a': data_shape, 
+                         'type_dict': {'take_indices': np.float16, 
+                                       'take_a': np.float16}}]
+            arg_params = {'take_indices': np.random.randint(low=0, 
+                                                            high=data_shape[0], 
+                                                            size=idx_shape), 
+                          'take_a': np.random.normal(size=data_shape)}
+            check_consistency(sym, ctx_list, 
+                              grad_req={'take_indices': 'null',
+                                        'take_a': 'write'},
+                              arg_params=arg_params)
+
 if __name__ == '__main__':
     test_convolution_options()
     test_convolution_with_type()
@@ -224,4 +267,5 @@ if __name__ == '__main__':
     test_fullyconnected_with_type()
     test_activation_with_type()
     test_embedding_with_type()
+    test_take_with_type()
 

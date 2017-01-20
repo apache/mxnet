@@ -188,6 +188,13 @@ class TBlob {
   inline index_t Size(void) const {
     return shape_.Size();
   }
+  /*! \brief get pointer in dtype */
+  template<typename DType>
+  inline DType* dptr() const {
+    CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
+      << "TBlob.dptr(): data type do not match specified type.";
+    return static_cast<DType*>(dptr_);
+  }
   /*!
    * \brief fetch the tensor, with respect to specific dimension
    * if dim do not match the stored dimension, an error will be issued
