@@ -51,7 +51,13 @@ class Initializer(object):
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
         else:
-            self._init_default(name, arr)
+            ret = re.search(r'_RNN_params_H(\d+)', name)
+            if ret:
+                self._init_cudnn_rnn_params(name, arr,
+                                            state_size=int(ret.group(1)))
+            else:
+                self._init_default(name, arr)
+
     # pylint: disable=no-self-use, missing-docstring, invalid-name
     def _init_bilinear(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
@@ -83,6 +89,12 @@ class Initializer(object):
 
     def _init_beta(self, _, arr):
         arr[:] = 0.0
+
+    # pylint: disable=unused-argument
+    def _init_cudnn_rnn_params(self, name, arr, state_size):
+        scale = 1.0 / np.sqrt(state_size)
+        random.uniform(-scale, scale, out=arr)
+    # pylint: enable=unused-argument
 
     def _init_weight(self, name, arr):
         """Abstruct method to Initialize weight"""

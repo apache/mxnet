@@ -29,8 +29,8 @@ namespace rnn_enum {
 
 // A utility function to calculate input size
 inline int rnn_single_param_size(int inputSize,
-                                int hiddenSize,
-                                int mode) {
+                                 int hiddenSize,
+                                 int mode) {
   int size = hiddenSize * (hiddenSize + inputSize + 2);
   // Different RNN's have different num weights
   switch (mode) {
@@ -141,10 +141,13 @@ Operator* CreateOp(RNNParam param, int dtype);
 class RNNProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
+    // we encode state size in the RNN param name so that
+    // the initializer could know the correct scale
+    auto param_name = "RNN_params_H" + std::to_string(param_.state_size);
     if (param_.mode == rnn_enum::kLstm) {
-      return {"data", "parameters", "state", "state_cell"};
+      return {"data", param_name, "state", "state_cell"};
     } else {
-      return {"data", "parameters", "state"};
+      return {"data", param_name, "state"};
     }
   }
 
