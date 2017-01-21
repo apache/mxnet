@@ -1,5 +1,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+from __future__ import print_function
 import sys, random
 sys.path.insert(0, "../../python")
 import numpy as np
@@ -47,7 +48,8 @@ def get_label(buf):
 class OCRIter(mx.io.DataIter):
     def __init__(self, count, batch_size, num_label, init_states):
         super(OCRIter, self).__init__()
-        self.captcha = ImageCaptcha(fonts=['./data/Xerox.ttf'])
+        # you can get this font from http://font.ubuntu.com/
+        self.captcha = ImageCaptcha(fonts=['./font/Ubuntu-M.ttf'])
         self.batch_size = batch_size
         self.count = count
         self.num_label = num_label
@@ -57,7 +59,7 @@ class OCRIter(mx.io.DataIter):
         self.provide_label = [('label', (self.batch_size, 4))]
 
     def __iter__(self):
-        print 'iter'
+        print('iter')
         init_state_names = [x[0] for x in self.init_states]
         for k in range(self.count):
             data = []
@@ -139,7 +141,7 @@ if __name__ == '__main__':
     momentum = 0.9
     num_label = 4
 
-    contexts = [mx.context.gpu(1)]
+    contexts = [mx.context.gpu(0)]
 
     def sym_gen(seq_len):
         return lstm_unroll(num_lstm_layer, seq_len,
@@ -167,10 +169,11 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     
-    print 'begin fit'
+    print('begin fit')
 
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Accuracy),
-              batch_end_callback=mx.callback.Speedometer(BATCH_SIZE, 50),)
+              batch_end_callback=mx.callback.Speedometer(BATCH_SIZE, 50),
+              epoch_end_callback = mx.callback.do_checkpoint(prefix, 1))
 
     model.save("ocr")

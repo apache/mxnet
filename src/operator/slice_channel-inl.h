@@ -59,11 +59,16 @@ class SliceChannelOp : public Operator {
     std::vector<Tensor<xpu, 3> > outputs(size_);
     Tensor<xpu, 3> data;
     size_t leading = 1, trailing = 1;
-    size_t mid = in_data[slice_enum::kData].shape_[axis_];
-    for (int i = 0; i < axis_; ++i) {
+    int real_axis = axis_;
+    if (real_axis < 0) {
+      real_axis += in_data[slice_enum::kData].ndim();
+    }
+    CHECK_LT(real_axis, in_data[slice_enum::kData].ndim());
+    size_t mid = in_data[slice_enum::kData].shape_[real_axis];
+    for (int i = 0; i < real_axis; ++i) {
       leading *= in_data[slice_enum::kData].shape_[i];
     }
-    for (int i = axis_ + 1; i < in_data[slice_enum::kData].ndim(); ++i) {
+    for (int i = real_axis + 1; i < in_data[slice_enum::kData].ndim(); ++i) {
       trailing *= in_data[slice_enum::kData].shape_[i];
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
@@ -90,11 +95,16 @@ class SliceChannelOp : public Operator {
     std::vector<Tensor<xpu, 3> > grad_out(size_);
     Tensor<xpu, 3> grad;
     size_t leading = 1, trailing = 1;
-    size_t mid = in_grad[slice_enum::kData].shape_[axis_];
-    for (int i = 0; i < axis_; ++i) {
+    int real_axis = axis_;
+    if (real_axis < 0) {
+        real_axis += in_grad[slice_enum::kData].ndim();
+    }
+    CHECK_LT(real_axis, in_grad[slice_enum::kData].ndim());
+    size_t mid = in_grad[slice_enum::kData].shape_[real_axis];
+    for (int i = 0; i < real_axis; ++i) {
       leading *= in_grad[slice_enum::kData].shape_[i];
     }
-    for (int i = axis_ + 1; i < in_grad[slice_enum::kData].ndim(); ++i) {
+    for (int i = real_axis + 1; i < in_grad[slice_enum::kData].ndim(); ++i) {
       trailing *= in_grad[slice_enum::kData].shape_[i];
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
@@ -146,14 +156,22 @@ class SliceChannelProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1);
     TShape dshape = in_shape->at(slice_enum::kData);
     if (dshape.ndim() == 0) return false;
-    CHECK_GE(dshape.ndim(), static_cast<size_t>(param_.axis));
-    CHECK_EQ(dshape[param_.axis] % param_.num_outputs, 0)
+    if (param_.axis >= 0) {
+      CHECK_LT(static_cast<size_t>(param_.axis), dshape.ndim());
+    } else {
+      CHECK_LT(param_.axis + dshape.ndim(), dshape.ndim());
+    }
+    int real_axis = param_.axis;
+    if (real_axis < 0) {
+      real_axis += dshape.ndim();
+    }
+    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0)
       << "num_outputs (" << param_.num_outputs
       << ") does not divide input dimension "
-      << param_.axis << " (" << dshape[param_.axis] << ").";
-    dshape[param_.axis] /= param_.num_outputs;
-    if (param_.squeeze_axis && dshape[param_.axis] == 1) {
-      for (int d = param_.axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
+      << real_axis << " (" << dshape[real_axis] << ").";
+    dshape[real_axis] /= param_.num_outputs;
+    if (param_.squeeze_axis && dshape[real_axis] == 1) {
+      for (int d = real_axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
         dshape[d] = dshape[d+1];
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);

@@ -6,6 +6,7 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 import ml.dmlc.mxnet.init.Base._
+import ml.dmlc.mxnet.utils.OperatorBuildUtils
 
 private[mxnet] class AddSymbolFunctions extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addDefs
@@ -101,13 +102,18 @@ private[mxnet] object SymbolImplMacros {
 
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): Map[String, SymbolFunction] = {
-    val symbolList = ListBuffer.empty[SymbolHandle]
-    _LIB.mxSymbolListAtomicSymbolCreators(symbolList)
-    symbolList.map(makeAtomicSymbolFunction).toMap
+    val opNames = ListBuffer.empty[String]
+    _LIB.mxListAllOpNames(opNames)
+    opNames.map(opName => {
+      val opHandle = new RefLong
+      _LIB.nnGetOpHandle(opName, opHandle)
+      makeAtomicSymbolFunction(opHandle.value, opName)
+    }).toMap
   }
 
   // Create an atomic symbol function by handle and function name.
-  private def makeAtomicSymbolFunction(handle: SymbolHandle): (String, SymbolFunction) = {
+  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
+      : (String, SymbolFunction) = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
@@ -118,28 +124,17 @@ private[mxnet] object SymbolImplMacros {
 
     _LIB.mxSymbolGetAtomicSymbolInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
-    val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
+    val paramStr = OperatorBuildUtils.ctypes2docstring(argNames, argTypes, argDescs)
     val extraDoc: String = if (keyVarNumArgs.value != null && keyVarNumArgs.value.length > 0) {
         s"This function support variable length of positional input (${keyVarNumArgs.value})."
       } else {
         ""
       }
-    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n$extraDoc\n"
+    val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
+    val docStr = s"$aliasName $realName\n${desc.value}\n\n$paramStr\n$extraDoc\n"
     // scalastyle:off println
-    println("Atomic Symbol function defination:\n" + docStr)
+    println("Symbol function definition:\n" + docStr)
     // scalastyle:on println
-    (name.value, new SymbolFunction(handle, keyVarNumArgs.value))
-  }
-
-  // Convert ctypes returned doc string information into parameters docstring.
-  def ctypes2docstring(argNames: Seq[String],
-                       argTypes: Seq[String],
-                       argDescs: Seq[String]): String = {
-    val params =
-      (argNames zip argTypes zip argDescs) map { case ((argName, argType), argDesc) =>
-        val desc = if (argDesc.isEmpty) "" else s"\n$argDesc"
-        s"$argName : $argType$desc"
-      }
-    s"Parameters\n----------\n${params.mkString("\n")}\n"
+    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 }

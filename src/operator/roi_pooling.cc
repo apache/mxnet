@@ -108,11 +108,11 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 }
 
 template<typename Dtype>
-inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
-                            const Tensor<cpu, 4, Dtype> &out_grad,
-                            const Tensor<cpu, 2, Dtype> &bbox,
-                            const Tensor<cpu, 4, Dtype> &max_idx,
-                            const float spatial_scale_) {
+inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
+                               const Tensor<cpu, 4, Dtype> &out_grad,
+                               const Tensor<cpu, 2, Dtype> &bbox,
+                               const Tensor<cpu, 4, Dtype> &max_idx,
+                               const float spatial_scale_) {
   const Dtype *top_diff = out_grad.dptr_;
   const Dtype *bottom_rois = bbox.dptr_;
   Dtype *bottom_diff = in_grad.dptr_;
@@ -193,7 +193,7 @@ inline void ROIPoolBackward(const Tensor<cpu, 4, Dtype> &in_grad,
               }
             }
           }
-          bottom_diff[offset_bottom_diff] = gradient;
+          bottom_diff[offset_bottom_diff] += gradient;
         }
       }
     }

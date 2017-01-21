@@ -1,7 +1,7 @@
 # Measure communication bandwidth
 
 MXNet provides multiple ways to communicate data. The best choice depends on
-both the physical machines and neural network strcture. This folder provides
+both the physical machines and neural network structure. This folder provides
 tools to test the bandwidth under various setups, which can be used to debugging
 the performance.
 
@@ -19,9 +19,9 @@ measure.py --help` for more details.
      GPUs.
   - `dist_sync` : similar to `local`, but the data is further send to parameter
     servers, and run the optimizer on servers
-  - `dist_sync_device` : similar to `dist_sync` but try best to use GPU for communcation
-  - `dist_async` : similar to `dist_sync` but uses asynchoronous communication
-  - `dist_async_device` : similar to `dist_async` but try best to use GPU for communcation
+  - `dist_sync_device` : similar to `dist_sync` but try best to use GPU for communication
+  - `dist_async` : similar to `dist_sync` but uses asynchronous communication
+  - `dist_async_device` : similar to `dist_async` but try best to use GPU for communication
 
 ## Samples
 
@@ -30,8 +30,8 @@ measure.py --help` for more details.
 - Use resnet 200 layers on GPU 0, 1, 2, and 3
 
 ```bash
-~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1 --network resnet --depth 200
-INFO:root:Namespace(batch_size=128, data_shape='128,3,224,224', depth=200, disp_batches=1, gpus='0,1', kv_store='device', network='resnet', num_batches=5, num_classes=1000, optimizer='None', test_results=1)
+~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1 --network resnet --num-layers 200
+INFO:root:Namespace(disp_batches=1, gpus='0,1', image_shape='3,224,224', kv_store='device', network='resnet', num_batches=5, num_classes=1000, num_layers=200, optimizer='None', test_results=1)
 INFO:root:num of arrays = 205, total size = 257.991328 MB
 INFO:root:iter 1, 0.023242 sec, 11.100222 GB/sec per gpu, error 0.000000
 INFO:root:iter 2, 0.023106 sec, 11.165508 GB/sec per gpu, error 0.000000
@@ -44,11 +44,11 @@ The results are close to the unidirectional bandwidth, which is 13 GB/sec, repor
 `cuda/samples/1_Utilities/p2pBandwidthLatencyTest`. But our problem is harder
 because we do all-to-all communication.
 
-- Use 8 GPUs, it satruates the single 16x link between GPU 0,1,2,3 and GPU 4,5,6,7.
+- Use 8 GPUs, it saturates the single 16x link between GPU 0,1,2,3 and GPU 4,5,6,7.
 
 ```bash
-~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1,2,3,4,5,6,7 --network resnet --depth 200
-INFO:root:Namespace(batch_size=128, data_shape='128,3,224,224', depth=200, disp_batches=1, gpus='0,1,2,3,4,5,6,7', kv_store='device', network='resnet', num_batches=5, num_classes=1000, optimizer='None', test_results=1)
+~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1,2,3,4,5,6,7 --network resnet --num-layers 200
+INFO:root:Namespace(disp_batches=1, gpus='0,1,2,3,4,5,6,7', image_shape='3,224,224', kv_store='device', network='resnet', num_batches=5, num_classes=1000, num_layers=200, optimizer='None', test_results=1)
 INFO:root:num of arrays = 205, total size = 257.991328 MB
 INFO:root:iter 1, 0.102321 sec, 4.412429 GB/sec per gpu, error 0.000000
 INFO:root:iter 2, 0.100345 sec, 4.499330 GB/sec per gpu, error 0.000000
@@ -57,12 +57,12 @@ INFO:root:iter 4, 0.099873 sec, 4.520586 GB/sec per gpu, error 0.000000
 INFO:root:iter 5, 0.100774 sec, 4.480169 GB/sec per gpu, error 0.000000
 ```
 
-- Now let's only use GPU-CPU communication, it satruates the single 16x link
+- Now let's only use GPU-CPU communication, it saturates the single 16x link
 between all GPUs and the CPU.
 
 ```bash
-~/mxnet/tools/bandwidth $ python measure.py --kv-store local --gpus 0,1,2,3,4,5,6,7 --network resnet --depth 200
-INFO:root:Namespace(batch_size=128, data_shape='128,3,224,224', depth=200, disp_batches=1, gpus='0,1,2,3,4,5,6,7', kv_store='local', network='resnet', num_batches=5, num_classes=1000, optimizer='None', test_results=1)
+~/mxnet/tools/bandwidth $ python measure.py --kv-store local --gpus 0,1,2,3,4,5,6,7 --network resnet --num-layers 200
+INFO:root:Namespace(disp_batches=1, gpus='0,1,2,3,4,5,6,7', image_shape='3,224,224', kv_store='local', network='resnet', num_batches=5, num_classes=1000, num_layers=200, optimizer='None', test_results=1)
 INFO:root:num of arrays = 205, total size = 257.991328 MB
 INFO:root:iter 1, 0.290164 sec, 1.555964 GB/sec per gpu, error 0.000000
 INFO:root:iter 2, 0.293963 sec, 1.535856 GB/sec per gpu, error 0.000000
@@ -71,17 +71,18 @@ INFO:root:iter 4, 0.290657 sec, 1.553325 GB/sec per gpu, error 0.000000
 INFO:root:iter 5, 0.290799 sec, 1.552567 GB/sec per gpu, error 0.000000
 ```
 
-- Finally we change to VGG and also run the `sgd` optimizor
+- Finally we change to Inception-v3 which requires input image size to be `3*299*299`, and also run the `sgd` optimizor
 
 ```bash
-~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1,2,3,4,5,6,7 --network vgg --optimizer sgd
-INFO:root:Namespace(batch_size=128, data_shape='128,3,224,224', depth=152, disp_batches=1, gpus='0,1,2,3,4,5,6,7', kv_store='device', network='vgg', num_batches=5, num_classes=1000, optimizer='sgd', test_results=1)
-INFO:root:num of arrays = 22, total size = 531.453344 MB
-INFO:root:iter 1, 0.525208 sec, 1.770810 GB/sec per gpu, error 0.000000
-INFO:root:iter 2, 0.524052 sec, 1.774715 GB/sec per gpu, error 0.000000
-INFO:root:iter 3, 0.524732 sec, 1.772416 GB/sec per gpu, error 0.000000
-INFO:root:iter 4, 0.527117 sec, 1.764396 GB/sec per gpu, error 0.000000
-INFO:root:iter 5, 0.520293 sec, 1.787538 GB/sec per gpu, error 0.000000
+~/mxnet/tools/bandwidth $ python measure.py --kv-store device --gpus 0,1,2,3,4,5,6,7 --image-shape 3,299,299 --network inception-v3 --optimizer sgd
+libdc1394 error: Failed to initialize libdc1394
+INFO:root:Namespace(disp_batches=1, gpus='0,1,2,3,4,5,6,7', image_shape='3,299,299', kv_store='device', network='inception-v3', num_batches=5, num_classes=1000, num_layers=152, optimizer='sgd', test_results=1)
+INFO:root:num of arrays = 96, total size = 95.200544 MB
+INFO:root:iter 1, 0.086527 sec, 1.925424 GB/sec per gpu, error 0.000000
+INFO:root:iter 2, 0.057934 sec, 2.875700 GB/sec per gpu, error 0.000000
+INFO:root:iter 3, 0.055442 sec, 3.004967 GB/sec per gpu, error 0.000000
+INFO:root:iter 4, 0.055579 sec, 2.997555 GB/sec per gpu, error 0.000000
+INFO:root:iter 5, 0.055107 sec, 3.023220 GB/sec per gpu, error 0.000000
 ```
 
 ### Multiple GPU machines
@@ -98,8 +99,8 @@ For more than one machines, we can replace `hosts` with the actual machine IPs
 line by line. Then launch it by
 
 ```bash
-~/mxnet/tools/bandwidth $ python ../launch.py -H hosts -n 1 python measure.py --kv-store dist_device_sync --gpus 0,1,2,3,4,5,6,7 --network resnet --depth 200
-INFO:root:Namespace(batch_size=128, data_shape='128,3,224,224', depth=200, disp_batches=1, gpus='0,1,2,3,4,5,6,7', kv_store='dist_device_sync', network='resnet', num_batches=5, num_classes=1000, optimizer='None', test_results=1)
+~/mxnet/tools/bandwidth $ python ../launch.py -H hosts -n 1 python measure.py --kv-store dist_device_sync --gpus 0,1,2,3,4,5,6,7 --network resnet --num-layers 200
+INFO:root:Namespace(disp_batches=1, gpus='0,1,2,3,4,5,6,7', image_shape='3,224,224', kv_store='dist_device_sync', network='resnet', num_batches=5, num_classes=1000, num_layers=200, optimizer='None', test_results=1)
 INFO:root:num of arrays = 205, total size = 257.991328 MB
 INFO:root:iter 1, 0.295398 sec, 1.528395 GB/sec per gpu, error 0.000000
 INFO:root:iter 2, 0.303159 sec, 1.489267 GB/sec per gpu, error 0.000000
@@ -113,8 +114,8 @@ harms the performance. We can slightly improve the performance using more than
 1 server nodes:
 
 ```bash
-~/mxnet/tools/bandwidth $ python ../launch.py -H hosts -n 1 -s 4 python measure.py --kv-store dist_device_sync --gpus 0,1,2,3,4,5,6,7 --network resnet --depth 200
-INFO:root:Namespace(batch_size=128, data_shape='128,3,224,224', depth=200, disp_batches=1, gpus='0,1,2,3,4,5,6,7', kv_store='dist_device_sync', network='resnet', num_batches=5, num_classes=1000, optimizer='None', test_results=1)
+~/mxnet/tools/bandwidth $ python ../launch.py -H hosts -n 1 -s 4 python measure.py --kv-store dist_device_sync --gpus 0,1,2,3,4,5,6,7 --network resnet --num-layers 200
+INFO:root:Namespace(disp_batches=1, gpus='0,1,2,3,4,5,6,7', image_shape='3,224,224', kv_store='dist_device_sync', network='resnet', num_batches=5, num_classes=1000, num_layers=200, optimizer='None', test_results=1)
 INFO:root:num of arrays = 205, total size = 257.991328 MB
 INFO:root:iter 1, 0.233309 sec, 1.935137 GB/sec per gpu, error 0.000000
 INFO:root:iter 2, 0.253864 sec, 1.778453 GB/sec per gpu, error 0.000000

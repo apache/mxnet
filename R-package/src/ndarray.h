@@ -8,6 +8,7 @@
 
 #include <Rcpp.h>
 #include <mxnet/c_api.h>
+#include <nnvm/c_api.h>
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -83,7 +84,7 @@ class NDArray  {
    * \brief Create a new moved NDArray
    */
   inline NDArray Move() const {
-    RCHECK(ptr_->writable)
+    RCHECK(ptr_->writable && !ptr_->moved)
         << "Passing a read only NDArray to mutate function";
     ptr_->moved = true;
     return NDArray(ptr_->handle, ptr_->writable);
@@ -194,10 +195,12 @@ class NDArray  {
    * \param array_list The NDArray list.
    * \param list_name The name of the list, used for error message.
    * \param allow_null If set to True, allow null in the list.
+   * \param move_old_array If set to true, move the old ndarrays
    */
   static std::vector<NDArrayHandle> GetHandles(const Rcpp::List& array_list,
                                                const std::string& list_name,
-                                               bool allow_null = false);
+                                               bool allow_null = false,
+                                               bool move_old_array = false);
   /*! \brief static function to initialize the Rcpp functions */
   static void InitRcppModule();
 
@@ -212,7 +215,7 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
   virtual SEXP operator() (SEXP * args);
 
   virtual int nargs() {
-    return num_args_;
+    return static_cast<int>(arg_names_.size());
   }
 
   virtual bool is_void() {
@@ -238,32 +241,21 @@ class NDArrayFunction : public ::Rcpp::CppFunction {
   static void InitRcppModule();
 
   // internal helper function to search function handle
-  static FunctionHandle FindHandle(const std::string& hname);
+  static OpHandle FindHandle(const std::string& hname);
 
  private:
   // make constructor private
-  explicit NDArrayFunction(FunctionHandle handle);
-
+  explicit NDArrayFunction(OpHandle handle, std::string name);
   /*! \brief internal functioon handle. */
-  FunctionHandle handle_;
+  OpHandle handle_;
   // name of the function
   std::string name_;
-  // beginning position of use vars
-  mx_uint begin_use_vars_;
-  // number of use variable
-  mx_uint num_use_vars_;
-  // beginning position of scalars
-  mx_uint begin_scalars_;
-  // number of scalars
-  mx_uint num_scalars_;
-  // begining of mutate variables
-  mx_uint begin_mutate_vars_;
-  // number of mutate variables
-  mx_uint num_mutate_vars_;
-  // number of arguments
-  mx_uint num_args_;
-  // whether it accept empty output
-  bool accept_empty_out_;
+  // keyword arguments.
+  std::string key_var_num_args_;
+  // name of arguments
+  std::vector<std::string> arg_names_;
+  // check
+  std::vector<bool> arg_nd_array_;
   // ther formals of arguments
   Rcpp::List formals_;
 };

@@ -98,7 +98,7 @@ class LocalResponseNormOp : public Operator {
 };  // class LocalResponseNormOp
 
 template<typename xpu>
-Operator *CreateOp(LRNParam param);
+Operator *CreateOp(LRNParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class LocalResponseNormProp : public OperatorProperty {
@@ -160,7 +160,13 @@ class LocalResponseNormProp : public OperatorProperty {
     return {"output", "tmp_norm"};
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return NULL;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   LRNParam param_;
