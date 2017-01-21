@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # install additional depts
-sudo apt install python-pip python-dev unzip
-sudo pip install cython python-matplotlib python-skimage easydict
+sudo apt install python-pip python-dev unzip python-matplotlib
+sudo pip install cython scikit-image easydict
 
 # install a forked MXNet
 pushd ../../
