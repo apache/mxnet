@@ -72,5 +72,5 @@ setup(name='mxnet',
           'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook'
           ],
       data_files=[('mxnet', [LIB_PATH[0]])],
-      url='https://github.com/dmlc/mxnet',
-      ext_modules=config_cython())
+      url='https://github.com/dmlc/mxnet')
+      #ext_modules=config_cython())  # causes strange import error for some users.
