@@ -10,6 +10,7 @@
 #include <vector>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -631,6 +632,17 @@ struct SimpleCropParam : public dmlc::Parameter<SimpleCropParam> {
   }
 };
 
+
+struct ClipParam : public dmlc::Parameter<ClipParam> {
+  real_t a_min, a_max;
+  DMLC_DECLARE_PARAMETER(ClipParam) {
+    DMLC_DECLARE_FIELD(a_min)
+    .describe("Minimum value");
+    DMLC_DECLARE_FIELD(a_max)
+    .describe("Maximum value");
+  }
+};
+
 // matrix crop for multi dimensional cropping: see also slice
 template<typename xpu>
 void Crop(const nnvm::NodeAttrs& attrs,
@@ -704,6 +716,40 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<typename xpu>
+void Clip(const nnvm::NodeAttrs& attrs,
+          const OpContext& ctx,
+          const std::vector<TBlob>& inputs,
+          const std::vector<OpReqType>& req,
+          const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+    inputs[0].dptr<DType>(), DType(param.a_min), DType(param.a_max));
+  });
+}
+
+template<typename xpu>
+void ClipGrad_(const nnvm::NodeAttrs& attrs,
+               const OpContext& ctx,
+               const std::vector<TBlob>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<clip_grad, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+    inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), DType(param.a_min), DType(param.a_max));
+  });
+}
 
 template<typename xpu>
 void CropAssign(const nnvm::NodeAttrs& attrs,

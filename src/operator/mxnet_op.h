@@ -67,6 +67,36 @@ struct batch_take {
   }
 };
 
+struct clip {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas,
+                                  DType a_min, DType a_max) {
+    DType data = datas[i];
+    if (data > a_max) {
+      out[i] = a_max;
+    } else if (data < a_min) {
+      out[i] = a_min;
+    } else {
+      out[i] = data;
+    }
+  }
+};
+
+struct clip_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* grad, const DType* datas,
+                                  DType a_min, DType a_max) {
+    DType data = datas[i];
+    if (data > a_max) {
+      out[i] = 0;
+    } else if (data < a_min) {
+      out[i] = 0;
+    } else {
+      out[i] = grad[i];
+    }
+  }
+};
+
 }  // namespace mxnet_op
 }  // namespace op
 }  // namespace mxnet
