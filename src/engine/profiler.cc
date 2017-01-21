@@ -15,8 +15,11 @@
 
 namespace mxnet {
 namespace engine {
-
+#if MXNET_USE_PROFILER
 Profiler* Profiler::instance_ = new Profiler();
+#else
+Profiler* Profiler::instance_ = nullptr;
+#endif
 const int INITIAL_SIZE = 1024;
 
 Profiler::Profiler()
@@ -24,15 +27,11 @@ Profiler::Profiler()
   this->init_time_ = NowInUsec();
 
   // TODO(ziheng) get device number during execution
-  int kMaxNumCpus = 64;
+  int kMaxNumCpus = 64, kMaxNumGpus = 32;
   this->cpu_num_ = kMaxNumCpus;
   this->gpu_num_ = 0;
-
 #if MXNET_USE_CUDA
-  cudaError_t ret = cudaGetDeviceCount(reinterpret_cast<int*>(&this->gpu_num_));
-  if (ret != cudaSuccess) {
-    this->gpu_num_ = 0;
-  }
+  this->gpu_num_ = kMaxNumGpus;
 #endif
 
   this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1];
