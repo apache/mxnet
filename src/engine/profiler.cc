@@ -27,11 +27,13 @@ Profiler::Profiler()
   this->init_time_ = NowInUsec();
 
   // TODO(ziheng) get device number during execution
-  int kMaxNumCpus = 64, kMaxNumGpus = 32;
+  int kMaxNumCpus = 64;
   this->cpu_num_ = kMaxNumCpus;
-  this->gpu_num_ = 0;
 #if MXNET_USE_CUDA
+  int kMaxNumGpus = 32;
   this->gpu_num_ = kMaxNumGpus;
+#else
+  this->gpu_num_ = 0;
 #endif
 
   this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1];
