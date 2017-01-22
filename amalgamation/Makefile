@@ -48,7 +48,6 @@ jni_libmxnet_predict.so: jni_libmxnet_predict.o
 	${CXX} ${CFLAGS} -shared -o $@ $(filter %.o %.a, $^) $(LDFLAGS)
 
 ifneq ($(ANDROID), 1)
-        LDFLAGS+= -lrt
         android:
 else
         CFLAGS+=  -mhard-float -D_NDK_MATH_NO_SOFTFP=1 -O3
