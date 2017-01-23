@@ -184,15 +184,12 @@ inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
             int offset = (roi_n * channels_ + c) * pooled_height_ * pooled_width_;
             const Dtype* offset_top_diff = top_diff + offset;
             const Dtype* offset_argmax_data = argmax_data + offset;
-            for (int ph = phstart; ph < phend; ++ph) {
-              for (int pw = pwstart; pw < pwend; ++pw) {
-                const int pooled_index = ph * pooled_width_ + pw;
-                if (static_cast<int>(offset_argmax_data[pooled_index]) == h * width_ + w) {
-                  gradient += offset_top_diff[pooled_index];
-                }
-              }
+            
+            const int pooled_index = phstart * pooled_width_ + pwstart;
+            if (static_cast<int>(offset_argmax_data[pooled_index]) == h * width_ + w) {
+              gradient += offset_top_diff[pooled_index];
             }
-          }
+	  }
           bottom_diff[offset_bottom_diff] += gradient;
         }
       }
