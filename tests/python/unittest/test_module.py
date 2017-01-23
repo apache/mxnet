@@ -58,7 +58,7 @@ def test_save_load():
 
 def test_module_reshape():
     data = mx.sym.Variable('data')
-    sym = mx.sym.FullyConnected(data, num_hidden=20)
+    sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
 
     dshape = (7, 20)
     mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
@@ -71,7 +71,7 @@ def test_module_reshape():
     mod.backward([mx.nd.ones(dshape)])
     mod.update()
     assert mod.get_outputs()[0].shape == dshape
-    assert (mod.get_params()[0]['fullyconnected0_bias'].asnumpy() == -1).all()
+    assert (mod.get_params()[0]['fc_bias'].asnumpy() == -1).all()
 
     dshape = (14, 20)
     mod.reshape(data_shapes=[('data', dshape)])
@@ -80,7 +80,7 @@ def test_module_reshape():
     mod.backward([mx.nd.ones(dshape)])
     mod.update()
     assert mod.get_outputs()[0].shape == dshape
-    assert (mod.get_params()[0]['fullyconnected0_bias'].asnumpy() == -3).all()
+    assert (mod.get_params()[0]['fc_bias'].asnumpy() == -3).all()
 
 
 if __name__ == '__main__':
