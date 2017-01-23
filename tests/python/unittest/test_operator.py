@@ -1272,6 +1272,13 @@ def test_slice_axis():
             d = shape[t]
             b = random.randint(0, d-1)
             e = random.randint(b+1, d)
+            if np.random.rand() > 0.6:
+                e = None
+            else:
+                if e < d and np.random.rand() > 0.5:
+                    e = e - d
+            if np.random.rand() > 0.5:
+                b = b - d
             idx = []
             for i in range(ndim):
                 idx.append(slice(0, shape[i]))
@@ -1291,7 +1298,14 @@ def test_slice_axis():
             xx[:] = 0.0
             xx[idx] = x.asnumpy()[idx]
             assert_allclose(xx, xgrad.asnumpy())
-
+            x_grad_npy = np.random.normal(size=x.shape)
+            xgrad = mx.nd.array(x_grad_npy)
+            exec2 = Y.bind(default_context(), args=[x], args_grad={'X': xgrad}, grad_req="add")
+            exec2.forward()
+            exec2.backward([exec2.outputs[0]])
+            xx = np.zeros(shape=x.shape, dtype=np.float32)
+            xx[idx] = x.asnumpy()[idx]
+            assert_allclose(xx + x_grad_npy, xgrad.asnumpy(), atol=1E-5)
 
 def test_flip():
     for ndim in range(1, 6):
@@ -2044,7 +2058,8 @@ def test_init():
     test_arange()
 
 
-def test_order(ctx=default_context()):
+def test_order():
+    ctx = default_context()
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
             if is_ascend:
