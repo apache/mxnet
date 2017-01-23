@@ -23,7 +23,7 @@ The following code creates a two-layer perceptron network:
 
 Each symbol takes a (unique) string name. *Variable* often defines the inputs,
 or free variables. Other symbols take a symbol as their input (*data*),
-and might accept other hyperparameters, such as the number of hidden neurons (*num_hidden*)
+and might accept other hyper parameters, such as the number of hidden neurons (*num_hidden*)
 or the activation type (*act_type*).
 
 The symbol can be seen simply as a function taking several arguments whose
@@ -53,7 +53,7 @@ We can also specify the automatically generated names explicitly:
 
 ## More Complicated Composition
 
-MXNet provides well-optimized symbols for layers 
+MXNet provides well-optimized symbols for layers
 commonly used in deep learning (see
 [src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)). We can also easily define new operators
 in Python.  The following example first performs an element-wise add between two
@@ -116,7 +116,7 @@ The ```bind``` function will create a ```Executor``` that can be used to carry o
     >>> b = mx.nd.ones(3) * 2
     >>> # bind the symbol with real arguments
     >>> c_exec = C.bind(ctx=mx.cpu(), args={'A' : a, 'B': b})
-    >>> # do forward pass calclation.
+    >>> # do forward pass calculation.
     >>> c_exec.forward()
     >>> c_exec.outputs[0].asnumpy()
     [ 8.  8.  8.]

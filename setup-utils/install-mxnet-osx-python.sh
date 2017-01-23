@@ -58,7 +58,7 @@ runme() {
 runme brew update
 runme brew_pkg_install pkg-config
 runme brew_pkg_install python
-runme brew_pkg_install openblas
+brew install homebrew/science/openblas
 runme brew_pkg_install opencv
 # Needed for /usr/local/lib/graphviz to be created 
 runme brew_pkg_install graphviz  
