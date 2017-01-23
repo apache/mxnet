@@ -105,21 +105,6 @@ struct ElemwiseGradUseNone {
   }
 };
 
-struct ElemwiseGradZeros {
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> ret;
-    for (index_t i = 0; i < n->num_inputs(); ++i) {
-      nnvm::NodePtr p = nnvm::Node::Create();
-      p->attrs.op = nnvm::Op::Get("_zeros");
-      p->attrs.name = n->attrs.name + "_backward_" + std::to_string(i);
-      p->control_deps.emplace_back(n);
-      ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
-    }
-    return ret;
-  }
-};
-
 }  // namespace op
 }  // namespace mxnet
 
