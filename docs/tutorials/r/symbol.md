@@ -25,7 +25,7 @@ class(net)
 
 Each symbol takes a (unique) string name. *Variable* often defines the inputs,
 or free variables. Other symbols take a symbol as the input (*data*),
-and may accept other hyperparameters, such as the number of hidden neurons (*num_hidden*)
+and may accept other hyper parameters, such as the number of hidden neurons (*num_hidden*)
 or the activation type (*act_type*).
 
 A symbol can be viewed as a function that takes several arguments, whose
@@ -112,7 +112,7 @@ We encourage you to read [Symbolic Configuration and Execution in Pictures for p
 
 The Symbolic API brings the efficient C++
 operations in powerful toolkits, such as CXXNet and Caffe, together with the
-flexible dynamic NArray operations. All of the memory and computation resources are
+flexible dynamic NDArray operations. All of the memory and computation resources are
 allocated statically during bind operations, to maximize runtime performance and memory
 utilization.
 

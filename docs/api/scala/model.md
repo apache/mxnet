@@ -2,7 +2,7 @@
 
 The model API provides a simplified way to train neural networks using common best practices.
 It's a thin wrapper built on top of the [ndarray](ndarray.md) and [symbolic](symbol.md)
-modules that makes neural network training easy.
+modules that make neural network training easy.
 
 Topics:
 
@@ -14,7 +14,7 @@ Topics:
 
 ## Train the Model
 
-To train a model, perform two steps: configure the model  using the symbol parameter,
+To train a model, perform two steps: configure the model using the symbol parameter,
 then call ```model.Feedforward.create``` to create the model.
 The following example creates a two-layer neural network.
 
