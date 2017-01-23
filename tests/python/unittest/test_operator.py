@@ -318,9 +318,9 @@ def test_scalarop():
     arr_grad = mx.nd.empty(shape)
     arr_grad[:]=3
 
-    test = 2 / (4-((1+data+1)*2/5)-0.2)
+    test = 2 / (4-((1+data+1)*2/5)-0.8-(data!=0))
 
-    npout_1 = (4-((1+data_tmp+1)*2/5)-0.2)
+    npout_1 = (4-((1+data_tmp+1)*2/5)-0.8-(data_tmp!=0))
     npout = 2/npout_1
 
     check_symbolic_forward(test, [data_tmp], [npout])
@@ -910,11 +910,17 @@ def test_binary_op():
         check_binary_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
                                         g_out * a ** b * np.log(a)), gen_binary_data)
 
+    def test_bneq(a, b):
+        c = a != b
+        check_binary_op_forward(c, lambda a, b: (a != b).astype(a.dtype), gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data)
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
     test_bpow(a, b)
+    test_bneq(a, b)
 
 def test_broadcast_binary_op():
     a = mx.sym.Variable('a')
@@ -946,11 +952,18 @@ def test_broadcast_binary_op():
         check_binary_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
                                         g_out * a ** b * np.log(a)), gen_broadcast_data)
 
+    def test_bequal(a, b):
+        c = mx.sym.broadcast_equal(a, b)
+        check_binary_op_forward(c, lambda a, b: (a == b).astype(a.dtype), gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data)
+
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
     test_bpow(a, b)
+    test_bequal(a, b)
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     # Input for spike response
@@ -1149,6 +1162,10 @@ def test_reduce():
                       lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
                         outgrad.reshape(keepdim_shape),
                       mx.symbol.sum)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
+                      mx.symbol.mean)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
                       lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
                         outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
@@ -2179,6 +2196,8 @@ def test_index2d():
 if __name__ == '__main__':
     test_clip()
     test_index2d()
+    test_scalarop()
+    test_reduce()
     test_init()
     test_expand_dims()
     test_slice_axis()
@@ -2196,7 +2215,6 @@ if __name__ == '__main__':
     test_regression()
     test_python_op()
     test_swapaxes()
-    test_scalarop()
     test_scalar_pow()
     test_symbol_pow()
     test_pow_fn()
@@ -2211,7 +2229,6 @@ if __name__ == '__main__':
     check_softmax_with_ignore_label(default_context())
     test_convolution_dilated_impulse_response()
     test_reshape()
-    test_reduce()
     test_broadcast()
     test_stn()
     test_dot()

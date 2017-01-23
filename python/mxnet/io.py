@@ -72,6 +72,10 @@ class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
     def __init__(self, data, label, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
+        if data is not None:
+            assert isinstance(data, (list, tuple)), "Data must be list of NDArrays"
+        if label is not None:
+            assert isinstance(label, (list, tuple)), "Label must be list of NDArrays"
         self.data = data
         self.label = label
         self.pad = pad
@@ -188,6 +192,8 @@ class ResizeIter(DataIter):
         self.provide_data = data_iter.provide_data
         self.provide_label = data_iter.provide_label
         self.batch_size = data_iter.batch_size
+        if hasattr(data_iter, 'default_bucket_key'):
+            self.default_bucket_key = data_iter.default_bucket_key
 
     def reset(self):
         self.cur = 0

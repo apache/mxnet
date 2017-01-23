@@ -13,6 +13,12 @@ NNVM_REGISTER_OP(sum)
 NNVM_REGISTER_OP(_backward_sum)
 .set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu>);
 
+NNVM_REGISTER_OP(mean)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow::red::sum, true>);
+
+NNVM_REGISTER_OP(_backward_mean)
+.set_attr<FCompute>("FCompute<gpu>", ReduceAxesBackwardUseNone<gpu, true>);
+
 NNVM_REGISTER_OP(prod)
 .set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow_op::product>);
 

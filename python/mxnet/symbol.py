@@ -1188,7 +1188,7 @@ def hypot(left, right):
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
 
-def zeros(shape, dtype=_numpy.float32):
+def zeros(shape, dtype=_numpy.float32, **kwargs):
     """Create a Tensor filled with zeros, similar to numpy.zeros
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.zeros.html.
 
@@ -1204,10 +1204,10 @@ def zeros(shape, dtype=_numpy.float32):
     out : Symbol
         The created Symbol
     """
-    return _internal._zeros(shape=shape, dtype=dtype)
+    return _internal._zeros(shape=shape, dtype=dtype, **kwargs)
 
 
-def ones(shape, dtype=_numpy.float32):
+def ones(shape, dtype=_numpy.float32, **kwargs):
     """Create a Tensor filled with ones, similar to numpy.ones
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html.
 
@@ -1223,7 +1223,7 @@ def ones(shape, dtype=_numpy.float32):
     out : Symbol
         The created Symbol
     """
-    return _internal._ones(shape=shape, dtype=dtype)
+    return _internal._ones(shape=shape, dtype=dtype, **kwargs)
 
 
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=_numpy.float32):
