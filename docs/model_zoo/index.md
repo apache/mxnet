@@ -7,15 +7,15 @@ ongoing project to collect complete models, with python scripts, pre-trained wei
 
 The Model Zoo has good entries for CNNs but is seeking content in other areas.
 
-Issue a Pull Request containing the following: 
+Issue a Pull Request containing the following:
 * Gist Log
 * .json model definition
 * Model parameter file
 * Readme file (details below)
- 
+
 Readme file should contain:
 * Model Location, access instructions (wget)
-* Confirmation the trained model meets published accuracy from original paper 
+* Confirmation the trained model meets published accuracy from original paper
 * Step by step instructions on how to use the trained model
 * References to any other applicable docs or arxiv papers the model is based on
 
@@ -55,7 +55,7 @@ and Gated Recurrent Units (GRU) networks. Some available datasets include:
 * [Penn Treebank (PTB)](https://www.cis.upenn.edu/~treebank/): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
 * [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare’s works.
 * [IMDB reviews](https://s3.amazonaws.com/text-datasets): 25,000 movie reviews, labeled as positive or negative
-* [Facebook bAbI](https://research.facebook.com/researchers/1543934539189348): As set of 20 question & answer tasks, each with 1,000 training examples.
+* [Facebook bAbI](https://research.facebook.com/researchers/1543934539189348): As a set of 20 question & answer tasks, each with 1,000 training examples.
 * [Flickr8k, COCO](http://mscoco.org/): Images with associated caption (sentences). Flickr8k consists of 8,092 images captioned by AmazonTurkers with ~40,000 captions. COCO has 328,000 images, each with 5 captions. The COCO images also come with labeled objects using segmentation algorithms.
 
 
@@ -68,7 +68,7 @@ and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
 ## Generative Adversarial Networks (GANs)
 
-[Generative Adversarial Networks](http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) train a competing pair of 
+[Generative Adversarial Networks](http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) train a competing pair of
 neural networks: a generator network which transforms a latent vector into content like an image, and a discriminator
 network that tries to distinguish between generated content and supplied "real" training content.  When properly
 trained the two achieve a [Nash equilibrium](https://en.wikipedia.org/wiki/Nash_equilibrium).
@@ -76,7 +76,7 @@ trained the two achieve a [Nash equilibrium](https://en.wikipedia.org/wiki/Nash_
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
 | DCGANs | ImageNet | | [Radford et al..,2016](https://arxiv.org/pdf/1511.06434v2.pdf) | @... |
-| Text to Image Synthesis |MS COCO| | [Reed et al.., 2016](https://arxiv.org/pdf/1605.05396v2.pdf) | | 
+| Text to Image Synthesis |MS COCO| | [Reed et al.., 2016](https://arxiv.org/pdf/1605.05396v2.pdf) | |
 | Deep Jazz	| | | [Deepjazz.io](https://deepjazz.io) | |
 
 
@@ -89,13 +89,10 @@ MXNet Supports a variety of model types beyond the canonical CNN and LSTM model 
 * [MovieLens 20M Dataset](http://grouplens.org/datasets/movielens/): 20 million ratings and 465,000 tag applications applied to 27,000 movies by 138,000 users. Includes tag genome data with 12 million relevance scores across 1,100 tags.
 * [Atari Video Game Emulator](http://stella.sourceforge.net/): Stella is a multi-platform Atari 2600 VCS emulator released under the GNU General Public License (GPL).
 
- 
+
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
 | Word2Vec | Google News | | [Mikolov et al.., 2013](https://arxiv.org/pdf/1310.4546v1.pdf) | @... |
 | Matrix Factorization | MovieLens 20M | | [Huang et al.., 2013](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/cikm2013_DSSM_fullversion.pdf) | |
 | Deep Q-Network | Atari video games | | [Minh et al.., 2015](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html) | |
 | Asynchronous advantage actor-critic (A3C) | Atari video games | | [Minh et al.., 2016](https://arxiv.org/pdf/1602.01783.pdf) | |
-
-
-

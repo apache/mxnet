@@ -318,9 +318,9 @@ def test_scalarop():
     arr_grad = mx.nd.empty(shape)
     arr_grad[:]=3
 
-    test = 2 / (4-((1+data+1)*2/5)-0.2)
+    test = 2 / (4-((1+data+1)*2/5)-0.8-(data!=0))
 
-    npout_1 = (4-((1+data_tmp+1)*2/5)-0.2)
+    npout_1 = (4-((1+data_tmp+1)*2/5)-0.8-(data_tmp!=0))
     npout = 2/npout_1
 
     check_symbolic_forward(test, [data_tmp], [npout])
@@ -910,11 +910,17 @@ def test_binary_op():
         check_binary_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
                                         g_out * a ** b * np.log(a)), gen_binary_data)
 
+    def test_bneq(a, b):
+        c = a != b
+        check_binary_op_forward(c, lambda a, b: (a != b).astype(a.dtype), gen_binary_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data)
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
     test_bpow(a, b)
+    test_bneq(a, b)
 
 def test_broadcast_binary_op():
     a = mx.sym.Variable('a')
@@ -946,11 +952,18 @@ def test_broadcast_binary_op():
         check_binary_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
                                         g_out * a ** b * np.log(a)), gen_broadcast_data)
 
+    def test_bequal(a, b):
+        c = mx.sym.broadcast_equal(a, b)
+        check_binary_op_forward(c, lambda a, b: (a == b).astype(a.dtype), gen_broadcast_data)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data)
+
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
     test_bpow(a, b)
+    test_bequal(a, b)
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     # Input for spike response
@@ -1149,6 +1162,10 @@ def test_reduce():
                       lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
                         outgrad.reshape(keepdim_shape),
                       mx.symbol.sum)
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
+                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                        outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
+                      mx.symbol.mean)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
                       lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
                         outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
@@ -1876,84 +1893,6 @@ def test_special_functions_using_scipy():
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
 
-
-def mathematical_core_binary(name,
-                             forward_mxnet_call,
-                             forward_numpy_call,
-                             backward_numpy_call1,
-                             backward_numpy_call2,
-                             data1_init=2.,
-                             data2_init=3.,
-                             grad_init=2.):
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
-    shape = (3, 4)
-    data_tmp1 = np.random.rand(3, 4)
-    data_tmp2 = np.random.rand(3, 4)
-    data_tmp1[:] = data1_init
-    data_tmp2[:] = data2_init
-
-    arr_data1 = mx.nd.array(data_tmp1)
-    arr_data2 = mx.nd.array(data_tmp2)
-
-    arr_grad1 = mx.nd.empty(shape)
-    arr_grad2 = mx.nd.empty(shape)
-
-    test = forward_mxnet_call(data1, data2)
-    exe_test = test.bind(default_context(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
-    exe_test.forward()
-    out = exe_test.outputs[0].asnumpy()
-    npout = forward_numpy_call(data_tmp1, data_tmp2)
-    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
-
-    out_grad = mx.nd.empty(shape)
-    out_grad[:] = grad_init
-    exe_test.backward(out_grad)
-
-    npout_grad = np.ones(shape)
-    npout_grad[:] = grad_init
-
-    npout_grad1 = npout_grad * backward_numpy_call1(data_tmp1, data_tmp2)
-    npout_grad2 = npout_grad * backward_numpy_call2(data_tmp1, data_tmp2)
-    arr_grad1 = arr_grad1.asnumpy()
-    arr_grad2 = arr_grad2.asnumpy()
-
-    assert reldiff(arr_grad1, npout_grad1) < 1e-6, "%s mathematical backward1 failed\n%s\n\n%s" % (
-        name, arr_grad1, npout_grad)
-    assert reldiff(arr_grad2, npout_grad2) < 1e-6, "%s mathematical backward2 failed\n%s\n\n%s" % (
-        name, arr_grad2, npout_grad)
-
-
-def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
-    data = mx.symbol.Variable('data')
-    shape = (3, 4)
-    data_tmp = np.ones(shape)
-    data_tmp[:] = data_init
-    arr_data = mx.nd.array(data_tmp)
-    arr_grad = mx.nd.empty(shape)
-    arr_grad[:] = 3
-
-    test = forward_mxnet_call(data)
-    exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
-    exe_test.forward()
-    out = exe_test.outputs[0].asnumpy()
-    npout = forward_numpy_call(data_tmp)
-    assert reldiff(out, npout) < 1e-5, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
-
-    out_grad = mx.nd.empty(shape)
-    out_grad[:] = grad_init
-    npout_grad = out_grad.asnumpy()
-    temp = backward_numpy_call(data_tmp)
-    npout_grad = npout_grad * temp
-    exe_test.backward(out_grad)
-    arr_grad = arr_grad.asnumpy()
-    # print(name)
-    # print(arr_grad)
-    # print(npout_grad)
-    assert reldiff(arr_grad, npout_grad) < 1e-5, "%s mathematical backward failed\n%s\n\n%s" % (
-        name, arr_grad, npout_grad)
-
-
 def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -2069,6 +2008,15 @@ def test_special_functions_using_scipy():
     mathematical_core("gammaln", lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
+def test_clip():
+    data = mx.symbol.Variable('data')
+    shape = (30, 30)
+    data_tmp = np.random.uniform(-1, 1, shape)
+    test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
+    check_numeric_gradient(test, [data_tmp])
+    check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
+    check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
+                            [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
 
 def test_init():
     def test_basic_val_init(sym_func, np_func, shape, dtype):
@@ -2246,7 +2194,10 @@ def test_index2d():
         assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
 if __name__ == '__main__':
+    test_clip()
     test_index2d()
+    test_scalarop()
+    test_reduce()
     test_init()
     test_expand_dims()
     test_slice_axis()
@@ -2264,7 +2215,6 @@ if __name__ == '__main__':
     test_regression()
     test_python_op()
     test_swapaxes()
-    test_scalarop()
     test_scalar_pow()
     test_symbol_pow()
     test_pow_fn()
@@ -2279,7 +2229,6 @@ if __name__ == '__main__':
     check_softmax_with_ignore_label(default_context())
     test_convolution_dilated_impulse_response()
     test_reshape()
-    test_reduce()
     test_broadcast()
     test_stn()
     test_dot()

@@ -305,9 +305,9 @@ class Executor(object):
                         "is more efficient than the reverse." + \
                         "If you really want to up size, set allow_up_sizing=True " + \
                         "to enable allocation of new arrays."
-                    new_arg_dict[name] = nd.empty(new_shape, ctx=arr.context)
+                    new_arg_dict[name] = nd.empty(new_shape, ctx=arr.context, dtype=arr.dtype)
                     if darr is not None:
-                        new_grad_dict[name] = nd.empty(new_shape, ctx=darr.context)
+                        new_grad_dict[name] = nd.empty(new_shape, ctx=darr.context, dtype=arr.dtype)
                 else:
                     new_arg_dict[name] = arr.reshape(new_shape)
                     if darr is not None:
@@ -328,7 +328,7 @@ class Executor(object):
                         "is more efficient than the reverse." + \
                         "If you really want to up size, set allow_up_sizing=True " + \
                         "to enable allocation of new arrays."
-                    new_aux_dict[name] = nd.empty(new_shape, ctx=arr.context)
+                    new_aux_dict[name] = nd.empty(new_shape, ctx=arr.context, dtype=arr.dtype)
                 else:
                     new_aux_dict[name] = arr.reshape(new_shape)
             else:

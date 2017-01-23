@@ -406,7 +406,8 @@ inline uint32_t TopKNumVisibleOutputs(const NodeAttrs& attrs) {
 inline bool TopKType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_attrs,
                      std::vector<int> *out_attrs) {
-  return ElemwiseAttr<int, type_is_none, true>(attrs, in_attrs, out_attrs);
+  return ElemwiseAttr<int, type_is_none, type_assign, true>(
+    attrs, in_attrs, out_attrs, -1);
 }
 
 inline bool TopKShapeImpl(const TopKParam& param,

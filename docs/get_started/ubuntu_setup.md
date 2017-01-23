@@ -5,13 +5,13 @@ The simple installation scripts set up MXNet for Python and R on computers runni
 
 ## Prepare environment for GPU Installation
 
-If you plan to build with GPU, you need to set up environemtn for CUDA and CUDNN.
+If you plan to build with GPU, you need to set up the environment for CUDA and CUDNN.
 
-First download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
+First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
 
 Then download [cudnn 5](https://developer.nvidia.com/cudnn).
 
-Unzip the file and change to cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
+Unzip the file and change to the cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
 
 ```bash
     tar xvzf cudnn-8.0-linux-x64-v5.1-ga.tgz
@@ -21,7 +21,7 @@ Unzip the file and change to cudnn root directory. Move the header and libraries
     sudo ldconfig
 ```
 
-Finally add configurations to config.mk file:
+Finally, add configurations to config.mk file:
 
 ```bash
     cp make/config.mk .
@@ -64,7 +64,7 @@ You can view the installation script we just used to install MXNet for Python [h
 
 ### Install MXNet for R
 
-MXNet requires R-version to be 3.2.0 and above. If you are running earlier version of R, run below commands to update your R version, before running the installation script.
+MXNet requires R-version to be 3.2.0 and above. If you are running an earlier version of R, run below commands to update your R version, before running the installation script.
 
 ```bash
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
