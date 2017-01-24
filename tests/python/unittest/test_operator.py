@@ -2027,7 +2027,7 @@ def test_clip():
     shape = (30, 30)
     data_tmp = np.random.uniform(-1, 1, shape)
     test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], check_eps=2E-2)
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
                             [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
