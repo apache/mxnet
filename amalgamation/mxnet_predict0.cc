@@ -1,4 +1,7 @@
 // mexnet.cc
+#if defined(__ANDROID__) || defined(__MXNET_JS__)
+#define MSHADOW_USE_SSE         0
+#endif
 
 #include "src/ndarray/ndarray_function.cc"
 #include "src/ndarray/ndarray.cc"
