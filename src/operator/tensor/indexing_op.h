@@ -18,6 +18,7 @@
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -325,6 +326,51 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
             LOG(FATAL) << "wrong req";
         }
     });
+}
+
+inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2) << "BatchTake op requires three inputs";
+  if ((*in_attrs)[1].ndim() != 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
+  } else if ((*out_attrs)[0].ndim() != 0) {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, (*out_attrs)[0]);
+  }
+  if ((*in_attrs)[0].ndim() == 0) return false;
+  CHECK_EQ((*in_attrs)[0].ndim(), 2) << "Data array must by 2 dimensional";
+  if ((*out_attrs)[0].ndim() == 0) return false;
+  CHECK_EQ((*in_attrs)[0][0], (*out_attrs)[0][0])
+    << "Index array's size must be the same as data array's first dimension";
+  return true;
+}
+
+inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  if ((*in_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else if ((*out_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  }
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kInt32);
+  return true;
+}
+
+template<typename xpu>
+void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<batch_take, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                    inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                    inputs[0].Size()/inputs[0].shape_[0]);
+  });
 }
 
 }  // namespace op

@@ -24,7 +24,7 @@ To create the speech acoustic modeling example, use the following steps.
 
 ### Build Kaldi
 
-Build Kaldi as shared libraies if you have not already done so.
+Build Kaldi as shared libraries if you have not already done so.
 
 ```bash
 cd kaldi/src

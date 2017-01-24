@@ -1,4 +1,4 @@
-# MXNet Python Symbolic API
+# Symbol API
 
 Topics:
 

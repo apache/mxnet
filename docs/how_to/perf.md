@@ -46,7 +46,7 @@ with MXNet commit `0a03417`
 
 ## Other CPU
 
-if using cpus(not just intel cpus, such as ARMs), NNAPCK will also imporve the running performance with 2x~7x, plese check [nnpack.md](./nnpack.md) for details.
+If using cpus(not just intel cpus, such as ARMs), NNAPCK will also improve the running performance with 2x~7x, please check [nnpack.md](./nnpack.md) for details.
 
 ## Nvidia GPU
 
@@ -147,7 +147,7 @@ details.
 
 Besides, we can use
 [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth) to
-find the communication cost per batch. A ideal situation is the cost is less
+find the communication cost per batch. An ideal situation is the cost is less
 than the time to compute a batch. We can
 
 - Explore different `--kv-store` options to reduce the cost
@@ -158,22 +158,22 @@ than the time to compute a batch. We can
 For the input data, mind the following:
 
 * Data format. If you are using the `rec` format, then everything should be fine.
-* Decoding. By default, MXNet uses 4 CPU threads for decoding images. This is often sufficient to decode more than 1K images per second. If  you are using a low-end CPU oryour GPUs are very powerful, you can increase the number of threads.
+* Decoding. By default, MXNet uses 4 CPU threads for decoding images. This is often sufficient to decode more than 1K images per second. If  you are using a low-end CPU or your GPUs are very powerful, you can increase the number of threads.
 * Storage location. Any local or distributed file system (HDFS, Amazon S3) should be fine. If multiple devices read the data from the network shared file system (NFS) at the same time, problems might occur.
 * Use a large batch size. We often choose the largest one that fits into GPU memory. A value that's too large can slow down convergence. For example, the safe batch size for CIFAR 10 is approximately 200, while for ImageNet 1K, the batch size can exceed 1K.
 
 ## Profiler
 
-As of v0.9.1 (with the NNVM merge) MXNet has a built-in profiler that gives detailed information about 
-execution time at the symbol level. 
-This feature compliments general profiling tools like nvprof and gprof by summarizing at the operator 
-level, instead of function, kernel, or instruction level.
+As of v0.9.1 (with the NNVM merge) MXNet has a built-in profiler that gives detailed information about
+execution time at the symbol level.
+This feature compliments general profiling tools like nvprof and gprof by summarizing at the operator
+level, instead of a function, kernel, or instruction level.
 
 To be able to use the profiler, you must compile MXNet with the `USE_PROFILER=1` flag in `config.mk`.
-Once enabled, the profiler can be enabled with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler) for an entire program run, or 
+Once enabled, the profiler can be enabled with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler) for an entire program run, or
 programmatically for just part of a run.
 See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler) for complete examples
-of how to use the profiler in code, but briefly the python code looks like
+of how to use the profiler in code, but briefly, the python code looks like
 
 ```
     mx.profiler.profiler_set_config(mode='all', filename='profile_output.json')
@@ -184,7 +184,7 @@ of how to use the profiler in code, but briefly the python code looks like
     mx.profiler.profiler_set_state('stop')
 ```
 
-The `mode` parameter can be set to 
+The `mode` parameter can be set to
 
 * `symbolic` to only include symbolic operations
 * `all` to include all operations

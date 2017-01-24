@@ -74,6 +74,7 @@ class Module(BaseModule):
         self._update_on_kvstore = None
         self._updater = None
         self._preload_opt_states = None
+        self._grad_req = None
 
         self._exec_group = None
         self._data_shapes = None
@@ -307,6 +308,7 @@ class Module(BaseModule):
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
         self.binded = True
+        self._grad_req = grad_req
 
         if not for_training:
             assert not inputs_need_grad
@@ -331,17 +333,13 @@ class Module(BaseModule):
         else:
             shared_group = None
 
-        input_types = {x.name: x.dtype for x in self._data_shapes}
-        if self._label_shapes is not None:
-            input_types.update({x.name: x.dtype for x in self._label_shapes})
-
         self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, self._data_shapes,
                                                      self._label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
-                                                     grad_req=grad_req, input_types=input_types)
+                                                     grad_req=grad_req)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
@@ -353,6 +351,27 @@ class Module(BaseModule):
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
+
+    def reshape(self, data_shapes, label_shapes=None):
+        """Reshape the module for new input shapes.
+
+        Parameters
+        ----------
+        data_shapes : list of (str, tuple)
+            Typically is `data_iter.provide_data`.
+        label_shapes : list of (str, tuple)
+            Typically is `data_iter.provide_label`.
+        """
+        assert self.binded
+        self._data_shapes = \
+            [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
+        if label_shapes is not None:
+            self._label_shapes = \
+                [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        else:
+            self._label_shapes = None
+
+        self._exec_group.reshape(self._data_shapes, self._label_shapes)
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):

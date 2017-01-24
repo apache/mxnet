@@ -1,25 +1,22 @@
 import sys, os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append("../../../amalgamation/python/")
-sys.path.append("../../../python/")
 
 from mxnet_predict import Predictor, load_ndarray_file
-import mxnet as mx
 import logging
 import numpy as np
 from skimage import io, transform
 
 # Load the pre-trained model
-prefix = "Inception/Inception_BN"
-num_round = 39
+prefix = "resnet/resnet-18"
+num_round = 0
 symbol_file = "%s-symbol.json" % prefix
-param_file = "%s-0039.params" % prefix
-predictor = Predictor(open(symbol_file).read(),
-                      open(param_file).read(),
+param_file = "%s-0000.params" % prefix
+predictor = Predictor(open(symbol_file, "r").read(),
+                      open(param_file, "rb").read(),
                       {'data':(1, 3, 224, 224)})
-mean_img = load_ndarray_file(open("Inception/mean_224.nd").read())["mean_img"]
 
-synset = [l.strip() for l in open('Inception/synset.txt').readlines()]
+synset = [l.strip() for l in open('resnet/synset.txt').readlines()]
 
 def PreprocessImage(path, show_img=False):
     # load image
@@ -32,8 +29,6 @@ def PreprocessImage(path, show_img=False):
     crop_img = img[yy : yy + short_egde, xx : xx + short_egde]
     # resize to 224, 224
     resized_img = transform.resize(crop_img, (224, 224))
-    if show_img:
-        io.imshow(resized_img)
     # convert to numpy.ndarray
     sample = np.asarray(resized_img) * 255
     # swap axes to make image from (224, 224, 3) to (3, 224, 224)
@@ -41,12 +36,10 @@ def PreprocessImage(path, show_img=False):
     sample = np.swapaxes(sample, 1, 2)
 
     # sub mean
-    normed_img = sample - mean_img
-    normed_img.resize(1, 3, 224, 224)
-    return normed_img
+    return sample
 
 # Get preprocessed batch (single image batch)
-batch = PreprocessImage('./download.png', True)
+batch = PreprocessImage('./download.jpg', True)
 
 predictor.forward(data=batch)
 prob = predictor.get_output(0)[0]

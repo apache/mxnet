@@ -23,7 +23,7 @@ pull request. For details, see [contribution guidelines](http://mxnet.io/communi
 
 This section lists the basic requirements for running MXNet, requirements for using it with GPUs, and requirements to support computer vision and image augmentation.
 
-**Note:**  Setting up all basic(CPU only) required dependencies is covered as part of individual OS installation guide. This section is provided for power users who wants to set up alternate dependencies(GPU/Intel MKL etc..) and experiment.
+**Note:**  Setting up all basic(CPU only) required dependencies is covered as part of individual OS installation guide. This section is provided for power users who want to set up alternate dependencies(GPU/Intel MKL etc..) and experiment.
 
 ## Minimum Requirements
 
