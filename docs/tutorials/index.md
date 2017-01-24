@@ -108,6 +108,12 @@ The following tutorials explain how to develop applications for discovering exis
 - [Recommendation Systems](http://mxnet.io/tutorials/general_ml/recommendation_systems.html)
 *An example of using an autoencoder and matrix factorization to make a complete end to end recommendation system*
 
+#### Visualization
+
+The following tutorials show how visualization helps us in daily work, and better understanding towards neural network.
+
+- [Understanding the vanishing gradient problem through visualization](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/understanding_vanish_gradient.ipynb)
+*An example of using the visualization component, [TensorBoard](https://github.com/dmlc/tensorboard), to have an intuitive understanding on the well-known vanished gradient problem in deep learning.*
 
 ### R
 
