@@ -12,8 +12,6 @@ endif
 
 ifndef ANDROID
     export ANDROID=0
-else
-	DEFS+=-DMSHADOW_USE_SSE=0
 endif
 
 
