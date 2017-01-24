@@ -15,6 +15,7 @@ RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so
 ENV NOTVISIBLE "in users profile"
 RUN echo "export VISIBLE=now" >> /etc/profile
 
+RUN chmod -R 755 install
 RUN /install/install_opencv.sh
 RUN /install/install_openblas.sh
 RUN /install/install_python2.sh
