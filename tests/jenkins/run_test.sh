@@ -14,9 +14,9 @@ make lint || exit -1
 echo "BUILD cpp_test"
 make -j 4 test || exit -1
 export MXNET_ENGINE_INFO=true
-for test in tests/cpp/*_test; do
-    ./$test || exit -1
-done
+#for test in tests/cpp/*_test; do
+#    ./$test || exit -1
+#done
 export MXNET_ENGINE_INFO=false
 
 echo "BUILD python_test"
