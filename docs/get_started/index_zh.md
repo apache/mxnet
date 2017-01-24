@@ -32,17 +32,17 @@ julia> Array{Float32}(a * 2)
 
 Python接口可以`numpy.NDArray`很相近：
 
- ```python
+```python
     >>> import mxnet as mx
     >>> a = mx.nd.ones((2, 3), mx.gpu())
     >>> print ((a * 2).asnumpy())
     [[ 2.  2.  2.]
      [ 2.  2.  2.]]
- ```
+```
 
 ## R
 
- ```r
+```r
     > require(mxnet)
     Loading required package: mxnet
     > a <- mx.nd.ones(c(2,3))
@@ -54,13 +54,13 @@ Python接口可以`numpy.NDArray`很相近：
          [,1] [,2] [,3]
     [1,]    2    2    2
     [2,]    2    2    2
- ```
+```
 
 ## Scala
 
 你可以在纯Scala种执行张量(tensor)和矩阵(matrix)运算:
 
- ```scala
+```scala
     scala> import ml.dmlc.mxnet._
     import ml.dmlc.mxnet._
 
@@ -75,7 +75,7 @@ Python接口可以`numpy.NDArray`很相近：
 
     scala> (arr * 2).shape
     res3: ml.dmlc.mxnet.Shape = (2,3)
- ```
+```
 # 推荐教程
 
 * [使用卷积神经网络(Convolutional Neural Networks)识别手写数字](http://mxnet.io/tutorials/python/mnist.html) (初级)
