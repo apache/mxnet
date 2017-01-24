@@ -382,7 +382,7 @@ void MatchArguments(
     for (const auto& kv : known_arg_attrs) {
       const std::string& key = kv.first;
       if (keys.count(key) == 0) {
-        LOG(FATAL) << source
+        LOG(WARNING) << source
                    << "Keyword argument name " << key << " not found."
                    << msg.str();
       }
