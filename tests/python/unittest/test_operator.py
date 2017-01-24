@@ -1587,7 +1587,7 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
 
     # backward error
     assert_almost_equal(exe1.grad_dict['img1'].asnumpy(), grad1, threshold=1E-3)
-    assert_almost_equal(exe1.grad_dict['img1'].asnumpy(), grad1, threshold=1E-3)
+    assert_almost_equal(exe1.grad_dict['img2'].asnumpy(), grad2, threshold=1E-3)
 
 def test_correlation():
 
