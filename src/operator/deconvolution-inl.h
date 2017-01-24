@@ -170,6 +170,8 @@ class DeconvolutionOp : public Operator {
                                    param_.kernel[0],
                                    param_.kernel[1],
                                    param_.stride[0],
+                                   param_.stride[1],
+                                   1,
                                    1);  // Deconvolution only support dilate equals 1
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
@@ -180,6 +182,8 @@ class DeconvolutionOp : public Operator {
                                         param_.kernel[0],
                                         param_.kernel[1],
                                         param_.stride[0],
+                                        param_.stride[1],
+                                        1,
                                         1),  // Deconvolution only support dilate equals 1
                                         out[i][0].shape_);
       }

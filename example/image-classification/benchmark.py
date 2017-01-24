@@ -86,7 +86,7 @@ def parse_args():
                 sys.exit(1)
             try:
                 #check if the network exists
-                importlib.import_module('symbol.'+ args[0])
+                importlib.import_module('symbols.'+ args[0])
                 batch_size = int(args[1])
                 img_size = int(args[2])
                 return Network(name=args[0], batch_size=batch_size, img_size=img_size)

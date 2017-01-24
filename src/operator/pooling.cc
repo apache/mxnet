@@ -10,10 +10,12 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_pooling-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_NNPACK == 1
+#include "./nnpack/nnpack_pooling-inl.h"
+#endif  // MXNET_USE_NNPACK
 
 namespace mxnet {
 namespace op {
-
 
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
@@ -32,6 +34,22 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
       }
     }
     LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
+#endif
+#if MXNET_USE_NNPACK == 1
+  // NNPACK only support max-pooling with kernel = 2, stride = 2, pooling_convention
+  // = kFull(note that the default value is kValid in MXNet)
+  if ((param.pool_type == pool_enum::kMaxPooling)
+    && (param.pooling_convention == pool_enum::kFull)
+    && (param.kernel.ndim() == 2) && (param.stride.ndim() == 2)
+    && (param.kernel[0] == 2) && (param.kernel[1] == 2)
+    && (param.stride[0] == 2) && (param.stride[1] == 2)) {
+    switch (dtype) {
+    case mshadow::kFloat32:
+      return new NNPACKPoolingOp<cpu, mshadow::red::maximum, float>(param);
+    default:
+      break;
+    }
+  }
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.pool_type) {
@@ -72,4 +90,3 @@ MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
 
 }  // namespace op
 }  // namespace mxnet
-

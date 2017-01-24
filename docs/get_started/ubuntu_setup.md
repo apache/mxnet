@@ -3,41 +3,83 @@ MXNet currently supports Python, R, Julia, and Scala. For users of Python and R 
 
 The simple installation scripts set up MXNet for Python and R on computers running Ubuntu 12 or later. The scripts install MXNet in your home folder ```~/mxnet```.
 
+## Prepare environment for GPU Installation
+
+If you plan to build with GPU, you need to set up the environment for CUDA and CUDNN.
+
+First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
+
+Then download [cudnn 5](https://developer.nvidia.com/cudnn).
+
+Unzip the file and change to the cudnn root directory. Move the header and libraries to your local CUDA Toolkit folder:
+
+```bash
+    tar xvzf cudnn-8.0-linux-x64-v5.1-ga.tgz
+    sudo cp -P cuda/include/cudnn.h /usr/local/cuda/include
+    sudo cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
+    sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
+    sudo ldconfig
+```
+
+Finally, add configurations to config.mk file:
+
+```bash
+    cp make/config.mk .
+```
+
 ## Quick Installation
 ### Install MXNet for Python
 
 To clone the MXNet source code repository to your computer, use ```git```.
 ```bash
-# Install git if not already installed.
-sudo apt-get update
-sudo apt-get -y install git
+    # Install git if not already installed.
+    sudo apt-get update
+    sudo apt-get -y install git
 ```
 
 Clone the MXNet source code repository to your computer, run the installation script, and refresh the environment variables. In addition to installing MXNet, the script installs all MXNet dependencies: ```Numpy```, ```LibBLAS``` and ```OpenCV```.
 It takes around 5 minutes to complete the installation.
 
 ```bash
-  # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
-  git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+    # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
 
-  # Install MXNet for Python with all required dependencies
-  cd ~/mxnet/setup-utils
-  bash install-mxnet-ubuntu-python.sh
+    # If building with GPU, add configurations to config.mk file:
+    cd ~/mxnet
+    cp make/config.mk .
+    echo "USE_CUDA=1" >>config.mk
+    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
+    echo "USE_CUDNN=1" >>config.mk
 
-  # We have added MXNet Python package path in your ~/.bashrc.
-  # Run the following command to refresh environment variables.
-  $ source ~/.bashrc
+    # Install MXNet for Python with all required dependencies
+    cd ~/mxnet/setup-utils
+    bash install-mxnet-ubuntu-python.sh
+
+    # We have added MXNet Python package path in your ~/.bashrc.
+    # Run the following command to refresh environment variables.
+    $ source ~/.bashrc
 ```
 
 You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu-python.sh).
 
 ### Install MXNet for R
 
+MXNet requires R-version to be 3.2.0 and above. If you are running an earlier version of R, run below commands to update your R version, before running the installation script.
+
+```bash
+    sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+    sudo add-apt-repository ppa:marutter/rdev
+
+    sudo apt-get update
+    sudo apt-get upgrade
+    sudo apt-get install r-base r-base-dev
+```
+
 To install MXNet for R:
 
 ```bash
-  cd ~/mxnet/setup-utils
-  bash install-mxnet-ubuntu-r.sh
+    cd ~/mxnet/setup-utils
+    bash install-mxnet-ubuntu-r.sh
 ```
 The installation script to install MXNet for R can be found [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu-r.sh).
 
@@ -63,15 +105,34 @@ On Ubuntu versions 13.10 or later, you need the following dependencies:
 Install these dependencies using the following commands:
 
 ```bash
-  sudo apt-get update
-  sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
+    sudo apt-get update
+    sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
 ```
 
-After you have downloaded and installed the dependencies, use the following commands to pull the MXNet source code from GitHub and build MXNet:
+After installing the dependencies, use the following command to pull the MXNet source code from GitHub
 
 ```bash
-  git clone --recursive https://github.com/dmlc/mxnet
-  cd mxnet; make -j$(nproc)
+    # Get MXNet source code
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+    # Move to source code parent directory
+    cd ~/mxnet
+    cp make/config.mk .
+    echo "USE_BLAS=openblas" >>config.mk
+    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
+    echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
+```
+If building with ```GPU``` support, run below commands to add GPU dependency configurations to config.mk file:
+
+```bash
+    echo "USE_CUDA=1" >>config.mk
+    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
+    echo "USE_CUDNN=1" >>config.mk
+```
+
+Then build mxnet:
+
+```bash
+    make -j$(nproc)
 ```
 
 Executing these commands creates a library called ```libmxnet.so```.
@@ -96,13 +157,13 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 Run the following commands to install the MXNet dependencies and build the MXNet R package.
 
 ```r
-  Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 ```
 ```bash
-  cd R-package
-  Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
-  cd ..
-  make rpkg
+    cd R-package
+    Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+    cd ..
+    make rpkg
 ```
 
 **Note:** R-package is a folder in the MXNet source.
@@ -110,7 +171,7 @@ Run the following commands to install the MXNet dependencies and build the MXNet
 These commands create the MXNet R package as a tar.gz file that you can install as an R package. To install the R package, run the following command, use your MXNet version number:
 
 ```bash
-  R CMD INSTALL mxnet_0.7.tar.gz
+    R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
 ### Install the MXNet Package for Julia
@@ -118,19 +179,19 @@ These commands create the MXNet R package as a tar.gz file that you can install 
 The MXNet package for Julia is hosted in a separate repository, MXNet.jl, which is available on [GitHub](https://github.com/dmlc/MXNet.jl). To use Julia binding it with an existing libmxnet installation, set the ```MXNET_HOME``` environment variable by running the following command:
 
 ```bash
-  export MXNET_HOME=/<path to>/libmxnet
+    export MXNET_HOME=/<path to>/libmxnet
 ```
 
 The path to the existing libmxnet installation should be the root directory of libmxnet. In other words, you should be able to find the ```libmxnet.so``` file at ```$MXNET_HOME/lib```. For example, if the root directory of libmxnet is ```~```, you would run the following command:
 
 ```bash
-  export MXNET_HOME=/~/libmxnet
+    export MXNET_HOME=/~/libmxnet
 ```
 
 You might want to add this command to your ```~/.bashrc``` file. If you do, you can install the Julia package in the Julia console using the following command:
 
 ```julia
-  Pkg.add("MXNet")
+    Pkg.add("MXNet")
 ```
 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
@@ -177,7 +238,7 @@ If your native environment differs slightly from the assembly package, for examp
 Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
 
 ```bash
-  make scalapkg
+    make scalapkg
 ```
 
 This command creates the JAR files for the assembly, core, and example modules. It also creates the native library in the ```native/{your-architecture}/target directory```, which you can use to cooperate with the core module.
@@ -185,7 +246,7 @@ This command creates the JAR files for the assembly, core, and example modules. 
 To install the MXNet Scala package into your local Maven repository, run the following command from the MXNet source root directory:
 
 ```bash
-  make scalainstall
+    make scalainstall
 ```
 
 **Note - ** You are more than welcome to contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/community/index.html) for contributors guidelines.

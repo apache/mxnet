@@ -5,12 +5,10 @@
 import logging
 import numpy as np
 
-from ..base import mx_real_t
 from .. import context as ctx
 from .. import ndarray as nd
-
+from ..io import DataDesc
 from ..executor_manager import _split_input_slice
-from ..io import DefaultLayoutMapper
 
 
 def _load_general(data, targets, major_axis):
@@ -99,24 +97,19 @@ class DataParallelExecutorGroup(object):
         group corresponding to a different bucket. In other words, it will correspond to a different
         symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
         In this case, many memory will be shared.
-    input_types : list
-        Default is `None`. When not `None`, can be used to specify the data type for each
-        of the data/label inputs.
     logger : Logger
         Default is `logging`.
     fixed_param_names: list of str
         Indicate parameters to be fixed during training. Parameters in this list will not allocate
         space for gradient, nor do gradient calculation.
-    layout_mapper : LayoutMapper
-        A helper to decide the data layout of data, label and outputs.
     grad_req : str, list of str, dict of str to str
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
         Can be specified globally (str) or for each argument (list, dict).
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
-                 for_training, inputs_need_grad, shared_group=None, input_types=None,
-                 logger=logging, fixed_param_names=None, layout_mapper=None, grad_req='write'):
+                 for_training, inputs_need_grad, shared_group=None,
+                 logger=logging, fixed_param_names=None, grad_req='write'):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -128,7 +121,6 @@ class DataParallelExecutorGroup(object):
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
 
-        self.input_types = input_types
         self.logger = logger
 
         self.fixed_param_names = fixed_param_names
@@ -138,7 +130,12 @@ class DataParallelExecutorGroup(object):
         if not for_training:
             grad_req = 'null'
 
-        data_names = [x[0] for x in data_shapes]
+        data_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
+        if label_shapes is not None:
+            label_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+
+        data_names = [x.name for x in data_shapes]
+
         if isinstance(grad_req, str):
             self.grad_req = {}
             for k in self.arg_names:
@@ -172,20 +169,19 @@ class DataParallelExecutorGroup(object):
         # initialize some instance variables
         self.batch_size = None
         self.slices = None
-        self.execs = None
+        self.execs = []
         self.data_arrays = None
         self.label_arrays = None
         self.param_arrays = None
         self.grad_arrays = None
         self.aux_arrays = None
+        self.input_grad_arrays = None
 
-        # calculate workload and bind executors
-        self.layout_mapper = layout_mapper or DefaultLayoutMapper()
-        self.data_layouts = self.decide_slices(data_shapes)
-        if label_shapes is not None:
-            # call it to make sure labels has the same batch size as data
-            self.label_layouts = self.decide_slices(label_shapes)
-        self.output_layouts = [self.layout_mapper.get_batch_axis(name)
+        self.data_shapes = None
+        self.label_shapes = None
+        self.data_layouts = None
+        self.label_layouts = None
+        self.output_layouts = [DataDesc.get_batch_axis(self.symbol[name].attr('__layout__'))
                                for name in self.symbol.list_outputs()]
 
         self.bind_exec(data_shapes, label_shapes, shared_group)
@@ -199,8 +195,7 @@ class DataParallelExecutorGroup(object):
             list of (name, shape) specifying the shapes for the input data or label.
         """
         assert len(data_shapes) > 0
-        major_axis = [self.layout_mapper.get_batch_axis(name)
-                      for (name, _) in data_shapes]
+        major_axis = [DataDesc.get_batch_axis(x.layout) for x in data_shapes]
 
         for (name, shape), axis in zip(data_shapes, major_axis):
             if axis == -1:
@@ -217,26 +212,15 @@ class DataParallelExecutorGroup(object):
 
         return major_axis
 
-    def bind_exec(self, data_shapes, label_shapes, shared_group):
-        """Bind executors on their respective devices.
-
-        Parameters
-        ----------
-        data_shapes : list
-        label_shapes : list
-        shared_group : DataParallelExecutorGroup
-        """
-        self.execs = []
-        for i in range(len(self.contexts)):
-            self.execs.append(self._bind_ith_exec(i, data_shapes, label_shapes, shared_group))
-
+    def _collect_arrays(self):
+        """Collect internal arrays from executors."""
         # convenient data structures
         self.data_arrays = [[(self.slices[i], e.arg_dict[name]) for i, e in enumerate(self.execs)]
-                            for name, _ in data_shapes]
-        if label_shapes is not None:
+                            for name, _ in self.data_shapes]
+        if self.label_shapes is not None:
             self.label_arrays = [[(self.slices[i], e.arg_dict[name])
                                   for i, e in enumerate(self.execs)]
-                                 for name, _ in label_shapes]
+                                 for name, _ in self.label_shapes]
         else:
             self.label_arrays = None
 
@@ -250,7 +234,7 @@ class DataParallelExecutorGroup(object):
         else:
             self.grad_arrays = None
 
-        data_names = [x[0] for x in data_shapes]
+        data_names = [x[0] for x in self.data_shapes]
         if self.inputs_need_grad:
             self.input_grad_arrays = [[exec_.grad_arrays[i] for exec_ in self.execs]
                                       for i, name in enumerate(self.arg_names)
@@ -260,6 +244,55 @@ class DataParallelExecutorGroup(object):
 
         self.aux_arrays = [[exec_.aux_arrays[i] for exec_ in self.execs]
                            for i in range(len(self.aux_names))]
+
+    def bind_exec(self, data_shapes, label_shapes, shared_group=None, reshape=False):
+        """Bind executors on their respective devices.
+
+        Parameters
+        ----------
+        data_shapes : list
+        label_shapes : list
+        shared_group : DataParallelExecutorGroup
+        reshape : bool
+        """
+        assert reshape or not self.execs
+        self.batch_size = None
+
+        # calculate workload and bind executors
+        self.data_layouts = self.decide_slices(data_shapes)
+        if label_shapes is not None:
+            # call it to make sure labels has the same batch size as data
+            self.label_layouts = self.decide_slices(label_shapes)
+
+        for i in range(len(self.contexts)):
+            data_shapes_i = self._sliced_shape(data_shapes, i, self.data_layouts)
+            if label_shapes is not None:
+                label_shapes_i = self._sliced_shape(label_shapes, i, self.label_layouts)
+            else:
+                label_shapes_i = []
+
+            if reshape:
+                self.execs[i] = self.execs[i].reshape(allow_up_sizing=True,
+                                                      **dict(data_shapes_i + label_shapes_i))
+            else:
+                self.execs.append(self._bind_ith_exec(i, data_shapes_i, label_shapes_i,
+                                                      shared_group))
+
+        self.data_shapes = data_shapes
+        self.label_shapes = label_shapes
+        self._collect_arrays()
+
+    def reshape(self, data_shapes, label_shapes):
+        """Reshape executors.
+
+        Parameters
+        ----------
+        data_shapes : list
+        label_shapes : list
+        """
+        if data_shapes == self.data_shapes and label_shapes == self.label_shapes:
+            return
+        self.bind_exec(data_shapes, label_shapes, reshape=True)
 
     def set_params(self, arg_params, aux_params):
         """Assign, i.e. copy parameters to all the executors.
@@ -439,9 +472,6 @@ class DataParallelExecutorGroup(object):
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.
         """
-        data_shapes = self._sliced_shape(data_shapes, i, self.data_layouts)
-        if label_shapes is not None:
-            label_shapes = self._sliced_shape(label_shapes, i, self.label_layouts)
         shared_exec = None if shared_group is None else shared_group.execs[i]
         context = self.contexts[i]
         shared_data_arrays = self.shared_data_arrays[i]
@@ -453,10 +483,9 @@ class DataParallelExecutorGroup(object):
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
         assert arg_shapes is not None, "shape inference failed"
 
-        if self.input_types is None:
-            input_types = {k: mx_real_t for k in input_shapes.keys()}
-        else:
-            input_types = self.input_types
+        input_types = {x.name: x.dtype for x in data_shapes}
+        if label_shapes is not None:
+            input_types.update({x.name: x.dtype for x in label_shapes})
         arg_types, _, aux_types = self.symbol.infer_type(**input_types)
         assert arg_types is not None, "type inference failed"
 
@@ -542,11 +571,11 @@ class DataParallelExecutorGroup(object):
             Which executor we are dealing with.
         """
         sliced_shapes = []
-        for (k, shape), axis in zip(shapes, major_axis):
-            shape = list(shape)
+        for desc, axis in zip(shapes, major_axis):
+            shape = list(desc.shape)
             if axis >= 0:
                 shape[axis] = self.slices[i].stop - self.slices[i].start
-            sliced_shapes.append((k, tuple(shape)))
+            sliced_shapes.append(DataDesc(desc.name, tuple(shape), desc.dtype, desc.layout))
         return sliced_shapes
 
     def install_monitor(self, mon):

@@ -1,10 +1,10 @@
-# Module Interface 
-The module API provides an intermediate- and high-level interface for performing computation with neural networks in MXNet. A *module* is an instance of subclasses of `BaseModule`. The most widely used module class is simply called `Module`, which wraps a `Symbol` and one or more `Executors`. For a full list of functions, see  `BaseModule`. 
+# Module API
+The module API provides an intermediate and high-level interface for performing computation with neural networks in MXNet. A *module* is an instance of subclasses of the `BaseModule`. The most widely used module class is simply called `Module`, which wraps a `Symbol` and one or more `Executors`. For a full list of functions, see  `BaseModule`.
 Each subclass of modules might have some extra interface functions. In this topic, we provide some examples of common use cases. All of the module APIs are in the `mxnet.module` namespace, simply called `mxnet.mod`.
 
 ## Preparing a Module for Computation
 
-To construct a module, refer to the constructors for the specific module class. For example, the `Module` class takes a `Symbol` as input:
+To construct a module, refer to the constructors for the specific module class. For example, the `Module` class accepts a `Symbol` as the input:
 
 ```python
     import mxnet as mx
@@ -17,7 +17,7 @@ To construct a module, refer to the constructors for the specific module class. 
     act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
     fc3  = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
     out  = mx.symbol.SoftmaxOutput(fc3, name = 'softmax')
- 
+
     # construct the module
     mod = mx.mod.Module(out)
 ```
@@ -40,7 +40,7 @@ Modules provide high-level APIs for training, predicting, and evaluating. To fit
 
 ```python
     mod = mx.mod.Module(softmax)
-    mod.fit(train_dataiter, eval_data=val_dataiter,
+    mod.fit(train_dataiter, eval_data=eval_dataiter,
             optimizer_params={'learning_rate':0.01, 'momentum': 0.9},
             num_epoch=n_epoch)
 ```
@@ -51,7 +51,7 @@ The interface is very similar to the old `FeedForward` class. You can pass in ba
     mod.predict(val_dataiter)
 ```
 
-The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the `predict()` function. 
+The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the `predict()` function.
 
 When prediction results might be too large to fit in memory, use the `iter_predict` API:
 

@@ -2,7 +2,6 @@ package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
 
-import scala.collection.immutable.ListMap
 import scala.collection.mutable.ArrayBuffer
 
 object Executor {

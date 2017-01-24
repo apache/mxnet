@@ -62,14 +62,14 @@ if __name__ == '__main__':
         batch_size      = 64,
         disp_batches = 100,
         num_epochs     = 20,
-        lr             = .1,
+        lr             = .05,
         lr_step_epochs = '10',
     )
     args = parser.parse_args()
 
     # load network
     from importlib import import_module
-    net = import_module('symbol.'+args.network)
+    net = import_module('symbols.'+args.network)
     sym = net.get_symbol(**vars(args))
 
     # train

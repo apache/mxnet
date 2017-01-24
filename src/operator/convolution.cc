@@ -17,6 +17,8 @@
 
 namespace mxnet {
 namespace op {
+DMLC_REGISTER_PARAMETER(ConvolutionParam);
+
 template<>
 Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
                         std::vector<TShape> *in_shape,
@@ -38,9 +40,12 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
   LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
+  const size_t batch_size = (*in_shape)[0][0];
   if ((param.dilate[0] == 1 && param.dilate[1] == 1)
       && param.kernel.ndim() == 2 && (!param.no_bias)
-      && param.num_group == 1) {
+      && param.num_group == 1 && (batch_size == 1 ||
+      ((batch_size > 1) && (param.stride[0] == 1) &&
+      (param.stride[1] == 1)))) {
     switch (dtype) {
     case mshadow::kFloat32:
       return new NNPACKConvolutionOp<cpu, float>(param);
@@ -66,8 +71,6 @@ Operator *ConvolutionProp::CreateOperatorEx(Context ctx,
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
 }
 
-DMLC_REGISTER_PARAMETER(ConvolutionParam);
-
 MXNET_REGISTER_OP_PROPERTY(Convolution, ConvolutionProp)
 .add_argument("data", "Symbol", "Input data to the ConvolutionOp.")
 .add_argument("weight", "Symbol", "Weight matrix.")
@@ -77,4 +80,3 @@ MXNET_REGISTER_OP_PROPERTY(Convolution, ConvolutionProp)
 
 }  // namespace op
 }  // namespace mxnet
-

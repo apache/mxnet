@@ -9,11 +9,17 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_fully_connected-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_NNPACK == 1
+#include "./nnpack/nnpack_fully_connected-inl.h"
+#endif  // MXNET_USE_NNPACK
 
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
+Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
+                        std::vector<TShape> *in_shape,
+                        std::vector<TShape> *out_shape,
+                        Context ctx) {
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
   switch (dtype) {
@@ -24,6 +30,21 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
   default:
     LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
     break;
+  }
+#endif
+#if MXNET_USE_NNPACK == 1
+  const size_t batch_size = (*in_shape)[0][0];
+  // nnp_fully_connected_inference will do optimization for batch-size = 1
+  // nnp_fully_connected_output will do optimization for batch-size > 1
+  // but just found FullyConnected in NNPACK result is wrong when batch_size != 2^n
+  // so here only using NNPACK when batch_size = 2^n.
+  if ((batch_size == 1) || ((batch_size > 1) && (!(batch_size & (batch_size - 1))))) {
+    switch (dtype) {
+    case mshadow::kFloat32:
+      return new NNPACKFullyConnectedOp<cpu, float>(param);
+    default:
+      break;
+    }
   }
 #endif
   switch (dtype) {
@@ -47,11 +68,11 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype) {
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *FullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
+  std::vector<TShape> out_shape(1, TShape()), aux_shape;
+  std::vector<int> out_type(1, -1), aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
 }
 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);

@@ -135,7 +135,9 @@ class Accuracy(EvalMetric):
         check_label_shapes(labels, preds)
 
         for label, pred_label in zip(labels, preds):
-            pred_label = ndarray.argmax_channel(pred_label).asnumpy().astype('int32')
+            if pred_label.shape != label.shape:
+                pred_label = ndarray.argmax_channel(pred_label)
+            pred_label = pred_label.asnumpy().astype('int32')
             label = label.asnumpy().astype('int32')
 
             check_label_shapes(label, pred_label)
@@ -281,8 +283,9 @@ class RMSE(EvalMetric):
 
 class CrossEntropy(EvalMetric):
     """Calculate Cross Entropy loss"""
-    def __init__(self):
+    def __init__(self, eps=1e-8):
         super(CrossEntropy, self).__init__('cross-entropy')
+        self.eps = eps
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -295,7 +298,7 @@ class CrossEntropy(EvalMetric):
             assert label.shape[0] == pred.shape[0]
 
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
-            self.sum_metric += (-numpy.log(prob)).sum()
+            self.sum_metric += (-numpy.log(prob + self.eps)).sum()
             self.num_inst += label.shape[0]
 
 class Torch(EvalMetric):

@@ -57,6 +57,6 @@ We have provided many operations on the symbols, so you can also define `|pred-l
 
 ## Next Steps
 * [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with a Pretrained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
+* [Classify Real-World Images with a PreTrained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 * [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
 * [Character Language Model Using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)

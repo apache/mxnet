@@ -28,7 +28,8 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype) {
           break;
       }
   }
-  LOG(INFO) << MKLReluOp<cpu, float>::getName() << " Skip MKL optimization";
+  if (enableMKLWarnGenerated())
+    LOG(INFO) << MKLReluOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.act_type) {
@@ -76,6 +77,7 @@ scalar of the input tensor):
 
 See `LeakyReLU` for other activations with parameters.
 )")
+.add_argument("data", "Symbol", "Input data to activation function.")
 .add_arguments(ActivationParam::__FIELDS__());
 
 }  // namespace op

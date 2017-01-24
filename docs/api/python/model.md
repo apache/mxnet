@@ -1,14 +1,14 @@
-# MXNet Python Model API
+# Model API
 
 The model API provides a simplified way to train neural networks using common best practices.
 It's a thin wrapper built on top of the [ndarray](ndarray.md) and [symbolic](symbol.md)
-modules that makes neural network training easy.
+modules that make neural network training easy.
 
 Topics:
 
-* [Train a Model](#train-a-model) 
+* [Train a Model](#train-a-model)
 * [Save the Model](#save-the-model)
-* [Periodic Checkpoint](#periodically-checkpoint)
+* [Periodic Checkpoint](#periodic-checkpointing)
 * [Initializer API Reference](#initializer-api-reference)
 * [Evaluation Metric API Reference](#initializer-api-reference)
 * [Optimizer API Reference](#optimizer-api-reference)
@@ -16,7 +16,7 @@ Topics:
 
 ## Train the Model
 
-To train a model, perform two steps: configure the model  using the symbol parameter,
+To train a model, perform two steps: configure the model using the symbol parameter,
 then call ```model.Feedforward.create``` to create the model.
 The following example creates a two-layer neural network.
 
@@ -62,7 +62,7 @@ We also provide save and load functions.
     # load model back
     model_loaded = mx.model.FeedForward.load(prefix, iteration)
 ```
-The advantage of these save and load functions is that they are language agnostic.
+The advantage of these save and load functions are that they are language agnostic.
 You should be able to save and load directly into cloud storage, such as Amazon S3 and HDFS.
 
 ##  Periodic Checkpointing

@@ -52,11 +52,14 @@
         VERSION:     '{{ release|e }}',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
-        HAS_SOURCE:  {{ has_source|lower }}
+        HAS_SOURCE:  {{ has_source|lower }},
+        SOURCELINK_SUFFIX: '{{ sourcelink_suffix }}'
       };
     </script>
 
-    {% for name in ['jquery.js', 'underscore.js', 'doctools.js', 'searchtools.js', 'selectlang.js'] %}
+    <script type="text/javascript" src="{{ pathto('_static/jquery-1.11.1.js', 1) }}"></script>
+
+    {% for name in ['underscore.js', 'searchtools.js', 'doctools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
 
@@ -155,5 +158,6 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
     <script type="text/javascript" src="{{ pathto('_static/js/sidebar.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/js/search.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/navbar.js', 1) }}"></script>
   </body>
 </html>

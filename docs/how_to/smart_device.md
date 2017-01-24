@@ -1,6 +1,6 @@
 # Deep Learning in a Single File for Smart Devices
 
-Deep learning (DL) systems are complex, and often have a few of dependencies. It can  be painful to port a DL library to different platforms, especially smart devices. A simple solution to this problem is to  provide a light interface and put all required code into a single file with minimal dependencies. In this topic, we explain how to amalgamate the code into a single file, and demonstrate how to run image object recognition on mobile devices.
+Deep learning (DL) systems are complex, and often have a few of dependencies. It can be painful to port a DL library to different platforms, especially smart devices. A simple solution to this problem is to provide a light interface and put all required code into a single file with minimal dependencies. In this topic, we explain how to amalgamate the code into a single file, and demonstrate how to run image object recognition on mobile devices.
 
 ## Amalgamation: Making the Whole System a Single File
 
@@ -19,7 +19,7 @@ If you plan to amalgamate your system, there are a few guidelines you need to ob
 
 - Minimize the dependency on other libraries.
 - Use namespace to encapsulate the types and operators.
-- Avoid do commands such as ```using namespace xyz``` on the global scope.
+- Avoid doing commands such as ```using namespace xyz``` on the global scope.
 - Avoid cyclic include dependencies.
 
 
@@ -28,9 +28,9 @@ If you plan to amalgamate your system, there are a few guidelines you need to ob
 With amalgamation, deploying the system on smart devices (such as Android or iOS) is simple. But there are two additional considerations:
 
 - The model should be small enough to fit into the device’s memory.
-- The model shouldn't be too expensive to run given the relative low computational power of these devices.
+- The model shouldn't be too expensive to run given the relatively low computational power of these devices.
 
-Let's use image recognition as an example to show how to get such a model. We start with the state-of-the-art inception model. We train it on an ImagenNet dataset, using multiple servers with GTX 980 cards. The resulting model fits into memory, but it's too expensive to run. We remove some layers, but now the results are poor. 
+Let's use image recognition as an example to show how to get such a model. We start with the state-of-the-art inception model. We train it on an ImageNet dataset, using multiple servers with GTX 980 cards. The resulting model fits into memory, but it's too expensive to run. We remove some layers, but now the results are poor.
 
 Finally, we show an Android example, thanks to Leliana, [https://github.com/Leliana/WhatsThis](https://github.com/Leliana/WhatsThis) to demonstrate how to run on Android.
 
@@ -41,7 +41,7 @@ By using amalgamation, we can easily port the prediction library to mobile devic
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/apk/poolnet.png" height="488" width="274">
 
-Besides this pretrained Inception-BatchNorm network, we've provided two  pretrained models.
+Besides this pre-trained Inception-BatchNorm network, we've provided two  pre-trained models.
 
 We tested our model on Nexus 5:
 
@@ -66,6 +66,3 @@ These models are for demonstration only. They aren't fine-tuned for mobile devic
 
 
 - [SubInception](https://github.com/dmlc/web-data/blob/master/mxnet/apk/subinception.apk?raw=true)
-
-
-

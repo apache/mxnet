@@ -212,7 +212,10 @@ object Visualization {
       val params = node.asInstanceOf[Map[String, Any]]
       val op = params("op").asInstanceOf[String]
       val name = params("name").asInstanceOf[String]
-      val param = params("param").asInstanceOf[Map[String, String]]
+      val attrs = {
+        if (params.contains("attr")) params("attr").asInstanceOf[Map[String, String]]
+        else Map[String, String]()
+      }
       // input data
       val attr = nodeAttr.clone()
       var label = op
@@ -228,26 +231,26 @@ object Visualization {
           attr("fillcolor") = cm(0)
         }
         case "Convolution" => {
-          val kernel = str2Tuple(param("kernel"))
-          val stride = str2Tuple(param("stride"))
+          val kernel = str2Tuple(attrs("kernel"))
+          val stride = if (attrs.contains("stride")) str2Tuple(attrs("stride")) else List(1)
           label =
-            s""""Convolution\\n${kernel(0)}x${kernel(1)}/${stride(0)}, ${param("num_filter")}""""
+            s""""Convolution\\n${kernel(0)}x${kernel(1)}/${stride(0)}, ${attrs("num_filter")}""""
           attr("fillcolor") = cm(1)
         }
         case "FullyConnected" => {
-          label = s""""FullyConnected\\n${param("num_hidden")}""""
+          label = s""""FullyConnected\\n${attrs("num_hidden")}""""
           attr("fillcolor") = cm(1)
         }
         case "BatchNorm" => attr("fillcolor") = cm(3)
         case "Activation" | "LeakyReLU" => {
-          label = s""""${op}\\n${param("act_type")}""""
+          label = s""""${op}\\n${attrs("act_type")}""""
           attr("fillcolor") = cm(2)
         }
         case "Pooling" => {
-          val kernel = str2Tuple(param("kernel"))
-          val stride = str2Tuple(param("stride"))
+          val kernel = str2Tuple(attrs("kernel"))
+          val stride = if (attrs.contains("stride")) str2Tuple(attrs("stride")) else List(1)
           label =
-            s""""Pooling\\n${param("pool_type")}, ${kernel(0)}x${kernel(1)}/${stride(0)}""""
+            s""""Pooling\\n${attrs("pool_type")}, ${kernel(0)}x${kernel(1)}/${stride(0)}""""
           attr("fillcolor") = cm(4)
         }
         case "Concat" | "Flatten" | "Reshape" => attr("fillcolor") = cm(5)

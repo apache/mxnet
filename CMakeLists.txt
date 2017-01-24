@@ -2,36 +2,34 @@ cmake_minimum_required(VERSION 2.8.7)
 
 project(mxnet C CXX)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+endif()
+
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
+mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
+mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
-include(mshadow/cmake/mshadow.cmake)
-include(mshadow/cmake/Utils.cmake)
-include(mshadow/cmake/Cuda.cmake)
-
-set(mxnet_LINKER_LIBS "")
-list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
-
-include_directories("include")
-include_directories("mshadow")
-include_directories("dmlc-core/include")
-
 if(MSVC)
+  add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-DDMLC_USE_CXX11)
   add_definitions(-DMSHADOW_IN_CXX11)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
+  add_definitions(-DNNVM_EXPORTS)
+  add_definitions(-DDMLC_STRICT_CXX11)
   set(CMAKE_C_FLAGS "/MP")
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
@@ -52,6 +50,30 @@ else(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2")
   endif()
 endif(MSVC)
+
+if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
+  include(mshadow/cmake/mshadow.cmake)
+  include(mshadow/cmake/Utils.cmake)
+  include(mshadow/cmake/Cuda.cmake)
+else()
+  include(mshadowUtils)
+  include(Cuda)
+  include(mshadow)
+endif()
+
+foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
+ 	include_directories(${var})
+endforeach()
+
+set(mxnet_LINKER_LIBS "")
+set(mxnet_LINKER_LIBS_DEBUG "")
+set(mxnet_LINKER_LIBS_RELEASE "")
+list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+
+include_directories("include")
+include_directories("mshadow")
+include_directories("nnvm/include")
+include_directories("dmlc-core/include")
 
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
@@ -78,7 +100,7 @@ if(USE_OPENMP)
 endif()
 
 # cudnn detection
-if(USE_CUDNN)
+if(USE_CUDNN AND USE_CUDA)
   detect_cuDNN()
   if(HAVE_CUDNN)
     add_definitions(-DUSE_CUDNN)
@@ -88,9 +110,14 @@ if(USE_CUDNN)
   endif()
 endif()
 
-add_subdirectory("dmlc-core")
+if(EXISTS ${PROJECT_SOURCE_DIR}/dmlc-core/cmake)
+  add_subdirectory("dmlc-core")
+endif()
+
 if(USE_DIST_KVSTORE)
-	add_subdirectory("ps-lite")
+  if(EXISTS ${PROJECT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
+	  add_subdirectory("ps-lite")
+  endif()
 endif()
 
 mxnet_source_group("Include\\common"   GLOB "src/common/*.h")
@@ -104,6 +131,7 @@ mxnet_source_group("Include\\optimizer"   GLOB "src/optimizer/*.h")
 mxnet_source_group("Include\\resource.cc"   GLOB "src/resource.cc/*.h")
 mxnet_source_group("Include\\storage"   GLOB "src/storage/*.h")
 mxnet_source_group("Include\\symbol"   GLOB "src/symbol/*.h")
+mxnet_source_group("Include\\executor"   GLOB "src/executor/*.h")
 
 mxnet_source_group("Cuda\\common"   GLOB "src/common/*.cu")
 mxnet_source_group("Cuda\\c_api"   GLOB "src/c_api/*.cu")
@@ -112,6 +140,7 @@ mxnet_source_group("Cuda\\io"   GLOB "src/io/*.cu")
 mxnet_source_group("Cuda\\kvstore"   GLOB "src/kvstore/*.cu")
 mxnet_source_group("Cuda\\ndarray"   GLOB "src/ndarray/*.cu")
 mxnet_source_group("Cuda\\operator"   GLOB "src/operator/*.cu")
+mxnet_source_group("Cuda\\operator\\tensor"   GLOB "src/operator/tensor/*.cu")
 mxnet_source_group("Cuda\\optimizer"   GLOB "src/optimizer/*.cu")
 mxnet_source_group("Cuda\\resource.cc"   GLOB "src/resource.cc/*.cu")
 mxnet_source_group("Cuda\\storage"   GLOB "src/storage/*.cu")
@@ -125,17 +154,50 @@ mxnet_source_group("Source\\io"   GLOB "src/io/*.cc")
 mxnet_source_group("Source\\kvstore"   GLOB "src/kvstore/*.cc")
 mxnet_source_group("Source\\ndarray"   GLOB "src/ndarray/*.cc")
 mxnet_source_group("Source\\operator"   GLOB "src/operator/*.cc")
+mxnet_source_group("Source\\operator\\tensor"   GLOB "src/operator/tensor/*.cc")
 mxnet_source_group("Source\\optimizer"   GLOB "src/optimizer/*.cc")
 mxnet_source_group("Source\\resource.cc"   GLOB "src/resource.cc/*.cc")
 mxnet_source_group("Source\\storage"   GLOB "src/storage/*.cc")
 mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
+mxnet_source_group("Source\\executor"   GLOB "src/executor/*.cc")
+mxnet_source_group("Source\\nnvm"   GLOB "src/nnvm/*.cc")
+
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu")
 
+# add nnvm to source
+
+mxnet_source_group("NNVM\\Include\\c_api"   GLOB "nnvm/src/c_api/*.h")
+mxnet_source_group("NNVM\\Include\\core"   GLOB "nnvm/src/core/*.h")
+mxnet_source_group("NNVM\\Include\\pass"   GLOB "nnvm/src/pass/*.h")
+mxnet_source_group("NNVM\\Include\\nnvm"   GLOB "nnvm/include/nnvm/*.h")
+mxnet_source_group("NNVM\\Include\\dmlc"   GLOB "nnvm/include/dmlc/*.h")
+
+mxnet_source_group("NNVM\\Source"   GLOB "nnvm/src/*.cc")
+mxnet_source_group("NNVM\\Source\\c_api"   GLOB "nnvm/src/c_api/*.cc")
+mxnet_source_group("NNVM\\Source\\core"   GLOB "nnvm/src/core/*.cc")
+mxnet_source_group("NNVM\\Source\\pass"   GLOB "nnvm/src/pass/*.cc")
+
+FILE(GLOB_RECURSE NNVMSOURCE "nnvm/src/*.cc" "nnvm/src/*.h" "nnvm/include/*.h")
+list(APPEND SOURCE ${NNVMSOURCE})
+
+# add mshadow file
+mxnet_source_group("mshadow\\Include"   GLOB "mshadow/mshadow/*.h")
+mxnet_source_group("mshadow\\Include\\cuda"   GLOB "mshadow/mshadow/cuda/*.h")
+mxnet_source_group("mshadow\\Include\\extension"   GLOB "mshadow/mshadow/extension/*.h")
+mxnet_source_group("mshadow\\Include\\packet"   GLOB "mshadow/mshadow/packet/*.h")
+
+FILE(GLOB_RECURSE MSHADOWSOURCE "mshadow/mshadow/*.h")
+list(APPEND SOURCE ${MSHADOWSOURCE})
+
 if(USE_PLUGINS_WARPCTC)
 	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
-	set(WARPCTC_LIB  "" CACHE FILEPATH "WARPCTC lib")
+    set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
+    set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
+    set(mxnet_LINKER_LIBS_RELEASE ${WARPCTC_LIB_RELEASE})
+    set(mxnet_LINKER_LIBS_DEBUG ${WARPCTC_LIB_DEBUG})
+
 	include_directories(SYSTEM ${WARPCTC_INCLUDE})
 	list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
 	mxnet_source_group("Include\\plugin\\warpctc"   GLOB "plugin/warpctc/*.h")
@@ -197,6 +259,7 @@ if(MSVC)
 endif()
 
 if(USE_CUDA)
+  list(APPEND CUDA_INCLUDE_DIRS ${INCLUDE_DIRECTORIES})
   # define preprocessor macro so that we will not include the generated forcelink header
   mshadow_cuda_compile(cuda_objs ${CUDA})
   if(MSVC)
@@ -211,6 +274,9 @@ if(USE_CUDA)
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
   add_definitions(-DMXNET_USE_NVRTC=1)
+  if(CUDA_LIBRARY_PATH)
+    link_directories(${CUDA_LIBRARY_PATH}/stubs)
+  endif()
 endif()
 
 # unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
@@ -218,6 +284,10 @@ if(USE_PLUGIN_CAFFE)
   if(EXISTS ${PROJECT_SOURCE_DIR}/caffe)
     add_subdirectory(caffe)
   endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
+  list(APPEND mxnet_LINKER_LIBS nnvm)
 endif()
 
 if(NOT MSVC)
@@ -236,10 +306,18 @@ else()
   add_library(mxnet SHARED ${SOURCE})
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
+
+if(USE_PLUGINS_WARPCTC)
+  target_link_libraries(mxnet debug ${mxnet_LINKER_LIBS_DEBUG})
+  target_link_libraries(mxnet optimized ${mxnet_LINKER_LIBS_RELEASE})
+endif()
+
 target_link_libraries(mxnet dmlccore)
+
 
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
+
 endif()
 
 if(USE_DIST_KVSTORE)
@@ -249,12 +327,27 @@ if(USE_DIST_KVSTORE)
 	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
 endif()
 
+if(USE_PROFILER)
+	add_definitions(-DMXNET_USE_PROFILER)
+endif()
+
+if(INSTALL_PYTHON_VERSIONS)
+  foreach(version ${INSTALL_PYTHON_VERSIONS})
+    set(outdir ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python${version}/site-packages/mxnet)
+    add_custom_command(TARGET mxnet POST_BUILD
+      COMMAND mkdir -p ${outdir}
+      COMMAND cp -rul ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
+      )
+  endforeach()
+endif()
+
 # ---[ Linter target
 if(MSVC)
-  find_package(PythonInterp 2)
-  set(PYTHON2_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 2.x executable")
-  find_package(PythonInterp 3)
-  set(PYTHON3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 3.x executable")
+  find_package(PythonInterp)
+  set(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python executable")
 endif()
 set(LINT_DIRS include src scripts python)
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+
+add_subdirectory(tests/cpp)
+add_subdirectory(example/image-classification/predict-cpp)
