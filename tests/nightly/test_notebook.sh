@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 echo "BUILD make"
 cp ./make/config.mk .
 echo "USE_CUDA=0" >> ./config.mk
