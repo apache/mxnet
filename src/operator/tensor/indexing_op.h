@@ -243,7 +243,17 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
       if (req[embedding::kWeight] == kWriteTo) {
         grad_in = scalar<DType>(0.0f);
       }
-      if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
+      // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+      // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+      // When the number of elements processed is low, use AddTakeGrad.
+      // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+      uint64_t shape_in_prod = 
+        static_cast<uint64_t>(grad_in.shape_[0])*
+        static_cast<uint64_t>(grad_in.shape_[1]);
+      uint64_t shape_out_prod = 
+        static_cast<uint64_t>(grad_out.shape_[0])*
+        static_cast<uint64_t>(grad_out.shape_[1]);
+      if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
         AddTakeGrad(grad_in, data, grad_out);
       } else {
         AddTakeGradLargeBatchCaller(ctx, grad_in, data, grad_out);
@@ -404,7 +414,17 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
             if (req[take_::kArr] == kWriteTo) {
                 grad_in = scalar<DType>(0.0f);
             }
-            if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
+            // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+            // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+            // When the number of elements processed is low, use AddTakeGrad.
+            // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+            uint64_t shape_in_prod = 
+              static_cast<uint64_t>(grad_in.shape_[0])*
+              static_cast<uint64_t>(grad_in.shape_[1]);
+            uint64_t shape_out_prod = 
+              static_cast<uint64_t>(grad_out.shape_[0])*
+              static_cast<uint64_t>(grad_out.shape_[1]);
+            if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
                 AddTakeGrad(grad_in, idx, grad_out);
             } else {
                 AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
