@@ -1,6 +1,7 @@
-# Installing MXNet on Ubuntu
-MXNet currently supports the Debian based Raspbian operating system for Raspberry Pi Devices, offering a python API. We currently reccomend running MXNet on the Raspberry Pi 3 or equivilant devices with more than 1GB of RAM and with an SD card that has at least 4 GB of memory free.
-The Raspberry Pi 1, 2, Zero and other devices with less than 1GB of RAM are not sufficient to run the full MXNet library (though they can run the MXNet amalgamation library). 
+# Installing MXNet on Raspbian
+MXNet currently supports the Debian based Raspbian operating system for Raspberry Pi Devices, offering a python API. 
+
+The full MxNet library is over 200MB when loaded into memory and the requirements can take almost 1GB of disk space. Due to this we currently reccomend running MXNet on the Raspberry Pi 3 or equivilant devices with more than 1GB of RAM and with an SD card that has at least 4 GB of memory free. The Raspberry Pi 1, 2, Zero and other devices with less than 1GB of RAM are not sufficient to run the full MXNet library (though they can run the MXNet amalgamation library). 
 
 ## Standard installation
 
@@ -65,7 +66,7 @@ Sometimes you have to run the bash command twice as it may fail the first time.
 
 You are now ready to run MxNet on your Raspberry Pi! 
 
-**Note - ** Keep in mind loading the entire MxNet library takes up a significant fraction of the Raspberry Pi's limited RAM, so steps such as switching off the GUI and killing concurrently running processes to free RAM may be nessecary to load training data or large models into memory.
+**Note - ** Keep in mind loading the entire MxNet library takes up a significant fraction (200MB+) of the Raspberry Pi's limited RAM, so steps such as switching off the GUI and killing concurrently running processes to free RAM may be nessecary to load training data or large models into memory.
 
 
 ## Next Steps
