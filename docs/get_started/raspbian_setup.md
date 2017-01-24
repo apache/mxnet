@@ -1,6 +1,6 @@
 # Installing MXNet on Ubuntu
-MXNet currently supports the Raspbian operating system for Raspberry Pi Devices, offering a python API. We currently reccomend running MxNet on the Raspberry Pi 3 or other devices with more than 1GB of RAM and with an SD card that has at least 4 GB free.
-The Raspberry Pi 1, 2, Zero and other devices with less than 1GB of RAM are not sufficient to run the full MxNet library (though they can run the mxnet amalgamation library). 
+MXNet currently supports the Debian based Raspbian operating system for Raspberry Pi Devices, offering a python API. We currently reccomend running MXNet on the Raspberry Pi 3 or equivilant devices with more than 1GB of RAM and with an SD card that has at least 4 GB of memory free.
+The Raspberry Pi 1, 2, Zero and other devices with less than 1GB of RAM are not sufficient to run the full MXNet library (though they can run the MXNet amalgamation library). 
 
 ## Standard installation
 
@@ -8,7 +8,6 @@ Installing MXNet is a two-step process:
 
 1. Build the shared library from the MXNet C++ source code.
 2. Install the supported language-specific packages for MXNet.
-
 
 ### Build the Shared Library
 
@@ -18,7 +17,11 @@ On Rasbian versions Wheezy and later, you need the following dependencies:
 
 - libblas (for linear algebraic operations)
 
-- libopencv (for computer vision operations this is optional if you want to save RAM and Disk Space)
+- libopencv (for computer vision operations. This is optional if you want to save RAM and Disk Space)
+
+- A C++ compiler that supports C++ 11. The C++ compiler compiles and builds MXNet source code. Supported compilers include the following:
+
+- [G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/)
 
 Install these dependencies using the following commands:
 
@@ -32,14 +35,14 @@ Clone the MXNet source code repository to your computer, using ```git```.
     git clone https://github.com/dmlc/mxnet.git --recursive
 ```
 
-Then build the full MxNet library.
+Then build the full MxNet library, ensuring the ARM flag is enabled (this removes the x86 specific msse flag in the NNVM Submodule's Makefile, making it ARM compatible)
 ```bash
     cd mxnet
     export ARM=1
     make
 ```
 
-If you are not processing images with MxNet on the Pi you can install this package without opencv to minimize the size of the loaded library. You can do this by compiling with the following code:
+If you are not processing images with MxNet on the Pi you can build MxNet without opencv to minimize the size of the loaded library. You can do this by compiling with the following code:
 ```bash
     cd mxnet
     export ARM=1
@@ -58,11 +61,11 @@ cd setup-utils
 bash ./install-mxnet-ubuntu-python.sh
 ```
 
-Sometimes this you have to run the bash command twice as it may fail the first time.
+Sometimes you have to run the bash command twice as it may fail the first time.
 
 You are now ready to run MxNet on your Raspberry Pi! 
 
-**Note - ** Keep in mind loading the entire MxNet library takes up a significant fraction of RAM, so steps such as switching off the GUI to free RAM may be nessecary to load training data or large models into memory.
+**Note - ** Keep in mind loading the entire MxNet library takes up a significant fraction of the Raspberry Pi's limited RAM, so steps such as switching off the GUI and killing concurrently running processes to free RAM may be nessecary to load training data or large models into memory.
 
 
 ## Next Steps
