@@ -49,18 +49,21 @@ function create_state(self :: SGD, index :: Int, weight :: NDArray)
   end
 end
 
-function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, state :: Union{Void, NDArray})
+function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, state :: Void)
+  lr = get_learning_rate(self.opts.lr_scheduler, self.state)
+  grad = normalized_gradient(self.opts, self.state, weight, grad)
+  
+  @inplace weight += -lr * grad
+end
+
+# update with momentum
+function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, state :: NDArray)
   lr = get_learning_rate(self.opts.lr_scheduler, self.state)
   grad = normalized_gradient(self.opts, self.state, weight, grad)
 
-  if isa(state, Void)
-    # vanilla SGD, without momentum
-    @inplace weight += -lr * grad
-  else
-    mom = state :: NDArray
-    coef = get_momentum(self.opts.momentum_scheduler, self.state)
-    @inplace mom    .*= coef
-    @inplace mom    .+= -lr * grad
-    @inplace weight .+= mom
-  end
+  mom = state :: NDArray
+  coef = get_momentum(self.opts.momentum_scheduler, self.state)
+  @inplace mom    .*= coef
+  @inplace mom    .+= -lr * grad
+  @inplace weight .+= mom
 end
