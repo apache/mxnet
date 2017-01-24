@@ -341,6 +341,9 @@ if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
+# Do tests before chrpath
+add_subdirectory(tests)
+
 if(IS_CONTAINER_BUILD)
   find_program(CHRPATH_EXE chrpath HINTS ${PATH})
   if(CHRPATH_EXE)
@@ -353,8 +356,6 @@ if(IS_CONTAINER_BUILD)
     message(ERROR "Unable to find chrpath executable")
   endif()
 endif()
-
-add_subdirectory(tests)
 
 if(INSTALL_PYTHON_VERSIONS)
   message(STATUS "Installing for python versions: ${INSTALL_PYTHON_VERSIONS}")
