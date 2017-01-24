@@ -26,3 +26,7 @@ cd ../tests/nightly
 
 echo "Test Jupyter notebook"
 python test_ipynb.py
+
+echo "Test Summary Start"
+cat test_summary.txt
+echo "Test Summary End"
