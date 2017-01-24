@@ -252,7 +252,7 @@ class NotebookTester(object):
                 test_summary.write("%s\n" % error)                       
                 print nb
         else:
-            test_summary.write("All notebook tests passed!")
+            test_summary.write("\nAll notebook tests passed!")
         test_summary.close()
         print "Test summarys are stored in test_summary.txt"
 
