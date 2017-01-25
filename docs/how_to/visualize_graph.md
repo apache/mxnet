@@ -7,16 +7,16 @@ You need [Jupyter Notebook](jupyter.readthedocs.io) and [Graphviz](http://www.gr
 
 ## Visualize the sample Neural Network
 
-```mx.viz.plot_network``` takes [Symbol](http://mxnet.io/api/python/symbol.html), with your Network definition, and optional node_attrs, parameters for shape of node in the graph,  as input and generates a computation graph.
+```mx.viz.plot_network``` takes [Symbol](http://mxnet.io/api/python/symbol.html), with your Network definition, and optional node_attrs, parameters for the shape of the node in the graph,  as input and generates a computation graph.
 
 We will now try to visualize a sample Neural Network for linear matrix factorization:
 - Start Jupyter notebook server
 ```bash
   $ jupyter notebook
 ```
-- Aceess Jupyter Notebook in your browser - http://localhost:8888/.
+- Access Jupyter Notebook in your browser - http://localhost:8888/.
 - Create a new notebook - "File -> New Notebook -> Python 2"
-- Copy and and run below code to visualize a sample network.
+- Copy and run below code to visualize a sample network.
 
 ```python
   import mxnet as mx

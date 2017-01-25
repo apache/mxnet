@@ -42,14 +42,14 @@
 Previous Navbar Layout End -->
 
 <div class="navbar navbar-fixed-top">
-<a href="https://github.com/dmlc/mxnet"><img style="position: absolute; top: 0; right: 0; border: 0; z-index: 0" 
+<a href="https://github.com/dmlc/mxnet"><img style="position: absolute; top: 0; right: 0; border: 0; z-index: 0"
 src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_fork_me_green_ribbon.png" alt="Fork me on GitHub"/>
   <div class="container" id="navContainer">
     <div id="header-inner" class="innder">
       <h1 id="logo-wrap">
         <a href="{{ url_root }}" id="logo"><img src="http://data.mxnet.io/theme/mxnet.png"></a>
       </h1>
-      <nav id="main-nav">
+      <nav id="main-nav" class='nav-bar'>
         {% for name in ['Get Started', 'Tutorials', 'How To'] %}
         <a class="main-nav-link" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/index.html">{{name}}</a>
         {% endfor %}
@@ -65,18 +65,16 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
             <li><a class="main-nav-link" href="{{url_root}}api/python/io.html">- I/O</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/python/ndarray.html">- NDArray</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/python/kvstore.html">- KVStore</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/scala/index.html">Scala</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/r/index.html">R</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/julia/index.html">Julia</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/c++/index.html">C++</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}api/scala/index.html">Scala</a></li>
           </ul>
           {% endfor %}
         </span>
-		
+
         <a class="main-nav-link" href="{{url_root}}architecture/index.html">Architecture</a>
 		<a class="main-nav-link" href="{{url_root}}community/index.html">Community</a>
-        
-
       </nav>
       <script> function getRootPath(){ return "{{url_root}}" } </script>
       <div class="burgerIcon dropdown">
@@ -89,7 +87,7 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
               <li class="dropdown-submenu">
                 <a href="#" tabindex="-1">{{name}}</a>
                 <ul class="dropdown-menu">
-                  {% for lang in ['Python', 'R', 'Julia', 'C++', 'Scala'] %}
+                  {% for lang in ['Python', 'Scala', 'R', 'Julia', 'C++'] %}
                     <li><a tabindex="-1" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/{{lang.lower()}}/index.html">{{lang}}</a>
                     </li>
                   {% endfor %}
@@ -100,8 +98,15 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
 		      <li><a href="{{url_root}}community/index.html">Community</a></li>
           </ul>
       </div>
+      <div class="plusIcon dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></a>
+        <ul id="plusMenu" class="dropdown-menu"></ul>
+      </div>
       <div id="search-input-wrap">
           {{searchform('', False)}}
+      </div>
+      <div id='searchIcon'>
+          <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
       </div>
       <div id="lang-select-wrap"> 
         <label id="lang-select-label">

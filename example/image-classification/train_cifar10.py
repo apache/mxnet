@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     # load network
     from importlib import import_module
-    net = import_module('symbol.'+args.network)
+    net = import_module('symbols.'+args.network)
     sym = net.get_symbol(**vars(args))
 
     # train

@@ -22,6 +22,15 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
 .set_num_inputs(1)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
 
+MXNET_OPERATOR_REGISTER_REDUCE(mean)
+.MXNET_DESCRIBE("Compute mean src along axis. If axis is empty, global reduction is performed")
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mean"});
+
+MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_mean)
+.set_num_inputs(1)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu, true>);
+
 MXNET_OPERATOR_REGISTER_REDUCE(prod)
 .MXNET_DESCRIBE("Compute product of src along axis. "
 "If axis is empty, global reduction is performed")

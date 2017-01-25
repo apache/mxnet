@@ -12,7 +12,7 @@ These tutorials cover use cases and applications of MXNet, organized by type and
 
 #### Basics
 
-The following tutorials walks throught the basic usage of MXNet, including manipulating arrays, building networks, loading and preprocessing data, etc.
+The following tutorials walk you through the basic usage of MXNet, including manipulating arrays, building networks, loading and preprocessing data, etc.
 
 - [CPU/GPU Array Manipulation](http://mxnet.io/tutorials/python/ndarray.html)
 *How to use `mxnet.ndarray` (similar to numpy array but supports GPU) for tensor computation. Also explains MXNet's powerful automatic parallelization feature.*
@@ -45,7 +45,7 @@ The following tutorials walks throught the basic usage of MXNet, including manip
 The following tutorials explain how to develop applications that use machine learning to modify, classify, and segment images and video.
 
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/python/mnist.html)
-*A simple example of classifying handwritten digits from the MNIST dataset using a MLP and convolutional network*
+*A simple example of classifying handwritten digits from the MNIST dataset using an MLP and convolutional network*
 
 - [Image Classification](http://mxnet.io/tutorials/computer_vision/image_classification.html)
 *An example of classifying various images of real-world objects using a convolutional neural network.*
@@ -93,7 +93,7 @@ The following tutorials explain how to develop applications that map natural spe
 The following tutorial explains how to develop applications that generate content as data sets, such as images, text, music, and more.
 
 - [Generative Adversarial Network](http://mxnet.io/tutorials/unsupervised_learning/gan.html)
-*An example of using a GAN trained on the MNIST dataset on generate handwritten digits*
+*An example of using a GAN trained on the MNIST dataset on generating handwritten digits*
 
 #### Unsupervised Machine Learning
 
@@ -103,11 +103,17 @@ The following tutorials explain how to develop applications for discovering exis
 *An example using matrix factorization to discover user preferences in the MovieLens dataset*
 
 - [Auto Encoders](http://mxnet.io/tutorials/unsupervised_learning/auto_encoders.html)
-*An example using a non-linear deep autoencoder to find low dimensional representations for the MNIST dataset*
+*An example using a non-linear deep autoencoder to find low-dimensional representations for the MNIST dataset*
 
 - [Recommendation Systems](http://mxnet.io/tutorials/general_ml/recommendation_systems.html)
 *An example of using an autoencoder and matrix factorization to make a complete end to end recommendation system*
 
+#### Visualization
+
+The following tutorials show how visualization helps us in daily work, and better understanding towards neural network.
+
+- [Understanding the vanishing gradient problem through visualization](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/understanding_vanish_gradient.ipynb)
+*An example of using the visualization component, [TensorBoard](https://github.com/dmlc/tensorboard), to have an intuitive understanding on the well-known vanished gradient problem in deep learning.*
 
 ### R
 

@@ -19,55 +19,34 @@
 
 namespace mxnet {
 namespace op {
-template<typename AttrType,
-         bool (*is_none)(const AttrType&), bool reverse_infer>
+template<typename AttrType, bool (*is_none)(const AttrType&),
+         bool (*assign)(AttrType*, const AttrType&), bool reverse_infer>
 inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                          std::vector<AttrType> *in_attrs,
-                         std::vector<AttrType> *out_attrs) {
-  size_t n_in = in_attrs->size();
-  size_t n_out = out_attrs->size();
-  bool found = false;
-  AttrType dattr;
-  for (size_t i = 0; i < n_in; ++i) {
-    if (!is_none((*in_attrs)[i])) {
-      dattr = (*in_attrs)[i];
-      found = true;
-      break;
-    }
-  }
-  if (reverse_infer && !found) {
-    for (size_t i = 0; i < n_out; ++i) {
-      if (!is_none((*out_attrs)[i])) {
-        dattr = (*out_attrs)[i];
-        found = true;
-        break;
+                         std::vector<AttrType> *out_attrs,
+                         const AttrType& none) {
+  AttrType dattr = none;
+  auto deduce = [&](std::vector<AttrType> *vec, const char *name) {
+      for (size_t i = 0; i < vec->size(); ++i) {
+        CHECK(assign(&dattr, (*vec)[i]))
+          << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
+          << name << ": " << "expected " << dattr << ", got " << (*vec)[i];
       }
-    }
-  }
-  if (!found) {
-    return false;
-  }
-  for (size_t i = 0; i < n_in; ++i) {
-    if (is_none((*in_attrs)[i])) {
-      (*in_attrs)[i] = dattr;
-    } else if ((*in_attrs)[i] != dattr) {
-      LOG(FATAL) << "Incompatible attr in node " << attrs.name << " at " << i << "-th input: "
-                 << "expected " << dattr << ", got " << (*in_attrs)[i];
-    }
-  }
-  for (size_t i = 0; i < n_out; ++i) {
-    if (is_none((*out_attrs)[i])) {
-      (*out_attrs)[i] = dattr;
-    } else if ((*out_attrs)[i] != dattr) {
-      LOG(FATAL) << "Incompatible attr in node " << attrs.name << " at " << i << "-th output: "
-                 << "expected " << dattr << ", got " << (*out_attrs)[i];
-    }
-  }
-  return true;
-}
+    };
+  deduce(in_attrs, "input");
+  if (reverse_infer) deduce(out_attrs, "output");
 
-inline bool shape_is_none(const TShape& x) {
-  return  x.ndim() == 0;
+  auto write = [&](std::vector<AttrType> *vec, const char *name) {
+      for (size_t i = 0; i < vec->size(); ++i) {
+        CHECK(assign(&(*vec)[i], dattr))
+          << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
+          << name << ": " << "expected " << dattr << ", got " << (*vec)[i];
+      }
+    };
+  write(in_attrs, "input");
+  write(out_attrs, "output");
+  if (is_none(dattr)) return false;
+  return true;
 }
 
 template<int n_in, int n_out>
@@ -75,13 +54,9 @@ inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), n_in) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), n_out);
-  return ElemwiseAttr<TShape, shape_is_none, true>(
-    attrs, in_attrs, out_attrs);
-}
-
-inline bool type_is_none(const int& x) {
-  return x == -1;
+  CHECK_EQ(out_attrs->size(), n_out) << " in operator " << attrs.name;
+  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true>(
+    attrs, in_attrs, out_attrs, TShape());
 }
 
 template<int n_in, int n_out>
@@ -89,11 +64,12 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), n_in) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), n_out);
-  return ElemwiseAttr<int, type_is_none, true>(
-    attrs, in_attrs, out_attrs);
+  CHECK_EQ(out_attrs->size(), n_out) << " in operator " << attrs.name;
+  return ElemwiseAttr<int, type_is_none, type_assign, true>(
+    attrs, in_attrs, out_attrs, -1);
 }
 
+// Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -106,6 +82,7 @@ struct ElemwiseGradUseIn {
   }
 };
 
+// Transfer gradient and output to FGradient function
 struct ElemwiseGradUseOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -119,6 +96,7 @@ struct ElemwiseGradUseOut {
   }
 };
 
+// Transfer only gradient to FGradient function
 struct ElemwiseGradUseNone {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,

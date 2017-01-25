@@ -137,7 +137,7 @@ For more details, run ```./bin/im2rec```.
 The `im2rec` tool and `IO.ImageRecordIter` have multi-label support for a single image.
 For example, if you have four labels for a single image, you can use the following procedure to use the Recordio tools.
 
-1. Write the the image list files as follows:
+1. Write the image list files as follows:
 
      ```
          integer_image_index \t label_1 \t label_2 \t   label_3 \t label_4 \t path_to_image

@@ -3,6 +3,7 @@
 # pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
 """Image IO API of mxnet."""
 from __future__ import absolute_import, print_function
+from .base import numeric_types
 
 import os
 import random
@@ -298,6 +299,9 @@ class ImageIter(io.DataIter):
         path to image list (.lst)
         Created with tools/im2rec.py or with custom script.
         Format: index\t[one or more label separated by \t]\trelative_path_from_root
+    imglist: list
+        a list of image with the label(s)
+        each item is a list [imagelabel: float or list of float, imgpath]
     path_root : str
         Root folder of image files
     path_imgidx : str
@@ -314,9 +318,9 @@ class ImageIter(io.DataIter):
     """
     def __init__(self, batch_size, data_shape, label_width=1,
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
-                 shuffle=False, part_index=0, num_parts=1, aug_list=None, **kwargs):
+                 shuffle=False, part_index=0, num_parts=1, aug_list=None, imglist=None, **kwargs):
         super(ImageIter, self).__init__()
-        assert path_imgrec or path_imglist
+        assert(path_imgrec or path_imglist or (isinstance(imglist, list)))
         if path_imgrec:
             print('loading recordio...')
             if path_imgidx:
@@ -340,6 +344,21 @@ class ImageIter(io.DataIter):
                     imglist[key] = (label, line[-1])
                     imgkeys.append(key)
                 self.imglist = imglist
+        elif isinstance(imglist, list):
+            print('loading image list...')
+            result = {}
+            imgkeys = []
+            index = 1
+            for img in imglist:
+                key = str(index)
+                index += 1
+                if isinstance(img[0], numeric_types):
+                    label = nd.array([img[0]])
+                else:
+                    label = nd.array(img[0])
+                result[key] = (label, img[1])
+                imgkeys.append(str(key))
+            self.imglist = result
         else:
             self.imglist = None
         self.path_root = path_root

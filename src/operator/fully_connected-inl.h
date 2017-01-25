@@ -168,7 +168,9 @@ class FullyConnectedProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
     }
-    const TShape &dshape = (*in_shape)[fullc::kData];
+    CHECK_EQ(out_shape->size(), 1);
+    TShape dshape = (*in_shape)[fullc::kData];
+    TShape oshape = (*out_shape)[0];
     // require data to be known
     if (dshape.ndim() ==  0) return false;
 
@@ -177,8 +179,12 @@ class FullyConnectedProp : public OperatorProperty {
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));
     }
-    out_shape->clear();
-    out_shape->push_back(Shape2(dshape[0], param_.num_hidden));
+
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param_.num_hidden));
+    if (oshape.ndim() != 0) {
+      dshape[0] = oshape[0];
+      SHAPE_ASSIGN_CHECK(*in_shape, fullc::kData, dshape);
+    }
     return true;
   }
 

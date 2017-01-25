@@ -683,33 +683,34 @@ NDArray NDArray::Copy(Context ctx) const {
 }
 
 void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
-  this->WaitToWrite();
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  TBlob dst = this->data();
   TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    Engine::Get()->PushSync([&](RunContext rctx) {
-        ndarray::Copy<cpu, cpu>(src, &dst,
-                                Context::CPU(), Context::CPU(), rctx);
-      }, this->ctx(), {}, {this->var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncCopyCPU2CPU"));
+    this->WaitToWrite();
+    this->CheckAndAlloc();
+    RunContext rctx;
+    rctx.stream = nullptr;
+    TBlob dst = this->data();
+    ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
+        this->CheckAndAlloc();
+        TBlob dst = this->data();
         ndarray::Copy<cpu, gpu>(src, &dst,
                                 Context::CPU(), this->ctx(), rctx);
         // Wait GPU kernel to complete
         rctx.get_stream<gpu>()->Wait();
       }, this->ctx(), {}, {this->var()},
       FnProperty::kCopyToGPU, 0, PROFILER_MESSAGE("SyncCopyCPU2GPU"));
+    this->WaitToRead();
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
   }
-  this->WaitToRead();
 }
 
 void NDArray::SyncCopyToCPU(void *data, size_t size) const {
@@ -719,11 +720,11 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    Engine::Get()->PushSync([&](RunContext rctx) {
-        ndarray::Copy<cpu, cpu>(this->data(), &dst,
-                                Context::CPU(), Context::CPU(), rctx);
-      }, this->ctx(), {}, {this->var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncCopyCPU2CPU"));
+    this->WaitToRead();
+    RunContext rctx;
+    rctx.stream = nullptr;
+    ndarray::Copy<cpu, cpu>(this->data(), &dst,
+                            Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
@@ -731,13 +732,13 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
                                 this->ctx(), Context::CPU(), rctx);
         // Wait GPU kernel to complete
         rctx.get_stream<gpu>()->Wait();
-      }, this->ctx(), {}, {this->var()},
-      FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyCPU2GPU"));
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyGPU2CPU"));
+    this->WaitToWrite();
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
   }
-  this->WaitToRead();
 }
 
 #if MXNET_PREDICT_ONLY == 0
@@ -771,20 +772,6 @@ MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromToSimple)
 .set_type_mask(kNDArrayArgBeforeScalar);
-
-MXNET_REGISTER_NDARRAY_FUN(clip)
-.set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    ClipOp(*u[0], s[0], s[1], out[0]);
-  })
-.set_num_use_vars(1)
-.set_num_scalars(2)
-.set_num_mutate_vars(1)
-.describe("Clip ndarray elements to range (a_min, a_max)")
-.add_argument("src", "NDArray", "Source input")
-.add_argument("a_min", "real_t", "Minimum value")
-.add_argument("a_max", "real_t", "Maximum value");
 
 void Imdecode(NDArray *ret, NDArray mean, size_t index,
               size_t x0, size_t y0, size_t x1, size_t y1, size_t n_channels,

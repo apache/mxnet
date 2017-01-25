@@ -129,3 +129,7 @@ lib
 
 # Mac OS X
 .DS_Store
+
+#Notebook Automated Test
+!tests/nightly/test_config.txt
+!tests/nightly/TestNotebook
