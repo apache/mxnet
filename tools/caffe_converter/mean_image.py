@@ -10,11 +10,12 @@ except ImportError:
     caffe_flag = False
     import caffe_parse.caffe_pb2
 
-def protoBlobFileToND(protofile):
+
+def protoBlobFileToND(proto_file):
     data = ''
-    file = open(protofile, "r")
+    file = open(proto_file, "r")
     if not file:
-        raise self.ProcessException("ERROR (" + protofile + ")!")
+        raise Exception("ERROR (" + proto_file + ")!")
     data = file.read()
     file.close()
 
@@ -33,6 +34,7 @@ def protoBlobFileToND(protofile):
     img_mean_np[0] = img_mean_np2[2]
     img_mean_np[2] = img_mean_np2[0]
     return mx.nd.array(img_mean_np)
+
 
 def main():
     parser = argparse.ArgumentParser(description='Caffe prototxt to mxnet model parameter converter.\
