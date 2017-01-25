@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=wildcard-import
 """Recurrent neural network module."""
 
 from . import rnn_cell

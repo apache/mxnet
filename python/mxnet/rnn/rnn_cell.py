@@ -1,18 +1,35 @@
 # coding: utf-8
+# pylint: disable=no-member, invalid-name, protected-access
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
-import copy
 
 from .. import symbol
-from .. import ndarray
 from ..base import numeric_types, string_types
 
 class RNNParams(object):
+    """Container for holding variables.
+    Used by RNN cells for parameter sharing between cells.
+
+    Parameters
+    ----------
+    prefix : str
+        All variables' name created by this container will
+        be prepended with prefix
+    """
     def __init__(self, prefix=''):
         self._prefix = prefix
         self._params = {}
 
     def get(self, name, **kwargs):
+        """Get a variable with name or create a new one if missing.
+
+        Parameters
+        ----------
+        name : str
+            name of the variable
+        **kwargs :
+            more arguments that's passed to symbol.Variable
+        """
         name = self._prefix + name
         if name not in self._params:
             self._params[name] = symbol.Variable(name, **kwargs)
@@ -20,7 +37,17 @@ class RNNParams(object):
 
 
 class BaseRNNCell(object):
-    """Abstract base class for RNN cells"""
+    """Abstract base class for RNN cells
+
+    Parameters
+    ----------
+    prefix : str
+        prefix for name of layers
+        (and name of weight if params is None)
+    params : RNNParams or None
+        container for weight sharing between cells.
+        created if None.
+    """
     def __init__(self, prefix='', params=None):
         if params is None:
             params = RNNParams(prefix)
@@ -34,7 +61,22 @@ class BaseRNNCell(object):
         self._modified = False
 
     def __call__(self, inputs, states):
-        """construct symbol"""
+        """Construct symbol for one step of RNN.
+
+        Parameters
+        ----------
+        inputs : sym.Variable
+            input symbol, 2D, batch * num_units
+        states : sym.Variable
+            state from previous step or begin_state().
+
+        Returns
+        -------
+        output : Symbol
+            output symbol
+        states : Symbol
+            state to next step of RNN.
+        """
         raise NotImplementedError()
 
     @property
@@ -54,12 +96,28 @@ class BaseRNNCell(object):
         raise NotImplementedError()
 
     def begin_state(self, init_sym=symbol.zeros, **kwargs):
-        """initial state"""
+        """Initial state for this cell.
+
+        Parameters
+        ----------
+        init_sym : Symbol, default symbol.zeros
+            Symbol for generating initial state. Can be zeros,
+            ones, uniform, normal, etc.
+        **kwargs :
+            more keyword arguments passed to init_sym. For example
+            mean, std, dtype, etc.
+
+        Returns
+        -------
+        states : nested list of Symbol
+            starting states for first RNN step
+        """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
         state_shape = self.state_shape
         def recursive(shape):
+            """Recursively construct input states"""
             if isinstance(shape, tuple):
                 assert len(shape) == 0 or isinstance(shape[0], numeric_types)
                 self._init_counter += 1
@@ -71,15 +129,31 @@ class BaseRNNCell(object):
 
         return recursive(state_shape)
 
-    def _get_activation(self, x, activation, **kwargs):
+    #pylint: disable=no-self-use
+    def _get_activation(self, inputs, activation, **kwargs):
+        """Get activation function. Convert if is string"""
         if isinstance(activation, string_types):
-            return symbol.Activation(x, act_type=activation, **kwargs)
+            return symbol.Activation(inputs, act_type=activation, **kwargs)
         else:
-            return activation(x, **kwargs)
+            return activation(inputs, **kwargs)
 
 
 class RNNCell(BaseRNNCell):
-    """Simple recurrent neural network cell"""
+    """Simple recurrent neural network cell
+
+    Parameters
+    ----------
+    num_hidden : int
+        number of units in output symbol
+    activation : str or Symbol, default 'tanh'
+        type of activation function
+    prefix : str, default 'rnn_'
+        prefix for name of layers
+        (and name of weight if params is None)
+    params : RNNParams or None
+        container for weight sharing between cells.
+        created if None.
+    """
     def __init__(self, num_hidden, activation='tanh', prefix='rnn_', params=None):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
@@ -91,13 +165,31 @@ class RNNCell(BaseRNNCell):
 
     @property
     def state_shape(self):
+        """shape(s) of states"""
         return (0, self._num_hidden)
 
     @property
     def output_shape(self):
+        """shape(s) of output"""
         return (0, self._num_hidden)
 
     def __call__(self, inputs, states):
+        """Construct symbol for one step of RNN.
+
+        Parameters
+        ----------
+        inputs : sym.Variable
+            input symbol, 2D, batch * num_units
+        states : sym.Variable
+            state from previous step or begin_state().
+
+        Returns
+        -------
+        output : Symbol
+            output symbol
+        states : Symbol
+            state to next step of RNN.
+        """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
@@ -113,7 +205,19 @@ class RNNCell(BaseRNNCell):
 
 
 class LSTMCell(BaseRNNCell):
-    """LSTM cell"""
+    """Long-Short Term Memory (LSTM) network cell.
+
+    Parameters
+    ----------
+    num_hidden : int
+        number of units in output symbol
+    prefix : str, default 'rnn_'
+        prefix for name of layers
+        (and name of weight if params is None)
+    params : RNNParams or None
+        container for weight sharing between cells.
+        created if None.
+    """
     def __init__(self, num_hidden, prefix='lstm_', params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
@@ -124,13 +228,31 @@ class LSTMCell(BaseRNNCell):
 
     @property
     def state_shape(self):
+        """shape(s) of states"""
         return [(0, self._num_hidden), (0, self._num_hidden)]
 
     @property
     def output_shape(self):
+        """shape(s) of output"""
         return (0, self._num_hidden)
 
     def __call__(self, inputs, states):
+        """Construct symbol for one step of RNN.
+
+        Parameters
+        ----------
+        inputs : sym.Variable
+            input symbol, 2D, batch * num_units
+        states : sym.Variable
+            state from previous step or begin_state().
+
+        Returns
+        -------
+        output : Symbol
+            output symbol
+        states : Symbol
+            state to next step of RNN.
+        """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
@@ -153,19 +275,32 @@ class LSTMCell(BaseRNNCell):
         next_c = symbol._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                         name='%sstate'%name)
         next_h = symbol._internal._mul(out_gate, symbol.Activation(next_c, act_type="tanh"),
-                                        name='%sout'%name)
+                                       name='%sout'%name)
 
         return next_h, [next_h, next_c]
 
 
 class SequentialRNNCell(BaseRNNCell):
-    """Stacked multple rnn cels"""
+    """Sequantially stacking multiple RNN cells
+
+    Parameters
+    ----------
+    params : RNNParams or None
+        container for weight sharing between cells.
+        created if None.
+    """
     def __init__(self, params=None):
         super(SequentialRNNCell, self).__init__(prefix='', params=params)
         self._override_cell_params = params is not None
         self._cells = []
 
     def add(self, cell):
+        """Append a cell into the stack.
+
+        Parameters
+        ----------
+        cell : rnn cell
+        """
         self._cells.append(cell)
         if self._override_cell_params:
             assert cell._own_params, \
@@ -176,19 +311,53 @@ class SequentialRNNCell(BaseRNNCell):
 
     @property
     def state_shape(self):
+        """shape(s) of states"""
         return [c.state_shape for c in self._cells]
 
     @property
     def output_shape(self):
+        """shape(s) of output"""
         return self._cells[-1].output_shape
 
     def begin_state(self, **kwargs):
+        """Initial state for this cell.
+
+        Parameters
+        ----------
+        init_sym : Symbol, default symbol.zeros
+            Symbol for generating initial state. Can be zeros,
+            ones, uniform, normal, etc.
+        **kwargs :
+            more keyword arguments passed to init_sym. For example
+            mean, std, dtype, etc.
+
+        Returns
+        -------
+        states : nested list of Symbol
+            starting states for first RNN step
+        """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
         return [c.begin_state(**kwargs) for c in self._cells]
 
     def __call__(self, inputs, states):
+        """Construct symbol for one step of RNN.
+
+        Parameters
+        ----------
+        inputs : sym.Variable
+            input symbol, 2D, batch * num_units
+        states : sym.Variable
+            state from previous step or begin_state().
+
+        Returns
+        -------
+        output : Symbol
+            output symbol
+        states : Symbol
+            state to next step of RNN.
+        """
         self._counter += 1
         next_states = []
         for cell, state in zip(self._cells, states):
@@ -197,6 +366,14 @@ class SequentialRNNCell(BaseRNNCell):
         return inputs, next_states
 
 class ModifierCell(BaseRNNCell):
+    """Base class for modifier cells. A modifier
+    cell takes a base cell, apply modifications
+    on it (e.g. Dropout), and returns a new cell.
+
+    After applying modifiers the base cell should
+    no longer be called directly. The modifer cell
+    should be used instead.
+    """
     def __init__(self, base_cell):
         super(ModifierCell, self).__init__()
         base_cell._modified = True
@@ -219,7 +396,22 @@ class ModifierCell(BaseRNNCell):
         return self.base_cell.output_shape
 
     def begin_state(self, init_sym=symbol.zeros, **kwargs):
-        """initial state"""
+        """Initial state for this cell.
+
+        Parameters
+        ----------
+        init_sym : Symbol, default symbol.zeros
+            Symbol for generating initial state. Can be zeros,
+            ones, uniform, normal, etc.
+        **kwargs :
+            more keyword arguments passed to init_sym. For example
+            mean, std, dtype, etc.
+
+        Returns
+        -------
+        states : nested list of Symbol
+            starting states for first RNN step
+        """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -227,6 +419,25 @@ class ModifierCell(BaseRNNCell):
         begin = self.base_cell.begin_state(init_sym, **kwargs)
         self.base_cell._modified = True
         return begin
+
+    def __call__(self, inputs, states):
+        """Construct symbol for one step of RNN.
+
+        Parameters
+        ----------
+        inputs : sym.Variable
+            input symbol, 2D, batch * num_units
+        states : sym.Variable
+            state from previous step or begin_state().
+
+        Returns
+        -------
+        output : Symbol
+            output symbol
+        states : Symbol
+            state to next step of RNN.
+        """
+        raise NotImplementedError
 
 
 class DropoutCell(ModifierCell):
@@ -237,6 +448,22 @@ class DropoutCell(ModifierCell):
         self.dropout_states = dropout_states
 
     def __call__(self, inputs, states):
+        """Construct symbol for one step of RNN.
+
+        Parameters
+        ----------
+        inputs : sym.Variable
+            input symbol, 2D, batch * num_units
+        states : sym.Variable
+            state from previous step or begin_state().
+
+        Returns
+        -------
+        output : Symbol
+            output symbol
+        states : Symbol
+            state to next step of RNN.
+        """
         output, states = self.base_cell(inputs, states)
         if self.dropout_outputs > 0:
             output = symbol.Dropout(data=output, p=self.dropout_outputs)
@@ -246,14 +473,30 @@ class DropoutCell(ModifierCell):
 
 
 class ZoneoutCell(ModifierCell):
-    """docstring for Zoneout"""
+    """Apply Zoneout on base cell"""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
-        super(Zoneout, self).__init__(base_cell)
+        super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs
         self.zoneout_states = zoneout_states
         self.prev_output = None
 
     def __call__(self, inputs, states):
+        """Construct symbol for one step of RNN.
+
+        Parameters
+        ----------
+        inputs : sym.Variable
+            input symbol, 2D, batch * num_units
+        states : sym.Variable
+            state from previous step or begin_state().
+
+        Returns
+        -------
+        output : Symbol
+            output symbol
+        states : Symbol
+            state to next step of RNN.
+        """
         raise NotImplementedError
 
 

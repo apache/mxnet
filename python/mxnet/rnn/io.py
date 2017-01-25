@@ -1,4 +1,5 @@
 # coding: utf-8
+# pylint: disable=too-many-arguments
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 
@@ -9,7 +10,33 @@ import numpy as np
 from ..io import DataIter, DataBatch
 from .. import ndarray
 
-def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='', start_label=0):
+def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', start_label=0):
+    """Encode sentences and (optionally) build a mapping
+    from string tokens to integer indices. Unknown keys
+    will be added to vocabulary.
+
+    Parameters
+    ----------
+    sentences : list of list of str
+        A list of sentences to encode. Each sentence
+        should be a list of string tokens.
+    vocab : None or dict of str -> int
+        Optional input Vocabulary
+    invalid_label : int, default -1
+        Index for invalid token, like <end-of-sentence>
+    invalid_key : str, default '\n'
+        Key for invalid token. Use '\n' for end
+        of sentence by default.
+    start_label : int
+        lowest index.
+
+    Returns
+    -------
+    result : list of list of int
+        encoded sentences
+    vocab : dict of str -> int
+        result vocabulary
+    """
     idx = start_label
     if vocab is None:
         vocab = {invalid_key: invalid_label}
@@ -32,11 +59,33 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='', st
     return res, vocab
 
 class BucketSentenceIter(DataIter):
+    """Simple bucketing iterator for language model.
+    Label for each step is constructed from data of
+    next step.
+
+    Parameters
+    ----------
+    sentences : list of list of int
+        encoded sentences
+    batch_size : int
+        batch_size of data
+    invalid_label : int, default -1
+        key for invalid label, e.g. <end-of-sentence>
+    dtype : str, default 'float32'
+        data type
+    buckets : list of int
+        size of data buckets. Automatically generated if None.
+    data_name : str, default 'data'
+        name of data
+    label_name : str, default 'softmax_label'
+        name of label
+    """
     def __init__(self, sentences, batch_size, invalid_label=-1, dtype='float32',
                  buckets=None, data_name='data', label_name='softmax_label'):
+        super(BucketSentenceIter, self).__init__()
         if not buckets:
             buckets = [i for i, j in enumerate(np.bincount([len(s) for s in sentences]))
-                        if j >= batch_size]
+                       if j >= batch_size]
         buckets.sort()
 
         ndiscard = 0

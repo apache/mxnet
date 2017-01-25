@@ -242,8 +242,8 @@ class Perplexity(EvalMetric):
             probs.append(pred)
 
         for prob in probs:
-            loss += -numpy.log(numpy.maximum(1e-10, pred.asnumpy())).sum()
-            num += label.size
+            loss += -numpy.log(numpy.maximum(1e-10, prob.asnumpy())).sum()
+            num += prob.size
 
         self.sum_metric += numpy.exp(loss / num)
         self.num_inst += 1
