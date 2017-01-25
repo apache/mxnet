@@ -24,6 +24,9 @@ python3 setup.py install || exit 1
 echo "~/.local"
 cd ../tests/nightly
 
+echo "Pull mxnet-notebook"
+git clone https://github.com/dmlc/mxnet-notebooks.git
+
 echo "Test Jupyter notebook"
 python test_ipynb.py
 
