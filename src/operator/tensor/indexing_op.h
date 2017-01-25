@@ -182,9 +182,9 @@ void AddTakeGradLargeBatchCaller(const OpContext& ctx, mshadow::Tensor<xpu, 2, D
                                  const mshadow::Tensor<xpu, 2, DType> &src) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  
+
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  
+
   // Calculate amount of temporary storage
   size_t sort_workspace_size = mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>
     (index.shape_.Size());
@@ -247,10 +247,10 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
       // shape_in_prod  ~= the number of elements stored in AddTakeGrad
       // When the number of elements processed is low, use AddTakeGrad.
       // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
-      uint64_t shape_in_prod = 
+      uint64_t shape_in_prod =
         static_cast<uint64_t>(grad_in.shape_[0])*
         static_cast<uint64_t>(grad_in.shape_[1]);
-      uint64_t shape_out_prod = 
+      uint64_t shape_out_prod =
         static_cast<uint64_t>(grad_out.shape_[0])*
         static_cast<uint64_t>(grad_out.shape_[1]);
       if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
@@ -418,10 +418,10 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
             // shape_in_prod  ~= the number of elements stored in AddTakeGrad
             // When the number of elements processed is low, use AddTakeGrad.
             // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
-            uint64_t shape_in_prod = 
+            uint64_t shape_in_prod =
               static_cast<uint64_t>(grad_in.shape_[0])*
               static_cast<uint64_t>(grad_in.shape_[1]);
-            uint64_t shape_out_prod = 
+            uint64_t shape_out_prod =
               static_cast<uint64_t>(grad_out.shape_[0])*
               static_cast<uint64_t>(grad_out.shape_[1]);
             if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
