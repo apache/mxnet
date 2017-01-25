@@ -1,19 +1,19 @@
 # MXNet: 一个可扩展的深度学习框架
-MXNet是一个开源的深度学习框架，允许你在不同类型的设备上定义、训练、部署深度神经网络，从公共云服务器到移动设备均可。它具备很高的可扩展性，允许快速模型训练，支持灵活的程序模型和不同的编程语言。MXNet为了最大化效率和生产力，允许你混合使用符号式(symbolic)和命令式(imperative)编程。MXNet建立在一个动态依赖调度器上(dynamic dependency scheduler)，它可以同时运行符号式(symbolic)和命令式(imperative)语言。在它之上是一个图优化层（graph optimization layer），可以让符号式语言执行的快而且内存效率高。MXNet库是一个便携式和轻量级的库，可以适用于GPU集群和不同的设备。
+MXNet 是一个开源的深度学习框架，允许你在不同类型的设备上定义、训练、部署深度神经网络，从公共云服务器到移动设备均可。它具备很高的可扩展性，允许快速模型训练，支持灵活的程序模型和不同的编程语言。MXNet 为了最大化效率和生产力，允许你混合使用符号式(symbolic)和命令式(imperative)编程。MXNet 建立在一个动态依赖调度器上(dynamic dependency scheduler)，它可以同时运行符号式(symbolic)和命令式(imperative)语言。在它之上是一个图优化层(graph optimization layer)，可以让符号式语言执行的快而且内存效率高。MXNet 库是一个便携式和轻量级的库，可以适用于 GPU 集群和不同的设备。
 
 # 设置和安装
-你可以在Amazon Linux, Ubuntu/Debian, OS X, and Windows操作系统上运行MXNet,同时Docker和云服务(比如AWS)也可以运行。MXNet目前支持Python, R, Julia和Scala编程语言
+你可以在 Amazon Linux, Ubuntu/Debian, OS X, and Windows 操作系统上运行 MXNet,同时 Docker 和云服务(比如AWS)也可以运行。MXNet 目前支持 Python, R, Julia 和 Scala 编程语言
 
-如果你是在Amazon Linux或者Ubuntu上使用Python/R语言，那么你可以通过git、bash脚本快速安装MXNet库和所有相关依赖。
+如果你是在 Amazon Linux 或者 Ubuntu 上使用 Python/R 语言，那么你可以通过 git、bash 脚本快速安装 MXNet 库和所有相关依赖。
 
-参考如下条目获取配置MXNet的更详细信息：
-* [MXNet设备要求](http://mxnet.io/get_started/setup.html#prerequisites)
-* [详细安装教程](http://mxnet.io/get_started/setup.html#overview)
-* [安装常见问题](http://mxnet.io/get_started/setup.html#common-installation-problems)
+参考如下条目获取配置 MXNet 的更详细信息：
+* [MXNet设备要求](./setup_zh.md#设备要求)
+* [详细安装教程](./setup_zh.md#概述)
+* [常见安装问题](./setup_zh.md#常见安装问题)
 
 # 开始使用
 
-当我们安装完MXNet和语言库以后，可以通过下面的代码来检查安装是否成功
+当我们安装完 MXNet 和语言库以后，可以通过下面的代码来检查安装是否成功
 
 ## Julia
 ```julia
@@ -30,7 +30,7 @@ julia> Array{Float32}(a * 2)
 
 ## Python
 
-Python接口可以`numpy.NDArray`很相近：
+Python 接口可以 `numpy.NDArray` 很相近：
 
 ```python
     >>> import mxnet as mx
@@ -58,7 +58,7 @@ Python接口可以`numpy.NDArray`很相近：
 
 ## Scala
 
-你可以在纯Scala种执行张量(tensor)和矩阵(matrix)运算:
+你可以在纯 Scala 种执行张量(tensor)和矩阵(matrix)运算:
 
 ```scala
     scala> import ml.dmlc.mxnet._
@@ -83,7 +83,7 @@ Python接口可以`numpy.NDArray`很相近：
 
 
 # 下一步
-* [配置和安装](http://mxnet.io/get_started/setup.html)
+* [配置和安装](./setup_zh.md)
 * [教程](http://mxnet.io/tutorials/index.html)
 * [如何使用](http://mxnet.io/how_to/index.html)
 * [架构设计](http://mxnet.io/architecture/index.html)
@@ -91,7 +91,7 @@ Python接口可以`numpy.NDArray`很相近：
 
 # MXNet 开源社区
 
-**广泛的模型支持** – 训练和部署最新的CNN和LSTM模型
+**广泛的模型支持** – 训练和部署最新的 CNN 和 LSTM 模型
 
 &nbsp;
 
