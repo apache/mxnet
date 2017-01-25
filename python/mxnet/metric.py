@@ -222,6 +222,33 @@ class F1(EvalMetric):
             self.sum_metric += f1_score
             self.num_inst += 1
 
+
+class Perplexity(EvalMetric):
+    """Calculate perplexity"""
+    def __init__(self):
+        super(Perplexity, self).__init__('Perplexity')
+
+    def update(self, labels, preds):
+        assert len(labels) == len(preds)
+        loss = 0.
+        num = 0
+        probs = []
+
+        for label, pred in zip(labels, preds):
+            assert label.size == pred.size/pred.shape[-1], \
+                "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
+            label = label.as_in_context(pred.context).astype(dtype='int32').reshape((label.size,))
+            pred = ndarray.batch_take(pred, label)
+            probs.append(pred)
+
+        for prob in probs:
+            loss += -numpy.log(numpy.maximum(1e-10, pred.asnumpy())).sum()
+            num += label.size
+
+        self.sum_metric += numpy.exp(loss / num)
+        self.num_inst += 1
+
+
 ####################
 # REGRESSION METRICS
 ####################

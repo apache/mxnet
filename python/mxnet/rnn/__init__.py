@@ -6,3 +6,6 @@ from .rnn_cell import *
 
 from . import rnn
 from .rnn import *
+
+from . import io
+from .io import *

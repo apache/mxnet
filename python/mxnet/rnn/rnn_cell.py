@@ -31,6 +31,7 @@ class BaseRNNCell(object):
         self._params = params
         self._init_counter = -1
         self._counter = -1
+        self._modified = False
 
     def __call__(self, inputs, states):
         """construct symbol"""
@@ -54,6 +55,9 @@ class BaseRNNCell(object):
 
     def begin_state(self, init_sym=symbol.zeros, **kwargs):
         """initial state"""
+        assert not self._modified, \
+            "After applying modifier cells (e.g. DropoutCell) the base " \
+            "cell cannot be called directly. Call the modifier cell instead."
         state_shape = self.state_shape
         def recursive(shape):
             if isinstance(shape, tuple):
@@ -72,6 +76,7 @@ class BaseRNNCell(object):
             return symbol.Activation(x, act_type=activation, **kwargs)
         else:
             return activation(x, **kwargs)
+
 
 class RNNCell(BaseRNNCell):
     """Simple recurrent neural network cell"""
@@ -105,6 +110,7 @@ class RNNCell(BaseRNNCell):
                                       name='%sout'%name)
 
         return output, output
+
 
 class LSTMCell(BaseRNNCell):
     """LSTM cell"""
@@ -177,6 +183,9 @@ class SequentialRNNCell(BaseRNNCell):
         return self._cells[-1].output_shape
 
     def begin_state(self, **kwargs):
+        assert not self._modified, \
+            "After applying modifier cells (e.g. DropoutCell) the base " \
+            "cell cannot be called directly. Call the modifier cell instead."
         return [c.begin_state(**kwargs) for c in self._cells]
 
     def __call__(self, inputs, states):
@@ -187,15 +196,65 @@ class SequentialRNNCell(BaseRNNCell):
             next_states.append(state)
         return inputs, next_states
 
+class ModifierCell(BaseRNNCell):
+    def __init__(self, base_cell):
+        super(ModifierCell, self).__init__()
+        base_cell._modified = True
+        self.base_cell = base_cell
+
+    @property
+    def params(self):
+        """Parameters of this cell"""
+        self._own_params = False
+        return self.base_cell.params
+
+    @property
+    def state_shape(self):
+        """shape(s) of states"""
+        return self.base_cell.state_shape
+
+    @property
+    def output_shape(self):
+        """shape(s) of output"""
+        return self.base_cell.output_shape
+
+    def begin_state(self, init_sym=symbol.zeros, **kwargs):
+        """initial state"""
+        assert not self._modified, \
+            "After applying modifier cells (e.g. DropoutCell) the base " \
+            "cell cannot be called directly. Call the modifier cell instead."
+        self.base_cell._modified = False
+        begin = self.base_cell.begin_state(init_sym, **kwargs)
+        self.base_cell._modified = True
+        return begin
 
 
+class DropoutCell(ModifierCell):
+    """Apply dropout on base cell"""
+    def __init__(self, base_cell, dropout_outputs=0., dropout_states=0.):
+        super(DropoutCell, self).__init__(base_cell)
+        self.dropout_outputs = dropout_outputs
+        self.dropout_states = dropout_states
+
+    def __call__(self, inputs, states):
+        output, states = self.base_cell(inputs, states)
+        if self.dropout_outputs > 0:
+            output = symbol.Dropout(data=output, p=self.dropout_outputs)
+        if self.dropout_states > 0:
+            states = symbol.Dropout(data=states, p=self.dropout_states)
+        return output, states
 
 
+class ZoneoutCell(ModifierCell):
+    """docstring for Zoneout"""
+    def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
+        super(Zoneout, self).__init__(base_cell)
+        self.zoneout_outputs = zoneout_outputs
+        self.zoneout_states = zoneout_states
+        self.prev_output = None
 
-
-
-
-
+    def __call__(self, inputs, states):
+        raise NotImplementedError
 
 
 
