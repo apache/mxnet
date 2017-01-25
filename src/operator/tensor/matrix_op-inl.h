@@ -927,16 +927,49 @@ inline bool CropAssignScalarShape(const nnvm::NodeAttrs& attrs,
 struct SliceParam : public dmlc::Parameter<SliceParam> {
   int axis;
   int begin;
-  int end;
+  dmlc::optional<int> end;
   DMLC_DECLARE_PARAMETER(SliceParam) {
-    DMLC_DECLARE_FIELD(axis).set_lower_bound(0)
-      .describe("The axis to be sliced");
-    DMLC_DECLARE_FIELD(begin).set_lower_bound(0)
-      .describe("The beginning index to be sliced");
-    DMLC_DECLARE_FIELD(end).set_lower_bound(0)
-      .describe("The end index to be sliced");
+    DMLC_DECLARE_FIELD(axis)
+      .describe("The axis to be sliced."
+                " Negative axis means to count from the last to the first axis.");
+    DMLC_DECLARE_FIELD(begin)
+      .describe("The beginning index to be sliced."
+                " Negative values are interpreted as counting from the backward.");
+    DMLC_DECLARE_FIELD(end)
+      .describe("The end index to be sliced."
+                " The end can be None, in which case all the rest elements are used."
+                " Also, negative values are interpreted as counting from the backward.");
   }
 };
+
+inline void GetSliceParams(const SliceParam& param, const TShape& ishape,
+                           int* axis, int* begin, int* end) {
+  *axis = param.axis;
+  if (*axis < 0) {
+    *axis += static_cast<int>(ishape.ndim());
+  }
+  CHECK(*axis < static_cast<int>(ishape.ndim()) && *axis >= 0) <<
+    "Transformed axis must be smaller than the source ndim and larger than zero! Recieved axis=" <<
+    param.axis << ", src_ndim=" << ishape.ndim() << ", transformed axis=" << *axis;
+  int axis_size = static_cast<int>(ishape[*axis]);
+  *begin = param.begin;
+  *end = -1;
+  if (*begin < 0) {
+    *begin += axis_size;
+  }
+  if (!static_cast<bool>(param.end)) {
+    *end = axis_size;
+  } else {
+    *end = param.end.value();
+    if (*end < 0) {
+      *end += axis_size;
+    }
+  }
+  CHECK((*end <= axis_size) && (*end >= 0))
+    << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
+  CHECK((*begin < *end) && (*begin >= 0))
+    << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
+}
 
 inline bool SliceShape(const nnvm::NodeAttrs& attrs,
                        std::vector<TShape> *in_attrs,
@@ -945,17 +978,12 @@ inline bool SliceShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   TShape& ishape = (*in_attrs)[0];
-  CHECK(param.axis < static_cast<int>(ishape.ndim())) <<
-    "axis must be smaller than the source ndim! Recieved axis=" <<
-      param.axis << ", src_ndim=" << ishape.ndim();
-  int axis_size = static_cast<int>(ishape[param.axis]);
-  CHECK_LE(param.end, axis_size);
-  CHECK_LT(param.begin, param.end);
-
+  int axis, begin, end;
+  GetSliceParams(param, ishape, &axis, &begin, &end);
   TShape shape(ishape.ndim());
   for (index_t i = 0; i < ishape.ndim(); ++i) {
-    if (static_cast<int>(i) == param.axis) {
-      shape[i] = static_cast<index_t>(param.end - param.begin);
+    if (static_cast<int>(i) == axis) {
+      shape[i] = static_cast<index_t>(end - begin);
     } else {
       shape[i] = ishape[i];
     }
@@ -974,23 +1002,25 @@ void Slice(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  int axis, begin, end;
+  GetSliceParams(param, inputs[0].shape_, &axis, &begin, &end);
   int ndim = static_cast<int>(outputs[0].ndim());
 
-  if (param.axis + 1 == ndim) {
+  if (axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         mshadow::Tensor<xpu, 2, DType> in =
             inputs[0].FlatTo2D<xpu, DType>(s);
         mshadow::Tensor<xpu, 2, DType> out =
             outputs[0].FlatTo2D<xpu, DType>(s);
-        ASSIGN_DISPATCH(out, req[0], slice<1>(in, param.begin, param.end));
+        ASSIGN_DISPATCH(out, req[0], slice<1>(in, begin, end));
       });
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         mshadow::Tensor<xpu, 3, DType> in =
-            inputs[0].FlatTo3D<xpu, DType>(param.axis, s);
+            inputs[0].FlatTo3D<xpu, DType>(axis, s);
         mshadow::Tensor<xpu, 3, DType> out =
-            outputs[0].FlatTo3D<xpu, DType>(param.axis, s);
-        ASSIGN_DISPATCH(out, req[0], slice<1>(in, param.begin, param.end));
+            outputs[0].FlatTo3D<xpu, DType>(axis, s);
+        ASSIGN_DISPATCH(out, req[0], slice<1>(in, begin, end));
       });
   }
 }
@@ -1006,19 +1036,21 @@ void SliceGrad_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  int axis, begin, end;
+  GetSliceParams(param, outputs[0].shape_, &axis, &begin, &end);
   int ndim = static_cast<int>(outputs[0].shape_.ndim());
 
-  if (param.axis + 1 == ndim) {
+  if (axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         mshadow::Tensor<xpu, 2, DType> ograd =
             inputs[0].FlatTo2D<xpu, DType>(s);
         mshadow::Tensor<xpu, 2, DType> igrad =
             outputs[0].FlatTo2D<xpu, DType>(s);
         if (req[0] == kAddTo) {
-          slice<1>(igrad, param.begin, param.end) += F<identity>(ograd);
+          slice<1>(igrad, begin, end) += F<identity>(ograd);
         } else if (req[0] == kWriteTo) {
           igrad = 0.0f;
-          slice<1>(igrad, param.begin, param.end) = F<identity>(ograd);
+          slice<1>(igrad, begin, end) = F<identity>(ograd);
         } else {
           CHECK_EQ(req[0], kNullOp);
         }
@@ -1026,14 +1058,14 @@ void SliceGrad_(const nnvm::NodeAttrs& attrs,
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         mshadow::Tensor<xpu, 3, DType> ograd =
-            inputs[0].FlatTo3D<xpu, DType>(param.axis, s);
+            inputs[0].FlatTo3D<xpu, DType>(axis, s);
         mshadow::Tensor<xpu, 3, DType> igrad =
-            outputs[0].FlatTo3D<xpu, DType>(param.axis, s);
+            outputs[0].FlatTo3D<xpu, DType>(axis, s);
         if (req[0] == kAddTo) {
-          slice<1>(igrad, param.begin, param.end) += F<identity>(ograd);
+          slice<1>(igrad, begin, end) += F<identity>(ograd);
         } else if (req[0] == kWriteTo) {
           igrad = 0.0f;
-          slice<1>(igrad, param.begin, param.end) = F<identity>(ograd);
+          slice<1>(igrad, begin, end) = F<identity>(ograd);
         } else {
           CHECK_EQ(req[0], kNullOp);
         }
