@@ -1667,9 +1667,11 @@ def test_roipooling():
     x1 = np.random.rand(4, 3, 12, 8)
     x2 = np.array([[0, 1, 1, 6, 6], [2, 6, 2, 7, 11], [1, 3, 1, 5, 10], [0, 3, 3, 3, 3]])
 
-    check_numeric_gradient(test, [x1, x2], numeric_eps=1e-3, check_eps=1e-2)
     check_numeric_gradient(sym=test, location=[x1, x2],
-                           grad_nodes={'data':'add', 'rois':'write'},
+                           grad_nodes={'data':'write', 'rois':'null'},
+                           numeric_eps=1e-3, check_eps=1e-2)
+    check_numeric_gradient(sym=test, location=[x1, x2],
+                           grad_nodes={'data':'add', 'rois':'null'},
                            numeric_eps=1e-3, check_eps=1e-2)
 
 def check_pad_with_shape(shape, xpu, pad_width, mode):
@@ -2097,10 +2099,10 @@ def test_order():
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=2,
                                              is_ascend=False)])
-    b = mx.sym.topk(a, axis=None, is_ascend=True, ret_typ="value", k=10)
+    b = mx.sym.topk(a, axis=None, is_ascend=True, ret_typ="value", k=7)
     check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-4, check_eps=2E-2, ctx=ctx)
     check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=None, ret_typ="value", k=10,
+                           expected=[gt_topk(dat=a_npy, axis=None, ret_typ="value", k=7,
                                              is_ascend=True)])
     b = mx.sym.topk(a, axis=3, is_ascend=True, ret_typ="value", k=3)
     check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
