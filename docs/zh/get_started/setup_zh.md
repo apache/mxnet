@@ -16,7 +16,7 @@
 - [常见安装问题](#常见安装问题)
 - [编译依赖库](#编译依赖库)
 
-如果你在安装中碰到问题，并在在[常见安装问题]中找不到解决办法，可以在 [mxnet/issues](https://github.com/dmlc/mxnet/issues) 发起提问.如果你可以解决这个问题，可以发起 pull request。细节可以参考 [contribution guidelines](http://mxnet.io/community/index.html).
+如果你在安装中碰到问题，并在在[常见安装问题](#常见安装问题)中找不到解决办法，可以在 [mxnet/issues](https://github.com/dmlc/mxnet/issues) 发起提问.如果你可以解决这个问题，可以发起 pull request。细节可以参考 [contribution guidelines](http://mxnet.io/community/index.html).
 
 
 # 设备要求

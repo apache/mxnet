@@ -8,7 +8,7 @@
 ### 在 Windows 上安装预编译包
 MXNet 为 Windows 提供了一个预编译包。这个包里包含了 MXNet 库，所有的第三方依赖库，一个 Visual Studio 的 C++ 解决方案例子，和一个 Python 安装脚本。安装预编译：
 
-1. 从 MXNet [Releases](https://github.com/dmlc/mxnet/releases) 表里下载最新的预编译包。这有两个版本。一个 GPU 版本(需要 CUDA 和 CUDNN v03),一个非 GPU 版本。请根据你的硬件配置选择合适的版本。哪个版本适应哪种硬件配置，更详细的信息参考 [Requirements for GPU](./setup_zh.md#使用-GPU-的要求)。
+1. 从 MXNet [Releases](https://github.com/dmlc/mxnet/releases) 表里下载最新的预编译包。这有两个版本。一个 GPU 版本(需要 CUDA 和 CUDNN v03),一个非 GPU 版本。请根据你的硬件配置选择合适的版本。哪个版本适应哪种硬件配置，更详细的信息参考 [Requirements for GPU](./setup_zh.md#使用-gpu-的要求)。
 2. 将预编译包解压到文件夹中，可以给文件夹取个合适的名字，比如 ```D:\MXNet```。
 3. 打开文件夹，双击 ```setupenv.cmd``` 进行安装。它会配置好所有 MXNet 需要的所有环境变量。
 4. 可以通过里面提供的  Visual Studio C++ 解决方案来测试安装是否成功。
@@ -51,13 +51,13 @@ MXNet 为 Windows 提供了一个预编译包。这个包里包含了 MXNet 库�
 &nbsp;
 
 我们已经安装完了 MXNet 的核心库(core library)，接下来我们要选择一种编程语言，安装语言接口包:
-- [Python](#安装-MXNet-python-语言包)
-- [R](#安装-MXNet-R-语言包)
-- [Julia](#安装-MXNet-Julia-语言包)
-- [Scala](#安装-MXNet-Scala-语言包)
+- [Python](#安装-python-版-mxnet)
+- [R](#安装-r-版-mxnet)
+- [Julia](#安装-julia-版-mxnet)
+- [Scala](#安装-scala-版-mxnet)
 
 
-## 安装 MXNet python 语言包
+## 安装 Python 版 MXNet
 
 1. 在 [这里](https://www.python.org/downloads/release/python-2712/) 找到可用的 Windows 安装包，安装 ```Python``` 。
 2. 在 [这里](http://scipy.org/install.html) 找到可用的 Windows 安装包，安装 ```Numpy``` 。
@@ -85,7 +85,7 @@ MXNet 为 Windows 提供了一个预编译包。这个包里包含了 MXNet 库�
 
 我们实际上是用 MXNet 做了一个小的张量(tensor)计算！到这里你已经在电脑上完全配置好了 MXNet。
 
-## 安装 MXNet R 语言包
+## 安装 R 版 MXNet
 R 版 MXNet 同时支持 CPU 和 GPU.
 
 ### 安装使用 CPU 的 MXNet
@@ -158,7 +158,9 @@ BRun the following commands to install the MXNet dependencies and build the MXNe
 
 **注意:** 为了最大化可移植性，MXNet 库是使用 Rcpp 编译的。Windows 电脑需要 [MSVC](https://en.wikipedia.org/wiki/Visual_C%2B%2B) (Microsoft Visual C++) 来处理 CUDA 工具链的兼容性。
 
-## 安装 MXNet Julia 语言包 (此方法是适用于 Linux 和 OS X 的，原来的英文文档可能存在错误，我只是翻译在这里，并不保证可以运行)
+## 安装 Julia 版 MXNet
+## (此方法是适用于 Linux 和 OS X 的，原来的英文文档可能存在错误，我只是翻译在这里，并不保证可以运行,如果谁更新了方法，可以联系我修改中文翻译hebeilijianzhang@163.com)
+
 MXNet Julia 语言包托管在一个单独的仓库 ```MXNet.jl```。地址是 [GitHub](https://github.com/dmlc/MXNet.jl)。Julia需要与已经安装的 libmxnet 绑定。使用下面的命令来配置 ```MXNET_HOME``` 环境变量：
 
 ```bash
@@ -179,14 +181,16 @@ export MXNET_HOME=/<path to>/libmxnet
 
 MXNet Julia 语言包更详细的安装教程可以参考 [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
-## 安装 MXNet Scala 语言包 (此方法是适用于 Linux 和 OS X 的，原来的英文文档可能存在错误，我只是翻译在这里，并不保证可以运行)
+## 安装 Scala 版 MXNet
+## (此方法是适用于 Linux 和 OS X 的，原来的英文文档可能存在错误，我只是翻译在这里，并不保证可以运行,如果谁更新了方法，可以联系我修改中文翻译hebeilijianzhang@163.com)
+
 有两种方式安装 MXNet Scala 语言包：
 
-* 使用提前编译好的二进制包
+* 使用预编译的二进制包
 
 * 通过源码编译
 
-### 使用提前编译好的二进制包
+### 使用预编译的二进制包
 对于 Linux 和 OS X (Mac) 用户，MXNet 提供了编译好的二进制包，同时支持 CPU 和 GPU。可以通过 ```Maven``` 来下载使用这个包，根据你的需求修改下面 Maven 依赖里的 ```artifactId``` ：
 
 ```HTML

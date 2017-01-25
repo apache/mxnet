@@ -150,11 +150,11 @@ MXNet 要求 R 版本 3.2.0 及以上。如果你正在使用低版本的 R， �
 &nbsp;
 
 我们已经安装完了 MXNet 的核心库(core library)，接下来我们要选择一种编程语言，安装语言接口包:
-- [R](#安装-MXNet-R-语言包)
-- [Julia](#安装-MXNet-Julia-语言包)
-- [Scala](#安装-MXNet-Scala-语言包)
+- [R](#标准安装-r-版-mxnet)
+- [Julia](#安装-julia-版-mxnet)
+- [Scala](#安装-scala-版-mxnet)
 
-### 安装 MXNet R 语言包
+### 标准安装 R 版 MXNet
 
 运行下面命令来安装MXNet依赖并且编译 MXNet R 语言包
 
@@ -176,7 +176,7 @@ MXNet 要求 R 版本 3.2.0 及以上。如果你正在使用低版本的 R， �
     R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
-### 安装 MXNet Julia 语言包
+### 安装 Julia 版 MXNet
 
 MXNet Julia 语言包托管在一个单独的仓库 ```MXNet.jl```。地址是 [GitHub](https://github.com/dmlc/MXNet.jl)。Julia需要与已经安装的 libmxnet 绑定。使用下面的命令来配置 ```MXNET_HOME``` 环境变量：
 
@@ -198,15 +198,15 @@ MXNet Julia 语言包托管在一个单独的仓库 ```MXNet.jl```。地址是 [
 
 MXNet Julia 语言包更详细的安装教程可以参考 [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
-### 安装 MXNet Scala 语言包
+### 安装 Scala 版 MXNet
 
 有两种方式安装 MXNet Scala 语言包：
 
-* 使用提前编译好的二进制包
+* 使用预编译的二进制包
 
 * 通过源码编译
 
-#### 使用提前编译好的二进制包
+#### 使用预编译的二进制包
 对于 Linux 用户，MXNet 提供了编译好的二进制包，同时支持 CPU 和 GPU。可以通过 ```Maven``` 来下载使用这个包，根据你的需求修改下面 Maven 依赖里的 ```artifactId``` ：
 
 ```HTML

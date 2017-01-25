@@ -133,17 +133,17 @@ MXNet 目前支持 Python, R, Julia, and Scala。对于 Mac 上使用 Python 的
 &nbsp;
 
 我们已经安装完了 MXNet 的核心库(core library)，接下来我们要选择一种编程语言，安装语言接口包:
-- [R](#安装-MXNet-R-语言包)
-- [Julia](#安装-MXNet-Julia-语言包)
-- [Scala](#安装-MXNet-Scala-语言包)
+- [R](#安装-r-版-mxnet)
+- [Julia](#安装-julia-版-mxnet)
+- [Scala](#安装-scala-版-mxnet)
 
 
-### 安装 MXNet R 语言包
+### 安装 R 版 MXNet
 有两个选择:
-1. 使用预先编译好的二进制包
+1. 使用预编译的二进制包
 2. 使用源码编译
 
-#### 使用预先编译好的二进制包
+#### 使用预编译的二进制包
 
 对于 OS X (Mac) 用户, MXNet 提供了编译好的 CPU 版二进制包. 这个包每周更新，你可以在 R 控制台中使用下面的命令来安装这个包：
 
@@ -175,7 +175,7 @@ MXNet 目前支持 Python, R, Julia, and Scala。对于 Mac 上使用 Python 的
 	R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
-### 安装 MXNet Julia 语言包
+### 安装 Julia 版 MXNet
 MXNet Julia 语言包托管在一个单独的仓库 ```MXNet.jl```，地址是 [GitHub](https://github.com/dmlc/MXNet.jl)。 Julia 需要与已经安装的 libmxnet 绑定。使用下面的命令来配置 ```MXNET_HOME``` 环境变量：
 
 ```bash
@@ -196,7 +196,7 @@ MXNet Julia 语言包托管在一个单独的仓库 ```MXNet.jl```，地址是 [
 
 MXNet Julia 语言包更详细的安装教程可以参考 [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
-### 安装 MXNet Scala 语言包
+### 安装 Scala 版 MXNet
 在编译 MXNet Scala 语言包前，你必须已经完成了 [编译共享库](#编译共享库)。然后在 MXNet 源码根目录运行下面命令来编译 Scala 语言包：
 
 ```bash
