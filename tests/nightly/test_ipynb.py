@@ -1,29 +1,30 @@
+#pylint: disable=no-member, too-many-locals, too-many-branches, no-self-use, broad-except, lost-exception, too-many-nested-blocks, too-few-public-methods
 """
     This script runs notebooks in selected directory and report
     errors for each notebook.
-    
+
     Traceback information can be found in the output notebooks
     generated in coresponding output directories.
-    
+
     Before running this scripe, make sure all the notebooks have
     been run at least once and outputs are generated.
 """
 
 import os
-import errno
 import json
 import ConfigParser
 import re
 import sys
+from textwrap import dedent
 reload(sys)
 sys.setdefaultencoding('utf-8')
+#pylint: enable=no-member
 
 import nbformat
-from textwrap import dedent
 import nbconvert.preprocessors.execute as execute
 
-time_limit_flag = '# @@@ AUTOTEST_TIME_LIMT_SECONDS='
-ignored_cell_flag = '# @@@ AUTOTEST_OUTPUT_IGNORED_CELL'
+TIME_LIMIT_FLAG = '# @@@ AUTOTEST_TIME_LIMT_SECONDS='
+IGNORED_CELL_FLAG = '# @@@ AUTOTEST_OUTPUT_IGNORED_CELL'
 
 class CustomizedPreprocessor(execute.ExecutePreprocessor):
     """A customized preprocessor which allows preset for cell.
@@ -36,7 +37,7 @@ class CustomizedPreprocessor(execute.ExecutePreprocessor):
         if cell.cell_type != 'code':
             return cell, resources
 
-        regex = re.compile(time_limit_flag + '[0-9]+')
+        regex = re.compile(TIME_LIMIT_FLAG + '[0-9]+')
         time_flag = re.search(regex, cell.source)
         if time_flag is not None:
             timeout = int(re.search(r'[0-9]+', time_flag).group())
@@ -82,12 +83,12 @@ class NotebookTester(object):
         Notebook list to be tested
         """
         nb_list = []
-        configParser = ConfigParser.RawConfigParser()
-        configParser.read(test_config)
-        test_dirs = configParser.get('Folder Path', 'test_path').split(', ')
+        config_parser = ConfigParser.RawConfigParser()
+        config_parser.read(test_config)
+        test_dirs = config_parser.get('Folder Path', 'test_path').split(', ')
         if len(test_dirs) == 1 and len(test_dirs[0]) == 0:
             test_dirs.append('.')
-        ignored_item = configParser.get('Folder Path', 'test_ignored').split(', ')
+        ignored_item = config_parser.get('Folder Path', 'test_ignored').split(', ')
         ignored_dir = set()
         ignored_nb = set()
         for item in ignored_item:
@@ -98,51 +99,52 @@ class NotebookTester(object):
             else:
                 for root, _, _ in os.walk(item):
                     ignored_dir.add(os.path.abspath(root))
-        for dir in test_dirs:
-            for root, dirs, files in os.walk(dir):
+        for test_dir in test_dirs:
+            for root, _, files in os.walk(test_dir):
                 if os.path.abspath(root) in ignored_dir:
                     continue
-                for file in files:
-                    if file.endswith('.ipynb') and not file.endswith('-checkpoint.ipynb'):
-                        notebook = os.path.join(root, file)
+                for test_file in files:
+                    if test_file.endswith('.ipynb') and not \
+                       test_file.endswith('-checkpoint.ipynb'):
+                        notebook = os.path.join(root, test_file)
                         if os.path.abspath(notebook) not in ignored_nb:
                             if notebook.startswith('./'):
                                 notebook = notebook[2:]
                             nb_list.append(notebook)
         return nb_list
-            
-        
+
+
     def __notebook_run(self, path):
         """Execute a notebook via nbconvert and collect output.
-        
+
         Parameters
         ----------
         path : str
         notebook file path.
-        
+
         Returns
         -------
         error : str
         notebook first cell execution errors.
         """
         error = ""
-        parent_dir, nb_name = os.path.split(path)        
+        parent_dir, nb_name = os.path.split(path)
         with open(path) as nb_file:
-            nb = nbformat.read(nb_file, as_version=4)
-            ep = CustomizedPreprocessor(timeout=900)
+            notebook = nbformat.read(nb_file, as_version=4)
+            eprocessor = CustomizedPreprocessor(timeout=900)
             #Use a loop to avoid "Kernel died before replying to kernel_info" error, repeat 5 times
             for _ in range(0, 5):
                 error = ""
                 try:
-                    ep.preprocess(nb, {'metadata': {'path': parent_dir}})
-                except Exception as e:
-                    error = str(e)
+                    eprocessor.preprocess(notebook, {'metadata': {'path': parent_dir}})
+                except Exception as ex_error:
+                    error = str(ex_error)
                 finally:
                     if error != 'Kernel died before replying to kernel_info':
                         output_nb = os.path.splitext(nb_name)[0] + "_output.ipynb"
-                        with open(output_nb, mode='w') as f:
-                            nbformat.write(nb, f)
-                        f.close()
+                        with open(output_nb, mode='w') as output_file:
+                            nbformat.write(notebook, output_file)
+                        output_file.close()
                         nb_file.close()
                         if len(error) == 0:
                             cell_num = self.__verify_output(path, output_nb)
@@ -160,10 +162,10 @@ class NotebookTester(object):
         ----------
         origin_nb : str
         original notebook file path.
-        
+
         output_nb : str
         output notebook file path.
-        
+
         Returns
         -------
         cell_num : int
@@ -179,12 +181,13 @@ class NotebookTester(object):
             if len(origin_cell["source"]) == 0 or not origin_cell.has_key("outputs"):
                 is_ignored_cell = True
             for line in origin_cell["source"]:
-                if line.startswith(ignored_cell_flag):
+                if line.startswith(IGNORED_CELL_FLAG):
                     is_ignored_cell = True
                     break
             if is_ignored_cell:
                 continue
-            if self.__extract_output(origin_cell["outputs"]) != self.__extract_output(output_cell["outputs"]):
+            if self.__extract_output(origin_cell["outputs"]) != \
+               self.__extract_output(output_cell["outputs"]):
                 cell_num = origin_cell["execution_count"]
                 break
         origin_nb_file.close()
@@ -194,26 +197,27 @@ class NotebookTester(object):
 
     def __extract_output(self, outputs):
         """Extract text part of output of a notebook cell.
-        
+
         Parasmeters
         -----------
         outputs : list
         list of output
-        
+
         Returns
         -------
         ret : str
         Concatenation of all text output contents
         """
         ret = ''
-        for dict in outputs:
-            for key, val in dict.items():
+        for out_dict in outputs:
+            for key, val in out_dict.items():
                 if str(key).startswith('text'):
                     for content in val:
                         ret += str(content)
                 elif key == 'data':
                     for dt_key, dt_val in val.items():
-                        if str(dt_key).startswith('text') and not str(dt_key).startswith('text/html'):
+                        if str(dt_key).startswith('text') and not \
+                           str(dt_key).startswith('text/html'):
                             for dt_content in dt_val:
                                 if not str(dt_content).startswith('<matplotlib') and not \
                                    str(dt_content).startswith('<graphviz'):
@@ -228,18 +232,18 @@ class NotebookTester(object):
         test_summary = open('test_summary.txt', mode='w')
         fail_nb_dict = {}
         test_summary.write("%d notebooks were tested:\n" % len(nb_to_test))
-        for nb in nb_to_test:
-            test_summary.write("%s\n" % nb)
-            print "Start to test %s.\n" % nb
-            error = self.__notebook_run(nb)
+        for test_nb in nb_to_test:
+            test_summary.write("%s\n" % test_nb)
+            print "Start to test %s.\n" % test_nb
+            error = self.__notebook_run(test_nb)
             if len(error) == 0:
-                print "Tests for %s all passed!\n" % nb
+                print "Tests for %s all passed!\n" % test_nb
             else:
-                fail_nb_dict[nb] = error
-                print "Tests for %s failed:\n" % nb
+                fail_nb_dict[test_nb] = error
+                print "Tests for %s failed:\n" % test_nb
                 print error + '\n'
-                if (error == 'Cell execution timed out, see log for details.' or 
-                    error == 'Kernel died before replying to kernel_info'):
+                if error == 'Cell execution timed out, see log for details.' or \
+                   error == 'Kernel died before replying to kernel_info':
                     print "Please manually run this notebook to debug.\n"
         print "%d notebooks tested, %d succeeded, %d failed" % (len(nb_to_test),
                                                                 len(nb_to_test) - len(fail_nb_dict),
@@ -247,15 +251,15 @@ class NotebookTester(object):
         if len(fail_nb_dict) > 0:
             test_summary.write("\n%d notebook tests failed:\n" % len(fail_nb_dict))
             print "Following are failed notebooks:"
-            for nb, error in fail_nb_dict.items():
-                test_summary.write("\n%s:\n" % nb)
-                test_summary.write("%s\n" % error)                       
-                print nb
+            for fail_nb, error in fail_nb_dict.items():
+                test_summary.write("\n%s:\n" % fail_nb)
+                test_summary.write("%s\n" % error)
+                print fail_nb
         else:
             test_summary.write("\nAll notebook tests passed!\n")
         test_summary.close()
         print "Test summarys are stored in test_summary.txt"
 
 if __name__ == "__main__":
-    nb_tester = NotebookTester('test_config.txt')
-    nb_tester.run_test()
+    NB_TESTER = NotebookTester('test_config.txt')
+    NB_TESTER.run_test()
