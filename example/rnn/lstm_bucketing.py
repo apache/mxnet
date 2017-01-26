@@ -47,7 +47,6 @@ if __name__ == '__main__':
 
     #buckets = []
     buckets = [10, 20, 30, 40, 50, 60]
-    #buckets = [32]
 
     start_label = 1
     invalid_label = 0
@@ -96,7 +95,7 @@ if __name__ == '__main__':
     model.fit(
         train_data          = data_train,
         eval_data           = data_val,
-        eval_metric         = mx.metric.Perplexity(),
+        eval_metric         = mx.metric.Perplexity(invalid_label),
         kvstore             = args.kv_store,
         optimizer           = args.optimizer,
         optimizer_params    = { 'learning_rate': args.lr,

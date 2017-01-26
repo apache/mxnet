@@ -8,25 +8,6 @@ import mxnet as mx
 from lstm import lstm_unroll
 from bucket_io import BucketSentenceIter, default_build_vocab
 
-# class Perplexity(mx.metric.EvalMetric):
-#     """Calculate perplexity"""
-#     def __init__(self):
-#         super(Perplexity, self).__init__('Perplexity')
-
-#     def update(self, labels, preds):
-#         assert len(labels) == len(preds)
-
-#         loss = 0.
-#         num = 0
-#         for label, pred in zip(labels, preds):
-#             label = label.asnumpy().T.reshape((-1,))
-#             label = mx.nd.array(label, ctx=pred.context, dtype='int32')
-#             pred = mx.nd.index2d(pred, mx.nd.arange(label.shape[0], ctx=pred.context, dtype='int32'), label).asnumpy()
-#             loss += -np.log(np.maximum(1e-10, pred)).sum()
-#             num += label.size
-#         self.sum_metric += np.exp(loss / num)
-#         self.num_inst += 1
-
 def Perplexity(label, pred):
     label = label.T.reshape((-1,))
     loss = 0.

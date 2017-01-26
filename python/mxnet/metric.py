@@ -224,9 +224,18 @@ class F1(EvalMetric):
 
 
 class Perplexity(EvalMetric):
-    """Calculate perplexity"""
-    def __init__(self):
+    """Calculate perplexity
+
+    Parameters
+    ----------
+    ignore_label : int or None
+        index of invalid label to ignore when
+        counting. usually should be -1. Include
+        all entries if None.
+    """
+    def __init__(self, ignore_label):
         super(Perplexity, self).__init__('Perplexity')
+        self.ignore_label = ignore_label
 
     def update(self, labels, preds):
         assert len(labels) == len(preds)
@@ -241,9 +250,15 @@ class Perplexity(EvalMetric):
             pred = ndarray.batch_take(pred, label)
             probs.append(pred)
 
-        for prob in probs:
-            loss += -numpy.log(numpy.maximum(1e-10, prob.asnumpy())).sum()
-            num += prob.size
+        for label, prob in zip(labels, probs):
+            prob = prob.asnumpy()
+            if self.ignore_label is not None:
+                ignore = label.asnumpy().flatten() == self.ignore_label
+                prob = prob*(1-ignore) + ignore
+                num += prob.size - ignore.sum()
+            else:
+                num += prob.size
+            loss += -numpy.log(numpy.maximum(1e-10, prob)).sum()
 
         self.sum_metric += numpy.exp(loss / num)
         self.num_inst += 1

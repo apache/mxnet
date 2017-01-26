@@ -99,6 +99,8 @@ class BucketSentenceIter(DataIter):
             buff[:len(sentences[i])] = sentences[i]
             self.data[buck].append(buff)
 
+        self.data = [np.asarray(i, dtype=dtype) for i in self.data]
+
         print("WARNING: discarded %d sentences longer than the largest bucket."%ndiscard)
 
         self.default_bucket_key = max(buckets)
@@ -122,7 +124,7 @@ class BucketSentenceIter(DataIter):
         self.curr_idx = 0
         random.shuffle(self.idx)
         for buck in self.data:
-            random.shuffle(buck)
+            np.random.shuffle(buck)
 
     def next(self):
         if self.curr_idx == len(self.idx):
@@ -130,7 +132,7 @@ class BucketSentenceIter(DataIter):
         i, j = self.idx[self.curr_idx]
         self.curr_idx += 1
 
-        data = np.asarray(self.data[i][j:j+self.batch_size], dtype=self.dtype)
+        data = self.data[i][j:j+self.batch_size]
         label = np.empty_like(data)
         label[:, :-1] = data[:, 1:]
         label[:, -1] = self.invalid_label
