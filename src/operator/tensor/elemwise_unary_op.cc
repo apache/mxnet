@@ -79,7 +79,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sign)
 // round
 MXNET_OPERATOR_REGISTER_UNARY(round)
 .MXNET_DESCRIBE("Take round of the src")
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>);
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
 MXNET_OPERATOR_REGISTER_UNARY(ceil)

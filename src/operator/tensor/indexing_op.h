@@ -15,10 +15,13 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <algorithm>
+#include <type_traits>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
+#include "./sort_op.h"
 
 namespace mxnet {
 namespace op {
@@ -39,6 +42,61 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
     .describe("dimension of the embedding vectors.");
   }
 };
+
+/*!
+ * \brief CPU/GPU: Return the amount of temporary storage in bytes required by
+                   AddTakeGradLargeBatch
+ * \param num_items number of keys
+ */
+template <typename IndexType, typename xpu>
+inline typename std::enable_if<std::is_same<xpu, cpu>::value, size_t>::type
+AddTakeGradLargeBatchWorkspaceSize(size_t num_keys) {
+  return 0;
+}
+/*!
+ * \brief CPU/GPU: Return the amount of temporary storage in bytes required by
+                   AddTakeGradLargeBatch
+ * \param num_items number of keys
+ */
+template <typename IndexType, typename xpu>
+inline typename std::enable_if<std::is_same<xpu, gpu>::value, size_t>::type
+AddTakeGradLargeBatchWorkspaceSize(size_t num_keys);
+/*!
+ * \brief CPU/GPU: Gradient accumulate of embedding matrix.
+                   dst[sorted[i]] += src[index[i]]
+                   Called when the batchsize of src is larger than the featuredim
+ * \param dst destination
+ * \param sorted the sorted indices
+ * \param index original index of the sorted indices
+ * \param src source output
+ * \param workspace (optional) temporary storage
+ */
+template<typename IndexType, typename DType>
+inline void AddTakeGradLargeBatch(mshadow::Tensor<cpu, 2, DType> dst,
+                                  const mshadow::Tensor<cpu, 1, IndexType>& sorted,
+                                  const mshadow::Tensor<cpu, 1, IndexType>& index,
+                                  const mshadow::Tensor<cpu, 2, DType> &src,
+                                  mshadow::Tensor<cpu, 1, char>* workspace = NULL) {
+  for (index_t y = 0; y < sorted.size(0); ++y) {
+    dst[sorted[y]] += src[index[y]];
+  }
+}
+/*!
+ * \brief CPU/GPU: Gradient accumulate of embedding matrix.
+                   dst[sorted[i]] += src[index[i]]
+                   Called when the batchsize of src is larger than the featuredim
+ * \param dst destination
+ * \param sorted the sorted indices
+ * \param index original index of the sorted indices
+ * \param src source output
+ * \param workspace (optional) temporary storage
+ */
+template<typename IndexType, typename DType>
+inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
+                                  const mshadow::Tensor<gpu, 1, IndexType>& sorted,
+                                  const mshadow::Tensor<gpu, 1, IndexType>& index,
+                                  const mshadow::Tensor<gpu, 2, DType> &src,
+                                  mshadow::Tensor<gpu, 1, char>* workspace = NULL);
 
 inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
@@ -111,6 +169,51 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+// Returns integer log2(a) rounded up
+static int ilog2(unsigned int a) {
+  int k = 1;
+  while (a >>= 1) k++;
+  return k;
+}
+
+template<typename xpu, typename IndexType, typename DType>
+void AddTakeGradLargeBatchCaller(const OpContext& ctx, mshadow::Tensor<xpu, 2, DType> dst,
+                                 const mshadow::Tensor<xpu, 1, IndexType>& index,
+                                 const mshadow::Tensor<xpu, 2, DType> &src) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  // Calculate amount of temporary storage
+  size_t sort_workspace_size = mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>
+    (index.shape_.Size());
+  size_t addtake_workspace_size = mxnet::op::AddTakeGradLargeBatchWorkspaceSize<int, xpu>
+    (index.shape_.Size());
+  size_t temp_storage_size = std::max(sort_workspace_size, addtake_workspace_size);
+  size_t workspace_size = 2*(index.shape_.Size()*sizeof(int)) + temp_storage_size;
+
+  // Request temporary storage
+  Tensor<xpu, 1, char> workspace =
+    ctx.requested[embedding::kTempSpace].get_space_typed<xpu, 1, char>(
+      Shape1(workspace_size), s);
+
+  // Create tensors
+  size_t pos = 0;
+  Tensor<xpu, 1, int> sorted_data(reinterpret_cast<int*>(&workspace[pos]),
+    Shape1(index.shape_.Size()), s);
+  pos += index.shape_.Size()*sizeof(int);
+  Tensor<xpu, 1, int> original_index(reinterpret_cast<int*>(&workspace[pos]),
+    Shape1(index.shape_.Size()), s);
+  pos += index.shape_.Size()*sizeof(int);
+  Tensor<xpu, 1, char> temp_storage(&workspace[pos], Shape1(temp_storage_size), s);
+  sorted_data = tcast<int>(index);
+  original_index = range<int>(0, index.shape_.Size());
+  int num_bits = ilog2((dst.shape_[0] - 1));
+  mxnet::op::SortByKey(sorted_data, original_index, true, &temp_storage, 0, num_bits);
+  mxnet::op::AddTakeGradLargeBatch(dst, sorted_data, original_index, src, &temp_storage);
+}
+
 template<typename xpu>
 void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
@@ -140,18 +243,20 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
       if (req[embedding::kWeight] == kWriteTo) {
         grad_in = scalar<DType>(0.0f);
       }
-      if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
+      // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+      // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+      // When the number of elements processed is low, use AddTakeGrad.
+      // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+      uint64_t shape_in_prod =
+        static_cast<uint64_t>(grad_in.shape_[0])*
+        static_cast<uint64_t>(grad_in.shape_[1]);
+      uint64_t shape_out_prod =
+        static_cast<uint64_t>(grad_out.shape_[0])*
+        static_cast<uint64_t>(grad_out.shape_[1]);
+      if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
         AddTakeGrad(grad_in, data, grad_out);
       } else {
-        Tensor<xpu, 2, int> workspace =
-          ctx.requested[embedding::kTempSpace].get_space_typed<xpu, 2, int>(
-            mshadow::Shape2(2, data.shape_.Size()), s);
-        Tensor<xpu, 1, int> sorted_data = workspace[0];
-        Tensor<xpu, 1, int> original_index = workspace[1];
-        sorted_data = tcast<int>(data);
-        original_index = range<int>(0, data.shape_.Size());
-        SortByKey(sorted_data, original_index, true);
-        AddTakeGradLargeBatch(grad_in, sorted_data, original_index, grad_out);
+        AddTakeGradLargeBatchCaller(ctx, grad_in, data, grad_out);
       }
     } else {
       LOG(FATAL) << "wrong req";
@@ -309,18 +414,20 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
             if (req[take_::kArr] == kWriteTo) {
                 grad_in = scalar<DType>(0.0f);
             }
-            if ((grad_out.shape_[0] < grad_out.shape_[1]) && (grad_out.shape_[0] < 512)) {
+            // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+            // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+            // When the number of elements processed is low, use AddTakeGrad.
+            // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+            uint64_t shape_in_prod =
+              static_cast<uint64_t>(grad_in.shape_[0])*
+              static_cast<uint64_t>(grad_in.shape_[1]);
+            uint64_t shape_out_prod =
+              static_cast<uint64_t>(grad_out.shape_[0])*
+              static_cast<uint64_t>(grad_out.shape_[1]);
+            if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
                 AddTakeGrad(grad_in, idx, grad_out);
             } else {
-                Tensor<xpu, 2, int> workspace =
-                    ctx.requested[take_::kTempSpace].get_space_typed<xpu, 2, int>(
-                        mshadow::Shape2(2, idx.shape_.Size()), s);
-                Tensor<xpu, 1, int> sorted_idx = workspace[0];
-                Tensor<xpu, 1, int> original_idx = workspace[1];
-                sorted_idx = tcast<int>(idx);
-                original_idx = range<int>(0, idx.shape_.Size());
-                SortByKey(sorted_idx, original_idx, true);
-                AddTakeGradLargeBatch(grad_in, sorted_idx, original_idx, grad_out);
+                AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
             }
         } else {
             LOG(FATAL) << "wrong req";
@@ -375,4 +482,7 @@ void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+#ifdef __CUDACC__
+#include "./indexing_op-inl.cuh"
+#endif
 #endif  // MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
