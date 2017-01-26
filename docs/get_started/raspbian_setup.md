@@ -66,7 +66,7 @@ Sometimes you have to run the bash command twice as it may fail the first time.
 
 You are now ready to run MxNet on your Raspberry Pi! 
 
-**Note - ** Keep in mind loading the entire MxNet library takes up a significant fraction (200MB+) of the Raspberry Pi's limited RAM, so steps such as switching off the GUI and killing concurrently running processes to free RAM may be nessecary to load training data or large models into memory.
+*Note - Keep in mind loading the entire MxNet library takes up a significant fraction (200MB+) of the Raspberry Pi's limited RAM, so steps such as switching off the GUI and killing concurrently running processes to free RAM may be nessecary to load training data or large models into memory.*
 
 
 ## Next Steps
