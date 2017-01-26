@@ -1,23 +1,28 @@
 # Installing MXNet on CentOS
-MXNet currently supports Python, R, Julia, and Scala. For users on CentOS, MXNet provides [a docker installation guide](http://mxnet.io/get_started/docker_setup.html). If you don't have docker environment, please install MXNet step by step.
+MXNet currently supports Python, R, Julia, and Scala. For users on CentOS with Docker environment, MXNet provides [Docker installation guide](http://mxnet.io/get_started/docker_setup.html). If you do not have a Docker environment set up, follow below-provided step by step instructions.
 
-Note: If you are not familiar with CentOS or building progress, we encourage you to [install or deploy MXNet environment on Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html). 
 
 ## Minimum Requirements
-Make sure you have the root permission, and `yum` is properly installed.
+Make sure you have the root permission, and `yum` is properly installed. Check it using the following command:
 
-To install MXNet on CentOS, you must have the following:
+```bash
+sudo yum check-update 
+```
+If you don't get a error message, then `yum` is installed.
+
+**To install MXNet on CentOS, you must have the following:**
 
 1. gcc, g++ (4.8 or later)
 2. python2, python-numpy, python-pip, clang
 3. graphviz, jupyter (pip or yum install)
 4. OpenBLAS
 5. CUDA for GPU
-6. opencv (do not use yum to install opencv, some shared libs may not be installed) and cmake
+6. cmake and opencv (do not use yum to install opencv, some shared libs may not be installed)
 
-### Basic packages
+## Install Dependencies
 Make sure your machine is connected to Internet. A few installations need to download (`git clone` or `wget`) some packages from Internet.
 
+### Install Basic Environment
 ```bash
 	# Install gcc-4.8/make and other development tools
 	sudo yum install -y gcc
@@ -45,6 +50,8 @@ Note that OpenBLAS can be replaced by other BLAS libs, e.g, Intel MKL.
 	cd ..
 ```
 ### Install CUDA for GPU
+Note: Setting up CUDA is optional for MXNet. If you do not have a GPU machine (or if you want to train with CPU), you can skip this section and proceed with installation of OpenCV. 
+
 If you plan to build with GPU, you need to set up the environment for CUDA and CUDNN.
 
 First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
@@ -60,10 +67,13 @@ Unzip the file and change to the cudnn root directory. Move the header and libra
     sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
     sudo ldconfig
 ```
-### Install opencv for Computer Vision and Image Augmentation
+### Install opencv
+Note: Setting up opencv is optional but strongly recommended for MXNet, unless you do not want to work on Computer Vision and Image Augmentation. If you are quite sure about that, skip this section and  set `USE_OPENCV = 0` in `config.mk`. 
+
 The Open Source Computer Vision (OpenCV) library contains programming functions for computer vision and image augmentation. For more information, see [OpenCV](https://en.wikipedia.org/wiki/OpenCV).
 
 ```bash
+	# Install cmake for building opencv
 	sudo yum install -y cmake
 	# Install OpenCV at /usr/local/opencv
 	git clone https://github.com/opencv/opencv
@@ -76,11 +86,11 @@ The Open Source Computer Vision (OpenCV) library contains programming functions 
 
 ## Install MXNet
 
-### Generate libmxnet.so
+### Build MXNet shared library
 After installing the dependencies, use the following command to pull the MXNet source code from GitHub.
 
 ```bash
-    # Get MXNet source code
+    # Download MXNet source code to ~/mxnet directory
     git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
     # Move to source code parent directory
     cd ~/mxnet
@@ -105,10 +115,10 @@ Then build mxnet:
     make -j$(nproc)
 ```
 
-Executing these commands creates a library called ```libmxnet.so``` in `mxnet/lib/`.
+Executing these commands creates a library called ```libmxnet.so``` in `~/mxnet/lib/`.
 
 ### Install MXNet for Python
-Assume you are in `mxnet` directory , then install Python support for MXNet.
+Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
 
 ```bash
 	# Install MXNet Python package
@@ -119,9 +129,13 @@ Assume you are in `mxnet` directory , then install Python support for MXNet.
 Check if MXNet is properly installed.
 
 ```bash
+	# You can change mx.cpu to mx.gpu
 	python
 	>>> import mxnet as mx
-	>>> 
+	>>> a = mx.nd.ones((2, 3), mx.cpu())
+	>>> print ((a * 2).asnumpy())
+	[[ 2.  2.  2.]
+	 [ 2.  2.  2.]]
 ```
 If you don't get an import error, then MXNet is ready for python.
 
@@ -133,15 +147,17 @@ Note: You can update mxnet for python by repeating this step after re-building `
 - [Julia](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-julia)
 - [Scala](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-scala)
 
-## FAQ
+## Troubleshooting
 
-#### 1. Cannot build opencv from source code
+Here is some information to help you troubleshoot, in case you encounter error messages:
 
-This is caused by download failure during building, e.g., `ippicv`. 
+**1. Cannot build opencv from source code**
+
+This may be caused by download failure during building, e.g., `ippicv`. 
 
 Prepare some large packages by yourself, then copy them to the right place, e.g, `opencv/3rdparty/ippicv/downloads/linux-808XXXXXXXXX/`.
 
-#### 2. Link errors when building MXNet
+**2. Link errors when building MXNet**
 
 ```bash
 /usr/bin/ld: /tmp/ccQ9qruP.o: undefined reference to symbol '_ZN2cv6String10deallocateEv'
@@ -155,6 +171,7 @@ Please modify `config.mk` in `mxnet` directory, and add `-L/usr/local/lib` to `A
 	ADD_CFLAGS += -I/usr/include/openblas -L/usr/local/lib
 ```
 This solution solves this link error, but there are still lots of warnings.
+
 
 ## Next Steps
 
