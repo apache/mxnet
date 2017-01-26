@@ -108,8 +108,8 @@ class L2NormalizationOp : public Operator {
       Tensor<xpu, 2> norm = out_data[l2_normalization::kNorm]
         .get_with_shape<xpu, 2, real_t>(norm_shape, s);
       norm = reduce_with_axis<red::sum, false>(F<mxnet::op::mshadow_op::square>(data), 2);
-      norm = F<mxnet::op::mshadow_op::square_root>(norm);
-      out = data / broadcast_with_axis(norm + param_.eps, 1, dshape[2]);
+      norm = F<mxnet::op::mshadow_op::square_root>(norm + param_.eps);
+      out = data / broadcast_with_axis(norm, 1, dshape[2]);
     } else {
       LOG(FATAL) << "Unexpected mode in l2 normalization";
     }
@@ -164,7 +164,7 @@ class L2NormalizationOp : public Operator {
       temp = reduce_with_axis<red::sum, false>(grad_out * data, 1);
       Assign(grad_in, req[l2_normalization::kData],
         (grad_out - data * broadcast_with_axis(temp, 0, orig_shape[1])) /
-        broadcast_with_axis(norm + param_.eps, 0, orig_shape[1]));
+        broadcast_with_axis(norm, 0, orig_shape[1]));
     } else if (param_.mode == l2_normalization::kSpatial) {
       CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
@@ -183,7 +183,7 @@ class L2NormalizationOp : public Operator {
       temp = reduce_with_axis<red::sum, false>(grad_out * data, 2);
       Assign(grad_in, req[l2_normalization::kData],
         (grad_out - data * broadcast_with_axis(temp, 1, dshape[2])) /
-        broadcast_with_axis(norm + param_.eps, 1, dshape[2]));
+        broadcast_with_axis(norm, 1, dshape[2]));
     } else {
       LOG(FATAL) << "Unexpected mode in l2 normalization";
     }
