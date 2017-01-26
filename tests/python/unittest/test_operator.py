@@ -652,6 +652,15 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.backward(out_grad)
     assert reldiff(out, args_grad[0].asnumpy()) < 1e-6
 
+    args_grad_addto_npy = [np.random.normal(size=s) for s in arg_shapes]
+    args_grad_addto = [mx.nd.array(ele) for ele in args_grad_addto_npy]
+    exe = deconv.bind(default_context(), args=args, args_grad=args_grad_addto, grad_req="add")
+    exe.forward()
+    out = exe.outputs[0].asnumpy()
+    exe.backward(out_grad)
+    assert reldiff(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy()) < 1e-6
+
+
 def check_deconvolution_gradient(input_shape, num_filter, pad):
     """configure A: input --> conv --> output.
        configure B: input --> deconv --> output
@@ -689,11 +698,24 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     deconv_args['deconv_weight'] = conv_args['conv_weight']
     deconv_args_grad = [mx.nd.zeros(deconv_data.shape),
         mx.nd.zeros((num_filter, input_shape[1]) + kernel)]
+    deconv_addto_args_grad_npy = [np.random.normal(size=deconv_data.shape),
+                                  np.random.normal(size=(num_filter, input_shape[1]) + kernel)]
+    deconv_addto_args_grad = [mx.nd.array(deconv_addto_args_grad_npy[0]),
+                              mx.nd.array(deconv_addto_args_grad_npy[1])]
     exe_deconv = deconv.bind(default_context(), args=deconv_args, args_grad=deconv_args_grad)
     exe_deconv.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv.backward(deconv_out_grad)
     assert reldiff(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy()) < 1e-6
+    # Test AddTo
+    exe_deconv_addto = deconv.bind(default_context(), args=deconv_args,
+                                   args_grad=deconv_addto_args_grad,
+                                   grad_req="add")
+    exe_deconv_addto.forward(is_train=True)
+    deconv_out_grad = conv_data[:]
+    exe_deconv_addto.backward(deconv_out_grad)
+    assert reldiff(conv_args_grad[1].asnumpy() + deconv_addto_args_grad_npy[1],
+                   deconv_addto_args_grad[1].asnumpy()) < 1e-6
 
 def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, target_shape=None):
     data = mx.sym.Variable(name="data")
