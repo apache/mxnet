@@ -32,6 +32,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float momentum;
   bool fix_gamma;
   bool use_global_stats;
+  bool output_mean_var;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
@@ -42,6 +43,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
     .describe("Whether use global moving statistics instead of local batch-norm. "
               "This will force change batch-norm into a scale shift operator.");
+    DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
+    .describe("Output All,normal mean and var");
   }
 };
 
@@ -123,7 +126,7 @@ class BatchNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), param_.output_mean_var ? 3 : 1);
     CHECK_EQ(in_data.size(), 3);
     CHECK_EQ(out_data.size(), 3);
     CHECK_EQ(in_grad.size(), 3);
@@ -276,6 +279,9 @@ class BatchNormProp : public OperatorProperty {
   }
 
   int NumVisibleOutputs() const override {
+    if (param_.output_mean_var) {
+      return 3;
+    }
     return 1;
   }
 
