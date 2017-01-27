@@ -62,7 +62,7 @@ function test_aggregator()
 
   for vv in vals
     for v in vv
-      @test maximum(abs(copy(v)) - 2num_devs) == 0
+      @test maximum(abs.(copy(v)) - 2 * num_devs) == 0
     end
   end
 end
