@@ -389,7 +389,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
     end
   end
 
-  train_execs = Array(Executor, num_dev)
+  train_execs = Array{Executor}(num_dev)
   for i = 1:num_dev
     data_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_data(data)))
     label_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_label(data)))
