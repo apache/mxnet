@@ -14,7 +14,7 @@ lstm = LSTM(LSTM_N_LAYER, SEQ_LENGTH, DIM_HIDDEN, DIM_EMBED,
 
 #--data
 # load data
-text_all  = readall(INPUT_FILE)
+text_all  = readstring(INPUT_FILE)
 len_train = round(Int, length(text_all)*DATA_TR_RATIO)
 text_tr   = text_all[1:len_train]
 text_val  = text_all[len_train+1:end]

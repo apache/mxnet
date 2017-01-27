@@ -41,7 +41,7 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   end
   mlp_load = mx.load("$cp_prefix-symbol.json", mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
-  mlp_load = mx.from_json(readall("$cp_prefix-symbol.json"), mx.SymbolicNode)
+  mlp_load = mx.from_json(readstring("$cp_prefix-symbol.json"), mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
 
   #--------------------------------------------------------------------------------
