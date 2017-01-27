@@ -9,7 +9,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(softmax_cross_entropy)
-.MXNET_DESCRIBE("Calculate cross_entropy(lhs, one_hot(rhs))")
+.MXNET_DESCRIBE("Calculate cross_entropy(data, one_hot(label))")
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxCrossEntropyShape)

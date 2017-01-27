@@ -195,7 +195,9 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
-.MXNET_DESCRIBE("Slice the input along certain axis and return a sliced array.")
+.MXNET_DESCRIBE("Slice the input along certain axis and return a sliced array."
+                " The slice will be taken from [begin, end)."
+                " end can be None and axis can be negative.")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SliceParam>)

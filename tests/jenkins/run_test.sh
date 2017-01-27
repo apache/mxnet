@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "BUILD make"
 cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
@@ -6,17 +8,38 @@ echo "USE_CUDNN=1" >> config.mk
 echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
+user=`id -u -n`
 make -j$(nproc) || exit -1
+
+echo "BUILD python2 mxnet"
+cd python
+if [ $user == 'root' ]
+then
+    python setup.py install || exit 1
+else
+    python setup.py install --prefix ~/.local || exit 1
+fi
+cd ..
+
+echo "BUILD python3 mxnet"
+cd python
+if [ $user == 'root' ]
+then
+    python3 setup.py install || exit 1
+else
+    python3 setup.py install --prefix ~/.local || exit 1
+fi
+cd ..
 
 echo "BUILD lint"
 make lint || exit -1
 
 echo "BUILD cpp_test"
-make -j 4 test || exit -1
+make -j$(nproc) test || exit -1
 export MXNET_ENGINE_INFO=true
-for test in tests/cpp/*_test; do
-    ./$test || exit -1
-done
+#for test in tests/cpp/*_test; do
+#    ./$test || exit -1
+#done
 export MXNET_ENGINE_INFO=false
 
 echo "BUILD python_test"
