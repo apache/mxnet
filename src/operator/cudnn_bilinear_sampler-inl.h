@@ -37,6 +37,7 @@ class CuDNNBilinearSamplerOp : public Operator {
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
+    CHECK_EQ(req[bs::kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 2);
     Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -74,6 +75,8 @@ class CuDNNBilinearSamplerOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
+    CHECK_NE(req[bs::kData], kWriteInplace);
+    CHECK_NE(req[bs::kGrid], kWriteInplace);
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 2);
     CHECK_EQ(out_grad.size(), 1);
@@ -84,8 +87,8 @@ class CuDNNBilinearSamplerOp : public Operator {
     Tensor<gpu, 4, DType> ggrid = in_grad[bs::kGrid].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> grad = out_grad[bs::kOut].get<gpu, 4, DType>(s);
 
-    typename DataType<DType>::ScaleType alpha = 1.0f;
-    typename DataType<DType>::ScaleType beta = 0.0f;
+    typename DataType<DType>::ScaleType alpha = (req[bs::kData] == kNullOp) ? 0.0f : 1.0f;
+    typename DataType<DType>::ScaleType beta = (req[bs::kData] == kAddTo) ? 1.0f : 0.0f;
     typename DataType<DType>::ScaleType alpha_dgrid = 1.0f;
     typename DataType<DType>::ScaleType beta_dgrid = 0.0f;
     CHECK_EQ(cudnnSpatialTfSamplerBackward(s->dnn_handle_,
@@ -103,7 +106,7 @@ class CuDNNBilinearSamplerOp : public Operator {
                                            &beta_dgrid,
                                            grid_tmp.dptr_/*output, reuse grid*/),
                                            CUDNN_STATUS_SUCCESS);
-    ggrid = transpose(grid_tmp, Shape4(0, 3, 1, 2));
+    Assign(ggrid, req[bs::kGrid], transpose(grid_tmp, Shape4(0, 3, 1, 2)));
   }
 
  private:

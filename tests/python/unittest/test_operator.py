@@ -2223,14 +2223,6 @@ def test_take():
                 idx_shape += (np.random.randint(low=3, high=5), ) 
             check_output_n_grad(data_shape, idx_shape)
 
-def test_index2d():
-    for _ in range(30):
-        n = np.random.randint(1, 100)
-        m = np.random.randint(1, 500)
-        data = mx.random.uniform(-1, 1, shape=(n, m), ctx=default_context())
-        x = mx.nd.array(np.random.randint(0, m, size=n), ctx=default_context(), dtype='int32')
-        r = mx.nd.batch_take(data, x)
-        assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
 def test_grid_generator():
     # transform_type =  affine
@@ -2257,10 +2249,17 @@ def test_grid_generator():
         tmp[0] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) % target_shape[1]) * (2.0 / (target_shape[1]-1))
         tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
         tmp[2] = 1
-        
         grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
         assert reldiff(exe.grad_dict['affine'].asnumpy()[0], grad_est) < 1E-6
-    
+        # check addto
+        exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='add')
+        grid_grad_npy = np.random.normal(size=exe.grad_dict['affine'].shape)
+        exe.grad_dict['affine'][:] = grid_grad_npy
+        exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
+        exe.forward()
+        exe.backward(mx.nd.array(out_grad))
+        assert reldiff(exe.grad_dict['affine'].asnumpy()[0], grad_est + grid_grad_npy) < 1E-6
+
     # transform_type = warp
     test_case = [(12,21),(4,3),(6,12)]
     for target_shape in test_case:
@@ -2283,6 +2282,15 @@ def test_grid_generator():
         grad_est[0,0] = out_grad[0,0] / ((target_shape[1]-1.0) / 2.0)
         grad_est[0,1] = out_grad[0,1] / ((target_shape[0]-1.0) / 2.0)
         assert reldiff(exe.grad_dict['flow'].asnumpy(), grad_est) < 1E-6
+        # check addto
+        exe_add = grid.simple_bind(ctx=default_context(), flow=(1, 2) + target_shape, grad_req='add')
+        flow_grad_npy = np.random.normal(size=exe_add.grad_dict['flow'].shape)
+        exe_add.arg_dict['flow'][:] = np.ones((1, 2) + target_shape)
+        exe_add.grad_dict['flow'][:] = flow_grad_npy
+        exe_add.forward()
+        exe_add.backward(mx.nd.array(out_grad))
+        assert reldiff(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy) < 1E-6
+
 
 def test_bilinear_sampler():
     
@@ -2413,7 +2421,6 @@ def test_bilinear_sampler():
         for item in test_case:
             data_shape, grid_shape = item
             exe = net.simple_bind(data=data_shape,grid=grid_shape,ctx=ctx,grad_req='write')
-            
             # check forward
             tmp = np.zeros(grid_shape)
             xv, yv = np.meshgrid(np.arange(grid_shape[2]), np.arange(grid_shape[3]))
@@ -2430,9 +2437,30 @@ def test_bilinear_sampler():
             exe.backward(mx.nd.array(out_grad))
             data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(), 
                                                        exe.arg_dict['grid'].asnumpy())
+            assert reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 1E-4
+            assert reldiff(exe.grad_dict['grid'].asnumpy(),grid_grad) < 1E-5
+
+            # check kAddTo
+            exe_addto = net.simple_bind(data=data_shape, grid=grid_shape, ctx=ctx, grad_req='add')
+            data_initial_grid = np.random.normal(size=exe_addto.grad_dict['data'].shape)
+            grid_initial_grid = np.random.normal(size=exe_addto.grad_dict['grid'].shape)
+            exe_addto.arg_dict['data'][:] = exe.arg_dict['data'][:]
+            exe_addto.arg_dict['grid'][:] = exe.arg_dict['grid'][:]
+            exe_addto.grad_dict['data'][:] = data_initial_grid
+            exe_addto.grad_dict['grid'][:] = grid_initial_grid
+            exe_addto.forward()
+            exe_addto.backward(mx.nd.array(out_grad))
+            assert reldiff(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid) < 1E-4
+            assert reldiff(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid) < 1E-5
             
-            assert  reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 1E-5
-            assert  reldiff(exe.grad_dict['grid'].asnumpy(),grid_grad) < 1E-5
+def test_index2d():
+    for _ in range(30):
+        n = np.random.randint(1, 100)
+        m = np.random.randint(1, 500)
+        data = mx.random.uniform(-1, 1, shape=(n, m), ctx=default_context())
+        x = mx.nd.array(np.random.randint(0, m, size=n), ctx=default_context(), dtype='int32')
+        r = mx.nd.batch_take(data, x)
+        assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
 if __name__ == '__main__':
     test_clip()
