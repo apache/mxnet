@@ -1,10 +1,12 @@
 using Compat
+import JSON
 
 ################################################################################
 # First try to detect and load existing libmxnet
 ################################################################################
 libmxnet_detected = false
 libmxnet_curr_ver = "master"
+curr_win = "20161125"
 
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
@@ -18,25 +20,39 @@ if haskey(ENV, "MXNET_HOME")
   end
 end
 
+
+
 using BinDeps
 @BinDeps.setup
 if !libmxnet_detected
+  if is_windows()
+    # TODO: Detect GPU support on Windows
+    info("Downloading pre-built CPU packages for Windows.")
+    base_url = "https://github.com/dmlc/mxnet/releases/download/20160531/20160531_win10_x64_cpu.7z"
+    if libmxnet_curr_ver == "master"
+      # download_cmd uses powershell 2, but we need powershell 3 to do this
+      ps_wget(url, file) = run(`powershell -NoProfile -Command "wget \"$url\" -o \"$file\""`)
+      ps_wget("https://api.github.com/repos/yajiedesign/mxnet/releases/latest", "mxnet.json")
+      curr_win = JSON.parsefile("mxnet.json")["tag_name"]
+      info("Can't use MXNet master on Windows, using latest binaries from $curr_win.")
+    end
+    # TODO: Get url from JSON.
+    package_url = "https://github.com/yajiedesign/mxnet/releases/download/$(curr_win)/$(curr_win)_mxnet_x64_vc12_cpu.7z"
+
+    run(download_cmd(base_url, "mxnet_base.7z"))
+    run(`7z x mxnet_base.7z -y -ousr`)
+    run(`usr\\setupenv.cmd`)
+    run(`cmd /c copy "usr\\3rdparty\\openblas\\bin\\*.dll" "usr\\lib"`)
+
+    run(download_cmd(package_url, "mxnet.7z"))
+    run(`7z x mxnet.7z -y -ousr`)
+
+    return
+  end
+
   ################################################################################
   # If not found, try to build automatically using BinDeps
   ################################################################################
-  if is_windows()  
-	DOWNLOAD_URL = "https://github.com/dmlc/mxnet/releases/download/20160531/20160531_win10_x64_cpu.7z"
-	run(download_cmd(DOWNLOAD_URL, "mxnet.7z"))
-	run(`7z x mxnet.7z -y -ousr`)
-	run(`usr\\setupenv.cmd`)
-	run(`cmd /c copy "usr\\3rdparty\\openblas\\bin\\*.dll" "usr\\lib"`)
-	
-	DOWNLOAD_URL = "https://github.com/yajiedesign/mxnet/releases/download/20161125/20161125_mxnet_x64_cpu.7z"
-	run(download_cmd(DOWNLOAD_URL, "mxnet.7z"))
-	run(`7z x mxnet.7z -y -ousr`)
-
-	return
-  end
 
   blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
 
