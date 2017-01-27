@@ -5,6 +5,8 @@ module MNISTTest
 using MXNet
 using Base.Test
 
+include("mnist-data.jl")
+
 function get_mnist_mlp()
   mlp = @mx.chain mx.Variable(:data)             =>
     mx.FullyConnected(name=:fc1, num_hidden=128) =>
@@ -17,7 +19,6 @@ function get_mnist_mlp()
 end
 
 function get_mnist_data(batch_size=100)
-  include("mnist-data.jl")
   return get_mnist_providers(batch_size)
 end
 
