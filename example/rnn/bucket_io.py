@@ -187,7 +187,7 @@ class BucketSentenceIter(mx.io.DataIter):
             bucket_n_batches.append(len(self.data[i]) / self.batch_size)
             self.data[i] = self.data[i][:int(bucket_n_batches[i]*self.batch_size)]
 
-        bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
+        bucket_plan = np.hstack([np.zeros(int(n), int)+i for i, n in enumerate(bucket_n_batches)])
         np.random.shuffle(bucket_plan)
 
         bucket_idx_all = [np.random.permutation(len(x)) for x in self.data]
@@ -225,7 +225,7 @@ class BucketSentenceIter(mx.io.DataIter):
             # Model parallelism 
             if self.model_parallel:
                 if self.data[i_bucket][:, idx].shape[1] == 0:
-                    print "WARNING: detected shape " + str(self.data[i_bucket][:, idx].shape)
+                    print("WARNING: detected shape " + str(self.data[i_bucket][:, idx].shape))
                     continue
                 data[:] = self.data[i_bucket][:, idx]
                 data_batch = ModelParallelBatch(data, self.buckets[i_bucket])
