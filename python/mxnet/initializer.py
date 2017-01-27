@@ -389,10 +389,7 @@ class Xavier(Initializer):
         if self.rnd_type == "uniform":
             random.uniform(-scale, scale, out=arr)
         elif self.rnd_type == "gaussian":
-            nout = arr.shape[0]
-            nin = np.prod(arr.shape[1:])
-            arr = np.random.normal(0, scale, (nout, nin))
-            # random.normal(0, scale, out=arr)
+            random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
 
