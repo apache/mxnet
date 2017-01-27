@@ -58,13 +58,6 @@ ifndef LINT_LANG
 	LINT_LANG="all"
 endif
 
-# For building pip wheel
-ifeq ($(BUILD_PIP_WHEEL), 1)
-	USE_BLAS=openblas
-	ADD_CFLAGS += -L~/lib
-	ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_highgui
-endif
-
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)

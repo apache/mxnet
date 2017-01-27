@@ -22,13 +22,9 @@ else
 fi
 sudo pip install -U pip setuptools wheel
 
-# Setup path to dependencies
-export PKG_CONFIG_PATH=$HOME/lib/pkgconfig:$HOME/lib64/pkgconfig:$PKG_CONFIG_PATH
-export CPATH=$HOME/include:$CPATH
-
-# Position Independent code must be turned on for statically linking .a
-export CC="gcc -fPIC"
-export CXX="g++ -fPIC"
+# Set up path as temporary working directory
+DEPS_PATH=$PWD/../../deps
+mkdir $DEPS_PATH
 
 # Dependencies can be updated here. Be sure to verify the download link before
 # changing. The dependencies are:
@@ -39,44 +35,52 @@ PNG_VERSION=1.5.10
 TIFF_VERSION=3.8.2
 OPENCV_VERSION=2.4.13
 
+# Setup path to dependencies
+export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$PKG_CONFIG_PATH
+export CPATH=$DEPS_PATH/include:$CPATH
+
+# Position Independent code must be turned on for statically linking .a
+export CC="gcc -fPIC"
+export CXX="g++ -fPIC"
+
 # Download and build zlib
-curl -L https://github.com/LuaDist/zlib/archive/$ZLIB_VERSION.zip -o $HOME/zlib.zip
-unzip $HOME/zlib.zip -d $HOME
-mkdir $HOME/zlib-$ZLIB_VERSION/build
-cd $HOME/zlib-$ZLIB_VERSION/build
+curl -L https://github.com/LuaDist/zlib/archive/$ZLIB_VERSION.zip -o $DEPS_PATH/zlib.zip
+unzip $DEPS_PATH/zlib.zip -d $DEPS_PATH
+mkdir $DEPS_PATH/zlib-$ZLIB_VERSION/build
+cd $DEPS_PATH/zlib-$ZLIB_VERSION/build
 cmake -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=$HOME \
+      -D CMAKE_INSTALL_PREFIX=$DEPS_PATH \
       -D BUILD_SHARED_LIBS=OFF ..
 make -j$(nproc)
 make install
 cd -
 
 # download and build openblas
-curl -L https://github.com/xianyi/OpenBLAS/archive/v$OPENBLAS_VERSION.zip -o $HOME/openblas.zip
-unzip $HOME/openblas.zip -d $HOME
-cd $HOME/OpenBLAS-$OPENBLAS_VERSION
+curl -L https://github.com/xianyi/OpenBLAS/archive/v$OPENBLAS_VERSION.zip -o $DEPS_PATH/openblas.zip
+unzip $DEPS_PATH/openblas.zip -d $DEPS_PATH
+cd $DEPS_PATH/OpenBLAS-$OPENBLAS_VERSION
 make FC=gfortran -j $(($(nproc) + 1))
-make PREFIX=$HOME install
+make PREFIX=$DEPS_PATH install
 cd -
-ln -s $HOME/lib/libopenblas_haswellp-r0.2.19.a $HOME/lib/libcblas.a
+ln -s $DEPS_PATH/lib/libopenblas_haswellp-r0.2.19.a $DEPS_PATH/lib/libcblas.a
 
 # download and build libjpeg
-curl -L https://github.com/LuaDist/libjpeg/archive/$JPEG_VERSION.zip -o $HOME/libjpeg.zip
-unzip $HOME/libjpeg.zip -d $HOME
-cd $HOME/libjpeg-$JPEG_VERSION
-./configure --disable-shared --prefix=$HOME
+curl -L https://github.com/LuaDist/libjpeg/archive/$JPEG_VERSION.zip -o $DEPS_PATH/libjpeg.zip
+unzip $DEPS_PATH/libjpeg.zip -d $DEPS_PATH
+cd $DEPS_PATH/libjpeg-$JPEG_VERSION
+./configure --disable-shared --prefix=$DEPS_PATH
 make -j$(nproc)
 make test
 make install
 cd -
 
 # download and build libpng
-curl -L https://github.com/LuaDist/libpng/archive/$PNG_VERSION.zip -o $HOME/libpng.zip
-unzip $HOME/libpng.zip -d $HOME
-mkdir $HOME/libpng-$PNG_VERSION/build
-cd $HOME/libpng-$PNG_VERSION/build
+curl -L https://github.com/LuaDist/libpng/archive/$PNG_VERSION.zip -o $DEPS_PATH/libpng.zip
+unzip $DEPS_PATH/libpng.zip -d $DEPS_PATH
+mkdir $DEPS_PATH/libpng-$PNG_VERSION/build
+cd $DEPS_PATH/libpng-$PNG_VERSION/build
 cmake -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=$HOME \
+      -D CMAKE_INSTALL_PREFIX=$DEPS_PATH \
       -D PNG_CONFIGURE_LIBPNG=-fPIC \
       -D BUILD_SHARED_LIBS=OFF ..
 make -j$(nproc)
@@ -84,19 +88,19 @@ make install
 cd -
 
 # download and build libtiff
-curl -L https://github.com/LuaDist/libtiff/archive/$TIFF_VERSION.zip -o $HOME/libtiff.zip
-unzip $HOME/libtiff.zip -d $HOME
-cd $HOME/libtiff-$TIFF_VERSION
-./configure --disable-shared --prefix=$HOME
+curl -L https://github.com/LuaDist/libtiff/archive/$TIFF_VERSION.zip -o $DEPS_PATH/libtiff.zip
+unzip $DEPS_PATH/libtiff.zip -d $DEPS_PATH
+cd $DEPS_PATH/libtiff-$TIFF_VERSION
+./configure --disable-shared --prefix=$DEPS_PATH
 make -j$(nproc)
 make install
 cd -
 
 # download and build opencv since we need the static library
-curl -L https://github.com/Itseez/opencv/archive/$OPENCV_VERSION.zip -o $HOME/opencv.zip
-unzip $HOME/opencv.zip -d $HOME
-mkdir $HOME/opencv-$OPENCV_VERSION/build
-cd $HOME/opencv-$OPENCV_VERSION/build
+curl -L https://github.com/Itseez/opencv/archive/$OPENCV_VERSION.zip -o $DEPS_PATH/opencv.zip
+unzip $DEPS_PATH/opencv.zip -d $DEPS_PATH
+mkdir $DEPS_PATH/opencv-$OPENCV_VERSION/build
+cd $DEPS_PATH/opencv-$OPENCV_VERSION/build
 cmake -D WITH_1394=OFF \
       -D WITH_AVFOUNDATION=OFF \
       -D WITH_CUDA=OFF \
@@ -137,7 +141,7 @@ cmake -D WITH_1394=OFF \
       -D BUILD_DOCS=OFF \
       -D BUILD_PACKAGE=OFF \
       -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=$HOME ..
+      -D CMAKE_INSTALL_PREFIX=$DEPS_PATH ..
 make -j $(nproc)
 make install # user will always have access to home, so no sudo needed
 cd -
@@ -145,11 +149,12 @@ cd -
 # Although .so building is explicitly turned off for most libraries, sometimes
 # they still get created. So, remove them just to make sure they don't
 # interfere, or otherwise we might get libmxnet.so that is not self-contained.
-rm $HOME/{lib,lib64}/*.{so,so.0}
+rm $DEPS_PATH/{lib,lib64}/*.{so,so.0}
 
 # Go to the parent path and build mxnet
 cd ../../
-BUILD_PIP_WHEEL=1 make -j $(nproc)
+cp make/pip_$(uname | tr '[:upper:]' '[:lower:]')_cpu.mk config.mk
+make -j $(nproc)
 
 # Generate wheel. The output is in the mxnet/tools/pip_package/dist path.
 cd tools/pip_package
