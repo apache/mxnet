@@ -262,6 +262,9 @@ class Symbol(SymbolBase):
             index = idx
         if not isinstance(index, int):
             raise TypeError('Symbol only support integer index to fetch i-th output')
+        if index >= (len(self.list_outputs())):
+            # Important, python determines the end by this exception
+            raise IndexError
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolGetOutput(
             self.handle, mx_uint(index), ctypes.byref(handle)))
