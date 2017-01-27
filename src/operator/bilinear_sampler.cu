@@ -36,11 +36,11 @@ __global__ void BilinearSamplerForwardKernel(const int i_c, const int i_h,
     index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
     DType y_real = (*(grid + grid_index + o_h * o_w) + 1) * (i_h - 1) / 2;
     DType x_real = (*(grid + grid_index) + 1) * (i_w - 1) / 2;
-    index_t top_left_y = static_cast<int>(floor(y_real));
-    index_t top_left_x = static_cast<int>(floor(x_real));
+    int top_left_y = static_cast<int>(floor(y_real));
+    int top_left_x = static_cast<int>(floor(x_real));
     DType top_left_y_w = 1.0 - (y_real - top_left_y);
     DType top_left_x_w = 1.0 - (x_real - top_left_x);
-    index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
+    int data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
     DType top_left_v = 0;
     DType top_right_v = 0;
     DType bottom_left_v = 0;
@@ -81,13 +81,13 @@ __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
     DType y_real = (*(grid_src + grid_src_index + o_h * o_w) + 1) * (i_h - 1) / 2;
     DType x_real = (*(grid_src + grid_src_index) + 1) * (i_w - 1) / 2;
 
-    index_t top_left_y = static_cast<int>(floor(y_real));
-    index_t top_left_x = static_cast<int>(floor(x_real));
+    int top_left_y = static_cast<int>(floor(y_real));
+    int top_left_x = static_cast<int>(floor(x_real));
     DType top_left_y_w = 1.0 - (y_real - top_left_y);
     DType top_left_x_w = 1.0 - (x_real - top_left_x);
     for (index_t c = 0; c < o_c; ++c) {
       index_t grad_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
-      index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
+      int data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
       // calc 4 vertex value in input data
       DType top_left_v = 0;
       DType top_right_v = 0;
@@ -122,8 +122,8 @@ __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
                         * top_left_y_w);
     }
     // calc grad of grid
-    *(grad_grid + grid_src_index + o_h * o_w) = top_left_y_gw * (i_h - 1) / 2;
-    *(grad_grid + grid_src_index) = top_left_x_gw * (i_w - 1) / 2;
+    *(grad_grid + grid_src_index + o_h * o_w) += top_left_y_gw * (i_h - 1) / 2;
+    *(grad_grid + grid_src_index) += top_left_x_gw * (i_w - 1) / 2;
   }
 }
 }  // namespace cuda
@@ -139,12 +139,18 @@ inline void BilinearSamplerForward(const Tensor<gpu, 4, DType> &output,
     int i_c = input.size(1), i_h = input.size(2), i_w = input.size(3);
     using namespace cuda;
     const int max_block = (output.shape_.Size() + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
-    dim3 num_blocks(kMaxGridNum, (max_block + kMaxGridNum - 1) / kMaxGridNum);
+    const int grid_dim_x = (max_block > kMaxGridNum) ? kMaxGridNum : max_block;
+    const int grid_dim_y =
+      (max_block > kMaxGridNum) ? (max_block + kMaxGridNum - 1) / kMaxGridNum : 1;
+    dim3 num_blocks(grid_dim_x, grid_dim_y);
     dim3 threads_per_block(kMaxThreadsPerBlock);
     CheckLaunchParam(num_blocks, threads_per_block, "bilinear sampler forward");
     cudaStream_t stream = Stream<gpu>::GetStream(output.stream_);
     cuda::BilinearSamplerForwardKernel<DType> << <num_blocks, threads_per_block, 0, stream >> >(
       i_c, i_h, i_w, data, grid, o_n, o_c, o_h, o_w, out);
+    // post kernel check
+    cudaError err = cudaPeekAtLastError();
+    CHECK_EQ(err, cudaSuccess) << cudaGetErrorString(err);
 }
 
 template<typename DType>
@@ -164,12 +170,18 @@ inline void BilinearSamplerBackward(const Tensor<gpu, 4, DType> &input_grad,
   using namespace cuda;
   const int max_block = (output_grad.shape_.Size() / o_c + kMaxThreadsPerBlock - 1)
                         / kMaxThreadsPerBlock;
-  dim3 num_blocks(kMaxGridNum, (max_block + kMaxGridNum - 1) / kMaxGridNum);
+  const int grid_dim_x = (max_block > kMaxGridNum) ? kMaxGridNum : max_block;
+  const int grid_dim_y =
+    (max_block > kMaxGridNum) ? (max_block + kMaxGridNum - 1) / kMaxGridNum : 1;
+  dim3 num_blocks(grid_dim_x, grid_dim_y);
   dim3 threads_per_block(kMaxThreadsPerBlock);
   CheckLaunchParam(num_blocks, threads_per_block, "bilinear sampler backward");
   cudaStream_t stream = Stream<gpu>::GetStream(input_grad.stream_);
   cuda::BilinearSamplerBackwardKernel<DType> << <num_blocks, threads_per_block, 0, stream >> >(
     i_c, i_h, i_w, grad, data, o_n, o_c, o_h, o_w, g_input, grid_src, grad_grid);
+  // post kernel check
+  cudaError err = cudaPeekAtLastError();
+  CHECK_EQ(err, cudaSuccess) << cudaGetErrorString(err);
 }
 
 }  // namespace mshadow

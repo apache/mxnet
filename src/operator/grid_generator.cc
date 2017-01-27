@@ -12,9 +12,11 @@ namespace op {
 template<>
 Operator* CreateOp<cpu>(GridGeneratorParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new GridGeneratorOp<cpu, DType>(param);
-  })
+  if (dtype == mshadow::kFloat32) {
+    op = new GridGeneratorOp<cpu, float>(param);
+  } else {
+    LOG(FATAL) << "Other DTypes are not supported!";
+  }
   return op;
 }
 

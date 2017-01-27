@@ -15,6 +15,7 @@
 #include <map>
 #include <utility>
 #include <string>
+#include "./mshadow_op.h"
 #include "./operator_common.h"
 
 namespace mxnet {
@@ -58,6 +59,7 @@ class GridGeneratorOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    CHECK_EQ(req[grid::kOut], kWriteTo);
     CHECK_EQ(in_data.size(), 1);
     CHECK_EQ(out_data.size(), 2);
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -80,7 +82,7 @@ class GridGeneratorOp : public Operator {
         grid_dst[1] = range<DType>(0, grid_dst.shape_[1]);
         grid_dst[1] = scalar<DType>(-1.0) + tcast<DType>(tcast<int>(grid_dst[1] /
           scalar<DType>(param_.target_shape[1]))) * scalar<DType>(2.0/(param_.target_shape[0] - 1));
-        grid_dst[2] = 1.0;
+        grid_dst[2] = scalar<DType>(1.0);
         Assign(out, req[grid::kOut], dot(data, grid_dst));
         break;
       }
@@ -92,18 +94,17 @@ class GridGeneratorOp : public Operator {
         Tensor<xpu, 4, DType> out = out_data[grid::kOut].get<xpu, 4, DType>(s);
         // grid_dst : (2, H, W)
         Tensor<xpu, 3, DType> grid_dst = out_data[grid::kGridDst].get<xpu, 3, DType>(s);
+        Tensor<xpu, 2, DType> workspace = ctx.requested[grid::kTempSpace]
+          .get_space_typed<xpu, 2, DType>(Shape2(2, 1), s);
         grid_dst[0] = repmat(range<DType>(0, data.size(3)), data.size(2));
         grid_dst[1] = reshape(range<DType>(0, data.size(2), 1, data.size(3)),
                               Shape2(data.size(2), data.size(3)));
-        for (index_t batch = 0; batch < data.size(0); batch++) {
-          // bilinear sampler op assume that grid has been nomalized
-          Assign(out[batch][0], req[grid::kOut],
-            (data[batch][0] + grid_dst[0]) / scalar<DType>((data.size(3) - 1) / 2.0)
-            - scalar<DType>(1));
-          Assign(out[batch][1], req[grid::kOut],
-            (data[batch][1] + grid_dst[1]) / scalar<DType>((data.size(2) - 1) / 2.0)
-            - scalar<DType>(1));
-        }
+        workspace[0] = scalar<DType>((DType(data.size(3)) - 1.0) / 2.0);
+        workspace[1] = scalar<DType>((DType(data.size(2)) - 1.0) / 2.0);
+        Assign(out, req[grid::kOut],
+               (data + broadcast_with_axis(grid_dst, -1, data.shape_[0])) /
+                 broadcast_to(reshape(workspace, Shape4(1, 2, 1, 1)),
+                              TShape(data.shape_)) - scalar<DType>(1));
         break;
       }
     }
@@ -138,11 +139,13 @@ class GridGeneratorOp : public Operator {
       case grid::kWarp: {
         Tensor<xpu, 4, DType> grad = out_grad[grid::kOut].get<xpu, 4, DType>(s);
         Tensor<xpu, 4, DType> gdata = in_grad[grid::kData].get<xpu, 4, DType>(s);
-        Tensor<xpu, 1, DType> workspace = ctx.requested[grid::kTempSpace]
-          .get_space_typed<xpu, 1, DType>(Shape1(2), s);
-        workspace[0] = (gdata.size(3) - 1) / 2.0;
-        workspace[1] = (gdata.size(2) - 1) / 2.0;
-        Assign(gdata, req[grid::kData], grad / broadcast<1>(workspace, gdata.shape_));
+        Tensor<xpu, 2, DType> workspace = ctx.requested[grid::kTempSpace]
+          .get_space_typed<xpu, 2, DType>(Shape2(2, 1), s);
+        workspace[0] = scalar<DType>((DType(gdata.size(3)) - 1.0) / 2.0);
+        workspace[1] = scalar<DType>((DType(gdata.size(2)) - 1.0) / 2.0);
+        Assign(gdata, req[grid::kData],
+               grad / broadcast_to(reshape(workspace, Shape4(1, 2, 1, 1)),
+                                   TShape(gdata.shape_)));
         break;
       }
     }
@@ -270,6 +273,19 @@ class GridGeneratorProp : public OperatorProperty {
       }
     }
     return {};
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+    const std::vector<TShape> &in_shape) const override {
+    switch (param_.transform_type) {
+    case grid::kAffine: {
+      return{};
+    }
+    case grid::kWarp: {
+      return{ ResourceRequest::kTempSpace };
+    }
+    }
+    return{};
   }
 
   std::vector<ResourceRequest> BackwardResource(
