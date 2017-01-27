@@ -31,8 +31,7 @@ if !libmxnet_detected
     base_url = "https://github.com/dmlc/mxnet/releases/download/20160531/20160531_win10_x64_cpu.7z"
     if libmxnet_curr_ver == "master"
       # download_cmd uses powershell 2, but we need powershell 3 to do this
-      ps_wget(url, file) = run(`powershell -NoProfile -Command "wget \"$url\" -o \"$file\""`)
-      ps_wget("https://api.github.com/repos/yajiedesign/mxnet/releases/latest", "mxnet.json")
+	  run(`powershell -NoProfile -Command Invoke-WebRequest -Uri "https://api.github.com/repos/yajiedesign/mxnet/releases/latest" -OutFile "mxnet.json"`)
       curr_win = JSON.parsefile("mxnet.json")["tag_name"]
       info("Can't use MXNet master on Windows, using latest binaries from $curr_win.")
     end
