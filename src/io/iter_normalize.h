@@ -17,64 +17,10 @@
 #include <string>
 #include <vector>
 #include "../common/utils.h"
+#include "./image_iter_common.h"
 
 namespace mxnet {
 namespace io {
-
-// normalize parameters
-struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
-  /*! \brief random seed */
-  int seed;
-  /*! \brief whether to mirror the image */
-  bool mirror;
-  /*! \brief whether to perform rand mirror the image */
-  bool rand_mirror;
-  /*! \brief mean file string */
-  std::string mean_img;
-  /*! \brief mean value for r channel */
-  float mean_r;
-  /*! \brief mean value for g channel */
-  float mean_g;
-  /*! \brief mean value for b channel */
-  float mean_b;
-  /*! \brief mean value for alpha channel */
-  float mean_a;
-  /*! \brief scale on color space */
-  float scale;
-  /*! \brief maximum ratio of contrast variation */
-  float max_random_contrast;
-  /*! \brief maximum value of illumination variation */
-  float max_random_illumination;
-  /*! \brief silent */
-  bool verbose;
-  // declare parameters
-  DMLC_DECLARE_PARAMETER(ImageNormalizeParam) {
-    DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("Augmentation Param: Random Seed.");
-    DMLC_DECLARE_FIELD(mirror).set_default(false)
-        .describe("Augmentation Param: Whether to mirror the image.");
-    DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("Augmentation Param: Whether to mirror the image randomly.");
-    DMLC_DECLARE_FIELD(mean_img).set_default("")
-        .describe("Augmentation Param: Mean Image to be subtracted.");
-    DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on R channel.");
-    DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on G channel.");
-    DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on B channel.");
-    DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on Alpha channel.");
-    DMLC_DECLARE_FIELD(scale).set_default(1.0f)
-        .describe("Augmentation Param: Scale in color space.");
-    DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
-        .describe("Augmentation Param: Maximum ratio of contrast variation.");
-    DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
-        .describe("Augmentation Param: Maximum value of illumination variation.");
-    DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("Augmentation Param: Whether to print augmentor info.");
-  }
-};
 
 /*!
  * \brief Iterator that normalize a image.
