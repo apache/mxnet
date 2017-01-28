@@ -11,6 +11,10 @@ using Compat
 import Compat.String
 import Compat.view
 
+if VERSION >= v"0.6.0-dev.1024"
+  import Base.Iterators: filter
+end
+
 using Formatting
 
 # Functions from base that we can safely extend and that are defined by libmxnet.

@@ -5,6 +5,8 @@ module MNISTTest
 using MXNet
 using Base.Test
 
+include("mnist-data.jl")
+
 function get_mnist_mlp()
   mlp = @mx.chain mx.Variable(:data)             =>
     mx.FullyConnected(name=:fc1, num_hidden=128) =>
@@ -17,7 +19,6 @@ function get_mnist_mlp()
 end
 
 function get_mnist_data(batch_size=100)
-  include("mnist-data.jl")
   return get_mnist_providers(batch_size)
 end
 
@@ -40,7 +41,7 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   end
   mlp_load = mx.load("$cp_prefix-symbol.json", mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
-  mlp_load = mx.from_json(readall("$cp_prefix-symbol.json"), mx.SymbolicNode)
+  mlp_load = mx.from_json(readstring("$cp_prefix-symbol.json"), mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
 
   #--------------------------------------------------------------------------------

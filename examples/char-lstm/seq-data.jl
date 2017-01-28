@@ -5,7 +5,7 @@ using MXNet
 function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; max_vocab=10000)
   if isfile(vocab_fn)
     info("Vocabulary already exists, reusing $vocab_fn...")
-    vocab = Dict{Char,Int}([w => i for (i,w) in enumerate(readall(vocab_fn))])
+    vocab = Dict{Char,Int}([w => i for (i,w) in enumerate(readstring(vocab_fn))])
   else
     # count symbol frequency
     dict = Dict{Char,Int}()
