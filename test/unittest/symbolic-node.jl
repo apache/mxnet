@@ -130,6 +130,14 @@ function test_dot()
   @test reldiff(ret, 2*ones(100, 200)) < 1e-6
 end
 
+function test_misc()
+  info("SymbolicNode::Miscellaneous")
+  # Test for #189
+  a = mx.Variable("a")
+  b = mx.Variable("b")
+  symb = mx.ElementWiseSum(a,b)
+end
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -143,6 +151,7 @@ end
   test_attrs()
   test_functions()
   test_dot()
+  test_misc()
 end
 
 end

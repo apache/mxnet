@@ -627,8 +627,8 @@ function _define_atomic_symbol_creator(name :: String)
 
     $(if key_narg != ""
       quote
-        if !in(Symbol($key_narg), param_keys)
-          push!(param_keys, Symbol($key_narg))
+        if !in($key_narg, param_keys)
+          push!(param_keys, $key_narg)
           push!(param_vals, string(length(args)))
         end
       end
