@@ -20,7 +20,7 @@ for test in tests/cpp/*_test; do
     ./$test || exit -1
 done
 export MXNET_ENGINE_INFO=false
-export PYTHONPATH=$(PWD)/python
+export PYTHONPATH=$(pwd)/python
 
 echo "BUILD python_test"
 nosetests --verbose tests/python/unittest || exit -1
