@@ -20,23 +20,56 @@ if haskey(ENV, "MXNET_HOME")
   end
 end
 
+# Try to find cuda
+CUDAPATHS = String[]
+if haskey(ENV, "CUDA_HOME")
+  push!(CUDAPATHS, joinpath(ENV["CUDA_HOME"], "lib64"))
+elseif is_linux()
+  append!(CUDAPATHS, ["/opt/cuda/lib64", "/usr/local/cuda/lib64"])
+end
 
+if is_unix()
+  try
+    push!(CUDAPATHS, replace(strip(readstring(`which nvcc`)), "bin/nvcc", "lib64"))
+  end
+end
+
+HAS_CUDA = false
+let cudalib = Libdl.find_library(["libcuda", "nvcuda.dll"], CUDAPATHS)
+  HAS_CUDA = Libdl.dlopen_e(cudalib) != C_NULL
+end
+
+if !HAS_CUDA && is_windows()
+  # TODO: this needs to be improved.
+  try
+    run(`nvcc --version`)
+    HAS_CUDA = true
+  end
+end
+
+if HAS_CUDA
+  info("Found a CUDA installation.")
+else
+  info("Did not find a CUDA installation, using CPU-only version of MXNet.")
+end
 
 using BinDeps
 @BinDeps.setup
 if !libmxnet_detected
   if is_windows()
-    # TODO: Detect GPU support on Windows
-    info("Downloading pre-built CPU packages for Windows.")
-    base_url = "https://github.com/dmlc/mxnet/releases/download/20160531/20160531_win10_x64_cpu.7z"
+    info("Downloading pre-built packages for Windows.")
+    name = "20160531_win10_x64_$(HAS_CUDA ? "gpu" : "cpu").7z"
+    base_url = "https://github.com/dmlc/mxnet/releases/download/20160531/$name"
+
     if libmxnet_curr_ver == "master"
       # download_cmd uses powershell 2, but we need powershell 3 to do this
-	  run(`powershell -NoProfile -Command Invoke-WebRequest -Uri "https://api.github.com/repos/yajiedesign/mxnet/releases/latest" -OutFile "mxnet.json"`)
+      run(`powershell -NoProfile -Command Invoke-WebRequest -Uri "https://api.github.com/repos/yajiedesign/mxnet/releases/latest" -OutFile "mxnet.json"`)
       curr_win = JSON.parsefile("mxnet.json")["tag_name"]
       info("Can't use MXNet master on Windows, using latest binaries from $curr_win.")
     end
     # TODO: Get url from JSON.
-    package_url = "https://github.com/yajiedesign/mxnet/releases/download/$(curr_win)/$(curr_win)_mxnet_x64_vc12_cpu.7z"
+    name = "mxnet_x64_vc12_$(HAS_CUDA ? "gpu" : "cpu").7z"
+    package_url = "https://github.com/yajiedesign/mxnet/releases/download/$(curr_win)/$(curr_win)_$(name)"
 
     exe7z = joinpath(JULIA_HOME, "7z.exe")
 
@@ -55,16 +88,6 @@ if !libmxnet_detected
   ################################################################################
 
   blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
-
-  # Try to find cuda
-  hascuda = false
-  if haskey(ENV, "CUDA_HOME")
-    hascuda = Libdl.dlopen_e(joinpath(ENV["CUDA_HOME"], "lib64", "libcuda.so")) != C_NULL
-  else
-    cudapaths = String["/opt/cuda/lib64", "/usr/local/cuda/lib64"]
-    cudalib = Libdl.find_library(["libcuda", "libcuda.so"], cudapaths)
-    hascuda = Libdl.dlopen_e(cudalib) != C_NULL
-  end
 
   if VERSION >= v"0.5.0-dev+4338"
     blas_vendor = Base.BLAS.vendor()
@@ -129,7 +152,7 @@ if !libmxnet_detected
             `cp make/config.mk config.mk`
           end
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
-          if hascuda
+          if HAS_CUDA
             `sed -i -s 's/USE_CUDA = 0/USE_CUDA = 1/' config.mk`
             if haskey(ENV, "CUDA_HOME")
               `sed -i -s 's/USE_CUDA_PATH = NULL/USE_CUDA_PATH = $(ENV["CUDA_HOME"])/' config.mk`
