@@ -18,7 +18,7 @@ typealias char_pp Ptr{char_p}
 ################################################################################
 const MXNET_LIB = Libdl.find_library(["libmxnet.so","libmxnet.dll"],
                                      [joinpath("$(get(ENV,"MXNET_HOME",""))","lib"),
-                                      joinpath(Pkg.dir("MXNet"),"deps/usr/lib")])
+                                      Pkg.dir("MXNet","deps","usr","lib")])
 if isempty(MXNET_LIB)
   # touch this file, so that after the user properly build libmxnet, the precompiled
   # MXNet.ji will be re-compiled to get MXNET_LIB properly.

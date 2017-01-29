@@ -40,7 +40,6 @@ if !libmxnet_detected
 
     run(download_cmd(base_url, "mxnet_base.7z"))
     run(`7z x mxnet_base.7z -y -ousr`)
-    run(`usr\\setupenv.cmd`)
     run(`cmd /c copy "usr\\3rdparty\\openblas\\bin\\*.dll" "usr\\lib"`)
 
     run(download_cmd(package_url, "mxnet.7z"))
