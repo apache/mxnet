@@ -18,9 +18,9 @@ namespace op {
 inline bool SoftmaxCrossEntropyShape(const nnvm::NodeAttrs& attrs,
                                      std::vector<TShape> *in_attrs,
                                      std::vector<TShape> *out_attrs) {
-  CHECK_EQ((*in_attrs)[0].ndim(), 2)
+  CHECK_EQ((*in_attrs)[0].ndim(), 2U)
       << "SoftmaxCrossEntropy only accept 2D data";
-  CHECK_EQ((*in_attrs)[1].ndim(), 1)
+  CHECK_EQ((*in_attrs)[1].ndim(), 1U)
       << "SoftmaxCrossEntropy only accept 1D label";
   CHECK_EQ((*in_attrs)[0][0], (*in_attrs)[1][0])
       << "SoftmaxCrossEntropy: data label shape mismatch";

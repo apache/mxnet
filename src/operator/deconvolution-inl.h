@@ -108,7 +108,7 @@ class DeconvolutionOp : public Operator {
     CHECK_EQ(req[deconv::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = in_data[deconv::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[deconv::kOut].get<xpu, 4, DType>(s);
@@ -201,7 +201,7 @@ class DeconvolutionOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
@@ -370,9 +370,9 @@ class DeconvolutionProp : public OperatorProperty {
     const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
     index_t pad_y, pad_x, adj_y, adj_x;
     param_.InferPad(dshape[2], dshape[3], &pad_y, &pad_x, &adj_y, &adj_x);
-    CHECK_EQ(dshape[1] % param_.num_group, 0) \
+    CHECK_EQ(dshape[1] % param_.num_group, 0U) \
         << "input num_filter must divide group size";
-    CHECK_EQ(param_.num_filter % param_.num_group, 0) \
+    CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
         << "output num_filter must divide group size";
     CHECK_GT(param_.kernel.Size(), 0U) \
         << "incorrect kernel size: " << param_.kernel;
