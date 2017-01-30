@@ -4,9 +4,12 @@ Reference:
 Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. "Imagenet classification with deep convolutional neural networks." Advances in neural information processing systems. 2012.
 """
 import mxnet as mx
+import numpy as np
 
-def get_symbol(num_classes, **kwargs):
+def get_symbol(num_classes, fp, **kwargs):
     input_data = mx.symbol.Variable(name="data")
+    if fp == 16:
+        input_data = mx.symbol.Cast(data=input_data, dtype=np.float16)
     # stage 1
     conv1 = mx.symbol.Convolution(
         data=input_data, kernel=(11, 11), stride=(4, 4), num_filter=96)
@@ -42,5 +45,8 @@ def get_symbol(num_classes, **kwargs):
     dropout2 = mx.symbol.Dropout(data=relu7, p=0.5)
     # stage 6
     fc3 = mx.symbol.FullyConnected(data=dropout2, num_hidden=num_classes)
+    if fp == 16:
+        label = mx.symbol.Variable(name='softmax_label')
+        label = mx.symbol.Cast(data=label, dtype=np.float16)
     softmax = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
     return softmax
