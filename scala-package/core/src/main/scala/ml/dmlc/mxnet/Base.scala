@@ -76,7 +76,6 @@ object Base {
       System.loadLibrary(libname)
     } catch {
       case e: UnsatisfiedLinkError =>
-        logger.warn("Failed to load from native path. Exception:", e)
         val os = System.getProperty("os.name")
         // ref: http://lopica.sourceforge.net/os.html
         if (os.startsWith("Linux")) {
