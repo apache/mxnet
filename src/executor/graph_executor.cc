@@ -539,8 +539,8 @@ void GraphExecutor::InitCachedOps() {
     op_nodes_[nid].exec = op_execs[nid];
     op_nodes_[nid].ctx = vctx[nid];
     auto& exec = op_nodes_[nid].exec;
-    CHECK_EQ(exec->in_array.size(), 0);
-    CHECK_EQ(exec->out_array.size(), 0);
+    CHECK_EQ(exec->in_array.size(), 0U);
+    CHECK_EQ(exec->out_array.size(), 0U);
     for (const auto& e : inode.inputs) {
       exec->in_array.push_back(data_entry_[idx.entry_id(e)]);
     }

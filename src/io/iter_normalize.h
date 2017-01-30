@@ -109,7 +109,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
           std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param_.mean_img.c_str(), "r"));
           NDArray::Load(fi.get(), &data, &keys);
         }
-        CHECK_EQ(data.size(), 1)
+        CHECK_EQ(data.size(), 1U)
             << "Invalid mean image file format";
         data[0].WaitToRead();
         mshadow::Tensor<cpu, 3> src = data[0].data().get<cpu, 3, real_t>();
