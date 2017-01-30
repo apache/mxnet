@@ -1,5 +1,5 @@
 
-# Real Time Object Detection with MxNet On The Raspberry Pi  
+# Real-time Object Detection with MxNet On The Raspberry Pi  
 
 <!-- A brief introduction to the tutorial that describes:
 
@@ -10,22 +10,21 @@
 
 If there is another similar tutorial that's more appropriate for another audience, direct the reader there with a linked reference. -->
 
-### What's In This Tutorial?
-In this demo we will walk through the steps to setup a real-time object classifier, powered by MxNet running entirely on a Raspberry Pi 3. We will then work through connecting this local Raspberry Pi model to the AWS cloud via the IoT service, letting you easily and reliablely get realtime updates from the device.
+## What's In This Tutorial?
+In this demo we will walk through the steps to set up a real-time object classifier, powered by MxNet running entirely on a Raspberry Pi 3. We will then work through connecting this local Raspberry Pi model to the AWS cloud via the IoT service, letting you easily and reliably get real-time updates from the device.
 
-* The primary goal of this Tutorial is to introduce developers who work with the Raspberry Pi or similar embedded ARM-based devices with a guide to compiling MxNet for those devices as well as running a non-trival, pre-trained deep network model on them. 
+* The primary goal of this tutorial is to provide developers who work with the Raspberry Pi or similar embedded ARM-based devices with a guide to compiling MxNet for those devices, as well as running a non-trivial, pre-trained deep network model.
 
-* The secondary goal of this Tutorial is to provide embedded device developers with an example of how AWS IoT infrastructure can be used to manage and monitor these MxNet models once they are running across your devices.
+* The secondary goal of this Tutorial is to provide embedded device developers with an example of how AWS IoT infrastructure can be used to manage and monitor these MxNet models once they are running on your devices.
 
 ### Who's This Tutorial For?
 This tutorial is aimed at developers who are reasonably familiar with the Raspbian OS and the [Raspberry Pi Ecosystem](https://www.raspberrypi.org/), as well as somewhat familiar with machine learning, MxNet, and [AWS IoT](https://aws.amazon.com/iot/). All code written will be in Python 2.7
 
-
-## How to Use This Tutorial
+### How to Use This Tutorial
 
 <!-- A brief explanation of how the reader can use the tutorial. Can the reader copy each code snippet into a Python or other environment? Or can the reader run <filename> before or after reading through the explanations to understand how the code works? -->
 
-To follow this tutorial, you must setup your Pi as instructed (preferably from a fresh Raspbian install), then create the files and run the bash commands described below. All instuctions described are can be executed on the Raspberry Pi directly or via SSH.
+To follow this tutorial, you must set up your Pi as instructed (preferably from a fresh Raspbian install), and then create the files and run the bash commands described below. All instructions described are can be executed on the Raspberry Pi directly or via SSH.
 
 <!--A bulleted list of the tasks the reader will accomplish and skills he or she will learn. Begin each list item with a noun (Learn, Create, Use, etc.). -->
 
@@ -33,7 +32,7 @@ You will accomplish the following:
 
 - Build and Install MxNet with Python bindings on your Raspbian Based Raspberry Pi
 - Fetch and run a pre-trained MxNet model on your Pi
-- Create a real time video analysis application for the Pi
+- Create a real-time video analysis application for the Pi
 - Connect the application to the AWS IoT service
 
 ## Prerequisites
@@ -42,9 +41,9 @@ You will accomplish the following:
 
 To complete this tutorial, you need:
 
-* Raspbian Wheezy or Higher, which can be downloaded [here](https://www.raspberrypi.org/downloads/raspbian/), loaded onto a 8GB+ micro SD card (with at least 4GB+ free)
-* A [Raspberry Pi 3](https://www.raspberrypi.org/blog/raspberry-pi-3-on-sale/) or equivilant Raspberry Pi with 1GB+ of RAM
-* A [Raspberry Pi Camera Module](https://www.raspberrypi.org/products/camera-module/) [activated and running with the correponding Python module](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) (for the real time video analysis with the deep network model)
+* Raspbian Wheezy or later, which can be downloaded [here](https://www.raspberrypi.org/downloads/raspbian/), loaded onto a 8GB+ micro SD card (with at least 4GB+ free)
+* A [Raspberry Pi 3](https://www.raspberrypi.org/blog/raspberry-pi-3-on-sale/) or equivalent Raspberry Pi with 1GB+ of RAM
+* A [Raspberry Pi Camera Module](https://www.raspberrypi.org/products/camera-module/) [activated and running with the corresponding Python module](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) (for the real-time video analysis with the deep network model)
 * An AWS account With AWS IoT enabled and the [AWS IoT Python SDK](https://github.com/aws/aws-iot-device-sdk-python) (for remote, real-time managing and monitoring of the model running on the Pi)
 * The [cv2 Python library](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) for the Pi
 
@@ -52,12 +51,15 @@ To complete this tutorial, you need:
 
 The first step will be to get MxNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided on [here](http://mxnet.io/get_started/raspbian_setup.html). In short you will have to download the dependencies, and build the full MxNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will finally the Python bindings. Once this is done you should test that works by opening a python REPL on your Pi and typing the following commands:
 
+The first step is to get MxNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided [here](http://mxnet.io/get_started/raspbian_setup.html). The linked tutorial walks you through downloading the dependencies, and building the full MxNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will register the Python bindings to MXNet. After this is done you should test that your installation works by opening a python REPL on your Pi and typing the following commands:
+
+
 ```bash
 python
 >>> import mxnet as mx
 ```
 
-*Note: If you are getting memory allocation failed errors at this point (or at any point in this tutorial) it is likely because the full MxNet library takes up a large amount of RAM when loaded. To fit this you may want to kill the GUI as well as other processes that are occupying memory*
+*Note: If you are getting memory allocation failed errors at this point (or at any point in this tutorial) it is likely because the full MxNet library takes up a large amount of RAM when loaded. You might want to kill the GUI and other processes that are occupying memory.*
 
 
 ## Running A Pre-Trained Inception Model on The Pi
@@ -66,7 +68,7 @@ We are now ready to load a pre-trained model and run inference on the Pi. We wil
 
 ### Getting the Model
 
-The first step is to download, unzip, and setup the pretrained deep network model files we will be using to classify images. To do this run the following commands in your home directory:
+The first step is to download, unzip, and set up the pre-trained deep network model files that we will be using to classify images. To do this run the following commands in your home directory:
 
 ```bash
 curl --header 'Host: data.mxnet.io' --header 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:45.0) Gecko/20100101 Firefox/45.0' --header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' --header 'Accept-Language: en-US,en;q=0.5' --header 'Referer: http://data.mxnet.io/models/imagenet/' --header 'Connection: keep-alive' 'http://data.mxnet.io/models/imagenet/inception-bn.tar.gz' -o 'inception-bn.tar.gz' -L
@@ -103,7 +105,7 @@ mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))])
 mod.set_params(arg_params, aux_params)
  
 '''
-Function to run a forward pass through the model given a pointer to an image file and the loaded network
+Function to predict objects by giving the model a pointer to an image file and running a forward pass through the model.
 
 inputs:
 filename = jpeg file of image to classify objects in
@@ -163,14 +165,14 @@ python
 >>> predict_from_url("http://imgur.com/HzafyBA")
 ```
 
-This should give a reasonable prediction for the fuzzy cow in this [image](http://imgur.com/HzafyBA). 
+This should give a reasonable prediction for the fluffy cow in this [image](http://imgur.com/HzafyBA). 
 
 
-## Running a Inception on Real-Time Video From PiCamera
+## Running an Inception on Real-Time Video From PiCamera
 
-We can now move on to using this network for object detection in real time video from the PiCamera.
+We can now move on to using this network for object detection in real-time video from the PiCamera.
 
-Doing this requires simply sending the images the the camera is capturing into the prediction code we created in the previous step. To do this create a new file in your home directory called camera_test.py and add the following code to it:
+Doing this requires sending the images that the camera is capturing to the prediction code that we created in the previous step. To do this, create a new file in your home directory called camera_test.py and add the following code to it:
 
 
 ```python
@@ -182,7 +184,7 @@ import inception_predict
 # Create camera interface
 camera = picamera.PiCamera()
 while True:
-    # Take jpg image from camera
+    # Take the jpg image from camera
     print "Capturing"
     filename = '/home/pi/cap.jpg'
     # Show quick preview of what's being captured
@@ -198,23 +200,23 @@ while True:
     print topn
 ```
 
-You can then run this file by entring the following command
+You can then run this file by entering the following command:
 
 ```bash
 python camera_test.py
 ```
 
-If this is working you see a preview every few seconds of the image that is being captured and fed to the model, as well as predicted classes for objects in the image being written to the terminal. 
+If camera_test.py is working you should see a preview every few seconds of the image that is being captured and fed to the model, as well as predicted classes for objects in the image being written to the terminal. 
 
-Try pointing the PiCamera at a few different objects and see the predictions the network comes out with.
+Try pointing the PiCamera at a few different objects and see what predictions the network comes out with.
 
 ## Connecting Our Model To The AWS Cloud
 
-We can now move on to adding the code to send the predictions this real time model is making locally to the AWS cloud if certain conditions are met.
+We can now move on to adding the code to send the predictions that this real-time model is making locally to the AWS cloud if certain conditions are met.
 
-The first step is to setup an AWS account if you don't have one yet. Then you should go to the [AWS IoT dashboard](https://us-west-2.console.aws.amazon.com/iotv2/home?region=us-west-2#/thinghub) and register a new device.
+The first step is to set up an AWS account if you don't have one yet. Then go to the [AWS IoT dashboard](https://us-west-2.console.aws.amazon.com/iotv2/home?region=us-west-2#/thinghub) and register a new device.
 
-Once that device is registered you should download and copy the corresponding rootCA, Certificate and Private key, to your home directory, while noting the unique endpoint of your device shadow on the AWS IoT Dashboard.
+After the device is registered, download and copy the corresponding rootCA, Certificate, and Private key to your home directory. Note the unique endpoint of your device shadow on the AWS IoT Dashboard.
 
 We will now build an application, based off the code in camera_test.py, which will send a message to the cloud whenever a wine bottle is detected in a frame by the PiCamera.
 
@@ -369,15 +371,15 @@ while True:
         myAWSIoTMQTTClient.publish("sdk/test/Python", "New Message: WINE DETECTED!", 0)
 ```
 
-You can then run this file by entring the following command
+You can then run this file by entering the following command
 
 ```bash
 python wine_alerter.py -e <endpointURL> -r <rootCAFilePath> -c <certFilePath> -k <privateKeyFilePath>
 ```
 
-If this is working you should see the same kind of image preview you did with camera_test.py every few seconds, however the console will only print a message now when a wine bottle is detected in the shot (you can edit the bottom lines in the wine_alerter.py code to make this alert for any object you specify).
+If this is working you should see the same kind of image preview you did with camera_test.py every few seconds, however the console will only print a message now when a wine bottle is detected in the shot (you can edit the bottom lines in the wine_alerter.py code to make this alert for any object label from the [ImageNet-11k dataset](http://image-net.org/index) that you specify).
 
-You can open up the activity tab for the thing you registered on the AWS IoT Dashboard and see the corresponding messages pushed to the server whenever a wine bottle is detected in shot. Thanks to AWS IoT even if network connectivity periodically fails, the updates will eventually be pushed out to the server when possible, allowing this system to reliably let you know when there is wine around.
+You can open up the activity tab for the thing that you registered on the AWS IoT Dashboard and see the corresponding messages pushed to the server whenever a wine bottle is detected in a camera shot. Even if network connectivity periodically fails, AWS IoT will push updates out to the server when possible, allowing this system to reliably let you know when there is wine around.
 
 ## Summary
 <!-- Briefly describe the end result of the tutorial and how the user can use it or modify it to customize it. -->
