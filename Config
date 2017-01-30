@@ -24,6 +24,9 @@ package.DeepMXNet = {
       Python34 = 1.0;
       Python-setuptools = 2.x;
       C-ares = 1.x;
+      Scala29 = 1.0;
+      BrazilMaven = 3.0;
+      JDK8 = 1.0;
     };
   };
 
@@ -60,6 +63,8 @@ package.DeepMXNet = {
       SciPy = 0.15.x;
       Requests = 2.x.x;
       C-ares = 1.x;
+      Graphviz = 2.36.0;
+      PythonMatplotlib = 1.3.1;
     };
   };
 
@@ -90,7 +95,7 @@ package.DeepMXNet = {
       };
     };
 
-    # This target is needed for upstream python packages to include opencv
+    # This target is needed for upstream python packages to include mxnet
     # in the PYTHONPATH correctly.
     python = { type = python };
   };

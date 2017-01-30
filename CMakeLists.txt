@@ -12,13 +12,14 @@ include(CTest)
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" OFF)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
-mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
-mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
+mxnet_option(USE_CUDNN   "Build with cudnn support"  OFF) # one could set CUDNN_ROOT for search path
+mxnet_option(USE_CUDA    "Build with CUDA support"   OFF)
 mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
+mxnet_option(USE_SCALA "Build Scala packages" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -341,10 +342,9 @@ if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
-# Do tests before chrpath
-add_subdirectory(tests)
-
 if(IS_CONTAINER_BUILD)
+  # Do tests before chrpath so that we use the cuda stub driver
+  add_subdirectory(tests)
   find_program(CHRPATH_EXE chrpath HINTS ${PATH})
   if(CHRPATH_EXE)
     message(STATUS " Found chrpath executable: ${CHRPATH_EXE}")
@@ -355,6 +355,24 @@ if(IS_CONTAINER_BUILD)
   else()
     message(ERROR "Unable to find chrpath executable")
   endif()
+else()
+  # Do tests after chrpath so that we use the "real" cuda driver
+  add_subdirectory(tests)
+endif()
+
+# AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
+if(AUTO_INSTALL_DIR)
+  # ---[ Install Includes
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${PROJECT_SOURCE_DIR}/include ${AUTO_INSTALL_DIR}/include
+    )
+
+  # ---[ Install Examples
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${PROJECT_SOURCE_DIR}/example ${AUTO_INSTALL_DIR}/example
+    )
 endif()
 
 if(INSTALL_PYTHON_VERSIONS)
@@ -367,6 +385,13 @@ if(INSTALL_PYTHON_VERSIONS)
       )
   endforeach()
 endif()
+
+#
+# Scala
+#
+#if(USE_SCALA)
+#  find_package(Scala REQUIRED)
+#endif()
 
 # ---[ Linter target
 if(MSVC)
