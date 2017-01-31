@@ -185,6 +185,9 @@ MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
  */
 MXNET_DLL int MXSetProfilerState(int state);
 
+/*! \brief Save profile and stop profiler */
+MXNET_DLL int MXDumpProfile();
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
@@ -403,7 +406,6 @@ MXNET_DLL int MXNDArrayGetDType(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out_dev_type,
                                   int *out_dev_id);
-
 //--------------------------------
 // Part 2: functions on NDArray
 //--------------------------------

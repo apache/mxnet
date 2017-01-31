@@ -1,3 +1,4 @@
+from __future__ import print_function
 from google.protobuf import text_format
 import argparse
 import re
@@ -11,23 +12,26 @@ except ImportError:
     caffe_flag = False
     import caffe_parse.caffe_pb2
 
-def readProtoSolverFile(filepath):
+
+def read_proto_solver_file(file_path):
     solver_config = ''
     if caffe_flag:
         solver_config = caffe.proto.caffe_pb2.NetParameter()
     else:
         solver_config = caffe_parse.caffe_pb2.NetParameter()
-    return readProtoFile(filepath, solver_config)
+    return read_proto_file(file_path, solver_config)
 
-def readProtoFile(filepath, parser_object):
-    file = open(filepath, "r")
+
+def read_proto_file(file_path, parser_object):
+    file = open(file_path, "r")
     if not file:
-        raise self.ProcessException("ERROR (" + filepath + ")!")
+        raise Exception("ERROR (" + file_path + ")!")
     text_format.Merge(str(file.read()), parser_object)
     file.close()
     return parser_object
 
-def convParamToString(param):
+
+def conv_param_to_string(param):
     pad = 0
     if isinstance(param.pad, int):
         pad = param.pad
@@ -49,16 +53,16 @@ def convParamToString(param):
     else:
         dilate = 1 if len(param.dilation) == 0 else param.dilation[0]
     # convert to string except for dilation
-    param_string = "num_filter=%d, pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d), no_bias=%s" %\
-        (param.num_output, pad, pad, kernel_size,\
-        kernel_size, stride, stride, not param.bias_term)
+    param_string = "num_filter=%d, pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d), no_bias=%s" % \
+                   (param.num_output, pad, pad, kernel_size, kernel_size, stride, stride, not param.bias_term)
     # deal with dilation. Won't be in deconvolution
     if dilate > 1:
         param_string += ", dilate=(%d, %d)" % (dilate, dilate)
     return param_string
 
+
 def proto2script(proto_file):
-    proto = readProtoSolverFile(proto_file)
+    proto = read_proto_solver_file(proto_file)
     connection = dict()
     symbols = dict()
     top = dict()
@@ -70,52 +74,51 @@ def proto2script(proto_file):
     elif len(proto.layers):
         layer = proto.layers
     else:
-        raise Exception('Invalid proto file.')   
-    # Get input size to network
-    input_dim = [1, 3, 224, 224] # default
+        raise Exception('Invalid proto file.')
+        # Get input size to network
+    input_dim = [1, 3, 224, 224]  # default
     if len(proto.input_dim) > 0:
         input_dim = proto.input_dim
-    elif len(proto.input_shape) > 0: 
+    elif len(proto.input_shape) > 0:
         input_dim = proto.input_shape[0].dim
-    elif (layer[0].type == "Input"):
+    elif layer[0].type == "Input":
         input_dim = layer[0].input_param.shape._values[0].dim
         layer.pop(0)
     else:
-        raise Exception('Invalid proto file.')   
+        raise Exception('Invalid proto file.')
 
-    # We assume the first bottom blob of first layer is the output from data layer
+        # We assume the first bottom blob of first layer is the output from data layer
     input_name = layer[0].bottom[0]
     output_name = ""
-    mapping = {input_name : 'data'}
-    need_flatten = {input_name : False}
+    mapping = {input_name: 'data'}
+    need_flatten = {input_name: False}
     for i in range(len(layer)):
         type_string = ''
         param_string = ''
         name = re.sub('[-/]', '_', layer[i].name)
         if layer[i].type == 'Convolution' or layer[i].type == 4:
             type_string = 'mx.symbol.Convolution'
-            param_string = convParamToString(layer[i].convolution_param)
+            param_string = conv_param_to_string(layer[i].convolution_param)
             need_flatten[name] = True
         if layer[i].type == 'Deconvolution' or layer[i].type == 39:
             type_string = 'mx.symbol.Deconvolution'
-            param_string = convParamToString(layer[i].convolution_param)
+            param_string = conv_param_to_string(layer[i].convolution_param)
             need_flatten[name] = True
         if layer[i].type == 'Pooling' or layer[i].type == 17:
             type_string = 'mx.symbol.Pooling'
             param = layer[i].pooling_param
             param_string = ''
             param_string += "pooling_convention='full', "
-            if param.global_pooling == True:
+            if param.global_pooling:
                 # there must be a param `kernel` in a pooling layer
                 param_string += "global_pool=True, kernel=(1,1)"
             else:
-                param_string += "pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d)" %\
-                    (param.pad, param.pad, param.kernel_size,\
-                    param.kernel_size, param.stride, param.stride)
+                param_string += "pad=(%d,%d), kernel=(%d,%d), stride=(%d,%d)" % \
+                                (param.pad, param.pad, param.kernel_size, param.kernel_size, param.stride, param.stride)
             if param.pool == 0:
-                param_string = param_string + ", pool_type='max'"
+                param_string += ", pool_type='max'"
             elif param.pool == 1:
-                param_string = param_string + ", pool_type='avg'"
+                param_string += ", pool_type='avg'"
             else:
                 raise Exception("Unknown Pooling Method!")
             need_flatten[name] = True
@@ -134,8 +137,8 @@ def proto2script(proto_file):
         if layer[i].type == 'LRN' or layer[i].type == 15:
             type_string = 'mx.symbol.LRN'
             param = layer[i].lrn_param
-            param_string = "alpha=%f, beta=%f, knorm=%f, nsize=%d" %\
-                (param.alpha, param.beta, param.k, param.local_size)
+            param_string = "alpha=%f, beta=%f, knorm=%f, nsize=%d" % \
+                           (param.alpha, param.beta, param.k, param.local_size)
             need_flatten[name] = True
         if layer[i].type == 'InnerProduct' or layer[i].type == 14:
             type_string = 'mx.symbol.FullyConnected'
@@ -165,6 +168,11 @@ def proto2script(proto_file):
             type_string = 'mx.symbol.BatchNorm'
             param = layer[i].batch_norm_param
             param_string = 'use_global_stats=%s' % param.use_global_stats
+        if layer[i].type == 'PReLU':
+            type_string = 'mx.symbol.LeakyReLU'
+            param = layer[i].prelu_param
+            param_string = "act_type='prelu', slope=%f" % param.filler.value
+            need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
         if type_string == '':
             raise Exception('Unknown Layer %s!' % layer[i].type)
         if type_string != 'split':
@@ -174,30 +182,34 @@ def proto2script(proto_file):
             if len(bottom) == 1:
                 if need_flatten[mapping[bottom[0]]] and type_string == 'mx.symbol.FullyConnected':
                     flatten_name = "flatten_%d" % flatten_count
-                    symbol_string += "%s=mx.symbol.Flatten(name='%s', data=%s)\n" %\
-                        (flatten_name, flatten_name, mapping[bottom[0]])
+                    symbol_string += "%s=mx.symbol.Flatten(name='%s', data=%s)\n" % \
+                                     (flatten_name, flatten_name, mapping[bottom[0]])
                     flatten_count += 1
                     need_flatten[flatten_name] = False
                     bottom[0] = flatten_name
                     mapping[bottom[0]] = bottom[0]
-                symbol_string += "%s = %s(name='%s', data=%s %s)\n" %\
-                    (name, type_string, name, mapping[bottom[0]], param_string)
+                symbol_string += "%s = %s(name='%s', data=%s %s)\n" % \
+                                 (name, type_string, name, mapping[bottom[0]], param_string)
             else:
-                symbol_string += "%s = %s(name='%s', *[%s] %s)\n" %\
-                    (name, type_string, name, ','.join([mapping[x] for x in bottom]), param_string)
+                symbol_string += "%s = %s(name='%s', *[%s] %s)\n" % \
+                                 (name, type_string, name, ','.join([mapping[x] for x in bottom]), param_string)
         for j in range(len(layer[i].top)):
             mapping[layer[i].top[j]] = name
         output_name = name
     return symbol_string, output_name, input_dim
 
+
 def proto2symbol(proto_file):
     sym, output_name, input_dim = proto2script(proto_file)
     sym = "import mxnet as mx\n" \
-            + "data = mx.symbol.Variable(name='data')\n" \
-            + sym
+          + "data = mx.symbol.Variable(name='data')\n" \
+          + sym
     exec(sym)
-    exec("ret = " + output_name)
+    _locals = locals()
+    exec("ret = " + output_name, globals(), _locals)
+    ret = _locals['ret']
     return ret, input_dim
+
 
 def main():
     symbol_string, output_name, input_dim = proto2script(sys.argv[1])
@@ -206,6 +218,7 @@ def main():
             fout.write(symbol_string)
     else:
         print(symbol_string)
+
 
 if __name__ == '__main__':
     main()

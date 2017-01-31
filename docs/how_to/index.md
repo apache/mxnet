@@ -1,6 +1,6 @@
 # MXNet How To
 
-The How-tos provide a range of information from installation, basic concepts and general guidance to demos complete with pre-trained models, instructions, and commands.
+The how_tos provide a range of information from installation, basic concepts and general guidance to demos complete with pre-trained models, instructions, and commands.
 
 
 &nbsp;
@@ -17,7 +17,7 @@ If you are running Python/R on Amazon Linux or Ubuntu, you can use Git Bash scri
 
 ## Using Pre-trained Models
 The MXNet [Model zoo](http://mxnet.io/model_zoo/index.html) is a growing collection of pre-trained models for a variety of tasks.
-In particular, the popular task of using a ConvNet to figure out what is in an image is described in detail in the tutorial on 
+In particular, the popular task of using a ConvNet to figure out what is in an image is described in detail in the tutorial on
 [use pre-trained image classification models](http://mxnet.io/tutorials/python/predict_imagenet.html).  This provides step-by-step instructions on loading, customizing, and predicting image classes with the provided pre-trained image classification model.
 
 ## Use MXNet to Perform Specific Tasks
@@ -68,7 +68,7 @@ In particular, the popular task of using a ConvNet to figure out what is in an i
 
 * [Set Environment Variables for MXNet](env_var.md)
 
-Provides a list of default MXNet environment variables, along with a short description of what each controls.
+Provides a list of default MXNet environment variables, along with a short description of what each control.
 
 ## Frequently Asked Questions
 

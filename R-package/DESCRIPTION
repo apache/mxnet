@@ -1,7 +1,7 @@
 Package: mxnet
 Type: Package
 Title: MXNet
-Version: 0.9.1
+Version: 0.9.3
 Date: 2015-12-23
 Author: Tianqi Chen, Qiang Kou, Tong He
 Maintainer: Qiang Kou <qkou@umail.iu.edu>
@@ -15,7 +15,7 @@ BugReports: https://github.com/dmlc/mxnet/issues
 Imports:
     methods,
     Rcpp (>= 0.12.1),
-    DiagrammeR (>= 0.9.0),
+    visNetwork (>= 1.0.3),
     data.table,
     jsonlite,
     magrittr,

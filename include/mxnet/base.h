@@ -87,7 +87,7 @@
 /*! \brief minor version */
 #define MXNET_MINOR 9
 /*! \brief patch version */
-#define MXNET_PATCH 1
+#define MXNET_PATCH 3
 /*! \brief mxnet version */
 #define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
 /*! \brief helper for making version number */
@@ -287,6 +287,20 @@ inline Context Context::FromString(std::string str) {
     LOG(FATAL) << "Invalid context string " << str;
   }
   return ret;
+}
+
+inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
+  if (ctx.dev_type == Context::kCPU) {
+    out << "cpu(";
+  } else if (ctx.dev_type == Context::kGPU) {
+    out << "gpu(";
+  } else if (ctx.dev_type == Context::kCPUPinned) {
+    out << "cpu_pinned(";
+  } else {
+    out << "unknown(";
+  }
+  out << ctx.dev_id << ")";
+  return out;
 }
 }  // namespace mxnet
 

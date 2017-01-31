@@ -42,6 +42,8 @@ DMLC_REGISTER_PARAMETER(BatchNormParam);
 MXNET_REGISTER_OP_PROPERTY(BatchNorm, BatchNormProp)
 .describe("Apply batch normalization to input.")
 .add_argument("data", "Symbol", "Input data to batch normalization")
+.add_argument("gamma", "Symbol", "gamma matrix")
+.add_argument("beta", "Symbol", "beta matrix")
 .add_arguments(BatchNormParam::__FIELDS__());
 
 }  // namespace op

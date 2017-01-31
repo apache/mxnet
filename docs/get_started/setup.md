@@ -8,6 +8,7 @@ Step by step instructions for setting up MXNet:
 - [Installing MXNet on the Cloud (AWS AMI)](http://mxnet.io/get_started/cloud_setup.html)
 - [Installing MXNet on Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html)
 - [Installing MXNet on Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html)
+- [Installing MXNet on CentOS](http://mxnet.io/get_started/centos_setup.html)
 - [Installing MXNet on OS X (Mac)](http://mxnet.io/get_started/osx_setup.html)
 - [Installing MXNet on Windows](http://mxnet.io/get_started/windows_setup.html)
 
@@ -23,7 +24,7 @@ pull request. For details, see [contribution guidelines](http://mxnet.io/communi
 
 This section lists the basic requirements for running MXNet, requirements for using it with GPUs, and requirements to support computer vision and image augmentation.
 
-**Note:**  Setting up all basic(CPU only) required dependencies is covered as part of individual OS installation guide. This section is provided for power users who wants to set up alternate dependencies(GPU/Intel MKL etc..) and experiment.
+**Note:**  Setting up all basic(CPU only) required dependencies is covered as part of individual OS installation guide. This section is provided for power users who want to set up alternate dependencies(GPU/Intel MKL etc..) and experiment.
 
 ## Minimum Requirements
 

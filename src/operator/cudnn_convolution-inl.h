@@ -54,12 +54,13 @@ class CuDNNAlgoReg {
     if (reg_.size() % 50 == 0) {
       LOG(INFO)
         << "Running performance tests to find the best convolution algorithm, "
-           "this can take a while...";
+           "this can take a while... (setting env variable "
+           "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)";
       if (reg_.size() >= 1000) {
         LOG(INFO)
           << "If you see this message in the middle of training, you are "
              "probably using bucketing. Consider setting env variable "
-             "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable tests.";
+             "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable cudnn tuning.";
       }
     }
     reg_[key].fwd = fwd;
@@ -303,7 +304,6 @@ class CuDNNConvolutionOp : public Operator {
                workspace.dptr_,
                backward_workspace_byte_,
                req[conv::kData] == kAddTo? &beta_add : &beta,
-               &beta,
                in_desc_,
                gdata_ptr + data_offset_ * g), CUDNN_STATUS_SUCCESS);
       #elif CUDNN_MAJOR >= 5

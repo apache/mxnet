@@ -33,7 +33,9 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, lhs);
     return true;
   }
+
   TShape out(std::max(lhs.ndim(), rhs.ndim()));
+  std::fill_n(out.begin(), out.ndim(), 0);
   index_t bl = out.ndim() - lhs.ndim();
   index_t br = out.ndim() - rhs.ndim();
   for (index_t i = 0; i < out.ndim(); ++i) {
@@ -41,9 +43,13 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
     if (l != r) {
-      CHECK(l == 1 || r == 1)
-        << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
-      out[i] = std::max(l, r);
+      if (l == 0 || r == 0) {
+        out[i] = 0;
+      } else {
+        CHECK(l == 1 || r == 1)
+          << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
+        out[i] = std::max(l, r);
+      }
     } else {
       out[i] = l;
     }

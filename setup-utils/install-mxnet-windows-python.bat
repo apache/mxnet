@@ -196,8 +196,6 @@ findstr "cython" "%MXNET_CONDA_PKGS%" >nul
 if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% cython
 findstr "numpy" "%MXNET_CONDA_PKGS%" >nul
 if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% numpy
-findstr "ninja" "%MXNET_CONDA_PKGS%" >nul
-if errorlevel 1 set MXNET_DEPENDENCIES=%MXNET_DEPENDENCIES% ninja
 
 if not "%MXNET_DEPENDENCIES%" == "" (
   echo %ECHO_PREFIX% Installing %MXNET_DEPENDENCIES% by conda for MXNET
@@ -237,9 +235,9 @@ if "%MXNET_BLAS%"=="MKL" SET CMAKE_OPT=%CMAKE_OPT% -DMKL_HOME="%INTEL_MKL_DIR%" 
 
 SET CMAKE_OPT=%CMAKE_OPT% -DOpenCV_LIB_PATH="%MXNET_CONDA_LIBRARY%\\lib\\" -DOpenCV_INCLUDE_DIRS="%MXNET_CONDA_LIBRARY%\\include\\" -DOpenCV_CONFIG_PATH="%MXNET_CONDA_LIBRARY%"
 
-cmake -Wno-dev %CMAKE_OPT% -DCMAKE_PREFIX_PATH="%MXNET_CONDA_LIBRARY%" -G "Ninja" -DCMAKE_BUILD_TYPE=Release -H. -Bbuild
+cmake -Wno-dev %CMAKE_OPT% -DCMAKE_PREFIX_PATH="%MXNET_CONDA_LIBRARY%" -G "Visual Studio 14 2015 Win64" -DUSE_PROFILER=1 -DCMAKE_BUILD_TYPE=Release -H. -Bbuild
 if errorlevel 1 goto :FAIL
-cmake --build build --config Release
+msbuild build\mxnet.sln /t:Build /p:Configuration=Release;Platform=x64 /m
 if errorlevel 1 goto :FAIL
 
 echo %ECHO_PREFIX% Install libmxnet.dll

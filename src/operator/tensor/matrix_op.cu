@@ -51,5 +51,11 @@ NNVM_REGISTER_OP(batch_dot)
 NNVM_REGISTER_OP(_backward_batch_dot)
 .set_attr<FCompute>("FCompute<gpu>", BatchDotBackward_<gpu>);
 
+NNVM_REGISTER_OP(clip)
+.set_attr<FCompute>("FCompute<gpu>", Clip<gpu>);
+
+NNVM_REGISTER_OP(_backward_clip)
+.set_attr<FCompute>("FCompute<gpu>", ClipGrad_<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

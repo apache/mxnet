@@ -10,7 +10,6 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>libmxnet-init-scala-osx-x86_64</artifactId>
   <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Initializer Native OSX-x86_64</name>

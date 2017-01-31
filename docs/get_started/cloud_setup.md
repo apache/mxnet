@@ -1,10 +1,10 @@
 # Installing MXNet on the Cloud
 
-You can start using MXNet on cloud with MXNet pre-installed. Refer below for more details.
+You can start using MXNet on the cloud with MXNet pre-installed. Refer below for more details.
 
 ## Install MXNet Using Amazon Machine Images(AMIs)
 
-Here is a link to a AWS blog illustrating how to setup an Amazon Machine Image(AMI) that supports both MXNet and other popular deep learning frameworks.
+Here is a link to an AWS blog illustrating how to setup an Amazon Machine Image(AMI) that supports both MXNet and other popular deep learning frameworks.
 * [P2 and Deep Learning Blog](https://aws.amazon.com/blogs/aws/new-p2-instance-type-for-amazon-ec2-up-to-16-gpus/)
 * [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
 

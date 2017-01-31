@@ -3,17 +3,12 @@
 #'
 #' @importFrom magrittr %>%
 #' @importFrom stringr str_extract_all
-#' @importFrom magrittr %>%
-#' @importFrom data.table data.table
-#' @importFrom data.table as.data.table
-#' @importFrom data.table :=
-#' @importFrom data.table setkey
+#' @importFrom stringr str_replace_all
+#' @importFrom stringr str_replace_na
+#' @importFrom stringr str_trim
 #' @importFrom jsonlite fromJSON
-#' @importFrom DiagrammeR create_node_df
-#' @importFrom DiagrammeR create_graph
-#' @importFrom DiagrammeR create_edge_df	
-#' @importFrom DiagrammeR combine_edfs
-#' @importFrom DiagrammeR render_graph
+#' @importFrom visNetwork visNetwork
+#' @importFrom visNetwork visHierarchicalLayout
 #'
 #' @param model a \code{string} representing the path to a file containing the \code{JSon} of a model dump or the actual model dump.
 #' @param graph.title a \code{string} displayed on top of the viz.
@@ -25,7 +20,8 @@
 #' @return a graph object ready to be displayed with the \code{print} function.
 #'
 #' @export
-graph.viz <- function(model, graph.title = "Computation graph", graph.title.font.name = "Helvetica", graph.title.font.size = 30, graph.width.px = 500, graph.height.px = 500){
+graph.viz <- function(symbol, shape=NULL, graph.title = "Computation graph", graph.title.font.name = "Helvetica", graph.title.font.size = 30, graph.width.px = 500, graph.height.px = 500){
+  
   # generate color code for each type of node.
   get.color <- function(type) {
     switch(
@@ -44,117 +40,76 @@ graph.viz <- function(model, graph.title = "Computation graph", graph.title.font
       "#fccde5" # default value
     )
   }
-
+  
   get.shape <- function(type) {
     switch(
       EXPR = type,
       "data" = "star",
-      #     "FullyConnected" = ,
-      #     "Convolution" = "#fb8072",
-      #    "LeakyReLU" = ,
-      #    "Activation" = "diamond",
-      #     "BatchNorm" = "#bebada",
       "Pooling" = "oval",
-      "Flatten" = ,
-      "Reshape" = ,
-      "Concat" = "invtriangle",
-      #     "Softmax" = "#b3de69",
+      "Flatten" = "triangleDown",
+      "Reshape" = "triangleDown",
+      "Concat" = "triangleDown",
       "box" # default value
     )
   }
-
-  # extract IDs from string list
-  str2tuple <- function(str) str_extract_all(str, "\\d+") %>% unlist %>% as.numeric
-
-  # generate text content for each node.
-  get.label <- function(type, mat.row) {
-    switch(
-      EXPR = type,
-      "FullyConnected" = mat.row[,attr.num_hidden] %>% paste("FullyConnected", ., sep = "\n"),
-      "Convolution" = {
-        kernel.parameters <- mat.row[,attr.kernel] %>% str2tuple
-        stride.parameters <- mat.row[,attr.stride] %>% str2tuple
-        num_filter.parameters <- mat.row[,attr.num_filter] %>% str2tuple
-        paste0("Convolution\n", kernel.parameters[1], "x", kernel.parameters[2],
-               "/", stride.parameters[1], ", ", num_filter.parameters)
-      },
-      "LeakyReLU" = ,
-      "Activation" = mat.row[,attr.act_type] %>% paste0(type, "\n", .),
-      "Pooling" = {
-        pool_type.parameters <- mat.row[,attr.pool_type] %>% str2tuple
-        kernel.parameters <- mat.row[,attr.kernel] %>% str2tuple
-        stride.parameters <- mat.row[,attr.stride] %>% str2tuple
-        paste0("Pooling\n", pool_type.parameters, "\n", kernel.parameters[1], "x",
-               kernel.parameters[2], "/", stride.parameters[1])
-      },
-      type # default value
-    )
-  }
-
-  mx.model.json <- fromJSON(model, flatten = T)
-  mx.model.nodes <- mx.model.json$nodes %>% as.data.table
-  mx.model.nodes[,id:= .I - 1]
-  setkey(mx.model.nodes, id)
-  mx.model.json$heads[1,] %>% {mx.model.nodes[id %in% .,op:=name]} # add nodes from heads (mainly data node)
-  mx.model.nodes[,color:= get.color(op), by = id] # by=id to have an execution row per row
-  mx.model.nodes[,shape:= get.shape(op), by = id] # by=id to have an execution row per row
-  mx.model.nodes[,label:= get.label(op, .SD), by = id] # by=id to have an execution row per row
-
-  nodes.to.keep <-
-    mx.model.nodes[op != "null",id] %>% unique %>% sort
-  nodes.to.remove <-
-    mx.model.nodes[,id] %>% unique %>% setdiff(nodes.to.keep) %>% sort
-
-  nodes <-
-    create_node_df(
-      n  = length(mx.model.nodes[id %in% nodes.to.keep, id]),
-      label = mx.model.nodes[id %in% nodes.to.keep, label],
-      type = "lower",
-      style = "filled",
-      fillcolor  = mx.model.nodes[id %in% nodes.to.keep, color],
-      shape = mx.model.nodes[id %in% nodes.to.keep, shape],
-      data = mx.model.nodes[id %in% nodes.to.keep, id],
-      #fixedsize = TRUE,
-      width = "1.3",
-      height = "0.8034"
-    )
   
-  nodes$id <- mx.model.nodes[id %in% nodes.to.keep, id]
-
-  mx.model.nodes[,has.connection:= sapply(inputs, function(x)
-    length(x) > 0)]
-
-  nodes.to.insert <-
-    mx.model.nodes[id %in% nodes.to.keep &
-                     has.connection == T, .(id, inputs)]
-
-  edges <- NULL
-  for (i in 1:nrow(nodes.to.insert)) {
-    current.id <- nodes.to.insert[i, id]
-    origin <-
-      nodes.to.insert[i, inputs][[1]][,1] %>% setdiff(nodes.to.remove) %>% unique
-    destination <- rep(current.id, length(origin))
-    edges.temp <- create_edge_df(from = as.character(origin),
-                               to = as.character(destination),
-                               relationship = "leading_to")
-    if (is.null(edges))
-      edges <- edges.temp
-    else
-      edges <- combine_edfs(edges.temp, edges)
+  model_list<- fromJSON(symbol$as.json())
+  model_nodes<- model_list$nodes
+  model_nodes$id<- 1:nrow(model_nodes)-1
+  model_nodes$level<- model_nodes$ID
+  
+  # extract IDs from string list
+  tuple_str <- function(str) sapply(str_extract_all(str, "\\d+"), function(x) paste0(x, collapse="X"))
+  
+  label_paste <- paste0(
+    model_nodes$name,
+    "\n",
+    model_nodes$attr$num_hidden %>% str_replace_na() %>% str_replace_all(pattern = "NA", ""),
+    model_nodes$attr$pool_type %>% str_replace_na() %>% str_replace_all(pattern = "NA", ""),
+    model_nodes$attr$kernel %>% tuple_str %>% str_replace_na() %>% str_replace_all(pattern = "NA", ""),
+    " / ",
+    model_nodes$attr$stride %>% tuple_str %>% str_replace_na() %>% str_replace_all(pattern = "NA", ""),
+    ", ",
+    model_nodes$attr$num_filter %>% str_replace_na() %>% str_replace_all(pattern = "NA", "")
+  ) %>% 
+    str_replace_all(pattern = "[^[:alnum:]]+$", "")  %>% 
+    str_trim #%>% 
+  #str_replace(pattern = "\\s+", " ")  %>% 
+  #str_replace(pattern = "[^[:alnum:]]+$", "")
+  
+  
+  model_nodes$op[model_list$heads[1,]+1]<- model_nodes$name[model_list$heads[1,]+1]
+  model_nodes$color<- apply(model_nodes["op"], 1, get.color)
+  model_nodes$shape<- apply(model_nodes["op"], 1, get.shape)
+  model_nodes$label<- label_paste
+  
+  id.to.keep <- model_nodes$id[!model_nodes$op=="null"]
+  nodes_df <- model_nodes[model_nodes$id %in% id.to.keep, c("id", "label", "shape", "color")]
+  
+  edges_id<- model_nodes$id[!sapply(model_nodes$inputs, length)==0 & !model_nodes$op=="null"]
+  edges<- model_nodes$inputs[!sapply(model_nodes$inputs, length)==0 & !model_nodes$op=="null"]
+  edges<- sapply(edges, function(x)intersect(as.numeric(x[, 1]), id.to.keep), simplify = F)
+  names(edges)<- edges_id
+  
+  edges_df<- data.frame(
+    from=unlist(edges),
+    to=rep(names(edges), time=sapply(edges, length)),
+    arrows = "to",
+    color="black",
+    from_name_output=paste0(model_nodes$name[unlist(edges)+1], "_output"), 
+    stringsAsFactors=F)
+  
+  if (!is.null(shape)){
+    edges_labels_raw<- symbol$get.internals()$infer.shape(list(data=shape))$out.shapes
+    edge_label_str <- function(x) paste0(x, collapse="X")
+    edges_labels_raw<- sapply(edges_labels_raw, edge_label_str)
+    edges_df$label<- edges_labels_raw[edges_df$from_name_output]
   }
-
-  graph <-
-    create_graph(
-      nodes_df = nodes,
-      edges_df = edges#,
-#      directed = TRUE#,
-      # node_attrs = c("fontname = Helvetica"),
-#      graph_attrs = paste0("label = \"", graph.title, "\"") %>% c(paste0("fontname = ", graph.title.font.name)) %>% c(paste0("fontsize = ", graph.title.font.size)) %>% c("labelloc = t"),
-      # node_attrs = "fontname = Helvetica",
- #     edge_attrs = c("color = gray20", "arrowsize = 0.8", "arrowhead = vee")
-    )
-
-  return(render_graph(graph, width = graph.width.px, height = graph.height.px))
+  
+  graph <-visNetwork(nodes = nodes_df, edges = edges_df, main = graph.title) %>%
+    visHierarchicalLayout(direction = "UD", sortMethod = "directed")
+  
+  return(graph)
 }
 
 globalVariables(c("color", "shape", "label", "id", ".", "op"))

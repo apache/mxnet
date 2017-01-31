@@ -2,7 +2,7 @@
 
 Topics:
 * [Basic Push and Pull](#basic-push-and-pull)
-* [List Key-Value Pairs](#interface-for-list-key-value-pairs)
+* [List Key-Value Pairs](#list-key-value-pairs)
 * [API Reference](#api-reference)
 
 

@@ -6,7 +6,7 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 ## Set the Number of Threads
 
 * MXNET_GPU_WORKER_NTHREADS (default=2)
-  - The maximum number of threads that do the the computation job on each GPU.
+  - The maximum number of threads that do the computation job on each GPU.
 * MXNET_GPU_COPY_NTHREADS (default=1)
   - The maximum number of threads that do the memory copy job on each GPU.
 * MXNET_CPU_WORKER_NTHREADS (default=1)
@@ -54,15 +54,15 @@ Typically, you wouldn't need to change these settings, but they are listed here 
 
 * MXNET_BACKWARD_DO_MIRROR (default=0)
     - whether do `mirror` during training for saving device memory.
-    - when set to `1`, then during forward propagation, graph exector will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed. `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
+    - when set to `1`, then during forward propagation, graph executor will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed. `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
     - one extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will only use O(sqrt(N)) memory at 75% running speed.
 
 ## Control the profiler
 
-When USE_PROFILER is enabled in Makefile or CMake, the following enviroments can be used to profile the application without changing code.
+When USE_PROFILER is enabled in Makefile or CMake, the following environments can be used to profile the application without changing code.
 
 * MXNET_PROFILER_AUTOSTART (default=0)
-	- Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the work directory.
+	- Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
 
 * MXNET_PROFILER_MODE (default=0)
 	- If set to '0', profiler records the events of the symbolic operators.

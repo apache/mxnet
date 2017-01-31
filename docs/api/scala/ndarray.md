@@ -3,6 +3,12 @@
 
 The NDArray package (`mxnet.ndarray`) contains tensor operations similar to `numpy.ndarray`. The syntax is also similar, except for some additional calls for dealing with I/O and multiple devices.
 
+Topics:
+
+* [Create NDArray](#create-ndarray)
+* [NDArray Operations](#ndarray-operations)
+* [NDArray API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.NDArray)
+
 ## Create NDArray
 
 Create `mxnet.ndarray` as follows:

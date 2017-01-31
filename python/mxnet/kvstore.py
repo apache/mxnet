@@ -284,7 +284,7 @@ class KVStore(object):
 
     @property
     def num_workers(self):
-        """Get the number of worker ndoes
+        """Get the number of worker nodes
 
         Returns
         -------

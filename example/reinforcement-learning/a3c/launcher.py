@@ -89,7 +89,7 @@ def submit(args):
                    pscmd=(' '.join(args.command)))
 
 def signal_handler(signal, frame):
-    logging.info('Stop luancher')
+    logging.info('Stop launcher')
     sys.exit(0)
 
 if __name__ == '__main__':

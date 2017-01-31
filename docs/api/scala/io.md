@@ -8,7 +8,7 @@ Topics:
 * [Data Iterator Parameters](#parameters-for-data-iterator) clarifies the different usages for dataiter parameters.
 * [Create a Data Iterator](#create-a-data-iterator) introduces how to create a data iterator in MXNet for Scala.
 * [How to Get Data](#how-to-get-data) introduces the data resource and data preparation tools.
-* [IO API Reference](#io-api-reference) explains the IO API.
+* [IO API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.IO$) explains the IO API.
 
 
 ## Data Iterator Parameters
@@ -137,7 +137,7 @@ For more details, run ```./bin/im2rec```.
 The `im2rec` tool and `IO.ImageRecordIter` have multi-label support for a single image.
 For example, if you have four labels for a single image, you can use the following procedure to use the Recordio tools.
 
-1. Write the the image list files as follows:
+1. Write the image list files as follows:
 
      ```
          integer_image_index \t label_1 \t label_2 \t   label_3 \t label_4 \t path_to_image

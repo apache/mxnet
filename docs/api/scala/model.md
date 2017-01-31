@@ -2,21 +2,19 @@
 
 The model API provides a simplified way to train neural networks using common best practices.
 It's a thin wrapper built on top of the [ndarray](ndarray.md) and [symbolic](symbol.md)
-modules that makes neural network training easy.
+modules that make neural network training easy.
 
 Topics:
 
 * [Train a Model](#train-a-model)
 * [Save the Model](#save-the-model)
-* [Periodic Checkpoint](#periodically-checkpoint)
-* [Initializer API Reference](#initializer-api-reference)
-* [Evaluation Metric API Reference](#initializer-api-reference)
-* [Optimizer API Reference](#optimizer-api-reference)
-* [Model API Reference](#model-api-reference)
+* [Periodic Checkpoint](#periodic-checkpointing)
+* [Multiple Devices](#use-multiple-devices)
+* [Model API Reference](#http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Model)
 
 ## Train the Model
 
-To train a model, perform two steps: configure the model  using the symbol parameter,
+To train a model, perform two steps: configure the model using the symbol parameter,
 then call ```model.Feedforward.create``` to create the model.
 The following example creates a two-layer neural network.
 

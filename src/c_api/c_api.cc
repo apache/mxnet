@@ -87,6 +87,19 @@ int MXSetProfilerConfig(int mode, const char* filename) {
   API_END();
 }
 
+int MXDumpProfile() {
+  API_BEGIN();
+#if MXNET_USE_PROFILER
+  engine::Profiler *profiler = engine::Profiler::Get();
+  CHECK(profiler->IsEnableOutput())
+    << "Profiler haven't been run. Config and start profiler first";
+  engine::Profiler::Get()->DumpProfile();
+#else
+  LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
+#endif
+  API_END()
+}
+
 int MXSetProfilerState(int state) {
   // state, kNotRunning: 0, kRunning: 1
   API_BEGIN();

@@ -29,11 +29,7 @@ NNVM_REGISTER_OP(_backward_copy)
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .MXNET_DESCRIBE("Get output from a symbol and pass 0 gradient back")
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // pass back zero gradient
-    return MakeGradNode("_zeros", n, {}, std::unordered_map<std::string, std::string>());
-});
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
@@ -83,7 +79,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sign)
 // round
 MXNET_OPERATOR_REGISTER_UNARY(round)
 .MXNET_DESCRIBE("Take round of the src")
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>);
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
 MXNET_OPERATOR_REGISTER_UNARY(ceil)

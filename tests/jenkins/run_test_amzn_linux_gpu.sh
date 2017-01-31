@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "BUILD make"
 cp make/config.mk .
 echo "USE_CUDA=0" >> config.mk
@@ -11,17 +13,27 @@ echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.
 echo 'export JRE_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.x86_64/jre' >> ~/.profile
 echo 'export PATH=$PATH:/apache-maven-3.3.9/bin/:/usr/bin:/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.x86_64/bin:/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.x86_64/jre/bin' >> ~/.profile
 source ~/.profile
+user=`id -u -n`
 make -j 4 || exit -1
 
 echo "BUILD python2 mxnet"
 cd python
-python setup.py install --prefix ~/.local || exit 1
+if [ $user == 'root' ]
+then
+    python setup.py install || exit 1
+else
+    python setup.py install --prefix ~/.local || exit 1
+fi
 cd ..
 
 echo "BUILD python3 mxnet"
 cd python
-python3 setup.py install --prefix ~/.local || exit 1
-echo "~/.local"
+if [ $user == 'root' ]
+then
+    python3 setup.py install || exit 1
+else
+    python3 setup.py install --prefix ~/.local || exit 1
+fi
 cd ..
 
 echo "BUILD lint"

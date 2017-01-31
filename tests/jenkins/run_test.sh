@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "BUILD make"
 cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
@@ -12,12 +14,13 @@ echo "BUILD lint"
 make lint || exit -1
 
 echo "BUILD cpp_test"
-make -j 4 test || exit -1
+make -j$(nproc) test || exit -1
 export MXNET_ENGINE_INFO=true
 for test in tests/cpp/*_test; do
     ./$test || exit -1
 done
 export MXNET_ENGINE_INFO=false
+export PYTHONPATH=$(pwd)/python
 
 echo "BUILD python_test"
 nosetests --verbose tests/python/unittest || exit -1
