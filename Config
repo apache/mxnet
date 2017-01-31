@@ -62,8 +62,8 @@ package.DeepMXNet = {
       SciPy = 0.15.x;
       Requests = 2.x.x;
       C-ares = 1.x;
-      Graphviz = 2.36.0;
-      #PythonMatplotlib = 1.3.1;
+      PyGraphviz = 1.3;
+      #PythonMatplotlib = 1.4.x;
       DeepMXNetApolloDeploymentHelper = 1.0;
     };
   };
