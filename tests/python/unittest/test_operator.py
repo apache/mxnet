@@ -2474,8 +2474,8 @@ def test_cast():
             exe.arg_arrays[0][:] = X
             exe.forward()
             exe.backward(mx.nd.array(X, dtype=dsttype, ctx=default_context()))
-            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), threshold=2e-4)
-            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=2e-4)
+            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), threshold=5e-4)
+            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=5e-4)
 
 
 if __name__ == '__main__':
