@@ -1133,6 +1133,161 @@ void Flip(const nnvm::NodeAttrs& attrs,
   });
 }
 
+/*!
+ * \brief The parameters of the repeat operator include
+ * the number of repeating time and axis (optional).
+ * The parameters will be later used to deduce the
+ * output ndarray shape in bool RepeatShape() function.
+ */
+struct RepeatParam : public dmlc::Parameter<RepeatParam> {
+  int repeats = 1;
+  dmlc::optional<int> axis;
+  DMLC_DECLARE_PARAMETER(RepeatParam) {
+    DMLC_DECLARE_FIELD(repeats)
+      .describe("The number of repetitions for each element.");
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(dmlc::optional<int>())
+      .describe("The axis along which to repeat values."
+                " The negative numbers are interpreted counting from the backward."
+                " By default, use the flattened input array,"
+                " and return a flat output array.");
+  }
+};
+
+/*!
+ * \brief Helper function for getting user input params for the operator repeat.
+ * Sanity check the user input values.
+ */
+inline void GetRepeatParams(const RepeatParam& param, const TShape& ishape,
+                            int& repeats, dmlc::optional<int>& axisOpt) {
+  repeats = param.repeats;
+  CHECK_GE(repeats, 0) << "repeats cannot be a negative number";
+  axisOpt = param.axis;
+  if (static_cast<bool>(axisOpt)) {
+    int ndims = static_cast<int>(ishape.ndim());
+    int axis = axisOpt.value();
+    if (axis < 0) {
+      axis += ndims;
+    }
+    CHECK(axis >= 0 && axis < ndims) << "axis = " << axisOpt.value() << " out of bounds";
+  }
+}
+
+inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_attrs,
+                        std::vector<TShape> *out_attrs) {
+  const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const TShape& ishape = (*in_attrs)[0];
+  int repeats = 0;
+  dmlc::optional<int> axisOpt;
+  GetRepeatParams(param, ishape, repeats, axisOpt);
+  // If 0 repeats, return an empty 0 dim array
+  if (0 == repeats) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape());
+    return true;
+  }
+
+  // If repeats > 0, multiply the size of the corresponding axis by repeats
+  if (static_cast<bool>(axisOpt)) {
+    int ndims = static_cast<int>(ishape.ndim());
+    int axis = axisOpt.value();
+    if (axis < 0) {
+      axis += ndims;
+    }
+    TShape shape(ishape.ndim());
+    for (index_t i = 0; i < ishape.ndim(); ++i) {
+      if (static_cast<int>(i) == axis) {
+        shape[i] = static_cast<index_t>(repeats) * ishape[i];
+      } else {
+        shape[i] = ishape[i];
+      }
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  } else { // If axis is not input by user, return a flat 1D array of size = in.size*repeats
+    TShape shape(1);
+    shape[0] = ishape.Size() * static_cast<index_t>(repeats);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  }
+  return true;
+}
+
+inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int>* in_attrs,
+                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  if ((*in_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else if ((*out_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  }
+  return true;
+}
+
+template<typename xpu>
+void RepeatOpForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx, 
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req, 
+                     const std::vector<TBlob>& outputs) {
+  int repeats = 0;
+  dmlc::optional<int> axisOpt;
+  const TBlob& iTBlob = inputs[0];
+  const TShape& ishape = iTBlob.shape_;
+  if (ishape.ndim() == 0) return;
+
+  const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
+  GetRepeatParams(param, ishape, repeats, axisOpt);
+  if (0 == repeats) return;
+
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    using namespace mxnet_op;
+    using namespace mshadow;
+    if (static_cast<bool>(axisOpt)) {
+      int axis = axisOpt.value();
+      int ndim = static_cast<int>(ishape.ndim());
+      if (axis < 0)  {
+        axis += ndim;
+      }
+      if (1 == ndim) { // 1D input array
+        Kernel<repeat<1, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                          inputs[0].dptr<DType>(), repeats, ishape.Size());
+      } else if (2 == ndim) { // 2D input array
+        if (0 == axis) {
+          Kernel<repeat<2, 0>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                            inputs[0].dptr<DType>(), repeats, ishape[0], ishape[1]);
+        } else if (1 == axis) {
+          Kernel<repeat<2, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                            inputs[0].dptr<DType>(), repeats, ishape[0], ishape[1]);
+        }
+      } else { // 3D or more dim input array
+        if (0 == axis) {
+          // collapse dims 1,...,ndim-1 to the second dim
+          Shape<2> fshape = Shape2(ishape[0], ishape.ProdShape(1, ndim));
+          Kernel<repeat<2, 0>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                            inputs[0].dptr<DType>(), repeats, fshape[0], fshape[1]);
+        } else if (ndim-1 == axis) {
+          // collapse dims 0,...,ndim-2 to the first dim
+          Shape<2> fshape = Shape2(ishape.ProdShape(0, ndim-1), ishape[ndim-1]);
+          Kernel<repeat<2, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                            inputs[0].dptr<DType>(), repeats, fshape[0], fshape[1]);
+        } else {
+          // collapse dims 0,...,axis-1 to the first dim
+          // collapse dims axis+1,...,ndim-1 to the third dim
+          Shape<3> fshape = Shape3(ishape.ProdShape(0, axis), axis, ishape.ProdShape(axis+1, ndim));
+          Kernel<repeat<3, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                            inputs[0].dptr<DType>(), repeats, fshape[0], fshape[1], fshape[2]);
+        }
+      }
+    } else { // axis is not specified by user
+        Kernel<repeat<1, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                          inputs[0].dptr<DType>(), repeats, ishape.Size());
+    }
+  });
+}
+
 }  // namespace op
 }  // namespace mxnet
 

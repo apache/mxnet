@@ -88,6 +88,116 @@ struct clip_grad {
   }
 };
 
+/*!
+ * \brief Primary template definition for operator repeat.
+ * The function Map is a dummy here.
+ * Will be specialized later for different cases.
+ * The function Map is under looping through every
+ * element of the input data.
+ */
+template<size_t nDims, int axis>
+struct repeat {
+  /*!
+   * \brief
+   * \param i index of the input array in 1D form
+   * \param out output array
+   * \param datas input array
+   * \param repeats number of repeating times
+   * \param n1 size of the input array in the first dim
+   * \param n2 size of the input array in the second dim (dummy for arrays of dims > 1)
+   * \param n3 size of the input array in the third dim (dummy for arrays of dims > 2)
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas, int repeats,
+                                  size_t n1 = 0, size_t n2 = 0, size_t n3 = 0) {}  
+};
+
+/*!
+ * \brief Specialized template for operator repeat.
+ * This implementation handles the most common case
+ * when nDims = 3 and axis = 1.
+ */
+template<>
+struct repeat<3, 1> {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas, int repeats,
+                                  size_t n1 = 0, size_t n2 = 0, size_t n3 = 0) {
+    DType data = datas[i];
+    size_t n23 = n2 * n3;
+    // calculate the 3D index of the input 3D array from its 1D index i
+    int i1 = i / n23;
+    int i2 = (i % n23) / n3;
+    int i3 = i - i1 * n23 - i2 * n3;
+
+    // calculate the corresponding 3D index of the output 3D array
+    // j1 = i1, j3 = i3, so the assignment will be skipped.
+    int j2 = i2 * repeats;
+    int n23_b = n23 * repeats;
+    for (int k = 0; k < repeats; ++k) {
+      out[i1*n23_b+(j2+k)*n3+i3] = data;
+    }
+  }  
+};
+
+/*!
+ * \brief Specialized template for operator repeat.
+ * This implementation handles the use case where axis
+ * is not specified by users or the input array
+ * is a 1D array. If the input array is a multi-dim array,
+ * it will be flattened into a 1D array before being passed to
+ * the kernel. Hence, nDims = 1 in this case.
+ */
+template<>
+struct repeat<1, 1> {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas, int repeats,
+                                  size_t n1 = 0, size_t n2 = 0, size_t n3 = 0) {
+    DType data = datas[i];
+    int j = i * repeats; // starting index of every element in out
+    for (int k = 0; k < repeats; ++k) {
+      out[j+k] = data;
+    }
+  }
+};
+
+/*!
+ * \brief Specialize template for operator repeat.
+ * This implementation handles the use case where
+ * nDims = 2 and axis = 0.
+ */
+template<>
+struct repeat<2, 0> {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas, int repeats,
+                                  size_t n1 = 0, size_t n2 = 0, size_t n3 = 0) {
+    DType data = datas[i];
+    int i1 = i / n2;
+    int i2 = i - i1 * n2;
+    int j1 = i1 * repeats; // starting index of every element of out in the first dim
+    for (int k = 0; k < repeats; ++k) {
+      out[(j1+k)*n2+i2] = data;
+    }
+  }
+};
+
+/*!
+ * \brief Specialize template for operator repeat.
+ * This implementation handles the use case where
+ * nDims = 2 and axis = 1.
+ */
+template<>
+struct repeat<2, 1> {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas, int repeats,
+                                  size_t n1 = 0, size_t n2 = 0, size_t n3 = 0) {
+    DType data = datas[i];
+    int j = i * repeats;
+    for (int k = 0; k < repeats; ++k) {
+      out[j+k] = data;
+    }
+  }
+};
+
 }  // namespace mxnet_op
 }  // namespace op
 }  // namespace mxnet

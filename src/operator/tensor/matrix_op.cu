@@ -57,5 +57,8 @@ NNVM_REGISTER_OP(clip)
 NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<gpu>", ClipGrad_<gpu>);
 
+NNVM_REGISTER_OP(repeat)
+.set_attr<FCompute>("FCompute<gpu>", RepeatOpForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

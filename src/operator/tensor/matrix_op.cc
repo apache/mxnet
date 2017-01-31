@@ -18,6 +18,7 @@ DMLC_REGISTER_PARAMETER(SimpleCropAssignScalarParam);
 DMLC_REGISTER_PARAMETER(SliceParam);
 DMLC_REGISTER_PARAMETER(FlipParam);
 DMLC_REGISTER_PARAMETER(DotParam);
+DMLC_REGISTER_PARAMETER(RepeatParam);
 
 NNVM_REGISTER_OP(Reshape)
 .MXNET_DESCRIBE("Reshape input according to a target shape spec.\n"
@@ -303,6 +304,21 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr_parser(ParamParser<ClipParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
+
+NNVM_REGISTER_OP(repeat)
+.MXNET_DESCRIBE("Repeat elements of an array")
+.set_num_outputs(1)
+.set_num_inputs(1)
+.set_attr_parser(ParamParser<RepeatParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a", "repeats", "axis"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", RepeatOpShape)
+.set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
+.set_attr<FCompute>("FCompute<cpu>", RepeatOpForward<cpu>)
+.add_argument("a", "NDArray", "Input data array")
+.add_arguments(RepeatParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
