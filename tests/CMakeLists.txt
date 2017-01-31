@@ -27,6 +27,7 @@ if(GTEST_FOUND)
     ${mxnet_LINKER_LIBS}
     gtest
     mxnet
+    rt
     )
 
   add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
