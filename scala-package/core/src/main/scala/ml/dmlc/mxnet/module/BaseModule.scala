@@ -5,7 +5,6 @@ import java.io.IOException
 import ml.dmlc.mxnet.optimizer.SGD
 
 import scala.collection.immutable.ListMap
-import scala.util.control.Breaks._
 import ml.dmlc.mxnet._
 
 /**
