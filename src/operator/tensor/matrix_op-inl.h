@@ -596,8 +596,8 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];

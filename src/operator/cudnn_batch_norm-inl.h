@@ -55,8 +55,8 @@ class CuDNNBatchNormOp : public Operator {
       CHECK_GE(req.size(), 1U);
     }
     CHECK_EQ(req[cudnnbatchnorm::kOut], kWriteTo);
-    CHECK_GE(in_data[cudnnbatchnorm::kData].ndim(), 2U);
-    CHECK_LE(in_data[cudnnbatchnorm::kData].ndim(), 4U);
+    CHECK_GE(in_data[cudnnbatchnorm::kData].ndim(), 2);
+    CHECK_LE(in_data[cudnnbatchnorm::kData].ndim(), 4);
 
     if (!init_cudnn_) {
       for (int i = 0; i < 4; ++i) {

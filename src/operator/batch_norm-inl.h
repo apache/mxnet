@@ -123,10 +123,10 @@ class BatchNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
-    CHECK_EQ(in_grad.size(), 3);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
+    CHECK_EQ(in_grad.size(), 3U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
     const real_t scale = static_cast<real_t>(out_grad[batchnorm::kOut].shape_[1]) /

@@ -140,8 +140,8 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
 inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                std::vector<TShape> *in_attrs,
                                std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   if ((*in_attrs)[0].ndim() == 0) return false;
   const BroadcastAxesParam& param = nnvm::get<BroadcastAxesParam>(attrs.parsed);
   CHECK_EQ(param.axis.ndim() , param.size.ndim());
@@ -158,8 +158,8 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
 inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   if (ishape.ndim() == 0) return false;
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);

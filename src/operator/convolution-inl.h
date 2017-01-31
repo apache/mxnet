@@ -378,7 +378,7 @@ class ConvolutionProp : public OperatorProperty {
     if (dshp.ndim() ==  0) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv
-      CHECK_EQ(dshp.ndim(), 4) \
+      CHECK_EQ(dshp.ndim(), 4U) \
           << "Input data should be 4D in batch-num_filter-y-x";
       Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
       Shape<4> wshape = Shape4(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
@@ -435,17 +435,17 @@ class ConvolutionProp : public OperatorProperty {
         << "input num_filter must divide group size";
       CHECK_EQ(param_.num_filter % param_.num_group, 0)
         << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0) \
+      CHECK_GT(param_.kernel.Size(), 0U) \
         << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0) \
+      CHECK_GT(param_.stride.Size(), 0U) \
         << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0) \
+      CHECK_GT(param_.dilate.Size(), 0U) \
         << "incorrect dilate size: " << param_.dilate;
       CHECK(ksize_d < dshape[2] + 2 * param_.pad[0]
             && ksize_y <= dshape[3] + 2 * param_.pad[1]
             && ksize_x <= dshape[4] + 2 * param_.pad[2])
         << "kernel size exceed input";
-      CHECK_EQ(param_.dilate.Size(), 1)
+      CHECK_EQ(param_.dilate.Size(), 1U)
         << "Dilate is not supported in 3d convolution";
       Shape<5> oshape;
       oshape[0] = dshape[0];

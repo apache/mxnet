@@ -60,7 +60,7 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(req[fullc::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
@@ -185,7 +185,7 @@ class FullyConnectedProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

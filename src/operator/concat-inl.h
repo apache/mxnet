@@ -82,7 +82,7 @@ class ConcatOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK_EQ(in_grad.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3, DType> > grad_in(size_);

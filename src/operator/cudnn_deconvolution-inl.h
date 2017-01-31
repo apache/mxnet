@@ -44,7 +44,7 @@ class CuDNNDeconvolutionOp : public Operator {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> data = in_data[deconv::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> wmat = in_data[deconv::kWeight].get<gpu, 4, DType>(s);

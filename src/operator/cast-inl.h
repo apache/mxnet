@@ -111,7 +111,7 @@ class CastProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 1);
+    CHECK_EQ(in_type->size(), 1U);
     out_type->clear();
     out_type->push_back(param_.dtype);
     return true;

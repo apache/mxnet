@@ -164,7 +164,7 @@ class DropoutProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
