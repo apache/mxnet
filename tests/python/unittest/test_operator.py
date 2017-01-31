@@ -652,6 +652,15 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.backward(out_grad)
     assert reldiff(out, args_grad[0].asnumpy()) < 1e-6
 
+    args_grad_addto_npy = [np.random.normal(size=s) for s in arg_shapes]
+    args_grad_addto = [mx.nd.array(ele) for ele in args_grad_addto_npy]
+    exe = deconv.bind(default_context(), args=args, args_grad=args_grad_addto, grad_req="add")
+    exe.forward()
+    out = exe.outputs[0].asnumpy()
+    exe.backward(out_grad)
+    assert reldiff(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy()) < 1e-6
+
+
 def check_deconvolution_gradient(input_shape, num_filter, pad):
     """configure A: input --> conv --> output.
        configure B: input --> deconv --> output
@@ -689,11 +698,24 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     deconv_args['deconv_weight'] = conv_args['conv_weight']
     deconv_args_grad = [mx.nd.zeros(deconv_data.shape),
         mx.nd.zeros((num_filter, input_shape[1]) + kernel)]
+    deconv_addto_args_grad_npy = [np.random.normal(size=deconv_data.shape),
+                                  np.random.normal(size=(num_filter, input_shape[1]) + kernel)]
+    deconv_addto_args_grad = [mx.nd.array(deconv_addto_args_grad_npy[0]),
+                              mx.nd.array(deconv_addto_args_grad_npy[1])]
     exe_deconv = deconv.bind(default_context(), args=deconv_args, args_grad=deconv_args_grad)
     exe_deconv.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv.backward(deconv_out_grad)
     assert reldiff(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy()) < 1e-6
+    # Test AddTo
+    exe_deconv_addto = deconv.bind(default_context(), args=deconv_args,
+                                   args_grad=deconv_addto_args_grad,
+                                   grad_req="add")
+    exe_deconv_addto.forward(is_train=True)
+    deconv_out_grad = conv_data[:]
+    exe_deconv_addto.backward(deconv_out_grad)
+    assert reldiff(conv_args_grad[1].asnumpy() + deconv_addto_args_grad_npy[1],
+                   deconv_addto_args_grad[1].asnumpy()) < 1e-6
 
 def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, target_shape=None):
     data = mx.sym.Variable(name="data")
@@ -2201,6 +2223,236 @@ def test_take():
                 idx_shape += (np.random.randint(low=3, high=5), ) 
             check_output_n_grad(data_shape, idx_shape)
 
+
+def test_grid_generator():
+    # transform_type =  affine
+    test_case = [(20,21),(4,3),(6,12),(15,17)]
+    for target_shape in test_case:
+        affine_matrix =  mx.sym.Variable('affine')
+        grid = mx.sym.GridGenerator(data=affine_matrix,transform_type='affine', target_shape=target_shape)
+        exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='write')
+        
+        # check forward
+        exe.arg_dict['affine'][:] = np.array([[1.0,0,0,0,1.0,0]])
+        exe.forward()
+        output = exe.outputs[0].asnumpy()
+        output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
+        output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
+        xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
+        reldiff(output[0,0], yv.T) < 1E-6
+        reldiff(output[0,1], xv.T) < 1E-6
+        
+        # check backward
+        out_grad = np.random.normal(size=(1,2)+target_shape)
+        exe.backward(mx.nd.array(out_grad))
+        tmp = np.zeros((3,target_shape[0]*target_shape[1]))
+        tmp[0] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) % target_shape[1]) * (2.0 / (target_shape[1]-1))
+        tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
+        tmp[2] = 1
+        grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
+        assert reldiff(exe.grad_dict['affine'].asnumpy()[0], grad_est) < 1E-6
+        # check addto
+        exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='add')
+        grid_grad_npy = np.random.normal(size=exe.grad_dict['affine'].shape)
+        exe.grad_dict['affine'][:] = grid_grad_npy
+        exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
+        exe.forward()
+        exe.backward(mx.nd.array(out_grad))
+        assert reldiff(exe.grad_dict['affine'].asnumpy()[0], grad_est + grid_grad_npy) < 1E-6
+
+    # transform_type = warp
+    test_case = [(12,21),(4,3),(6,12)]
+    for target_shape in test_case:
+        flow = mx.sym.Variable('flow')
+        grid = mx.sym.GridGenerator(data=flow,transform_type='warp', target_shape=target_shape)
+        exe = grid.simple_bind(ctx=default_context(), flow=(1,2)+target_shape, grad_req='write')
+        # check forward
+        exe.arg_dict['flow'][:] = np.ones((1,2)+target_shape)
+        exe.forward()
+        output = exe.outputs[0].asnumpy()
+        output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
+        output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
+        xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
+        reldiff(output[0,0], yv.T) < 1E-6
+        reldiff(output[0,1], xv.T) < 1E-6
+        # check backward
+        out_grad = np.random.normal(size=(1,2)+target_shape)
+        exe.backward(mx.nd.array(out_grad))
+        grad_est = np.zeros((1,2)+target_shape)
+        grad_est[0,0] = out_grad[0,0] / ((target_shape[1]-1.0) / 2.0)
+        grad_est[0,1] = out_grad[0,1] / ((target_shape[0]-1.0) / 2.0)
+        assert reldiff(exe.grad_dict['flow'].asnumpy(), grad_est) < 1E-6
+        # check addto
+        exe_add = grid.simple_bind(ctx=default_context(), flow=(1, 2) + target_shape, grad_req='add')
+        flow_grad_npy = np.random.normal(size=exe_add.grad_dict['flow'].shape)
+        exe_add.arg_dict['flow'][:] = np.ones((1, 2) + target_shape)
+        exe_add.grad_dict['flow'][:] = flow_grad_npy
+        exe_add.forward()
+        exe_add.backward(mx.nd.array(out_grad))
+        assert reldiff(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy) < 1E-6
+
+
+def test_bilinear_sampler():
+    
+    from math import floor
+    def between(x, lowerbound, upperbound):
+        return x>=lowerbound and x<=upperbound
+
+    def bilinear_forward_numpy(data, grid):
+
+        batchsize = data.shape[0]
+        input_height = data.shape[2]
+        input_width = data.shape[3]
+        num_channel = data.shape[1]
+
+        output_height = grid.shape[2]
+        output_width = grid.shape[3]
+        out = np.zeros(data.shape[:2] + grid.shape[2:])
+
+        for i in range(batchsize):
+            for yout in range(output_height):
+                for xout in range(output_width):
+                    
+                    xcoord = (grid[i, 0, yout, xout]+1) * (input_width-1) / 2.0
+                    ycoord = (grid[i, 1, yout, xout]+1) * (input_height-1) / 2.0
+
+                    xInTopLeft = int(floor(xcoord))
+                    xWeightTopLeft = 1-abs(xcoord - xInTopLeft)
+
+                    yInTopLeft = int(floor(ycoord))
+                    yWeightTopLeft = 1-abs(ycoord - yInTopLeft)
+
+                    # interpolation
+                    for channel in range(num_channel):
+                        
+                        inTopLeft = data[i,channel,yInTopLeft, xInTopLeft] \
+                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0
+                        inTopRight = data[i,channel,yInTopLeft, xInTopLeft+1] \
+                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0
+                        inBottomLeft = data[i,channel,yInTopLeft+1, xInTopLeft] \
+                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0
+                        inBottomRight = data[i,channel,yInTopLeft+1, xInTopLeft+1] \
+                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0
+                        out[i,channel,yout,xout] = xWeightTopLeft * yWeightTopLeft * inTopLeft\
+                                +  (1-xWeightTopLeft)*yWeightTopLeft * inTopRight\
+                                +  xWeightTopLeft * (1-yWeightTopLeft) * inBottomLeft\
+                            +(1-xWeightTopLeft) * (1-yWeightTopLeft) * inBottomRight
+        return out
+
+
+    def bilinear_backward_numpy(out_grad, data, grid):
+
+        data_grad = np.zeros(data.shape)
+        grid_grad = np.zeros(grid.shape)
+
+        batchsize = data.shape[0]
+        input_height = data.shape[2]
+        input_width = data.shape[3]
+        num_channel = data.shape[1]
+        output_height = grid.shape[2]
+        output_width = grid.shape[3]
+        out = np.zeros(data.shape)
+
+        for i in range(batchsize):
+            for yout in range(output_height):
+                for xout in range(output_width):
+
+                    xcoord = (grid[i, 0, yout, xout]+1) * (input_width-1) / 2.0
+                    ycoord = (grid[i, 1, yout, xout]+1) * (input_height-1) / 2.0
+
+                    if xcoord>=0 and xcoord<=input_width-1 and ycoord>=0 and ycoord<=input_height-1:
+
+                        xInTopLeft = int(floor(xcoord))
+                        xWeightTopLeft = 1-abs(xcoord - xInTopLeft)
+
+                        yInTopLeft = int(floor(ycoord))
+                        yWeightTopLeft = 1-abs(ycoord - yInTopLeft)
+
+                        topLeftDotProduct = 0
+                        topRightDotProduct = 0
+                        bottomLeftDotProduct = 0
+                        bottomRightDotProduct = 0
+
+                        for channel in range(num_channel):
+                            # left top
+                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1):
+                                topLeftDotProduct += data[i,channel,yInTopLeft, xInTopLeft] * \
+                                    out_grad[i,channel,yout,xout]
+                                data_grad[i, channel, yInTopLeft, xInTopLeft] += xWeightTopLeft * \
+                                    yWeightTopLeft * out_grad[i,channel,yout,xout]
+                            # right top
+                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1):
+                                topRightDotProduct += data[i, channel, yInTopLeft,xInTopLeft+1] * \
+                                    out_grad[i, channel, yout,xout] 
+                                data_grad[i, channel,yInTopLeft, xInTopLeft+1] += (1-xWeightTopLeft) * \
+                                    yWeightTopLeft * out_grad[i,channel,yout,xout]
+                            # left bottom
+                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
+                                bottomLeftDotProduct += data[i, channel,yInTopLeft+1, xInTopLeft] * \
+                                    out_grad[i,channel,yout,xout]
+                                data_grad[i,channel,yInTopLeft+1,xInTopLeft]+=xWeightTopLeft * \
+                                    (1-yWeightTopLeft)* out_grad[i,channel,yout,xout]
+                            # right bottom
+                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
+                                bottomRightDotProduct += data[i,channel,yInTopLeft+1, xInTopLeft+1] * \
+                                    out_grad[i,channel,yout,xout]
+                                data_grad[i,channel,yInTopLeft+1,xInTopLeft+1]+= (1-xWeightTopLeft) * \
+                                    (1-yWeightTopLeft)*out_grad[i,channel,yout,xout]
+
+                        yf = -xWeightTopLeft * topLeftDotProduct + xWeightTopLeft*bottomLeftDotProduct - \
+                            (1-xWeightTopLeft)* topRightDotProduct + (1-xWeightTopLeft)*bottomRightDotProduct
+                        xf = -yWeightTopLeft * topLeftDotProduct + yWeightTopLeft*topRightDotProduct - \
+                            (1-yWeightTopLeft)*bottomLeftDotProduct + (1-yWeightTopLeft)*bottomRightDotProduct
+                        grid_grad[i,0,yout,xout] = xf * (input_width-1) / 2.0
+                        grid_grad[i,1,yout,xout] = yf * (input_height-1) / 2.0
+
+        return data_grad, grid_grad
+    
+    data = mx.sym.Variable('data')
+    grid = mx.sym.Variable('grid')
+    net = mx.sym.BilinearSampler(data=data,grid=grid)
+    
+    test_case = [[(1,3,15,16),(1,2,10,10)],
+                 [(1,6,7,16),(1,2,10,4)],
+                 [(1,7,3,16),(1,2,8,11)],
+                 [(1,9,50,50),(1,2,50,50)]]
+    
+    for ctx in [default_context()]:
+        for item in test_case:
+            data_shape, grid_shape = item
+            exe = net.simple_bind(data=data_shape,grid=grid_shape,ctx=ctx,grad_req='write')
+            # check forward
+            tmp = np.zeros(grid_shape)
+            xv, yv = np.meshgrid(np.arange(grid_shape[2]), np.arange(grid_shape[3]))
+            tmp[0,0] = yv.T
+            tmp[0,1] = xv.T
+            exe.arg_dict['data'][:] = np.random.normal(0,100,size=data_shape) 
+            exe.arg_dict['grid'][:] = tmp + np.random.normal(0,100,size=grid_shape) 
+            exe.forward()
+            out = bilinear_forward_numpy(exe.arg_dict['data'].asnumpy(), exe.arg_dict['grid'].asnumpy())
+            assert reldiff(exe.outputs[0].asnumpy(),out) < 1E-5
+
+            # check backward
+            out_grad = np.random.normal(size=data_shape[:2] + grid_shape[2:])
+            exe.backward(mx.nd.array(out_grad))
+            data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(), 
+                                                       exe.arg_dict['grid'].asnumpy())
+            assert reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 1E-4
+            assert reldiff(exe.grad_dict['grid'].asnumpy(),grid_grad) < 1E-5
+
+            # check kAddTo
+            exe_addto = net.simple_bind(data=data_shape, grid=grid_shape, ctx=ctx, grad_req='add')
+            data_initial_grid = np.random.normal(size=exe_addto.grad_dict['data'].shape)
+            grid_initial_grid = np.random.normal(size=exe_addto.grad_dict['grid'].shape)
+            exe_addto.arg_dict['data'][:] = exe.arg_dict['data'][:]
+            exe_addto.arg_dict['grid'][:] = exe.arg_dict['grid'][:]
+            exe_addto.grad_dict['data'][:] = data_initial_grid
+            exe_addto.grad_dict['grid'][:] = grid_initial_grid
+            exe_addto.forward()
+            exe_addto.backward(mx.nd.array(out_grad))
+            assert reldiff(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid) < 1E-4
+            assert reldiff(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid) < 1E-5
+            
 def test_index2d():
     for _ in range(30):
         n = np.random.randint(1, 100)
@@ -2263,4 +2515,6 @@ if __name__ == '__main__':
     test_order()
     test_blockgrad()
     test_take()
+    test_grid_generator()
+    test_bilinear_sampler()
     test_binary_logic()

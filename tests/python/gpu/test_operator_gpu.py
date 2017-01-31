@@ -91,6 +91,37 @@ def test_deconvolution_with_type():
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
     check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+
+def test_bilinear_sampler_with_type():
+    data = mx.sym.Variable('data')
+    grid = mx.sym.Variable('grid')
+    sym = mx.sym.BilinearSampler(data=data, grid=grid)
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float64}},
+                {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float32}},
+                {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float16}},
+                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float64}},
+                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+
+def test_grid_generator_with_type():
+    data = mx.sym.Variable('data')
+    sym = mx.sym.GridGenerator(data=data, transform_type='affine', target_shape=(20, 20))
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}},
+                {'ctx': mx.cpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+    sym = mx.sym.GridGenerator(data=data, transform_type='warp', target_shape=(20, 20))
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}},
+                {'ctx': mx.cpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
 
 def test_pooling_with_type():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
@@ -268,4 +299,5 @@ if __name__ == '__main__':
     test_activation_with_type()
     test_embedding_with_type()
     test_take_with_type()
-
+    test_bilinear_sampler_with_type()
+    test_grid_generator_with_type()

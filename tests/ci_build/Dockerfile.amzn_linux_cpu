@@ -3,17 +3,7 @@ MAINTAINER Ly Nguyen <lynguyen@amazon.com>
 
 COPY install/* /install/
 
-RUN yum install -y openssh-server git wget
-RUN mkdir /var/run/sshd
-RUN adduser --password jenkins jenkins
-RUN chown -R jenkins /install
-RUN chgrp -R jenkins /install
-
-RUN /usr/bin/ssh-keygen -A
-RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
-
-ENV NOTVISIBLE "in users profile"
-RUN echo "export VISIBLE=now" >> /etc/profile
+RUN yum install -y git wget
 
 RUN chmod -R 755 install
 RUN /install/install_opencv.sh
@@ -24,7 +14,3 @@ RUN /install/install_testdeps.sh
 RUN /install/install_julia.sh
 RUN /install/install_maven.sh
 RUN /install/install_library.sh
-
-
-EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
