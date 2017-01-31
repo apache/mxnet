@@ -29,7 +29,7 @@ include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
 WARNFLAGS= -Wall
-CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+CFLAGS = -std=c++11 -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
@@ -37,7 +37,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -g -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -239,7 +239,7 @@ lib/libmxnet.so: $(ALLX_DEP)
 $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
-	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
+	$(MAKE) CXX=$(CXX)  DEPS_PATH=$(DEPS_PATH) CFLAGS="$(CFLAGS)"  -C $(PS_PATH) 
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
