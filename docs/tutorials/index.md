@@ -148,6 +148,9 @@ Applications that use traditional methods to model classification and regression
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/scala/mnist.html)
 *A simple example of classifying handwritten digits from the MNIST dataset using a multilayer perceptron.*
 
+## Contributing Tutorials
+
+Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 ## Other Resources
 - [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
