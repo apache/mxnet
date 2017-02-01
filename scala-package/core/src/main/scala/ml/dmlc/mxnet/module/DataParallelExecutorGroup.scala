@@ -12,7 +12,7 @@ object DataParallelExecutorGroup {
   private val logger: Logger = LoggerFactory.getLogger(classOf[DataParallelExecutorGroup])
   // Load a list of arrays into a list of arrays specified by slices
   private def loadGeneralMulti(data: Seq[NDArray],
-                               targets: Seq[IndexedSeq[((Int, Int), NDArray)]],
+                               targets: Seq[Array[((Int, Int), NDArray)]],
                                majorAxis: Seq[Int]): Unit = {
     for (((dSrc, dTargets), axis) <- data zip targets zip majorAxis) {
       for (((sliceIdxStart, sliceIdxStop), dDst) <- dTargets) {
@@ -50,7 +50,7 @@ object DataParallelExecutorGroup {
 
   // Load data into sliced arrays
   private def loadData(batch: DataBatch,
-                       targets: Seq[IndexedSeq[((Int, Int), NDArray)]],
+                       targets: Seq[Array[((Int, Int), NDArray)]],
                        majorAxis: Seq[Int]): Unit = {
     loadGeneralMulti(batch.data, targets, majorAxis)
   }
@@ -58,7 +58,7 @@ object DataParallelExecutorGroup {
 
   // Load label into sliced arrays
   private def loadLabel(batch: DataBatch,
-                        targets: Seq[IndexedSeq[((Int, Int), NDArray)]],
+                        targets: Seq[Array[((Int, Int), NDArray)]],
                         majorAxis: Seq[Int]): Unit = {
     loadGeneralMulti(batch.label, targets, majorAxis)
   }
@@ -95,14 +95,13 @@ object DataParallelExecutorGroup {
       }).toMap
     }
   }
-  class Builder private[DataParallelExecutorGroup](
-    private val symbol: Symbol,
-    private val contexts: Array[Context],
-    private val paramNames: IndexedSeq[String]) {
+  class Builder(private val symbol: Symbol,
+                private val contexts: Array[Context],
+                private val paramNames: IndexedSeq[String]) {
 
-    private var workLoadList: Seq[Float] = null
-    private var dataShapes: Seq[DataDesc] = null
-    private var labelShapes: Option[Seq[DataDesc]] = None
+    private var workLoadList: IndexedSeq[Float] = null
+    private var dataShapes: IndexedSeq[DataDesc] = null
+    private var labelShapes: Option[IndexedSeq[DataDesc]] = None
     private var forTraining: Boolean = true
     private var inputsNeedGrad: Boolean = false
     private var sharedGroup: Option[DataParallelExecutorGroup] = None
@@ -112,29 +111,29 @@ object DataParallelExecutorGroup {
 
     val argNames = symbol.listArguments()
 
-    def setWorkLoadList(workLoad: Seq[Float]): Builder = {
+    def setWorkLoadList(workLoad: IndexedSeq[Float]): Builder = {
       this.workLoadList = workLoad
       this
     }
 
-    def setDataShapes(shapes: Seq[DataDesc]): Builder = {
+    def setDataShapes(shapes: IndexedSeq[DataDesc]): Builder = {
       require(shapes != null)
       this.dataShapes = shapes
       this
     }
 
-    def setDataShapesByName(shapes: Seq[(String, Shape)]): Builder = {
+    def setDataShapesByName(shapes: IndexedSeq[(String, Shape)]): Builder = {
       require(shapes != null)
       this.dataShapes = shapes.map { case (k, s) => new DataDesc(k, s) }
       this
     }
 
-    def setLabelShapes(shapes: Seq[DataDesc]): Builder = {
+    def setLabelShapes(shapes: IndexedSeq[DataDesc]): Builder = {
       this.labelShapes = Some(shapes)
       this
     }
 
-    def setLabelShapesByName(shapes: Seq[(String, Shape)]): Builder = {
+    def setLabelShapesByName(shapes: IndexedSeq[(String, Shape)]): Builder = {
       this.labelShapes = Some(shapes).map(shapesInst =>
         shapesInst.map { case (k, s) => new DataDesc(k, s) }
       )
@@ -244,10 +243,10 @@ object DataParallelExecutorGroup {
 class DataParallelExecutorGroup private[mxnet](
     private val symbol: Symbol,
     private val contexts: Array[Context],
-    private val workLoadList: Seq[Float],
-    private val dataShapes: Seq[DataDesc],
-    private val labelShapes: Option[Seq[DataDesc]] = None,
-    private val paramNames: IndexedSeq[String],
+    private val workLoadList: IndexedSeq[Float],
+    private val dataShapes: IndexedSeq[DataDesc],
+    private val labelShapes: Option[IndexedSeq[DataDesc]] = None,
+    private[mxnet] val paramNames: IndexedSeq[String],
     private val forTraining: Boolean,
     private val inputsNeedGrad: Boolean,
     private val sharedGroup: Option[DataParallelExecutorGroup] = None,
@@ -274,13 +273,13 @@ class DataParallelExecutorGroup private[mxnet](
 
   private var batchSize: Int = -1
   private var slices: Array[(Int, Int)] = null
-  private var execs: IndexedSeq[Executor] = null
-  private var dataArrays: Seq[IndexedSeq[((Int, Int), NDArray)]] = null
-  private var labelArrays: Option[Seq[IndexedSeq[((Int, Int), NDArray)]]] = None
-  private var paramArrays: IndexedSeq[IndexedSeq[NDArray]] = null
-  private var gradArrays: IndexedSeq[IndexedSeq[NDArray]] = null
-  private var auxArrays: IndexedSeq[IndexedSeq[NDArray]] = null
-  private var inputGradArrays: IndexedSeq[IndexedSeq[NDArray]] = null
+  private var execs: Array[Executor] = null
+  private var dataArrays: Seq[Array[((Int, Int), NDArray)]] = null
+  private var labelArrays: Option[Seq[Array[((Int, Int), NDArray)]]] = None
+  private[mxnet] var paramArrays: IndexedSeq[Array[NDArray]] = null
+  private[mxnet] var gradArrays: IndexedSeq[Array[NDArray]] = null
+  private[mxnet] var auxArrays: IndexedSeq[Array[NDArray]] = null
+  private var inputGradArrays: IndexedSeq[Array[NDArray]] = null
 
   private val dataLayouts = decideSlices(dataShapes)
   private val labelLayouts =
@@ -292,6 +291,8 @@ class DataParallelExecutorGroup private[mxnet](
     DataDesc.getBatchAxis(symbol.get(name).attr("__layout__"))
   )
   bindExec(dataShapes, labelShapes, sharedGroup)
+
+  def getBatchSize: Int = batchSize
 
   /**
    * Decide the slices for each context according to the workload.
@@ -327,7 +328,9 @@ class DataParallelExecutorGroup private[mxnet](
    */
   def bindExec(dataShapes: Seq[DataDesc], labelShapes: Option[Seq[DataDesc]],
                sharedGroup: Option[DataParallelExecutorGroup]): Unit = {
-    execs = (0 until contexts.length).map(i => bindIthExec(i, dataShapes, labelShapes, sharedGroup))
+    execs = (0 until contexts.length).map(i =>
+      bindIthExec(i, dataShapes, labelShapes, sharedGroup)
+    ).toArray
 
     // convenient data structures
     dataArrays = dataShapes.map(dataDesc =>
@@ -389,18 +392,18 @@ class DataParallelExecutorGroup private[mxnet](
    */
   def getParams(argParams: Map[String, NDArray], auxParams: Map[String, NDArray]): Unit = {
     for ((name, block) <- paramNames.zip(paramArrays)) {
-      val weight = (block.map(_.copyTo(Context.cpu())).reduce { case (a, b) =>
+      val weight = (block.map(_.copyTo(Context.cpu())).reduce((a: NDArray, b: NDArray) =>
         (a + b).disposeDeps()
-      } / block.size).disposeDeps()
+      ) / block.length).disposeDeps()
       val weightNewType = weight.asType(argParams(name).dtype)
       weightNewType.copyTo(argParams(name))
       weight.dispose()
       weightNewType.dispose()
     }
     for ((name, block) <- auxNames.zip(auxArrays)) {
-      val weight = (block.map(_.copyTo(Context.cpu())).reduce { case (a, b) =>
+      val weight = (block.map(_.copyTo(Context.cpu())).reduce((a: NDArray, b: NDArray) =>
         (a + b).disposeDeps()
-      } / block.size).disposeDeps()
+      ) / block.length).disposeDeps()
       val weightNewType = weight.asType(auxParams(name).dtype)
       weightNewType.copyTo(auxParams(name))
       weight.dispose()
@@ -448,7 +451,7 @@ class DataParallelExecutorGroup private[mxnet](
    *         those `NDArray` might live on different devices.
    */
   def getOutputs(): IndexedSeq[IndexedSeq[NDArray]] = {
-    (0 until execs(0).outputs.length).map(i => execs.map(_.outputs(i)))
+    (0 until execs(0).outputs.length).map(i => execs.map(_.outputs(i)).toIndexedSeq)
   }
 
   /**
@@ -471,7 +474,7 @@ class DataParallelExecutorGroup private[mxnet](
    */
   def getInputGrads(): IndexedSeq[IndexedSeq[NDArray]] = {
     require(inputsNeedGrad)
-    inputGradArrays
+    inputGradArrays.map(_.toIndexedSeq)
   }
 
   /**
@@ -529,7 +532,7 @@ class DataParallelExecutorGroup private[mxnet](
           } else if (axis > 0) {
             val labelMySlice: NDArray = NDArray.slice_axis(Map(
               "axis" -> axis, "begin" -> islice._1, "end" -> islice._2))(label)
-              .as_in_context(label.context)
+              .asInContext(label.context)
             labelMySlice
           } else {
             label
@@ -653,7 +656,7 @@ class DataParallelExecutorGroup private[mxnet](
         require(argArr.dtype == argType)
         argArr.reshape(argShape)
       } else {
-        DataParallelExecutorGroup.logger.warn(s"bucketing: data \"$name\" has a shape $argShape," +
+        DataParallelExecutorGroup.logger.warn(s"bucketing: data $name has a shape $argShape," +
           s"which is larger than already allocated shape ${argArr.shape}." +
           "Need to re-allocate. Consider putting default_bucket_key to be the bucket" +
           "taking the largest input for better memory sharing.")

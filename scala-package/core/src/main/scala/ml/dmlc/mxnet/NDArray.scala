@@ -934,6 +934,7 @@ class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def copy(): NDArray = head.copy()
   def shape: Shape = head.shape
   def size: Int = head.size
+  def asInContext(context: Context): NDArray = head.asInContext(context)
 }
 
 class NDArrayInternal private[mxnet](private val internal: Array[Byte], private val dtype: DType) {

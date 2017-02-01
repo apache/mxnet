@@ -3,8 +3,6 @@ package ml.dmlc.mxnet.module
 import java.io.IOException
 
 import ml.dmlc.mxnet.optimizer.SGD
-
-import scala.collection.immutable.ListMap
 import ml.dmlc.mxnet._
 
 /**
@@ -91,13 +89,15 @@ import ml.dmlc.mxnet._
  * @author Yizhi Liu
  */
 abstract class BaseModule {
-  var binded: Boolean = false
-  var forTraining: Boolean = false
-  var inputsNeedGrad: Boolean = false
-  val paramsInitialized: Boolean = false
-  val optimizerInitialized: Boolean = false
-  val symbol: Symbol = null
-  val layoutMapper = None
+  private[mxnet] var binded: Boolean = false
+  private[mxnet] var forTraining: Boolean = false
+  private[mxnet] var inputsNeedGrad: Boolean = false
+  private[mxnet] var paramsInitialized: Boolean = false
+  private[mxnet] var optimizerInitialized: Boolean = false
+  private[mxnet] var symbol: Symbol = null
+  private[mxnet] var execGroup: DataParallelExecutorGroup = null
+  private[mxnet] var argParams: Map[String, NDArray] = null
+  private[mxnet] var auxParams: Map[String, NDArray] = null
 
   // High Level API
 
@@ -163,7 +163,7 @@ abstract class BaseModule {
 
   // Input/Output information
   // A list of (name, shape) pairs specifying the data inputs to this module.
-  def dataShapes: IndexedSeq[(String, Shape)]
+  def dataShapes: IndexedSeq[DataDesc]
 
   /**
    * A list of (name, shape) pairs specifying the label inputs to this module.
@@ -171,7 +171,7 @@ abstract class BaseModule {
    * function, or it is not binded for training, then this should return an empty
    * list `[]`.
    */
-  def labelShapes: IndexedSeq[(String, Shape)]
+  def labelShapes: IndexedSeq[DataDesc]
 
   // A list of (name, shape) pairs specifying the outputs of this module.
   def outputShapes: IndexedSeq[(String, Shape)]
@@ -201,8 +201,8 @@ abstract class BaseModule {
    *         If true, will force re-initialize even if already initialized.
    */
   def initParams(initializer: Initializer = new Uniform(0.01f),
-                 argParams: Option[Map[String, NDArray]] = None,
-                 auxParams: Option[Map[String, NDArray]] = None,
+                 argParams: Map[String, NDArray] = null,
+                 auxParams: Map[String, NDArray] = null,
                  allowMissing: Boolean = false, forceInit: Boolean = false): Unit
 
   /**
@@ -221,7 +221,7 @@ abstract class BaseModule {
                 auxParams: Map[String, NDArray],
                 allowMissing: Boolean = false,
                 forceInit: Boolean = true): Unit = {
-    initParams(initializer = null, argParams = Option(argParams), auxParams = Option(auxParams),
+    initParams(initializer = null, argParams = argParams, auxParams = auxParams,
       allowMissing = allowMissing, forceInit = forceInit)
   }
 
@@ -345,15 +345,13 @@ abstract class BaseModule {
    *                      (e.g. unrolled RNNs with different lengths).
    * @param gradReq Requirement for gradient accumulation (globally).
    *                Can be 'write', 'add', or 'null' (default to 'write').
-   * @param gradReqs Requirement for gradient accumulation (for each argument)
-   *                 Can be 'write', 'add', or 'null' (default to 'write').
    */
-  def bind(dataShapes: ListMap[String, Shape], labelShapes: Option[ListMap[String, Shape]] = None,
+  def bind(dataShapes: IndexedSeq[DataDesc], labelShapes: Option[IndexedSeq[DataDesc]] = None,
            forTraining: Boolean = true, inputsNeedGrad: Boolean = false,
            forceRebind: Boolean = false, sharedModule: Option[BaseModule] = None,
-           gradReq: String = "write", gradReqs: Map[String, String] = null): Unit
+           gradReq: String = "write"): Unit
 
   // Install and initialize optimizers.
-  def initOptimizer(kvstore: String = "local",
-                    optimizer: Optimizer = new SGD(learningRate = 0.01f)): Unit
+  def initOptimizer(kvstore: String = "local", optimizer: Optimizer = new SGD(),
+                    resetOptimizer: Boolean = true, forceInit: Boolean = false): Unit
 }

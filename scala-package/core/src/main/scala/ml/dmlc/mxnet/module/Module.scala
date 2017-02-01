@@ -2,40 +2,33 @@ package ml.dmlc.mxnet.module
 
 import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet._
-import org.slf4j.{LoggerFactory, Logger}
-
-import scala.collection.immutable.ListMap
-import scala.collection.mutable
+import ml.dmlc.mxnet.module.DataParallelExecutorGroup.Builder
+import ml.dmlc.mxnet.optimizer.SGD
+import org.slf4j.LoggerFactory
 
 /**
  * Module is a basic module that wrap a `Symbol`. It is functionally the same
  * as the `FeedForward` model, except under the module API.
- * @param symbol : Symbol
-    data_names : list of str
-        Default is `('data')` for a typical model used in image classification.
-    label_names : list of str
-        Default is `('softmax_label')` for a typical model used in image
-        classification.
-    logger : Logger
-        Default is `logging`.
-    context : Context or list of Context
-        Default is `cpu()`.
-    work_load_list : list of number
-        Default `None`, indicating uniform workload.
-    fixed_param_names: list of str
-        Default `None`, indicating no network parameters are fixed.
+ * @param symbol : Symbol definition.
+ * @param dataNames Input data names.
+ * @param labelNames Input label names
+ * @param contexts Default is cpu().
+ * @param workLoadList  Default `None`, indicating uniform workload.
+ * @param fixedParamNames Default `None`, indicating no network parameters are fixed.
  */
-class Module(private val symbol: Symbol, val dataNames: IndexedSeq[String] = IndexedSeq("data"),
+class Module(symbolVar: Symbol,
+             val dataNames: IndexedSeq[String] = IndexedSeq("data"),
              labelNames: IndexedSeq[String] = IndexedSeq("softmax_label"),
-             context: Array[Context] = Context.cpu(), workLoadList: Option[Seq[Float]] = None,
-             fixedParamNames: Option[Seq[String]] = None) extends BaseModule {
+             private val contexts: Array[Context] = Context.cpu(),
+             workLoadList: Option[IndexedSeq[Float]] = None,
+             private val fixedParamNames: Option[Set[String]] = None) extends BaseModule {
   private val logger = LoggerFactory.getLogger(classOf[Module])
-  // TODO: module.DataParallelExecutorGroup
-  private var execGroup: DataParallelExecutorGroup = null
-  private var paramsInitialized: Boolean = false
 
-  private val workLoads = workLoadList.getOrElse(context.map(_ => 1f).toSeq)
-  require(workLoads.size == context.length)
+  require(symbolVar != null)
+  this.symbol = symbolVar
+
+  private val workLoads = workLoadList.getOrElse(contexts.map(_ => 1f).toIndexedSeq)
+  require(workLoads.size == contexts.length)
 
   private val labelNameList = if (labelNames == null) IndexedSeq.empty[String] else labelNames
 
@@ -43,52 +36,44 @@ class Module(private val symbol: Symbol, val dataNames: IndexedSeq[String] = Ind
   private val inputNames = dataNames ++ labelNameList
   private val paramNames = argNames.filterNot(inputNames.toSet)
   private val auxNames = symbol.listAuxiliaryStates()
-  val outputNames = symbol.listOutputs()
+  private val outputNamesVar = symbol.listOutputs()
 
-  private var argParams: Map[String, NDArray] = null
-  private var auxParams: Map[String, NDArray] = null
   private var paramsDirty = false
 
   private var optimizer: Optimizer = null
-  private var kvstore: KVStore = null
-  private var updateOnKvstore = None
-  private var updater = None
+  private var kvstore: Option[KVStore] = None
+  private var updateOnKVStore: Boolean = false
+  private var updater: Option[MXKVStoreUpdater] = None
 
-  private var dataShapes: Seq[DataDesc] = null
-  private var labelShapes: Option[Seq[DataDesc]] = None
+  private var dataShapesVar: IndexedSeq[DataDesc] = null
+  private var labelShapesVar: Option[IndexedSeq[DataDesc]] = None
 
-  // Internal function to reset binded state.
-  private def resetBind(): Unit = {
-    binded = false
-    execGroup = null
-    dataShapes = null
-    labelShapes = null
-  }
-
-  def getDataShapes(): ListMap[String, Shape] = {
+  override def dataShapes: IndexedSeq[DataDesc] = {
     require(binded)
-    dataShapes
+    dataShapesVar
   }
 
-  def getLabelShapes(): ListMap[String, Shape] = {
+  override def labelShapes: IndexedSeq[DataDesc] = {
     require(binded)
-    labelShapes
+    labelShapesVar.orNull
   }
 
-  def getOutputShapes(): ListMap[String, Shape] = {
+  override def outputShapes: IndexedSeq[(String, Shape)] = {
     require(binded)
-    null // TODO
+    execGroup.getOutputShapes
   }
+
+  def outputNames: IndexedSeq[String] = outputNamesVar
 
   /**
    * Get current parameters.
    * `(arg_params, aux_params)`, each a dictionary of name to parameters (in
    * `NDArray`) mapping.
    */
-  def getParams(): (Map[String, NDArray], Map[String, NDArray]) = {
+  override def getParams: (Map[String, NDArray], Map[String, NDArray]) = {
     require(binded && paramsInitialized)
     if (paramsDirty) {
-      // TODO: sync_params_from_devices()
+      syncParamsFromDevices()
     }
     (argParams, auxParams)
   }
@@ -104,10 +89,10 @@ class Module(private val symbol: Symbol, val dataNames: IndexedSeq[String] = Ind
    *                     and the initializer will be called to fill those missing params.
    * @param forceInit If true, will force re-initialize even if already initialized.
    */
-  def initParams(initializer: Initializer = new Uniform(0.01f),
-                 argParams: Map[String, NDArray] = null,
-                 auxParams: Map[String, NDArray] = null,
-                 allowMissing: Boolean = false, forceInit: Boolean = false): Unit = {
+  override def initParams(initializer: Initializer = new Uniform(0.01f),
+                          argParams: Map[String, NDArray] = null,
+                          auxParams: Map[String, NDArray] = null,
+                          allowMissing: Boolean = false, forceInit: Boolean = false): Unit = {
     if (paramsInitialized && !forceInit) {
       return
     }
@@ -126,32 +111,32 @@ class Module(private val symbol: Symbol, val dataNames: IndexedSeq[String] = Ind
     }
 
     this.argParams.foreach { case (name, arr) =>
-      _impl(name, arr, allowMissing, Some(initializer), argParams)
+      impl(name, arr, allowMissing, Some(initializer), argParams)
     }
 
     this.auxParams.foreach { case (name, arr) =>
-      _impl(name, arr, allowMissing, Some(initializer), auxParams)
+      impl(name, arr, allowMissing, Some(initializer), auxParams)
     }
 
     this.paramsInitialized = true
-    this.paramsDirty = false // copy the initialized parameters to devices
-    // TODO: this.execGroup.setParams(self._arg_params, self._aux_params)
+    this.paramsDirty = false
+
+    // copy the initialized parameters to devices
+    this.execGroup.setParams(this.argParams, this.auxParams)
   }
 
   // Internal helper for parameter initialization
-  private def _impl(name: String, arr: NDArray, allowMissing: Boolean,
-                    initializer: Option[Initializer] = None,
-                    cache: Map[String, NDArray] = null): Unit = {
+  private def impl(name: String, arr: NDArray, allowMissing: Boolean,
+                   initializer: Option[Initializer] = None,
+                   cache: Map[String, NDArray] = null): Unit = {
     if (cache != null) {
       if (cache.contains(name)) {
         val cacheArr = cache(name) // just in case the cached array is just the target itself
-        if (cacheArr != arr) {
+        if (cacheArr ne arr) {
           cacheArr.copyTo(arr)
         }
       } else {
-        if (allowMissing) {
-          throw new RuntimeException(s"$name is not presented")
-        }
+        require(allowMissing, s"$name is not presented")
         initializer.foreach(inst => inst(name, arr))
       }
     } else {
@@ -160,11 +145,11 @@ class Module(private val symbol: Symbol, val dataNames: IndexedSeq[String] = Ind
   }
 
   // Internal function to reset binded state.
-  private def _reset_bind(): Unit = {
+  private def resetBind(): Unit = {
     binded = false
     execGroup = null
-    dataShapes = null
-    labelShapes = null
+    dataShapesVar = null
+    labelShapesVar = None
   }
 
   /**
@@ -186,13 +171,14 @@ class Module(private val symbol: Symbol, val dataNames: IndexedSeq[String] = Ind
    *                     but with the same sets of parameters
    *                     (e.g. unrolled RNNs with different lengths).
    */
-  def bind(dataShapes: Seq[DataDesc], labelShapes: Option[Seq[DataDesc]] = None,
-           forTraining: Boolean = true, inputsNeedGrad: Boolean = false,
-           forceRebind: Boolean = false, sharedModule: Module = null,
-           gradReq: String = "write"): Unit = {
+  override def bind(dataShapes: IndexedSeq[DataDesc],
+                    labelShapes: Option[IndexedSeq[DataDesc]] = None,
+                    forTraining: Boolean = true, inputsNeedGrad: Boolean = false,
+                    forceRebind: Boolean = false, sharedModule: Option[BaseModule] = null,
+                    gradReq: String = "write"): Unit = {
     // force rebinding is typically used when one want to switch from training to prediction phase.
     if (forceRebind) {
-      _reset_bind()
+      resetBind()
     }
 
     if (binded) {
@@ -204,48 +190,235 @@ class Module(private val symbol: Symbol, val dataNames: IndexedSeq[String] = Ind
     this.inputsNeedGrad = inputsNeedGrad
     this.binded = true
 
-    require(forTraining || !inputsNeedGrad)
-    // this is not True, as some module might not contains a loss function
-    // that consumes the labels
-    // assert label_shapes is not None
+    if (!forTraining) {
+      require(!inputsNeedGrad)
+    } else {
+      // this is not True, as some module might not contains a loss function
+      // that consumes the labels
+      // require(labelShapes != None)
+    }
 
-    this.dataShapes = dataShapes
-    this.labelShapes = labelShapes
+    this.dataShapesVar = dataShapes
+    this.labelShapesVar = labelShapes
 
     val sharedGroup =
-      if (sharedModule != null) {
-        require(sharedModule.binded && sharedModule.paramsInitialized)
-        sharedModule.execGroup
-      } else {
-        null
-      }
+      sharedModule.map(sharedModuleInst => {
+        require(sharedModuleInst.binded && sharedModuleInst.paramsInitialized)
+        sharedModuleInst.execGroup
+      })
 
-    val inputTypes = this.dataShapes.map(dataDesc => (dataDesc.name, dataDesc.dtype)).toMap ++
+    val inputTypes = this.dataShapesVar.map(dataDesc => (dataDesc.name, dataDesc.dtype)).toMap ++
       labelShapes.map(shapes => shapes.map(dataDesc => (dataDesc.name, dataDesc.dtype)).toMap)
                  .getOrElse(Map.empty[String, DType])
 
-    /* TODO
-    self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
-      self._work_load_list, self._data_shapes,
-      self._label_shapes, self._param_names,
-      for_training, inputs_need_grad,
-      shared_group, logger = self.logger,
-      fixed_param_names = self._fixed_param_names,
-      grad_req = grad_req, input_types = input_types)
-    */
-    if (sharedModule != null) {
+    execGroup = new Builder(symbol, contexts, paramNames)
+      .setWorkLoadList(workLoads)
+      .setDataShapes(dataShapes)
+      .setLabelShapes(labelShapes.orNull)
+      .setForTraining(forTraining)
+      .setInputsNeedGrad(inputsNeedGrad)
+      .setSharedGroup(sharedGroup.orNull)
+      .setFixedParamNames(fixedParamNames.orNull)
+      .setGradReq(gradReq)
+      .setInputTypes(inputTypes)
+      .build()
+
+    if (sharedModule != None) {
       paramsInitialized = true
-      argParams = sharedModule.argParams
-      auxParams = sharedModule.auxParams
+      argParams = sharedModule.get.argParams
+      auxParams = sharedModule.get.auxParams
     } else if (paramsInitialized) {
       // if the parameters are already initialized, we are re-binding
       // so automatically copy the already initialized params
-      // TODO
       execGroup.setParams(argParams, auxParams)
     }
 
-    if (sharedModule != null && sharedModule.optimizerInitialized) {
-      borrowOptimizer(sharedModule)
+    sharedModule.foreach {
+      case sharedModuleInst: Module =>
+        if (sharedModuleInst.optimizerInitialized) {
+          borrowOptimizer(sharedModuleInst)
+        }
+      case _ =>
     }
   }
+
+  /**
+   * Install and initialize optimizers.
+   * @param kvstore
+   * @param optimizer
+   * @param resetOptimizer Default `True`, indicating whether we should set `rescaleGrad`
+   *                       & `idx2name` for optimizer according to executorGroup
+   * @param forceInit Default `False`, indicating whether we should force re-initializing
+   *                  the optimizer in the case an optimizer is already installed.
+   */
+  def initOptimizer(kvstore: String = "local", optimizer: Optimizer = new SGD(),
+                    resetOptimizer: Boolean = true, forceInit: Boolean = false): Unit = {
+    require(binded && paramsInitialized)
+    if (optimizerInitialized && !forceInit) {
+      logger.warn("optimizer already initialized, ignoring ...")
+    } else {
+      val (kvstoreInst, updateOnKVStore) = Model.createKVStore(kvstore, contexts.length, argParams)
+      val batchSize = execGroup.getBatchSize *
+        (if (kvstoreInst != None && kvstoreInst.get.`type` == "dist_sync")
+          kvstoreInst.get.numWorkers else 1)
+      if (resetOptimizer) {
+        val idx2name =
+          if (updateOnKVStore) {
+            execGroup.paramNames.zipWithIndex.map { case (name, i) => (i, name) }.toMap
+          } else {
+            (0 until contexts.length).flatMap(k =>
+              execGroup.paramNames.zipWithIndex.map { case (name, i) =>
+                (i * contexts.length + k, name)
+              }
+            ).toMap
+          }
+        optimizer.setIdx2Name(idx2name)
+        optimizer.setRescaleGrad(1f / batchSize)
+      }
+
+      this.optimizer = optimizer
+      this.kvstore = kvstoreInst
+      this.updateOnKVStore = updateOnKVStore
+
+      kvstoreInst.foreach(kv =>
+        // copy initialized local parameters to kvstore
+        Model.initializeKVStore(kv, execGroup.paramArrays,
+          argParams, paramNames, updateOnKVStore)
+      )
+      updater =
+        if (updateOnKVStore) {
+          kvstoreInst.foreach(_.setOptimizer(this.optimizer))
+          None
+        } else {
+          Some(Optimizer.getUpdater(optimizer))
+        }
+
+      optimizerInitialized = true
+      // TODO: preload optimizer states
+    }
+  }
+
+  /**
+   * Borrow optimizer from a shared module. Used in bucketing, where exactly the same
+   * optimizer (esp. kvstore) is used.
+   * @param sharedModule
+   */
+  def borrowOptimizer(sharedModule: Module): Unit = {
+    require(sharedModule.optimizerInitialized)
+    optimizer = sharedModule.optimizer
+    kvstore = sharedModule.kvstore
+    updateOnKVStore = sharedModule.updateOnKVStore
+    updater = sharedModule.updater
+    optimizerInitialized = true
+  }
+
+  /**
+   * Forward computation.
+   * @param dataBatch input data
+   * @param isTrain Default is `None`, which means `is_train` takes the value of `for_training`.
+   */
+  def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit = {
+    require(binded && paramsInitialized)
+    execGroup.forward(dataBatch, isTrain)
+  }
+
+  /**
+   * Backward computation.
+   * @param outGrads Gradient on the outputs to be propagated back.
+   *                 This parameter is only needed when bind is called
+   *                 on outputs that are not a loss function.
+   */
+  def backward(outGrads: Array[NDArray] = null): Unit = {
+    require(binded && paramsInitialized)
+    execGroup.backward(outGrads)
+  }
+
+  // Update parameters according to the installed optimizer and the gradients computed
+  // in the previous forward-backward batch.
+  def update(): Unit = {
+    require(binded && paramsInitialized && optimizerInitialized)
+    paramsDirty = true
+    if (updateOnKVStore) {
+      Model.updateParamsOnKVStore(execGroup.paramArrays,
+        execGroup.gradArrays, kvstore)
+    } else {
+      require(updater != None)
+      Model.updateParams(execGroup.paramArrays,
+        execGroup.gradArrays, updater.orNull, contexts.length, kvstore)
+    }
+  }
+
+  /**
+   * Get outputs of the previous forward computation.
+   * @return In the case when data-parallelism is used,
+   *         the outputs will be collected from multiple devices.
+   *         The results will look like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`,
+   *         those `NDArray` might live on different devices.
+   */
+  def getOutputs(): IndexedSeq[IndexedSeq[NDArray]] = {
+    require(binded && paramsInitialized)
+    execGroup.getOutputs()
+  }
+
+  /**
+   * Get outputs of the previous forward computation.
+   * @return In the case when data-parallelism is used,
+   *         the outputs will be merged from multiple devices,
+   *         as they look like from a single executor.
+   *         The results will look like `[out1, out2]`
+   */
+  def getOutputsMerged(): IndexedSeq[NDArray] = {
+    require(binded && paramsInitialized)
+    execGroup.getOutputsMerged()
+  }
+
+  /**
+   * Get the gradients to the inputs, computed in the previous backward computation.
+   * @return In the case when data-parallelism is used,
+   *         the grads will be collected from multiple devices.
+   *         The results will look like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`,
+   *         those `NDArray` might live on different devices.
+   */
+  def getInputGrads(): IndexedSeq[IndexedSeq[NDArray]] = {
+    require(binded && paramsInitialized && inputsNeedGrad)
+    execGroup.getInputGrads()
+  }
+
+  /**
+   * Get the gradients to the inputs, computed in the previous backward computation.
+   * @return In the case when data-parallelism is used,
+   *         the grads will be merged from multiple devices,
+   *         as they look like from a single executor.
+   *         The results will look like `[grad1, grad2]`
+   */
+  def getInputGradsMerged(): IndexedSeq[NDArray] = {
+    require(binded && paramsInitialized && inputsNeedGrad)
+    execGroup.getInputGradsMerged()
+  }
+
+  /**
+   * Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+   * @param evalMetric
+   * @param labels
+   */
+  def updateMetric(evalMetric: EvalMetric, labels: IndexedSeq[NDArray]): Unit = {
+    execGroup.updateMetric(evalMetric, labels)
+  }
+
+  // Synchronize parameters from devices to CPU. This function should be called after
+  // calling `update` that updates the parameters on the devices, before one can read the
+  // latest parameters from `self._arg_params` and `self._aux_params`.
+  private def syncParamsFromDevices(): Unit = {
+    execGroup.getParams(argParams, auxParams)
+  }
+
+  // Install monitor on all executors
+  def installMonitor(monitor: Monitor): Unit = {
+    require(binded)
+    execGroup.installMonitor(monitor)
+  }
+}
+
+object Module {
+  // TODO: Load & save model
 }
