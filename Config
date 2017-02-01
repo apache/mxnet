@@ -46,6 +46,7 @@ package.DeepMXNet = {
 #      DeepOpenCV = 2.4.x;
       DeepNNVM = 0.9;
       DeepMKL = 1.0;
+      CUB = 1.6;
 
       # Required for managing apollo deployments. For example - Setting CuDA
       # stubs path
