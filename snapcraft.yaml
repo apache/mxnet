@@ -13,6 +13,10 @@ description: |
 grade: stable
 confinement: strict
 
+apps:
+  python:
+    command: snap.python
+
 parts:
   mxnet:
     source: .
@@ -47,4 +51,12 @@ parts:
       - graphviz
       - Jupyter
     after: [mxnet]
+    
+  python-wrapper:
+    plugin: dump
+    source: .
+    stage:
+      - snap.python
+    prime:
+      - snap.python
 
