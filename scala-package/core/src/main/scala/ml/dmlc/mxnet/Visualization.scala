@@ -192,7 +192,7 @@ object Visualization {
       else {
         val internals = symbol.getInternals()
         val (_, outShapes, _) = internals.inferShape(shape)
-        require(outShapes != null, "Input shape is incompete")
+        require(outShapes != null, "Input shape is incomplete")
         val shapeDict = internals.listOutputs().zip(outShapes).toMap
         (true, shapeDict)
       }
