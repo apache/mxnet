@@ -13,6 +13,7 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 * [Document](#documents)
 * [Test Cases](#test-cases)
 * [Examples](#examples)
+* [Tutorials](#tutorials)
 * [Core Library](#core-library)
 * [Python Package](#python-package)
 * [R Package](#r-package)
@@ -109,6 +110,10 @@ It's fine to force a push to your own fork, as long as only your commits are cha
 * If you have blog posts about MXNet or
   tutorials that use MXNet, please tell us and we'll add
   a link to them in the examples on GitHub.
+
+## Tutorials
+
+Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 ## Core Library
 

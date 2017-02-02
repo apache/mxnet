@@ -20,7 +20,7 @@ This page contains a curated list of awesome MXnet examples, tutorials and blogs
 
 ## <a name="Contributing"></a>Contributing
 
-If you want to contribute to this list and the examples, please open a new pull request.
+If you want to contribute to this list and the examples, please open a new pull request. To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 ##<a name="list-of-examples"></a>List of examples
 

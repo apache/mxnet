@@ -77,7 +77,6 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
     std::vector<int> tmp;
     size_t src_idx = 0;
     int inf_idx = -1;
-    size_t new_size = dshape.Size();
     if (param_.reverse) {
       std::reverse(dshape_vec.begin(), dshape_vec.end());
       std::reverse(param_shape_vec.begin(), param_shape_vec.end());
@@ -90,18 +89,16 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         // keep same
         CHECK_LT(src_idx, dshape_len);
         tmp.push_back(dshape_vec[src_idx++]);
-        new_size /= tmp.back();
       } else if (proposed_dim == -1) {
         // infer
         CHECK_LT(inf_idx, 0) << "One and only one dim can be inferred";
         inf_idx = i;
-        tmp.push_back(0);
+        tmp.push_back(1);
         src_idx++;
       } else if (proposed_dim == -2) {
         // copy all remaining dims from source
         while (src_idx < dshape_len) {
           size_t dn = dshape_vec[src_idx++];
-          new_size /= dn;
           tmp.push_back(dn);
         }
       } else if (proposed_dim == -3) {
@@ -110,7 +107,6 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         size_t d1 = dshape_vec[src_idx++];
         size_t d2 = dshape_vec[src_idx++];
         size_t dn = d1 * d2;
-        new_size /= dn;
         tmp.push_back(dn);
       } else if (proposed_dim == -4) {
         // split the source dim s into two dims
@@ -125,20 +121,23 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         if (d2 == -1) d2 = d0 / d1;
         CHECK_EQ(d1 * d2, d0) <<
           "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
-        new_size /= d0;
         tmp.push_back(d1);
         tmp.push_back(d2);
       } else {
         // greater than 0, new shape
-        CHECK_EQ(new_size % proposed_dim, 0) << "Illegal dim setting, can't be divided.";
         tmp.push_back(proposed_dim);
-        new_size /= proposed_dim;
         src_idx++;
       }
     }
 
     if (inf_idx >= 0) {
-      tmp[inf_idx] = new_size;
+      if (dshape.Size() > 0) {
+        int new_size = 1;
+        for (int x : tmp) new_size *= x;
+        tmp[inf_idx] = dshape.Size() / new_size;
+      } else {
+        tmp[inf_idx] = 0;
+      }
     }
     if (param_.reverse) {
       std::reverse(param_shape_vec.begin(), param_shape_vec.end());
