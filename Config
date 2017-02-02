@@ -11,10 +11,9 @@ package.DeepMXNet = {
   build-tools = {
     0.9 = {
       BrazilPath = 1.1;
-      CFlagsGCC = 4.9.x;
       Chrpath = 1.0;
       GnuMake = 3.81;
-      GCC = 4.9.x;
+      #GCC = 4.9.x;
       CMake = 3.5.x;
       Cuda = 7.x;
       DeepBrazilCmakeBuildSystem = 2.0;
@@ -27,19 +26,20 @@ package.DeepMXNet = {
       Scala29 = 1.0;
       BrazilMaven = 3.0;
       JDK8 = 1.0;
+      CFlagsGCC = 4.9.x;
     };
   };
 
   dependencies = {
     0.9 = {
-      LibStdCppNoCFlags = 4.9;
+      #LibStdCppNoCFlags = 4.9;
       Googletest = 1.x;
       CMake = 3.5.x;
       OpenBLAS = 0.2.x;
       DeepDmlc-core = 0.9;
       DeepMShadow = 2.x;
       DeepJemalloc = 4.x;
-      CRuntime = 1.0;
+#      CRuntime = 1.0;
       Cuda = 7.x;
       C-ares = 1.x;
       DeepCudnn = 5.x;
