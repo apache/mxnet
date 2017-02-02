@@ -306,7 +306,9 @@ class ThreadedEngine : public Engine {
       opr_block->opr_stat = Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
       uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
       opr_block->opr_stat->thread_id = id;
-      opr_block->opr_stat->opr_name  = std::string(threaded_opr->opr_name);
+      strncpy(opr_block->opr_stat->opr_name,
+        threaded_opr->opr_name,
+        sizeof(opr_block->opr_stat->opr_name) - 1);
       // record operator start timestamp
       SetOprStart(opr_block->opr_stat);
     }
