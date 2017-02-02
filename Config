@@ -56,18 +56,10 @@ package.DeepMXNet = {
   runtime-dependencies = {
     0.9 = {
       CRuntime = 1.0;
-      Python27 = 1.0;
-      Python34 = 1.0;
-      NumPy = 1.9.x;
-      Scikit-image = 0.11.x;
-      Scikit-learn = 0.17.x;
-      SciPy = 0.15.x;
       Requests = 2.x.x;
       C-ares = 1.x;
-      #PyGraphviz = 1.3;
-      #PythonMatplotlib = 1.4.x;
-      Python-graphviz = 0.x;
       DeepMXNetApolloDeploymentHelper = 1.0;
+      MXNetPython = 1.0;
     };
   };
 
