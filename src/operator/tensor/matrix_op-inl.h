@@ -11,6 +11,7 @@
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
+#include "broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -1286,6 +1287,116 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
                                           inputs[0].dptr<DType>(), repeats, ishape.Size());
     }
   });
+}
+
+struct TileParam : public dmlc::Parameter<TileParam> {
+  TShape reps;
+  DMLC_DECLARE_PARAMETER(TileParam) {
+    DMLC_DECLARE_FIELD(reps)
+      .describe("The number of times for repeating the tensor a."
+                " If reps has length d, the result will have dimension of max(d, a.ndim);"
+                " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
+                " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
+  }
+};
+
+inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_attrs,
+                        std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const TileParam& param = nnvm::get<TileParam>(attrs.parsed);
+  const TShape& ishape = (*in_attrs)[0];
+  const TShape& reps = param.reps;
+  // If reps is empty, return a identical input array
+  if (reps.ndim() == 0 || ishape.ndim() == 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
+    return true;
+  }
+  TShape oshape(std::max(ishape.ndim(), reps.ndim()));
+  int i1 = static_cast<int>(ishape.ndim()) - 1;
+  int i2 = static_cast<int>(reps.ndim()) - 1;
+  for (int i = static_cast<int>(oshape.ndim()) - 1; i >= 0; --i) {
+    if (i1 >= 0 && i2 >= 0) {
+      oshape[i] = ishape[i1--] * reps[i2--]; 
+    } else if (i1 >= 0) {
+      oshape[i] = ishape[i1--];
+    } else if (i2 >= 0) {
+      oshape[i] = reps[i2--];
+    }
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
+inline bool TileOpType(const nnvm::NodeAttrs& attrs,
+                       std::vector<int>* in_attrs,
+                       std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  if ((*in_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else if ((*out_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  }
+  return true;
+}
+
+/*!
+ * \brief Implementation of tiling the input tensor a based
+ * on the user-input shape, reps.
+ * If a.ndim < reps.ndim, new axes are pre-pended to a. For example,
+ * the input tensor has shape (3,), and the reps is (2, 4); the input
+ * tensor would be reshaped to (1, 3).
+ * If a.ndim > reps.ndim, pre-pending 1's to reps. For example,
+ * the input tensor has shape (2, 3, 4, 5), and reps is (2, 2);
+ * the reps would be changed to (1, 1, 2, 2).
+ * Suppose we have a.ndim = reps.ndim now. To achieve tiling,
+ * we utilize the operator broadcast_to. For example, for a tensor
+ * of shape (2, 3, 4, 5) and reps (2, 8, 9, 3), we first reshape
+ * the tensor to the shape (1, 2, 1, 3, 1, 4, 1, 5) by adding
+ * one axis before each dimension. Then, we want to broadcast
+ * the new tensor to shape (2, 2, 8, 3, 9, 4, 3, 5). The final
+ * output tensor would have shape (2*2, 8*3, 9*4, 3*5).
+ */
+template<typename xpu>
+void TileOpForward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx, 
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req, 
+                   const std::vector<TBlob>& outputs) {
+  if (inputs[0].Size() == 0) return;
+  const TShape& ishape = inputs[0].shape_;
+  const TShape& reps = nnvm::get<TileParam>(attrs.parsed).reps;
+
+  // If any one of the number in reps is zero, return immediately
+  for (index_t i = 0; i < reps.ndim(); ++i) {
+    if (0 == reps[i]) return;
+  }
+
+  // The shape we want to broadcast to
+  TShape bshape(std::max(ishape.ndim(), reps.ndim()) * 2);
+  // The shape of the input tensor after adding new axes before each dim
+  TShape rshape(bshape.ndim());
+
+  int i1 = static_cast<int>(ishape.ndim()) - 1;
+  int i2 = static_cast<int>(reps.ndim()) - 1;
+  for (int i = static_cast<int>(bshape.ndim()) - 1; i >= 0; --i) {
+    if (0 == (i & 1)) {
+      bshape[i] = (i2 >= 0? reps[i2--] : 1);
+      rshape[i] = 1;
+    } else {
+      rshape[i] = bshape[i] = (i1 >= 0? ishape[i1--] : 1);
+    }
+  }
+
+  // reshaped input tblob
+  TBlob iblob(inputs[0].dptr_, rshape, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+  // reshaped output tblob
+  TBlob oblob(outputs[0].dptr_, bshape, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
+
+  BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
 }
 
 }  // namespace op

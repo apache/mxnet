@@ -19,6 +19,7 @@ DMLC_REGISTER_PARAMETER(SliceParam);
 DMLC_REGISTER_PARAMETER(FlipParam);
 DMLC_REGISTER_PARAMETER(DotParam);
 DMLC_REGISTER_PARAMETER(RepeatParam);
+DMLC_REGISTER_PARAMETER(TileParam);
 
 NNVM_REGISTER_OP(Reshape)
 .MXNET_DESCRIBE("Reshape input according to a target shape spec.\n"
@@ -319,6 +320,21 @@ NNVM_REGISTER_OP(repeat)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpForward<cpu>)
 .add_argument("a", "NDArray", "Input data array")
 .add_arguments(RepeatParam::__FIELDS__());
+
+NNVM_REGISTER_OP(tile)
+.MXNET_DESCRIBE("Construct an array by repeating A the number of times given by reps.")
+.set_num_outputs(1)
+.set_num_inputs(1)
+.set_attr_parser(ParamParser<TileParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a", "reps"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", TileOpShape)
+.set_attr<nnvm::FInferType>("FInferType", TileOpType)
+.set_attr<FCompute>("FCompute<cpu>", TileOpForward<cpu>)
+.add_argument("a", "NDArray", "Input data array")
+.add_arguments(TileParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

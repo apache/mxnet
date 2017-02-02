@@ -2496,6 +2496,62 @@ def test_repeat():
             bb = mx.nd.repeat(b, repeats, axis).asnumpy()
             assert_almost_equal(aa, bb)
 
+def test_tile():
+    def test_normal_case():
+        ndim_max = 3 # max number of dims of the ndarray
+        size_max = 10 # max number of elements in each dim
+        length_max = 3 # max length of reps
+        rep_max = 10 # max number of tiling in each dim
+        for ndim in range(ndim_max, ndim_max+1):
+            shape = ()
+            for i in range(0, ndim):
+                shape += (np.random.randint(1, size_max+1), )
+            a = np.random.random_integers(0, 100, shape)
+            a = np.asarray(a, dtype=np.int32)
+            if ndim == 0:
+                a = np.array([])
+            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+
+            reps_len = np.random.randint(0, length_max+1)
+            reps_tuple = ()
+            for i in range(1, reps_len):
+                reps_tuple += (np.random.randint(0, rep_max), )
+            reps_array = np.asarray(reps_tuple)
+
+            a_tiled = np.tile(a, reps_array)
+            b_tiled = mx.nd.tile(b, reps_tuple).asnumpy()
+            assert same(a_tiled, b_tiled)
+
+    def test_empty_tensor():
+        shape = (2, 3, 0, 4)
+        a = np.array([], dtype=np.int32).reshape(shape)
+        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+        reps = (2, 4, 6)
+
+        a_tiled = np.tile(a, reps)
+        b_tiled = mx.nd.tile(b, reps).asnumpy()
+        assert same(a_tiled, b_tiled)
+
+    def test_empty_reps():
+        a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
+        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+        a_tiled = np.tile(a, ())
+        b_tiled = mx.nd.tile(b, ()).asnumpy()
+        assert same(a_tiled, b_tiled)
+
+    def test_zero_reps():
+        a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
+        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+        reps = (2, 0, 4, 5)
+        a_tiled = np.tile(a, reps)
+        b_tiled = mx.nd.tile(b, reps).asnumpy()
+        assert same(a_tiled, b_tiled)
+
+    test_normal_case()
+    test_empty_tensor()
+    test_empty_reps()
+    test_zero_reps()
+
 if __name__ == '__main__':
     test_cast()
     test_clip()
@@ -2554,3 +2610,5 @@ if __name__ == '__main__':
     test_bilinear_sampler()
     test_binary_logic()
     test_repeat()
+    test_tile()
+
