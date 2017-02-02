@@ -59,7 +59,6 @@ package.DeepMXNet = {
       Requests = 2.x.x;
       C-ares = 1.x;
       DeepMXNetApolloDeploymentHelper = 1.0;
-      MXNetPython = 1.0;
     };
   };
 
