@@ -2462,7 +2462,24 @@ def test_index2d():
         r = mx.nd.batch_take(data, x)
         assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
+def test_cast():
+    for srctype in [np.int32, np.float32, np.float16]:
+        for dsttype in [np.float32, np.int32, np.float16]:
+            x = mx.sym.Variable('x', dtype=srctype)
+            y = mx.sym.Cast(x, dtype=dsttype)
+            exe = y.simple_bind(ctx=default_context(), x=(10, 10))
+            assert exe.arg_arrays[0].dtype == srctype
+            assert exe.outputs[0].dtype == dsttype
+            X = np.random.uniform(-10, 10, size=(10, 10))
+            exe.arg_arrays[0][:] = X
+            exe.forward()
+            exe.backward(mx.nd.array(X, dtype=dsttype, ctx=default_context()))
+            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), threshold=5e-4)
+            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=5e-4)
+
+
 if __name__ == '__main__':
+    test_cast()
     test_clip()
     test_index2d()
     test_scalarop()

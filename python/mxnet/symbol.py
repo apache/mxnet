@@ -759,7 +759,9 @@ class Symbol(SymbolBase):
         """
         # pylint: disable=too-many-locals
         if type_dict is None:
-            type_dict = {k: mx_real_t for k in self.list_arguments()}
+            attrs = self.attr_dict()
+            type_dict = {k: mx_real_t for k in self.list_arguments()
+                         if k not in attrs or '__dtype__' not in attrs[k]}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
         arg_types, _, aux_types = self.infer_type(**type_dict)
 
