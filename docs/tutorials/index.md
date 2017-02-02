@@ -120,7 +120,7 @@ The following tutorials show how visualization helps us in daily work, and bette
 The following tutorials explain how to develop machine learning applications running on embedded devices, such as the Raspberry Pi
 
 - [Raspberry Pi Object Classifier](http://mxnet.io/tutorials/embedded/wine_detector.html)
-*An example using a Raspberry Pi equipped with the standard camera module to identify objects in real time using a pretrained imageNet model*
+*An example using a Raspberry Pi equipped with the standard camera module to identify objects in real-time using a pretrained imageNet model*
 
 ### R
 

@@ -1,6 +1,7 @@
 
 # Real-time Object Detection with MxNet On The Raspberry Pi  
 
+This tutorial shows developers who work with the Raspberry Pi or similar embedded ARM-based devices how to compile MXNet for those devices and run a pretrained deep network model. It also shows how to use AWS IoT to manage and monitor MXNet models running on your devices.
 <!-- A brief introduction to the tutorial that describes:
 
 - The problem that that the tutorial addresses
@@ -11,14 +12,16 @@
 If there is another similar tutorial that's more appropriate for another audience, direct the reader there with a linked reference. -->
 
 ## What's In This Tutorial?
-In this demo we will walk through the steps to set up a real-time object classifier, powered by MxNet running entirely on a Raspberry Pi 3. We will then work through connecting this local Raspberry Pi model to the AWS cloud via the IoT service, letting you easily and reliably get real-time updates from the device.
 
-* The primary goal of this tutorial is to provide developers who work with the Raspberry Pi or similar embedded ARM-based devices with a guide to compiling MxNet for those devices, as well as running a non-trivial, pre-trained deep network model.
+This tutorial shows how to:
 
-* The secondary goal of this Tutorial is to provide embedded device developers with an example of how AWS IoT infrastructure can be used to manage and monitor these MxNet models once they are running on your devices.
+1. Use MXNet to set up a real-time object classifier on a Raspberry Pi 3 device.
+
+2. Connect the local Raspberry Pi model to the AWS Cloud with AWS IoT to get real-time updates from the device.
 
 ### Who's This Tutorial For?
-This tutorial is aimed at developers who are reasonably familiar with the Raspbian OS and the [Raspberry Pi Ecosystem](https://www.raspberrypi.org/), as well as somewhat familiar with machine learning, MxNet, and [AWS IoT](https://aws.amazon.com/iot/). All code written will be in Python 2.7
+
+It assumes that you are familiar with the Raspbian operating system and the [Raspberry Pi ecosystem](https://www.raspberrypi.org/) and are somewhat familiar with machine learning, MXNet, and [AWS IoT](https://aws.amazon.com/iot/). All code is written in Python 2.7.
 
 ### How to Use This Tutorial
 
