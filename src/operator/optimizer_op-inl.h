@@ -177,7 +177,7 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
 }
 
 
-struct RMSpropParam : public dmlc::Parameter<RMSpropParam> {
+struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
   float lr;
   float gamma1;
   float gamma2;
@@ -185,7 +185,7 @@ struct RMSpropParam : public dmlc::Parameter<RMSpropParam> {
   float wd;
   float rescale_grad;
   float clip_gradient;
-  DMLC_DECLARE_PARAMETER(RMSpropParam) {
+  DMLC_DECLARE_PARAMETER(RMSPropParam) {
     DMLC_DECLARE_FIELD(lr).describe("learning_rate");
     DMLC_DECLARE_FIELD(gamma1).set_default(0.95f).describe("gamma1");
     DMLC_DECLARE_FIELD(gamma2).set_default(0.9f).describe("gamma2");
@@ -203,14 +203,14 @@ struct RMSpropParam : public dmlc::Parameter<RMSpropParam> {
 };
 
 template <typename xpu>
-inline void RMSpropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                           const std::vector<TBlob> &inputs,
                           const std::vector<OpReqType> &req,
                           const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mshadow_op;
-  const RMSpropParam &param = nnvm::get<RMSpropParam>(attrs.parsed);
+  const RMSPropParam &param = nnvm::get<RMSPropParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
