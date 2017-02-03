@@ -58,6 +58,7 @@ package.DeepMXNet = {
       CRuntime = 1.0;
       Requests = 2.x.x;
       C-ares = 1.x;
+      LibStdCpp = gcc;
       DeepMXNetApolloDeploymentHelper = 1.0;
 
             Python27 = 1.0;
