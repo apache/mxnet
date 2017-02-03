@@ -8,6 +8,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <algorithm>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
@@ -1160,17 +1161,17 @@ struct RepeatParam : public dmlc::Parameter<RepeatParam> {
  * Sanity check the user input values.
  */
 inline void GetRepeatParams(const RepeatParam& param, const TShape& ishape,
-                            int& repeats, dmlc::optional<int>& axisOpt) {
-  repeats = param.repeats;
-  CHECK_GE(repeats, 0) << "repeats cannot be a negative number";
-  axisOpt = param.axis;
-  if (static_cast<bool>(axisOpt)) {
+                            int* repeats, dmlc::optional<int>* axisOpt) {
+  *repeats = param.repeats;
+  CHECK_GE(*repeats, 0) << "repeats cannot be a negative number";
+  *axisOpt = param.axis;
+  if (static_cast<bool>(*axisOpt)) {
     int ndims = static_cast<int>(ishape.ndim());
-    int axis = axisOpt.value();
+    int axis = axisOpt->value();
     if (axis < 0) {
       axis += ndims;
     }
-    CHECK(axis >= 0 && axis < ndims) << "axis = " << axisOpt.value() << " out of bounds";
+    CHECK(axis >= 0 && axis < ndims) << "axis = " << axisOpt->value() << " out of bounds";
   }
 }
 
@@ -1183,7 +1184,7 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
   const TShape& ishape = (*in_attrs)[0];
   int repeats = 0;
   dmlc::optional<int> axisOpt;
-  GetRepeatParams(param, ishape, repeats, axisOpt);
+  GetRepeatParams(param, ishape, &repeats, &axisOpt);
   // If 0 repeats, return an empty 0 dim array
   if (0 == repeats) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape());
@@ -1206,7 +1207,7 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
       }
     }
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
-  } else { // If axis is not input by user, return a flat 1D array of size = in.size*repeats
+  } else {  // If axis is not input by user, return a flat 1D array of size = in.size*repeats
     TShape shape(1);
     shape[0] = ishape.Size() * static_cast<index_t>(repeats);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
@@ -1228,9 +1229,9 @@ inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void RepeatOpForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx, 
+                     const OpContext& ctx,
                      const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req, 
+                     const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
   int repeats = 0;
   dmlc::optional<int> axisOpt;
@@ -1239,7 +1240,7 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
   if (ishape.ndim() == 0) return;
 
   const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
-  GetRepeatParams(param, ishape, repeats, axisOpt);
+  GetRepeatParams(param, ishape, &repeats, &axisOpt);
   if (0 == repeats) return;
 
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
@@ -1252,39 +1253,53 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
       if (axis < 0)  {
         axis += ndim;
       }
-      if (1 == ndim) { // 1D input array
-        Kernel<repeat<1, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                          inputs[0].dptr<DType>(), repeats, ishape.Size());
-      } else if (2 == ndim) { // 2D input array
-        if (0 == axis) {
-          Kernel<repeat<2, 0>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                            inputs[0].dptr<DType>(), repeats, ishape[0], ishape[1]);
-        } else if (1 == axis) {
-          Kernel<repeat<2, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                            inputs[0].dptr<DType>(), repeats, ishape[0], ishape[1]);
-        }
-      } else { // 3D or more dim input array
-        if (0 == axis) {
-          // collapse dims 1,...,ndim-1 to the second dim
-          Shape<2> fshape = Shape2(ishape[0], ishape.ProdShape(1, ndim));
-          Kernel<repeat<2, 0>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                            inputs[0].dptr<DType>(), repeats, fshape[0], fshape[1]);
-        } else if (ndim-1 == axis) {
-          // collapse dims 0,...,ndim-2 to the first dim
-          Shape<2> fshape = Shape2(ishape.ProdShape(0, ndim-1), ishape[ndim-1]);
-          Kernel<repeat<2, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                            inputs[0].dptr<DType>(), repeats, fshape[0], fshape[1]);
-        } else {
-          // collapse dims 0,...,axis-1 to the first dim
-          // collapse dims axis+1,...,ndim-1 to the third dim
-          Shape<3> fshape = Shape3(ishape.ProdShape(0, axis), axis, ishape.ProdShape(axis+1, ndim));
-          Kernel<repeat<3, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                            inputs[0].dptr<DType>(), repeats, fshape[0], fshape[1], fshape[2]);
-        }
+      CHECK(axis >= 0 && axis < static_cast<int>(ishape.ndim())) << "Invalid input of axis";
+
+      // reshape the input tensor by adding a dim at the (axis+1)-th dim
+      TShape rshape(ishape.ndim()+1);
+      // the shape we want to broadcast to
+      TShape bshape(rshape.ndim());
+      int i = 0;
+      while (i <= axis) {
+        rshape[i] = bshape[i] = ishape[i];
+        ++i;
       }
-    } else { // axis is not specified by user
-        Kernel<repeat<1, 1>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                          inputs[0].dptr<DType>(), repeats, ishape.Size());
+      rshape[i] = 1;
+      bshape[i] = repeats;
+      while (i < static_cast<int>(ishape.ndim())) {
+        rshape[i+1] = ishape[i];
+        bshape[i+1] = ishape[i];
+        ++i;
+      }
+
+      // reshaped input tblob
+      TBlob iblob(inputs[0].dptr_, rshape, inputs[0].dev_mask_, inputs[0].type_flag_);
+      std::vector<TBlob> newInputs = {iblob};
+      // reshaped output tblob
+      TBlob oblob(outputs[0].dptr_, bshape, outputs[0].dev_mask_, outputs[0].type_flag_);
+      std::vector<TBlob> newOutputs = {oblob};
+
+      BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
+    } else {  // axis is not input by user
+      // reshape the tensor into shape (ishape.Size(), 1)
+      // then add one dim at axis = 1 and broadcast to
+      // shape (ishape.Size(), repeats)
+      TShape rshape(2);
+      rshape[0] = ishape.Size();
+      rshape[1] = 1;
+
+      TShape bshape(2);
+      bshape[0] = rshape[0];
+      bshape[1] = repeats;
+
+      // reshaped input tblob
+      TBlob iblob(inputs[0].dptr_, rshape, inputs[0].dev_mask_, inputs[0].type_flag_);
+      std::vector<TBlob> newInputs = {iblob};
+      // reshaped output tblob
+      TBlob oblob(outputs[0].dptr_, bshape, outputs[0].dev_mask_, outputs[0].type_flag_);
+      std::vector<TBlob> newOutputs = {oblob};
+
+      BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
     }
   });
 }
@@ -1318,7 +1333,7 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
   int i2 = static_cast<int>(reps.ndim()) - 1;
   for (int i = static_cast<int>(oshape.ndim()) - 1; i >= 0; --i) {
     if (i1 >= 0 && i2 >= 0) {
-      oshape[i] = ishape[i1--] * reps[i2--]; 
+      oshape[i] = ishape[i1--] * reps[i2--];
     } else if (i1 >= 0) {
       oshape[i] = ishape[i1--];
     } else if (i2 >= 0) {
@@ -1360,9 +1375,9 @@ inline bool TileOpType(const nnvm::NodeAttrs& attrs,
  */
 template<typename xpu>
 void TileOpForward(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx, 
+                   const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req, 
+                   const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   if (inputs[0].Size() == 0) return;
   const TShape& ishape = inputs[0].shape_;
