@@ -49,5 +49,21 @@ NNVM_REGISTER_OP(adam_update)
   })
 .set_attr<FCompute>("FCompute<cpu>", AdamUpdate<cpu>);
 
+
+DMLC_REGISTER_PARAMETER(RMSpropParam);
+
+NNVM_REGISTER_OP(rmsprop_update)
+.describe("Updater function for RMSprop optimizer")
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<RMSpropParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.set_attr<FCompute>("FCompute<cpu>", RMSpropUpdate<cpu>);
+
 }  // namespace op
 }  // namespace mxnet
