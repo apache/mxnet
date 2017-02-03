@@ -32,7 +32,7 @@ package.DeepMXNet = {
 
   dependencies = {
     0.9 = {
-      LibStdCpp = gcc;
+      LibStdCppNoCFlags = 4.9.x;
       Googletest = 1.x;
       CMake = 3.5.x;
       OpenBLAS = 0.2.x;
@@ -58,7 +58,7 @@ package.DeepMXNet = {
       CRuntime = 1.0;
       Requests = 2.x.x;
       C-ares = 1.x;
-      LibStdCpp = gcc;
+      LibStdCppNoCFlags = 4.9.x;
       DeepMXNetApolloDeploymentHelper = 1.0;
 
             Python27 = 1.0;
