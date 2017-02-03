@@ -127,6 +127,7 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     edges_df$label<- edges_labels_raw[edges_df$from_name_output]
   }
   
+  
   nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled", fillcolor=adjustcolor(nodes_df$color, alpha.f = 1))
   edge_df_new<- create_edge_df(from = edges_df$from, to=edges_df$to, rel=edges_df$label, label=edges_df$label, color="black")
 
@@ -140,6 +141,9 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     graph_render<- render_graph(graph = graph, output = "graph", width = graph.width.px, height = graph.height.px)
   }
 
+  # graph <-visNetwork(nodes = nodes_df, edges = edges_df, main = graph.title) %>%
+  #   visHierarchicalLayout(direction = "UD", sortMethod = "directed")
+  
   return(graph_render)
 }
 
