@@ -26,7 +26,6 @@ Suggests:
     knitr,
     rmarkdown,
     imager,
-    roxygen2
 LinkingTo: Rcpp
-RoxygenNote: 5.0.1
 VignetteBuilder: knitr
+RoxygenNote: 5.0.1
