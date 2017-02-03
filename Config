@@ -32,7 +32,7 @@ package.DeepMXNet = {
 
   dependencies = {
     0.9 = {
-      #LibStdCppNoCFlags = 4.9;
+      LibStdCpp = gcc;
       Googletest = 1.x;
       CMake = 3.5.x;
       OpenBLAS = 0.2.x;
