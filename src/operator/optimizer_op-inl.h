@@ -176,7 +176,9 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
-
+// This RMSProp code follows the version in 
+// http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
+// by Alex Graves, 2013.
 struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
   float lr;
   float gamma1;
@@ -221,36 +223,39 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
     if (param.clip_gradient >= 0.0f) {
-      state_n = scalar<DType>((1.f - param.gamma2)) *
+      state_n = scalar<DType>(1.f - param.gamma1) *
                     F<clip>(scalar<DType>(param.rescale_grad) * grad,
                             DType(param.clip_gradient)) *
                     F<clip>(scalar<DType>(param.rescale_grad) * grad,
                             DType(param.clip_gradient)) +
                 scalar<DType>(param.gamma1) * state_n;
-      state_g = scalar<DType>((1.f - param.gamma2)) *
+      state_g = scalar<DType>(1.f - param.gamma1) *
                     F<clip>(scalar<DType>(param.rescale_grad) * grad,
                             DType(param.clip_gradient)) +
                 scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  (grad / F<square_root>(state_n - state_g * state_g) +
+                  (F<clip>(scalar<DType>(param.rescale_grad) * grad,
+                           DType(param.clip_gradient)) /
+                       F<square_root>(state_n - state_g * state_g) +
                    scalar<DType>(param.epsilon)) +
               scalar<DType>(param.wd) * weight;
     } else {
-      state_n = scalar<DType>((1.f - param.gamma2) *
+      state_n = scalar<DType>((1.f - param.gamma1) *
                               std::pow(param.rescale_grad, 2)) *
                     (grad * grad) +
                 scalar<DType>(param.gamma1) * state_n;
       state_g =
-          scalar<DType>((1.f - param.gamma2) * param.rescale_grad) * grad +
+          scalar<DType>((1.f - param.gamma1) * param.rescale_grad) * grad +
           scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  (grad / F<square_root>(state_n - state_g * state_g) +
+                  (scalar<DType>(param.rescale_grad) * grad /
+                       F<square_root>(state_n - state_g * state_g) +
                    scalar<DType>(param.epsilon)) +
               scalar<DType>(param.wd) * weight;
     }
-    Assign(out, req[0], delta);
+    Assign(out, req[0], weight + delta);
   });
 }
 
