@@ -7,9 +7,12 @@
 #' @importFrom stringr str_replace_na
 #' @importFrom stringr str_trim
 #' @importFrom jsonlite fromJSON
-#' @importFrom create_graph DiagrammeR
-#' @importFrom set_global_graph_attrs DiagrammeR
-#' @importFrom add_global_graph_attrs DiagrammeR
+#' @importFrom DiagrammeR create_graph
+#' @importFrom DiagrammeR set_global_graph_attrs 
+#' @importFrom DiagrammeR add_global_graph_attrs
+#' @importFrom DiagrammeR create_node_df
+#' @importFrom DiagrammeR create_edge_df
+#' @importFrom DiagrammeR render_graph
 #' @importFrom visNetwork visHierarchicalLayout
 #'
 #' @param symbol a \code{string} representing the symbol of a model.
