@@ -39,19 +39,13 @@ def compare_optimizer(opt1, opt2, shape):
 
     state1 = opt1.create_state(0, w1)
     state2 = opt2.create_state(0, w2)
-    print("first state")
     for s1, s2, in zip(state1, state2):
         assert(same(s1.asnumpy(), s2.asnumpy()))
 
     opt1.update(0, w1, g1, state1)
     opt2.update(0, w2, g2, state2)
-    print("second state")
     for s1, s2, in zip(state1, state2):
-        print("s2")
-        print(reldiff(s1.asnumpy(), s2.asnumpy()))
         assert(reldiff(s1.asnumpy(), s2.asnumpy()) < 1e-5)
-    print("final")
-    print(reldiff(w1.asnumpy(), w2.asnumpy()))
     assert(reldiff(w1.asnumpy(), w2.asnumpy()) < 1e-5)
 
 # ADAM
@@ -128,7 +122,6 @@ def test_adam():
     shape = (3, 4, 5)
     kwargs = [{}]
     for kwarg in kwargs:
-        print("helo")
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
 # RMSProp
@@ -216,9 +209,8 @@ def test_rms():
               {'clip_gradient': 0.4, 'rescale_grad': 0.14},
               {'rescale_grad': 0.8}]
     for kwarg in kwargs:
-        print(kwarg)
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
 if __name__ == '__main__':
-    # test_adam()
+    test_adam()
     test_rms()
