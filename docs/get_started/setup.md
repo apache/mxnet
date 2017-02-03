@@ -11,6 +11,7 @@ Step by step instructions for setting up MXNet:
 - [Installing MXNet on CentOS](http://mxnet.io/get_started/centos_setup.html)
 - [Installing MXNet on OS X (Mac)](http://mxnet.io/get_started/osx_setup.html)
 - [Installing MXNet on Windows](http://mxnet.io/get_started/windows_setup.html)
+- [Installing MXNet on Raspberry Pi (Raspbian)](http://mxnet.io/get_started/raspbian_setup.html)
 
 This topic also covers the following:
 - [Prerequisites for using MXNet](#prerequisites)
