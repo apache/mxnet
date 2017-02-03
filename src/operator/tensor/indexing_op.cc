@@ -93,8 +93,10 @@ NNVM_REGISTER_OP(_backward_take)
 
 
 NNVM_REGISTER_OP(batch_take)
-.MXNET_DESCRIBE("Take scalar value from a batch of data vectos according to "
-                "an index vector, i.e. out[i] = a[i, indices[i]]")
+.MXNET_DESCRIBE(
+  "Take scalar value from a batch of data vectos according to "
+  "an index vector, i.e. out[i] = a[i, indices[i]]. out of bound "
+  "indices are clipped to boundary.")
 .set_num_outputs(1)
 .set_num_inputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",

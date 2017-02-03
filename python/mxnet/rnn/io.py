@@ -144,22 +144,3 @@ class BucketSentenceIter(DataIter):
                          provide_data=[(self.data_name, data.shape)],
                          provide_label=[(self.label_name, label.shape)])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

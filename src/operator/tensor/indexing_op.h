@@ -466,6 +466,18 @@ inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+/*! \brief take scalar value from 2d data array */
+struct batch_take {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
+                                  const int *idx, int M) {
+    int j = idx[i];
+    if (j < 0) j = 0;
+    else if (j >= M) j = M-1;
+    out[i] = a[i*M+j];
+  }
+};
+
 template<typename xpu>
 void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,

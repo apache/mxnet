@@ -65,12 +65,11 @@ if __name__ == '__main__':
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab), output_dim=args.num_embed,name='embed')
-        wordvec = mx.sym.SliceChannel(data=embed, num_outputs=seq_len, squeeze_axis=1)
 
         stack = mx.rnn.SequentialRNNCell()
         for i in range(args.num_layers):
             stack.add(mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i))
-        outputs, states = mx.rnn.rnn_unroll(stack, seq_len, inputs=wordvec)
+        outputs, states = mx.rnn.rnn_unroll(stack, seq_len, inputs=embed)
 
         outputs = [mx.sym.expand_dims(x, axis=1) for x in outputs]
         pred = mx.sym.Concat(*outputs, dim=1)
