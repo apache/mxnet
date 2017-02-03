@@ -258,9 +258,12 @@ class Module(symbolVar: Symbol,
       logger.warn("optimizer already initialized, ignoring ...")
     } else {
       val (kvstoreInst, updateOnKVStore) = Model.createKVStore(kvstore, contexts.length, argParams)
-      val batchSize = execGroup.getBatchSize *
-        (if (kvstoreInst != None && kvstoreInst.get.`type` == "dist_sync")
-          kvstoreInst.get.numWorkers else 1)
+      val batchSize = execGroup.getBatchSize * (
+        if (kvstoreInst != None && kvstoreInst.get.`type` == "dist_sync") {
+          kvstoreInst.get.numWorkers
+        } else {
+          1
+        })
       if (resetOptimizer) {
         val idx2name =
           if (updateOnKVStore) {

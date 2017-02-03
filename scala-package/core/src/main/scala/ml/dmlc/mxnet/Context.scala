@@ -76,4 +76,8 @@ class Context(deviceTypeName: String, val deviceId: Int = 0) extends Serializabl
       false
     }
   }
+
+  override def hashCode: Int = {
+    toString.hashCode
+  }
 }

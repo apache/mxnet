@@ -237,8 +237,8 @@ object DataParallelExecutorGroup {
  * @param fixedParamNames Indicate parameters to be fixed during training.
  *                        Parameters in this list will not allocate space for gradient,
  *                        nor do gradient calculation.
- * @param gradReq Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
- *                (default to 'write'). Can be specified globally (str) or for each argument (list, dict).
+ * @param gradReq Requirement for gradient accumulation. Can be 'write', 'add', or 'null',
+ *                be specified for each argument.
  */
 class DataParallelExecutorGroup private[mxnet](
     private val symbol: Symbol,
@@ -616,7 +616,7 @@ class DataParallelExecutorGroup private[mxnet](
           }
           sharedExecInst.auxArrays.map(identity)
       }
-    symbol.bind(ctx = context, args = argArrays.toSeq,argsGrad = gradArrayMap.toMap,
+    symbol.bind(ctx = context, args = argArrays.toSeq, argsGrad = gradArrayMap.toMap,
       gradsReq = gradReqRun, auxStates = auxArrays.toSeq, group2ctx = null,
       sharedExec = sharedExec.orNull)
   }

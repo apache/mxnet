@@ -103,7 +103,7 @@ abstract class BaseModule {
 
   // A convenient function that calls both `forward` and `backward`.
   def forwardBackward(dataBatch: DataBatch): Unit = {
-    forward(dataBatch, isTrain= Option(true))
+    forward(dataBatch, isTrain = Option(true))
     backward()
   }
 

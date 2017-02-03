@@ -346,10 +346,10 @@ object NDArray {
           begin(axis) = idx
           end(axis) = idx + arr.shape(axis)
           NDArray._crop_assign(Map("out" -> ret,
-            "begin" -> s"(${begin.mkString(",")})",
-            "end" -> s"(${end.mkString(",")})"))(ret, arr)
-          idx += arr.shape(axis)
+            "begin" -> Shape(begin),
+            "end" -> Shape(end)))(ret, arr)
         }
+        idx += arr.shape(axis)
       }
       ret
     }
