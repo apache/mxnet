@@ -176,7 +176,7 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
-// This RMSProp code follows the version in 
+// This RMSProp code follows the version in
 // http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
 // by Alex Graves, 2013.
 struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
