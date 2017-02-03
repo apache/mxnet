@@ -702,7 +702,7 @@ class RMSProp(Optimizer):
         self._update_count(index)
         n, g, delta = state
         rmsprop_update(weight, grad, n, g, delta, out=weight,
-                    lr=lr, wd=wd, **self.kwargs)
+                       lr=lr, wd=wd, **self.kwargs)
 
 @register
 class AdaDelta(Optimizer):
