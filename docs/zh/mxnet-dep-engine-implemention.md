@@ -289,7 +289,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
 1.  这两个指针的中间有多个元素，很显然这是多个读依赖，第二个 `while` 循环就是用来
     并行的执行这两个指针中间的读依赖的。
 2.  这两个指针之间没有元素，那么意味着没有读依赖，那么就直接执行
-    `end_of_read_chian` 指向的写依赖，如果该指针指向 `head_` 那么意味着队列为空，
+    `end_of_read_chain` 指向的写依赖，如果该指针指向 `head_` 那么意味着队列为空，
     什么也不用做。 最后 一部分的 `if` 就是用来处理这个情况的。
 
 # Engine<a id="orgheadline11"></a>
