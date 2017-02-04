@@ -247,4 +247,8 @@ object DataDesc {
   def getBatchAxis(layout: Option[String]): Int = {
     layout.map(_.indexOf('N')).getOrElse(0)
   }
+
+  implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
+    shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
+  }
 }

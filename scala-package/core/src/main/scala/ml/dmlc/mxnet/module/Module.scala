@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 /**
  * Module is a basic module that wrap a `Symbol`. It is functionally the same
  * as the `FeedForward` model, except under the module API.
- * @param symbol : Symbol definition.
+ * @param symbolVar : Symbol definition.
  * @param dataNames Input data names.
  * @param labelNames Input label names
  * @param contexts Default is cpu().
@@ -111,11 +111,11 @@ class Module(symbolVar: Symbol,
     }
 
     this.argParams.foreach { case (name, arr) =>
-      impl(name, arr, allowMissing, Some(initializer), argParams)
+      impl(name, arr, allowMissing, Option(initializer), argParams)
     }
 
     this.auxParams.foreach { case (name, arr) =>
-      impl(name, arr, allowMissing, Some(initializer), auxParams)
+      impl(name, arr, allowMissing, Option(initializer), auxParams)
     }
 
     this.paramsInitialized = true
@@ -174,7 +174,7 @@ class Module(symbolVar: Symbol,
   override def bind(dataShapes: IndexedSeq[DataDesc],
                     labelShapes: Option[IndexedSeq[DataDesc]] = None,
                     forTraining: Boolean = true, inputsNeedGrad: Boolean = false,
-                    forceRebind: Boolean = false, sharedModule: Option[BaseModule] = null,
+                    forceRebind: Boolean = false, sharedModule: Option[BaseModule] = None,
                     gradReq: String = "write"): Unit = {
     // force rebinding is typically used when one want to switch from training to prediction phase.
     if (forceRebind) {

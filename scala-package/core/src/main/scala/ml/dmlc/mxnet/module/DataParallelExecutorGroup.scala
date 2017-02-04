@@ -84,6 +84,10 @@ object DataParallelExecutorGroup {
         gradReq: String, argNames: IndexedSeq[String], paramNames: IndexedSeq[String],
         fixedParamNames: Set[String], dataNames: Seq[String], inputsNeedGrad: Boolean)
         : Map[String, String] = {
+      require(argNames != null)
+      require(paramNames != null)
+      require(fixedParamNames != null)
+      require(dataNames != null)
       argNames.map(k => {
         if (paramNames.contains(k)) {
           (k, if (fixedParamNames.contains(k)) "null" else gradReq)
@@ -129,12 +133,12 @@ object DataParallelExecutorGroup {
     }
 
     def setLabelShapes(shapes: IndexedSeq[DataDesc]): Builder = {
-      this.labelShapes = Some(shapes)
+      this.labelShapes = Option(shapes)
       this
     }
 
     def setLabelShapesByName(shapes: IndexedSeq[(String, Shape)]): Builder = {
-      this.labelShapes = Some(shapes).map(shapesInst =>
+      this.labelShapes = Option(shapes).map(shapesInst =>
         shapesInst.map { case (k, s) => new DataDesc(k, s) }
       )
       this
@@ -151,17 +155,17 @@ object DataParallelExecutorGroup {
     }
 
     def setSharedGroup(sharedGroup: DataParallelExecutorGroup): Builder = {
-      this.sharedGroup = Some(sharedGroup)
+      this.sharedGroup = Option(sharedGroup)
       this
     }
 
     def setInputTypes(inputTypes: Map[String, DType]): Builder = {
-      this.inputTypes = Some(inputTypes)
+      this.inputTypes = Option(inputTypes)
       this
     }
 
     def setFixedParamNames(fixedParamNames: Set[String]): Builder = {
-      this.fixedParamNames = Some(fixedParamNames).getOrElse(Set.empty[String])
+      this.fixedParamNames = Option(fixedParamNames).getOrElse(Set.empty[String])
       this
     }
 
