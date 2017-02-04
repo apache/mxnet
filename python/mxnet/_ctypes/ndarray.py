@@ -12,6 +12,7 @@ from ..base import c_array, py_str, c_str, mx_uint
 from ..base import NDArrayHandle, OpHandle
 from ..base import check_call
 from ..ndarray_doc import _build_doc
+from ..context import current_context
 
 _ndarray_cls = None
 
@@ -37,6 +38,29 @@ class NDArrayBase(object):
 
     def __reduce__(self):
         return (_ndarray_cls, (None,), self.__getstate__())
+
+
+def _convert2ndarray(data):
+    # convert to numpy array
+    src = np.array(data)
+    # get the information
+    shape = src.shape
+    ctx = current_context()
+
+    # create empty ndarray
+    hdl = NDArrayHandle()
+    check_call(_LIB.MXNDArrayCreate(
+        c_array(mx_uint,shape),
+        mx_uint(len(shape)),
+        ctypes.c_int(ctx.device_typeid),
+        ctypes.c_int(ctx.device_id),
+        ctypes.c_int(int(False)),
+        ctypes.byref(hdl)))
+
+    # assignment
+    arr = _ndarray_cls(handle=hdl)
+    arr[:] = src
+    return arr
 
 
 # pylint: disable=too-many-locals, invalid-name
@@ -97,6 +121,11 @@ def _make_ndarray_function(handle, name):
         for i in args:
             if isinstance(i, NDArrayBase):
                 ndargs.append(i)
+            elif num_args.value == 1:
+                data = i
+                if np.isscalar(data):
+                    data = [data]
+                ndargs.append(_convert2ndarray(data))
             else:
                 pos_args.append(str(i))
 
