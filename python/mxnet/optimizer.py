@@ -36,7 +36,7 @@ class Optimizer(object):
             of a subclass of Optimizer. Case insensitive.
 
         rescale_grad : float
-            Rescaling factor on gradient.
+            Rescaling factor on gradient. Normally should be 1/batch_size.
 
         kwargs: dict
             Parameters for optimizer
@@ -211,7 +211,7 @@ class SGD(Optimizer):
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -294,7 +294,7 @@ class DCASGD(Optimizer):
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -431,7 +431,7 @@ class SGLD(Optimizer):
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -519,7 +519,7 @@ class Adam(Optimizer):
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -597,7 +597,7 @@ class AdaGrad(Optimizer):
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     eps: float, optional
         A small float number to make the updating processing stable
@@ -651,7 +651,7 @@ class RMSProp(Optimizer):
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
@@ -722,7 +722,7 @@ class AdaDelta(Optimizer):
     wd : float
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """

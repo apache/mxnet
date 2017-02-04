@@ -438,17 +438,18 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
 inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2) << "BatchTake op requires three inputs";
+  CHECK_EQ(in_attrs->size(), 2) << "BatchTake op requires two inputs";
   if ((*in_attrs)[1].ndim() != 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
   } else if ((*out_attrs)[0].ndim() != 0) {
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, (*out_attrs)[0]);
   }
   if ((*in_attrs)[0].ndim() == 0) return false;
-  CHECK_EQ((*in_attrs)[0].ndim(), 2) << "Data array must by 2 dimensional";
+  CHECK_GE((*in_attrs)[0].ndim(), 2) << "Data array must have at least 2 dimensional";
   if ((*out_attrs)[0].ndim() == 0) return false;
-  CHECK_EQ((*in_attrs)[0][0], (*out_attrs)[0][0])
-    << "Index array's size must be the same as data array's first dimension";
+  CHECK_EQ((*in_attrs)[0].Size()/(*in_attrs)[0][(*in_attrs)[0].ndim()-1],
+           (*out_attrs)[0].Size())
+    << "Index array's size must be the same as data array's size excluding the first dimension";
   return true;
 }
 
@@ -464,6 +465,18 @@ inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kInt32);
   return true;
 }
+
+/*! \brief take scalar value from 2d data array */
+struct batch_take {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
+                                  const int *idx, int M) {
+    int j = idx[i];
+    if (j < 0) j = 0;
+    else if (j >= M) j = M-1;
+    out[i] = a[i*M+j];
+  }
+};
 
 template<typename xpu>
 void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
