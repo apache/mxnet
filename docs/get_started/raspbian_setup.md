@@ -3,7 +3,7 @@ MXNet currently supports the Debian based Raspbian operating system so you can r
 
 These instructions will walk through how to build MXNet for the Raspberry Pi and install the Python bindings for the library.
 
-The full MxNet library is over 200MB when loaded into memory and the requirements can take almost 1GB of disk space. Due to the size we currently reccomend running MXNet on the Raspberry Pi 3 or equivilant devices with more than 1GB of RAM and with an SD card that has at least 4 GB of memory free. The Raspberry Pi 1, 2, Zero and other devices with less than 1GB of RAM are not sufficient to run the full MXNet library (though they can run the MXNet amalgamation library). 
+The full MxNet library is over 200MB when loaded into memory and the requirements can take almost 1GB of disk space. Due to the size we currently recommend running MXNet on the Raspberry Pi 3 or equivalent devices with more than 1GB of RAM and with an SD card that has at least 4 GB of memory free. The Raspberry Pi 1, 2, Zero and other devices with less than 1GB of RAM are not sufficient to run the full MXNet library (though they can run the MXNet amalgamation library). 
 
 The complete MXNet library and its requirements can take almost 200MB of RAM, and loading large models with the library can take over 1GB of RAM. Because of this, we recommend running MXNet on the Raspberry Pi 3 or an equivalent device that has more than 1 GB of RAM and a Secure Digital (SD) card that has at least 4 GB of free memory. The Raspberry Pi 1, 2, Zero and other devices with less than 1 GB of RAM cannot run the complete MXNet library.
 
@@ -16,7 +16,7 @@ Installing MXNet is a two-step process:
 
 ### Build the Shared Library
 
-On Rasbian versions Wheezy and later, you need the following dependencies:
+On Raspbian versions Wheezy and later, you need the following dependencies:
 
 - Git (to pull code from GitHub)
 

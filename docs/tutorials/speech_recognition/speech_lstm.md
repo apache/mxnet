@@ -55,7 +55,7 @@ The default `run_sdm.sh` script generates the force-alignment labels in their st
 . ./cmd.sh
 . ./path.sh
 
-# SDM - Signle Distant Microphone
+# SDM - Single Distant Microphone
 micid=1 #which mic from array should be used?
 mic=sdm$micid
 
