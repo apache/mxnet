@@ -159,6 +159,40 @@ class Mixed(object):
                          'add a ".*" pattern at the and with default Initializer.')
 
 
+class Constant(Initializer):
+    """Initialize the parameter with a constant value
+
+    Parameters
+    ----------
+    value : float, optional
+        The constant value to initialize for the paramter
+    """
+    def __init__(self, value=0.0):
+        self.value = value
+
+    def __call__(self, name, arr):
+        """Override () function to do Initialization
+
+        Parameters
+        ----------
+        name : str
+            name of corrosponding ndarray
+
+        arr : NDArray
+            ndarray to be Initialized
+        """
+        if not isinstance(name, string_types):
+            raise TypeError('name must be string')
+        if not isinstance(arr, NDArray):
+            raise TypeError('arr must be NDArray')
+
+        logging.info('Init (Constant) %s with value %s', name, self.value)
+        arr[:] = self.value
+
+    def _init_weight(self, _, arr):
+        self.__call__(_, arr)
+
+
 class Uniform(Initializer):
     """Initialize the weight with uniform [-scale, scale]
 
@@ -171,6 +205,7 @@ class Uniform(Initializer):
         self.scale = scale
 
     def _init_weight(self, _, arr):
+        logging.info('Init (Uniform) %s with scale %s', _, self.scale)
         random.uniform(-self.scale, self.scale, out=arr)
 
 
@@ -186,6 +221,7 @@ class Normal(Initializer):
         self.sigma = sigma
 
     def _init_weight(self, _, arr):
+        logging.info('Init (Normal) %s with sigma %s', _, self.sigma)
         random.normal(0, self.sigma, out=arr)
 
 
@@ -268,6 +304,9 @@ class Xavier(Initializer):
             random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
+        logging.info('Init (Xavier %s %s) %s with scale %s', self.rnd_type,
+                     self.magnitude, _, scale)
+
 
 class MSRAPrelu(Xavier):
     """Initialize the weight with initialization scheme from
@@ -284,3 +323,53 @@ class MSRAPrelu(Xavier):
     def __init__(self, factor_type="avg", slope=0.25):
         magnitude = 2. / (1 + slope ** 2)
         super(MSRAPrelu, self).__init__("gaussian", factor_type, magnitude)
+
+
+def get_initializer(initializer):
+    """
+    Create initializer from a string or list of tuples.
+
+    Parameters
+    ----------
+    initializer : str or list of tuples
+        key to construct the initializer. str for single initializer and list of
+        tuples for mixed initializer. E.g. "msra", [('.*weight', 'msra'),
+        ('.*relu_gamma', 'const0.0')], or [('conv1_weight', 'normal0.0001'),
+        ('conv[23]_weight', 'normal0.01'), ('ip[12]_weight', 'normal0.1')].
+    """
+
+    def get_initializer_from_string(key):
+        """Create single initializer from a string"""
+        # 'xavier', 'xavier-gaussian', 'msra', 'default'
+        initializer_inst = None
+        if key == 'xavier':
+            initializer_inst = Xavier(factor_type="in", magnitude=3.0)
+        elif key == 'xavier-gaussian':
+            initializer_inst = Xavier(factor_type="in", rnd_type="gaussian", magnitude=1.0)
+        elif key == 'msra':
+            initializer_inst = Xavier(factor_type="in", rnd_type="gaussian", magnitude=2.0)
+        elif key == 'default':
+            initializer_inst = Xavier(factor_type="in", magnitude=2.34)
+        # 'normal', 'uniform', 'const'
+        elif key.startswith('normal'):
+            initializer_inst = Normal(sigma=float(key[len('normal'):]))
+        elif key.startswith('uniform'):
+            initializer_inst = Uniform(scale=float(key[len('uniform'):]))
+        elif key.startswith('const'):
+            initializer_inst = Constant(value=float(key[len('const'):]))
+        else:
+            raise ValueError('Invalid initializer: %s' % key)
+        return initializer_inst
+
+    if initializer in ['xavier', 'xavier-gaussian', 'msra', 'default']:
+        # single initializer
+        initializer_inst = get_initializer_from_string(initializer)
+    else:
+        # mixed initializer
+        from collections import OrderedDict
+        initializer = OrderedDict(initializer)
+        keys = initializer.keys()
+        patterns = keys + ['.*']
+        initializers = [get_initializer_from_string(initializer[k]) for k in keys] + [Initializer()]
+        initializer_inst = Mixed(patterns, initializers)
+    return initializer_inst
