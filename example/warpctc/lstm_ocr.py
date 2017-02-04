@@ -132,7 +132,6 @@ def Accuracy(label, pred):
         total += 1.0
     return hit / total
 
-
 def LCS(p,l):
     # Dynamic Programming Finding LCS
     if len(p) == 0:
