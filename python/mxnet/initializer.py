@@ -248,10 +248,13 @@ class Xavier(Initializer):
 
     def _init_weight(self, _, arr):
         shape = arr.shape
-        hw_scale = 1.
-        if len(shape) > 2:
+        if len(shape) >= 2:
             hw_scale = np.prod(shape[2:])
-        fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
+            fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
+        elif len(shape) == 1:  #for example, cuDNN RNNOp parameters
+            fan_in = fan_out = np.sqrt(shape[0])
+        else:
+            return
         factor = 1.
         if self.factor_type == "avg":
             factor = (fan_in + fan_out) / 2.0

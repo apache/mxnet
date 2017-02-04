@@ -20,6 +20,26 @@ def Perplexity(label, pred):
         loss += -np.log(max(1e-10, pred[i][int(label[i])]))
     return np.exp(loss / label.size)
 
+class RNNXavier(mx.init.Xavier):
+    """Initialize the weight with Xavier or similar initialization scheme.
+    
+    Prepared specially for RNN parameters.
+    Parameters
+    ----------
+    rnd_type: str, optional
+        Use ```gaussian``` or ```uniform``` to init
+
+    factor_type: str, optional
+        Use ```avg```, ```in```, or ```out``` to init
+
+    magnitude: float, optional
+        scale of random number range
+    """
+    def __init__(self, rnd_type="uniform", factor_type="avg", magnitude=3):
+        super().__init__(rnd_type, factor_type, magnitude)
+
+    def _init_default(self, name, arr):
+        super()._init_weight(name, arr)
 
 if __name__ == '__main__':
     batch_size = 128
@@ -28,11 +48,11 @@ if __name__ == '__main__':
     num_embed = 200
     num_lstm_layer = 2
 
-    num_epoch = 2
+    num_epoch = 20
     learning_rate = 0.01
     momentum = 0.0
 
-    contexts = [mx.context.gpu(i) for i in range(4)]
+    contexts = [mx.context.gpu(i) for i in range(1)]
     vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
 
     init_h = [('LSTM_init_h', (batch_size, num_lstm_layer, num_hidden))]
@@ -70,19 +90,36 @@ if __name__ == '__main__':
         rnn_c_init = mx.sym.SwapAxis(mx.sym.Variable('LSTM_init_c'),
                                      dim1=0, dim2=1)
 
-        # TODO(tofix)
-        # currently all the LSTM parameters are concatenated as
-        # a huge vector, and named '<name>_parameters'. By default
-        # mxnet initializer does not know how to initilize this
-        # guy because its name does not ends with _weight or _bias
-        # or anything familiar. Here we just use a temp workaround
-        # to create a variable and name it as LSTM_bias to get
-        # this demo running. Note by default bias is initialized
-        # as zeros, so this is not a good scheme. But calling it
-        # LSTM_weight is not good, as this is 1D vector, while
-        # the initialization scheme of a weight parameter needs
-        # at least two dimensions.
-        rnn_params = mx.sym.Variable('LSTM_bias')
+        # The original example, rnn_cell_demo.py, uses default Xavier as initalizer, 
+        # which relies on variable name, cannot initialize LSTM_parameters. Thus it was
+        # renamed to LSTM_bias, which can be initialized as zero. It weakens the converge
+        # speed. Here I use revised initializer.py and introduce class RNNXavier to 
+        # initialize LSTM_parameters. I attached the first epoch comparison:
+        # The old LSTM_bias case:
+# 2017-01-28 01:56:19,164 Epoch[0] Batch [50]    Speed: 1081.03 samples/sec    Train-Perplexity=4506.515945
+# 2017-01-28 01:56:25,360 Epoch[0] Batch [100]    Speed: 1033.19 samples/sec    Train-Perplexity=797.195374
+# 2017-01-28 01:56:31,394 Epoch[0] Batch [150]    Speed: 1060.61 samples/sec    Train-Perplexity=569.822128
+# 2017-01-28 01:56:37,784 Epoch[0] Batch [200]    Speed: 1001.64 samples/sec    Train-Perplexity=469.483883
+# 2017-01-28 01:56:43,424 Epoch[0] Batch [250]    Speed: 1134.96 samples/sec    Train-Perplexity=341.282116
+# 2017-01-28 01:56:49,097 Epoch[0] Batch [300]    Speed: 1128.55 samples/sec    Train-Perplexity=327.141254
+# 2017-01-28 01:56:54,667 Epoch[0] Batch [350]    Speed: 1149.03 samples/sec    Train-Perplexity=321.201624
+# 2017-01-28 01:57:00,193 Epoch[0] Batch [400]    Speed: 1158.18 samples/sec    Train-Perplexity=293.513695
+# 2017-01-28 01:57:04,366 Epoch[0] Train-Perplexity=335.999086
+# 2017-01-28 01:57:04,366 Epoch[0] Time cost=51.624
+# 2017-01-28 01:57:07,082 Epoch[0] Validation-Perplexity=276.119522
+        # The new LSTM_parameters case (based on RNNXavier and revised initializer.py):          
+# 2017-01-28 01:54:08,342 Epoch[0] Batch [50]    Speed: 1272.47 samples/sec    Train-Perplexity=3510.636976
+# 2017-01-28 01:54:14,230 Epoch[0] Batch [100]    Speed: 1087.30 samples/sec    Train-Perplexity=849.972727
+# 2017-01-28 01:54:20,326 Epoch[0] Batch [150]    Speed: 1049.99 samples/sec    Train-Perplexity=496.757170
+# 2017-01-28 01:54:25,690 Epoch[0] Batch [200]    Speed: 1193.19 samples/sec    Train-Perplexity=324.072778
+# 2017-01-28 01:54:31,388 Epoch[0] Batch [250]    Speed: 1123.19 samples/sec    Train-Perplexity=278.631529
+# 2017-01-28 01:54:37,856 Epoch[0] Batch [300]    Speed: 989.55 samples/sec    Train-Perplexity=271.496667
+# 2017-01-28 01:54:43,726 Epoch[0] Batch [350]    Speed: 1090.45 samples/sec    Train-Perplexity=210.853686
+# 2017-01-28 01:54:49,338 Epoch[0] Batch [400]    Speed: 1140.62 samples/sec    Train-Perplexity=198.847126
+# 2017-01-28 01:54:53,062 Epoch[0] Train-Perplexity=186.354118
+# 2017-01-28 01:54:53,063 Epoch[0] Time cost=50.277
+# 2017-01-28 01:54:55,770 Epoch[0] Validation-Perplexity=181.052411
+        rnn_params = mx.sym.Variable('LSTM_parameters')
 
         # RNN cell takes input of shape (time, batch, feature)
         rnn = mx.sym.RNN(data=embed_tm, state_size=num_hidden,
@@ -129,7 +166,7 @@ if __name__ == '__main__':
     mod.fit(data_train, eval_data=data_val, num_epoch=num_epoch,
             eval_metric=mx.metric.np(Perplexity),
             batch_end_callback=mx.callback.Speedometer(batch_size, 50),
-            initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
+            initializer=RNNXavier(factor_type="in", magnitude=2.34),
             optimizer='sgd',
             optimizer_params={'learning_rate': learning_rate,
                               'momentum': momentum, 'wd': 0.00001})
