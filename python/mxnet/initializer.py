@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function
 
 import re
 import logging
+import warnings
 import json
 import numpy as np
 from .base import string_types
@@ -34,11 +35,12 @@ def register(klass):
     assert issubclass(klass, Initializer), "Can only register subclass of Initializer"
     name = klass.__name__.lower()
     if name in _INITIALIZER_REGISTRY:
-        logging.warning(
-            "WARNING: New initializer %s.%s is overriding existing initializer %s.%s",
-            klass.__module__, klass.__name__,
-            _INITIALIZER_REGISTRY[name].__module__,
-            _INITIALIZER_REGISTRY[name].__name__)
+        warnings.warn(
+            "\033[91mNew initializer %s.%s is overriding existing initializer %s.%s\033[0m"%(
+                klass.__module__, klass.__name__,
+                _INITIALIZER_REGISTRY[name].__module__,
+                _INITIALIZER_REGISTRY[name].__name__),
+            UserWarning, stacklevel=2)
     _INITIALIZER_REGISTRY[name] = klass
     return klass
 
@@ -104,9 +106,10 @@ class Initializer(object):
         arr : NDArray
             ndarray to be Initialized
         """
-        logging.warning(
-            "calling initializer with init(str, NDArray) has been deprecated." \
-            "please use init(mx.init.InitDesc(...), NDArray) instead.")
+        warnings.warn(
+            "\033[91mCalling initializer with init(str, NDArray) has been deprecated." \
+            "please use init(mx.init.InitDesc(...), NDArray) instead.\033[0m",
+            DeprecationWarning, stacklevel=3)
         if not isinstance(name, string_types):
             raise TypeError('name must be string')
         if not isinstance(arr, NDArray):
