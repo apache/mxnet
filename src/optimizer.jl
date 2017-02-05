@@ -259,7 +259,7 @@ function normalized_gradient(opts::AbstractOptimizerOptions, state::Optimization
 
   grad = grad_scale * grad
   if opts.grad_clip > 0
-    grad = clip(grad, -opts.grad_clip, opts.grad_clip)
+    grad = clip(grad, a_min=-opts.grad_clip, a_max=opts.grad_clip)
   end
   if opts.weight_decay > 0
     @inplace grad += opts.weight_decay * weight

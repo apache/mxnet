@@ -10,11 +10,11 @@ vocab   = build_vocabulary(INPUT_FILE, VOCAB_FILE)
 n_class = length(vocab)
 
 # prepare data provider
-jl_data = Pair[(symbol(NAME, "_data_$t") => zeros(mx.MX_float, (length(vocab), BATCH_SIZE_SMP)))
+jl_data = Pair[(Symbol(NAME, "_data_$t") => zeros(mx.MX_float, (length(vocab), BATCH_SIZE_SMP)))
                for t = 1:1]
-jl_c    = Pair[(symbol(NAME, "_l$(l)_init_c") => zeros(mx.MX_float, (DIM_HIDDEN, BATCH_SIZE_SMP)))
+jl_c    = Pair[(Symbol(NAME, "_l$(l)_init_c") => zeros(mx.MX_float, (DIM_HIDDEN, BATCH_SIZE_SMP)))
                for l = 1:LSTM_N_LAYER]
-jl_h    = Pair[(symbol(NAME, "_l$(l)_init_h") => zeros(mx.MX_float, (DIM_HIDDEN, BATCH_SIZE_SMP)))
+jl_h    = Pair[(Symbol(NAME, "_l$(l)_init_h") => zeros(mx.MX_float, (DIM_HIDDEN, BATCH_SIZE_SMP)))
                for l = 1:LSTM_N_LAYER]
 
 # the first input in the sequence
@@ -36,7 +36,7 @@ output_samples = zeros(Char, (SAMPLE_LENGTH, BATCH_SIZE_SMP))
 output_samples[1, :] = SAMPLE_START
 
 # build inverse vocabulary for convenience
-inv_vocab = Dict([v => k for (k,v) in vocab])
+inv_vocab = Dict(v => k for (k,v) in vocab)
 
 # do prediction and sampling step by step
 for t = 2:SAMPLE_LENGTH-1

@@ -650,8 +650,8 @@ function _define_atomic_symbol_creator(name :: String)
       end
     end
 
-    if length(args) != 0 && length(symbol_kws) != 0
-      @assert(false, $name * " only accepts SymbolicNode either as positional or keyword arguments, not both.")
+    if length(args) > 1 && length(symbol_kws) != 0
+      @assert(false, $name * " only accepts SymbolicNode either as positional or keyword arguments with optional positional `data` argument, not both.")
     end
     $(if key_narg != ""
       quote
@@ -680,8 +680,10 @@ function _define_atomic_symbol_creator(name :: String)
       set_attr(node, k, v)
     end
 
-    if length(args) != 0
+    if length(symbol_kws) == 0
       _compose!(node, name, args...)
+    elseif length(args) == 1
+      _compose!(node; name=name, data=args[1], symbol_kws...)
     else
       _compose!(node; name=name, symbol_kws...)
     end

@@ -5,7 +5,7 @@ using MXNet
 function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; max_vocab=10000)
   if isfile(vocab_fn)
     info("Vocabulary already exists, reusing $vocab_fn...")
-    vocab = Dict{Char,Int}([w => i for (i,w) in enumerate(readstring(vocab_fn))])
+    vocab = Dict{Char,Int}(w => i for (i,w) in enumerate(readstring(vocab_fn)))
   else
     # count symbol frequency
     dict = Dict{Char,Int}()
@@ -25,7 +25,7 @@ function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; m
       end
     end
 
-    vocab = Dict([x.first => i for (i,x) in enumerate(vocab)])
+    vocab = Dict(x.first => i for (i,x) in enumerate(vocab))
   end
   vocab[UNKNOWN_CHAR] = length(vocab)
   return vocab
@@ -50,12 +50,12 @@ end
 
 #--provide
 function mx.provide_data(p :: CharSeqProvider)
-  [(symbol(p.prefix, "_data_$t"), (length(p.vocab), p.batch_size)) for t = 1:p.seq_len] ∪
-  [(symbol(p.prefix, "_l$(l)_init_c"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer] ∪
-  [(symbol(p.prefix, "_l$(l)_init_h"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer]
+  [(Symbol(p.prefix, "_data_$t"), (length(p.vocab), p.batch_size)) for t = 1:p.seq_len] ∪
+  [(Symbol(p.prefix, "_l$(l)_init_c"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer] ∪
+  [(Symbol(p.prefix, "_l$(l)_init_h"), (p.dim_hidden, p.batch_size)) for l=1:p.n_layer]
 end
 function mx.provide_label(p :: CharSeqProvider)
-  [(symbol(p.prefix, "_label_$t"), (p.batch_size,)) for t = 1:p.seq_len]
+  [(Symbol(p.prefix, "_label_$t"), (p.batch_size,)) for t = 1:p.seq_len]
 end
 #--/provide
 

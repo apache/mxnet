@@ -26,11 +26,11 @@ function lstm_cell(data::mx.SymbolicNode, prev_state::LSTMState, param::LSTMPara
   end
 
   i2h = mx.FullyConnected(data, weight=param.i2h_W, bias=param.i2h_b,
-                          num_hidden=4num_hidden, name=symbol(name, "_i2h"))
+                          num_hidden=4num_hidden, name=Symbol(name, "_i2h"))
   h2h = mx.FullyConnected(prev_state.h, weight=param.h2h_W, bias=param.h2h_b,
-                          num_hidden=4num_hidden, name=symbol(name, "_h2h"))
+                          num_hidden=4num_hidden, name=Symbol(name, "_h2h"))
 
-  gates = mx.SliceChannel(i2h + h2h, num_outputs=4, name=symbol(name, "_gates"))
+  gates = mx.SliceChannel(i2h + h2h, num_outputs=4, name=Symbol(name, "_gates"))
 
   in_gate     = mx.Activation(gates[1], act_type=:sigmoid)
   in_trans    = mx.Activation(gates[2], act_type=:tanh)
@@ -49,17 +49,17 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
               dropout::Real=0, name::Symbol=gensym(), output_states::Bool=false)
 
   # placeholder nodes for all parameters
-  embed_W = mx.Variable(symbol(name, "_embed_weight"))
-  pred_W  = mx.Variable(symbol(name, "_pred_weight"))
-  pred_b  = mx.Variable(symbol(name, "_pred_bias"))
+  embed_W = mx.Variable(Symbol(name, "_embed_weight"))
+  pred_W  = mx.Variable(Symbol(name, "_pred_weight"))
+  pred_b  = mx.Variable(Symbol(name, "_pred_bias"))
 
   layer_param_states = map(1:n_layer) do i
-    param = LSTMParam(mx.Variable(symbol(name, "_l$(i)_i2h_weight")),
-                      mx.Variable(symbol(name, "_l$(i)_h2h_weight")),
-                      mx.Variable(symbol(name, "_l$(i)_i2h_bias")),
-                      mx.Variable(symbol(name, "_l$(i)_h2h_bias")))
-    state = LSTMState(mx.Variable(symbol(name, "_l$(i)_init_c")),
-                      mx.Variable(symbol(name, "_l$(i)_init_h")))
+    param = LSTMParam(mx.Variable(Symbol(name, "_l$(i)_i2h_weight")),
+                      mx.Variable(Symbol(name, "_l$(i)_h2h_weight")),
+                      mx.Variable(Symbol(name, "_l$(i)_i2h_bias")),
+                      mx.Variable(Symbol(name, "_l$(i)_h2h_bias")))
+    state = LSTMState(mx.Variable(Symbol(name, "_l$(i)_init_c")),
+                      mx.Variable(Symbol(name, "_l$(i)_init_h")))
     (param, state)
   end
   #...
@@ -69,17 +69,17 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
   # now unroll over time
   outputs = mx.SymbolicNode[]
   for t = 1:seq_len
-    data   = mx.Variable(symbol(name, "_data_$t"))
-    label  = mx.Variable(symbol(name, "_label_$t"))
+    data   = mx.Variable(Symbol(name, "_data_$t"))
+    label  = mx.Variable(Symbol(name, "_label_$t"))
     hidden = mx.FullyConnected(data, weight=embed_W, num_hidden=dim_embed,
-                               no_bias=true, name=symbol(name, "_embed_$t"))
+                               no_bias=true, name=Symbol(name, "_embed_$t"))
 
     # stack LSTM cells
     for i = 1:n_layer
       l_param, l_state = layer_param_states[i]
       dp = i == 1 ? 0 : dropout # don't do dropout for data
       next_state = lstm_cell(hidden, l_state, l_param, num_hidden=dim_hidden, dropout=dp,
-                             name=symbol(name, "_lstm_$t"))
+                             name=Symbol(name, "_lstm_$t"))
       hidden = next_state.h
       layer_param_states[i] = (l_param, next_state)
     end
@@ -89,8 +89,8 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
       hidden = mx.Dropout(hidden, p=dropout)
     end
     pred = mx.FullyConnected(hidden, weight=pred_W, bias=pred_b, num_hidden=n_class,
-                             name=symbol(name, "_pred_$t"))
-    smax = mx.SoftmaxOutput(pred, label, name=symbol(name, "_softmax_$t"))
+                             name=Symbol(name, "_pred_$t"))
+    smax = mx.SoftmaxOutput(pred, label, name=Symbol(name, "_softmax_$t"))
     push!(outputs, smax)
   end
   #...
@@ -100,8 +100,8 @@ function LSTM(n_layer::Int, seq_len::Int, dim_hidden::Int, dim_embed::Int, n_cla
   # append block-gradient nodes to the final states
   for i = 1:n_layer
     l_param, l_state = layer_param_states[i]
-    final_state = LSTMState(mx.BlockGrad(l_state.c, name=symbol(name, "_l$(i)_last_c")),
-                            mx.BlockGrad(l_state.h, name=symbol(name, "_l$(i)_last_h")))
+    final_state = LSTMState(mx.BlockGrad(l_state.c, name=Symbol(name, "_l$(i)_last_c")),
+                            mx.BlockGrad(l_state.h, name=Symbol(name, "_l$(i)_last_h")))
     layer_param_states[i] = (l_param, final_state)
   end
 
