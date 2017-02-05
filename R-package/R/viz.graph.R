@@ -127,11 +127,13 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   
   if (!is.null(shape)){
     edges_labels_raw<- symbol$get.internals()$infer.shape(list(data=shape))$out.shapes
-    edge_label_str <- function(x) paste0(x, collapse="X")
-    edges_labels_raw<- sapply(edges_labels_raw, edge_label_str)
-    names(edges_labels_raw)[names(edges_labels_raw)=="data"]<- "data_output"
-    edge_df_new$label<- edges_labels_raw[edges_df$from_name_output]
-    edge_df_new$rel<- edge_df_new$label
+    if (!is.null(edges_labels_raw)){
+      edge_label_str <- function(x) paste0(x, collapse="X")
+      edges_labels_raw<- sapply(edges_labels_raw, edge_label_str)
+      names(edges_labels_raw)[names(edges_labels_raw)=="data"]<- "data_output"
+      edge_df_new$label<- edges_labels_raw[edges_df$from_name_output]
+      edge_df_new$rel<- edge_df_new$label
+    }
   }
   
   graph<- create_graph(nodes_df = nodes_df_new, edges_df = edge_df_new, directed = T) %>% 

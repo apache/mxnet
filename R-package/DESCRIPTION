@@ -28,10 +28,5 @@ Suggests:
     rmarkdown,
     imager,
 LinkingTo: Rcpp
-<<<<<<< HEAD
-RoxygenNote: 5.0.1
-VignetteBuilder: knitr
-=======
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1
->>>>>>> a2730787b1fca896934b61999210fd2445dd87ee
