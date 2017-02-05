@@ -60,5 +60,11 @@ NNVM_REGISTER_OP(_backward_clip)
 NNVM_REGISTER_OP(repeat)
 .set_attr<FCompute>("FCompute<gpu>", RepeatOpForward<gpu>);
 
+NNVM_REGISTER_OP(_backward_repeat)
+.set_attr<FCompute>("FCompute<gpu>", RepeatOpBackward<gpu>);
+
+NNVM_REGISTER_OP(tile)
+.set_attr<FCompute>("FCompute<gpu>", TileOpForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

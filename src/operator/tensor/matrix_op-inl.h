@@ -1227,81 +1227,118 @@ inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+/*!
+ * \brief Reshape the input and output tensors for
+ * using broadcast_to to achieve the funcitonality
+ * of operator repeat.
+ * \return a pair of TShape's, first is the reshaped
+ * input shape, second is the reshaped output shape.
+ */
+std::pair<TShape, TShape> ReshapeInputOutputForRepeatOp(const TShape& ishape,
+                                                        const dmlc::optional<int>& axisOpt,
+                                                        const int repeats) {
+  if (static_cast<bool>(axisOpt)) {
+    int axis = axisOpt.value();
+    int ndim = static_cast<int>(ishape.ndim());
+    if (axis < 0)  {
+      axis += ndim;
+    }
+    CHECK(axis >= 0 && axis < static_cast<int>(ishape.ndim())) << "Invalid input of axis";
+
+    // reshape the input tensor by adding a dim at the (axis+1)-th dim
+    TShape rshape(ishape.ndim()+1);
+    // the shape we want to broadcast to
+    TShape bshape(rshape.ndim());
+    int i = 0;
+    while (i <= axis) {
+      rshape[i] = bshape[i] = ishape[i];
+      ++i;
+    }
+    rshape[i] = 1;
+    bshape[i] = repeats;
+    while (i < static_cast<int>(ishape.ndim())) {
+      rshape[i+1] = ishape[i];
+      bshape[i+1] = ishape[i];
+      ++i;
+    }
+    return std::make_pair(rshape, bshape);
+  } else { 
+    // axis is not input by user
+    // reshape the tensor into shape (ishape.Size(), 1)
+    // then add one dim at axis = 1 and broadcast to
+    // shape (ishape.Size(), repeats)
+    TShape rshape(2);
+    rshape[0] = ishape.Size();
+    rshape[1] = 1;
+
+    TShape bshape(2);
+    bshape[0] = rshape[0];
+    bshape[1] = repeats;
+    return std::make_pair(rshape, bshape);
+  }
+}
+
 template<typename xpu>
 void RepeatOpForward(const nnvm::NodeAttrs& attrs,
                      const OpContext& ctx,
                      const std::vector<TBlob>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
-  int repeats = 0;
-  dmlc::optional<int> axisOpt;
   const TBlob& iTBlob = inputs[0];
   const TShape& ishape = iTBlob.shape_;
   if (ishape.ndim() == 0) return;
 
+  int repeats = 0;
+  dmlc::optional<int> axisOpt;
   const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
   GetRepeatParams(param, ishape, &repeats, &axisOpt);
   if (0 == repeats) return;
 
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    using namespace mxnet_op;
-    using namespace mshadow;
-    if (static_cast<bool>(axisOpt)) {
-      int axis = axisOpt.value();
-      int ndim = static_cast<int>(ishape.ndim());
-      if (axis < 0)  {
-        axis += ndim;
-      }
-      CHECK(axis >= 0 && axis < static_cast<int>(ishape.ndim())) << "Invalid input of axis";
+  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForRepeatOp(ishape, axisOpt, repeats);
 
-      // reshape the input tensor by adding a dim at the (axis+1)-th dim
-      TShape rshape(ishape.ndim()+1);
-      // the shape we want to broadcast to
-      TShape bshape(rshape.ndim());
-      int i = 0;
-      while (i <= axis) {
-        rshape[i] = bshape[i] = ishape[i];
-        ++i;
-      }
-      rshape[i] = 1;
-      bshape[i] = repeats;
-      while (i < static_cast<int>(ishape.ndim())) {
-        rshape[i+1] = ishape[i];
-        bshape[i+1] = ishape[i];
-        ++i;
-      }
+  // reshaped input tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
 
-      // reshaped input tblob
-      TBlob iblob(inputs[0].dptr_, rshape, inputs[0].dev_mask_, inputs[0].type_flag_);
-      std::vector<TBlob> newInputs = {iblob};
-      // reshaped output tblob
-      TBlob oblob(outputs[0].dptr_, bshape, outputs[0].dev_mask_, outputs[0].type_flag_);
-      std::vector<TBlob> newOutputs = {oblob};
+  // reshaped output tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
 
-      BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
-    } else {  // axis is not input by user
-      // reshape the tensor into shape (ishape.Size(), 1)
-      // then add one dim at axis = 1 and broadcast to
-      // shape (ishape.Size(), repeats)
-      TShape rshape(2);
-      rshape[0] = ishape.Size();
-      rshape[1] = 1;
+  BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
+}
 
-      TShape bshape(2);
-      bshape[0] = rshape[0];
-      bshape[1] = repeats;
+template<typename xpu>
+void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
 
-      // reshaped input tblob
-      TBlob iblob(inputs[0].dptr_, rshape, inputs[0].dev_mask_, inputs[0].type_flag_);
-      std::vector<TBlob> newInputs = {iblob};
-      // reshaped output tblob
-      TBlob oblob(outputs[0].dptr_, bshape, outputs[0].dev_mask_, outputs[0].type_flag_);
-      std::vector<TBlob> newOutputs = {oblob};
+  const TShape& ishape = inputs[0].shape_;
+  if (ishape.ndim() == 0) return;
 
-      BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
-    }
-  });
+  int repeats = 0;
+  dmlc::optional<int> axisOpt;
+  const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
+  GetRepeatParams(param, ishape, &repeats, &axisOpt);
+  if (0 == repeats) return;
+
+  std::pair<TShape, TShape> rshapes =
+    ReshapeInputOutputForRepeatOp(inputs[0].shape_, axisOpt, repeats);
+
+  // reshaped input tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+
+  // reshaped output tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
+
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+      attrs, ctx, newOutputs, req, newInputs, rshapes.first);
 }
 
 struct TileParam : public dmlc::Parameter<TileParam> {
