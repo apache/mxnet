@@ -6,6 +6,8 @@ from __future__ import absolute_import
 import sys
 import ctypes
 import atexit
+import warnings
+warnings.filterwarnings('default', category=DeprecationWarning)
 import numpy as np
 from . import libinfo
 

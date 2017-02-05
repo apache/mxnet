@@ -5,8 +5,9 @@
  * \author Bing Xu
 */
 
-#include "./deconvolution-inl.h"
 #include "./upsampling-inl.h"
+#include <nnvm/op_attr_types.h>
+#include "./deconvolution-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -56,5 +57,14 @@ MXNET_REGISTER_OP_PROPERTY(UpSampling, UpSamplingProp)
 .add_argument("data", "Symbol[]", "Array of tensors to upsample")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_key_var_num_args("num_args");
+
+NNVM_REGISTER_OP(UpSampling)
+.set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
+    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+      if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
+      if (index == 1) {
+        var->attrs.dict["__init__"] = "[\"bilinear\", {}]";
+      }
+    });
 }  // namespace op
 }  // namespace mxnet

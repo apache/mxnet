@@ -625,8 +625,6 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         for _ in range(N):
             exe.forward(is_train=True)
             exe.backward(out_grads=exe.outputs)
-            for output in exe.outputs:
-                output.wait_to_read()
         mx.nd.waitall()
         toc = time.time()
         forward_backward_time = (toc - tic) * 1.0 / N
@@ -641,8 +639,6 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         tic = time.time()
         for _ in range(N):
             exe.forward(is_train=False)
-            for output in exe.outputs:
-                output.wait_to_read()
         mx.nd.waitall()
         toc = time.time()
         forward_time = (toc - tic) * 1.0 / N
