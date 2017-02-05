@@ -29,7 +29,7 @@ require(mxnet)
 ```r
 a <- mx.nd.zeros(c(2, 3)) # create a 2-by-3 matrix on cpu
 b <- mx.nd.zeros(c(2, 3), mx.cpu()) # create a 2-by-3 matrix on cpu
-# c <- mx.nd.zeros(c(2, 3), mx.gpu(0)) # create a 2-by-3 matrix on gpu 0, if you have CUA enabled.
+# c <- mx.nd.zeros(c(2, 3), mx.gpu(0)) # create a 2-by-3 matrix on gpu 0, if you have CUDA enabled.
 ```
 
 Typically for CUDA-enabled devices, the device id of a GPU starts from 0.

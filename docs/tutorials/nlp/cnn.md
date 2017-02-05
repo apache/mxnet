@@ -39,10 +39,10 @@ def load_data_and_labels():
     Loads MR polarity data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
-    # Pull scentences with positive sentiment
+    # Pull sentences with positive sentiment
     pos_file = urllib2.urlopen('https://raw.githubusercontent.com/yoonkim/CNN_sentence/master/rt-polarity.pos')
 
-    # Pull scentences with negative sentiment
+    # Pull sentences with negative sentiment
     neg_file = urllib2.urlopen('https://raw.githubusercontent.com/yoonkim/CNN_sentence/master/rt-polarity.neg')
 
     # Load data from files
@@ -117,7 +117,7 @@ x_shuffled = x[shuffle_indices]
 y_shuffled = y[shuffle_indices]
 
 # split train/dev set
-# there are a total of 10662 labled examples to train on
+# there are a total of 10662 labeled examples to train on
 x_train, x_dev = x_shuffled[:-1000], x_shuffled[-1000:]
 y_train, y_dev = y_shuffled[:-1000], y_shuffled[-1000:]
 

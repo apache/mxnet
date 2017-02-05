@@ -1,7 +1,7 @@
 Package: mxnet
 Type: Package
 Title: MXNet
-Version: 0.9.3
+Version: 0.9.4
 Date: 2015-12-23
 Author: Tianqi Chen, Qiang Kou, Tong He
 Maintainer: Qiang Kou <qkou@umail.iu.edu>
@@ -27,7 +27,11 @@ Suggests:
     knitr,
     rmarkdown,
     imager,
-    roxygen2
 LinkingTo: Rcpp
+<<<<<<< HEAD
 RoxygenNote: 5.0.1
 VignetteBuilder: knitr
+=======
+VignetteBuilder: knitr
+RoxygenNote: 5.0.1
+>>>>>>> a2730787b1fca896934b61999210fd2445dd87ee
