@@ -4,6 +4,9 @@ import java.io.IOException
 
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet._
+import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * The base class of a modules. A module represents a computation component. The design
@@ -89,6 +92,8 @@ import ml.dmlc.mxnet._
  * @author Yizhi Liu
  */
 abstract class BaseModule {
+  private val logger = LoggerFactory.getLogger(classOf[BaseModule])
+
   private[mxnet] var binded: Boolean = false
   private[mxnet] var forTraining: Boolean = false
   private[mxnet] var inputsNeedGrad: Boolean = false
@@ -150,8 +155,66 @@ abstract class BaseModule {
       callback.invoke(epoch, nBatch, evalMetric)
     })
 
-    // TODO: eval_metric.get_name_value()
     evalMetric
+  }
+
+  /**
+   * Run prediction and collect the outputs.
+   * @param evalData
+   * @param numBatch Default is -1, indicating running all the batches in the data iterator.
+   * @param reset Default is `True`, indicating whether we should reset the data iter before start
+   *              doing prediction.
+   * @return The return value will be a nested list like
+   *         `[[out1_batch1, out2_batch1, ...], [out1_batch2, out2_batch2, ...]]`
+   *         This mode is useful because in some cases (e.g. bucketing),
+   *         the module does not necessarily produce the same number of outputs.
+   */
+  def predictEveryBatch(evalData: DataIter, numBatch: Int = -1, reset: Boolean = true)
+    : IndexedSeq[IndexedSeq[NDArray]] = {
+    require(binded && paramsInitialized)
+    if (reset) {
+      evalData.reset()
+    }
+    val outputList = ArrayBuffer.empty[IndexedSeq[NDArray]]
+
+    var nBatch = 0
+    while (evalData.hasNext && nBatch != numBatch) {
+      val evalBatch = evalData.next()
+      outputList.append(predict(evalBatch))
+      nBatch += 1
+    }
+
+    outputList
+  }
+
+  def predict(batch: DataBatch): IndexedSeq[NDArray] = {
+    require(binded && paramsInitialized)
+    forward(batch, isTrain = Option(false))
+    val pad = batch.pad
+    getOutputsMerged().map(out =>
+      out.slice(0, out.shape(0)-pad).copy()
+    )
+  }
+
+  /**
+   * Run prediction and collect the outputs.
+   * @param evalData
+   * @param numBatch Default is -1, indicating running all the batches in the data iterator.
+   * @param reset Default is `True`, indicating whether we should reset the data iter before start
+   *              doing prediction.
+   * @return The return value will be a list `[out1, out2, out3]`.
+   *         Where each element is concatenation of the outputs for all the mini-batches.
+   */
+  def predict(evalData: DataIter, numBatch: Int = -1, reset: Boolean = true)
+    : IndexedSeq[NDArray] = {
+    val outputBatches = predictEveryBatch(evalData, numBatch, reset)
+    val numOutputs = outputBatches.head.size
+    outputBatches.foreach(out =>
+      require(out.size == numOutputs,
+      "Cannot merge batches, as num of outputs is not the same in mini-batches." +
+      "Maybe bucketing is used?")
+    )
+    outputBatches.map(out => NDArray.concatenate(out))
   }
 
   // Symbol information
@@ -258,6 +321,121 @@ abstract class BaseModule {
     }
     setParams(argParams.toMap, auxParams.toMap)
   }
+
+  /**
+   *
+   * Train the module parameters.
+   * @param trainData
+   * @param evalData If not `None`, will be used as validation set and evaluate
+   *                 the performance after each epoch.
+   * @param evalMetric The performance measure used to display during training.
+   * @param epochEndCallback Each callback will be called with the current `epoch`,
+   *                         `symbol`, `arg_params` and `aux_params`.
+   * @param batchEndCallback Each callback will be called with a `BatchEndParam`.
+   * @param kvstore Default `'local'`.
+   * @param optimizer
+   * @param evalEndCallback These will be called at the end of each full evaluation,
+   *                        with the metrics over the entire evaluation set.
+   * @param evalBatchEndCallback These will be called at the end of each minibatch during evaluation
+   * @param initializer Will be called to initialize the module parameters
+   *                    if not already initialized.
+   * @param argParams Default `None`, if not `None`, should be existing parameters from a trained
+   *                  model or loaded from a checkpoint (previously saved model). In this case,
+   *                  the value here will be used to initialize the module parameters,
+   *                  unless they are already initialized by the user
+   *                  via a call to `init_params` or `fit`.
+   *                  `arg_params` has higher priority to `initializer`.
+   * @param auxParams Default `None`. Similar to `argParams`, except for auxiliary states.
+   * @param allowMissing Default `False`. Indicate whether we allow missing parameters
+   *                     when `arg_params` and `aux_params` are not `None`.
+   *                     If this is `True`, then the missing parameters will be
+   *                     initialized via the `initializer`.
+   * @param forceRebind Default `False`. Whether to force rebinding the executors if already binded.
+   * @param forceInit Default `False`. Indicate whether we should force initialization even if the
+   *                  parameters are already initialized.
+   * @param beginEpoch Default `0`. Indicate the starting epoch. Usually, if we are resuming from a
+   *                   checkpoint saved at a previous training phase at epoch N,
+   *                   then we should specify this value as N+1.
+   * @param numEpoch Number of epochs to run training.
+   */
+  // scalastyle:off parameterNum
+  def fit(trainData: DataIter, evalData: Option[DataIter] = None,
+          evalMetric: EvalMetric = new Accuracy(),
+          epochEndCallback: Option[EpochEndCallback] = None,
+          batchEndCallback: Option[BatchEndCallback] = None,
+          kvstore: String = "local",
+          optimizer: Optimizer = new SGD(),
+          evalEndCallback: Option[BatchEndCallback] = None,
+          evalBatchEndCallback: Option[BatchEndCallback] = None,
+          initializer: Initializer = new Uniform(0.01f),
+          argParams: Map[String, NDArray] = null,
+          auxParams: Map[String, NDArray] = null,
+          allowMissing: Boolean = false,
+          forceRebind: Boolean = false,
+          forceInit: Boolean = false,
+          beginEpoch: Int = 0, numEpoch: Int = 1,
+          validationMetric: Option[EvalMetric] = None,
+          monitor: Option[Monitor] = None): Unit = {
+    require(numEpoch > 0, "please specify number of epochs")
+    import ml.dmlc.mxnet.DataDesc._
+    bind(dataShapes = trainData.provideData, labelShapes = Option(trainData.provideLabel),
+         forTraining = true, forceRebind = forceRebind)
+    monitor.foreach(installMonitor)
+    initParams(initializer, argParams, auxParams, allowMissing, forceInit)
+    initOptimizer(kvstore, optimizer)
+
+    val valMetric = validationMetric.getOrElse(evalMetric)
+
+    // training loop
+    for (epoch <- beginEpoch until numEpoch) {
+      val tic = System.currentTimeMillis
+      evalMetric.reset()
+
+      var nBatch = 0
+      while (trainData.hasNext) {
+        val dataBatch = trainData.next()
+
+        monitor.foreach(_.tic())
+        forwardBackward(dataBatch)
+        update()
+        updateMetric(evalMetric, dataBatch.label)
+        monitor.foreach(_.tocPrint())
+
+        batchEndCallback.foreach(callback =>
+          callback.invoke(epoch, nBatch, evalMetric)
+        )
+
+        nBatch += 1
+      }
+
+      // one epoch of training is finished
+      val (name, value) = evalMetric.get
+      logger.info(s"Epoch[$epoch] Train-$name=$value")
+      val toc = System.currentTimeMillis
+      logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
+
+      // sync aux params across devices
+      val (argParamsSync, auxParamsSync) = getParams
+      setParams(argParamsSync, auxParamsSync)
+
+      epochEndCallback.foreach(callback =>
+        callback.invoke(epoch, symbol, argParamsSync, auxParamsSync)
+      )
+
+      // evaluation on validation set
+      evalData.foreach(data => {
+        val res = score(data, valMetric,
+          scoreEndCallback = evalEndCallback,
+          batchEndCallback = evalBatchEndCallback, epoch = epoch)
+        val (name, value) = res.get
+        logger.info(s"Epoch[$epoch] Validation-$name=$value")
+      })
+
+      // end of 1 epoch, reset the data-iter for another epoch
+      trainData.reset()
+    }
+  }
+  // scalastyle:on parameterNum
 
   // Install monitor on all executors
   def installMonitor(monitor: Monitor): Unit

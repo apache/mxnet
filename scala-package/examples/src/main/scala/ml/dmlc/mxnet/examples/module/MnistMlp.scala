@@ -23,6 +23,81 @@ object MnistMlp {
     softmax
   }
 
+  def runIntermediateLevelApi(train: DataIter, eval: DataIter, cmdLine: MnistMlp): Unit = {
+    // Intermediate-level API
+    val mod = new Module(getSymbol)
+    mod.bind(dataShapes = train.provideData, labelShapes = Some(train.provideLabel))
+    mod.initParams()
+    mod.initOptimizer(optimizer = new SGD(learningRate = 0.01f, momentum = 0.9f))
+
+    val metric = new Accuracy()
+
+    for (epoch <- 0 until cmdLine.numEpoch) {
+      while (train.hasNext) {
+        val batch = train.next()
+        mod.forward(batch)
+        mod.updateMetric(metric, batch.label)
+        mod.backward()
+        mod.update()
+      }
+
+      val (name, value) = metric.get
+      logger.info(s"epoch $epoch $name=$value")
+      metric.reset()
+      train.reset()
+    }
+
+    // High-level API
+    train.reset()
+  }
+
+  def runHighLevelApi(train: DataIter, test: DataIter, cmdLine: MnistMlp): Unit = {
+    val mod = new Module(getSymbol)
+    mod.fit(train, evalData = scala.Option(test), numEpoch = cmdLine.numEpoch)
+
+    // prediction iterator API
+    var iBatch = 0
+    test.reset()
+    while (test.hasNext) {
+      val batch = test.next()
+      val preds = mod.predict(batch)
+      val predLabel: Array[Int] = NDArray.argmax_channel(preds(0)).toArray.map(_.toInt)
+      val label = batch.label(0).toArray.map(_.toInt)
+      val acc = (predLabel zip label).map { case (py, y) =>
+        if (py == y) 1 else 0
+      }.sum / predLabel.length.toFloat
+      if (iBatch % 20 == 0) {
+        logger.info(s"Batch $iBatch acc: $acc")
+      }
+      iBatch += 1
+    }
+
+    // a dummy call just to test if the API works
+    mod.predict(test)
+
+    // perform prediction and calculate accuracy manually
+    val preds = mod.predictEveryBatch(test)
+    test.reset()
+    var accSum = 0.0f
+    var accCnt = 0
+    var i = 0
+    while (test.hasNext) {
+      val batch = test.next()
+      val predLabel: Array[Int] = NDArray.argmax_channel(preds(i)(0)).toArray.map(_.toInt)
+      val label = batch.label(0).toArray.map(_.toInt)
+      accSum += (predLabel zip label).map { case (py, y) =>
+        if (py == y) 1 else 0
+      }.sum
+      accCnt += predLabel.length
+      i += 1
+    }
+    logger.info(s"Validation Accuracy: {}", accSum / accCnt.toFloat)
+
+    // evaluate on validation set with a evaluation metric
+    val (name, value) = mod.score(test, new Accuracy).get
+    logger.info("Scored {} = {}", name, value)
+  }
+
   def main(args: Array[String]): Unit = {
     val inst = new MnistMlp
     val parser: CmdLineParser = new CmdLineParser(inst)
@@ -45,28 +120,8 @@ object MnistMlp {
         "batch_size" -> inst.batchSize.toString,
         "flat" -> "True", "silent" -> "False"))
 
-      // Intermediate-level API
-      val mod = new Module(getSymbol)
-      mod.bind(dataShapes = train.provideData, labelShapes = Some(train.provideLabel))
-      mod.initParams()
-      mod.initOptimizer(optimizer = new SGD(learningRate = 0.01f, momentum = 0.9f))
-
-      val metric = new Accuracy()
-
-      for (epoch <- 0 until inst.numEpoch) {
-        while (train.hasNext) {
-          val batch = train.next()
-          mod.forward(batch)
-          mod.updateMetric(metric, batch.label)
-          mod.backward()
-          mod.update()
-        }
-
-        val (name, value) = metric.get
-        logger.info(s"epoch $epoch $name=$value")
-        metric.reset()
-        train.reset()
-      }
+      runIntermediateLevelApi(train, eval, inst)
+      runHighLevelApi(train, eval, inst)
     } catch {
       case ex: Exception =>
         logger.error(ex.getMessage, ex)
