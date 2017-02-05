@@ -122,18 +122,18 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     stringsAsFactors=F)
   edges_df$from<- id_dic[as.character(edges_df$from)]
   
+  nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled", fillcolor=adjustcolor(nodes_df$color, alpha.f = 1))
+  edge_df_new<- create_edge_df(from = edges_df$from, to=edges_df$to, color="black")
+  
   if (!is.null(shape)){
     edges_labels_raw<- symbol$get.internals()$infer.shape(list(data=shape))$out.shapes
     edge_label_str <- function(x) paste0(x, collapse="X")
     edges_labels_raw<- sapply(edges_labels_raw, edge_label_str)
     names(edges_labels_raw)[names(edges_labels_raw)=="data"]<- "data_output"
-    edges_df$label<- edges_labels_raw[edges_df$from_name_output]
+    edge_df_new$label<- edges_labels_raw[edges_df$from_name_output]
+    edge_df_new$rel<- edge_df_new$label
   }
   
-  
-  nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled", fillcolor=adjustcolor(nodes_df$color, alpha.f = 1))
-  edge_df_new<- create_edge_df(from = edges_df$from, to=edges_df$to, rel=edges_df$label, label=edges_df$label, color="black")
-
   graph<- create_graph(nodes_df = nodes_df_new, edges_df = edge_df_new, directed = T) %>% 
     set_global_graph_attrs("layout", value = "dot", attr_type = "graph") %>% 
     add_global_graph_attrs("rankdir", value = direction, attr_type = "graph")
