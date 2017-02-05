@@ -1234,9 +1234,9 @@ inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
  * \return a pair of TShape's, first is the reshaped
  * input shape, second is the reshaped output shape.
  */
-std::pair<TShape, TShape> ReshapeInputOutputForRepeatOp(const TShape& ishape,
-                                                        const dmlc::optional<int>& axisOpt,
-                                                        const int repeats) {
+inline std::pair<TShape, TShape> ReshapeInputOutputForRepeatOp(const TShape& ishape,
+                                                               const dmlc::optional<int>& axisOpt,
+                                                               const int repeats) {
   if (static_cast<bool>(axisOpt)) {
     int axis = axisOpt.value();
     int ndim = static_cast<int>(ishape.ndim());
@@ -1394,6 +1394,39 @@ inline bool TileOpType(const nnvm::NodeAttrs& attrs,
 }
 
 /*!
+ * \brief Reshape the input and output tensors for
+ * using broadcast_to to achieve the funcitonality
+ * of operator tile.
+ * \return a pair of TShape's, first is the reshaped
+ * input shape, second is the reshaped output shape.
+ */
+inline std::pair<TShape, TShape> ReshapeInputOutputForTileOp(const TShape& ishape,
+                                                             const TShape& reps) {
+  if (ishape.ndim() == 0 || reps.ndim() == 0) {
+    return std::make_pair(ishape, ishape);
+  }
+
+  // The shape we want to broadcast to
+  TShape bshape(std::max(ishape.ndim(), reps.ndim()) * 2);
+
+  // The shape of the input tensor after adding new axes before each dim
+  TShape rshape(bshape.ndim());
+
+  int i1 = static_cast<int>(ishape.ndim()) - 1;
+  int i2 = static_cast<int>(reps.ndim()) - 1;
+  for (int i = static_cast<int>(bshape.ndim()) - 1; i >= 0; --i) {
+    if (0 == (i & 1)) {
+      bshape[i] = (i2 >= 0? reps[i2--] : 1);
+      rshape[i] = 1;
+    } else {
+      rshape[i] = bshape[i] = (i1 >= 0? ishape[i1--] : 1);
+    }
+  }
+
+  return std::make_pair(rshape, bshape);
+}
+
+/*!
  * \brief Implementation of tiling the input tensor a based
  * on the user-input shape, reps.
  * If a.ndim < reps.ndim, new axes are pre-pended to a. For example,
@@ -1416,6 +1449,9 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+
   if (inputs[0].Size() == 0) return;
   const TShape& ishape = inputs[0].shape_;
   const TShape& reps = nnvm::get<TileParam>(attrs.parsed).reps;
@@ -1425,30 +1461,47 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
     if (0 == reps[i]) return;
   }
 
-  // The shape we want to broadcast to
-  TShape bshape(std::max(ishape.ndim(), reps.ndim()) * 2);
-  // The shape of the input tensor after adding new axes before each dim
-  TShape rshape(bshape.ndim());
-
-  int i1 = static_cast<int>(ishape.ndim()) - 1;
-  int i2 = static_cast<int>(reps.ndim()) - 1;
-  for (int i = static_cast<int>(bshape.ndim()) - 1; i >= 0; --i) {
-    if (0 == (i & 1)) {
-      bshape[i] = (i2 >= 0? reps[i2--] : 1);
-      rshape[i] = 1;
-    } else {
-      rshape[i] = bshape[i] = (i1 >= 0? ishape[i1--] : 1);
-    }
-  }
+  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(ishape, reps);
 
   // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshape, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
   std::vector<TBlob> newInputs = {iblob};
   // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, bshape, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
+}
+
+template<typename xpu>
+void TileOpBackward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+
+  if (inputs[0].Size() == 0) return;
+  const TShape& ishape = inputs[0].shape_;
+  const TShape& reps = nnvm::get<TileParam>(attrs.parsed).reps;
+
+  // If any one of the number in reps is zero, return immediately
+  for (index_t i = 0; i < reps.ndim(); ++i) {
+    if (0 == reps[i]) return;
+  }
+
+  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(ishape, reps);
+
+  // reshaped input tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+  // reshaped output tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
+
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+      attrs, ctx, newOutputs, req, newInputs, rshapes.first);
 }
 
 }  // namespace op

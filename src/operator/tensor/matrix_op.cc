@@ -341,8 +341,15 @@ NNVM_REGISTER_OP(tile)
 .set_attr<nnvm::FInferShape>("FInferShape", TileOpShape)
 .set_attr<nnvm::FInferType>("FInferType", TileOpType)
 .set_attr<FCompute>("FCompute<cpu>", TileOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tile"})
 .add_argument("a", "NDArray", "Input data array")
 .add_arguments(TileParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_backward_tile)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<TileParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>);
 }  // namespace op
 }  // namespace mxnet
