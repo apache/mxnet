@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    #buckets = []
+    #buckets = [32]
     buckets = [10, 20, 30, 40, 50, 60]
 
     start_label = 1
@@ -64,15 +64,12 @@ if __name__ == '__main__':
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
-        embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
-                                 output_dim=args.num_embed, name='embed')
+        embed = mx.sym.Embedding(data=data, input_dim=len(vocab), output_dim=args.num_embed,name='embed')
 
-        stack = mx.rnn.SequentialRNNCell()
-        for i in range(args.num_layers):
-            stack.add(mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i))
-        outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
+        cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, mode='lstm')
+        output, _ = cell.unroll(seq_len, inputs=embed, merge_outputs=True)
 
-        pred = mx.sym.Reshape(outputs, shape=(-1, args.num_hidden))
+        pred = mx.sym.Reshape(output, shape=(-1, args.num_hidden))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')
 
         label = mx.sym.Reshape(label, shape=(-1,))

@@ -90,7 +90,7 @@ class BucketSentenceIter(DataIter):
 
         ndiscard = 0
         self.data = [[] for _ in buckets]
-        for i in xrange(len(sentences)):
+        for i in range(len(sentences)):
             buck = bisect.bisect_left(buckets, len(sentences[i]))
             if buck == len(buckets):
                 ndiscard += 1
@@ -114,11 +114,15 @@ class BucketSentenceIter(DataIter):
         self.label_name = label_name
         self.dtype = dtype
         self.invalid_label = invalid_label
+        self.nddata = []
+        self.ndlabel = []
 
         self.idx = []
         for i, buck in enumerate(self.data):
             self.idx.extend([(i, j) for j in range(0, len(buck) - batch_size + 1, batch_size)])
         self.curr_idx = 0
+
+        self.reset()
 
     def reset(self):
         self.curr_idx = 0
@@ -126,20 +130,25 @@ class BucketSentenceIter(DataIter):
         for buck in self.data:
             np.random.shuffle(buck)
 
+        self.nddata = []
+        self.ndlabel = []
+        for buck in self.data:
+            label = np.empty_like(buck)
+            label[:, :-1] = buck[:, 1:]
+            label[:, -1] = self.invalid_label
+            self.nddata.append(ndarray.array(buck, dtype=self.dtype))
+            self.ndlabel.append(ndarray.array(label, dtype=self.dtype))
+
     def next(self):
         if self.curr_idx == len(self.idx):
             raise StopIteration
         i, j = self.idx[self.curr_idx]
         self.curr_idx += 1
 
-        data = self.data[i][j:j+self.batch_size]
-        label = np.empty_like(data)
-        label[:, :-1] = data[:, 1:]
-        label[:, -1] = self.invalid_label
+        data = self.nddata[i][j:j+self.batch_size]
+        label = self.ndlabel[i][j:j+self.batch_size]
 
-
-        return DataBatch([ndarray.array(data, dtype=self.dtype)],
-                         [ndarray.array(label, dtype=self.dtype)],
+        return DataBatch([data], [label],
                          bucket_key=self.buckets[i],
                          provide_data=[(self.data_name, data.shape)],
                          provide_label=[(self.label_name, label.shape)])
