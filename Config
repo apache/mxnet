@@ -62,13 +62,13 @@ package.DeepMXNet = {
         LibStdCppNoCFlags = 4.9;
 
         DeepMXNetApolloDeploymentHelper = 1.0;
-        Python27 = 1.0;
-        Python34 = 1.0;
-        NumPy = 1.9.x;
-        Scikit-image = 0.11.x;
-        Scikit-learn = 0.17.x;
-        SciPy = 0.15.x;
-        Python-graphviz = 0.x;
+        #Python27 = 1.0;
+        #Python34 = 1.0;
+        #NumPy = 1.9.x;
+        #Scikit-image = 0.11.x;
+        #Scikit-learn = 0.17.x;
+        #SciPy = 0.15.x;
+        #Python-graphviz = 0.x;
         #Python-matplotlib = 1.5.3;
     };
   };
