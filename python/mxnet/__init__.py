@@ -46,6 +46,7 @@ from . import torch
 from . import torch as th
 
 from . import profiler
+from . import log
 
 from . import module
 from . import module as mod
