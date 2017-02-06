@@ -2534,9 +2534,21 @@ def test_repeat():
 
         assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
 
+    def test_repeat_numeric_gradient():
+        data = mx.sym.Variable('data')
+        n1 = 3
+        n2 = 4
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        repeats = 2
+
+        test = mx.sym.repeat(data, repeats=repeats, axis=0)
+        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-3, check_eps=0.01)
+
     test_repeat_forward()
     test_repeat_backward(axis=0)
     test_repeat_backward(axis=1)
+    test_repeat_numeric_gradient()
 
 def test_tile():
     def test_normal_case():
@@ -2613,11 +2625,24 @@ def test_tile():
 
         assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
 
+    def test_tile_numeric_gradient():
+        data = mx.sym.Variable('data')
+        n1 = 2
+        n2 = 2
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        reps1 = 2
+        reps2 = 2
+        reps = (reps1, reps2)
+        test = mx.sym.tile(data, reps=reps)
+        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-3, check_eps=0.01)
+
     test_normal_case()
     test_empty_tensor()
     test_empty_reps()
     test_zero_reps()
     test_tile_backward()
+    test_tile_numeric_gradient()
 
 if __name__ == '__main__':
     test_cast()
@@ -2678,4 +2703,3 @@ if __name__ == '__main__':
     test_binary_logic()
     test_repeat()
     test_tile()
-
