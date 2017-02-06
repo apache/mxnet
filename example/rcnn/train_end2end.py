@@ -68,7 +68,7 @@ def train_net(args, ctx, pretrained, epoch, prefix, begin_epoch, end_epoch,
 
     # load and initialize params
     if args.resume:
-        arg_params, aux_params = load_param(prefix, begin_epoch, convert=True)
+        arg_params, aux_params = load_param(prefix, max(0, begin_epoch - 1), convert=True)
     else:
         arg_params, aux_params = load_param(pretrained, epoch, convert=True)
         arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=arg_shape_dict['rpn_conv_3x3_weight'])
