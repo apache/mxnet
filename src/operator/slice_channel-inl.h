@@ -189,11 +189,11 @@ class SliceChannelProp : public OperatorProperty {
             back_calculate_dshape[d] = (*out_shape)[i][d];
           }
           back_calculate_dshape[real_axis] = param_.num_outputs;
-          for (int d = real_axis + 1; d < ishape.ndim(); ++d) {
+          for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
             back_calculate_dshape[d] = (*out_shape)[i][d - 1];
           }
         } else {
-          for (int d = 0; d < ishape.ndim(); ++d) {
+          for (int d = 0; d < static_cast<int>(ishape.ndim()); ++d) {
             back_calculate_dshape[d] = (*out_shape)[i][d];
             if (d == real_axis) {
               back_calculate_dshape[d] *= param_.num_outputs;
