@@ -1262,7 +1262,7 @@ inline std::pair<TShape, TShape> ReshapeInputOutputForRepeatOp(const TShape& ish
       ++i;
     }
     return std::make_pair(rshape, bshape);
-  } else { 
+  } else {
     // axis is not input by user
     // reshape the tensor into shape (ishape.Size(), 1)
     // then add one dim at axis = 1 and broadcast to
@@ -1308,37 +1308,47 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
 }
 
+/*!
+ * \brief Compute the gradient of the loss function
+ * with respect to the input of the operator.
+ * Backpropagation is employed to implement the
+ * chain rule.
+ * \param inputs the gradient of the loss function
+ * with respect to the outputs of the operator
+ * \param outputs the gradient of the loss function
+ * with respect to the inputs of the operator
+ */
 template<typename xpu>
 void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
 
-  const TShape& ishape = inputs[0].shape_;
-  if (ishape.ndim() == 0) return;
+  const TShape& oshape = outputs[0].shape_;
+  if (oshape.ndim() == 0) return;
 
   int repeats = 0;
   dmlc::optional<int> axisOpt;
   const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
-  GetRepeatParams(param, ishape, &repeats, &axisOpt);
+  GetRepeatParams(param, oshape, &repeats, &axisOpt);
   if (0 == repeats) return;
 
   std::pair<TShape, TShape> rshapes =
-    ReshapeInputOutputForRepeatOp(inputs[0].shape_, axisOpt, repeats);
+    ReshapeInputOutputForRepeatOp(oshape, axisOpt, repeats);
 
-  // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
-  std::vector<TBlob> newInputs = {iblob};
-
-  // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  // reshaped output grad tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
   std::vector<TBlob> newOutputs = {oblob};
 
+  // reshaped input grad tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
-      attrs, ctx, newOutputs, req, newInputs, rshapes.first);
+      attrs, ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
 struct TileParam : public dmlc::Parameter<TileParam> {
@@ -1473,6 +1483,16 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
 }
 
+/*!
+ * \brief Compute the gradient of the loss function
+ * with respect to the input of the operator.
+ * Backpropagation is employed to implement the
+ * chain rule.
+ * \param inputs the gradient of the loss function
+ * with respect to the outputs of the operator
+ * \param outputs the gradient of the loss function
+ * with respect to the inputs of the operator
+ */
 template<typename xpu>
 void TileOpBackward(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
@@ -1483,7 +1503,7 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1);
 
   if (inputs[0].Size() == 0) return;
-  const TShape& ishape = inputs[0].shape_;
+  const TShape& oshape = outputs[0].shape_;
   const TShape& reps = nnvm::get<TileParam>(attrs.parsed).reps;
 
   // If any one of the number in reps is zero, return immediately
@@ -1491,17 +1511,17 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
     if (0 == reps[i]) return;
   }
 
-  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(ishape, reps);
+  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(oshape, reps);
 
-  // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
-  std::vector<TBlob> newInputs = {iblob};
-  // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  // reshaped output grad tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
   std::vector<TBlob> newOutputs = {oblob};
+  // reshaped input grad tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
-      attrs, ctx, newOutputs, req, newInputs, rshapes.first);
+      attrs, ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
 }  // namespace op

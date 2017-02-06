@@ -2478,23 +2478,26 @@ def test_cast():
             assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=5e-4)
 
 def test_repeat():
-    ndim_max = 6 # max number of dims of the ndarray
-    size_max = 10 # max number of elements in each dim
-    repeats = 3
-    for ndim in range(1, ndim_max+1):
-        shape = ()
-        for i in range(0, ndim):
-            shape += (np.random.randint(1, size_max+1), )
-        a = np.random.random_sample(size=shape)
-        aa = np.repeat(a, repeats)
-        b = mx.nd.array(a, ctx=default_context())
-        bb = mx.nd.repeat(b, repeats).asnumpy()
-        assert_almost_equal(aa, bb)
-
-        for axis in range(0, ndim):
-            aa = np.repeat(a, repeats, axis)
-            bb = mx.nd.repeat(b, repeats, axis).asnumpy()
+    def test_repeat_forward():
+        ndim_max = 6 # max number of dims of the ndarray
+        size_max = 10 # max number of elements in each dim
+        repeats = 3
+        for ndim in range(1, ndim_max+1):
+            shape = ()
+            for i in range(0, ndim):
+                shape += (np.random.randint(1, size_max+1), )
+            a = np.random.random_sample(size=shape)
+            aa = np.repeat(a, repeats)
+            b = mx.nd.array(a, ctx=default_context())
+            bb = mx.nd.repeat(b, repeats).asnumpy()
             assert_almost_equal(aa, bb)
+
+            for axis in range(0, ndim):
+                aa = np.repeat(a, repeats, axis)
+                bb = mx.nd.repeat(b, repeats, axis).asnumpy()
+                assert_almost_equal(aa, bb)
+
+    test_repeat_forward()
 
 def test_tile():
     def test_normal_case():
