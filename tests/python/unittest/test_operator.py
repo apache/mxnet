@@ -2497,7 +2497,46 @@ def test_repeat():
                 bb = mx.nd.repeat(b, repeats, axis).asnumpy()
                 assert_almost_equal(aa, bb)
 
+    def test_repeat_backward(axis):
+        data = mx.sym.Variable('data')
+        n1 = 3
+        n2 = 4
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        arr_data = mx.nd.array(data_tmp)
+        arr_grad = mx.nd.empty(shape)
+        repeats = 2
+        test = mx.sym.repeat(data, repeats=repeats, axis=axis)
+        exe = test.bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
+        npout_grad = np.random.randint(0, 10, n1 * n2 * repeats)
+        if axis == 0:
+            npout_grad = npout_grad.reshape(n1 * repeats, n2)
+        elif axis == 1:
+            npout_grad = npout_grad.reshape(n1, n2 * repeats)
+        else:
+            raise RuntimeError("Invalid axis value")
+        out_grad = mx.nd.array(npout_grad)
+        exe.backward(out_grad)
+
+        expected_grad = np.zeros(shape)
+        if axis == 0:
+            for i in range(shape[0]):
+                for j in range(shape[1]):
+                    k = i * repeats
+                    expected_grad[i][j] = sum(npout_grad[k:k + repeats, j])
+        elif axis == 1:
+            for j in range(shape[1]):
+                for i in range(shape[0]):
+                    k = j * repeats
+                    expected_grad[i][j] = sum(npout_grad[i, k:k + repeats])
+        else:
+            raise RuntimeError("Invalid axis value")
+
+        assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
+
     test_repeat_forward()
+    test_repeat_backward(axis=0)
+    test_repeat_backward(axis=1)
 
 def test_tile():
     def test_normal_case():
@@ -2550,10 +2589,35 @@ def test_tile():
         b_tiled = mx.nd.tile(b, reps).asnumpy()
         assert same(a_tiled, b_tiled)
 
+    def test_tile_backward():
+        data = mx.sym.Variable('data')
+        n1 = 2
+        n2 = 2
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        arr_data = mx.nd.array(data_tmp)
+        arr_grad = mx.nd.empty(shape)
+        reps1 = 2
+        reps2 = 2
+        reps = (reps1, reps2)
+        test = mx.sym.tile(data, reps=reps)
+        exe = test.bind(ctx=mx.context.Context.default_ctx, args=[arr_data], args_grad=[arr_grad])
+        npout_grad = np.random.randint(0, 10, n1 * n2 * reps1 * reps2).reshape(n1 * reps1, n2 * reps2)
+        out_grad = mx.nd.array(npout_grad)
+        exe.backward(out_grad)
+
+        expected_grad = np.zeros(shape)
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                expected_grad[i][j] += sum(sum(npout_grad[i:(n1 * reps1):reps1, j:(n2 * reps2):reps2]))
+
+        assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
+
     test_normal_case()
     test_empty_tensor()
     test_empty_reps()
     test_zero_reps()
+    test_tile_backward()
 
 if __name__ == '__main__':
     test_cast()
