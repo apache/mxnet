@@ -61,7 +61,7 @@ class SequentialModule(BaseModule):
         self._modules.append(module)
 
         # a sanity check to avoid typo
-        for key in kwargs.iterkeys():
+        for key in kwargs.keys():
             assert key in self._meta_keys, ('Unknown meta "%s", a typo?' % key)
 
         self._metas.append(kwargs)
@@ -172,7 +172,7 @@ class SequentialModule(BaseModule):
         def _check_name(known_names, new_names, modules, i):
             """Internal function to help checking duplicated names."""
             for name in new_names:
-                assert not known_names.has_key(name), "Duplicated parameter names: " + \
+                assert not name in known_names, "Duplicated parameter names: " + \
                     ('name "%s" in layer %d (%s) is already ' % (name, i, type(modules[i]))) + \
                     ('used in layer %d (%s).' % (known_names[name],
                                                  type(modules[known_names[name]])))
@@ -182,8 +182,8 @@ class SequentialModule(BaseModule):
         aux_names = dict()
         for i_layer, module in enumerate(self._modules):
             arg_params, aux_params = module.get_params()
-            _check_name(arg_names, arg_params.iterkeys(), self._modules, i_layer)
-            _check_name(aux_names, aux_params.iterkeys(), self._modules, i_layer)
+            _check_name(arg_names, arg_params.keys(), self._modules, i_layer)
+            _check_name(aux_names, aux_params.keys(), self._modules, i_layer)
 
         self.params_initialized = True
 
@@ -233,7 +233,7 @@ class SequentialModule(BaseModule):
         anybody_ever_needs_label = False
         for i_layer, module in enumerate(self._modules):
             meta = self._metas[i_layer]
-            if meta.has_key(SequentialModule.META_TAKE_LABELS) and \
+            if SequentialModule.META_TAKE_LABELS in meta and \
                     meta[SequentialModule.META_TAKE_LABELS]:
                 my_label_shapes = label_shapes
                 anybody_ever_needs_label = True
@@ -324,7 +324,7 @@ class SequentialModule(BaseModule):
         """Backward computation."""
         assert self.binded and self.params_initialized
 
-        for i_layer, module in reversed(zip(range(len(self._modules)), self._modules)):
+        for i_layer, module in reversed(list(zip(range(len(self._modules)), self._modules))):
             module.backward(out_grads=out_grads)
             if i_layer == 0:
                 break
@@ -392,7 +392,7 @@ class SequentialModule(BaseModule):
         assert self.binded and self.params_initialized
 
         for meta, module in zip(self._metas, self._modules):
-            if meta.has_key(SequentialModule.META_TAKE_LABELS) and \
+            if SequentialModule.META_TAKE_LABELS in meta and \
                     meta[SequentialModule.META_TAKE_LABELS]:
                 module.update_metric(eval_metric, labels)
 
