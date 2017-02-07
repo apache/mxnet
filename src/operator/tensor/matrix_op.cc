@@ -230,7 +230,13 @@ NNVM_REGISTER_OP(flip)
 .add_arguments(FlipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(dot)
-.MXNET_DESCRIBE("Calculate dot product of two matrices or two vectors.")
+.MXNET_DESCRIBE(
+  "Calculate dot product of two matrices or two vectors. "
+  "If matrices have more than two dimensions, will do dot "
+  "over the last (or first if transpose_a is true) axis of lhs "
+  "and the first (or last if transpose_b is true) axis of rhs. "
+  "Shape of result array will be the rest of lhs and rhs's axes "
+  "concatenated.")
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<DotParam>)

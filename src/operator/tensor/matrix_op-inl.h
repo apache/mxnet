@@ -352,20 +352,50 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
                  const std::vector<TBlob>& inputs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
   using namespace mshadow::expr;
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
       << "Binary function only support input/output with the same type";
-  CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32)
+  CHECK_EQ(outputs[0].type_flag_, kFloat32)
       << "dot only support 32 bit float so far";
 
-  if (inputs[0].ndim() == 2 && inputs[1].ndim() == 2) {
-    mshadow::Tensor<xpu, 2, real_t> input0 = inputs[0].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> input1 = inputs[1].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> out = outputs[0].FlatTo2D<xpu, real_t>(s);
+  if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
+    CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
+    Tensor<xpu, 1, real_t> out = outputs[0].get<xpu, 1, real_t>(s);
+    VectorDot(out,
+              inputs[0].get<xpu, 1, real_t>(s),
+              inputs[1].get<xpu, 1, real_t>(s));
+  } else {
+    int ma, na, mb, nb, m, n;
+    if (param.transpose_a) {
+      ma = inputs[0].size(0);
+      na = inputs[0].Size()/ma;
+      m = na;
+    } else {
+      na = inputs[0].size(inputs[0].ndim()-1);
+      ma = inputs[0].Size()/na;
+      m = ma;
+    }
+    if (param.transpose_b) {
+      nb = inputs[1].size(inputs[1].ndim()-1);
+      mb = inputs[1].Size()/nb;
+      n = mb;
+    } else {
+      mb = inputs[1].size(0);
+      nb = inputs[1].Size()/mb;
+      n = nb;
+    }
+
+    Tensor<xpu, 2, real_t> input0 =
+      inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
+    Tensor<xpu, 2, real_t> input1 =
+      inputs[1].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
+    Tensor<xpu, 2, real_t> out =
+      outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(m, n), s);
     if (param.transpose_a && param.transpose_b) {
       ASSIGN_DISPATCH(out, req[0], dot(input0.T(), input1.T()));
     } else if (!param.transpose_a && param.transpose_b) {
@@ -375,12 +405,6 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
     } else {
       ASSIGN_DISPATCH(out, req[0], dot(input0, input1));
     }
-  } else {
-    CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
-    mshadow::Tensor<xpu, 1, real_t> out = outputs[0].get<xpu, 1, real_t>(s);
-    mshadow::VectorDot(out,
-                       inputs[0].get<xpu, 1, real_t>(s),
-                       inputs[1].get<xpu, 1, real_t>(s));
   }
 }
 
@@ -390,18 +414,54 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& inputs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
   using namespace mshadow::expr;
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_NE(req[0], kWriteInplace);
   CHECK_NE(req[1], kWriteInplace);
 
-  if (inputs[1].ndim() == 2 && inputs[2].ndim() == 2) {
-    mshadow::Tensor<xpu, 2, real_t> mout_grad = inputs[0].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mlhs_data = inputs[1].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mrhs_data = inputs[2].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mlhs_grad = outputs[0].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mrhs_grad = outputs[1].get<xpu, 2, real_t>(s);
+  if (inputs[1].ndim() == 1 && inputs[2].ndim() == 1) {
+    Tensor<xpu, 1, real_t> mout_grad = inputs[0].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mlhs_data = inputs[1].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mrhs_data = inputs[2].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mlhs_grad = outputs[0].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mrhs_grad = outputs[1].get<xpu, 1, real_t>(s);
+    ASSIGN_DISPATCH(mrhs_grad, req[1],
+                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mlhs_data);
+    ASSIGN_DISPATCH(mlhs_grad, req[0],
+                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mrhs_data);
+  } else {
+    int ma, na, mb, nb, m, n;
+    if (param.transpose_a) {
+      ma = outputs[0].size(0);
+      na = outputs[0].Size()/ma;
+      m = na;
+    } else {
+      na = outputs[0].size(outputs[0].ndim()-1);
+      ma = outputs[0].Size()/na;
+      m = ma;
+    }
+    if (param.transpose_b) {
+      nb = outputs[1].size(outputs[1].ndim()-1);
+      mb = outputs[1].Size()/nb;
+      n = mb;
+    } else {
+      mb = outputs[1].size(0);
+      nb = outputs[1].Size()/mb;
+      n = nb;
+    }
+
+    Tensor<xpu, 2, real_t> mout_grad =
+      inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(m, n), s);
+    Tensor<xpu, 2, real_t> mlhs_data =
+      inputs[1].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
+    Tensor<xpu, 2, real_t> mrhs_data =
+      inputs[2].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
+    Tensor<xpu, 2, real_t> mlhs_grad =
+      outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
+    Tensor<xpu, 2, real_t> mrhs_grad =
+      outputs[1].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
     if (param.transpose_a && param.transpose_b) {
       // Gradient of z = dot(x.T, y.T)
       // dy = dot(x, dz).T = dot(dz.T, x.T)
@@ -427,16 +487,6 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
       ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data.T(), mout_grad));
       ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data.T()));
     }
-  } else {
-    mshadow::Tensor<xpu, 1, real_t> mout_grad = inputs[0].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mlhs_data = inputs[1].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mrhs_data = inputs[2].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mlhs_grad = outputs[0].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mrhs_grad = outputs[1].get<xpu, 1, real_t>(s);
-    ASSIGN_DISPATCH(mrhs_grad, req[1],
-                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mlhs_data);
-    ASSIGN_DISPATCH(mlhs_grad, req[0],
-                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mrhs_data);
   }
 }
 
@@ -448,27 +498,35 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
-  if (lshape.ndim() == 2 && rshape.ndim() == 2) {
-    if (param.transpose_a && param.transpose_b) {
-      CHECK_EQ(lshape[0], rshape[1]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[1], rshape[0]));
-    } else if (!param.transpose_a && param.transpose_b) {
-      CHECK_EQ(lshape[1], rshape[1]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[0], rshape[0]));
-    } else if (param.transpose_a && !param.transpose_b) {
-      CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[1], rshape[1]));
-    } else {
-      CHECK_EQ(lshape[1], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[0], rshape[1]));
-    }
-  } else if (lshape.ndim() == 1 && rshape.ndim() == 1) {
+  if (lshape.ndim() == 1 && rshape.ndim() == 1) {
+    CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
   } else {
-    LOG(FATAL) << "dot currently only support 2D*2D array or 1D*1D array"
-               << lshape << " v.s. " << rshape;
-    return false;
+    bool Ta = param.transpose_a, Tb = param.transpose_b;
+    TShape L[2], R[2];
+    if (Ta) {
+      L[0] = mshadow::Shape1(lshape[0]);
+      L[1] = lshape.ndim() > 1 ? TShape(&lshape[1], &lshape[lshape.ndim()]) : TShape(1);
+    } else {
+      L[0] = lshape.ndim() > 1 ? TShape(&lshape[0], &lshape[lshape.ndim()-1]) : TShape(1);
+      L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
+    }
+    if (Tb) {
+      R[0] = rshape.ndim() > 1 ? TShape(&rshape[0], &rshape[rshape.ndim()-1]) : TShape(1);
+      R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
+    } else {
+      R[0] = mshadow::Shape1(rshape[0]);
+      R[1] = rshape.ndim() > 1 ? TShape(&rshape[1], &rshape[rshape.ndim()]) : TShape(1);
+    }
+
+    CHECK_EQ(L[!Ta].Size(), R[Tb].Size())
+      << "dot shape error: " << lshape << " X " << rshape;
+    std::vector<index_t> buf;
+    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
+    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
+    TShape oshape(buf.begin(), buf.end());
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
   return true;
 }

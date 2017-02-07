@@ -235,7 +235,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         name = node["name"]
         # input data
         attr = copy.deepcopy(node_attr)
-        label = op
+        label = name
 
         if op == "null":
             if looks_like_weight(node["name"]):

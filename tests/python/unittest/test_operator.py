@@ -1404,9 +1404,8 @@ def test_dot(ctx=default_context()):
                 exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
                 assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
                 assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
+
     # Test dot with transpose flag using gradient checker.
-    m1_npy = np.random.normal(0, 1, (3, 4))
-    m2_npy = np.random.normal(0, 1, (4, 5))
     def dot_sym():
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
@@ -1423,10 +1422,13 @@ def test_dot(ctx=default_context()):
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
         return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
-    check_numeric_gradient(dot_sym(), [m1_npy, m2_npy])
-    check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy])
-    check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T])
-    check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T])
+    for ashape, bshape in [((3, 4), (4, 5)), ((2,3,4), (4, 5, 6))]:
+        m1_npy = np.random.normal(0, 1, ashape)
+        m2_npy = np.random.normal(0, 1, bshape)
+        check_numeric_gradient(dot_sym(), [m1_npy, m2_npy], check_eps=2e-2)
+        check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy], check_eps=2e-2)
+        check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T], check_eps=2e-2)
+        check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T], check_eps=2e-2)
 
 def test_batch_dot():
     for batch_size in range(1, 5):
@@ -2645,6 +2647,7 @@ def test_tile():
     test_tile_numeric_gradient()
 
 if __name__ == '__main__':
+    test_dot()
     test_cast()
     test_clip()
     test_index2d()
@@ -2683,7 +2686,6 @@ if __name__ == '__main__':
     test_reshape()
     test_broadcast()
     test_stn()
-    test_dot()
     test_batch_dot()
     test_correlation()
     test_support_vector_machine_l1_svm()
