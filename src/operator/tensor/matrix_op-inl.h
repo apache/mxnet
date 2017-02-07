@@ -8,9 +8,12 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <algorithm>
+#include <utility>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
+#include "broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -349,20 +352,50 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
                  const std::vector<TBlob>& inputs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
   using namespace mshadow::expr;
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
       << "Binary function only support input/output with the same type";
-  CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32)
+  CHECK_EQ(outputs[0].type_flag_, kFloat32)
       << "dot only support 32 bit float so far";
 
-  if (inputs[0].ndim() == 2 && inputs[1].ndim() == 2) {
-    mshadow::Tensor<xpu, 2, real_t> input0 = inputs[0].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> input1 = inputs[1].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> out = outputs[0].FlatTo2D<xpu, real_t>(s);
+  if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
+    CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
+    Tensor<xpu, 1, real_t> out = outputs[0].get<xpu, 1, real_t>(s);
+    VectorDot(out,
+              inputs[0].get<xpu, 1, real_t>(s),
+              inputs[1].get<xpu, 1, real_t>(s));
+  } else {
+    int ma, na, mb, nb, m, n;
+    if (param.transpose_a) {
+      ma = inputs[0].size(0);
+      na = inputs[0].Size()/ma;
+      m = na;
+    } else {
+      na = inputs[0].size(inputs[0].ndim()-1);
+      ma = inputs[0].Size()/na;
+      m = ma;
+    }
+    if (param.transpose_b) {
+      nb = inputs[1].size(inputs[1].ndim()-1);
+      mb = inputs[1].Size()/nb;
+      n = mb;
+    } else {
+      mb = inputs[1].size(0);
+      nb = inputs[1].Size()/mb;
+      n = nb;
+    }
+
+    Tensor<xpu, 2, real_t> input0 =
+      inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
+    Tensor<xpu, 2, real_t> input1 =
+      inputs[1].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
+    Tensor<xpu, 2, real_t> out =
+      outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(m, n), s);
     if (param.transpose_a && param.transpose_b) {
       ASSIGN_DISPATCH(out, req[0], dot(input0.T(), input1.T()));
     } else if (!param.transpose_a && param.transpose_b) {
@@ -372,12 +405,6 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
     } else {
       ASSIGN_DISPATCH(out, req[0], dot(input0, input1));
     }
-  } else {
-    CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
-    mshadow::Tensor<xpu, 1, real_t> out = outputs[0].get<xpu, 1, real_t>(s);
-    mshadow::VectorDot(out,
-                       inputs[0].get<xpu, 1, real_t>(s),
-                       inputs[1].get<xpu, 1, real_t>(s));
   }
 }
 
@@ -387,18 +414,54 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& inputs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
   using namespace mshadow::expr;
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_NE(req[0], kWriteInplace);
   CHECK_NE(req[1], kWriteInplace);
 
-  if (inputs[1].ndim() == 2 && inputs[2].ndim() == 2) {
-    mshadow::Tensor<xpu, 2, real_t> mout_grad = inputs[0].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mlhs_data = inputs[1].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mrhs_data = inputs[2].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mlhs_grad = outputs[0].get<xpu, 2, real_t>(s);
-    mshadow::Tensor<xpu, 2, real_t> mrhs_grad = outputs[1].get<xpu, 2, real_t>(s);
+  if (inputs[1].ndim() == 1 && inputs[2].ndim() == 1) {
+    Tensor<xpu, 1, real_t> mout_grad = inputs[0].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mlhs_data = inputs[1].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mrhs_data = inputs[2].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mlhs_grad = outputs[0].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1, real_t> mrhs_grad = outputs[1].get<xpu, 1, real_t>(s);
+    ASSIGN_DISPATCH(mrhs_grad, req[1],
+                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mlhs_data);
+    ASSIGN_DISPATCH(mlhs_grad, req[0],
+                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mrhs_data);
+  } else {
+    int ma, na, mb, nb, m, n;
+    if (param.transpose_a) {
+      ma = outputs[0].size(0);
+      na = outputs[0].Size()/ma;
+      m = na;
+    } else {
+      na = outputs[0].size(outputs[0].ndim()-1);
+      ma = outputs[0].Size()/na;
+      m = ma;
+    }
+    if (param.transpose_b) {
+      nb = outputs[1].size(outputs[1].ndim()-1);
+      mb = outputs[1].Size()/nb;
+      n = mb;
+    } else {
+      mb = outputs[1].size(0);
+      nb = outputs[1].Size()/mb;
+      n = nb;
+    }
+
+    Tensor<xpu, 2, real_t> mout_grad =
+      inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(m, n), s);
+    Tensor<xpu, 2, real_t> mlhs_data =
+      inputs[1].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
+    Tensor<xpu, 2, real_t> mrhs_data =
+      inputs[2].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
+    Tensor<xpu, 2, real_t> mlhs_grad =
+      outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
+    Tensor<xpu, 2, real_t> mrhs_grad =
+      outputs[1].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
     if (param.transpose_a && param.transpose_b) {
       // Gradient of z = dot(x.T, y.T)
       // dy = dot(x, dz).T = dot(dz.T, x.T)
@@ -424,16 +487,6 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
       ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data.T(), mout_grad));
       ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data.T()));
     }
-  } else {
-    mshadow::Tensor<xpu, 1, real_t> mout_grad = inputs[0].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mlhs_data = inputs[1].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mrhs_data = inputs[2].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mlhs_grad = outputs[0].get<xpu, 1, real_t>(s);
-    mshadow::Tensor<xpu, 1, real_t> mrhs_grad = outputs[1].get<xpu, 1, real_t>(s);
-    ASSIGN_DISPATCH(mrhs_grad, req[1],
-                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mlhs_data);
-    ASSIGN_DISPATCH(mlhs_grad, req[0],
-                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mrhs_data);
   }
 }
 
@@ -445,27 +498,35 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
-  if (lshape.ndim() == 2 && rshape.ndim() == 2) {
-    if (param.transpose_a && param.transpose_b) {
-      CHECK_EQ(lshape[0], rshape[1]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[1], rshape[0]));
-    } else if (!param.transpose_a && param.transpose_b) {
-      CHECK_EQ(lshape[1], rshape[1]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[0], rshape[0]));
-    } else if (param.transpose_a && !param.transpose_b) {
-      CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[1], rshape[1]));
-    } else {
-      CHECK_EQ(lshape[1], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(lshape[0], rshape[1]));
-    }
-  } else if (lshape.ndim() == 1 && rshape.ndim() == 1) {
+  if (lshape.ndim() == 1 && rshape.ndim() == 1) {
+    CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
   } else {
-    LOG(FATAL) << "dot currently only support 2D*2D array or 1D*1D array"
-               << lshape << " v.s. " << rshape;
-    return false;
+    bool Ta = param.transpose_a, Tb = param.transpose_b;
+    TShape L[2], R[2];
+    if (Ta) {
+      L[0] = mshadow::Shape1(lshape[0]);
+      L[1] = lshape.ndim() > 1 ? TShape(&lshape[1], &lshape[lshape.ndim()]) : TShape(1);
+    } else {
+      L[0] = lshape.ndim() > 1 ? TShape(&lshape[0], &lshape[lshape.ndim()-1]) : TShape(1);
+      L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
+    }
+    if (Tb) {
+      R[0] = rshape.ndim() > 1 ? TShape(&rshape[0], &rshape[rshape.ndim()-1]) : TShape(1);
+      R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
+    } else {
+      R[0] = mshadow::Shape1(rshape[0]);
+      R[1] = rshape.ndim() > 1 ? TShape(&rshape[1], &rshape[rshape.ndim()]) : TShape(1);
+    }
+
+    CHECK_EQ(L[!Ta].Size(), R[Tb].Size())
+      << "dot shape error: " << lshape << " X " << rshape;
+    std::vector<index_t> buf;
+    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
+    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
+    TShape oshape(buf.begin(), buf.end());
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
   return true;
 }
@@ -1131,6 +1192,395 @@ void Flip(const nnvm::NodeAttrs& attrs,
       break;
     }
   });
+}
+
+/*!
+ * \brief The parameters of the repeat operator include
+ * the number of repeating time and axis (optional).
+ * The parameters will be later used to deduce the
+ * output ndarray shape in bool RepeatShape() function.
+ */
+struct RepeatParam : public dmlc::Parameter<RepeatParam> {
+  int repeats = 1;
+  dmlc::optional<int> axis;
+  DMLC_DECLARE_PARAMETER(RepeatParam) {
+    DMLC_DECLARE_FIELD(repeats)
+      .describe("The number of repetitions for each element.");
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(dmlc::optional<int>())
+      .describe("The axis along which to repeat values."
+                " The negative numbers are interpreted counting from the backward."
+                " By default, use the flattened input array,"
+                " and return a flat output array.");
+  }
+};
+
+/*!
+ * \brief Helper function for getting user input params for the operator repeat.
+ * Sanity check the user input values.
+ */
+inline void GetRepeatParams(const RepeatParam& param, const TShape& ishape,
+                            int* repeats, dmlc::optional<int>* axisOpt) {
+  *repeats = param.repeats;
+  CHECK_GE(*repeats, 0) << "repeats cannot be a negative number";
+  *axisOpt = param.axis;
+  if (static_cast<bool>(*axisOpt)) {
+    int ndims = static_cast<int>(ishape.ndim());
+    int axis = axisOpt->value();
+    if (axis < 0) {
+      axis += ndims;
+    }
+    CHECK(axis >= 0 && axis < ndims) << "axis = " << axisOpt->value() << " out of bounds";
+  }
+}
+
+inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_attrs,
+                        std::vector<TShape> *out_attrs) {
+  const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const TShape& ishape = (*in_attrs)[0];
+  int repeats = 0;
+  dmlc::optional<int> axisOpt;
+  GetRepeatParams(param, ishape, &repeats, &axisOpt);
+  // If 0 repeats, return an empty 0 dim array
+  if (0 == repeats) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape());
+    return true;
+  }
+
+  // If repeats > 0, multiply the size of the corresponding axis by repeats
+  if (static_cast<bool>(axisOpt)) {
+    int ndims = static_cast<int>(ishape.ndim());
+    int axis = axisOpt.value();
+    if (axis < 0) {
+      axis += ndims;
+    }
+    TShape shape(ishape.ndim());
+    for (index_t i = 0; i < ishape.ndim(); ++i) {
+      if (static_cast<int>(i) == axis) {
+        shape[i] = static_cast<index_t>(repeats) * ishape[i];
+      } else {
+        shape[i] = ishape[i];
+      }
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  } else {  // If axis is not input by user, return a flat 1D array of size = in.size*repeats
+    TShape shape(1);
+    shape[0] = ishape.Size() * static_cast<index_t>(repeats);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  }
+  return true;
+}
+
+inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int>* in_attrs,
+                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  if ((*in_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else if ((*out_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  }
+  return true;
+}
+
+/*!
+ * \brief Reshape the input and output tensors for
+ * using broadcast_to to achieve the funcitonality
+ * of operator repeat.
+ * \return a pair of TShape's, first is the reshaped
+ * input shape, second is the reshaped output shape.
+ */
+inline std::pair<TShape, TShape> ReshapeInputOutputForRepeatOp(const TShape& ishape,
+                                                               const dmlc::optional<int>& axisOpt,
+                                                               const int repeats) {
+  if (static_cast<bool>(axisOpt)) {
+    int axis = axisOpt.value();
+    int ndim = static_cast<int>(ishape.ndim());
+    if (axis < 0)  {
+      axis += ndim;
+    }
+    CHECK(axis >= 0 && axis < static_cast<int>(ishape.ndim())) << "Invalid input of axis";
+
+    // reshape the input tensor by adding a dim at the (axis+1)-th dim
+    TShape rshape(ishape.ndim()+1);
+    // the shape we want to broadcast to
+    TShape bshape(rshape.ndim());
+    int i = 0;
+    while (i <= axis) {
+      rshape[i] = bshape[i] = ishape[i];
+      ++i;
+    }
+    rshape[i] = 1;
+    bshape[i] = repeats;
+    while (i < static_cast<int>(ishape.ndim())) {
+      rshape[i+1] = ishape[i];
+      bshape[i+1] = ishape[i];
+      ++i;
+    }
+    return std::make_pair(rshape, bshape);
+  } else {
+    // axis is not input by user
+    // reshape the tensor into shape (ishape.Size(), 1)
+    // then add one dim at axis = 1 and broadcast to
+    // shape (ishape.Size(), repeats)
+    TShape rshape(2);
+    rshape[0] = ishape.Size();
+    rshape[1] = 1;
+
+    TShape bshape(2);
+    bshape[0] = rshape[0];
+    bshape[1] = repeats;
+    return std::make_pair(rshape, bshape);
+  }
+}
+
+template<typename xpu>
+void RepeatOpForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  const TBlob& iTBlob = inputs[0];
+  const TShape& ishape = iTBlob.shape_;
+  if (ishape.ndim() == 0) return;
+
+  int repeats = 0;
+  dmlc::optional<int> axisOpt;
+  const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
+  GetRepeatParams(param, ishape, &repeats, &axisOpt);
+  if (0 == repeats) return;
+
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForRepeatOp(ishape, axisOpt, repeats);
+
+  // reshaped input tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+
+  // reshaped output tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
+
+  BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
+}
+
+/*!
+ * \brief Compute the gradient of the loss function
+ * with respect to the input of the operator.
+ * Backpropagation is employed to implement the
+ * chain rule.
+ * \param inputs the gradient of the loss function
+ * with respect to the outputs of the operator
+ * \param outputs the gradient of the loss function
+ * with respect to the inputs of the operator
+ */
+template<typename xpu>
+void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+
+  const TShape& oshape = outputs[0].shape_;
+  if (oshape.ndim() == 0) return;
+
+  int repeats = 0;
+  dmlc::optional<int> axisOpt;
+  const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
+  GetRepeatParams(param, oshape, &repeats, &axisOpt);
+  if (0 == repeats) return;
+
+  std::pair<TShape, TShape> rshapes =
+    ReshapeInputOutputForRepeatOp(oshape, axisOpt, repeats);
+
+  // reshaped output grad tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
+
+  // reshaped input grad tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+      attrs, ctx, newInputs, req, newOutputs, rshapes.first);
+}
+
+struct TileParam : public dmlc::Parameter<TileParam> {
+  TShape reps;
+  DMLC_DECLARE_PARAMETER(TileParam) {
+    DMLC_DECLARE_FIELD(reps)
+      .describe("The number of times for repeating the tensor a."
+                " If reps has length d, the result will have dimension of max(d, a.ndim);"
+                " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
+                " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
+  }
+};
+
+inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_attrs,
+                        std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const TileParam& param = nnvm::get<TileParam>(attrs.parsed);
+  const TShape& ishape = (*in_attrs)[0];
+  const TShape& reps = param.reps;
+  // If reps is empty, return a identical input array
+  if (reps.ndim() == 0 || ishape.ndim() == 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
+    return true;
+  }
+  TShape oshape(std::max(ishape.ndim(), reps.ndim()));
+  int i1 = static_cast<int>(ishape.ndim()) - 1;
+  int i2 = static_cast<int>(reps.ndim()) - 1;
+  for (int i = static_cast<int>(oshape.ndim()) - 1; i >= 0; --i) {
+    if (i1 >= 0 && i2 >= 0) {
+      oshape[i] = ishape[i1--] * reps[i2--];
+    } else if (i1 >= 0) {
+      oshape[i] = ishape[i1--];
+    } else if (i2 >= 0) {
+      oshape[i] = reps[i2--];
+    }
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
+inline bool TileOpType(const nnvm::NodeAttrs& attrs,
+                       std::vector<int>* in_attrs,
+                       std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  if ((*in_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else if ((*out_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  }
+  return true;
+}
+
+/*!
+ * \brief Reshape the input and output tensors for
+ * using broadcast_to to achieve the funcitonality
+ * of operator tile.
+ * \return a pair of TShape's, first is the reshaped
+ * input shape, second is the reshaped output shape.
+ */
+inline std::pair<TShape, TShape> ReshapeInputOutputForTileOp(const TShape& ishape,
+                                                             const TShape& reps) {
+  if (ishape.ndim() == 0 || reps.ndim() == 0) {
+    return std::make_pair(ishape, ishape);
+  }
+
+  // The shape we want to broadcast to
+  TShape bshape(std::max(ishape.ndim(), reps.ndim()) * 2);
+
+  // The shape of the input tensor after adding new axes before each dim
+  TShape rshape(bshape.ndim());
+
+  int i1 = static_cast<int>(ishape.ndim()) - 1;
+  int i2 = static_cast<int>(reps.ndim()) - 1;
+  for (int i = static_cast<int>(bshape.ndim()) - 1; i >= 0; --i) {
+    if (0 == (i & 1)) {
+      bshape[i] = (i2 >= 0? reps[i2--] : 1);
+      rshape[i] = 1;
+    } else {
+      rshape[i] = bshape[i] = (i1 >= 0? ishape[i1--] : 1);
+    }
+  }
+
+  return std::make_pair(rshape, bshape);
+}
+
+/*!
+ * \brief Implementation of tiling the input tensor a based
+ * on the user-input shape, reps.
+ * If a.ndim < reps.ndim, new axes are pre-pended to a. For example,
+ * the input tensor has shape (3,), and the reps is (2, 4); the input
+ * tensor would be reshaped to (1, 3).
+ * If a.ndim > reps.ndim, pre-pending 1's to reps. For example,
+ * the input tensor has shape (2, 3, 4, 5), and reps is (2, 2);
+ * the reps would be changed to (1, 1, 2, 2).
+ * Suppose we have a.ndim = reps.ndim now. To achieve tiling,
+ * we utilize the operator broadcast_to. For example, for a tensor
+ * of shape (2, 3, 4, 5) and reps (2, 8, 9, 3), we first reshape
+ * the tensor to the shape (1, 2, 1, 3, 1, 4, 1, 5) by adding
+ * one axis before each dimension. Then, we want to broadcast
+ * the new tensor to shape (2, 2, 8, 3, 9, 4, 3, 5). The final
+ * output tensor would have shape (2*2, 8*3, 9*4, 3*5).
+ */
+template<typename xpu>
+void TileOpForward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+
+  if (inputs[0].Size() == 0) return;
+  const TShape& ishape = inputs[0].shape_;
+  const TShape& reps = nnvm::get<TileParam>(attrs.parsed).reps;
+
+  // If any one of the number in reps is zero, return immediately
+  for (index_t i = 0; i < reps.ndim(); ++i) {
+    if (0 == reps[i]) return;
+  }
+
+  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(ishape, reps);
+
+  // reshaped input tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+  // reshaped output tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
+
+  BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
+}
+
+/*!
+ * \brief Compute the gradient of the loss function
+ * with respect to the input of the operator.
+ * Backpropagation is employed to implement the
+ * chain rule.
+ * \param inputs the gradient of the loss function
+ * with respect to the outputs of the operator
+ * \param outputs the gradient of the loss function
+ * with respect to the inputs of the operator
+ */
+template<typename xpu>
+void TileOpBackward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+
+  if (inputs[0].Size() == 0) return;
+  const TShape& oshape = outputs[0].shape_;
+  const TShape& reps = nnvm::get<TileParam>(attrs.parsed).reps;
+
+  // If any one of the number in reps is zero, return immediately
+  for (index_t i = 0; i < reps.ndim(); ++i) {
+    if (0 == reps[i]) return;
+  }
+
+  std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(oshape, reps);
+
+  // reshaped output grad tblob
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  std::vector<TBlob> newOutputs = {oblob};
+  // reshaped input grad tblob
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  std::vector<TBlob> newInputs = {iblob};
+
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+      attrs, ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
 }  // namespace op
