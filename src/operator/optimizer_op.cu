@@ -18,7 +18,7 @@ NNVM_REGISTER_OP(sgd_mom_update)
 NNVM_REGISTER_OP(adam_update)
 .set_attr<FCompute>("FCompute<gpu>", AdamUpdate<gpu>);
 
-NNVM_REGISTER_OP(RMSProp_update)
+NNVM_REGISTER_OP(rmsprop_update)
 .set_attr<FCompute>("FCompute<gpu>", RMSPropUpdate<gpu>);
 
 }  // namespace op
