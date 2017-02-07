@@ -14,13 +14,14 @@ Topics:
 Create `mxnet.ndarray` as follows:
 
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> // all-zero array of dimension 100x50
-    scala> val a = NDArray.zeros(100, 50)
-    scala> // all-one array of dimension 256x32x128x1
-    scala> val b = NDArray.ones(256, 32, 128, 1)
-    scala> // initialize array with contents, you can specify dimensions of array using Shape parameter while creating array.
-    scala> val c = NDArray.array(Array(1, 2, 3, 4, 5, 6), shape = Shape(2, 3))
+    import ml.dmlc.mxnet._
+    // all-zero array of dimension 100x50
+    val a = NDArray.zeros(100, 50)
+    // all-one array of dimension 256x32x128x1
+    val b = NDArray.ones(256, 32, 128, 1)
+    // Initialize array with contents.
+    // You can specify dimensions of an array using the Shape parameter while creating array.
+    val c = NDArray.array(Array(1, 2, 3, 4, 5, 6), shape = Shape(2, 3))
 ```
 This is similar to the way you use `numpy`.
 ## NDArray Operations
@@ -29,127 +30,154 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 
 ### Arithmetic Operations
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val a = NDArray.zeros(100, 50)
-    scala> a.shape
-    ml.dmlc.mxnet.Shape = (100,50)
-    scala> val b = NDArray.ones(100, 50)
-    scala> // c and d will be calculated in parallel here!
-    scala> val c = a + b
-    scala> val d = a - b
-    scala> // inplace operation, b's contents will be modified, but c and d won't be affected.
-    scala> b += d
+    import ml.dmlc.mxnet._
+    val a = NDArray.zeros(100, 50)
+    a.shape
+    val b = NDArray.ones(100, 50)
+    // c and d will be calculated in parallel here!
+    val c = a + b
+    val d = a - b
+    // inplace operation, b's contents will be modified, but c and d won't be affected.
+    b += d
 ```
+
+Output:
+```scala
+    ml.dmlc.mxnet.Shape = (100,50)
+```
+
 ### Multiplication/Division Operations
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
+    import ml.dmlc.mxnet._
     //Multiplication
-    scala> val ndones = NDArray.ones(2, 1)
-    scala> val ndtwos = ndones * 2
-    scala> ndtwos.toArray
-    Array[Float] = Array(2.0, 2.0)
-    scala> (ndones * ndones).toArray
-    Array[Float] = Array(1.0, 1.0)
-    scala> (ndtwos * ndtwos).toArray
-    Array[Float] = Array(4.0, 4.0)
-    scala> ndtwos *= ndtwos // inplace
-    scala> ndtwos.toArray
-    Array[Float] = Array(4.0, 4.0)
+    val ndones = NDArray.ones(2, 1)
+    val ndtwos = ndones * 2
+    ndtwos.toArray
+    (ndones * ndones).toArray
+    (ndtwos * ndtwos).toArray
+    ndtwos *= ndtwos // inplace
+    ndtwos.toArray
 
     //Division
-    scala> val ndones = NDArray.ones(2, 1)
-    scala> val ndzeros = ndones - 1f
-    scala> val ndhalves = ndones / 2
-    scala> ndhalves.toArray
+    val ndones = NDArray.ones(2, 1)
+    val ndzeros = ndones - 1f
+    val ndhalves = ndones / 2
+    ndhalves.toArray
+    (ndhalves / ndhalves).toArray
+    (ndones / ndones).toArray
+    (ndzeros / ndones).toArray
+    ndhalves /= ndhalves
+    ndhalves.toArray
+```
+
+Output:
+```scala
+    Array[Float] = Array(2.0, 2.0)
+    Array[Float] = Array(1.0, 1.0)
+    Array[Float] = Array(4.0, 4.0)
+    Array[Float] = Array(4.0, 4.0)
+
     Array[Float] = Array(0.5, 0.5)
-    scala> (ndhalves / ndhalves).toArray
     Array[Float] = Array(1.0, 1.0)
-    scala> (ndones / ndones).toArray
     Array[Float] = Array(1.0, 1.0)
-    scala> (ndzeros / ndones).toArray
     Array[Float] = Array(0.0, 0.0)
-    scala> ndhalves /= ndhalves
-    scala> ndhalves.toArray
     Array[Float] = Array(1.0, 1.0)
 ```
 
 ### Slice Operations
 
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val a = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Shape(3, 2))
-    scala> val a1 = a.slice(1)   
-    scala> assert(a1.shape === Shape(1, 2))
-    scala> assert(a1.toArray === Array(3f, 4f))
+    import ml.dmlc.mxnet._
+    val a = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Shape(3, 2))
+    val a1 = a.slice(1)   
+    assert(a1.shape === Shape(1, 2))
+    assert(a1.toArray === Array(3f, 4f))
 
-    scala> val a2 = arr.slice(1, 3)
-    scala> assert(a2.shape === Shape(2, 2))
-    scala> assert(a2.toArray === Array(3f, 4f, 5f, 6f))
+    val a2 = arr.slice(1, 3)
+    assert(a2.shape === Shape(2, 2))
+    assert(a2.toArray === Array(3f, 4f, 5f, 6f))
 ```
 
 ### Dot Product
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val arr1 = NDArray.array(Array(1f, 2f), shape = Shape(1, 2))
-    scala> val arr2 = NDArray.array(Array(3f, 4f), shape = Shape(2, 1))   
-    scala> val res = NDArray.dot(arr1, arr2)
-    scala> res.shape
+     import ml.dmlc.mxnet._
+     val arr1 = NDArray.array(Array(1f, 2f), shape = Shape(1, 2))
+     val arr2 = NDArray.array(Array(3f, 4f), shape = Shape(2, 1))   
+     val res = NDArray.dot(arr1, arr2)
+     res.shape
+     res.toArray
+```
+
+Output:
+```scala
     ml.dmlc.mxnet.Shape = (1,1)
-    scala> res.toArray
     Array[Float] = Array(11.0)
 ```
 
 ### Save and Load NDArray
 
-You can use pickle to save and load NDArrays.
-Or, you can use MXNet functions to save and load a list or dictionary of NDArrays from file systems.
+You can use MXNet functions to save and load a list or dictionary of NDArrays from file systems, as follows:
 
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val a = NDArray.zeros(100, 200)
-    scala> val b = NDArray.zeros(100, 200)
-    scala> // save list of NDArrays
-    scala> NDArray.save("/path/to/array/file", Array(a, b))
-    scala> // save dictionary of NDArrays to AWS S3
-    scala> NDArray.save("s3://path/to/s3/array", Map("A" -> a, "B" -> b))
-    scala> // save list of NDArrays to hdfs.
-    scala> NDArray.save("hdfs://path/to/hdfs/array", Array(a, b))
-    scala> val from_file = NDArray.load("/path/to/array/file")
-    scala> val from_s3 = NDArray.load("s3://path/to/s3/array")
-    scala> val from_hdfs = NDArray.load("hdfs://path/to/hdfs/array")
+    import ml.dmlc.mxnet._
+    val a = NDArray.zeros(100, 200)
+    val b = NDArray.zeros(100, 200)
+    // save list of NDArrays
+    NDArray.save("/path/to/array/file", Array(a, b))
+    // save dictionary of NDArrays to AWS S3
+    NDArray.save("s3://path/to/s3/array", Map("A" -> a, "B" -> b))
+    // save list of NDArrays to hdfs.
+    NDArray.save("hdfs://path/to/hdfs/array", Array(a, b))
+    val from_file = NDArray.load("/path/to/array/file")
+    val from_s3 = NDArray.load("s3://path/to/s3/array")
+    val from_hdfs = NDArray.load("hdfs://path/to/hdfs/array")
 ```
 The good thing about using the `save` and `load` interface is that you can use the format across all `mxnet` language bindings. They also already support Amazon S3 and HDFS.
 
 ### Multi-Device Support
 
-Device information is stored in the `mxnet.Context` structure. When creating NDArray in MXNet, you can use either the context argument (the default is the CPU context) to create arrays on specific devices as follows:
+Device information is stored in the `mxnet.Context` structure. When creating NDArray in MXNet, you can use the context argument (the default is the CPU context) to create arrays on specific devices as follows:
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val cpu_a = NDArray.zeros(100, 200)
-    scala> cpu_a.context
+    import ml.dmlc.mxnet._
+    val cpu_a = NDArray.zeros(100, 200)
+    cpu_a.context
+    val ctx = Context.gpu(0)
+    val gpu_b = NDArray.zeros(Shape(100, 200), ctx)
+    gpu_b.context
+```
+
+Output:
+```scala
     ml.dmlc.mxnet.Context = cpu(0)
-    scala> val ctx = Context.gpu(0)
-    scala> val gpu_b = NDArray.zeros(Shape(100, 200), ctx)
-    scala> gpu_b.context
     ml.dmlc.mxnet.Context = gpu(0)
 ```
 
 Currently, we *do not* allow operations among arrays from different contexts. To manually enable this, use the `copyto` member function to copy the content to different devices, and continue computation:
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val x = NDArray.zeros(100, 200)
-    scala> val ctx = Context.gpu(0)
-    scala> val y = NDArray.zeros(Shape(100, 200), ctx)
-    scala> val z = x + y
-    mxnet.base.MXNetError: [13:29:12] src/ndarray/ndarray.cc:33: Check failed: lhs.ctx() == rhs.ctx() operands context mismatch
-    scala> val cpu_y = NDArray.zeros(100, 200)
-    scala> y.copyto(cpu_y)
-    scala> val z = x + cpu_y
+    import ml.dmlc.mxnet._
+    val x = NDArray.zeros(100, 200)
+    val ctx = Context.gpu(0)
+    val y = NDArray.zeros(Shape(100, 200), ctx)
+    val z = x + y
+    val cpu_y = NDArray.zeros(100, 200)
+    y.copyto(cpu_y)
+    val z = x + cpu_y
+```
+
+Output:
+```scala
+    mxnet.base.MXNetError: [13:29:12] src/ndarray/ndarray.cc:33:
+    Check failed: lhs.ctx() == rhs.ctx() operands context mismatch
 ```
 
 ## Next Steps
