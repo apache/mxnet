@@ -786,6 +786,17 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
         name = 'arg_%d'%k
         assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
+def check_bilinear_upsampling_with_shape(shapes, scale, root_scale):
+    arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_context()) for i, shape in zip(range(len(shapes)), shapes)}
+    arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
+
+    up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='bilinear', scale=root_scale)
+    exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
+    exe.forward(is_train=True)
+    exe.backward(exe.outputs)
+    for k in range(len(shapes)):
+        name = 'arg_%d'%k
+        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 def test_nearest_upsampling():
     for root_scale in [1,2,3]:
