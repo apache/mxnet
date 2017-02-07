@@ -15,9 +15,6 @@
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_op.h"
 #include "../operator_common.h"
-#ifdef __CUDACC__
-#include <cub/cub.cuh>
-#endif
 
 namespace mxnet {
 namespace op {
@@ -151,6 +148,7 @@ MSHADOW_XINLINE void assign(DType& dst, const bool addto, const DType src) {
   }
 }
 
+#if 1
 template<typename DType, typename OP>
 MSHADOW_XINLINE void binary_broadcast_assign(const int idx, const bool addto,
                                              const DType* lhs, const DType* rhs, DType* out,
@@ -160,7 +158,16 @@ MSHADOW_XINLINE void binary_broadcast_assign(const int idx, const bool addto,
   unravel_ravel(idx, oshape, lshape, rshape, j, k);
   assign(out[idx], addto, OP::Map(lhs[j], rhs[k]));
 }
-
+template<typename DType, typename OP>
+MSHADOW_XINLINE void binary_broadcast_assign(const int idx, const bool addto,
+                                             const DType* lhs, const DType* rhs, DType* out,
+                                             const CShape& lshape, const CShape& rshape,
+                                             const CShape& oshape) {
+  int j, k;
+  unravel_ravel(idx, oshape, lshape, rshape, j, k);
+  assign(out[idx], addto, OP::Map(lhs[j], rhs[k]));
+}
+#else
 template<typename DType, typename OP>
 MSHADOW_XINLINE void binary_broadcast_assign(const int idx, const bool addto,
                                              const DType* lhs, const DType* rhs, DType* out,
@@ -173,6 +180,7 @@ MSHADOW_XINLINE void binary_broadcast_assign(const int idx, const bool addto,
   unravel_ravel(idx, oshape, lshape, rshape, j, k);
   assign(out[idx], addto, OP::Map(lhs[j], rhs[k]));
 }
+#endif
 
 template<typename Reducer, typename DType, typename OP>
 MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
@@ -191,8 +199,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
 
 #ifdef __CUDACC__
 
-#include <cub/device/device_reduce.cuh>
-
+#if 0
 // Parallel unravel + ravel for cases where idx is constant across warp
 __forceinline__ __device__ int par_unravel_ravel(const int idx, const int shape, const int prod,
   const int stride) {
@@ -219,27 +226,38 @@ __forceinline__ __device__ void seq_reduce_assign(const int idx, const int M, co
   }
   assign(small[idx], addto, val);
 }
+#endif
 
 template<typename DType>
 using CTensor = Tensor<gpu, MAX_DIM, DType>;
 
+#if 1
 template<typename DType, typename OP>
-__global__ void binary_broadcast_kernel(const int N, const bool addto, const DType *lhs,
-                                        const DType *rhs, DType *out, const CShapeWP lshape,
+__global__ void binary_broadcast_kernel(const int N, const bool addto, const DType* __restrict__ lhs,
+                                        const DType* __restrict__ rhs, DType *out, const CShapeWP lshape,
                                         const CShapeWP rshape, const CShape oshape) {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += blockDim.x * gridDim.x) {
     binary_broadcast_assign<DType, OP>(idx, addto, lhs, rhs, out, lshape, rshape, oshape);
   }
 }
-
 template<typename DType, typename OP>
-__global__ void binary_broadcast_kernel(const int N, const bool addto, const DType *lhs,
-                                        const DType *rhs, DType *out, const CShape lshape,
+__global__ void binary_broadcast_kernel(const int N, const bool addto, const DType* __restrict__ lhs,
+                                        const DType* __restrict__ rhs, DType *out, const CShape lshape,
                                         const CShape rshape, const CShape oshape) {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += blockDim.x * gridDim.x) {
     binary_broadcast_assign<DType, OP>(idx, addto, lhs, rhs, out, lshape, rshape, oshape);
   }
 }
+#else
+template<typename DType, typename OP>
+__global__ void binary_broadcast_kernel(const int N, const bool addto, const DType* __restrict__ lhs,
+                                        const DType* __restrict__ rhs, DType *out, const CShape lshape,
+                                        const CShape rshape, const CShape oshape) {
+  for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += blockDim.x * gridDim.x) {
+    binary_broadcast_assign<DType, OP>(idx, addto, lhs, rhs, out, lshape, rshape, oshape);
+  }
+}
+#endif
 
 template<typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
@@ -248,18 +266,24 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   int N = out.shape_.Size();
-  int nthread = kMaxThreadsPerBlock / 2;
+  int nthread = kBaseThreadNum;
   int ngrid = std::min(kBaseGridNum, (N + nthread - 1) / nthread);
-  CShapeWP lhs_shape(lhs.shape_);
-  CShapeWP rhs_shape(rhs.shape_);
-  lhs_shape.SetProd();
-  rhs_shape.SetProd();
+#if 1
+  // CShapeWP lhs_shape(lhs.shape_);
+  // CShapeWP rhs_shape(rhs.shape_);
+  // lhs_shape.SetProd();
+  // rhs_shape.SetProd();
+  // binary_broadcast_kernel<DType, OP><<<ngrid, nthread, 0, stream>>>(
+  //   N, req == kAddTo, lhs.dptr_, rhs.dptr_, out.dptr_, lhs_shape, rhs_shape, out.shape_);
   binary_broadcast_kernel<DType, OP><<<ngrid, nthread, 0, stream>>>(
-    N, req == kAddTo, lhs.dptr_, rhs.dptr_, out.dptr_, lhs_shape, rhs_shape, out.shape_);
-  // binary_broadcast_kernel<DType, OP><<<ngrid, kBaseThreadNum, 0, stream>>>(
-  //   N, req == kAddTo, lhs.dptr_, rhs.dptr_, out.dptr_, lhs.shape_, rhs.shape_, out.shape_);
+    N, req == kAddTo, lhs.dptr_, rhs.dptr_, out.dptr_, lhs.shape_, rhs.shape_, out.shape_);
+#else
+  binary_broadcast_kernel<DType, OP><<<ngrid, nthread, 0, stream>>>(
+    N, req == kAddTo, lhs.dptr_, rhs.dptr_, out.dptr_, lhs.shape_, rhs.shape_, out.shape_);
+#endif
 }
 
+#if 0
 template<typename Reducer, typename DType, typename OP, int ndim>
 __global__ void seq_reduce_kernel(const int N, const int M, const bool addto,
                                   const DType *big, DType *small, const CShape bshape,
@@ -292,14 +316,14 @@ __global__ void seq_reduce_kernel(const int N, const int M, const bool addto,
     seq_reduce_assign<Reducer, DType, OP>(idx, M, addto, big, small, bshape, sshape, rshape, rstride);
   }
 }
+#endif
 
-#if 1
 template<typename Reducer, typename DType, typename OP, int x_bits>
 __launch_bounds__(mshadow::cuda::kMaxThreadsPerBlock)
 __global__ void par_reduce_kernel(const int N, const int M, const bool addto,
                                   const DType *big, DType *small, const CShape bshape,
                                   const CShape sshape, const CShape rshape, const CShape rstride,
-                                  const int Mnext, int* offsets) {
+                                  const int Mnext) {
   __shared__ DType buf[1<<x_bits];
 
   for (int m0 = blockIdx.y; m0 < Mnext; m0 += gridDim.y) {
@@ -320,47 +344,18 @@ __global__ void par_reduce_kernel(const int N, const int M, const bool addto,
       cuda::Reduce1D<Reducer, x_bits>(buf);
       if (threadIdx.x == 0) {
         assign(small[idx + m0*N], addto, buf[0]);
-        if (offsets != NULL) offsets[idx] = idx*Mnext;
       }
     }
   }
 
-  // Cap offsets
-  if (threadIdx.x == 0 && blockIdx.x == 0 
-    && blockIdx.y == 0 && offsets != NULL) offsets[N] = N*Mnext;
 }
-
-#else
-template<typename Reducer, typename DType, typename OP, int x_bits>
-__global__ void par_reduce_kernel(const int N, const int M, const bool addto,
-                                  const DType *big, DType *small, const CShape bshape,
-                                  const CShape sshape, const CShape rshape, const CShape rstride) {
-  __shared__ DType buf[1<<x_bits];
-  for (int idx = blockIdx.x; idx < N; idx += gridDim.x) {
-    CShape coord = unravel(idx, sshape);
-    int j = ravel(coord, bshape);
-
-    Reducer::SetInitValue(buf[threadIdx.x]);
-    for (int k = threadIdx.x; k < M; k += blockDim.x) {
-      coord = unravel(k, rshape);
-      Reducer::Reduce(buf[threadIdx.x], OP::Map(big[j + dot(coord, rstride)]));
-    }
-    __syncthreads();
-    cuda::Reduce1D<Reducer, x_bits>(buf);
-    if (threadIdx.x == 0) {
-      assign(small[idx], addto, buf[0]);
-    }
-  }
-
-}
-#endif
 
 template<typename Reducer, typename DType, typename OP>
 __launch_bounds__(mshadow::cuda::kMaxThreadsPerBlock)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
                               const DType* __restrict__ big, DType *small, const CShape bshape,
                               const CShape sshape, const CShape rshape, const CShape rstride,
-                              const int Mnext, int* offsets) {
+                              const int Mnext) {
   // Size of shared memory is blockDim.x*blockDim.y*sizeof(DType)
   extern __shared__ char shTileChar[];
   DType* shTile = (DType*)(shTileChar);
@@ -383,34 +378,49 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         }
       }
 
-      shTileChar[it0] = val;
-      __syncthreads();
-      for (int t=1;t < blockDim.y;t <<= 1) {
-        DType tmp;
-        Reducer::SetInitValue(tmp);
-        if (threadIdx.y + t < blockDim.y) tmp = shTile[it0 + t*blockDim.x];
+      if (blockDim.y > 1) {
+        shTileChar[it0] = val;
         __syncthreads();
-        Reducer::Reduce(shTile[it0], tmp);
-        __syncthreads();
-      }
+        for (int t=1;t < blockDim.y;t <<= 1) {
+          DType tmp;
+          Reducer::SetInitValue(tmp);
+          if (threadIdx.y + t < blockDim.y) tmp = shTile[it0 + t*blockDim.x];
+          __syncthreads();
+          Reducer::Reduce(shTile[it0], tmp);
+          __syncthreads();
+        }
 
-      if (idx < N && threadIdx.y == 0) {
-        assign(small[idx + m0*N], addto, shTile[threadIdx.x]);
-        if (offsets != NULL) offsets[idx] = idx*Mnext;
+        if (idx < N && threadIdx.y == 0) {
+          assign(small[idx + m0*N], addto, shTile[threadIdx.x]);
+        }
+      } else {
+        if (idx < N) {
+          assign(small[idx + m0*N], addto, val);
+        }        
       }
 
     }
   }
 
-  // Cap offsets
-  if (threadIdx.x == 0 && threadIdx.y == 0 &&
-    blockIdx.x == 0 && blockIdx.y == 0 && offsets != NULL) offsets[N] = N*Mnext;
 }
 
-template<typename DType>
-__global__ void addTo_kernel(const int N, const DType* small_in, DType* small_out) {
+// Simple reduction of lines when M is small
+template<typename Reducer, typename DType, typename OP>
+__launch_bounds__(mshadow::cuda::kMaxThreadsPerBlock)
+__global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
+  const int small_in_stride, const DType* __restrict__ small_in, DType *small_out) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
-    assign(small_out[idx], true, small_in[idx]);
+    
+    DType val;
+    Reducer::SetInitValue(val);
+    for (int k = 0; k < M; k++) {
+      Reducer::Reduce(val, OP::Map(small_in[idx + k*small_in_stride]));
+    }
+
+    if (idx < N) {
+      assign(small_out[idx], addto, val);
+    }
+
   }
 }
 
@@ -424,20 +434,6 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
     assign(small[idx], addto, OP::Map(big[j]));
   }
 }
-
-#if 1
-
-// Convert Reducer::Reduce to CUB operation
-template<typename Reducer>
-struct cubOP {
-  template <typename DType>
-  CUB_RUNTIME_FUNCTION __forceinline__ __device__
-  DType operator()(const DType &a, const DType &b) const {
-    DType c = a;
-    Reducer::Reduce(c, b);
-    return c;
-  }
-};
 
 template<typename Reducer, typename DType, typename OP>
 size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
@@ -466,11 +462,6 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
     }
   } else {
 
-    // The goal is to saturate the GPU with enough work. This happens when there are enough
-    // thread blocks to keep all SMs working.
-
-    // First try saturating the GPU in a single pass, where Mnext = 1
-
     dim3 blockDim;
     dim3 gridDim;
 
@@ -478,38 +469,41 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
     const int par_reduce_lim = 1024;
 
     int Mnext = 1;
-    // int nthreadPerM;
     int minGridSize;
     if (N < par_reduce_lim) {
-      // nthreadPerM = 1 << kMaxThreadBits;
       blockDim.x = 1 << kMaxThreadBits;
-      gridDim.x = std::min(kMaxGridNum, N);
-      gridDim.y = std::min(kMaxGridNum, Mnext);
+      gridDim.x = std::min(kBaseGridNum, N);
+      gridDim.y = std::min(kBaseGridNum, Mnext);
       int blockSize;
       cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize,
         par_reduce_kernel<Reducer, DType, OP, kMaxThreadBits>, 0, kMaxThreadsPerBlock);
+      Mnext = (minGridSize*8 + gridDim.x*gridDim.y - 1) / (gridDim.x*gridDim.y);
     } else {
-      // nthreadPerM = std::min(M, warpSize);
-      // blockDim.y = std::min(M, 1);
       if (M >= N) {
-        blockDim.y = std::min(M, warpSize);
+        blockDim.y = std::min(M, kMaxThreadsPerBlock/warpSize);
       } else {
-        blockDim.y = 1;
+        blockDim.y = 4;
       }
       blockDim.x = (kMaxThreadsPerBlock/(blockDim.y*warpSize))*warpSize;
-      // gridDim.x = std::min((unsigned int)kBaseGridNum, (N + blockDim.x - 1)/blockDim.x);
       gridDim.x = std::min((unsigned int)512, (N + blockDim.x - 1)/blockDim.x);
-      gridDim.y = std::min(kMaxGridNum, Mnext);
+      gridDim.y = std::min(kBaseGridNum, Mnext);
       int shMemSize = blockDim.x*blockDim.y*sizeof(DType);
       int blockSize;
       cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize,
         reduce_kernel<Reducer, DType, OP>, shMemSize, kMaxThreadsPerBlock);
+      // // Number of times Thread Block (TB) loops in M - direction.
+      // int loopPerTB = M / blockDim.y;
+      // LOG(INFO) << "loopPerTB " << loopPerTB;
+      // Maximum number of times we want TB to loop in M
+      const int maxLoopPerTB = 64;
+      // Max size of M-block each TB can handle
+      int maxMblock = blockDim.y*maxLoopPerTB;
+      Mnext = (M + maxMblock - 1) / maxMblock;
+      //Mnext = 1;//(minGridSize*16 + gridDim.x*gridDim.y - 1) / (gridDim.x*gridDim.y);
     }
 
     // minGridSize is the minimum number of blocks we need to saturate the GPU
-    // 
-    LOG(INFO) << "minGridSize " << minGridSize << " gridDim " << gridDim.x*gridDim.y;
-    Mnext = (minGridSize*8 + gridDim.x*gridDim.y - 1) / (gridDim.x*gridDim.y);
+    LOG(INFO) << "minGridSize " << minGridSize << " gridDim " << gridDim.x << " " << gridDim.y;
     LOG(INFO) << "Mnext " << Mnext;
 
     // Maximum number of times TB loops
@@ -519,26 +513,18 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
     // Size of M after first pass
     // Mnext = (M + maxMblock - 1) / maxMblock;
     DType* out1_dptr = small.dptr_;
-    int* offsets_dptr = NULL;
     bool addto = (req == kAddTo);
     if (Mnext > 1) {
       // out1_dptr[] is N*Mnext*sizeof(DType) bytes
       out1_dptr = reinterpret_cast<DType*>(workspace.dptr_ + workspace_pos);
       workspace_pos += N*Mnext*sizeof(DType);
-      // offsets_dptr[] is (N + 1)*sizeof(int) bytes
-      offsets_dptr = reinterpret_cast<int*>(workspace.dptr_ + workspace_pos);
-      workspace_pos += (N + 1)*sizeof(int);
       addto = false;
       // Check that the workspace is contigiuous
       if (!getWorkspaceSize) CHECK_EQ(workspace.CheckContiguous(), true);
       // Check that we have enough storage
       if (!getWorkspaceSize) CHECK_GE(workspace.size(0), workspace_pos);
-      // Fix grid y-dimension
-      if (N < par_reduce_lim) {
-        gridDim.y = std::min(kMaxGridNum, Mnext);
-      } else {
-        gridDim.y = std::min(kMaxGridNum, Mnext);
-      }
+      // Set gridDim.y to Mnext
+      gridDim.y = std::min(kBaseGridNum, Mnext);
     }
 
     if (N < par_reduce_lim) {
@@ -546,7 +532,7 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
         par_reduce_kernel<Reducer, DType, OP, kMaxThreadBits>
         <<< gridDim, blockDim, 0, stream>>>(
           N, M, addto, big.dptr_, out1_dptr, big.shape_, small.shape_,
-          rshape, rstride, Mnext, offsets_dptr);
+          rshape, rstride, Mnext);
       }
     } else {
       if (!getWorkspaceSize) {
@@ -554,62 +540,23 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
         reduce_kernel<Reducer, DType, OP>
         <<< gridDim, blockDim, shMemSize, stream>>>(
           N, M, addto, big.dptr_, out1_dptr, big.shape_, small.shape_,
-          rshape, rstride, Mnext, offsets_dptr);
+          rshape, rstride, Mnext);
       }
     }
 
     if (Mnext > 1) {
-      DType initValue;
-      Reducer::SetInitValue(initValue);
-      cubOP<Reducer> reduceOp;
-
-      DType* out2_dptr = small.dptr_;
-      DType* temp_storage_dptr = NULL;
-      if (req == kAddTo) {
-        // out2_dptr[] is N*sizeof(DType) bytes
-        out2_dptr = reinterpret_cast<DType*>(workspace.dptr_ + workspace_pos);
-        workspace_pos += N*sizeof(DType);
-        // Check that we have enough storage
-        if (!getWorkspaceSize) CHECK_GE(workspace.size(0), workspace_pos);
-      }
-
-      // Get size of temporary storage temp_storage_bytes
-      size_t temp_storage_bytes = 0;
-      cub::DeviceSegmentedReduce::Reduce(temp_storage_dptr, temp_storage_bytes, out1_dptr, out2_dptr,
-        N, offsets_dptr, offsets_dptr + 1, reduceOp, initValue, stream);
-
-      // temp_storage_dptr[] is temp_storage_bytes bytes
-      temp_storage_dptr = reinterpret_cast<DType*>(workspace.dptr_ + workspace_pos);
-      workspace_pos += temp_storage_bytes;
-      // Check that we have enough storage
-      if (!getWorkspaceSize) CHECK_GE(workspace.size(0), workspace_pos);
-
-      // Reduce
       if (!getWorkspaceSize) {
-        cub::DeviceSegmentedReduce::Reduce(temp_storage_dptr, temp_storage_bytes, out1_dptr, out2_dptr,
-          N, offsets_dptr, offsets_dptr + 1, reduceOp, initValue, stream);
+        int blockSize = kMaxThreadsPerBlock;
+        int gridSize = std::min((int)kBaseGridNum, (N + blockSize - 1)/blockSize );
+        reduce_lines_kernel<Reducer, DType, OP><<< gridSize, blockSize, 0, stream >>>
+        (N, Mnext, req == kAddTo, N, out1_dptr, small.dptr_);
       }
-
-      if (req == kAddTo) {
-        if (!getWorkspaceSize) {
-          // Add out2_dptr[0 ... N - 1] to small.dptr[0 ... N - 1]
-          int blockSize = kMaxThreadsPerBlock;
-          int gridSize = std::min((int)kMaxGridNum, (N + blockSize - 1)/blockSize );
-          addTo_kernel<<< gridSize, blockSize, 0, stream >>>(N, out2_dptr, small.dptr_);
-        }
-      }
-
     }
 
   }
 
   return workspace_pos;
 }
-
-// template<typename Reducer, typename DType, typename OP>
-// size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
-//                   const CTensor<DType>& big, mshadow::Tensor<gpu, 1, char>& workspace,
-//                   const bool getWorkspaceSize);
 
 template<typename Reducer, typename DType, typename OP>
 void Reduce(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
@@ -623,43 +570,6 @@ size_t ReduceWorkspaceSize(Stream<gpu> *s, CTensor<DType> small, const OpReqType
   mshadow::Tensor<gpu, 1, char> dummy_workspace;
   return ReduceImpl<Reducer, DType, OP>(s, small, req, big, dummy_workspace, true);
 }
-
-#else
-template<typename Reducer, typename DType, typename OP>
-void Reduce(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
-            const CTensor<DType>& big, mshadow::Tensor<gpu, 1, char>& workspace) {
-  using namespace mshadow::cuda;
-  if (req == kNullOp) return;
-  cudaStream_t stream = Stream<gpu>::GetStream(s);
-  CShape rshape, rstride;
-  int mdim = diff(small.shape_, big.shape_, rshape, rstride);
-  int N = small.shape_.Size(), M = rshape.Size();
-  LOG(INFO) << "N " << N << " M " << M;
-  if (N > 32*kBaseThreadNum) {
-    // int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
-    // CShapeWP rshapeWP(rshape);
-    // rshapeWP.SetProd();
-    // seq_reduce_kernel<Reducer, DType, OP><<<ngrid, kBaseThreadNum, 0, stream>>>(
-    //   N, M, req == kAddTo, big.dptr_, small.dptr_, big.shape_, small.shape_,
-    //   rshapeWP, rstride);
-    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
-    seq_reduce_kernel<Reducer, DType, OP><<<ngrid, kBaseThreadNum, 0, stream>>>(
-      N, M, req == kAddTo, big.dptr_, small.dptr_, big.shape_, small.shape_,
-      rshape, rstride);
-  } else {
-    int ngrid = std::min(kMaxGridNum, N);
-    par_reduce_kernel<Reducer, DType, OP, kBaseThreadBits><<<ngrid, kBaseThreadNum, 0, stream>>>(
-      N, M, req == kAddTo, big.dptr_, small.dptr_, big.shape_, small.shape_,
-      rshape, rstride);
-  }
-}
-
-template<typename Reducer, typename DType, typename OP>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
-                           const CTensor<DType>& big) {
-  return 0;
-}
-#endif
 
 #else
 

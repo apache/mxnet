@@ -172,7 +172,7 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                     const std::vector<TBlob>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<TBlob>& outputs) {
-  LOG(INFO) << attrs.name;
+  // LOG(INFO) << attrs.name;
   using namespace broadcast;
   TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
@@ -192,7 +192,7 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
       size_t workspace_size_l = ReduceWorkspaceSize<red::sum, DType, LOP>(s, lgrad, req[0], ograd);
       size_t workspace_size_r = ReduceWorkspaceSize<red::sum, DType, ROP>(s, rgrad, req[1], ograd);
       size_t workspace_size = workspace_size_l + workspace_size_r;
-      LOG(INFO) << "workspace_size " << workspace_size;
+      // LOG(INFO) << "workspace_size " << workspace_size;
       Tensor<xpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
       Tensor<xpu, 1, char> workspace_l(&workspace[0], Shape1(workspace_size_l), s);
