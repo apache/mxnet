@@ -56,7 +56,8 @@ package.DeepMXNet = {
     0.9 = {
         CRuntime = 1.0;
         C-ares = 1.x;
-        LibStdCppNoCFlags = 4.9;
+        #LibStdCppNoCFlags = 4.9;
+        LibStdCpp = gcc;
         DeepMXNetApolloDeploymentHelper = 1.0;
     };
   };
