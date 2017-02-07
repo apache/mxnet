@@ -22,18 +22,16 @@ def get_sources(def_file):
     sources = []
     files = []
     visited = set()
-    mxnet_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))
+    mxnet_path = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
     for line in open(def_file):
         files = files + line.strip().split(' ')
 
     for f in files:
         f = f.strip()
         if not f or f.endswith('.o:') or f == '\\': continue
+        f = os.path.realpath(f)
         fn = os.path.relpath(f)
-        if fn.startswith("../nnvm/include/dmlc/"):
-            name = fn.split('/')[-1]
-            fn = "../dmlc-core/include/dmlc/" + name
-        if os.path.abspath(f).startswith(mxnet_path) and fn not in visited:
+        if f.startswith(mxnet_path) and fn not in visited:
             sources.append(fn)
             visited.add(fn)
     return sources
