@@ -2439,7 +2439,7 @@ def test_bilinear_sampler():
             exe.backward(mx.nd.array(out_grad))
             data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(), 
                                                        exe.arg_dict['grid'].asnumpy())
-            assert reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 1E-4
+            assert reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 2E-4
             assert reldiff(exe.grad_dict['grid'].asnumpy(),grid_grad) < 1E-5
 
             # check kAddTo
@@ -2452,7 +2452,7 @@ def test_bilinear_sampler():
             exe_addto.grad_dict['grid'][:] = grid_initial_grid
             exe_addto.forward()
             exe_addto.backward(mx.nd.array(out_grad))
-            assert reldiff(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid) < 1E-4
+            assert reldiff(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid) < 2E-4
             assert reldiff(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid) < 1E-5
             
 def test_index2d():

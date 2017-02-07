@@ -251,7 +251,7 @@ DMLCCORE:
 $(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
 
 LIBNNVM:
-	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
+	+ cd $(NNVM_PATH); make lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
