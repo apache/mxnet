@@ -77,6 +77,7 @@ scalar of the input tensor):
 
 See `LeakyReLU` for other activations with parameters.
 )")
+.add_argument("data", "Symbol", "Input data to activation function.")
 .add_arguments(ActivationParam::__FIELDS__());
 
 }  // namespace op

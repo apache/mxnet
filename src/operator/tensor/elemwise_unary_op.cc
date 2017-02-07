@@ -8,6 +8,7 @@
 
 namespace mxnet {
 namespace op {
+DMLC_REGISTER_PARAMETER(CastParam);
 
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
@@ -29,11 +30,7 @@ NNVM_REGISTER_OP(_backward_copy)
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .MXNET_DESCRIBE("Get output from a symbol and pass 0 gradient back")
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // pass back zero gradient
-    return MakeGradNode("_zeros", n, {}, std::unordered_map<std::string, std::string>());
-});
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
@@ -55,6 +52,25 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
       return lhs;
     });
+
+NNVM_REGISTER_OP(Cast)
+.add_alias("cast")
+.MXNET_DESCRIBE("Convert data type to dtype")
+.set_attr_parser(ParamParser<CastParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", CastType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
+.add_argument("data", "NDArray", "Source input")
+.add_arguments(CastParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_cast)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>);
 
 // negative
 MXNET_OPERATOR_REGISTER_UNARY(negative)
@@ -83,7 +99,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sign)
 // round
 MXNET_OPERATOR_REGISTER_UNARY(round)
 .MXNET_DESCRIBE("Take round of the src")
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>);
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
 MXNET_OPERATOR_REGISTER_UNARY(ceil)

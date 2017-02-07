@@ -256,7 +256,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
         ndarray::Copy<cpu, cpu>(from.data(), &tmp,
                                 from.ctx(), ret.ctx(), ctx);
       }, from.ctx(), const_vars, {ret.var()},
-      FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
+      FnProperty::kNormal, priority, PROFILER_MESSAGE("CopyCPU2CPU"));
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
@@ -268,7 +268,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, ret.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE_FUNCNAME);
+        FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("CopyCPU2GPU"));
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -278,7 +278,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE_FUNCNAME);
+        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2CPU"));
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushSync([from, ret](RunContext ctx) {
           ret.CheckAndAlloc();
@@ -288,7 +288,8 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE_FUNCNAME);
+        from.dtype() != ret.dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
+        priority, PROFILER_MESSAGE("CopyGPU2GPU"));
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -683,26 +684,30 @@ NDArray NDArray::Copy(Context ctx) const {
 }
 
 void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
-  this->WaitToWrite();
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  Context ctx = this->ctx();
-  TBlob dst = this->data();
   TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
-  RunContext run_ctx;
-  run_ctx.stream = nullptr;
-  if (ctx.dev_mask() == cpu::kDevMask) {
-    ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), ctx, run_ctx);
+  if (this->ctx().dev_mask() == cpu::kDevMask) {
+    this->WaitToWrite();
+    this->CheckAndAlloc();
+    RunContext rctx;
+    rctx.stream = nullptr;
+    TBlob dst = this->data();
+    ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
-    // use empty stream to do sync copy
-    // TODO(bing, yutian) consider use a Real Stream, so it is not blocking others
-    // Maybe move to engine part
-    mshadow::Stream<gpu> zero_stream;
-    run_ctx.stream = &zero_stream;
-    ndarray::Copy<cpu, gpu>(src, &dst, Context::CPU(), ctx, run_ctx);
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        this->CheckAndAlloc();
+        TBlob dst = this->data();
+        ndarray::Copy<cpu, gpu>(src, &dst,
+                                Context::CPU(), this->ctx(), rctx);
+        // Wait GPU kernel to complete
+        rctx.get_stream<gpu>()->Wait();
+      }, this->ctx(), {}, {this->var()},
+      FnProperty::kCopyToGPU, 0, PROFILER_MESSAGE("SyncCopyCPU2GPU"));
+    this->WaitToRead();
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -710,26 +715,27 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
 }
 
 void NDArray::SyncCopyToCPU(void *data, size_t size) const {
-  this->WaitToRead();
   TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
-  Context ctx = this->ctx();
-  TBlob src = this->data();
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_); // NOLINT(*)
 
-  RunContext run_ctx;
-  run_ctx.stream = nullptr;
-  if (ctx.dev_mask() == cpu::kDevMask) {
-    ndarray::Copy<cpu, cpu>(src, &dst, ctx, Context::CPU(), run_ctx);
+  if (this->ctx().dev_mask() == cpu::kDevMask) {
+    this->WaitToRead();
+    RunContext rctx;
+    rctx.stream = nullptr;
+    ndarray::Copy<cpu, cpu>(this->data(), &dst,
+                            Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
-    // use empty stream to do sync copy
-    // TODO(bing, yutian) consider use a Real Stream, so it is not blocking others
-    // Maybe move to engine part
-    mshadow::Stream<gpu> zero_stream;
-    run_ctx.stream = &zero_stream;
-    ndarray::Copy<gpu, cpu>(src, &dst, ctx, Context::CPU(), run_ctx);
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        ndarray::Copy<gpu, cpu>(this->data(), &dst,
+                                this->ctx(), Context::CPU(), rctx);
+        // Wait GPU kernel to complete
+        rctx.get_stream<gpu>()->Wait();
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyGPU2CPU"));
+    this->WaitToWrite();
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -767,20 +773,6 @@ MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromToSimple)
 .set_type_mask(kNDArrayArgBeforeScalar);
-
-MXNET_REGISTER_NDARRAY_FUN(clip)
-.set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    ClipOp(*u[0], s[0], s[1], out[0]);
-  })
-.set_num_use_vars(1)
-.set_num_scalars(2)
-.set_num_mutate_vars(1)
-.describe("Clip ndarray elements to range (a_min, a_max)")
-.add_argument("src", "NDArray", "Source input")
-.add_argument("a_min", "real_t", "Minimum value")
-.add_argument("a_max", "real_t", "Maximum value");
 
 void Imdecode(NDArray *ret, NDArray mean, size_t index,
               size_t x0, size_t y0, size_t x1, size_t y1, size_t n_channels,

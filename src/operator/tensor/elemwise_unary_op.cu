@@ -22,6 +22,12 @@ NNVM_REGISTER_OP(BlockGrad)
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
+NNVM_REGISTER_OP(Cast)
+.set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_cast)
+.set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
+
 // negative
 NNVM_REGISTER_OP(negative)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::negation>);

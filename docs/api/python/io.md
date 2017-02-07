@@ -2,16 +2,16 @@
 This topic introduces the data input method for MXNet. MXNet uses an iterator to provide data to the neural network.  Iterators do some preprocessing and generate batches for the neural network.
 
 MXNet provides basic iterators for MNIST and Recordio images. To hide the cost of I/O, MXNet uses a prefetch strategy that enables parallelism for the learning process and data fetching. Data is automatically fetched by an independent thread.
- 
+
 Topics:
- 
-* [Data Iterator Parameters](#parameters-for-data-iterator) clarifies the different usages for dataiter parameters.
+
+* [Data Iterator Parameters](#parameters-for-data-iterator) clarifies the different usages for Dataiter parameters.
 * [Create a Data Iterator](#create-a-data-iterator) introduces how to create a data iterator in MXNet for Python.
 * [How to Get Data](#how-to-get-data) introduces the data resource and data preparation tools.
 * [IO API Reference](#io-api-reference) explains the IO API.
 
 
-## Data Iterator Parameters 
+## Data Iterator Parameters
 
 To create a data iterator, you typically need to provide five parameters:
 
@@ -83,7 +83,7 @@ First, explicitly specify the kind of data (MNIST, ImageRecord, etc.) to fetch. 
 ## How to Get Data
 
 
-We provide a [script](../../tests/python/common/get_data.py) to download MNIST data and CIFAR10 ImageRecord data. If you want to create your own dataset, we recommend using the Image Recordio data format.
+We provide a [script](https://github.com/dmlc/mxnet/tree/master/scala-package/core/scripts) to download MNIST data and CIFAR10 ImageRecord data. If you want to create your own dataset, we recommend using the Image Recordio data format.
 
 ## Create a Dataset Using Recordio
 
@@ -93,7 +93,7 @@ Recordio implements a file format for a sequence of records. We recommend storin
 * Packing data together allows continuous reading on the disk.
 * Recordio has a simple way to partition, simplifying distributed setting. We provide an example later.
 
-We provide the [im2rec tool](../../tools/im2rec.cc) so you can create an Image Recordio dataset by yourself. The following walkthrough shows you how.
+We provide the [im2rec tool](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc) so you can create an Image Recordio dataset by yourself. The following walkthrough shows you how.
 
 ### Prerequisites
 Download the data. You don't need to resize the images manually. You can use ```im2rec``` to resize them automatically. For details, see the "Extension" topic.
@@ -137,7 +137,7 @@ For more details, run ```./bin/im2rec```.
 The `im2rec` tool and `mx.io.ImageRecordIter` have multi-label support for a single image.
 For example, if you have four labels for a single image, you can use the following procedure to use the Recordio tools.
 
-1. Write the the image list files as follows:
+1. Write the image list files as follows:
 
      ```
          integer_image_index \t label_1 \t label_2 \t   label_3 \t label_4 \t path_to_image

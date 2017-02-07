@@ -3,7 +3,7 @@
 import math
 import pickle
 from .ndarray import NDArray, zeros, clip, sqrt
-from .ndarray import sgd_update, sgd_mom_update, adam_update
+from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update
 from .random import normal
 
 
@@ -36,7 +36,7 @@ class Optimizer(object):
             of a subclass of Optimizer. Case insensitive.
 
         rescale_grad : float
-            Rescaling factor on gradient.
+            Rescaling factor on gradient. Normally should be 1/batch_size.
 
         kwargs: dict
             Parameters for optimizer
@@ -211,7 +211,7 @@ class SGD(Optimizer):
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -271,6 +271,104 @@ class SGD(Optimizer):
         else:
             sgd_update(weight, grad, out=weight,
                        lr=lr, wd=wd, **self.kwargs)
+
+@register
+class DCASGD(Optimizer):
+    """ DCASGD optimizer with momentum and weight regularization.
+
+    implement paper "Asynchronous Stochastic Gradient Descent with
+                    Delay Compensation for Distributed Deep Learning"
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        learning_rate of SGD
+
+    momentum : float, optional
+       momentum value
+
+    lamda : float, optional
+       scale DC value
+
+    wd : float, optional
+        L2 regularization coefficient add to all the weights
+
+    rescale_grad : float, optional
+        rescaling factor of gradient. Normally should be 1/batch_size.
+
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+
+    param_idx2name : dict of string/int to float, optional
+        special treat weight decay in parameter ends with bias, gamma, and beta
+    """
+    def __init__(self, momentum=0.0, lamda=0.04, **kwargs):
+        super(DCASGD, self).__init__(**kwargs)
+        self.momentum = momentum
+        self.weight_previous = {}
+        self.lamda = lamda
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state such as momentum.
+
+        Parameters
+        ----------
+        weight : NDArray
+            The weight data
+
+        """
+        if self.momentum == 0.0:
+            return None
+        else:
+            return zeros(weight.shape, weight.context, dtype=weight.dtype)
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+        """
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+
+        grad = grad * self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        if state:
+            mom = state
+            mom[:] *= self.momentum
+            if self.weight_previous.has_key(index):
+                mom[:] += -lr * (grad + wd * weight + self.lamda \
+                                    * grad * grad * (weight - self.weight_previous[index]))
+                self.weight_previous[index] = weight
+            else:
+                mom[:] += -lr * (grad + wd * weight)
+                self.weight_previous[index] = weight
+            weight[:] += mom
+        else:
+            assert self.momentum == 0.0
+            if self.weight_previous.has_key(index):
+                weight[:] += -lr * (grad + wd * weight + self.lamda \
+                                    * grad * grad * (weight - self.weight_previous[index]))
+                self.weight_previous[index] = weight
+            else:
+                weight[:] += -lr * (grad + wd * weight)
+                self.weight_previous[index] = weight
 
 @register
 class NAG(SGD):
@@ -333,7 +431,7 @@ class SGLD(Optimizer):
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -421,7 +519,7 @@ class Adam(Optimizer):
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -499,7 +597,7 @@ class AdaGrad(Optimizer):
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     eps: float, optional
         A small float number to make the updating processing stable
@@ -548,17 +646,24 @@ class RMSProp(Optimizer):
     gamma2: float, optional
         "momentum" factor.
         Default value if set to 0.9.
+    epsilon : float, optional
+        Default value is set to 1e-8.
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """
-    def __init__(self, gamma1=0.95, gamma2=0.9, **kwargs):
-        super(RMSProp, self).__init__(**kwargs)
+    def __init__(self, learning_rate=0.001, gamma1=0.95, gamma2=0.9,
+                 epsilon=1e-8, **kwargs):
+        super(RMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
         self.gamma1 = gamma1
         self.gamma2 = gamma2
+        self.kwargs = {'gamma1': gamma1, 'gamma2': gamma2, 'epsilon': epsilon,
+                       'rescale_grad': self.rescale_grad}
+        if self.clip_gradient:
+            self.kwargs['clip_gradient'] = self.clip_gradient
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -595,16 +700,9 @@ class RMSProp(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
-
         n, g, delta = state
-        grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
-        n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
-        g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
-        delta[:] = (self.gamma2) * delta - lr * (grad/(sqrt(n - g*g) + 1e-8) + wd * weight)
-        weight[:] += delta
-
+        rmsprop_update(weight, grad, n, g, delta, out=weight,
+                       lr=lr, wd=wd, **self.kwargs)
 
 @register
 class AdaDelta(Optimizer):
@@ -624,7 +722,7 @@ class AdaDelta(Optimizer):
     wd : float
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
     """

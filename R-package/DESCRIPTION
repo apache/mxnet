@@ -1,7 +1,7 @@
 Package: mxnet
 Type: Package
 Title: MXNet
-Version: 0.9.1
+Version: 0.9.4
 Date: 2015-12-23
 Author: Tianqi Chen, Qiang Kou, Tong He
 Maintainer: Qiang Kou <qkou@umail.iu.edu>
@@ -9,13 +9,14 @@ Repository: DMLC
 Description: MXNet is a deep learning framework designed for both efficiency
     and flexibility. It allows you to mix the flavours of deep learning programs
     together to maximize the efficiency and your productivity.
-License: BSD
+License: Apache License (== 2.0)
 URL: https://github.com/dmlc/mxnet/tree/master/R-package
 BugReports: https://github.com/dmlc/mxnet/issues
 Imports:
     methods,
     Rcpp (>= 0.12.1),
     DiagrammeR (>= 0.9.0),
+    visNetwork (>= 1.0.3),
     data.table,
     jsonlite,
     magrittr,
@@ -25,8 +26,7 @@ Suggests:
     mlbench,
     knitr,
     rmarkdown,
-    imager,
-    roxygen2
+    imager
 LinkingTo: Rcpp
-RoxygenNote: 5.0.1
 VignetteBuilder: knitr
+RoxygenNote: 5.0.1

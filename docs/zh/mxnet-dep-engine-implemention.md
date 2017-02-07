@@ -48,8 +48,7 @@ Op实际上是用来代表计算过程以及它依赖的var，先来看看它的
 
 # Var<a id="orgheadline9"></a>
 
-var可以看做是一个tag，用来标示每一个对象的，这样Op对对象的依赖可以简化成对var的
-依赖，这样就可以构建出一个不依赖于具体的对象的通用的依赖引擎。Var是依赖引擎的关键。
+var可以看做是一个tag，用来标示每一个对象的，这样Op对对象的依赖可以简化成对var的依赖，从而可以构建出一个不依赖于具体对象的通用的依赖引擎。Var是依赖引擎的关键。
 
 ## 类图<a id="orgheadline3"></a>
 
@@ -290,7 +289,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
 1.  这两个指针的中间有多个元素，很显然这是多个读依赖，第二个 `while` 循环就是用来
     并行的执行这两个指针中间的读依赖的。
 2.  这两个指针之间没有元素，那么意味着没有读依赖，那么就直接执行
-    `end_of_read_chian` 指向的写依赖，如果该指针指向 `head_` 那么意味着队列为空，
+    `end_of_read_chain` 指向的写依赖，如果该指针指向 `head_` 那么意味着队列为空，
     什么也不用做。 最后 一部分的 `if` 就是用来处理这个情况的。
 
 # Engine<a id="orgheadline11"></a>

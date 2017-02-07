@@ -8,7 +8,7 @@ This problem presents several technical challenges:
 - How to minimize the memory consumption of the network, so that we can use a network with more capacity than the one used for the ImageNet 1K dataset
 - How to train the model fast
 
-We've also released our pretrained model for this full ImageNet dataset.
+We've also released our pre-trained model for this full ImageNet dataset.
 
 ## Data Preprocessing
 The raw full ImageNet dataset is more than 1 TB. Before training the network, we need to shuffle the images, and then load batches of images to feed the neural network. Before we describe how we did it, let’s do some calculations.
@@ -24,9 +24,9 @@ Assume that we have two good storage devices [2]:
 
 A very naive approach to loading from a list is random seeking. If we use this approach, we will spend 677 hours with an HDD or 6.7 hours with an SSD, respectively. This is for read only. Although the results for the SSD isn't bad, a 1 TB SSD is expensive.
 
-Sequential seek is much faster than random seek. Loading by batch is a sequential action. But ee can't perform sequential seek directly. We need to randomly shuffle the training data first, then pack it into a sequential binary package.
+Sequential seek is much faster than random seek. Loading by batch is a sequential action. But it can't perform sequential seek directly. We need to randomly shuffle the training data first, then pack it into a sequential binary package.
 
-This is the solution used by most deep learning packages. However, unlike the ImageNet 1K dataset, we *can't* store the images in raw pixel format because that would require more than 1 TB of space. Instead, we need to pack the images into compressed format.
+This is the solution used by most deep learning packages. However, unlike the ImageNet 1K dataset, we *can't* store the images in raw pixel format because that would require more than 1 TB of space. Instead, we need to pack the images into a compressed format.
 
 To do this:
 
@@ -39,9 +39,9 @@ After packing, along with the threaded buffer iterator, we can achieve an I/O sp
 ## Training the Model
 
 
-Now that we have data, we need to decide which network structure to use. We will use the Inception-BN [3]-style model, which compared to other models, such as VGG, has fewer parameters and less parameters simplified sync problems. Considering that our problem is much more challenging than the problem with 1K classes, we add suitable capacity to the original Inception-BN structure by increasing the size of the filter by a factor of 1.5 in the bottom layers of the original Inception-BN network.
+Now that we have data, we need to decide which network structure to use. We will use the Inception-BN [3]-style model, which compared to other models, such as VGG, has fewer parameters and fewer parameters simplified sync problems. Considering that our problem is much more challenging than the problem with 1K classes, we add suitable capacity to the original Inception-BN structure by increasing the size of the filter by a factor of 1.5 in the bottom layers of the original Inception-BN network.
 
-However, this creates a challenge for GPU memory. Because the GTX 980 has only 4 GB of GPU RAM, we need to minimize memory consumption to fit larger batch sizes into training. To solve this problem, we use techniques such as node memory reuse  and in-place optimization, which reduce memory consumption by half. For more details, see the [memory optimization note](http://mxnet.io/architecture/note_memory.html).
+However, this creates a challenge for GPU memory. Because the GTX 980 has only 4 GB of GPU RAM, we need to minimize memory consumption to fit larger batch sizes into training. To solve this problem, we use techniques such as node memory reuse and in-place optimization, which reduce memory consumption by half. For more details, see the [memory optimization note](http://mxnet.io/architecture/note_memory.html).
 
 Finally, we can't train the model using a single GPU because this is a really large network and a lot of data. We use data parallelism on four GPUs for training, which involves smart synchronization of parameters between different GPUs, and overlap communication and computation. To simplify this task, we use a [runtime dependency engine](http://mxnet.io/architecture/note_engine.html), allowing us to run training at approximately 170 images/sec.
 
@@ -70,7 +70,7 @@ This result is by no means optimal. We didn't carefully pick the parameters, and
 The code and guide are available on [GitHub](https://github.com/dmlc/mxnet/tree/master/example/image-classification). We also released a pretrained model on [GitHub](https://github.com/dmlc/mxnet-model-gallery/tree/master/imagenet-21k-inception.md).
 
 ## How to Use the Model
-Training 21K classes is much more challenging than training 1K classes. It's impractical to use the raw prediction directly.
+Training 21K classes are much more challenging than training 1K classes. It's impractical to use the raw prediction directly.
 
 Look at this picture of Mount Rainier:
 

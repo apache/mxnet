@@ -39,4 +39,4 @@ def find_lib_path():
 
 
 # current version
-__version__ = "0.9.1"
+__version__ = "0.9.4"

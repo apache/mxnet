@@ -71,8 +71,7 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
   std::sort(ndvar.begin(), ndvar.end());
   ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
 
-  std::unique_lock<std::mutex> lock(mtx_);
-  q_.push([=]() mutable {
+  auto compute = [=]() mutable {
       CHECK(
         op_info_->forward(ptrs.size(),
         ptrs.data(), tags.data(),
@@ -85,8 +84,15 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
           ctx.async_on_complete();
         }, ndctx, ndvar, {},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpForward"));
-    });
-  cv_.notify_all();
+    };
+
+  if (sync_mode_) {
+    compute();
+  } else {
+    std::unique_lock<std::mutex> lock(mtx_);
+    q_.push(compute);
+    cv_.notify_all();
+  }
 }
 
 template<typename xpu>
@@ -134,8 +140,7 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
     tags.push_back(3);
   }
 
-  std::unique_lock<std::mutex> lock(mtx_);
-  q_.push([=]() mutable {
+  auto compute = [=]() mutable {
       CHECK(
         op_info_->backward(ptrs.size(),
         ptrs.data(),
@@ -148,8 +153,15 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
           ctx.async_on_complete();
         }, ndctx, ndvar, {},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOpBackward"));
-    });
-  cv_.notify_all();
+    };
+
+  if (sync_mode_) {
+    compute();
+  } else {
+    std::unique_lock<std::mutex> lock(mtx_);
+    q_.push(compute);
+    cv_.notify_all();
+  }
 }
 
 Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,

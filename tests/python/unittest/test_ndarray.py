@@ -563,7 +563,7 @@ def test_ndarray_lesser_equal():
     z = 1 <= y
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
-def test_ndarray_take():
+def test_take():
     for data_ndim in range(2, 5):
         for idx_ndim in range(1, 4):
             data_shape = ()
@@ -576,7 +576,7 @@ def test_ndarray_take():
             idx_real = np.random.randint(low=0, high=data_shape[0], size=idx_shape)
             data_real_mx = mx.nd.array(data_real)
             idx_real_mx = mx.nd.array(idx_real)
-            result = mx.nd.take(idx_real_mx, data_real_mx)
+            result = mx.nd.take(data_real_mx, idx_real_mx)
             assert reldiff(result.asnumpy(), data_real[idx_real]) < 1e-6
 
 if __name__ == '__main__':
@@ -602,4 +602,4 @@ if __name__ == '__main__':
     test_arange()
     test_order()
     test_ndarray_equal()
-    test_ndarray_take()
+    test_take()

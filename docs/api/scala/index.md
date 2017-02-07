@@ -25,6 +25,14 @@ You can perform tensor or matrix computation in pure Scala:
     res3: ml.dmlc.mxnet.Shape = (2,3)
  ```
 
+ ## Scala API Reference
+ * [Model API](model.md) is an alternate simple high-level interface for training neural networks.
+ * [Symbolic API](symbol.md) performs operations on NDArrays to assemble neural networks from layers.
+ * [IO Data Loading API](io.md) performs parsing and data loading.
+ * [NDArray API](ndarray.md) performs vector/matrix/tensor operations.
+ * [KVStore API](kvstore.md) performs multi-GPU and multi-host distributed training.
+
+
 ## Resources
 
 * [MXNet Scala API Documentation](http://mxnet.io/api/scala/docs/index.html)

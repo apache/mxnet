@@ -23,7 +23,11 @@ __version__ = libinfo['__version__']
 
 
 def config_cython():
-    """Try to configure cython and retyurn cython configuration"""
+    """Try to configure cython and return cython configuration"""
+    if os.name == 'nt':
+        print("WARNING: Cython is not supported on Windows, will compile without cython module")
+        return []
+
     try:
         from Cython.Build import cythonize
         # from setuptools.extension import Extension
@@ -64,7 +68,7 @@ setup(name='mxnet',
       ],
       zip_safe=False,
       packages=[
-          'mxnet', 'mxnet.module', 'mxnet._ctypes',
+          'mxnet', 'mxnet.module', 'mxnet._ctypes', 'mxnet.rnn',
           'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook'
           ],
       data_files=[('mxnet', [LIB_PATH[0]])],
