@@ -537,11 +537,6 @@ inline void GetOneHotParams(const OneHotParam& param, int* depth, double* on_val
   *axis = param.axis;
   CHECK_EQ(*axis, -1) << "Only support axis = -1 for now";
   *dtype = param.dtype;
-  CHECK_EQ(*dtype == mshadow::kFloat32
-        || *dtype == mshadow::kFloat64
-        || *dtype == mshadow::kFloat16
-        || *dtype == mshadow::kUint8
-        || *dtype == mshadow::kInt32, true) << "dtype = " << dtype << " is not supported";
 }
 
 inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
@@ -591,9 +586,6 @@ struct one_hot {
   MSHADOW_XINLINE static void Map(int i, DType* out, const int* indices,
                                   int depth, DType on_value, DType off_value) {
     int offset = i * depth;
-    for (int j = 0; j < depth; ++j) {
-      out[offset+j] = off_value;
-    }
     int j = indices[i];
     if (j >= 0 && j < depth) {
       out[offset+j] = on_value;
@@ -617,8 +609,11 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
   GetOneHotParams(param, &depth, &on_value, &off_value, &axis, &dtype);
   using namespace mxnet_op;
+  using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
+    out = scalar<DType>(static_cast<DType>(off_value));
     Kernel<one_hot, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
         inputs[0].dptr<int>(), depth,
         static_cast<DType>(on_value), static_cast<DType>(off_value));

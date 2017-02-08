@@ -115,7 +115,9 @@ NNVM_REGISTER_OP(one_hot)
                 " indicating where to set on_value and depth,"
                 " return an output ndarray of shape (shape(indices), depth)."
                 " The off_value is marked everywhere else that"
-                " are not indicated in indices.")
+                " are not indicated in indices. If a location in the indices"
+                " is negative or greater than or equal to depth, assigning"
+                " on_value to that location will be ignored.")
 .set_num_outputs(1)
 .set_num_inputs(1)
 .set_attr_parser(ParamParser<OneHotParam>)
