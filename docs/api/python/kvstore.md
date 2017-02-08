@@ -13,7 +13,7 @@ Provides basic operation over multiple devices (GPUs) on a single device.
 ### Initialization
 
 Let's consider a simple example. It initializes
-a (`int`, `NDAarray`) pair into the store, and then pulls the value out.
+a (`int`, `NDArray`) pair into the store, and then pulls the value out.
 
 ```python
     >>> kv = mx.kv.create('local') # create a local kv store.
