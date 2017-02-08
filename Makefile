@@ -251,7 +251,7 @@ DMLCCORE:
 $(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
 
 LIBNNVM:
-	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
+	+ cd $(NNVM_PATH); make lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
@@ -301,6 +301,7 @@ rpkg:
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
 	rm -rf R-package/NAMESPACE
+	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\")"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz

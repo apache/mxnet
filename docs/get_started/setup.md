@@ -11,6 +11,7 @@ Step by step instructions for setting up MXNet:
 - [Installing MXNet on CentOS](http://mxnet.io/get_started/centos_setup.html)
 - [Installing MXNet on OS X (Mac)](http://mxnet.io/get_started/osx_setup.html)
 - [Installing MXNet on Windows](http://mxnet.io/get_started/windows_setup.html)
+- [Installing MXNet on Raspberry Pi (Raspbian)](http://mxnet.io/get_started/raspbian_setup.html)
 
 This topic also covers the following:
 - [Prerequisites for using MXNet](#prerequisites)
@@ -68,7 +69,7 @@ This section provides instructions on how to build MXNet's dependent libraries f
 - If you do not have root permission to install packages. In this case, you need to change the installation directory from /usr/local to one where you do have permission. The following examples use the directory ${HOME}.
 
 ## Building GCC from Source Code
-To build the GNU Complier Collection (GCC) from source code, you need the 32-bit libc library.
+To build the GNU Compiler Collection (GCC) from source code, you need the 32-bit libc library.
 
 1. Install libc with one of the following system-specific commands:
 

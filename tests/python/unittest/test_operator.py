@@ -786,6 +786,17 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
         name = 'arg_%d'%k
         assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
+def check_bilinear_upsampling_with_shape(shapes, scale, root_scale):
+    arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_context()) for i, shape in zip(range(len(shapes)), shapes)}
+    arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
+
+    up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='bilinear', scale=root_scale)
+    exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
+    exe.forward(is_train=True)
+    exe.backward(exe.outputs)
+    for k in range(len(shapes)):
+        name = 'arg_%d'%k
+        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 def test_nearest_upsampling():
     for root_scale in [1,2,3]:
@@ -1404,9 +1415,8 @@ def test_dot(ctx=default_context()):
                 exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
                 assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
                 assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
+
     # Test dot with transpose flag using gradient checker.
-    m1_npy = np.random.normal(0, 1, (3, 4))
-    m2_npy = np.random.normal(0, 1, (4, 5))
     def dot_sym():
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
@@ -1423,10 +1433,13 @@ def test_dot(ctx=default_context()):
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
         return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
-    check_numeric_gradient(dot_sym(), [m1_npy, m2_npy])
-    check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy])
-    check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T])
-    check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T])
+    for ashape, bshape in [((3, 4), (4, 5)), ((2,3,4), (4, 5, 6))]:
+        m1_npy = np.random.normal(0, 1, ashape)
+        m2_npy = np.random.normal(0, 1, bshape)
+        check_numeric_gradient(dot_sym(), [m1_npy, m2_npy], check_eps=2e-2)
+        check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy], check_eps=2e-2)
+        check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T], check_eps=2e-2)
+        check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T], check_eps=2e-2)
 
 def test_batch_dot():
     for batch_size in range(1, 5):
@@ -2437,7 +2450,7 @@ def test_bilinear_sampler():
             exe.backward(mx.nd.array(out_grad))
             data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(), 
                                                        exe.arg_dict['grid'].asnumpy())
-            assert reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 1E-4
+            assert reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 2E-4
             assert reldiff(exe.grad_dict['grid'].asnumpy(),grid_grad) < 1E-5
 
             # check kAddTo
@@ -2450,7 +2463,7 @@ def test_bilinear_sampler():
             exe_addto.grad_dict['grid'][:] = grid_initial_grid
             exe_addto.forward()
             exe_addto.backward(mx.nd.array(out_grad))
-            assert reldiff(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid) < 1E-4
+            assert reldiff(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid) < 2E-4
             assert reldiff(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid) < 1E-5
             
 def test_index2d():
@@ -2462,7 +2475,191 @@ def test_index2d():
         r = mx.nd.batch_take(data, x)
         assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
+def test_cast():
+    for srctype in [np.int32, np.float32, np.float16]:
+        for dsttype in [np.float32, np.int32, np.float16]:
+            x = mx.sym.Variable('x', dtype=srctype)
+            y = mx.sym.Cast(x, dtype=dsttype)
+            exe = y.simple_bind(ctx=default_context(), x=(10, 10))
+            assert exe.arg_arrays[0].dtype == srctype
+            assert exe.outputs[0].dtype == dsttype
+            X = np.random.uniform(-10, 10, size=(10, 10))
+            exe.arg_arrays[0][:] = X
+            exe.forward()
+            exe.backward(mx.nd.array(X, dtype=dsttype, ctx=default_context()))
+            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), threshold=5e-4)
+            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=5e-4)
+
+def test_repeat():
+    def test_repeat_forward():
+        ndim_max = 6 # max number of dims of the ndarray
+        size_max = 10 # max number of elements in each dim
+        repeats = 3
+        for ndim in range(1, ndim_max+1):
+            shape = ()
+            for i in range(0, ndim):
+                shape += (np.random.randint(1, size_max+1), )
+            a = np.random.random_sample(size=shape)
+            aa = np.repeat(a, repeats)
+            b = mx.nd.array(a, ctx=default_context())
+            bb = mx.nd.repeat(b, repeats).asnumpy()
+            assert_almost_equal(aa, bb)
+
+            for axis in range(0, ndim):
+                aa = np.repeat(a, repeats, axis)
+                bb = mx.nd.repeat(b, repeats, axis).asnumpy()
+                assert_almost_equal(aa, bb)
+
+    def test_repeat_backward(axis):
+        data = mx.sym.Variable('data')
+        n1 = 3
+        n2 = 4
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        arr_data = mx.nd.array(data_tmp)
+        arr_grad = mx.nd.empty(shape)
+        repeats = 2
+        test = mx.sym.repeat(data, repeats=repeats, axis=axis)
+        exe = test.bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
+        npout_grad = np.random.randint(0, 10, n1 * n2 * repeats)
+        if axis == 0:
+            npout_grad = npout_grad.reshape(n1 * repeats, n2)
+        elif axis == 1:
+            npout_grad = npout_grad.reshape(n1, n2 * repeats)
+        else:
+            raise RuntimeError("Invalid axis value")
+        out_grad = mx.nd.array(npout_grad)
+        exe.backward(out_grad)
+
+        expected_grad = np.zeros(shape)
+        if axis == 0:
+            for i in range(shape[0]):
+                for j in range(shape[1]):
+                    k = i * repeats
+                    expected_grad[i][j] = sum(npout_grad[k:k + repeats, j])
+        elif axis == 1:
+            for j in range(shape[1]):
+                for i in range(shape[0]):
+                    k = j * repeats
+                    expected_grad[i][j] = sum(npout_grad[i, k:k + repeats])
+        else:
+            raise RuntimeError("Invalid axis value")
+
+        assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
+
+    def test_repeat_numeric_gradient():
+        data = mx.sym.Variable('data')
+        n1 = 3
+        n2 = 4
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        repeats = 2
+
+        test = mx.sym.repeat(data, repeats=repeats, axis=0)
+        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-3, check_eps=0.01)
+
+    test_repeat_forward()
+    test_repeat_backward(axis=0)
+    test_repeat_backward(axis=1)
+    test_repeat_numeric_gradient()
+
+def test_tile():
+    def test_normal_case():
+        ndim_max = 3 # max number of dims of the ndarray
+        size_max = 10 # max number of elements in each dim
+        length_max = 3 # max length of reps
+        rep_max = 10 # max number of tiling in each dim
+        for ndim in range(ndim_max, ndim_max+1):
+            shape = ()
+            for i in range(0, ndim):
+                shape += (np.random.randint(1, size_max+1), )
+            a = np.random.random_integers(0, 100, shape)
+            a = np.asarray(a, dtype=np.int32)
+            if ndim == 0:
+                a = np.array([])
+            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+
+            reps_len = np.random.randint(0, length_max+1)
+            reps_tuple = ()
+            for i in range(1, reps_len):
+                reps_tuple += (np.random.randint(0, rep_max), )
+            reps_array = np.asarray(reps_tuple)
+
+            a_tiled = np.tile(a, reps_array)
+            b_tiled = mx.nd.tile(b, reps_tuple).asnumpy()
+            assert same(a_tiled, b_tiled)
+
+    def test_empty_tensor():
+        shape = (2, 3, 0, 4)
+        a = np.array([], dtype=np.int32).reshape(shape)
+        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+        reps = (2, 4, 6)
+
+        a_tiled = np.tile(a, reps)
+        b_tiled = mx.nd.tile(b, reps).asnumpy()
+        assert same(a_tiled, b_tiled)
+
+    def test_empty_reps():
+        a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
+        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+        a_tiled = np.tile(a, ())
+        b_tiled = mx.nd.tile(b, ()).asnumpy()
+        assert same(a_tiled, b_tiled)
+
+    def test_zero_reps():
+        a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
+        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+        reps = (2, 0, 4, 5)
+        a_tiled = np.tile(a, reps)
+        b_tiled = mx.nd.tile(b, reps).asnumpy()
+        assert same(a_tiled, b_tiled)
+
+    def test_tile_backward():
+        data = mx.sym.Variable('data')
+        n1 = 2
+        n2 = 2
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        arr_data = mx.nd.array(data_tmp)
+        arr_grad = mx.nd.empty(shape)
+        reps1 = 2
+        reps2 = 2
+        reps = (reps1, reps2)
+        test = mx.sym.tile(data, reps=reps)
+        exe = test.bind(ctx=mx.context.Context.default_ctx, args=[arr_data], args_grad=[arr_grad])
+        npout_grad = np.random.randint(0, 10, n1 * n2 * reps1 * reps2).reshape(n1 * reps1, n2 * reps2)
+        out_grad = mx.nd.array(npout_grad)
+        exe.backward(out_grad)
+
+        expected_grad = np.zeros(shape)
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                expected_grad[i][j] += sum(sum(npout_grad[i:(n1 * reps1):reps1, j:(n2 * reps2):reps2]))
+
+        assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
+
+    def test_tile_numeric_gradient():
+        data = mx.sym.Variable('data')
+        n1 = 2
+        n2 = 2
+        shape = (n1, n2)
+        data_tmp = np.random.randint(0, 10, n1 * n2).reshape(shape)
+        reps1 = 2
+        reps2 = 2
+        reps = (reps1, reps2)
+        test = mx.sym.tile(data, reps=reps)
+        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-3, check_eps=0.01)
+
+    test_normal_case()
+    test_empty_tensor()
+    test_empty_reps()
+    test_zero_reps()
+    test_tile_backward()
+    test_tile_numeric_gradient()
+
 if __name__ == '__main__':
+    test_dot()
+    test_cast()
     test_clip()
     test_index2d()
     test_scalarop()
@@ -2500,7 +2697,6 @@ if __name__ == '__main__':
     test_reshape()
     test_broadcast()
     test_stn()
-    test_dot()
     test_batch_dot()
     test_correlation()
     test_support_vector_machine_l1_svm()
@@ -2518,3 +2714,5 @@ if __name__ == '__main__':
     test_grid_generator()
     test_bilinear_sampler()
     test_binary_logic()
+    test_repeat()
+    test_tile()

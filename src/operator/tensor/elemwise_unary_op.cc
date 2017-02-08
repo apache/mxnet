@@ -8,6 +8,7 @@
 
 namespace mxnet {
 namespace op {
+DMLC_REGISTER_PARAMETER(CastParam);
 
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
@@ -51,6 +52,25 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
       return lhs;
     });
+
+NNVM_REGISTER_OP(Cast)
+.add_alias("cast")
+.MXNET_DESCRIBE("Convert data type to dtype")
+.set_attr_parser(ParamParser<CastParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", CastType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
+.add_argument("data", "NDArray", "Source input")
+.add_arguments(CastParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_cast)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>);
 
 // negative
 MXNET_OPERATOR_REGISTER_UNARY(negative)

@@ -68,7 +68,7 @@ setup(name='mxnet',
       ],
       zip_safe=False,
       packages=[
-          'mxnet', 'mxnet.module', 'mxnet._ctypes',
+          'mxnet', 'mxnet.module', 'mxnet._ctypes', 'mxnet.rnn',
           'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook'
           ],
       data_files=[('mxnet', [LIB_PATH[0]])],

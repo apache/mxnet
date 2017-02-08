@@ -46,7 +46,7 @@ with MXNet commit `0a03417`
 
 ## Other CPU
 
-If using cpus(not just intel cpus, such as ARMs), NNAPCK will also improve the running performance with 2x~7x, please check [nnpack.md](./nnpack.md) for details.
+If using CPUs (not just Intel CPUs -- ARMs also), NNPACK will also improve the running performance with 2x~7x, please check [nnpack.md](./nnpack.md) for details.
 
 ## Nvidia GPU
 

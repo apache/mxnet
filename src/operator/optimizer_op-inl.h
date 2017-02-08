@@ -176,6 +176,89 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
+// This RMSProp code follows the version in
+// http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
+// by Alex Graves, 2013.
+struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
+  float lr;
+  float gamma1;
+  float gamma2;
+  float epsilon;
+  float wd;
+  float rescale_grad;
+  float clip_gradient;
+  DMLC_DECLARE_PARAMETER(RMSPropParam) {
+    DMLC_DECLARE_FIELD(lr).describe("learning_rate");
+    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f).describe("gamma1");
+    DMLC_DECLARE_FIELD(gamma2).set_default(0.9f).describe("gamma2");
+    DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f).describe("epsilon");
+    DMLC_DECLARE_FIELD(wd).set_default(0.0f).describe("weight decay");
+    DMLC_DECLARE_FIELD(rescale_grad)
+        .set_default(1.0f)
+        .describe("rescale gradient as grad = rescale_grad*grad.");
+    DMLC_DECLARE_FIELD(clip_gradient)
+        .set_default(-1.0f)
+        .describe("If greater than 0, clip gradient to "
+                  "grad = max(min(grad, -clip_gradient), clip_gradient). "
+                  "Otherwise turned off.");
+  }
+};
+
+template <typename xpu>
+inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mshadow_op;
+  const RMSPropParam &param = nnvm::get<RMSPropParam>(attrs.parsed);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> state_n = inputs[2].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> state_g = inputs[3].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> delta = inputs[4].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+
+    if (param.clip_gradient >= 0.0f) {
+      state_n = scalar<DType>(1.f - param.gamma1) *
+                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
+                            DType(param.clip_gradient)) *
+                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
+                            DType(param.clip_gradient)) +
+                scalar<DType>(param.gamma1) * state_n;
+      state_g = scalar<DType>(1.f - param.gamma1) *
+                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
+                            DType(param.clip_gradient)) +
+                scalar<DType>(param.gamma1) * state_g;
+      delta = scalar<DType>(param.gamma2) * delta -
+              scalar<DType>(param.lr) *
+                  (F<clip>(scalar<DType>(param.rescale_grad) * grad,
+                           DType(param.clip_gradient)) /
+                       F<square_root>(state_n - state_g * state_g) +
+                   scalar<DType>(param.epsilon)) +
+              scalar<DType>(param.wd) * weight;
+    } else {
+      state_n = scalar<DType>((1.f - param.gamma1) *
+                              std::pow(param.rescale_grad, 2)) *
+                    (grad * grad) +
+                scalar<DType>(param.gamma1) * state_n;
+      state_g =
+          scalar<DType>((1.f - param.gamma1) * param.rescale_grad) * grad +
+          scalar<DType>(param.gamma1) * state_g;
+      delta = scalar<DType>(param.gamma2) * delta -
+              scalar<DType>(param.lr) *
+                  (scalar<DType>(param.rescale_grad) * grad /
+                       F<square_root>(state_n - state_g * state_g) +
+                   scalar<DType>(param.epsilon)) +
+              scalar<DType>(param.wd) * weight;
+    }
+    Assign(out, req[0], weight + delta);
+  });
+}
+
 }  // namespace op
 }  // namespace mxnet
 

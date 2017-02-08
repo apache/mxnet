@@ -95,7 +95,7 @@ After installing the dependencies, use the following command to pull the MXNet s
     # Move to source code parent directory
     cd ~/mxnet
     cp make/config.mk .
-    # Repalce this line if you use other BLAS libs
+    # Replace this line if you use other BLAS libs
     echo "USE_BLAS=openblas" >>config.mk
     echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
     echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk

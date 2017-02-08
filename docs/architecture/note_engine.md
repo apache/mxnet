@@ -156,7 +156,7 @@ Here's a summary of goals for the engine:
 
 - It should be unaware of operations that are being performed, so that users can perform any operations they define.
 - It shouldn't schedule only certain types of objects.
-	- We should be able to schedule dependency on GPU andCPU memory.
+	- We should be able to schedule dependency on GPU and CPU memory.
 	- We should be able to track dependency on the random number generator, etc.
 - It shouldn't allocate resources. It should only track dependencies. Users can allocate their own memory, PRNG, etc.
 
