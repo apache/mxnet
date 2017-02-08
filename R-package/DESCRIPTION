@@ -9,7 +9,7 @@ Repository: DMLC
 Description: MXNet is a deep learning framework designed for both efficiency
     and flexibility. It allows you to mix the flavours of deep learning programs
     together to maximize the efficiency and your productivity.
-License: BSD
+License: Apache License (== 2.0)
 URL: https://github.com/dmlc/mxnet/tree/master/R-package
 BugReports: https://github.com/dmlc/mxnet/issues
 Imports:
@@ -26,7 +26,7 @@ Suggests:
     mlbench,
     knitr,
     rmarkdown,
-    imager,
+    imager
 LinkingTo: Rcpp
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1
