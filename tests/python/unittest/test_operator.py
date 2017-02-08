@@ -1263,7 +1263,7 @@ def test_expand_dims():
 
 def test_crop():
     for ndim in range(1, 6):
-        for t in range(5):
+        for t in range(50):
             dims = []
             begin = []
             end = []
@@ -1272,6 +1272,14 @@ def test_crop():
                 d = random.randint(1, 10)
                 b = random.randint(0, d-1)
                 e = random.randint(b+1, d)
+                if b == 0 and random.randint(0, 1):
+                    b = None
+                elif b != 0 and random.randint(0, 1):
+                    b -= d
+                if e == d and random.randint(0, 1):
+                    e = None
+                elif e != d and random.randint(0, 1):
+                    e -= d
                 dims.append(d)
                 begin.append(b)
                 end.append(e)
@@ -1279,6 +1287,10 @@ def test_crop():
             x = mx.nd.array(np.random.normal(size=dims))
             y = mx.nd.crop(x, begin=tuple(begin), end=tuple(end))
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
+
+            vx = mx.sym.Variable('x')
+            vy = mx.sym.crop(vx, begin=tuple(begin), end=tuple(end))
+            check_numeric_gradient(vy, [x.asnumpy()])
 
 
 def test_slice_axis():
