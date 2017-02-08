@@ -46,39 +46,71 @@ def test_backward_infer():
 
 
 def test_incomplete_infer_elewise():
-    a = mx.sym.zeros(shape=(0, 10))
-    b = mx.sym.ones(shape=(12, 0))
+    a = mx.sym.Variable('a', shape=(0, 10))
+    b = mx.sym.Variable('b', shape=(12, 0))
     c = a + b
-    arg_shapes, out_shapes, aux_shapes = c.infer_shape()
-    assert out_shapes[0] == (12, 10)
+    arg_shapes, _, _ = c.infer_shape()
+    arg_names = c.list_arguments()
+    arg_shapes = {k: v for k, v in zip(arg_names, arg_shapes)}
+    assert arg_shapes['a'] == (12, 10)
+    assert arg_shapes['b'] == (12, 10)
 
 
 def test_incomplete_infer_mlp():
-    a = mx.sym.zeros(shape=(0, 10))
+    a = mx.sym.Variable('a', shape=(0, 10))
     b = mx.sym.FullyConnected(data=a, num_hidden=21)
-    c = mx.sym.zeros(shape=(5, 21))
+    c = mx.sym.Variable('c', shape=(5, 0))
     d = b + c
-    arg_shapes, out_shapes, aux_shapes = d.infer_shape()
-    assert out_shapes[0] == (5, 21)
+    arg_shapes, _, _ = d.infer_shape()
+    arg_names = d.list_arguments()
+    arg_shapes = {k: v for k, v in zip(arg_names, arg_shapes)}
+    assert arg_shapes['a'] == (5, 10)
+    assert arg_shapes['c'] == (5, 21)
 
 
 def test_incomplete_infer_slicechannel():
-    a = mx.sym.zeros(shape=(0, 10))
-    b = mx.sym.SliceChannel(data=a, num_outputs=10, squeeze_axis=True)
-    c = mx.sym.zeros(shape=(5,))
+    a = mx.sym.Variable('a', shape=(0, 10))
+    b = mx.sym.SliceChannel(data=a, num_outputs=10, axis=1, squeeze_axis=True)
+    c = mx.sym.Variable('c', shape=(5,))
     d = b[1] + c
-    arg_shapes, out_shapes, aux_shapes = d.infer_shape()
-    assert out_shapes[0] == (5,)
+    arg_shapes, _, _ = d.infer_shape()
+    arg_names = d.list_arguments()
+    arg_shapes = {k: v for k, v in zip(arg_names, arg_shapes)}
+    assert arg_shapes['a'] == (5, 10)
+
+    a = mx.sym.Variable('a', shape=(0, 15, 0))
+    b = mx.sym.SliceChannel(data=a, num_outputs=3, squeeze_axis=False)
+    c = mx.sym.Variable('c', shape=(3, 5, 2))
+    d = b[1] + c
+    arg_shapes, _, _ = d.infer_shape()
+    arg_names = d.list_arguments()
+    arg_shapes = {k: v for k, v in zip(arg_names, arg_shapes)}
+    assert arg_shapes['a'] == (3, 15, 2)
 
 
 def test_incomplete_infer_convolution():
-    a = mx.sym.zeros(shape=(0, 10, 0, 0))
+    a = mx.sym.Variable('a', shape=(0, 10, 0, 0))
     b = mx.sym.Convolution(data=a, num_filter=21, kernel=(3, 3), dilate=(1, 1), pad=(1, 1))
-    c = mx.sym.zeros(shape=(5, 21, 32, 32))
+    c = mx.sym.Variable('c', shape=(5, 21, 32, 32))
     d = b + c
-    arg_shapes, out_shapes, aux_shapes = d.infer_shape()
-    assert out_shapes[0] == (5, 21, 32, 32)
+    arg_shapes, _, _ = d.infer_shape()
+    arg_names = d.list_arguments()
+    arg_shapes = {k: v for k, v in zip(arg_names, arg_shapes)}
+    assert arg_shapes['a'] == (5, 10, 32, 32)
 
+
+def test_incomplete_infer_concat():
+    a = mx.sym.Variable('a', shape=(0, 10))
+    b = mx.sym.Variable('b', shape=(0, 5))
+    c = mx.sym.Concat(a, b, num_args=2, dim=1)
+    d = mx.sym.Variable('d', shape=(2, 0))
+    d = d + c
+    arg_shapes, _, _ = d.infer_shape()
+    arg_names = d.list_arguments()
+    arg_shapes = {k: v for k, v in zip(arg_names, arg_shapes)}
+    assert arg_shapes['a'] == (2, 10)
+    assert arg_shapes['b'] == (2, 5)
+    assert arg_shapes['d'] == (2, 15)
 
 if __name__ == "__main__":
     test_mlp2_infer_shape()
@@ -88,3 +120,4 @@ if __name__ == "__main__":
     test_incomplete_infer_mlp()
     test_incomplete_infer_slicechannel()
     test_incomplete_infer_convolution()
+    test_incomplete_infer_concat()
