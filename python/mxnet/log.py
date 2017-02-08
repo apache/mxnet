@@ -57,12 +57,10 @@ class _Formatter(logging.Formatter):
             self._fmt = fmt
         return super(_Formatter, self).format(record)
 
-
 _handler = logging.StreamHandler()
 _handler.setFormatter(_Formatter())
 
-
-def _get_logger(name=None, level=WARNING):
+def getLogger(name=None, level=WARNING):
     """Get customized logger.
 
     Args:
@@ -73,11 +71,19 @@ def _get_logger(name=None, level=WARNING):
         A logger.
     """
     logger = logging.getLogger(name)
-    if name and not getattr(logger, '_init_done', None):
+    if name is not None and not getattr(logger, '_init_done', None):
         logger._init_done = True
         logger.addHandler(_handler)
         logger.setLevel(level)
     return logger
 
+# get the root logger
+mxlogger = getLogger(name='', level=WARNING)
 
-mxlogger = _get_logger(name='mxnet', level=WARNING)
+def basicConfig(**kwarg):
+    """Forward to the logging.basicConfig"""
+    mxlogger.handlers = []
+    # This function does nothing if the root logger
+    # already has handlers configured.
+    logging.basicConfig(**kwarg)
+
