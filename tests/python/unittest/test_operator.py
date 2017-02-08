@@ -2670,8 +2670,9 @@ def test_one_hot():
                 shape += (np.random.randint(1, dim_size_max+1), )
             indices = np.random.randint(-dim_size_max, dim_size_max+1,
                                         size=np.prod(shape)).reshape(shape)
-            mx_one_hot_array = mx.nd.one_hot(mx.nd.array(indices, dtype=np.int32),
-                                             depth = depth, dtype=np.int32)
+            mx_one_hot_array = mx.nd.one_hot(
+                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                depth = depth, dtype=np.int32)
             expected_array = np.zeros((np.prod(shape), depth), dtype=np.int32)
             expected_array[:] = off_value
             indices_1d = indices.flatten()
@@ -2688,8 +2689,9 @@ def test_one_hot():
         shape = (2, 0, 9, 3)
         indices = np.array([]).reshape(shape)
         depth = 10
-        mx_one_hot_array = mx.nd.one_hot(mx.nd.array(indices, dtype=np.int32),
-                                         depth=depth, dtype=np.int32).asnumpy()
+        mx_one_hot_array = mx.nd.one_hot(
+            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+            depth=depth, dtype=np.int32).asnumpy()
         expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
         assert same(expected_array, mx_one_hot_array)
 
@@ -2697,8 +2699,9 @@ def test_one_hot():
         shape = (2, 4, 9, 3)
         indices = np.ones(shape)
         depth = 0
-        mx_one_hot_array = mx.nd.one_hot(mx.nd.array(indices, dtype=np.int32),
-                                         depth=depth, dtype=np.int32).asnumpy()
+        mx_one_hot_array = mx.nd.one_hot(
+            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+            depth=depth, dtype=np.int32).asnumpy()
         expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
         assert same(expected_array, mx_one_hot_array)
 
