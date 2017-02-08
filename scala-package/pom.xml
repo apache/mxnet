@@ -72,15 +72,14 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
+            <version>2.2.1</version>
             <executions>
               <execution>
                 <phase>package</phase>
+                <id>attach-sources</id>
                 <goals>
                   <goal>jar-no-fork</goal>
                 </goals>
-                <configuration>
-                  <includePom>true</includePom>>
-                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -91,7 +90,7 @@
             <executions>
               <execution>
                 <id>doc</id>
-                <phase>generate-sources</phase>
+                <phase>package</phase>
                 <goals>
                   <goal>compile</goal>
                 </goals>
@@ -137,7 +136,7 @@
             </configuration>
             <executions>
               <execution>
-                <phase>package</phase>
+                <id>attach-javadocs</id>
                 <goals>
                   <goal>jar</goal>
                 </goals>
@@ -180,8 +179,22 @@
   </distributionManagement>
 
   <build>
-    <pluginManagement>
+    <!--<pluginManagement>-->
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>2.2.1</version>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <id>attach-sources</id>
+              <goals>
+                <goal>jar-no-fork</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>native-maven-plugin</artifactId>
@@ -322,14 +335,12 @@
               <goals>
                 <goal>compile</goal>
               </goals>
-              <phase>compile</phase>
             </execution>
             <execution>
               <id>test-compile</id>
               <goals>
                 <goal>testCompile</goal>
               </goals>
-              <phase>test-compile</phase>
             </execution>
             <execution>
               <phase>process-resources</phase>
@@ -357,11 +368,6 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-          <version>2.2.1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.9.1</version>
         </plugin>
@@ -374,10 +380,10 @@
         <plugin>
           <groupId>org.sonatype.plugins</groupId>
           <artifactId>nexus-staging-maven-plugin</artifactId>
-          <version>1.6.3</version>
+          <version>1.6.7</version>
         </plugin>
       </plugins>
-    </pluginManagement>
+    <!--</pluginManagement>-->
   </build>
   <dependencyManagement>
     <dependencies>
