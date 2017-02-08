@@ -32,8 +32,8 @@ package.DeepMXNet = {
 
   dependencies = {
     0.9 = {
-#     LibStdCppNoCFlags = 4.9;
-      LibStdCpp = gcc;
+     LibStdCppNoCFlags = 4.9;
+#      LibStdCpp = gcc;
 #      CFlagsGCC = 4.9.x;
       Googletest = 1.x;
       CMake = 3.5.x;
