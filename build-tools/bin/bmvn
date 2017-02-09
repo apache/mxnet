@@ -1,0 +1,248 @@
+#!/bin/bash
+# Entry-point to the BrazilMaven build system
+
+# Fail if commands error.
+set -e
+
+# Fail if commands in pipelines error.
+set -o pipefail
+
+# Fail if variables are undefined.
+#set -u
+
+# We want to make sure we copy hidden files when we find them.
+# This options makes the '*' glob also return hidden files.
+shopt -s dotglob
+
+# Variable needed by all functions
+PACKAGE_SRC_ROOT=$(brazil-path pkg.src)
+echo "PACKAGE_SRC_ROOT: $PACKAGE_SRC_ROOT"
+
+#
+# Find the root pom.xml if POM_ROOT_DIR is not set
+#
+if [ -z "$POM_ROOT_DIR" ]; then
+    for i in {1..5}; do
+        if [ -z "$POM_ROOT_DIR" ]; then
+            POMS_FOUND="$(find $PACKAGE_SRC_ROOT -maxdepth $i -name pom.xml)"
+            for p in $POMS_FOUND ; do
+                THIS_POM_DIR="$(dirname $p)"
+                if [ ! -z "$THIS_POM_DIR" ]; then
+                    POM_ROOT_DIR=$THIS_POM_DIR
+                    echo "Found POM_ROOT_DIR: $POM_ROOT_DIR"
+                    break
+                fi
+            done
+        else
+            break
+        fi
+    done
+fi
+
+#echo "ROOT POM_ROOT_DIR: $POM_ROOT_DIR"
+
+if [ -z "$POM_ROOT_DIR" ]; then
+    echo "No pom.xml found (checked up to depth of 5)"
+    exit 1
+fi
+
+#export CLASSPATH=$(brazil-path all.classpath):$CLASSPATH
+
+#echo "**************************"
+#echo "CLASSPATH: $CLASSPATH"
+#echo "**************************"
+
+# Load the package's mavenrc file if there is one.
+# This is primarily intended for configuration
+# beyond what settings.xml allows when running
+# under "brazil-build release"
+#
+# Expected output variables:
+# MAVEN_OPTS: Parameters passed to the Java VM when running Maven. This is an environment variable mvn uses
+# BRAZILMAVEN_EXTRA_ARGS: Extra command-line arguments to pass to Maven.
+function source_mavenrc() {
+    # Default our variables to a empty strings if they aren't set.
+    MAVEN_OPTS="${MAVEN_OPTS=}"
+    BRAZILMAVEN_EXTRA_ARGS="${BRAZILMAVEN_EXTRA_ARGS=}"
+
+    # Turn BRAZILMAVEN_EXTRA_ARGS into an Array, properly splitting the string
+    # in the process (i.e., things like '--c="a space"' work properly.)
+    # "$@" appears not to need this.
+    eval "BRAZILMAVEN_EXTRA_ARGS=($BRAZILMAVEN_EXTRA_ARGS)"
+
+    if [[ -f "$POM_ROOT_DIR/mavenrc" ]]; then
+        source "$POM_ROOT_DIR/mavenrc"
+    fi
+}
+
+# Read command line arguments to decide what to do.
+#
+# Arguments:
+# $@: The arguments given to this script
+#
+# Sets the following variables:
+# MVN_PHASE_OR_GOAL: The phase and/or goal arguments to pass to mvn
+# MVN_CMD_OPTS: Other command-line arguments to pass to mvn
+# NON_RECURSIVE_OPTION: Command-line argument to pass to mvn to run non-recursively,
+#   or an empty string if running recursively (the default)
+# RUN_INSTALL: Flag to indicate whether the install step should be run
+# RUN_APOLLO_PKG: Flag to indicate whether the "apollo-pkg" step should be run
+function read_args() {
+
+    # Default our variables to a empty strings if they aren't set.
+    MVN_PHASE_OR_GOAL="${MVN_PHASE_OR_GOAL=}"
+    MVN_CMD_OPTS="${MVN_CMD_OPTS=}"
+    NON_RECURSIVE_OPTION="${NON_RECURSIVE_OPTION=}"
+    RUN_INSTALL="${RUN_INSTALL=}"
+    RUN_APOLLO_PKG="${RUN_APOLLO_PKG=}"
+
+    for ARG in "$@" "${BRAZILMAVEN_EXTRA_ARGS[*]}"; do
+        case "$ARG" in
+            --non-recursive) NON_RECURSIVE_OPTION="--non-recursive" ;;
+            -*) MVN_CMD_OPTS="$MVN_CMD_OPTS $ARG" ;;
+            *) MVN_PHASE_OR_GOAL="$MVN_PHASE_OR_GOAL $ARG" ;;
+        esac
+    done
+
+    # Strip leading and trailing whitespace.
+    MVN_PHASE_OR_GOAL="${MVN_PHASE_OR_GOAL//[[:blank:]]/}"
+
+    if [[ "$MVN_PHASE_OR_GOAL" == "apollo-pkg" ]]; then
+        RUN_APOLLO_PKG=1
+    fi
+
+    # Use "package" as the goal for the common Brazil "targets"
+    # Any other phase or goal will be passed through to mvn
+    # Only install to Brazil locations for the common targets, because other
+    # goals might not affect the installed artifacts at all
+
+    if [[
+        -z "$MVN_PHASE_OR_GOAL" ||
+        "$MVN_PHASE_OR_GOAL" == "release" ||
+        "$MVN_PHASE_OR_GOAL" == "apollo-pkg"
+    ]]; then
+        MVN_PHASE_OR_GOAL="package"
+        MVN_CMD_OPTS="$MVN_CMD_OPTS --batch-mode --offline"
+        RUN_INSTALL=1
+    fi
+}
+
+# Prepare the build directory prior to running mvn and compute needed variables
+#
+# Sets the following variables:
+# M2_HOME: Where Maven is installed
+# PROJECT_DIR: Where to run the reactor project
+# LOCAL_REPOSITORY_DIR: Where to set the local repository
+# JAVA_HOME: The JAVA_HOME used to run Maven (also the default for the compiler goals)
+function setup() {
+    echo "Setting up project directory"
+
+    PRIVATE_DIR="$PACKAGE_SRC_ROOT/build/private"
+
+    #M2_HOME="$(cd $(dirname $0)/.. && pwd 2>/dev/null)"
+    M2_HOME="$(brazil-path [Maven]pkg.bin)"/..
+    echo "M2_HOME: $M2_HOME"
+
+    # Use the JDK build-tool dependency as JAVA_HOME
+    JAVA_HOME=`brazil-path "tooldirect.jdk"`
+
+    # Local artifact repository is normally in $HOME/m2/repository
+    # With the Brazil extension, Maven shouldn't do anything with this directory,
+    # but Maven will still try to create the directory if it doesn't exist
+    LOCAL_REPOSITORY_DIR="$PRIVATE_DIR/m2/repository"
+
+    echo "LOCAL_REPOSITORY_DIR: $LOCAL_REPOSITORY_DIR"
+
+    # Copy Maven project files into a writable tmp directory
+    # Maven puts its output directories in the project directory,
+    # but we want to treat the package source source directory as unmodifiable
+    PROJECT_DIR="$PRIVATE_DIR/project"
+    mkdir -p "$PROJECT_DIR"
+    for f in "$POM_ROOT_DIR"/*; do
+        basename=`basename "$f"`
+        if [[
+            "$basename" != "." &&
+            "$basename" != ".." &&
+            "$basename" != "Config" &&
+            "$basename" != "build"  &&
+            "$basename" != "settings.xml" &&
+            "$basename" != ".git" &&
+            "$basename" != ".svn" &&
+            "$basename" != ".p4config"
+        ]]; then
+            cp -ruv -f "$f" "$PROJECT_DIR"
+        fi
+    done
+}
+
+# Run mvn to build the package
+function run_mvn() {
+    echo "Running Maven"
+
+    if [[ -f "$POM_ROOT_DIR/settings.xml" ]]; then
+        MVN_CMD_OPTS="--settings \"$POM_ROOT_DIR/settings.xml\" $MVN_CMD_OPTS"
+    fi
+
+    cd "$PROJECT_DIR" && \
+        JAVA_HOME="$JAVA_HOME" \
+        M2_HOME="$M2_HOME" \
+        MAVEN_OPTS="$MAVEN_OPTS" \
+        mvn --define BrazilMaven.localRepository="$LOCAL_REPOSITORY_DIR" \
+        $NON_RECURSIVE_OPTION \
+        $MVN_CMD_OPTS \
+        $MVN_PHASE_OR_GOAL
+    cd "$PACKAGE_SRC_ROOT"
+}
+
+# Install Maven output into the locations Brazil expects
+function install() {
+    echo "Installing Maven artifacts to Brazil locations"
+
+    # Glob all the jars into arrays.
+    EXT_CLASSPATH="$M2_HOME"/lib/ext/*.jar
+    LIB_CLASSPATH="$M2_HOME"/lib/*.jar
+
+    # Combine the arrays into one.
+    COMPLETE_CLASSPATH=( ${EXT_CLASSPATH[@]} ${LIB_CLASSPATH[@]} )
+
+    # Join the classpath with a ':'.
+    COMPLETE_CLASSPATH="$(printf -- "%s:" ${COMPLETE_CLASSPATH[*]})"
+
+    # Remove the trailing ':'.
+    COMPLETE_CLASSPATH="${COMPLETE_CLASSPATH%?}"
+
+    "$JAVA_HOME"/bin/java \
+        -classpath "$COMPLETE_CLASSPATH" \
+        com.amazon.brazil.aether.cli.InstallMavenProjectDirectory \
+        $NON_RECURSIVE_OPTION \
+        "$PROJECT_DIR" \
+        "$PACKAGE_SRC_ROOT"/build
+}
+
+# Setup the apollo-overrides directory for this package
+function apollo_pkg() {
+    PACKAGE_NAME=`brazil-path package-name`
+    WORKSPACE_ROOT=`brazil-path workspace-root`
+
+    /apollo/env/SDETools/bin/brazil-to-apollo-package \
+        --package "$PACKAGE_NAME" \
+        --packageRoot "$PACKAGE_SRC_ROOT" \
+        --workspaceRoot "$WORKSPACE_ROOT"
+}
+
+# Source mavenrc first so it doesn't have a chance to clobber other variables
+source_mavenrc
+read_args "$@"
+setup
+run_mvn
+
+if [[ "$RUN_INSTALL" ]]; then
+    install
+fi
+
+if [[ "$RUN_APOLLO_PKG" ]]; then
+    apollo_pkg
+fi
+
+exit 0
+
