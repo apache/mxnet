@@ -591,6 +591,9 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
+  // The following line is needed to guard the situation when
+  // an output array is empty on GPU. In that case, out.dptr() = 0x0
+  if (outputs[0].Size() == 0) return;
   int depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
@@ -601,9 +604,6 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    // The following line is needed to guard the situation when
-    // an output array is empty on GPU. In that case, out.dptr() = 0x0
-    if (outputs[0].dptr<DType>() == nullptr) return;
     mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     out = static_cast<DType>(off_value);
     Kernel<one_hot, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
