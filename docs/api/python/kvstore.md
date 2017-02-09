@@ -15,73 +15,97 @@ Provides basic operation over multiple devices (GPUs) on a single device.
 Let's consider a simple example. It initializes
 a (`int`, `NDArray`) pair into the store, and then pulls the value out.
 
+Input:
 ```python
-    >>> kv = mx.kv.create('local') # create a local kv store.
-    >>> shape = (2,3)
-    >>> kv.init(3, mx.nd.ones(shape)*2)
-    >>> a = mx.nd.zeros(shape)
-    >>> kv.pull(3, out = a)
-    >>> print a.asnumpy()
+     kv = mx.kv.create('local') # create a local kv store
+     shape = (2,3)
+     kv.init(3, mx.nd.ones(shape)*2)
+     a = mx.nd.zeros(shape)
+     kv.pull(3, out = a)
+     print a.asnumpy()
+```
+
+Output:
+```python
     [[ 2.  2.  2.]
      [ 2.  2.  2.]]
 ```
 
 ### Push, Aggregation, and Updater
 
-For any key that's been initialized, you can push a new value with the same shape to the key.
+For any key that's been initialized, you can push a new value with the same shape to the key, as follows:
 
+Input:
 ```python
-    >>> kv.push(3, mx.nd.ones(shape)*8)
-    >>> kv.pull(3, out = a) # pull out the value
-    >>> print a.asnumpy()
+     kv.push(3, mx.nd.ones(shape)*8)
+     kv.pull(3, out = a) # pull out the value
+     print a.asnumpy()
+```
+
+Output:
+```python
     [[ 8.  8.  8.]
      [ 8.  8.  8.]]
 ```
 
 The data that you want to push can be stored on any device. Furthermore, you can push multiple
 values into the same key, where KVStore first sums all of these
-values, and then pushes the aggregated value.
+values, and then pushes the aggregated value, as follows:
 
+Input:
 ```python
-    >>> gpus = [mx.gpu(i) for i in range(4)]
-    >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
-    >>> kv.push(3, b)
-    >>> kv.pull(3, out = a)
-    >>> print a.asnumpy()
+     gpus = [mx.gpu(i) for i in range(4)]
+     b = [mx.nd.ones(shape, gpu) for gpu in gpus]
+     kv.push(3, b)
+     kv.pull(3, out = a)
+     print a.asnumpy()
+```
+
+Output:
+```python
     [[ 4.  4.  4.]
      [ 4.  4.  4.]]
 ```
 
-For each push command, KVStore applies the pushed value to the value stored by a
-`updater`. The default updater is `ASSGIN`, and you can replace the default to
+For each push command, KVStore applies the pushed value to the value stored by an
+`updater`. The default updater is `ASSIGN`. You can replace the default to
 control how data is merged.
 
+Input:
 ```python
-    >>> def update(key, input, stored):
-    >>>     print "update on key: %d" % key
-    >>>     stored += input * 2
-    >>> kv._set_updater(update)
-    >>> kv.pull(3, out=a)
-    >>> print a.asnumpy()
+     def update(key, input, stored):
+         print "update on key: %d" % key
+         stored += input * 2
+     kv._set_updater(update)
+     kv.pull(3, out=a)
+     print a.asnumpy()
+     kv.push(3, mx.nd.ones(shape))
+     kv.pull(3, out=a)
+     print a.asnumpy()
+```
+
+Output:
+```python
     [[ 4.  4.  4.]
      [ 4.  4.  4.]]
-    >>> kv.push(3, mx.nd.ones(shape))
     update on key: 3
-    >>> kv.pull(3, out=a)
-    >>> print a.asnumpy()
     [[ 6.  6.  6.]
      [ 6.  6.  6.]]
 ```
-
 ### Pull
 
 You've already seen how to pull a single key-value pair. Similar to the way that you use the push command, you can
 pull the value into several devices with a single call.
 
+Input:
 ```python
-    >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
-    >>> kv.pull(3, out = b)
-    >>> print b[1].asnumpy()
+     b = [mx.nd.ones(shape, gpu) for gpu in gpus]
+     kv.pull(3, out = b)
+     print b[1].asnumpy()
+```
+
+Output:
+```python
     [[ 6.  6.  6.]
      [ 6.  6.  6.]]
 ```
@@ -91,30 +115,40 @@ pull the value into several devices with a single call.
 All of the operations that we've discussed so far are performed on a single key. KVStore also provides
 the interface for generating a list of key-value pairs. For a single device, use the following:
 
+Input:
 ```python
-    >>> keys = [5, 7, 9]
-    >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
-    >>> kv.push(keys, [mx.nd.ones(shape)]*len(keys))
+     keys = [5, 7, 9]
+     kv.init(keys, [mx.nd.ones(shape)]*len(keys))
+     kv.push(keys, [mx.nd.ones(shape)]*len(keys))
+     b = [mx.nd.zeros(shape)]*len(keys)
+     kv.pull(keys, out = b)
+     print b[1].asnumpy()
+```
+
+Output:
+```python
     update on key: 5
     update on key: 7
     update on key: 9
-    >>> b = [mx.nd.zeros(shape)]*len(keys)
-    >>> kv.pull(keys, out = b)
-    >>> print b[1].asnumpy()
     [[ 3.  3.  3.]
      [ 3.  3.  3.]]
 ```
 
 For multiple devices:
 
+Input:
 ```python
-    >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
-    >>> kv.push(keys, b)
+     b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
+     kv.push(keys, b)
+     kv.pull(keys, out = b)
+     print b[1][1].asnumpy()
+```
+
+Output:
+```python
     update on key: 5
     update on key: 7
     update on key: 9
-    >>> kv.pull(keys, out = b)
-    >>> print b[1][1].asnumpy()
     [[ 11.  11.  11.]
      [ 11.  11.  11.]]
 ```

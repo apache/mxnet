@@ -10,7 +10,7 @@ Topics:
 * [Multiple Outputs](#multiple-outputs) explains how to configure multiple outputs.
 * [Symbol Creation API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Symbol) documents functions.
 
-We also highly encouraged you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
+We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
 
 ## How to Compose Symbols
 
@@ -19,15 +19,20 @@ You can configure the graphs either at the level of neural network layer operati
 
 The following example configures a two-layer neural network.
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val data = Symbol.Variable("data")
-    scala> val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    scala> val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    scala> val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    scala> val net = Symbol.SoftmaxOutput(name = "out")()(Map("data" -> fc2))
-    scala> :type net
-    ml.dmlc.mxnet.Symbol
+     import ml.dmlc.mxnet._
+     val data = Symbol.Variable("data")
+     val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
+     val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
+     val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
+     val net = Symbol.SoftmaxOutput(name = "out")()(Map("data" -> fc2))
+     :type net
+```
+
+Output:
+```scala
+      ml.dmlc.mxnet.Symbol
 ```
 
 The basic arithmetic operators (plus, minus, div, multiplication) are overloaded for
@@ -36,29 +41,29 @@ The basic arithmetic operators (plus, minus, div, multiplication) are overloaded
 The following example creates a computation graph that adds two inputs together.
 
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val a = Symbol.Variable("a")
-    scala> val b = Symbol.Variable("b")
-    scala> val c = a + b
+     import ml.dmlc.mxnet._
+     val a = Symbol.Variable("a")
+     val b = Symbol.Variable("b")
+     val c = a + b
 ```
 
 ## Symbol Attributes
 
-You can add attributes to symbols by providing an attribute dictionary when creating a symbol.
+You can add an attribute to a symbol by providing an attribute dictionary when you create a symbol.
 
 ```scala
     val data = Symbol.Variable("data", Map("mood"-> "angry"))
     val op   = Symbol.Convolution()()(
       Map("data" -> data, "kernel" -> "(1, 1)", "num_filter" -> 1, "mood"-> "so so"))
 ```
-For proper communication with the C++ back end, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use `attr(key)`:
+For proper communication with the C++ backend, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use `attr(key)`:
 
 ```
-    scala> data.attr("mood")
+    data.attr("mood")
     res6: Option[String] = Some(angry)
 ```
 
-To attach attributes, we can use ```AttrScope```. ```AttrScope``` automatically adds the specified attributes to all of the symbols created within that scope. The user can also inherit this object to change naming behavior. For example:
+To attach attributes, you can use ```AttrScope```. ```AttrScope``` automatically adds the specified attributes to all of the symbols created within that scope. The user can also inherit this object to change naming behavior. For example:
 
 ```scala
     val (data, gdata) =
@@ -76,28 +81,32 @@ To attach attributes, we can use ```AttrScope```. ```AttrScope``` automatically 
 
 ## Serialization
 
-There are two ways to save and load the symbols. You can pickle to serialize the ```Symbol``` objects.
-Or, you can use the [mxnet.Symbol.save] and [mxnet.symbol.load] functions.
-The advantage of using save and load is that it's  language agnostic and cloud friendly.
-The symbol is saved in JSON format. You can also directly get a JSON string using [mxnet.Symbol.toJson].
-Refer to API documentation for more details. (http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Symbol)
+There are two ways to save and load the symbols. You can use the `mxnet.Symbol.save` and `mxnet.Symbol.load` functions to serialize the ```Symbol``` objects.
+The advantage of using `save` and `load` functions is that it is language agnostic and cloud friendly.
+The symbol is saved in JSON format. You can also get a JSON string directly using `mxnet.Symbol.toJson`.
+Refer to [API documentation](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Symbol) for more details.
 
 The following example shows how to save a symbol to an S3 bucket, load it back, and compare two symbols using a JSON string.
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val a = Symbol.Variable("a")
-    scala> val b = Symbol.Variable("b")
-    scala> val c = a + b
-    scala> c.save("s3://my-bucket/symbol-c.json")
-    scala> val c2 = Symbol.load("s3://my-bucket/symbol-c.json")
-    scala> c.toJson == c2.toJson
+    import ml.dmlc.mxnet._
+    val a = Symbol.Variable("a")
+    val b = Symbol.Variable("b")
+    val c = a + b
+    c.save("s3://my-bucket/symbol-c.json")
+    val c2 = Symbol.load("s3://my-bucket/symbol-c.json")
+    c.toJson == c2.toJson
+```
+
+Output:
+```scala
     Boolean = true
 ```
 
 ## Executing Symbols
 
-After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate those symbols.
+After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate them.
 If you are training a neural network, this is typically
 handled by the high-level [Model class](model.md) and the [`fit()`] function.
 
@@ -112,15 +121,20 @@ which is typically constructed by calling the [`simpleBind(<parameters>)`] metho
 
 To group the symbols together, use the [mxnet.symbol.Group](#mxnet.symbol.Group) function.
 
+Input:
 ```scala
-    scala> import ml.dmlc.mxnet._
-    scala> val data = Symbol.Variable("data")
-    scala> val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    scala> val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    scala> val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    scala> val net = Symbol.SoftmaxOutput(name = "out")()(Map("data" -> fc2))
-    scala> val group = Symbol.Group(fc1, net)
-    scala> group.listOutputs()
+    import ml.dmlc.mxnet._
+    val data = Symbol.Variable("data")
+    val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
+    val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
+    val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
+    val net = Symbol.SoftmaxOutput(name = "out")()(Map("data" -> fc2))
+    val group = Symbol.Group(fc1, net)
+    group.listOutputs()
+```
+
+Output:
+```scala
     IndexedSeq[String] = ArrayBuffer(fc1_output, out_output)
 ```
 
