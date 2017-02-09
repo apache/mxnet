@@ -57,10 +57,7 @@ class _Formatter(logging.Formatter):
             self._fmt = fmt
         return super(_Formatter, self).format(record)
 
-_handler = logging.StreamHandler()
-_handler.setFormatter(_Formatter())
-
-def getLogger(name=None, level=WARNING):
+def getLogger(name=None, filename=None, filemode=None, level=WARNING):
     """Get customized logger.
 
     Args:
@@ -73,6 +70,15 @@ def getLogger(name=None, level=WARNING):
     logger = logging.getLogger(name)
     if name is not None and not getattr(logger, '_init_done', None):
         logger._init_done = True
-        logger.addHandler(_handler)
+        if filename:
+            mode = filemode if filemode else 'a'
+            hdlr = FileHandler(filename, mode)
+        else:
+            hdlr = logging.StreamHandler()
+            # the `_Formatter` contain some escape character to
+            # represent color, which is not suitable for FileHandler,
+            # (TODO) maybe we can add another Formatter for FileHandler.
+            hdlr.setFormatter(_Formatter())
+        logger.addHandler(hdlr)
         logger.setLevel(level)
     return logger
