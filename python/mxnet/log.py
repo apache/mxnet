@@ -76,14 +76,3 @@ def getLogger(name=None, level=WARNING):
         logger.addHandler(_handler)
         logger.setLevel(level)
     return logger
-
-# get the root logger
-mxlogger = getLogger(name='', level=WARNING)
-
-def basicConfig(**kwarg):
-    """Forward to the logging.basicConfig"""
-    mxlogger.handlers = []
-    # This function does nothing if the root logger
-    # already has handlers configured.
-    logging.basicConfig(**kwarg)
-
