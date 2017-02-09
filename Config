@@ -1,7 +1,8 @@
 package.DeepMXNet = {
   interfaces = (0.9);
 
-  build-system = brazilcmake;
+  #build-system = brazilcmake;
+  build-system = bmvn;
 
   build-environment = {
     chroot = basic;
@@ -23,15 +24,27 @@ package.DeepMXNet = {
       Python34 = 1.0;
       Python-setuptools = 2.x;
       C-ares = 1.x;
+      CFlagsGCC = 4.9.x;
+
+      # Scala build
+      #JDK8 = 1.0;
+      JDK = 1.7;
+      Maven = 3.0;
+      #Aether = 1;
       Scala29 = 1.0;
       BrazilMaven = 3.0;
-      JDK8 = 1.0;
-      CFlagsGCC = 4.9.x;
+      BrazilAetherSupport = 1.0;
+      Maven-maven-site-plugin = 3.x;
+      Maven-maven-deploy-plugin = 2.x;
+      Maven-maven-install-plugin = 2.x;
+      Maven-maven-clean-plugin = 2.x;
+      Maven-maven-enforcer-plugin = 1.x;
     };
   };
 
   dependencies = {
     0.9 = {
+     Maven-oss-parent = 6;
      LibStdCppNoCFlags = 4.9;
 #      LibStdCpp = gcc;
 #      CFlagsGCC = 4.9.x;
@@ -92,6 +105,7 @@ package.DeepMXNet = {
     # This target is needed for upstream python packages to include mxnet
     # in the PYTHONPATH correctly.
     python = { type = python };
+    scala-mxnet = { type = javalibrary; };
   };
 
 };
