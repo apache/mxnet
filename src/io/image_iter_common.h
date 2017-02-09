@@ -1,9 +1,16 @@
+/*!
+ *  Copyright (c) 2017 by Contributors
+ * \file image_iter_common.h
+ * \brief common types used by image data iterators
+ */
+
 #ifndef MXNET_IO_IMAGE_ITER_COMMON_H_
 #define MXNET_IO_IMAGE_ITER_COMMON_H_
 
+#include <mxnet/io.h>
 #include <vector>
 #include <unordered_map>
-#include <mxnet/io.h>
+#include <string>
 
 namespace mxnet {
 namespace io {
@@ -239,7 +246,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   }
 };
 
-} //namsepace io
-} //namespace mxnet
+}  // namespace io
+}  // namespace mxnet
 
-#endif// MXNET_IO_IMAGE_ITER_COMMON_H_
+#endif  // MXNET_IO_IMAGE_ITER_COMMON_H_

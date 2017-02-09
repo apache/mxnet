@@ -6,10 +6,6 @@
 
 #include <mxnet/io.h>
 #include <dmlc/parameter.h>
-#include "./image_recordio.h"
-#include "./image_augmenter.h"
-#include "./image_iter_common.h"
-#include "./inst_vector.h"
 #include <dmlc/threadediter.h>
 #include <dmlc/input_split_shuffle.h>
 #include <dmlc/recordio.h>
@@ -18,6 +14,10 @@
 #include <dmlc/omp.h>
 #include <dmlc/common.h>
 #include <type_traits>
+#include "./image_recordio.h"
+#include "./image_augmenter.h"
+#include "./image_iter_common.h"
+#include "./inst_vector.h"
 
 namespace mxnet {
 namespace io {
@@ -30,7 +30,7 @@ class ImageRecordIOParser2 {
 
   // set record to the head
   inline void BeforeFirst(void) {
-    if(batch_param_.round_batch == 0 || !overflow)
+    if (batch_param_.round_batch == 0 || !overflow)
       return source_->BeforeFirst();
     else
       overflow = false;
@@ -158,23 +158,20 @@ inline void ImageRecordIOParser2<DType>::Init(
 template<typename DType>
 inline bool ImageRecordIOParser2<DType>::
 ParseNext(DataBatch *out) {
-  if(overflow)
+  if (overflow)
     return false;
   CHECK(source_ != nullptr);
   dmlc::InputSplit::Blob chunk;
   unsigned current_size = 0;
-  while(current_size < batch_param_.batch_size)
-  {
+  while (current_size < batch_param_.batch_size) {
     unsigned n_to_copy;
-    if(n_parsed_ == 0)
-    {
-      if (source_->NextChunk(&chunk))
-      {
+    if (n_parsed_ == 0) {
+      if (source_->NextChunk(&chunk)) {
         inst_order_.clear();
         inst_index_ = 0;
         ParseChunk(&chunk);
         unsigned n_read = 0;
-        for(unsigned i = 0; i < temp_.size(); ++i) {
+        for (unsigned i = 0; i < temp_.size(); ++i) {
           const InstVector<DType>& tmp = temp_[i];
           for (unsigned j = 0; j < tmp.Size(); ++j) {
             inst_order_.push_back(std::make_pair(i, j));
@@ -187,30 +184,24 @@ ParseNext(DataBatch *out) {
         if (record_param_.shuffle != 0) {
           std::shuffle(inst_order_.begin(), inst_order_.end(), rnd_);
         }
-      }
-      else
-      {
-        if(current_size == 0) return false;
+      } else {
+        if (current_size == 0) return false;
         CHECK(!overflow) << "number of input images must be bigger than the batch size";
-        if(batch_param_.round_batch != 0) {
+        if (batch_param_.round_batch != 0) {
           overflow = true;
           source_->BeforeFirst();
-        }
-        else
-        {
+        } else {
           current_size = batch_param_.batch_size;
         }
         out->num_batch_padd = batch_param_.batch_size - current_size;
         n_to_copy = 0;
       }
-    }
-    else
-    {
+    } else {
       n_to_copy = std::min(n_parsed_, batch_param_.batch_size - current_size);
       n_parsed_ -= n_to_copy;
     }
 
-    //TODO: copy
+    // TODO(ptrendx): copy
 
     current_size += n_to_copy;
   }
@@ -218,8 +209,7 @@ ParseNext(DataBatch *out) {
 }
 
 template<typename DType>
-void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk)
-{
+void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk) {
   temp_.resize(param_.preprocess_threads);
 #if MXNET_USE_OPENCV
   // save opencv out
@@ -276,14 +266,12 @@ void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk)
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
           for (int k = 0; k < n_channels; ++k) {
-            if(!std::is_same<DType, uint8_t>::value) {
-              //TODO: normalize/mirror here to avoid memory copies
-              //logic from iter_normalize
+            if (!std::is_same<DType, uint8_t>::value) {
+              // TODO(ptrendx): normalize/mirror here to avoid memory copies
+              // logic from iter_normalize
               data[k][i][j] = im_data[swap_indices[k]];
-            }
-            else
-            {
-              //do not do normalization in Uint8 reader
+            } else {
+              // do not do normalization in Uint8 reader
               data[k][i][j] = im_data[swap_indices[k]];
             }
           }
@@ -316,22 +304,21 @@ void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk)
 
 template<typename DType = real_t>
 class ImageRecordIter2 : public IIterator<DataBatch> {
-  public:
+ public:
     ImageRecordIter2() : out_(nullptr) { }
 
     virtual ~ImageRecordIter2(void) {
       iter_.Destroy();
     }
 
-    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs)
-    {
+    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       prefetch_param_.InitAllowUnknown(kwargs);
       parser_.Init(kwargs);
       // maximum prefetch threaded iter internal size
       const int kMaxPrefetchBuffer = 16;
       // init thread iter
       iter_.set_max_capacity(kMaxPrefetchBuffer);
-      //init thread iter
+      // init thread iter
       iter_.Init([this](DataBatch **dptr) {
           if (*dptr == nullptr) {
             *dptr = new DataBatch();
@@ -345,7 +332,7 @@ class ImageRecordIter2 : public IIterator<DataBatch> {
       iter_.BeforeFirst();
     }
 
-    //From iter_prefetcher.h
+    // From iter_prefetcher.h
     virtual bool Next(void) {
       if (out_ != nullptr) {
         recycle_queue_.push(out_); out_ = nullptr;
@@ -367,7 +354,7 @@ class ImageRecordIter2 : public IIterator<DataBatch> {
       return *out_;
     }
 
-  private:
+ private:
     /*! \brief Backend thread */
     dmlc::ThreadedIter<DataBatch> iter_;
     /*! \brief Parameters */
@@ -392,5 +379,5 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter2)
     return new ImageRecordIter2<real_t>();
     });
 
-}
-}
+}  // namespace io
+}  // namespace mxnet
