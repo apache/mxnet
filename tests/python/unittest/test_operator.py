@@ -2490,6 +2490,7 @@ def test_cast():
             assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), threshold=5e-4)
             assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=5e-4)
 
+
 def test_repeat():
     def test_repeat_forward():
         ndim_max = 6 # max number of dims of the ndarray
@@ -2562,6 +2563,7 @@ def test_repeat():
     test_repeat_backward(axis=0)
     test_repeat_backward(axis=1)
     test_repeat_numeric_gradient()
+
 
 def test_tile():
     def test_normal_case():
@@ -2657,11 +2659,12 @@ def test_tile():
     test_tile_backward()
     test_tile_numeric_gradient()
 
+
 def test_one_hot():
     def test_normal_case():
         ndim_max = 6
         dim_size_max = 20
-        depth = dim_size_max / 2
+        depth = int(dim_size_max / 2)
         on_value = 1
         off_value = 0
         for ndim in range(1, ndim_max+1):
@@ -2672,7 +2675,7 @@ def test_one_hot():
                                         size=np.prod(shape)).reshape(shape)
             mx_one_hot_array = mx.nd.one_hot(
                 mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
-                depth = depth, dtype=np.int32)
+                depth=depth, dtype=np.int32)
             expected_array = np.zeros((np.prod(shape), depth), dtype=np.int32)
             expected_array[:] = off_value
             indices_1d = indices.flatten()
