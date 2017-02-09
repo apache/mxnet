@@ -128,6 +128,7 @@ NNVM_REGISTER_OP(one_hot)
 .set_attr<nnvm::FInferShape>("FInferShape", OneHotOpShape)
 .set_attr<nnvm::FInferType>("FInferType", OneHotOpType)
 .set_attr<FCompute>("FCompute<cpu>", OneHotOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("indices", "NDArray", "array of locations where to set on_value")
 .add_arguments(OneHotParam::__FIELDS__());
 

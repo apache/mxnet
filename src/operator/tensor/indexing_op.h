@@ -511,12 +511,6 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
     DMLC_DECLARE_FIELD(off_value)
       .set_default(0.0f)
       .describe("The value assigned to the locations not represented by indices.");
-    DMLC_DECLARE_FIELD(axis)
-      .set_default(-1)
-      .describe("The dimension position at which a new dimension will be created."
-                " So far, only axis = -1 is supported, which means a new dimension"
-                " is always appended at the end of the array. Setting it to other"
-                " numbers will cause the program to throw an exception");
     DMLC_DECLARE_FIELD(dtype)
       .set_default(mshadow::kFloat32)
       .add_enum("float32", mshadow::kFloat32)
@@ -529,13 +523,11 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
 };
 
 inline void GetOneHotParams(const OneHotParam& param, int* depth, double* on_value,
-                            double* off_value, int* axis, int* dtype) {
+                            double* off_value, int* dtype) {
   *depth = param.depth;
   CHECK_GE(*depth, 0) << "Dimension size, depth, must be a non-negative integer";
   *on_value = param.on_value;
   *off_value = param.off_value;
-  *axis = param.axis;
-  CHECK_EQ(*axis, -1) << "Only support axis = -1 for now";
   *dtype = param.dtype;
 }
 
@@ -551,9 +543,8 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   int depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
-  int axis = -1;
   int dtype = mshadow::kFloat32;
-  GetOneHotParams(param, &depth, &on_value, &off_value, &axis, &dtype);
+  GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
 
   TShape oshape(ishape.ndim() + 1);
   for (index_t i = 0; i < ishape.ndim(); ++i) {
@@ -572,10 +563,9 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   int depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
-  int axis = -1;
   int dtype = mshadow::kFloat32;
   const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
-  GetOneHotParams(param, &depth, &on_value, &off_value, &axis, &dtype);
+  GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kInt32);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);
   return true;
@@ -604,14 +594,16 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   int depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
-  int axis = -1;
   int dtype = mshadow::kFloat32;
   const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
-  GetOneHotParams(param, &depth, &on_value, &off_value, &axis, &dtype);
+  GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
   using namespace mxnet_op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    // The following line is needed to guard the situation when
+    // an output array is empty on GPU. In that case, out.dptr() = 0x0
+    if (outputs[0].dptr<DType>() == nullptr) return;
     mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     out = static_cast<DType>(off_value);
     Kernel<one_hot, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
