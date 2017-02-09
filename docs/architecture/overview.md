@@ -682,7 +682,7 @@ in the registration process, we use `set_enable_scalar(true)`, and use `env.scal
 declarations.
 
 ### Crafting a Tensor Operation
-Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we  
+Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we 
 can craft tensor operations in operator implementations. If you define such functions as element-wise, you
 can implement them as an `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` that contains a lot of `mshadow_op`,
 for example. `mshadow_op` are expression mappers. They deal with the scalar case of desired functions. For details, see
