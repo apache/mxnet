@@ -221,7 +221,7 @@ class CaffeOpProp : public OperatorProperty {
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> res;
     for (int i = 0; i < param_.num_data; ++i)
-      res.push_back(std::string("data_") + static_cast<char>('0' + i));
+      res.push_back(std::string("data_") + std::to_string(i));
 
     for (int i = 0; i < param_.num_weight; ++i) {
       if (i == 0)
