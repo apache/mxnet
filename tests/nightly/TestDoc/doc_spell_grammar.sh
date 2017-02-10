@@ -21,10 +21,13 @@ python setup.py install || exit 1
 
 echo "BUILD python3 mxnet"
 python3 setup.py install || exit 1
-echo "~/.local"
-cd ../tests/nightly/TestDoc
+
+echo "BUILD mxnet document"
+cd ../docs
+make html
 
 echo "Check spell and grammar for documentation"
+cd ../tests/nightly/TestDoc
 python test_ipynb.py
 
 echo "Check spell and grammar End"
