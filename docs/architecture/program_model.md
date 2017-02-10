@@ -259,7 +259,7 @@ configuration layer on top of the imperative language.
 ### Parameter Updates
 
 Most symbolic programs are data flow  (computation) graphs. Data flow graphs describe computation.
-but it's is not obvious how to use graphs to describe parameter updates. That's because parameter updates introduce mutation,
+but it is not obvious how to use graphs to describe parameter updates. That's because parameter updates introduce mutation,
 which is not a data flow concept. Most symbolic programs introduce a special update statement to update some persistent
 states of the programs.
 
