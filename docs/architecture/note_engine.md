@@ -272,7 +272,7 @@ on each device.
 
 This running policy is usually independent of dependency tracking, and can be separated out as either an independent module
 or a virtual interface of base-dependency tracking modules. Developing a runtime policy that is fair to all operations and schedules
-smoothly is an interesting systems problem itself.
+smoothly is an interesting system's problem itself.
 
 ## Discussion
 
