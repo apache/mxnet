@@ -22,17 +22,19 @@ python setup.py install || exit 1
 echo "BUILD python3 mxnet"
 python3 setup.py install || exit 1
 
-echo "BUILD mxnet document"
-cd ../docs
-make html
-
-echo "Check spell and grammar for documentation"
+echo "Install other dependencies"
 yum -y install enchant
 yum -y install aspell-en enchant-aspell
 pip install pyenchant
 pip install grammar-check
 pip install html2text
 pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
+
+echo "BUILD mxnet document"
+cd ../docs
+make html
+
+echo "Check spell and grammar for documentation"
 cd ../tests/nightly/TestDoc
 python doc_spell_checker.py
 
