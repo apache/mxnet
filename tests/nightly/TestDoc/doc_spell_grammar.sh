@@ -28,6 +28,7 @@ make html
 
 echo "Check spell and grammar for documentation"
 yum -y install enchant
+yum -y install aspell-en enchant-aspell
 pip install pyenchant
 pip install grammar-check
 pip install html2text
