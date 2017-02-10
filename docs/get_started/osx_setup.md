@@ -7,7 +7,7 @@ This section is optional. Skip to next section if you don't plan to use GPUs. If
 
 First, download and install [CUDA 8 toolkit](https://developer.nvidia.com/cuda-toolkit).
 
-Once you have the CUDA Toolkit installed you will need to setup the required environment variables by adding the following to your ~/.bash_profile file:
+Once you have the CUDA Toolkit installed you will need to set up the required environment variables by adding the following to your ~/.bash_profile file:
 
 ```bash
     export CUDA_HOME=/usr/local/cuda

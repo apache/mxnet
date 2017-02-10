@@ -52,7 +52,7 @@ values, and then pushes the aggregated value.
      [ 4.  4.  4.]]
 ```
 
-For each push command, KVStore applies the pushed value to the value stored by a
+For each push command, KVStore applies the pushed value to the value stored by an
 `updater`. The default updater is `ASSGIN`, and you can replace the default to
 control how data is merged.
 

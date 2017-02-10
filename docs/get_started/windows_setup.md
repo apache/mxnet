@@ -31,7 +31,7 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 7. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory```.
 8. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
 9. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
-10. Download and install [CuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as a NVIDIA community user.
+10. Download and install [CuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
@@ -142,7 +142,7 @@ To install the required dependencies and install MXNet for R:
 3. Download the MXNet package as a .zip file from the [MXNet Github repository](https://github.com/dmlc/mxnet/) and unpack it. You will be editing the ```"/mxnet/R-package"``` folder.
 4. Download the most recent GPU-enabled MXNet package from the [Releases](https://github.com/dmlc/mxnet/releases) tab. Unzip this file and navigate to the ```/nocudnn``` folder.
 **Note:** You will copy some of these extracted files into MXNet's R-package folder. We are now working two folders, 	```R-package/``` and ```nocudnn/```.
-5. Download and install [CuDNN V3](https://developer.nvidia.com/cudnn). To get access to the download link, register as a NVIDIA community user. Unpack the .zip file. You will see three folders: ```/bin```, ```/include```, and ```/lib```. Copy these folders into ```nocudnn/3rdparty/cudnn/```, replacing the folders that are already there. You can also unpack the .zip file directly into the nocudnn/ folder.
+5. Download and install [CuDNN V3](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user. Unpack the .zip file. You will see three folders: ```/bin```, ```/include```, and ```/lib```. Copy these folders into ```nocudnn/3rdparty/cudnn/```, replacing the folders that are already there. You can also unpack the .zip file directly into the nocudnn/ folder.
 6. Create a folder called ```R-package/inst/libs/x64```. MXNet supports only 64-bit operating systems, so you need the x64 folder.
 7. Copy the following shared libraries (.dll files) into the ```R-package/inst/libs/x64``` folder:
     * nocudnn/lib/libmxnet.dll.
