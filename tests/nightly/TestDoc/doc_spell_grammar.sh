@@ -23,15 +23,17 @@ echo "BUILD python3 mxnet"
 python3 setup.py install || exit 1
 
 echo "Install other dependencies"
+cd ..
 yum -y install enchant
-yum -y install aspell-en enchant-aspell
 pip install pyenchant
+cp tests/nightly/TestDoc/{en_US-large.aff, en_US-large.dic, en_US.aff, en_US.dic} pyenchant/enchant/share/enchant/myspell
 pip install grammar-check
 pip install html2text
 pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
 
+
 echo "BUILD mxnet document"
-cd ../docs
+cd docs
 make html
 
 echo "Check spell and grammar for documentation"
