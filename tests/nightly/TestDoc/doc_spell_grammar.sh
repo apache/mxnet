@@ -29,7 +29,7 @@ make html
 echo "Check spell and grammar for documentation"
 yum -y install enchant
 pip install pyenchant
-pip install grammar-checker
+pip install grammar-check
 cd ../tests/nightly/TestDoc
 python doc_spell_checker.py
 
