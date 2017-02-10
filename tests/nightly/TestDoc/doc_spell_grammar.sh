@@ -26,7 +26,7 @@ echo "Install other dependencies"
 cd ..
 yum -y install enchant
 pip install pyenchant
-cp /tests/nightly/TestDoc/{en_US-large.aff, en_US-large.dic, en_US.aff, en_US.dic} ./pyenchant/enchant/share/enchant/myspell
+cp /tests/nightly/TestDoc/{en_US-large.aff, en_US-large.dic, en_US.aff, en_US.dic} /pyenchant/enchant/share/enchant/myspell
 pip install grammar-check
 pip install html2text
 pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
