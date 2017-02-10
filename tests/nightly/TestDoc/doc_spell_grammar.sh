@@ -29,7 +29,7 @@ pip install pyenchant
 mkdir /usr/local/lib/python2.7/site-packages/enchant/share
 mkdir /usr/local/lib/python2.7/site-packages/enchant/share/enchant
 mkdir /usr/local/lib/python2.7/site-packages/enchant/share/enchant/myspell
-cp /tests/nightly/TestDoc/en_US-large.aff /tests/nightly/TestDoc/en_US-large.dic /tests/nightly/TestDoc/en_US.aff /tests/nightly/TestDoc/en_US.dic /usr/local/lib/python2.7/site-packages/enchant/share/enchant/myspell
+cp tests/nightly/TestDoc/en_US-large.aff tests/nightly/TestDoc/en_US-large.dic tests/nightly/TestDoc/en_US.aff tests/nightly/TestDoc/en_US.dic /usr/local/lib/python2.7/site-packages/enchant/share/enchant/myspell
 pip install grammar-check
 pip install html2text
 pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
