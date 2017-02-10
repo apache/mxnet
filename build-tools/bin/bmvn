@@ -122,7 +122,7 @@ function read_args() {
         "$MVN_PHASE_OR_GOAL" == "apollo-pkg"
     ]]; then
         MVN_PHASE_OR_GOAL="package"
-        MVN_CMD_OPTS="$MVN_CMD_OPTS --batch-mode --offline"
+        MVN_CMD_OPTS="$MVN_CMD_OPTS --batch-mode --offline -Dcxx=g++"
         RUN_INSTALL=1
     fi
 }
@@ -140,7 +140,7 @@ function setup() {
     PRIVATE_DIR="$PACKAGE_SRC_ROOT/build/private"
 
     #M2_HOME="$(cd $(dirname $0)/.. && pwd 2>/dev/null)"
-    M2_HOME="$(brazil-path [Maven]pkg.bin)"/..
+    M2_HOME="$(brazil-path [BrazilMaven]run.runtimefarm)"
     echo "M2_HOME: $M2_HOME"
 
     # Use the JDK build-tool dependency as JAVA_HOME
@@ -183,11 +183,16 @@ function run_mvn() {
         MVN_CMD_OPTS="--settings \"$POM_ROOT_DIR/settings.xml\" $MVN_CMD_OPTS"
     fi
 
+    #PROJECT_DIR=$POM_ROOT_DIR
+
+    PKG_PROFILE=linux-x86_64-gpu
+
+
     cd "$PROJECT_DIR" && \
         JAVA_HOME="$JAVA_HOME" \
         M2_HOME="$M2_HOME" \
         MAVEN_OPTS="$MAVEN_OPTS" \
-        mvn --define BrazilMaven.localRepository="$LOCAL_REPOSITORY_DIR" \
+        mvn -P$PKG_PROFILE --define BrazilMaven.localRepository="$LOCAL_REPOSITORY_DIR" \
         $NON_RECURSIVE_OPTION \
         $MVN_CMD_OPTS \
         $MVN_PHASE_OR_GOAL

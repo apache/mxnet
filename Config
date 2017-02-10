@@ -3,6 +3,7 @@ package.DeepMXNet = {
 
   build-system = brazilcmake;
   #build-system = bmvn;
+  #build-system = brazilmvn;
 
   build-environment = {
     chroot = basic;
@@ -33,11 +34,18 @@ package.DeepMXNet = {
       Scala29 = 1.0;
       BrazilMaven = 3.0;
       BrazilAetherSupport = 1.0;
-      Maven-maven-site-plugin = 3.x;
-      Maven-maven-deploy-plugin = 2.x;
-      Maven-maven-install-plugin = 2.x;
-      Maven-maven-clean-plugin = 2.x;
-      Maven-maven-enforcer-plugin = 1.x;
+     
+#      Maven-maven-enforcer-plugin = 1.x;
+#      Maven-maven-plugin-plugin = 3.x;
+#      Maven-maven-site-plugin = 3.x;
+#      Maven-maven-clean-plugin = 2.x;
+#      Maven-maven-install-plugin = 2.x;
+      Maven-maven-resources-plugin = 2.x;
+#      Maven-maven-surefire-plugin = 2.x;
+#      Maven-maven-compiler-plugin = 3.x;
+#      Maven-maven-jar-plugin = 2.x;
+#      Maven-maven-deploy-plugin = 2.x;
+      Maven-native-maven-plugin = 1.0_alpha_7;
     };
   };
 
