@@ -51,7 +51,7 @@ package.DeepMXNet = {
 
   dependencies = {
     0.9 = {
-     Maven-oss-parent = 6;
+     #Maven-oss-parent = 6;
      LibStdCppNoCFlags = 4.9;
       Googletest = 1.x;
       CMake = 3.5.x;
