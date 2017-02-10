@@ -30,6 +30,7 @@ echo "Check spell and grammar for documentation"
 yum -y install enchant
 pip install pyenchant
 pip install grammar-check
+pip install html2text
 cd ../tests/nightly/TestDoc
 python doc_spell_checker.py
 
