@@ -65,6 +65,7 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
 template<typename xpu, typename OP>
 inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
                         TBlob *ret, RunContext ctx) {
+  LOG(INFO) << "The operator onehot_encode is deprecated; use one_hot instead.";
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   // TODO(eric): support mixed type encoding, i.e. int index and float rhs.
