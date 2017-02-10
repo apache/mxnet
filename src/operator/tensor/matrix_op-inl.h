@@ -15,6 +15,10 @@
 #include "../mxnet_op.h"
 #include "broadcast_reduce_op.h"
 
+#if MXNET_USE_CUDA
+#include <thrust/device_vector.h>
+#endif
+
 namespace mxnet {
 namespace op {
 
@@ -1656,6 +1660,77 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
       attrs, ctx, newInputs, req, newOutputs, rshapes.first);
 }
+
+struct ReverseParam : public dmlc::Parameter<ReverseParam> {
+  nnvm::Tuple<int> axis;
+  DMLC_DECLARE_PARAMETER(ReverseParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("The axis which to reverse elements.");
+  }
+};
+
+
+template<typename xpu>
+void ReverseOpForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  const ReverseParam& param = nnvm::get<ReverseParam>(attrs.parsed);
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  CHECK_LT(param.axis.ndim(), REVERSE_MAX_DIM);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const TShape& ishape = inputs[0].shape_;
+
+  std::vector<index_t> stride_(param.axis.ndim());
+  std::vector<index_t>  trailing_(param.axis.ndim());
+  index_t reverse_index = 0;
+  for (auto axis_iter = param.axis.begin() ; axis_iter!= param.axis.end(); ++axis_iter) {
+    CHECK_LT(*axis_iter, ishape.ndim());
+    stride_[reverse_index] = ishape[*axis_iter];
+    trailing_[reverse_index] = 1;
+    for (int i2 = *axis_iter + 1; i2 < ishape.ndim(); ++i2) {
+      trailing_[reverse_index] *= ishape[i2];
+    }
+    reverse_index++;
+  }
+
+#ifdef __CUDACC__
+  mshadow::Tensor<xpu, 1, uint8_t> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, uint8_t>(
+      mshadow::Shape1(reverse_index * sizeof(index_t) * 2), s);
+
+  auto stride_workspace = workspace.dptr_;
+  auto trailing_workspace = workspace.dptr_ + reverse_index * sizeof(index_t);
+
+  cudaMemcpyAsync(stride_workspace, thrust::raw_pointer_cast(stride_.data()),
+                  stride_.size() * sizeof(index_t),
+                  cudaMemcpyHostToDevice, mshadow::Stream<gpu>::GetStream(s));
+  cudaMemcpyAsync(trailing_workspace, thrust::raw_pointer_cast(trailing_.data()),
+                  trailing_.size() * sizeof(index_t),
+                  cudaMemcpyHostToDevice, mshadow::Stream<gpu>::GetStream(s));
+
+#endif
+
+#ifdef __CUDACC__
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<reverse, xpu>::Launch(s, inputs[0].Size(), reverse_index,
+    inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+    reinterpret_cast<index_t*>(stride_workspace), reinterpret_cast<index_t*>(trailing_workspace));
+  });
+#else
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<reverse, xpu>::Launch(s, inputs[0].Size(), reverse_index,
+    inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+    stride_.data(), trailing_.data());
+  });
+#endif
+}
+
+
 
 }  // namespace op
 }  // namespace mxnet
