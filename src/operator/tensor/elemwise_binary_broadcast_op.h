@@ -15,7 +15,7 @@
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_op.h"
 #include "../operator_common.h"
-#include "broadcast_reduce_kernel.h"
+#include "broadcast_reduce-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -110,9 +110,9 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   } else {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      CTensor<DType> lhs = inputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_lshape.get<MAX_DIM>());
-      CTensor<DType> rhs = inputs[1].get_with_shape<xpu, MAX_DIM, DType>(new_rshape.get<MAX_DIM>());
-      CTensor<DType> out = outputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_oshape.get<MAX_DIM>());
+      CTensor<DType> lhs = inputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_lshape.get<MAX_DIM>(), s);
+      CTensor<DType> rhs = inputs[1].get_with_shape<xpu, MAX_DIM, DType>(new_rshape.get<MAX_DIM>(), s);
+      CTensor<DType> out = outputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_oshape.get<MAX_DIM>(), s);
       BinaryBroadcastComputeImpl<DType, OP>(s, req[0], lhs, rhs, out);
     });
   }
@@ -192,7 +192,6 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
       size_t workspace_size_l = ReduceWorkspaceSize<red::sum, DType, LOP>(s, lgrad, req[0], ograd);
       size_t workspace_size_r = ReduceWorkspaceSize<red::sum, DType, ROP>(s, rgrad, req[1], ograd);
       size_t workspace_size = workspace_size_l + workspace_size_r;
-      // LOG(INFO) << "workspace_size " << workspace_size;
       Tensor<xpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
       Tensor<xpu, 1, char> workspace_l(&workspace[0], Shape1(workspace_size_l), s);
