@@ -3,12 +3,14 @@
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 
+import sys
 import bisect
 import random
 import numpy as np
 
 from ..io import DataIter, DataBatch
 from .. import ndarray
+
 
 def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', start_label=0):
     """Encode sentences and (optionally) build a mapping
@@ -90,7 +92,7 @@ class BucketSentenceIter(DataIter):
 
         ndiscard = 0
         self.data = [[] for _ in buckets]
-        for i in xrange(len(sentences)):
+        for i in range(len(sentences)):
             buck = bisect.bisect_left(buckets, len(sentences[i]))
             if buck == len(buckets):
                 ndiscard += 1
