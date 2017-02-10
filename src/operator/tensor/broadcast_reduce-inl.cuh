@@ -222,12 +222,11 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
     dim3 gridDim;
 
     const int kMaxThreadBits = 10;
-    const int par_reduce_lim = 32;//128;
+    const int par_reduce_lim = 32;
     const int unroll_par_reduce = 2;
-    const int unroll_reduce = 8;
+    const int unroll_reduce = 4;
 
     int Mnext = 1;
-    int minGridSize;
     if (N <= par_reduce_lim) {
       blockDim.x = 1 << kMaxThreadBits;
       gridDim.x = std::min(kBaseGridNum, N);
@@ -255,8 +254,6 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
       int maxMblock = blockDim.y*maxLoopPerTB;
       Mnext = (M + maxMblock - 1) / maxMblock;
     }
-
-    // LOG(INFO) << "N " << N << " M " << M << " Mnext " << Mnext;
 
     DType* out1_dptr = small.dptr_;
     bool addto = (req == kAddTo);
