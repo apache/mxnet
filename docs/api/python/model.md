@@ -62,7 +62,7 @@ We also provide save and load functions.
     # load model back
     model_loaded = mx.model.FeedForward.load(prefix, iteration)
 ```
-The advantage of these save and load functions are that they are language agnostic.
+The advantage of these saving and loading functions are that they are language agnostic.
 You should be able to save and load directly into cloud storage, such as Amazon S3 and HDFS.
 
 ##  Periodic Checkpointing
