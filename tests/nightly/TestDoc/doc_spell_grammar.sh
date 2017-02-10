@@ -27,7 +27,7 @@ cd ../docs
 make html
 
 echo "Check spell and grammar for documentation"
-yum install enchant
+yum -y install enchant
 pip install pyenchant
 pip install grammar-checker
 cd ../tests/nightly/TestDoc
