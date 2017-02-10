@@ -27,7 +27,9 @@ cd ../docs
 make html
 
 echo "Check spell and grammar for documentation"
+pip install pyenchant
+pip install grammar-checker
 cd ../tests/nightly/TestDoc
-python test_ipynb.py
+python doc_spell_checker.py
 
 echo "Check spell and grammar End"
