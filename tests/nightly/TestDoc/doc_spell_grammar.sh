@@ -26,6 +26,8 @@ echo "Install other dependencies"
 cd ..
 yum -y install enchant
 pip install pyenchant
+pwd
+ls
 cp /tests/nightly/TestDoc/{en_US-large.aff, en_US-large.dic, en_US.aff, en_US.dic} /pyenchant/enchant/share/enchant/myspell
 pip install grammar-check
 pip install html2text
