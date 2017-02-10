@@ -2,7 +2,7 @@
 
 [NNPACK](https://github.com/Maratyszcza/NNPACK) is an acceleration package for neural network computations, which can run on x86-64, ARMv7, or ARM64 architecture cpus. it's very useful for us using NNPACK to speed up running speed when deploy the trained model on mobile device.
 
-MXNet(nnvm branch) has integrate NNPACK for forward propagation(only inference) in convolution/max-pooling/fully-connected, so you may consider using NNPACK now.
+MXNet(nnvm branch) has integrated NNPACK for forward propagation(only inference) in convolution/max-pooling/fully-connected, so you may consider using NNPACK now.
 
 
 ### Conditions
@@ -19,7 +19,7 @@ The following table will tell you which satisfaction will NNPACK work.
 
 ### Build/Install NNPACK with MXNet
 
-Now, if the trained model meets some conditions of using NNPACK, you can built MXNet with NNPACK support. here is the steps for you:  
+Now, if the trained model meets some conditions of using NNPACK, you can build MXNet with NNPACK support. here is the steps for you:  
 * install NNPACK based on this [tutorials](https://github.com/Maratyszcza/NNPACK#building), that's to say you need ninja to build NNPACK. make sure add `--enable-shared` when running configure.py(i.e. `python configure.py --enable-shared`), because MXNet will link NNPACK dynamically.  
 * set lib path of NNPACK as the environment variable, such as `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$YOUR_NNPACK_INSTALL_PATH/lib`
 * add the include file of NNPACK and its third-party to  `ADD_CFLAGS` in config.mk, such as `ADD_CFLAGS = -I$(YOUR_NNPACK_INSTALL_PATH)/include -I$(YOUR_NNPACK_INSTALL_PATH)/pthreadpool/include`

@@ -13,7 +13,7 @@ Provides basic operation over multiple devices (GPUs) on a single device.
 ### Initialization
 
 Let's consider a simple example. It initializes
-a (`int`, `NDAarray`) pair into the store, and then pulls the value out.
+a (`int`, `NDArray`) pair into the store, and then pulls the value out.
 
 ```python
     >>> kv = mx.kv.create('local') # create a local kv store.
@@ -52,7 +52,7 @@ values, and then pushes the aggregated value.
      [ 4.  4.  4.]]
 ```
 
-For each push command, KVStore applies the pushed value to the value stored by a
+For each push command, KVStore applies the pushed value to the value stored by an
 `updater`. The default updater is `ASSGIN`, and you can replace the default to
 control how data is merged.
 
