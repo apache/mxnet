@@ -2705,6 +2705,57 @@ def test_one_hot():
     test_empty_indices()
     test_zero_depth()
 
+
+def test_where():
+    def test_same_shape():
+        shape = (5, 2, 4, 9)
+        np_condition = np.random.randint(0, 2, np.prod(shape))
+        np_x = np.random.randint(1, 6, np.prod(shape))
+        np_y = np.random.randint(7, 11, np.prod(shape))
+        np_expected = np.zeros(np.prod(shape))
+        for i in range(0, np_condition.shape[0]):
+            if np_condition[i] > 0:
+                np_expected[i] = np_x[i]
+            else:
+                np_expected[i] = np_y[i]
+        np_expected = np_expected.reshape(shape)
+
+        condition = mx.nd.array(np_condition.reshape(shape),
+                                ctx=default_context(), dtype=np.int32)
+        x = mx.nd.array(np_x.reshape(shape), ctx=default_context(), dtype=np.int32)
+        y = mx.nd.array(np_y.reshape(shape), ctx=default_context(), dtype=np.int32)
+        mx_output = mx.nd.where(condition, x, y)
+        assert same(np_expected, mx_output.asnumpy())
+
+    def test_condition_vector():
+        shape = (10, 2, 4, 9)
+        np_condition = np.random.randint(0, 2, shape[0])
+        np_x = np.random.randint(1, 6, np.prod(shape))\
+            .reshape(shape[0], np.prod(shape)/shape[0])
+        np_y = np.random.randint(7, 11, np.prod(shape))\
+            .reshape(shape[0], np.prod(shape)/shape[0])
+        np_expected = np.zeros(np.prod(shape))\
+            .reshape(shape[0], np.prod(shape)/shape[0])
+        for i in range(0, np_condition.shape[0]):
+            if np_condition[i] > 0:
+                for j in range(0, len(np_x[0])):
+                    np_expected[i, j] = np_x[i, j]
+            else:
+                for j in range(0, len(np_x[0])):
+                    np_expected[i, j] = np_y[i, j]
+        np_expected = np_expected.reshape(shape)
+
+        condition = mx.nd.array(np_condition,
+                                ctx=default_context(), dtype=np.int32)
+        x = mx.nd.array(np_x.reshape(shape), ctx=default_context(), dtype=np.int32)
+        y = mx.nd.array(np_y.reshape(shape), ctx=default_context(), dtype=np.int32)
+        mx_output = mx.nd.where(condition, x, y)
+        assert same(np_expected, mx_output.asnumpy())
+
+    test_same_shape()
+    test_condition_vector()
+
+
 if __name__ == '__main__':
     test_l2_normalization()
     test_sequence_mask()
@@ -2765,3 +2816,4 @@ if __name__ == '__main__':
     test_repeat()
     test_tile()
     test_one_hot()
+    test_where()
