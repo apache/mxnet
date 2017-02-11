@@ -18,7 +18,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-CODE_BLOCK_CLASS = set(['highlight-python', 'highlight-julia', 'highlight-r', 'highlight-scala'])
+word_list = set()
 GRAMMAR_CHECK_IGNORE = ['WHITESPACE_RULE', 'DOUBLE_PUNCTUATION', 'EN_QUOTES[1]',
                                                       'EN_QUOTES[2]', 'COMMA_PARENTHESIS_WHITESPACE',
                                                       'ENGLISH_WORD_REPEAT_RULE', 'EN_UNPAIRED_BRACKETS',
@@ -77,6 +77,7 @@ def check_doc(content, spell_checker, spell_check_res):
             spell_check_res[error.word] += 1
         else:
             spell_check_res[error.word] = 1
+        word_list.add(error.word)
 
 
 class DocParser(HTMLParser):
@@ -183,3 +184,5 @@ if __name__ == "__main__":
             doc_parser.clear_res()
             doc_parser.clear_parsed_content()
     res.close()
+    for word in word_list:
+        print word

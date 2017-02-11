@@ -27,7 +27,6 @@ cd ..
 yum -y install enchant
 pip install pyenchant
 
-mkdir /usr/share/myspell
 cp tests/nightly/TestDoc/en_US-large.aff tests/nightly/TestDoc/en_US-large.dic tests/nightly/TestDoc/en_US.aff tests/nightly/TestDoc/en_US.dic /usr/share/myspell
 pip install grammar-check
 pip install html2text
