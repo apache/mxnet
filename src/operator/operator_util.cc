@@ -484,7 +484,9 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
         (*fun)(env, &tmp, req, ctx);
 #if MXNET_USE_CUDA
         if (dev_mask == gpu::kDevMask) {
-          ctx.get_stream<gpu>()->Wait();
+            if (!Engine::Get()->SupportsAsynchronousKernelExecution()) {
+                ctx.get_stream<gpu>()->Wait();
+            }
         }
 #endif
       }, ret.ctx(), {}, write_vars,
@@ -669,7 +671,9 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
         (*fun)(src.data(), env, &tmp, req, ctx);
 #if MXNET_USE_CUDA
         if (dev_mask == gpu::kDevMask) {
-          ctx.get_stream<gpu>()->Wait();
+            if (!Engine::Get()->SupportsAsynchronousKernelExecution()) {
+                ctx.get_stream<gpu>()->Wait();
+            }
         }
 #endif
       }, src.ctx(), const_vars, write_vars,
@@ -944,7 +948,9 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
         (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
         #if MXNET_USE_CUDA
         if (dev_mask == gpu::kDevMask) {
-          ctx.get_stream<gpu>()->Wait();
+            if (!Engine::Get()->SupportsAsynchronousKernelExecution()) {
+                ctx.get_stream<gpu>()->Wait();
+            }
         }
         #endif
       }, lhs.ctx(), const_vars, write_vars,

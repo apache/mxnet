@@ -658,7 +658,9 @@ void GraphExecutor::InitCachedOps() {
         if (is_gpu) {
         #if MXNET_USE_CUDA
           // Wait GPU kernel to finish.
-          ctx.get_stream<gpu>()->Wait();
+            if (!Engine::Get()->SupportsAsynchronousKernelExecution()) {
+                ctx.get_stream<gpu>()->Wait();
+            }
         #else
           LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
         #endif

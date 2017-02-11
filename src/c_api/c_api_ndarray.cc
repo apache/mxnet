@@ -254,7 +254,9 @@ void PushFCompute(const FCompute& fn,
       std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
       fn(attrs, opctx, input_blobs, req, output_blobs);
       if (ctx.dev_mask() == gpu::kDevMask) {
-        rctx.get_stream<gpu>()->Wait();
+        if (!Engine::Get()->SupportsAsynchronousKernelExecution()) {
+          rctx.get_stream<gpu>()->Wait();
+        }
       }
       on_complete();
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -310,7 +312,9 @@ void PushOperator(const nnvm::Op* op,
       opr->Forward(opctx, input_blobs, req, output_blobs, aux_blobs);
       if (opr->exec_type() != Operator::kAsync) {
         if (ctx.dev_mask() == gpu::kDevMask) {
-          rctx.get_stream<gpu>()->Wait();
+         if (!Engine::Get()->SupportsAsynchronousKernelExecution()) {
+           rctx.get_stream<gpu>()->Wait();
+          }
         }
         delete opr;
         delete capture;
