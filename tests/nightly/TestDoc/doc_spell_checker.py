@@ -106,10 +106,6 @@ class DocParser(HTMLParser):
         if self.__is_code_block:
             self.__in_code_block = True
             return
-        for attr in attrs:
-            if attr[0] == 'class' and attr[1] in CODE_BLOCK_CLASS:
-                self.__is_code_block = True
-                break
             
     def handle_endtag(self, tag):
         if self.__is_code_block and not self.__in_code_block:
