@@ -4,13 +4,13 @@ You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating sy
 
 Step by step instructions for setting up MXNet:
 
-- [MXNet with Docker](http://mxnet.io/get_started/docker_setup.html)
-- [Installing MXNet on the Cloud (AWS AMI)](http://mxnet.io/get_started/cloud_setup.html)
+- [Installing MXNet on OS X (Mac)](http://mxnet.io/get_started/osx_setup.html)
 - [Installing MXNet on Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html)
+- [Installing MXNet on Windows](http://mxnet.io/get_started/windows_setup.html)
 - [Installing MXNet on Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html)
 - [Installing MXNet on CentOS](http://mxnet.io/get_started/centos_setup.html)
-- [Installing MXNet on OS X (Mac)](http://mxnet.io/get_started/osx_setup.html)
-- [Installing MXNet on Windows](http://mxnet.io/get_started/windows_setup.html)
+- [MXNet with Docker](http://mxnet.io/get_started/docker_setup.html)
+- [Installing MXNet on the Cloud (AWS AMI)](http://mxnet.io/get_started/cloud_setup.html)
 - [Installing MXNet on Raspberry Pi (Raspbian)](http://mxnet.io/get_started/raspbian_setup.html)
 
 This topic also covers the following:
