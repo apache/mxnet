@@ -288,7 +288,8 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2GPU"));
+        from.dtype() != ret.dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
+        priority, PROFILER_MESSAGE("CopyGPU2GPU"));
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -772,20 +773,6 @@ MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 MXNET_REGISTER_NDARRAY_FUN(_copyto)
 .set_function(CopyFromToSimple)
 .set_type_mask(kNDArrayArgBeforeScalar);
-
-MXNET_REGISTER_NDARRAY_FUN(clip)
-.set_type_mask(kNDArrayArgBeforeScalar | kAcceptEmptyMutateTarget)
-.set_body([](NDArray **u, real_t *s, NDArray **out,
-             int num_params, char **param_keys, char **param_vals) {
-    ClipOp(*u[0], s[0], s[1], out[0]);
-  })
-.set_num_use_vars(1)
-.set_num_scalars(2)
-.set_num_mutate_vars(1)
-.describe("Clip ndarray elements to range (a_min, a_max)")
-.add_argument("src", "NDArray", "Source input")
-.add_argument("a_min", "real_t", "Minimum value")
-.add_argument("a_max", "real_t", "Maximum value");
 
 void Imdecode(NDArray *ret, NDArray mean, size_t index,
               size_t x0, size_t y0, size_t x1, size_t y1, size_t n_channels,

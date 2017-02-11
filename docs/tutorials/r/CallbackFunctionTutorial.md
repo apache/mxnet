@@ -30,7 +30,7 @@ Let's begin with a small example. We can build and train a model with the follow
  ```
 
  ```
-    ## Auto detect layout of input matrix, use rowmajor..
+    ## Auto detect layout of input matrix, use row major..
     ## Start training with 1 devices
     ## [1] Train-rmse=16.063282524034
     ## [1] Validation-rmse=10.1766446093622
@@ -73,7 +73,7 @@ This package provides two callback functions:
 ```
 
 ```
-          ## Auto detect layout of input matrix, use rowmajor..
+          ## Auto detect layout of input matrix, use row major..
           ## Start training with 1 devices
           ## [1] Train-rmse=19.1621424021617
           ## [1] Validation-rmse=20.721515592165
@@ -84,7 +84,7 @@ This package provides two callback functions:
 ```
 
 
-- `mx.callback.log.train.metric` logs a training metric each period. You can use it either as a `batch.end.callback` or a
+- `mx.callback.log.train.metric` logs a training metric each period. You can use it either as a `batch.end.callback` or an
 `epoch.end.callback`.
 
 
@@ -96,9 +96,9 @@ This package provides two callback functions:
            learning.rate=2e-6, momentum=0.9, eval.metric=mx.metric.rmse,
            batch.end.callback = mx.callback.log.train.metric(5))
  ```
-   
+
 ```
-         ## Auto detect layout of input matrix, use rowmajor..
+         ## Auto detect layout of input matrix, use row major..
          ## Start training with 1 devices
          ## Batch [5] Train-rmse=17.6514558545416
          ## [1] Train-rmse=15.2879610219001
@@ -123,7 +123,7 @@ You also can save the training and evaluation errors for later use by passing a 
  ```
 
  ```
-    ## Auto detect layout of input matrix, use rowmajor..
+    ## Auto detect layout of input matrix, use row major..
     ## Start training with 1 devices
     ## [1] Train-rmse=19.1083228733256
     ## [1] Validation-rmse=12.7150687428974
@@ -237,7 +237,7 @@ Yes! You can stop the training early with `return(FALSE)`. See the following exa
  ```
 
  ```
-    ## Auto detect layout of input matrix, use rowmajor..
+    ## Auto detect layout of input matrix, use row major..
     ## Start training with 1 devices
     ## [1] Train-rmse=18.5897984387033
     ## [1] Validation-rmse=13.5555213820571

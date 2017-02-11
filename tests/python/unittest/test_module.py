@@ -56,6 +56,34 @@ def test_save_load():
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
 
+def test_module_reshape():
+    data = mx.sym.Variable('data')
+    sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
+
+    dshape = (7, 20)
+    mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
+    mod.bind(data_shapes=[('data', dshape)])
+    mod.init_params()
+    mod.init_optimizer(optimizer_params={'learning_rate': 1})
+
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape)],
+                                label=None))
+    mod.backward([mx.nd.ones(dshape)])
+    mod.update()
+    assert mod.get_outputs()[0].shape == dshape
+    assert (mod.get_params()[0]['fc_bias'].asnumpy() == -1).all()
+
+    dshape = (14, 20)
+    mod.reshape(data_shapes=[('data', dshape)])
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape)],
+                                label=None))
+    mod.backward([mx.nd.ones(dshape)])
+    mod.update()
+    assert mod.get_outputs()[0].shape == dshape
+    assert (mod.get_params()[0]['fc_bias'].asnumpy() == -3).all()
+
+
 if __name__ == '__main__':
+    test_module_reshape()
     test_save_load()
     test_module_layout()

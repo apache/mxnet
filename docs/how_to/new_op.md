@@ -2,7 +2,7 @@
 
 This topic walks through the process of creating new MXNet operators (or layers).
 
-We've done our best to provide high speed operators for most common use cases. However, if you find yourself in need of custom layers, like a novel loss for your research, you have two options:
+We've done our best to provide high-speed operators for most common use cases. However, if you find yourself in need of custom layers, like a novel loss for your research, you have two options:
 
 * Use CustomOp to write new operators in the front-end language (i.e., Python) that run on CPUs or GPUs. Depending on your implementation, this can range from very fast (if you only use operators under mx.nd) to very slow (if you use `.asnumpy()` to copy out the data).
 
@@ -87,7 +87,7 @@ def create_operator(self, ctx, shapes, dtypes):
     return Softmax()
 ```
 
-To use the custom operator, create an mx.sym.Custom symbol with op_type as the registered name:
+To use the custom operator, create a mx.sym.Custom symbol with op_type as the registered name:
 
 ```python
 mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')
@@ -130,7 +130,7 @@ In this section, we will go through the basic attributes MXNet expect for all op
 
 #### Descriptions (Optional)
 
-`.describe(comment)` adds comment to the operator. Use `.MXNET_DESCRIBE(comment)` to add the current file name and line number to comment.
+`.describe(comment)` adds a comment to the operator. Use `.MXNET_DESCRIBE(comment)` to add the current file name and line number to comment.
 
 #### Attribute Parser (Optional)
 
@@ -145,7 +145,7 @@ NNVM_REGISTER_OP(scalar_op)
   })
 ```
 
-The parsed arguments can then be accessed in other attribute functions with 
+The parsed arguments can then be accessed in other attribute functions with
 ```
 double alpha = nnvm::get<double>(attrs.parsed);
 ```
@@ -179,7 +179,7 @@ Number of inputs/outputs can be set with `.set_num_inputs(n_in)` and `.set_num_o
 
 Alternatively, if the number of inputs/outputs is variable and depends on arguments, you can set n_in/n_out to functions with prototype `uint32_t(const nnvm::NodeAttrs& attrs)` that return the number of inputs/outputs based on parsed arguments.
 
-Outputs can be made invisible to other operators by registering `FNumVisibleOutputs` and return an interger smaller than n_out.
+Outputs can be made invisible to other operators by registering `FNumVisibleOutputs` and return an integer smaller than n_out.
 
 Inputs/outputs can be named by registering `FListInputNames` and `FListOutputNames` with prototype `std::vector<std::string>(const NodeAttrs& attrs)`.
 
@@ -188,7 +188,7 @@ Inputs/outputs can be named by registering `FListInputNames` and `FListOutputNam
 
 Set argument descriptions with `.add_argument(name, type, comment)`. This is necessary for operators to be properly called imperatively.
 
-First add NDArray arguments num_inputs times with type "NDArray" or one time with type "NDArray[]" for ops with variable length inputs.
+First, add NDArray arguments num_inputs times with type "NDArray" or one time with type "NDArray[]" for ops with variable length inputs.
 
 Then add key-word arguments with proper type (float, string, etc). Operators that parse key-word arguments with `dmlc::Parameter` can add argument descriptions in bulk with `.add_arguments(ActivationParam::__FIELDS__())` (NDArray arguments still need to be manually added with type "NDArray").
 
@@ -196,7 +196,7 @@ Then add key-word arguments with proper type (float, string, etc). Operators tha
 
 Normally operators need to have `FInferShape` with prototype `bool(const nnvm::NodeAttrs& attrs, std::vector<TShape> *in_attrs, std::vector<TShape> *out_attrs)`. `FInferShape` fills unknown shapes (`shape.ndim() == 0`) in in_attrs/out_attrs based on known shapes in in_attrs/out_attrs. Use `ElemwiseShape<n_in, n_out>` for simple operators with uniform shapes.
 
-Operators that are only used for backward pass can instead register `.set_attr<nnvm::TIsBackward>("TIsBackward", true)` and its shapes with be copied from corresponding forward operator.
+Operators that are only used for a backward pass can instead register `.set_attr<nnvm::TIsBackward>("TIsBackward", true)` and its shapes with be copied from the corresponding forward operator.
 
 #### FInferType
 
@@ -205,12 +205,12 @@ Similar to FInferShape, FInferType fills unknown types (-1) based on known types
 
 #### FInplaceOption (Optional)
 
-`FInplaceOption` with prototype `std::vector<std::pair<int, int> >(const NodeAttrs& attrs)` specifies which input/output pairs can be computed inplace and share memory with each other. Each pair (i, j) in the returned list means that the i-th input can share memory with the j-th output.
+`FInplaceOption` with prototype `std::vector<std::pair<int, int> >(const NodeAttrs& attrs)` specifies which input/output pairs can be computed in-place and share memory with each other. Each pair (i, j) in the returned list means that the i-th input can share memory with the j-th output.
 
 
 #### FGradient (Optional for imperative use, required for symbolic use)
 
-If and operator has gradient, it can be described with `FGradient` with prototype 
+If and operator has gradient, it can be described with `FGradient` with prototype
 
 ``` c++
 std::vector<nnvm::NodeEntry>(const nnvm::NodePtr& n,
@@ -219,13 +219,13 @@ std::vector<nnvm::NodeEntry>(const nnvm::NodePtr& n,
 
 Use utility functions `ElemwiseGradUseIn{op_name}`, `ElemwiseGradUseOut{op_name}`, `ElemwiseGradUseNone{op_name}`  for ops that need corresponding forward op's input, output or nothing to calculating gradient.
 
-For more complicated pattern, use `MakeGradNode(op_name, n, heads, dict)` to create gradient entries, where heads are input entries to backward op, composed from ograds and n->inputs.
+For more complicated pattern, use `MakeGradNode(op_name, n, heads, dict)` to create gradient entries, where heads are input entries to the backward op, composed from ograds and n->inputs.
 
 #### FCompute\<xpu\>
 
-Simple operators can register FCompute<xpu> with `.set_attr<FCompute>("FCompute<cpu>", ...)` and `.set_attr<FCompute>("FCompute<gpu>", ...)` for both cpu and (optionally) gpu computation.
+Simple operators can register FCompute<xpu> with `.set_attr<FCompute>("FCompute<cpu>", ...)` and `.set_attr<FCompute>("FCompute<gpu>", ...)` for both CPU and (optionally) GPU computation.
 
-FCompute has prototype 
+FCompute has prototype
 
 ```c++
 void(const nnvm::NodeAttrs& attrs,
@@ -246,7 +246,7 @@ enum OpReqType {
 };
 ```
 
-Normally, the `req` of all `outputs` should be `kWriteTo`, meaning that the provided `outputs` tensor is a *raw* memory block, so the operator should write results directly into it. In some cases, for example when calculating the gradient tensor, it would be great if we could accumulate the result, rather than directly overwrite the tensor contents so that no extra space needs to be created each time. In such cases, the corresponding `req` is set to `kAddTo`, indicating that a `+=` should be use.
+Normally, the `req` of all `outputs` should be `kWriteTo`, meaning that the provided `outputs` tensor is a *raw* memory block, so the operator should write results directly into it. In some cases, for example, when calculating the gradient tensor, it would be great if we could accumulate the result, rather than directly overwrite the tensor contents so that no extra space needs to be created each time. In such cases, the corresponding `req` is set to `kAddTo`, indicating that a `+=` should be used.
 
 ### Example: abs operator
 
@@ -265,7 +265,7 @@ NNVM_REGISTER_OP(abs)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});              
 .add_argument("data", "NDArray", "Source input")
 
-NNVM_REGISTER_OP(_bacward_abs)
+NNVM_REGISTER_OP(_backward_abs)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
@@ -279,6 +279,6 @@ NNVM_REGISTER_OP(_bacward_abs)
 
 ### Legacy Operators
 
-For the lagecy (pre 0.9) way of defining operators with C++, please see:
+For the legacy (pre 0.9) way of defining operators with C++, please see:
 - [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet)
 - [Developer Guide - SimpleOp](http://mxnet.io/architecture/overview.html#simpleop-the-unified-operator-api)

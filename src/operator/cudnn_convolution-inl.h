@@ -304,7 +304,6 @@ class CuDNNConvolutionOp : public Operator {
                workspace.dptr_,
                backward_workspace_byte_,
                req[conv::kData] == kAddTo? &beta_add : &beta,
-               &beta,
                in_desc_,
                gdata_ptr + data_offset_ * g), CUDNN_STATUS_SUCCESS);
       #elif CUDNN_MAJOR >= 5

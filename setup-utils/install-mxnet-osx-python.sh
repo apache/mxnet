@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-# This scripts installs the dependencies, downloads MXNet source 
-# and compiles it. 
+# This scripts installs the dependencies and compiles
+# MXNet source.
 #
 # The script also installs the MXNet package for Python.
 #
 
 #set -ex
 
-export MXNET_HOME=`pwd`/mxnet
+export MXNET_HOME="$HOME/mxnet"
 export MXNET_LOG=${MXNET_HOME}/buildMXNet_mac.log
 # Insert the Homebrew directory at the top of your PATH environment variable
 export PATH=/usr/local/bin:/usr/local/sbin:$PATH
@@ -16,7 +16,7 @@ LINE="########################################################################"
 
 echo $LINE
 echo " "
-echo "This script installs MXNet on MacOS." 
+echo "This script installs MXNet on MacOS."
 echo "It has been tested to work successfully on MacOS El Capitan and Sierra"
 echo "and is expected to work fine on other versions as well."
 echo " "
@@ -58,10 +58,10 @@ runme() {
 runme brew update
 runme brew_pkg_install pkg-config
 runme brew_pkg_install python
-runme brew_pkg_install openblas
+brew install homebrew/science/openblas
 runme brew_pkg_install opencv
-# Needed for /usr/local/lib/graphviz to be created 
-runme brew_pkg_install graphviz  
+# Needed for /usr/local/lib/graphviz to be created
+runme brew_pkg_install graphviz
 runme brew_pkg_install numpy
 
 runme brew tap homebrew/science
@@ -71,17 +71,9 @@ runme pip install jupyter
 runme pip install cython
 
 #
-# Fetch MXNet source and compile it
+# Compile MXNet. It assumes you have checked out MXNet source to ~/mxnet
 #
-if [ -f ${MXNET_HOME} ]; then
-	ls -al ${MXNET_HOME}
-	echo " "
-	echo "ERROR: ${MXNET_HOME} directory already present"
-	echo "To correct the problem, please rename the directory or remove it."
-	echo " "
-fi
 
-runme git clone --recursive https://github.com/dmlc/mxnet
 cd ${MXNET_HOME}
 runme cp make/osx.mk ./config.mk
 runme echo "USE_BLAS = openblas" >> ./config.mk

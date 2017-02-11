@@ -243,14 +243,47 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
-template<typename xpu, typename reducer>
+template<typename xpu, typename reducer, bool normalize = false>
+void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs,
+                           const TShape& small) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+
+  TShape src_shape, dst_shape;
+  BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    if (dst_shape.ndim() == 2) {
+      Tensor<xpu, 2, DType> out =
+        outputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+      Tensor<xpu, 2, DType> data =
+        inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+      ReduceToAssign<reducer>(out, req[0], data);
+      if (normalize) out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+    } else {
+      const int ndim = MXNET_SPECIAL_MAX_NDIM;
+      Tensor<xpu, ndim, DType> out =
+        outputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+      Tensor<xpu, ndim, DType> data =
+        inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+      ReduceToAssign<reducer>(out, req[0], data);
+      if (normalize) out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+    }
+  });
+}
+
+template<typename xpu, typename reducer, bool normalize = false>
 void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
+  // using namespace mshadow;
+  // using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
   if (!param.keepdims) {
@@ -265,29 +298,11 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     small = outputs[0].shape_;
   }
 
-  TShape src_shape, dst_shape;
-  BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (dst_shape.ndim() == 2) {
-      Tensor<xpu, 2, DType> out =
-        outputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
-      Tensor<xpu, 2, DType> data =
-        inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-      ReduceToAssign<reducer>(out, req[0], data);
-    } else {
-      const int ndim = MXNET_SPECIAL_MAX_NDIM;
-      Tensor<xpu, ndim, DType> out =
-        outputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-      Tensor<xpu, ndim, DType> data =
-        inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-      ReduceToAssign<reducer>(out, req[0], data);
-    }
-  });
+  ReduceAxesComputeImpl<xpu, reducer, normalize>(attrs, ctx, inputs, req, outputs, small);
 }
 
 // works when shape inference of output is given
-template<typename xpu, typename OP>
+template<typename xpu, typename OP, bool normalize = false>
 void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<TBlob>& inputs,
@@ -320,6 +335,7 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
         inputs[2].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
       ASSIGN_DISPATCH(igrad, req[0],
           broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
+      if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
     } else {
       const int ndim = MXNET_SPECIAL_MAX_NDIM;
       Tensor<xpu, ndim, DType> igrad =
@@ -332,6 +348,7 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
         inputs[2].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
       ASSIGN_DISPATCH(igrad, req[0],
           broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
+      if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
     }
   });
 }
@@ -375,12 +392,14 @@ inline void BroadcastCompute(const nnvm::NodeAttrs& attrs,
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, inputs[0].shape_);
 }
 
-template<typename xpu>
+template<typename xpu, bool normalize = false>
 inline void ReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                       const OpContext& ctx,
                                       const std::vector<TBlob>& inputs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape small;
   if (param.axis.ndim() == 0) {
@@ -391,6 +410,13 @@ inline void ReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
       small[param.axis[i]] = 1;
   }
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
+  if (normalize)  {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
+      igrad /= scalar<DType>(outputs[0].Size()/inputs[0].Size());
+    });
+  }
 }
 
 template<typename PType>

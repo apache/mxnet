@@ -14,14 +14,14 @@ This topic explains how to:
 
 
 1. Download the official Caffe repository, [BVLC/Caffe](https://github.com/BVLC/caffe).
-2. Download the [Caffe patch for the MXNet interface](https://github.com/BVLC/caffe/pull/4527.patch). Move the patch file under your Caffe root folder, and apply the patch by using `git apply patch_file_name`.
+2. Download the [Caffe patch for the MXNet interface](https://github.com/BVLC/caffe/pull/4527.patch). Move the patch file to your Caffe root folder, and apply the patch by using `git apply patch_file_name`.
 3. Install Caffe using the [official guide](http://caffe.berkeleyvision.org/installation.html).
 
 ## Compile with Caffe
 
 
-1. If you haven't already, copy `make/config.mk` (for Linux) or `make/osx.mk` (for Mac) into the MXNet root folder as `config.mk`. 
-2. In the mxnet folder, open `config.mk` and uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk`. Modify `CAFFE_PATH` to your Caffe installation, if necessary. 
+1. If you haven't already, copy `make/config.mk` (for Linux) or `make/osx.mk` (for Mac) into the MXNet root folder as `config.mk`.
+2. In the mxnet folder, open `config.mk` and uncomment the lines `CAFFE_PATH = $(HOME)/caffe` and `MXNET_PLUGINS += plugin/caffe/caffe.mk`. Modify `CAFFE_PATH` to your Caffe installation, if necessary.
 3. To build with Caffe support, run `make clean && make`.
 
 ## Using the Caffe Operator (Layer)
@@ -51,5 +51,3 @@ To use the loss function in Caffe, replace the last line with:
 label = mx.symbol.Variable('softmax_label')
 mlp = mx.symbol.CaffeLoss(data=fc3, label=label, grad_scale=1, name='softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
 ```
-
-

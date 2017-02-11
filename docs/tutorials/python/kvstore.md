@@ -7,7 +7,7 @@ and pull data out.
 ## Initialization
 
 Let's consider a simple example: initializing
-a (`int`, `NDAarray`) pair into the store, and then pulling the value out:
+a (`int`, `NDArray`) pair into the store, and then pulling the value out:
 
 ```python
     >>> kv = mx.kv.create('local') # create a local kv store.
@@ -125,12 +125,12 @@ When the distributed version is ready, we will update this section.
 <!-- You can mix APIs as much as you like. Here are some guidelines -->
 <!-- * Use the Symbolic API and a coarse-grained operator to create  an established structure. -->
 <!-- * Use a fine-grained operator to extend parts of a more flexible symbolic graph. -->
-<!-- * Do some dynamic NArray tricks, which are even more flexible, between the calls of forward and backward executors. -->
+<!-- * Do some dynamic NDArray tricks, which are even more flexible, between the calls of forward and backward executors. -->
 
 <!-- Different approaches offer you different levels of flexibility and -->
 <!-- efficiency. Normally, you do not need to be flexible in all parts of the -->
 <!-- network, so use the parts optimized for speed, and compose it -->
-<!-- flexibly with a fine-grained operator or a dynamic NArray. Such a -->
+<!-- flexibly with a fine-grained operator or a dynamic NDArray. Such a -->
 <!-- mixture allows you to build the deep learning architecture both efficiently and -->
 <!-- flexibly as your choice.  -->
 

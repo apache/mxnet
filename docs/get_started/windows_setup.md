@@ -3,12 +3,12 @@
 On Windows, you can download and install the prebuilt MXNet package, or download, build, and install MXNet yourself.
 
 ## Build the Shared Library
-You can either use prebuilt binary package or build from source to build the MXNet shared library - ```libmxnet.dll```.
+You can either use a prebuilt binary package or build from source to build the MXNet shared library - ```libmxnet.dll```.
 
 ### Installing the Prebuilt Package on Windows
 MXNet provides a prebuilt package for Windows. The prebuilt package includes the MXNet library, all of the dependent third-party libraries, a sample C++ solution for Visual Studio, and the Python installation script. To install the prebuilt package:
 
-1. Download the latest prebuilt package from the [Releases](https://github.com/dmlc/mxnet/releases) tab  of MXNet.
+1. Download the latest prebuilt package from the [Releases](https://github.com/dmlc/mxnet/releases) tab of MXNet.
    There are two versions. One with GPU support (using CUDA and CUDNN v3), and one without GPU support. Choose the version that suits your hardware configuration. For more information on which version works on each hardware configuration, see [Requirements for GPU](http://mxnet.io/get_started/setup.html#requirements-for-using-gpus).
 2. Unpack the package into a folder, with an appropriate name, such as ```D:\MXNet```.
 3. Open the folder, and install the package by double-clicking ```setupenv.cmd```. This sets up all of the environment variables required by MXNet.
@@ -38,12 +38,12 @@ After you have installed all of the required dependencies, build the MXNet sourc
 1. Download the MXNet source code from [GitHub](https://github.com/dmlc/mxnet).
 2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
-These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug folder```.
+These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
 
 
 
 &nbsp;
-Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](jupyter.readthedocs.io) used for running MXNet tutorials and examples.
+Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
 - Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](http://www.graphviz.org/Download_windows.php).
 **Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
 - Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.continuum.io/downloads)
@@ -103,7 +103,7 @@ For Windows users, MXNet provides a prebuilt binary package for CPUs. The prebui
 
 #### Building MXNet from Source Code
 
-BRun the following commands to install the MXNet dependencies and build the MXNet R package.
+Run the following commands to install the MXNet dependencies and build the MXNet R package.
 
 ```r
   Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
@@ -125,7 +125,7 @@ These commands create the MXNet R package as a tar.gz file that you can install 
 
 ### Installing MXNet on a Computer with a GPU Processor
 
-To install MXNet on a computer with a GPU processsor, you need the following:
+To install MXNet on a computer with a GPU processor, you need the following:
 
 * Microsoft Visual Studio 2013
 
@@ -149,7 +149,7 @@ To install the required dependencies and install MXNet for R:
     * The *.dll files in all four subfolders of the nocudnn/3rdparty/ directory. The cudnn and openblas .dll files are in the /bin folders.
 You should now have 11 .dll files in the R-package/inst/libs/x64 folder.
 8. Copy the ```nocudnn/include/``` folder into ```R-package/inst/```. You should now have a folder called ```R-package/inst/include/``` with three subfolders.
-9. Make sure that R is added to your ```PATH``` in the environment variables. Running the where ```R``` command at the command prompt should return the location.
+9. Make sure that R is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
 10.	Run ```R CMD INSTALL --no-multiarch R-package```.
 
 **Note:** To maximize its portability, the MXNet library is built with the Rcpp end. Computers running Windows need [MSVC](https://en.wikipedia.org/wiki/Visual_C%2B%2B) (Microsoft Visual C++) to handle CUDA toolchain compatibilities.
@@ -193,12 +193,12 @@ For Linux and OS X (Mac) users, MXNet provides prebuilt binary packages that sup
 </dependency>
 ```
 
-For example, to download and build the 64-bit CPU-only version for OS X, use:
+For example, to download and build the 64-bit CPU-only version for Linux, use:
 
 ```HTML
 <dependency>
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-full_2.10-linux-x86_64-gpu</artifactId>
+  <artifactId>mxnet-full_2.10-linux-x86_64-cpu</artifactId>
   <version>0.1.1</version>
 </dependency>
 ```

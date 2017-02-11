@@ -58,7 +58,7 @@ For proper communication with the C++ back end, both the key and values of the a
     res6: Option[String] = Some(angry)
 ```
 
-To attach attributes, we can use ```AttrScope```. ```AttrScope``` automatically adds the specified attributes to all of the symbols created within that scope. User can also inherit this object to change naming behavior. For example:
+To attach attributes, we can use ```AttrScope```. ```AttrScope``` automatically adds the specified attributes to all of the symbols created within that scope. The user can also inherit this object to change naming behavior. For example:
 
 ```scala
     val (data, gdata) =

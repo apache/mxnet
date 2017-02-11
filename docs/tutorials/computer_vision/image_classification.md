@@ -61,7 +61,7 @@ You can use either synchronous SGD `dist_sync` or asynchronous SGD
   `dist_async`.
 
 * If you have several computers that you can connect to using SSH, and if this mxnet folder is
-  accessible on these computers (is mounted as a NFS; see a tutorial for [Ubuntu](https://help.ubuntu.com/lts/serverguide/network-file-system.html)), run a job on these computers, first by saving their hostnames on a file, for example:
+  accessible on these computers (is mounted as an NFS; see a tutorial for [Ubuntu](https://help.ubuntu.com/lts/serverguide/network-file-system.html)), run a job on these computers, first by saving their hostnames on a file, for example:
 
 ```bash
   $ cat hosts
@@ -142,19 +142,19 @@ The following factors can significantly improve performance:
 and mkl, is necessary only if you are using a CPU processor. For Nvidia GPUs, we strongly
 recommend using CUDNN.
 * Input data:
-  
-	- Data format. Use the `rec` format.
- 
 
-	- Number of threads used for decoding. By default, MXNet uses four CPU threads for decoding images, which
+	- Data format. Use the `rec` format.
+
+
+	- A number of threads used for decoding. By default, MXNet uses four CPU threads for decoding images, which
     can often decode more than 1 Kb images per second. If you are using a low-end CPU or
     very powerful GPUs, you
     can increase the number of threads .
- 
+
 
 	- Data storage location. Any local or distributed file system (HDFS, Amazon
     S3) should be fine. If multiple computers read the
-    data from the network shared file system (NFS) at the same time, howeverr, you might encounter a problem.
+    data from the network shared file system (NFS) at the same time, however, you might encounter a problem.
 
 
 	- Batch size. We recommend using the largest size that the GPU memory can accommodate. A value that is too large might slow down convergence. A safe batch size for CIFAR 10 is approximately 200; for ImageNet

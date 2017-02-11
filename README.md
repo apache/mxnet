@@ -22,6 +22,7 @@ deep learning system, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Version 0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.
 * [Version 0.9.1 Release (NNVM refactor)](./docs/architecture/release_note_0_9.md) - NNVM branch is merged into master now. An official release will be made soon.
 * [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
 * [Updated Image Classification with new Pre-trained Models](./example/image-classification)

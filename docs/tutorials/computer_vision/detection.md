@@ -4,7 +4,7 @@ You can get the source code for below example [here](https://github.com/dmlc/mxn
 # Faster R-CNN in MXNet with distributed implementation and data parallelization
 
 Region Proposal Network solves object detection as a regression problem
-from the objectness perspective. Bounding boxes are predicted by applying
+from the object-ness perspective. Bounding boxes are predicted by applying
 learned bounding box deltas to base boxes, namely anchor boxes across
 different positions in feature maps. Training process directly learns a
 mapping from raw image intensities to bounding box transformation targets.
@@ -16,11 +16,11 @@ detection results. Cropping feature maps instead of image input accelerates
 computation utilizing shared convolution maps. Bounding box displacements
 are simultaneously learned in the training process.
 
-Faster R-CNN utilize an alternate optimization training process between RPN
+Faster R-CNN utilizes an alternate optimization training process between RPN
 and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 
 ## Getting Started
-* Install python package `easydict`, `cv2`, `matplotlib`. MXNet require `numpy`.
+* Install python package `easydict`, `cv2`, `matplotlib`. MXNet requires `numpy`.
 * Install MXNet with version no later than Commit 8a3424e, preferably the latest master.
   Follow the instructions at http://mxnet.io/get_started/setup.html#quick-installation. Install the python interface.
 * Try out detection result by running `python demo.py --prefix final --epoch 0 --image myimage.jpg --gpu 0`.
@@ -30,7 +30,7 @@ and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 * Install additional python package `scipy`.
 * Download Pascal VOC data and place them to `data` folder according to `Data Folder Structure`.
   You might want to create a symbolic link to VOCdevkit folder by `ln -s /path/to/your/VOCdevkit data/VOCdevkit`.
-* Download VGG16 pretrained model, use `mxnet/tools/caffe_converter` to convert it,
+* Download VGG16 pre-trained model, use `mxnet/tools/caffe_converter` to convert it,
   rename to `vgg16-symbol.json` and `vgg16-0001.params` and place it in `model` folder.
   `model` folder will be used to place model checkpoints along the training process.
 * Start training by running `python train_alternate.py` after VOCdevkit is ready.
@@ -52,7 +52,7 @@ and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 
 ## Approximate Joint Training
 * Support training faster-rcnn model using end2end training method which is implemented by approximate joint training, and it is almost the same as [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn)
-* Start end2end training by running `python -u train_end2end.py`, please using `python train_end2end.py --help` to query how to setting the training paramters, such as you can setting the step of dropping lr by `--factor-step`.
+* Start end2end training by running `python -u train_end2end.py`, please using `python train_end2end.py --help` to query how to setting the training parameters, such as you can set the step of dropping lr by `--factor-step`.
 
 ## Information
 * Download link to trained model
