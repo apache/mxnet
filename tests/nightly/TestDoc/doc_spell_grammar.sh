@@ -23,7 +23,8 @@ echo "BUILD python3 mxnet"
 python3 setup.py install || exit 1
 
 echo "Install other dependencies"
-cd ..yum -y install enchant
+cd ..
+yum -y install enchant
 pip install pyenchant
 
 mkdir /usr/share/myspell
