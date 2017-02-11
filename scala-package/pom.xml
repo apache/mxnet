@@ -189,6 +189,9 @@
                 <goal>jar</goal>
               </goals>
               <configuration>
+                <includes>
+                  <include>**/*</include>
+                </includes>
                 <classifier>javadoc</classifier>
                 <classesDirectory>${basedir}/javadoc</classesDirectory>
               </configuration>
@@ -221,7 +224,7 @@
           <configuration>
             <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
             <junitxml>.</junitxml>
-            <filereports>WDF_TestSuite.txt</filereports>
+            <filereports>WDF TestSuite.txt</filereports>
           </configuration>
           <executions>
             <execution>
@@ -232,7 +235,7 @@
                which means, in order to run the unit tests,
                we have to compile all the modules first.
               -->
-              <!--<phase>integration-test</phase>-->
+              <phase>integration-test</phase>
               <goals>
                 <goal>test</goal>
               </goals>
