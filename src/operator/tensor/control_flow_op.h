@@ -17,12 +17,10 @@ namespace mxnet {
 namespace op {
 
 /*! \brief return elements from x or y depending on condition
- * This is the primary template for the operator where.
  * The condition, x, and y have the same shape.
  * The returned array is formed by elements from x or y
  * depending on the elements of condition.
  */
-template<bool same_shape>
 struct where {
   // DType is the output data type
   // CType is condition data type
@@ -34,14 +32,12 @@ struct where {
 };
 
 /*! \brief return elements from x or y depending on condition
- * This is the specialized template for the operator where.
  * The condition is a vector whose size is the same as the
  * x's first dim size.
  * The returned array is formed by rows from x or y depending on
  * the condition's elements.
  */
-template<>
-struct where<false> {
+struct where_batch {
   // DType is the output data type
   // CType is the condition data type
   template<typename DType, typename CType>
@@ -140,14 +136,14 @@ void WhereOpForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
     if (cond.shape_ == x.shape_) {
       MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
-        Kernel<where<true>, xpu>::Launch(s, out.Size(), out.dptr<DType>(),
-                                         cond.dptr<CType>(), x.dptr<DType>(), y.dptr<DType>());
+        Kernel<where, xpu>::Launch(s, out.Size(), out.dptr<DType>(),
+                                   cond.dptr<CType>(), x.dptr<DType>(), y.dptr<DType>());
       });
     } else {
       MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
-        Kernel<where<false>, xpu>::Launch(s, cond.Size(), out.dptr<DType>(),
-                                          cond.dptr<CType>(), x.dptr<DType>(), y.dptr<DType>(),
-                                          x.Size()/cond.Size());
+        Kernel<where_batch, xpu>::Launch(s, cond.Size(), out.dptr<DType>(),
+                                         cond.dptr<CType>(), x.dptr<DType>(), y.dptr<DType>(),
+                                         x.Size()/cond.Size());
       });
     }
   });
