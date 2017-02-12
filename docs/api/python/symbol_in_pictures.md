@@ -31,7 +31,7 @@ The following example shows how to configure multiple input neural networks.
 ## Bind and Execute Symbol
 
 When you need to execute a symbol graph, you call the bind function to bind ```NDArrays``` to the argument nodes
-in order to obtain a ```Executor```.
+in order to obtain an ```Executor```.
 
 ![Bind](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/bind_basic.png)
 
