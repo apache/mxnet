@@ -18,7 +18,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-word_list = set()
+
 GRAMMAR_CHECK_IGNORE = ['WHITESPACE_RULE', 'DOUBLE_PUNCTUATION', 'EN_QUOTES[1]',
                                                       'EN_QUOTES[2]', 'COMMA_PARENTHESIS_WHITESPACE',
                                                       'ENGLISH_WORD_REPEAT_RULE', 'EN_UNPAIRED_BRACKETS',
@@ -77,7 +77,6 @@ def check_doc(content, spell_checker, spell_check_res):
             spell_check_res[error.word] += 1
         else:
             spell_check_res[error.word] = 1
-        word_list.add(error.word)
 
 
 class DocParser(HTMLParser):
@@ -98,36 +97,14 @@ class DocParser(HTMLParser):
         
     def handle_starttag(self, tag, attrs):
         self.__ignore_tag = True if tag.startswith('script') or tag.startswith('option') else False
-        """If is_code_block flag is true, we're in a code block.
-            in_code_block is set.
-            if is_code_block is false, we check the class attribute
-            to decide whether this is a start tag for code block.
-        """
-        if self.__is_code_block:
-            self.__in_code_block = True
-            return
             
     def handle_endtag(self, tag):
-        if self.__is_code_block and not self.__in_code_block:
-            self.__is_code_block = False
-        if self.__is_code_block and self.__in_code_block:
-            self.__in_code_block = False
+        pass
             
     def handle_data(self, data):
         #Ignore url content
         if not self.__ignore_tag and not data.startswith('http'):
             check_doc(data, self.__spell_checker, self.__spell_check_res)
-            if self.__is_code_block:
-                return
-            line_list = data.split('\n')
-            for line in line_list:
-                line = line.lstrip()
-                line = line.rstrip()
-                if len(line) == 0:
-                    continue
-                if line[0] == ',' or line[0] == '.' or line[0] == ':' or line[0] == ';'  :
-                    self.__parsed_content = self.__parsed_content[:-1]
-                self.__parsed_content += line + ' '
 
     def __get_parsed_content(self):
         return self.__parsed_content
@@ -180,5 +157,3 @@ if __name__ == "__main__":
             doc_parser.clear_res()
             doc_parser.clear_parsed_content()
     res.close()
-    for word in word_list:
-        print word
