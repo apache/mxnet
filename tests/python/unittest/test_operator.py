@@ -2731,11 +2731,11 @@ def test_where():
         shape = (10, 2, 4, 9)
         np_condition = np.random.randint(0, 2, shape[0])
         np_x = np.random.randint(1, 6, np.prod(shape))\
-            .reshape(shape[0], np.prod(shape)/shape[0])
+            .reshape(shape[0], int(np.prod(shape)/shape[0]))
         np_y = np.random.randint(7, 11, np.prod(shape))\
-            .reshape(shape[0], np.prod(shape)/shape[0])
+            .reshape(shape[0], int(np.prod(shape)/shape[0]))
         np_expected = np.zeros(np.prod(shape))\
-            .reshape(shape[0], np.prod(shape)/shape[0])
+            .reshape(shape[0], int(np.prod(shape)/shape[0]))
         for i in range(0, np_condition.shape[0]):
             if np_condition[i] > 0:
                 for j in range(0, len(np_x[0])):
