@@ -15,15 +15,18 @@ from .symbol import Symbol
 
 _rng = np.random.RandomState(1234)
 
+
 def default_context():
     """Get default context for regression test."""
     # _TODO: get context from environment variable to support
     # testing with GPUs
     return Context.default_ctx
 
+
 def set_default_context(ctx):
     """Set default ctx"""
     Context.default_ctx = ctx
+
 
 def default_dtype():
     """Get default data type for regression test."""
@@ -31,11 +34,18 @@ def default_dtype():
     return np.float32
 
 
-def default_numerical_threshold():
+def get_atol(atol=None):
     """Get default numerical threshold for regression test."""
     # _TODO: get from env variable, different threshold might
     # be needed for different device and dtype
-    return 1e-5
+    return 1e-20 if atol is None else atol
+
+
+def get_rtol(rtol=None):
+    """Get default numerical threshold for regression test."""
+    # _TODO: get from env variable, different threshold might
+    # be needed for different device and dtype
+    return 1e-5 if rtol is None else rtol
 
 
 def random_arrays(*shapes):
@@ -78,15 +88,18 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
         ret = ret.reshape(tuple(keepdims_shape))
     return ret
 
-def print_max_err_loc(a, b, rtol=1e-7, atol=0):
-    """print location of maximum violation"""
+
+def find_max_violation(a, b, rtol=None, atol=None):
+    """find location of maximum violation"""
+    rtol = get_rtol(rtol)
+    atol = get_atol(atol)
     diff = np.abs(a-b)
     tol = atol + rtol*np.abs(b)
     violation = diff/(tol+1e-20)
     loc = np.argmax(violation)
     idx = np.unravel_index(loc, violation.shape)
-    print('Maximum err at ', idx, ':', a.flat[loc], ' vs ', b.flat[loc])
-    return idx
+    return idx, np.max(violation)
+
 
 def same(a, b):
     """Test if two numpy arrays are the same
@@ -98,43 +111,13 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-def reldiff(a, b, return_index=False, thresh=1E-3):
-    """Calculate the relative difference between two input arrays
 
-    Calculated by :math:`\\max(frac{|a-b|}{max(|a|, |b|) + 1E-7})`
-    Also If |a-b| is smaller than "thresh", the absolute difference will be used.
-
-    Parameters
-    ----------
-    a : np.ndarray
-    b : np.ndarray
-    return_index : bool, optional
-        Whether to return the index that has the maximum difference
-    thresh : float, optional
-        If |a-b| is smaller than "thresh", the absolute difference will be used.
-    """
-    diff = np.abs(a - b)
-    norm = np.maximum(np.abs(a), np.abs(b)) + 1e-7
-    relative_diff = diff / norm
-    if isinstance(diff, np.ndarray):
-        relative_diff[diff < thresh] = diff[diff < thresh]
-    else:
-        relative_diff = diff if diff < thresh else relative_diff
-    ret = np.max(relative_diff)
-    if not return_index:
-        return ret
-    else:
-        index = np.unravel_index(np.argmax(diff / norm), dims=a.shape)
-        return ret, index
-
-def almost_equal(a, b, threshold=None):
+def almost_equal(a, b, rtol=None, atol=None):
     """Test if two numpy arrays are almost equal."""
-    threshold = threshold or default_numerical_threshold()
-    rel = reldiff(a, b)
-    return not np.isnan(rel) and rel <= threshold
+    return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol))
 
 
-def assert_almost_equal(a, b, threshold=None):
+def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b')):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
 
     Parameters
@@ -144,17 +127,21 @@ def assert_almost_equal(a, b, threshold=None):
     threshold : None or float
         The checking threshold. Default threshold will be used if set to None
     """
-    threshold = threshold or default_numerical_threshold()
-    rel, index = reldiff(a, b, True)
-    if np.isnan(rel) or rel > threshold:
-        np.set_printoptions(threshold=4, suppress=True)
-        msg = npt.build_err_msg([a, b],
-                                err_msg="Rel Err=%f, Expected <=%f,"
-                                        " Index of maximum error:%s, a=%f, b=%f"
-                                % (rel, threshold, str(index), a[index], b[index]),
-                                names=["a", "b"])
-        raise Exception(msg)
-    return rel
+    rtol = get_rtol(rtol)
+    atol = get_atol(atol)
+
+    if almost_equal(a, b, rtol, atol):
+        return
+
+    index, rel = find_max_violation(a, b, rtol, atol)
+    np.set_printoptions(threshold=4, suppress=True)
+    msg = npt.build_err_msg([a, b],
+                            err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
+                                    " Location of maximum error:%s, a=%f, b=%f"
+                            % (rel, rtol, atol, str(index), a[index], b[index]),
+                            names=names)
+    raise AssertionError(msg)
+
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     """Test that two numpy arrays are almost equal (ignoring NaN in either array).
@@ -178,13 +165,31 @@ def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     a[nan_mask] = 0
     b[nan_mask] = 0
 
-    rtol = rtol or default_numerical_threshold()
-    atol = atol or default_numerical_threshold()
+    return almost_equal(a, b, rtol, atol)
 
-    rel_approx_equal = reldiff(a, b) <= rtol
-    abs_approx_equal = np.sum(np.abs(a - b) > atol) == 0
+def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b')):
+    """Test that two numpy arrays are almost equal (ignoring NaN in either array).
+    Combines a relative and absolute measure of approximate eqality.
+    If either the relative or absolute check passes, the arrays are considered equal.
+    Including an absolute check resolves issues with the relative check where all
+    array values are close to zero.
 
-    return rel_approx_equal or abs_approx_equal
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to None
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to None
+    """
+    a = np.copy(a)
+    b = np.copy(b)
+    nan_mask = np.logical_or(np.isnan(a), np.isnan(b))
+    a[nan_mask] = 0
+    b[nan_mask] = 0
+
+    assert_almost_equal(a, b, rtol, atol, names)
 
 
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
@@ -307,7 +312,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
             executor.forward(is_train=use_forward_train)
-            f_peps = executor.outputs[0].asnumpy()[0]
+            f_peps = executor.outputs[0].asnumpy()
 
             v.ravel()[i] -= eps
             executor.arg_dict[k][:] = v
@@ -315,17 +320,17 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
             executor.forward(is_train=use_forward_train)
-            f_neps = executor.outputs[0].asnumpy()[0]
+            f_neps = executor.outputs[0].asnumpy()
 
-            approx_grads[k].ravel()[i] = (f_peps - f_neps) / eps
+            approx_grads[k].ravel()[i] = (f_peps - f_neps).sum() / eps
             v.ravel()[i] = old_value.ravel()[i]
         # copy back the original value
         executor.arg_dict[k][:] = old_value
     return approx_grads
 
 
-def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, check_eps=1e-2,
-                           grad_nodes=None, use_forward_train=True, ctx=None):
+def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
+                           atol=None, grad_nodes=None, use_forward_train=True, ctx=None):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -395,7 +400,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
-    out = mx.sym.sum(sym * proj)
+    out = sym * proj
     out = mx.sym.MakeLoss(out)
 
     location = dict(list(location.items()) +
@@ -425,30 +430,20 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-4, che
         orig_grad = args_grad_npy[name]
         sym_grad = symbolic_grads[name]
         if grad_req[name] == 'write':
-            rel, index = reldiff(fd_grad, sym_grad, True)
-            arr_l = [fd_grad, sym_grad]
+            assert_almost_equal(fd_grad, sym_grad, rtol, atol,
+                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'add':
-            rel, index = reldiff(fd_grad, sym_grad - orig_grad, True)
-            arr_l = [fd_grad, sym_grad - orig_grad]
+            assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol,
+                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'null':
-            rel, index = reldiff(orig_grad, sym_grad, True)
-            arr_l = [orig_grad, sym_grad]
+            assert_almost_equal(orig_grad, sym_grad, rtol, atol,
+                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         else:
-            raise ValueError
-        if np.isnan(rel) or rel > check_eps:
-            np.set_printoptions(threshold=4, suppress=True)
-            msg = npt.build_err_msg(arr_l,
-                                    err_msg="In symbol \"%s\", ctx=%s, "
-                                            "numeric check failed for \"%s\", grad_req= \"%s\". "
-                                            "Rel Err=%f, Expected <=%f,"
-                                            " Index of maximum error:%s, Numeric=%f, Calculated=%f"
-                                    %(sym.name, str(ctx), name, grad_req[name], rel, check_eps,
-                                      str(index), arr_l[0][index], arr_l[1][index]),
-                                    names=["NUMERICAL", "BACKWARD"])
-            raise Exception(msg)
+            raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
 
-def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=None, ctx=None):
+def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
+                           aux_states=None, ctx=None):
     """Compare foward call to expected value.
 
     Parameters
@@ -497,21 +492,11 @@ def check_symbolic_forward(sym, location, expected, check_eps=1E-4, aux_states=N
     outputs = [x.asnumpy() for x in executor.outputs]
 
     for output_name, expect, output in zip(sym.list_outputs(), expected, outputs):
-        rel, index = reldiff(expect, output, True)
-        if rel > check_eps:
-            np.set_printoptions(threshold=4, suppress=True)
-            msg = npt.build_err_msg([expect, output],
-                                    err_msg="In symbol \"%s\", ctx=%s, "
-                                            "forward check failed for \"%s\". "
-                                            "Rel Err=%f, Expected <=%f,"
-                                            " Index of maximum error:%s, Expect=%f, Forward=%f"
-                                    %(sym.name, str(ctx), output_name, rel, check_eps,
-                                      str(index), expect[index], output[index]),
-                                    names=["EXPECTED", "FORWARD"])
-            raise Exception(msg)
+        assert_almost_equal(expect, outputs, rtol, atol,
+                            ("EXPECTED_%s"%output_name, "FORWARD_%s"%output_name))
 
 
-def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
+def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
                             aux_states=None, grad_req='write', ctx=None):
     """Compare backward call to expected value.
 
@@ -575,27 +560,16 @@ def check_symbolic_backward(sym, location, out_grads, expected, check_eps=1e-5,
     grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
     for name in expected:
         if grad_req[name] == 'write':
-            rel, index = reldiff(expected[name], grads[name], True)
-            arr_l = [expected[name], grads[name]]
+            assert_almost_equal(expected[name], grads[name], rtol, atol,
+                                ("EXPECTED_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'add':
-            rel, index = reldiff(expected[name], grads[name] - args_grad_npy[name], True)
-            arr_l = [expected[name], grads[name] - args_grad_npy[name]]
+            assert_almost_equal(expected[name], grads[name] - args_grad_npy[name],
+                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'null':
-            rel, index = reldiff(args_grad_npy[name], grads[name], True)
-            arr_l = [args_grad_npy[name], grads[name]]
+            assert_almost_equal(args_grad_npy[name], grads[name],
+                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name))
         else:
-            raise ValueError
-        if rel > check_eps:
-            np.set_printoptions(threshold=4, suppress=True)
-            msg = npt.build_err_msg(arr_l,
-                                    err_msg="In symbol \"%s\", ctx=%s, "
-                                            "backward check failed for \"%s\". "
-                                            "Rel Err=%f, Expected <=%f,"
-                                            " Index of maximum error:%s, Expect=%f, Backward=%f"
-                                    %(sym.name, str(ctx), name, rel, check_eps,
-                                      index, arr_l[0][index], arr_l[1][index]),
-                                    names=["EXPECTED", "BACKWARD"])
-            raise Exception(msg)
+            raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
 
 def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
@@ -774,13 +748,14 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             gtarr = gt[name].astype(dtypes[i]).asnumpy()
             arr = arr.asnumpy()
             try:
-                npt.assert_allclose(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
             except Exception as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
-                print_max_err_loc(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                 traceback.print_exc()
                 if raise_on_err:
                     raise e
+                else:
+                    print(str(e))
 
     # train
     if grad_req != 'null':
@@ -799,12 +774,13 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 gtarr = gt[name].astype(dtypes[i]).asnumpy()
                 arr = arr.asnumpy()
                 try:
-                    npt.assert_allclose(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
                 except Exception as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
-                    print_max_err_loc(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-                    print(e)
+                    traceback.print_exc()
                     if raise_on_err:
                         raise e
+                    else:
+                        print(str(e))
 
     return gt
