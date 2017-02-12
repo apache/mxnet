@@ -1,4 +1,4 @@
-#pylint: disable=no-member, too-many-instance-attributes, invalid-name
+#pylint: disable=no-member, too-many-instance-attributes
 """This script uses pyenchant to check spelling for MXNet
     documentation website.
     An exclude list is provided to avoid checking specific word,
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     CHINESE_HTML_DIR = '../../../docs/_build/html/zh'
     STATIC_HTML_DIR = '../../../docs/_build/html/_static'
     DOC_PARSER = DocParser()
-    all_clear = True
+    ALL_CLEAR = True
     for root, _, files in os.walk(BUILD_HTML_DIR):
         if root.startswith(CHINESE_HTML_DIR) or root.startswith(STATIC_HTML_DIR):
             continue
@@ -155,14 +155,14 @@ if __name__ == "__main__":
             if len(spell_check_res) > 0:
                 print "%s has typo:" % os.path.join(root, read_file)
                 print "%s\n" % spell_check_res
-                all_clear = False
+                ALL_CLEAR = False
             if grammar_check_res:
                 filtered_res = get_grammar_res(grammar_check_res)
                 if len(filtered_res) > 0:
                     print "%s has grammar issue:" % os.path.join(root, read_file)
                     for item in filtered_res:
                         print "%s\n" % item
-                    all_clear = False
+                    ALL_CLEAR = False
             DOC_PARSER.clear_res()
-    if all_clear:
+    if ALL_CLEAR:
         print "No typo or grammar issue is found."
