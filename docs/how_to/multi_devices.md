@@ -42,7 +42,7 @@ python train_mnist.py --gpus 0,2 ...
 
 ### Advanced Usage
 
-If the GPUs are have different computation power, we can partition the workload
+If the GPUs have different computation power, we can partition the workload
 according to their powers. For example, if GPU 0 is 3 times faster than GPU 2,
 then we provide an additional workload option `work_load_list=[3, 1]`, see
 [model.fit](../api/python/model.html#mxnet.model.FeedForward.fit) for more
@@ -60,7 +60,7 @@ communication. One can either use `mx.kvstore.create(type)` to get an instance o
 There are two commonly used types,
 
 - `local`: all gradients are copied to CPU memory and weights are updated there.
-- `device`: both gradients aggregation and weight updating are run on GPUs. It also attempts to use GPU peer-to-peer communication, which potentially accelerates the communication. But this option may result in higher GPU memory usage.
+- `device`: both gradients' aggregation and weight updating are run on GPUs. It also attempts to use GPU peer-to-peer communication, which potentially accelerates the communication. But this option may result in higher GPU memory usage.
 
 When there is a large number of GPUs, e.g. >=4, we suggest using `device` for better performance.
 
@@ -82,7 +82,7 @@ We can simply change the `KVStore` type to run with multiple machines.
 > To use distributed training, we need to compile with `USE_DIST_KVSTORE=1`
 > (see [MXNet installation guide](http://mxnet.io/get_started/setup.html) for more options).
 
-Launching a distributed job is a little bit different than running on a single
+Launching a distributed job is a bit different from running on a single
 machine. MXNet provides
 [tools/launch.py](https://github.com/dmlc/mxnet/blob/master/tools/launch.py) to
 start a job by using `ssh`, `mpi`, `sge`, or `yarn`.

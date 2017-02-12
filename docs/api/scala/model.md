@@ -35,10 +35,10 @@ The following example creates a two-layer neural network.
       .setEvalData(valDataIter)
       .build()
 ```
-You can also use the scikit-learn-style construct and fit function to create a model.
+You can also use the `scikit-learn-style` construct and `fit` function to create a model.
 
 ```scala
-    // create a model using sklearn-style two step way
+    // create a model using sklearn-style two-step way
     val model = new FeedForward(softmax,
                                 numEpoch = numEpochs,
                                 argParams = argParams,
@@ -53,10 +53,11 @@ For more information, see [API Reference](http://mxnet.io/api/scala/docs/index.h
 ## Save the Model
 
 After the job is done, save your work.
-We also provide save and load functions. Load function can be used to load a model checkpoint from a file.
+We also provide `save` and `load` functions. You can use the `load` function to load a model checkpoint from a file.
 
 ```scala
-    // checkpoint the model data into file save a model to modelPrefix-symbol.json and modelPrefix-0100.params
+    // checkpoint the model data into file,
+    // save a model to modelPrefix-symbol.json and modelPrefix-0100.params
     val modelPrefix: String = "checkpt"
     val num_epoch = 100
     Model.saveCheckpoint(modelPrefix, epoch + 1, symbol, argParams, auxStates)
@@ -64,19 +65,19 @@ We also provide save and load functions. Load function can be used to load a mod
     // load model back
     val model_loaded = FeedForward.load(modelPrefix, num_epoch)
 ```
-The advantage of these save and load functions is that they are language agnostic.
+The advantage of these two `save` and `load` functions is that they are language agnostic.
 You should be able to save and load directly into cloud storage, such as Amazon S3 and HDFS.
 
 ##  Periodic Checkpointing
 
 We recommend checkpointing your model after each iteration.
-To do this, add a checkpoint callback ```Model.saveCheckpoint(<parameters>)``` to the function after each iteration using EpochEndCallback.
-The training process automatically checkpoints the specified location after
-each iteration.
+To do this, use ```EpochEndCallback``` to add a ```Model.saveCheckpoint(<parameters>)``` checkpoint callback to the function after each iteration .
 
 ```scala
-    // modelPrefix-symbol.json will be saved for symbol. modelPrefix-epoch.params will be saved for parameters.
-    // Checkpoint the model into file. Can specify parameters. For more information, check API doc.
+    // modelPrefix-symbol.json will be saved for symbol.
+    // modelPrefix-epoch.params will be saved for parameters.
+    // Checkpoint the model into file. Can specify parameters.
+    // For more information, check API doc.
     val modelPrefix: String = "checkpt"
     val checkpoint: EpochEndCallback =
     if (modelPrefix == null) null
@@ -88,7 +89,7 @@ each iteration.
             }
            }
 
-    // Load model checkpoint from file. Returns symbol, argParams and auxParams
+    // Load model checkpoint from file. Returns symbol, argParams, auxParams.
     val (_, argParams, _) = Model.loadCheckpoint(modelPrefix, num_epoch)
 
 ```
@@ -96,7 +97,7 @@ You can load the model checkpoint later using ```Model.loadCheckpoint(modelPrefi
 
 ## Use Multiple Devices
 
-Set ```ctx``` to the list of devices that you want to train on. You can create list of devices in any way you want.
+Set ```ctx``` to the list of devices that you want to train on. You can create a list of devices in any way you want.
 
 ```scala
     val devices = Array(Context.gpu(0), Context.gpu(1))
