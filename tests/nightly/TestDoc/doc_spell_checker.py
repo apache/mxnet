@@ -1,4 +1,4 @@
-#pylint: disable=no-member, too-many-instance-attributes
+#pylint: disable=no-member, too-many-instance-attributes, invalid-name
 """This script uses pyenchant to check spelling for MXNet
     documentation website.
     An exclude list is provided to avoid checking specific word,
