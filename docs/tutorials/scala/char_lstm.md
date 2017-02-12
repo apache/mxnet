@@ -84,9 +84,8 @@ To download the data which contains Barack Obama's speeches:
         head -10 obama.txt
     ```
 
-        You will get text like this:
-
-    ```scala
+Output:
+```scala
         Call to Renewal Keynote Address Call to Renewal Pt 1Call to Renewal Part 2 TOPIC: Our Past, Our Future & Vision for America June
         28, 2006 Call to Renewal' Keynote Address Complete Text Good morning. I appreciate the opportunity to speak here at the Call to R
         enewal's Building a Covenant for a New America conference. I've had the opportunity to take a look at your Covenant for a New Ame
@@ -97,7 +96,7 @@ To download the data which contains Barack Obama's speeches:
         ast several years.I do so because, as you all know, we can affirm the importance of poverty in the Bible; and we can raise up and
          pass out this Covenant for a New America. We can talk to the press, and we can discuss the religious call to address poverty and
          environmental stewardship all we want, but it won't have an impact unless we tackle head-on the mutual suspicion that sometimes
-    ```
+```
 
 ## Prepare the Data
 
@@ -240,15 +239,19 @@ Note: The BucketSentenceIter data iterator supports various length examples; how
         scala> // initialize states for LSTM
         scala> val initC = for (l <- 0 until numLstmLayer) yield (s"l${l}_init_c", (batchSize, numHidden))
 
-        initC: scala.collection.immutable.IndexedSeq[(String, (Int, Int))] = Vector((l0_init_c,(32,512)), (l1_init_c,(32,512)), (l2_init_c,(32,512)))
+        initC: scala.collection.immutable.IndexedSeq[(String, (Int, Int))] = Vector((l0_init_c,(32,512)),
+        (l1_init_c,(32,512)), (l2_init_c,(32,512)))
 
         scala> val initH = for (l <- 0 until numLstmLayer) yield (s"l${l}_init_h", (batchSize, numHidden))
 
-        initH: scala.collection.immutable.IndexedSeq[(String, (Int, Int))] = Vector((l0_init_h,(32,512)), (l1_init_h,(32,512)), (l2_init_h,(32,512)))
+        initH: scala.collection.immutable.IndexedSeq[(String, (Int, Int))] = Vector((l0_init_h,(32,512)),
+        (l1_init_h,(32,512)), (l2_init_h,(32,512)))
 
         scala> val initStates = initC ++ initH
 
-        initStates: scala.collection.immutable.IndexedSeq[(String, (Int, Int))] = Vector((l0_init_c,(32,512)), (l1_init_c,(32,512)), (l2_init_c,(32,512)), (l0_init_h,(32,512)), (l1_init_h,(32,512)), (l2_init_h,(32,512)))
+        initStates: scala.collection.immutable.IndexedSeq[(String, (Int, Int))] =
+        Vector((l0_init_c,(32,512)), (l1_init_c,(32,512)), (l2_init_c,(32,512)), (l0_init_h,(32,512)),
+        (l1_init_h,(32,512)), (l2_init_h,(32,512)))
 
         scala> val dataTrain = new BucketIo.BucketSentenceIter(dataPath, vocab, buckets,
                                               batchSize, initStates, seperateChar = "\n",
@@ -328,9 +331,8 @@ Note: The BucketSentenceIter data iterator supports various length examples; how
         initializer: ml.dmlc.mxnet.Xavier = ml.dmlc.mxnet.Xavier@54e8f10a
 
     ```
-Now, you have implemented all the supporting infrastructures for the char-lstm model.
 
-8) To train the model, use the standard [MXNet high-level API](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.FeedForward). You can train the model on a single GPU or CPU from multiple GPUs or CPUs by changing ```.setContext(Array(Context.gpu(0),Context.gpu(1),Context.gpu(2),Context.gpu(3)))``` to ```.setContext(Array(Context.gpu(0)))```:
+8) Now, you have implemented all the supporting infrastructures for the char-lstm model. To train the model, use the standard [MXNet high-level API](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.FeedForward). You can train the model on a single GPU or CPU from multiple GPUs or CPUs by changing ```.setContext(Array(Context.gpu(0),Context.gpu(1),Context.gpu(2),Context.gpu(3)))``` to ```.setContext(Array(Context.gpu(0)))```:
 
     ```scala
         scala> val model = FeedForward.newBuilder(symbol)
@@ -357,9 +359,7 @@ You can now sample sentences from the trained model. The sampler works as follow
 - In the next time step, feeds the previously sampled character as input.
 - Continues running until it has sampled enough characters. Note we are running mini-batches, so several sentences could be sampled simultaneously.
 
-To build the inference model:
-
-1) Define the following utility functions that help MXNet make inferences:
+To build the inference model, define the following utility functions that help MXNet make inferences:
 
 * `makeRevertVocab` - Reverts the key value in the dictionary for easy access to characters while predicting
 * `makeInput` -  Uses a given character as input
@@ -446,21 +446,22 @@ To build the inference model:
 
     ```
 
-2) Build the inference model:
+1) Build the inference model:
 
     ```scala
         scala> // load from check-point
         scala> val (_, argParams, _) = Model.loadCheckpoint("obama", 75)
 
         scala> // build an inference model
-        scala> val model = new RnnModel.LSTMInferenceModel(numLstmLayer, vocab.size + 1,
-                                   numHidden = numHidden, numEmbed = numEmbed,
-                                   numLabel = vocab.size + 1, argParams = argParams, ctx = Context.cpu(), dropout = 0.2f)
+        scala> val model = new RnnModel.LSTMInferenceModel(numLstmLayer, vocab.size + 1, \
+                                   numHidden = numHidden, numEmbed = numEmbed, \
+                                   numLabel = vocab.size + 1, argParams = argParams, \
+                                   ctx = Context.cpu(), dropout = 0.2f)
 
         model: RnnModel.LSTMInferenceModel = RnnModel$LSTMInferenceModel@2f0c0319
     ```
 
-3) Now you can generate a sequence of 1200 characters (you can select any number of characters you want) starting with "The United States" as follows:
+2) Now you can generate a sequence of 1200 characters (you can select any number of characters you want) starting with "The United States" as follows:
 
     ```scala
 
