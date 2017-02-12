@@ -92,7 +92,7 @@ class DocParser(HTMLParser):
         self.__ignore_tag = False
         self.__is_code_block = False
         self.__in_code_block = False
-        self.__dictionary = enchant.DictWithPWL('en_US', 'ignored_words.txt')
+        self.__dictionary = enchant.DictWithPWL('en_US', 'web-data/mxnet/doc/ignored_words.txt')
         self.__spell_checker = SpellChecker(self.__dictionary)
         self.__parsed_content = ""
         self.__grammar_checker = grammar_check.LanguageTool('en-US')
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     CHINESE_HTML_DIR = '../../../docs/_build/html/zh'
     STATIC_HTML_DIR = '../../../docs/_build/html/_static'
     DOC_PARSER = DocParser()
-    RES = open('result.txt', 'w')
+    all_clear = True
     for root, _, files in os.walk(BUILD_HTML_DIR):
         if root.startswith(CHINESE_HTML_DIR) or root.startswith(STATIC_HTML_DIR):
             continue
@@ -155,13 +155,14 @@ if __name__ == "__main__":
             if len(spell_check_res) > 0:
                 print "%s has typo:" % os.path.join(root, read_file)
                 print "%s\n" % spell_check_res
+                all_clear = False
             if grammar_check_res:
                 filtered_res = get_grammar_res(grammar_check_res)
                 if len(filtered_res) > 0:
                     print "%s has grammar issue:" % os.path.join(root, read_file)
-                    RES.write("%s has grammar issue:\n" % os.path.join(root, read_file))
                     for item in filtered_res:
                         print "%s\n" % item
-                        RES.write("%s\n" % item)
+                    all_clear = False
             DOC_PARSER.clear_res()
-    RES.close()
+    if all_clear:
+        print "No typo or grammar issue is found."

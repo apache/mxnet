@@ -27,7 +27,8 @@ cd ..
 yum -y install enchant
 pip install pyenchant
 
-cp tests/nightly/TestDoc/en_US-large.aff tests/nightly/TestDoc/en_US-large.dic tests/nightly/TestDoc/en_US.aff tests/nightly/TestDoc/en_US.dic /usr/share/myspell
+git clone https://github.com/dmlc/web-data.git
+cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
 pip install grammar-check
 pip install html2text
 pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
