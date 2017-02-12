@@ -6,8 +6,8 @@
 #ifndef MXNET_OPERATOR_TENSOR_CONTROL_FLOW_OP_H_
 #define MXNET_OPERATOR_TENSOR_CONTROL_FLOW_OP_H_
 
-#include <vector>
 #include <mxnet/operator_util.h>
+#include <vector>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
