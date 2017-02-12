@@ -28,6 +28,7 @@ NNVM_REGISTER_OP(where)
 .set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("condition", "NDArray", "condition array")
 .add_argument("x", "NDArray", "")
 .add_argument("y", "NDArray", "");

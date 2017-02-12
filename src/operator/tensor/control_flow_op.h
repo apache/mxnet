@@ -43,12 +43,7 @@ struct where_batch {
   template<typename DType, typename CType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
                                   const DType* x, const DType* y, int M) {
-    int k = i * M;
-    const DType* a = (cond[i] != 0? x : y);
-    for (int j = 0; j < M; ++j) {
-        out[k] = a[k];
-        ++k;
-    }
+    out[i] = (cond[i/M] != 0? x[i] : y[i]);
   }
 };
 
@@ -101,20 +96,12 @@ inline bool WhereOpType(const nnvm::NodeAttrs& attrs,
     << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
   CHECK_EQ(out_attrs->size(), 1);
 
-  if ((*in_attrs)[0] == -1) {
-    TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kFloat32);
+  std::vector<int> in_attrs_xy = {(*in_attrs)[1], (*in_attrs)[2]};
+  if (!ElemwiseType<2, 1>(attrs, &in_attrs_xy, out_attrs)) {
+    return false;
   }
-  if ((*in_attrs)[1] == -1 && (*in_attrs)[2] == -1) {
-    TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*in_attrs, 2, mshadow::kFloat32);
-  } else if ((*in_attrs)[1] == -1) {
-    TYPE_ASSIGN_CHECK(*in_attrs, 1, (*in_attrs)[2]);
-  } else if ((*in_attrs)[2] == -1) {
-    TYPE_ASSIGN_CHECK(*in_attrs, 2, (*in_attrs)[1]);
-  } else {
-    CHECK_EQ((*in_attrs)[1], (*in_attrs)[2]) << "The data types of x and y must be same";
-  }
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
+  (*in_attrs)[1] = in_attrs_xy[0];
+  (*in_attrs)[2] = in_attrs_xy[1];
   return true;
 }
 
@@ -141,7 +128,7 @@ void WhereOpForward(const nnvm::NodeAttrs& attrs,
       });
     } else {
       MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
-        Kernel<where_batch, xpu>::Launch(s, cond.Size(), out.dptr<DType>(),
+        Kernel<where_batch, xpu>::Launch(s, out.Size(), out.dptr<DType>(),
                                          cond.dptr<CType>(), x.dptr<DType>(), y.dptr<DType>(),
                                          x.Size()/cond.Size());
       });
