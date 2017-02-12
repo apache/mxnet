@@ -23,7 +23,7 @@ To run the scripts:
 
 Edit the CLASS_PATH variable in the script to include your operating system-specific folder (e.g., linux-x86_64-cpu/linux-x86_64-gpu/osx-x86_64-cpu) in the path. Run the script with the following command:
 
-```scala
+```bash
 
     bash run_train_charrnn.sh <which GPU card to use; -1 means CPU> <input data path> <location to save the model>
 
@@ -36,7 +36,7 @@ Edit the CLASS_PATH variable in the script to include your operating system-spec
 
 Edit the CLASS_PATH variable in the script to include your operating system-specific folder (e.g., linux-x86_64-cpu/linux-x86_64-gpu/osx-x86_64-cpu) in the path. Run the script with the following command:
 
-```scala
+```bash
 
     bash run_test_charrnn.sh <input data path> <trained model from previous script>
 
@@ -68,24 +68,24 @@ To download the data which contains Barack Obama's speeches:
 
 1) Download the dataset with the following command:
 
-    ```scala
+    ```bash
         wget http://data.mxnet.io/data/char_lstm.zip
     ```
 
 2) Unzip the dataset with the following command:
 
-    ```scala
+    ```bash
         unzip char_lstm.zip -d char_lstm/
     ```
 
 3) The downloaded data contains President Obama's speeches. You can have sneak peek at the dataset with the following command:
 
-    ```scala
+    ```bash
         head -10 obama.txt
     ```
 
 Output:
-```scala
+```
         Call to Renewal Keynote Address Call to Renewal Pt 1Call to Renewal Part 2 TOPIC: Our Past, Our Future & Vision for America June
         28, 2006 Call to Renewal' Keynote Address Complete Text Good morning. I appreciate the opportunity to speak here at the Call to R
         enewal's Building a Covenant for a New America conference. I've had the opportunity to take a look at your Covenant for a New Ame
