@@ -47,6 +47,51 @@ struct where_batch {
   }
 };
 
+/*! \brief Fill in the gradient tensors of condition, x and y.
+ * The condition, x, and y have the same shape.
+ */
+struct where_backward {
+  // DType is the output data type
+  // CType is condition data type
+  template<typename DType, typename CType>
+  MSHADOW_XINLINE static void Map(int i, CType* grad_cond,
+                                  DType* grad_x, DType* grad_y,
+                                  const DType* grad_in, const CType* cond) {
+    grad_cond[i] = 0;
+    if (0 != cond[i]) {
+      grad_x[i] = grad_in[i];
+      grad_y[i] = 0;
+    } else {
+      grad_x[i] = 0;
+      grad_y[i] = grad_in[i];
+    }
+  }
+};
+
+/*! \brief Fill in the gradient tensors of condition, x and y.
+ * The condition is a vector whose size is the same as the
+ * x's first dim size.
+ */
+struct where_batch_backward {
+  // DType is the output data type
+  // CType is the condition data type
+  template<typename DType, typename CType>
+  MSHADOW_XINLINE static void Map(int i, CType* grad_cond,
+                                  DType* grad_x, DType* grad_y,
+                                  const DType* grad_in, const CType* cond, int M) {
+    int row = i / M;
+    grad_cond[row] = 0;
+    if (0 != cond[row]) {
+      grad_x[i] = grad_in[i];
+      grad_y[i] = 0;
+    } else {
+      grad_x[i] = 0;
+      grad_y[i] = grad_in[i];
+    }
+  }
+};
+
+
 inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape>* in_attrs,
                          std::vector<TShape>* out_attrs) {
@@ -135,6 +180,52 @@ void WhereOpForward(const nnvm::NodeAttrs& attrs,
     }
   });
 }
+
+/*!
+ * \brief Compute the gradient of the loss function
+ * with respect to condition, x, and y. The gradient
+ * with respect to condition is always 0. The gradient
+ * with respect to x and y depends on the corresponding
+ * elements in the condition.
+ * The inputs are gradient with respect to the output
+ * of the operator, condition, x, and y.
+ * The outputs are gradients with respect to
+ * condition, x, and y.
+ */
+template<typename xpu>
+void WhereOpBackward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 4);
+  CHECK_EQ(outputs.size(), 3);
+  using namespace mxnet_op;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& grad_in = inputs[0];
+  const TBlob& cond = inputs[1];
+  const TBlob& grad_cond = outputs[0];
+  const TBlob& grad_x = outputs[1];
+  const TBlob& grad_y = outputs[2];
+  if (grad_in.Size() == 0) return;
+  MSHADOW_TYPE_SWITCH(grad_in.type_flag_, DType, {
+    if (cond.shape_ == grad_in.shape_) {
+      MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
+        Kernel<where_backward, xpu>::Launch(s, grad_in.Size(), grad_cond.dptr<CType>(),
+                                            grad_x.dptr<DType>(), grad_y.dptr<DType>(),
+                                            grad_in.dptr<DType>(), cond.dptr<CType>());
+      });
+    } else {
+      MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
+        Kernel<where_batch_backward, xpu>::Launch(s, grad_in.Size(), grad_cond.dptr<CType>(),
+                                                  grad_x.dptr<DType>(), grad_y.dptr<DType>(),
+                                                  grad_in.dptr<DType>(), cond.dptr<CType>(),
+                                                  grad_in.Size()/cond.Size());
+      });
+    }
+  });
+}
+
 
 }  // namespace op
 }  // namespace mxnet

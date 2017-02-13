@@ -28,10 +28,16 @@ NNVM_REGISTER_OP(where)
 .set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_where"})
 .add_argument("condition", "NDArray", "condition array")
 .add_argument("x", "NDArray", "")
 .add_argument("y", "NDArray", "");
+
+NNVM_REGISTER_OP(_backward_where)
+.set_num_inputs(1)
+.set_num_outputs(3)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", WhereOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -2752,8 +2752,130 @@ def test_where():
         mx_output = mx.nd.where(condition, x, y)
         assert same(np_expected, mx_output.asnumpy())
 
+    def test_where_backward_same_shape():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        n1 = 3
+        n2 = 4
+        n3 = 5
+        shape = (n1, n2, n3)
+        condition_np = np.random.randint(0, 2, np.prod(shape)).reshape(shape)
+        x_np = np.random.randint(0, 10, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(10, 20, np.prod(shape)).reshape(shape)
+        condition_mx = mx.nd.array(condition_np, dtype=np.int32)
+        x_mx = mx.nd.array(x_np, dtype=np.int32)
+        y_mx = mx.nd.array(y_np, dtype=np.int32)
+
+        condition_grad = mx.nd.empty(shape, dtype=np.int32)
+        x_grad = mx.nd.empty(shape, dtype=np.int32)
+        y_grad = mx.nd.empty(shape, dtype=np.int32)
+
+        where_sym = mx.sym.where(condition, x, y)
+        where_exe = where_sym.bind(ctx=default_context(),
+                                   args=[condition_mx, x_mx, y_mx],
+                                   args_grad=[condition_grad, x_grad, y_grad])
+        grad_in_np = np.random.randint(20, 30, np.prod(shape)).reshape(shape)
+        grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
+        where_exe.backward(grad_in_mx)
+
+        condition_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        x_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        y_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                for k in range(shape[2]):
+                    if condition_np[i, j, k] != 0:
+                        x_grad_expected[i, j, k] = grad_in_np[i, j, k]
+                        y_grad_expected[i, j, k] = 0
+                    else:
+                        x_grad_expected[i, j, k] = 0
+                        y_grad_expected[i, j, k] = grad_in_np[i, j, k]
+
+        assert_almost_equal(condition_grad_expected, condition_grad.asnumpy())
+        assert_almost_equal(x_grad_expected, x_grad.asnumpy())
+        assert_almost_equal(y_grad_expected, y_grad.asnumpy())
+
+    def test_where_backward_condition_vector():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        n1 = 10
+        n2 = 4
+        n3 = 5
+        shape = (n1, n2, n3)
+        condition_np = np.random.randint(0, 2, shape[0])
+        x_np = np.random.randint(0, 10, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(10, 20, np.prod(shape)).reshape(shape)
+        condition_mx = mx.nd.array(condition_np, dtype=np.int32)
+        x_mx = mx.nd.array(x_np, dtype=np.int32)
+        y_mx = mx.nd.array(y_np, dtype=np.int32)
+
+        condition_grad = mx.nd.empty((shape[0],), dtype=np.int32)
+        x_grad = mx.nd.empty(shape, dtype=np.int32)
+        y_grad = mx.nd.empty(shape, dtype=np.int32)
+
+        where_sym = mx.sym.where(condition, x, y)
+        where_exe = where_sym.bind(ctx=default_context(),
+                                   args=[condition_mx, x_mx, y_mx],
+                                   args_grad=[condition_grad, x_grad, y_grad])
+        grad_in_np = np.random.randint(20, 30, np.prod(shape)).reshape(shape)
+        grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
+        where_exe.backward(grad_in_mx)
+
+        condition_grad_expected = np.zeros(shape[0])
+        x_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        y_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        for i in range(shape[0]):
+            if condition_np[i] != 0:
+                for j in range(shape[1]):
+                    for k in range(shape[2]):
+                        x_grad_expected[i, j, k] = grad_in_np[i, j, k]
+                        y_grad_expected[i, j, k] = 0
+            else:
+                for j in range(shape[1]):
+                    for k in range(shape[2]):
+                        x_grad_expected[i, j, k] = 0
+                        y_grad_expected[i, j, k] = grad_in_np[i, j, k]
+
+        assert_almost_equal(condition_grad_expected, condition_grad.asnumpy())
+        assert_almost_equal(x_grad_expected, x_grad.asnumpy())
+        assert_almost_equal(y_grad_expected, y_grad.asnumpy())
+
+    def test_where_numeric_gradient_same_shape():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        n1 = 5
+        n2 = 4
+        n3 = 6
+        shape = (n1, n2, n3)
+        where_sym = mx.sym.where(condition, x, y)
+        condition_np = np.random.randint(0, 2, np.prod(shape)).reshape(shape)
+        x_np = np.random.normal(0, 1, shape)
+        y_np = np.random.normal(0, 1, shape)
+        check_numeric_gradient(where_sym, [condition_np, x_np, y_np], grad_nodes=['x', 'y'])
+
+    def test_where_numeric_gradient_condition_vector():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        n1 = 10
+        n2 = 4
+        n3 = 6
+        shape = (n1, n2, n3)
+        where_sym = mx.sym.where(condition, x, y)
+        condition_np = np.random.randint(0, 2, shape[0])
+        x_np = np.random.normal(0, 1, shape)
+        y_np = np.random.normal(0, 1, shape)
+        check_numeric_gradient(where_sym, [condition_np, x_np, y_np], grad_nodes=['x', 'y'])
+
     test_same_shape()
     test_condition_vector()
+    test_where_backward_same_shape()
+    test_where_backward_condition_vector()
+    test_where_numeric_gradient_same_shape()
+    test_where_numeric_gradient_condition_vector()
 
 
 if __name__ == '__main__':
