@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file image_aug_default.cc
+ * \file image_detection_aug_default.cc
  * \brief Default augmenter.
  */
 #include <mxnet/base.h>
@@ -22,11 +22,15 @@ namespace mxnet {
 namespace io {
 
 /*! \brief image augmentation parameters*/
-struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentParam> {
+struct DefaultImageDetectionAugmentParam : public dmlc::Parameter<DefaultImageDetectionAugmentParam> {
   /*! \brief resize shorter edge to size before applying other augmentations */
   int resize;
   /*! \brief whether we do random cropping */
   bool rand_crop;
+  /*! \brief where to nonrandom crop on y */
+  int crop_y_start;
+  /*! \brief where to nonrandom crop on x */
+  int crop_x_start;
   /*! \brief [-max_rotate_angle, max_rotate_angle] */
   int max_rotate_angle;
   /*! \brief max aspect ratio */
@@ -62,68 +66,58 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   /*! \brief shape of the image data*/
   TShape data_shape;
   // declare parameters
-  DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
+  DMLC_DECLARE_PARAMETER(DefaultImageDetectionAugmentParam) {
     DMLC_DECLARE_FIELD(resize).set_default(-1)
-        .describe("Down scale the shorter edge to a new size  "
+        .describe("Augmentation Param: scale shorter edge to size "
                   "before applying other augmentations.");
     DMLC_DECLARE_FIELD(rand_crop).set_default(false)
-        .describe("If or not randomly crop the image");
+        .describe("Augmentation Param: Whether to random crop on the image");
+    DMLC_DECLARE_FIELD(crop_y_start).set_default(-1)
+        .describe("Augmentation Param: Where to nonrandom crop on y.");
+    DMLC_DECLARE_FIELD(crop_x_start).set_default(-1)
+        .describe("Augmentation Param: Where to nonrandom crop on x.");
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
-        .describe("Rotate by a random degree in ``[-v, v]``");
+        .describe("Augmentation Param: rotated randomly in [-max_rotate_angle, max_rotate_angle].");
     DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(0.0f)
-        .describe("Change the aspect (namely width/height) to a random value "
-                  "in ``[1 - max_aspect_ratio, 1 + max_aspect_ratio]``");
+        .describe("Augmentation Param: denotes the max ratio of random aspect ratio augmentation.");
     DMLC_DECLARE_FIELD(max_shear_ratio).set_default(0.0f)
-        .describe("Apply a shear transformation (namely ``(x,y)->(x+my,y)``) "
-                  "with ``m`` randomly chose from "
-                  "``[-max_shear_ratio, max_shear_ratio]``");
+        .describe("Augmentation Param: denotes the max random shearing ratio.");
     DMLC_DECLARE_FIELD(max_crop_size).set_default(-1)
-        .describe("Crop both width and height into a random size in "
-                  "``[min_crop_size, max_crop_size]``");
+        .describe("Augmentation Param: Maximum crop size.");
     DMLC_DECLARE_FIELD(min_crop_size).set_default(-1)
-        .describe("Crop both width and height into a random size in "
-                  "``[min_crop_size, max_crop_size]``");
+        .describe("Augmentation Param: Minimum crop size.");
     DMLC_DECLARE_FIELD(max_random_scale).set_default(1.0f)
-        .describe("Resize into ``[width*s, height*s]`` with ``s`` randsomly"
-                  " chosen from ``[min_random_scale, max_random_scale]``");
+        .describe("Augmentation Param: Maximum scale ratio.");
     DMLC_DECLARE_FIELD(min_random_scale).set_default(1.0f)
-        .describe("Resize into ``[width*s, height*s]`` with ``s`` randsomly"
-                  " chosen from ``[min_random_scale, max_random_scale]``");
+        .describe("Augmentation Param: Minimum scale ratio.");
     DMLC_DECLARE_FIELD(max_img_size).set_default(1e10f)
-        .describe("Set the maximal width and height after all resize and"
-                  " rotate argumentation  are applied");
+        .describe("Augmentation Param: Maximum image size after resizing.");
     DMLC_DECLARE_FIELD(min_img_size).set_default(0.0f)
-        .describe("Set the minimal width and height after all resize and"
-                  " rotate argumentation  are applied");
+        .describe("Augmentation Param: Minimum image size after resizing.");
     DMLC_DECLARE_FIELD(random_h).set_default(0)
-        .describe("Add a random value in ``[-random_h, random_h]`` to "
-                  "the H channel in HSL color space.");
+        .describe("Augmentation Param: Maximum random value of H channel in HSL color space.");
     DMLC_DECLARE_FIELD(random_s).set_default(0)
-        .describe("Add a random value in ``[-random_s, random_s]`` to "
-                  "the S channel in HSL color space.");
+        .describe("Augmentation Param: Maximum random value of S channel in HSL color space.");
     DMLC_DECLARE_FIELD(random_l).set_default(0)
-        .describe("Add a random value in ``[-random_l, random_l]`` to "
-                  "the L channel in HSL color space.");
+        .describe("Augmentation Param: Maximum random value of L channel in HSL color space.");
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
-        .describe("Rotate by an angle. If set, it overrites the ``max_rotate_angle`` option.");
+        .describe("Augmentation Param: Rotate angle.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
-        .describe("Set the padding pixes value into ``fill_value``.");
+        .describe("Augmentation Param: Filled color value while padding.");
     DMLC_DECLARE_FIELD(data_shape)
         .set_expect_ndim(3).enforce_nonzero()
-        .describe("The shape of a output image.");
+        .describe("Dataset Param: Shape of each instance generated by the DataIter.");
     DMLC_DECLARE_FIELD(inter_method).set_default(1)
-        .describe("The interpolation method: 0-NN 1-bilinear 2-cubic 3-area "
-                  "4-lanczos4 9-auto 10-rand.");
+        .describe("Augmentation Param: 0-NN 1-bilinear 2-cubic 3-area 4-lanczos4 9-auto 10-rand.");
     DMLC_DECLARE_FIELD(pad).set_default(0)
-        .describe("Change size from ``[width, height]`` into "
-                  "``[pad + width + pad, pad + height + pad]`` by padding pixes");
+        .describe("Augmentation Param: Padding size.");
   }
 };
 
-DMLC_REGISTER_PARAMETER(DefaultImageAugmentParam);
+DMLC_REGISTER_PARAMETER(DefaultImageDetectionAugmentParam);
 
-std::vector<dmlc::ParamFieldInfo> ListDefaultAugParams() {
-  return DefaultImageAugmentParam::__FIELDS__();
+std::vector<dmlc::ParamFieldInfo> ListDefaultDetectionAugParams() {
+  return DefaultImageDetectionAugmentParam::__FIELDS__();
 }
 
 #if MXNET_USE_OPENCV
@@ -131,11 +125,72 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultAugParams() {
 #ifdef _MSC_VER
 #define M_PI CV_PI
 #endif
+
+/*! \brief helper class for better detection label handling */
+class ImageDetectionLabel {
+ public:
+   struct ImageDetectionObject {
+     float id;
+     float left;
+     float top;
+     float right;
+     float bottom;
+     std::vector<float> extra;
+   }
+   explicit ImageDetectionLabel(std::vector<float> &raw_label) {
+     from_array(raw_label);
+   }
+
+   void from_array(std::vector<float> &raw_label) {
+     int label_width = static_cast<int>(raw_label.size());
+     CHECK_GE(label_width, 7);  // at least 2(header) + 5(1 object)
+     int header_width = static_cast<int>(label[0]);
+     CHECK_GE(header_width, 2);
+     object_width_ = static_cast<int>(label[1]);
+     CHECK_GE(object_width_, 5);  // id, x1, y1, x2, y2...
+     header_.assign(raw_label.begin(), raw_label.begin() + header_width);
+     int num = (label_width - header_width) / object_width_;
+     CHECK_EQ((label_width - header_width) % object_width_, 0);
+     objects.reserve(num);
+     for (std::size_t i = header_width; i < label_width; i += object_width_) {
+       ImageDetectionObject obj;
+       obj.id = raw_label[i++];
+       obj.left = raw_label[i++];
+       obj.top = raw_label[i++];
+       obj.right = raw_label[i++];
+       obj.bottom = raw_label[i++];
+       obj.extra.assign(raw_label.begin() + i, raw_label.begin() + i + object_width_ - 5);
+       objects.push_back(obj);
+     }
+   }
+
+   std::vector<float> to_array() const {
+     std::vector<float> out(header_);
+     out.reserve(out.size() + objects.size() * object_width_);
+     for (auto& obj : objects) {
+       out.push_back(obj.id);
+       out.push_back(obj.left);
+       out.push_back(obj.top);
+       out.push_back(obj.right);
+       out.push_back(obj.bottom);
+       out.insert(out.end(), obj.extra.begin(), obj.extra.end());
+     }
+     return out;
+   }
+
+   std::vector<ImageDetectionObject> objects;
+
+ private:
+   /*! \brief  */
+   int object_width_;
+   std::vector<float> header_;
+};  // class ImageDetectionLabel
+
 /*! \brief helper class to do image augmentation */
-class DefaultImageAugmenter : public ImageAugmenter {
+class DefaultImageDetectionAugmenter : public ImageAugmenter {
  public:
   // contructor
-  DefaultImageAugmenter() {
+  DefaultImageDetectionAugmenter() {
     rotateM_ = cv::Mat(2, 3, CV_32F);
   }
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -175,7 +230,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       return inter_method;
     }
   }
-  cv::Mat Process(const cv::Mat &src, std::vector<float> &label,
+  cv::Mat Process(const cv::Mat &src,
                   common::RANDOM_ENGINE *prnd) override {
     using mshadow::index_t;
     cv::Mat res;
@@ -323,7 +378,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
   // rotation param
   cv::Mat rotateM_;
   // parameters
-  DefaultImageAugmentParam param_;
+  DefaultImageDetectionAugmentParam param_;
   /*! \brief list of possible rotate angle */
   std::vector<int> rotate_list_;
 };
@@ -332,10 +387,10 @@ ImageAugmenter* ImageAugmenter::Create(const std::string& name) {
   return dmlc::Registry<ImageAugmenterReg>::Find(name)->body();
 }
 
-MXNET_REGISTER_IMAGE_AUGMENTER(aug_default)
-.describe("default augmenter")
+MXNET_REGISTER_IMAGE_DETECTION_AUGMENTER(detection_aug_default)
+.describe("default detection augmenter")
 .set_body([]() {
-    return new DefaultImageAugmenter();
+    return new DefaultImageDetectionAugmenter();
   });
 #endif  // MXNET_USE_OPENCV
 }  // namespace io

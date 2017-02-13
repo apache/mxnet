@@ -296,8 +296,9 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
         LOG(FATAL) << "Invalid output shape " << param_.data_shape;
       }
       const int n_channels = res.channels();
+      std::vector<float> empty_label;
       for (auto& aug : augmenters_[tid]) {
-        res = aug->Process(res, prnds_[tid].get());
+        res = aug->Process(res, empty_label, prnds_[tid].get());
       }
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(n_channels, res.rows, res.cols),
