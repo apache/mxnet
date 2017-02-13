@@ -635,7 +635,7 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.forward()
     out = exe.outputs[0].asnumpy()
     exe.backward(out_grad)
-    assert_almost_equal(out, args_grad[0].asnumpy(), rtol=1E-4)
+    assert_almost_equal(out, args_grad[0].asnumpy(), rtol=1E-3, atol=1e-4)
 
     args_grad_addto_npy = [np.random.normal(size=s) for s in arg_shapes]
     args_grad_addto = [mx.nd.array(ele) for ele in args_grad_addto_npy]
@@ -691,7 +691,7 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     exe_deconv.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv.backward(deconv_out_grad)
-    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy())
+    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy(), rtol=1e-3)
     # Test AddTo
     exe_deconv_addto = deconv.bind(default_context(), args=deconv_args,
                                    args_grad=deconv_addto_args_grad,
@@ -1790,7 +1790,7 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     # compare numpy + mxnet
     assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-5)
     # check gradient
-    check_numeric_gradient(out, [in_data], numeric_eps=1e-2, rtol=5e-2, atol=1e-3)
+    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 def test_l2_normalization():
     for mode in ['channel', 'spatial', 'instance']:
@@ -2425,7 +2425,7 @@ def test_bilinear_sampler():
             exe.arg_dict['grid'][:] = tmp + np.random.normal(0,100,size=grid_shape) 
             exe.forward()
             out = bilinear_forward_numpy(exe.arg_dict['data'].asnumpy(), exe.arg_dict['grid'].asnumpy())
-            assert_almost_equal(exe.outputs[0].asnumpy(), out, rtol=1e-4)
+            assert_almost_equal(exe.outputs[0].asnumpy(), out, rtol=1e-3)
 
             # check backward
             out_grad = np.random.normal(size=data_shape[:2] + grid_shape[2:])
@@ -2695,6 +2695,7 @@ def test_one_hot():
     test_zero_depth()
 
 if __name__ == '__main__':
+    test_l2_normalization()
     test_sequence_mask()
     test_roipooling()
     test_batchnorm_training()
@@ -2744,7 +2745,6 @@ if __name__ == '__main__':
     test_support_vector_machine_l2_svm()
     test_pad()
     test_instance_normalization()
-    test_l2_normalization()
     test_mathematical()
     test_special_functions_using_scipy()
     test_blockgrad()
