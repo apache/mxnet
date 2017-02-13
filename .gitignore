@@ -64,7 +64,6 @@ __pycache__
 build
 data
 recommonmark
-bin
 deps
 
 # R
@@ -142,3 +141,4 @@ tools/pip_package/mxnet
 
 # temporary path for building dependencies when building wheel
 deps/
+bld

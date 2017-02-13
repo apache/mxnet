@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+#
+# DO NOT add build logic here. Builds should build completely and correctly with the given 
+# Brazil builder tools (ie cmake, modified bmvn (brazilmvn) script, etc).
+# Never put a brazil-path command in here, for instance.
+#
+
+brazilcmake $@
+bmvn $@
