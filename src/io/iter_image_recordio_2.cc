@@ -49,6 +49,7 @@ class ImageRecordIOParser2 {
   ImageRecordParam record_param_;
   BatchParam batch_param_;
   ImageNormalizeParam normalize_param_;
+  PrefetcherParam prefetch_param_;
   #if MXNET_USE_OPENCV
   /*! \brief augmenters */
   std::vector<std::vector<std::unique_ptr<ImageAugmenter> > > augmenters_;
@@ -71,6 +72,8 @@ class ImageRecordIOParser2 {
   unsigned n_parsed_;
   /*! \brief overflow marker */
   bool overflow;
+  /*! \brief unit size */
+  std::vector<size_t> unit_size_;
 };
 
 template<typename DType>
@@ -83,6 +86,7 @@ inline void ImageRecordIOParser2<DType>::Init(
   record_param_.InitAllowUnknown(kwargs);
   batch_param_.InitAllowUnknown(kwargs);
   normalize_param_.InitAllowUnknown(kwargs);
+  prefetch_param_.InitAllowUnknown(kwargs);
   n_parsed_ = 0;
   overflow = false;
   rnd_.seed(kRandMagic + record_param_.seed);
@@ -163,6 +167,7 @@ ParseNext(DataBatch *out) {
   CHECK(source_ != nullptr);
   dmlc::InputSplit::Blob chunk;
   unsigned current_size = 0;
+  out->index.resize(batch_param_.batch_size);
   while (current_size < batch_param_.batch_size) {
     unsigned n_to_copy;
     if (n_parsed_ == 0) {
@@ -201,8 +206,44 @@ ParseNext(DataBatch *out) {
       n_parsed_ -= n_to_copy;
     }
 
-    // TODO(ptrendx): copy
+    //InitBatch
+    if (out->data.size() == 0 && n_to_copy != 0) {
+      std::pair<unsigned, unsigned> place = inst_order_[inst_index_];
+      const DataInst& first_batch = temp_[place.first][place.second];
+      out->data.resize(first_batch.data.size());
+      unit_size_.resize(first_batch.data.size());
+      for (size_t i = 0; i < out->data.size(); ++i) {
+        TShape src_shape = first_batch.data[i].shape_;
+      int src_type_flag = first_batch.data[i].type_flag_;
+      // init object attributes
+      std::vector<index_t> shape_vec;
+      shape_vec.push_back(batch_param_.batch_size);
+      for (index_t dim = 0; dim < src_shape.ndim(); ++dim) {
+        shape_vec.push_back(src_shape[dim]);
+      }
+      TShape dst_shape(shape_vec.begin(), shape_vec.end());
+      auto dtype = prefetch_param_.dtype
+        ? prefetch_param_.dtype.value()
+        : first_batch.data[i].type_flag_;
+      out->data.at(i) = NDArray(dst_shape, Context::CPU(), false , src_type_flag);
+      unit_size_[i] = src_shape.Size();
+      }
+    }
 
+    //Copy
+    #pragma omp parallel num_threads(param_.preprocess_threads)
+    for (unsigned i = 0; i < n_to_copy; ++i) {
+      std::pair<unsigned, unsigned> place = inst_order_[inst_index_ + i];
+      const DataInst& batch = temp_[place.first][place.second];
+      for (unsigned j = 0; j < batch.data.size(); ++j) {
+        CHECK_EQ(unit_size_[j], batch.data[j].Size());
+        mshadow::Copy(
+            out->data[j].data().FlatTo1D<cpu, DType>().Slice((current_size + i) * unit_size_[j],
+              (current_size + i + 1) * unit_size_[j]),
+            batch.data[j].get_with_shape<cpu, 1, DType>(mshadow::Shape1(unit_size_[j])));
+      }
+    }
+    inst_index_ += n_to_copy;
     current_size += n_to_copy;
   }
   return true;
