@@ -12,7 +12,7 @@ Topics:
 * [Symbol Object Document](#mxnet.symbol.Symbol) documents the Symbol object.
 * [Testing Utility Reference](#testing-utility-reference) documents the testing utilities.
 
-We also highly encouraged you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
+We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
 
 ## How to Compose Symbols
 
@@ -42,18 +42,18 @@ The following example creates a computation graph that adds two inputs together.
     >>> a = mx.symbol.Variable('a')
     >>> b = mx.symbol.Variable('b')
     >>> c = a + b
-````
+```
 
 ## Symbol Attributes
 
-You can add attributes to symbols by providing an attribute dictionary when creating a symbol.
+You can add an attribute to a symbol by providing an attribute dictionary when you create a symbol.
 
 ```python
     data = mx.sym.Variable('data', attr={'mood': 'angry'})
     op   = mx.sym.Convolution(data=data, name='conv', kernel=(1, 1),
                               num_filter=1, attr={'mood': 'so so'})
 ```
-For proper communication with the C++ back end, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use `attr(key)` or `list_attr()`:
+For proper communication with the C++ backend, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use `attr(key)` or `list_attr()`:
 
 ```
     assert data.attr('mood') == 'angry'
@@ -104,10 +104,10 @@ Another way to attach attributes is to use ```AttrScope```. ```AttrScope``` auto
 
 ## Serialization
 
-There are two ways to save and load the symbols. You can pickle to serialize the ```Symbol``` objects.
+There are two ways to save and load the symbols. You can use Pickle to serialize the ```Symbol``` objects.
 Or, you can use the [mxnet.symbol.Symbol.save](#mxnet.symbol.Symbol.save) and [mxnet.symbol.load](#mxnet.symbol.load) functions.
-The advantage of using save and load is that it's  language agnostic and cloud friendly.
-The symbol is saved in JSON format. You can also directly get a JSON string using [mxnet.symbol.Symbol.tojson](#mxnet.symbol.Symbol.tojson).
+The advantage of using the `save` and `load` functions is that this method is language agnostic and cloud friendly.
+The symbol is saved in JSON format. You can also get a JSON string directly using [mxnet.symbol.Symbol.tojson](#mxnet.symbol.Symbol.tojson).
 
 The following example shows how to save a symbol to an S3 bucket, load it back, and compare two symbols using a JSON string.
 
@@ -124,7 +124,7 @@ The following example shows how to save a symbol to an S3 bucket, load it back, 
 
 ## Executing Symbols
 
-After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate those symbols.
+After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate them.
 If you are training a neural network, this is typically
 handled by the high-level [Model class](model.md) and the [`fit()`](model.html#mxnet.model.FeedForward.fit) function.
 

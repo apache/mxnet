@@ -19,7 +19,7 @@ Create `mxnet.ndarray` as follows:
 This is similar to the way you use `numpy`.
 ## NDArray Operations
 
-We provide some basic ndarray operations, like arithmetic and slice operations. 
+We provide some basic NDArray operations, like arithmetic and slice operations.
 
 ### Arithmetic Operations
 
@@ -61,8 +61,8 @@ MXNet NDArray provides an easy way to convert from or to `mxnet.ndarray` to or f
 
 ### Save and Load NDArray
 
-You can use pickle to save and load NDArrays.
-Or, you can use MXNet functions to save and load a list or dictionary of NDArrays from file systems.
+You can use Pickle to save and load NDArrays.
+Or, you can use MXNet functions to save and load a list or dictionary of NDArrays from file systems, as follows:
 
 ```python
     >>> import mxnet as mx
@@ -107,7 +107,8 @@ Currently, we *do not* allow operations among arrays from different contexts. To
     >>> with mx.Context(mx.gpu(0)):
     >>>   y = mx.nd.zeros((100, 200))
     >>> z = x + y
-    mxnet.base.MXNetError: [13:29:12] src/ndarray/ndarray.cc:33: Check failed: lhs.ctx() == rhs.ctx() operands context mismatch
+    mxnet.base.MXNetError: [13:29:12] src/ndarray/ndarray.cc:33:
+    Check failed: lhs.ctx() == rhs.ctx() operands context mismatch
     >>> cpu_y = mx.nd.zeros((100, 200))
     >>> y.copyto(cpu_y)
     >>> z = x + cpu_y
