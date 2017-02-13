@@ -1,7 +1,7 @@
 # MXNet Python Data Loading API
 This topic introduces the data input method for MXNet. MXNet uses an iterator to provide data to the neural network.  Iterators do some preprocessing and generate batches for the neural network.
 
-MXNet provides basic iterators for MNIST and Recordio images. To hide the cost of I/O, MXNet uses a prefetch strategy that enables parallelism for the learning process and data fetching. Data is automatically fetched by an independent thread.
+MXNet provides basic iterators for MNIST and RecordIO images. To hide the cost of I/O, MXNet uses a prefetch strategy that enables parallelism for the learning process and data fetching. Data is automatically fetched by an independent thread.
 
 Topics:
 
@@ -29,53 +29,53 @@ The IO API provides a simple way to create a data iterator in Python.
 The following example code shows how to create a CIFAR data iterator.
 
 ```python
-    >>>dataiter = mx.io.ImageRecordIter(
-    >>>        # Utility Parameter
-    >>>        # Optional
-    >>>        # Name of the data, should match the name of the data input of the network
-    >>>        # data_name='data',
-    >>>        # Utility Parameter
-    >>>        # Optional
-    >>>        # Name of the label, should match the name of the label parameter of the network.
-    >>>        # Usually, if the loss layer is named 'foo', then the label input has the name
-    >>>        # 'foo_label', unless overwritten
-    >>>        # label_name='softmax_label',
-    >>>        # Dataset Parameter
-    >>>        # Impulsary
-    >>>        # indicating the data file, please check the data is already there
-    >>>        path_imgrec="data/cifar/train.rec",
-    >>>        # Dataset Parameter
-    >>>        # Impulsary
-    >>>        # indicating the image size after preprocessing
-    >>>        data_shape=(3,28,28),
-    >>>        # Batch Parameter
-    >>>        # Impulsary
-    >>>        # tells how many images in a batch
-    >>>        batch_size=100,
-    >>>        # Augmentation Parameter
-    >>>        # Optional
-    >>>        # when offers mean_img, each image will subtract the mean value at each pixel
-    >>>        mean_img="data/cifar/cifar10_mean.bin",
-    >>>        # Augmentation Parameter
-    >>>        # Optional
-    >>>        # randomly crop a patch of the data_shape from the original image
-    >>>        rand_crop=True,
-    >>>        # Augmentation Parameter
-    >>>        # Optional
-    >>>        # randomly mirror the image horizontally
-    >>>        rand_mirror=True,
-    >>>        # Augmentation Parameter
-    >>>        # Optional
-    >>>        # randomly shuffle the data
-    >>>        shuffle=False,
-    >>>        # Backend Parameter
-    >>>        # Optional
-    >>>        # Preprocessing thread number
-    >>>        preprocess_threads=4,
-    >>>        # Backend Parameter
-    >>>        # Optional
-    >>>        # Prefetch buffer size
-    >>>        prefetch_buffer=1)
+    dataiter = mx.io.ImageRecordIter(
+            # Utility Parameter
+            # Optional
+            # Name of the data, should match the name of the data input of the network
+            # data_name='data',
+            # Utility Parameter
+            # Optional
+            # Name of the label, should match the name of the label parameter of the network
+            # Usually, if the loss layer is named 'foo', then the label input has the name
+            # 'foo_label', unless overwritten
+            # label_name='softmax_label',
+            # Dataset Parameter
+            # Impulsary
+            # indicating the data file, please check the data is already there
+            path_imgrec="data/cifar/train.rec",
+            # Dataset Parameter
+            # Impulsary
+            # indicating the image size after preprocessing
+            data_shape=(3,28,28),
+            # Batch Parameter
+            # Impulsary
+            # tells how many images in a batch
+            batch_size=100,
+            # Augmentation Parameter
+            # Optional
+            # when offers mean_img, each image will subtract the mean value at each pixel
+            mean_img="data/cifar/cifar10_mean.bin",
+            # Augmentation Parameter
+            # Optional
+            # randomly crop a patch of the data_shape from the original image
+            rand_crop=True,
+            # Augmentation Parameter
+            # Optional
+            # randomly mirror the image horizontally
+            rand_mirror=True,
+            # Augmentation Parameter
+            # Optional
+            # randomly shuffle the data
+            shuffle=False,
+            # Backend Parameter
+            # Optional
+            # Preprocessing thread number
+            preprocess_threads=4,
+            # Backend Parameter
+            # Optional
+            # Prefetch buffer size
+            prefetch_buffer=1)
 ```
 
 First, explicitly specify the kind of data (MNIST, ImageRecord, etc.) to fetch. Then, provide the options for the dataset, batching, image augmentation, multi-tread processing,  and prefetching operations. The code automatically validates the parameters. If a required parameter is missing, MXNet returns an error.
@@ -83,20 +83,20 @@ First, explicitly specify the kind of data (MNIST, ImageRecord, etc.) to fetch. 
 ## How to Get Data
 
 
-We provide a [script](https://github.com/dmlc/mxnet/tree/master/scala-package/core/scripts) to download MNIST data and CIFAR10 ImageRecord data. If you want to create your own dataset, we recommend using the Image Recordio data format.
+We provide [scripts](https://github.com/dmlc/mxnet/tree/master/scala-package/core/scripts) to download MNIST data and CIFAR10 ImageRecord data. If you want to create your own dataset, we recommend using the Image RecordIO data format.
 
-## Create a Dataset Using Recordio
+## Create a Dataset Using RecordIO
 
-Recordio implements a file format for a sequence of records. We recommend storing images as records and packing them together. The benefits include:
+RecordIO implements a file format for a sequence of records. We recommend storing images as records and packing them together. The benefits include:
 
 * Storing images in a compact format--e.g., JPEG, for records--greatly reduces the size of the dataset on the disk.
 * Packing data together allows continuous reading on the disk.
-* Recordio has a simple way to partition, simplifying distributed setting. We provide an example later.
+* RecordIO has a simple way to partition, simplifying distributed setting. We provide an example later.
 
-We provide the [im2rec tool](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc) so you can create an Image Recordio dataset by yourself. The following walkthrough shows you how.
+We provide the [im2rec tool](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc) so you can create an Image RecordIO dataset by yourself. The following walkthrough shows you how.
 
 ### Prerequisites
-Download the data. You don't need to resize the images manually. You can use ```im2rec``` to resize them automatically. For details, see the "Extension" topic.
+Download the data. You don't need to resize the images manually. You can use ```im2rec``` to resize them automatically. For details, see the "Extension: Using Multiple Labels for a Single Image," later in this topic.
 
 ### Step 1. Make an Image List File
 After you download the data, you need to make an image list file.  The format is:
@@ -104,9 +104,9 @@ After you download the data, you need to make an image list file.  The format is
 ```
     integer_image_index \t label_index \t path_to_image
 ```
-Typically, the program takes the list of names of all of the images, shuffles them, then separates them into two lists: a training files name list and a testing file name list. Write the list in the right format.
+Typically, the program takes the list of names of all of the images, shuffles them, then separates them into two lists: a training filename list and a testing filename list. Write the list in the right format.
 
-This is example file:
+This is an example file:
 
 ```bash
     95099  464     n04467665_17283.JPEG
@@ -123,9 +123,9 @@ This is example file:
 ```
 
 ### Step 2. Create the Binary File
-To generate a binary image, use *im2rec* in the tool folder. im2rec takes the path of the _image list file_ you generated, the _root path_ of the images, and the _output file path_ as input. This process usually takes several hours, so be patient.
+To generate a binary image, use `im2rec` in the tool folder. `im2rec` takes the path of the `_image list file_` you generated, the `_root path_` of the images, and the `_output file path_` as input. This process usually takes several hours, so be patient.
 
-A sample command:
+Sample command:
 
 ```bash
     ./bin/im2rec image.lst image_root_dir output.bin resize=256
@@ -135,7 +135,7 @@ For more details, run ```./bin/im2rec```.
 ### Extension: Multiple Labels for a Single Image
 
 The `im2rec` tool and `mx.io.ImageRecordIter` have multi-label support for a single image.
-For example, if you have four labels for a single image, you can use the following procedure to use the Recordio tools.
+For example, if you have four labels for a single image, you can use the following procedure to use the RecordIO tools.
 
 1. Write the image list files as follows:
 

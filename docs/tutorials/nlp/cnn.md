@@ -2,7 +2,7 @@
 
 This tutorial is based of Yoon Kim's [paper](https://arxiv.org/abs/1408.5882) on using convolutional neural networks for sentence sentiment classification.
 
-For this tutorial, we will train a convolutional deep network model on Rotten Tomatoes movie review sentences labeled with their sentiment. The result will be a model that can classify a sentence based on it's sentiment (with 1 being a purely positive sentiment, 0 being a purely negative sentiment and 0.5 being neutral).
+For this tutorial, we will train a convolutional deep network model on movie review sentences from Rotten Tomatoes labeled with their sentiment. The result will be a model that can classify a sentence based on its sentiment (with 1 being a purely positive sentiment, 0 being a purely negative sentiment and 0.5 being neutral).
 
 Our first step will be to fetch the labeled training data of positive and negative sentiment sentences and process it into sets of vectors that are then randomly split into train and test sets.
 

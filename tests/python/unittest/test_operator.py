@@ -2490,6 +2490,7 @@ def test_cast():
             assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), threshold=5e-4)
             assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=5e-4)
 
+
 def test_repeat():
     def test_repeat_forward():
         ndim_max = 6 # max number of dims of the ndarray
@@ -2563,6 +2564,7 @@ def test_repeat():
     test_repeat_backward(axis=1)
     test_repeat_numeric_gradient()
 
+
 def test_tile():
     def test_normal_case():
         ndim_max = 3 # max number of dims of the ndarray
@@ -2573,7 +2575,7 @@ def test_tile():
             shape = ()
             for i in range(0, ndim):
                 shape += (np.random.randint(1, size_max+1), )
-            a = np.random.random_integers(0, 100, shape)
+            a = np.random.randint(0, 100, shape)
             a = np.asarray(a, dtype=np.int32)
             if ndim == 0:
                 a = np.array([])
@@ -2657,6 +2659,59 @@ def test_tile():
     test_tile_backward()
     test_tile_numeric_gradient()
 
+
+def test_one_hot():
+    def test_normal_case():
+        ndim_max = 6
+        dim_size_max = 20
+        depth = int(dim_size_max / 2)
+        on_value = 1
+        off_value = 0
+        for ndim in range(1, ndim_max+1):
+            shape = ()
+            for i in range(1, ndim+1):
+                shape += (np.random.randint(1, dim_size_max+1), )
+            indices = np.random.randint(-dim_size_max, dim_size_max+1,
+                                        size=np.prod(shape)).reshape(shape)
+            mx_one_hot_array = mx.nd.one_hot(
+                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                depth=depth, dtype=np.int32)
+            expected_array = np.zeros((np.prod(shape), depth), dtype=np.int32)
+            expected_array[:] = off_value
+            indices_1d = indices.flatten()
+            row = 0
+            for idx in indices_1d:
+                if 0 <= idx < depth:
+                    expected_array[row, idx] = on_value
+                row += 1
+            expected_array = expected_array.reshape(shape + (depth, ))
+            one_hot_array = mx_one_hot_array.asnumpy()
+            assert same(expected_array, one_hot_array)
+
+    def test_empty_indices():
+        shape = (2, 0, 9, 3)
+        indices = np.array([]).reshape(shape)
+        depth = 10
+        mx_one_hot_array = mx.nd.one_hot(
+            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+            depth=depth, dtype=np.int32).asnumpy()
+        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
+        assert same(expected_array, mx_one_hot_array)
+
+    def test_zero_depth():
+        shape = (2, 4, 9, 3)
+        indices = np.ones(shape)
+        depth = 0
+        mx_one_hot_array = mx.nd.one_hot(
+            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+            depth=depth, dtype=np.int32).asnumpy()
+        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
+        assert same(expected_array, mx_one_hot_array)
+
+    test_normal_case()
+    test_empty_indices()
+    test_zero_depth()
+
 if __name__ == '__main__':
     test_dot()
     test_cast()
@@ -2716,3 +2771,4 @@ if __name__ == '__main__':
     test_binary_logic()
     test_repeat()
     test_tile()
+    test_one_hot()

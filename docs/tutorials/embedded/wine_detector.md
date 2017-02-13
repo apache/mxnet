@@ -1,15 +1,6 @@
-
 # Real-time Object Detection with MXNet On The Raspberry Pi  
 
 This tutorial shows developers who work with the Raspberry Pi or similar embedded ARM-based devices how to compile MXNet for those devices and run a pretrained deep network model. It also shows how to use AWS IoT to manage and monitor MXNet models running on your devices.
-<!-- A brief introduction to the tutorial that describes:
-
-- The problem that that the tutorial addresses
-- Who the intended audience is
-- The expected experience level of that audience with a concept or tool 
-- Which environment/language/hardware it runs in 
-
-If there is another similar tutorial that's more appropriate for another audience, direct the reader there with a linked reference. -->
 
 ## What's In This Tutorial?
 
@@ -25,11 +16,7 @@ It assumes that you are familiar with the Raspbian operating system and the [Ras
 
 ### How to Use This Tutorial
 
-<!-- A brief explanation of how the reader can use the tutorial. Can the reader copy each code snippet into a Python or other environment? Or can the reader run <filename> before or after reading through the explanations to understand how the code works? -->
-
 To follow this tutorial, you must set up your Pi as instructed (preferably from a fresh Raspbian install), and then create the files and run the bash commands described below. All instructions described are can be executed on the Raspberry Pi directly or via SSH.
-
-<!--A bulleted list of the tasks the reader will accomplish and skills he or she will learn. Begin each list item with a noun (Learn, Create, Use, etc.). -->
 
 You will accomplish the following:
 
@@ -39,8 +26,6 @@ You will accomplish the following:
 - Connect the application to the AWS IoT service
 
 ## Prerequisites
-
-<!-- Provide a *complete* list of the software, hardware, knowledge, and skills required to be successful using the tutorial. For each item, link the item to installation instructions, specs, or skill development tools, as appropriate. If good installation instructions aren't available for required software, start the tutorial with instructions for installing it.-->
 
 To complete this tutorial, you need:
 
@@ -385,7 +370,6 @@ If this is working you should see the same kind of image preview you did with ca
 You can open up the activity tab for the thing that you registered on the AWS IoT Dashboard and see the corresponding messages pushed to the server whenever a wine bottle is detected in a camera shot. Even if network connectivity periodically fails, AWS IoT will push updates out to the server when possible, allowing this system to reliably let you know when there is wine around.
 
 ## Summary
-<!-- Briefly describe the end result of the tutorial and how the user can use it or modify it to customize it. -->
 You now have a Raspberry Pi running a pre-trained MXNet model fully locally. This model is also linked to the cloud via AWS IoT and can reliably alert AWS whenever it sees a wine bottle.
 
 You can now extend this demo to create more interesting applications, such as using AWS IoT to push model updates to your Pi, loading different pre-trained models from the MXNet Model Zoo onto the Pi, or even training full end-to-end models on the Pi.
