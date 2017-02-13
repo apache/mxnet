@@ -34,7 +34,7 @@ package.DeepMXNet = {
       Scala29 = 1.0;
       BrazilMaven = 3.0;
       BrazilAetherSupport = 1.0;
-     
+
       Maven-maven-enforcer-plugin = 1.x;
       Maven-maven-plugin-plugin = 3.x;
       Maven-maven-site-plugin = 3.x;
@@ -109,7 +109,7 @@ package.DeepMXNet = {
     # This target is needed for upstream python packages to include mxnet
     # in the PYTHONPATH correctly.
     python = { type = python };
-    scala-mxnet = { type = javalibrary; };
+    #scala-mxnet = { type = javalibrary; };
   };
 
 };
