@@ -21,7 +21,6 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
   float high;
   TShape shape;
   std::string ctx;
-  // int dtype;
   DMLC_DECLARE_PARAMETER(SampleUniformParam) {
     DMLC_DECLARE_FIELD(low).set_default(0.0f)
     .describe("The lower bound of distribution");
@@ -34,11 +33,6 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    // DMLC_DECLARE_FIELD(dtype)
-    // .add_enum("float16", mshadow::kFloat16)
-    // .add_enum("float32", mshadow::kFloat32)
-    // .set_default(mshadow::kFloat32)
-    // .describe("DType of the output");
   }
 };
 
@@ -47,7 +41,6 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
   float scale;
   TShape shape;
   std::string ctx;
-  // int dtype;
   DMLC_DECLARE_PARAMETER(SampleNormalParam) {
     DMLC_DECLARE_FIELD(loc).set_default(0.0f)
     .describe("Mean of the distribution.");
@@ -60,11 +53,6 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    // DMLC_DECLARE_FIELD(dtype)
-    // .add_enum("float16", mshadow::kFloat16)
-    // .add_enum("float32", mshadow::kFloat32)
-    // .set_default(mshadow::kFloat32)
-    // .describe("DType of the output");
   }
 };
 
@@ -85,7 +73,7 @@ void SampleUniform_(const nnvm::NodeAttrs& attrs,
       mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 1, float> workspace =
         ctx.requested[ResourceRequest::kTempSpace].get_space_typed<xpu, 1, float>
-        ( mshadow::Shape1(out.shape_.Size()), s);
+        (mshadow::Shape1(out.shape_.Size()), s);
       prnd->SampleUniform(&workspace, param.low, param.high);
       out = reshape(tcast<DType>(workspace), mshadow::Shape2(out.shape_[0], out.shape_[1]));
     } else {
@@ -113,7 +101,7 @@ void SampleNormal_(const nnvm::NodeAttrs& attrs,
       mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 1, float> workspace =
         ctx.requested[ResourceRequest::kTempSpace].get_space_typed<xpu, 1, float>
-        ( mshadow::Shape1(out.shape_.Size()), s);
+        (mshadow::Shape1(out.shape_.Size()), s);
       prnd->SampleGaussian(&workspace, param.loc, param.scale);
       out = reshape(tcast<DType>(workspace), mshadow::Shape2(out.shape_[0], out.shape_[1]));
     } else {
