@@ -224,7 +224,7 @@ class L2NormalizationProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "L2Normalization layer only accepts data as input";
+    CHECK_EQ(in_shape->size(), 1U) << "L2Normalization layer only accepts data as input";
     const TShape &dshape = (*in_shape)[l2_normalization::kData];
     // require data to be known
     if ((*in_shape)[l2_normalization::kData].ndim() == 0) return false;
@@ -233,12 +233,12 @@ class L2NormalizationProp : public OperatorProperty {
     if (param_.mode == l2_normalization::kInstance) {
       out_shape->push_back(Shape1(dshape[0]));
     } else if (param_.mode == l2_normalization::kChannel) {
-      CHECK_GE(dshape.ndim(), 3) << "At lease 3 dimensions required in channel mode";
+      CHECK_GE(dshape.ndim(), 3U) << "At lease 3 dimensions required in channel mode";
       TShape norm_shape = dshape;
       norm_shape[1] = 1;
       out_shape->push_back(norm_shape);
     } else if (param_.mode == l2_normalization::kSpatial) {
-      CHECK_GE(dshape.ndim(), 3) << "At lease 3 dimensions required in spatial mode";
+      CHECK_GE(dshape.ndim(), 3U) << "At lease 3 dimensions required in spatial mode";
       out_shape->push_back(Shape2(dshape[0], dshape[1]));
     } else {
       return false;
