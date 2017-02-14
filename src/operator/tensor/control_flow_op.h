@@ -54,10 +54,9 @@ struct where_backward {
   // DType is the output data type
   // CType is condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, CType* grad_cond,
+  MSHADOW_XINLINE static void Map(int i,
                                   DType* grad_x, DType* grad_y,
                                   const DType* grad_in, const CType* cond) {
-    grad_cond[i] = 0;
     if (0 != cond[i]) {
       grad_x[i] = grad_in[i];
       grad_y[i] = 0;
@@ -76,12 +75,10 @@ struct where_batch_backward {
   // DType is the output data type
   // CType is the condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, CType* grad_cond,
+  MSHADOW_XINLINE static void Map(int i,
                                   DType* grad_x, DType* grad_y,
                                   const DType* grad_in, const CType* cond, int M) {
-    int row = i / M;
-    grad_cond[row] = 0;
-    if (0 != cond[row]) {
+    if (0 != cond[i/M]) {
       grad_x[i] = grad_in[i];
       grad_y[i] = 0;
     } else {
@@ -90,7 +87,6 @@ struct where_batch_backward {
     }
   }
 };
-
 
 inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape>* in_attrs,
@@ -198,26 +194,25 @@ void WhereOpBackward(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 4);
-  CHECK_EQ(outputs.size(), 3);
+  CHECK_EQ(inputs.size(), 2);
+  CHECK_EQ(outputs.size(), 2);
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& grad_in = inputs[0];
   const TBlob& cond = inputs[1];
-  const TBlob& grad_cond = outputs[0];
-  const TBlob& grad_x = outputs[1];
-  const TBlob& grad_y = outputs[2];
+  const TBlob& grad_x = outputs[0];
+  const TBlob& grad_y = outputs[1];
   if (grad_in.Size() == 0) return;
   MSHADOW_TYPE_SWITCH(grad_in.type_flag_, DType, {
     if (cond.shape_ == grad_in.shape_) {
       MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
-        Kernel<where_backward, xpu>::Launch(s, grad_in.Size(), grad_cond.dptr<CType>(),
+        Kernel<where_backward, xpu>::Launch(s, grad_in.Size(),
                                             grad_x.dptr<DType>(), grad_y.dptr<DType>(),
                                             grad_in.dptr<DType>(), cond.dptr<CType>());
       });
     } else {
       MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
-        Kernel<where_batch_backward, xpu>::Launch(s, grad_in.Size(), grad_cond.dptr<CType>(),
+        Kernel<where_batch_backward, xpu>::Launch(s, grad_in.Size(),
                                                   grad_x.dptr<DType>(), grad_y.dptr<DType>(),
                                                   grad_in.dptr<DType>(), cond.dptr<CType>(),
                                                   grad_in.Size()/cond.Size());
@@ -225,7 +220,6 @@ void WhereOpBackward(const nnvm::NodeAttrs& attrs,
     }
   });
 }
-
 
 }  // namespace op
 }  // namespace mxnet

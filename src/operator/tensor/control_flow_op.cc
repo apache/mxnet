@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2017 by Contributors
  * \file control_flow_op.cc
  * \brief CPU Implementation of flow control
  */
@@ -22,20 +22,53 @@ NNVM_REGISTER_OP(where)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-    [](const NodeAttrs& attrs) {
-      return std::vector<std::string>{"condition", "x", "y"};
-    })
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"condition", "x", "y"};
+  })
 .set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_where"})
+//.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_where"})
+.set_attr<nnvm::FGradient>("FGradient",
+  // Use the following lambda function instead of ElemwiseGradUseIn
+  // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
+  // we need only condition from input.
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> ret;
+    // make zero grad node for grad[condition]
+    nnvm::NodePtr p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("_zeros");
+    std::ostringstream os;
+    os << n->attrs.name << "_in" << 0 << "_backward";
+    p->attrs.name = os.str();
+    p->attrs.dict = std::unordered_map<std::string, std::string>();
+    p->control_deps.emplace_back(n);
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+
+    // make grad nodes for grad[x] and grad[y]
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
+    p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("_backward_where");
+    p->attrs.name = n->attrs.name + "_backward";
+    p->attrs.dict = n->attrs.dict;
+    if (p->op()->attr_parser != nullptr) {
+      p->op()->attr_parser(&(p->attrs));
+    }
+    p->control_deps.emplace_back(n);
+    p->inputs = std::move(heads);
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(nnvm::NodeEntry{p, 1, 0});
+
+    return ret;
+  })
 .add_argument("condition", "NDArray", "condition array")
 .add_argument("x", "NDArray", "")
 .add_argument("y", "NDArray", "");
 
 NNVM_REGISTER_OP(_backward_where)
-.set_num_inputs(1)
-.set_num_outputs(3)
+.set_num_inputs(2)
+.set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpBackward<cpu>);
 
