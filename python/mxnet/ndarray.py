@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from __future__ import division
 try:
     from __builtin__ import slice as py_slice
-except:
+except ImportError:
     from builtins import slice as py_slice
 
 import ctypes
