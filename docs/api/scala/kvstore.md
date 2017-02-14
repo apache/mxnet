@@ -27,7 +27,7 @@ a (`int`, `NDArray`) pair into the store, and then pulls the value out.
 
 ### Push, Aggregation, and Updater
 
-For any key that's been initialized, you can push a new value with the same shape to the key.
+For any key that's been initialized, you can push a new value with the same shape to the key, as follows:
 
 ```scala
     scala> kv.push(3, NDArray.ones(shape)*8)
@@ -38,19 +38,20 @@ For any key that's been initialized, you can push a new value with the same shap
 
 The data that you want to push can be stored on any device. Furthermore, you can push multiple
 values into the same key, where KVStore first sums all of these
-values, and then pushes the aggregated value.
+values, and then pushes the aggregated value, as follows:
 
 ```scala
     scala> val gpus = Array(Context.gpu(0), Context.gpu(1), Context.gpu(2), Context.gpu(3))
-    scala> val b = Array(NDArray.ones(shape, gpus(0)), NDArray.ones(shape, gpus(1)), NDArray.ones(shape, gpus(2)), NDArray.ones(shape, gpus(3)))
+    scala> val b = Array(NDArray.ones(shape, gpus(0)), NDArray.ones(shape, gpus(1)), \
+    scala> NDArray.ones(shape, gpus(2)), NDArray.ones(shape, gpus(3)))
     scala> kv.push(3, b)
     scala> kv.pull(3, out = a)
     scala> a.toArray
     Array[Float] = Array(4.0, 4.0, 4.0, 4.0, 4.0, 4.0)
 ```
 
-For each push command, KVStore applies the pushed value to the value stored by a
-`updater`. The default updater is `ASSGIN`, and you can replace the default to
+For each push command, KVStore applies the pushed value to the value stored by an
+`updater`. The default updater is `ASSIGN`. You can replace the default to
 control how data is merged.
 
 ```scala
@@ -78,7 +79,8 @@ You've already seen how to pull a single key-value pair. Similar to the way that
 pull the value into several devices with a single call.
 
 ```scala
-    scala> val b = Array(NDArray.ones(shape, gpus(0)), NDArray.ones(shape, gpus(1)), NDArray.ones(shape, gpus(2)), NDArray.ones(shape, gpus(3)))
+    scala> val b = Array(NDArray.ones(shape, gpus(0)), NDArray.ones(shape, gpus(1)),\
+    scala> NDArray.ones(shape, gpus(2)), NDArray.ones(shape, gpus(3)))
     scala> kv.pull(3, outs = b)
     scala> b(1).toArray
     Array[Float] = Array(6.0, 6.0, 6.0, 6.0, 6.0, 6.0)

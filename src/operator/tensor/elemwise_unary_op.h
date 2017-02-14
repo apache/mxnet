@@ -58,6 +58,48 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct CastParam : public dmlc::Parameter<CastParam> {
+  // use int for enumeration
+  int dtype;
+  DMLC_DECLARE_PARAMETER(CastParam) {
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .describe("Output data type.");
+  }
+};
+
+inline bool CastType(const nnvm::NodeAttrs& attrs,
+                     std::vector<int> *in_attrs,
+                     std::vector<int> *out_attrs) {
+  const CastParam& param = nnvm::get<CastParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
+  return (*in_attrs)[0] != -1;
+}
+
+template<typename xpu>
+void CastCompute(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DstDType, {
+    Tensor<xpu, 1, DstDType> out = outputs[0].FlatTo1D<xpu, DstDType>(s);
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
+      Tensor<xpu, 1, SrcDType> data = inputs[0].FlatTo1D<xpu, SrcDType>(s);
+      Assign(out, req[0], tcast<DstDType>(data));
+    });
+  });
+}
+
 #define MXNET_OPERATOR_REGISTER_UNARY(name)                         \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(1)                                                \

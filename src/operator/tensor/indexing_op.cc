@@ -10,6 +10,7 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
 DMLC_REGISTER_PARAMETER(TakeParam);
+DMLC_REGISTER_PARAMETER(OneHotParam);
 
 NNVM_REGISTER_OP(Embedding)
 .MXNET_DESCRIBE("Map integer index to vector representations (embeddings)."
@@ -93,8 +94,10 @@ NNVM_REGISTER_OP(_backward_take)
 
 
 NNVM_REGISTER_OP(batch_take)
-.MXNET_DESCRIBE("Take scalar value from a batch of data vectos according to "
-                "an index vector, i.e. out[i] = a[i, indices[i]]")
+.MXNET_DESCRIBE(
+  "Take scalar value from a batch of data vectos according to "
+  "an index vector, i.e. out[i] = a[i, indices[i]]. out of bound "
+  "indices are clipped to boundary.")
 .set_num_outputs(1)
 .set_num_inputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -106,6 +109,28 @@ NNVM_REGISTER_OP(batch_take)
 .set_attr<FCompute>("FCompute<cpu>", BatchTakeOpForward<cpu>)
 .add_argument("a", "NDArray", "Input data array")
 .add_argument("indices", "NDArray", "index array");
+
+NNVM_REGISTER_OP(one_hot)
+.MXNET_DESCRIBE("Given an ndarray indices filled with locations"
+                " indicating where to set on_value and depth,"
+                " return an output ndarray of shape (shape(indices), depth)."
+                " The off_value is marked everywhere else that"
+                " are not indicated in indices. If a location in the indices"
+                " is negative or greater than or equal to depth, assigning"
+                " on_value to that location will be ignored.")
+.set_num_outputs(1)
+.set_num_inputs(1)
+.set_attr_parser(ParamParser<OneHotParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", OneHotOpShape)
+.set_attr<nnvm::FInferType>("FInferType", OneHotOpType)
+.set_attr<FCompute>("FCompute<cpu>", OneHotOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("indices", "NDArray", "array of locations where to set on_value")
+.add_arguments(OneHotParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

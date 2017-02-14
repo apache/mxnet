@@ -22,7 +22,6 @@
 #ifndef MXNET_OPERATOR_MKL_MKL_MEMORY_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_MEMORY_INL_H_
 
-
 #include <string>
 #include <vector>
 #include <memory>
@@ -69,8 +68,8 @@ struct MKLMemoryDescriptorBase : public PrvMemDescr,
           << status << "\n";
     }
   }
-  virtual void* prv_ptr() {
-    if (internal_ptr == NULL)
+  virtual void* prv_ptr(bool allocate_when_uninit = true) {
+    if (internal_ptr == NULL && allocate_when_uninit)
       allocate();
     return internal_ptr;
   }
@@ -108,9 +107,8 @@ struct MKLMemoryDescriptor : MKLMemoryDescriptorBase<DType> {
   // The last get_converted_prv() argument is a hack for reusing
   // in backward a conversion done already in the forward direction.
   DType* get_converted_prv(DType *data_ptr, bool set_prv_ptr,
-              std::shared_ptr<MKLMemHolder> dnn_chunk = NULL,
-              MKLMemoryDescriptor<DType>* converted_in_fwd = NULL);
-
+              std::shared_ptr<MKLMemHolder> dnn_chunk = NULL);
+  bool copy_from(std::shared_ptr<MKLMemHolder> dnn_chunk);
   MKLMemoryDescriptor() {}
 };
 

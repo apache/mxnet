@@ -57,5 +57,16 @@ NNVM_REGISTER_OP(clip)
 NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<gpu>", ClipGrad_<gpu>);
 
+NNVM_REGISTER_OP(repeat)
+.set_attr<FCompute>("FCompute<gpu>", RepeatOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_repeat)
+.set_attr<FCompute>("FCompute<gpu>", RepeatOpBackward<gpu>);
+
+NNVM_REGISTER_OP(tile)
+.set_attr<FCompute>("FCompute<gpu>", TileOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_tile)
+.set_attr<FCompute>("FCompute<gpu>", TileOpBackward<gpu>);
 }  // namespace op
 }  // namespace mxnet

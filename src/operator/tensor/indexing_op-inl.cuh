@@ -72,16 +72,14 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
       idx_end -= blockDim.x*blockDim.y;
       // Find the first edge
       // Example:
-      //   (0,:)  val = 1 << 0 = 1
+      //   (0,:)  val = 1
       //   (rest) val = 0
       unsigned int val = (threadIdx.x < blockDim.y && sh_ballot[threadIdx.x] != 0) ?
-        (1 << threadIdx.x) : 0;
-      // NOTE: We do butterfly reduction on the entire warp width
-      //       so that all threads have the same result
+        1 : 0;
+      // NOTE: Set nth bit if thread n in the warp has val = 1
       // Example:
       //   (all) val = 1
-      #pragma unroll
-      for (int i=warpSize/2;i>=1;i/=2) val |= __shfl_xor(val, i);
+      val = __ballot( val );
       // __ffs() returns the position of first set bit, 1...32. __ffs(1) = 1
       // j will be the warp index where edge was found
       // Example:

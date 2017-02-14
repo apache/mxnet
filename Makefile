@@ -246,12 +246,12 @@ PSLITE:
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
 DMLCCORE:
-	+ cd $(DMLC_CORE); make libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 $(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
 
 LIBNNVM:
-	+ cd $(NNVM_PATH); make lib/libnnvm.a; cd $(ROOTDIR)
+	+ cd $(NNVM_PATH); $(MAKE) lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
@@ -301,6 +301,7 @@ rpkg:
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export(\"R-package\")"
 	rm -rf R-package/NAMESPACE
+	Rscript -e "require(devtools); install_version(\"roxygen2\", version = \"5.0.1\", repos = \"https://cloud.r-project.org/\")"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise(\"R-package\")"
 	R CMD build --no-build-vignettes R-package
 	rm -rf mxnet_current_r.tar.gz
@@ -337,18 +338,18 @@ ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
-	cd $(DMLC_CORE); make clean; cd -
-	cd $(PS_PATH); make clean; cd -
-	cd $(NNVM_PATH); make clean; cd -
+	cd $(DMLC_CORE); $(MAKE) clean; cd -
+	cd $(PS_PATH); $(MAKE) clean; cd -
+	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: cyclean
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
-	cd $(DMLC_CORE); make clean; cd -
-	cd $(PS_PATH); make clean; cd -
-	cd $(NNVM_PATH); make clean; cd -
+	cd $(DMLC_CORE); $(MAKE) clean; cd -
+	cd $(PS_PATH); $(MAKE) clean; cd -
+	cd $(NNVM_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean

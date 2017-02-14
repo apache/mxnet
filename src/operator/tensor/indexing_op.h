@@ -438,17 +438,18 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
 inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2) << "BatchTake op requires three inputs";
+  CHECK_EQ(in_attrs->size(), 2) << "BatchTake op requires two inputs";
   if ((*in_attrs)[1].ndim() != 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
   } else if ((*out_attrs)[0].ndim() != 0) {
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, (*out_attrs)[0]);
   }
   if ((*in_attrs)[0].ndim() == 0) return false;
-  CHECK_EQ((*in_attrs)[0].ndim(), 2) << "Data array must by 2 dimensional";
+  CHECK_GE((*in_attrs)[0].ndim(), 2) << "Data array must have at least 2 dimensional";
   if ((*out_attrs)[0].ndim() == 0) return false;
-  CHECK_EQ((*in_attrs)[0][0], (*out_attrs)[0][0])
-    << "Index array's size must be the same as data array's first dimension";
+  CHECK_EQ((*in_attrs)[0].Size()/(*in_attrs)[0][(*in_attrs)[0].ndim()-1],
+           (*out_attrs)[0].Size())
+    << "Index array's size must be the same as data array's size excluding the first dimension";
   return true;
 }
 
@@ -465,6 +466,18 @@ inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+/*! \brief take scalar value from 2d data array */
+struct batch_take {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
+                                  const int *idx, int M) {
+    int j = idx[i];
+    if (j < 0) j = 0;
+    else if (j >= M) j = M-1;
+    out[i] = a[i*M+j];
+  }
+};
+
 template<typename xpu>
 void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
@@ -477,6 +490,125 @@ void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
     Kernel<batch_take, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
                                     inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
                                     inputs[0].Size()/inputs[0].shape_[0]);
+  });
+}
+
+/*!
+ * \brief The parameters of the one_hot operator.
+ */
+struct OneHotParam : public dmlc::Parameter<OneHotParam> {
+  int depth;
+  double on_value;
+  double off_value;
+  int axis;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(OneHotParam) {
+    DMLC_DECLARE_FIELD(depth)
+      .describe("The dimension size at dim = axis.");
+    DMLC_DECLARE_FIELD(on_value)
+      .set_default(1.0f)
+      .describe("The value assigned to the locations represented by indices.");
+    DMLC_DECLARE_FIELD(off_value)
+      .set_default(0.0f)
+      .describe("The value assigned to the locations not represented by indices.");
+    DMLC_DECLARE_FIELD(dtype)
+      .set_default(mshadow::kFloat32)
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("float64", mshadow::kFloat64)
+      .add_enum("float16", mshadow::kFloat16)
+      .add_enum("uint8", mshadow::kUint8)
+      .add_enum("int32", mshadow::kInt32)
+      .describe("DType of the output");
+  }
+};
+
+inline void GetOneHotParams(const OneHotParam& param, int* depth, double* on_value,
+                            double* off_value, int* dtype) {
+  *depth = param.depth;
+  CHECK_GE(*depth, 0) << "Dimension size, depth, must be a non-negative integer";
+  *on_value = param.on_value;
+  *off_value = param.off_value;
+  *dtype = param.dtype;
+}
+
+inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
+                          std::vector<TShape> *in_attrs,
+                          std::vector<TShape> *out_attrs) {
+  const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  // The shape of indices
+  const TShape& ishape = (*in_attrs)[0];
+
+  int depth = 0;
+  double on_value = 1.0;
+  double off_value = 0.0;
+  int dtype = mshadow::kFloat32;
+  GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
+
+  TShape oshape(ishape.ndim() + 1);
+  for (index_t i = 0; i < ishape.ndim(); ++i) {
+    oshape[i] = ishape[i];
+  }
+  oshape[oshape.ndim()-1] = depth;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
+inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int>* in_attrs,
+                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  int depth = 0;
+  double on_value = 1.0;
+  double off_value = 0.0;
+  int dtype = mshadow::kFloat32;
+  const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
+  GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kInt32);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);
+  return true;
+}
+
+struct one_hot {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const int* indices,
+                                  int depth, DType on_value, DType off_value) {
+    int offset = i * depth;
+    int j = indices[i];
+    if (j >= 0 && j < depth) {
+      out[offset+j] = on_value;
+    }
+  }
+};
+
+template<typename xpu>
+void OneHotOpForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+  // The following line is needed to guard the situation when
+  // an output array is empty on GPU. In that case, out.dptr() = 0x0
+  if (outputs[0].Size() == 0) return;
+  int depth = 0;
+  double on_value = 1.0;
+  double off_value = 0.0;
+  int dtype = mshadow::kFloat32;
+  const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
+  GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
+  using namespace mxnet_op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
+    out = static_cast<DType>(off_value);
+    Kernel<one_hot, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+        inputs[0].dptr<int>(), depth,
+        static_cast<DType>(on_value), static_cast<DType>(off_value));
   });
 }
 

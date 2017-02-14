@@ -128,9 +128,7 @@ DMLC_REGISTER_PARAMETER(SpatialTransformerParam);
 MXNET_REGISTER_OP_PROPERTY(SpatialTransformer, SpatialTransformerProp)
 .add_argument("data", "Symbol", "Input data to the SpatialTransformerOp.")
 .add_argument("loc", "Symbol", "localisation net, the output dim should be 6 when transform_type "
-              "is affine, and the name of loc symbol should better starts with 'stn_loc', so that "
-              "initialization it with iddentify tranform, or you shold initialize the weight and "
-              "bias by yourself.")
+              "is affine. You shold initialize the weight and bias with identity tranform.")
 .add_arguments(SpatialTransformerParam::__FIELDS__())
 .describe("Apply spatial transformer to input feature map.");
 

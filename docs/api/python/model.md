@@ -34,10 +34,10 @@ The following example creates a two-layer neural network.
          num_epoch=num_epoch,
          learning_rate=0.01)
 ```
-You can also use the scikit-learn-style construct and fit function to create a model.
+You can also use the `scikit-learn-style` construct and `fit` function to create a model.
 
 ```python
-    # create a model using sklearn-style two step way
+    # create a model using sklearn-style two-step way
     model = mx.model.FeedForward(
          softmax,
          num_epoch=num_epoch,
@@ -51,7 +51,7 @@ For more information, see [Model API Reference](#model-api-reference).
 
 After the job is done, save your work.
 To save the model, you can directly pickle it with Python.
-We also provide save and load functions.
+We also provide `save` and `load` functions.
 
 ```python
     # save a model to mymodel-symbol.json and mymodel-0100.params
@@ -62,7 +62,7 @@ We also provide save and load functions.
     # load model back
     model_loaded = mx.model.FeedForward.load(prefix, iteration)
 ```
-The advantage of these save and load functions are that they are language agnostic.
+The advantage of these two `save` and `load` functions are that they are language agnostic.
 You should be able to save and load directly into cloud storage, such as Amazon S3 and HDFS.
 
 ##  Periodic Checkpointing
