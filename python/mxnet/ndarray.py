@@ -4,7 +4,10 @@
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
-from __builtin__ import slice as py_slice
+try:
+    from __builtin__ import slice as py_slice
+except:
+    from builtins import slice as py_slice
 
 import ctypes
 import warnings
