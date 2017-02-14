@@ -24,8 +24,8 @@ env:
 matrix:
   include:
     - os: linux
-    env: TASK=cpp_test
-    sudo: required
+      env: TASK=cpp_test
+      sudo: required
 #       env: TASK=julia JULIA_VER=0.4
 #     - os: linux
 #       env: TASK=build
