@@ -156,13 +156,5 @@ if __name__ == "__main__":
                 print "%s has typo:" % os.path.join(root, read_file)
                 print "%s\n" % spell_check_res
                 ALL_CLEAR = False
-            if grammar_check_res:
-                filtered_res = get_grammar_res(grammar_check_res)
-                if len(filtered_res) > 0:
-                    print "%s has grammar issue:" % os.path.join(root, read_file)
-                    for item in filtered_res:
-                        print "%s\n" % item
-                    ALL_CLEAR = False
-            DOC_PARSER.clear_res()
     if ALL_CLEAR:
-        print "No typo or grammar issue is found."
+        print "No typo is found."
