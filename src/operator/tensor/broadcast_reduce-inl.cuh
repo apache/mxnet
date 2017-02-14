@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2017 by Contributors
+ * Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce-inl.cuh
  * \brief CUDA implementations for binary broadcast and reduce
  * \author Antti-Pekka Hynninen

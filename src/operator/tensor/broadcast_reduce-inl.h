@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2015 by Contributors
+ *  Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce_kernel.h
  * \brief Function defintion of elementwise unary operators
  */
