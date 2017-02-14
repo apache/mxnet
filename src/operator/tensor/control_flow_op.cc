@@ -28,7 +28,6 @@ NNVM_REGISTER_OP(where)
 .set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
-//.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_where"})
 .set_attr<nnvm::FGradient>("FGradient",
   // Use the following lambda function instead of ElemwiseGradUseIn
   // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]

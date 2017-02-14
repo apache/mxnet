@@ -2796,6 +2796,60 @@ def test_where():
         assert_almost_equal(x_grad_expected, x_grad.asnumpy())
         assert_almost_equal(y_grad_expected, y_grad.asnumpy())
 
+    def test_where_backward_same_shape_with_req():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        n1 = 5
+        n2 = 7
+        n3 = 9
+        shape = (n1, n2, n3)
+        condition_np = np.random.randint(0, 2, np.prod(shape)).reshape(shape)
+        x_np = np.random.randint(0, 10, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(10, 20, np.prod(shape)).reshape(shape)
+
+        grad_in_np = np.random.randint(20, 30, np.prod(shape)).reshape(shape)
+        x_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        y_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                for k in range(shape[2]):
+                    if condition_np[i, j, k] != 0:
+                        x_grad_expected[i, j, k] = grad_in_np[i, j, k]
+                        y_grad_expected[i, j, k] = 0
+                    else:
+                        x_grad_expected[i, j, k] = 0
+                        y_grad_expected[i, j, k] = grad_in_np[i, j, k]
+
+        grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
+        where_sym = mx.sym.where(condition, x, y)
+
+        # test req='write'
+        where_exe_write = where_sym.simple_bind(ctx=default_context(),
+                                                condition=condition_np.shape,
+                                                x=x_np.shape, y=y_np.shape,
+                                                grad_req='write')
+        where_exe_write.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
+        where_exe_write.backward(grad_in_mx)
+        assert reldiff(where_exe_write.grad_dict['x'].asnumpy(), x_grad_expected) < 1E-3
+        assert reldiff(where_exe_write.grad_dict['y'].asnumpy(), y_grad_expected) < 1E-3
+
+        # test req='add'
+        x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
+        y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
+        where_exe_add = where_sym.simple_bind(ctx=default_context(),
+                                              condition=condition_np.shape,
+                                              x=x_np.shape, y=y_np.shape,
+                                              grad_req='add')
+        where_exe_add.grad_dict['x'][:] = x_grad_init
+        where_exe_add.grad_dict['y'][:] = y_grad_init
+        where_exe_add.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
+        where_exe_add.backward(grad_in_mx)
+        x_ograd = where_exe_add.grad_dict['x'].asnumpy()
+        y_ograd = where_exe_add.grad_dict['y'].asnumpy()
+        assert reldiff(x_ograd, x_grad_expected+x_grad_init) < 1E-3
+        assert reldiff(y_ograd, y_grad_expected+y_grad_init) < 1E-3
+
     def test_where_backward_condition_vector():
         condition = mx.sym.Variable('condition')
         x = mx.sym.Variable('x')
@@ -2842,6 +2896,62 @@ def test_where():
         assert_almost_equal(x_grad_expected, x_grad.asnumpy())
         assert_almost_equal(y_grad_expected, y_grad.asnumpy())
 
+    def test_where_backward_condition_vector_with_req():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        n1 = 10
+        n2 = 5
+        n3 = 8
+        shape = (n1, n2, n3)
+        condition_np = np.random.randint(0, 2, shape[0])
+        x_np = np.random.randint(0, 10, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(10, 20, np.prod(shape)).reshape(shape)
+
+        grad_in_np = np.random.randint(20, 30, np.prod(shape)).reshape(shape)
+        grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
+
+        x_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        y_grad_expected = np.zeros(np.prod(shape)).reshape(shape)
+        for i in range(shape[0]):
+            if condition_np[i] != 0:
+                for j in range(shape[1]):
+                    for k in range(shape[2]):
+                        x_grad_expected[i, j, k] = grad_in_np[i, j, k]
+                        y_grad_expected[i, j, k] = 0
+            else:
+                for j in range(shape[1]):
+                    for k in range(shape[2]):
+                        x_grad_expected[i, j, k] = 0
+                        y_grad_expected[i, j, k] = grad_in_np[i, j, k]
+
+        where_sym = mx.sym.where(condition, x, y)
+        # test req='write'
+        where_exe_write = where_sym.simple_bind(ctx=default_context(),
+                                                condition=condition_np.shape,
+                                                x=x_np.shape, y=y_np.shape,
+                                                grad_req='write')
+        where_exe_write.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
+        where_exe_write.backward(grad_in_mx)
+        assert reldiff(where_exe_write.grad_dict['x'].asnumpy(), x_grad_expected) < 1E-3
+        assert reldiff(where_exe_write.grad_dict['y'].asnumpy(), y_grad_expected) < 1E-3
+
+        # test req='add'
+        x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
+        y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
+        where_exe_add = where_sym.simple_bind(ctx=default_context(),
+                                              condition=condition_np.shape,
+                                              x=x_np.shape, y=y_np.shape,
+                                              grad_req='add')
+        where_exe_add.grad_dict['x'][:] = x_grad_init
+        where_exe_add.grad_dict['y'][:] = y_grad_init
+        where_exe_add.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
+        where_exe_add.backward(grad_in_mx)
+        x_ograd = where_exe_add.grad_dict['x'].asnumpy()
+        y_ograd = where_exe_add.grad_dict['y'].asnumpy()
+        assert reldiff(x_ograd, x_grad_expected+x_grad_init) < 1E-3
+        assert reldiff(y_ograd, y_grad_expected+y_grad_init) < 1E-3
+
     def test_where_numeric_gradient_same_shape():
         condition = mx.sym.Variable('condition')
         x = mx.sym.Variable('x')
@@ -2873,7 +2983,9 @@ def test_where():
     test_same_shape()
     test_condition_vector()
     test_where_backward_same_shape()
+    test_where_backward_same_shape_with_req()
     test_where_backward_condition_vector()
+    test_where_backward_condition_vector_with_req()
     test_where_numeric_gradient_same_shape()
     test_where_numeric_gradient_condition_vector()
 
