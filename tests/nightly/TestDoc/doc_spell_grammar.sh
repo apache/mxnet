@@ -26,9 +26,6 @@ echo "Install other dependencies"
 cd ..
 yum -y install enchant
 pip install pyenchant
-
-git clone https://github.com/dmlc/web-data.git
-cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
 pip install grammar-check
 pip install html2text
 pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
@@ -40,6 +37,8 @@ make html
 
 echo "Check spell and grammar for documentation"
 cd ../tests/nightly/TestDoc
+git clone https://github.com/dmlc/web-data.git
+cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
 python doc_spell_checker.py
 
 echo "Check spell and grammar End"
