@@ -29,3 +29,8 @@ if [ ${TASK} == "julia" ]; then
   export PATH="${PATH}:${HOME}/julia/bin"
   julia -e 'versioninfo()'
 fi
+
+if [ ${TASK} == "perl_test" ]; then
+  cpanm -L "${HOME}/perl5" Function::Parameters
+  export PERL5LIB="${HOME}/perl5/lib/perl5"
+fi

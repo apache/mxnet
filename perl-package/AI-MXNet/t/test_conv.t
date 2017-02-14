@@ -39,7 +39,7 @@ my $val_dataiter = mx->io->MNISTIter({
         data_shape=>[1, 28, 28],
         batch_size=>$batch_size, shuffle=>1, flat=>0, silent=>0});
 
-my $n_epoch = 2;
+my $n_epoch = 1;
 my $mod = mx->mod->new(symbol => $softmax);
 $mod->fit(
     $train_dataiter,
@@ -48,4 +48,4 @@ $mod->fit(
     num_epoch=>$n_epoch
 );
 my $res = $mod->score($val_dataiter, mx->metric->create('acc'));
-ok($res->{accuracy} > 0.9);
+ok($res->{accuracy} > 0.8);

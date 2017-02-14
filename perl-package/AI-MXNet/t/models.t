@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use AI::MXNet qw(mx);
 use Data::Dumper;
 sub mlp2
@@ -11,9 +11,6 @@ sub mlp2
     $out = mx->symbol->FullyConnected({ data => $out, name => 'fc2', num_hidden => 10 });
     $out->simple_bind(type_dict => { data => "float32" }, shapes => { data => [1,10] });
 }
-
-print mlp2()->forward(1, data => [[0..9]])->[0]->aspdl;
-
 
 sub conv
 {
@@ -34,6 +31,19 @@ sub conv
     $softmax->simple_bind(type_dict => { data => "float32" }, shapes => { data => [28,1,28,28] });
 }
 
-print conv()->forward->[0]->aspdl;
+is_deeply(mlp2()->forward(1, data => [[0..9]])->[0]->aspdl->unpdl, [
+          [
+            '0',
+            '0',
+            '0',
+            '0',
+            '0',
+            '0',
+            '0',
+            '0',
+            '0',
+            '0'
+          ]
+        ]);
 
-ok(1);
+is_deeply(conv()->forward()->[0]->aspdl->unpdl, [ map { [ map { 0.100000001490116 } 0..9 ] } 0..27 ]);

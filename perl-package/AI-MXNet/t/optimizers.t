@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use AI::MXNet qw(mx);
 use Mouse;
-use Method::Signatures;
+use AI::MXNet::Function::Parameters;
 extends 'AI::MXNet::Optimizer';
 has 'beta1' => (is => 'rw', default => 0.9);
 has 'beta2' => (is => 'rw', default => 0.999);

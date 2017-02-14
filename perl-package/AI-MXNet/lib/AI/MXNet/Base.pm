@@ -3,14 +3,14 @@ use strict;
 use warnings;
 use PDL;
 use PDL::Types qw();
-use AI::MXNetCAPI;
-use AI::NNVMCAPI;
+use AI::MXNetCAPI 0.02;
+use AI::NNVMCAPI 0.02;
 use AI::MXNet::Types;
 use Time::HiRes;
 use Carp;
 use Exporter;
 use base qw(Exporter);
-@AI::MXNet::Base::EXPORT = qw(enumerate assert zip check_call build_param_doc pdl cat dog svd
+@AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc pdl cat dog svd
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
                               DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL);
 @AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
@@ -98,6 +98,18 @@ sub enumerate
     my ($sub, @arrays) = @_;
     my $len = @{ $arrays[0] };
     zip($sub, [0..$len-1], @arrays);
+}
+
+=head2 product
+
+    Calculates product of the input agruments
+=cut
+
+sub product
+{
+    my $p = 1;
+    map { $p = $p * $_ } @_;
+    return $p;
 }
 
 =head2 assert

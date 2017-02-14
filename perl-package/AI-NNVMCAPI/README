@@ -1,4 +1,4 @@
-AI-NNVMCAPI version 0.01
+AI-NNVMCAPI version 0.02
 =====================
 
 Swig interface to MXNet c api.
@@ -22,8 +22,6 @@ COPYRIGHT AND LICENCE
 
 Copyright (C) 2017 by Sergey Kolychev <sergeykolychev.github@gmail.com>
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.18.2 or,
-at your option, any later version of Perl 5 you may have available.
+This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
 
 

@@ -122,7 +122,7 @@ has [qw/output_layouts label_layouts arg_names aux_names
 package AI::MXNet::DataParallelExecutorGroup;
 use Mouse;
 use AI::MXNet::Base;
-use List::Util qw(sum product);
+use List::Util qw(sum);
 
 =head1 DESCRIPTION
 

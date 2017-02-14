@@ -1,7 +1,7 @@
 ---
 abstract: unknown
 author:
-  - 'Sergey Kolychev <mxnet4perl@gmail.com>'
+  - 'Sergey Kolychev <sergeykolychev.github@gmail.com>'
 build_requires:
   ExtUtils::MakeMaker: '0'
 configure_requires:

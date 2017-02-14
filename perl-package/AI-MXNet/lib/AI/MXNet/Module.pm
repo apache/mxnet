@@ -17,7 +17,7 @@ has [qw/_param_names _fixed_param_names
 package AI::MXNet::Module;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
-use List::Util qw(max product);
+use List::Util qw(max);
 use Mouse;
 
 =head2 _create_kvstore

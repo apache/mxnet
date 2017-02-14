@@ -21,7 +21,7 @@ use AI::MXNet::Monitor;
 use AI::MXNet::Profiler;
 use AI::MXNet::Module::Base;
 use AI::MXNet::Module;
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 sub import
 {
@@ -89,12 +89,8 @@ Sergey Kolychev, <sergeykolychev.github@gmail.com>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2017 Sergey Kolychev.
+Copyright (C) 2017 by Sergey Kolychev <sergeykolychev.github@gmail.com>
 
-This program is free software; you can redistribute it and/or modify it
-under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
-
-See http://dev.perl.org/licenses/ for more information.
+This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
 
 =cut

@@ -13,10 +13,10 @@ meta-spec:
   version: 1.4
 name: AI-MXNet
 requires:
-  AI::MXNetCAPI: 0.01
-  AI::NNVMCAPI: 0.01
+  AI::MXNetCAPI: 0.02
+  AI::NNVMCAPI: 0.02
   Function::Parameters: 1.0705
   Mouse: v2.1.0
   PDL: 2.007
   perl: v5.14.0
-version: 0.01
+version: 0.02
