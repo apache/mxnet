@@ -22,16 +22,12 @@ namespace mxnet {
 namespace op {
 struct SGDParam : public dmlc::Parameter<SGDParam> {
   float lr;
-  float momentum;
   float wd;
   float rescale_grad;
   float clip_gradient;
   DMLC_DECLARE_PARAMETER(SGDParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("learning_rate");
-    DMLC_DECLARE_FIELD(momentum)
-    .set_default(0.0f)
-    .describe("momentum");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
     .describe("weight decay");
@@ -75,6 +71,32 @@ inline void SGDUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
+  float lr;
+  float momentum;
+  float wd;
+  float rescale_grad;
+  float clip_gradient;
+  DMLC_DECLARE_PARAMETER(SGDMomParam) {
+    DMLC_DECLARE_FIELD(lr)
+    .describe("learning_rate");
+    DMLC_DECLARE_FIELD(momentum)
+    .set_default(0.0f)
+    .describe("momentum");
+    DMLC_DECLARE_FIELD(wd)
+    .set_default(0.0f)
+    .describe("weight decay");
+    DMLC_DECLARE_FIELD(rescale_grad)
+    .set_default(1.0f)
+    .describe("rescale gradient as grad = rescale_grad*grad.");
+    DMLC_DECLARE_FIELD(clip_gradient)
+    .set_default(-1.0f)
+    .describe("If greater than 0, clip gradient to "
+              "grad = max(min(grad, -clip_gradient), clip_gradient). "
+              "Otherwise turned off.");
+  }
+};
+
 template<typename xpu>
 inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
                          const OpContext &ctx,
@@ -84,7 +106,7 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mshadow_op;
-  SGDParam param = nnvm::get<SGDParam>(attrs.parsed);
+  SGDMomParam param = nnvm::get<SGDMomParam>(attrs.parsed);
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
