@@ -68,8 +68,8 @@ if [ ! -d "$HOME_MKL" ]; then
 fi
 MXNET_ROOT=`dirname $0`
 OMP=0 
-VERSION_MATCH=20161123
-ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20161122.tgz
+VERSION_MATCH=20170210
+ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20170209.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
 MKLURL="https://github.com/dmlc/web-data/raw/master/mxnet/mklml-release/$ARCHIVE_BASENAME"
 # there are diffrent MKL lib to be used for GCC and for ICC
