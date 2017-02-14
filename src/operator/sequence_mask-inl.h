@@ -108,7 +108,7 @@ class SequenceMaskOp : public Operator {
     if (param_.use_sequence_length) {
       Tensor<xpu, 1, DType> indices =
           in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
-      SequenceMask(data_grad, indices, static_cast<DType>(param_.value));
+      SequenceMask(data_grad, indices, DType(0));
     }
   }
 
