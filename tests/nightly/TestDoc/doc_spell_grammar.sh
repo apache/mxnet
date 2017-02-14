@@ -37,6 +37,7 @@ make html
 
 echo "Check spell and grammar for documentation"
 cd ../tests/nightly/TestDoc
+rm -rf web-data
 git clone https://github.com/dmlc/web-data.git
 cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
 python doc_spell_checker.py
