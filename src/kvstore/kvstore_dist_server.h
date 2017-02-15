@@ -88,6 +88,7 @@ class Executor {
 class KVStoreDistServer {
  public:
   KVStoreDistServer() {
+    LOG(INFO)<<"*******FULL******Revision 1.1.1.1.3******************"<<std::endl;
     using namespace std::placeholders;
     ps_server_ = new ps::KVServer<float>(0);
     static_cast<ps::SimpleApp*>(ps_server_)->set_request_handle(
