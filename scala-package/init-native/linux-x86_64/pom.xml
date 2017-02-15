@@ -54,23 +54,33 @@
           </sources>
           <compilerStartOptions>
             <compilerStartOption>-std=c++0x</compilerStartOption>
+            <compilerStartOption>-fPIC</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
-            <compilerEndOption>-I../../../include</compilerEndOption>
+            <compilerEndOption>${all_includes}</compilerEndOption>
+            <!-- <compilerEndOption>-I../../../include</compilerEndOption> -->
             <compilerEndOption>${cflags}</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
+            <linkerStartOption>-fPIC</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
+            <linkerMiddleOption>${all_ldpaths}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
+            <!-- <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption> -->
+            <!-- <linkerMiddleOption>${current_libdir}/libmxnet.a</linkerMiddleOption> -->
+            <linkerMiddleOption>-lmxnet</linkerMiddleOption>
+            <linkerMiddleOption>-ldmlccore</linkerMiddleOption>
+            <linkerMiddleOption>-lnnvm</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
+            <linkerMiddleOption>${all_linklibs}</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>
             <linkerEndOption>-fopenmp</linkerEndOption>
+            <!-- <linkerEndOption>${all_linklibs}</linkerEndOption> -->
           </linkerEndOptions>
         </configuration>
 

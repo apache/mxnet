@@ -331,7 +331,20 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
+  if(UNIX)
+  #add_library(objlib OBJECT ${SOURCE})
+  #set_property(TARGET ${objlib} PROPERTY POSITION_INDEPENDENT_CODE 1)
   add_library(mxnet SHARED ${SOURCE})
+  #add_library(mxnet SHARED $<TARGET_OBJECTS:objlib>)
+  #add_library(mxnet_static STATIC $<TARGET_OBJECTS:objlib>)
+  #add_library(mxnet_static STATIC ${SOURCE})
+#    add_custom_command(TARGET mxnet_static POST_BUILD
+#       COMMAND ln -sf libmxnet_static.a libmxnet.a
+#       WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+#    )
+  else()
+    add_library(mxnet SHARED ${SOURCE})
+  endif()
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
 

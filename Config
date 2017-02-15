@@ -3,7 +3,6 @@ package.DeepMXNet = {
 
   build-system = brazilcmake;
   #build-system = bmvn;
-  #build-system = brazilmvn;
 
   build-environment = {
     chroot = basic;
@@ -28,29 +27,29 @@ package.DeepMXNet = {
 
       # Scala build
       #JDK8 = 1.0;
-      JDK = 1.7;
+#      JDK = 1.7;
       Maven = 3.0;
-      #Aether = 1;
-      Scala211 = 1.0;
-      ScalaLang211 = 1.0;
-      BrazilMaven = 3.0;
-      BrazilAetherSupport = 1.0;
+#      Scala211 = 1.0;
+#      ScalaLang211 = 1.0;
+#      BrazilMaven = 3.0;
+#      BrazilAetherSupport = 1.0;
 
       #Maven-maven-enforcer-plugin = 1.x;
-      Maven-maven-plugin-plugin = 3.x;
+#      Maven-maven-plugin-plugin = 3.x;
       #Maven-maven-site-plugin = 3.x;
-      Maven-maven-clean-plugin = 2.x;
-      Maven-maven-install-plugin = 2.x;
-      #Maven-maven-resources-plugin = 2.x;
-      #Maven-maven-surefire-plugin = 2.x;
-      Maven-maven-compiler-plugin = 3.x;
-      Maven-maven-jar-plugin = 2.x;
-      Maven-maven-deploy-plugin = 2.x;
-      Maven-native-maven-plugin = 1.0_alpha_7;
-      Maven-maven-dependency-plugin = 2.x;
-      Maven-maven-dependency-tree = 2.1;
-      Maven-org-scala-lang_scala-library = 2.x;
-      Maven-org-scala-lang_scala-xml = 2.11.x;
+#      Maven-maven-clean-plugin = 2.x;
+#      Maven-maven-install-plugin = 2.x;
+#      Maven-maven-resources-plugin = 2.x;
+#      Maven-maven-surefire-plugin = 2.x;
+#      Maven-maven-compiler-plugin = 3.x;
+#      Maven-maven-jar-plugin = 2.x;
+#      Maven-maven-deploy-plugin = 2.x;
+#      Maven-native-maven-plugin = 1.0_alpha_7;
+#      Maven-maven-dependency-plugin = 2.x;
+#      Maven-maven-dependency-tree = 2.1;
+#      Maven-org-scala-lang_scala-library = 2.x;
+      #Maven-org-scala-lang_scala-xml = 2.11.x;
+      ScalaMavenBuilder = 1.0;
     };
   };
 
@@ -60,7 +59,7 @@ package.DeepMXNet = {
      LibStdCppNoCFlags = 4.9;
       Googletest = 1.x;
       CMake = 3.5.x;
-      OpenBLAS = 0.2.x;
+      OpenBLAS = 0.2.x_live;
       DeepDmlc-core = 0.9;
       DeepMShadow = 2.x;
       DeepJemalloc = 4.x;
@@ -79,14 +78,13 @@ package.DeepMXNet = {
       #Maven-maven-install-plugin = 2.x;
       #Maven-maven-resources-plugin = 2.x;
       #Maven-maven-surefire-plugin = 2.x;
-      #Maven-maven-compiler-plugin = 3.x;
+#      Maven-maven-compiler-plugin = 3.x;
       #Maven-maven-jar-plugin = 2.x;
       #Maven-maven-deploy-plugin = 2.x;
-      #Maven-native-maven-plugin = 1.0_alpha_7;
+#      Maven-native-maven-plugin = 1.0_alpha_7;
       #Maven-maven-dependency-plugin = 2.x;
       #Maven-maven-dependency-tree = 2.1;
-      #Maven-org-scala-lang_scala-library = 2.x;
-      #Maven-org-scala-lang_scala-xml = 2.11.x;
+#      Maven-org-scala-lang_scala-library = 2.x;
       #Maven-org-scala-lang_scala-xml = 2.11.x;
       #ScalaLang211 = 1.0;
     };
