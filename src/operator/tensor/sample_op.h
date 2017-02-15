@@ -21,6 +21,7 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
   float high;
   TShape shape;
   std::string ctx;
+  int dtype;
   DMLC_DECLARE_PARAMETER(SampleUniformParam) {
     DMLC_DECLARE_FIELD(low).set_default(0.0f)
     .describe("The lower bound of distribution");
@@ -33,6 +34,13 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("", -1)
+    .set_default(-1)
+    .describe("DType of the output");
   }
 };
 
@@ -41,6 +49,7 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
   float scale;
   TShape shape;
   std::string ctx;
+  int dtype;
   DMLC_DECLARE_PARAMETER(SampleNormalParam) {
     DMLC_DECLARE_FIELD(loc).set_default(0.0f)
     .describe("Mean of the distribution.");
@@ -53,6 +62,13 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("", -1)
+    .set_default(-1)
+    .describe("DType of the output");
   }
 };
 
@@ -112,16 +128,40 @@ void SampleNormal_(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<typename ParamType>
 inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_type,
                          std::vector<int> *out_type) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_type->size(), 0);
   CHECK_EQ(out_type->size(), 1);
-  int dtype = (*out_type)[0];
-  CHECK_NE(dtype, -1) << "Output must have specified type";
+  int dtype = -1;
+  int dtype_out = (*out_type)[0];
+  if (dtype_out != -1) {
+    // Output type can be inferred, use it and make sure it
+    dtype = dtype_out;
+    if (param.dtype != -1) {
+      // dtype given in args, check that it matches the output type
+      CHECK_EQ(dtype_out, param.dtype) << "Output type does not match requested type: "
+      << dtype_out << " vs " << param.dtype;
+    }
+  } else {
+    // Output type can't be inferred
+    if (param.dtype != -1) {
+      // Use dtype given in args
+      dtype = param.dtype;
+    } else {
+      // Use default
+      dtype = mshadow::kFloat32;
+    }
+  }
   bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||
   (dtype == mshadow::kFloat64);
-  CHECK_EQ(dtype_ok, true) << "Output must be float16, float32, or float64";
+  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, or float64: dtype is "
+  << dtype_out << " vs " << mshadow::kFloat16 << " or " << mshadow::kFloat32 << " or "
+  << mshadow::kFloat64;
+  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
+  LOG(INFO) << "dtypes " << dtype_out << " " << param.dtype << " " << dtype;
   return true;
 }
 
@@ -135,7 +175,7 @@ inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
   .set_num_outputs(1)                                                   \
   .set_attr_parser(ParamParser<ParamType>)                              \
   .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)     \
-  .set_attr<nnvm::FInferType>("FInferType", SampleOpType)                   \
+  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)    \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)       \
   .add_arguments(ParamType::__FIELDS__())
 }  // namespace op
