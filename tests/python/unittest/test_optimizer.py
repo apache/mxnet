@@ -45,8 +45,8 @@ def compare_optimizer(opt1, opt2, shape):
     opt1.update(0, w1, g1, state1)
     opt2.update(0, w2, g2, state2)
     for s1, s2, in zip(state1, state2):
-        assert(reldiff(s1.asnumpy(), s2.asnumpy()) < 1e-5)
-    assert(reldiff(w1.asnumpy(), w2.asnumpy()) < 1e-5)
+        assert_almost_equal(s1.asnumpy(), s2.asnumpy(), rtol=1e-4, atol=1e-5)
+    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=1e-4, atol=1e-5)
 
 # ADAM
 
