@@ -205,7 +205,9 @@ sub test_inits
     $arr = mx->nd->zeros([1,1,1]);
     my $Orthogonal = mx->init->Orthogonal;
     &{$Orthogonal}("weight", $arr);
-    is_deeply($arr->aspdl->unpdl, [
+    my $unpdl = $arr->aspdl->unpdl;
+    $unpdl->[0][0][0] = lc $unpdl->[0][0][0]; ## perl 5.18 (-inf) perl 5.22 (-Inf)
+    is_deeply($unpdl, [
           [
             [
               '-inf'
