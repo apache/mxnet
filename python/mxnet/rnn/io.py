@@ -79,9 +79,13 @@ class BucketSentenceIter(DataIter):
         name of data
     label_name : str, default 'softmax_label'
         name of label
+    layout : str
+        format of data and label. 'NT' means (batch_size, length)
+        and 'TN' means (length, batch_size).
     """
-    def __init__(self, sentences, batch_size, invalid_label=-1, dtype='float32',
-                 buckets=None, data_name='data', label_name='softmax_label'):
+    def __init__(self, sentences, batch_size, buckets=None, invalid_label=-1,
+                 data_name='data', label_name='softmax_label', dtype='float32',
+                 layout='NTC'):
         super(BucketSentenceIter, self).__init__()
         if not buckets:
             buckets = [i for i, j in enumerate(np.bincount([len(s) for s in sentences]))
@@ -103,11 +107,6 @@ class BucketSentenceIter(DataIter):
 
         print("WARNING: discarded %d sentences longer than the largest bucket."%ndiscard)
 
-        self.default_bucket_key = max(buckets)
-
-        self.provide_data = [(data_name, (batch_size, self.default_bucket_key))]
-        self.provide_label = [(label_name, (batch_size, self.default_bucket_key))]
-
         self.batch_size = batch_size
         self.buckets = buckets
         self.data_name = data_name
@@ -116,6 +115,17 @@ class BucketSentenceIter(DataIter):
         self.invalid_label = invalid_label
         self.nddata = []
         self.ndlabel = []
+        self.major_axis = layout.find('N')
+        self.default_bucket_key = max(buckets)
+
+        if self.major_axis == 0:
+            self.provide_data = [(data_name, (batch_size, self.default_bucket_key))]
+            self.provide_label = [(label_name, (batch_size, self.default_bucket_key))]
+        elif self.major_axis == 1:
+            self.provide_data = [(data_name, (self.default_bucket_key, batch_size))]
+            self.provide_label = [(label_name, (self.default_bucket_key, batch_size))]
+        else:
+            raise ValueError("Invalid layout %s: Must by NT (batch major) or TN (time major)")
 
         self.idx = []
         for i, buck in enumerate(self.data):
@@ -145,8 +155,12 @@ class BucketSentenceIter(DataIter):
         i, j = self.idx[self.curr_idx]
         self.curr_idx += 1
 
-        data = self.nddata[i][j:j+self.batch_size]
-        label = self.ndlabel[i][j:j+self.batch_size]
+        if self.major_axis == 1:
+            data = self.nddata[i][j:j+self.batch_size].T
+            label = self.ndlabel[i][j:j+self.batch_size].T
+        else:
+            data = self.nddata[i][j:j+self.batch_size]
+            label = self.ndlabel[i][j:j+self.batch_size]
 
         return DataBatch([data], [label],
                          bucket_key=self.buckets[i],

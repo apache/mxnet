@@ -443,7 +443,9 @@ class FusedRNNCell(BaseRNNCell):
     """
     def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
                  dropout=0., get_next_state=False, initializer=None,
-                 prefix='fused_', params=None):
+                 prefix=None, params=None):
+        if prefix is None:
+            prefix = '%s_'%mode
         super(FusedRNNCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
         self._num_layers = num_layers
