@@ -16,77 +16,19 @@
 namespace mxnet {
 namespace op {
 
-/*! \brief return elements from x or y depending on condition
+/*! \brief Choose elements from x or y depending on condition.
  * The condition, x, and y have the same shape.
  * The returned array is formed by elements from x or y
  * depending on the elements of condition.
  */
 template<int req>
-struct where;
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition, x, and y have the same shape.
- * The returned array is formed by elements from x or y
- * depending on the elements of condition.
- * This should only be invoked by req_type=kNullOp.
- */
-template<>
-struct where<kNullOp> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y) {}
-};
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition, x, and y have the same shape.
- * The returned array is formed by elements from x or y
- * depending on the elements of condition.
- * This should only be invoked by req_type=kWriteTo.
- */
-template<>
-struct where<kWriteTo> {
+struct where {
   // DType is the output data type
   // CType is condition data type
   template<typename DType, typename CType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
                                   const DType* x, const DType* y) {
-    out[i] = (0 != cond[i]? x[i] : y[i]);
-  }
-};
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition, x, and y have the same shape.
- * The returned array is formed by elements from x or y
- * depending on the elements of condition.
- * This should only be invoked by req_type=kWriteInplace.
- */
-template<>
-struct where<kWriteInplace> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y) {
-    out[i] = (0 != cond[i]? x[i] : y[i]);
-  }
-};
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition, x, and y have the same shape.
- * The returned array is formed by elements from x or y
- * depending on the elements of condition.
- * This should only be invoked by req_type=kWriteInplace.
- */
-template<>
-struct where<kAddTo> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y) {
-    out[i] += (0 != cond[i]? x[i] : y[i]);
+    ASSIGN_DISPATCH(out[i], req, (0 != cond[i]? x[i] : y[i]));
   }
 };
 
@@ -97,351 +39,53 @@ struct where<kAddTo> {
  * the condition's elements.
  */
 template<int req>
-struct where_batch;
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * The returned array is formed by rows from x or y depending on
- * the condition's elements.
- * This should only be invoked by req_type=kNullOp.
- */
-template<>
-struct where_batch<kNullOp> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y, int M) {}
-};
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * The returned array is formed by rows from x or y depending on
- * the condition's elements.
- * This should only be invoked by req_type=kWriteTo.
- */
-template<>
-struct where_batch<kWriteTo> {
+struct where_batch {
   // DType is the output data type
   // CType is the condition data type
   template<typename DType, typename CType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
                                   const DType* x, const DType* y, int M) {
-    out[i] = (cond[i/M] != 0? x[i] : y[i]);
-  }
-};
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * The returned array is formed by rows from x or y depending on
- * the condition's elements.
- * This should only be invoked by req_type=kWriteInplace.
- */
-template<>
-struct where_batch<kWriteInplace> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y, int M) {
-    out[i] = (cond[i/M] != 0? x[i] : y[i]);
-  }
-};
-
-/*! \brief Choose elements from x or y depending on condition
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * The returned array is formed by rows from x or y depending on
- * the condition's elements.
- * This should only be invoked by req_type=kAddTo.
- */
-template<>
-struct where_batch<kAddTo> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y, int M) {
-    out[i] += (cond[i/M] != 0? x[i] : y[i]);
+    ASSIGN_DISPATCH(out[i], req, (0 != cond[i/M]? x[i] : y[i]));
   }
 };
 
 /*!
- * \brief Primary template for calculating grad[x].
- * Will be specialized for req = kNullOp, kWriteTo, kWriteInplace, kAddTo.
+ * \brief Template for calculating grad[x] and grad[y].
+ * template argument req is OpReqType; negate indicates
+ * whether the output is grad_x (negate=true)
+ * or grad_y (negate=false).
  */
-template<int req>
-struct where_x_backward;
-
-/*!
- * \brief Specialized backward template for
- * calculating grad[x] when req_type = kNullOp
- */
-template<>
-struct where_x_backward<kNullOp> {
+template<int req, bool negate>
+struct where_backward {
   // DType is the output data type
   // CType is condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x,
-                                  const DType* grad_in,
-                                  const CType* cond) {}
-};
-
-/*!
- * \brief Specialized backward template for
- * calculating grad[x] when req_type = kWriteTo
- */
-template<>
-struct where_x_backward<kWriteTo> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x,
+  MSHADOW_XINLINE static void Map(int i, DType* grad_out,
                                   const DType* grad_in,
                                   const CType* cond) {
-    grad_x[i] = (0 != cond[i]? grad_in[i] : static_cast<DType>(0));
+    ASSIGN_DISPATCH(grad_out[i], req,
+      ((0 == cond[i])^negate)? grad_in[i] : static_cast<DType>(0));
   }
 };
 
 /*!
- * \brief Specialized backward template for
- * calculating grad[x] when req_type = kWriteInplace
+ * \brief Template for calculating grad[x] and grad[y].
+ * template argument req is OpReqType; negate indicates
+ * whether the output is grad_x (negate=true)
+ * or grad_y (negate=false).
+ * The condition is a vector whose size is the same as the
+ * x's first dim size.
  */
-template<>
-struct where_x_backward<kWriteInplace> {
+template<int req, bool negate>
+struct where_batch_backward {
   // DType is the output data type
   // CType is condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x,
+  MSHADOW_XINLINE static void Map(int i, DType* grad_out,
                                   const DType* grad_in,
-                                  const CType* cond) {
-    grad_x[i] = (0 != cond[i]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*!
- * \brief Specialized backward template for
- * calculating grad[x] when req_type = kAddTo
- */
-template<>
-struct where_x_backward<kAddTo> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x,
-                                  const DType* grad_in,
-                                  const CType* cond) {
-    grad_x[i] += (0 != cond[i]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*!
- * \brief Primary template for calculating grad[y].
- * Will be specialized for req = kNullOp, kWriteTo, kWriteInplace, kAddTo.
- */
-template<int req>
-struct where_y_backward;
-
-/*!
- * \brief Specialized backward template for
- * calculating grad[y] when req_type = kNullOp
- */
-template<>
-struct where_y_backward<kNullOp> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y,
-                                  const DType* grad_in,
-                                  const CType* cond) {}
-};
-
-/*!
- * \brief Specialized backward template for
- * calculating grad[y] when req_type = kWriteTo
- */
-template<>
-struct where_y_backward<kWriteTo> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y,
-                                  const DType* grad_in,
-                                  const CType* cond) {
-    grad_y[i] = (0 == cond[i]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*!
- * \brief Specialized backward template for
- * calculating grad[y] when req_type = kWriteInplace
- */
-template<>
-struct where_y_backward<kWriteInplace> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y,
-                                  const DType* grad_in,
-                                  const CType* cond) {
-    grad_y[i] = (0 == cond[i]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*!
- * \brief Specialized backward template for
- * calculating grad[y] when req_type = kAddTo
- */
-template<>
-struct where_y_backward<kAddTo> {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y,
-                                  const DType* grad_in,
-                                  const CType* cond) {
-    grad_y[i] += (0 == cond[i]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*! \brief Primary template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- */
-template<int req>
-struct where_x_batch_backward;
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kNullOp.
- */
-template<>
-struct where_x_batch_backward<kNullOp> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x, const DType* grad_in,
-                                  const CType* cond, int M) {}
-};
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kWriteTo.
- */
-template<>
-struct where_x_batch_backward<kWriteTo> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x, const DType* grad_in,
                                   const CType* cond, int M) {
-    grad_x[i] = (0 != cond[i/M]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kWriteInplace.
- */
-template<>
-struct where_x_batch_backward<kWriteInplace> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x, const DType* grad_in,
-                                  const CType* cond, int M) {
-    grad_x[i] = (0 != cond[i/M]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kAddTo.
- */
-template<>
-struct where_x_batch_backward<kAddTo> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_x, const DType* grad_in,
-                                  const CType* cond, int M) {
-    grad_x[i] += (0 != cond[i/M]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*! \brief Primary template for calculating grad[y] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- */
-template<int req>
-struct where_y_batch_backward;
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kNullOp.
- */
-template<>
-struct where_y_batch_backward<kNullOp> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y, const DType* grad_in,
-                                  const CType* cond, int M) {}
-};
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kWriteTo.
- */
-template<>
-struct where_y_batch_backward<kWriteTo> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y, const DType* grad_in,
-                                  const CType* cond, int M) {
-    grad_y[i] = (0 == cond[i/M]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kWriteInplace.
- */
-template<>
-struct where_y_batch_backward<kWriteInplace> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y, const DType* grad_in,
-                                  const CType* cond, int M) {
-    grad_y[i] = (0 == cond[i/M]? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*! \brief Specialized template for calculating grad[x] in batch.
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- * This template should only be invoked by req_type = kAddTo.
- */
-template<>
-struct where_y_batch_backward<kAddTo> {
-  // DType is the output data type
-  // CType is the condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_y, const DType* grad_in,
-                                  const CType* cond, int M) {
-    grad_y[i] += (0 == cond[i/M]? grad_in[i] : static_cast<DType>(0));
+    ASSIGN_DISPATCH(grad_out[i], req,
+      ((0 == cond[i/M])^negate)? grad_in[i] : static_cast<DType>(0));
   }
 };
 
@@ -568,20 +212,20 @@ void WhereOpBackward(const nnvm::NodeAttrs& attrs,
       bool same_shape = (cond.shape_ == grad_in.shape_);
       MXNET_OP_REQ_TYPE_SWITCH(req[0], req_type_x, {
         if (same_shape) {
-          Kernel<where_x_backward<req_type_x>, xpu>::Launch(s, grad_in.Size(),
+          Kernel<where_backward<req_type_x, true>, xpu>::Launch(s, grad_in.Size(),
             grad_x.dptr<DType>(), grad_in.dptr<DType>(), cond.dptr<CType>());
         } else {
-          Kernel<where_x_batch_backward<req_type_x>, xpu>::Launch(s, grad_in.Size(),
+          Kernel<where_batch_backward<req_type_x, true>, xpu>::Launch(s, grad_in.Size(),
             grad_x.dptr<DType>(), grad_in.dptr<DType>(), cond.dptr<CType>(),
             grad_in.Size()/cond.Size());
         }
       });
       MXNET_OP_REQ_TYPE_SWITCH(req[1], req_type_y, {
         if (same_shape) {
-          Kernel<where_y_backward<req_type_y>, xpu>::Launch(s, grad_in.Size(),
+          Kernel<where_backward<req_type_y, false>, xpu>::Launch(s, grad_in.Size(),
             grad_y.dptr<DType>(), grad_in.dptr<DType>(), cond.dptr<CType>());
         } else {
-          Kernel<where_y_batch_backward<req_type_y>, xpu>::Launch(s, grad_in.Size(),
+          Kernel<where_batch_backward<req_type_y, false>, xpu>::Launch(s, grad_in.Size(),
             grad_y.dptr<DType>(), grad_in.dptr<DType>(), cond.dptr<CType>(),
             grad_in.Size()/cond.Size());
         }
