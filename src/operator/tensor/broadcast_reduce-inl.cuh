@@ -10,24 +10,29 @@
 template<typename DType>
 using CTensor = Tensor<gpu, MAX_DIM, DType>;
 
+using namespace mshadow::cuda;
+
 template<typename DType, typename OP, int unroll>
-__launch_bounds__(mshadow::cuda::kMaxThreadsPerBlock)
-__global__ void binary_broadcast_kernel(const int N, const bool addto, const DType* __restrict__ lhs,
-                                        const DType* __restrict__ rhs, DType *out, const CShape lstride,
-                                        const CShape rstride, const CShape oshape) {
-  for (int idx = blockIdx.x * blockDim.x * unroll + threadIdx.x; idx < N; idx += blockDim.x * gridDim.x * unroll)
+__launch_bounds__(kMaxThreadsPerBlock)
+__global__ void binary_broadcast_kernel(const int N, const bool addto,
+                                        const DType* __restrict__ lhs,
+                                        const DType* __restrict__ rhs, DType *out,
+                                        const CShape lstride, const CShape rstride,
+                                        const CShape oshape) {
+  for (int idx = blockIdx.x * blockDim.x * unroll + threadIdx.x; idx < N;
+    idx += blockDim.x * gridDim.x * unroll)
   {
     int j[unroll];
     int k[unroll];
     DType val[unroll];
     #pragma unroll
     for (int i=0;i < unroll;i++) {
-      unravel_dot(idx + i*blockDim.x, oshape, lstride, rstride, j[i], k[i]);
+      unravel_dot(idx + i*blockDim.x, oshape, lstride, rstride, &j[i], &k[i]);
       val[i] = OP::Map(lhs[j[i]], rhs[k[i]]);
     }
     #pragma unroll
     for (int i=0;i < unroll;i++) {
-      if (idx + i*blockDim.x < N) assign(out[idx + i*blockDim.x], addto, val[i]);
+      if (idx + i*blockDim.x < N) assign(&out[idx + i*blockDim.x], addto, val[i]);
     }
 
   }
@@ -35,8 +40,7 @@ __global__ void binary_broadcast_kernel(const int N, const bool addto, const DTy
 
 template<typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
-                                const CTensor<DType>& lhs, const CTensor<DType>& rhs, CTensor<DType> out) {
-  using namespace mshadow::cuda;
+                                const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   int N = out.shape_.Size();
@@ -44,14 +48,15 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
   const int unroll = 2;
   int nthread = std::min(kMaxThreadsPerBlock, ((N + warpSize - 1)/warpSize)*warpSize );
   int ngrid = std::min(kBaseGridNum, (N + nthread*unroll - 1) / (nthread*unroll));
-  CShape lstride = calc_stride(lhs.shape_);
-  CShape rstride = calc_stride(rhs.shape_);
+  CShape lstride = calc_stride(lhs.shape_.get<MAX_DIM>());
+  CShape rstride = calc_stride(rhs.shape_.get<MAX_DIM>());
   binary_broadcast_kernel<DType, OP, unroll><<<ngrid, nthread, 0, stream>>>(
-    N, req == kAddTo, lhs.dptr_, rhs.dptr_, out.dptr_, lstride, rstride, out.shape_);
+    N, req == kAddTo, lhs.dptr<DType>(), rhs.dptr<DType>(), out.dptr<DType>(), lstride, rstride,
+    out.shape_.get<MAX_DIM>());
 }
 
 template<typename Reducer, typename DType, typename OP, int x_bits, int unroll>
-__launch_bounds__(mshadow::cuda::kMaxThreadsPerBlock)
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void par_reduce_kernel(const int N, const int M, const bool addto,
                                   const DType* __restrict__ big, DType *small, const CShape bshape,
                                   const CShape sshape, const CShape rshape, const CShape rstride,
@@ -87,16 +92,16 @@ __global__ void par_reduce_kernel(const int N, const int M, const bool addto,
       buf[threadIdx.x] = val;
 
       __syncthreads();
-      cuda::Reduce1D<Reducer, x_bits>(buf);
+      Reduce1D<Reducer, x_bits>(buf);
       if (threadIdx.x == 0) {
-        assign(small[idx + m0*N], addto, buf[0]);
+        assign(&small[idx + m0*N], addto, buf[0]);
       }
     }
   }
 
 }
 
-const int nthread_reduce = mshadow::cuda::kMaxThreadsPerBlock;
+const int nthread_reduce = kMaxThreadsPerBlock;
 template<typename Reducer, typename DType, typename OP, int unroll>
 __launch_bounds__(nthread_reduce)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
@@ -149,11 +154,11 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           __syncthreads();
         }
         if (idx < N && threadIdx.y == 0) {
-          assign(small[idx + m0*N], addto, shTile[threadIdx.x]);
+          assign(&small[idx + m0*N], addto, shTile[threadIdx.x]);
         }
       } else {
         if (idx < N) {
-          assign(small[idx + m0*N], addto, val);
+          assign(&small[idx + m0*N], addto, val);
         }        
       }
 
@@ -164,7 +169,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
 
 // Simple reduction of lines when M is small
 template<typename Reducer, typename DType, typename OP>
-__launch_bounds__(mshadow::cuda::kMaxThreadsPerBlock)
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
   const int small_in_stride, const DType* __restrict__ small_in, DType *small_out) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
@@ -176,7 +181,7 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
     }
 
     if (idx < N) {
-      assign(small_out[idx], addto, val);
+      assign(&small_out[idx], addto, val);
     }
 
   }
@@ -189,20 +194,19 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     CShape coord = unravel(idx, sshape);
     int j = ravel(coord, bshape);
-    assign(small[idx], addto, OP::Map(big[j]));
+    assign(&small[idx], addto, OP::Map(big[j]));
   }
 }
 
 template<typename Reducer, typename DType, typename OP>
-size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
-                  const CTensor<DType>& big, mshadow::Tensor<gpu, 1, char>& workspace,
+size_t ReduceImpl(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+                  const TBlob& big, const Tensor<gpu, 1, char>& workspace,
                   const bool getWorkspaceSize) {
-  using namespace mshadow::cuda;
   size_t workspace_pos = 0;
   if (req == kNullOp) return workspace_pos;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   CShape rshape, rstride;
-  int mdim = diff(small.shape_, big.shape_, rshape, rstride);
+  int mdim = diff(small.shape_.get<MAX_DIM>(), big.shape_.get<MAX_DIM>(), &rshape, &rstride);
   int N = small.shape_.Size(), M = rshape.Size();
 
   const int warpSize = 32;
@@ -214,7 +218,8 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
       blockDim.x = kMaxThreadsPerBlock;
       gridDim.x = std::min((unsigned int)kBaseGridNum, (N + blockDim.x - 1)/blockDim.x);
       reduce_kernel_M1<Reducer, DType, OP><<< gridDim, blockDim, 0, stream>>>(
-        N, req == kAddTo, big.dptr_, small.dptr_, big.shape_, small.shape_);
+        N, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(), big.shape_.get<MAX_DIM>(),
+        small.shape_.get<MAX_DIM>());
     }
   } else {
 
@@ -255,7 +260,7 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
       Mnext = (M + maxMblock - 1) / maxMblock;
     }
 
-    DType* out1_dptr = small.dptr_;
+    DType* out1_dptr = small.dptr<DType>();
     bool addto = (req == kAddTo);
     if (Mnext > 1) {
       // out1_dptr[] is N*Mnext*sizeof(DType) bytes
@@ -275,13 +280,13 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
         if ( M / (blockDim.x*Mnext) >= unroll_par_reduce ) {
           par_reduce_kernel<Reducer, DType, OP, kMaxThreadBits, unroll_par_reduce>
           <<< gridDim, blockDim, 0, stream>>>(
-            N, M, addto, big.dptr_, out1_dptr, big.shape_, small.shape_,
-            rshape, rstride, Mnext);
+            N, M, addto, big.dptr<DType>(), out1_dptr, big.shape_.get<MAX_DIM>(),
+            small.shape_.get<MAX_DIM>(), rshape, rstride, Mnext);
         } else {
           par_reduce_kernel<Reducer, DType, OP, kMaxThreadBits, 1>
           <<< gridDim, blockDim, 0, stream>>>(
-            N, M, addto, big.dptr_, out1_dptr, big.shape_, small.shape_,
-            rshape, rstride, Mnext);          
+            N, M, addto, big.dptr<DType>(), out1_dptr, big.shape_.get<MAX_DIM>(),
+            small.shape_.get<MAX_DIM>(), rshape, rstride, Mnext);          
         }
       }
     } else {
@@ -290,13 +295,13 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
         if ( M / (blockDim.y*Mnext) >= unroll_reduce ) {
           reduce_kernel<Reducer, DType, OP, unroll_reduce>
           <<< gridDim, blockDim, shMemSize, stream>>>(
-            N, M, addto, big.dptr_, out1_dptr, big.shape_, small.shape_,
-            rshape, rstride, Mnext);
+            N, M, addto, big.dptr<DType>(), out1_dptr, big.shape_.get<MAX_DIM>(),
+            small.shape_.get<MAX_DIM>(), rshape, rstride, Mnext);
         } else {
           reduce_kernel<Reducer, DType, OP, 1>
           <<< gridDim, blockDim, shMemSize, stream>>>(
-            N, M, addto, big.dptr_, out1_dptr, big.shape_, small.shape_,
-            rshape, rstride, Mnext);          
+            N, M, addto, big.dptr<DType>(), out1_dptr, big.shape_.get<MAX_DIM>(),
+            small.shape_.get<MAX_DIM>(), rshape, rstride, Mnext);          
         }
       }
     }
@@ -306,7 +311,7 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
         int blockSize = kMaxThreadsPerBlock;
         int gridSize = std::min((int)kBaseGridNum, (N + blockSize - 1)/blockSize );
         reduce_lines_kernel<Reducer, DType, OP><<< gridSize, blockSize, 0, stream >>>
-        (N, Mnext, req == kAddTo, N, out1_dptr, small.dptr_);
+        (N, Mnext, req == kAddTo, N, out1_dptr, small.dptr<DType>());
       }
     }
 
@@ -316,14 +321,14 @@ size_t ReduceImpl(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
 }
 
 template<typename Reducer, typename DType, typename OP>
-void Reduce(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
-            const CTensor<DType>& big, mshadow::Tensor<gpu, 1, char>& workspace) {
+void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+            const TBlob& big, const Tensor<gpu, 1, char>& workspace) {
   ReduceImpl<Reducer, DType, OP>(s, small, req, big, workspace, false);
 }
 
 template<typename Reducer, typename DType, typename OP>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, CTensor<DType> small, const OpReqType req,
-                           const CTensor<DType>& big) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+                           const TBlob& big) {
   mshadow::Tensor<gpu, 1, char> dummy_workspace;
   return ReduceImpl<Reducer, DType, OP>(s, small, req, big, dummy_workspace, true);
 }

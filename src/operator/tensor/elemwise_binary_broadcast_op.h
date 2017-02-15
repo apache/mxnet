@@ -42,9 +42,13 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
     if (l != r) {
-      CHECK(l == 1 || r == 1)
-        << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
-      out[i] = std::max(l, r);
+      if (l == 0 || r == 0) {
+        out[i] = 0;
+      } else {
+        CHECK(l == 1 || r == 1)
+          << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
+        out[i] = std::max(l, r);
+      }
     } else {
       out[i] = l;
     }
@@ -56,7 +60,7 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
 inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshape,
                                        const TShape& oshape, TShape *new_lshape,
                                        TShape *new_rshape, TShape *new_oshape) {
-  // if (lshape == rshape) return 0;
+  if (lshape == rshape) return 0;
   index_t odim = std::max<index_t>(oshape.ndim(), broadcast::MAX_DIM);
   *new_lshape = TShape(odim);
   *new_rshape = TShape(odim);
@@ -110,10 +114,8 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   } else {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      CTensor<DType> lhs = inputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_lshape.get<MAX_DIM>(), s);
-      CTensor<DType> rhs = inputs[1].get_with_shape<xpu, MAX_DIM, DType>(new_rshape.get<MAX_DIM>(), s);
-      CTensor<DType> out = outputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_oshape.get<MAX_DIM>(), s);
-      BinaryBroadcastComputeImpl<DType, OP>(s, req[0], lhs, rhs, out);
+      BinaryBroadcastComputeImpl<DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
+        inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
     });
   }
 }
@@ -182,22 +184,19 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Stream<xpu> *s = ctx.get_stream<xpu>();
-      CTensor<DType> ograd =
-        inputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_oshape.get<MAX_DIM>(), s);
-      CTensor<DType> lgrad =
-        outputs[0].get_with_shape<xpu, MAX_DIM, DType>(new_lshape.get<MAX_DIM>(), s);
-      CTensor<DType> rgrad =
-        outputs[1].get_with_shape<xpu, MAX_DIM, DType>(new_rshape.get<MAX_DIM>(), s);
+      const TBlob lhs = outputs[0].reshape(new_lshape);
+      const TBlob rhs = outputs[1].reshape(new_rshape);
+      const TBlob out = inputs[0].reshape(new_oshape);
       // Request temporary storage
-      size_t workspace_size_l = ReduceWorkspaceSize<red::sum, DType, LOP>(s, lgrad, req[0], ograd);
-      size_t workspace_size_r = ReduceWorkspaceSize<red::sum, DType, ROP>(s, rgrad, req[1], ograd);
+      size_t workspace_size_l = ReduceWorkspaceSize<red::sum, DType, LOP>(s, lhs, req[0], out);
+      size_t workspace_size_r = ReduceWorkspaceSize<red::sum, DType, ROP>(s, rhs, req[1], out);
       size_t workspace_size = workspace_size_l + workspace_size_r;
       Tensor<xpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
       Tensor<xpu, 1, char> workspace_l(&workspace[0], Shape1(workspace_size_l), s);
       Tensor<xpu, 1, char> workspace_r(&workspace[workspace_size_l], Shape1(workspace_size_r), s);
-      Reduce<red::sum, DType, LOP>(s, lgrad, req[0], ograd, workspace_l);
-      Reduce<red::sum, DType, ROP>(s, rgrad, req[1], ograd, workspace_r);
+      Reduce<red::sum, DType, LOP>(s, lhs, req[0], out, workspace_l);
+      Reduce<red::sum, DType, ROP>(s, rhs, req[1], out, workspace_r);
     });
   }
 }
