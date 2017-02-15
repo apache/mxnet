@@ -52,7 +52,7 @@ and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
 
 ## Approximate Joint Training
 * Support training faster-rcnn model using end2end training method which is implemented by approximate joint training, and it is almost the same as [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn)
-* Start end2end training by running `python -u train_end2end.py`, please using `python train_end2end.py --help` to query how to setting the training parameters, such as you can setting the step of dropping lr by `--factor-step`.
+* Start end2end training by running `python -u train_end2end.py`, please using `python train_end2end.py --help` to query how to setting the training parameters, such as you can set the step of dropping lr by `--factor-step`.
 
 ## Information
 * Download link to trained model

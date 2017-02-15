@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     detector = get_detector(args.network, args.prefix, args.epoch,
                             args.data_shape,
-                            mx.nd.array((args.mean_r, args.mean_g, args.mean_b)).reshape((3,1,1)),
+                            (args.mean_r, args.mean_g, args.mean_b),
                             ctx, args.nms_thresh, args.force_nms)
     # run detection
     detector.detect_and_visualize(image_list, args.dir, args.extension,

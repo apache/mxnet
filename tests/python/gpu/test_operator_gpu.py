@@ -3,6 +3,7 @@ import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
+from test_optimizer import *
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import check_consistency, set_default_context
@@ -144,12 +145,21 @@ def test_pooling_with_type():
     check_consistency(sym, ctx_list)
 
 def test_upsampling_with_type():
-    sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type = 'nearest', num_args=1)
+    sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type='nearest', num_args=1)
     ctx_list = [{'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
                 {'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float32}},
                 {'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float16}},
                 {'ctx': mx.cpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
                 {'ctx': mx.cpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float32}}]
+    check_consistency(sym, ctx_list)
+
+def test_upsampling_bilinear_with_type():
+    sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type='bilinear', num_args=1)
+    ctx_list = [{'ctx': mx.gpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float64}},
+                {'ctx': mx.gpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float32}},
+                {'ctx': mx.gpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float16}},
+                {'ctx': mx.cpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float64}},
+                {'ctx': mx.cpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float32}}]
     check_consistency(sym, ctx_list)
 
 def test_concat_with_type():
@@ -290,6 +300,7 @@ if __name__ == '__main__':
     test_batchnorm_with_type()
     test_deconvolution_with_type()
     test_upsampling_with_type()
+    test_upsampling_bilinear_with_type()
     test_concat_with_type()
     test_elementwisesum_with_type()
     test_reshape_with_type()

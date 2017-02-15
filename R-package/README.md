@@ -33,4 +33,4 @@ To use the GPU version or to use it on Linux, please follow [Installation Guide]
 
 License
 -------
-MXNet R-package is licensed under [BSD](./LICENSE) license.
+MXNet R-package is licensed under [Apache-2.0](./LICENSE) license.

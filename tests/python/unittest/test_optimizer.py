@@ -11,7 +11,7 @@ def test_lr_wd_mult():
     fc1 = mx.sym.FullyConnected(data=data, bias=bias, name='fc1', num_hidden=10, lr_mult=0)
     fc2 = mx.sym.FullyConnected(data=fc1, name='fc2', num_hidden=10, wd_mult=0.5)
 
-    mod = mx.mod.Module(symbol=fc2, label_names=None)
+    mod = mx.mod.Module(symbol=fc2, label_names=None, context=default_context())
     mod.bind(data_shapes=[('data', (5,10))])
     mod.init_params(initializer=mx.init.Uniform(1.0))
     mod.init_optimizer(optimizer_params={'learning_rate': 1.0})
@@ -31,11 +31,11 @@ def test_lr_wd_mult():
 
 
 def compare_optimizer(opt1, opt2, shape):
-    w1 = mx.random.uniform(shape=shape)
-    g1 = mx.random.uniform(shape=shape)
+    w1 = mx.random.uniform(shape=shape, ctx=default_context())
+    g1 = mx.random.uniform(shape=shape, ctx=default_context())
 
-    w2 = w1.copyto(mx.cpu())
-    g2 = g1.copyto(mx.cpu())
+    w2 = w1.copyto(default_context())
+    g2 = g1.copyto(default_context())
 
     state1 = opt1.create_state(0, w1)
     state2 = opt2.create_state(0, w2)
@@ -45,8 +45,8 @@ def compare_optimizer(opt1, opt2, shape):
     opt1.update(0, w1, g1, state1)
     opt2.update(0, w2, g2, state2)
     for s1, s2, in zip(state1, state2):
-        assert(reldiff(s1.asnumpy(), s2.asnumpy()) < 1e-5)
-    assert(reldiff(w1.asnumpy(), w2.asnumpy()) < 1e-5)
+        assert_almost_equal(s1.asnumpy(), s2.asnumpy(), rtol=1e-4, atol=1e-5)
+    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=1e-4, atol=1e-5)
 
 # ADAM
 

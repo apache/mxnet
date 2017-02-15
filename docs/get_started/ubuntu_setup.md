@@ -148,9 +148,34 @@ Next, we install ```graphviz``` library that we use for visualizing network grap
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
+- [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
+
+### Install the MXNet Package for Python
+Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
+
+```bash
+	# Install MXNet Python package
+	cd python
+	sudo python setup.py install
+```
+
+Check if MXNet is properly installed.
+
+```bash
+	# You can change mx.cpu to mx.gpu
+	python
+	>>> import mxnet as mx
+	>>> a = mx.nd.ones((2, 3), mx.cpu())
+	>>> print ((a * 2).asnumpy())
+	[[ 2.  2.  2.]
+	 [ 2.  2.  2.]]
+```
+If you don't get an import error, then MXNet is ready for python.
+
+Note: You can update mxnet for python by repeating this step after re-building `libmxnet.so`.
 
 ### Install the MXNet Package for R
 

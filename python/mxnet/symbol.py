@@ -964,7 +964,7 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
 
-def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None):
+def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
     """Create a symbolic variable with specified name.
 
     Parameters
@@ -983,6 +983,8 @@ def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None
         Specify weight decay muliplier for this variable.
     dtype : str or numpy.dtype
         Similar to shape, we can specify dtype for this variable.
+    init : initializer (mxnet.init.*)
+        Specify initializer for this variable to override the default initializer
 
     Returns
     -------
@@ -1004,6 +1006,8 @@ def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
         attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+    if init is not None:
+        attr['__init__'] = init.dumps()
     ret._set_attr(**attr)
     return ret
 

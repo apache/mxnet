@@ -54,6 +54,21 @@ namespace op {
     }
 #endif
   }
+#if MKL_EXPERIMENTAL == 1
+  template<typename DType>
+  inline std::shared_ptr<MKLData<DType> > mkl_get_mem_desc(
+    const std::shared_ptr<MKLMemHolder> data_mem) {
+    std::shared_ptr<PrvMemDescr> prv_descriptor =
+      data_mem->get_prv_descriptor();
+    CHECK_EQ(prv_descriptor->get_descr_type(),
+      PrvMemDescr::PRV_DESCR_MKL2017);
+    std::shared_ptr<MKLData<DType> > mem_descr
+      = std::static_pointer_cast<MKLData<DType>>
+      (prv_descriptor);
+    CHECK(mem_descr != NULL);
+    return mem_descr;
+  }
+#endif
   template<typename xpu, int dim, typename DType>
   inline  mshadow::Tensor<xpu, dim, DType> mkl_experimental_direct_get(
     const TBlob &b, mshadow::Stream<xpu> *s) {
