@@ -2831,8 +2831,8 @@ def test_where():
                                                 grad_req='write')
         where_exe_write.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
         where_exe_write.backward(grad_in_mx)
-        assert reldiff(where_exe_write.grad_dict['x'].asnumpy(), x_grad_expected) < 1E-3
-        assert reldiff(where_exe_write.grad_dict['y'].asnumpy(), y_grad_expected) < 1E-3
+        assert_almost_equal(where_exe_write.grad_dict['x'].asnumpy(), x_grad_expected)
+        assert_almost_equal(where_exe_write.grad_dict['y'].asnumpy(), y_grad_expected)
 
         # test req='add'
         x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
@@ -2847,8 +2847,8 @@ def test_where():
         where_exe_add.backward(grad_in_mx)
         x_ograd = where_exe_add.grad_dict['x'].asnumpy()
         y_ograd = where_exe_add.grad_dict['y'].asnumpy()
-        assert reldiff(x_ograd, x_grad_expected+x_grad_init) < 1E-3
-        assert reldiff(y_ograd, y_grad_expected+y_grad_init) < 1E-3
+        assert_almost_equal(x_ograd, x_grad_expected+x_grad_init)
+        assert_almost_equal(y_ograd, y_grad_expected+y_grad_init)
 
     def test_where_backward_condition_vector():
         condition = mx.sym.Variable('condition')
@@ -2933,8 +2933,8 @@ def test_where():
                                                 grad_req='write')
         where_exe_write.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
         where_exe_write.backward(grad_in_mx)
-        assert reldiff(where_exe_write.grad_dict['x'].asnumpy(), x_grad_expected) < 1E-3
-        assert reldiff(where_exe_write.grad_dict['y'].asnumpy(), y_grad_expected) < 1E-3
+        assert_almost_equal(where_exe_write.grad_dict['x'].asnumpy(), x_grad_expected)
+        assert_almost_equal(where_exe_write.grad_dict['y'].asnumpy(), y_grad_expected)
 
         # test req='add'
         x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
@@ -2949,8 +2949,8 @@ def test_where():
         where_exe_add.backward(grad_in_mx)
         x_ograd = where_exe_add.grad_dict['x'].asnumpy()
         y_ograd = where_exe_add.grad_dict['y'].asnumpy()
-        assert reldiff(x_ograd, x_grad_expected+x_grad_init) < 1E-3
-        assert reldiff(y_ograd, y_grad_expected+y_grad_init) < 1E-3
+        assert_almost_equal(x_ograd, x_grad_expected+x_grad_init)
+        assert_almost_equal(y_ograd, y_grad_expected+y_grad_init)
 
     def test_where_numeric_gradient_same_shape():
         condition = mx.sym.Variable('condition')
