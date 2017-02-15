@@ -1,4 +1,7 @@
 use ExtUtils::MakeMaker;
+`swig -noproxy -c++ -perl nnvm.i`;
+unlink "NNVMCAPI.pm";
+
 WriteMakefile(
     NAME            => 'AI::NNVMCAPI',
     LICENSE         => 'apache_2_0',

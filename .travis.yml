@@ -62,6 +62,7 @@ addons:
       - libmouse-perl
       - pdl
       - cpanminus
+      - swig
 
 before_install:
   - export NVCC_PREFIX=${HOME}

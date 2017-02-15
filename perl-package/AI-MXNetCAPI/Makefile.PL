@@ -1,5 +1,8 @@
 use ExtUtils::MakeMaker;
 use DynaLoader;
+`swig -noproxy -c++ -perl mxnet.i`;
+unlink "MXNetCAPI.pm";
+
 WriteMakefile(
     NAME            => 'AI::MXNetCAPI',
     LICENSE         => 'apache_2_0',
