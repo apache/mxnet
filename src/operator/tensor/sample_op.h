@@ -35,12 +35,13 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+    .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
-    .add_enum("", -1)
     .set_default(-1)
-    .describe("DType of the output");
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -63,12 +64,13 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+    .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
-    .add_enum("", -1)
     .set_default(-1)
-    .describe("DType of the output");
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -83,8 +85,8 @@ void SampleUniform_(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
   mshadow::Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (outputs[0].type_flag_ != mshadow::kFloat32) {
+  if (outputs[0].type_flag_ != mshadow::kFloat32) {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       // Not float32: use workspace and copy to output
       mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 1, float> workspace =
@@ -92,12 +94,12 @@ void SampleUniform_(const nnvm::NodeAttrs& attrs,
         (mshadow::Shape1(out.shape_.Size()), s);
       prnd->SampleUniform(&workspace, param.low, param.high);
       out = reshape(tcast<DType>(workspace), mshadow::Shape2(out.shape_[0], out.shape_[1]));
-    } else {
-      // float32: write directly into output
-      mshadow::Tensor<xpu, 2, float> out = outputs[0].FlatTo2D<xpu, float>(s);
-      prnd->SampleUniform(&out, param.low, param.high);
-    }
-  });
+    });
+  } else {
+    // float32: write directly into output
+    mshadow::Tensor<xpu, 2, float> out = outputs[0].FlatTo2D<xpu, float>(s);
+    prnd->SampleUniform(&out, param.low, param.high);
+  }
 }
 
 template<typename xpu>
@@ -111,8 +113,8 @@ void SampleNormal_(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const SampleNormalParam& param = nnvm::get<SampleNormalParam>(attrs.parsed);
   mshadow::Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (outputs[0].type_flag_ != mshadow::kFloat32) {
+  if (outputs[0].type_flag_ != mshadow::kFloat32) {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       // Not float32: use workspace and copy to output
       mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       mshadow::Tensor<xpu, 1, float> workspace =
@@ -120,12 +122,12 @@ void SampleNormal_(const nnvm::NodeAttrs& attrs,
         (mshadow::Shape1(out.shape_.Size()), s);
       prnd->SampleGaussian(&workspace, param.loc, param.scale);
       out = reshape(tcast<DType>(workspace), mshadow::Shape2(out.shape_[0], out.shape_[1]));
-    } else {
-      // float32: write directly into output
-      mshadow::Tensor<xpu, 2, float> out = outputs[0].FlatTo2D<xpu, float>(s);
-      prnd->SampleGaussian(&out, param.loc, param.scale);
-    }
-  });
+    });
+  } else {
+    // float32: write directly into output
+    mshadow::Tensor<xpu, 2, float> out = outputs[0].FlatTo2D<xpu, float>(s);
+    prnd->SampleGaussian(&out, param.loc, param.scale);
+  }
 }
 
 template<typename ParamType>
@@ -161,7 +163,6 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
   << dtype_out << " vs " << mshadow::kFloat16 << " or " << mshadow::kFloat32 << " or "
   << mshadow::kFloat64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
-  LOG(INFO) << "dtypes " << dtype_out << " " << param.dtype << " " << dtype;
   return true;
 }
 
