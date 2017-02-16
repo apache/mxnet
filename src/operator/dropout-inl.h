@@ -36,13 +36,13 @@ namespace mxnet {
 namespace op {
 
 #if defined(USE_MKL) && defined(_OPENMP)
-static unsigned int bernoulli_seed = 1;
+const int nthr = omp_get_max_threads();
+std::vector<unsigned int> bernoulli_seed(nthr, 1);
 static void bernoulli_generate(int n, double p, int* r) {
-  int seed = 17 + rand_r(&bernoulli_seed) % 4096;
-  int nthr = omp_get_max_threads();
+  const int ithr = omp_get_thread_num();
+  int seed = 17 + rand_r(&bernoulli_seed[ithr]) % 4096;
 # pragma omp parallel num_threads(nthr)
   {
-    const int ithr = omp_get_thread_num();
     const int avg_amount = (n + nthr - 1) / nthr;
     const int my_offset = ithr * avg_amount;
     const int my_amount = std::min(my_offset + avg_amount, n) - my_offset;
