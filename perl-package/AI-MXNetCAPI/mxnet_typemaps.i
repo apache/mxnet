@@ -47,7 +47,7 @@
     {
         $1 = (char **)safemalloc(hash_len*sizeof(char *));
         $2 = (char **)safemalloc(hash_len*sizeof(char *));
-        while (val = hv_iternextsv(temphv, &key, &len)) 
+        while ((val = hv_iternextsv(temphv, &key, &len))) 
         {
             $1[i] = key;
             $2[i] = SvPV(val, len2);
@@ -69,10 +69,9 @@
 
 %typemap(argout) (const char **out)
 {
-    STRLEN len;
     if(!result)
     {
-        $result = newSVpv(*$1, len);
+        $result = newSVpv(*$1, 0);
         sv_2mortal($result);
         argvi++;
     }
@@ -590,19 +589,18 @@
     {
         AV *container, *names, *types, *descs;
         int i;
-        STRLEN len;
         container = newAV();
         names = newAV();
         types = newAV();
         descs = newAV();
-        if($1) av_push(container, newSVpv(*$1,len));
-        if($2) av_push(container, newSVpv(*$2,len));
+        if($1) av_push(container, newSVpv(*$1,0));
+        if($2) av_push(container, newSVpv(*$2,0));
         if($3)
         {
             for (i = 0; i < *$3 ; i++) {
-                av_push(names, newSVpv((*$4)[i],len));
-                av_push(types, newSVpv((*$5)[i],len));
-                av_push(descs, newSVpv((*$6)[i],len));
+                av_push(names, newSVpv((*$4)[i],0));
+                av_push(types, newSVpv((*$5)[i],0));
+                av_push(descs, newSVpv((*$6)[i],0));
             }
         }
         av_push(container, newRV_noinc((SV*)names));
@@ -653,25 +651,24 @@
     {
         AV *container, *names, *types, *descs;
         int i;
-        STRLEN len;
         container = newAV();
         names = newAV();
         types = newAV();
         descs = newAV();
-        if($1) av_push(container, newSVpv(*$1,len));
-        if($2) av_push(container, newSVpv(*$2,len));
+        if($1) av_push(container, newSVpv(*$1,0));
+        if($2) av_push(container, newSVpv(*$2,0));
         if($3)
         {
             for (i = 0; i < *$3 ; i++) {
-                av_push(names, newSVpv((*$4)[i],len));
-                av_push(types, newSVpv((*$5)[i],len));
-                av_push(descs, newSVpv((*$6)[i],len));                    
+                av_push(names, newSVpv((*$4)[i],0));
+                av_push(types, newSVpv((*$5)[i],0));
+                av_push(descs, newSVpv((*$6)[i],0));                    
             }
         }
         av_push(container, newRV_noinc((SV*)names));
         av_push(container, newRV_noinc((SV*)types));
         av_push(container, newRV_noinc((SV*)descs));
-        if($7) av_push(container, newSVpv(*$7,len));
+        if($7) av_push(container, newSVpv(*$7,0));
         $result = newRV_noinc((SV*)container);
         sv_2mortal($result);
         argvi++;

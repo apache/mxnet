@@ -13,6 +13,7 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install fftw
     brew install libpng
     brew install ImageMagick
+    brew install swig
     if [ ${TASK} == "python_test" ]; then
         python -m pip install --user nose numpy cython
         python3 -m pip install --user nose numpy cython
@@ -31,6 +32,7 @@ if [ ${TASK} == "julia" ]; then
 fi
 
 if [ ${TASK} == "perl_test" ]; then
-  cpanm -L "${HOME}/perl5" Function::Parameters
-  export PERL5LIB="${HOME}/perl5/lib/perl5"
+    if [ ${TRAVIS_OS_NAME} == "linux" ]; then
+       cpanm -q -L "${HOME}/perl5" Function::Parameters
+    fi
 fi
