@@ -39,6 +39,9 @@
         <artifactId>native-maven-plugin</artifactId>
         <extensions>true</extensions>
         <configuration>
+          <compilerArguments>
+            <verbose/>
+          </compilerArguments>
           <!--  trigger javah -->
           <javahOS>linux</javahOS>
           <compilerProvider>generic-classic</compilerProvider>
@@ -55,26 +58,25 @@
           <compilerStartOptions>
             <compilerStartOption>-std=c++0x</compilerStartOption>
             <compilerStartOption>-fPIC</compilerStartOption>
+            <compilerStartOption>-g</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
             <compilerEndOption>${all_includes}</compilerEndOption>
-            <!-- <compilerEndOption>-I../../../include</compilerEndOption> -->
             <compilerEndOption>${cflags}</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
             <linkerStartOption>-fPIC</linkerStartOption>
+            <linkerStartOption>-g</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>${all_ldpaths}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
-            <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <!-- <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption> -->
-            <!-- <linkerMiddleOption>${current_libdir}/libmxnet.a</linkerMiddleOption> -->
+            <!-- <linkerMiddleOption>${lddeps}</linkerMiddleOption> -->
+            <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
             <linkerMiddleOption>-lmxnet</linkerMiddleOption>
             <linkerMiddleOption>-ldmlccore</linkerMiddleOption>
             <linkerMiddleOption>-lnnvm</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
             <linkerMiddleOption>${all_linklibs}</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>

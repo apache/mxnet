@@ -2,10 +2,15 @@
 set -e
 
 #
-# DO NOT add build logic here. Builds should build completely and correctly with the given 
+# DO NOT add build logic here. Builds should build completely and correctly with the given
 # Brazil builder tools (ie cmake, modified bmvn (brazilmvn) script, etc).
 # Never put a brazil-path command in here, for instance.
 #
 
 brazilcmake $@
+
+if [ "$1" == "clean" ] || [ "$1" == "generate" ]; then
+  exit 0
+fi
+
 bmvn $@

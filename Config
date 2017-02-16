@@ -1,8 +1,9 @@
 package.DeepMXNet = {
   interfaces = (0.9);
 
-  build-system = brazilcmake;
+  #build-system = brazilcmake;
   #build-system = bmvn;
+  build-system = build-chain;
 
   build-environment = {
     chroot = basic;
@@ -26,29 +27,8 @@ package.DeepMXNet = {
       CFlagsGCC = 4.9.x;
 
       # Scala build
-      #JDK8 = 1.0;
-#      JDK = 1.7;
+      JDK = 1.7;
       Maven = 3.0;
-#      Scala211 = 1.0;
-#      ScalaLang211 = 1.0;
-#      BrazilMaven = 3.0;
-#      BrazilAetherSupport = 1.0;
-
-      #Maven-maven-enforcer-plugin = 1.x;
-#      Maven-maven-plugin-plugin = 3.x;
-      #Maven-maven-site-plugin = 3.x;
-#      Maven-maven-clean-plugin = 2.x;
-#      Maven-maven-install-plugin = 2.x;
-#      Maven-maven-resources-plugin = 2.x;
-#      Maven-maven-surefire-plugin = 2.x;
-#      Maven-maven-compiler-plugin = 3.x;
-#      Maven-maven-jar-plugin = 2.x;
-#      Maven-maven-deploy-plugin = 2.x;
-#      Maven-native-maven-plugin = 1.0_alpha_7;
-#      Maven-maven-dependency-plugin = 2.x;
-#      Maven-maven-dependency-tree = 2.1;
-#      Maven-org-scala-lang_scala-library = 2.x;
-      #Maven-org-scala-lang_scala-xml = 2.11.x;
       ScalaMavenBuilder = 1.0;
     };
   };
@@ -66,27 +46,10 @@ package.DeepMXNet = {
       Cuda = 7.x;
       C-ares = 1.x;
       DeepCudnn = 5.x;
-#      DeepOpenCV = 2.4.x;
+#     DeepOpenCV = 2.4.x;
       DeepNNVM = 0.9;
       DeepMKL = 1.0;
       CUB = 1.6;
-
-      #Maven-maven-enforcer-plugin = 1.x;
-      #Maven-maven-plugin-plugin = 3.x;
-      #Maven-maven-site-plugin = 3.x;
-      #Maven-maven-clean-plugin = 2.x;
-      #Maven-maven-install-plugin = 2.x;
-      #Maven-maven-resources-plugin = 2.x;
-      #Maven-maven-surefire-plugin = 2.x;
-#      Maven-maven-compiler-plugin = 3.x;
-      #Maven-maven-jar-plugin = 2.x;
-      #Maven-maven-deploy-plugin = 2.x;
-#      Maven-native-maven-plugin = 1.0_alpha_7;
-      #Maven-maven-dependency-plugin = 2.x;
-      #Maven-maven-dependency-tree = 2.1;
-#      Maven-org-scala-lang_scala-library = 2.x;
-      #Maven-org-scala-lang_scala-xml = 2.11.x;
-      #ScalaLang211 = 1.0;
     };
   };
 
@@ -127,7 +90,12 @@ package.DeepMXNet = {
 
     # This target is needed for upstream python packages to include mxnet
     # in the PYTHONPATH correctly.
-    python = { type = python };
+    python = { type = python; };
+
+    mxnet-core_2.11-0.1.2   = { type = javalibrary; };
+    mxnet-macros_2.11-0.1.2 = { type = javalibrary; };
+    mxnet-init_2.11-0.1.2   = { type = javalibrary; };
+
   };
 
 };

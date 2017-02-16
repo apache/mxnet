@@ -14,7 +14,8 @@
 #include <string>
 #include <unordered_map>
 #include "jni_helper_func.h"
- #include "../../../../../src/common/cuda_utils.h"
+//#include "../../../../../src/common/cuda_utils.h"
+#include <../src/common/cuda_utils.h>
 
 JavaVM *_jvm;
 

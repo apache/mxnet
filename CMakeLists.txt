@@ -14,7 +14,8 @@ mxnet_option(USE_OPENCV  "Build with OpenCV support" OFF)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
-mxnet_option(USE_JEMALLOC "Build with Jemalloc support"   ON)
+mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" OFF)
+mxnet_option(USE_JEMALLOC "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
@@ -23,6 +24,10 @@ mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_SCALA "Build Scala packages" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
+
+if(USE_MKL_IF_AVAILABLE)
+  find_package(MKL)
+endif()
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -373,16 +378,16 @@ endif()
 if(IS_CONTAINER_BUILD)
   # Do tests before chrpath so that we use the cuda stub driver
   add_subdirectory(tests)
-  find_program(CHRPATH_EXE chrpath HINTS ${PATH})
-  if(CHRPATH_EXE)
-    message(STATUS " Found chrpath executable: ${CHRPATH_EXE}")
-    add_custom_command(TARGET mxnet
-      COMMAND echo "Removing rpath from mxnet library"
-      COMMAND ${CHRPATH_EXE} -d ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmxnet.so
-    )
-  else()
-    message(ERROR "Unable to find chrpath executable")
-  endif()
+#  find_program(CHRPATH_EXE chrpath HINTS ${PATH})
+#  if(CHRPATH_EXE)
+#    message(STATUS " Found chrpath executable: ${CHRPATH_EXE}")
+#    add_custom_command(TARGET mxnet
+#      COMMAND echo "Removing rpath from mxnet library"
+#      COMMAND ${CHRPATH_EXE} -d ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmxnet.so
+#    )
+#  else()
+#    message(ERROR "Unable to find chrpath executable")
+#  endif()
 else()
   # Do tests after chrpath so that we use the "real" cuda driver
   add_subdirectory(tests)
