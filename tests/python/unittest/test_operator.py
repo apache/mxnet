@@ -2264,7 +2264,7 @@ def test_grid_generator():
         exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
         exe.forward()
         exe.backward(mx.nd.array(out_grad))
-        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est + grid_grad_npy, rtol=1e-3)
+        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est + grid_grad_npy, rtol=1e-2)
 
     # transform_type = warp
     test_case = [(12,21),(4,3),(6,12)]
