@@ -433,17 +433,14 @@ class MKLConvolutionOp : public Operator {
 #endif
       res_convolutionBwdFilter[dnnResourceDiffDst] =
         bwdf_top_diff->get_converted_prv(grad.dptr_, true, out_bias_mem);
-      MKLMemoryDescriptor<DType>* fwd_bottom_data_desc = NULL;
 #if MKL_EXPERIMENTAL == 1
       std::shared_ptr<MKLMemHolder> in_data_mem = in_data[conv::kData].Mkl_mem_;
-      fwd_bottom_data_desc = fwd_bottom_data.get();
 #else
       std::shared_ptr<MKLMemHolder> in_data_mem = NULL;
 #endif
       res_convolutionBwdFilter[dnnResourceSrc] =
         bwdf_bottom_data->get_converted_prv(data.dptr_, false,
-                                            in_data_mem,
-                                            fwd_bottom_data_desc);
+                                            in_data_mem);
      if (bwdf_filter_diff->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
        std::shared_ptr<MKLMemHolder> gwamt_mem =

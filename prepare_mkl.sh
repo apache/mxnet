@@ -36,19 +36,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
-FindLibrary() 
-{
-  case "$1" in
-    intel|1)
-      LOCALMKL=`find $HOME_MKL -name libmklml_intel.so`   # name of MKL SDL lib
-      ;;
-    *)
-      LOCALMKL=`find $HOME_MKL -name libmklml_gnu.so`   # name of MKL SDL lib
-      ;;
-  esac
-
-}
-
 GetVersionName()
 {
 VERSION_LINE=0
@@ -62,14 +49,14 @@ echo $VERSION_LINE  # Return Version Line
 }
 
 # MKL
-HOME_MKL=$2
+HOME_MKL=$1
 if [ ! -d "$HOME_MKL" ]; then
    mkdir $HOME_MKL
 fi
 MXNET_ROOT=`dirname $0`
-OMP=0 
-VERSION_MATCH=20161123
-ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20161122.tgz
+USE_MKLML=0
+VERSION_MATCH=20170210
+ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20170209.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
 MKLURL="https://github.com/dmlc/web-data/raw/master/mxnet/mklml-release/$ARCHIVE_BASENAME"
 # there are diffrent MKL lib to be used for GCC and for ICC
@@ -77,7 +64,7 @@ reg='^[0-9]+$'
 VERSION_LINE=`GetVersionName $MKLROOT`
 #echo $VERSION_LINE
 # Check if MKLROOT is set if positive then set one will be used..
-if [ -z $MKLROOT ] || [ $VERSION_LINE -lt $VERSION_MATCH ]; then
+if [ -z $MKLROOT ]; then
   # ..if MKLROOT is not set then check if we have MKL downloaded in proper version
     VERSION_LINE=`GetVersionName $HOME_MKL`
     #echo $VERSION_LINE
@@ -89,19 +76,16 @@ if [ -z $MKLROOT ] || [ $VERSION_LINE -lt $VERSION_MATCH ]; then
       yes | cp -rf $MXNET_ROOT/$MKL_CONTENT_DIR/* $HOME_MKL
       rm -rf $MXNET_ROOT/$MKL_CONTENT_DIR
     fi
-  FindLibrary $1
-  #echo $LOCALMKL
-  MKLROOT=`echo $LOCALMKL | sed -e 's/lib.*$//'`
+  MKLLIB=`find $HOME_MKL -name libmklml_gnu.so`
+  MKLROOT=`echo $MKLLIB | sed -e 's/lib.*$//'`
 fi
 
 # Check what MKL lib we have in MKLROOT
-if [ -z `find $MKLROOT -name libmkl_rt.so -print -quit` ]; then
-  LIBRARIES=`basename $LOCALMKL | sed -e 's/^.*lib//' | sed -e 's/\.so.*$//'`
-  OMP=1
-else
-  LIBRARIES="mkl_rt"
-fi 
-
+if [ -z `find $MKLROOT -name libmklml_gnu.so -print -quit` ]; then
+  USE_MKLML=0
+elif [ -z `find $MKLROOT -name libmkl_core.so -print -quit` ]; then
+  USE_MKLML=1
+fi
 
 # return value to calling script (Makefile,cmake)
-echo $MKLROOT $LIBRARIES $OMP
+echo $MKLROOT $USE_MKLML
