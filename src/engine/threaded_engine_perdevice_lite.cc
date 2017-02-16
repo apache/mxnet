@@ -65,8 +65,9 @@ class ThreadedEnginePerDeviceLite : public ThreadedEngine {
             strcmp(opr_block->opr->opr_name,"argmax_channel") &&
             strcmp(opr_block->opr->opr_name,"KVStoreDistPush") &&
             strcmp(opr_block->opr->opr_name,"KVStoreDistPull") && 
+            //strcmp(opr_block->opr->opr_name,"DeleteVariable") &&
             strcmp(opr_block->opr->opr_name,"WaitForVar")) {
-         // printf("[CPU][%s]\r\n",opr_block->opr->opr_name);
+          //printf("[CPU][%s]\r\n",opr_block->opr->opr_name);
       //strncpy(opr_block->opr_stat->opr_name,
       //  threaded_opr->opr_name,
       //  sizeof(opr_block->opr_stat->opr_name) - 1);

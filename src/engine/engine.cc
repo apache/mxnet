@@ -29,6 +29,9 @@ inline Engine* CreateEngine() {
   {
     ret = CreateThreadedEnginePerDeviceLite();
   }
+  else if(stype == "NaiveEngineLite"){
+    ret = CreateNaiveEngineLite();
+  }
   #else
   ret = CreateNaiveEngine();
   #endif
