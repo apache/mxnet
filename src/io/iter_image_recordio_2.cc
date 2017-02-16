@@ -207,7 +207,7 @@ ParseNext(DataBatch *out) {
   unsigned current_size = 0;
   out->index.resize(batch_param_.batch_size);
   while (current_size < batch_param_.batch_size) {
-    unsigned n_to_copy;
+    int n_to_copy;
     if (n_parsed_ == 0) {
       if (source_->NextChunk(&chunk)) {
         inst_order_.clear();
@@ -270,7 +270,7 @@ ParseNext(DataBatch *out) {
 
     // Copy
     #pragma omp parallel for num_threads(param_.preprocess_threads)
-    for (unsigned i = 0; i < n_to_copy; ++i) {
+    for (int i = 0; i < n_to_copy; ++i) {
       std::pair<unsigned, unsigned> place = inst_order_[inst_index_ + i];
       const DataInst& batch = temp_[place.first][place.second];
       for (unsigned j = 0; j < batch.data.size(); ++j) {
