@@ -84,7 +84,7 @@ namespace mxnet {
 namespace io {
 /*! \return the parameter of default augmenter */
 std::vector<dmlc::ParamFieldInfo> ListDefaultAugParams();
-std::vector<dmlc::ParamFieldInfo> ListDefaultDetectionAugParams();
+std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams();
 }  // namespace io
 }  // namespace mxnet
 #endif  // MXNET_IO_IMAGE_AUGMENTER_H_

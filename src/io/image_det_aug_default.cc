@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file image_detection_aug_default.cc
+ * \file image_det_aug_default.cc
  * \brief Default augmenter.
  */
 #include <mxnet/base.h>
@@ -22,14 +22,14 @@
 namespace mxnet {
 namespace io {
 
-namespace image_detection_aug_default_enum {
-enum ImageDetectionAugDefaultCropEmitMode {kCenter, kOverlap};
+namespace image_det_aug_default_enum {
+enum ImageDetAugDefaultCropEmitMode {kCenter, kOverlap};
 }
 
 using nnvm::Tuple;
 using Rect = cv::Rect_<float>;
 /*! \brief image augmentation parameters*/
-struct DefaultImageDetectionAugmentParam : public dmlc::Parameter<DefaultImageDetectionAugmentParam> {
+struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugmentParam> {
   /*! \brief resize shorter edge to size before applying other augmentations */
   int resize;
   /*! \brief whether we do random cropping */
@@ -101,7 +101,7 @@ struct DefaultImageDetectionAugmentParam : public dmlc::Parameter<DefaultImageDe
   float std_b;
   float std_a;
   // declare parameters
-  DMLC_DECLARE_PARAMETER(DefaultImageDetectionAugmentParam) {
+  DMLC_DECLARE_PARAMETER(DefaultImageDetAugmentParam) {
     DMLC_DECLARE_FIELD(resize).set_default(-1)
         .describe("Augmentation Param: scale shorter edge to size "
                   "before applying other augmentations, -1 to disable.");
@@ -130,9 +130,9 @@ struct DefaultImageDetectionAugmentParam : public dmlc::Parameter<DefaultImageDe
     DMLC_DECLARE_FIELD(num_crop_sampler).set_default(1)
         .describe("Augmentation Param: Minimum scale ratio.");
     DMLC_DECLARE_FIELD(crop_emit_mode)
-        .add_enum("center", image_detection_aug_default_enum::kCenter)
-        .add_enum("overlap", image_detection_aug_default_enum::kOverlap)
-        .set_default(image_detection_aug_default_enum::kCenter)
+        .add_enum("center", image_det_aug_default_enum::kCenter)
+        .add_enum("overlap", image_det_aug_default_enum::kOverlap)
+        .set_default(image_det_aug_default_enum::kCenter)
         .describe("Augmentation Param: Minimum scale ratio.");
     DMLC_DECLARE_FIELD(emit_overlap_thresh).set_default(0.5f)
         .describe("Augmentation Param: Minimum scale ratio.");
@@ -190,10 +190,10 @@ struct DefaultImageDetectionAugmentParam : public dmlc::Parameter<DefaultImageDe
   }
 };
 
-DMLC_REGISTER_PARAMETER(DefaultImageDetectionAugmentParam);
+DMLC_REGISTER_PARAMETER(DefaultImageDetAugmentParam);
 
-std::vector<dmlc::ParamFieldInfo> ListDefaultDetectionAugParams() {
-  return DefaultImageDetectionAugmentParam::__FIELDS__();
+std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
+  return DefaultImageDetAugmentParam::__FIELDS__();
 }
 
 #if MXNET_USE_OPENCV
@@ -224,9 +224,9 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetectionAugParams() {
 // };
 
 /*! \brief helper class for better detection label handling */
-class ImageDetectionLabel {
+class ImageDetLabel {
  public:
-   struct ImageDetectionObject {
+   struct ImageDetObject {
      float id;
      float left;
      float top;
@@ -237,8 +237,8 @@ class ImageDetectionLabel {
        return Rect(left, top, right - left, bottom - top);
      }
 
-     ImageDetectionObject Project(Rect box) const {
-       ImageDetectionObject ret = *this;
+     ImageDetObject Project(Rect box) const {
+       ImageDetObject ret = *this;
        ret.left = (ret.left - box.x) / box.width;
        ret.top = (ret.top - box.y) / box.height;
        ret.right = (ret.right - box.x) / box.width;
@@ -246,7 +246,7 @@ class ImageDetectionLabel {
        return ret;
      }
    };
-   explicit ImageDetectionLabel(std::vector<float> &raw_label) {
+   explicit ImageDetLabel(std::vector<float> &raw_label) {
      FromArray(raw_label);
    }
 
@@ -262,7 +262,7 @@ class ImageDetectionLabel {
      CHECK_EQ((label_width - header_width) % object_width_, 0);
      objects_.reserve(num);
      for (int i = header_width; i < label_width; i += object_width_) {
-       ImageDetectionObject obj;
+       ImageDetObject obj;
        obj.id = raw_label[i++];
        obj.left = raw_label[i++];
        obj.top = raw_label[i++];
@@ -305,7 +305,7 @@ class ImageDetectionLabel {
   //    return RectSize(a) + RectSize(b) - RectIntersect(a, b);
   //  }
    //
-   static float RectOverlap(Rect a, Rect b) {
+   static float RectIOU(Rect a, Rect b) {
      float intersect = (a & b).area();
      if (intersect <= 0.f) return 0.f;
      return intersect / (a.area() + b.area() - intersect);
@@ -327,7 +327,7 @@ class ImageDetectionLabel {
       for (auto& obj : objects_) {
         Rect gt_box = obj.ToRect();
         if (min_crop_overlap > 0.f || max_crop_overlap < 1.f) {
-          float ovp = RectOverlap(crop_box, gt_box);
+          float ovp = RectIOU(crop_box, gt_box);
           if (ovp < min_crop_overlap || ovp > max_crop_overlap) {
             continue;
           }
@@ -353,17 +353,17 @@ class ImageDetectionLabel {
 
     if (!valid) return false;
     // transform ground-truth labels
-    std::vector<ImageDetectionObject> new_objects;
+    std::vector<ImageDetObject> new_objects;
     for (auto iter = objects_.begin(); iter != objects_.end(); ++iter) {
-      if (image_detection_aug_default_enum::kCenter == crop_emit_mode) {
+      if (image_det_aug_default_enum::kCenter == crop_emit_mode) {
         float center_x = (iter->left + iter->right) * 0.5f;
         float center_y = (iter->top + iter->bottom) * 0.5f;
         if (!crop_box.contains(cv::Point2f(center_x, center_y))) {
           continue;
         }
         new_objects.push_back(iter->Project(crop_box));
-      } else if (image_detection_aug_default_enum::kOverlap == crop_emit_mode) {
-        float overlap = RectOverlap(crop_box, iter->ToRect());
+      } else if (image_det_aug_default_enum::kOverlap == crop_emit_mode) {
+        float overlap = RectIOU(crop_box, iter->ToRect());
         if (overlap > emit_overlap_thresh) {
           new_objects.push_back(iter->Project(crop_box));
         }
@@ -378,14 +378,14 @@ class ImageDetectionLabel {
    /*! \brief  */
    int object_width_;
    std::vector<float> header_;
-   std::vector<ImageDetectionObject> objects_;
-};  // class ImageDetectionLabel
+   std::vector<ImageDetObject> objects_;
+};  // class ImageDetLabel
 
 /*! \brief helper class to do image augmentation */
-class DefaultImageDetectionAugmenter : public ImageAugmenter {
+class DefaultImageDetAugmenter : public ImageAugmenter {
  public:
   // contructor
-  DefaultImageDetectionAugmenter() {
+  DefaultImageDetAugmenter() {
     rotateM_ = cv::Mat(2, 3, CV_32F);
   }
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -598,7 +598,7 @@ class DefaultImageDetectionAugmenter : public ImageAugmenter {
     // }
 
     // build a helper class for processing labels
-    ImageDetectionLabel det_label(label);
+    ImageDetLabel det_label(label);
 
     // random crop logic
     if (param_.rand_crop_prob > 0 && param_.num_crop_sampler > 0) {
@@ -674,7 +674,7 @@ class DefaultImageDetectionAugmenter : public ImageAugmenter {
   // rotation param
   cv::Mat rotateM_;
   // parameters
-  DefaultImageDetectionAugmentParam param_;
+  DefaultImageDetAugmentParam param_;
   /*! \brief list of possible rotate angle */
   std::vector<int> rotate_list_;
 };
@@ -683,10 +683,10 @@ class DefaultImageDetectionAugmenter : public ImageAugmenter {
 //   return dmlc::Registry<ImageAugmenterReg>::Find(name)->body();
 // }
 
-MXNET_REGISTER_IMAGE_AUGMENTER(detection_aug_default)
+MXNET_REGISTER_IMAGE_AUGMENTER(det_aug_default)
 .describe("default detection augmenter")
 .set_body([]() {
-    return new DefaultImageDetectionAugmenter();
+    return new DefaultImageDetAugmenter();
   });
 #endif  // MXNET_USE_OPENCV
 }  // namespace io
