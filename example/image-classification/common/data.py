@@ -99,7 +99,7 @@ def get_rec_iter(args, kv=None):
     else:
         (rank, nworker) = (0, 1)
     rgb_mean = [float(i) for i in args.rgb_mean.split(',')]
-    train = mx.io.ImageRecordIter(
+    train = mx.io.ImageRecordIter2(
         path_imgrec         = args.data_train,
         label_width         = 1,
         mean_r              = rgb_mean[0],
@@ -127,7 +127,7 @@ def get_rec_iter(args, kv=None):
         part_index          = rank)
     if args.data_val is None:
         return (train, None)
-    val = mx.io.ImageRecordIter(
+    val = mx.io.ImageRecordIter2(
         path_imgrec         = args.data_val,
         label_width         = 1,
         mean_r              = rgb_mean[0],

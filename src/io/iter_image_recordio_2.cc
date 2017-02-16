@@ -13,6 +13,7 @@
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
 #include <dmlc/common.h>
+#include <dmlc/timer.h>
 #include <type_traits>
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
@@ -41,9 +42,11 @@ class ImageRecordIOParser2 {
 
  private:
   inline void ParseChunk(dmlc::InputSplit::Blob * chunk);
+  inline void CreateMeanImg(void);
 
   // magic number to seed prng
   static const int kRandMagic = 111;
+  static const int kRandMagicNormalize = 0;
   /*! \brief parameters */
   ImageRecParserParam param_;
   ImageRecordParam record_param_;
@@ -74,6 +77,10 @@ class ImageRecordIOParser2 {
   bool overflow;
   /*! \brief unit size */
   std::vector<size_t> unit_size_;
+  /*! \brief mean image, if needed */
+  mshadow::TensorContainer<cpu, 3> meanimg_;
+  // whether mean image is ready.
+  bool meanfile_ready_;
 };
 
 template<typename DType>
@@ -154,6 +161,36 @@ inline void ImageRecordIOParser2<DType>::Init(
     // use 64 MB chunk when possible
     source_->HintChunkSize(8 << 20UL);
   }
+  //Normalize init
+  if (!std::is_same<DType, uint8_t>::value) {
+    meanimg_.set_pad(false);
+    if (normalize_param_.mean_img.length() != 0) {
+      std::unique_ptr<dmlc::Stream> fi(
+          dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "r", true));
+      if (fi.get() == nullptr) {
+        this->CreateMeanImg();
+      } else {
+        fi.reset(nullptr);
+        if (param_.verbose) {
+          LOG(INFO) << "Load mean image from " << normalize_param_.mean_img;
+        }
+        // use python compatible ndarray store format
+        std::vector<NDArray> data;
+        std::vector<std::string> keys;
+        {
+          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "r"));
+          NDArray::Load(fi.get(), &data, &keys);
+        }
+        CHECK_EQ(data.size(), 1)
+          << "Invalid mean image file format";
+        data[0].WaitToRead();
+        mshadow::Tensor<cpu, 3> src = data[0].data().get<cpu, 3, real_t>();
+        meanimg_.Resize(src.shape_);
+        mshadow::Copy(meanimg_, src);
+        meanfile_ready_ = true;
+      }
+    }
+  }
 #else
   LOG(FATAL) << "ImageRec need opencv to process";
 #endif
@@ -231,7 +268,7 @@ ParseNext(DataBatch *out) {
     }
 
     //Copy
-    #pragma omp parallel num_threads(param_.preprocess_threads)
+    #pragma omp parallel for num_threads(param_.preprocess_threads)
     for (unsigned i = 0; i < n_to_copy; ++i) {
       std::pair<unsigned, unsigned> place = inst_order_[inst_index_ + i];
       const DataInst& batch = temp_[place.first][place.second];
@@ -250,7 +287,7 @@ ParseNext(DataBatch *out) {
 }
 
 template<typename DType>
-void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk) {
+inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk) {
   temp_.resize(param_.preprocess_threads);
 #if MXNET_USE_OPENCV
   // save opencv out
@@ -303,17 +340,62 @@ void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk) {
       if (n_channels == 3) swap_indices = {2, 1, 0};
       if (n_channels == 4) swap_indices = {2, 1, 0, 3};
 
+      std::uniform_real_distribution<float> rand_uniform(0, 1);
+      std::bernoulli_distribution coin_flip(0.5);
+      bool is_mirrored = (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid]))) || normalize_param_.mirror;
       for (int i = 0; i < res.rows; ++i) {
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
+          DType RGBA[4];
+          for (int k = 0; k < n_channels; ++k) {
+            RGBA[k] = im_data[swap_indices[k]];
+          }
+          if (!std::is_same<DType, uint8_t>::value) {
+            // normalize/mirror here to avoid memory copies
+            // logic from iter_normalize.h, function SetOutImg
+            float contrast =
+              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2 - normalize_param_.max_random_contrast + 1;
+            float illumination =
+              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2 - normalize_param_.max_random_illumination;
+
+            if (normalize_param_.mean_r > 0.0f || normalize_param_.mean_g > 0.0f ||
+                normalize_param_.mean_b > 0.0f || normalize_param_.mean_a > 0.0f) {
+              // subtract mean per channel
+              RGBA[0] -= normalize_param_.mean_r;
+              if (n_channels >= 3) {
+                RGBA[1] -= normalize_param_.mean_g;
+                RGBA[2] -= normalize_param_.mean_b;
+              }
+              if (n_channels == 4) {
+                RGBA[3] -= normalize_param_.mean_a;
+              }
+              for (int k = 0; k < n_channels; ++k) {
+                RGBA[k] = (RGBA[k] * contrast + illumination) * normalize_param_.scale;
+              }
+            } else if (!meanfile_ready_ || normalize_param_.mean_img.length() == 0) {
+              // do not subtract anything
+              for (int k = 0; k < n_channels; ++k) {
+                RGBA[k] = RGBA[k] * normalize_param_.scale;
+              }
+            } else {
+              CHECK(meanfile_ready_);
+              for (int k = 0; k < n_channels; ++k) {
+                  RGBA[k] = ((RGBA[k] - meanimg_[k][i][j]) * contrast + illumination) * normalize_param_.scale;
+              }
+            }
+          }
           for (int k = 0; k < n_channels; ++k) {
             if (!std::is_same<DType, uint8_t>::value) {
-              // TODO(ptrendx): normalize/mirror here to avoid memory copies
-              // logic from iter_normalize
-              data[k][i][j] = im_data[swap_indices[k]];
+              // normalize/mirror here to avoid memory copies
+              // logic from iter_normalize.h, function SetOutImg
+              if(is_mirrored) {
+                data[k][i][res.cols - j - 1] = RGBA[k];
+              } else {
+                data[k][i][j] = RGBA[k];
+              }
             } else {
               // do not do normalization in Uint8 reader
-              data[k][i][j] = im_data[swap_indices[k]];
+              data[k][i][j] = RGBA[k];
             }
           }
           im_data += n_channels;
@@ -341,6 +423,14 @@ void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk) {
 #else
       LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
 #endif
+}
+
+// create mean image.
+// NOT IMPLEMENTED
+template<typename DType>
+inline void ImageRecordIOParser2<DType>::CreateMeanImg(void) {
+  LOG(FATAL) << "Cannot find " << normalize_param_.mean_img
+             << ": creating mean image from data is not yet supported";
 }
 
 template<typename DType = real_t>
