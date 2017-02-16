@@ -1,6 +1,27 @@
 use ExtUtils::MakeMaker;
 `swig -noproxy -c++ -perl nnvm.i`;
 unlink "NNVMCAPI.pm";
+my @tmp = split(/ /, $ExtUtils::MakeMaker::Config{lddlflags});
+my @lddlflags;
+while(my $flag = shift(@tmp))
+{
+   if($flag eq '-arch')
+   {
+      my $arch = shift(@tmp);
+      if($arch eq 'i386')
+      {
+         next;
+      }
+      else
+      {
+         push @lddlflags, ($flag, $arch);
+      }
+   }
+   else
+   {
+      push @lddlflags, $flag;
+   }
+}
 
 WriteMakefile(
     NAME            => 'AI::NNVMCAPI',
@@ -11,6 +32,7 @@ WriteMakefile(
     LIBS           => ['-L../../lib -lmxnet'],
     INC            => '-I../../nnvm/include/nnvm',
     OBJECT         => 'nnvm_wrap.o',
+    LDDLFLAGS      => join(' ', @lddlflags),
     PREREQ_PM      => {
         # prereqs
         # build/test prereqs

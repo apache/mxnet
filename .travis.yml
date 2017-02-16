@@ -26,6 +26,10 @@ matrix:
     - os: linux
       dist: trusty
       env: TASK=perl_test
+    - os: osx
+      osx_image: xcode8.2
+      sudo: required
+      env: TASK=perl_test
 #       env: TASK=julia JULIA_VER=0.4
 #     - os: linux
 #       env: TASK=build
