@@ -190,13 +190,11 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
       // Request temporary storage
       size_t workspace_size_l = ReduceWorkspaceSize<red::sum, DType, LOP>(s, lhs, req[0], out);
       size_t workspace_size_r = ReduceWorkspaceSize<red::sum, DType, ROP>(s, rhs, req[1], out);
-      size_t workspace_size = workspace_size_l + workspace_size_r;
+      size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
       Tensor<xpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      Tensor<xpu, 1, char> workspace_l(&workspace[0], Shape1(workspace_size_l), s);
-      Tensor<xpu, 1, char> workspace_r(&workspace[workspace_size_l], Shape1(workspace_size_r), s);
-      Reduce<red::sum, DType, LOP>(s, lhs, req[0], out, workspace_l);
-      Reduce<red::sum, DType, ROP>(s, rhs, req[1], out, workspace_r);
+      Reduce<red::sum, DType, LOP>(s, lhs, req[0], out, workspace);
+      Reduce<red::sum, DType, ROP>(s, rhs, req[1], out, workspace);
     });
   }
 }
