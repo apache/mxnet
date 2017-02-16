@@ -2,8 +2,6 @@
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
 #include <mxnet/storage.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
 
 extern bool unitTestsWithCuda;
 
