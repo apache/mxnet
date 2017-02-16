@@ -28,7 +28,7 @@ struct where {
   template<typename DType, typename CType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
                                   const DType* x, const DType* y) {
-    ASSIGN_DISPATCH(out[i], req, (0 != cond[i]? x[i] : y[i]));
+    KERNEL_ASSIGN(out[i], req, (0 != cond[i]? x[i] : y[i]));
   }
 };
 
@@ -45,7 +45,7 @@ struct where_batch {
   template<typename DType, typename CType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
                                   const DType* x, const DType* y, int M) {
-    ASSIGN_DISPATCH(out[i], req, (0 != cond[i/M]? x[i] : y[i]));
+    KERNEL_ASSIGN(out[i], req, (0 != cond[i/M]? x[i] : y[i]));
   }
 };
 
@@ -63,7 +63,7 @@ struct where_backward {
   MSHADOW_XINLINE static void Map(int i, DType* grad_out,
                                   const DType* grad_in,
                                   const CType* cond) {
-    ASSIGN_DISPATCH(grad_out[i], req,
+    KERNEL_ASSIGN(grad_out[i], req,
       ((0 == cond[i])^negate)? grad_in[i] : static_cast<DType>(0));
   }
 };
@@ -84,7 +84,7 @@ struct where_batch_backward {
   MSHADOW_XINLINE static void Map(int i, DType* grad_out,
                                   const DType* grad_in,
                                   const CType* cond, int M) {
-    ASSIGN_DISPATCH(grad_out[i], req,
+    KERNEL_ASSIGN(grad_out[i], req,
       ((0 == cond[i/M])^negate)? grad_in[i] : static_cast<DType>(0));
   }
 };
@@ -165,7 +165,7 @@ void WhereOpForward(const nnvm::NodeAttrs& attrs,
   if (out.Size() == 0) return;
   MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
-      MXNET_OP_REQ_TYPE_SWITCH(req[0], req_type, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         if (cond.shape_ == x.shape_) {
           Kernel<where<req_type>, xpu>::Launch(s, out.Size(), out.dptr<DType>(),
                                                cond.dptr<CType>(), x.dptr<DType>(),
@@ -210,7 +210,7 @@ void WhereOpBackward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(grad_in.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(cond.type_flag_, CType, {
       bool same_shape = (cond.shape_ == grad_in.shape_);
-      MXNET_OP_REQ_TYPE_SWITCH(req[0], req_type_x, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type_x, {
         if (same_shape) {
           Kernel<where_backward<req_type_x, true>, xpu>::Launch(s, grad_in.Size(),
             grad_x.dptr<DType>(), grad_in.dptr<DType>(), cond.dptr<CType>());
@@ -220,7 +220,7 @@ void WhereOpBackward(const nnvm::NodeAttrs& attrs,
             grad_in.Size()/cond.Size());
         }
       });
-      MXNET_OP_REQ_TYPE_SWITCH(req[1], req_type_y, {
+      MXNET_ASSIGN_REQ_SWITCH(req[1], req_type_y, {
         if (same_shape) {
           Kernel<where_backward<req_type_y, false>, xpu>::Launch(s, grad_in.Size(),
             grad_y.dptr<DType>(), grad_in.dptr<DType>(), cond.dptr<CType>());

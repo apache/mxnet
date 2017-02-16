@@ -36,37 +36,6 @@ enum OpReqType {
   kAddTo
 };
 
-/*! \brief operator request type switch */
-#define MXNET_OP_REQ_TYPE_SWITCH(req, ReqType, ...) \
-  switch (req) {                                    \
-  case kNullOp:                                     \
-    {                                               \
-      const int ReqType = kNullOp;                  \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  case kWriteTo:                                    \
-    {                                               \
-      const int ReqType = kWriteTo;                 \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  case kWriteInplace:                               \
-    {                                               \
-      const int ReqType = kWriteInplace;            \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  case kAddTo:                                      \
-    {                                               \
-      const int ReqType = kAddTo;                   \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
-  default:                                          \
-    LOG(FATAL) << "Unknown OpReqType enum " << req; \
-  }
-
 /*!
  * \brief All the possible information needed by Operator.Forward and Backward
  *  This is the superset of RunContext.

@@ -475,7 +475,7 @@ struct batch_take {
     int j = idx[i];
     if (j < 0) j = 0;
     else if (j >= M) j = M-1;
-    ASSIGN_DISPATCH(out[i], req, a[i*M+j]);
+    KERNEL_ASSIGN(out[i], req, a[i*M+j]);
   }
 };
 
@@ -491,7 +491,7 @@ void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    MXNET_OP_REQ_TYPE_SWITCH(req[0], req_type, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<batch_take<req_type>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
                                                 inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
                                                 inputs[0].Size()/inputs[0].shape_[0]);
@@ -585,7 +585,7 @@ struct one_hot {
     int offset = i * depth;
     int j = indices[i];
     if (j >= 0 && j < depth) {
-      ASSIGN_DISPATCH(out[offset+j], req, on_value);
+      KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
   }
 };
@@ -614,7 +614,7 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req[0], static_cast<DType>(off_value));
-    MXNET_OP_REQ_TYPE_SWITCH(req[0], req_type, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<one_hot<req_type>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
                                              inputs[0].dptr<int>(), depth,
                                              static_cast<DType>(on_value));
