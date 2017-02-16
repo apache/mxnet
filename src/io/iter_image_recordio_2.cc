@@ -161,7 +161,7 @@ inline void ImageRecordIOParser2<DType>::Init(
     // use 64 MB chunk when possible
     source_->HintChunkSize(8 << 20UL);
   }
-  //Normalize init
+  // Normalize init
   if (!std::is_same<DType, uint8_t>::value) {
     meanimg_.set_pad(false);
     if (normalize_param_.mean_img.length() != 0) {
@@ -178,7 +178,8 @@ inline void ImageRecordIOParser2<DType>::Init(
         std::vector<NDArray> data;
         std::vector<std::string> keys;
         {
-          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "r"));
+          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(normalize_param_.mean_img.c_str(),
+                                                                "r"));
           NDArray::Load(fi.get(), &data, &keys);
         }
         CHECK_EQ(data.size(), 1)
@@ -243,7 +244,7 @@ ParseNext(DataBatch *out) {
       n_parsed_ -= n_to_copy;
     }
 
-    //InitBatch
+    // InitBatch
     if (out->data.size() == 0 && n_to_copy != 0) {
       std::pair<unsigned, unsigned> place = inst_order_[inst_index_];
       const DataInst& first_batch = temp_[place.first][place.second];
@@ -267,7 +268,7 @@ ParseNext(DataBatch *out) {
       }
     }
 
-    //Copy
+    // Copy
     #pragma omp parallel for num_threads(param_.preprocess_threads)
     for (unsigned i = 0; i < n_to_copy; ++i) {
       std::pair<unsigned, unsigned> place = inst_order_[inst_index_ + i];
@@ -342,7 +343,8 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
 
       std::uniform_real_distribution<float> rand_uniform(0, 1);
       std::bernoulli_distribution coin_flip(0.5);
-      bool is_mirrored = (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid]))) || normalize_param_.mirror;
+      bool is_mirrored = (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid])))
+                         || normalize_param_.mirror;
       for (int i = 0; i < res.rows; ++i) {
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
@@ -354,9 +356,11 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
             // normalize/mirror here to avoid memory copies
             // logic from iter_normalize.h, function SetOutImg
             float contrast =
-              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2 - normalize_param_.max_random_contrast + 1;
+              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2
+              - normalize_param_.max_random_contrast + 1;
             float illumination =
-              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2 - normalize_param_.max_random_illumination;
+              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
+              - normalize_param_.max_random_illumination;
 
             if (normalize_param_.mean_r > 0.0f || normalize_param_.mean_g > 0.0f ||
                 normalize_param_.mean_b > 0.0f || normalize_param_.mean_a > 0.0f) {
@@ -380,7 +384,8 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
             } else {
               CHECK(meanfile_ready_);
               for (int k = 0; k < n_channels; ++k) {
-                  RGBA[k] = ((RGBA[k] - meanimg_[k][i][j]) * contrast + illumination) * normalize_param_.scale;
+                  RGBA[k] = ((RGBA[k] - meanimg_[k][i][j]) * contrast + illumination) *
+                    normalize_param_.scale;
               }
             }
           }
@@ -388,7 +393,7 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
             if (!std::is_same<DType, uint8_t>::value) {
               // normalize/mirror here to avoid memory copies
               // logic from iter_normalize.h, function SetOutImg
-              if(is_mirrored) {
+              if (is_mirrored) {
                 data[k][i][res.cols - j - 1] = RGBA[k];
               } else {
                 data[k][i][j] = RGBA[k];
