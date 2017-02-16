@@ -153,32 +153,18 @@ if [ ${TASK} == "perl_test" ]; then
     ln -s ${CACHE_PREFIX}/data ${MXNET_HOME}/perl-package/AI-MXNet/data
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-       sudo sh -c 'curl -L https://cpanmin.us | perl - App::cpanminus'
-       sudo cpanm -q -n -f --installdeps PDL Mouse Function::Parameters || true
-       sudo cpanm -q -n -f PDL Mouse Function::Parameters || true
+        export DYLD_LIBRARY_PATH=${MXNET_HOME}
+    else
+        export LD_LIBRARY_PATH=${MXNET_HOME}/lib
     fi
-
-    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
     export PERL5LIB=${HOME}/perl5/lib/perl5
 
     cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
     perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make || exit -1
-    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-        install_name_tool -change lib/libmxnet.so \
-            ${MXNET_HOME}/lib/libmxnet.so \
-            blib/arch/auto/AI/MXNetCAPI/MXNetCAPI.bundle 
-    fi
     make install || exit -1
 
     cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
     perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make || exit -1
-    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-        install_name_tool -change lib/libmxnet.so \
-            ${MXNET_HOME}/lib/libmxnet.so \
-            blib/arch/auto/AI/NNVMCAPI/NNVMCAPI.bundle 
-    fi
     make install || exit -1
 
     cd ${MXNET_HOME}/perl-package/AI-MXNet/
