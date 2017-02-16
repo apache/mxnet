@@ -345,6 +345,16 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
       std::bernoulli_distribution coin_flip(0.5);
       bool is_mirrored = (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid])))
                          || normalize_param_.mirror;
+      float contrast_scaled;
+      float illumination_scaled;
+      if (!std::is_same<DType, uint8_t>::value) {
+        contrast_scaled =
+          (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2
+          - normalize_param_.max_random_contrast + 1)*normalize_param_.scale;
+        illumination_scaled =
+          (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
+          - normalize_param_.max_random_illumination) * normalize_param_.scale;
+      }
       for (int i = 0; i < res.rows; ++i) {
         uchar* im_data = res.ptr<uchar>(i);
         for (int j = 0; j < res.cols; ++j) {
@@ -355,12 +365,6 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
           if (!std::is_same<DType, uint8_t>::value) {
             // normalize/mirror here to avoid memory copies
             // logic from iter_normalize.h, function SetOutImg
-            float contrast =
-              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2
-              - normalize_param_.max_random_contrast + 1;
-            float illumination =
-              rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
-              - normalize_param_.max_random_illumination;
 
             if (normalize_param_.mean_r > 0.0f || normalize_param_.mean_g > 0.0f ||
                 normalize_param_.mean_b > 0.0f || normalize_param_.mean_a > 0.0f) {
@@ -374,7 +378,7 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
                 RGBA[3] -= normalize_param_.mean_a;
               }
               for (int k = 0; k < n_channels; ++k) {
-                RGBA[k] = (RGBA[k] * contrast + illumination) * normalize_param_.scale;
+                RGBA[k] = RGBA[k] * contrast_scaled + illumination_scaled;
               }
             } else if (!meanfile_ready_ || normalize_param_.mean_img.length() == 0) {
               // do not subtract anything
@@ -384,8 +388,7 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
             } else {
               CHECK(meanfile_ready_);
               for (int k = 0; k < n_channels; ++k) {
-                  RGBA[k] = ((RGBA[k] - meanimg_[k][i][j]) * contrast + illumination) *
-                    normalize_param_.scale;
+                  RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * contrast_scaled + illumination_scaled;
               }
             }
           }
@@ -515,5 +518,15 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter2)
     return new ImageRecordIter2<real_t>();
     });
 
+MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter2)
+.describe("Create iterator for dataset packed in recordio.")
+.add_arguments(ImageRecParserParam::__FIELDS__())
+.add_arguments(ImageRecordParam::__FIELDS__())
+.add_arguments(BatchParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.add_arguments(ListDefaultAugParams())
+.set_body([]() {
+    return new ImageRecordIter2<uint8_t>();
+  });
 }  // namespace io
 }  // namespace mxnet
