@@ -96,39 +96,21 @@ inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
     << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
   CHECK_EQ(out_attrs->size(), 1);
 
-  // condition shape
-  const TShape& cshape = (*in_attrs)[0];
-  // x shape
-  const TShape& xshape = (*in_attrs)[1];
-  // y shape
-  const TShape& yshape = (*in_attrs)[2];
+  TShape tshape((*in_attrs)[1]);
+  if (!shape_assign(&tshape, (*in_attrs)[2])) return false;
+  if (!shape_assign(&tshape, (*out_attrs)[0])) return false;
+  SHAPE_ASSIGN_CHECK(*in_attrs, 1, tshape);
+  SHAPE_ASSIGN_CHECK(*in_attrs, 2, tshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
 
-  CHECK_EQ(xshape, yshape) << "x must have the same shape as y";
-  CHECK_LE(cshape.ndim(), xshape.ndim())
-    << "condition's dimension=" << cshape.ndim()
-    << " cannot be greater than x's dimension=" << xshape.ndim();
-
-  // handle 0-dim arrays
-  if (cshape.ndim() == 0 && xshape.ndim() == 0) {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape());
+  if ((*in_attrs)[0].ndim() == tshape.ndim()) {
+    if (!shape_assign(&tshape, (*in_attrs)[0])) return false;
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, tshape);
     return true;
+  } else if ((*in_attrs)[0].ndim() == 1) {
+    return (*in_attrs)[0].Size() == tshape[0];
   }
-
-  // condition, x, and y cannot be 0-dim arrays
-  // if the program has reached here
-  CHECK_GT(cshape.ndim(), 0) << "condition array cannot be 0-dim if x is not 0-dim";
-  CHECK_GT(xshape.ndim(), 0) << "x array cannot 0-dim if condition is not 0-dim";
-
-  // condition and x have the same shape
-  if (cshape.ndim() == xshape.ndim()) {
-    CHECK_EQ(cshape, xshape) << "condition and x have the same dimension but different shapes";
-  } else {
-    CHECK_EQ(cshape.ndim(), 1) << "condition must either have the same shape as x or be a vector";
-    CHECK_EQ(cshape[0], xshape[0]) << "condition's first dim size ("
-      << cshape[0] << ") must be equal to x's first dim size (" << xshape[0] << ")";
-  }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, xshape);
-  return true;
+  return false;
 }
 
 inline bool WhereOpType(const nnvm::NodeAttrs& attrs,
@@ -138,12 +120,16 @@ inline bool WhereOpType(const nnvm::NodeAttrs& attrs,
     << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
   CHECK_EQ(out_attrs->size(), 1);
 
-  std::vector<int> in_attrs_xy = {(*in_attrs)[1], (*in_attrs)[2]};
-  if (!ElemwiseType<2, 1>(attrs, &in_attrs_xy, out_attrs)) {
-    return false;
-  }
-  (*in_attrs)[1] = in_attrs_xy[0];
-  (*in_attrs)[2] = in_attrs_xy[1];
+  int dtype = -1;
+  if (!type_assign(&dtype, (*in_attrs)[1])) return false;
+  if (!type_assign(&dtype, (*in_attrs)[2])) return false;
+  if (!type_assign(&dtype, (*out_attrs)[0])) return false;
+  if (-1 == dtype) return false;
+
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, dtype);
+  TYPE_ASSIGN_CHECK(*in_attrs, 2, dtype);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);
+
   return true;
 }
 
