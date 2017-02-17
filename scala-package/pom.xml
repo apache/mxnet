@@ -45,12 +45,6 @@
       <organization>DMLC</organization>
       <organizationUrl>http://dmlc.ml</organizationUrl>
     </developer>
-    <developer>
-      <name>Chris Olivier</name>
-      <email>cjolivier01@gmail.com</email>
-      <organization>AmazonAI</organization>
-      <organizationUrl>https://aws.amazon.com/amazon-ai</organizationUrl>
-    </developer>
   </developers>
 
   <properties>

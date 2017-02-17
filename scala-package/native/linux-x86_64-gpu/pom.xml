@@ -55,23 +55,24 @@
           </sources>
           <compilerStartOptions>
             <compilerStartOption>-std=c++0x</compilerStartOption>
-            <linkerStartOption>-fPIC</linkerStartOption>
-            <linkerStartOption>-g</linkerStartOption>
+            <compilerStartOption>-fPIC</compilerStartOption>
+            <compilerStartOption>-g</compilerStartOption>
+            <compilerStartOption>-O2</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
+            <compilerEndOption>-I../../../include</compilerEndOption>
             <compilerEndOption>${all_includes}</compilerEndOption>
             <compilerEndOption>${cflags}</compilerEndOption>
-            <!-- <compilerEndOption>-DMSHADOW_USE_CBLAS=1</compilerEndOption> -->
-            <!-- <compilerEndOption>-DMSHADOW_USE_MKL=0</compilerEndOption> -->
-            <compilerEndOption>-D__USE_XOPEN2K8</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
+            <linkerStartOption>-fPIC</linkerStartOption>
+            <linkerStartOption>-g</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>${all_ldpaths}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
-            <!-- <linkerMiddleOption>${lddeps}</linkerMiddleOption> -->
+            <linkerMiddleOption>${lddeps}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
             <linkerMiddleOption>-lmxnet</linkerMiddleOption>
             <linkerMiddleOption>-ldmlccore</linkerMiddleOption>

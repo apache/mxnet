@@ -59,8 +59,10 @@
             <compilerStartOption>-std=c++0x</compilerStartOption>
             <compilerStartOption>-fPIC</compilerStartOption>
             <compilerStartOption>-g</compilerStartOption>
+            <compilerStartOption>-O2</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
+            <compilerEndOption>-I../../../include</compilerEndOption>
             <compilerEndOption>${all_includes}</compilerEndOption>
             <compilerEndOption>${cflags}</compilerEndOption>
           </compilerEndOptions>
@@ -72,7 +74,7 @@
           <linkerMiddleOptions>
             <linkerMiddleOption>${all_ldpaths}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
-            <!-- <linkerMiddleOption>${lddeps}</linkerMiddleOption> -->
+             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
             <linkerMiddleOption>-lmxnet</linkerMiddleOption>
             <linkerMiddleOption>-ldmlccore</linkerMiddleOption>
@@ -82,7 +84,6 @@
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>
             <linkerEndOption>-fopenmp</linkerEndOption>
-            <!-- <linkerEndOption>${all_linklibs}</linkerEndOption> -->
           </linkerEndOptions>
         </configuration>
 
