@@ -565,6 +565,93 @@ class ImageDetRecordIOParser : public ImageRecordIOParser<DType> {
 template<typename DType>
 inline bool ImageDetRecordIOParser<DType>::
 ParseNext(std::vector<InstVector<DType>> *out_vec) {
+  CHECK(source_ != nullptr);
+  dmlc::InputSplit::Blob chunk;
+  if (!source_->NextChunk(&chunk)) return false;
+#if MXNET_USE_OPENCV
+  // save opencv out
+  out_vec->resize(param_.preprocess_threads);
+  #pragma omp parallel num_threads(param_.preprocess_threads)
+  {
+    CHECK(omp_get_num_threads() == param_.preprocess_threads);
+    int tid = omp_get_thread_num();
+    dmlc::RecordIOChunkReader reader(chunk, tid, param_.preprocess_threads);
+    ImageRecordIO rec;
+    dmlc::InputSplit::Blob blob;
+    // image data
+    InstVector<DType> &out = (*out_vec)[tid];
+    out.Clear();
+    while (reader.NextRecord(&blob)) {
+      // Opencv decode and augments
+      cv::Mat res;
+      rec.Load(blob.dptr, blob.size);
+      cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
+      switch (param_.data_shape[0]) {
+       case 1:
+        res = cv::imdecode(buf, 0);
+        break;
+       case 3:
+        res = cv::imdecode(buf, 1);
+        break;
+       case 4:
+        // -1 to keep the number of channel of the encoded image, and not force gray or color.
+        res = cv::imdecode(buf, -1);
+        CHECK_EQ(res.channels(), 4)
+          << "Invalid image with index " << rec.image_index()
+          << ". Expected 4 channels, got " << res.channels();
+        break;
+       default:
+        LOG(FATAL) << "Invalid output shape " << param_.data_shape;
+      }
+      const int n_channels = res.channels();
+      std::vector<float> empty_label;
+      for (auto& aug : augmenters_[tid]) {
+        res = aug->Process(res, empty_label, prnds_[tid].get());
+      }
+      out.Push(static_cast<unsigned>(rec.image_index()),
+               mshadow::Shape3(n_channels, res.rows, res.cols),
+               mshadow::Shape1(param_.label_width));
+
+      mshadow::Tensor<cpu, 3, DType> data = out.data().Back();
+
+      // For RGB or RGBA data, swap the B and R channel:
+      // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
+      std::vector<int> swap_indices;
+      if (n_channels == 1) swap_indices = {0};
+      if (n_channels == 3) swap_indices = {2, 1, 0};
+      if (n_channels == 4) swap_indices = {2, 1, 0, 3};
+
+      for (int i = 0; i < res.rows; ++i) {
+        uchar* im_data = res.ptr<uchar>(i);
+        for (int j = 0; j < res.cols; ++j) {
+          for (int k = 0; k < n_channels; ++k) {
+              data[k][i][j] = im_data[swap_indices[k]];
+          }
+          im_data += n_channels;
+        }
+      }
+
+      mshadow::Tensor<cpu, 1> label = out.label().Back();
+      if (label_map_ != nullptr) {
+        mshadow::Copy(label, label_map_->Find(rec.image_index()));
+      } else if (rec.label != NULL) {
+        CHECK_EQ(param_.label_width, rec.num_label)
+          << "rec file provide " << rec.num_label << "-dimensional label "
+             "but label_width is set to " << param_.label_width;
+        mshadow::Copy(label, mshadow::Tensor<cpu, 1>(rec.label,
+                                                     mshadow::Shape1(rec.num_label)));
+      } else {
+        CHECK_EQ(param_.label_width, 1)
+          << "label_width must be 1 unless an imglist is provided "
+             "or the rec file is packed with multi dimensional label";
+        label[0] = rec.header.label;
+      }
+      res.release();
+    }
+  }
+#else
+      LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
+#endif
   return true;
 }
 
@@ -572,6 +659,49 @@ template<typename DType = real_t>
 class ImageDetRecordIter : public ImageRecordIter<DType> {
 private:
   ImageDetRecordIOParser<DType> parser_;
+};
+
+class BatchLoaderModifier : public IIterator<TBlobBatch> {
+ public:
+  explicit BatchLoaderModifier(IIterator<TBlobBatch> *base):
+      base_(base) {
+  }
+
+  virtual ~BatchLoaderModifier(void) {
+    delete base_;
+  }
+
+  inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    std::string kw("batch_size");
+    std::vector<std::pair<std::string, std::string> > new_kwargs(kwargs);
+    bool found = false;
+    for (auto iter = new_kwargs.begin(); iter != new_kwargs.end(); ++iter) {
+      if (iter->first.compare(kw) == 0) {
+        iter->second = "1";
+        found = true;
+      }
+    }
+    if (!found) {
+      new_kwargs.push_back(std::pair<std::string, std::string>(kw, "1"));
+    }
+    base_->Init(new_kwargs);
+  }
+
+  virtual void BeforeFirst(void) {
+    base_->BeforeFirst();
+  }
+
+  virtual bool Next(void) {
+    return base_->Next();
+  }
+
+  virtual const TBlobBatch &Value(void) const {
+    return base_->Value();
+  }
+
+ private:
+  /*! \brief base iterator */
+  IIterator<TBlobBatch> *base_;
 };
 
 DMLC_REGISTER_PARAMETER(ImageDetRecParserParam);
@@ -584,8 +714,9 @@ MXNET_REGISTER_IO_ITER(ImageDetRecordIter)
 .add_arguments(ListDefaultDetAugParams())
 .set_body([]() {
   return new PrefetcherIter(
-      new BatchLoader(
-        new ImageDetRecordIter<real_t>()));
+      new BatchLoaderModifier(
+        new BatchLoader(
+          new ImageDetRecordIter<real_t>())));
 });
 }  // namespace io
 }  // namespace mxnet
