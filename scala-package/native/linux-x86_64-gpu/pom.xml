@@ -61,8 +61,9 @@
           <compilerEndOptions>
             <compilerEndOption>${all_includes}</compilerEndOption>
             <compilerEndOption>${cflags}</compilerEndOption>
-            <compilerEndOption>-DMSHADOW_USE_CBLAS=1</compilerEndOption>
-            <compilerEndOption>-DMSHADOW_USE_MKL=0</compilerEndOption>
+            <!-- <compilerEndOption>-DMSHADOW_USE_CBLAS=1</compilerEndOption> -->
+            <!-- <compilerEndOption>-DMSHADOW_USE_MKL=0</compilerEndOption> -->
+            <compilerEndOption>-D__USE_XOPEN2K8</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
