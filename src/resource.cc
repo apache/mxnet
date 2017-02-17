@@ -53,7 +53,7 @@ struct SpaceAllocator {
 
   inline void* GetHostSpace(size_t size) {
     if (host_handle.size >= size) return host_handle.dptr;
-    if (handle.size != 0) {
+    if (host_handle.size != 0) {
       Storage::Get()->DirectFree(host_handle);
     }
     host_handle = Storage::Get()->Alloc(size, Context());
