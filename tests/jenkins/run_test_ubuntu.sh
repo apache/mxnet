@@ -11,26 +11,6 @@ echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 user=`id -u -n`
 make -j$(nproc) || exit 1
 
-echo "BUILD python2 mxnet"
-cd python
-if [ $user == 'root' ]
-then
-    python setup.py install || exit 1
-else
-    python setup.py install --prefix ~/.local || exit 1
-fi
-cd ..
-
-echo "BUILD python3 mxnet"
-cd python
-if [ $user == 'root' ]
-then
-    python3 setup.py install || exit 1
-else
-    python3 setup.py install --prefix ~/.local || exit 1
-fi
-cd ..
-
 echo "BUILD lint"
 make lint || exit 1
 
@@ -41,6 +21,7 @@ export MXNET_ENGINE_INFO=true
 #    ./$test || exit 1
 #done
 export MXNET_ENGINE_INFO=false
+export PYTHONPATH=${PWD}/python
 
 echo "BUILD python_test"
 nosetests --verbose tests/python/unittest || exit 1
