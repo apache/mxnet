@@ -26,7 +26,9 @@ package.DeepMXNet = {
       C-ares = 1.x;
       CFlagsGCC = 4.9.x;
       GCC = 4.9.x;
-      
+
+      DeepOpenCV = 2.4.x;
+
       # Scala build
       JDK8 = 1.0;
       Maven = 3.0;
@@ -46,10 +48,10 @@ package.DeepMXNet = {
       Cuda = 7.x;
       C-ares = 1.x;
       DeepCudnn = 5.x;
-#     DeepOpenCV = 2.4.x;
       DeepNNVM = 0.9;
       DeepMKL = 1.0;
       CUB = 1.6;
+      DeepOpenCV = 2.4.x;
     };
   };
 
