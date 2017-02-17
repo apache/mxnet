@@ -2,8 +2,8 @@ package.DeepMXNet = {
   interfaces = (0.9);
 
   #build-system = brazilcmake;
-  build-system = bmvn;
-  ##build-system = build-chain;
+  #build-system = bmvn;
+  build-system = build-chain;
 
   build-environment = {
     chroot = basic;
