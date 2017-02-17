@@ -78,7 +78,7 @@
             <linkerMiddleOption>-lmxnet</linkerMiddleOption>
             <linkerMiddleOption>-ldmlccore</linkerMiddleOption>
             <linkerMiddleOption>-lnnvm</linkerMiddleOption>
-            <linkerMiddleOption>${all_linklibs}</linkerMiddleOption>
+            <!-- <linkerMiddleOption>${all_linklibs}</linkerMiddleOption> -->
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>
