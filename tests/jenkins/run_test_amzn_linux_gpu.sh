@@ -36,9 +36,9 @@ echo "BUILD python3_test"
 nosetests3 --verbose tests/python/unittest || exit -1
 nosetests3 --verbose tests/python/train || exit -1
 
-echo "BUILD julia_test"
-export MXNET_HOME="${PWD}"
-julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+#echo "BUILD julia_test"
+#export MXNET_HOME="${PWD}"
+#julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
 
 echo "BUILD scala_test"
 make scalapkg || exit -1
