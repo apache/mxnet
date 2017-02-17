@@ -2,7 +2,7 @@
 
 This tutorial is based of Yoon Kim's [paper](https://arxiv.org/abs/1408.5882) on using convolutional neural networks for sentence sentiment classification.
 
-For this tutorial, we will train a convolutional deep network model on Rotten Tomatoes movie review sentences labeled with their sentiment. The result will be a model that can classify a sentence based on it's sentiment (with 1 being a purely positive sentiment, 0 being a purely negative sentiment and 0.5 being neutral).
+For this tutorial, we will train a convolutional deep network model on movie review sentences from Rotten Tomatoes labeled with their sentiment. The result will be a model that can classify a sentence based on its sentiment (with 1 being a purely positive sentiment, 0 being a purely negative sentiment and 0.5 being neutral).
 
 Our first step will be to fetch the labeled training data of positive and negative sentiment sentences and process it into sets of vectors that are then randomly split into train and test sets.
 
@@ -39,10 +39,10 @@ def load_data_and_labels():
     Loads MR polarity data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
-    # Pull scentences with positive sentiment
+    # Pull sentences with positive sentiment
     pos_file = urllib2.urlopen('https://raw.githubusercontent.com/yoonkim/CNN_sentence/master/rt-polarity.pos')
 
-    # Pull scentences with negative sentiment
+    # Pull sentences with negative sentiment
     neg_file = urllib2.urlopen('https://raw.githubusercontent.com/yoonkim/CNN_sentence/master/rt-polarity.neg')
 
     # Load data from files
@@ -117,7 +117,7 @@ x_shuffled = x[shuffle_indices]
 y_shuffled = y[shuffle_indices]
 
 # split train/dev set
-# there are a total of 10662 labled examples to train on
+# there are a total of 10662 labeled examples to train on
 x_train, x_dev = x_shuffled[:-1000], x_shuffled[-1000:]
 y_train, y_dev = y_shuffled[:-1000], y_shuffled[-1000:]
 

@@ -8,7 +8,7 @@ Make sure you have the root permission, and `yum` is properly installed. Check i
 ```bash
 sudo yum check-update 
 ```
-If you don't get a error message, then `yum` is installed.
+If you don't get an error message, then `yum` is installed.
 
 **To install MXNet on CentOS, you must have the following:**
 
@@ -95,7 +95,7 @@ After installing the dependencies, use the following command to pull the MXNet s
     # Move to source code parent directory
     cd ~/mxnet
     cp make/config.mk .
-    # Repalce this line if you use other BLAS libs
+    # Replace this line if you use other BLAS libs
     echo "USE_BLAS=openblas" >>config.mk
     echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
     echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk

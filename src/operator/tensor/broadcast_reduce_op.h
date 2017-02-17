@@ -244,26 +244,14 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename reducer, bool normalize = false>
-void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
+void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs,
+                           const TShape& small) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  TShape small;
-  if (!param.keepdims) {
-    if (param.axis.ndim() == 0) {
-      small = TShape(inputs[0].shape_.ndim());
-    } else {
-      small = inputs[0].shape_;
-      for (index_t i = 0; i < param.axis.ndim(); ++i)
-        small[param.axis[i]] = 1;
-    }
-  } else {
-    small = outputs[0].shape_;
-  }
 
   TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
@@ -286,6 +274,31 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
       if (normalize) out /= scalar<DType>(src_shape.Size()/dst_shape.Size());
     }
   });
+}
+
+template<typename xpu, typename reducer, bool normalize = false>
+void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  // using namespace mshadow;
+  // using namespace mshadow::expr;
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (!param.keepdims) {
+    if (param.axis.ndim() == 0) {
+      small = TShape(inputs[0].shape_.ndim());
+    } else {
+      small = inputs[0].shape_;
+      for (index_t i = 0; i < param.axis.ndim(); ++i)
+        small[param.axis[i]] = 1;
+    }
+  } else {
+    small = outputs[0].shape_;
+  }
+
+  ReduceAxesComputeImpl<xpu, reducer, normalize>(attrs, ctx, inputs, req, outputs, small);
 }
 
 // works when shape inference of output is given

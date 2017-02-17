@@ -48,6 +48,10 @@ class Symbol(SymbolBase):
         return '<%s %s>' % (self.__class__.__name__,
                             'Grouped' if name is None else name)
 
+    def __iter__(self):
+        """Return all outputs in a list"""
+        return (self[i] for i in self.list_outputs())
+
     def __add__(self, other):
         if isinstance(other, Symbol):
             return _internal._Plus(self, other)
@@ -759,7 +763,9 @@ class Symbol(SymbolBase):
         """
         # pylint: disable=too-many-locals
         if type_dict is None:
-            type_dict = {k: mx_real_t for k in self.list_arguments()}
+            attrs = self.attr_dict()
+            type_dict = {k: mx_real_t for k in self.list_arguments()
+                         if k not in attrs or '__dtype__' not in attrs[k]}
         arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
         arg_types, _, aux_types = self.infer_type(**type_dict)
 
@@ -958,7 +964,7 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
 
-def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None):
+def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
     """Create a symbolic variable with specified name.
 
     Parameters
@@ -977,6 +983,8 @@ def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None
         Specify weight decay muliplier for this variable.
     dtype : str or numpy.dtype
         Similar to shape, we can specify dtype for this variable.
+    init : initializer (mxnet.init.*)
+        Specify initializer for this variable to override the default initializer
 
     Returns
     -------
@@ -998,6 +1006,8 @@ def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
         attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+    if init is not None:
+        attr['__init__'] = init.dumps()
     ret._set_attr(**attr)
     return ret
 
@@ -1191,7 +1201,7 @@ def hypot(left, right):
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
 
-def zeros(shape, dtype=_numpy.float32, **kwargs):
+def zeros(shape, dtype=None, **kwargs):
     """Create a Tensor filled with zeros, similar to numpy.zeros
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.zeros.html.
 
@@ -1199,18 +1209,20 @@ def zeros(shape, dtype=_numpy.float32, **kwargs):
     ----------
     shape :  int or sequence of ints
         Shape of the new array.
-    dtype : type, optional
-        The value type of the NDArray, default to np.float32
+    dtype : str or numpy.dtype, optional
+        The value type of the inner value, default to np.float32
 
     Returns
     -------
     out : Symbol
         The created Symbol
     """
+    if dtype is None:
+        dtype = _numpy.float32
     return _internal._zeros(shape=shape, dtype=dtype, **kwargs)
 
 
-def ones(shape, dtype=_numpy.float32, **kwargs):
+def ones(shape, dtype=None, **kwargs):
     """Create a Tensor filled with ones, similar to numpy.ones
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html.
 
@@ -1218,18 +1230,20 @@ def ones(shape, dtype=_numpy.float32, **kwargs):
     ----------
     shape :  int or sequence of ints
         Shape of the new array.
-    dtype : type, optional
-        The value type of the NDArray, default to np.float32
+    dtype : str or numpy.dtype, optional
+        The value type of the inner value, default to np.float32
 
     Returns
     -------
     out : Symbol
         The created Symbol
     """
+    if dtype is None:
+        dtype = _numpy.float32
     return _internal._ones(shape=shape, dtype=dtype, **kwargs)
 
 
-def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=_numpy.float32):
+def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     """Simlar function in the MXNet ndarray as numpy.arange
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
 
@@ -1244,13 +1258,15 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=_numpy.float32
     repeat : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
-    dtype : type, optional
-        The value type of the NDArray, default to np.float32
+    dtype : str or numpy.dtype, optional
+        The value type of the inner value, default to np.float32
 
     Returns
     -------
     out : Symbol
         The created Symbol
     """
+    if dtype is None:
+        dtype = _numpy.float32
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              name=name, dtype=dtype)

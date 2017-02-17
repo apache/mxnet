@@ -137,29 +137,41 @@ class ConcatProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-    TShape dshape = in_shape->at(concat_enum::kData0);
-    if (dshape.ndim() == 0) return false;
-    CHECK_GE(dshape.ndim(), 1);
-    CHECK_LT(static_cast<index_t>(param_.dim), dshape.ndim())
-        <<"the dimension to be concated is not in the range of input's dimension";
-    for (int i = 1; i < param_.num_args; ++i) {
-      const TShape &tmp = in_shape->at(i);
-      if (tmp.ndim() == 0) return false;
-      for (index_t j = 0; j < dshape.ndim(); ++j) {
-        if (j == static_cast<index_t>(param_.dim)) {
-          dshape[param_.dim] += tmp[param_.dim];
-        } else {
-          CHECK_EQ(dshape[j], tmp[j])
-              << "Incorrect shape[" << i << "]: "
-              << tmp << ". "
-              << "(first input shape: "
-              << dshape << ")";
-        }
+    TShape dshape;
+    index_t size = 0;
+    bool has_zero = false;
+    for (int i = 0; i < param_.num_args; ++i) {
+      TShape tmp = (*in_shape)[i];
+      if (tmp.ndim()) {
+        CHECK_LT(static_cast<index_t>(param_.dim), tmp.ndim())
+          << "concat dim " << param_.dim << " out of range of input shape " << tmp;
+        has_zero = tmp[param_.dim] == 0 || has_zero;
+        size += tmp[param_.dim];
+        tmp[param_.dim] = 0;
+        shape_assign(&dshape, tmp);
       }
     }
-    out_shape->clear();
-    out_shape->push_back(dshape);
-    return true;
+
+    TShape tmp = (*out_shape)[0];
+    if (tmp.ndim()) {
+      CHECK_LT(static_cast<index_t>(param_.dim), tmp.ndim())
+        << "concat dim " << param_.dim << " out of range of input shape " << tmp;
+      tmp[param_.dim] = 0;
+      shape_assign(&dshape, tmp);
+    }
+
+    if (dshape.ndim() == 0) return false;
+
+    for (int i = 0; i < param_.num_args; ++i) {
+      CHECK(shape_assign(&(*in_shape)[i], dshape))
+        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+    }
+
+    if (!has_zero) dshape[param_.dim] = size;
+    CHECK(shape_assign(&(*out_shape)[0], dshape))
+      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+
+    return dshape.Size() != 0;
   }
 
   bool InferType(std::vector<int> *in_type,
