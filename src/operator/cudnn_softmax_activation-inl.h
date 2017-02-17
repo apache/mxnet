@@ -111,7 +111,7 @@ class CuDNNSoftmaxActivationOp : public Operator {
     Tensor<gpu, 4> input_grad;
     cudnnSoftmaxMode_t softmax_mode;
     if (param_.mode == softmax_activation::kInstance) {
-      Shape<2> shape_new = in_data[softmax_activation::kData].shape_.FlatTo2D();
+      Shape<2> shape_new = in_grad[softmax_activation::kData].shape_.FlatTo2D();
       Shape<4> dshape = Shape4(shape_new.shape_[0], shape_new.shape_[1], 1, 1);
       grad = out_grad[softmax_activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);
       output_data = out_data[softmax_activation::kOut].get_with_shape<gpu, 4, real_t>(dshape, s);

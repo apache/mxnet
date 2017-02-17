@@ -14,6 +14,37 @@ def np_softmax(x):
     x /= np.sum(x, axis=-1).reshape(x.shape[:-1] + (1,))
     return x
 
+def np_softmax_channel(x):
+    x_temp = np.swapaxes(x, -1, 1)
+    x_temp = np_softmax(x_temp)
+    x_temp = np.swapaxes(x_temp, -1, 1)
+    return x_temp
+
+def test_softmax_activation_with_shape(shape, mode):
+    data_sym = mx.symbol.Variable('data')
+    x = mx.random.uniform(-1, 1, shape, ctx=default_context())
+    g = mx.random.uniform(-1, 1, shape, ctx=default_context())
+    symbol = mx.sym.SoftmaxActivation(data_sym, mode=mode)
+    exe_test = symbol.bind(ctx=default_context(), args=[x], args_grad=[g])
+    exe_test.forward()
+    out = exe_test.outputs[0].asnumpy()
+
+    np_data = x.asnumpy()
+    if(mode == "instance"):
+        npout = np_softmax(np_data)
+    else:
+        npout = np_softmax_channel(np_data)
+    assert_almost_equal(out, npout)
+
+    check_numeric_gradient(symbol, [x.asnumpy()], grad_nodes={'data':'write'},
+        numeric_eps=1e-2, rtol=1e-2)
+
+def test_sofmax_activation():
+    test_softmax_activation_with_shape((2, 3), "instance")
+    test_softmax_activation_with_shape((2, 3, 2), "instance")
+    test_softmax_activation_with_shape((1, 2, 1, 3), "instance")
+    test_softmax_activation_with_shape((2, 3, 2), "channel")
+    test_softmax_activation_with_shape((2, 3, 1, 1), "channel")
 
 def check_elementwise_sum_with_shape(shape, n):
     # forward
@@ -2765,3 +2796,4 @@ if __name__ == '__main__':
     test_repeat()
     test_tile()
     test_one_hot()
+    test_sofmax_activation()
