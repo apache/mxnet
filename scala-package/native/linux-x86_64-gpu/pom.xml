@@ -58,6 +58,7 @@
             <compilerStartOption>-fPIC</compilerStartOption>
             <compilerStartOption>-g</compilerStartOption>
             <compilerStartOption>-O2</compilerStartOption>
+            <compilerStartOption>-D__USE_XOPEN2K8</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
             <compilerEndOption>-I../../../include</compilerEndOption>
