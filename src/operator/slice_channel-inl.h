@@ -36,7 +36,8 @@ struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
     DMLC_DECLARE_FIELD(axis).set_default(1)
     .describe("Dimension along which to slice.");
     DMLC_DECLARE_FIELD(squeeze_axis).set_default(0)
-    .describe("If true AND the sliced dimension becomes 1, squeeze that dimension.");
+    .describe("If true, the dimension will squeezed. Size of the dimension in the input must be"
+              " the same as `num_outputs`.");
   }
 };  // struct SliceChannelParam
 
@@ -172,6 +173,12 @@ class SliceChannelProp : public OperatorProperty {
       << "num_outputs (" << param_.num_outputs
       << ") does not divide input dimension "
       << real_axis << " (" << dshape[real_axis] << ").";
+    if (param_.squeeze_axis && ishape[real_axis] != 0) {
+      CHECK_EQ(ishape[real_axis], param_.num_outputs)
+        << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
+        << " Input shape=" << ishape << ", axis=" << real_axis
+        << ", num_outputs=" << param_.num_outputs << "."
+    }
     dshape[real_axis] /= param_.num_outputs;
     if (param_.squeeze_axis && (dshape[real_axis] == 1 || ishape[real_axis] == 0)) {
       for (int d = real_axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
