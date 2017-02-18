@@ -20,3 +20,4 @@ python3 get-pip.py
 ln -s -f /opt/bin/pip /usr/bin/pip3
 
 mkdir -p /home/jenkins/.local/lib/python3.5/site-packages/
+pip3 install numpy
