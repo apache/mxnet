@@ -37,7 +37,7 @@ def test_softmax_activation_with_shape(shape, mode):
     assert_almost_equal(out, npout)
 
     check_numeric_gradient(symbol, [x.asnumpy()], grad_nodes={'data':'write'},
-        numeric_eps=1e-2, rtol=1e-2)
+        numeric_eps=1e-2, rtol=2e-2, atol=1e-3)
 
 def test_sofmax_activation():
     test_softmax_activation_with_shape((2, 3), "instance")
