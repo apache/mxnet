@@ -20,12 +20,12 @@ fi
 
 cp make/config.mk config.mk
 
-if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+if [[ ${TRAVIS_OS_NAME} == "osx" ]]; then
     echo "USE_BLAS=apple" >> config.mk
     echo "USE_OPENMP=0" >> config.mk
 else
     # use g++-4.8 for linux
-    if [ ${CXX} == "g++" ]; then
+    if [[ ${CXX} == "g++" ]]; then
         export CXX=g++-4.8
     fi
     echo "USE_BLAS=blas" >> config.mk
@@ -61,9 +61,13 @@ if [ ${TASK} == "r_test" ]; then
 
     set -e
     export _R_CHECK_TIMINGS_=0
-    wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
-    sudo installer -pkg "/tmp/R-latest.pkg" -target /
-    Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+    
+    if [[ ${TRAVIS_OS_NAME} == "osx" ]]; then
+        wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
+        sudo installer -pkg "/tmp/R-latest.pkg" -target /
+        Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+    fi        
+    
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
