@@ -235,6 +235,7 @@ case class DataDesc(name: String, shape: Shape,
     s"DataDesc[$name,$shape,$dtype,$layout]"
   }
 }
+
 object DataDesc {
   /**
    * Get the dimension that corresponds to the batch size.

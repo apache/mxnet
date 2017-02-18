@@ -18,7 +18,7 @@
 package ml.dmlc.mxnet.examples.module
 
 import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.module.Module
+import ml.dmlc.mxnet.module.{FitParams, Module}
 import ml.dmlc.mxnet.DataDesc._
 import ml.dmlc.mxnet.optimizer.SGD
 import org.kohsuke.args4j.{Option, CmdLineParser}
@@ -117,7 +117,7 @@ object MnistMlp {
 
   def main(args: Array[String]): Unit = {
     val inst = new MnistMlp
-    val parser: CmdLineParser = new CmdLineParser(inst)
+    val parser = new CmdLineParser(inst)
     try {
       parser.parseArgument(args.toList.asJava)
 

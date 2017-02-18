@@ -25,7 +25,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-object DataParallelExecutorGroup {
+private object DataParallelExecutorGroup {
   private val logger: Logger = LoggerFactory.getLogger(classOf[DataParallelExecutorGroup])
   // Load a list of arrays into a list of arrays specified by slices
   private def loadGeneralMulti(data: Seq[NDArray],
@@ -96,8 +96,8 @@ object DataParallelExecutorGroup {
     }
   }
 
-  object Builder {
-    private[mxnet] def convertGradReq(
+  private object Builder {
+    private[module] def convertGradReq(
         gradReq: String, argNames: IndexedSeq[String], paramNames: IndexedSeq[String],
         fixedParamNames: Set[String], dataNames: Seq[String], inputsNeedGrad: Boolean)
         : Map[String, String] = {
@@ -116,9 +116,10 @@ object DataParallelExecutorGroup {
       }).toMap
     }
   }
-  class Builder(private val symbol: Symbol,
-                private val contexts: Array[Context],
-                private val paramNames: IndexedSeq[String]) {
+
+  class Builder private[module](private val symbol: Symbol,
+                                private val contexts: Array[Context],
+                                private val paramNames: IndexedSeq[String]) {
 
     private var workLoadList: IndexedSeq[Float] = null
     private var dataShapes: IndexedSeq[DataDesc] = null
@@ -261,13 +262,13 @@ object DataParallelExecutorGroup {
  * @param gradReq Requirement for gradient accumulation. Can be 'write', 'add', or 'null',
  *                be specified for each argument.
  */
-class DataParallelExecutorGroup private[mxnet](
+class DataParallelExecutorGroup private[module](
     private val symbol: Symbol,
     private val contexts: Array[Context],
     private val workLoadList: IndexedSeq[Float],
     private val dataShapes: IndexedSeq[DataDesc],
     private val labelShapes: Option[IndexedSeq[DataDesc]] = None,
-    private[mxnet] val paramNames: IndexedSeq[String],
+    private[module] val paramNames: IndexedSeq[String],
     private val forTraining: Boolean,
     private val inputsNeedGrad: Boolean,
     private val sharedGroup: Option[DataParallelExecutorGroup] = None,
@@ -297,9 +298,9 @@ class DataParallelExecutorGroup private[mxnet](
   private var execs: Array[Executor] = null
   private var dataArrays: Seq[Array[((Int, Int), NDArray)]] = null
   private var labelArrays: Option[Seq[Array[((Int, Int), NDArray)]]] = None
-  private[mxnet] var paramArrays: IndexedSeq[Array[NDArray]] = null
-  private[mxnet] var gradArrays: IndexedSeq[Array[NDArray]] = null
-  private[mxnet] var auxArrays: IndexedSeq[Array[NDArray]] = null
+  private[module] var paramArrays: IndexedSeq[Array[NDArray]] = null
+  private[module] var gradArrays: IndexedSeq[Array[NDArray]] = null
+  private[module] var auxArrays: IndexedSeq[Array[NDArray]] = null
   private var inputGradArrays: IndexedSeq[Array[NDArray]] = null
 
   private val dataLayouts = decideSlices(dataShapes)

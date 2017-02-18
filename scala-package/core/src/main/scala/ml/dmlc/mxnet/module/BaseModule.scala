@@ -106,20 +106,19 @@ import scala.collection.mutable.ArrayBuffer
  *  - `fit`: train the module parameters on a data set
  *  - `predict`: run prediction on a data set and collect outputs
  *  - `score`: run prediction on a data set and evaluate performance
- * @author Yizhi Liu
  */
 abstract class BaseModule {
   private val logger = LoggerFactory.getLogger(classOf[BaseModule])
 
-  private[mxnet] var binded: Boolean = false
-  private[mxnet] var forTraining: Boolean = false
-  private[mxnet] var inputsNeedGrad: Boolean = false
-  private[mxnet] var paramsInitialized: Boolean = false
-  private[mxnet] var optimizerInitialized: Boolean = false
-  private[mxnet] var symbol: Symbol = null
-  private[mxnet] var execGroup: DataParallelExecutorGroup = null
-  private[mxnet] var argParams: Map[String, NDArray] = null
-  private[mxnet] var auxParams: Map[String, NDArray] = null
+  private[module] var binded: Boolean = false
+  private[module] var forTraining: Boolean = false
+  private[module] var inputsNeedGrad: Boolean = false
+  private[module] var paramsInitialized: Boolean = false
+  private[module] var optimizerInitialized: Boolean = false
+  private[module] var symbol: Symbol = null
+  private[module] var execGroup: DataParallelExecutorGroup = null
+  private[module] var argParams: Map[String, NDArray] = null
+  private[module] var auxParams: Map[String, NDArray] = null
 
   // High Level API
 
@@ -345,88 +344,47 @@ abstract class BaseModule {
    * @param trainData
    * @param evalData If not `None`, will be used as validation set and evaluate
    *                 the performance after each epoch.
-   * @param evalMetric The performance measure used to display during training.
-   * @param epochEndCallback Each callback will be called with the current `epoch`,
-   *                         `symbol`, `arg_params` and `aux_params`.
-   * @param batchEndCallback Each callback will be called with a `BatchEndParam`.
-   * @param kvstore Default `'local'`.
-   * @param optimizer
-   * @param evalEndCallback These will be called at the end of each full evaluation,
-   *                        with the metrics over the entire evaluation set.
-   * @param evalBatchEndCallback These will be called at the end of each minibatch during evaluation
-   * @param initializer Will be called to initialize the module parameters
-   *                    if not already initialized.
-   * @param argParams Default `None`, if not `None`, should be existing parameters from a trained
-   *                  model or loaded from a checkpoint (previously saved model). In this case,
-   *                  the value here will be used to initialize the module parameters,
-   *                  unless they are already initialized by the user
-   *                  via a call to `init_params` or `fit`.
-   *                  `arg_params` has higher priority to `initializer`.
-   * @param auxParams Default `None`. Similar to `argParams`, except for auxiliary states.
-   * @param allowMissing Default `False`. Indicate whether we allow missing parameters
-   *                     when `arg_params` and `aux_params` are not `None`.
-   *                     If this is `True`, then the missing parameters will be
-   *                     initialized via the `initializer`.
-   * @param forceRebind Default `False`. Whether to force rebinding the executors if already binded.
-   * @param forceInit Default `False`. Indicate whether we should force initialization even if the
-   *                  parameters are already initialized.
-   * @param beginEpoch Default `0`. Indicate the starting epoch. Usually, if we are resuming from a
-   *                   checkpoint saved at a previous training phase at epoch N,
-   *                   then we should specify this value as N+1.
    * @param numEpoch Number of epochs to run training.
+   * @param fitParams Extra parameters for training.
    */
-  // scalastyle:off parameterNum
-  def fit(trainData: DataIter, evalData: Option[DataIter] = None,
-          evalMetric: EvalMetric = new Accuracy(),
-          epochEndCallback: Option[EpochEndCallback] = None,
-          batchEndCallback: Option[BatchEndCallback] = None,
-          kvstore: String = "local",
-          optimizer: Optimizer = new SGD(),
-          evalEndCallback: Option[BatchEndCallback] = None,
-          evalBatchEndCallback: Option[BatchEndCallback] = None,
-          initializer: Initializer = new Uniform(0.01f),
-          argParams: Map[String, NDArray] = null,
-          auxParams: Map[String, NDArray] = null,
-          allowMissing: Boolean = false,
-          forceRebind: Boolean = false,
-          forceInit: Boolean = false,
-          beginEpoch: Int = 0, numEpoch: Int = 1,
-          validationMetric: Option[EvalMetric] = None,
-          monitor: Option[Monitor] = None): Unit = {
+  def fit(trainData: DataIter, evalData: Option[DataIter] = None, numEpoch: Int = 1,
+          fitParams: FitParams = new FitParams): Unit = {
+    require(fitParams != null)
     require(numEpoch > 0, "please specify number of epochs")
     import ml.dmlc.mxnet.DataDesc._
     bind(dataShapes = trainData.provideData, labelShapes = Option(trainData.provideLabel),
-         forTraining = true, forceRebind = forceRebind)
-    monitor.foreach(installMonitor)
-    initParams(initializer, argParams, auxParams, allowMissing, forceInit)
-    initOptimizer(kvstore, optimizer)
+         forTraining = true, forceRebind = fitParams.forceRebind)
+    fitParams.monitor.foreach(installMonitor)
+    initParams(fitParams.initializer, argParams, auxParams,
+      fitParams.allowMissing, fitParams.forceInit)
+    initOptimizer(fitParams.kvstore, fitParams.optimizer)
 
-    val valMetric = validationMetric.getOrElse(evalMetric)
+    val valMetric = fitParams.validationMetric.getOrElse(fitParams.evalMetric)
 
     // training loop
-    for (epoch <- beginEpoch until numEpoch) {
+    for (epoch <- fitParams.beginEpoch until numEpoch) {
       val tic = System.currentTimeMillis
-      evalMetric.reset()
+      fitParams.evalMetric.reset()
 
       var nBatch = 0
       while (trainData.hasNext) {
         val dataBatch = trainData.next()
 
-        monitor.foreach(_.tic())
+        fitParams.monitor.foreach(_.tic())
         forwardBackward(dataBatch)
         update()
-        updateMetric(evalMetric, dataBatch.label)
-        monitor.foreach(_.tocPrint())
+        updateMetric(fitParams.evalMetric, dataBatch.label)
+        fitParams.monitor.foreach(_.tocPrint())
 
-        batchEndCallback.foreach(callback =>
-          callback.invoke(epoch, nBatch, evalMetric)
+        fitParams.batchEndCallback.foreach(callback =>
+          callback.invoke(epoch, nBatch, fitParams.evalMetric)
         )
 
         nBatch += 1
       }
 
       // one epoch of training is finished
-      val (name, value) = evalMetric.get
+      val (name, value) = fitParams.evalMetric.get
       logger.info(s"Epoch[$epoch] Train-$name=$value")
       val toc = System.currentTimeMillis
       logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
@@ -435,15 +393,15 @@ abstract class BaseModule {
       val (argParamsSync, auxParamsSync) = getParams
       setParams(argParamsSync, auxParamsSync)
 
-      epochEndCallback.foreach(callback =>
+      fitParams.epochEndCallback.foreach(callback =>
         callback.invoke(epoch, symbol, argParamsSync, auxParamsSync)
       )
 
       // evaluation on validation set
       evalData.foreach(data => {
         val res = score(data, valMetric,
-          scoreEndCallback = evalEndCallback,
-          batchEndCallback = evalBatchEndCallback, epoch = epoch)
+          scoreEndCallback = fitParams.evalEndCallback,
+          batchEndCallback = fitParams.evalBatchEndCallback, epoch = epoch)
         val (name, value) = res.get
         logger.info(s"Epoch[$epoch] Validation-$name=$value")
       })
@@ -452,7 +410,6 @@ abstract class BaseModule {
       trainData.reset()
     }
   }
-  // scalastyle:on parameterNum
 
   // Install monitor on all executors
   def installMonitor(monitor: Monitor): Unit
@@ -549,4 +506,133 @@ abstract class BaseModule {
   // Install and initialize optimizers.
   def initOptimizer(kvstore: String = "local", optimizer: Optimizer = new SGD(),
                     resetOptimizer: Boolean = true, forceInit: Boolean = false): Unit
+}
+
+class FitParams {
+  private[module] var evalMetric: EvalMetric = new Accuracy()
+  private[module] var epochEndCallback: Option[EpochEndCallback] = None
+  private[module] var batchEndCallback: Option[BatchEndCallback] = None
+  private[module] var kvstore: String = "local"
+  private[module] var optimizer: Optimizer = new SGD()
+  private[module] var evalEndCallback: Option[BatchEndCallback] = None
+  private[module] var evalBatchEndCallback: Option[BatchEndCallback] = None
+  private[module] var initializer: Initializer = new Uniform(0.01f)
+  private[module] var argParams: Map[String, NDArray] = null
+  private[module] var auxParams: Map[String, NDArray] = null
+  private[module] var allowMissing: Boolean = false
+  private[module] var forceRebind: Boolean = false
+  private[module] var forceInit: Boolean = false
+  private[module] var beginEpoch: Int = 0
+  private[module] var validationMetric: Option[EvalMetric] = None
+  private[module] var monitor: Option[Monitor] = None
+
+  // The performance measure used to display during training.
+  def setEvalMetric(evalMetric: EvalMetric): FitParams = {
+    require(evalMetric != null)
+    this.evalMetric = evalMetric
+    this
+  }
+
+  // Each callback will be called with the current
+  // `epoch`, `symbol`, `arg_params` and `aux_params`.
+  def setEpochEndCallback(epochEndCallback: EpochEndCallback): FitParams = {
+    this.epochEndCallback = Option(epochEndCallback)
+    this
+  }
+
+  // Each callback will be called with a `BatchEndParam`.
+  def setBatchEndCallback(batchEndCallback: BatchEndCallback): FitParams = {
+    this.batchEndCallback = Option(batchEndCallback)
+    this
+  }
+
+  def setKVStore(kvStore: String): FitParams = {
+    require(kvStore != null)
+    this.kvstore = kvstore
+    this
+  }
+
+  def setOptimizer(optimizer: Optimizer): FitParams = {
+    require(optimizer != null)
+    this.optimizer = optimizer
+    this
+  }
+
+  // These will be called at the end of each full evaluation,
+  // with the metrics over the entire evaluation set.
+  def setEvalEndCallback(evalEndCallback: BatchEndCallback): FitParams = {
+    this.evalEndCallback = Option(evalEndCallback)
+    this
+  }
+
+  // These will be called at the end of each minibatch during evaluation.
+  def setEvalBatchEndCallback(evalBatchEndCallback: BatchEndCallback): FitParams = {
+    this.evalBatchEndCallback = Option(evalBatchEndCallback)
+    this
+  }
+
+  // Will be called to initialize the module parameters if not already initialized.
+  def setInitializer(initializer: Initializer): FitParams = {
+    require(initializer != null)
+    this.initializer = initializer
+    this
+  }
+
+  // Default `None`, if not `None`, should be existing parameters from a trained
+  // model or loaded from a checkpoint (previously saved model). In this case,
+  // the value here will be used to initialize the module parameters,
+  // unless they are already initialized by the user
+  // via a call to `init_params` or `fit`.
+  // `argParams` has higher priority to `initializer`.
+  def setArgParams(argParams: Map[String, NDArray]): FitParams = {
+    this.argParams = argParams
+    this
+  }
+
+  // Default `None`. Similar to `argParams`, except for auxiliary states.
+  def setAuxParams(auxParams: Map[String, NDArray]): FitParams = {
+    this.auxParams = auxParams
+    this
+  }
+
+  // Default `False`. Indicate whether we allow missing parameters
+  // when `arg_params` and `aux_params` are not `None`.
+  // If this is `True`, then the missing parameters will be
+  // initialized via the `initializer`.
+  def setAllowMissing(allowMissing: Boolean): FitParams = {
+    this.allowMissing = allowMissing
+    this
+  }
+
+  // Default `False`. Whether to force rebinding the executors if already binded.
+  def setForceRebind(forceRebind: Boolean): FitParams = {
+    this.forceRebind = forceRebind
+    this
+  }
+
+  // Default `False`. Indicate whether we should force initialization even if the
+  // parameters are already initialized.
+  def setForceInit(forceInit: Boolean): FitParams = {
+    this.forceInit = forceInit
+    this
+  }
+
+  // Default `0`. Indicate the starting epoch. Usually, if we are resuming from a
+  // checkpoint saved at a previous training phase at epoch N,
+  // then we should specify this value as N+1.
+  def setBeginEpoch(beginEpoch: Int): FitParams = {
+    require(beginEpoch >= 0)
+    this.beginEpoch = beginEpoch
+    this
+  }
+
+  def setValidationMetric(metric: EvalMetric): FitParams = {
+    this.validationMetric = Option(metric)
+    this
+  }
+
+  def setMonitor(monitor: Monitor): FitParams = {
+    this.monitor = Option(monitor)
+    this
+  }
 }
