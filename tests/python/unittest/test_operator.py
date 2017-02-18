@@ -1376,6 +1376,8 @@ def test_stn():
 
 
 def test_dot(ctx=default_context()):
+    np.random.seed(1234)
+
     # Test normal dot.
     for m in range(1, 5):
         for k in range(1, 5):
@@ -1677,31 +1679,23 @@ def test_support_vector_machine_l2_svm():
     grad_np = grad_np.astype(np.float32)
     assert_almost_equal(grad_np, grad.asnumpy())
 
+
 def test_roipooling():
+    np.random.seed(1234)
+
     data = mx.symbol.Variable(name='data')
     rois = mx.symbol.Variable(name='rois')
     test = mx.symbol.ROIPooling(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1)
 
-    x1 = np.random.rand(4, 3, 12, 8)
-    x2 = np.array([[0, 1.1, 1.1, 6.2, 6.2], [2, 6.1, 2.1, 8.2, 11.2], [1, 3.1, 1.1, 5.2, 10.2], [0, 3, 3, 3, 3]])
+    x1 = np.random.rand(4, 3, 12, 8).astype('float32')
+    x2 = np.array([[0, 1.1, 1.1, 6.2, 6.2], [2, 6.1, 2.1, 8.2, 11.2], [1, 3.1, 1.1, 5.2, 10.2], [0, 3, 3, 3, 3]], dtype='float32')
 
-    # TODO: fails randomly. investigate and remove retry.
-    try:
-        check_numeric_gradient(sym=test, location=[x1, x2],
-                               grad_nodes={'data':'write', 'rois':'null'},
-                               numeric_eps=1e-4, rtol=1e-1, atol=1e-4)
-    except:
-        check_numeric_gradient(sym=test, location=[x1, x2],
-                               grad_nodes={'data':'write', 'rois':'null'},
-                               numeric_eps=1e-4, rtol=1e-1, atol=1e-4)
-    try:
-        check_numeric_gradient(sym=test, location=[x1, x2],
-                               grad_nodes={'data':'add', 'rois':'null'},
-                               numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
-    except:
-        check_numeric_gradient(sym=test, location=[x1, x2],
-                               grad_nodes={'data':'add', 'rois':'null'},
-                               numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
+    check_numeric_gradient(sym=test, location=[x1, x2],
+                           grad_nodes={'data':'write', 'rois':'null'},
+                           numeric_eps=1e-4, rtol=1e-1, atol=1e-4)
+    check_numeric_gradient(sym=test, location=[x1, x2],
+                           grad_nodes={'data':'add', 'rois':'null'},
+                           numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
 
 def check_pad_with_shape(shape, xpu, pad_width, mode):
     # bind with label
@@ -2299,7 +2293,7 @@ def test_grid_generator():
 
 
 def test_bilinear_sampler():
-    
+    np.random.seed(1234)
     from math import floor
 
     def between(x, lowerbound, upperbound):

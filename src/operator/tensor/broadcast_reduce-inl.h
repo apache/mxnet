@@ -121,8 +121,8 @@ MSHADOW_XINLINE void assign(DType* dst, const bool addto, const DType src) {
 
 template<typename DType, typename OP>
 MSHADOW_XINLINE void binary_broadcast_assign(const int idx, const bool addto,
-                                             const DType* __restrict__ lhs,
-                                             const DType* __restrict__ rhs, DType* out,
+                                             const DType* __restrict lhs,
+                                             const DType* __restrict rhs, DType* out,
                                              const CShape& lshape, const CShape& rshape,
                                              const CShape& oshape) {
   const CShape coord = unravel(idx, oshape);
@@ -133,7 +133,7 @@ MSHADOW_XINLINE void binary_broadcast_assign(const int idx, const bool addto,
 
 template<typename Reducer, typename DType, typename OP>
 MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
-                                       const DType* __restrict__ big, DType *small,
+                                       const DType* __restrict big, DType *small,
                                        const CShape& bshape, const CShape& sshape,
                                        const CShape& rshape, const CShape& rstride) {
   CShape coord = unravel(idx, sshape);

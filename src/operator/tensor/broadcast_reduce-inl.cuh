@@ -15,8 +15,8 @@ using namespace mshadow::cuda;
 template<typename DType, typename OP, int unroll>
 __launch_bounds__(kMaxThreadsPerBlock)
 __global__ void binary_broadcast_kernel(const int N, const bool addto,
-                                        const DType* __restrict__ lhs,
-                                        const DType* __restrict__ rhs, DType *out,
+                                        const DType* __restrict lhs,
+                                        const DType* __restrict rhs, DType *out,
                                         const CShape lstride, const CShape rstride,
                                         const CShape oshape) {
   for (int idx = blockIdx.x * blockDim.x * unroll + threadIdx.x; idx < N;
@@ -58,7 +58,7 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
 template<typename Reducer, typename DType, typename OP, int x_bits, int unroll>
 __launch_bounds__(kMaxThreadsPerBlock)
 __global__ void par_reduce_kernel(const int N, const int M, const bool addto,
-                                  const DType* __restrict__ big, DType *small, const CShape bshape,
+                                  const DType* __restrict big, DType *small, const CShape bshape,
                                   const CShape sshape, const CShape rshape, const CShape rstride,
                                   const int Mnext) {
   __shared__ DType buf[1<<x_bits];
@@ -105,7 +105,7 @@ const int nthread_reduce = kMaxThreadsPerBlock;
 template<typename Reducer, typename DType, typename OP, int unroll>
 __launch_bounds__(nthread_reduce)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
-                              const DType* __restrict__ big, DType *small, const CShape bshape,
+                              const DType* __restrict big, DType *small, const CShape bshape,
                               const CShape sshape, const CShape rshape, const CShape rstride,
                               const int Mnext) {
   // Size of shared memory is blockDim.x*( (blockDim.y > 1) ? blockDim.y : 0 )*sizeof(DType)
@@ -171,7 +171,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
 template<typename Reducer, typename DType, typename OP>
 __launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
-  const int small_in_stride, const DType* __restrict__ small_in, DType *small_out) {
+  const int small_in_stride, const DType* __restrict small_in, DType *small_out) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     
     DType val;
@@ -189,7 +189,7 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
 
 template<typename Reducer, typename DType, typename OP>
 __global__ void reduce_kernel_M1(const int N, const bool addto,
-                                const DType* __restrict__ big, DType *small, const CShape bshape,
+                                const DType* __restrict big, DType *small, const CShape bshape,
                                 const CShape sshape) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     CShape coord = unravel(idx, sshape);
