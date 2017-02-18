@@ -27,7 +27,11 @@ matrix:
       dist: trusty
       env: TASK=perl_test
     - os: osx
-      osx_image: xcode8.2
+      ## sudo is required because
+      ## prexexisting packages conflict
+      ## with new ones.
+      ## would be nice to have macports
+      ## on travis osx, it has all needed perl packages
       sudo: required
       env: TASK=perl_test
 #       env: TASK=julia JULIA_VER=0.4

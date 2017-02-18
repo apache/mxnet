@@ -147,30 +147,36 @@ if [ ${TASK} == "perl_test" ]; then
     make all || exit -1
 
     # use cached dir for storing data
-    export MXNET_HOME=${PWD}
+    MXNET_HOME=${PWD}
     rm -rf ${MXNET_HOME}/perl-package/AI-MXNet/data
     mkdir -p ${CACHE_PREFIX}/data
     ln -s ${CACHE_PREFIX}/data ${MXNET_HOME}/perl-package/AI-MXNet/data
 
-    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-        export DYLD_LIBRARY_PATH=${MXNET_HOME}
-    else
-        export LD_LIBRARY_PATH=${MXNET_HOME}/lib
-    fi
+    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
     export PERL5LIB=${HOME}/perl5/lib/perl5
 
     cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
     perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make || exit -1
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        install_name_tool -change lib/libmxnet.so \
+            ${MXNET_HOME}/lib/libmxnet.so \
+            blib/arch/auto/AI/MXNetCAPI/MXNetCAPI.bundle 
+    fi
     make install || exit -1
 
     cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
     perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make || exit -1
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        install_name_tool -change lib/libmxnet.so \
+            ${MXNET_HOME}/lib/libmxnet.so \
+            blib/arch/auto/AI/NNVMCAPI/NNVMCAPI.bundle 
+    fi
     make install || exit -1
 
     cd ${MXNET_HOME}/perl-package/AI-MXNet/
     perl Makefile.PL
     make test || exit -1
-    cd ${MXNET_HOME}
     exit 0
 fi
-
