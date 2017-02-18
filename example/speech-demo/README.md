@@ -145,3 +145,16 @@ Here are the results on TIMIT and AMI test set (using all default setup, 3 layer
 |AMI     | 51.7 (42.2) |
 
 Note that for AMI 42.2 was evaluated non-overlapped speech. Kaldi-HMM baseline was 67.2% and DNN was 57.5%.
+
+### update Feb 07
+
+We had updated this demo on Feb 07 (kaldi c747ed5, mxnet 912a7eb). We had also added timit demo script in this folder. 
+
+To run the timit demo:
+
+1. cd path/to/kaldi/egs/timit/s5/
+2. ./run.sh (setup the kaild timit demo and run it) 
+3. ln -s path/to/mxnet/example/speech-demo/* path/to/kaldi/egs/timit/s5/
+4. set **ali_src, graph_src** and so on in the run_timit.sh and default_timit.cfg to the generated folder in kaldi/egs/timit/s5/exp. In the demo script, we use tri3_ali as the alignment dir
+5. set ydim (in default_timit.cfg) to kaldi/egs/timit/s5/exp/tri3/graph/num_pdfs + 1
+6. ./run_timit.sh
