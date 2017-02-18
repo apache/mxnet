@@ -12,7 +12,7 @@ This README shows the user how to setup and install MKL2017 library with mxnet.
 
     1.1 By default, MKL_2017_EXPRIEMENTAL=0. If setting MKL_2017_EXPRIEMENTAL=1, MKL buffer will be created and transferred between layers to achiever much higher performance.
 
-    1.2 By default, USE_BLAS=atlas, MKLML_ROOT=/usr/local, MKL2017_ML will be used
+    1.2 By default, MKLML_ROOT=/usr/local, MKL2017_ML will be used
 
       1.2.1 when excute make, Makefile will execute "prepare_mkl.sh" to download the MKL2017_ML library under <MKLML_ROOT>
 
@@ -28,11 +28,11 @@ This README shows the user how to setup and install MKL2017 library with mxnet.
 
     1.3 If setting USE_BLAS=mkl
 
-      1.3.1 please navigate here to do a full MKL installation: https://registrationcenter.intel.com/en/forms/?productid=2558&licensetype=2  
+      1.3.1 mshadow can also utilize mkl blas function in mklml package  
 
-      1.3.2 do not use MKL2017 and MKL2017_ML at the same time
+    1.4 MKL version compatibility
         
-        1.3.2.1 Do not execute MKL2017 compilervars.sh or mklvars.sh script before MxNet compilation. Otherwise, MKL2017 may conflict with MKL2017_ML and MxNet may not be compiled.   
+        1.3.2.1 If you already have MKL installed and MKLROOT being set in your system, by default, it will not attempt to download the latest mklml package unless you unset MKLROOT. 
 
   2. Run 'make -jX'
        
