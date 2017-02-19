@@ -203,10 +203,10 @@ extern "C" {
     }
 
     if (dropout_retention > 0.0) {
-      nnet->nnet_transf.SetDropoutRetention(dropout_retention);
+      nnet->nnet_transf.SetDropoutRate(dropout_retention);
     }
     if (crossvalidate) {
-      nnet->nnet_transf.SetDropoutRetention(1.0);
+      nnet->nnet_transf.SetDropoutRate(1.0);
     }
 
     return nnet;
