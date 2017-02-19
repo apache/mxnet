@@ -1,5 +1,4 @@
 MANIFEST
-META.yml
 Makefile.PL
 README
 Changes
@@ -36,9 +35,11 @@ lib/AI/MXNet/Symbol/NameManager.pm
 lib/AI/MXNet/TestUtils.pm
 lib/AI/MXNet/Types.pm
 lib/AI/MXNet/Util/Printable.pm
+lib/AI/MXNet/Visualization.pm
 t/AI-MXNet.t
 t/initializers.t
 t/io.t
 t/models.t
 t/optimizers.t
 t/test_conv.t
+t/test_viz.t
