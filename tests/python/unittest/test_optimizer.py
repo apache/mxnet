@@ -120,7 +120,13 @@ def test_adam():
     opt1 = PyAdam
     opt2 = mx.optimizer.Adam
     shape = (3, 4, 5)
-    kwargs = [{}]
+    kwargs = [{},
+              {'clip_gradient': 0.5},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14},
+              {'rescale_grad': 0.8},
+              {'clip_gradient': 0.5, 'wd': 0.07},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
+              {'rescale_grad': 0.8, 'wd': 0.05}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
@@ -207,7 +213,10 @@ def test_rms():
     kwargs = [{},
               {'clip_gradient': 0.5},
               {'clip_gradient': 0.4, 'rescale_grad': 0.14},
-              {'rescale_grad': 0.8}]
+              {'rescale_grad': 0.8},
+              {'clip_gradient': 0.5, 'wd': 0.07},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
+              {'rescale_grad': 0.8, 'wd': 0.05}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
