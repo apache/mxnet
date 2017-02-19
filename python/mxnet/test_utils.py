@@ -192,6 +192,25 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
     assert_almost_equal(a, b, rtol, atol, names)
 
 
+def retry(n):
+    """Retry n times before failing for stochastic test cases"""
+    assert n > 0
+    def decorate(f):
+        """Decorate a test case"""
+        def wrapper(*args, **kwargs):
+            """Wrapper for tests function"""
+            for _ in range(n):
+                try:
+                    f(*args, **kwargs)
+                except AssertionError as e:
+                    err = e
+                    continue
+                return
+            raise err
+        return wrapper
+    return decorate
+
+
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
     """A simple forward function for a symbol.
 
