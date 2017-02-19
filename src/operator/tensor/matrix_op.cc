@@ -319,13 +319,13 @@ NNVM_REGISTER_OP(repeat)
 .set_attr_parser(ParamParser<RepeatParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "repeats", "axis"};
+    return std::vector<std::string>{"data"};
   })
 .set_attr<nnvm::FInferShape>("FInferShape", RepeatOpShape)
 .set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_repeat"})
-.add_argument("a", "NDArray", "Input data array")
+.add_argument("data", "NDArray", "Input data array")
 .add_arguments(RepeatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_repeat)
@@ -342,13 +342,13 @@ NNVM_REGISTER_OP(tile)
 .set_attr_parser(ParamParser<TileParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "reps"};
+    return std::vector<std::string>{"data"};
   })
 .set_attr<nnvm::FInferShape>("FInferShape", TileOpShape)
 .set_attr<nnvm::FInferType>("FInferType", TileOpType)
 .set_attr<FCompute>("FCompute<cpu>", TileOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tile"})
-.add_argument("a", "NDArray", "Input data array")
+.add_argument("data", "NDArray", "Input data array")
 .add_arguments(TileParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_tile)
