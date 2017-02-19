@@ -56,8 +56,7 @@ if [ ${TASK} == "r_test" ]; then
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
-    mkdir -p ${CACHE_PREFIX}/data
-    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+    mkdir -p ${PWD}/data
 
     set -e
     export _R_CHECK_TIMINGS_=0
@@ -97,8 +96,7 @@ if [ ${TASK} == "python_test" ]; then
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
-    mkdir -p ${CACHE_PREFIX}/data
-    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+    mkdir -p ${PWD}/data
 
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         python -m nose tests/python/unittest || exit -1
@@ -120,8 +118,7 @@ if [ ${TASK} == "julia" ]; then
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
-    mkdir -p ${CACHE_PREFIX}/data
-    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+    mkdir -p ${PWD}/data
 
     export MXNET_HOME="${PWD}"
     julia -e 'Pkg.clone("MXNet"); Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
@@ -136,8 +133,7 @@ if [ ${TASK} == "scala_test" ]; then
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
-    mkdir -p ${CACHE_PREFIX}/data
-    ln -s ${CACHE_PREFIX}/data ${PWD}/data
+    mkdir -p ${PWD}/data
 
     export JAVA_HOME=$(/usr/libexec/java_home)
 
