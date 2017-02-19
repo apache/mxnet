@@ -56,7 +56,8 @@ if [ ${TASK} == "r_test" ]; then
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
-    mkdir -p ${PWD}/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${PWD}/data
 
     set -e
     export _R_CHECK_TIMINGS_=0
