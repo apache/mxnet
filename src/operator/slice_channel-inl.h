@@ -36,8 +36,9 @@ struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
     DMLC_DECLARE_FIELD(axis).set_default(1)
     .describe("Dimension along which to slice.");
     DMLC_DECLARE_FIELD(squeeze_axis).set_default(0)
-    .describe("If true, the dimension will squeezed. Size of the dimension in the input must be"
-              " the same as `num_outputs`.");
+    .describe("If true, the dimension will be squeezed."
+              " Also, input.shape[axis] must be the same as `num_outputs`"
+              " when squeeze_axis is turned on.");
   }
 };  // struct SliceChannelParam
 
