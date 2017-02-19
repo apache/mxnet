@@ -177,7 +177,7 @@ class SliceChannelProp : public OperatorProperty {
       CHECK_EQ(ishape[real_axis], param_.num_outputs)
         << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
         << " Input shape=" << ishape << ", axis=" << real_axis
-        << ", num_outputs=" << param_.num_outputs << "."
+        << ", num_outputs=" << param_.num_outputs << ".";
     }
     dshape[real_axis] /= param_.num_outputs;
     if (param_.squeeze_axis && (dshape[real_axis] == 1 || ishape[real_axis] == 0)) {
