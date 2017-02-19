@@ -538,7 +538,7 @@ class FusedRNNCell(BaseRNNCell):
         b = self._directions
         m = self._num_weights
         h = self._num_hidden
-        num_input = arr.size/b/h/m - (self._num_layers - 1)*(h+b*h+2) - h - 2
+        num_input = arr.size//b//h//m - (self._num_layers - 1)*(h+b*h+2) - h - 2
 
         nargs = self._slice_weights(arr, num_input, self._num_hidden)
         args.update({name: nd.copy() for name, nd in nargs.items()})
