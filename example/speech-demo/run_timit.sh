@@ -13,48 +13,47 @@ set -u           #Fail on an undefined variable
 . ./cmd.sh
 . ./path.sh
 
-cmd=hostd3.pl
+cmd=run.pl
 # root folder,
-expdir=exp_mxnet
+expdir=exp_timit
 
 ##################################################
 # Kaldi generated folder
 ##################################################
 
 # alignment folder
-ali_src=exp_cntk/sdm1/dnn_120fbank_ali
+ali_src=/home/sooda/speech/kaldi/egs/timit/s5/exp/tri3_ali
 
 # decoding graph
-graph_src=exp/sdm1/tri3a/graph_ami_fsh.o3g.kn.pr1-7/
+graph_src=/home/sooda/speech/kaldi/egs/timit/s5/exp/tri3/graph
 
 # features
-train_src=data/sdm1/train_fbank_gcmvn
-dev_src=data/sdm1/eval_fbank_gcmvn
+train_src=/home/sooda/speech/kaldi/egs/timit/s5/data/train
+dev_src=/home/sooda/speech/kaldi/egs/timit/s5/data/dev
 
 # config file
-config=ami_local_bptt.cfg
-
+config=default_timit.cfg
 # optional settings,
-njdec=128
+njdec=8
 scoring="--min-lmwt 5 --max-lmwt 19"
 
 # The device number to run the training
 # change to AUTO to select the card automatically
-deviceNumber=gpu1
+deviceNumber=gpu0
 
 # decoding method
 method=simple
 modelName=
 # model
-prefix=
-num_epoch=
+prefix=timit
+num_epoch=12
 acwt=0.1
 #smbr training variables
 num_utts_per_iter=40
 smooth_factor=0.1
 use_one_sil=true
 
-stage=0
+stage=4
 . utils/parse_options.sh || exit 1;
 
 
@@ -72,13 +71,14 @@ if [ $stage -le 0 ] ; then
     mkdir -p $dir/rawpost
 
     # for compressed ali
-    #$cmd JOB=1:$njdec $dir/log/gen_post.JOB.log \
-    #    ali-to-pdf $ali_src/final.mdl "ark:gunzip -c $ali_src/ali.JOB.gz |" \
-    #        ark:- | ali-to-post ark:- ark,scp:$dir/rawpost/post.JOB.ark,$dir/rawpost/post.JOB.scp || exit 1;
     num=`cat $ali_src/num_jobs`
     $cmd JOB=1:$num $dir/log/gen_post.JOB.log \
-        ali-to-pdf $ali_src/final.mdl ark:$ali_src/ali.JOB.ark \
+        ali-to-pdf $ali_src/final.mdl "ark:gunzip -c $ali_src/ali.JOB.gz |" \
             ark:- \| ali-to-post ark:- ark,scp:$dir/rawpost/post.JOB.ark,$dir/rawpost/post.JOB.scp || exit 1;
+    #num=`cat $ali_src/num_jobs`
+    #$cmd JOB=1:$num $dir/log/gen_post.JOB.log \
+    #    ali-to-pdf $ali_src/final.mdl ark:$ali_src/ali.JOB.ark \
+    #        ark:- \| ali-to-post ark:- ark,scp:$dir/rawpost/post.JOB.ark,$dir/rawpost/post.JOB.scp || exit 1;
 
 
     for n in $(seq $num); do
@@ -117,7 +117,7 @@ fi
 if [ $stage -le 4 ] ; then
   cp $ali_src/final.mdl $expdir
   mxnet_string="OMP_NUM_THREADS=1 python decode_mxnet.py --config $config --data_test $dir/test.feats --data_label_mean $dir/label_mean.feats --train_method $method --train_prefix $PWD/$expdir/$prefix --train_num_epoch $num_epoch --train_context cpu0 --train_batch_size 1"
-  ./decode_mxnet.sh --nj $njdec --cmd $decode_cmd --acwt $acwt --scoring-opts "$scoring" \
+  ./decode_mxnet.sh --nj $njdec --cmd $cmd --acwt $acwt --scoring-opts "$scoring" \
     $graph_src $dev_src $expdir/decode_${prefix}_$(basename $dev_src) "$mxnet_string" || exit 1;
 
 fi

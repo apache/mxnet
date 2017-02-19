@@ -78,7 +78,7 @@ sub _compose
 func _make_atomic_symbol_function($handle, $name)
 {
     my ($real_name, $desc, $arg_names, 
-        $arg_types, $arg_descs, $key_var_num_args, 
+        $arg_types, $arg_descs, $key_var_num_args,
         $ret_type) = @{ check_call(AI::MXNetCAPI::SymbolGetAtomicSymbolInfo($handle)) };
     $ret_type //= '';
     my $func_name = $name;
@@ -105,16 +105,26 @@ func _make_atomic_symbol_function($handle, $name)
         symbol: Symbol
             the resulting symbol
 =cut
-
     my $creator = sub {
- 
         my $class = shift;
         my (@args, %kwargs);
         if(@_ and ref $_[-1] eq 'HASH')
         {
             %kwargs = %{ pop(@_) };
+            @args = @_;
         }
-        @args = @_;
+        elsif(blessed $_[0] and $_[0]->isa(__PACKAGE__))
+        {
+            while(blessed $_[0] and $_[0]->isa(__PACKAGE__))
+            {
+                push @args, shift(@_);
+            }
+            %kwargs = @_;
+        }
+        else
+        {
+            %kwargs = @_;
+        }
         my $params = {};
         my $symbol_kwargs = {};
         my $attr = delete $kwargs{ 'attr' };

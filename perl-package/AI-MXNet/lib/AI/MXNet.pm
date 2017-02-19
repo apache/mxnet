@@ -21,6 +21,7 @@ use AI::MXNet::Monitor;
 use AI::MXNet::Profiler;
 use AI::MXNet::Module::Base;
 use AI::MXNet::Module;
+use AI::MXNet::Visualization;
 our $VERSION = '0.02';
 
 sub import
@@ -48,6 +49,7 @@ sub import
             sub io { 'AI::MXNet::IO' }
             sub metric { 'AI::MXNet::Metric' }
             sub mod { 'AI::MXNet::Module' }
+            sub viz { 'AI::MXNet::Visualization' }
             1;
 EOP
             eval $short_name_package;

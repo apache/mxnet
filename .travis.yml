@@ -71,6 +71,7 @@ addons:
       - pdl
       - cpanminus
       - swig
+      - libgraphviz-perl
 
 before_install:
   - export NVCC_PREFIX=${HOME}

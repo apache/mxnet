@@ -16,14 +16,15 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "AI-MXNet",
   "EXE_FILES" => [],
-  "LICENSE" => "perl",
+  "LICENSE" => "apache_2_0",
   "NAME" => "AI::MXNet",
   "PREREQ_PM" => {
     "AI::MXNetCAPI" => "0.02",
     "AI::NNVMCAPI" => "0.02",
     "Function::Parameters" => "1.0705",
-    "Mouse" => "v2.1.0",
-    "PDL" => "2.007"
+    "Mouse" => "2.1.0",
+    "PDL" => "2.007",
+    "GraphViz" => "2.14"
   },
   "TEST_REQUIRES" => {},
   "VERSION" => "0.02",
@@ -37,8 +38,9 @@ my %FallbackPrereqs = (
   "AI::MXNetCAPI" => "0.02",
   "AI::NNVMCAPI" => "0.02",
   "Function::Parameters" => "1.0705",
-  "Mouse" => "v2.1.0",
-  "PDL" => "2.007"
+  "Mouse" => "2.1.0",
+  "PDL" => "2.007",
+  "GraphViz" => "2.14"
 );
 
 
