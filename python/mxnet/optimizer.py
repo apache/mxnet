@@ -143,8 +143,8 @@ class Optimizer(object):
         """
         if index not in self._index_update_count:
             self._index_update_count[index] = self.begin_num_update
-        self._index_update_count[index] += 1
-        self.num_update = max(self._index_update_count[index], self.num_update)
+        self.num_update = self._index_update_count[index]
+        self._index_update_count[index] += 1     
 
     def _get_lr(self, index):
         """get learning rate for index.
