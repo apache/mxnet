@@ -27,7 +27,10 @@ def GetMNIST_ubyte():
 def GetCifar10():
     if not os.path.isdir("data/"):
         os.system("mkdir data/")
-    if not os.path.exists('data/cifar10.zip'):
+    if (not os.path.exists('data/cifar/train.rec')) or \
+       (not os.path.exists('data/cifar/test.rec')) or \
+       (not os.path.exists('data/cifar/train.lst')) or \
+       (not os.path.exists('data/cifar/test.lst')):
         os.system("wget http://data.mxnet.io/mxnet/data/cifar10.zip -P data/")
         os.chdir("./data")
         os.system("unzip -u cifar10.zip")
