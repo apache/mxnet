@@ -401,7 +401,7 @@ method fit(
     HashRef                            :$optimizer_params={ learning_rate => 0.01 },
     Maybe[Callback]                    :$eval_end_callback=,
     Maybe[Callback]                    :$eval_batch_end_callback=,
-    AI::MXNet::Initializer             :$initializer=AI::MXNet::Initializer->Uniform(learning_rate => 0.01),
+    AI::MXNet::Initializer             :$initializer=AI::MXNet::Initializer->Uniform(scale => 0.01),
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]] :$aux_params=,
     Bool                               :$allow_missing=0,
@@ -818,27 +818,27 @@ method update_metric(EvalMetric $eval_metric, ArrayRef[AI::MXNet::NDArray] $labe
 
         Parameters
         ----------
-        data_shapes : list of AI::MXNet::DataDesc
+        data_shapes : array ref of AI::MXNet::DataDesc
             Typically is `data_iter.provide_data`.
-        label_shapes : list of AI::MXNet::DataDesc
+        label_shapes : array ref of AI::MXNet::DataDesc
             Typically is `data_iter.provide_label`.
-        for_training : bool
-            Default is `True`. Whether the executors should be bind for training.
-        inputs_need_grad : bool
-            Default is `False`. Whether the gradients to the input data need to be computed.
+        for_training : Bool
+            Default is 1. Whether the executors should be bind for training.
+        inputs_need_grad : Bool
+            Default is 0. Whether the gradients to the input data need to be computed.
             Typically this is not needed. But this might be needed when implementing composition
             of modules.
-        force_rebind : bool
-            Default is `False`. This function does nothing if the executors are already
-            binded. But with this `True`, the executors will be forced to rebind.
+        force_rebind : Bool
+            Default is 0. This function does nothing if the executors are already
+            binded. But with this as 1, the executors will be forced to rebind.
         shared_module : Module
-            Default is `None`. This is used in bucketing. When not `None`, the shared module
+            Default is undef. This is used in bucketing. When not undef, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
-        grad_req : str, list of str, dict of str to str
+        grad_req : str, array ref of str, hashref of str to str
             Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
             (default to 'write').
-            Can be specified globally (str) or for each argument (list, dict).
+            Can be specified globally (str) or for each argument (array ref, hash ref).
 =cut
 
 method bind(

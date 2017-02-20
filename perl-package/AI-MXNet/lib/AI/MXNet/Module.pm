@@ -551,21 +551,21 @@ method init_params(
 
         Parameters
         ----------
-        data_shapes : list of (str, tuple)
-            Typically is `data_iter.provide_data`.
-        label_shapes : list of (str, tuple)
-            Typically is `data_iter.provide_label`.
+        data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
+            Typically is `data_iter->provide_data`.
+        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+            Typically is `data_iter->provide_label`.
         for_training : bool
-            Default is `True`. Whether the executors should be bind for training.
+            Default is 1. Whether the executors should be bind for training.
         inputs_need_grad : bool
-            Default is `False`. Whether the gradients to the input data need to be computed.
+            Default is 0. Whether the gradients to the input data need to be computed.
             Typically this is not needed. But this might be needed when implementing composition
             of modules.
         force_rebind : bool
-            Default is `False`. This function does nothing if the executors are already
-            binded. But with this `True`, the executors will be forced to rebind.
+            Default is 0. This function does nothing if the executors are already
+            binded. But with this 1, the executors will be forced to rebind.
         shared_module : Module
-            Default is `None`. This is used in bucketing. When not `None`, the shared module
+            Default is undef. This is used in bucketing. When not undef, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
             but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
 =cut
@@ -909,9 +909,9 @@ method get_input_grads(Bool $merge_multi_context=1)
 
         Parameters
         ----------
-        eval_metric : EvalMetric
-        labels : list of NDArray
-            Typically `data_batch.label`.
+        eval_metric : AI::MXNet::EvalMetric
+        labels : ArrayRef[AI::MXNet::NDArray]
+            Typically $data_batch->label.
 =cut
 method update_metric(
     AI::MXNet::EvalMetric $eval_metric,

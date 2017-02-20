@@ -22,11 +22,12 @@ sub import {
     );
 }
 
-package Function::Parameters;
-no warnings 'redefine';
-sub _croak {
-    local($Carp::CarpLevel) = 1;
-    Carp::confess ("@_");
+{
+    no warnings 'redefine';
+    *Function::Parameters::_croak = sub {
+        local($Carp::CarpLevel) = 1;
+        Carp::confess ("@_");
+    };
 }
 
 1;

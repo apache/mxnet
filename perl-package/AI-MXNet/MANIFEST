@@ -18,6 +18,7 @@ lib/AI/MXNet/Logging.pm
 lib/AI/MXNet/Metric.pm
 lib/AI/MXNet/Module.pm
 lib/AI/MXNet/Module/Base.pm
+lib/AI/MXNet/Module/Bucketing.pm
 lib/AI/MXNet/Monitor.pm
 lib/AI/MXNet/NDArray.pm
 lib/AI/MXNet/NDArray/Base.pm
