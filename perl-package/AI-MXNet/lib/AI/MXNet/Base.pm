@@ -125,7 +125,7 @@ sub assert
 {
     my ($input, $error_str) = @_;
     local($Carp::CarpLevel) = 1;
-    Carp::confess('AssertionError')
+    Carp::confess($error_str//'AssertionError')
         unless $input;
 }
 
