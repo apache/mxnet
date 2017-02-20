@@ -54,47 +54,47 @@ import scala.collection.mutable.ArrayBuffer
  *  - state information
  *    - `binded`: `bool`, indicating whether the memory buffers needed for computation
  *      has been allocated.
- *    - `for_training`: whether the module is binded for training (if binded).
- *    - `params_initialized`: `bool`, indicating whether the parameters of this modules
+ *    - `forTraining`: whether the module is binded for training (if binded).
+ *    - `paramsInitialized`: `bool`, indicating whether the parameters of this modules
  *      has been initialized.
- *    - `optimizer_initialized`: `bool`, indicating whether an optimizer is defined
+ *    - `optimizerInitialized`: `bool`, indicating whether an optimizer is defined
  *      and initialized.
- *    - `inputs_need_grad`: `bool`, indicating whether gradients with respect to the
+ *    - `inputsNeedGrad`: `bool`, indicating whether gradients with respect to the
  *      input data is needed. Might be useful when implementing composition of modules.
  *
  *  - input/output information
- *    - `data_shapes`: a list of `(name, shape)`. In theory, since the memory is allocated,
+ *    - `dataShapes`: a list of `(name, shape)`. In theory, since the memory is allocated,
  *      we could directly provide the data arrays. But in the case of data parallelization,
  *      the data arrays might not be of the same shape as viewed from the external world.
- *    - `label_shapes`: a list of `(name, shape)`. This might be `[]` if the module does
+ *    - `labelShapes`: a list of `(name, shape)`. This might be `[]` if the module does
  *      not need labels (e.g. it does not contains a loss function at the top), or a module
  *      is not binded for training.
- *    - `output_shapes`: a list of `(name, shape)` for outputs of the module.
+ *    - `outputShapes`: a list of `(name, shape)` for outputs of the module.
  *
  *  - parameters (for modules with parameters)
- *    - `get_params()`: return a tuple `(arg_params, aux_params)`. Each of those
+ *    - `getParams()`: return a tuple `(argParams, auxParams)`. Each of those
  *      is a dictionary of name to `NDArray` mapping. Those `NDArray` always lives on
  *      CPU. The actual parameters used for computing might live on other devices (GPUs),
  *      this function will retrieve (a copy of) the latest parameters. Therefore, modifying
- *    - `set_params(arg_params, aux_params)`: assign parameters to the devices
+ *    - `setParams(argParams, auxParams)`: assign parameters to the devices
  *      doing the computation.
- *    - `init_params(...)`: a more flexible interface to assign or initialize the parameters.
+ *    - `initParams(...)`: a more flexible interface to assign or initialize the parameters.
  *
  *  - setup
  *    - `bind()`: prepare environment for computation.
- *    - `init_optimizer()`: install optimizer for parameter updating.
+ *    - `initOptimizer()`: install optimizer for parameter updating.
  *
  *  - computation
- *    - `forward(data_batch)`: forward operation.
- *    - `backward(out_grads=None)`: backward operation.
+ *    - `forward(dataBatch)`: forward operation.
+ *    - `backward(outGrads=None)`: backward operation.
  *    - `update()`: update parameters according to installed optimizer.
- *    - `get_outputs()`: get outputs of the previous forward operation.
- *    - `get_input_grads()`: get the gradients with respect to the inputs computed
+ *    - `getOutputs()`: get outputs of the previous forward operation.
+ *    - `getInputGrads()`: get the gradients with respect to the inputs computed
  *      in the previous backward operation.
- *    - `update_metric(metric, labels)`: update performance metric for the previous forward
+ *    - `updateMetric(metric, labels)`: update performance metric for the previous forward
  *      computed results.
  *
- *  - other properties (mostly for backward compatability)
+ *  - other properties (mostly for backward compatibility)
  *    - `symbol`: the underlying symbolic graph for this module (if any)
  *      This property is not necessarily constant. For example, for `BucketingModule`,
  *      this property is simply the *current* symbol being used. For other modules,
@@ -132,7 +132,7 @@ abstract class BaseModule {
    * Run prediction on `eval_data` and evaluate the performance according to `eval_metric`.
    * @param evalData : DataIter
    * @param evalMetric : EvalMetric
-   * @param numBatch Number of batches to run. Default is `None`,
+   * @param numBatch Number of batches to run. Default is `Integer.MAX_VALUE`,
    *                 indicating run until the `DataIter` finishes.
    * @param batchEndCallback Could also be a list of functions.
    * @param reset Default `True`,

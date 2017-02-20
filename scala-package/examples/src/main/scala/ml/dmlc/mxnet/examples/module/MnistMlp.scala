@@ -80,7 +80,7 @@ object MnistMlp {
       val preds = mod.predict(batch)
       val predLabel: Array[Int] = NDArray.argmax_channel(preds(0)).toArray.map(_.toInt)
       val label = batch.label(0).toArray.map(_.toInt)
-      val acc = (predLabel zip label).map { case (py, y) =>
+      val acc = predLabel.zip(label).map { case (py, y) =>
         if (py == y) 1 else 0
       }.sum / predLabel.length.toFloat
       if (iBatch % 20 == 0) {
