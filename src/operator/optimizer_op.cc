@@ -13,6 +13,7 @@ DMLC_REGISTER_PARAMETER(SGDParam);
 DMLC_REGISTER_PARAMETER(SGDMomParam);
 DMLC_REGISTER_PARAMETER(AdamParam);
 DMLC_REGISTER_PARAMETER(RMSPropParam);
+DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
 
 NNVM_REGISTER_OP(sgd_update)
 .describe("Updater function for sgd optimizer")
@@ -55,18 +56,35 @@ NNVM_REGISTER_OP(adam_update)
 NNVM_REGISTER_OP(rmsprop_update)
 .describe("Updater function for RMSProp optimizer."
           " The RMSProp code follows the version in"
+          " http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf "
+          "Tieleman & Hinton, 2012.")
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<RMSPropParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs &attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.set_attr<FCompute>("FCompute<cpu>", RMSPropUpdate<cpu>)
+.add_arguments(RMSPropParam::__FIELDS__());
+
+NNVM_REGISTER_OP(rmspropalex_update)
+.describe("Updater function for RMSPropAlex optimizer."
+          " The RMSPropAlex code follows the version in"
           " http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.")
 .set_num_inputs(5)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<RMSPropParam>)
+.set_attr_parser(ParamParser<RMSPropAlexParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<5, 1>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3, 4};
   })
-.set_attr<FCompute>("FCompute<cpu>", RMSPropUpdate<cpu>)
-.add_arguments(RMSPropParam::__FIELDS__());
+.set_attr<FCompute>("FCompute<cpu>", RMSPropAlexUpdate<cpu>)
+.add_arguments(RMSPropAlexParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
