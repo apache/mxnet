@@ -23,6 +23,7 @@ if(GTEST_FOUND)
 
   link_directories(${C_CXX_LINK_DIRECTORIES})
   add_executable(${PROJECT_NAME}_unit_tests ${UNIT_TEST_SOURCE})
+  message(STATUS " TESTS mxnet_LINKER_LIBS: ${mxnet_LINKER_LIBS}")
   target_link_libraries(${PROJECT_NAME}_unit_tests
     ${mxnet_LINKER_LIBS}
     gtest

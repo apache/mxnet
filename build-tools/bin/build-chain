@@ -15,4 +15,4 @@ if [ "$1" == "clean" ] || [ "$1" == "generate" ]; then
   exit 0
 fi
 
-bmvn $@
+$(brazil-path [ScalaMavenBuilder]pkg.bin)/bmvn $@
