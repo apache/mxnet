@@ -55,6 +55,12 @@ package.DeepMXNet = {
     };
   };
 
+ resolves-conflict-dependencies = {
+   0.9 = {
+     Zlib = 1;
+   };
+ };
+
   runtime-dependencies = {
     0.9 = {
         CRuntime = 1.0;

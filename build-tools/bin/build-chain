@@ -7,7 +7,9 @@ set -e
 # Never put a brazil-path command in here, for instance.
 #
 
-brazilcmake $@
+if [ -z "$1" ] || [ "$1" != "mvn" ]; then
+  brazilcmake $@
+fi
 
 if [ "$1" == "clean" ] || [ "$1" == "generate" ]; then
   exit 0
