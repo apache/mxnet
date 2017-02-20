@@ -9,6 +9,7 @@ import atexit
 import warnings
 warnings.filterwarnings('default', category=DeprecationWarning)
 import numpy as np
+import inspect
 from . import libinfo
 
 __all__ = ['MXNetError']
@@ -218,3 +219,37 @@ def _notify_shutdown():
     check_call(_LIB.MXNotifyShutdown())
 
 atexit.register(_notify_shutdown)
+
+def add_fileline_to_docstring(module, incursive=True):
+    """Append the definition position to each function contained in module
+
+    Examples
+    --------
+    # Put the following codes at the end of a file
+    add_fileline_to_docstring(__name__)
+    """
+
+    def _add_fileline(obj):
+        if obj.__doc__ is None or 'From:' in obj.__doc__:
+            return
+        fname = inspect.getsourcefile(obj)
+        if fname is None:
+            return
+        try:
+            line = inspect.getsourcelines(obj)[-1]
+        except:
+            return
+        obj.__doc__ += '\n\nFrom:%s:%d' % (fname, line)
+
+    if isinstance(module, str):
+        module = sys.modules[module]
+    for name, obj in inspect.getmembers(module):
+        # print(name)
+        if inspect.isbuiltin(obj):
+            continue
+        if inspect.isfunction(obj):
+            _add_fileline(obj)
+        if inspect.ismethod(obj):
+            _add_fileline(obj.__func__)
+        if inspect.isclass(obj) and incursive:
+            add_fileline_to_docstring(obj, False)
