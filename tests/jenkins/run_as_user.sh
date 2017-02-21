@@ -17,4 +17,5 @@ HOME_DIR=/home/${USER_NAME}
 groupadd -f -g ${GROUP_ID} ${GROUP_NAME}
 useradd -m -u ${USER_ID} -g ${GROUP_NAME} ${USER_NAME}
 chown -R ${USER_NAME}:${GROUP_NAME} ${HOME_DIR}
+chown -R ${USER_NAME}:${GROUP_NAME} /usr/local/lib/
 su -m ${USER_NAME} -c "export HOME=${HOME_DIR}; ${SCRIPT}"
