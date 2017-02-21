@@ -37,12 +37,14 @@ package.DeepMXNet = {
       JDK8 = 1.0;
       Maven = 3.0;
       ScalaMavenBuilder = 1.0;
+      Libgfortran1 = 1.0;
     };
   };
 
   dependencies = {
     0.9 = {
       LibStdCppNoCFlags = 4.9;
+      Libgfortran1 = 1.0;
       Googletest = 1.x;
       CMake = 3.5.x;
       OpenBLAS = 0.2.x_live;
