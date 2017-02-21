@@ -1,5 +1,5 @@
 # coding: utf-8
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches, too-many-arguments
 """Initialization helper for mxnet"""
 from __future__ import absolute_import, print_function
 
@@ -413,7 +413,7 @@ class MSRAPrelu(Xavier):
 
 @register
 class Bilinear(Initializer):
-    """docstring for Bilinear"""
+    """Initialize weight for upsampling layer"""
     def __init__(self):
         super(Bilinear, self).__init__()
 
@@ -428,3 +428,45 @@ class Bilinear(Initializer):
             y = (i / shape[3]) % shape[2]
             weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
         arr[:] = weight.reshape(shape)
+
+
+@register
+class FusedRNN(Initializer):
+    """Initialze parameters for fused rnn layer
+
+    Parameters
+    ----------
+    init : Initializer
+        intializer applied to unpacked weights.
+    num_hidden : int
+        should be the same with arguments passed to FusedRNNCell.
+    num_layers : int
+        should be the same with arguments passed to FusedRNNCell.
+    mode : str
+        should be the same with arguments passed to FusedRNNCell.
+    bidirectional : bool
+        should be the same with arguments passed to FusedRNNCell.
+    """
+    def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False):
+        if not isinstance(init, Initializer):
+            klass, kwargs = json.loads(init)
+            init = _INITIALIZER_REGISTRY[klass.lower()](**kwargs)
+        super(FusedRNN, self).__init__(init=init.dumps(), num_hidden=num_hidden,
+                                       num_layers=num_layers, mode=mode,
+                                       bidirectional=bidirectional)
+        self._num_hidden = num_hidden
+        self._num_layers = num_layers
+        self._bidirectional = bidirectional
+        self._mode = mode
+        self._init = init
+
+    def _init_weight(self, _, arr):
+        from .rnn import rnn_cell
+        cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
+                                     self._mode, self._bidirectional, prefix='')
+        args = cell.unpack_weights({'parameters': arr})
+        for name in args:
+            desc = InitDesc(name)
+            self._init(desc, args[name])
+        arr[:] = cell.pack_weights(args)['parameters']
+
