@@ -82,8 +82,34 @@ def test_module_reshape():
     assert mod.get_outputs()[0].shape == dshape
     assert (mod.get_params()[0]['fc_bias'].asnumpy() == -3).all()
 
+def test_module_states():
+    stack = mx.rnn.SequentialRNNCell()
+    for i in range(2):
+        stack.add(mx.rnn.LSTMCell(num_hidden=20, prefix='lstm_l%d_'%i))
+    begin_state = stack.begin_state(func=mx.sym.Variable)
+    _, states = stack.unroll(10, begin_state=begin_state, inputs=mx.sym.Variable('data'))
+
+    state_names = [i.name for i in begin_state]
+    mod = mx.mod.Module(mx.sym.Group(states), context=[mx.cpu(0), mx.cpu(1)],
+                        label_names=None, state_names=state_names)
+    mod.bind(data_shapes=[('data', (5, 10))], label_shapes=None, for_training=False)
+    mod.init_params()
+    batch = mx.io.DataBatch(data=[mx.nd.zeros((5, 10))], label=[])
+
+    mod.set_states(value=1)
+    mod.forward(batch)
+    out = mod.get_outputs(merge_multi_context=False)
+    out1 = mod.get_outputs(merge_multi_context=True)
+
+    mod.set_states(states=out)
+    mod.forward(batch)
+    out2 = mod.get_outputs(merge_multi_context=True)
+
+    for x1, x2 in zip(out1, out2):
+        assert not mx.test_utils.almost_equal(x1.asnumpy(), x2.asnumpy(), rtol=1e-3)
 
 if __name__ == '__main__':
+    test_module_states()
     test_module_reshape()
     test_save_load()
     test_module_layout()
