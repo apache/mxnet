@@ -8,7 +8,7 @@ blacklist = [
     'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
     'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h',
     'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h', 'cuda.h', 'cuda_fp16.h',
-    'omp.h', 'execinfo.h', 'packet/sse-inl.h'
+    'omp.h', 'execinfo.h', 'packet/sse-inl.h', 'emmintrin.h'
     ]
 
 minimum = int(sys.argv[6]) if len(sys.argv) > 5 else 0
@@ -122,7 +122,6 @@ f = open(sys.argv[5], 'wb')
 
 if minimum != 0:
     sysheaders.remove('cblas.h')
-    sysheaders.remove('emmintrin.h')
     print >>f, "#define MSHADOW_STAND_ALONE 1"
     print >>f, "#define MSHADOW_USE_SSE 0"
     print >>f, "#define MSHADOW_USE_CBLAS 0"

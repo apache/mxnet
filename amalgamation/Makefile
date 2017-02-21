@@ -82,9 +82,17 @@ endif
 
 libmxnet_predict.js: mxnet_predict-all.cc
 	${EMCC} -std=c++11 -O2 $(DEFS) -DMSHADOW_USE_SSE=0 -D__MXNET_JS__  -o $@ $+ \
-	-s EXPORTED_FUNCTIONS="['_MXPredCreate', '_MXPredGetOutputShape', '_MXPredSetInput', '_MXPredForward', '_MXPredPartialForward', '_MXPredGetOutput', '_MXPredFree', '_MXNDListCreate', '_MXNDListGet', '_MXNDListFree']" \
+	-s EXPORTED_FUNCTIONS="['_MXPredCreate', \
+	                        '_MXPredGetOutputShape', \
+	                        '_MXPredSetInput', \
+	                        '_MXPredForward', \
+	                        '_MXPredPartialForward', \
+	                        '_MXPredGetOutput', \
+	                        '_MXPredFree', \
+	                        '_MXNDListCreate', \
+	                        '_MXNDListGet', \
+	                        '_MXNDListFree']" \
 	-s ALLOW_MEMORY_GROWTH=1
-
 
 ${MXNET_ROOT}/lib/libmxnet_predict.so:  mxnet_predict-all.o
 	@mkdir -p ${MXNET_ROOT}/lib
