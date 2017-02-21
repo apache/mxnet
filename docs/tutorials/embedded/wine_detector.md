@@ -1,15 +1,6 @@
-
-# Real-time Object Detection with MxNet On The Raspberry Pi  
+# Real-time Object Detection with MXNet On The Raspberry Pi  
 
 This tutorial shows developers who work with the Raspberry Pi or similar embedded ARM-based devices how to compile MXNet for those devices and run a pretrained deep network model. It also shows how to use AWS IoT to manage and monitor MXNet models running on your devices.
-<!-- A brief introduction to the tutorial that describes:
-
-- The problem that that the tutorial addresses
-- Who the intended audience is
-- The expected experience level of that audience with a concept or tool 
-- Which environment/language/hardware it runs in 
-
-If there is another similar tutorial that's more appropriate for another audience, direct the reader there with a linked reference. -->
 
 ## What's In This Tutorial?
 
@@ -25,22 +16,16 @@ It assumes that you are familiar with the Raspbian operating system and the [Ras
 
 ### How to Use This Tutorial
 
-<!-- A brief explanation of how the reader can use the tutorial. Can the reader copy each code snippet into a Python or other environment? Or can the reader run <filename> before or after reading through the explanations to understand how the code works? -->
-
 To follow this tutorial, you must set up your Pi as instructed (preferably from a fresh Raspbian install), and then create the files and run the bash commands described below. All instructions described are can be executed on the Raspberry Pi directly or via SSH.
-
-<!--A bulleted list of the tasks the reader will accomplish and skills he or she will learn. Begin each list item with a noun (Learn, Create, Use, etc.). -->
 
 You will accomplish the following:
 
-- Build and Install MxNet with Python bindings on your Raspbian Based Raspberry Pi
-- Fetch and run a pre-trained MxNet model on your Pi
+- Build and Install MXNet with Python bindings on your Raspbian Based Raspberry Pi
+- Fetch and run a pre-trained MXNet model on your Pi
 - Create a real-time video analysis application for the Pi
 - Connect the application to the AWS IoT service
 
 ## Prerequisites
-
-<!-- Provide a *complete* list of the software, hardware, knowledge, and skills required to be successful using the tutorial. For each item, link the item to installation instructions, specs, or skill development tools, as appropriate. If good installation instructions aren't available for required software, start the tutorial with instructions for installing it.-->
 
 To complete this tutorial, you need:
 
@@ -50,11 +35,11 @@ To complete this tutorial, you need:
 * An AWS account With AWS IoT enabled and the [AWS IoT Python SDK](https://github.com/aws/aws-iot-device-sdk-python) (for remote, real-time managing and monitoring of the model running on the Pi)
 * The [cv2 Python library](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) for the Pi
 
-## Building MxNet for The Pi
+## Building MXNet for The Pi
 
-The first step will be to get MxNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided on [here](http://mxnet.io/get_started/raspbian_setup.html). In short you will have to download the dependencies, and build the full MxNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will finally the Python bindings. Once this is done you should test that works by opening a python REPL on your Pi and typing the following commands:
+The first step will be to get MXNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided on [here](http://mxnet.io/get_started/raspbian_setup.html). In short you will have to download the dependencies, and build the full MXNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will finally the Python bindings. Once this is done you should test that works by opening a python REPL on your Pi and typing the following commands:
 
-The first step is to get MxNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided [here](http://mxnet.io/get_started/raspbian_setup.html). The linked tutorial walks you through downloading the dependencies, and building the full MxNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will register the Python bindings to MXNet. After this is done you should test that your installation works by opening a python REPL on your Pi and typing the following commands:
+The first step is to get MXNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided [here](http://mxnet.io/get_started/raspbian_setup.html). The linked tutorial walks you through downloading the dependencies, and building the full MXNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will register the Python bindings to MXNet. After this is done you should test that your installation works by opening a python REPL on your Pi and typing the following commands:
 
 
 ```bash
@@ -62,12 +47,12 @@ python
 >>> import mxnet as mx
 ```
 
-*Note: If you are getting memory allocation failed errors at this point (or at any point in this tutorial) it is likely because the full MxNet library takes up a large amount of RAM when loaded. You might want to kill the GUI and other processes that are occupying memory.*
+*Note: If you are getting memory allocation failed errors at this point (or at any point in this tutorial) it is likely because the full MXNet library takes up a large amount of RAM when loaded. You might want to kill the GUI and other processes that are occupying memory.*
 
 
 ## Running A Pre-Trained Inception Model on The Pi
 
-We are now ready to load a pre-trained model and run inference on the Pi. We will be using a simple object recognition model trained on the ImageNet data set. The model is called batch normalized Inception network (or Inception_BN for short) and it is found in the MxNet model zoo.
+We are now ready to load a pre-trained model and run inference on the Pi. We will be using a simple object recognition model trained on the ImageNet data set. The model is called batch normalized Inception network (or Inception_BN for short) and it is found in the MXNet model zoo.
 
 ### Getting the Model
 
@@ -102,7 +87,7 @@ with open('synset.txt', 'r') as f:
 # Load the network parameters
 sym, arg_params, aux_params = mx.model.load_checkpoint('Inception_BN', 0)
 
-# Load the network into an MxNet module and bind the corresponding parameters
+# Load the network into an MXNet module and bind the corresponding parameters
 mod = mx.mod.Module(symbol=sym, context=mx.cpu())
 mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))])
 mod.set_params(arg_params, aux_params)
@@ -385,7 +370,6 @@ If this is working you should see the same kind of image preview you did with ca
 You can open up the activity tab for the thing that you registered on the AWS IoT Dashboard and see the corresponding messages pushed to the server whenever a wine bottle is detected in a camera shot. Even if network connectivity periodically fails, AWS IoT will push updates out to the server when possible, allowing this system to reliably let you know when there is wine around.
 
 ## Summary
-<!-- Briefly describe the end result of the tutorial and how the user can use it or modify it to customize it. -->
-You now have a Raspberry Pi running a pre-trained MxNet model fully locally. This model is also linked to the cloud via AWS IoT and can reliably alert AWS whenever it sees a wine bottle.
+You now have a Raspberry Pi running a pre-trained MXNet model fully locally. This model is also linked to the cloud via AWS IoT and can reliably alert AWS whenever it sees a wine bottle.
 
-You can now extend this demo to create more interesting applications, such as using AWS IoT to push model updates to your Pi, loading different pre-trained models from the MxNet Model Zoo onto the Pi, or even training full end-to-end models on the Pi.
+You can now extend this demo to create more interesting applications, such as using AWS IoT to push model updates to your Pi, loading different pre-trained models from the MXNet Model Zoo onto the Pi, or even training full end-to-end models on the Pi.

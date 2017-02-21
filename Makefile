@@ -22,8 +22,16 @@ ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
 
+
 # use customized config file
 include $(config)
+
+ifeq ($(USE_MKL2017), 1)
+	RETURN_STRING=$(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT=$(firstword $(RETURN_STRING))
+	export USE_MKLML=$(lastword $(RETURN_STRING))
+endif
+
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
@@ -84,18 +92,6 @@ ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 else
 	CFLAGS += -DMKL_EXPERIMENTAL=0
-endif
-ifneq ($(USE_BLAS), mkl)
-	ICC_ON=0
-	RETURN_STRING=$(shell ./prepare_mkl.sh $(ICC_ON) $(MKLML_ROOT))
-	MKLROOT=$(firstword $(RETURN_STRING))
-	MKL_LDFLAGS=-l$(word 2, $(RETURN_STRING))
-	MKL_EXTERNAL=$(lastword $(RETURN_STRING))
-ifeq ($(MKL_EXTERNAL), 1)
-	MKL_LDFLAGS+=-Wl,-rpath,$(MKLROOT)/lib
-	CFLAGS += -I$(MKLROOT)/include
-	LDFLAGS += -Wl,--as-needed -L$(MKLROOT)/lib/ -liomp5 -lmklml_intel
-endif
 endif
 endif
 
@@ -246,12 +242,12 @@ PSLITE:
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
 DMLCCORE:
-	+ cd $(DMLC_CORE); make libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
 $(NNVM_PATH)/lib/libnnvm.a: LIBNNVM
 
 LIBNNVM:
-	+ cd $(NNVM_PATH); make lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
+	+ cd $(NNVM_PATH); $(MAKE) lib/libnnvm.a DMLC_CORE_PATH=$(DMLC_CORE); cd $(ROOTDIR)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
@@ -338,18 +334,18 @@ ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
-	cd $(DMLC_CORE); make clean; cd -
-	cd $(PS_PATH); make clean; cd -
-	cd $(NNVM_PATH); make clean; cd -
+	cd $(DMLC_CORE); $(MAKE) clean; cd -
+	cd $(PS_PATH); $(MAKE) clean; cd -
+	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: cyclean
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
-	cd $(DMLC_CORE); make clean; cd -
-	cd $(PS_PATH); make clean; cd -
-	cd $(NNVM_PATH); make clean; cd -
+	cd $(DMLC_CORE); $(MAKE) clean; cd -
+	cd $(PS_PATH); $(MAKE) clean; cd -
+	cd $(NNVM_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean

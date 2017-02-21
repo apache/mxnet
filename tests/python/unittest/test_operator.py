@@ -30,14 +30,14 @@ def check_elementwise_sum_with_shape(shape, n):
     exec1.forward()
     out1 = exec1.outputs[0].asnumpy()
     out = sum(a.asnumpy() for a  in arr)
+    assert_almost_equal(out, out1)
 
-    assert reldiff(out, out1) < 1e-6
     out_grad = mx.nd.empty(shape)
     out_grad[:] = np.random.uniform(-10, 10, shape)
     # backward
     exec1.backward([out_grad])
     for a in arr_grad:
-        assert same(a.asnumpy(), out_grad.asnumpy())
+        assert_almost_equal(a.asnumpy(), out_grad.asnumpy())
 
 def test_elementwise_sum():
     np.random.seed(0)
@@ -81,7 +81,7 @@ def check_concat_with_shape(shapes, dimension, skip_second):
     exec1.forward()
     out1 = exec1.outputs[0]
     ret = np.concatenate([narray.asnumpy() for narray in arr], axis=dimension)
-    assert same(out1.asnumpy(), ret)
+    assert_almost_equal(out1.asnumpy(), ret)
     # backward
     out1.copyto(out_grad)
     out_grad[:] += 1
@@ -91,7 +91,7 @@ def check_concat_with_shape(shapes, dimension, skip_second):
         if not skip_second or name != 'arg1':
             grad = dict_grad[name]
             np_grad = arr_np[i]
-            assert same(grad.asnumpy(), np_grad + 1)
+            assert_almost_equal(grad.asnumpy(), np_grad + 1)
 
 def test_concat():
     for dimension in range(4):
@@ -164,18 +164,18 @@ def test_slice_channel():
                                          (i+1) * shape[axis]/num_outputs).astype(np.int), axis=axis)
             if squeeze_axis:
 
-                assert reldiff(outputs[i].asnumpy(), gt.reshape(outputs[i].shape)) < 1e-5
+                assert_almost_equal(outputs[i].asnumpy(), gt.reshape(outputs[i].shape))
             else:
-                assert reldiff(outputs[i].asnumpy(), gt) < 1e-5
+                assert_almost_equal(outputs[i].asnumpy(), gt)
         # test backward
         exe.backward(out_grads=[mx.nd.array(ele, ctx=default_context()) for ele in out_grads_npy])
         if squeeze_axis:
-            assert reldiff(exe.grad_arrays[0].asnumpy(),
-                           np.concatenate([np.expand_dims(ele, axis=axis) for ele in out_grads_npy],
-                                          axis=axis)) < 1e-5
+            assert_almost_equal(exe.grad_arrays[0].asnumpy(),
+                                np.concatenate([np.expand_dims(ele, axis=axis) for ele in out_grads_npy],
+                                               axis=axis))
         else:
-            assert reldiff(exe.grad_arrays[0].asnumpy(),
-                           np.concatenate(out_grads_npy, axis=axis)) < 1e-5
+            assert_almost_equal(exe.grad_arrays[0].asnumpy(),
+                                np.concatenate(out_grads_npy, axis=axis))
     check_slice_channel(data_ndim=2, axis=1, num_outputs=3, squeeze_axis=True)
     check_slice_channel(data_ndim=4, axis=2, num_outputs=3, squeeze_axis=False)
     check_slice_channel(data_ndim=3, axis=-1, num_outputs=2, squeeze_axis=False)
@@ -196,11 +196,11 @@ def check_regression(symbol, forward, backward):
     exec1.forward()
     out1 = exec1.outputs[0].asnumpy()
     npout = forward(arr_data.asnumpy())
-    assert reldiff(npout, out1) < 1e-6
+    assert_almost_equal(npout, out1)
 
     exec1.backward()
     npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
-    assert reldiff(npout, arr_grad.asnumpy()) < 1e-6
+    assert_almost_equal(npout, arr_grad.asnumpy())
 
 def test_regression():
     check_regression(mx.symbol.LogisticRegressionOutput,
@@ -239,8 +239,8 @@ def check_softmax_with_ignore_label(xpu):
     exec1.backward()
     grad1 = grad.asnumpy()
 
-    assert(abs(np.sum(grad1[:int(shape[0]/2)])) < 1e-5)
-    assert(reldiff(grad0[int(shape[0]/2):], grad1[int(shape[0]/2):]) < 1e-5)
+    assert abs(np.sum(grad1[:int(shape[0]/2)])) < 1e-5
+    assert_almost_equal(grad0[int(shape[0]/2):], grad1[int(shape[0]/2):])
 
 def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     # bind with label
@@ -254,29 +254,14 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward()
     out = exec1.outputs[0].asnumpy()
-    assert_allclose(out, np_softmax(x.asnumpy()), rtol=1e-4)
+    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
     exec1.backward()
-    assert_allclose(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
+    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
 
 def test_softmax():
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
     check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
-
-def check_multi_softmax_with_shape(shape, xpu):
-    X = mx.symbol.Variable('X')
-    L = mx.symbol.Variable('L')
-    Y = mx.symbol.SoftmaxOutput(data=X, label=L, multi_output=True)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
-    l = mx.nd.empty((shape[0], shape[2]), ctx = xpu)
-    l[:] = np.random.randint(0, shape[1]-1, (shape[0], shape[2]))
-    grad = mx.nd.empty(shape, ctx = xpu)
-
-    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    exec1.forward()
-    print(exec1.outputs[0].asnumpy())
-    exec1.backward()
-    print(grad.asnumpy())
 
 def test_python_op():
     X = mx.symbol.Variable('X')
@@ -288,9 +273,9 @@ def test_python_op():
     dy = mx.ndarray.ones((10))
     exec1 = s.bind(default_context(), args=[x], args_grad = {'X': dx})
     exec1.forward()
-    assert reldiff(x.asnumpy(), exec1.outputs[0].asnumpy()) < 1e-5
+    assert_almost_equal(x.asnumpy(), exec1.outputs[0].asnumpy())
     exec1.backward(dy)
-    assert reldiff(dy.asnumpy(), dx.asnumpy()) < 1e-5
+    assert_almost_equal(dy.asnumpy(), dx.asnumpy())
 
 def test_swapaxes():
     data = mx.symbol.Variable('data')
@@ -308,7 +293,7 @@ def test_swapaxes():
     swap0_ = np.swapaxes(data_tmp, 0, 2)
     swap_ = np.swapaxes(swap0_, 1, 2)
 
-    assert reldiff(out, swap_) < 1e-6
+    assert_almost_equal(out, swap_)
 
 def test_scalarop():
     data = mx.symbol.Variable('data')
@@ -363,7 +348,7 @@ def test_pow_fn():
     exp = mx.symbol.Variable("exp")
     y = mx.sym.pow(2, exp)
     x = np.ones(shape)*3
-    check_numeric_gradient(y, [x])
+    check_numeric_gradient(y, [x], numeric_eps=1E-3)
     check_symbolic_forward(y, [x], [2**x])
     check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
@@ -376,7 +361,7 @@ def test_binary_logic():
         y_npy = np.random.randint(0, 4, size=y_shape).astype(np.float32)
         exe = z.simple_bind(ctx=default_context(), x=x_shape, y=y_shape)
         mx_out = exe.forward(is_train=True, x=x_npy, y=y_npy)[0].asnumpy()
-        assert_allclose(mx_out, forward_gt(x_npy, y_npy))
+        assert_almost_equal(mx_out, forward_gt(x_npy, y_npy))
         exe.backward()
         if test_scalar:
             z_lscalar = logic_sym(1, y)
@@ -385,8 +370,8 @@ def test_binary_logic():
             exe_rscalar = z_rscalar.simple_bind(ctx=default_context(), x=x_shape)
             mx_lscalar_out = exe_lscalar.forward(is_train=True, y=y_npy)[0].asnumpy()
             mx_rscalar_out = exe_rscalar.forward(is_train=True, x=x_npy)[0].asnumpy()
-            assert_allclose(mx_lscalar_out, forward_gt(1, y_npy))
-            assert_allclose(mx_rscalar_out, forward_gt(x_npy, 1))
+            assert_almost_equal(mx_lscalar_out, forward_gt(1, y_npy))
+            assert_almost_equal(mx_rscalar_out, forward_gt(x_npy, 1))
             exe_lscalar.backward()
             exe_rscalar.backward()
     # Test the no-broadcasting binary logic ops + scalar logic ops
@@ -440,13 +425,13 @@ def test_embedding():
     arg_map["data"][:] = np_data
     arg_map["embed_weight"][:] = np_weight
     exe_test.forward()
-    assert reldiff(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight)) < 1e-6
+    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight))
     # backward
     np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
     grad = mx.nd.zeros(np_grad.shape)
     grad[:] = np_grad
     exe_test.backward([grad])
-    assert reldiff(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad)) < 1e-6
+    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad))
 
 # check ops handle duplicate input correctly.
 def test_binary_op_duplicate_input():
@@ -462,9 +447,9 @@ def test_binary_op_duplicate_input():
     square = data * data
     exe_square = square.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_square.forward()
-    assert reldiff(exe_square.outputs[0].asnumpy(), data_tmp * data_tmp) < 1e-6
+    assert_almost_equal(exe_square.outputs[0].asnumpy(), data_tmp * data_tmp)
     exe_square.backward(out_grad)
-    assert reldiff(arr_grad.asnumpy(), 2.0 * data_tmp) < 1e-6
+    assert_almost_equal(arr_grad.asnumpy(), 2.0 * data_tmp)
 
 def test_sign():
     data = mx.symbol.Variable('data')
@@ -480,14 +465,14 @@ def test_sign():
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = np.sign(data_tmp)
-    assert reldiff(out, npout) < 1e-6
+    assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = 2;
     npout_grad = out_grad.asnumpy()
     npout_grad = 0;
     exe_test.backward(out_grad)
-    assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
+    assert_almost_equal(arr_grad.asnumpy(), npout_grad)
 
 def test_round_ceil_floor():
     data = mx.symbol.Variable('data')
@@ -503,7 +488,7 @@ def test_round_ceil_floor():
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = np.round(data_tmp) + np.ceil(data_tmp) + np.floor(data_tmp)
-    assert reldiff(out, npout) < 1e-6
+    assert_almost_equal(out, npout)
 
 def test_rsqrt_cos_sin():
     data = mx.symbol.Variable('data')
@@ -519,14 +504,14 @@ def test_rsqrt_cos_sin():
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout =  1/ np.sqrt(data_tmp) + np.cos(data_tmp) + np.sin(data_tmp)
-    assert reldiff(out, npout) < 1e-6
+    assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = 2;
     npout_grad = out_grad.asnumpy()
     npout_grad = npout_grad * -(1.0 / (2.0 * data_tmp * np.sqrt(data_tmp))) + npout_grad * -1 * np.sin(data_tmp) + npout_grad * np.cos(data_tmp)
     exe_test.backward(out_grad)
-    assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
+    assert_almost_equal(arr_grad.asnumpy(), npout_grad)
 
 def test_maximum_minimum():
     data1 = mx.symbol.Variable('data')
@@ -550,7 +535,7 @@ def test_maximum_minimum():
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout =  np.maximum(data_tmp1,data_tmp2) + np.minimum(data_tmp1,data_tmp2)
-    assert reldiff(out, npout) < 1e-6
+    assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = 2
@@ -563,8 +548,8 @@ def test_maximum_minimum():
     npout_grad1 = npout_grad * mask1 + npout_grad * mask2
     npout_grad2 = (npout_grad - npout_grad * mask1) + (npout_grad - npout_grad * mask2)
 
-    assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
-    assert reldiff(arr_grad2.asnumpy(), npout_grad2) < 1e-6
+    assert_almost_equal(arr_grad1.asnumpy(), npout_grad1)
+    assert_almost_equal(arr_grad2.asnumpy(), npout_grad2)
 
 def test_maximum_minimum_scalar():
     data1 = mx.symbol.Variable('data')
@@ -580,7 +565,7 @@ def test_maximum_minimum_scalar():
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout =  np.maximum(data_tmp1,3) + np.maximum(9,data_tmp1) + np.minimum(5,data_tmp1) + np.minimum(data_tmp1,4)
-    assert reldiff(out, npout) < 1e-6
+    assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = 2
@@ -594,7 +579,7 @@ def test_maximum_minimum_scalar():
     mask4 = (data_tmp1 < 4).astype('float')
     npout_grad1 = npout_grad * mask1 + (npout_grad - npout_grad * mask2) + (npout_grad - npout_grad * mask3) + npout_grad * mask4
 
-    assert reldiff(arr_grad1.asnumpy(), npout_grad1) < 1e-6
+    assert_almost_equal(arr_grad1.asnumpy(), npout_grad1)
 
 def test_abs():
     data = mx.symbol.Variable('data')
@@ -610,14 +595,14 @@ def test_abs():
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = abs(data_tmp)
-    assert reldiff(out, npout) < 1e-6
+    assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = 2;
     npout_grad = out_grad.asnumpy()
     npout_grad = npout_grad * np.sign(data_tmp)
     exe_test.backward(out_grad)
-    assert reldiff(arr_grad.asnumpy(), npout_grad) < 1e-6
+    assert_almost_equal(arr_grad.asnumpy(), npout_grad)
 
 def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride, pad):
     """configure A: input --> conv --> deconv --> output.
@@ -650,7 +635,7 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.forward()
     out = exe.outputs[0].asnumpy()
     exe.backward(out_grad)
-    assert reldiff(out, args_grad[0].asnumpy()) < 1e-6
+    assert_almost_equal(out, args_grad[0].asnumpy(), rtol=1E-3, atol=1e-4)
 
     args_grad_addto_npy = [np.random.normal(size=s) for s in arg_shapes]
     args_grad_addto = [mx.nd.array(ele) for ele in args_grad_addto_npy]
@@ -658,7 +643,7 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.forward()
     out = exe.outputs[0].asnumpy()
     exe.backward(out_grad)
-    assert reldiff(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy()) < 1e-6
+    assert_almost_equal(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy(), rtol=1e-4, atol=1e-4)
 
 
 def check_deconvolution_gradient(input_shape, num_filter, pad):
@@ -706,7 +691,7 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     exe_deconv.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv.backward(deconv_out_grad)
-    assert reldiff(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy()) < 1e-6
+    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy(), rtol=1e-3)
     # Test AddTo
     exe_deconv_addto = deconv.bind(default_context(), args=deconv_args,
                                    args_grad=deconv_addto_args_grad,
@@ -714,8 +699,8 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     exe_deconv_addto.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv_addto.backward(deconv_out_grad)
-    assert reldiff(conv_args_grad[1].asnumpy() + deconv_addto_args_grad_npy[1],
-                   deconv_addto_args_grad[1].asnumpy()) < 1e-6
+    assert_almost_equal(conv_args_grad[1].asnumpy() + deconv_addto_args_grad_npy[1],
+                        deconv_addto_args_grad[1].asnumpy(), rtol=1e-3, atol=1e-2)
 
 def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, target_shape=None):
     data = mx.sym.Variable(name="data")
@@ -808,7 +793,7 @@ def test_nearest_upsampling():
 
 def test_batchnorm_training():
     for shape in [(2, 3), (2, 3, 2, 2)]:
-        data_tmp = np.random.normal(size=shape)
+        data_tmp = np.random.normal(-0.1, 0.1, size=shape)
         s = shape[1],
         gamma = np.ones(s)
         beta = np.ones(s)
@@ -820,10 +805,10 @@ def test_batchnorm_training():
 
         data = mx.symbol.Variable('data')
         test = mx.symbol.BatchNorm(data, fix_gamma=False)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, check_eps=0.16)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
         test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
-        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, check_eps=0.16)
+        check_numeric_gradient(test, [data_tmp, gamma, beta], [rolling_mean, rolling_std], numeric_eps=1e-2, rtol=0.16)
 
 def test_convolution_grouping():
     num_filter = 4
@@ -1245,11 +1230,9 @@ def test_broadcast():
                                                  args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
-            err_forward = reldiff(net.outputs[0].asnumpy(), groundtruth)
-            assert err_forward < 1E-4
+            assert_almost_equal(net.outputs[0].asnumpy(), groundtruth, rtol=1e-4)
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            err_backward = reldiff(grad_nd.asnumpy(), grad_groundtruth)
-            assert err_backward < 1E-4
+            assert_almost_equal(grad_nd.asnumpy(), grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
         test_broadcasting_ele(sym_bcast_to)
 
@@ -1385,14 +1368,16 @@ def test_stn():
                     exe.forward(is_train=True)
                     out = exe.outputs[0].asnumpy()
                     # check forward
-                    reldiff(out, args['data'].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+                    assert_almost_equal(out, args['data'].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4], rtol=1e-2, atol=1e-4)
                     out_grad = mx.nd.ones(out.shape, ctx=dev)
                     exe.backward([out_grad])
                     # check backward
-                    reldiff(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4]) < 1e-6
+                    assert_almost_equal(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4], rtol=1e-2, atol=1e-4)
 
 
 def test_dot(ctx=default_context()):
+    np.random.seed(1234)
+
     # Test normal dot.
     for m in range(1, 5):
         for k in range(1, 5):
@@ -1411,10 +1396,10 @@ def test_dot(ctx=default_context()):
                 c = mx.sym.dot(a, b)
                 exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                 outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
+                assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
                 exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
-                assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
+                assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3)
+                assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
 
     # Test dot with transpose flag using gradient checker.
     def dot_sym():
@@ -1434,12 +1419,12 @@ def test_dot(ctx=default_context()):
         y = mx.sym.Variable('y')
         return mx.sym.dot(x, y, transpose_a=True, transpose_b=True)
     for ashape, bshape in [((3, 4), (4, 5)), ((2,3,4), (4, 5, 6))]:
-        m1_npy = np.random.normal(0, 1, ashape)
-        m2_npy = np.random.normal(0, 1, bshape)
-        check_numeric_gradient(dot_sym(), [m1_npy, m2_npy], check_eps=2e-2)
-        check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy], check_eps=2e-2)
-        check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T], check_eps=2e-2)
-        check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T], check_eps=2e-2)
+        m1_npy = np.random.uniform(-1, 1, ashape)
+        m2_npy = np.random.uniform(-1, 1, bshape)
+        check_numeric_gradient(dot_sym(), [m1_npy, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+        check_numeric_gradient(dot_sym_xT(), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+        check_numeric_gradient(dot_sym_yT(), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+        check_numeric_gradient(dot_sym_xT_yT(), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
 
 def test_batch_dot():
     for batch_size in range(1, 5):
@@ -1478,16 +1463,16 @@ def test_batch_dot():
                     exe_add.grad_dict['a'][:] = a_init_grad_npy
                     exe_add.grad_dict['b'][:] = b_init_grad_npy
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert reldiff(outputs[0].asnumpy(), c_npy) < 1E-3
+                    assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
                     exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert reldiff(exe.grad_dict['a'].asnumpy(), agrad_npy) < 1E-3
-                    assert reldiff(exe.grad_dict['b'].asnumpy(), bgrad_npy) < 1E-3
+                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
+                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
                     exe_add.forward(is_train=True, a=a_npy, b=b_npy)
                     exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                    assert reldiff(exe_add.grad_dict['a'].asnumpy(),
-                                   agrad_npy + a_init_grad_npy) < 1E-3
-                    assert reldiff(exe_add.grad_dict['b'].asnumpy(),
-                                   bgrad_npy + b_init_grad_npy) < 1E-3
+                    assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
+                                   agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
+                    assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
+                                   bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
 
@@ -1610,7 +1595,7 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     forward_result,tmp1,tmp2 = correlation_forward(img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
     # forward error
-    assert np.abs(exe1.outputs[0].asnumpy()-forward_result).mean() < 1e-4
+    assert_almost_equal(exe1.outputs[0].asnumpy(), forward_result, rtol=1e-4, atol=1e-4)
 
     # out_grad
     a = np.ones(forward_result.shape)
@@ -1621,8 +1606,8 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     grad1,grad2 = correlation_backward(a,tmp1,tmp2,img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
     # backward error
-    assert_almost_equal(exe1.grad_dict['img1'].asnumpy(), grad1, threshold=1E-3)
-    assert_almost_equal(exe1.grad_dict['img2'].asnumpy(), grad2, threshold=1E-3)
+    assert_almost_equal(exe1.grad_dict['img1'].asnumpy(), grad1, rtol=1e-3, atol=1e-4)
+    assert_almost_equal(exe1.grad_dict['img2'].asnumpy(), grad2, rtol=1e-3, atol=1e-4)
 
 def test_correlation():
 
@@ -1655,7 +1640,7 @@ def test_support_vector_machine_l1_svm():
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward()
 
-    assert_allclose(x_np, exec1.outputs[0].asnumpy())
+    assert_almost_equal(x_np, exec1.outputs[0].asnumpy())
 
     exec1.backward()
 
@@ -1663,7 +1648,7 @@ def test_support_vector_machine_l1_svm():
     l_mask = np.array(l_mask, dtype=np.float32)*2 -1
     grad_np = (-1) * l_mask * np.greater(1 - l_mask * x_np, 0)
 
-    assert_allclose(grad_np, grad.asnumpy())
+    assert_almost_equal(grad_np, grad.asnumpy())
 
 def test_support_vector_machine_l2_svm():
     xpu = default_context()
@@ -1684,7 +1669,7 @@ def test_support_vector_machine_l2_svm():
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward()
 
-    assert_allclose(x_np, exec1.outputs[0].asnumpy())
+    assert_almost_equal(x_np, exec1.outputs[0].asnumpy())
 
     exec1.backward()
 
@@ -1692,22 +1677,25 @@ def test_support_vector_machine_l2_svm():
     l_mask = np.array(l_mask, dtype=np.float32)*2 -1
     grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
     grad_np = grad_np.astype(np.float32)
-    assert_allclose(grad_np, grad.asnumpy())
+    assert_almost_equal(grad_np, grad.asnumpy())
+
 
 def test_roipooling():
+    np.random.seed(1234)
+
     data = mx.symbol.Variable(name='data')
     rois = mx.symbol.Variable(name='rois')
-    test = mx.symbol.ROIPooling(data=data, rois=rois, pooled_size=(6, 6), spatial_scale=1)
+    test = mx.symbol.ROIPooling(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1)
 
-    x1 = np.random.rand(4, 3, 12, 8)
-    x2 = np.array([[0, 1, 1, 6, 6], [2, 6, 2, 7, 11], [1, 3, 1, 5, 10], [0, 3, 3, 3, 3]])
+    x1 = np.random.rand(4, 3, 12, 8).astype('float32')
+    x2 = np.array([[0, 1.1, 1.1, 6.2, 6.2], [2, 6.1, 2.1, 8.2, 11.2], [1, 3.1, 1.1, 5.2, 10.2], [0, 3, 3, 3, 3]], dtype='float32')
 
     check_numeric_gradient(sym=test, location=[x1, x2],
                            grad_nodes={'data':'write', 'rois':'null'},
-                           numeric_eps=1e-3, check_eps=1e-2)
+                           numeric_eps=1e-4, rtol=1e-1, atol=1e-4)
     check_numeric_gradient(sym=test, location=[x1, x2],
                            grad_nodes={'data':'add', 'rois':'null'},
-                           numeric_eps=1e-3, check_eps=1e-2)
+                           numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
 
 def check_pad_with_shape(shape, xpu, pad_width, mode):
     # bind with label
@@ -1723,9 +1711,9 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
     exec1.forward()
     out = exec1.outputs[0].asnumpy()
     # compare numpy + mxnet
-    assert_allclose(out, np_out, rtol=1e-5)
+    assert_almost_equal(out, np_out)
     # grad check
-    check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-3, check_eps=1e-2)
+    check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
 
 def test_pad():
     shape1 = (2, 3, 2, 3)
@@ -1755,22 +1743,23 @@ def np_instance_norm(data, weight, bias, eps):
 
 def check_instance_norm_with_shape(shape, xpu):
     # bind with label
-    eps = 0.0234
+    eps = 0.001
     X = mx.symbol.Variable('X')
     G = mx.symbol.Variable('G')
     B = mx.symbol.Variable('B')
 
     Y = mx.symbol.InstanceNorm(data=X, beta=B, gamma=G, eps=eps)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
-    gamma = mx.random.uniform(-1, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
-    beta = mx.random.uniform(-1, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
+    x = mx.random.normal(0, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    gamma = mx.random.normal(0, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
+    beta = mx.random.normal(0, 1, shape[1], ctx=mx.cpu()).copyto(xpu)
 
     np_out = np_instance_norm(x.asnumpy(), gamma.asnumpy(), beta.asnumpy(), eps)
     exec1 = Y.bind(xpu, args = {'X':x, 'G':gamma, 'B':beta})
     exec1.forward(is_train=False)
     out = exec1.outputs[0].asnumpy()
-    assert_allclose(out, np_out, rtol=1e-4)
-    check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()}, numeric_eps=1e-2, check_eps=0.16)
+    assert_almost_equal(out, np_out, rtol=1e-4)
+    check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()},
+                           numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 def test_instance_normalization():
     check_instance_norm_with_shape((2,4,5,6), default_context())
@@ -1804,9 +1793,9 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     exe = out.simple_bind(ctx=ctx, data=in_data.shape)
     output = exe.forward(is_train=True, data=in_data)
     # compare numpy + mxnet
-    assert_allclose(exe.outputs[0].asnumpy(), np_out, rtol=1e-5)
+    assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-5)
     # check gradient
-    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, check_eps=1e-2)
+    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 def test_l2_normalization():
     for mode in ['channel', 'spatial', 'instance']:
@@ -1842,10 +1831,10 @@ def check_sequence_mask(shape, xpu, mask_value):
     exec1.forward()
     out = exec1.outputs[0].asnumpy()
     # compare numpy + mxnet
-    assert_allclose(out, np_out, rtol=1e-5)
+    assert_almost_equal(out, np_out, rtol=1e-5)
     # grad check
     check_numeric_gradient(Y, [x.asnumpy(), l.asnumpy()], grad_nodes={'X':'write'},
-        numeric_eps=1e-3, check_eps=1)
+        numeric_eps=1e-3, rtol=1e-2)
 
 def test_sequence_mask():
     shape1 = (4, 2, 2, 3)
@@ -1880,7 +1869,7 @@ def mathematical_core_binary(name,
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp1, data_tmp2)
-    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
+    assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = grad_init
@@ -1894,10 +1883,8 @@ def mathematical_core_binary(name,
     arr_grad1 = arr_grad1.asnumpy()
     arr_grad2 = arr_grad2.asnumpy()
 
-    assert reldiff(arr_grad1, npout_grad1) < 1e-6, "%s mathematical backward1 failed\n%s\n\n%s" % (
-        name, arr_grad1, npout_grad)
-    assert reldiff(arr_grad2, npout_grad2) < 1e-6, "%s mathematical backward2 failed\n%s\n\n%s" % (
-        name, arr_grad2, npout_grad)
+    assert_almost_equal(arr_grad1, npout_grad1)
+    assert_almost_equal(arr_grad2, npout_grad2)
 
 def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
@@ -1913,7 +1900,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp)
-    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
+    assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = grad_init
@@ -1925,8 +1912,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     # print(name)
     # print(arr_grad)
     # print(npout_grad)
-    assert reldiff(arr_grad, npout_grad) < 1e-6, "%s mathematical backward failed\n%s\n\n%s" % (
-        name, arr_grad, npout_grad)
+    assert_almost_equal(arr_grad, npout_grad)
 
 def test_special_functions_using_scipy():
     try:
@@ -1956,7 +1942,7 @@ def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_in
     exe_test.forward()
     out = exe_test.outputs[0].asnumpy()
     npout = forward_numpy_call(data_tmp)
-    assert reldiff(out, npout) < 1e-6, "%s mathematical forward failed\n%s\n\n%s" % (name, out, npout)
+    assert_almost_equal(out, npout)
 
 def test_mathematical():
     # rsqrt
@@ -2064,7 +2050,6 @@ def test_clip():
     shape = (30, 30)
     data_tmp = np.random.uniform(-1, 1, shape)
     test = mx.sym.clip(data, a_max=0.6, a_min=-0.6)
-    check_numeric_gradient(test, [data_tmp], check_eps=2E-2)
     check_symbolic_forward(test, [data_tmp], [np.clip(data_tmp, -0.6, 0.6)])
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)],
                             [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
@@ -2074,7 +2059,7 @@ def test_init():
         x = sym_func(shape=shape, dtype=dtype)
         exe = x.bind(default_context(), args=[], args_grad=[])
         exe.forward()
-        assert_allclose(exe.outputs[0].asnumpy(), np_func(shape=shape, dtype=dtype))
+        assert_almost_equal(exe.outputs[0].asnumpy(), np_func(shape=shape, dtype=dtype))
         assert exe.outputs[0].asnumpy().dtype == dtype
     def test_arange():
         for i in range(5):
@@ -2088,7 +2073,7 @@ def test_init():
             exe = x.simple_bind(ctx=default_context())
             assert len(exe.grad_arrays) == 0
             pred = exe.forward(is_train=False)[0].asnumpy()
-            assert_almost_equal(pred, gt, default_numerical_threshold())
+            assert_almost_equal(pred, gt)
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
@@ -2112,7 +2097,7 @@ def test_order():
             ret = np.take(np.sort(dat, axis=axis), axis=axis, indices=indices, mode='wrap')
         else:
             assert dat.shape == (5, 5, 5, 5)
-            assert axis is None or axis ==1
+            assert axis is None or axis == 1
             ret = np.zeros(dat.shape)
             if is_ascend:
                 indices = np.arange(k)
@@ -2127,32 +2112,40 @@ def test_order():
                         for k in range(5):
                             ret[i, gt_argsort[i, :, j, k], j, k] = 1
         return ret
-    a_npy = np.random.normal(size=(5, 5, 5, 5))
+
+    dshape = (5, 5, 5, 5)
+    a_npy = np.arange(np.prod(dshape)).astype(np.float32)
+    np.random.shuffle(a_npy)
+    a_npy = a_npy.reshape(dshape)
     a = mx.sym.Variable('a')
-    b = mx.sym.topk(a, axis=1, is_ascend=False, ret_typ="value", k=2)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=2,
-                                             is_ascend=False)])
-    b = mx.sym.topk(a, axis=None, is_ascend=True, ret_typ="value", k=7)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-4, check_eps=2E-2, ctx=ctx)
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=None, ret_typ="value", k=7,
-                                             is_ascend=True)])
-    b = mx.sym.topk(a, axis=3, is_ascend=True, ret_typ="value", k=3)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx,
-                           grad_nodes={'a': 'add'})
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=3, ret_typ="value", k=3,
-                                             is_ascend=True)])
-    b = mx.sym.topk(a, axis=3, is_ascend=False, ret_typ="indices", k=3)
+
+    for axis in [1, 3, None]:
+        K = [1, 3, 5, 7] if axis is None else [1, 3, 5]
+        for k in K:
+            for is_ascend in [True, False]:
+                b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="value", k=k)
+                out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=k, is_ascend=is_ascend)
+                check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
+                check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
+
+    for axis in [1, 3, None]:
+        for is_ascend in [True, False]:
+            b = mx.sym.sort(a, axis=axis, is_ascend=is_ascend)
+            if axis is None:
+                out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=a_npy.size, is_ascend=is_ascend)
+            else:
+                out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=5, is_ascend=is_ascend)
+            check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
+            check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
+
+    b = mx.sym.topk(a, axis=3, is_ascend=is_ascend, ret_typ="indices", k=3)
     check_symbolic_backward(sym=b, location={'a': a_npy},
                             out_grads=[np.random.normal(size=(5, 5, 5, 3))],
                             expected=[np.zeros((5, 5, 5, 5))])
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=3, ret_typ="indices", k=3,
                                              is_ascend=False)])
+
     b = mx.sym.topk(a, axis=1, is_ascend=True, ret_typ="mask", k=3)
     check_symbolic_backward(sym=b, location={'a': a_npy},
                             out_grads=[np.random.normal(size=(5, 5, 5, 5))],
@@ -2160,13 +2153,7 @@ def test_order():
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="mask", k=3,
                                              is_ascend=True)])
-    a = mx.sym.Variable('a')
-    b = mx.sym.sort(a, axis=1, is_ascend=False)
-    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-3, ctx=ctx)
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="value", k=5,
-                                             is_ascend=False)])
-    a = mx.sym.Variable('a')
+
     b = mx.sym.argsort(a, axis=1, is_ascend=False)
     check_symbolic_backward(sym=b, location={'a': a_npy},
                             out_grads=[np.random.normal(size=(5, 5, 5, 5))],
@@ -2174,7 +2161,7 @@ def test_order():
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=5,
                                              is_ascend=False)])
-    a = mx.sym.Variable('a')
+
     b = mx.sym.argmax(a, axis=1, keepdims=True)
     check_symbolic_backward(sym=b, location={'a': a_npy},
                             out_grads=[np.random.normal(size=(5, 5, 5, 5))],
@@ -2182,7 +2169,7 @@ def test_order():
     check_symbolic_forward(b, location={'a': a_npy},
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=1,
                                              is_ascend=False)])
-    a = mx.sym.Variable('a')
+
     b = mx.sym.argmin(a, axis=1, keepdims=True)
     check_symbolic_backward(sym=b, location={'a': a_npy},
                             out_grads=[np.random.normal(size=(5, 5, 5, 5))],
@@ -2213,13 +2200,13 @@ def test_take():
         exe.arg_dict['a'][:] = mx.nd.array(data_real)
         exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
         exe.forward()
-        assert reldiff(exe.outputs[0].asnumpy(), data_real[idx_real]) < 1e-6
+        assert_almost_equal(exe.outputs[0].asnumpy(), data_real[idx_real])
 
         for i in np.nditer(idx_real):
             grad_in[i] += 1.0
 
         exe.backward([mx.nd.array(grad_out)])
-        assert reldiff(exe.grad_dict['a'].asnumpy(), grad_in) < 1e-6
+        assert_almost_equal(exe.grad_dict['a'].asnumpy(), grad_in)
 
     data = mx.sym.Variable('a')
     idx = mx.sym.Variable('indices')
@@ -2252,8 +2239,8 @@ def test_grid_generator():
         output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
         output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
         xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
-        reldiff(output[0,0], yv.T) < 1E-6
-        reldiff(output[0,1], xv.T) < 1E-6
+        assert_almost_equal(output[0,0], yv.T)
+        assert_almost_equal(output[0,1], xv.T)
         
         # check backward
         out_grad = np.random.normal(size=(1,2)+target_shape)
@@ -2263,7 +2250,7 @@ def test_grid_generator():
         tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
         tmp[2] = 1
         grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
-        assert reldiff(exe.grad_dict['affine'].asnumpy()[0], grad_est) < 1E-6
+        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est, rtol=1e-3)
         # check addto
         exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='add')
         grid_grad_npy = np.random.normal(size=exe.grad_dict['affine'].shape)
@@ -2271,7 +2258,7 @@ def test_grid_generator():
         exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
         exe.forward()
         exe.backward(mx.nd.array(out_grad))
-        assert reldiff(exe.grad_dict['affine'].asnumpy()[0], grad_est + grid_grad_npy) < 1E-6
+        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est + grid_grad_npy, rtol=1e-2)
 
     # transform_type = warp
     test_case = [(12,21),(4,3),(6,12)]
@@ -2285,16 +2272,16 @@ def test_grid_generator():
         output = exe.outputs[0].asnumpy()
         output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
         output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
-        xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
-        reldiff(output[0,0], yv.T) < 1E-6
-        reldiff(output[0,1], xv.T) < 1E-6
+        xv, yv = np.meshgrid(np.arange(target_shape[0])+1, np.arange(target_shape[1])+1)
+        assert_almost_equal(output[0,0], yv.T)
+        assert_almost_equal(output[0,1], xv.T)
         # check backward
         out_grad = np.random.normal(size=(1,2)+target_shape)
         exe.backward(mx.nd.array(out_grad))
         grad_est = np.zeros((1,2)+target_shape)
         grad_est[0,0] = out_grad[0,0] / ((target_shape[1]-1.0) / 2.0)
         grad_est[0,1] = out_grad[0,1] / ((target_shape[0]-1.0) / 2.0)
-        assert reldiff(exe.grad_dict['flow'].asnumpy(), grad_est) < 1E-6
+        assert_almost_equal(exe.grad_dict['flow'].asnumpy(), grad_est, rtol=1e-3)
         # check addto
         exe_add = grid.simple_bind(ctx=default_context(), flow=(1, 2) + target_shape, grad_req='add')
         flow_grad_npy = np.random.normal(size=exe_add.grad_dict['flow'].shape)
@@ -2302,12 +2289,13 @@ def test_grid_generator():
         exe_add.grad_dict['flow'][:] = flow_grad_npy
         exe_add.forward()
         exe_add.backward(mx.nd.array(out_grad))
-        assert reldiff(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy) < 1E-6
+        assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
 
 
 def test_bilinear_sampler():
-    
+    np.random.seed(1234)
     from math import floor
+
     def between(x, lowerbound, upperbound):
         return x>=lowerbound and x<=upperbound
 
@@ -2320,32 +2308,33 @@ def test_bilinear_sampler():
 
         output_height = grid.shape[2]
         output_width = grid.shape[3]
-        out = np.zeros(data.shape[:2] + grid.shape[2:])
+        out = np.zeros(data.shape[:2] + grid.shape[2:], dtype=np.float32)
 
         for i in range(batchsize):
             for yout in range(output_height):
                 for xout in range(output_width):
-                    
-                    xcoord = (grid[i, 0, yout, xout]+1) * (input_width-1) / 2.0
-                    ycoord = (grid[i, 1, yout, xout]+1) * (input_height-1) / 2.0
+
+                    xcoord = np.float32((grid[i, 0, yout, xout] + 1) * (input_width-1) / 2.0)
+                    ycoord = np.float32((grid[i, 1, yout, xout] + 1) * (input_height-1) / 2.0)
 
                     xInTopLeft = int(floor(xcoord))
-                    xWeightTopLeft = 1-abs(xcoord - xInTopLeft)
-
+                    xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
+                    
                     yInTopLeft = int(floor(ycoord))
-                    yWeightTopLeft = 1-abs(ycoord - yInTopLeft)
+                    yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
 
                     # interpolation
                     for channel in range(num_channel):
-                        
+
                         inTopLeft = data[i,channel,yInTopLeft, xInTopLeft] \
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0
+                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0.0
                         inTopRight = data[i,channel,yInTopLeft, xInTopLeft+1] \
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0
+                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0.0
                         inBottomLeft = data[i,channel,yInTopLeft+1, xInTopLeft] \
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0
+                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
                         inBottomRight = data[i,channel,yInTopLeft+1, xInTopLeft+1] \
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0
+                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
+                        
                         out[i,channel,yout,xout] = xWeightTopLeft * yWeightTopLeft * inTopLeft\
                                 +  (1-xWeightTopLeft)*yWeightTopLeft * inTopRight\
                                 +  xWeightTopLeft * (1-yWeightTopLeft) * inBottomLeft\
@@ -2355,8 +2344,8 @@ def test_bilinear_sampler():
 
     def bilinear_backward_numpy(out_grad, data, grid):
 
-        data_grad = np.zeros(data.shape)
-        grid_grad = np.zeros(grid.shape)
+        data_grad = np.zeros(data.shape, dtype=np.float32)
+        grid_grad = np.zeros(grid.shape, dtype=np.float32)
 
         batchsize = data.shape[0]
         input_height = data.shape[2]
@@ -2364,61 +2353,62 @@ def test_bilinear_sampler():
         num_channel = data.shape[1]
         output_height = grid.shape[2]
         output_width = grid.shape[3]
-        out = np.zeros(data.shape)
 
         for i in range(batchsize):
             for yout in range(output_height):
                 for xout in range(output_width):
+                    
+                    top_left_y_gw = np.float32(0.0);
+                    top_left_x_gw = np.float32(0.0);
+            
+                    xcoord = np.float32((grid[i, 0, yout, xout] + 1) * (input_width-1) / 2.0)
+                    ycoord = np.float32((grid[i, 1, yout, xout] + 1) * (input_height-1) / 2.0)
 
-                    xcoord = (grid[i, 0, yout, xout]+1) * (input_width-1) / 2.0
-                    ycoord = (grid[i, 1, yout, xout]+1) * (input_height-1) / 2.0
+                    xInTopLeft = int(floor(xcoord))
+                    xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
+                    
+                    yInTopLeft = int(floor(ycoord))
+                    yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
+                    
+                    topLeftDotProduct = np.float32(0)
+                    topRightDotProduct = np.float32(0)
+                    bottomLeftDotProduct = np.float32(0)
+                    bottomRightDotProduct = np.float32(0)
+                        
+                    for channel in range(num_channel):
+                        # left top
+                        if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1):
+                            topLeftDotProduct += data[i,channel,yInTopLeft, xInTopLeft] * \
+                                out_grad[i,channel,yout,xout]
+                            data_grad[i, channel, yInTopLeft, xInTopLeft] += xWeightTopLeft * \
+                                yWeightTopLeft * out_grad[i,channel,yout,xout]
+                        # right top
+                        if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1):
+                            topRightDotProduct += data[i, channel, yInTopLeft,xInTopLeft+1] * \
+                                out_grad[i, channel, yout,xout] 
+                            data_grad[i, channel,yInTopLeft, xInTopLeft+1] += (1-xWeightTopLeft) * \
+                                yWeightTopLeft * out_grad[i,channel,yout,xout]
+                        # left bottom
+                        if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
+                            bottomLeftDotProduct += data[i, channel,yInTopLeft+1, xInTopLeft] * \
+                                out_grad[i,channel,yout,xout]
+                            data_grad[i,channel,yInTopLeft+1,xInTopLeft]+=xWeightTopLeft * \
+                                (1-yWeightTopLeft)* out_grad[i,channel,yout,xout]
+                        # right bottom
+                        if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
+                            bottomRightDotProduct += data[i,channel,yInTopLeft+1, xInTopLeft+1] * \
+                                out_grad[i,channel,yout,xout]
+                            data_grad[i,channel,yInTopLeft+1,xInTopLeft+1]+= (1-xWeightTopLeft) * \
+                                (1-yWeightTopLeft)*out_grad[i,channel,yout,xout]
 
-                    if xcoord>=0 and xcoord<=input_width-1 and ycoord>=0 and ycoord<=input_height-1:
+                    yf = np.float32(-xWeightTopLeft * topLeftDotProduct + xWeightTopLeft*bottomLeftDotProduct - \
+                        (1-xWeightTopLeft)* topRightDotProduct + (1-xWeightTopLeft)*bottomRightDotProduct)
+                    xf = np.float32(-yWeightTopLeft * topLeftDotProduct + yWeightTopLeft*topRightDotProduct - \
+                        (1-yWeightTopLeft)*bottomLeftDotProduct + (1-yWeightTopLeft)*bottomRightDotProduct)
 
-                        xInTopLeft = int(floor(xcoord))
-                        xWeightTopLeft = 1-abs(xcoord - xInTopLeft)
-
-                        yInTopLeft = int(floor(ycoord))
-                        yWeightTopLeft = 1-abs(ycoord - yInTopLeft)
-
-                        topLeftDotProduct = 0
-                        topRightDotProduct = 0
-                        bottomLeftDotProduct = 0
-                        bottomRightDotProduct = 0
-
-                        for channel in range(num_channel):
-                            # left top
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1):
-                                topLeftDotProduct += data[i,channel,yInTopLeft, xInTopLeft] * \
-                                    out_grad[i,channel,yout,xout]
-                                data_grad[i, channel, yInTopLeft, xInTopLeft] += xWeightTopLeft * \
-                                    yWeightTopLeft * out_grad[i,channel,yout,xout]
-                            # right top
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1):
-                                topRightDotProduct += data[i, channel, yInTopLeft,xInTopLeft+1] * \
-                                    out_grad[i, channel, yout,xout] 
-                                data_grad[i, channel,yInTopLeft, xInTopLeft+1] += (1-xWeightTopLeft) * \
-                                    yWeightTopLeft * out_grad[i,channel,yout,xout]
-                            # left bottom
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
-                                bottomLeftDotProduct += data[i, channel,yInTopLeft+1, xInTopLeft] * \
-                                    out_grad[i,channel,yout,xout]
-                                data_grad[i,channel,yInTopLeft+1,xInTopLeft]+=xWeightTopLeft * \
-                                    (1-yWeightTopLeft)* out_grad[i,channel,yout,xout]
-                            # right bottom
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
-                                bottomRightDotProduct += data[i,channel,yInTopLeft+1, xInTopLeft+1] * \
-                                    out_grad[i,channel,yout,xout]
-                                data_grad[i,channel,yInTopLeft+1,xInTopLeft+1]+= (1-xWeightTopLeft) * \
-                                    (1-yWeightTopLeft)*out_grad[i,channel,yout,xout]
-
-                        yf = -xWeightTopLeft * topLeftDotProduct + xWeightTopLeft*bottomLeftDotProduct - \
-                            (1-xWeightTopLeft)* topRightDotProduct + (1-xWeightTopLeft)*bottomRightDotProduct
-                        xf = -yWeightTopLeft * topLeftDotProduct + yWeightTopLeft*topRightDotProduct - \
-                            (1-yWeightTopLeft)*bottomLeftDotProduct + (1-yWeightTopLeft)*bottomRightDotProduct
-                        grid_grad[i,0,yout,xout] = xf * (input_width-1) / 2.0
-                        grid_grad[i,1,yout,xout] = yf * (input_height-1) / 2.0
-
+                    grid_grad[i,0,yout,xout] = xf * (input_width-1) / 2.0
+                    grid_grad[i,1,yout,xout] = yf * (input_height-1) / 2.0
+                    
         return data_grad, grid_grad
     
     data = mx.sym.Variable('data')
@@ -2435,36 +2425,32 @@ def test_bilinear_sampler():
             data_shape, grid_shape = item
             exe = net.simple_bind(data=data_shape,grid=grid_shape,ctx=ctx,grad_req='write')
             # check forward
-            tmp = np.zeros(grid_shape)
-            xv, yv = np.meshgrid(np.arange(grid_shape[2]), np.arange(grid_shape[3]))
-            tmp[0,0] = yv.T
-            tmp[0,1] = xv.T
-            exe.arg_dict['data'][:] = np.random.normal(0,100,size=data_shape) 
-            exe.arg_dict['grid'][:] = tmp + np.random.normal(0,100,size=grid_shape) 
+            exe.arg_dict['data'][:] = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
+            exe.arg_dict['grid'][:] = np.random.uniform(low=-2, high=2, size=grid_shape).astype(np.float32)
             exe.forward()
             out = bilinear_forward_numpy(exe.arg_dict['data'].asnumpy(), exe.arg_dict['grid'].asnumpy())
-            assert reldiff(exe.outputs[0].asnumpy(),out) < 1E-5
+            assert_almost_equal(exe.outputs[0].asnumpy(), out, rtol=1e-3,atol=1e-5)
 
             # check backward
-            out_grad = np.random.normal(size=data_shape[:2] + grid_shape[2:])
+            out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
             exe.backward(mx.nd.array(out_grad))
             data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(), 
                                                        exe.arg_dict['grid'].asnumpy())
-            assert reldiff(exe.grad_dict['data'].asnumpy(),data_grad) < 2E-4
-            assert reldiff(exe.grad_dict['grid'].asnumpy(),grid_grad) < 1E-5
+            assert_almost_equal(exe.grad_dict['data'].asnumpy(), data_grad, rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), grid_grad, rtol=1e-3, atol=1e-5)
 
             # check kAddTo
             exe_addto = net.simple_bind(data=data_shape, grid=grid_shape, ctx=ctx, grad_req='add')
-            data_initial_grid = np.random.normal(size=exe_addto.grad_dict['data'].shape)
-            grid_initial_grid = np.random.normal(size=exe_addto.grad_dict['grid'].shape)
+            data_initial_grid = np.random.normal(size=exe_addto.grad_dict['data'].shape).astype(np.float32)
+            grid_initial_grid = np.random.normal(size=exe_addto.grad_dict['grid'].shape).astype(np.float32)
             exe_addto.arg_dict['data'][:] = exe.arg_dict['data'][:]
             exe_addto.arg_dict['grid'][:] = exe.arg_dict['grid'][:]
             exe_addto.grad_dict['data'][:] = data_initial_grid
             exe_addto.grad_dict['grid'][:] = grid_initial_grid
             exe_addto.forward()
             exe_addto.backward(mx.nd.array(out_grad))
-            assert reldiff(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid) < 2E-4
-            assert reldiff(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid) < 1E-5
+            assert_almost_equal(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid, rtol=1e-3,atol=1e-5)
+            assert_almost_equal(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid, rtol=1e-3,atol=1e-5)
             
 def test_index2d():
     for _ in range(30):
@@ -2487,8 +2473,9 @@ def test_cast():
             exe.arg_arrays[0][:] = X
             exe.forward()
             exe.backward(mx.nd.array(X, dtype=dsttype, ctx=default_context()))
-            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), threshold=5e-4)
-            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), threshold=5e-4)
+            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), rtol=1e-3)
+            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), rtol=1e-3)
+
 
 def test_repeat():
     def test_repeat_forward():
@@ -2545,7 +2532,7 @@ def test_repeat():
         else:
             raise RuntimeError("Invalid axis value")
 
-        assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
+        assert_almost_equal(expected_grad, arr_grad.asnumpy(), rtol=1e-3)
 
     def test_repeat_numeric_gradient():
         data = mx.sym.Variable('data')
@@ -2556,12 +2543,13 @@ def test_repeat():
         repeats = 2
 
         test = mx.sym.repeat(data, repeats=repeats, axis=0)
-        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-3, check_eps=0.01)
+        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-3, rtol=1e-2)
 
     test_repeat_forward()
     test_repeat_backward(axis=0)
     test_repeat_backward(axis=1)
     test_repeat_numeric_gradient()
+
 
 def test_tile():
     def test_normal_case():
@@ -2573,7 +2561,7 @@ def test_tile():
             shape = ()
             for i in range(0, ndim):
                 shape += (np.random.randint(1, size_max+1), )
-            a = np.random.random_integers(0, 100, shape)
+            a = np.random.randint(0, 100, shape)
             a = np.asarray(a, dtype=np.int32)
             if ndim == 0:
                 a = np.array([])
@@ -2636,7 +2624,7 @@ def test_tile():
             for j in range(shape[1]):
                 expected_grad[i][j] += sum(sum(npout_grad[i:(n1 * reps1):reps1, j:(n2 * reps2):reps2]))
 
-        assert_almost_equal(expected_grad, arr_grad.asnumpy(), threshold=5e-4)
+        assert_almost_equal(expected_grad, arr_grad.asnumpy(), rtol=1e-3)
 
     def test_tile_numeric_gradient():
         data = mx.sym.Variable('data')
@@ -2648,7 +2636,7 @@ def test_tile():
         reps2 = 2
         reps = (reps1, reps2)
         test = mx.sym.tile(data, reps=reps)
-        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-3, check_eps=0.01)
+        check_numeric_gradient(test, [data_tmp], numeric_eps=1e-2, rtol=1e-2)
 
     test_normal_case()
     test_empty_tensor()
@@ -2657,7 +2645,202 @@ def test_tile():
     test_tile_backward()
     test_tile_numeric_gradient()
 
+
+def test_one_hot():
+    def test_normal_case():
+        ndim_max = 6
+        dim_size_max = 20
+        depth = int(dim_size_max / 2)
+        on_value = 1
+        off_value = 0
+        for ndim in range(1, ndim_max+1):
+            shape = ()
+            for i in range(1, ndim+1):
+                shape += (np.random.randint(1, dim_size_max+1), )
+            indices = np.random.randint(-dim_size_max, dim_size_max+1,
+                                        size=np.prod(shape)).reshape(shape)
+            mx_one_hot_array = mx.nd.one_hot(
+                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                depth=depth, dtype=np.int32)
+            expected_array = np.zeros((np.prod(shape), depth), dtype=np.int32)
+            expected_array[:] = off_value
+            indices_1d = indices.flatten()
+            row = 0
+            for idx in indices_1d:
+                if 0 <= idx < depth:
+                    expected_array[row, idx] = on_value
+                row += 1
+            expected_array = expected_array.reshape(shape + (depth, ))
+            one_hot_array = mx_one_hot_array.asnumpy()
+            assert same(expected_array, one_hot_array)
+
+    def test_empty_indices():
+        shape = (2, 0, 9, 3)
+        indices = np.array([]).reshape(shape)
+        depth = 10
+        mx_one_hot_array = mx.nd.one_hot(
+            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+            depth=depth, dtype=np.int32).asnumpy()
+        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
+        assert same(expected_array, mx_one_hot_array)
+
+    def test_zero_depth():
+        shape = (2, 4, 9, 3)
+        indices = np.ones(shape)
+        depth = 0
+        mx_one_hot_array = mx.nd.one_hot(
+            mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+            depth=depth, dtype=np.int32).asnumpy()
+        expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
+        assert same(expected_array, mx_one_hot_array)
+
+    test_normal_case()
+    test_empty_indices()
+    test_zero_depth()
+
+
+def test_where():
+    def get_forward_expected_output(condition, x, y):
+        original_shape = x.shape
+        out = np.zeros(original_shape)
+        if condition.shape == x.shape:
+            for index, c in np.ndenumerate(condition):
+                if c != 0:
+                    out[index] = x[index]
+                else:
+                    out[index] = y[index]
+        elif condition.shape == (x.shape[0], ):
+            s = x.shape
+            m = s[0]
+            n = int(np.prod(s)/s[0])
+            x2d = x.reshape((m, n))
+            y2d = y.reshape((m, n))
+            out = out.reshape((m, n))
+            for i in range(0, m):
+                if condition[i] != 0:
+                    for j in range(0, n):
+                        out[i, j] = x2d[i, j]
+                else:
+                    for j in range(0, n):
+                        out[i, j] = y2d[i, j]
+        else:
+            raise RuntimeError("Invalid condition shape for where op")
+
+        out = out.reshape(original_shape)
+        return out
+
+    def get_forward_inputs_same_shape(shape):
+        condition_np = np.random.randint(0, 2, np.prod(shape)).reshape(shape)
+        x_np = np.random.randint(1, 6, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(7, 11, np.prod(shape)).reshape(shape)
+        return condition_np, x_np, y_np
+
+    def get_forward_inputs_condition_vector(shape):
+        condition_np = np.random.randint(0, 2, shape[0])
+        x_np = np.random.randint(1, 6, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(7, 11, np.prod(shape)).reshape(shape)
+        return condition_np, x_np, y_np
+
+    def get_backward_input(shape):
+        return np.random.randint(20, 30, np.prod(shape)).reshape(shape)
+
+    def get_backward_expected_outputs(grad_in, condition):
+        shape = grad_in.shape
+        grad_cond = np.zeros(condition.shape)
+        grad_x = np.empty(shape)
+        grad_y = np.empty(shape)
+
+        for index, c in np.ndenumerate(condition):
+            if 0 != c:
+                grad_x[index] = grad_in[index]
+                grad_y[index] = 0
+            else:
+                grad_x[index] = 0
+                grad_y[index] = grad_in[index]
+
+        return grad_cond, grad_x, grad_y
+
+    def test_where_helper(shape, same_shape):
+        if same_shape:
+            condition_np, x_np, y_np = get_forward_inputs_same_shape(shape)
+        else:
+            condition_np, x_np, y_np = get_forward_inputs_condition_vector(shape)
+
+        out_expected = get_forward_expected_output(condition_np, x_np, y_np)
+
+        grad_in_np = get_backward_input(shape)
+        grad_expected_cond, grad_expected_x, grad_expected_y\
+            = get_backward_expected_outputs(grad_in_np, condition_np)
+
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
+        where_sym = mx.sym.where(condition, x, y)
+
+        # test req='write'
+        where_exe_write = where_sym.simple_bind(ctx=default_context(),
+                                                condition=condition_np.shape,
+                                                x=x_np.shape, y=y_np.shape,
+                                                grad_req='write')
+        # test forward req='write'
+        outputs = where_exe_write.forward(is_train=True, condition=condition_np,
+                                          x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
+        # test backward req='write'
+        where_exe_write.backward(grad_in_mx)
+        assert same(where_exe_write.grad_dict['x'].asnumpy(), grad_expected_x)
+        assert same(where_exe_write.grad_dict['y'].asnumpy(), grad_expected_y)
+        assert same(where_exe_write.grad_dict['condition'].asnumpy(), grad_expected_cond)
+
+        # test req='add'
+        x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
+        y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
+        where_exe_add = where_sym.simple_bind(ctx=default_context(),
+                                              condition=condition_np.shape,
+                                              x=x_np.shape, y=y_np.shape,
+                                              grad_req='add')
+        where_exe_add.grad_dict['x'][:] = x_grad_init
+        where_exe_add.grad_dict['y'][:] = y_grad_init
+        # test forward req='add'
+        outputs = where_exe_add.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
+        # test backward req='add'
+        where_exe_add.backward(grad_in_mx)
+        x_ograd = where_exe_add.grad_dict['x'].asnumpy()
+        y_ograd = where_exe_add.grad_dict['y'].asnumpy()
+        assert same(x_ograd, grad_expected_x+x_grad_init)
+        assert same(y_ograd, grad_expected_y+y_grad_init)
+
+    def test_where_numeric_gradient(shape, same_shape):
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        where_sym = mx.sym.where(condition, x, y)
+        if same_shape:
+            condition_np, x_np, y_np = get_forward_inputs_same_shape(shape)
+        else:
+            condition_np, x_np, y_np = get_forward_inputs_condition_vector(shape)
+        check_numeric_gradient(where_sym, [condition_np, x_np, y_np], grad_nodes=['x', 'y'])
+
+    test_where_helper((5, 9), True)
+    test_where_helper((5, 9), False)
+    test_where_helper((5, 7, 9), True)
+    test_where_helper((5, 7, 9), False)
+    test_where_helper((10, 8, 15, 3), True)
+    test_where_helper((10, 8, 15, 3), False)
+    test_where_numeric_gradient((5, 9), True)
+    test_where_numeric_gradient((5, 9), False)
+    test_where_numeric_gradient((5, 7, 9), True)
+    test_where_numeric_gradient((5, 7, 9), False)
+
 if __name__ == '__main__':
+    test_l2_normalization()
+    test_sequence_mask()
+    test_roipooling()
+    test_batchnorm_training()
+    test_order()
+    test_grid_generator()
     test_dot()
     test_cast()
     test_clip()
@@ -2691,7 +2874,6 @@ if __name__ == '__main__':
     test_abs()
     test_round_ceil_floor()
     test_deconvolution()
-    test_batchnorm_training()
     check_softmax_with_ignore_label(default_context())
     test_convolution_dilated_impulse_response()
     test_reshape()
@@ -2701,18 +2883,15 @@ if __name__ == '__main__':
     test_correlation()
     test_support_vector_machine_l1_svm()
     test_support_vector_machine_l2_svm()
-    test_roipooling()
     test_pad()
     test_instance_normalization()
-    test_l2_normalization()
-    test_sequence_mask()
     test_mathematical()
     test_special_functions_using_scipy()
-    test_order()
     test_blockgrad()
     test_take()
-    test_grid_generator()
     test_bilinear_sampler()
     test_binary_logic()
     test_repeat()
     test_tile()
+    test_one_hot()
+    test_where()

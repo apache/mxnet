@@ -8,7 +8,7 @@ Make sure you have the root permission, and `yum` is properly installed. Check i
 ```bash
 sudo yum check-update 
 ```
-If you don't get a error message, then `yum` is installed.
+If you don't get an error message, then `yum` is installed.
 
 **To install MXNet on CentOS, you must have the following:**
 

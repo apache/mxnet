@@ -389,9 +389,6 @@ class CustomMetric(EvalMetric):
             label = label.asnumpy()
             pred = pred.asnumpy()
 
-            if pred.shape[1] == 2:
-                pred = pred[:, 1]
-
             reval = self._feval(label, pred)
             if isinstance(reval, tuple):
                 (sum_metric, num_inst) = reval
