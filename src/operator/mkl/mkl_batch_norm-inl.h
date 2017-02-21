@@ -46,14 +46,18 @@ class MKLBatchNormOp : public Operator {
     fwd_bottom_data = MKLData<DType>::create();
     bwd_top_diff = MKLData<DType>::create();
     bwd_bottom_diff = MKLData<DType>::create();
+    scaleShift_space.dptr = NULL;
+    scaleShiftDiff_space.dptr = NULL;
   }
   virtual ~MKLBatchNormOp() {
     if (batchNormFwdInference != NULL) dnnDelete<DType>(batchNormFwdInference);
     if (batchNormFwdTraining != NULL) dnnDelete<DType>(batchNormFwdTraining);
     if (batchNormBwdScaleShift != NULL) dnnDelete<DType>(batchNormBwdScaleShift);
     dnnLayoutDelete<DType>(layout_usr_);
-    Storage::Get()->Free(scaleShift_space);
-    Storage::Get()->Free(scaleShiftDiff_space);
+    if (scaleShift_space.dptr)
+      Storage::Get()->Free(scaleShift_space);
+    if (scaleShiftDiff_space.dptr)
+      Storage::Get()->Free(scaleShiftDiff_space);
   }
   static std::string getName() {
     return "MKLBatchNormOp";
