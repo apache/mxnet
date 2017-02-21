@@ -316,7 +316,7 @@ class BucketingModule(BaseModule):
                             state_names=self._state_names)
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
-                        force_rebind=False, shared_module=self._curr_module)
+                        force_rebind=False, shared_module=self._buckets[self._default_bucket_key])
             self._buckets[bucket_key] = module
 
         self._curr_module = self._buckets[bucket_key]
