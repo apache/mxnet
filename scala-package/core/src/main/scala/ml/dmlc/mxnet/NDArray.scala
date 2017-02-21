@@ -305,29 +305,54 @@ object NDArray {
   }
 
   /**
-   * Join a sequence of arrays at the first dimension
-   * TODO: shall we make it native?
-   * @param arrays
+   * Concatenate a list of NDArrays along the specified dimension.
+   * @param arrays Arrays to be concatenate.
+   *               They must have identical shape except the first dimension.
+   *               They also must have the same data type.
+   * @param axis The axis along which to concatenate.
+   * @param alwaysCopy Default `True`. When not `True`,
+   *                   if the arrays only contain one `NDArray`,
+   *                   that element will be returned directly, avoid copying.
+   * @return An `NDArray` that lives on the same context as `arrays[0].context`.
    */
-  def concatenate(arrays: Seq[NDArray], ctx: Context = null): NDArray = {
-    require(arrays != null && arrays.size > 0, "arrays empty")
-    val array0 = arrays.head
-    val shape = array0.shape.drop(1)
-    var axis0 = array0.shape(0)
-    arrays.drop(1).foreach { array =>
-      require(shape == array.shape.drop(1),
-        s"shape mismatch between ${array.shape} and $shape")
-      axis0 += array.shape(0)
-    }
+  def concatenate(arrays: Seq[NDArray], axis: Int = 0, alwaysCopy: Boolean = true): NDArray = {
+    require(arrays.size > 0)
 
-    val output = NDArray.empty(Shape(axis0) ++ shape, ctx)
-    axis0 = 0
-    arrays.foreach { array =>
-      output.slice(axis0, axis0 + array.shape(0)).set(array)
-      axis0 += array.shape(0)
-    }
+    val array0 = arrays(0)
+    if (!alwaysCopy && arrays.size == 1) {
+      array0
+    } else {
+      val shapeRest1 = array0.shape.slice(0, axis)
+      val shapeRest2 = array0.shape.slice(axis + 1, array0.shape.length)
+      val dtype = array0.dtype
 
-    output
+      val shapeAxis =
+        arrays.map(arr => {
+          require(shapeRest1 == arr.shape.slice(0, axis))
+          require(shapeRest2 == arr.shape.slice(axis + 1, arr.shape.length))
+          require(dtype == arr.dtype)
+          arr.shape(axis)
+        }).sum
+      val retShape = shapeRest1 ++ Shape(shapeAxis) ++ shapeRest2
+      val ret = NDArray.empty(retShape, ctx = array0.context, dtype = dtype)
+
+      var idx = 0
+      val begin = Array.fill(retShape.length)(0)
+      val end = retShape.toArray
+      for (arr <- arrays) {
+        if (axis == 0) {
+          ret.slice(idx, idx + arr.shape(0)).set(arr)
+        } else {
+          begin(axis) = idx
+          end(axis) = idx + arr.shape(axis)
+          NDArray._crop_assign(Map("out" -> ret,
+            "begin" -> Shape(begin),
+            "end" -> Shape(end)))(ret, arr)
+        }
+        idx += arr.shape(axis)
+      }
+      ret
+    }
   }
 
   def concatenate(arrays: NDArray *): NDArray = {
@@ -475,10 +500,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
         if (excepts.contains(addr)) {
           true
         } else {
-          weak.get match {
-            case Some(arr) => arr.dispose()
-            case None =>
-          }
+          weak.get.foreach(_.dispose())
           false
         }
       }
@@ -787,20 +809,6 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   def copy(): NDArray = copyTo(this.context)
 
   /**
-   * Return an `NDArray` that lives in the target context. If the array
-   * is already in that context, the same object is returned. Otherwise, a copy is made.
-   * @param context The target context we want the return value to live in.
-   * @return A copy or `self` as an `NDArray` that lives in the target context.
-   */
-  def asInContext(context: Context): NDArray = {
-    if (this.context == context) {
-      this
-    } else {
-      this.copyTo(context)
-    }
-  }
-
-  /**
    * Get shape of current NDArray.
    * @return an array representing shape of current ndarray
    */
@@ -814,6 +822,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
 
   // Get size of current NDArray.
   def size: Int = shape.product
+
+  /**
+   * Return an `NDArray` that lives in the target context. If the array
+   * is already in that context, `self` is returned. Otherwise, a copy is made.
+   * @param context The target context we want the return value to live in.
+   * @return A copy or `self` as an `NDArray` that lives in the target context.
+   */
+  def asInContext(context: Context): NDArray = {
+    if (this.context == context) this else this.copyTo(context)
+  }
 
   override def equals(o: Any): Boolean = o match {
     case that: NDArray =>
@@ -916,6 +934,7 @@ class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def copy(): NDArray = head.copy()
   def shape: Shape = head.shape
   def size: Int = head.size
+  def asInContext(context: Context): NDArray = head.asInContext(context)
 }
 
 class NDArrayInternal private[mxnet](private val internal: Array[Byte], private val dtype: DType) {
