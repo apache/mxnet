@@ -88,6 +88,15 @@ include_directories("cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 
+if(UNIX)
+  find_library(RTLIB rt)
+  message(STATUS " RTLIB: ${RTLIB}")
+  if(RTLIB)
+    message(STATUS " AFTER IF RTLIB: ${RTLIB}")
+    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
+  endif()
+endif()
+
 # ---[ jemalloc
 if(USE_JEMALLOC)
   find_package(JeMalloc)
