@@ -26,17 +26,78 @@
 namespace mxnet {
 namespace io {
 /*! \brief data structure to hold labels for images */
+// class ImageLabelMap {
+//  public:
+//   /*!
+//    * \brief initialize the label list into memory
+//    * \param path_imglist path to the image list
+//    * \param label_width predefined label_width
+//    */
+//   explicit ImageLabelMap(const char *path_imglist,
+//                          mshadow::index_t label_width,
+//                          bool silent) {
+//     this->label_width = label_width;
+//     image_index_.clear();
+//     label_.clear();
+//     idx2label_.clear();
+//     dmlc::InputSplit *fi = dmlc::InputSplit::Create
+//         (path_imglist, 0, 1, "text");
+//     dmlc::InputSplit::Blob rec;
+//     while (fi->NextRecord(&rec)) {
+//       // quick manual parsing
+//       char *p = reinterpret_cast<char*>(rec.dptr);
+//       char *end = p + rec.size;
+//       // skip space
+//       while (isspace(*p) && p != end) ++p;
+//       image_index_.push_back(static_cast<size_t>(atol(p)));
+//       for (size_t i = 0; i < label_width; ++i) {
+//         // skip till space
+//         while (!isspace(*p) && p != end) ++p;
+//         // skip space
+//         while (isspace(*p) && p != end) ++p;
+//         CHECK(p != end) << "Bad ImageList format";
+//         label_.push_back(static_cast<real_t>(atof(p)));
+//       }
+//     }
+//     delete fi;
+//     // be careful not to resize label_ afterwards
+//     idx2label_.reserve(image_index_.size());
+//     for (size_t i = 0; i < image_index_.size(); ++i) {
+//       idx2label_[image_index_[i]] = dmlc::BeginPtr(label_) + i * label_width;
+//     }
+//     if (!silent) {
+//       LOG(INFO) << "Loaded ImageList from " << path_imglist << ' '
+//                 << image_index_.size() << " Image records";
+//     }
+//   }
+//   /*! \brief find a label for corresponding index */
+//   inline mshadow::Tensor<cpu, 1> Find(size_t imid) const {
+//     std::unordered_map<size_t, real_t*>::const_iterator it
+//         = idx2label_.find(imid);
+//     CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
+//     return mshadow::Tensor<cpu, 1>(it->second, mshadow::Shape1(label_width));
+//   }
+//
+//  private:
+//   // label with_
+//   mshadow::index_t label_width;
+//   // image index of each record
+//   std::vector<size_t> image_index_;
+//   // real label content
+//   std::vector<real_t> label_;
+//   // map index to label
+//   std::unordered_map<size_t, real_t*> idx2label_;
+// };
 class ImageLabelMap {
  public:
   /*!
    * \brief initialize the label list into memory
    * \param path_imglist path to the image list
-   * \param label_width predefined label_width
+   * \param label_width predefined label_width, -1 for arbitrary width
    */
   explicit ImageLabelMap(const char *path_imglist,
-                         mshadow::index_t label_width,
-                         bool silent) {
-    this->label_width = label_width;
+                            int label_width,
+                            bool silent) {
     image_index_.clear();
     label_.clear();
     idx2label_.clear();
@@ -50,43 +111,67 @@ class ImageLabelMap {
       // skip space
       while (isspace(*p) && p != end) ++p;
       image_index_.push_back(static_cast<size_t>(atol(p)));
-      for (size_t i = 0; i < label_width; ++i) {
-        // skip till space
+      size_t start_pos = label_.size();
+      if (label_width > 0) {
+        // provided label_width > 0, require width check
+        for (int i = 0; i < label_width; ++i) {
+          // skip till space
+          while (!isspace(*p) && p != end) ++p;
+          // skip space
+          while (isspace(*p) && p != end) ++p;
+          CHECK(p != end) << "Bad ImageList format";
+          label_.push_back(static_cast<real_t>(atof(p)));
+        }
+        CHECK_EQ(label_.size() - start_pos, label_width);
+      } else {
+        // arbitrary label width for each sample
         while (!isspace(*p) && p != end) ++p;
-        // skip space
         while (isspace(*p) && p != end) ++p;
-        CHECK(p != end) << "Bad ImageList format";
-        label_.push_back(static_cast<real_t>(atof(p)));
+        char *curr = p;
+        CHECK(curr != end) << "Bad ImageList format";
+        while (!isspace(*p) && p != end) ++p;
+        while (isspace(*p) && p != end) ++p;
+        char *next = p;
+        while (next != end) {
+          label_.push_back(static_cast<real_t>(atof(curr)));
+          curr = next;
+          while (!isspace(*next) && next != end) ++next;
+          while (isspace(*next) && next != end) ++next;
+        }
+        // skip the last one which should be the image_path
+        CHECK_GT(label_.size(), start_pos) << "Bad ImageList format: empty label";
       }
+      // record label start_pos and width in map
+      idx2label_[image_index_.back()] = std::pair<real_t*, size_t>(
+        dmlc::BeginPtr(label_) + start_pos, label_.size() - start_pos);
     }
     delete fi;
-    // be careful not to resize label_ afterwards
-    idx2label_.reserve(image_index_.size());
-    for (size_t i = 0; i < image_index_.size(); ++i) {
-      idx2label_[image_index_[i]] = dmlc::BeginPtr(label_) + i * label_width;
-    }
     if (!silent) {
       LOG(INFO) << "Loaded ImageList from " << path_imglist << ' '
                 << image_index_.size() << " Image records";
     }
   }
+
   /*! \brief find a label for corresponding index */
   inline mshadow::Tensor<cpu, 1> Find(size_t imid) const {
-    std::unordered_map<size_t, real_t*>::const_iterator it
+    std::unordered_map<size_t, std::pair<real_t*, size_t> >::const_iterator it
         = idx2label_.find(imid);
     CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
-    return mshadow::Tensor<cpu, 1>(it->second, mshadow::Shape1(label_width));
+    return mshadow::Tensor<cpu, 1>(it->second.first, mshadow::Shape1(it->second.second));
   }
 
- private:
-  // label with_
-  mshadow::index_t label_width;
-  // image index of each record
+  /*! \brief find a label for corresponding index, output vector as copy */
+  inline mshadow::Tensor<cpu, 1> FindCopy(size_t imid) const {
+    std::unordered_map<size_t, std::pair<real_t*, size_t> >::const_iterator it
+        = idx2label_.find(imid);
+    CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
+    return mshadow::Tensor<cpu, 1>(it->second.first, mshadow::Shape1(it->second.second));
+  }
+
+private:
   std::vector<size_t> image_index_;
-  // real label content
   std::vector<real_t> label_;
-  // map index to label
-  std::unordered_map<size_t, real_t*> idx2label_;
+  std::unordered_map<size_t, std::pair<real_t*, size_t> > idx2label_;
 };
 
 // Define image record parser parameters
@@ -159,7 +244,7 @@ class ImageRecordIOParser {
   // instance vector to the user
   virtual inline bool ParseNext(std::vector<InstVector<DType>> *out);
 
- private:
+ protected:
   // magic number to see prng
   static const int kRandMagic = 111;
   /*! \brief parameters */
@@ -498,6 +583,95 @@ the data type instead of ``float``.
             new ImageRecordIter<uint8_t>()));
   });
 
+/*! \brief data structure to hold labels for image detection tasks
+ *  support arbitrary label_width
+ */
+class ImageDetLabelMap {
+ public:
+  /*!
+   * \brief initialize the label list into memory
+   * \param path_imglist path to the image list
+   * \param label_width predefined label_width, -1 for arbitrary width
+   */
+  explicit ImageDetLabelMap(const char *path_imglist,
+                            int label_width,
+                            bool silent) {
+    image_index_.clear();
+    label_.clear();
+    idx2label_.clear();
+    dmlc::InputSplit *fi = dmlc::InputSplit::Create
+        (path_imglist, 0, 1, "text");
+    dmlc::InputSplit::Blob rec;
+    while (fi->NextRecord(&rec)) {
+      // quick manual parsing
+      char *p = reinterpret_cast<char*>(rec.dptr);
+      char *end = p + rec.size;
+      // skip space
+      while (isspace(*p) && p != end) ++p;
+      image_index_.push_back(static_cast<size_t>(atol(p)));
+      size_t start_pos = label_.size();
+      if (label_width > 0) {
+        // provided label_width > 0, require width check
+        for (int i = 0; i < label_width; ++i) {
+          // skip till space
+          while (!isspace(*p) && p != end) ++p;
+          // skip space
+          while (isspace(*p) && p != end) ++p;
+          CHECK(p != end) << "Bad ImageList format";
+          label_.push_back(static_cast<real_t>(atof(p)));
+        }
+        CHECK_EQ(label_.size() - start_pos, label_width);
+      } else {
+        // arbitrary label width for each sample
+        while (!isspace(*p) && p != end) ++p;
+        while (isspace(*p) && p != end) ++p;
+        char *curr = p;
+        CHECK(curr != end) << "Bad ImageList format";
+        while (!isspace(*p) && p != end) ++p;
+        while (isspace(*p) && p != end) ++p;
+        char *next = p;
+        while (next != end) {
+          label_.push_back(static_cast<real_t>(atof(curr)));
+          curr = next;
+          while (!isspace(*next) && next != end) ++next;
+          while (isspace(*next) && next != end) ++next;
+        }
+        // skip the last one which should be the image_path
+        CHECK_GT(label_.size(), start_pos) << "Bad ImageList format: empty label";
+      }
+      // record label start_pos and width in map
+      idx2label_[image_index_.back()] = std::pair<real_t*, size_t>(
+        dmlc::BeginPtr(label_) + start_pos, label_.size() - start_pos);
+    }
+    delete fi;
+    if (!silent) {
+      LOG(INFO) << "Loaded ImageList from " << path_imglist << ' '
+                << image_index_.size() << " Image records";
+    }
+  }
+
+  /*! \brief find a label for corresponding index */
+  inline mshadow::Tensor<cpu, 1> Find(size_t imid) const {
+    std::unordered_map<size_t, std::pair<real_t*, size_t> >::const_iterator it
+        = idx2label_.find(imid);
+    CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
+    return mshadow::Tensor<cpu, 1>(it->second.first, mshadow::Shape1(it->second.second));
+  }
+
+  /*! \brief find a label for corresponding index, output vector as copy */
+  inline mshadow::Tensor<cpu, 1> FindCopy(size_t imid) const {
+    std::unordered_map<size_t, std::pair<real_t*, size_t> >::const_iterator it
+        = idx2label_.find(imid);
+    CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
+    return mshadow::Tensor<cpu, 1>(it->second.first, mshadow::Shape1(it->second.second));
+  }
+
+private:
+  std::vector<size_t> image_index_;
+  std::vector<real_t> label_;
+  std::unordered_map<size_t, std::pair<real_t*, size_t> > idx2label_;
+};
+
 struct ImageDetRecParserParam : public dmlc::Parameter<ImageDetRecParserParam> {
   /*! \brief path to image list */
   std::string path_imglist;
@@ -521,6 +695,8 @@ struct ImageDetRecParserParam : public dmlc::Parameter<ImageDetRecParserParam> {
   size_t shuffle_chunk_size;
   /*! \brief the seed for chunk shuffling*/
   int shuffle_chunk_seed;
+  // int label_pad_width;
+  // float label_pad_value;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageDetRecParserParam) {
@@ -532,10 +708,10 @@ struct ImageDetRecParserParam : public dmlc::Parameter<ImageDetRecParserParam> {
         .describe("Augmentation Param: the augmenter names to represent"\
                   " sequence of augmenters to be applied, seperated by comma." \
                   " Additional keyword parameters will be seen by these augmenters.");
-    DMLC_DECLARE_FIELD(label_width).set_lower_bound(1).set_default(1)
-        .describe("Dataset Param: How many labels for an image.");
+    DMLC_DECLARE_FIELD(label_width).set_default(-1)
+        .describe("Dataset Param: How many labels for an image, -1 for non-fixed label size.");
     DMLC_DECLARE_FIELD(data_shape)
-        .set_expect_ndim(3).enforce_nonzero()
+        .set_expect_ndim(3)
         .describe("Dataset Param: Shape of each instance generated by the DataIter.");
     DMLC_DECLARE_FIELD(preprocess_threads).set_lower_bound(1).set_default(4)
         .describe("Backend Param: Number of thread to do preprocessing.");
@@ -550,6 +726,10 @@ struct ImageDetRecParserParam : public dmlc::Parameter<ImageDetRecParserParam> {
                   " it can enable global shuffling");
     DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
         .describe("the seed for chunk shuffling");
+    // DMLC_DECLARE_FIELD(label_pad_width).set_default(0)
+    //     .describe("pad output label width if set larger than 0");
+    // DMLC_DECLARE_FIELD(label_pad_value).set_default(-1.f)
+    //     .describe("label padding value if enabled");
   }
 };
 
@@ -565,9 +745,9 @@ class ImageDetRecordIOParser : public ImageRecordIOParser<DType> {
 template<typename DType>
 inline bool ImageDetRecordIOParser<DType>::
 ParseNext(std::vector<InstVector<DType>> *out_vec) {
-  CHECK(source_ != nullptr);
+  CHECK(this->source_ != nullptr);
   dmlc::InputSplit::Blob chunk;
-  if (!source_->NextChunk(&chunk)) return false;
+  if (!this->source_->NextChunk(&chunk)) return false;
 #if MXNET_USE_OPENCV
   // save opencv out
   out_vec->resize(param_.preprocess_threads);
@@ -604,13 +784,27 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
         LOG(FATAL) << "Invalid output shape " << param_.data_shape;
       }
       const int n_channels = res.channels();
-      std::vector<float> empty_label;
-      for (auto& aug : augmenters_[tid]) {
-        res = aug->Process(res, empty_label, prnds_[tid].get());
+      // load label before augmentations
+      std::vector<float> label_buf;
+      if (this->label_map_ != nullptr) {
+        auto ltensor = this->label_map_->FindCopy(rec.image_index());
+        label_buf.assign(ltensor.dptr_, ltensor.dptr_ + ltensor.size(0));
+      } else if (rec.label != NULL) {
+        if (param_.label_width > 0) {
+          CHECK_EQ(param_.label_width, rec.num_label)
+            << "rec file provide " << rec.num_label << "-dimensional label "
+               "but label_width is set to " << param_.label_width;
+        }
+        label_buf.assign(rec.label, rec.label + rec.num_label);
+      } else {
+        LOG(FATAL) << "Not enough label packed in img_list or rec file.";
+      }
+      for (auto& aug : this->augmenters_[tid]) {
+        res = aug->Process(res, label_buf, this->prnds_[tid].get());
       }
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(n_channels, res.rows, res.cols),
-               mshadow::Shape1(param_.label_width));
+               mshadow::Shape1(label_buf.size()));
 
       mshadow::Tensor<cpu, 3, DType> data = out.data().Back();
 
@@ -632,20 +826,8 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       }
 
       mshadow::Tensor<cpu, 1> label = out.label().Back();
-      if (label_map_ != nullptr) {
-        mshadow::Copy(label, label_map_->Find(rec.image_index()));
-      } else if (rec.label != NULL) {
-        CHECK_EQ(param_.label_width, rec.num_label)
-          << "rec file provide " << rec.num_label << "-dimensional label "
-             "but label_width is set to " << param_.label_width;
-        mshadow::Copy(label, mshadow::Tensor<cpu, 1>(rec.label,
-                                                     mshadow::Shape1(rec.num_label)));
-      } else {
-        CHECK_EQ(param_.label_width, 1)
-          << "label_width must be 1 unless an imglist is provided "
-             "or the rec file is packed with multi dimensional label";
-        label[0] = rec.header.label;
-      }
+      mshadow::Copy(label, mshadow::Tensor<cpu, 1>(dmlc::BeginPtr(label_buf),
+        mshadow::Shape1(label_buf.size())));
       res.release();
     }
   }
@@ -677,6 +859,9 @@ class BatchLoaderModifier : public IIterator<TBlobBatch> {
     bool found = false;
     for (auto iter = new_kwargs.begin(); iter != new_kwargs.end(); ++iter) {
       if (iter->first.compare(kw) == 0) {
+        if (atof(iter->second.c_str()) > 1) {
+          LOG(WARNING) << "batch_size > 1 detected, force to use 1 instead.";
+        }
         iter->second = "1";
         found = true;
       }

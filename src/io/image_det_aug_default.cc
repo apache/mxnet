@@ -640,7 +640,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
 
     // random padding logic
     if (param_.rand_pad_prob > 0 && param_.max_pad_scale > 1.f) {
-
+      
     }
 
     // color space augmentation
@@ -664,6 +664,19 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     //   }
     //   cvtColor(res, res, CV_HLS2BGR);
     // }
+
+    // force resize to specified size, regardless of aspect ratio
+    if (param_.data_shape[1] > 0 && param_.data_shape[2] > 0) {
+      int new_height = param_.data_shape[1];
+      int new_width = param_.data_shape[2];
+      CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
+       (param_.inter_method >= 9 && param_.inter_method <= 10))
+        << "invalid inter_method: valid value 0,1,2,3,9,10";
+      int interpolation_method = GetInterMethod(param_.inter_method,
+                   src.cols, src.rows, new_width, new_height, prnd);
+      cv::resize(res, res, cv::Size(new_width, new_height),
+                   0, 0, interpolation_method);
+    }
     label = det_label.ToArray();  // put back processed labels
     return res;
   }
