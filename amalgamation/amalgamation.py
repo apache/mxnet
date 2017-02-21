@@ -92,7 +92,8 @@ def expand(x, pending, stage):
             if (h not in blacklist and
                 h not in sysheaders and
                 'mkl' not in h and
-                'nnpack' not in h): sysheaders.append(h)
+                'nnpack' not in h and
+                not h.endswith('.cuh')): sysheaders.append(h)
         else:
             expand(source, pending + [x], stage)
     print >>out, "//===== EXPANDED: %s =====\n" %x
