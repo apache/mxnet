@@ -82,7 +82,7 @@ class CropOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_grad.size(), static_cast<size_t>(param_.num_args)) << in_grad.size();
-    CHECK_EQ(out_grad.size(), 1) << out_grad.size();
+    CHECK_EQ(out_grad.size(), 1U) << out_grad.size();
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> grad = out_grad[crop_enum::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[crop_enum::kData].get<xpu, 4, real_t>(s);

@@ -127,7 +127,7 @@ class CuDNNDeconvolutionOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.no_bias == 0 ? 3 : 2;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_NE(req[deconv::kWeight], kWriteInplace);
     CHECK_NE(req[deconv::kBias], kWriteInplace);

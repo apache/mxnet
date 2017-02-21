@@ -396,7 +396,7 @@ class ConvolutionProp : public OperatorProperty {
 
       const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
       const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
-      CHECK_EQ(dshape[1] % param_.num_group, 0) \
+      CHECK_EQ(dshape[1] % param_.num_group, 0U) \
           << "input num_filter must divide group size";
       CHECK_EQ(param_.num_filter % param_.num_group, 0) \
           << "output num_filter must divide group size";

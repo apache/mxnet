@@ -176,7 +176,7 @@ class DropoutProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 1);
+    CHECK_EQ(in_type->size(), 1U);
     int dtype = in_type->at(0);
 
     if (dtype == -1) {
