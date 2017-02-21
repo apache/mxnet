@@ -321,9 +321,18 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::vector<OpReqType>& grad_req_type,
                          const std::vector<NDArray>& aux_states,
                          Executor* shared_exec) {
+  // TODO change to multiset?
+  std::multimap<size_t, size_t> shared_pool;
+  if (shared_exec != nullptr) {
+    for (const NDArray& nd : dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_) {
+     size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+     shared_pool.insert(std::make_pair(bytes, bytes));
+    }
+  }
+
   nnvm::Graph g = InitGraph(symbol, default_ctx,
                             ctx_map, in_args, arg_grad_store,
-                            grad_req_type, aux_states);
+                            grad_req_type, aux_states, shared_pool);
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
   graph_ = std::move(g);
@@ -356,9 +365,13 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<NDArray>& in_args,
                                const std::vector<NDArray>& arg_grad_store,
                                const std::vector<OpReqType>& grad_req_type,
-                               const std::vector<NDArray>& aux_states) {
+                               const std::vector<NDArray>& aux_states,
+//referrence???
+                               std::multimap<size_t, size_t> shared_pool
+) {
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_type, arg_grad_store);
+  g.attrs["shared_pool"] = std::make_shared<nnvm::any>(shared_pool);
   g = AssignContext(g, default_ctx, ctx_map,
                     in_args,
                     grad_store_,
