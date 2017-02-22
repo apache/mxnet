@@ -193,8 +193,8 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
       size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
       Tensor<xpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      Reduce<red::sum, DType, LOP>(s, lhs, req[0], out, workspace);
-      Reduce<red::sum, DType, ROP>(s, rhs, req[1], out, workspace);
+      Reduce<red::sum, DType, LOP>(s, lhs, req[0], workspace, out);
+      Reduce<red::sum, DType, ROP>(s, rhs, req[1], workspace, out);
     });
   }
 }
@@ -207,6 +207,38 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
                                              const TShape& new_lshape,
                                              const TShape& new_rshape,
                                              const TShape& new_oshape) {
+#if 0
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  // Tensor<xpu, ndim, DType> ograd =
+  //   inputs[0].get_with_shape<xpu, ndim, DType>(new_oshape.get<ndim>(), s);
+  // Tensor<xpu, ndim, DType> lhs =
+  //   inputs[1].get_with_shape<xpu, ndim, DType>(new_lshape.get<ndim>(), s);
+  // Tensor<xpu, ndim, DType> rhs =
+  //   inputs[2].get_with_shape<xpu, ndim, DType>(new_rshape.get<ndim>(), s);
+  // Tensor<xpu, ndim, DType> lgrad =
+  //   outputs[0].get_with_shape<xpu, ndim, DType>(new_lshape.get<ndim>(), s);
+  // Tensor<xpu, ndim, DType> rgrad =
+  //   outputs[1].get_with_shape<xpu, ndim, DType>(new_rshape.get<ndim>(), s);
+
+  // size_t workspace_size_l = ReduceWorkspaceSize<red::sum, DType, LOP>(s, lhs, req[0], out);
+  // size_t workspace_size_r = ReduceWorkspaceSize<red::sum, DType, ROP>(s, rhs, req[1], out);
+  size_t workspace_size = 0;//std::max(workspace_size_l, workspace_size_r);
+  Tensor<xpu, 1, char> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+
+  // Reduce<xpu, red::sum, DType, LOP, mshadow::op::mul>(s, outputs[0], req[0], workspace,
+  //   inputs[1], inputs[2], inputs[0]);
+
+  Reduce<red::sum, DType, LOP, mshadow::op::mul>(s, outputs[0], req[0], workspace,
+    inputs[0], inputs[1], inputs[2]);
+
+  // Reduce<xpu, red::sum, DType, LOP>(s, outputs[0], req[0], workspace,
+  //   inputs[1], inputs[2]);
+
+#else
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -224,6 +256,7 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
     ograd*F<LOP>(broadcast_to(lhs, new_oshape), broadcast_to(rhs, new_oshape)));
   ReduceToAssign<red::sum>(rgrad, req[1],
     ograd*F<ROP>(broadcast_to(lhs, new_oshape), broadcast_to(rhs, new_oshape)));
+#endif
 }
 
 template<typename xpu, typename LOP, typename ROP>

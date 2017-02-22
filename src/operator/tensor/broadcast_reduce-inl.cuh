@@ -322,7 +322,7 @@ size_t ReduceImpl(Stream<gpu> *s, const TBlob& small, const OpReqType req,
 
 template<typename Reducer, typename DType, typename OP>
 void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
-            const TBlob& big, const Tensor<gpu, 1, char>& workspace) {
+            const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
   ReduceImpl<Reducer, DType, OP>(s, small, req, big, workspace, false);
 }
 

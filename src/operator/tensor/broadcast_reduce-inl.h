@@ -149,7 +149,101 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
 
 #ifdef __CUDACC__
 #include "broadcast_reduce-inl.cuh"
+
+template<typename Reducer, typename DType, typename OP, typename... OPs>
+void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+            const Tensor<gpu, 1, char>& workspace, const TBlob& inp, const TBlob& inps...) {
+}
 #else
+
+template<int ndim>
+MSHADOW_XINLINE void ravel_op(const int i, const Shape<ndim>& coord, int* rets, const int iret,
+  const Shape<ndim>& shape) {
+  rets[iret] = rets[iret] * shape[i] + (shape[i] > 1) * coord[i];
+}
+
+template<int ndim, typename... Shapes>
+MSHADOW_XINLINE void ravel_op(const int i, const Shape<ndim>& coord, int* rets, const int iret,
+  const Shape<ndim>& shape, Shapes... shapes) {
+  ravel_op(i, coord, rets, iret, shape);
+  ravel_op(i, coord, rets, iret + 1, shapes...);
+}
+
+template<int ndim, typename... Shapes>
+MSHADOW_XINLINE void ravel(const Shape<ndim>& coord, int* rets, Shapes... shapes) {
+  for (int i = 0;i < sizeof...(Shapes); ++i) rets[i] = 0;
+  for (int i = 0; i < ndim; ++i) {
+    ravel_op(i, coord, rets, 0, shapes...);
+  }
+}
+
+template<typename DType, typename OP>
+MSHADOW_XINLINE DType runOPs(const DType* a) {
+  return OP::Map(*a);
+}
+
+template<typename DType, typename OP, typename... OPs>
+MSHADOW_XINLINE DType runOPs(const DType* a) {
+  return OP::Map(*a, runOPs(a + 1));
+}
+
+template<int ndim>
+MSHADOW_XINLINE void unravel_op(int* j, const int i, Shape<ndim>* coords,
+  const Shape<ndim>& shape) {
+  int tmp = *j / shape[i];
+  coords[i] = *j - tmp*shape[i];
+  *j = tmp;
+}
+
+template<int ndim, typename... Shapes>
+MSHADOW_XINLINE void unravel_op(int* j, const int i, Shape<ndim>* coords,
+  const Shape<ndim>& shape, Shapes... shapes) {
+  unravel_op(j, i, coords, shape);
+  unravel_op(j + 1, i, coords, shapes...);
+}
+
+template<int ndim, typename... Shapes>
+MSHADOW_XINLINE void unravel(const int idx, Shape<ndim>* coords, Shapes... shapes) {
+  int js[sizeof...(Shapes)];
+  for (int i=0;i < sizeof...(Shapes);i++) js[i] = idx;
+  for (int i = ndim-1; i >=0; --i) {
+    unravel_op(js, i, coords, shapes...);
+  }
+}
+
+template<typename DType>
+MSHADOW_XINLINE void load(const int* j, DType* out, const DType* __restrict in) {
+  *out = in[*j];
+}
+
+template<typename DType, typename... Ins>
+MSHADOW_XINLINE void load(const int* j, DType* out, const DType* __restrict in, Ins... ins) {
+  load(j, out, in);
+  load(j + 1, out + 1, ins...);
+}
+
+// Bshapes = const CShape&
+// Bigs = const DType* __restrict
+template<typename Reducer, typename DType, typename... OPs, typename... Bshapes, typename... Bigs>
+MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
+                                       const CShape& sshape, DType *small,
+                                       Bshapes... rshapes, Bshapes... rstrides,
+                                       Bshapes... bshapes, Bigs... bigs) {
+  CShape coord = unravel(idx, sshape);
+  int js[sizeof...(Bshapes)];
+  ravel(coord, js, bshapes...);
+  DType val;
+  Reducer::SetInitValue(val);
+  for (int k = 0; k < M; ++k) {
+    CShape coords[sizeof...(Bshapes)];
+    unravel(k, coords, rshapes...);
+    DType bigvals[sizeof...(Bigs)];
+    load(js, bigvals, bigs...);
+    DType tmp = runOPs<OPs...>(bigvals);
+    Reducer::Reduce(val, tmp);
+  }
+  assign(&small[idx], addto, val);
+}
 
 template<typename DType>
 using CTensor = Tensor<cpu, MAX_DIM, DType>;
@@ -183,9 +277,20 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
   }
 }
 
+template<typename Reducer, typename DType, typename... OPs, typename... Bshapes, typename... Bigs>
+void seq_reduce_compute(const int N, const int M, const bool addto,
+                        const CShape sshape, DType *small,
+                        Bshapes... rshapes, Bshapes... rstrides,
+                        Bshapes... bshapes, Bigs... bigs) {
+  for (int idx = 0; idx < N; ++idx) {
+    seq_reduce_assign<Reducer, DType, OPs...>(idx, M, addto, sshape, small, rshapes..., rstrides..., 
+      bshapes..., bigs...);
+  }
+}
+
 template<typename Reducer, typename DType, typename OP>
 void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
-            const TBlob& big, const Tensor<cpu, 1, char>& workspace) {
+            const Tensor<cpu, 1, char>& workspace, const TBlob& big) {
   if (req == kNullOp) return;
   CShape rshape, rstride;
   int mdim = diff(small.shape_.get<MAX_DIM>(), big.shape_.get<MAX_DIM>(), &rshape, &rstride);
@@ -199,6 +304,19 @@ template<typename Reducer, typename DType, typename OP>
 size_t ReduceWorkspaceSize(Stream<cpu> *s, const TBlob& small, const OpReqType req,
                            const TBlob& big) {
   return 0;
+}
+
+template<typename Reducer, typename DType, typename OP1, typename OP2>
+void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
+            const Tensor<cpu, 1, char>& workspace, const TBlob& ograd, const TBlob& in1,
+            const TBlob& in2) {
+  if (req == kNullOp) return;
+  CShape rshape, rstride;
+  int mdim = diff(small.shape_.get<MAX_DIM>(), big.shape_.get<MAX_DIM>(), &rshape, &rstride);
+  int N = small.shape_.Size(), M = rshape.Size();
+  seq_reduce_compute<Reducer, DType, OPs... >(
+    N, M, req == kAddTo, small.shape_.get<MAX_DIM>(), small.dptr<DType>(),
+    rshape, rstride, big.shape_.get<MAX_DIM>(), big.dptr<DType>());
 }
 
 #endif
