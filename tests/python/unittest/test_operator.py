@@ -2569,7 +2569,7 @@ def test_reverse():
     data_tmp = np.random.uniform(-1, 1, shape)
     test = mx.sym.reverse(data, axis=[1, 2])
     grad = np.random.uniform(-1, 1, shape)
-    check_numeric_gradient(test, [data_tmp], check_eps=2E-2)
+    check_numeric_gradient(test, [data_tmp], numeric_eps=2E-2)
     check_symbolic_forward(test, [data_tmp], [data_tmp[:, ::-1, ::-1]])
     check_symbolic_backward(test, [data_tmp], [grad], [grad[:, ::-1, ::-1]])
 

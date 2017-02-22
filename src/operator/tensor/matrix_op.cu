@@ -39,9 +39,6 @@ NNVM_REGISTER_OP(slice_axis)
 NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxisGrad_<gpu>);
 
-NNVM_REGISTER_OP(flip)
-.set_attr<FCompute>("FCompute<gpu>", Flip<gpu>);
-
 NNVM_REGISTER_OP(dot)
 .set_attr<FCompute>("FCompute<gpu>", DotForward_<gpu>);
 

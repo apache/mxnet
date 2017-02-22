@@ -140,7 +140,7 @@ struct clip_grad {
 
 struct reverse {
   MSHADOW_XINLINE static int ReverseIndex(index_t idx,
-                                          int nreversedim,
+                                          index_t nreversedim,
                                           const index_t * stride_,
                                           const index_t * trailing_) {
     index_t outputIndex = idx;
@@ -155,7 +155,7 @@ struct reverse {
   }
 #ifdef __CUDACC__
   template<typename DType>
-  __device__  static void Map(int index, int nreversedim, const DType *src, DType *dst,
+  __device__  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
                               const index_t * stride_,
                               const index_t * trailing_) {
     __shared__ index_t stride_share[REVERSE_MAX_DIM];
@@ -170,7 +170,7 @@ struct reverse {
   }
 #else
   template<typename DType>
-  MSHADOW_XINLINE  static void Map(int index, int nreversedim, const DType *src, DType *dst,
+  MSHADOW_XINLINE  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
                                    const index_t * stride_,
                                    const index_t * trailing_) {
     index_t new_idx = ReverseIndex(index, nreversedim, stride_, trailing_);
