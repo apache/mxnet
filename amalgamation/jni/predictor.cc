@@ -19,14 +19,17 @@ JNIEXPORT jlong JNICALL Java_org_dmlc_mxnet_Predictor_createPredictor
 		track.emplace_back(js, s);
     }
 
-	std::vector<mx_uint> index{0};
+	std::vector<mx_uint> index;
 	std::vector<mx_uint> shapes;
+    mx_uint prev = 0;
+    index.emplace_back(prev);
     for (int i=0; i<env->GetArrayLength(jshapes); i++) {
         jintArray jshape = (jintArray) env->GetObjectArrayElement(jshapes, i);
 		jsize shape_len = env->GetArrayLength(jshape);
 		jint *shape = env->GetIntArrayElements(jshape, 0);
 
-		index.emplace_back(shape_len);
+        prev += shape_len;
+		index.emplace_back(prev);
 		for (int j=0; j<shape_len; ++j) shapes.emplace_back((mx_uint)shape[j]);
 		env->ReleaseIntArrayElements(jshape, shape, 0);
     }

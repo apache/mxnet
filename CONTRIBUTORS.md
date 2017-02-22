@@ -123,3 +123,4 @@ List of Contributors
 * [Xu Dong](https://github.com/dsqx71)
 * [Chihiro Komaki](https://github.com/ckomaki)
 * [Piyush Singh](https://github.com/Piyush3dB)
+* [Freddy Chua](https://github.com/freddycct)
