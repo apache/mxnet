@@ -1263,7 +1263,7 @@ def test_expand_dims():
 
 def test_crop():
     for ndim in range(1, 6):
-        for t in range(5):
+        for t in range(50):
             dims = []
             begin = []
             end = []
@@ -1272,6 +1272,14 @@ def test_crop():
                 d = random.randint(1, 10)
                 b = random.randint(0, d-1)
                 e = random.randint(b+1, d)
+                if b == 0 and random.randint(0, 1):
+                    b = None
+                elif b != 0 and random.randint(0, 1):
+                    b -= d
+                if e == d and random.randint(0, 1):
+                    e = None
+                elif e != d and random.randint(0, 1):
+                    e -= d
                 dims.append(d)
                 begin.append(b)
                 end.append(e)
@@ -1279,6 +1287,10 @@ def test_crop():
             x = mx.nd.array(np.random.normal(size=dims))
             y = mx.nd.crop(x, begin=tuple(begin), end=tuple(end))
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
+
+            vx = mx.sym.Variable('x')
+            vy = mx.sym.crop(vx, begin=tuple(begin), end=tuple(end))
+            check_numeric_gradient(vy, [x.asnumpy()])
 
 
 def test_slice_axis():
@@ -2250,7 +2262,7 @@ def test_grid_generator():
         tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
         tmp[2] = 1
         grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
-        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est, rtol=1e-3)
+        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est, rtol=1e-3, atol=1e-5)
         # check addto
         exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='add')
         grid_grad_npy = np.random.normal(size=exe.grad_dict['affine'].shape)
@@ -2258,7 +2270,7 @@ def test_grid_generator():
         exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
         exe.forward()
         exe.backward(mx.nd.array(out_grad))
-        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est + grid_grad_npy, rtol=1e-2)
+        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est + grid_grad_npy, rtol=1e-2, atol=1e-5)
 
     # transform_type = warp
     test_case = [(12,21),(4,3),(6,12)]

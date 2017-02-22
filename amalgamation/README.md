@@ -45,10 +45,15 @@ You can use generated library in [Leliana WhatsThis Android app](https://github.
 
 Javascript
 ---------------
-JS version works without OpenBLAS. You need [emscripten](http://kripken.github.io/emscripten-site/) to build it.
-Type ```make MIN=1 libmxnet_predict.js```
+JS version uses [emscripten](http://kripken.github.io/emscripten-site/) to cross-compile the amalgamation source file into a Javascript library that can be integrated into client side applications.  If you already have emanscripten installed then 
 
-You can use generated library in [mxnet.js](https://github.com/dmlc/mxnet.js)
+```make clean libmxnet_predict.js MIN=1```
+
+otherwise you can use [emscripten docker image](https://hub.docker.com/r/apiaryio/emcc/) to compile in the following way
+
+```make clean libmxnet_predict.js MIN=1 EMCC="docker run -v ${PWD}:/src apiaryio/emcc emcc"```
+
+An example WebApp that uses the generated JS library can be found at [mxnet.js](https://github.com/dmlc/mxnet.js)
 
 iOS
 ---------------

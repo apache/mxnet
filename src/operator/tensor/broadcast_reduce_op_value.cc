@@ -89,7 +89,9 @@ MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
-.MXNET_DESCRIBE("Broadcast src to shape")
+.MXNET_DESCRIBE(
+  "Broadcast src to shape. If shape[i] is 0, "
+  "input size will be preserved for axis i.")
 .set_attr_parser(ParamParser<BroadcastToParam>)
 .add_arguments(BroadcastToParam::__FIELDS__())
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastToShape)
