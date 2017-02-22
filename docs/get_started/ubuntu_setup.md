@@ -62,6 +62,8 @@ It takes around 5 minutes to complete the installation.
 
 You can view the installation script we just used to install MXNet for Python [here](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-ubuntu-python.sh).
 
+Note: The Cython version should be >= 0.23, since there would be syntax errors with a lower version compiler.
+
 ### Install MXNet for R
 
 MXNet requires R-version to be 3.2.0 and above. If you are running an earlier version of R, run below commands to update your R version, before running the installation script.
