@@ -315,6 +315,7 @@ class ImageRecordIter : public IIterator<DataInst> {
   common::RANDOM_ENGINE rnd_;
 };
 
+// OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
 .describe("Create iterator for dataset packed in recordio.")
 .add_arguments(ImageRecParserParam::__FIELDS__())
@@ -330,6 +331,7 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
                 new ImageRecordIter<real_t>())));
   });
 
+// OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter_v1)
 .describe("Create iterator for dataset packed in recordio.")
 .add_arguments(ImageRecParserParam::__FIELDS__())
