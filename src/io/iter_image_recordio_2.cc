@@ -434,11 +434,56 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
 }
 
 // create mean image.
-// NOT IMPLEMENTED
 template<typename DType>
 inline void ImageRecordIOParser2<DType>::CreateMeanImg(void) {
-  LOG(FATAL) << "Cannot find " << normalize_param_.mean_img
-             << ": creating mean image from data is not yet supported";
+    if (param_.verbose) {
+      LOG(INFO) << "Cannot find " << normalize_param_.mean_img
+                << ": create mean image, this will take some time...";
+    }
+    double start = dmlc::GetTime();
+    dmlc::InputSplit::Blob chunk;
+    size_t imcnt = 0;  // NOLINT(*)
+    while (source_->NextChunk(&chunk)) {
+      ParseChunk(&chunk);
+      inst_order_.clear();
+      for (unsigned i = 0; i < temp_.size(); ++i) {
+        const InstVector<DType>& tmp = temp_[i];
+        for (unsigned j = 0; j < tmp.Size(); ++j) {
+          inst_order_.push_back(std::make_pair(i, j));
+        }
+      }
+      for (unsigned i = 0; i < inst_order_.size(); ++i) {
+        std::pair<unsigned, unsigned> place = inst_order_[i];
+        mshadow::Tensor<cpu, 3> outimg =
+          temp_[place.first][place.second].data[0].template get<cpu, 3, real_t>();
+        if (imcnt == 0) {
+          meanimg_.Resize(outimg.shape_);
+          mshadow::Copy(meanimg_, outimg);
+        } else {
+          meanimg_ += outimg;
+        }
+        imcnt += 1;
+        double elapsed = dmlc::GetTime() - start;
+        if (imcnt % 10000L == 0 && param_.verbose) {
+          LOG(INFO) << imcnt << " images processed, " << elapsed << " sec elapsed";
+        }
+      }
+    }
+    meanimg_ *= (1.0f / imcnt);
+    // save as mxnet python compatible format.
+    TBlob tmp = meanimg_;
+    {
+      std::unique_ptr<dmlc::Stream> fo(
+          dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "w"));
+      NDArray::Save(fo.get(),
+                    {NDArray(tmp, 0)},
+                    {"mean_img"});
+    }
+    if (param_.verbose) {
+      LOG(INFO) << "Save mean image to " << normalize_param_.mean_img << "..";
+    }
+    meanfile_ready_ = true;
+    this->BeforeFirst();
 }
 
 template<typename DType = real_t>
@@ -506,7 +551,7 @@ class ImageRecordIter2 : public IIterator<DataBatch> {
     ImageRecordIOParser2<DType> parser_;
 };
 
-MXNET_REGISTER_IO_ITER(ImageRecordIter2)
+MXNET_REGISTER_IO_ITER(ImageRecordIter)
 .describe("Create iterator for dataset packed in recordio.")
 .add_arguments(ImageRecParserParam::__FIELDS__())
 .add_arguments(ImageRecordParam::__FIELDS__())
@@ -518,7 +563,7 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter2)
     return new ImageRecordIter2<real_t>();
     });
 
-MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter2)
+MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter)
 .describe("Create iterator for dataset packed in recordio.")
 .add_arguments(ImageRecParserParam::__FIELDS__())
 .add_arguments(ImageRecordParam::__FIELDS__())
