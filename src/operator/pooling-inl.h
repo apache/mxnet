@@ -57,13 +57,13 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
               "kValid is default setting of Mxnet and rounds down the output pooling size."
               "kFull is compatible with Caffe and rounds up the output pooling size.");
 
-    int stride_shape[] = {1, 1};
-    DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
+    int stride_shape[] = {1, 1, 1};
+    DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + kernel.ndim()))
     .enforce_nonzero()
     .describe("stride: for pooling (y, x) or (d, y, x)");
 
-    int pad_shape[] = {0, 0};
-    DMLC_DECLARE_FIELD(pad).set_default(TShape(pad_shape, pad_shape + 2))
+    int pad_shape[] = {0, 0, 0};
+    DMLC_DECLARE_FIELD(pad).set_default(TShape(pad_shape, pad_shape + kernel.ndim()))
     .describe("pad for pooling: (y, x) or (d, y, x)");
   }
 };
