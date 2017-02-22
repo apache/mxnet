@@ -257,14 +257,14 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                 scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  (F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                           DType(param.clip_gradient)) /
-                       F<square_root>(state_n - state_g * state_g) +
-                   scalar<DType>(param.epsilon)) +
-              scalar<DType>(param.wd) * weight;
+                  ((F<clip>(scalar<DType>(param.rescale_grad) * grad,
+                            DType(param.clip_gradient)) /
+                       (F<square_root>(state_n - state_g * state_g) +
+                        scalar<DType>(param.epsilon))) +
+                   scalar<DType>(param.wd) * weight);
     } else {
       state_n = scalar<DType>((1.f - param.gamma1) *
-                              std::pow(param.rescale_grad, 2)) *
+                              param.rescale_grad * param.rescale_grad) *
                     (grad * grad) +
                 scalar<DType>(param.gamma1) * state_n;
       state_g =
@@ -272,10 +272,10 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
           scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  (scalar<DType>(param.rescale_grad) * grad /
-                       F<square_root>(state_n - state_g * state_g) +
-                   scalar<DType>(param.epsilon)) +
-              scalar<DType>(param.wd) * weight;
+                  ((scalar<DType>(param.rescale_grad) * grad /
+                       (F<square_root>(state_n - state_g * state_g) +
+                        scalar<DType>(param.epsilon))) +
+                   scalar<DType>(param.wd) * weight);
     }
     Assign(out, req[0], weight + delta);
   });
