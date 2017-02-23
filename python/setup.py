@@ -3,6 +3,11 @@
 from __future__ import absolute_import
 import os
 import sys
+try:
+    from distutils.core import DistutilsPlatformError  # pylint: disable-msg=E0611
+except ImportError:
+    from distutils.errors import DistutilsPlatformError  # pylint: disable-msg=E0611
+
 # need to use distutils.core for correct placement of cython dll
 if "--inplace" in sys.argv:
     from distutils.core import setup
@@ -10,6 +15,7 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
+
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
 # Will be invoked which introduces dependences
@@ -24,11 +30,12 @@ __version__ = libinfo['__version__']
 
 def config_cython():
     """Try to configure cython and return cython configuration"""
-    if os.name == 'nt':
-        print("WARNING: Cython is not supported on Windows, will compile without cython module")
-        return []
-
     try:
+        if os.name == 'nt':
+            from distutils.msvccompiler import MSVCCompiler
+            comp = MSVCCompiler()
+            comp.initialize()
+
         from Cython.Build import cythonize
         # from setuptools.extension import Extension
         if sys.version_info >= (3, 0):
@@ -57,6 +64,10 @@ def config_cython():
         return cythonize(ret)
     except ImportError:
         print("WARNING: Cython is not installed, will compile without cython module")
+        return []
+    except DistutilsPlatformError as e:
+        print("WARNING: If use Cython.")
+        print(e.args[0])
         return []
 
 
