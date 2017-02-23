@@ -21,14 +21,14 @@
 
 namespace mxnet {
 namespace io {
+using nnvm::Tuple;
+using Rect = cv::Rect_<float>;
 
 namespace image_det_aug_default_enum {
 enum ImageDetAugDefaultCropEmitMode {kCenter, kOverlap};
 enum ImageDetAugDefaultResizeMode {kForce, kShrink, kFit};
 }
 
-using nnvm::Tuple;
-using Rect = cv::Rect_<float>;
 /*! \brief image augmentation parameters*/
 struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugmentParam> {
   /*! \brief resize shorter edge to size before applying other augmentations */
@@ -90,18 +90,18 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
   int resize_mode;
 
   /*! \brief mean value for r channel */
-  float mean_r;
-  /*! \brief mean value for g channel */
-  float mean_g;
-  /*! \brief mean value for b channel */
-  float mean_b;
-  /*! \brief mean value for alpha channel */
-  float mean_a;
+  // float mean_r;
+  // /*! \brief mean value for g channel */
+  // float mean_g;
+  // /*! \brief mean value for b channel */
+  // float mean_b;
+  // /*! \brief mean value for alpha channel */
+  // float mean_a;
   /*! \brief scale on color space */
-  float std_r;
-  float std_g;
-  float std_b;
-  float std_a;
+  // float std_r;
+  // float std_g;
+  // float std_b;
+  // float std_a;
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageDetAugmentParam) {
     DMLC_DECLARE_FIELD(resize).set_default(-1)
@@ -179,22 +179,22 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
       .add_enum("fit", image_det_aug_default_enum::kFit)
       .set_default(image_det_aug_default_enum::kForce)
       .describe("Augmentation Param: How image data fit in data_shape.");
-    DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on R channel.");
-    DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on G channel.");
-    DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on B channel.");
-    DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on Alpha channel.");
-    DMLC_DECLARE_FIELD(std_r).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on R channel.");
-    DMLC_DECLARE_FIELD(std_g).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on G channel.");
-    DMLC_DECLARE_FIELD(std_b).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on B channel.");
-    DMLC_DECLARE_FIELD(std_a).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on Alpha channel.");
+    // DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on R channel.");
+    // DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on G channel.");
+    // DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on B channel.");
+    // DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on Alpha channel.");
+    // DMLC_DECLARE_FIELD(std_r).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on R channel.");
+    // DMLC_DECLARE_FIELD(std_g).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on G channel.");
+    // DMLC_DECLARE_FIELD(std_b).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on B channel.");
+    // DMLC_DECLARE_FIELD(std_a).set_default(0.0f)
+    //     .describe("Augmentation Param: Mean value on Alpha channel.");
   }
 };
 
@@ -688,6 +688,50 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
       }
     }
 
+    // color space augmentation
+    if (param_.random_hue_prob > 0.f || param_.random_saturation_prob > 0.f ||
+        param_.random_illumination_prob > 0.f || param_.random_contrast_prob > 0.f) {
+      std::uniform_real_distribution<float> uniform_range(-1.f, 1.f);
+      int h = uniform_range(*prnd) * param_.max_random_hue;
+      int s = uniform_range(*prnd) * param_.max_random_saturation;
+      int l = uniform_range(*prnd) * param_.max_random_illumination;
+      float c = uniform_range(*prnd) * param_.max_random_contrast;
+      h = rand_uniform(*prnd) < param_.random_hue_prob ? h : 0;
+      s = rand_uniform(*prnd) < param_.random_saturation_prob ? s : 0;
+      l = rand_uniform(*prnd) < param_.random_illumination_prob ? l : 0;
+      c = rand_uniform(*prnd) < param_.random_contrast_prob ? c : 0;
+      if (h != 0 || s != 0 || l != 0) {
+        int temp[3] = {h, l, s};
+        int limit[3] = {180, 255, 255};
+        cv::cvtColor(res, res, CV_BGR2HLS);
+        for (int i = 0; i < res.rows; ++i) {
+          for (int j = 0; j < res.cols; ++j) {
+            for (int k = 0; k < 3; ++k) {
+              int v = res.at<cv::Vec3b>(i, j)[k];
+              v += temp[k];
+              v = std::max(0, std::min(limit[k], v));
+              res.at<cv::Vec3b>(i, j)[k] = v;
+            }
+          }
+        }
+        cv::cvtColor(res, res, CV_HLS2BGR);
+      }
+      if (fabs(c) > 1e-3) {
+        cv::Mat tmp = res;
+        tmp.convertTo(res, -1, c + 1.f, 0);
+      }
+    }
+
+    // random mirror logic
+    if (param_.rand_mirror_prob > 0 && rand_uniform(*prnd) < param_.rand_mirror_prob) {
+      if (det_label.TryMirror()) {
+        // flip image
+        cv::Mat tmp;
+        cv::flip(res, tmp, 1);
+        res = tmp;
+      }
+    }
+
     // random padding logic
     if (param_.rand_pad_prob > 0 && param_.max_pad_scale > 1.f) {
       if (rand_uniform(*prnd) < param_.rand_pad_prob) {
@@ -707,47 +751,24 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
       }
     }
 
-    // random mirror logic
-    if (param_.rand_mirror_prob > 0 && rand_uniform(*prnd) < param_.rand_mirror_prob) {
-      if (det_label.TryMirror()) {
-        // flip image
-        cv::Mat tmp;
-        cv::flip(res, tmp, 1);
-        res = tmp;
-      }
-    }
-
-    // color space augmentation
-    // if (param_.random_hue_prob > 0 || param_.random_saturation_prob > 0 ||
-    //     param_.random_illumination_prob > 0 || param_.random_contrast_prob > 0) {
-    //   std::uniform_real_distribution<float> uniform_range(-0.5f, 0.5f);
-    //   int h = uniform_range(*prnd) * param_.max_random_hue;
-    //   int s = uniform_range(*prnd) * param_.max_random_saturation;
-    //   int l = uniform_range(*prnd) * param_.max_random_illumination;
-    //   float c = uniform_range(*prnd) * param_.max_random_contrast;
-    //   h = rand_uniform(*prnd) < param_.random_hue_prob ? h : 0;
-    //   s = rand_uniform(*prnd) < param_.random_saturation_prob ? s : 0;
-    //   l = rand_uniform(*prnd) < param_.random_illumination_prob ? l : 0;
-    //   c = rand_uniform(*prnd) < param_.random_contrast_prob ? c : 0;
-    //   if (h != 0 || s != 0 || l != 0) {
-    //     int temp[3] = {h, l, s};
-    //     int limit[3] = {180, 255, 255};
-    //     cv::cvtColor(res, res, CV_BGR2HLS);
-    //     for (int i = 0; i < res.rows; ++i) {
-    //       for (int j = 0; j < res.cols; ++j) {
-    //         for (int k = 0; k < 3; ++k) {
-    //           int v = res.at<cv::Vec3b>(i, j)[k];
-    //           v += temp[k];
-    //           v = std::max(0, std::min(limit[k], v));
-    //           res.at<cv::Vec3b>(i, j)[k] = v;
-    //         }
-    //       }
+    // mean and std
+    // if (param_.mean_r > 0.f || param_.mean_g > 0.f || param_.mean_b > 0.f ||
+    //     param_.mean_a > 0.f || param_.std_r > 0.f || param_.std_g > 0.f ||
+    //     param_.std_b > 0.f || param_.std_a > 0.f) {
+    //   CHECK_GT(res.channels(), 0);
+    //   if (res.channels() == 1) {
+    //     res -= param_.mean_b;
+    //   } else {
+    //     CHECK_GE(res.channels(), 3);
+    //     std::vector<cv::Mat> splits;
+    //     cv::split(res, splits);
+    //     splits[0] -= param.mean_b;
+    //     splits[1] -= param_.mean_g;
+    //     splits[2] -= param_.mean_r;
+    //     if (res.channels() == 4 && param_.mean_a > 0) {
+    //       splits[3] -= param_.mean_a;
     //     }
-    //     cv::cvtColor(res, res, CV_HLS2BGR);
-    //   }
-    //   if (fabs(c - 1.f) > 1e-3) {
-    //     cv::Mat tmp = res;
-    //     tmp.convertTo(res, -1, c, 0);
+    //     cv::merge(splits, res);
     //   }
     // }
 
@@ -805,6 +826,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
       cv::resize(res, res, cv::Size(new_width, new_height),
                   0, 0, interpolation_method);
     }
+
     label = det_label.ToArray();  // put back processed labels
     return res;
   }

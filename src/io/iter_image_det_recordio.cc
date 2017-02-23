@@ -231,7 +231,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
   #pragma omp parallel
   {
     // be conservative, set number of real cores
-    maxthread = std::max(omp_get_num_procs() / 2 - 1, 1);
+    maxthread = std::max(omp_get_num_procs() - 1, 1);
   }
   param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
   #pragma omp parallel num_threads(param_.preprocess_threads)
@@ -304,11 +304,12 @@ inline void ImageDetRecordIOParser<DType>::Init(
     }
   }
   if (max_label_width > param_.label_pad_width) {
+    if (param_.label_pad_width > 0) {
+      LOG(FATAL) << "ImageDetRecordIOParser: label_pad_width: "
+        << param_.label_pad_width << " smaller than estimated width: "
+        << max_label_width;
+    }
     param_.label_pad_width = max_label_width;
-  } else if (param_.label_pad_width > 0) {
-    LOG(FATAL) << "ImageDetRecordIOParser: label_pad_width: "
-      << param_.label_pad_width << " smaller than estimated width: "
-      << max_label_width;
   }
   if (param_.verbose) {
     LOG(INFO) << "ImageDetRecordIOParser: " << param_.path_imgrec
@@ -611,10 +612,12 @@ MXNET_REGISTER_IO_ITER(ImageDetRecordIter)
 .add_arguments(BatchParam::__FIELDS__())
 .add_arguments(PrefetcherParam::__FIELDS__())
 .add_arguments(ListDefaultDetAugParams())
+.add_arguments(ImageDetNormalizeParam::__FIELDS__())
 .set_body([]() {
   return new PrefetcherIter(
         new BatchLoader(
-          new ImageDetRecordIter<real_t>()));
+            new ImageDetNormalizeIter(
+                new ImageDetRecordIter<real_t>())));
 });
 }  // namespace io
 }  // namespace mxnet
