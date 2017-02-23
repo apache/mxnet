@@ -22,46 +22,62 @@ DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 
 NNVM_REGISTER_OP(Reshape)
-.MXNET_DESCRIBE("Reshape input according to a target shape spec.\n"
-"The target shape is a tuple and can be a simple list of dimensions "
-"such as (12,3) or it can incorporate special codes that correspond "
-"to contextual operations that refer to the input dimensions.\n"
-"The special codes are all expressed as integers less than 1. These "
-"codes effectively refer to a machine that pops input dims off the "
-"beginning of the input dims list and pushes resulting output dims "
-"onto the end of the output dims list, which starts empty. The codes "
-"are:\n"
-"  0  Copy     Pop one input dim and push it onto the output dims\n"
-" -1  Infer    Push a dim that is inferred later from all other output dims\n"
-" -2  CopyAll  Pop all remaining input dims and push them onto output dims\n"
-" -3  Merge2   Pop two input dims, multiply them, and push result\n"
-" -4  Split2   Pop one input dim, and read two next target shape specs,\n"
-"              push them both onto output dims (either can be -1 and will\n"
-"              be inferred from the other\n"
-" The exact mathematical behavior of these codes is given in the "
-"description of the 'shape' parameter. All non-codes (positive "
-"integers) just pop a dim off the input dims (if any), throw it away, "
-"and then push the specified integer onto the output dims.\n"
-"Examples:\n"
-"Type     Input      Target            Output\n"
-"Copy     (2,3,4)    (4,0,2)           (4,3,2)\n"
-"Copy     (2,3,4)    (2,0,0)           (2,3,4)\n"
-"Infer    (2,3,4)    (6,1,-1)          (6,1,4)\n"
-"Infer    (2,3,4)    (3,-1,8)          (3,1,8)\n"
-"CopyAll  (9,8,7)    (-2)              (9,8,7)\n"
-"CopyAll  (9,8,7)    (9,-2)            (9,8,7)\n"
-"CopyAll  (9,8,7)    (-2,1,1)          (9,8,7,1,1)\n"
-"Merge2   (3,4)      (-3)              (12)\n"
-"Merge2   (3,4,5)    (-3,0)            (12,5)\n"
-"Merge2   (3,4,5)    (0,-3)            (3,20)\n"
-"Merge2   (3,4,5,6)  (-3,0,0)          (12,5,6)\n"
-"Merge2   (3,4,5,6)  (-3,-2)           (12,5,6)\n"
-"Split2   (12)       (-4,6,2)          (6,2)\n"
-"Split2   (12)       (-4,2,6)          (2,6)\n"
-"Split2   (12)       (-4,-1,6)         (2,6)\n"
-"Split2   (12,9)     (-4,2,6,0)        (2,6,9)\n"
-"Split2   (12,9,9,9) (-4,2,6,-2)       (2,6,9,9,9)\n"
-"Split2   (12,12)    (-4,2,-1,-4,-1,2) (2,6,6,2)\n")
+.add_alias("reshape")
+.describe(R"code(Reshape array into a new shape.
+
+The shape is a tuple of int such as (2,3,4). The new shape should not change the
+array size. For example
+
+.. math::
+   reshape([1,2,3,4], shape=(2,2)) = [[1,2], [3,4]]
+
+In addition, we can use special codes, which are integers less than
+1, on some shape dimensions. To inference the output shape, we set it to an
+empty tuple at beginning. When continuously pop dimensions from the original
+shape starting from the beginning, and then push translated results into the output
+shape.
+
+Each special code presents a way of translation.
+
+- ``0`` for copying one. Pop one input dimension and push into the output. For example
+
+  - input=(2,3,4), shape=(4,0,2), output=(4,3,2)
+  - input=(2,3,4), shape=(2,0,0), output=(2,3,4)
+
+- ``-1`` for inference. Push a placeholder into the output whose value will be
+   inferred later.
+
+  - input=(2,3,4), shape=(6,1,-1), output=(6,1,4)
+  - input=(2,3,4), shape=(3,-1,8), output=(3,1,8)
+  - input=(2,3,4), shape=(-1,), output=(24,)
+
+- ``-2`` for copying all. Pop all remaining input dimensions and push them into
+  the output.
+
+  - input=(2,3,4), shape=(-2), output=(9,8,7)
+  - input=(2,3,4), shape=(2,-2), output=(2,3,4)
+  - input=(2,3,4), shape=(-2,1,1), output=(2,3,4,1,1)
+
+- ``-3`` for merging two dimensions. Pop two input dimensions, compute the product and then
+  push into the output.
+
+  - input=(2,3,4), shape=(-3,4), output=(6,4)
+  - input=(2,3,4), shape=(0,-3), output=(2,12)
+  - input=(2,3,4), shape=(-3,-2), output=(6,4)
+
+- ``-4`` for splitting two dimensions. Pop one input dimensions, next split it
+  according to the next two dimensions (can contain one ``-1``) specified after
+  this code, then push into the output
+
+  - input=(2,3,4), shape=(-4,1,2,-2), output=(1,2,3,4)
+  - input=(2,3,4), shape=(2,-4,-1,3,-2), output=(2,1,3,4)
+
+If the argument ``reverse`` is set to be true, then translating the input shape
+from right to left. For example, with input shape (10, 5, 4) target shape (-1,
+0), then the output shape will be (50,4) if ``reverse=1``, otherwise it will be
+(40,5).
+
+)code")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ReshapeParam>)
@@ -230,13 +246,23 @@ NNVM_REGISTER_OP(flip)
 .add_arguments(FlipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(dot)
-.MXNET_DESCRIBE(
-  "Calculate dot product of two matrices or two vectors. "
-  "If matrices have more than two dimensions, will do dot "
-  "over the last (or first if transpose_a is true) axis of lhs "
-  "and the first (or last if transpose_b is true) axis of rhs. "
-  "Shape of result array will be the rest of lhs and rhs's axes "
-  "concatenated.")
+.describe(R"doc(Dot product of two arrays.
+
+``dot``'s behavior depends on the input array dimensions:
+
+- 1-D arrays: inner product of vectors
+- 2-D arrays: matrix multiplication
+- N-D arrays: a sum product over the last axis of the first input and the first
+  axis of the second input
+
+  For example, given 3-D ``x`` with shape `(n,m,k)` and ``y`` with shape `(k,r,s)`, the
+  result array will have shape `(n,m,r,s)`. It is computed by
+
+  .. math::
+
+    dot(x,y)[i,j,a,b] = sum(x[i,j,:]*y[:,a,b])
+
+)doc" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<DotParam>)
@@ -248,8 +274,8 @@ NNVM_REGISTER_OP(dot)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
-.add_argument("lhs", "NDArray", "Left input")
-.add_argument("rhs", "NDArray", "Right input")
+.add_argument("lhs", "ndarray-or-symbol", "The first input")
+.add_argument("rhs", "ndarray-or-symbol", "The second input")
 .add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_dot)
@@ -261,8 +287,20 @@ NNVM_REGISTER_OP(_backward_dot)
 .add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(batch_dot)
-.MXNET_DESCRIBE("Calculate batched dot product of two matrices."
-                " (batch, M, K) X (batch, K, N) --> (batch, M, N).")
+.describe(R"doc(Batchwise dot product.
+
+``batch_dot`` is used to compute dot product of ``x`` and ``y`` when ``x`` and
+``y`` are data in batch, namely 3D arrays in shape of `(batch_size, :, :)`.
+
+For example, given ``x`` with shape `(batch_size, n, m)` and ``y`` with shape
+`(batch_size, m, k)`, the result array will have shape `(batch_size, n, k)`,
+which is computed by
+
+.. math::
+
+   batch\_dot(x,y)[i,:,:] = dot(x[i,:,:], y[i,:,:])
+
+)doc" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<DotParam>)
@@ -278,8 +316,8 @@ NNVM_REGISTER_OP(batch_dot)
   })
 .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
-.add_argument("lhs", "NDArray", "Left input")
-.add_argument("rhs", "NDArray", "Right input")
+.add_argument("lhs", "ndarray-or-symbol", "The first input")
+.add_argument("rhs", "ndarray-or-symbol", "The second input")
 .add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_batch_dot)
@@ -294,7 +332,15 @@ NNVM_REGISTER_OP(_backward_batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
 NNVM_REGISTER_OP(clip)
-.MXNET_DESCRIBE("Clip ndarray elements to range (a_min, a_max)")
+.describe(R"code(Clip (limit) the values in an array, elementwise
+
+Given an interval, values outside the interval are clipped to the interval
+edges. That is,
+
+.. math::
+   clip(x) = max(min(x, a\_max)), a\_min)
+
+)code")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)

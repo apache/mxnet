@@ -98,86 +98,86 @@ In the rest of this document, we first overview the methods provided by the
 ### Array change shape
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        NDArray.T
-        NDArray.reshape
-        NDArray.broadcast_to
+    NDArray.T
+    NDArray.reshape
+    NDArray.broadcast_to
 ```
 
 ### Arithmetic operations
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        NDArray.__add__
-        NDArray.__sub__
-        NDArray.__rsub__
-        NDArray.__neg__
-        NDArray.__mul__
-        NDArray.__div__
-        NDArray.__rdiv__
-        NDArray.__pow__
+    NDArray.__add__
+    NDArray.__sub__
+    NDArray.__rsub__
+    NDArray.__neg__
+    NDArray.__mul__
+    NDArray.__div__
+    NDArray.__rdiv__
+    NDArray.__pow__
 ```
 
 ### In-place arithmetic operations
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        NDArray.__iadd__
-        NDArray.__isub__
-        NDArray.__imul__
-        NDArray.__idiv__
+    NDArray.__iadd__
+    NDArray.__isub__
+    NDArray.__imul__
+    NDArray.__idiv__
 ```
 
 ### Comparison operators:
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        NDArray.__lt__
-        NDArray.__le__
-        NDArray.__gt__
-        NDArray.__ge__
-        NDArray.__eq__
-        NDArray.__ne__
+    NDArray.__lt__
+    NDArray.__le__
+    NDArray.__gt__
+    NDArray.__ge__
+    NDArray.__eq__
+    NDArray.__ne__
 ```
 
 ### Indexing
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        NDArray.__getitem__
-        NDArray.__setitem__
+    NDArray.__getitem__
+    NDArray.__setitem__
 ```
 ### Lazy evaluation
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        NDArray.wait_to_read
+    NDArray.wait_to_read
 ```
 
 ## Array creation routines
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        array
-        empty
-        zeros
-        ones
-        full
-        arange
+    array
+    empty
+    zeros
+    ones
+    full
+    arange
 ```
 
 ## Mathematical functions
@@ -185,143 +185,144 @@ In the rest of this document, we first overview the methods provided by the
 ### Arithmetic operations
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        add
-        subtract
-        negative
-        multiply
-        divide
-        power
-        dot
-        batch_dot
-        ElementWiseSum -> add_n ?
+    add
+    subtract
+    negative
+    multiply
+    divide
+    dot
+    batch_dot
+    add_n
 ```
 
 ### Trigonometric functions
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        sin
-        cos
-        tan
-        arcsin
-        arccos
-        arctan
-        hypot
-        broadcast_hypot
-        degrees
-        radians
-```
-
-### Sums and products
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        sum
-        nansum
-        prod
-        nanprod
+    sin
+    cos
+    tan
+    arcsin
+    arccos
+    arctan
+    hypot
+    degrees
+    radians
 ```
 
 ### Hyperbolic functions
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        sinh
-        cosh
-        tanh
-        arcsinh
-        arccosh
-        arctanh
+    sinh
+    cosh
+    tanh
+    arcsinh
+    arccosh
+    arctanh
+```
+
+### Reduce functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sum
+    nansum
+    prod
+    nanprod
+    mean
+    max
+    min
 ```
 
 ### Rounding
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        round
-        rint
-        fix
-        floor
-        ceil
+    round
+    rint
+    fix
+    floor
+    ceil
 ```
 
 
 ### Exponents and logarithms
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        exp
-        expm1
-        log
-        log10
-        log2
-        log1p
-        sqrt
-        rsqrt
-        square
+    exp
+    expm1
+    log
+    log10
+    log2
+    log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    power
+    sqrt
+    rsqrt
+    square
 ```
 
 ### Logic functions
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        equal
-        not_equal
-        greater
-        greater_equal
-        lesser
-        lesser_equal
+    equal
+    not_equal
+    greater
+    greater_equal
+    lesser
+    lesser_equal
 ```
 ### Miscellaneous
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        maximum
-        minimum
-        clip
-        abs
-        sign
-        gamma
-        gammaln
+    maximum
+    minimum
+    clip
+    abs
+    sign
+    gamma
+    gammaln
 ```
 
 ## Array manipulation routines
 
-### Changing kind of array
+### Changing array shape, type and elements
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        NDArray.asnumpy
-        cast
-```
-
-### Changing array shape
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        Reshape -> reshape
-        Flatten -> flatten
+    cast
+    reshape -> reshape
+    Flatten -> flatten
 ```
 
 ### Changing both array shape and elements
@@ -434,8 +435,8 @@ In the rest of this document, we first overview the methods provided by the
     .. autosummary::
         :nosignatures:
 
-        mean
         norm
+        mean
         max
         min
 ```

@@ -599,7 +599,7 @@ struct rint {
   MSHADOW_XINLINE static DType Map(DType a) {
     float floor = floorf(a);
     float ceil = ceilf(a);
-    return DType((floor - a) < (ceil - a) ? floor : ceil);
+    return DType((a - floor) <= (ceil - a) ? floor : ceil);
   }
 };
 
@@ -609,7 +609,7 @@ struct fix {
   MSHADOW_XINLINE static DType Map(DType a) {
     float floor = floorf(a);
     float ceil = ceilf(a);
-    return DType((floor - 0) < (ceil - 0) ? floor : ceil);
+    return DType((floor > 0 ? floor : -floor) < (ceil > 0 ? ceil : -ceil) ? floor : ceil);
   }
 };
 
