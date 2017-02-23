@@ -147,6 +147,29 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
   assign(&small[idx], addto, val);
 }
 
+/*
+// Reduce<MUL, OP>(lgrad, req[0], ograd, out)
+// ReduceToAssign<red::sum>(lgrad, req[0], ograd*F<LOP>(out));
+template<typename Reducer, typename DType, typename OP1, typename OP2>
+MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
+                                       const DType* __restrict big1,
+                                       const DType* __restrict big2,
+                                       DType *small,
+                                       const CShape& bshape, const CShape& sshape,
+                                       const CShape& rshape, const CShape& rstride) {
+  CShape coord = unravel(idx, sshape);
+  int j = ravel(coord, bshape);
+  DType val;
+  Reducer::SetInitValue(val);
+  for (int k = 0; k < M; ++k) {
+    coord = unravel(k, rshape);
+    int ibig = j + dot(coord, rstride);
+    Reducer::Reduce(val, OP1::Map(big1[ibig], OP2::Map(big2[ibig]) ) );
+  }
+  assign(&small[idx], addto, val);
+}
+*/
+
 #ifdef __CUDACC__
 #include "broadcast_reduce-inl.cuh"
 
@@ -156,6 +179,7 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
 }
 #else
 
+#if 0
 template<int ndim>
 MSHADOW_XINLINE void ravel_op(const int i, const Shape<ndim>& coord, int* rets, const int iret,
   const Shape<ndim>& shape) {
@@ -244,6 +268,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
   }
   assign(&small[idx], addto, val);
 }
+#endif
 
 template<typename DType>
 using CTensor = Tensor<cpu, MAX_DIM, DType>;
@@ -277,6 +302,7 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
   }
 }
 
+#if 0
 template<typename Reducer, typename DType, typename... OPs, typename... Bshapes, typename... Bigs>
 void seq_reduce_compute(const int N, const int M, const bool addto,
                         const CShape sshape, DType *small,
@@ -287,6 +313,7 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
       bshapes..., bigs...);
   }
 }
+#endif
 
 template<typename Reducer, typename DType, typename OP>
 void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
@@ -306,18 +333,111 @@ size_t ReduceWorkspaceSize(Stream<cpu> *s, const TBlob& small, const OpReqType r
   return 0;
 }
 
+// template<typename Reducer, typename DType, typename OP1, typename OP2>
+// MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
+//                                        const DType* __restrict big,
+//                                        const DType* __restrict lhs,
+//                                        const DType* __restrict rhs,
+//                                        DType *small,
+//                                        const CShape& big_shape, const CShape& small_shape,
+//                                        const CShape& rshape, const CShape& rstride,
+//                                        const CShape& lhs_shape, const CShape& rhs_shape) {
+
+// Reduce<MUL, OP>(lgrad, req[0], ograd, lhs, rhs)
+// ReduceToAssign<red::sum>(lgrad, req[0], ograd*F<LOP>(broadcast_to(lhs, new_oshape), broadcast_to(rhs, new_oshape)));
+template<typename Reducer, typename DType, typename OP1, typename OP2>
+MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
+                                       const DType* __restrict ingrad,
+                                       const DType* __restrict lhs, const DType* __restrict rhs,
+                                       DType *outgrad,
+                                       const CShape& ingrad_shape, const CShape& outgrad_shape,
+                                       const CShape& out2in_shape, const CShape& out2in_stride,
+                                       const CShape out2lhs_shape, const CShape out2lhs_stride,
+                                       const CShape out2rhs_shape, const CShape out2rhs_stride,
+                                       const CShape& lhs_shape, const CShape& rhs_shape) {
+  CShape coord = unravel(idx, outgrad_shape);
+  const int idx_ingrad0 = ravel(coord, ingrad_shape);
+  const int idx_lhs0 = ravel(coord, lhs_shape);
+  const int idx_rhs0 = ravel(coord, rhs_shape);
+  DType val;
+  Reducer::SetInitValue(val);
+  for (int k = 0; k < M; ++k) {
+    CShape coord_ingrad = unravel(k, out2in_shape);
+    int idx_ingrad = idx_ingrad0 + dot(coord_ingrad, out2in_stride);
+
+    CShape coord_lhs = unravel(k, out2lhs_shape);
+    int idx_lhs = idx_lhs0 + dot(coord_lhs, out2lhs_stride);
+
+    CShape coord_rhs = unravel(k, out2rhs_shape);
+    int idx_rhs = idx_rhs0 + dot(coord_rhs, out2rhs_stride);
+
+    Reducer::Reduce(val, OP1::Map(ingrad[idx_ingrad], OP2::Map(lhs[idx_lhs], rhs[idx_rhs]) ) );
+  }
+  assign(&outgrad[idx], addto, val);
+}
+
+template<typename Reducer, typename DType, typename OP1, typename OP2>
+void seq_reduce_compute(const int N, const int M, const bool addto,
+                        const DType *ingrad, const DType *lhs, const DType *rhs, DType *outgrad,
+                        const CShape ingrad_shape, const CShape outgrad_shape,
+                        const CShape out2in_shape, const CShape out2in_stride,
+                        const CShape out2lhs_shape, const CShape out2lhs_stride,
+                        const CShape out2rhs_shape, const CShape out2rhs_stride,
+                        const CShape& lhs_shape, const CShape& rhs_shape) {
+  for (int idx = 0; idx < N; ++idx) {
+    seq_reduce_assign<Reducer, DType, OP1, OP2>(idx, M, addto,
+      ingrad,
+      lhs, rhs,
+      outgrad,
+      ingrad_shape, outgrad_shape,
+      out2in_shape, out2in_stride,
+      out2lhs_shape, out2lhs_stride,
+      out2rhs_shape, out2rhs_stride,
+      lhs_shape, rhs_shape);
+  }
+}
+
+template<typename Reducer, typename DType, typename OP1, typename OP2>
+void Reduce(Stream<cpu> *s, const TBlob& outgrad, const OpReqType req,
+            const Tensor<cpu, 1, char>& workspace, const TBlob& ingrad, const TBlob& lhs,
+            const TBlob& rhs) {
+  if (req == kNullOp) return;
+  CShape out2in_shape, out2in_stride;
+  diff(outgrad.shape_.get<MAX_DIM>(), ingrad.shape_.get<MAX_DIM>(), &out2in_shape, &out2in_stride);
+  int N = outgrad.shape_.Size();
+  int M = out2in_shape.Size();
+
+  CShape out2lhs_shape, out2lhs_stride;
+  diff(outgrad.shape_.get<MAX_DIM>(), lhs.shape_.get<MAX_DIM>(), &out2lhs_shape, &out2lhs_stride);
+
+  CShape out2rhs_shape, out2rhs_stride;
+  diff(outgrad.shape_.get<MAX_DIM>(), rhs.shape_.get<MAX_DIM>(), &out2rhs_shape, &out2rhs_stride);
+
+  seq_reduce_compute<Reducer, DType, OP1, OP2>(
+    N, M, req == kAddTo,
+    ingrad.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>(), outgrad.dptr<DType>(),
+    ingrad.shape_.get<MAX_DIM>(), outgrad.shape_.get<MAX_DIM>(),
+    out2in_shape, out2in_stride,
+    out2lhs_shape, out2lhs_stride,
+    out2rhs_shape, out2rhs_stride,
+    lhs.shape_.get<MAX_DIM>(), rhs.shape_.get<MAX_DIM>());
+}
+
+#if 0
 template<typename Reducer, typename DType, typename OP1, typename OP2>
 void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
-            const Tensor<cpu, 1, char>& workspace, const TBlob& ograd, const TBlob& in1,
-            const TBlob& in2) {
+            const Tensor<cpu, 1, char>& workspace, const TBlob& ograd, const TBlob& lhs,
+            const TBlob& rhs) {
   if (req == kNullOp) return;
-  CShape rshape, rstride;
-  int mdim = diff(small.shape_.get<MAX_DIM>(), big.shape_.get<MAX_DIM>(), &rshape, &rstride);
+  CShape oshape, ostride;
+  diff(small.shape_.get<MAX_DIM>(), ograd.shape_.get<MAX_DIM>(), &oshape, &ostride);
   int N = small.shape_.Size(), M = rshape.Size();
-  seq_reduce_compute<Reducer, DType, OPs... >(
+  diff(small.shape_.get<MAX_DIM>(), lhs.shape_.get<MAX_DIM>(), &lshape, &lstride);
+  seq_reduce_compute<Reducer, DType, OP1, OP2>(
     N, M, req == kAddTo, small.shape_.get<MAX_DIM>(), small.dptr<DType>(),
-    rshape, rstride, big.shape_.get<MAX_DIM>(), big.dptr<DType>());
+    oshape, ostride, ograd.shape_.get<MAX_DIM>(), ograd.dptr<DType>());
 }
+#endif
 
 #endif
 }  // namespace broadcast

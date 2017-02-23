@@ -199,6 +199,49 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
   }
 }
 
+// void Reduce(Stream<cpu> *s, const TBlob& outgrad, const OpReqType req,
+//             const Tensor<cpu, 1, char>& workspace, const TBlob& ingrad, const TBlob& lhs,
+//             const TBlob& rhs) {
+
+template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
+inline void BinaryBroadcastBackwardUseInImpl_NEW(const OpContext& ctx,
+                                             const std::vector<TBlob>& inputs,
+                                             const std::vector<OpReqType>& req,
+                                             const std::vector<TBlob>& outputs,
+                                             const TShape& new_lshape,
+                                             const TShape& new_rshape,
+                                             const TShape& new_oshape) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  // size_t workspace_size_l = ReduceWorkspaceSize<red::sum, DType, LOP>(s, lhs, req[0], out);
+  // size_t workspace_size_r = ReduceWorkspaceSize<red::sum, DType, ROP>(s, rhs, req[1], out);
+  size_t workspace_size = 0;//std::max(workspace_size_l, workspace_size_r);
+  Tensor<xpu, 1, char> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+
+  // Reduce<xpu, red::sum, DType, LOP, mshadow::op::mul>(s, outputs[0], req[0], workspace,
+  //   inputs[1], inputs[2], inputs[0]);
+
+  // lgrad = outputs[0]
+  // rgrad = outputs[1]
+  // ograd = inputs[0]
+  // lhs   = inputs[1]
+  // rhs   = inputs[2]
+
+  Reduce<red::sum, DType, mshadow::op::mul, LOP>(s, outputs[0], req[0], workspace,
+    inputs[0], inputs[1], inputs[2]);
+
+  Reduce<red::sum, DType, mshadow::op::mul, ROP>(s, outputs[1], req[0], workspace,
+    inputs[0], inputs[1], inputs[2]);
+
+  // Reduce<xpu, red::sum, DType, LOP>(s, outputs[0], req[0], workspace,
+  //   inputs[1], inputs[2]);
+
+}
+
 template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
 inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
                                              const std::vector<TBlob>& inputs,
@@ -273,8 +316,13 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       if (new_oshape.ndim() == 2) {
-        BinaryBroadcastBackwardUseInImpl<xpu, 2, DType, LOP, ROP>(
-          ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
+        if (ctx.dev_type == kCPU) {
+          BinaryBroadcastBackwardUseInImpl_NEW<xpu, 2, DType, LOP, ROP>(
+            ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
+        } else {
+          BinaryBroadcastBackwardUseInImpl<xpu, 2, DType, LOP, ROP>(
+            ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
+        }
       } else {
         BinaryBroadcastBackwardUseInImpl<xpu, broadcast::MAX_DIM, DType, LOP, ROP>(
           ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
@@ -283,6 +331,7 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
   }
 }
 
+/*
 template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
 inline void BinaryBroadcastBackwardUseOutImpl(const OpContext& ctx,
                                               const std::vector<TBlob>& inputs,
@@ -329,6 +378,7 @@ void BinaryBroadcastBackwardUseOut(const nnvm::NodeAttrs& attrs,
     });
   }
 }
+*/
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                \
   NNVM_REGISTER_OP(name)                                              \
