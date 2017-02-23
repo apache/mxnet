@@ -466,7 +466,7 @@ class NDArrayIter(DataIter):
         ]
 
     def hard_reset(self):
-        """Igore roll over data and set to start"""
+        """Ignore roll over data and set to start"""
         self.cursor = -self.batch_size
 
     def reset(self):
