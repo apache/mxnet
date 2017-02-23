@@ -93,20 +93,20 @@ class ImageDetLabelMap {
   }
 
   /*! \brief find a label for corresponding index */
-  inline mshadow::Tensor<cpu, 1> Find(size_t imid) {
-    std::unordered_map<size_t, std::pair<size_t, size_t> >::const_iterator it
-        = idx2label_.find(imid);
-    CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
-    return mshadow::Tensor<cpu, 1>(dmlc::BeginPtr(label_) + it->second.first, mshadow::Shape1(it->second.second));
-  }
+  // inline mshadow::Tensor<cpu, 1> Find(size_t imid) {
+  //   std::unordered_map<size_t, std::pair<size_t, size_t> >::const_iterator it
+  //       = idx2label_.find(imid);
+  //   CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
+  //   return mshadow::Tensor<cpu, 1>(dmlc::BeginPtr(label_) + it->second.first, mshadow::Shape1(it->second.second));
+  // }
 
   /*! \brief find a label for corresponding index, output vector as copy */
-  inline std::vector<real_t> FindCopy(size_t imid) {
+  inline std::vector<float> FindCopy(size_t imid) const {
     std::unordered_map<size_t, std::pair<size_t, size_t> >::const_iterator it
         = idx2label_.find(imid);
     CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
-    real_t *ptr = dmlc::BeginPtr(label_) + it->second.first;
-    return std::vector<real_t>(ptr, ptr + it->second.second);
+    const real_t *ptr = dmlc::BeginPtr(label_) + it->second.first;
+    return std::vector<float>(ptr, ptr + it->second.second);
   }
 
   inline size_t MaxLabelWidth() const {
@@ -303,11 +303,18 @@ inline void ImageDetRecordIOParser<DType>::Init(
       }
     }
   }
-  param_.label_pad_width = max_label_width;
+  if (max_label_width > param_.label_pad_width) {
+    param_.label_pad_width = max_label_width;
+  } else if (param_.label_pad_width > 0) {
+    LOG(FATAL) << "ImageDetRecordIOParser: label_pad_width: "
+      << param_.label_pad_width << " smaller than estimated width: "
+      << max_label_width;
+  }
   if (param_.verbose) {
     LOG(INFO) << "ImageDetRecordIOParser: " << param_.path_imgrec
               << ", label padding width: " << param_.label_pad_width;
   }
+
   source_.reset(dmlc::InputSplit::Create(
       param_.path_imgrec.c_str(), param_.part_index,
       param_.num_parts, "recordio"));
@@ -388,8 +395,8 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       // load label before augmentations
       std::vector<float> label_buf;
       if (this->label_map_ != nullptr) {
-        std::vector<real_t> ltensor = label_map_->FindCopy(rec.image_index());
-        label_buf.assign(ltensor.begin(), ltensor.end());
+        label_buf = label_map_->FindCopy(rec.image_index());
+        // label_buf.assign(ltensor.begin(), ltensor.end());
       } else if (rec.label != NULL) {
         if (param_.label_width > 0) {
           CHECK_EQ(param_.label_width, rec.num_label)
@@ -425,7 +432,6 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
           im_data += n_channels;
         }
       }
-
       mshadow::Tensor<cpu, 1> label = out.label().Back();
       label = param_.label_pad_value;
       label[0] = res.channels();

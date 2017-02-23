@@ -134,9 +134,9 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
     DMLC_DECLARE_FIELD(crop_emit_mode)
         .add_enum("center", image_det_aug_default_enum::kCenter)
         .add_enum("overlap", image_det_aug_default_enum::kOverlap)
-        .set_default(image_det_aug_default_enum::kCenter)
+        .set_default(image_det_aug_default_enum::kOverlap)
         .describe("Augmentation Param: Minimum scale ratio.");
-    DMLC_DECLARE_FIELD(emit_overlap_thresh).set_default(0.5f)
+    DMLC_DECLARE_FIELD(emit_overlap_thresh).set_default(0.3f)
         .describe("Augmentation Param: Minimum scale ratio.");
     DMLC_DECLARE_FIELD(max_crop_trials).set_default(Tuple<int>({25}))
         .describe("Augmentation Param: Minimum scale ratio.");
@@ -247,18 +247,25 @@ class ImageDetLabel {
 
      ImageDetObject Project(Rect box) const {
        ImageDetObject ret = *this;
-       ret.left = (ret.left - box.x) / box.width;
-       ret.top = (ret.top - box.y) / box.height;
-       ret.right = (ret.right - box.x) / box.width;
-       ret.bottom = (ret.bottom - box.y) / box.height;
+       ret.left = std::max(0.f, (ret.left - box.x) / box.width);
+       ret.top = std::max(0.f, (ret.top - box.y) / box.height);
+       ret.right = std::min(1.f, (ret.right - box.x) / box.width);
+       ret.bottom = std::min(1.f, (ret.bottom - box.y) / box.height);
+       return ret;
+     }
+
+     ImageDetObject HorizontalFlip() const {
+       ImageDetObject ret = *this;
+       ret.left = 1.f - this->right;
+       ret.right = 1.f - this->left;
        return ret;
      }
    };
-   explicit ImageDetLabel(std::vector<float> &raw_label) {
+   explicit ImageDetLabel(const std::vector<float> &raw_label) {
      FromArray(raw_label);
    }
 
-   void FromArray(std::vector<float> &raw_label) {
+   void FromArray(const std::vector<float> &raw_label) {
      int label_width = static_cast<int>(raw_label.size());
      CHECK_GE(label_width, 7);  // at least 2(header) + 5(1 object)
      int header_width = static_cast<int>(raw_label[0]);
@@ -271,12 +278,13 @@ class ImageDetLabel {
      objects_.reserve(num);
      for (int i = header_width; i < label_width; i += object_width_) {
        ImageDetObject obj;
-       obj.id = raw_label[i++];
-       obj.left = raw_label[i++];
-       obj.top = raw_label[i++];
-       obj.right = raw_label[i++];
-       obj.bottom = raw_label[i++];
-       obj.extra.assign(raw_label.begin() + i, raw_label.begin() + i + object_width_ - 5);
+       auto it = raw_label.cbegin() + i;
+       obj.id = *(it++);
+       obj.left = *(it++);
+       obj.top = *(it++);
+       obj.right = *(it++);
+       obj.bottom = *(it++);
+       obj.extra.assign(it, it - 5 + object_width_);
        objects_.push_back(obj);
        CHECK_GT(obj.right, obj.left);
        CHECK_GT(obj.bottom, obj.top);
@@ -319,7 +327,7 @@ class ImageDetLabel {
      return intersect / (a.area() + b.area() - intersect);
    }
 
-   bool TryCrop(Rect crop_box,
+   bool TryCrop(const Rect crop_box,
      const float min_crop_overlap, const float max_crop_overlap,
      const float min_crop_sample_coverage, const float max_crop_sample_coverage,
      const float min_crop_object_coverage, const float max_crop_object_coverage,
@@ -371,7 +379,8 @@ class ImageDetLabel {
         }
         new_objects.push_back(iter->Project(crop_box));
       } else if (image_det_aug_default_enum::kOverlap == crop_emit_mode) {
-        float overlap = RectIOU(crop_box, iter->ToRect());
+        Rect gt_box = iter->ToRect();
+        float overlap = (crop_box & gt_box).area() / gt_box.area();
         if (overlap > emit_overlap_thresh) {
           new_objects.push_back(iter->Project(crop_box));
         }
@@ -380,6 +389,22 @@ class ImageDetLabel {
     if (new_objects.size() < 1) return false;
     objects_ = new_objects;  // replace the old objects
     return true;
+   }
+
+   bool TryPad(const Rect pad_box) {
+     // update all objects inplace
+     for (auto it = objects_.begin(); it != objects_.end(); ++it) {
+       *it = it->Project(pad_box);
+     }
+     return true;
+   }
+
+   bool TryMirror() {
+     // flip all objects horizontally
+     for (auto it = objects_.begin(); it != objects_.end(); ++it) {
+       *it = it->HorizontalFlip();
+     }
+     return true;
    }
 
  private:
@@ -477,19 +502,33 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
 
   Rect GenerateCropBox(const float min_crop_scale,
     const float max_crop_scale, const float min_crop_aspect_ratio,
-    const float max_crop_aspect_ratio, common::RANDOM_ENGINE *prnd) {
+    const float max_crop_aspect_ratio, common::RANDOM_ENGINE *prnd,
+    const float img_aspect_ratio) {
     float new_scale = std::uniform_real_distribution<float>(
-      min_crop_scale, max_crop_scale)(*prnd) + 1e-12f;
-    float min_ratio = std::max<float>(min_crop_aspect_ratio, new_scale * new_scale);
-    float max_ratio = std::min<float>(max_crop_aspect_ratio, new_scale * new_scale);
+        min_crop_scale, max_crop_scale)(*prnd) + 1e-12f;
+    float min_ratio = std::max<float>(min_crop_aspect_ratio / img_aspect_ratio,
+        new_scale * new_scale);
+    float max_ratio = std::min<float>(max_crop_aspect_ratio / img_aspect_ratio,
+        1. / new_scale * new_scale);
     float new_ratio = std::sqrt(std::uniform_real_distribution<float>(
-      min_ratio, max_ratio)(*prnd));
-    float new_width = new_scale * new_ratio;
-    float new_height = new_scale / new_ratio;
+        min_ratio, max_ratio)(*prnd));
+    float new_width = std::min(1.f, new_scale * new_ratio);
+    float new_height = std::min(1.f, new_scale / new_ratio);
     float x0 = std::uniform_real_distribution<float>(0.f, 1 - new_width)(*prnd);
     float y0 = std::uniform_real_distribution<float>(0.f, 1 - new_height)(*prnd);
     return Rect(x0, y0, new_width, new_height);
   }
+
+  Rect GeneratePadBox(const float max_pad_scale,
+    common::RANDOM_ENGINE *prnd, const float threshold = 1.05f) {
+      float new_scale = std::uniform_real_distribution<float>(
+        1.f, max_pad_scale)(*prnd);
+      if (new_scale < threshold) return Rect(0, 0, 0, 0);
+      auto rand_uniform = std::uniform_real_distribution<float>(0.f, new_scale - 1);
+      float x0 = rand_uniform(*prnd);
+      float y0 = rand_uniform(*prnd);
+      return Rect(-x0, -y0, new_scale, new_scale);
+    }
 
   cv::Mat Process(const cv::Mat &src, std::vector<float> &label,
                   common::RANDOM_ENGINE *prnd) override {
@@ -608,10 +647,11 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
 
     // build a helper class for processing labels
     ImageDetLabel det_label(label);
+    // random engine
+    std::uniform_real_distribution<float> rand_uniform(0, 1);
 
     // random crop logic
     if (param_.rand_crop_prob > 0 && param_.num_crop_sampler > 0) {
-      std::uniform_real_distribution<float> rand_uniform(0, 1);
       if (rand_uniform(*prnd) < param_.rand_crop_prob) {
         // random crop sampling logic: randomly pick a sampler, return if success
         // continue to next sampler if failed(exceed max_trial)
@@ -627,7 +667,8 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
           for (int t = 0; t < param_.max_crop_trials[idx]; ++t) {
             Rect crop_box = GenerateCropBox(param_.min_crop_scales[idx],
               param_.max_crop_scales[idx], param_.min_crop_aspect_ratios[idx],
-              param_.max_crop_aspect_ratios[idx], prnd);
+              param_.max_crop_aspect_ratios[idx], prnd,
+              static_cast<float>(res.cols) / res.rows);
             if (det_label.TryCrop(crop_box, param_.min_crop_overlaps[idx],
                 param_.max_crop_overlaps[idx], param_.min_crop_sample_coverages[idx],
                 param_.max_crop_sample_coverages[idx], param_.min_crop_object_coverages[idx],
@@ -635,10 +676,10 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
                 param_.emit_overlap_thresh)) {
               ++num_processed;
               // crop image
-              int left = static_cast<int>(crop_box.x * src.cols);
-              int top = static_cast<int>(crop_box.y * src.rows);
-              int width = static_cast<int>(crop_box.width * src.cols);
-              int height = static_cast<int>(crop_box.height * src.rows);
+              int left = static_cast<int>(crop_box.x * res.cols);
+              int top = static_cast<int>(crop_box.y * res.rows);
+              int width = static_cast<int>(crop_box.width * res.cols);
+              int height = static_cast<int>(crop_box.height * res.rows);
               res = res(cv::Rect(left, top, width, height));
               break;
             }
@@ -649,8 +690,66 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
 
     // random padding logic
     if (param_.rand_pad_prob > 0 && param_.max_pad_scale > 1.f) {
-
+      if (rand_uniform(*prnd) < param_.rand_pad_prob) {
+        Rect pad_box = GeneratePadBox(param_.max_pad_scale, prnd);
+        if (pad_box.area() > 0) {
+          if (det_label.TryPad(pad_box)) {
+            // pad image
+            cv::Mat tmp = res;
+            int left = static_cast<int>(-pad_box.x * res.cols);
+            int top = static_cast<int>(-pad_box.y * res.rows);
+            int right = static_cast<int>((pad_box.width + pad_box.x - 1) * res.cols);
+            int bot = static_cast<int>((pad_box.height + pad_box.y - 1) * res.rows);
+            cv::copyMakeBorder(tmp, res, top, bot, left, right, cv::BORDER_ISOLATED,
+              cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
+          }
+        }
+      }
     }
+
+    // random mirror logic
+    if (param_.rand_mirror_prob > 0 && rand_uniform(*prnd) < param_.rand_mirror_prob) {
+      if (det_label.TryMirror()) {
+        // flip image
+        cv::Mat tmp;
+        cv::flip(res, tmp, 1);
+        res = tmp;
+      }
+    }
+
+    // color space augmentation
+    // if (param_.random_hue_prob > 0 || param_.random_saturation_prob > 0 ||
+    //     param_.random_illumination_prob > 0 || param_.random_contrast_prob > 0) {
+    //   std::uniform_real_distribution<float> uniform_range(-0.5f, 0.5f);
+    //   int h = uniform_range(*prnd) * param_.max_random_hue;
+    //   int s = uniform_range(*prnd) * param_.max_random_saturation;
+    //   int l = uniform_range(*prnd) * param_.max_random_illumination;
+    //   float c = uniform_range(*prnd) * param_.max_random_contrast;
+    //   h = rand_uniform(*prnd) < param_.random_hue_prob ? h : 0;
+    //   s = rand_uniform(*prnd) < param_.random_saturation_prob ? s : 0;
+    //   l = rand_uniform(*prnd) < param_.random_illumination_prob ? l : 0;
+    //   c = rand_uniform(*prnd) < param_.random_contrast_prob ? c : 0;
+    //   if (h != 0 || s != 0 || l != 0) {
+    //     int temp[3] = {h, l, s};
+    //     int limit[3] = {180, 255, 255};
+    //     cv::cvtColor(res, res, CV_BGR2HLS);
+    //     for (int i = 0; i < res.rows; ++i) {
+    //       for (int j = 0; j < res.cols; ++j) {
+    //         for (int k = 0; k < 3; ++k) {
+    //           int v = res.at<cv::Vec3b>(i, j)[k];
+    //           v += temp[k];
+    //           v = std::max(0, std::min(limit[k], v));
+    //           res.at<cv::Vec3b>(i, j)[k] = v;
+    //         }
+    //       }
+    //     }
+    //     cv::cvtColor(res, res, CV_HLS2BGR);
+    //   }
+    //   if (fabs(c - 1.f) > 1e-3) {
+    //     cv::Mat tmp = res;
+    //     tmp.convertTo(res, -1, c, 0);
+    //   }
+    // }
 
     // color space augmentation
     // if (param_.random_h != 0 || param_.random_s != 0 || param_.random_l != 0) {
