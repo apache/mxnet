@@ -131,50 +131,65 @@ def test_adam():
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
 # RMSProp
-
-class PyRMSPropAlex(mx.optimizer.Optimizer):
+class PyRMSProp(mx.optimizer.Optimizer):
     """RMSProp optimizer of Tieleman & Hinton, 2012,
 
-    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
-    by Alex Graves, 2013.
+    For centered=False, the code follows the version in
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    Tieleman & Hinton, 2012
+
+    For centered=True, the code follows the version in
+    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
     Parameters
     ----------
     learning_rate : float, optional
         Step size.
-        Default value is set to 0.002.
+        Default value is set to 0.001.
     gamma1: float, optional
         decay factor of moving average for gradient, gradient^2.
-        Default value is set to 0.95.
+        Default value is set to 0.9.
     gamma2: float, optional
         "momentum" factor.
         Default value if set to 0.9.
+        Only used if centered=True
+    epsilon : float, optional
+        Default value is set to 1e-8.
+    centered : boolean, optional
+        Use Graves or Tielemans & Hintons version of RMSProp
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
         rescaling factor of gradient.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
+
     """
-    def __init__(self, learning_rate=0.001, gamma1=0.95, gamma2=0.9,
-                 epsilon=1e-8, **kwargs):
-        super(PyRMSPropAlex, self).__init__(learning_rate=learning_rate, **kwargs)
+    def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
+                 epsilon=1e-8, centered=False, **kwargs):
+        super(PyRMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.centered = centered
         self.gamma1 = gamma1
         self.gamma2 = gamma2
         self.epsilon = epsilon
 
     def create_state(self, index, weight):
-        """Create additional optimizer state: n, g, delta
+        """Create additional optimizer state.
+
+        For centered=False: n
+        For centered=True: n, g, delta
 
         Parameters
         ----------
         weight : NDArray
             The weight data
-
         """
-        return (mx.nd.zeros(weight.shape, weight.context),  # n
-                mx.nd.zeros(weight.shape, weight.context),  # g
-                mx.nd.zeros(weight.shape, weight.context))  # delta
+        if self.centered:
+            return (mx.nd.zeros(weight.shape, weight.context),  # n
+                    mx.nd.zeros(weight.shape, weight.context),  # g
+                    mx.nd.zeros(weight.shape, weight.context))  # delta
+        else:
+            return (mx.nd.zeros(weight.shape, weight.context), )  # n
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
@@ -196,96 +211,24 @@ class PyRMSPropAlex(mx.optimizer.Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
-        n, g, delta = state
         grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
-        n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
-        g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
-        delta[:] = (self.gamma2) * delta - lr * (grad/(mx.nd.sqrt(n - g*g) + self.epsilon) + wd * weight)
-        weight[:] += delta
 
+        if not self.centered:
+            (n, ) = state
+            if self.clip_gradient is not None:
+                grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+            n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
+            weight[:] -= lr * (grad/(mx.nd.sqrt(n) + self.epsilon) + wd * weight)
 
-def test_rms_alex():
-    mx.random.seed(0)
-    opt1 = PyRMSPropAlex
-    opt2 = mx.optimizer.RMSPropAlex
-    shape = (3, 4, 5)
-    kwargs = [{},
-              {'clip_gradient': 0.5},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14},
-              {'rescale_grad': 0.8},
-              {'clip_gradient': 0.5, 'wd': 0.07},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
-              {'rescale_grad': 0.8, 'wd': 0.05}]
-    for kwarg in kwargs:
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
+        else:
+            n, g, delta = state
+            if self.clip_gradient is not None:
+                grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+            n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
+            g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
+            delta[:] = (self.gamma2) * delta - lr * (grad/(mx.nd.sqrt(n - g*g) + self.epsilon) + wd * weight)
+            weight[:] += delta
 
-
-class PyRMSProp(mx.optimizer.Optimizer):
-    """RMSProp optimizer of Tieleman & Hinton, 2012,
-
-    This code follows the version in http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
-    by Tieleman & Hinton, 2012
-
-    Parameters
-    ----------
-    learning_rate : float, optional
-        Step size.
-        Default value is set to 0.002.
-    gamma1: float, optional
-        decay factor of moving average for gradient, gradient^2.
-        Default value is set to 0.95.
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
-        rescaling factor of gradient.
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
-    """
-    def __init__(self, learning_rate=0.002, gamma1=0.95, gamma2=0.9,
-                 epsilon=1e-8, **kwargs):
-        super(PyRMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
-        self.gamma1 = gamma1
-        self.epsilon = epsilon
-
-    def create_state(self, index, weight):
-        """Create additional optimizer state: n
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-
-        """
-        return (mx.nd.zeros(weight.shape, weight.context), )  # n
-
-    def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-        self._update_count(index)
-        (n, ) = state
-        grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
-        n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
-        weight[:] -= lr * (grad/(mx.nd.sqrt(n) + self.epsilon) + wd * weight)
 
 def test_rms():
     mx.random.seed(0)
@@ -298,11 +241,17 @@ def test_rms():
               {'rescale_grad': 0.8},
               {'clip_gradient': 0.5, 'wd': 0.07},
               {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
-              {'rescale_grad': 0.8, 'wd': 0.05}]
+              {'rescale_grad': 0.8, 'wd': 0.05},
+              {'centered': True},
+              {'clip_gradient': 0.5, 'centered': True},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'centered': True},
+              {'rescale_grad': 0.8, 'centered': True},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'centered': True},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'centered': True},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
 if __name__ == '__main__':
     test_adam()
-    test_rms_alex()
     test_rms()

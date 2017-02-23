@@ -632,70 +632,12 @@ class AdaGrad(Optimizer):
 class RMSProp(Optimizer):
     """RMSProp optimizer of Tieleman & Hinton, 2012,
 
-    This code follows the version in http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
-    by Tieleman & Hinton, 2012
+    For centered=False, the code follows the version in
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    Tieleman & Hinton, 2012
 
-    Parameters
-    ----------
-    learning_rate : float, optional
-        Step size.
-        Default value is set to 0.002.
-    gamma1: float, optional
-        decay factor of moving average for gradient^2.
-        Default value is set to 0.95.
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
-        rescaling factor of gradient.
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
-    """
-    def __init__(self, learning_rate=0.002, gamma1=0.95,
-                 epsilon=1e-8, **kwargs):
-        super(RMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
-        self.gamma1 = gamma1
-        self.kwargs = {'gamma1': gamma1, 'epsilon': epsilon,
-                       'rescale_grad': self.rescale_grad}
-        if self.clip_gradient:
-            self.kwargs['clip_gradient'] = self.clip_gradient
-
-    def create_state(self, index, weight):
-        """Create additional optimizer state: n
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-        """
-        return (zeros(weight.shape, weight.context), )  # n
-
-    def update(self, index, weight, grad, state):
-        """Update the parameters.
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-        weight : NDArray
-            weight ndarray
-        grad : NDArray
-            grad ndarray
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-        self._update_count(index)
-        (n, ) = state
-        rmsprop_update(weight, grad, n, out=weight, lr=lr, wd=wd, **self.kwargs)
-
-
-@register
-class RMSPropAlex(Optimizer):
-    """RMSPropAlex optimizer of Tieleman & Hinton, 2012,
-
-    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
-    by Alex Graves, 2013.
+    For centered=True, the code follows the version in
+    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
     Parameters
     ----------
@@ -703,32 +645,42 @@ class RMSPropAlex(Optimizer):
         Step size.
         Default value is set to 0.001.
     gamma1: float, optional
-        decay factor of moving average for gradient, gradient^2.
-        Default value is set to 0.95.
+        decay factor of moving average for gradient^2.
+        Default value is set to 0.9.
     gamma2: float, optional
         "momentum" factor.
         Default value if set to 0.9.
+        Only used if centered=True
     epsilon : float, optional
         Default value is set to 1e-8.
+    centered : bool, optional
+        Use Graves or Tielemans & Hintons version of RMSProp
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
+        rescaling factor of gradient.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
+
     """
-    def __init__(self, learning_rate=0.001, gamma1=0.95, gamma2=0.9,
-                 epsilon=1e-8, **kwargs):
-        super(RMSPropAlex, self).__init__(learning_rate=learning_rate, **kwargs)
+    def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
+                 epsilon=1e-8, centered=False, **kwargs):
+        super(RMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
         self.gamma1 = gamma1
         self.gamma2 = gamma2
-        self.kwargs = {'gamma1': gamma1, 'gamma2': gamma2, 'epsilon': epsilon,
+        self.centered = centered
+        self.kwargs = {'gamma1': gamma1, 'epsilon': epsilon,
                        'rescale_grad': self.rescale_grad}
+        if self.centered:
+            self.kwargs['gamma2'] = gamma2
         if self.clip_gradient:
             self.kwargs['clip_gradient'] = self.clip_gradient
 
     def create_state(self, index, weight):
-        """Create additional optimizer state: n, g, delta
+        """Create additional optimizer state.
+
+        For centered=False: n
+        For centered=True: n, g, delta
 
         Parameters
         ----------
@@ -736,9 +688,13 @@ class RMSPropAlex(Optimizer):
             The weight data
 
         """
-        return (zeros(weight.shape, weight.context),  # n
+        if self.centered:
+            return (
+                zeros(weight.shape, weight.context),  # n
                 zeros(weight.shape, weight.context),  # g
                 zeros(weight.shape, weight.context))  # delta
+        else:
+            return (zeros(weight.shape, weight.context), )  # n
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
@@ -762,9 +718,15 @@ class RMSPropAlex(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
-        n, g, delta = state
-        rmspropalex_update(weight, grad, n, g, delta, out=weight,
-                       lr=lr, wd=wd, **self.kwargs)
+        if not self.centered:
+            (n, ) = state
+            rmsprop_update(
+                weight, grad, n, out=weight, lr=lr, wd=wd, **self.kwargs)
+        else:
+            n, g, delta = state
+            rmspropalex_update(weight, grad, n, g, delta, out=weight,
+                               lr=lr, wd=wd, **self.kwargs)
+
 
 @register
 class AdaDelta(Optimizer):
