@@ -121,3 +121,5 @@ List of Contributors
 * [Shishi Duan](https://github.com/burness)
 * [Yu Du](https://github.com/Answeror)
 * [Xu Dong](https://github.com/dsqx71)
+* [Chihiro Komaki](https://github.com/ckomaki)
+* [Piyush Singh](https://github.com/Piyush3dB)

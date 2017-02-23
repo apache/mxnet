@@ -8,7 +8,7 @@ import os.path
 import mxnet as mx
 import numpy as np
 
-from lstm import lstm_unroll
+from lstm_proj import lstm_unroll
 from io_util import BucketSentenceIter, TruncatedSentenceIter, SimpleIter, DataReadStream
 from config_util import parse_args, get_checkpoint_path, parse_contexts
 

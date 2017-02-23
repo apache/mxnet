@@ -1,6 +1,9 @@
 export MXNET_ROOT=`pwd`/..
-# Change this to path of openblas
-export OPENBLAS_ROOT=/usr/local/opt/openblas
+
+# Change this to path or specify in make command
+ifndef OPENBLAS_ROOT
+    export OPENBLAS_ROOT=/usr/local/opt/openblas
+endif
 
 # Whether use minimum build without blas and SSE, this will make the library super slow
 ifndef MIN
@@ -14,6 +17,11 @@ ifndef ANDROID
     export ANDROID=0
 else
     DEFS+=-DMSHADOW_USE_SSE=0
+endif
+
+# Use locally installed emscripten if not specified
+ifndef EMCC
+    EMCC=emcc
 endif
 
 
@@ -73,10 +81,18 @@ else
 endif
 
 libmxnet_predict.js: mxnet_predict-all.cc
-	emcc -std=c++11 -O2 $(DEFS) -DMSHADOW_USE_SSE=0 -D__MXNET_JS__  -o $@ $+ \
-	-s EXPORTED_FUNCTIONS="['_MXPredCreate', '_MXPredGetOutputShape', '_MXPredSetInput', '_MXPredForward', '_MXPredPartialForward', '_MXPredGetOutput', '_MXPredFree', '_MXNDListCreate', '_MXNDListGet', '_MXNDListFree']" \
+	${EMCC} -std=c++11 -O2 $(DEFS) -DMSHADOW_USE_SSE=0 -D__MXNET_JS__  -o $@ $+ \
+	-s EXPORTED_FUNCTIONS="['_MXPredCreate', \
+	                        '_MXPredGetOutputShape', \
+	                        '_MXPredSetInput', \
+	                        '_MXPredForward', \
+	                        '_MXPredPartialForward', \
+	                        '_MXPredGetOutput', \
+	                        '_MXPredFree', \
+	                        '_MXNDListCreate', \
+	                        '_MXNDListGet', \
+	                        '_MXNDListFree']" \
 	-s ALLOW_MEMORY_GROWTH=1
-
 
 ${MXNET_ROOT}/lib/libmxnet_predict.so:  mxnet_predict-all.o
 	@mkdir -p ${MXNET_ROOT}/lib
@@ -84,4 +100,4 @@ ${MXNET_ROOT}/lib/libmxnet_predict.so:  mxnet_predict-all.o
 	ls -alh $@
 
 clean:
-	rm -f *.d *.o *.so *.a mxnet_predict-all.cc nnvm.cc
+	rm -f *.d *.o *.so *.a *.js *.js.mem mxnet_predict-all.cc nnvm.cc
