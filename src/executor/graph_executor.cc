@@ -321,13 +321,13 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::vector<OpReqType>& grad_req_type,
                          const std::vector<NDArray>& aux_states,
                          Executor* shared_exec) {
-  // TODO change to multiset?
-  std::multimap<size_t, size_t> shared_pool;
+  //std::vector<NDArray>* shared_pool = nullptr;
+  std::vector<SharedStorageEntry> shared_pool;
   if (shared_exec != nullptr) {
-    for (const NDArray& nd : dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_) {
-     size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
-     shared_pool.insert(std::make_pair(bytes, bytes));
-    }
+     for (auto& nd : dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_) {
+       size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+       shared_pool.emplace_back(nd.ctx().dev_id, bytes); 
+     }
   }
 
   nnvm::Graph g = InitGraph(symbol, default_ctx,
@@ -337,9 +337,9 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   g = AttachOpResources(g);
   graph_ = std::move(g);
   if (shared_exec != nullptr) {
-    this->InitDataEntryMemory(dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_);
+    this->InitDataEntryMemory((&dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_));
   } else {
-    this->InitDataEntryMemory({});
+    this->InitDataEntryMemory(nullptr);
   }
   {
     // initialize output arrays
@@ -366,11 +366,11 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<NDArray>& arg_grad_store,
                                const std::vector<OpReqType>& grad_req_type,
                                const std::vector<NDArray>& aux_states,
-//referrence???
-                               std::multimap<size_t, size_t> shared_pool
-) {
+                               const std::vector<SharedStorageEntry> shared_pool) {
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_type, arg_grad_store);
+  // TODO avoid making it shared?
+  //g.attrs["shared_pool"] = std::make_shared<nnvm::any>(shared_pool);
   g.attrs["shared_pool"] = std::make_shared<nnvm::any>(shared_pool);
   g = AssignContext(g, default_ctx, ctx_map,
                     in_args,
@@ -433,7 +433,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
 }
 
 // initialize the memory of each entries
-void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool) {
+void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   using nnvm::DTypeVector;
   using nnvm::ShapeVector;
   using nnvm::StorageVector;
@@ -488,9 +488,11 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   }
   // construct the re-use pool, if needed
   std::multimap<size_t, NDArray> free_pool;
-  for (const NDArray& nd : shared_pool) {
-    size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
-    free_pool.insert(std::make_pair(bytes, nd));
+  if (shared_pool != nullptr) {
+    for (const NDArray& nd : *shared_pool) {
+      size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+      free_pool.insert(std::make_pair(bytes, nd));
+    }
   }
   // remake the data pool
   data_pool_.clear();
@@ -511,7 +513,11 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
       CHECK_LE(nword, std::numeric_limits<index_t>::max());
       // allocate float arrays
       TShape shape{index_t(nword)};
-      data_pool_.emplace_back(NDArray(shape, ctx));
+      NDArray nd(shape, ctx);
+      data_pool_.push_back(nd);
+//NDArray(shape, ctx));
+      if (shared_pool != nullptr)  shared_pool->push_back(nd);    
+      num_new_ndarray++;
     }
   }
   CHECK_EQ(data_pool_.size(), pool_info.size());

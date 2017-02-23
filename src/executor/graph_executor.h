@@ -28,6 +28,8 @@ using nnvm::Graph;
 class GraphExecutor : public Executor {
  public:
   using Executor::MonitorCallback;
+  using SharedStorageEntry = std::pair<int, size_t>;
+
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
@@ -67,8 +69,7 @@ class GraphExecutor : public Executor {
                   const std::vector<NDArray>& arg_grad_store,
                   const std::vector<OpReqType>& grad_req_type,
                   const std::vector<NDArray>& aux_states,
-std::multimap<size_t, size_t> shared_pool
-);
+                  const std::vector<SharedStorageEntry> shared_pool);
   // initialize the full graph, including gradient.
   Graph InitFullGraph(nnvm::Symbol symbol,
                       const std::vector<OpReqType>& grad_req_type,
@@ -78,7 +79,7 @@ std::multimap<size_t, size_t> shared_pool
   // initialize the resources in the graph
   // initialize the memory of data entries
   // shared_pool: extra memory shared from other parts
-  void InitDataEntryMemory(const std::vector<NDArray>& shared_pool);
+  void InitDataEntryMemory(std::vector<NDArray>* shared_pool);
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
   // internal graph
