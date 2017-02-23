@@ -227,10 +227,11 @@ struct RMSPropAlexParam : public dmlc::Parameter<RMSPropAlexParam> {
 };
 
 template <typename xpu>
-inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
-                          const std::vector<TBlob> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<TBlob> &outputs) {
+inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const std::vector<TBlob> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mshadow_op;
@@ -244,38 +245,31 @@ inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx
     Tensor<xpu, 2, DType> delta = inputs[4].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
+    grad = scalar<DType>(param.rescale_grad) * grad +
+           scalar<DType>(param.wd) * weight;
+
     if (param.clip_gradient >= 0.0f) {
       state_n = scalar<DType>(1.f - param.gamma1) *
-                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                            DType(param.clip_gradient)) *
-                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                            DType(param.clip_gradient)) +
+                    F<clip>(grad, DType(param.clip_gradient)) *
+                    F<clip>(grad, DType(param.clip_gradient)) +
                 scalar<DType>(param.gamma1) * state_n;
       state_g = scalar<DType>(1.f - param.gamma1) *
-                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                            DType(param.clip_gradient)) +
+                    F<clip>(grad, DType(param.clip_gradient)) +
                 scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  ((F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                            DType(param.clip_gradient)) /
-                       (F<square_root>(state_n - state_g * state_g) +
-                        scalar<DType>(param.epsilon))) +
-                   scalar<DType>(param.wd) * weight);
+                  (F<clip>(grad, DType(param.clip_gradient)) /
+                   (F<square_root>(state_n - state_g * state_g) +
+                    scalar<DType>(param.epsilon)));
     } else {
-      state_n = scalar<DType>((1.f - param.gamma1) *
-                              param.rescale_grad * param.rescale_grad) *
-                    (grad * grad) +
+      state_n = scalar<DType>(1.f - param.gamma1) * (grad * grad) +
                 scalar<DType>(param.gamma1) * state_n;
-      state_g =
-          scalar<DType>((1.f - param.gamma1) * param.rescale_grad) * grad +
-          scalar<DType>(param.gamma1) * state_g;
+      state_g = scalar<DType>(1.f - param.gamma1) * grad +
+                scalar<DType>(param.gamma1) * state_g;
       delta = scalar<DType>(param.gamma2) * delta -
               scalar<DType>(param.lr) *
-                  ((scalar<DType>(param.rescale_grad) * grad /
-                       (F<square_root>(state_n - state_g * state_g) +
-                        scalar<DType>(param.epsilon))) +
-                   scalar<DType>(param.wd) * weight);
+                  (grad / (F<square_root>(state_n - state_g * state_g) +
+                           scalar<DType>(param.epsilon)));
     }
     Assign(out, req[0], weight + delta);
   });
@@ -323,32 +317,26 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     Tensor<xpu, 2, DType> state_n = inputs[2].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
+    grad = scalar<DType>(param.rescale_grad) * grad +
+           scalar<DType>(param.wd) * weight;
+
     if (param.clip_gradient >= 0.0f) {
       state_n = scalar<DType>(1.f - param.gamma1) *
-                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                            DType(param.clip_gradient)) *
-                    F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                            DType(param.clip_gradient)) +
-                scalar<DType>(param.gamma1) * state_n;
-      Assign(
-          out, req[0],
-          weight -
-              scalar<DType>(param.lr) *
-                  ((F<clip>(scalar<DType>(param.rescale_grad) * grad,
-                            DType(param.clip_gradient)) /
-                    (F<square_root>(state_n) + scalar<DType>(param.epsilon))) +
-                   scalar<DType>(param.wd) * weight));
-    } else {
-      state_n = scalar<DType>((1.f - param.gamma1) * param.rescale_grad *
-                              param.rescale_grad) *
-                    (grad * grad) +
+                    F<clip>(grad, DType(param.clip_gradient)) *
+                    F<clip>(grad, DType(param.clip_gradient)) +
                 scalar<DType>(param.gamma1) * state_n;
       Assign(out, req[0], weight -
                               scalar<DType>(param.lr) *
-                                  ((scalar<DType>(param.rescale_grad) * grad /
-                                    (F<square_root>(state_n) +
-                                     scalar<DType>(param.epsilon))) +
-                                   scalar<DType>(param.wd) * weight));
+                                  (F<clip>(grad, DType(param.clip_gradient)) /
+                                   (F<square_root>(state_n) +
+                                    scalar<DType>(param.epsilon))));
+    } else {
+      state_n = scalar<DType>(1.f - param.gamma1) * (grad * grad) +
+                scalar<DType>(param.gamma1) * state_n;
+      Assign(out, req[0], weight -
+                              scalar<DType>(param.lr) *
+                                  (grad / (F<square_root>(state_n) +
+                                           scalar<DType>(param.epsilon))));
     }
   });
 }
