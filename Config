@@ -63,7 +63,7 @@ package.DeepMXNet = {
 
  resolves-conflict-dependencies = {
    0.9 = {
-     Zlib = 1;
+     Zlib = 1.0;
    };
  };
 
