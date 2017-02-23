@@ -659,7 +659,7 @@ class FusedRNNCell(BaseRNNCell):
         if not merge_outputs:
             warnings.warn("Call FusedRNNCell.unroll with merge_outputs=True "
                           "for faster speed")
-            outputs = list(symbol.SliceChannel(outputs, aixs=axis, num_outputs=length,
+            outputs = list(symbol.SliceChannel(outputs, axis=axis, num_outputs=length,
                                                squeeze_axis=1))
         elif axis == 1:
             outputs = symbol.SwapAxis(outputs, dim1=0, dim2=1)
