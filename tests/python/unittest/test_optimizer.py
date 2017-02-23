@@ -94,7 +94,9 @@ class PyAdam(mx.optimizer.Optimizer):
 
         t = self._index_update_count[index]
         mean, variance = state
-        grad *= self.rescale_grad
+
+        wd = self._get_wd(index)
+        grad = grad * self.rescale_grad + wd * weight
         if self.clip_gradient is not None:
             mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
 
@@ -109,10 +111,6 @@ class PyAdam(mx.optimizer.Optimizer):
         lr *= math.sqrt(coef2)/coef1
 
         weight -= lr*mean/(mx.nd.sqrt(variance) + self.epsilon)
-
-        wd = self._get_wd(index)
-        if wd > 0.:
-            weight[:] -= (lr * wd) * weight
 
 
 def test_adam():
