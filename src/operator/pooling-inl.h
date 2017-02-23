@@ -191,6 +191,8 @@ class PoolingProp : public OperatorProperty {
       if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
       if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
     }
+    CHECK_EQ(param_.stride.ndim(), param_.kernel.ndim()) << "stride and kernel should have the same length";
+    CHECK_EQ(param_.pad.ndim(), param_.kernel.ndim()) << "pad and kernel should have the same length";
   }
 
   std::map<std::string, std::string> GetParams() const override {
