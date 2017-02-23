@@ -58,6 +58,54 @@ struct Kernel<OP, gpu> {
 };
 #endif  // __CUDACC__
 
+/*! \brief operator request type switch */
+#define MXNET_ASSIGN_REQ_SWITCH(req, ReqType, ...)  \
+  switch (req) {                                    \
+  case kNullOp:                                     \
+    break;                                          \
+  case kWriteInplace:                               \
+  case kWriteTo:                                    \
+    {                                               \
+      const int ReqType = kWriteTo;                 \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case kAddTo:                                      \
+    {                                               \
+      const int ReqType = kAddTo;                   \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    break;                                          \
+  }
+
+/*!
+ * \brief assign the val to out according
+ * to request in Kernel::Launch
+ * \param out the data to be assigned
+ * \param req the assignment request
+ * \param val the value to be assigned to out
+ * \tparam OType output type
+ * \tparam VType value type
+ */
+#define KERNEL_ASSIGN(out, req, val)  \
+  {                                   \
+    switch (req) {                    \
+      case kNullOp:                   \
+        break;                        \
+      case kWriteTo:                  \
+      case kWriteInplace:             \
+        (out) = (val);                \
+        break;                        \
+      case kAddTo:                    \
+        (out) += (val);               \
+        break;                        \
+      default:                        \
+        break;                        \
+    }                                 \
+  }
+
 struct clip {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas,

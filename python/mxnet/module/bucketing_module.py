@@ -97,7 +97,7 @@ class BucketingModule(BaseModule):
         A list of `(name, shape)` pairs.
         """
         assert self.binded
-        return self._curr_module.label_shapes
+        return self._curr_module.output_shapes
 
     def get_params(self):
         """Get current parameters.

@@ -4,6 +4,10 @@
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
 
 import ctypes
 import warnings
@@ -255,7 +259,7 @@ class NDArray(NDArrayBase):
             sliced_arr = self._at(in_slice)
             sliced_arr[:] = value
             return
-        if isinstance(in_slice, slice):
+        if isinstance(in_slice, py_slice):
             if in_slice.step is not None:
                 raise ValueError('NDArray only support continuous slicing on axis 0')
             if in_slice.start is not None or in_slice.stop is not None:
@@ -276,7 +280,7 @@ class NDArray(NDArrayBase):
             my_shape = self.shape
             assert len(in_slice) == len(my_shape)
             for slice_i in in_slice:
-                assert isinstance(slice_i, (slice, int))
+                assert isinstance(slice_i, (py_slice, int))
             begin = [0 for _ in my_shape]
             end = [x for x in my_shape]
             for i, slice_i in enumerate(in_slice):
@@ -284,7 +288,7 @@ class NDArray(NDArrayBase):
                     assert slice_i < my_shape[i]
                     begin[i] = slice_i
                     end[i] = slice_i + 1
-                if isinstance(slice_i, slice):
+                if isinstance(slice_i, py_slice):
                     # only support continuous slicing
                     assert slice_i.step is None
                     begin[i] = slice_i.start or 0
@@ -313,7 +317,7 @@ class NDArray(NDArrayBase):
         """Get ndarray"""
         if isinstance(in_slice, int):
             return self._at(in_slice)
-        if not isinstance(in_slice, slice) or in_slice.step is not None:
+        if not isinstance(in_slice, py_slice) or in_slice.step is not None:
             raise ValueError('NDArray only support continuous slicing on axis 0')
         if in_slice.start is not None or in_slice.stop is not None:
             return self._slice(in_slice.start, in_slice.stop)
@@ -519,7 +523,7 @@ class NDArray(NDArrayBase):
 
         Parameters
         ----------
-        dtype : numpy.dtype or string
+        dtype : str or numpy.dtype
             Desired type of result array.
 
         Returns
@@ -615,7 +619,7 @@ def onehot_encode(indices, out):
     # pylint: enable= no-member, protected-access
 
 
-def empty(shape, ctx=None, dtype=mx_real_t):
+def empty(shape, ctx=None, dtype=None):
     """Create an empty uninitialized new NDArray, with specified shape.
 
     Parameters
@@ -626,6 +630,9 @@ def empty(shape, ctx=None, dtype=mx_real_t):
     ctx : Context, optional
         The context of the NDArray, default to current default context.
 
+    dtype : str or numpy.dtype, optional
+        The value type of the NDArray, default to np.float32
+
     Returns
     -------
     out: Array
@@ -635,6 +642,8 @@ def empty(shape, ctx=None, dtype=mx_real_t):
         shape = (shape, )
     if ctx is None:
         ctx = Context.default_ctx
+    if dtype is None:
+        dtype = mx_real_t
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -1034,7 +1043,7 @@ def negative(arr):
     """ Return the negation of array values """
     return multiply(arr, -1.0)
 
-def zeros(shape, ctx=None, dtype=mx_real_t):
+def zeros(shape, ctx=None, dtype=None):
     """Create a new NDArray filled with 0, with specified shape.
 
     Parameters
@@ -1043,6 +1052,8 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
         shape of the NDArray.
     ctx : Context, optional.
         The context of the NDArray, default to current default context.
+    dtype : str or numpy.dtype, optional
+        The value type of the NDArray, default to np.float32
 
     Returns
     -------
@@ -1051,11 +1062,13 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
+    if dtype is None:
+        dtype = mx_real_t
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
     # pylint: enable= no-member, protected-access
 
-def ones(shape, ctx=None, dtype=mx_real_t):
+def ones(shape, ctx=None, dtype=None):
     """Create a new NDArray filled with 1, with specified shape.
 
     Parameters
@@ -1064,6 +1077,8 @@ def ones(shape, ctx=None, dtype=mx_real_t):
         shape of the NDArray.
     ctx : Context, optional
         The context of the NDArray, default to current default context.
+    dtype : str or numpy.dtype, optional
+        The value type of the NDArray, default to np.float32
 
     Returns
     -------
@@ -1072,11 +1087,13 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
+    if dtype is None:
+        dtype = mx_real_t
     # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype)
     # pylint: enable= no-member, protected-access
 
-def full(shape, val, ctx=None, dtype=mx_real_t):
+def full(shape, val, ctx=None, dtype=None):
     """Create a new NDArray filled with given value, with specified shape.
 
     Parameters
@@ -1087,33 +1104,39 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
         value to be filled with.
     ctx : Context, optional
         The context of the NDArray, default to current default context.
+    dtype : str or numpy.dtype, optional
+        The value type of the NDArray, default to np.float32
 
     Returns
     -------
     out: Array
         The created NDArray.
     """
+    if dtype is None:
+        dtype = mx_real_t
     arr = empty(shape, ctx, dtype)
     arr[:] = val
     return arr
 
-def array(source_array, ctx=None, dtype=mx_real_t):
+def array(source_array, ctx=None, dtype=None):
     """Create a new NDArray that copies content from source_array.
 
     Parameters
     ----------
     source_array : array_like
         Source data to create NDArray from.
-
     ctx : Context, optional
         The context of the NDArray, default to current default context.
+    dtype : str or numpy.dtype, optional
+        The value type of the NDArray, default to np.float32
 
     Returns
     -------
     out: Array
         The created NDArray.
     """
-
+    if dtype is None:
+        dtype = mx_real_t
     if not isinstance(source_array, np.ndarray):
         try:
             source_array = np.array(source_array, dtype=dtype)
@@ -1179,7 +1202,7 @@ def concatenate(arrays, axis=0, always_copy=True):
     return ret
 
 # pylint: disable= no-member, protected-access, too-many-arguments
-def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
+def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=None):
     """Simlar function in the MXNet ndarray as numpy.arange
         See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
 
@@ -1196,7 +1219,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
     ctx : Context, optional
         The context of the NDArray, default to current default context.
-    dtype : type, optional
+    dtype : str or numpy.dtype, optional
         The value type of the NDArray, default to np.float32
 
     Returns
@@ -1206,6 +1229,8 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
+    if dtype is None:
+        dtype = mx_real_t
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
