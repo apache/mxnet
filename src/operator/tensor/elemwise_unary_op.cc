@@ -57,11 +57,12 @@ NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
 .describe(R"code(Cast to a specified type, element-wise.
 
-.. math::
-   cast([1e20, 11.1], 'float16') = [inf, 11.09375]
+For example:
+
+   cast([1e20, 11.1], 'float16') = [inf, 11.09375]\\
    cast([300, 11.1, 10.9, -1, -3], 'uint8') = [44, 11, 10, 255, 253]
 
-)code")
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CastParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", CastType)
@@ -88,10 +89,10 @@ MXNET_OPERATOR_REGISTER_UNARY(negative)
 MXNET_OPERATOR_REGISTER_UNARY(abs)
 .describe(R"code(Returns the absolute value of array elements, element-wise.
 
-.. math::
+For example:
    abs([-2, 0, 3]) = [2, 0, 3]
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::abs>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
 
@@ -102,10 +103,10 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_abs)
 MXNET_OPERATOR_REGISTER_UNARY(sign)
 .describe(R"code(Returns the indication sign of array elements, element-wise.
 
-.. math::
+For example::
    sign([-2, 0, 3]) = [-1, 0, 1]
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::sign>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
 
@@ -116,9 +117,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sign)
 MXNET_OPERATOR_REGISTER_UNARY(round)
 .describe(R"code(Round elements of the array to the nearest integer, element-wise.
 
-.. math::
+For example::
    round([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -2.,  2.,  2.,  2.]
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
@@ -126,31 +127,31 @@ MXNET_OPERATOR_REGISTER_UNARY(round)
 MXNET_OPERATOR_REGISTER_UNARY(ceil)
 .describe(R"code(Return the ceiling of the input, element-wise.
 
-.. math::
+For example::
    ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::ceil>);
 
 // floor
 MXNET_OPERATOR_REGISTER_UNARY(floor)
 .describe(R"code(Return the floor of the input, element-wise.
 
-.. math::
+For example::
    floor([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-3., -2.,  1.,  1.,  2.]
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::floor>);
 
 // rint
 MXNET_OPERATOR_REGISTER_UNARY(rint)
 .describe(R"code(Round elements of the array to the nearest integer, element-wise.
 
-.. math::
+For example::
    rint([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -2.,  1.,  2.,  2.]
 
 The difference to ``round`` is that ``rint`` returns ``n`` for input ``n.5``
 while ``round`` returns ``n+1`` for ``n>=0``.
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::rint>);
 
 // fix
@@ -158,19 +159,19 @@ MXNET_OPERATOR_REGISTER_UNARY(fix)
 .describe(R"code(Round elements of the array to the nearest integer towards
 zero, element-wise.
 
-.. math::
+For example::
    fix([-2.1, -1.9, 1.9, 2.1]) = [-2., -1.,  1., 2.]
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::fix>);
 
 // square
 MXNET_OPERATOR_REGISTER_UNARY(square)
 .describe(R"code(Calculate the square of an array, element-wise.
 
-.. math::
+For example::
    square(x) = x^2
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::square>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
 
@@ -181,9 +182,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_square)
 MXNET_OPERATOR_REGISTER_UNARY(sqrt)
 .describe(R"code(Calculate the square-root of an array, element-wise.
 
-.. math::
+For example::
    sqrt(x) = \sqrt{x}
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::square_root>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sqrt"});
 
@@ -194,9 +195,9 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sqrt)
 MXNET_OPERATOR_REGISTER_UNARY(rsqrt)
 .describe(R"code(Calculate the inverse square-root of an array, element-wise.
 
-.. math::
+For example::
    rsqrt(x) = 1/\sqrt{x}
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::reciprocal_square_root>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rsqrt"});
 
@@ -208,10 +209,10 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rsqrt)
 MXNET_OPERATOR_REGISTER_UNARY(exp)
 .describe(R"code(Calculate the exponential of the array, element-wise
 
-.. math::
+For example::
    exp(x) = e^x \approx 2.718^x
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::exp>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
 
@@ -221,7 +222,7 @@ MXNET_OPERATOR_REGISTER_UNARY(log)
 
 The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
@@ -231,7 +232,7 @@ MXNET_OPERATOR_REGISTER_UNARY(log10)
 
 ``10**log10(x) = x``
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log10>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
@@ -241,7 +242,7 @@ MXNET_OPERATOR_REGISTER_UNARY(log2)
 
 ``2**log2(x) = x``
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log2>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
@@ -271,7 +272,7 @@ MXNET_OPERATOR_REGISTER_UNARY(log1p)
 This function is more accurate than ``log(1 + x)``  for small ``x`` so that
 :math:`1+x\approx 1`
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log1p>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log1p"});
 
@@ -284,7 +285,7 @@ MXNET_OPERATOR_REGISTER_UNARY(expm1)
 
 This function provides greater precision than ``exp(x) - 1`` for small values of ``x``.
 
-)code")
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::expm1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_expm1"});
 
@@ -405,7 +406,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_radians)
 MXNET_OPERATOR_REGISTER_UNARY(sinh)
 .describe(R"code(Hyperbolic sine, element-wise.
 
-.. math::
+For example::
    sinh(x) = 0.5\times(exp(x) - exp(-x))
 
 )code" ADD_FILELINE)
@@ -419,7 +420,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sinh)
 MXNET_OPERATOR_REGISTER_UNARY(cosh)
 .describe(R"code(Hyperbolic cosine, element-wise.
 
-.. math::
+For example::
    cosh(x) = 0.5\times(exp(x) + exp(-x))
 
 )code" ADD_FILELINE)
@@ -433,7 +434,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_cosh)
 MXNET_OPERATOR_REGISTER_UNARY(tanh)
 .describe(R"code(Hyperbolic tangent element-wise.
 
-.. math::
+For example::
    tanh(x) = sinh(x) / cosh(x)
 
 )code" ADD_FILELINE)

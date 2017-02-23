@@ -121,7 +121,14 @@ MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
-.MXNET_DESCRIBE("Broadcast src to shape")
+.describe(R"code(Broadcast an array to a new shape.
+
+For example::
+
+   broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
+                                           [ 1.,  2.,  3.]])
+
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastToParam>)
 .add_arguments(BroadcastToParam::__FIELDS__())
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastToShape)

@@ -321,8 +321,8 @@ In the rest of this document, we first overview the methods provided by the
     :nosignatures:
 
     cast
-    reshape -> reshape
-    Flatten -> flatten
+    reshape
+    flatten
 ```
 
 ### Changing both array shape and elements
