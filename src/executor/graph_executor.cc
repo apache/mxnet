@@ -321,17 +321,9 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::vector<OpReqType>& grad_req_type,
                          const std::vector<NDArray>& aux_states,
                          Executor* shared_exec) {
-  std::vector<SharedStorageEntry> shared_pool;
-  if (shared_exec != nullptr) {
-     for (auto& nd : dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_) {
-       size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
-       shared_pool.emplace_back(nd.ctx().dev_id, bytes); 
-     }
-  }
-
   nnvm::Graph g = InitGraph(symbol, default_ctx,
                             ctx_map, in_args, arg_grad_store,
-                            grad_req_type, aux_states, shared_pool);
+                            grad_req_type, aux_states);
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
   graph_ = std::move(g);
@@ -364,11 +356,9 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<NDArray>& in_args,
                                const std::vector<NDArray>& arg_grad_store,
                                const std::vector<OpReqType>& grad_req_type,
-                               const std::vector<NDArray>& aux_states,
-                               const std::vector<SharedStorageEntry> shared_pool) {
+                               const std::vector<NDArray>& aux_states) {
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_type, arg_grad_store);
-  g.attrs["shared_pool"] = std::make_shared<nnvm::any>(shared_pool);
   g = AssignContext(g, default_ctx, ctx_map,
                     in_args,
                     grad_store_,
@@ -493,13 +483,23 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   }
   // remake the data pool
   data_pool_.clear();
-  for (size_t i = 0; i < pool_info.size(); ++i) {
+  data_pool_.resize(pool_info.size());
+
+  // sort the pool info the descending order before allocating memory
+  std::vector<size_t> sorted_pool_index(pool_info.size());
+  std::iota(sorted_pool_index.begin(), sorted_pool_index.end(), 0);
+  auto pool_comparator = [&pool_info](int lhs, int rhs){
+    return pool_info[lhs].second > pool_info[rhs].second;
+  };
+  std::sort(sorted_pool_index.begin(), sorted_pool_index.end(), pool_comparator);
+
+  for (size_t i : sorted_pool_index) {
     const Context& ctx = pool_info[i].first;
     size_t bytes = pool_info[i].second;
     bool allocated = false;
     for (auto it = free_pool.lower_bound(bytes); it != free_pool.end(); ++it) {
       if (it->second.ctx() == ctx && it->first >= bytes) {
-        data_pool_.push_back(it->second);
+        data_pool_[i] = it->second;
         free_pool.erase(it);
         allocated = true;
         break;
@@ -511,12 +511,11 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       // allocate float arrays
       TShape shape{index_t(nword)};
       NDArray nd(shape, ctx);
-      data_pool_.push_back(nd);
+      data_pool_[i] = nd;
       // put the new allocated arrays to shared pool
       if (shared_pool != nullptr)  {
         shared_pool->push_back(nd);
       }
-      num_new_ndarray++;
     }
   }
   CHECK_EQ(data_pool_.size(), pool_info.size());

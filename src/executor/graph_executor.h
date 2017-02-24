@@ -28,7 +28,6 @@ using nnvm::Graph;
 class GraphExecutor : public Executor {
  public:
   using Executor::MonitorCallback;
-  using SharedStorageEntry = std::pair<int, size_t>;
 
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
@@ -68,8 +67,7 @@ class GraphExecutor : public Executor {
                   const std::vector<NDArray>& in_args,
                   const std::vector<NDArray>& arg_grad_store,
                   const std::vector<OpReqType>& grad_req_type,
-                  const std::vector<NDArray>& aux_states,
-                  const std::vector<SharedStorageEntry> shared_pool);
+                  const std::vector<NDArray>& aux_states);
   // initialize the full graph, including gradient.
   Graph InitFullGraph(nnvm::Symbol symbol,
                       const std::vector<OpReqType>& grad_req_type,

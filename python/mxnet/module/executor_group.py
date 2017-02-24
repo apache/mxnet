@@ -125,7 +125,8 @@ class DataParallelExecutorGroup(object):
         self.inputs_need_grad = inputs_need_grad
 
         self.logger = logger
-
+        #TODO need a cleaner interface to profile memory per device (haibin)
+        self.total_exec_bytes = 0
         self.fixed_param_names = fixed_param_names
         if self.fixed_param_names is None:
             self.fixed_param_names = []
@@ -615,6 +616,8 @@ class DataParallelExecutorGroup(object):
         executor = self.symbol.bind(ctx=context, args=arg_arrays,
                                     args_grad=grad_arrays, aux_states=aux_arrays,
                                     grad_req=self.grad_req, shared_exec=shared_exec)
+        # Get the total bytes allocated for this executor
+        self.total_exec_bytes += int(executor.debug_str().split('\n')[-3].split()[1])
         return executor
 
     def _sliced_shape(self, shapes, i, major_axis):
