@@ -2,8 +2,8 @@ package.DeepMXNet = {
   interfaces = (0.9);
 
   #build-system = brazilcmake;
-  #build-system = bmvn;
-  build-system = build-chain;
+  build-system = bmvn;
+  #build-system = build-chain;
 
   deploy = {
       generic = false;
@@ -34,7 +34,7 @@ package.DeepMXNet = {
       DeepOpenCV = 2.4.x;
 
       # Scala build
-      JDK8 = 1.0;
+      JDK = 1.7;
       Maven = 3.0;
       ScalaMavenBuilder = 1.0;
       Libgfortran1 = 1.0;
