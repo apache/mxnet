@@ -275,10 +275,12 @@ ParseNext(DataBatch *out) {
       const DataInst& batch = temp_[place.first][place.second];
       for (unsigned j = 0; j < batch.data.size(); ++j) {
         CHECK_EQ(unit_size_[j], batch.data[j].Size());
+        MSHADOW_TYPE_SWITCH(out->data[j].data().type_flag_, dtype, {
         mshadow::Copy(
-            out->data[j].data().FlatTo1D<cpu, DType>().Slice((current_size + i) * unit_size_[j],
+            out->data[j].data().FlatTo1D<cpu, dtype>().Slice((current_size + i) * unit_size_[j],
               (current_size + i + 1) * unit_size_[j]),
-            batch.data[j].get_with_shape<cpu, 1, DType>(mshadow::Shape1(unit_size_[j])));
+            batch.data[j].get_with_shape<cpu, 1, dtype>(mshadow::Shape1(unit_size_[j])));
+        });
       }
     }
     inst_index_ += n_to_copy;
