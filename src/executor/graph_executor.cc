@@ -486,8 +486,10 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   data_pool_.resize(pool_info.size());
 
   // sort the pool info the descending order before allocating memory
-  std::vector<size_t> sorted_pool_index(pool_info.size());
-  std::iota(sorted_pool_index.begin(), sorted_pool_index.end(), 0);
+  std::vector<size_t> sorted_pool_index;
+  for (size_t i = 0; i < pool_info.size(); i++) {
+    sorted_pool_index.push_back(i);
+  }
   auto pool_comparator = [&pool_info](int lhs, int rhs){
     return pool_info[lhs].second > pool_info[rhs].second;
   };
