@@ -1,2 +1,3 @@
 rm -rf build/private/project
 rm -f build/lib/*.jar
+rm -rf build/private/m2
