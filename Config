@@ -35,7 +35,7 @@ package.DeepMXNet = {
 
       # Scala build
       JDK8 = 1.0;
-      Maven = 3.0;
+      Maven = 3.0.3_jdk;
       ScalaMavenBuilder = 1.0;
       Libgfortran1 = 1.0;
       Scala-Java8-compat = 1.0;
