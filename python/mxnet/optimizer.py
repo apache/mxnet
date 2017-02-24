@@ -355,11 +355,10 @@ class DCASGD(Optimizer):
             if self.weight_previous.has_key(index):
                 mom[:] += -lr * (grad + wd * weight + self.lamda \
                                     * grad * grad * (weight - self.weight_previous[index]))
-                self.weight_previous[index] = weight
             else:
                 mom[:] += -lr * (grad + wd * weight)
-                self.weight_previous[index] = weight
             weight[:] += mom
+            self.weight_previous[index] = weight
         else:
             assert self.momentum == 0.0
             if self.weight_previous.has_key(index):
