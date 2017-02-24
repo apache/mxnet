@@ -24,6 +24,7 @@ __version__ = libinfo['__version__']
 
 def config_cython():
     """Try to configure cython and return cython configuration"""
+    return [] # disable cython due to some users have compile errors.
     if os.name == 'nt':
         print("WARNING: Cython is not supported on Windows, will compile without cython module")
         return []
