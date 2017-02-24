@@ -6,7 +6,7 @@ package.DeepMXNet = {
   build-system = build-chain;
 
   deploy = {
-      generic = true;
+      generic = false;
   };
 
   build-environment = {
