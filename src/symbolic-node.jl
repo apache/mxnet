@@ -200,6 +200,27 @@ function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
 end
 
 """
+    get_name(self :: SymbolicNode)
+
+Get the name of the symbol.
+
+    julia> x = mx.Variable(:data)
+    julia> mx.get_name(x)
+    :data
+
+    julia> y = mx.FullyConnected(x, num_hidden = 128)
+    julia> mx.get_name(y)
+    :fullyconnected0
+"""
+function get_name(self :: mx.SymbolicNode)
+    name = Ref{mx.char_p}(0)
+    success = Ref(0)
+    @mxcall(:MXSymbolGetName, (MX_handle, Ref{char_p}, Ref{Int}), self.handle.value, name, success)
+    @assert success[] != -1
+    return Symbol(unsafe_wrap(String, name[]))
+end
+
+"""
     grad(self :: SymbolicNode, wrt :: Vector{SymbolicNode})
 
 Get the autodiff gradient of the current `SymbolicNode`. This function can

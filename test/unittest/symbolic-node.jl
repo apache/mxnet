@@ -86,6 +86,7 @@ function test_attrs()
 
   data = mx.Variable(:data)
 
+  @test mx.get_name(data) == :data
   result = mx.get_attr(data, :test)
   @test isnull(result)
   mx.set_attr(data, :test, "1.0")
@@ -100,6 +101,7 @@ function test_attrs()
   @test isnull(mx.get_attr(conv, :b))
   @test get(mx.get_attr(conv, :a)) == "a"
   @test get(mx.get_attr(conv, :π)) == "π"
+  @test isa(mx.get_name(conv), Symbol)
 
   @test_throws MethodError mx.Variable(:data3, attrs = Dict(:test => "1.0", :test2 => 1.0))
   @test_throws MethodError mx.Convolution(data2, kernel = (1,1), num_filter = 1, attrs = Dict(:test => "1.0", :test2 => 1.0))
