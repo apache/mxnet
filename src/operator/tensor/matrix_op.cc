@@ -140,7 +140,12 @@ NNVM_REGISTER_OP(transpose)
 
 
 NNVM_REGISTER_OP(expand_dims)
-.MXNET_DESCRIBE("Expand the shape of array by inserting a new axis.")
+.describe(R"code(Insert a new axis with size 1 into the array shape
+
+For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``
+will return a new array with shape ``(2,1,3,4)``.
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ExpandDimParam>)
@@ -156,12 +161,23 @@ NNVM_REGISTER_OP(expand_dims)
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(crop)
-.MXNET_DESCRIBE("(Crop the input tensor and return a new one.\n\n"
-"Requirements\n"
-"------------\n"
-"- the input and output (if explicitly given) are of the same data type,\n"
-"  and on the same device.\n"
-")")
+.describe(R"code(Crop a continuous region from the array.
+
+Assume the input array has *n* dimensions, given ``begin=(b_1, ..., b_n)`` and
+``end=(e_1, ..., e_n)``, then ``crop`` will return a region with shape
+``(e_1-b_1, ..., e_n-b_n)``. The result's *k*-th dimension contains elements
+from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
+
+For example::
+
+  x = [[  1.,   2.,   3.,   4.],
+       [  5.,   6.,   7.,   8.],
+       [  9.,  10.,  11.,  12.]]
+
+  crop(x, begin=(0,1), end=(2,4)) = [[ 2.,  3.,  4.],
+                                     [ 6.,  7.,  8.]]
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SimpleCropParam>)

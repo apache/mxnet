@@ -202,6 +202,8 @@ def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):
     for key, type_info, desc in zip(arg_names, arg_types, arg_descs):
         if key in param_keys and remove_dup:
             continue
+        if key == 'num_args':
+            continue
         param_keys.add(key)
         ret = '%s : %s' % (key, type_info)
         if len(desc) != 0:

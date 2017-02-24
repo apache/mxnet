@@ -57,10 +57,10 @@ NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
 .describe(R"code(Cast to a specified type, element-wise.
 
-For example:
+For example::
 
-   cast([1e20, 11.1], 'float16') = [inf, 11.09375]\\
-   cast([300, 11.1, 10.9, -1, -3], 'uint8') = [44, 11, 10, 255, 253]
+   cast([1e20, 11.1], dtype='float16') = [inf, 11.09375]
+   cast([300, 11.1, 10.9, -1, -3], dtype='uint8') = [44, 11, 10, 255, 253]
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CastParam>)
@@ -72,7 +72,7 @@ For example:
   })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(CastParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_cast)

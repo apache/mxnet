@@ -19,8 +19,8 @@ def _build_doc(func_name,
                ret_type=None):
     """Build docstring for imperative functions."""
     param_str = _build_param_doc(arg_names, arg_types, arg_desc)
-    if key_var_num_args:
-        desc += '\nThis function support variable length of positional input.'
+    # if key_var_num_args:
+    #     desc += '\nThis function support variable length of positional input.'
     doc_str = ('%s\n\n' +
                '%s\n' +
                'out : NDArray, optional\n' +

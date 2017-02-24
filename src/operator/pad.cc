@@ -400,12 +400,15 @@ Operator *PadProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
 DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
-    .describe(
-        "Pads an n-dimensional input tensor. Allows for precise control of the "
-        "padding type and how much padding to apply on both sides of a given "
-        "dimension.")
-    .add_argument("data", "Symbol", "An n-dimensional input tensor.")
-    .add_arguments(PadParam::__FIELDS__());
+.describe(R"code(Pad an array.
+
+Only supports 4-D and 5-D input array.
+
+)code" ADD_FILELINE)
+.add_argument("data", "ndarray-or-symbol", "An n-dimensional input tensor.")
+.add_arguments(PadParam::__FIELDS__());
+
+NNVM_REGISTER_OP(Pad).add_alias("pad");
 
 }  // namespace op
 }  // namespace mxnet

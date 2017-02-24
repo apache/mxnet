@@ -114,7 +114,27 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_min)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::eq>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
-.MXNET_DESCRIBE("Broadcast src along axis")
+.add_alias("broadcast_axes")
+.describe(R"code(Broadcast an array over particular axes.
+
+Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
+``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+
+For example::
+
+   // given (1,2,1) shape x
+   x = [[[ 1.],
+         [ 2.]]]
+
+   // broadcast on axis 2
+   broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
+                                         [ 2.,  2.,  2.]]]
+   // broadcast on axes 0 and 2
+   broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
+                                                 [ 2.,  2.,  2.]],
+                                                [[ 1.,  1.,  1.],
+                                                 [ 2.,  2.,  2.]]]
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastAxesParam>)
 .add_arguments(BroadcastAxesParam::__FIELDS__())
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastAxesShape)
@@ -123,10 +143,17 @@ MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 .describe(R"code(Broadcast an array to a new shape.
 
+Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
+``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+
 For example::
 
    broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
                                            [ 1.,  2.,  3.]])
+
+The dimensions that will not be changed can also use the special code ``0`` that
+means copy the original value. So with ``shape=(2,0)`` we will obtain the same
+results in the above example.
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastToParam>)

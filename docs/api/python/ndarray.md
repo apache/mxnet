@@ -328,35 +328,24 @@ In the rest of this document, we first overview the methods provided by the
 ### Changing both array shape and elements
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        broadcast_to
-        broadcast_axis
-        expand_dims
-        Crop -> ?
-        crop -> slice
-        Pad -> ?
+    broadcast_to
+    broadcast_axes
+    expand_dims
+    pad
 ```
 
 
-### Joining arrays
+### Joining and splitting arrays
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        Concat -> hide key_var_num_args
-```
-
-### Splitting arrays
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        slice_axis -> special slice
-        SliceChannel -> split
+    concat
+    split
 ```
 
 ### Tiling arrays
@@ -388,6 +377,8 @@ In the rest of this document, we first overview the methods provided by the
     .. autosummary::
         :nosignatures:
 
+        crop -> slice
+        slice_axis
         take
         batch_take
         one_hot
