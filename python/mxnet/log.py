@@ -24,6 +24,7 @@ class _Formatter(logging.Formatter):
         super(_Formatter, self).__init__(datefmt=datefmt)
 
     def _get_color(self, level):
+        # pylint: disable= missing-docstring
         if logging.WARNING <= level:
             return '\x1b[31m'
         elif logging.INFO <= level:
@@ -32,6 +33,7 @@ class _Formatter(logging.Formatter):
             return '\x1b[34m'
 
     def _get_label(self, level):
+        # pylint: disable= missing-docstring
         if level == logging.CRITICAL:
             return 'C'
         elif level == logging.ERROR:
@@ -46,6 +48,7 @@ class _Formatter(logging.Formatter):
             return 'U'
 
     def format(self, record):
+        # pylint: disable= missing-docstring
         fmt = self._get_color(record.levelno)
         fmt += self._get_label(record.levelno)
         fmt += '%(asctime)s %(process)d %(pathname)s:%(funcName)s:%(lineno)d'
@@ -72,9 +75,9 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
         logger._init_done = True
         if filename:
             mode = filemode if filemode else 'a'
-            hdlr = FileHandler(filename, mode)
+            hdlr = logging.FileHandler(filename, mode)
         else:
-            hdlr = logging.StreamHandler()
+            hdlr = logging.StreamHandler() # pylint: disable= redefined-variable-type
             # the `_Formatter` contain some escape character to
             # represent color, which is not suitable for FileHandler,
             # (TODO) maybe we can add another Formatter for FileHandler.
