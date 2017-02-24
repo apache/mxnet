@@ -661,20 +661,25 @@ class RMSProp(Optimizer):
         rescaling factor of gradient.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
+    clip_weights : float, optional
+        clip weights in range [-clip_weights, clip_weights]
 
     """
     def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
-                 epsilon=1e-8, centered=False, **kwargs):
+                 epsilon=1e-8, centered=False, clip_weights=None, **kwargs):
         super(RMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
         self.gamma1 = gamma1
         self.gamma2 = gamma2
         self.centered = centered
+        self.clip_weights = clip_weights
         self.kwargs = {'gamma1': gamma1, 'epsilon': epsilon,
                        'rescale_grad': self.rescale_grad}
         if self.centered:
             self.kwargs['gamma2'] = gamma2
         if self.clip_gradient:
             self.kwargs['clip_gradient'] = self.clip_gradient
+        if self.clip_weights:
+            self.kwargs['clip_weights'] = self.clip_weights
 
     def create_state(self, index, weight):
         """Create additional optimizer state.

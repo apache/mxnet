@@ -163,15 +163,18 @@ class PyRMSProp(mx.optimizer.Optimizer):
         rescaling factor of gradient.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
+    clip_weights : float, optional
+        clip weights in range [-clip_weights, clip_weights]
 
     """
     def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
-                 epsilon=1e-8, centered=False, **kwargs):
+                 epsilon=1e-8, centered=False, clip_weights=None, **kwargs):
         super(PyRMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
         self.centered = centered
         self.gamma1 = gamma1
         self.gamma2 = gamma2
         self.epsilon = epsilon
+        self.clip_weights = clip_weights
 
     def create_state(self, index, weight):
         """Create additional optimizer state.
@@ -229,6 +232,8 @@ class PyRMSProp(mx.optimizer.Optimizer):
             delta[:] = (self.gamma2) * delta - lr * grad/(mx.nd.sqrt(n - g*g) + self.epsilon)
             weight[:] += delta
 
+        if self.clip_weights:
+             mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
 def test_rms():
     mx.random.seed(0)
@@ -248,7 +253,20 @@ def test_rms():
               {'rescale_grad': 0.8, 'centered': True},
               {'clip_gradient': 0.5, 'wd': 0.07, 'centered': True},
               {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'centered': True},
-              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True}]
+              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True},
+              {'clip_gradient': 0.5, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'clip_weights': 0.01},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'clip_weights': 0.01},
+              {'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.5, 'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'centered': True, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'centered': True, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True, 'clip_weights': 0.01}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
