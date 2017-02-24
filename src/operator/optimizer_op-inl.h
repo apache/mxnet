@@ -193,7 +193,9 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
       var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2) * F<square>(grad);
     }
     Assign(out, req[0],
-           weight - scalar<DType>(param.lr)*mean/(F<square_root>(var)+scalar<DType>(param.epsilon)));
+           weight -
+           scalar<DType>(param.lr) * mean /
+           (F<square_root>(var) + scalar<DType>(param.epsilon)));
   });
 }
 
