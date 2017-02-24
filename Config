@@ -68,6 +68,12 @@ package.DeepMXNet = {
    };
  };
 
+ remove-dependencies = {
+   0.9 = {
+     JDK = 1.6_64;
+   };
+ };
+
   runtime-dependencies = {
     0.9 = {
         CRuntime = 1.0;
