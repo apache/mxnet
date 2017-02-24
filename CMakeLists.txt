@@ -354,7 +354,19 @@ else()
   if(UNIX)
   #add_library(objlib OBJECT ${SOURCE})
   #set_property(TARGET ${objlib} PROPERTY POSITION_INDEPENDENT_CODE 1)
-  add_library(mxnet SHARED ${SOURCE})
+  add_library(mxnet_static STATIC ${SOURCE})
+  add_library(mxnet SHARED src/common/stub.cc)
+  target_link_libraries(mxnet 
+      -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
+      #mxnet_static
+  )   
+  add_custom_target(
+      Name ALL
+      BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+      WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+      COMMAND ln -sf libmxnet_static.a libmxnet.a
+      DEPENDS mxnet_static
+  )
   #add_library(mxnet SHARED $<TARGET_OBJECTS:objlib>)
   #add_library(mxnet_static STATIC $<TARGET_OBJECTS:objlib>)
   #add_library(mxnet_static STATIC ${SOURCE})
