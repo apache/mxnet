@@ -1,12 +1,12 @@
 package.DeepMXNet = {
   interfaces = (0.9);
 
-  build-system = brazilcmake;
+  #build-system = brazilcmake;
   #build-system = bmvn;
-  #build-system = build-chain;
+  build-system = build-chain;
 
   deploy = {
-      generic = false;
+      generic = true;
   };
 
   build-environment = {
