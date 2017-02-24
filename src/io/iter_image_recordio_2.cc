@@ -164,6 +164,7 @@ inline void ImageRecordIOParser2<DType>::Init(
   // Normalize init
   if (!std::is_same<DType, uint8_t>::value) {
     meanimg_.set_pad(false);
+    meanfile_ready_ = false;
     if (normalize_param_.mean_img.length() != 0) {
       std::unique_ptr<dmlc::Stream> fi(
           dmlc::Stream::Create(normalize_param_.mean_img.c_str(), "r", true));
