@@ -152,13 +152,13 @@ def test_module_switch_bucket():
     #switch to test_key
     bucketing_model.switch_bucket(test_key, [('data', (batch_size, test_key))],
                                   [('softmax_label', (batch_size, test_key))])
-    total_bytes_before = bucketing_model._buckets[default_key].total_exec_bytes
+    total_bytes_before = bucketing_model._buckets[default_key]._total_exec_bytes
 
     #remove test_key and switch again
     del bucketing_model._buckets[test_key]
     bucketing_model.switch_bucket(test_key, [('data', (batch_size, test_key))],
                                   [('softmax_label', (batch_size, test_key))])
-    total_bytes_after = bucketing_model._buckets[default_key].total_exec_bytes
+    total_bytes_after = bucketing_model._buckets[default_key]._total_exec_bytes
     #the default bucket is expected to reuse the bytes allocated
     assert total_bytes_after == total_bytes_before
 
