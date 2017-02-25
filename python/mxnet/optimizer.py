@@ -318,7 +318,7 @@ class DCASGD(Optimizer):
 
         """
         if self.momentum == 0.0:
-            return (zeros(weight.shape, weight.context, dtype=weight.dtype), # placeholder
+            return (None,
                     weight.copy())  # previous weight
         else:
             return (zeros(weight.shape, weight.context, dtype=weight.dtype), # momentum
@@ -352,8 +352,13 @@ class DCASGD(Optimizer):
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
         mom, previous_weight = state
-        mom[:] *= self.momentum
-        mom[:] += -lr * (grad + wd * weight + self.lamda \
+        if mom:
+            mom[:] *= self.momentum
+            mom[:] += -lr * (grad + wd * weight + self.lamda \
+                      * grad * grad * (weight - previous_weight))
+        else:
+            assert(self.momentum == 0.0)
+            mom = -lr * (grad + wd * weight + self.lamda \
                       * grad * grad * (weight - previous_weight))
         previous_weight[:] = weight
         weight[:] += mom
