@@ -394,10 +394,9 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
 endif()
 
 if(USE_DIST_KVSTORE)
-	add_definitions(-DMXNET_USE_DIST_KVSTORE)
-	target_link_libraries(mxnet pslite zmq-static)
-	target_link_libraries(mxnet ${pslite_LINKER_LIBS})
-	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+  add_definitions(-DMXNET_USE_DIST_KVSTORE)
+  target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+  include_directories(SYSTEM ${pslite_INCLUDE_DIR})
 endif()
 
 if(USE_PROFILER)
