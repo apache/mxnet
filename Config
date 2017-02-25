@@ -118,7 +118,7 @@ package.DeepMXNet = {
     #mxnet-core_2.11-0.1.2   = { type = javalibrary; };
     #mxnet-macros_2.11-0.1.2 = { type = javalibrary; };
     #mxnet-init_2.11-0.1.2   = { type = javalibrary; };
-
+    mxnet-full_2.11-linux-x86_64-gpu-0.1.2-SNAPSHOT = { type = javalibrary; };
   };
 
 };
