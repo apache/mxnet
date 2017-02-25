@@ -60,6 +60,7 @@ package.DeepMXNet = {
       CUB = 1.6;
       DeepOpenCV = 2.4.x;
       DeepPS-Lite = 0.9;
+      GoogleProtoBuf = 3.1.x;
     };
   };
 
