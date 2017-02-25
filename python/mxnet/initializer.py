@@ -269,7 +269,7 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initialize the weight to 1"""
+    """Initialize the weight to a scalar value"""
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
         self.value = value

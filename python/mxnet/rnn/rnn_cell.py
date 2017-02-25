@@ -7,7 +7,7 @@ from __future__ import print_function
 import warnings
 
 from .. import symbol, init, ndarray
-from ..base import numeric_types, string_types
+from ..base import string_types
 
 class RNNParams(object):
     """Container for holding variables.
@@ -59,9 +59,14 @@ class BaseRNNCell(object):
             self._own_params = False
         self._prefix = prefix
         self._params = params
+        self._modified = False
+
+        self.reset()
+
+    def reset(self):
+        """Reset before re-using the cell for another graph"""
         self._init_counter = -1
         self._counter = -1
-        self._modified = False
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -93,16 +98,18 @@ class BaseRNNCell(object):
         """shape(s) of states"""
         raise NotImplementedError()
 
-    def begin_state(self, init_sym=symbol.zeros, **kwargs):
+    def begin_state(self, func=symbol.zeros, **kwargs):
         """Initial state for this cell.
 
         Parameters
         ----------
-        init_sym : Symbol, default symbol.zeros
-            Symbol for generating initial state. Can be zeros,
-            ones, uniform, normal, etc.
+        func : callable, default symbol.zeros
+            Function for creating initial state. Can be symbol.zeros,
+            symbol.uniform, symbol.Variable etc.
+            Use symbol.Variable if you want to directly
+            feed input as states.
         **kwargs :
-            more keyword arguments passed to init_sym. For example
+            more keyword arguments passed to func. For example
             mean, std, dtype, etc.
 
         Returns
@@ -113,19 +120,17 @@ class BaseRNNCell(object):
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
-        state_shape = self.state_shape
-        def recursive(shape):
-            """Recursively construct input states"""
-            if isinstance(shape, tuple):
-                assert len(shape) == 0 or isinstance(shape[0], numeric_types)
-                self._init_counter += 1
-                return init_sym(name='%sinit_%d'%(self._prefix, self._init_counter),
-                                shape=shape, **kwargs)
+        states = []
+        for shape in self.state_shape:
+            self._init_counter += 1
+            if shape is None:
+                state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
+                             **kwargs)
             else:
-                assert isinstance(shape, list)
-                return [recursive(i) for i in shape]
-
-        return recursive(state_shape)
+                state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
+                             shape=shape, **kwargs)
+            states.append(state)
+        return states
 
     def unpack_weights(self, args):
         """Unpack fused weight matrices into separate
@@ -208,6 +213,8 @@ class BaseRNNCell(object):
         states : Symbol or nested list of Symbol
             has the same structure as begin_state()
         """
+        self.reset()
+
         axis = layout.find('T')
         if inputs is None:
             inputs = [symbol.Variable('%st%d_data'%(input_prefix, i))
@@ -271,7 +278,7 @@ class RNNCell(BaseRNNCell):
     @property
     def state_shape(self):
         """shape(s) of states"""
-        return (0, self._num_hidden)
+        return [(0, self._num_hidden)]
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -295,7 +302,7 @@ class RNNCell(BaseRNNCell):
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
                                     num_hidden=self._num_hidden,
                                     name='%si2h'%name)
-        h2h = symbol.FullyConnected(data=states, weight=self._hW, bias=self._hB,
+        h2h = symbol.FullyConnected(data=states[0], weight=self._hW, bias=self._hB,
                                     num_hidden=self._num_hidden,
                                     name='%sh2h'%name)
         output = self._get_activation(i2h + h2h, self._activation,
@@ -471,11 +478,8 @@ class FusedRNNCell(BaseRNNCell):
     def state_shape(self):
         """shape(s) of states"""
         b = self._bidirectional + 1
-        if self._mode == 'lstm':
-            return [(b*self._num_layers, 0, self._num_hidden),
-                    (b*self._num_layers, 0, self._num_hidden)]
-        else:
-            return (b*self._num_layers, 0, self._num_hidden)
+        n = (self._mode == 'lstm') + 1
+        return [(b*self._num_layers, 0, self._num_hidden)]*n
 
     def _slice_weights(self, arr, li, lh):
         """slice fused rnn weights"""
@@ -616,6 +620,8 @@ class FusedRNNCell(BaseRNNCell):
         states : Symbol or nested list of Symbol
             has the same structure as begin_state()
         """
+        self.reset()
+
         axis = layout.find('T')
         if inputs is None:
             inputs = symbol.Variable('%sdata'%input_prefix)
@@ -631,8 +637,8 @@ class FusedRNNCell(BaseRNNCell):
                 assert axis == 0, "Unsupported layout %s"%layout
         else:
             assert len(inputs) == length
-            inputs = [symbol.expand_dims(i, axis=0) for i in inputs]
-            inputs = symbol.Concat(inputs, dim=0)
+            inputs = [symbol.expand_dims(i, axis=1) for i in inputs]
+            inputs = symbol.Concat(*inputs, dim=1)
         if begin_state is None:
             begin_state = self.begin_state()
 
@@ -699,7 +705,7 @@ class SequentialRNNCell(BaseRNNCell):
     @property
     def state_shape(self):
         """shape(s) of states"""
-        return [c.state_shape for c in self._cells]
+        return sum([c.state_shape for c in self._cells], [])
 
     def begin_state(self, **kwargs):
         """Initial state for this cell.
@@ -721,7 +727,7 @@ class SequentialRNNCell(BaseRNNCell):
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
-        return [c.begin_state(**kwargs) for c in self._cells]
+        return sum([c.begin_state(**kwargs) for c in self._cells], [])
 
     def unpack_weights(self, args):
         for cell in self._cells:
@@ -752,10 +758,14 @@ class SequentialRNNCell(BaseRNNCell):
         """
         self._counter += 1
         next_states = []
-        for cell, state in zip(self._cells, states):
+        p = 0
+        for cell in self._cells:
+            n = len(cell.state_shape)
+            state = states[p:p+n]
+            p += n
             inputs, state = cell(inputs, state)
             next_states.append(state)
-        return inputs, next_states
+        return inputs, sum(next_states, [])
 
 class ModifierCell(BaseRNNCell):
     """Base class for modifier cells. A modifier
