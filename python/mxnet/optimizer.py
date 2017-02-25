@@ -318,9 +318,11 @@ class DCASGD(Optimizer):
 
         """
         if self.momentum == 0.0:
-            return None
+            return (None,           # momentum
+                    weight.copy())  # previous weight
         else:
-            return zeros(weight.shape, weight.context, dtype=weight.dtype)
+            return (zeros(weight.shape, weight.context, dtype=weight.dtype), # momentum
+                    weight.copy())  # previous weight
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
@@ -349,25 +351,18 @@ class DCASGD(Optimizer):
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        if state:
-            mom = state
+        mom, previous_weight = state
+        if mom:
             mom[:] *= self.momentum
-            if self.weight_previous.has_key(index):
-                mom[:] += -lr * (grad + wd * weight + self.lamda \
-                                    * grad * grad * (weight - self.weight_previous[index]))
-            else:
-                mom[:] += -lr * (grad + wd * weight)
+            mom[:] += -lr * (grad + wd * weight + self.lamda \
+                                    * grad * grad * (weight - previous_weight))
             weight[:] += mom
-            self.weight_previous[index] = weight
+            previous_weight[:] = weight
         else:
             assert self.momentum == 0.0
-            if self.weight_previous.has_key(index):
-                weight[:] += -lr * (grad + wd * weight + self.lamda \
-                                    * grad * grad * (weight - self.weight_previous[index]))
-                self.weight_previous[index] = weight
-            else:
-                weight[:] += -lr * (grad + wd * weight)
-                self.weight_previous[index] = weight
+            weight[:] += -lr * (grad + wd * weight + self.lamda \
+                                    * grad * grad * (weight - previous_weight))
+            previous_weight[:] = weight
 
 @register
 class NAG(SGD):
