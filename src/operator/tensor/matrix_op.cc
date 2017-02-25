@@ -87,7 +87,7 @@ from right to left. For example, with input shape (10, 5, 4) target shape (-1,
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.add_argument("data", "NDArray", "Input data to reshape.")
+.add_argument("data", "ndarray-or-symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
 
@@ -109,10 +109,37 @@ the input array into shape ``(d1, d2*...*dk)``.
   [](const NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.add_argument("data", "NDArray", "Input data to reshape.");
+.add_argument("data", "ndarray-or-symbol", "Input data to reshape.");
 
 NNVM_REGISTER_OP(transpose)
-.MXNET_DESCRIBE("Transpose the input tensor and return a new one")
+.describe(R"code(Permute the dimensions of an array.
+
+Examples::
+
+  x = [[ 1, 2],
+       [ 3, 4]]
+
+  transpose(x) = [[ 1.,  3.],
+                  [ 2.,  4.]]
+
+  x = [[[ 1.,  2.],
+        [ 3.,  4.]],
+
+       [[ 5.,  6.],
+        [ 7.,  8.]]]
+
+  transpose(x) = [[[ 1.,  5.],
+                   [ 3.,  7.]],
+
+                  [[ 2.,  6.],
+                   [ 4.,  8.]]]
+
+  transpose(x, axes=(1,0,2)) = [[[ 1.,  2.],
+                                 [ 5.,  6.]],
+
+                                [[ 3.,  4.],
+                                 [ 7.,  8.]]]
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<TransposeParam>)
@@ -135,7 +162,7 @@ NNVM_REGISTER_OP(transpose)
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(TransposeParam::__FIELDS__());
 
 
@@ -157,7 +184,7 @@ will return a new array with shape ``(2,1,3,4)``.
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(crop)
@@ -184,7 +211,7 @@ For example::
 .set_attr<nnvm::FInferShape>("FInferShape", CropShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Crop<cpu>)
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(SimpleCropParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_crop_assign)
@@ -208,8 +235,8 @@ NNVM_REGISTER_OP(_crop_assign)
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .set_attr<FCompute>("FCompute<cpu>", CropAssign<cpu>)
-.add_argument("lhs", "NDArray", "Source input")
-.add_argument("rhs", "NDArray", "value to assign")
+.add_argument("lhs", "ndarray-or-symbol", "Source input")
+.add_argument("rhs", "ndarray-or-symbol", "value to assign")
 .add_arguments(SimpleCropParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_crop_assign_scalar)
@@ -228,13 +255,29 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .set_attr<FCompute>("FCompute<cpu>", CropAssignScalar<cpu>)
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
-.MXNET_DESCRIBE("Slice the input along certain axis and return a sliced array."
-                " The slice will be taken from [begin, end)."
-                " end can be None and axis can be negative.")
+.describe(R"code(Slice along a given axis.
+
+Examples:
+
+  x = [[  1.,   2.,   3.,   4.],
+       [  5.,   6.,   7.,   8.],
+       [  9.,  10.,  11.,  12.]]
+
+  slice_axis(x, axis=0, begin=1, end=3) = [[  5.,   6.,   7.,   8.],
+                                           [  9.,  10.,  11.,  12.]]
+
+  slice_axis(x, axis=1, begin=0, end=2) = [[  1.,   2.],
+                                           [  5.,   6.],
+                                           [  9.,  10.]]
+
+  slice_axis(x, axis=1, begin=-3, end=-1) = [[  2.,   3.],
+                                             [  6.,   7.],
+                                             [ 10.,  11.]]
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SliceParam>)
@@ -242,7 +285,7 @@ NNVM_REGISTER_OP(slice_axis)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_axis"})
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_slice_axis)
@@ -253,7 +296,19 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<cpu>", SliceGrad_<cpu>);
 
 NNVM_REGISTER_OP(flip)
-.MXNET_DESCRIBE("Flip the input tensor along axis and return a new one.")
+.describe(R"code(Reverse the order of elements in an array along the given axis.
+
+Examples::
+
+  x = [[ 1, 2],
+       [ 3, 4]]
+
+  flip(x, axis=0) = [[ 3.,  4.],
+                     [ 1.,  2.]]
+
+  flip(x, axis=1) = [[ 2.,  1.],
+                     [ 4.,  3.]]
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<FlipParam>)
@@ -261,7 +316,7 @@ NNVM_REGISTER_OP(flip)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Flip<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"flip"})
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(FlipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(dot)
@@ -362,7 +417,7 @@ edges. That is::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(ClipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_clip)
@@ -373,7 +428,27 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
 
 NNVM_REGISTER_OP(repeat)
-.MXNET_DESCRIBE("Repeat elements of an array")
+.describe(R"code(Repeat elements of an array.
+
+In default, ``repeat`` flatten the input array into 1-D and then repeat the
+elements::
+
+  x = [[ 1, 2],
+       [ 3, 4]]
+
+  repeat(x, repeats=2) = [ 1.,  1.,  2.,  2.,  3.,  3.,  4.,  4.]
+
+We can also choose a particular axis to repeat, in which a negative axis is
+interpreted counting from the backward::
+
+  repeat(x, repeats=2, axis=1) = [[ 1.,  1.,  2.,  2.],
+                                  [ 3.,  3.,  4.,  4.]]
+
+  repeat(x, repeats=2, axis=-1) = [[ 1.,  2.],
+                                   [ 1.,  2.],
+                                   [ 3.,  4.],
+                                   [ 3.,  4.]]
+)code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
 .set_attr_parser(ParamParser<RepeatParam>)
@@ -385,7 +460,7 @@ NNVM_REGISTER_OP(repeat)
 .set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_repeat"})
-.add_argument("a", "NDArray", "Input data array")
+.add_argument("a", "ndarray-or-symbol", "Input data array")
 .add_arguments(RepeatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_repeat)
@@ -396,7 +471,41 @@ NNVM_REGISTER_OP(_backward_repeat)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpBackward<cpu>);
 
 NNVM_REGISTER_OP(tile)
-.MXNET_DESCRIBE("Construct an array by repeating A the number of times given by reps.")
+.describe(R"code(Repeat the whole array by multiple times.
+
+If ``reps`` has length *d*, and input array has dimension of *n*. There are
+there cases:
+
+- **n=d**. Repeat *i*-th dimension of the input by ``reps[i]`` times::
+
+    x = [[1, 2],
+         [3, 4]]
+
+    tile(x, reps=(2,3)) = [[ 1.,  2.,  1.,  2.,  1.,  2.],
+                           [ 3.,  4.,  3.,  4.,  3.,  4.],
+                           [ 1.,  2.,  1.,  2.,  1.,  2.],
+                           [ 3.,  4.,  3.,  4.,  3.,  4.]]
+
+- **n>d**. ``reps`` is promoted to length *n* by pre-pending 1’s to it. Thus for
+  an input shape ``(2,3)``, ``repos=(2,)`` is treated as ``(1,2)``::
+
+
+    tile(x, reps=(2,)) = [[ 1.,  2.,  1.,  2.],
+                          [ 3.,  4.,  3.,  4.]]
+
+- **n<d**. The input is promoted to be d-dimensional by prepending new axes. So a
+  shape ``(2,2)`` array is promoted to ``(1,2,2)`` for 3-D replication::
+
+    tile(x, reps=(2,2,3)) = [[[ 1.,  2.,  1.,  2.,  1.,  2.],
+                              [ 3.,  4.,  3.,  4.,  3.,  4.],
+                              [ 1.,  2.,  1.,  2.,  1.,  2.],
+                              [ 3.,  4.,  3.,  4.,  3.,  4.]],
+
+                             [[ 1.,  2.,  1.,  2.,  1.,  2.],
+                              [ 3.,  4.,  3.,  4.,  3.,  4.],
+                              [ 1.,  2.,  1.,  2.,  1.,  2.],
+                              [ 3.,  4.,  3.,  4.,  3.,  4.]]]
+)code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
 .set_attr_parser(ParamParser<TileParam>)
@@ -408,7 +517,7 @@ NNVM_REGISTER_OP(tile)
 .set_attr<nnvm::FInferType>("FInferType", TileOpType)
 .set_attr<FCompute>("FCompute<cpu>", TileOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tile"})
-.add_argument("a", "NDArray", "Input data array")
+.add_argument("a", "ndarray-or-symbol", "Input data array")
 .add_arguments(TileParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_tile)

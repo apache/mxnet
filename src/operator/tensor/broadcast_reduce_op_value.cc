@@ -168,6 +168,18 @@ NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>);
 
 NNVM_REGISTER_OP(norm)
+.describe(R"code(Compute the L2 norm.
+
+Flatten then input array and then compute the l2 norm.
+
+Examples::
+
+  x = [[1, 2],
+       [3, 4]]
+
+  norm(x) = [5.47722578]
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape",
@@ -182,7 +194,7 @@ NNVM_REGISTER_OP(norm)
   })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
-.add_argument("src", "NDArray", "Source input");
+.add_argument("src", "ndarray-or-symbol", "Source input");
 
 }  // namespace op
 }  // namespace mxnet

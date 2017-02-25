@@ -242,6 +242,7 @@ In the rest of this document, we first overview the methods provided by the
     mean
     max
     min
+    norm
 ```
 
 ### Rounding
@@ -314,7 +315,7 @@ In the rest of this document, we first overview the methods provided by the
 
 ## Array manipulation routines
 
-### Changing array shape, type and elements
+### Changing array shape and type
 
 ```eval_rst
 .. autosummary::
@@ -323,9 +324,10 @@ In the rest of this document, we first overview the methods provided by the
     cast
     reshape
     flatten
+    expand_dims
 ```
 
-### Changing both array shape and elements
+### Expanding array elements
 
 ```eval_rst
 .. autosummary::
@@ -333,10 +335,21 @@ In the rest of this document, we first overview the methods provided by the
 
     broadcast_to
     broadcast_axes
-    expand_dims
+    repeat
+    tile
     pad
 ```
 
+### Rearranging elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    transpose
+    swapaxes
+    flip
+```
 
 ### Joining and splitting arrays
 
@@ -348,89 +361,54 @@ In the rest of this document, we first overview the methods provided by the
     split
 ```
 
-### Tiling arrays
+### Random sampling
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        repeat
-        tile
+    uniform
+    normal
+    mxnet.random.seed
 ```
-
-
-### Rearranging elements
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        transpose
-        SwapAxis ->swap_axis
-        flip
-
-```
-
 ## Indexing routines
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        crop -> slice
-        slice_axis
-        take
-        batch_take
-        one_hot
-        SequenceMask -->lower
-        SequenceReverse -->lower
+    crop
+    slice
+    slice_axis
+    take
+    batch_take
+    one_hot
 ```
 
 ## Input and output
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        load
-        save
+    load
+    save
 ```
 
-
-## Random sampling
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        uniform
-        normal
-```
 
 ## Sorting and searching
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        sort
-        topk
-        argsort
-        argmax
-        argmin
+    sort
+    topk
+    argsort
+    argmax
+    argmin
 ```
 
-## Statistics
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        norm
-        mean
-        max
-        min
-```
 
 ## Neural network
 
@@ -565,6 +543,9 @@ remove from symbol
 
 ```eval_rst
 .. automodule:: mxnet.ndarray
+    :members:
+
+.. automodule:: mxnet.random
     :members:
 
 ```

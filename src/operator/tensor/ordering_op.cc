@@ -15,7 +15,25 @@ DMLC_REGISTER_PARAMETER(SortParam);
 DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
-.MXNET_DESCRIBE("Return the top k element of an input tensor along a given axis.")
+.describe(R"code(Return the top *k* elements in an array.
+
+Examples::
+
+  x = [[ 0.3,  0.2,  0.4],
+       [ 0.1,  0.3,  0.2]]
+
+  // return the index of the largest element on last axis
+  topk(x) = [[ 2.],
+             [ 1.]]
+
+  // return the value of the top-2 elements on last axis
+  topk(x, ret_typ='value', k=2) = [[ 0.4,  0.3],
+                                   [ 0.3,  0.2]]
+
+  // flatten and then return both index and value
+  topk(x, ret_typ='both', k=2, axis=None) = [ 0.4,  0.3], [ 2.,  0.]
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(TopKNumOutputs)
 .set_attr_parser(ParamParser<TopKParam>)
@@ -41,7 +59,7 @@ NNVM_REGISTER_OP(topk)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "NDArray", "Source input")
+.add_argument("src", "ndarray-or-symbol", "Source input")
 .add_arguments(TopKParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_topk)
@@ -56,7 +74,29 @@ NNVM_REGISTER_OP(_backward_topk)
 });
 
 NNVM_REGISTER_OP(sort)
-.MXNET_DESCRIBE("Return a sorted copy of an array.")
+.describe(R"code(Return a sorted copy of an array.
+
+Examples::
+
+  x = [[ 1, 4],
+       [ 3, 1]]
+
+  // sort along the last axis
+  sort(x) = [[ 1.,  4.],
+             [ 1.,  3.]]
+
+  // flatten and then sort
+  sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
+
+  // sort long the first axis
+  sort(x, axis=0) = [[ 1.,  1.],
+                     [ 3.,  4.]]
+
+  // in a descend order
+  sort(x, is_ascend=0) = [[ 4.,  1.],
+                          [ 3.,  1.]]
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<SortParam>)
@@ -82,11 +122,28 @@ NNVM_REGISTER_OP(sort)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "NDArray", "Source input")
+.add_argument("src", "ndarray-or-symbol", "Source input")
 .add_arguments(SortParam::__FIELDS__());
 
 NNVM_REGISTER_OP(argsort)
-.MXNET_DESCRIBE("Returns the indices that would sort an array.")
+.describe(R"code(Returns the indices that can sort an array.
+
+Examples::
+
+  x = [[ 0.3,  0.2,  0.4],
+       [ 0.1,  0.3,  0.2]]
+
+  // sort along axis -1
+  argsort(x) = [[ 1.,  0.,  2.],
+                [ 0.,  2.,  1.]]
+
+  // sort along axis 0
+  argsort(x, axis=0) = [[ 1.,  0.,  1.]
+                        [ 0.,  1.,  0.]]
+
+  // flatten and then sort
+  argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ArgSortParam>)
@@ -98,7 +155,7 @@ NNVM_REGISTER_OP(argsort)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "NDArray", "Source input")
+.add_argument("src", "ndarray-or-symbol", "Source input")
 .add_arguments(ArgSortParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
