@@ -33,6 +33,11 @@ class lstm_ocr_model(object):
         init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
         init_states = init_c + init_h
 
+        init_state_arrays = np.zeros((batch_size, num_hidden), dtype="float32")
+        self.init_state_dict={}
+        for x in init_states:
+            self.init_state_dict[x[0]] = init_state_arrays
+
         all_shapes = [('data', (batch_size, 80 * 30))] + init_states + [('label', (batch_size, num_label))]
         all_shapes_dict = {}
         for _shape in all_shapes:
@@ -46,7 +51,7 @@ class lstm_ocr_model(object):
         img = img.transpose(1, 0)
         img = img.reshape((80 * 30))
         img = np.multiply(img, 1/255.0)
-        self.predictor.forward(data=img)
+        self.predictor.forward(data=img, **self.init_state_dict)
         prob = self.predictor.get_output(0)
         label_list = []
         for p in prob:
