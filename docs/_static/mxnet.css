@@ -51,20 +51,20 @@ h1, h2, h3 {
 h1 {
     font-size: 20px;
     font-weight: bold;
-    padding-top: 25px;
+    padding-top: 15px;
 }
 
 h2 {
     font-size: 18px;
     font-weight: bold;
-    padding-top: 1.5em;
+    padding-top: 10px;
     margin: 1em 0;
     color: #cc6600;
 }
 
 h3 {
     font-size: 16px;
-    padding-top: 1.2em;
+    padding-top: 8px;
     font-weight: bold;
     color: #cc6600;
 }
@@ -75,7 +75,7 @@ h3.orange {
 h4 {
     color: #cc6600;
     font-size: 16px;
-    padding-top: 1.8em;
+    padding-top: 6px;
     font-style: italic;
     font-weight: bold;
 }
@@ -83,7 +83,6 @@ h4 {
 h5 {
     color: #333333;
     font-size: 16px;
-    padding-top: 1em;
     font-style: italic;
     font-weight: bold;
 }
@@ -91,7 +90,6 @@ h5 {
 h6 {
     color: #333333;
     font-size: 14px;
-    padding-top: 1em;
     font-style: italic;
     font-weight: bold;
 }
@@ -124,7 +122,7 @@ img {
     background-color:#0079b2;
     opacity: 0.9;
     border: 0px;
-    height: 80px;
+    height: 60px;
     margin-bottom: 0px;
 }
 
@@ -135,7 +133,7 @@ img {
 
 @media screen and (max-width: 510px) {
     .navbar {
-        height: 100px;
+        height: 60px;
     }
 }
 
@@ -607,7 +605,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 /*------------------content----------------------*/
 div.navbar + div.container {
-    padding-top: 85px;
+    padding-top: 65px;
 }
 
 div.content {

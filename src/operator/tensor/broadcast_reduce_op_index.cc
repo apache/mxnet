@@ -8,12 +8,12 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
-.MXNET_DESCRIBE("Compute argmax")
+.MXNET_DESCRIBE("Returns the indices of the maximum values along an axis.")
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
-.MXNET_DESCRIBE("Compute argmin")
+.MXNET_DESCRIBE("Returns the indices of the minimum values along an axis.")
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
