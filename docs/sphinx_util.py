@@ -16,13 +16,17 @@ def run_build_mxnet(folder):
     except OSError as e:
         sys.stderr.write("build execution failed: %s" % e)
 
-def build_r_docs(root_path):
+def build_r_pdf_docs(root_path):
     r_root = os.path.join(root_path, 'R-package')
     pdf_path = os.path.join(root_path, 'docs', 'api', 'r', 'mxnet-r-reference-manual.pdf')
     subprocess.call('cd ' + r_root +'; R -e "roxygen2::roxygenize()"; R CMD Rd2pdf . --no-preview -o ' + pdf_path, shell = True)
     dest_path = os.path.join(root_path, 'docs', '_build', 'html', 'api', 'r')
     subprocess.call('mkdir -p ' + dest_path, shell = True)
     subprocess.call('mv ' + pdf_path + ' ' + dest_path, shell = True)
+
+def build_r_html_docs():
+    subprocess.call('mkdir -p api/r/html_docs', shell = True)
+    subprocess.call('cd api/r/html_docs; Rscript ../../../../R-package/man/build_html.r; bash make_markdown.sh', shell = True)
 
 def build_scala_docs(root_path):
     scala_path = os.path.join(root_path, 'scala-package', 'core', 'src', 'main', 'scala', 'ml', 'dmlc', 'mxnet')
@@ -105,7 +109,10 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 root_path = os.path.join(curr_path, '..')
 convert_md_table(curr_path)
 run_build_mxnet(root_path)
-build_r_docs(root_path)
+
+build_r_pdf_docs(root_path)
+build_r_html_docs()
+
 build_scala_docs(root_path)
 
 if not os.path.exists('../recommonmark'):
@@ -117,3 +124,4 @@ sys.path.insert(0, os.path.abspath('../recommonmark/'))
 from recommonmark import parser, transform
 MarkdownParser = parser.CommonMarkParser
 AutoStructify = transform.AutoStructify
+

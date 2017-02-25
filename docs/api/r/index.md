@@ -23,6 +23,7 @@ You can perform tensor or matrix computation in R:
 ```
 ## Resources
 
+* [MXNet R HTML Documentation](http://mxnet.io/api/r/html_docs/index.html)
 * [MXNet R Reference Manual](http://mxnet.io/api/r/mxnet-r-reference-manual.pdf)
 * [MXNet for R Tutorials](http://mxnet.io/tutorials/index.html#R-Tutorials)
 

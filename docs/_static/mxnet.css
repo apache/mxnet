@@ -778,6 +778,7 @@ dl.class p, dl.function p {
     color: #cc6600;
 }
 
+<<<<<<< HEAD
 /*----------------Model zoo page style------------------*/
 #mxnet-model-zoo table, #mxnet-model-zoo td, #mxnet-model-zoo th {
     border: 1px solid lightgray;
@@ -802,4 +803,19 @@ dl.class p, dl.function p {
 
 #mxnet-model-zoo tr:nth-child(even) {
     background-color: #f2f2f2;
+}
+
+/*-----------------Style for R documentation----------------------*/
+div#mxnet-r-api-html-documentation h2 {
+    padding-top: 40px;
+}
+
+div#mxnet-r-api-html-documentation h3 {
+    padding-top: 0;
+    margin-top: 10px;
+}
+
+div#mxnet-r-api-html-documentation p {
+    margin-top: 0;
+    padding-left: 15px;
 }
