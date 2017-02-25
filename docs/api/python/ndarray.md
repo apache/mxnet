@@ -45,14 +45,13 @@ A more detailed tutorial is avaible at
 
 ```eval_rst
 
-.. note:: ``NDArray`` is similar to ``numpy.ndarray`` in some aspects. But the
-    difference is not negligible. For example
+.. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the difference is not negligible. For example
 
-    - ``NDArray.T`` does real data transpose to return new a copied array, instead
-      of returning a view of the input array.
-    - `ndarray.dot`` performs dot between the last axis of the first input array
-      and the first axis of the second input, while `numpy.dot` uses the second
-      last axis of the input array.
+   - ``NDArray.T`` does real data transpose to return new a copied array, instead
+     of returning a view of the input array.
+   - ``ndarray.dot`` performs dot between the last axis of the first input array
+     and the first axis of the second input, while `numpy.dot` uses the second
+     last axis of the input array.
 
    In additional, ``NDArray`` supports GPU computation and various neural
    network layers.

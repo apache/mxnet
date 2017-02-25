@@ -801,3 +801,8 @@ dl.method, dl.attribute {
 #mxnet-model-zoo tr:nth-child(even) {
     background-color: #f2f2f2;
 }
+
+div.admonition {
+    padding: 20px;
+    background-color: #eee;
+}
