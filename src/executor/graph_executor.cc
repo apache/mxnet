@@ -328,7 +328,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   g = AttachOpResources(g);
   graph_ = std::move(g);
   if (shared_exec != nullptr) {
-    this->InitDataEntryMemory((&dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_));
+    this->InitDataEntryMemory(&(dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_));
   } else {
     this->InitDataEntryMemory(nullptr);
   }

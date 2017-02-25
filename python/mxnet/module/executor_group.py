@@ -125,7 +125,7 @@ class DataParallelExecutorGroup(object):
         self.inputs_need_grad = inputs_need_grad
 
         self.logger = logger
-        #TODO need a cleaner interface to profile memory per device (haibin)
+        #In the future we should have a better way to profile memory per device (haibin)
         self.total_exec_bytes = 0
         self.fixed_param_names = fixed_param_names
         if self.fixed_param_names is None:
