@@ -16,7 +16,7 @@ using namespace std;
 
 #define FLOAT_COUNT 104857600 //400MB
 #define ITERATION 10
-#define COPIES 1
+#define COPIES 8
 #define READ_ONLY_SAL
 #define READ_WRITE_SAL
 #define __OUT__
@@ -34,7 +34,11 @@ READ_WRITE_SAL real_t Outputs[FLOAT_COUNT]  ALIGNED(CACHE_LINE_SIZE);
 
 #ifdef __INTELLISENSE__
 //peace visual studio
-extern bool __sync_bool_compare_and_swap(void* location, long long old, long long desired);
+extern bool __sync_bool_compare_and_swap(void* location, uint64_t old, uint64_t desired);
+extern bool __sync_bool_compare_and_swap(void* location, int old, int desired);
+#define BUSY_WAIT_NO_OP
+#else
+#define BUSY_WAIT_NO_OP asm("")
 #endif
 
 void GetRange(
@@ -90,8 +94,7 @@ void RunNaivePass(int proc, void* additionalArgs)
 			old = ScratchNaive[i];
 			target.fv[1] = old.fv[1] + 1;
 			target.fv[0] = old.fv[0] + Inputs[i];
-		} 
-		while (!__sync_bool_compare_and_swap(&ScratchNaive[i].backingStore, old.backingStore, target.backingStore));
+		} while (!__sync_bool_compare_and_swap(&ScratchNaive[i].backingStore, old.backingStore, target.backingStore));
 		if (target.fv[1] == numProcs)
 		{
 			Outputs[i] = target.fv[0];
@@ -102,23 +105,95 @@ void RunNaivePass(int proc, void* additionalArgs)
 
 #pragma region MyRegion
 
-real_t** ScratchReductionTree ALIGNED(64);
+class ReductionTreeScratch
+{
+public:
+	real_t* Scratch;
+	volatile int ReadyCursor ALIGNED(4);
+	int sid;
+} ALIGNED(CACHE_LINE_SIZE);
 class ReductionTreeArgs
 {
 public:
 	int Base;
 };
 
+ReductionTreeScratch* reductionTreeScratches;
 void RunNaiveReductionTreePass(int proc, void* additionalArgs)
 {
 	var pArgs = (ReductionTreeArgs*)additionalArgs;
 	var base = pArgs->Base;
 	var level = (int)(log(proc + 1) / log(base));
+	var totalProc = PROC_CNT;
+	var maxLevel = (int)(log(totalProc - 1) / log(base));
+	vector<ReductionTreeScratch*> sources;
+	ReductionTreeScratch* dest;
+	if (totalProc == proc + 1) return; //not sure what to do with this proc.
+	ReductionTreeScratch inputFakeSource{ .Scratch = Inputs,.ReadyCursor = FLOAT_COUNT };
+	ReductionTreeScratch outputFakeSink{ .Scratch = Outputs };
 	//proc i read 2*i, 2*i+1
 	if (level == 0)
 	{
+		//printf("proc %d is root layer.\n", proc);
 		//the finally reduced 
+		for (int i = 0; i < base; i++)
+		{
+			sources.push_back(&reductionTreeScratches[base*(proc + 1) + i - 1]);
+			//reductionTreeScratches[base*(proc + 1) + i - 1].ReadyCursor = -1;
+		}
+		dest = &outputFakeSink;
+		dest->ReadyCursor = -1;
+	}
+	else if (level == maxLevel)
+	{
+		//this is the leaf.
+		//printf("proc %d is leaf layer.\n", proc);
+		for (int i = 0; i < base; i++)
+		{
+			sources.push_back(&inputFakeSource);
+		}
+		dest = &reductionTreeScratches[proc];
+		dest->ReadyCursor = -1;
+	}
+	else
+	{
+		//printf("proc %d is middle layer.\n", proc);
+		//middle
+		for (int i = 0; i < base; i++)
+		{
+			sources.push_back(&reductionTreeScratches[base*(proc + 1) + i - 1]);
+		}
+		dest = &reductionTreeScratches[proc];
+		dest->ReadyCursor = -1;
+	}
 
+	//every thread does this:
+	//probe to see if source has any data
+	for (int i = 0; i < FLOAT_COUNT; i++)
+	{
+		//read from all sources
+		var acc = 0;
+		for (int s = 0; s < sources.size(); s++)
+		{
+			bool complained = false;
+			while (sources[s]->ReadyCursor < i)
+			{
+				BUSY_WAIT_NO_OP;
+				//if (complained == false)
+				//{
+				//	printf("Proc %d waiting for source sid=%d (%llx) whose redyCursor is %d\n", proc, sources[s]->sid, sources[s], sources[s]->ReadyCursor);
+				//  complained = true;
+				//}
+			}
+			//clear to read.
+			acc += sources[s]->Scratch[i];
+		}
+		//write to destination.
+		dest->Scratch[i] = acc;
+		dest->ReadyCursor = i;
+		//assert(dest->ReadyCursor == i);
+		//__sync_bool_compare_and_swap((int*)&dest->ReadyCursor, dest->ReadyCursor, i);
+		//printf("Proc %d advanced scratch sid=%d's (%llx) redyCursor to %d\n", proc, dest->sid, dest, dest->ReadyCursor);
 	}
 }
 
@@ -141,7 +216,7 @@ void TestIterator(
 		{
 			for (int it = 0; it < total; it++)
 			{
-				kernel(id,arg);
+				kernel(id, arg);
 				task_barrier.Wait();
 			}
 		}, iterations, i, args[i], kernels[i]
@@ -165,6 +240,7 @@ int main()
 	vector<void*> args;
 #pragma region RunNaivePass
 	const char* NaivePass = "NAIVE FLAT PASS";
+	goto REDUCTIONTREE;
 	kernels.clear();
 	args.clear();
 	for (int i = 0; i < numProcs; i++)
@@ -172,27 +248,30 @@ int main()
 		kernels.push_back(RunNaivePass);
 		args.push_back(NULL);
 	}
-	TestIterator(ITERATION, kernels, args,string(NaivePass));
+	TestIterator(ITERATION, kernels, args, string(NaivePass));
 #pragma endregion
 
 #pragma region RunReductionTree
-	kernels.clear();
-	args.clear();
-	const char* ReductionTree = "NAIVE REDUCTION TREE BASE-2";
-	ReductionTreeArgs redArgs;
-	redArgs.Base = 2;
-	ScratchReductionTree = new real_t*[PROC_CNT];
-	//use no more than this.
-	for (int i = 0; i < numProcs; i++)
-	{
-		ScratchReductionTree[i] = new real_t[FLOAT_COUNT];
-		args.push_back(&redArgs);
-		kernels.push_back(RunNaiveReductionTreePass);
-	}
-	TestIterator(ITERATION, kernels, args, string(ReductionTree));
-	for (int i = 0; i < numProcs; i++)
-	{
-		delete ScratchReductionTree[i];
-	}
+	REDUCTIONTREE :
+				  kernels.clear();
+				  args.clear();
+				  const char* ReductionTree = "NAIVE REDUCTION TREE BASE-2";
+				  ReductionTreeArgs redArgs;
+				  redArgs.Base = 2;
+				  reductionTreeScratches = new ReductionTreeScratch[PROC_CNT];
+				  //use no more than this.
+				  for (int i = 0; i < numProcs; i++)
+				  {
+					  reductionTreeScratches[i].Scratch = new real_t[FLOAT_COUNT];
+					  reductionTreeScratches[i].sid = i;
+					  args.push_back(&redArgs);
+					  kernels.push_back(RunNaiveReductionTreePass);
+				  }
+				  TestIterator(ITERATION, kernels, args, string(ReductionTree));
+				  for (int i = 0; i < numProcs; i++)
+				  {
+					  delete reductionTreeScratches[i].Scratch;
+				  }
+				  delete reductionTreeScratches;
 #pragma endregion
 }
