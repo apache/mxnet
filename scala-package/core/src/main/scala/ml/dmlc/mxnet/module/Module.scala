@@ -18,7 +18,6 @@
 package ml.dmlc.mxnet.module
 
 import java.io.{FileInputStream, BufferedInputStream, BufferedOutputStream, FileOutputStream}
-
 import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet._
 import ml.dmlc.mxnet.module.DataParallelExecutorGroup.Builder

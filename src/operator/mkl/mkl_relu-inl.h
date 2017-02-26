@@ -107,6 +107,14 @@ class MKLReluOp : public Operator {
         in_data[activation::kData], dshape, s);
       out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         out_data[activation::kOut], dshape, s);
+    } else if (in_data[activation::kData].ndim() == 3) {
+      Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
+        in_data[activation::kData].shape_[1],
+        in_data[activation::kData].shape_[2], 1);
+      data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[activation::kData], dshape, s);
+      out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_data[activation::kOut], dshape, s);
     } else {
       data = mkl_experimental_direct_get<xpu, 4, DType>(in_data[activation::kData], s);
       out = mkl_experimental_direct_get<xpu, 4, DType>(out_data[activation::kOut], s);
@@ -205,6 +213,16 @@ class MKLReluOp : public Operator {
     if (out_grad[activation::kOut].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
                                out_grad[activation::kOut].shape_[1], 1, 1);
+      m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_grad[activation::kOut], dshape, s);
+      m_in_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[activation::kData], dshape, s);
+      m_in_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_grad[activation::kData], dshape, s);
+    } else if (out_grad[activation::kOut].ndim() == 3) {
+      Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
+        out_grad[activation::kOut].shape_[1],
+        out_grad[activation::kOut].shape_[2], 1);
       m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         out_grad[activation::kOut], dshape, s);
       m_in_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
