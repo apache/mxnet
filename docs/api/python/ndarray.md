@@ -40,8 +40,7 @@ size. Various methods for data manipulation and computation are provided.
 <NDArray 2x3 @gpu(0)>
 ```
 
-A more detailed tutorial is avaible at
-[http://mxnet.io/tutorials/python/ndarray.html](http://mxnet.io/tutorials/python/ndarray.html)
+We provide some basic NDArray operations, like arithmetic and slice operations.
 
 ```eval_rst
 
@@ -102,7 +101,6 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.asscalar
     NDArray.astype
 ```
-
 
 ### Array change shape
 

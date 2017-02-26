@@ -105,9 +105,11 @@ endif
 # to environment variable
 USE_INTEL_PATH = NONE
 
-# If use MKL, choose static link automatically to allow python wrapper
+# If use MKL only for BLAS, choose static link automatically to allow python wrapper
+ifeq ($(USE_MKL2017), 0)
 ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
+endif
 else
 USE_STATIC_MKL = NONE
 endif

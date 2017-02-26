@@ -83,8 +83,8 @@ class MKLReluOp : public Operator {
     fwd_top_data_->create_user_layout(dim, (sizes), (strides));
     bwd_bottom_diff_->create_user_layout(dim, (sizes), (strides));
     bwd_top_diff_->create_user_layout(dim, (sizes), (strides));
-    free(sizes);
-    free(strides);
+    delete[] sizes;
+    delete[] strides;
   }
 
  public:
@@ -107,6 +107,14 @@ class MKLReluOp : public Operator {
         in_data[activation::kData], dshape, s);
       out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         out_data[activation::kOut], dshape, s);
+    } else if (in_data[activation::kData].ndim() == 3) {
+      Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
+        in_data[activation::kData].shape_[1],
+        in_data[activation::kData].shape_[2], 1);
+      data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[activation::kData], dshape, s);
+      out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_data[activation::kOut], dshape, s);
     } else {
       data = mkl_experimental_direct_get<xpu, 4, DType>(in_data[activation::kData], s);
       out = mkl_experimental_direct_get<xpu, 4, DType>(out_data[activation::kOut], s);
@@ -123,15 +131,8 @@ class MKLReluOp : public Operator {
 #if MKL_EXPERIMENTAL == 1
     if (bottom_data != NULL) {
       if (reluFwd_ == NULL) {
-        std::shared_ptr<MKLMemHolder> bottom_data_mem =
-          in_data[activation::kData].Mkl_mem_;
-        std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
-          bottom_data_mem->get_prv_descriptor();
-        CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
-            PrvMemDescr::PRV_DESCR_MKL2017);
-        std::shared_ptr<MKLData<DType> > mem_descr
-          = std::static_pointer_cast<MKLData<DType>>(bottom_prv_descriptor);
-      CHECK(mem_descr != nullptr);
+      std::shared_ptr<MKLData<DType> > mem_descr =
+        mkl_get_mem_desc<DType>(in_data[activation::kData].Mkl_mem_);
       DType negative_slope = 0;
       dnnError_t e;
       e = dnnReLUCreateForward<DType>(&reluFwd_, NULL, mem_descr->layout_int,
@@ -151,49 +152,42 @@ class MKLReluOp : public Operator {
     if (bottom_data  == NULL) {
       bottom_data = data.dptr_;
       if (reluFwd_ == NULL) {
-      dnnError_t e;
-      DType negative_slope = 0;
-      e = dnnReLUCreateForward<DType>(&reluFwd_, NULL,
-                                      fwd_bottom_data_->layout_usr, negative_slope);
-      CHECK_EQ(e, E_SUCCESS);
-      e = dnnReLUCreateBackward<DType>(&reluBwd_, NULL,
-                                       fwd_bottom_data_->layout_usr, fwd_bottom_data_->layout_usr,
-                                       negative_slope);
-      CHECK_EQ(e, E_SUCCESS);
+        dnnError_t e;
+        DType negative_slope = 0;
+        e = dnnReLUCreateForward<DType>(&reluFwd_, NULL,
+                                        fwd_bottom_data_->layout_usr, negative_slope);
+        CHECK_EQ(e, E_SUCCESS);
+        e = dnnReLUCreateBackward<DType>(&reluBwd_, NULL,
+                                         fwd_bottom_data_->layout_usr, fwd_bottom_data_->layout_usr,
+                                         negative_slope);
+        CHECK_EQ(e, E_SUCCESS);
       }
     }
     dnnError_t e;
     void* relu_res[dnnResourceNumber];
     relu_res[dnnResourceSrc] = bottom_data;
     if (fwd_top_data_->conversion_needed()) {
-      std::shared_ptr<PrvMemDescr> bottom_prv_descriptor = NULL;
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLMemHolder> bottom_data_mem =
-        in_data[activation::kData].Mkl_mem_;
-      bottom_prv_descriptor = bottom_data_mem->get_prv_descriptor();
-#endif
-#if MKL_EXPERIMENTAL == 1
-        std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].Mkl_mem_;
-#endif
-      if (NULL != bottom_prv_descriptor) {
-        relu_res[dnnResourceDst] =
-          reinterpret_cast<void *>(fwd_bottom_data_->prv_ptr());
-#if MKL_EXPERIMENTAL == 1
-        top_mem->set_prv_descriptor(fwd_bottom_data_);
-#endif
+      std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].Mkl_mem_;
+      if (top_mem->prv_data(false)) {
+        fwd_top_data_ = mkl_get_mem_desc<DType>(top_mem);
       } else {
-#if MKL_EXPERIMENTAL == 1
         top_mem->set_prv_descriptor(fwd_top_data_);
-#endif
-        relu_res[dnnResourceDst] =
-          reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
       }
+#endif
+      relu_res[dnnResourceDst] =
+        reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
     } else {
       relu_res[dnnResourceDst] =
       reinterpret_cast<void *>(out.dptr_);
     }
     e = dnnExecute<DType>(reluFwd_, relu_res);
     CHECK_EQ(e, E_SUCCESS);
+#if MKL_EXPERIMENTAL == 0
+    if (fwd_top_data_->conversion_needed()) {
+      fwd_top_data_->convert_from_prv(out.dptr_);
+    }
+#endif
   }
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
@@ -221,43 +215,58 @@ class MKLReluOp : public Operator {
                                out_grad[activation::kOut].shape_[1], 1, 1);
       m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         out_grad[activation::kOut], dshape, s);
-      m_out_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-        out_data[activation::kOut], dshape, s);
+      m_in_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[activation::kData], dshape, s);
+      m_in_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_grad[activation::kData], dshape, s);
+    } else if (out_grad[activation::kOut].ndim() == 3) {
+      Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
+        out_grad[activation::kOut].shape_[1],
+        out_grad[activation::kOut].shape_[2], 1);
+      m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_grad[activation::kOut], dshape, s);
+      m_in_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[activation::kData], dshape, s);
       m_in_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
         in_grad[activation::kData], dshape, s);
     } else {
       m_out_grad = mkl_experimental_direct_get<xpu, 4, DType>(out_grad[activation::kOut], s);
-      m_out_data = mkl_experimental_direct_get<xpu, 4, DType>(out_data[activation::kOut], s);
+      m_in_data = mkl_experimental_direct_get<xpu, 4, DType>(in_data[activation::kData], s);
       m_in_grad = mkl_experimental_direct_get<xpu, 4, DType>(in_grad[activation::kData], s);
     }
     dnnError_t e;
     void* relu_res[dnnResourceNumber];
-    void* top_data = NULL;
-#if MKL_EXPERIMENTAL == 1
-    top_data =
-          reinterpret_cast<void *>(mkl_prv_data<DType>(out_data[activation::kOut]));
 
+    void* bottom_data = NULL;
+#if MKL_EXPERIMENTAL == 1
+    bottom_data =
+          reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[activation::kData]));
 #endif
-    if (NULL == top_data) {
-      top_data =
-        reinterpret_cast<void *>(const_cast<DType*>(m_out_data.dptr_));
+    if (NULL == bottom_data) {
+      bottom_data =
+        reinterpret_cast<void *>(const_cast<DType*>(m_in_data.dptr_));
     }
-    relu_res[dnnResourceSrc] = top_data;
+    relu_res[dnnResourceSrc] = bottom_data;
+
     std::shared_ptr<MKLMemHolder> top_diff_mem =
 #if MKL_EXPERIMENTAL == 1
       out_grad[activation::kOut].Mkl_mem_;
 #else
       NULL;
 #endif
-
     relu_res[dnnResourceDiffDst] = bwd_top_diff_->get_converted_prv(m_out_grad.dptr_,
                                                                     true, top_diff_mem);
     if (bwd_bottom_diff_->conversion_needed()) {
-      relu_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
 #if MKL_EXPERIMENTAL == 1
       std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[activation::kData].Mkl_mem_;
-      bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
+      // Need to check in_grad[activation::kData]  is the same with out_grad[activation::kOut]
+      if (bottom_diff_mem->prv_data(false)) {
+        bwd_bottom_diff_ = mkl_get_mem_desc<DType>(bottom_diff_mem);
+      } else {
+        bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
+      }
 #endif
+      relu_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
     } else {
       relu_res[dnnResourceDiffSrc] = m_in_grad.dptr_;
     }

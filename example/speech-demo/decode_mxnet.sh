@@ -70,7 +70,7 @@ feats="scp:$sdata/JOB/feats.scp"
 inputfeats="$sdata/JOB/mxnetInput.scp"
 
 
-if [ ! -f $sdata/1/feats.scp ]; then
+if [ -f $sdata/1/feats.scp ]; then
     $cmd JOB=1:$nj $dir/log/make_input.JOB.log \
         echo NO_FEATURE_TRANSFORM scp:$sdata/JOB/feats.scp \> $inputfeats
 fi

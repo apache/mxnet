@@ -125,6 +125,7 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list, grad_req="add")
 
 def test_pooling_with_type():
+    np.random.seed(1234)
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
@@ -292,7 +293,56 @@ def test_take_with_type():
                                         'take_a': 'write'},
                               arg_params=arg_params)
 
+def check_rnn_consistency(cell1, cell2):
+    dshape = (32, 5, 200)
+    data = mx.sym.Variable('data')
+
+    sym1, _ = cell1.unroll(5, data, merge_outputs=True)
+    mod1 = mx.mod.Module(sym1, label_names=None, context=mx.gpu(0))
+    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None)
+
+    sym2, _ = cell2.unroll(5, data, merge_outputs=True)
+    mod2 = mx.mod.Module(sym2, label_names=None, context=mx.gpu(0))
+    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None)
+
+    mod1.init_params()
+    args, auxs = mod1.get_params()
+    args = cell1.unpack_weights(args)
+    args = cell2.pack_weights(args)
+    mod2.set_params(args, auxs)
+
+    batch=mx.io.DataBatch(data=[mx.random.uniform(shape=dshape)], label=[])
+    mod1.forward(batch)
+    mod2.forward(batch)
+
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+
+
+def test_rnn():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l0_'))
+    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
+
+def test_lstm():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.LSTMCell(100, prefix='l0_'))
+    stack.add(mx.rnn.LSTMCell(100, prefix='l1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
+
 if __name__ == '__main__':
+    test_lstm()
+    test_rnn()
     test_convolution_options()
     test_convolution_with_type()
     test_pooling_with_type()
@@ -300,7 +350,6 @@ if __name__ == '__main__':
     test_batchnorm_with_type()
     test_deconvolution_with_type()
     test_upsampling_with_type()
-    test_upsampling_bilinear_with_type()
     test_concat_with_type()
     test_elementwisesum_with_type()
     test_reshape_with_type()

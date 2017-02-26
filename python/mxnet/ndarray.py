@@ -4,6 +4,10 @@
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
 
 import ctypes
 import warnings
@@ -327,7 +331,7 @@ fixed-size items.
                     assert slice_i < my_shape[i]
                     begin[i] = slice_i
                     end[i] = slice_i + 1
-                if isinstance(slice_i, slice):
+                if isinstance(slice_i, py_slice):
                     # only support continuous slicing
                     assert slice_i.step is None
                     begin[i] = slice_i.start or 0
@@ -388,6 +392,7 @@ fixed-size items.
                 return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
+
 
     def _sync_copyfrom(self, source_array):
         """Peform an synchronize copy from the array.
@@ -1014,6 +1019,9 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
         An optional device context (default is the current default context)
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`)
+
+    dtype : str or numpy.dtype, optional
+        The value type of the NDArray, default to np.float32
 
     Returns
     -------
@@ -1807,7 +1815,6 @@ def concatenate(arrays, axis=0, always_copy=True):
         idx += arr.shape[axis]
 
     return ret
-
 
 def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mean=None):
     """DEPRECATED, use mx.img instead

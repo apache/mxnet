@@ -13,6 +13,7 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install fftw
     brew install libpng
     brew install ImageMagick
+    brew install swig
     if [ ${TASK} == "python_test" ]; then
         python -m pip install --user nose numpy cython
         python3 -m pip install --user nose numpy cython
@@ -28,4 +29,13 @@ if [ ${TASK} == "julia" ]; then
   curl -s -L --retry 7 "https://s3.amazonaws.com/julialang/bin/linux/x64/${JULIA_VER}/julia-${JULIA_VER}-latest-linux-x86_64.tar.gz" | tar -C ~/julia -x -z --strip-components=1 -f -
   export PATH="${PATH}:${HOME}/julia/bin"
   julia -e 'versioninfo()'
+fi
+
+if [ ${TASK} == "perl_test" ]; then
+    if [ ${TRAVIS_OS_NAME} == "linux" ]; then
+       cpanm -q -L "${HOME}/perl5" Function::Parameters
+    else
+       sudo sh -c 'curl -L https://cpanmin.us | perl - App::cpanminus'
+       sudo cpanm -q -n PDL Mouse Function::Parameters
+    fi
 fi
