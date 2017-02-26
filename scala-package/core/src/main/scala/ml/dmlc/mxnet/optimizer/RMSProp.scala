@@ -17,14 +17,13 @@
 
 package ml.dmlc.mxnet.optimizer
 
+import ml.dmlc.mxnet.util.SerializerUtils
 import ml.dmlc.mxnet.{NDArray, Optimizer, LRScheduler}
 import ml.dmlc.mxnet.NDArrayConversions._
 
 /**
  * RMSProp optimizer as described in Tieleman & Hinton, 2012.
  * http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
- *
- * @author Yuan Tang, Yizhi Liu
  *
  * @param learningRate Float, Step size.
  * @param gamma1 Float, decay factor of moving average for gradient, gradient^^2.
@@ -91,6 +90,26 @@ class RMSProp(val learningRate: Float = 0.002f, val rescaleGradient: Float = 1.0
       n.dispose()
       g.dispose()
       delta.dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      val (n, g, delta) = state.asInstanceOf[(NDArray, NDArray, NDArray)]
+      SerializerUtils.serializeNDArrays(n, g, delta)
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      val ndArrays = SerializerUtils.deserializeNDArrays(bytes)
+      require(ndArrays.size == 3, s"Got ${ndArrays.size} arrays, expected 3.")
+      val state = (ndArrays(0), ndArrays(1), ndArrays(2))
+      state.asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }

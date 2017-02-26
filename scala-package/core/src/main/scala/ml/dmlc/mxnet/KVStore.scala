@@ -17,6 +17,8 @@
 
 package ml.dmlc.mxnet
 
+import java.io._
+
 import ml.dmlc.mxnet.Base._
 import org.slf4j.{LoggerFactory, Logger}
 
@@ -263,6 +265,35 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    */
   private def sendCommandToServers(head: Int, body: String): Unit = {
     checkCall(_LIB.mxKVStoreSendCommmandToServers(handle, head, body))
+  }
+
+  /**
+   * Save optimizer (updater) state to file
+   * @param fname Path to output states file.
+   */
+  def saveOptimizerStates(fname: String): Unit = {
+    require(updaterFunc != null, "Cannot save states for distributed training")
+    val target = new BufferedOutputStream(new FileOutputStream(fname))
+    try {
+      updaterFunc.serializeState().foreach(target.write(_))
+    } finally {
+      target.close()
+    }
+  }
+
+  /**
+   * Load optimizer (updater) state from file
+   * @param fname Path to input states file.
+   */
+  def loadOptimizerStates(fname: String): Unit = {
+    assert(updaterFunc != null, "Cannot load states for distributed training")
+    val bis = new BufferedInputStream(new FileInputStream(fname))
+    try {
+      val bArray = Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
+      updaterFunc.deserializeState(bArray)
+    } finally {
+      bis.close()
+    }
   }
 }
 // scalastyle:off finalize

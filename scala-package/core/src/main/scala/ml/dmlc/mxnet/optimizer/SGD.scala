@@ -22,7 +22,6 @@ import ml.dmlc.mxnet.NDArrayConversions._
 
 /**
  * A very simple SGD optimizer with momentum and weight regularization.
- * @author Yizhi Liu
  */
 class SGD(private val learningRate: Float = 0.01f, private val momentum: Float = 0.0f,
           private val wd: Float = 0.0001f, private val clipGradient: Float = 0f,
@@ -98,6 +97,22 @@ class SGD(private val learningRate: Float = 0.01f, private val momentum: Float =
   override def disposeState(state: AnyRef): Unit = {
     if (state != null) {
       state.asInstanceOf[NDArray].dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      state.asInstanceOf[NDArray].serialize()
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      NDArray.deserialize(bytes).asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }

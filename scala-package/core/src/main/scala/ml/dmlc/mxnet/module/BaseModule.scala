@@ -312,8 +312,8 @@ abstract class BaseModule {
   def saveParams(fname: String): Unit = {
     val (argParams, auxParams) = getParams
     val saveDict = (
-      argParams.map { case (k, v) => (k, v.asInContext(Context.cpu())) }
-      ++ auxParams.map { case (k, v) => (k, v.asInContext(Context.cpu())) }
+      argParams.map { case (k, v) => (s"arg:$k", v.asInContext(Context.cpu())) }
+      ++ auxParams.map { case (k, v) => (s"aux:$k", v.asInContext(Context.cpu())) }
     )
     NDArray.save(fname, saveDict)
   }

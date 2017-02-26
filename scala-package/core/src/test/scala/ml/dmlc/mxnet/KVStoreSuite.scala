@@ -51,6 +51,8 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
         stored += input * 2
       }
       override def dispose(): Unit = {}
+      override def serializeState(): Array[Byte] = null
+      override def deserializeState(bytes: Array[Byte]): Unit = {}
     }
     kv.setUpdater(updater)
 

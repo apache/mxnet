@@ -17,6 +17,8 @@
 
 package ml.dmlc.mxnet
 
+import java.io._
+
 import scala.collection.mutable
 
 object Optimizer {
@@ -37,6 +39,52 @@ object Optimizer {
       override def dispose(): Unit = {
         states.values.foreach(optimizer.disposeState)
         states.clear()
+      }
+      override def serializeState(): Array[Byte] = {
+        val bos = new ByteArrayOutputStream()
+        try {
+          val out = new ObjectOutputStream(bos)
+          out.writeInt(states.size)
+          states.foreach { case (k, v) =>
+            if (v != null) {
+              out.writeInt(k)
+              val stateBytes = optimizer.serializeState(v)
+              out.writeInt(stateBytes.length)
+              out.write(stateBytes)
+            }
+          }
+          out.flush()
+          bos.toByteArray
+        } finally {
+          try {
+            bos.close()
+          } catch {
+            case _: Throwable =>
+          }
+        }
+      }
+      override def deserializeState(bytes: Array[Byte]): Unit = {
+        val bis = new ByteArrayInputStream(bytes)
+        var in: ObjectInputStream = null
+        try {
+          in = new ObjectInputStream(bis)
+          val size = in.readInt()
+          (0 until size).foreach(_ => {
+            val key = in.readInt()
+            val bytesLength = in.readInt()
+            val bytes = Array.fill[Byte](bytesLength)(0)
+            in.readFully(bytes)
+            states.update(key, optimizer.deserializeState(bytes))
+          })
+        } finally {
+          try {
+            if (in != null) {
+              in.close()
+            }
+          } catch {
+            case _: Throwable =>
+          }
+        }
       }
     }
   }
@@ -70,6 +118,10 @@ abstract class Optimizer extends Serializable {
 
   // Dispose the state it created
   def disposeState(state: AnyRef): Unit
+
+  def serializeState(state: AnyRef): Array[Byte]
+
+  def deserializeState(bytes: Array[Byte]): AnyRef
 
   // Set individual learning rate scale for parameters
   def setLrScale(lrScale: Map[Int, Float]) {
@@ -139,4 +191,6 @@ trait MXKVStoreUpdater {
    */
   def update(key: Int, recv: NDArray, local: NDArray): Unit
   def dispose(): Unit
+  def serializeState(): Array[Byte]
+  def deserializeState(bytes: Array[Byte]): Unit
 }

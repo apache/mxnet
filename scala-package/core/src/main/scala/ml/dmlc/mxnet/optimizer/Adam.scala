@@ -17,8 +17,9 @@
 
 package ml.dmlc.mxnet.optimizer
 
-import ml.dmlc.mxnet.{NDArray, Optimizer, LRScheduler}
 import ml.dmlc.mxnet.NDArrayConversions._
+import ml.dmlc.mxnet.util.SerializerUtils
+import ml.dmlc.mxnet.{LRScheduler, NDArray, Optimizer}
 
 /**
  * Adam optimizer as described in [King2014]
@@ -26,8 +27,6 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * [King2014] Diederik Kingma, Jimmy Ba,
  * Adam: A Method for Stochastic Optimization,
  * http://arxiv.org/abs/1412.6980
- *
- * @author Yuan Tang, Yizhi Liu
  *
  * @param learningRate Float, Step size.
  * @param beta1 Float, Exponential decay rate for the first moment estimates.
@@ -129,6 +128,26 @@ class Adam(val learningRate: Float = 0.002f, val beta1: Float = 0.9f, val beta2:
       val (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
       mean.dispose()
       variance.dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      val (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
+      SerializerUtils.serializeNDArrays(mean, variance)
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      val ndArrays = SerializerUtils.deserializeNDArrays(bytes)
+      require(ndArrays.size == 2, s"Got ${ndArrays.size} arrays, expected 2.")
+      val state = (ndArrays(0), ndArrays(1))
+      state.asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }
