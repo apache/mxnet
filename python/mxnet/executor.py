@@ -271,18 +271,18 @@ class Executor(object):
             if name in self.arg_dict:
                 dst = self.arg_dict[name]
                 array.astype(dst.dtype).copyto(dst)
-            else:
-                if not allow_extra_params:
-                    raise ValueError('Find name \"%s\" that is not in the arguments' % name)
+            elif not allow_extra_params:
+                raise ValueError('Find name \"%s\" that is not in the arguments' % name)
+
         if aux_params is None:
-            aux_params = {}
+            return
+
         for name, array in aux_params.items():
             if name in self.aux_dict:
                 dst = self.aux_dict[name]
                 array.astype(dst.dtype).copyto(dst)
-            else:
-                if not allow_extra_params:
-                    raise ValueError('Find name %s that is not in the auxiliary states' % name)
+            elif not allow_extra_params:
+                raise ValueError('Find name %s that is not in the auxiliary states' % name)
 
     def reshape(self, partial_shaping=False, allow_up_sizing=False, **kwargs):
         """Return a new executor with the same symbol and shared memory,

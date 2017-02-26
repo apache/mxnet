@@ -61,6 +61,7 @@ class BucketingModule(BaseModule):
 
         self._buckets = {}
         self._curr_module = None
+        self._params_dirty = False
 
     def _reset_bind(self):
         """Internal utility function to reset binding."""
@@ -126,7 +127,49 @@ class BucketingModule(BaseModule):
         `NDArray`) mapping.
         """
         assert self.binded and self.params_initialized
-        return self._curr_module.get_params()
+        self._curr_module._params_dirty = self._params_dirty
+        params = self._curr_module.get_params()
+        self._params_dirty = False
+        return params
+
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
+        """Assign parameter and aux state values.
+
+        Parameters
+        ----------
+        arg_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        aux_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+
+        Examples
+        --------
+        An example of setting module parameters::
+            >>> sym, arg_params, aux_params = \
+            >>>     mx.model.load_checkpoint(model_prefix, n_epoch_load)
+            >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
+        """
+        if not allow_missing:
+            self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
+                             allow_missing=allow_missing, force_init=force_init)
+            return
+
+        if self.params_initialized and not force_init:
+            warnings.warn("Parameters already initialized and force_init=False. "
+                          "set_params call ignored.", stacklevel=2)
+            return
+
+        self._curr_module.set_params(arg_params, aux_params, allow_missing=allow_missing,
+                                     force_init=force_init)
+
+        # because we didn't update self._arg_params, they are dirty now.
+        self._params_dirty = True
+        self.params_initialized = True
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
                     allow_missing=False, force_init=False):
@@ -189,7 +232,7 @@ class BucketingModule(BaseModule):
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             grad_req='write'):
+             grad_req='write', bucket_key=None):
         """Binding for a `BucketingModule` means setting up the buckets and bind the
         executor for the default bucket key. Executors corresponding to other keys are
         binded afterwards with `switch_bucket`.
@@ -212,6 +255,8 @@ class BucketingModule(BaseModule):
             Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
             (default to 'write').
             Can be specified globally (str) or for each argument (list, dict).
+        bucket_key : str (or any python object)
+            bucket key for binding. by default use the default_bucket_key
         """
         # in case we already initialized params, keep it
         if self.params_initialized:
@@ -232,7 +277,10 @@ class BucketingModule(BaseModule):
         self.inputs_need_grad = inputs_need_grad
         self.binded = True
 
-        symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
+        if bucket_key is None:
+            bucket_key = self._default_bucket_key
+
+        symbol, data_names, label_names = self._sym_gen(bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list,
                         fixed_param_names=self._fixed_param_names,
@@ -240,7 +288,7 @@ class BucketingModule(BaseModule):
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None, grad_req=grad_req)
         self._curr_module = module
-        self._buckets[self._default_bucket_key] = module
+        self._buckets[bucket_key] = module
 
         # copy back saved params, if already initialized
         if self.params_initialized:
@@ -328,6 +376,7 @@ class BucketingModule(BaseModule):
         in the previous forward-backward cycle.
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
+        self._params_dirty = True
         self._curr_module.update()
 
     def get_outputs(self, merge_multi_context=True):
