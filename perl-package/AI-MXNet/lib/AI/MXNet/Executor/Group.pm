@@ -32,7 +32,7 @@ func _split_input_slice($batch_size, $work_load_list)
     return \@slices;
 }
 
-# Load a list of arrays into a list of arrays specified by slices"""
+# Load a list of arrays into a list of arrays specified by slices
 func _load_general($data, $targets, $major_axis)
 {
     zip(sub {
@@ -40,6 +40,13 @@ func _load_general($data, $targets, $major_axis)
         if(blessed($d_targets) and $d_targets->isa('AI::MXNet::NDarray'))
         {
             $d_src->copyto($d_targets);
+        }
+        elsif(ref $d_targets eq 'ARRAY' and blessed $d_targets->[0])
+        {
+            zip(sub {
+                my ($src, $dst) = @_;
+                $src->copyto($dst);
+            }, $d_src, $d_targets);
         }
         else
         {
@@ -117,7 +124,7 @@ has [qw/output_layouts label_layouts arg_names aux_names
         batch_size slices execs data_arrays
         label_arrays param_arrays grad_arrays aux_arrays
         data_layouts shared_data_arrays input_grad_arrays
-        _default_execs/
+        _default_execs state_arrays/
     ] => (is => 'rw', init_arg => undef);
 
 package AI::MXNet::DataParallelExecutorGroup;
@@ -169,6 +176,7 @@ use List::Util qw(sum);
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
         Can be specified globally (str) or for each argument (list, dict).
+    state_names: array ref str
 =cut
 
 has 'symbol'            => (is => 'ro', isa => 'AI::MXNet::Symbol', required => 1);
@@ -182,6 +190,7 @@ has 'inputs_need_grad'  => (is => 'ro', isa => 'Bool', default  => 0);
 has 'shared_group'      => (is => 'ro', isa => 'Maybe[AI::MXNet::DataParallelExecutorGroup]');
 has 'logger'            => (is => 'ro', default => sub { AI::MXNet::Logging->get_logger });
 has 'fixed_param_names' => (is => 'rw', isa => 'Maybe[ArrayRef[Str]]');
+has 'state_names'       => (is => 'rw', isa => 'Maybe[ArrayRef[Str]]');
 has 'grad_req'          => (is => 'rw', isa => 'ArrayRef[GradReq]|HashRef[GradReq]|GradReq', default=>'write');
 has '_p'                => (is => 'rw', init_arg => undef);
 sub BUILD
@@ -194,6 +203,7 @@ sub BUILD
     $self->_p($p);
     $self->grad_req('null') if not $self->for_training;
     $self->fixed_param_names([]) unless defined $self->fixed_param_names;
+    $self->state_names([]) unless defined $self->state_names;
     my $data_shapes = [];
     for my $d (@{ $self->data_shapes })
     {
@@ -352,6 +362,16 @@ method _collect_arrays
             }
             push @{ $self->_p->param_arrays }, \@tmp;
         }
+    }
+    for my $i (0..@{ $self->state_names }-1)
+    {
+        my $name = $self->state_names->[$i];
+        my @tmp;
+        for my $exec (@{ $self->_p->execs })
+        {
+            push @tmp, $exec->arg_dict->{$name};
+        }
+        push @{ $self->_p->state_arrays }, \@tmp;
     }
     if($self->for_training)
     {
@@ -527,6 +547,35 @@ method get_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::ND
             my $weight = sum(map { $_->copyto(AI::MXNet::Context->cpu) } @{ $block }) / @{ $block };
             $weight->astype($aux_params->{$name}->dtype)->copyto($aux_params->{$name});
     }, $self->_p->aux_names, $self->_p->aux_arrays);
+}
+
+
+
+method get_states($merge_multi_context=1)
+{
+    assert((not $merge_multi_context), "merge_multi_context=True is not supported for get_states yet.");
+    return $self->_p->state_arrays;
+}
+
+method set_states($states, $value)
+{
+    if(defined $states)
+    {
+        assert((not defined $value), "Only one of states & value can be specified.");
+        AI::MXNet::Executor::Group::_load_general($states, $self->_p->state_arrays, [(0)x@{ $states }]);
+    }
+    else
+    {
+        assert((defined $value), "At least one of states & value must be specified.");
+        assert((not defined $states), "Only one of states & value can be specified.");
+        for my $d_dst (@{ $self->_p->state_arrays })
+        {
+            for my $dst (@{ $d_dst })
+            {
+                $dst .= $value;
+            }
+        }
+    }
 }
 
 =head2 forward

@@ -481,7 +481,7 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
         $self->_activation,
         name       => "${name}out"
     );
-    return ($output, $output);
+    return ($output, [$output]);
 }
 
 package AI::MXNet::RNN::LSTMCell;
@@ -939,8 +939,8 @@ method unroll(
     else
     {
         assert(@$inputs == $length);
-        $inputs = [map { AI::MXNet::Symbol->expand_dims($_, axis => 1) } @{ $inputs }];
-        $inputs = AI::MXNet::Symbol->Concat(@{ $inputs }, dim => 1);
+        $inputs = [map { AI::MXNet::Symbol->expand_dims($_, axis => 0) } @{ $inputs }];
+        $inputs = AI::MXNet::Symbol->Concat(@{ $inputs }, dim => 0);
     }
     $begin_state //= $self->begin_state;
     my $states = $begin_state;
@@ -952,7 +952,7 @@ method unroll(
     }
     else
     {
-        %states = (state => $states);
+        %states = (state => $states[0]);
     }
     my $rnn = AI::MXNet::Symbol->RNN(
         data          => $inputs,
@@ -979,7 +979,8 @@ method unroll(
     }
     else
     {
-        ($outputs, $states) = @{ $rnn };
+        my @rnn = @{ $rnn };
+        ($outputs, $states) = ($rnn[0], [$rnn[1]]);
     }
     if(not $merge_outputs)
     {
@@ -990,7 +991,7 @@ method unroll(
         $outputs = [@ {
             AI::MXNet::Symbol->SliceChannel(
                 $outputs,
-                axis         => $axis,
+                axis         => 0,
                 num_outputs  => $length,
                 squeeze_axis => 1
             )
@@ -1026,6 +1027,7 @@ extends 'AI::MXNet::RNN::Cell::Base';
 =cut
 
 has [qw/_override_cell_params _cells/] => (is => 'rw', init_arg => undef);
+
 
 sub BUILD
 {
@@ -1200,7 +1202,7 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     }
     if($self->dropout_states > 0)
     {
-        $states = AI::MXNet::Symbol->Dropout(data => $states, p => $self->dropout_states);
+        $states = [map { AI::MXNet::Symbol->Dropout(data => $_, p => $self->dropout_states) } @{ $states }];
     }
     return ($output, $states);
 }

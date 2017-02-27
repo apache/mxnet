@@ -61,12 +61,19 @@ method init_data(
 
 package AI::MXNet::DataDesc;
 use Mouse;
-use overload '""' => \&stringify;
-
+use overload '""'  => \&stringify,
+             '@{}' => \&to_nameshape;
 has 'name'   => (is => 'ro', isa => "Str",   required => 1);
 has 'shape'  => (is => 'ro', isa => "Shape", required => 1);
 has 'dtype'  => (is => 'ro', isa => "Dtype", default => 'float32');
 has 'layout' => (is => 'ro', isa => "Str",   default => 'NCHW');
+
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(name => $_[0], shape => $_[1]) if @_ == 2;
+    return $class->$orig(@_);
+};
 
 method stringify($other=, $reverse=)
 {
@@ -77,6 +84,11 @@ method stringify($other=, $reverse=)
         $self->dtype,
         $self->layout
     );
+}
+
+method to_nameshape($other=, $reverse=)
+{
+    [$self->name, $self->shape];
 }
 
 =head2 get_batch_axis
