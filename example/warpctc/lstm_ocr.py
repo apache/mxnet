@@ -201,6 +201,7 @@ if __name__ == '__main__':
     
     print('begin fit')
 
+    prefix = 'ocr'
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Accuracy),
               # Use the following eval_metric if your num_label >= 10, or varies in a wide range
@@ -208,4 +209,4 @@ if __name__ == '__main__':
               batch_end_callback=mx.callback.Speedometer(BATCH_SIZE, 50),
               epoch_end_callback = mx.callback.do_checkpoint(prefix, 1))
 
-    model.save("ocr")
+    model.save(prefix)
