@@ -289,6 +289,9 @@ int MXSetProfilerConfig(int mode, const char* filename);
  */
 int MXSetProfilerState(int state);
 
+/*! \brief Save profile and stop profiler */
+int MXDumpProfile();
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
@@ -839,6 +842,14 @@ int MXSymbolListOutputs(SymbolHandle symbol,
  */
 int MXSymbolGetInternals(SymbolHandle symbol,
                                    SymbolHandle *out);
+/*!
+ * \brief Get a symbol that contains only direct children.
+ * \param symbol The symbol
+ * \param out The output symbol whose outputs are the direct children.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXSymbolGetChildren(SymbolHandle symbol,
+                                  SymbolHandle *out);
 /*!
  * \brief Get index-th outputs of the symbol.
  * \param symbol The symbol

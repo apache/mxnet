@@ -1,7 +1,7 @@
 package AI::NNVMCAPI;
 use base qw(DynaLoader);
 bootstrap AI::NNVMCAPI;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 1;
 __END__
 

@@ -1,5 +1,9 @@
 Revision history for Perl extension AI::MXNet
 
+0.03  Tue Feb 14 07:28:11 PST 2017
+        - sync up with current state of the Python inteface.
+        - high level RNN support.
+
 0.02  Tue Feb 14 07:28:11 PST 2017
         - prepared for inclusion to the mxnet code repository.
 

@@ -447,14 +447,16 @@ method reshape(HashRef[Shape] $kwargs, Int $partial_shaping=0, Int $allow_up_siz
                     ."to enable allocation of new arrays."
                 ) unless $allow_up_sizing;
                 $new_arg_dict{ $name }  = AI::MXNet::NDArray->empty(
-                    $new_shape, 
-                    ctx => $arr->context
+                    $new_shape,
+                    ctx => $arr->context,
+                    dtype => $arr->dtype
                 );
                 if(defined $darr)
                 {
                     $new_grad_dict{ $name } = AI::MXNet::NDArray->empty(
-                        $new_shape, 
-                        ctx => $darr->context
+                        $new_shape,
+                        ctx => $darr->context,
+                        dtype => $arr->dtype
                     );
                 }
             }
@@ -497,7 +499,8 @@ method reshape(HashRef[Shape] $kwargs, Int $partial_shaping=0, Int $allow_up_siz
                 ) unless $allow_up_sizing;
                 $new_aux_dict{ $name }  = AI::MXNet::NDArray->empty(
                     $new_shape, 
-                    ctx => $arr->context
+                    ctx => $arr->context,
+                    dtype => $arr->dtype
                 );
             }
             else

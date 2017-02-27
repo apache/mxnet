@@ -644,9 +644,14 @@ method set_params(
             Path to output param file.
 =cut
 
-method save_params(Str $fname)
+method save_params(
+    Str $fname,
+    Maybe[HashRef[AI::MXNet::NDArray]] $arg_params=,
+    Maybe[HashRef[AI::MXNet::NDArray]] $aux_params=
+)
 {
-    my ($arg_params, $aux_params) = $self->get_params;
+    ($arg_params, $aux_params) = $self->get_params
+        unless (defined $arg_params and defined $aux_params);
     my %save_dict;
     while(my ($k, $v) = each %{ $arg_params })
     {

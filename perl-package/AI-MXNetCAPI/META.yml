@@ -1,5 +1,5 @@
 ---
-abstract: unknown
+abstract: 'Swig interface to mxnet c api'
 author:
   - 'Sergey Kolychev <sergeykolychev.github@gmail.com>'
 build_requires:
@@ -8,7 +8,7 @@ configure_requires:
   ExtUtils::MakeMaker: '0'
 dynamic_config: 0
 generated_by: 'ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.143240'
-license: perl
+license: apache
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: '1.4'
@@ -19,4 +19,4 @@ no_index:
     - inc
 requires:
   Test::More: '0'
-version: '0.01'
+version: '0.03'

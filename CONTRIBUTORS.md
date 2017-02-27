@@ -124,3 +124,5 @@ List of Contributors
 * [Chihiro Komaki](https://github.com/ckomaki)
 * [Piyush Singh](https://github.com/Piyush3dB)
 * [Freddy Chua](https://github.com/freddycct)
+* [Sergey Kolychev](https://github.com/sergeykolychev)
+  - Sergey is original author and current maintainer of Perl5 interface.

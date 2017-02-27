@@ -1,8 +1,9 @@
 Changes
 Makefile.PL
 MANIFEST
-META.yml
 README
+META.json
+META.yml
 t/AI-MXNetCAPI.t
 lib/AI/MXNetCAPI.pm
 mxnet.i

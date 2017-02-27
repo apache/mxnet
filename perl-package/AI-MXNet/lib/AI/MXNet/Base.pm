@@ -10,7 +10,8 @@ use Time::HiRes;
 use Carp;
 use Exporter;
 use base qw(Exporter);
-@AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc pdl cat dog svd
+@AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc 
+                              pdl cat dog svd bisect_left
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
                               DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL);
 @AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
@@ -111,6 +112,37 @@ sub product
     map { $p = $p * $_ } @_;
     return $p;
 }
+
+=head2 bisect_left
+
+    https://hg.python.org/cpython/file/2.7/Lib/bisect.py
+
+=cut
+
+sub bisect_left
+{
+    my ($a, $x, $lo, $hi) = @_;
+    $lo //= 0;
+    $hi //= @{ $a };
+    if($lo < 0)
+    {
+        Carp::confess('lo must be non-negative');
+    }
+    while($lo < $hi)
+    {
+        my $mid = int(($lo+$hi)/2);
+        if($a->[$mid] < $x)
+        {
+            $lo = $mid+1;
+        }
+        else
+        {
+            $hi = $mid;
+        }
+    }
+    return $lo;
+}
+
 
 =head2 assert
 
