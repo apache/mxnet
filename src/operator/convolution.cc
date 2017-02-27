@@ -80,7 +80,7 @@ channel, height, weight)*, the output is computed by
 .. math::
 
    out[n,i,:,:] = bias[i] + \sum_{j=0}^{num\_filter} data[n,j,:,:] \star
-   weight[j,:,:]
+   weight[i,j,:,:]
 
 where :math:`\star` is the 2-D cross-correlation operator.
 
@@ -123,11 +123,11 @@ There are other options to tune the performance.
 - **cudnn_tune**: enable this option leads to higher startup time but may give
   faster speed. Options are
 
-  - *off*: no tuning
-  - *limited_workspace*:run test and pick the fastest algorithm that doesn't
+  - **off**: no tuning
+  - **limited_workspace**:run test and pick the fastest algorithm that doesn't
     exceed workspace limit.
-  - *fastest*: pick the fastest algorithm and ignore workspace limit.
-  - *None* (default): the behavior is determined by environment variable
+  - **fastest**: pick the fastest algorithm and ignore workspace limit.
+  - **None** (default): the behavior is determined by environment variable
     ``MXNET_CUDNN_AUTOTUNE_DEFAULT``. 0 for off, 1 for limited workspace
     (default), 2 for fastest.
 
