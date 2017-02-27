@@ -481,7 +481,7 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
         $self->_activation,
         name       => "${name}out"
     );
-    return ($output, $output);
+    return ($output, [$output]);
 }
 
 package AI::MXNet::RNN::LSTMCell;
@@ -952,7 +952,7 @@ method unroll(
     }
     else
     {
-        %states = (state => $states);
+        %states = (state => $states[0]);
     }
     my $rnn = AI::MXNet::Symbol->RNN(
         data          => $inputs,
@@ -979,7 +979,8 @@ method unroll(
     }
     else
     {
-        ($outputs, $states) = @{ $rnn };
+        my @rnn = @{ $rnn };
+        ($outputs, $states) = ($rnn[0], [$rnn[1]]);
     }
     if(not $merge_outputs)
     {
@@ -1201,7 +1202,7 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     }
     if($self->dropout_states > 0)
     {
-        $states = AI::MXNet::Symbol->Dropout(data => $states, p => $self->dropout_states);
+        $states = [map { AI::MXNet::Symbol->Dropout(data => $_, p => $self->dropout_states) } @{ $states }];
     }
     return ($output, $states);
 }
