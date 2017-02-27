@@ -292,7 +292,6 @@
 {
     if(!result)
     {    
-        assert_class_name(&$*1_mangle_inited, "$*1_mangle", "$*1_type", $*1_mangle_module_name);
         $result =  SWIG_NewPointerObj(SWIG_as_voidptr(*$1), $*1_descriptor, 0); argvi++;
     }
 }
@@ -425,7 +424,6 @@
         SV **svs;
         int i = 0;
         svs = (SV **)safemalloc(*$1*sizeof(SV *));
-        assert_class_name(&_p_MXAtomicSymbolCreator_inited, "_p_MXAtomicSymbolCreator", "AtomicSymbolCreator", _p_MXAtomicSymbolCreator_module_name);
         for (i = 0; i < *$1 ; i++) {
             svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXAtomicSymbolCreator, 0);
         }
@@ -445,7 +443,6 @@
         SV **svs;
         int i = 0;
         svs = (SV **)safemalloc(*$1*sizeof(SV *));
-        assert_class_name(&_p_MXFunction_inited, "_p_MXFunction", "FunctionHandle", _p_MXFunction_module_name);
         for (i = 0; i < *$1 ; i++) {
             svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXFunction, 0);
         }
@@ -465,7 +462,6 @@
         SV **svs;
         int i = 0;
         svs = (SV **)safemalloc(*$1*sizeof(SV *));
-        assert_class_name(&_p_MXDataIterCreator_inited, "_p_MXDataIterCreator", "DataIterCreator", _p_MXDataIterCreator_module_name);
         for (i = 0; i < *$1 ; i++) {
             svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXDataIterCreator, 0);
         }
@@ -485,7 +481,6 @@
         SV **svs;
         int i = 0;
         svs = (SV **)safemalloc(*$1*sizeof(SV *));
-        assert_class_name(&_p_MXNDArray_inited, "_p_MXNDArray", "NDArrayHandle", _p_MXNDArray_module_name);
         for (i = 0; i < *$1 ; i++) {
             svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXNDArray, 0);
         }
@@ -542,7 +537,6 @@
     {
         if(!result)
         {
-            assert_class_name(&_p_MXNDArray_inited, "_p_MXNDArray", "NDArrayHandle", _p_MXNDArray_module_name);
             AV *container = newAV();
             for (i = 0; i < *$1 ; i++) {
                 av_push(container, SvREFCNT_inc(SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXNDArray, 0)));
