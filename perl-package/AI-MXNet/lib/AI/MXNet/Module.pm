@@ -11,7 +11,7 @@ has [qw/_param_names _fixed_param_names
         _params_dirty _optimizer _kvstore
          _update_on_kvstore _updater _work_load_list
         _preload_opt_states _exec_group
-        _data_shapes _label_shapes _context/
+        _data_shapes _label_shapes _context _grad_req/
 ] => (is => 'rw', init_arg => undef);
 
 package AI::MXNet::Module;
@@ -243,6 +243,13 @@ has 'context'           => (
     default => sub { AI::MXNet::Context->cpu }
 );
 
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(symbol => $_[0]) if @_ == 1;
+    return $class->$orig(@_);
+};
+
 sub BUILD
 {
     my $self = shift;
@@ -274,6 +281,9 @@ sub BUILD
     $self->_p->_params_dirty(0);
     $self->data_names($self->_p->_data_names);
 }
+
+sub Module { my $class = shift; return $class->new(@_) }
+sub BucketingModule { shift; return AI::MXNet::Module::Bucketing->new(@_) }
 
 =head load
 
@@ -355,6 +365,45 @@ method save_checkpoint(Str $prefix, Int $epoch, Bool $save_optimizer_states=0)
         $self->save_optimizer_states($state_name);
         AI::MXNet::Logging->info('Saved optimizer state to "%s"', $state_name);
     }
+}
+
+=head2 model_save_checkpoint
+
+    Checkpoint the model data into file.
+
+    Parameters
+    ----------
+    prefix : str
+        Prefix of model name.
+    epoch : int
+        The epoch number of the model.
+    symbol : AI::MXNet::Symbol
+        The input symbol
+    arg_params : hash ref of str to AI::MXNet::NDArray
+        Model parameter, hash ref of name to AI::MXNet::NDArray of net's weights.
+    aux_params : hash ref of str to NDArray
+        Model parameter, hash ref of name to AI::MXNet::NDArray of net's auxiliary states.
+    Notes
+    -----
+    - prefix-symbol.json will be saved for symbol.
+    - prefix-epoch.params will be saved for parameters.
+=cut
+
+method model_save_checkpoint(
+    Str                         $prefix,
+    Int                         $epoch,
+    Maybe[AI::MXNet::Symbol]    $symbol,
+    HashRef[AI::MXNet::NDArray] $arg_params,
+    HashRef[AI::MXNet::NDArray] $aux_params
+)
+{
+    if(defined $symbol)
+    {
+        $symbol->save("$prefix-symbol.json");
+    }
+    my $param_name = sprintf('%s-%04d.params', $prefix, $epoch);
+    $self->save_params($param_name, $arg_params, $aux_params);
+    AI::MXNet::Logging->info('Saved checkpoint to "%s"', $param_name);
 }
 
 # Internal function to reset binded state.
@@ -529,13 +578,26 @@ method init_params(
                 &{$initializer}($name, $arr) if defined $initializer;
             }
     };
+    my $attrs = $self->_symbol->attr_dict;
     while(my ($name, $arr) = each %{ $self->_p->_arg_params })
     {
-        $_impl->($name, $arr, $arg_params);
+        $_impl->(
+            AI::MXNet::InitDesc->new(
+                name  => $name,
+                ($attrs->{$name} ? (attrs => $attrs->{$name}) : ())
+            ),
+            $arr, $arg_params
+        );
     }
     while(my ($name, $arr) = each %{ $self->_p->_aux_params })
     {
-        $_impl->($name, $arr, $aux_params);
+        $_impl->(
+            AI::MXNet::InitDesc->new(
+                name  => $name,
+                ($attrs->{$name} ? (attrs => $attrs->{$name}) : ())
+            ),
+            $arr, $aux_params
+        );
     }
     $self->params_initialized(1);
     $self->_p->_params_dirty(0);
@@ -594,6 +656,7 @@ method bind(
     $self->for_training($for_training);
     $self->inputs_need_grad($inputs_need_grad);
     $self->binded(1);
+    $self->_p->_grad_req($grad_req);
 
     if(not $for_training)
     {
@@ -625,11 +688,6 @@ method bind(
         $shared_group = $shared_module->_p->_exec_group;
     }
 
-    my %input_types = map { $_->name => $_->dtype } @{ $self->_p->_data_shapes };
-    if($self->_p->_label_shapes)
-    {
-        %input_types = (%input_types, map { $_->name => $_->dtype } @{ $self->_p->_label_shapes });
-    }
     $self->_p->_exec_group(
         AI::MXNet::DataParallelExecutorGroup->new(
             symbol            => $self->_symbol,
@@ -643,8 +701,7 @@ method bind(
             shared_group      => $shared_group,
             logger            => $self->logger,
             fixed_param_names => $self->_p->_fixed_param_names,
-            grad_req          => $grad_req,
-            input_types       => \%input_types
+            grad_req          => $grad_req
         )
     );
     if($shared_module)
@@ -663,6 +720,28 @@ method bind(
     {
         $self->borrow_optimizer($shared_module)
     }
+}
+
+=head2 reshape
+
+        Reshape the module for new input shapes.
+        Parameters
+        ----------
+        data_shapes : ArrayRef[AI::MXNet::DataDesc]
+            Typically is $data_iter->provide_data.
+        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc]]
+            Typically is $data_iter->provide_label.
+=cut
+
+method reshape(
+    ArrayRef[AI::MXNet::DataDesc]        $data_shapes,
+    Maybe[ArrayRef[AI::MXNet::DataDesc]] $label_shapes=
+)
+{
+    assert($self->binded);
+    $self->_p->_data_shapes($data_shapes);
+    $self->_p->_label_shapes($label_shapes);
+    $self->_p->_exec_group->reshape($self->_p->_data_shapes, $self->_p->_label_shapes);
 }
 
 =head2 init_optimizer
@@ -701,13 +780,15 @@ method init_optimizer(
         scalar(@{$self->_p->_context}),
         $self->_p->_arg_params
     );
+    my $batch_size = $self->_p->_exec_group->_p->batch_size;
+    if($kvstore and $kvstore->type =~ /dist/ and $kvstore->type =~ /_sync/)
+    {
+        $batch_size *= $kvstore->num_workers;
+    }
+    my $rescale_grad = 1/$batch_size;
+
     if(not blessed $optimizer)
     {
-        my $batch_size = $self->_p->_exec_group->_p->batch_size;
-        if($kvstore and $kvstore->type eq 'dist_sync')
-        {
-            $batch_size *= $kvstore->num_workers;
-        }
         my %idx2name;
         if($update_on_kvstore)
         {
@@ -722,7 +803,7 @@ method init_optimizer(
         }
         if(not exists $optimizer_params->{rescale_grad})
         {
-            $optimizer_params->{rescale_grad} = 1/$batch_size;
+            $optimizer_params->{rescale_grad} = $rescale_grad;
         }
         $optimizer = AI::MXNet::Optimizer->create(
             $optimizer,
@@ -730,6 +811,15 @@ method init_optimizer(
             param_idx2name => \%idx2name,
             %{ $optimizer_params }
         );
+        if($optimizer->rescale_grad != $rescale_grad)
+        {
+            AI::MXNet::Logging->warning(
+                "Optimizer created manually outside Module but rescale_grad "
+                ."is not normalized to 1.0/batch_size/num_workers (%s vs. %s). "
+                ."Is this intended?",
+                $optimizer->rescale_grad, $rescale_grad
+            );
+        }
     }
 
     $self->_p->_optimizer($optimizer);

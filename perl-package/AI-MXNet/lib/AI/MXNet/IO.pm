@@ -134,8 +134,8 @@ use Mouse;
     Default object for holding a mini-batch of data and related information.
 =cut
 
-has 'data'          => (is => 'rw', required => 1);
-has 'label'         => (is => 'rw', required => 1);
+has 'data'          => (is => 'rw', isa => 'Maybe[ArrayRef[AI::MXNet::NDArray]]', required => 1);
+has 'label'         => (is => 'rw', isa => 'Maybe[ArrayRef[AI::MXNet::NDArray]]', required => 1);
 has 'pad'           => (is => 'rw');
 has 'index'         => (is => 'rw');
 has 'bucket_key'    => (is => 'rw');
@@ -289,9 +289,22 @@ has 'size'           => (is => 'ro', isa => 'Int', required => 1);
 has 'reset_internal' => (is => 'rw', isa => 'Int', default => 1);
 has 'cur'            => (is => 'rw', isa => 'Int', default => 0);
 has 'current_batch'  => (is => 'rw', isa => 'Maybe[AI::MXNet::DataBatch]');
-has 'provide_data'   => (is => 'rw', default => sub { shift->data_iter->provide_data  }, lazy => 1);
-has 'provide_label'  => (is => 'rw', default => sub { shift->data_iter->provide_label }, lazy => 1);
-has 'batch_size'     => (is => 'rw', default => sub { shift->data_iter->batch_size    }, lazy => 1);
+has [qw/provide_data
+    default_bucket_key
+    provide_label
+    batch_size/]     => (is => 'rw', init_arg => undef);
+
+sub BUILD
+{
+    my $self = shift;
+    $self->provide_data($self->data_iter->provide_data);
+    $self->provide_label($self->data_iter->provide_label);
+    $self->batch_size($self->data_iter->batch_size);
+    if($self->data_iter->can('default_bucket_key'))
+    {
+        $self->default_bucket_key($self->data_iter->can('default_bucket_key'));
+    }
+}
 
 method reset()
 {

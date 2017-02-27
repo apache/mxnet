@@ -116,7 +116,8 @@ use Mouse;
 has [qw/output_layouts label_layouts arg_names aux_names
         batch_size slices execs data_arrays
         label_arrays param_arrays grad_arrays aux_arrays
-        data_layouts shared_data_arrays/
+        data_layouts shared_data_arrays input_grad_arrays
+        _default_execs/
     ] => (is => 'rw', init_arg => undef);
 
 package AI::MXNet::DataParallelExecutorGroup;
@@ -159,9 +160,6 @@ use List::Util qw(sum);
         group corresponding to a different bucket. In other words, it will correspond to a different
         symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
         In this case, many memory will be shared.
-    input_types : hashref
-        Default is `None`. When not `None`, can be used to specify the data type for each
-        of the data/label inputs.
     logger : Logger
         Default is `logging`.
     fixed_param_names: list of str
@@ -182,7 +180,6 @@ has 'param_names'       => (is => 'ro', isa => 'ArrayRef[Str]', required => 1);
 has 'for_training'      => (is => 'ro', isa => 'Bool', required => 1);
 has 'inputs_need_grad'  => (is => 'ro', isa => 'Bool', default  => 0);
 has 'shared_group'      => (is => 'ro', isa => 'Maybe[AI::MXNet::DataParallelExecutorGroup]');
-has 'input_types'       => (is => 'ro', isa => 'HashRef[Dtype]');
 has 'logger'            => (is => 'ro', default => sub { AI::MXNet::Logging->get_logger });
 has 'fixed_param_names' => (is => 'rw', isa => 'Maybe[ArrayRef[Str]]');
 has 'grad_req'          => (is => 'rw', isa => 'ArrayRef[GradReq]|HashRef[GradReq]|GradReq', default=>'write');
@@ -193,6 +190,7 @@ sub BUILD
     my $p = AI::MXNet::DataParallelExecutorGroup::_private->new;
     $p->arg_names($self->symbol->list_arguments);
     $p->aux_names($self->symbol->list_auxiliary_states);
+    $p->execs([]);
     $self->_p($p);
     $self->grad_req('null') if not $self->for_training;
     $self->fixed_param_names([]) unless defined $self->fixed_param_names;
@@ -269,11 +267,6 @@ sub BUILD
     {
         $self->_p->shared_data_arrays([map { +{} } 0..@{ $self->contexts }-1]);
     }
-    $self->_p->data_layouts($self->decide_slices($self->data_shapes));
-    if(defined $self->label_shapes)
-    {
-        $self->_p->label_layouts($self->decide_slices($self->label_shapes));
-    }
     $self->_p->output_layouts([
         map {
             AI::MXNet::DataDesc->get_batch_axis($self->symbol->slice($_)->attr('__layout__'))
@@ -316,32 +309,12 @@ method decide_slices(ArrayRef[AI::MXNet::DataDesc] $data_shapes)
     return $major_axis;
 }
 
-=method bind_exec
-
-        Bind executors on their respective devices.
-
-        Parameters
-        ----------
-        data_shapes  : ArrayRef of AI::MXNet::DataDesc objects
-        label_shapes : ArrayRef of AI::MXNet::DataDesc objects
-        shared_group : AI::MXNet::DataParallelExecutorGroup
-=cut
-
-method bind_exec(
-    ArrayRef[AI::MXNet::DataDesc] $data_shapes,
-    ArrayRef[AI::MXNet::DataDesc]|Undef $label_shapes,
-    AI::MXNet::DataParallelExecutorGroup|Undef $shared_group
-)
+# Collect internal arrays from executors.
+method _collect_arrays
 {
-    $self->_p->execs([]);
-    for my $i (0..@{ $self->contexts }-1)
-    {
-        push @{ $self->_p->execs }, $self->_bind_ith_exec($i, $data_shapes, $label_shapes, $shared_group);
-    }
-
     # convenient data structures
     $self->_p->data_arrays([]);
-    for my $d (@{ $data_shapes })
+    for my $d (@{ $self->data_shapes })
     {
         my $name = $d->name;
         my @tmp;
@@ -351,10 +324,10 @@ method bind_exec(
         }
         push @{ $self->_p->data_arrays }, \@tmp;
     }
-    if(defined $label_shapes)
+    if(defined $self->label_shapes)
     {
         $self->_p->label_arrays([]);
-        for my $l (@{ $label_shapes })
+        for my $l (@{ $self->label_shapes })
         {
             my $name = $l->name;
             my @tmp;
@@ -397,7 +370,7 @@ method bind_exec(
             }
         }
     }
-    my %data_names = map { $_->name => 1 } @{ $data_shapes };
+    my %data_names = map { $_->name => 1 } @{ $self->data_shapes };
     if($self->inputs_need_grad)
     {
         $self->_p->input_grad_arrays([]);
@@ -425,6 +398,87 @@ method bind_exec(
         }
         push @{ $self->_p->aux_arrays }, \@tmp;
     }
+}
+
+=method bind_exec
+
+        Bind executors on their respective devices.
+
+        Parameters
+        ----------
+        data_shapes  : ArrayRef of AI::MXNet::DataDesc objects
+        label_shapes : ArrayRef of AI::MXNet::DataDesc objects
+        shared_group : AI::MXNet::DataParallelExecutorGroup
+        reshape      : Bool
+
+=cut
+
+method bind_exec(
+    ArrayRef[AI::MXNet::DataDesc]               $data_shapes,
+    Maybe[ArrayRef[AI::MXNet::DataDesc]]        $label_shapes=,
+    Maybe[AI::MXNet::DataParallelExecutorGroup] $shared_group=,
+    Bool                                        $reshape=0
+)
+{
+    assert($reshape or not @{ $self->_p->execs });
+    $self->_p->batch_size(undef);
+
+    # calculate workload and bind executors
+    $self->_p->data_layouts($self->decide_slices($data_shapes));
+    # call it to make sure labels has the same batch size as data
+    if(defined $label_shapes)
+    {
+        $self->_p->label_layouts($self->decide_slices($label_shapes));
+    }
+
+    for my $i (0..@{ $self->contexts }-1)
+    {
+        my $data_shapes_i = $self->_sliced_shape($data_shapes, $i, $self->_p->data_layouts);
+        my $label_shapes_i = [];
+        if(defined $label_shapes)
+        {
+            $label_shapes_i = $self->_sliced_shape($label_shapes, $i, $self->_p->label_layouts);
+        }
+        if($reshape)
+        {
+            my %combined_hash = map { $_->name => $_->shape } (@{ $data_shapes_i }, @{ $label_shapes_i });
+            $self->_p->execs->[$i] = $self->_p->_default_execs->[$i]->reshape(
+                \%combined_hash,
+                allow_up_sizing => 1,
+            );
+        }
+        else
+        {
+            push @{ $self->_p->execs }, $self->_bind_ith_exec($i, $data_shapes_i, $label_shapes_i, $shared_group);
+        }
+    }
+    $self->data_shapes($data_shapes);
+    $self->label_shapes($label_shapes);
+    $self->_collect_arrays;
+}
+
+=head2 reshape
+
+        Reshape executors.
+
+        Parameters
+        ----------
+        data_shapes : ArrayRef[AI::MXNet::DataDesc]
+        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc]]
+=cut
+
+
+method reshape(
+    ArrayRef[AI::MXNet::DataDesc]          $data_shapes,
+    Maybe[ArrayRef[AI::MXNet::DataDesc]]   $label_shapes=
+)
+{
+    return if($data_shapes eq $self->data_shapes and $label_shapes eq $self->label_shapes);
+    if (not defined $self->_p->_default_execs)
+    {
+        $self->_p->_default_execs([@{ $self->_p->execs }]);
+    }
+    $self->bind_exec($data_shapes, $label_shapes, undef, 1);
 }
 
 =head set_params
@@ -676,18 +730,12 @@ method update_metric(AI::MXNet::EvalMetric $eval_metric, ArrayRef[AI::MXNet::NDA
 # Internal utility function to bind the i-th executor.
 
 method _bind_ith_exec(
-    Int $i,
-    ArrayRef[AI::MXNet::DataDesc] $data_shapes,
-    ArrayRef[AI::MXNet::DataDesc]|Undef $label_shapes,
-    AI::MXNet::DataParallelExecutorGroup|Undef $shared_group
+    Int                                         $i,
+    ArrayRef[AI::MXNet::DataDesc]               $data_shapes,
+    Maybe[ArrayRef[AI::MXNet::DataDesc]]        $label_shapes,
+    Maybe[AI::MXNet::DataParallelExecutorGroup] $shared_group
 )
 {
-    $data_shapes = $self->_sliced_shape($data_shapes, $i, $self->_p->data_layouts);
-    if(defined $label_shapes)
-    {
-        $label_shapes = $self->_sliced_shape($label_shapes, $i, $self->_p->label_layouts);
-    }
-
     my $shared_exec = $shared_group ? $shared_group->execs->[$i] : undef;
     my $context = $self->contexts->[$i];
     my $shared_data_arrays = $self->_p->shared_data_arrays->[$i];
@@ -699,16 +747,7 @@ method _bind_ith_exec(
     my ($arg_shapes, undef, $aux_shapes) = $self->symbol->infer_shape(%input_shapes);
     confess("shape inference failed") unless defined $arg_shapes;
 
-    my %input_types;
-    if(not defined $self->input_types)
-    {
-        %input_types = map { $_ => 'float32' } keys %input_shapes;
-    }
-    else
-    {
-        %input_types = %{ $self->input_types }
-    }
-
+    my %input_types = map { $_->name => $_->dtype } @{ $data_shapes };
     my ($arg_types, undef, $aux_types) = $self->symbol->infer_type(%input_types);
     confess("type inference failed") unless defined $arg_types;
     my $arg_arrays = [];
@@ -876,7 +915,12 @@ method _sliced_shape(ArrayRef[AI::MXNet::DataDesc] $shapes, Int $i, ArrayRef[Int
         {
             $shape[$axis] = $self->_p->slices->[$i]->[1] - $self->_p->slices->[$i]->[0];
         }
-        push @sliced_shapes, AI::MXNet::DataDesc->new(name => $desc->name, shape => \@shape);
+        push @sliced_shapes, AI::MXNet::DataDesc->new(
+            name    => $desc->name,
+            shape   => \@shape,
+            dtype   => $desc->dtype,
+            layout  => $desc->layout
+        );
     }, $shapes, $major_axis);
     return \@sliced_shapes;
 }
