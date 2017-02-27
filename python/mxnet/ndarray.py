@@ -302,7 +302,7 @@ fixed-size items.
             sliced_arr = self._at(key)
             sliced_arr[:] = value
             return
-        if isinstance(key, slice):
+        if isinstance(key, py_slice):
             if key.step is not None:
                 raise ValueError('NDArray only supports continuous slicing on axis 0')
             if key.start is not None or key.stop is not None:
@@ -323,7 +323,7 @@ fixed-size items.
             my_shape = self.shape
             assert len(key) == len(my_shape)
             for slice_i in key:
-                assert isinstance(slice_i, (slice, int))
+                assert isinstance(slice_i, (py_slice, int))
             begin = [0 for _ in my_shape]
             end = [x for x in my_shape]
             for i, slice_i in enumerate(key):
@@ -383,7 +383,7 @@ fixed-size items.
         # TODO(mli) multi-dimensional slicing
         if isinstance(key, int):
             return self._at(key)
-        if isinstance(key, slice):
+        if isinstance(key, py_slice):
             if key.step is not None:
                 raise ValueError('NDArray only supports continuous slicing on axis 0')
             if key.start is not None or key.stop is not None:
