@@ -92,9 +92,11 @@ def proto2script(proto_file):
     output_name = ""
     mapping = {input_name: 'data'}
     need_flatten = {input_name: False}
+    prev_bn = None
     for i in range(len(layer)):
         type_string = ''
         param_string = ''
+        skip_layer = False
         name = re.sub('[-/]', '_', layer[i].name)
         if layer[i].type == 'Convolution' or layer[i].type == 4:
             type_string = 'mx.symbol.Convolution'
@@ -167,15 +169,37 @@ def proto2script(proto_file):
         if layer[i].type == 'BatchNorm':
             type_string = 'mx.symbol.BatchNorm'
             param = layer[i].batch_norm_param
-            param_string = 'use_global_stats=%s' % param.use_global_stats
+            param_string = 'use_global_stats=%s, fix_gamma=False' % param.use_global_stats
+            need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
+        if layer[i].type == 'Scale':
+            assert layer[i-1].type == 'BatchNorm'
+            need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
+            skip_layer = True
+            prev_bn = re.sub('[-/]', '_', layer[i-1].name)
         if layer[i].type == 'PReLU':
             type_string = 'mx.symbol.LeakyReLU'
             param = layer[i].prelu_param
             param_string = "act_type='prelu', slope=%f" % param.filler.value
             need_flatten[name] = need_flatten[mapping[layer[i].bottom[0]]]
-        if type_string == '':
+        if layer[i].type == 'Eltwise':
+            type_string = 'mx.symbol.broadcast_add'
+            param_string = ""
+            need_flatten[name] = False
+
+        if layer[i].type == 'Reshape':
+            type_string = 'mx.symbol.Reshape'
+            need_flatten[name] = False
+            param = layer[i].reshape_param
+            param_string = "shape=(%s, %s, %s, %s)" % \
+                           (param.shape.dim[0], param.shape.dim[1], param.shape.dim[2], param.shape.dim[3])
+
+        if skip_layer:
+            assert len(layer[i].bottom) == 1
+            symbol_string += "%s = %s\n" % (name, prev_bn)
+
+        elif type_string == '':
             raise Exception('Unknown Layer %s!' % layer[i].type)
-        if type_string != 'split':
+        elif type_string != 'split':
             bottom = layer[i].bottom
             if param_string != "":
                 param_string = ", " + param_string
@@ -183,16 +207,16 @@ def proto2script(proto_file):
                 if need_flatten[mapping[bottom[0]]] and type_string == 'mx.symbol.FullyConnected':
                     flatten_name = "flatten_%d" % flatten_count
                     symbol_string += "%s=mx.symbol.Flatten(name='%s', data=%s)\n" % \
-                                     (flatten_name, flatten_name, mapping[bottom[0]])
+                        (flatten_name, flatten_name, mapping[bottom[0]])
                     flatten_count += 1
                     need_flatten[flatten_name] = False
                     bottom[0] = flatten_name
                     mapping[bottom[0]] = bottom[0]
                 symbol_string += "%s = %s(name='%s', data=%s %s)\n" % \
-                                 (name, type_string, name, mapping[bottom[0]], param_string)
+                    (name, type_string, name, mapping[bottom[0]], param_string)
             else:
                 symbol_string += "%s = %s(name='%s', *[%s] %s)\n" % \
-                                 (name, type_string, name, ','.join([mapping[x] for x in bottom]), param_string)
+                    (name, type_string, name, ','.join([mapping[x] for x in bottom]), param_string)
         for j in range(len(layer[i].top)):
             mapping[layer[i].top[j]] = name
         output_name = name
