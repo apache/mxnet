@@ -22,8 +22,19 @@ Operator *LeakyReLUProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(LeakyReLUParam);
 
 MXNET_REGISTER_OP_PROPERTY(LeakyReLU, LeakyReLUProp)
-.describe("Apply activation function to input.")
-.add_argument("data", "Symbol", "Input data to activation function.")
+.describe(R"code(Leaky ReLu activation
+
+The following types are supported:
+
+- *elu*: ``y = x > 0 ? x : slop * (exp(x)-1)``
+- *leaky*: ``y = x > 0 ? x : slope * x``
+- *prelu*: same as *leaky* but the ``slope`` is learnable.
+- *rrelu*: same as *leaky* but the ``slope`` is uniformly randomly chosen from
+  *[lower_bound, upper_bound)* for training, while fixed to be
+  *(lower_bound+upper_bound)/2* for inference.
+
+)code" ADD_FILELINE)
+.add_argument("data", "ndarray-or-symbol", "Input data to activation function.")
 .add_arguments(LeakyReLUParam::__FIELDS__());
 
 NNVM_REGISTER_OP(LeakyReLU)
@@ -36,4 +47,3 @@ NNVM_REGISTER_OP(LeakyReLU)
 
 }  // namespace op
 }  // namespace mxnet
-

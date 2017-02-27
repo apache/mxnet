@@ -383,7 +383,6 @@ In the rest of this document, we first overview the methods provided by the
 .. autosummary::
     :nosignatures:
 
-    crop
     slice
     slice_axis
     take
@@ -421,78 +420,78 @@ In the rest of this document, we first overview the methods provided by the
 ### Fully-connection
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        FullyConnected
+    FullyConnected
 ```
 
 ### Convolution
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        Convolution
-        Correlation --> http://dsp.stackexchange.com/questions/12684/difference-between-correlation-and-convolution-on-an-image
-        Deconvolution
+    Convolution
+    Correlation --> http://dsp.stackexchange.com/questions/12684/difference-between-correlation-and-convolution-on-an-image
+    Deconvolution
 ```
 
 ### Recurrent layers
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        RNN
+    RNN
 ```
 
 ### Embedding
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        Embedding
+    Embedding
 ```
 
 ### Activation
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        Activation
-        LeakyReLU
-        SoftmaxActivation --> softmax
+    Activation
+    LeakyReLU
+    SoftmaxActivation --> softmax
 ```
 
 ### Normalization
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        BatchNorm
-        InstanceNorm
-        L2Normalization
-        LRN
+    BatchNorm
+    InstanceNorm
+    L2Normalization
+    LRN
 ```
 
 
 ### Sampling
 
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        Pooling
-        ROIPooling
-        Dropout
-        BilinearSampler
-        GridGenerator
-        UpSampling
-        SpatialTransformer
+    Pooling
+    ROIPooling
+    Dropout
+    BilinearSampler
+    GridGenerator
+    UpSampling
+    SpatialTransformer
 ```
 
 ### Loss
