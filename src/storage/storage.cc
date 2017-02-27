@@ -9,7 +9,6 @@
 #include "./naive_storage_manager.h"
 #include "./pooled_storage_manager.h"
 #include "./cpu_device_storage.h"
-#include "./gpu_device_storage.h"
 #include "./pinned_memory_storage.h"
 #include "../common/cuda_utils.h"
 #include "../common/lazy_alloc_array.h"
