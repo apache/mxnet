@@ -194,6 +194,7 @@ class BucketingModule(BaseModule):
         self._curr_module.init_params(initializer=initializer, arg_params=arg_params,
                                       aux_params=aux_params, allow_missing=allow_missing,
                                       force_init=force_init)
+        self._params_dirty = False
         self.params_initialized = True
 
     def get_states(self, merge_multi_context=True):

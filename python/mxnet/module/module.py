@@ -659,6 +659,7 @@ class Module(BaseModule):
         latest parameters from `self._arg_params` and `self._aux_params`.
         """
         self._exec_group.get_params(self._arg_params, self._aux_params)
+        self._params_dirty = False
 
     def save_optimizer_states(self, fname):
         """Save optimizer (updater) state to file
