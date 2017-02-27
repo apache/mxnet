@@ -637,8 +637,8 @@ class FusedRNNCell(BaseRNNCell):
                 assert axis == 0, "Unsupported layout %s"%layout
         else:
             assert len(inputs) == length
-            inputs = [symbol.expand_dims(i, axis=1) for i in inputs]
-            inputs = symbol.Concat(*inputs, dim=1)
+            inputs = [symbol.expand_dims(i, axis=0) for i in inputs]
+            inputs = symbol.Concat(*inputs, dim=0)
         if begin_state is None:
             begin_state = self.begin_state()
 
