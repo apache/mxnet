@@ -267,7 +267,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
       param_.num_parts, "recordio"));
 
   // estimate padding width for labels
-  size_t max_label_width;
+  int max_label_width = 0;
   if (label_map_ != nullptr) {
     max_label_width = label_map_->MaxLabelWidth();
   } else {
@@ -277,7 +277,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
       #pragma omp parallel num_threads(param_.preprocess_threads)
       {
         CHECK(omp_get_num_threads() == param_.preprocess_threads);
-        size_t max_width = 0;
+        int max_width = 0;
         int tid = omp_get_thread_num();
         dmlc::RecordIOChunkReader reader(chunk, tid, param_.preprocess_threads);
         ImageRecordIO rec;
@@ -291,7 +291,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
                    "but label_width is set to " << param_.label_width;
             }
             // update max value
-            max_width = std::max(max_width, static_cast<size_t>(rec.num_label));
+            max_width = std::max(max_width, rec.num_label);
           } else {
             LOG(FATAL) << "Not enough label packed in img_list or rec file.";
           }
