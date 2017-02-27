@@ -61,15 +61,17 @@ if __name__ == '__main__':
     data_val    = mx.rnn.BucketSentenceIter(val_sent, args.batch_size, buckets=buckets,
                                             invalid_label=invalid_label)
 
+    stack = mx.rnn.SequentialRNNCell()
+    for i in range(args.num_layers):
+        stack.add(mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i))
+
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
                                  output_dim=args.num_embed, name='embed')
 
-        stack = mx.rnn.SequentialRNNCell()
-        for i in range(args.num_layers):
-            stack.add(mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i))
+        stack.reset()
         outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
 
         pred = mx.sym.Reshape(outputs, shape=(-1, args.num_hidden))
