@@ -939,8 +939,8 @@ method unroll(
     else
     {
         assert(@$inputs == $length);
-        $inputs = [map { AI::MXNet::Symbol->expand_dims($_, axis => 1) } @{ $inputs }];
-        $inputs = AI::MXNet::Symbol->Concat(@{ $inputs }, dim => 1);
+        $inputs = [map { AI::MXNet::Symbol->expand_dims($_, axis => 0) } @{ $inputs }];
+        $inputs = AI::MXNet::Symbol->Concat(@{ $inputs }, dim => 0);
     }
     $begin_state //= $self->begin_state;
     my $states = $begin_state;
@@ -1026,6 +1026,7 @@ extends 'AI::MXNet::RNN::Cell::Base';
 =cut
 
 has [qw/_override_cell_params _cells/] => (is => 'rw', init_arg => undef);
+
 
 sub BUILD
 {
