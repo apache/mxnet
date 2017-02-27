@@ -738,6 +738,14 @@ MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
 MXNET_DLL int MXSymbolGetInternals(SymbolHandle symbol,
                                    SymbolHandle *out);
 /*!
+ * \brief Get a symbol that contains only direct children.
+ * \param symbol The symbol
+ * \param out The output symbol whose outputs are the direct children.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetChildren(SymbolHandle symbol,
+                                  SymbolHandle *out);
+/*!
  * \brief Get index-th outputs of the symbol.
  * \param symbol The symbol
  * \param index the Index of the output.

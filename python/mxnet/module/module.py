@@ -5,6 +5,7 @@ more `Executor` for data parallelization.
 """
 
 import logging
+import warnings
 
 from .. import context as ctx
 from .. import ndarray as nd
@@ -402,10 +403,12 @@ class Module(BaseModule):
         (kvstore, update_on_kvstore) = \
                 _create_kvstore(kvstore, len(self._context), self._arg_params)
 
+        batch_size = self._exec_group.batch_size
+        if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
+            batch_size *= kvstore.num_workers
+        rescale_grad = 1.0/batch_size
+
         if isinstance(optimizer, str):
-            batch_size = self._exec_group.batch_size
-            if kvstore and kvstore.type == 'dist_sync':
-                batch_size *= kvstore.num_workers
             idx2name = {}
             if update_on_kvstore:
                 idx2name.update(enumerate(self._exec_group.param_names))
@@ -415,12 +418,19 @@ class Module(BaseModule):
                                      for i, n in enumerate(self._exec_group.param_names)})
             optimizer_params = dict(optimizer_params)
             if 'rescale_grad' not in optimizer_params:
-                optimizer_params['rescale_grad'] = 1.0/batch_size
+                optimizer_params['rescale_grad'] = rescale_grad
             optimizer = opt.create(optimizer,
                                    sym=self.symbol, param_idx2name=idx2name,
                                    **optimizer_params)
         else:
             assert isinstance(optimizer, opt.Optimizer)
+            if optimizer.rescale_grad != rescale_grad:
+                #pylint: disable=no-member
+                warnings.warn(
+                    "Optimizer created manually outside Module but rescale_grad " +
+                    "is not normalized to 1.0/batch_size/num_workers (%s vs. %s). "%(
+                        optimizer.rescale_grad, rescale_grad) +
+                    "Is this intended?", stacklevel=2)
 
         self._optimizer = optimizer
         self._kvstore = kvstore

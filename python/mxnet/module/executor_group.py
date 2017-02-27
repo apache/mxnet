@@ -170,6 +170,7 @@ class DataParallelExecutorGroup(object):
         self.batch_size = None
         self.slices = None
         self.execs = []
+        self._default_execs = None
         self.data_arrays = None
         self.label_arrays = None
         self.param_arrays = None
@@ -272,8 +273,8 @@ class DataParallelExecutorGroup(object):
                 label_shapes_i = []
 
             if reshape:
-                self.execs[i] = self.execs[i].reshape(allow_up_sizing=True,
-                                                      **dict(data_shapes_i + label_shapes_i))
+                self.execs[i] = self._default_execs[i].reshape(
+                    allow_up_sizing=True, **dict(data_shapes_i + label_shapes_i))
             else:
                 self.execs.append(self._bind_ith_exec(i, data_shapes_i, label_shapes_i,
                                                       shared_group))
@@ -292,6 +293,8 @@ class DataParallelExecutorGroup(object):
         """
         if data_shapes == self.data_shapes and label_shapes == self.label_shapes:
             return
+        if self._default_execs is None:
+            self._default_execs = [i for i in self.execs]
         self.bind_exec(data_shapes, label_shapes, reshape=True)
 
     def set_params(self, arg_params, aux_params):
