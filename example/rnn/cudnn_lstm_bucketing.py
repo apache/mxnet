@@ -65,15 +65,34 @@ def get_data(layout):
 def train(args):
     data_train, data_val, vocab = get_data('TN')
 
-    cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, mode='lstm')
+    # When training a deep, complex model, it's recommended to stack fused RNN cells (one
+    # layer per cell) together instead of one with all layers. The reason is that fused RNN
+    # cells doesn't set gradients to be ready until the computation for the entire layer is
+    # completed. Breaking a multi-layer fused RNN cell into several one-layer ones allows
+    # gradients to be processed ealier. This reduces communication overhead, especially with
+    # multiple GPUs.
+    stack_fused_rnn = args.num_layers >= 4
+    if stack_fused_rnn:
+        cells = []
+        for layer in xrange(args.num_layers):
+            cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1, mode='lstm', prefix='fused_rnn' + str(layer))
+            cells.append(cell)
+    else:
+        cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, mode='lstm')
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab), output_dim=args.num_embed,name='embed')
 
-        cell.reset()
-        output, _ = cell.unroll(seq_len, inputs=embed, merge_outputs=True, layout='TNC')
+        if stack_fused_rnn:
+            output = embed
+            for i in xrange(args.num_layers):
+                cells[i].reset()
+                output, _ = cells[i].unroll(seq_len, inputs=output, merge_outputs=True, layout='TNC')
+        else:
+            cell.reset()
+            output, _ = cell.unroll(seq_len, inputs=embed, merge_outputs=True, layout='TNC')
 
         pred = mx.sym.Reshape(output, shape=(-1, args.num_hidden))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')
