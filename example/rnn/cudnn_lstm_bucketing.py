@@ -72,6 +72,7 @@ def train(args):
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab), output_dim=args.num_embed,name='embed')
 
+        cell.reset()
         output, _ = cell.unroll(seq_len, inputs=embed, merge_outputs=True, layout='TNC')
 
         pred = mx.sym.Reshape(output, shape=(-1, args.num_hidden))
@@ -131,6 +132,7 @@ def test(args):
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
                                  output_dim=args.num_embed, name='embed')
 
+        stack.reset()
         outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
 
         pred = mx.sym.Reshape(outputs, shape=(-1, args.num_hidden))

@@ -16,8 +16,9 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 
-from .base_module import BaseModule
+from .base_module import BaseModule, _check_input_names
 from ..io import DataDesc
+
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -39,9 +40,13 @@ class Module(BaseModule):
         Default `None`, indicating uniform workload.
     fixed_param_names: list of str
         Default `None`, indicating no network parameters are fixed.
+    state_names : list of str
+        states are similar to data and label, but not provided by data iterator.
+        Instead they are initialized to 0 and can be set by set_states()
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
-                 logger=logging, context=ctx.cpu(), work_load_list=None, fixed_param_names=None):
+                 logger=logging, context=ctx.cpu(), work_load_list=None,
+                 fixed_param_names=None, state_names=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -54,16 +59,24 @@ class Module(BaseModule):
 
         self._symbol = symbol
 
-        data_names = list(data_names)
+        data_names = list(data_names) if data_names is not None else []
         label_names = list(label_names) if label_names is not None else []
+        state_names = list(state_names) if state_names is not None else []
+        fixed_param_names = list(fixed_param_names) if fixed_param_names is not None else []
+
+        _check_input_names(symbol, data_names, "data", True)
+        _check_input_names(symbol, label_names, "label", False)
+        _check_input_names(symbol, state_names, "state", True)
+        _check_input_names(symbol, fixed_param_names, "fixed_param", True)
 
         arg_names = symbol.list_arguments()
-        input_names = data_names + label_names
+        input_names = data_names + label_names + state_names
         self._param_names = [x for x in arg_names if x not in input_names]
         self._fixed_param_names = fixed_param_names
         self._aux_names = symbol.list_auxiliary_states()
         self._data_names = data_names
         self._label_names = label_names
+        self._state_names = state_names
         self._output_names = symbol.list_outputs()
 
         self._arg_params = None
@@ -225,22 +238,10 @@ class Module(BaseModule):
             If true, will force re-initialize even if already initialized.
         """
         if self.params_initialized and not force_init:
+            warnings.warn("Parameters already initialized and force_init=False. "
+                          "init_params call ignored.", stacklevel=2)
             return
         assert self.binded, 'call bind before initializing the parameters'
-
-        if self._arg_params is None:
-            param_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
-                for x in self._exec_group.param_arrays
-            ]
-            self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
-
-        if self._aux_params is None:
-            aux_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
-                for x in self._exec_group.aux_arrays
-            ]
-            self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         def _impl(name, arr, cache):
             """Internal helper for parameter initialization"""
@@ -273,6 +274,44 @@ class Module(BaseModule):
 
         # copy the initialized parameters to devices
         self._exec_group.set_params(self._arg_params, self._aux_params)
+
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
+        """Assign parameter and aux state values.
+
+        Parameters
+        ----------
+        arg_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        aux_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+
+        Examples
+        --------
+        An example of setting module parameters::
+            >>> sym, arg_params, aux_params = \
+            >>>     mx.model.load_checkpoint(model_prefix, n_epoch_load)
+            >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
+        """
+        if not allow_missing:
+            self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
+                             allow_missing=allow_missing, force_init=force_init)
+            return
+
+        if self.params_initialized and not force_init:
+            warnings.warn("Parameters already initialized and force_init=False. "
+                          "set_params call ignored.", stacklevel=2)
+            return
+
+        self._exec_group.set_params(arg_params, aux_params)
+
+        # because we didn't update self._arg_params, they are dirty now.
+        self._params_dirty = True
+        self.params_initialized = True
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
@@ -343,7 +382,8 @@ class Module(BaseModule):
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
-                                                     grad_req=grad_req)
+                                                     grad_req=grad_req,
+                                                     state_names=self._state_names)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
@@ -352,9 +392,23 @@ class Module(BaseModule):
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
             self._exec_group.set_params(self._arg_params, self._aux_params)
+        else:
+            assert self._arg_params is None and self._aux_params is None
+            param_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.param_arrays
+            ]
+            self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
+
+            aux_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.aux_arrays
+            ]
+            self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
+
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshape the module for new input shapes.
@@ -554,6 +608,40 @@ class Module(BaseModule):
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._exec_group.get_input_grads(merge_multi_context=merge_multi_context)
 
+    def get_states(self, merge_multi_context=True):
+        """Get states from all devices
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert self.binded and self.params_initialized
+        return self._exec_group.get_states(merge_multi_context=merge_multi_context)
+
+    def set_states(self, states=None, value=None):
+        """Set value for states. Only one of states & value can be specified.
+
+        Parameters
+        ----------
+        states : list of list of NDArrays
+            source states arrays formatted like [[state1_dev1, state1_dev2],
+            [state2_dev1, state2_dev2]].
+        value : number
+            a single scalar value for all state arrays.
+        """
+        assert self.binded and self.params_initialized
+        self._exec_group.set_states(states, value)
+
     def update_metric(self, eval_metric, labels):
         """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
 
@@ -571,6 +659,7 @@ class Module(BaseModule):
         latest parameters from `self._arg_params` and `self._aux_params`.
         """
         self._exec_group.get_params(self._arg_params, self._aux_params)
+        self._params_dirty = False
 
     def save_optimizer_states(self, fname):
         """Save optimizer (updater) state to file

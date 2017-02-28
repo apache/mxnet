@@ -308,7 +308,7 @@ class RNNCell(BaseRNNCell):
         output = self._get_activation(i2h + h2h, self._activation,
                                       name='%sout'%name)
 
-        return output, output
+        return output, [output]
 
 
 class LSTMCell(BaseRNNCell):
@@ -637,8 +637,8 @@ class FusedRNNCell(BaseRNNCell):
                 assert axis == 0, "Unsupported layout %s"%layout
         else:
             assert len(inputs) == length
-            inputs = [symbol.expand_dims(i, axis=1) for i in inputs]
-            inputs = symbol.Concat(*inputs, dim=1)
+            inputs = [symbol.expand_dims(i, axis=0) for i in inputs]
+            inputs = symbol.Concat(*inputs, dim=0)
         if begin_state is None:
             begin_state = self.begin_state()
 
@@ -646,7 +646,7 @@ class FusedRNNCell(BaseRNNCell):
         if self._mode == 'lstm':
             states = {'state': states[0], 'state_cell': states[1]}
         else:
-            states = {'state': states}
+            states = {'state': states[0]}
 
         rnn = symbol.RNN(data=inputs, parameters=self._parameter,
                          state_size=self._num_hidden, num_layers=self._num_layers,
@@ -660,7 +660,7 @@ class FusedRNNCell(BaseRNNCell):
         elif self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]
         else:
-            outputs, states = rnn[0], rnn[1]
+            outputs, states = rnn[0], [rnn[1]]
 
         if not merge_outputs:
             warnings.warn("Call FusedRNNCell.unroll with merge_outputs=True "
@@ -900,7 +900,7 @@ class DropoutCell(ModifierCell):
         if self.dropout_outputs > 0:
             output = symbol.Dropout(data=output, p=self.dropout_outputs)
         if self.dropout_states > 0:
-            states = symbol.Dropout(data=states, p=self.dropout_states)
+            states = [symbol.Dropout(data=i, p=self.dropout_states) for i in states]
         return output, states
 
 
