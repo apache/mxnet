@@ -1,10 +1,12 @@
-# pylint: disable=too-many-instance-attributes, too-many-arguments
+# pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access
+# pylint: disable=too-many-public-methods
 """A `BucketingModule` implement the `BaseModule` API, and allows multiple
 symbols to be used depending on the `bucket_key` provided by each different
 mini-batch of data.
 """
 
 import logging
+import warnings
 
 from .. import context as ctx
 
@@ -233,7 +235,7 @@ class BucketingModule(BaseModule):
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
-             grad_req='write', bucket_key=None):
+             grad_req='write'):
         """Binding for a `BucketingModule` means setting up the buckets and bind the
         executor for the default bucket key. Executors corresponding to other keys are
         binded afterwards with `switch_bucket`.
@@ -278,10 +280,7 @@ class BucketingModule(BaseModule):
         self.inputs_need_grad = inputs_need_grad
         self.binded = True
 
-        if bucket_key is None:
-            bucket_key = self._default_bucket_key
-
-        symbol, data_names, label_names = self._sym_gen(bucket_key)
+        symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list,
                         fixed_param_names=self._fixed_param_names,
@@ -289,7 +288,7 @@ class BucketingModule(BaseModule):
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None, grad_req=grad_req)
         self._curr_module = module
-        self._buckets[bucket_key] = module
+        self._buckets[self._default_bucket_key] = module
 
         # copy back saved params, if already initialized
         if self.params_initialized:
