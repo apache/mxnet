@@ -124,3 +124,4 @@ List of Contributors
 * [Chihiro Komaki](https://github.com/ckomaki)
 * [Piyush Singh](https://github.com/Piyush3dB)
 * [Freddy Chua](https://github.com/freddycct)
+* [Jie Zhang](https://github.com/luoyetx)
