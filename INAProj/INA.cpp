@@ -12,6 +12,7 @@
 #include <string.h>
 #include "INAAtomics.h"
 #include <math.h>
+#include <unordered_set>
 using namespace std;
 
 #define FLOAT_COUNT 104857600 //400MB
@@ -68,6 +69,44 @@ void GetRange(
 		//1 proc work on multiple copies
 	}
 }
+
+#pragma region OverheadProbe
+
+void RunOverheadProbe(int proc, void* args) {}
+
+#pragma endregion
+
+
+#pragma region Baseline
+
+void RunBaseline(int proc, void* args)
+{
+	//one core
+	for (int cp = 0; cp < COPIES; cp++)
+	{
+		for (int i = 0; i < FLOAT_COUNT; i++)
+		{
+			Outputs[i] += Inputs[i];
+		}
+	}
+}
+
+#pragma endregion
+
+#pragma region Optimal
+void RunOptimal(int proc, void* args)
+{
+	//one core, scan once and touch once.
+	var dumbSum = 0;
+	for (int i = 0; i < FLOAT_COUNT; i++)
+	{
+		dumbSum += Inputs[i];
+	}
+	//do a memcpy
+	memcpy(Outputs, Inputs, FLOAT_COUNT * sizeof(real_t));
+}
+#pragma endregion
+
 #pragma region RunNaivePass
 typedef union
 {
@@ -103,7 +142,7 @@ void RunNaivePass(int proc, void* additionalArgs)
 }
 #pragma endregion
 
-#pragma region MyRegion
+#pragma region RunReductionTree
 
 class ReductionTreeScratch
 {
@@ -199,6 +238,47 @@ void RunNaiveReductionTreePass(int proc, void* additionalArgs)
 
 #pragma endregion
 
+#pragma region RunShardedStridedFlatPass
+void RunShardedFlatPass(int proc, void* additionalArgs)
+{
+	var start = 0;
+	var end = 0;
+	var copyId = 0;
+	var numProcs = PROC_CNT;
+	GetRange(FLOAT_COUNT, 1, numProcs, proc, copyId, start, end);
+	assert(end != 0);
+	var chunkSize = CACHE_LINE_SIZE / sizeof(real_t);
+	real_t chunk[chunkSize];
+	real_t temp[chunkSize];
+	var totalChunks = (end - start) * sizeof(real_t) / CACHE_LINE_SIZE;
+	var lastChunkSize = (end - start) * sizeof(real_t) % CACHE_LINE_SIZE;
+	if (lastChunkSize != 0) totalChunks++;
+	for (int ch = 0; ch < totalChunks; ch++)
+	{
+		memset(chunk, 0, CACHE_LINE_SIZE);
+		var toCopy = CACHE_LINE_SIZE;
+		if (totalChunks != 0 && ch == totalChunks - 1)
+		{
+			//last chunk don't copy 64bytes
+			toCopy = lastChunkSize;
+		}
+		for (int cp = 0; cp < COPIES; cp++)
+		{
+			memcpy(temp, Inputs + ch *chunkSize, toCopy);
+			for (int i = 0; i < toCopy / sizeof(real_t); i++)
+			{
+				chunk[i] += temp[i];
+			}
+		}
+		//all copies done.
+		//save this chunk
+		memcpy(Outputs, Outputs + ch * chunkSize, toCopy);
+	}
+}
+#pragma endregion
+
+
+
 
 
 void TestIterator(
@@ -228,50 +308,107 @@ void TestIterator(
 	double delayms = std::chrono::duration_cast<std::chrono::milliseconds>(endNow - start).count();
 	cout << "[" << identifier << "] Average Time=" << delayms / iterations <<
 		"ms | Throughput=" <<
-		(1000 * iterations / delayms) * FLOAT_COUNT * 4 / 1024 / 1024 / 1024 <<
+		(1000 * iterations / delayms) * FLOAT_COUNT * sizeof(real_t) / 1024 / 1024 / 1024 <<
 		"GB/s" <<
 		endl;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	const char* OverheadProbe = "OVERHEAD";
+	const char* Baseline = "BASELINE";
+	const char* Optimal = "OPTIMAL";
+	const char* NaivePass = "NAIVE_FLAT_PASS";
+	const char* ReductionTree = "NAIVE_REDUCTION_TREE_BASE2";
+	const char* NaiveShardedStridedPass = "NAIVE_SHARDED_STRIDED_FLAT_PASS";
+	unordered_set<string> acceptedSet;
+	//printf("%d test selected\n", argc);
+	for (int i = 1; i < argc; i++)
+	{
+		var bench = string(argv[i]);
+		acceptedSet.insert(bench);
+	}
 	int numProcs = PROC_CNT;
 	vector<INAKernel> kernels;
 	vector<void*> args;
-#pragma region RunNaivePass
-	const char* NaivePass = "NAIVE FLAT PASS";
-	goto REDUCTIONTREE;
+#pragma region OverheadProbe
 	kernels.clear();
 	args.clear();
 	for (int i = 0; i < numProcs; i++)
 	{
-		kernels.push_back(RunNaivePass);
+		kernels.push_back(RunOverheadProbe);
 		args.push_back(NULL);
 	}
-	TestIterator(ITERATION, kernels, args, string(NaivePass));
+	TestIterator(ITERATION, kernels, args, string(OverheadProbe));
+#pragma endregion
+#pragma region Baseline
+	//mandatory run.
+	kernels.clear();
+	args.clear();
+	kernels.push_back(RunBaseline);
+	args.push_back(NULL);
+	TestIterator(ITERATION, kernels, args, string(Baseline));
+#pragma endregion
+
+#pragma region Optimal
+	kernels.clear();
+	args.clear();
+	kernels.push_back(RunOptimal);
+	args.push_back(NULL);
+	TestIterator(ITERATION, kernels, args, string(Optimal));
+#pragma endregion
+
+
+#pragma region RunNaivePass
+	if (acceptedSet.count(string(NaivePass)) != 0)
+	{
+		kernels.clear();
+		args.clear();
+		for (int i = 0; i < numProcs; i++)
+		{
+			kernels.push_back(RunNaivePass);
+			args.push_back(NULL);
+		}
+		TestIterator(ITERATION, kernels, args, string(NaivePass));
+	}
 #pragma endregion
 
 #pragma region RunReductionTree
-	REDUCTIONTREE :
-				  kernels.clear();
-				  args.clear();
-				  const char* ReductionTree = "NAIVE REDUCTION TREE BASE-2";
-				  ReductionTreeArgs redArgs;
-				  redArgs.Base = 2;
-				  reductionTreeScratches = new ReductionTreeScratch[PROC_CNT];
-				  //use no more than this.
-				  for (int i = 0; i < numProcs; i++)
-				  {
-					  reductionTreeScratches[i].Scratch = new real_t[FLOAT_COUNT];
-					  reductionTreeScratches[i].sid = i;
-					  args.push_back(&redArgs);
-					  kernels.push_back(RunNaiveReductionTreePass);
-				  }
-				  TestIterator(ITERATION, kernels, args, string(ReductionTree));
-				  for (int i = 0; i < numProcs; i++)
-				  {
-					  delete reductionTreeScratches[i].Scratch;
-				  }
-				  delete reductionTreeScratches;
+	if (acceptedSet.count(string(ReductionTree)) != 0)
+	{
+		kernels.clear();
+		args.clear();
+		ReductionTreeArgs redArgs;
+		redArgs.Base = 2;
+		reductionTreeScratches = new ReductionTreeScratch[PROC_CNT];
+		//use no more than this.
+		for (int i = 0; i < numProcs; i++)
+		{
+			reductionTreeScratches[i].Scratch = new real_t[FLOAT_COUNT];
+			reductionTreeScratches[i].sid = i;
+			args.push_back(&redArgs);
+			kernels.push_back(RunNaiveReductionTreePass);
+		}
+		TestIterator(ITERATION, kernels, args, string(ReductionTree));
+		for (int i = 0; i < numProcs; i++)
+		{
+			delete reductionTreeScratches[i].Scratch;
+		}
+		delete reductionTreeScratches;
+	}
+#pragma endregion
+
+#pragma region RunShardedStridedFlatPass
+	if (acceptedSet.count(string(NaiveShardedStridedPass)) != 0)
+	{
+		kernels.clear();
+		args.clear();
+		for (int i = 0; i < numProcs; i++)
+		{
+			kernels.push_back(RunShardedFlatPass);
+			args.push_back(NULL);
+		}
+		TestIterator(ITERATION, kernels, args, string(NaiveShardedStridedPass));
+	}
 #pragma endregion
 }
