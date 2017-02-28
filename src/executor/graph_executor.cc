@@ -8,6 +8,7 @@
 #include <nnvm/pass_functions.h>
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 #include "./exec_pass.h"
 #include "./graph_executor.h"
@@ -446,6 +447,7 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   using PoolEntry = std::pair<Context, size_t>;
   std::vector<PoolEntry> pool_info;
 
+
   // assign array to head gradient
   for (size_t i = num_forward_inputs_; i < idx.input_nodes().size(); ++i) {
     uint32_t nid = idx.input_nodes().at(i);
@@ -479,15 +481,22 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
     size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
     free_pool.insert(std::make_pair(bytes, nd));
   }
+  // allocate largest ndarrays first, to make best use of available space
+  std::vector<int> pool_info_desc_size_indices(pool_info.size());
+  std::iota(pool_info_desc_size_indices.begin(), pool_info_desc_size_indices.end(), 0);
+  std::sort(pool_info_desc_size_indices.begin(), pool_info_desc_size_indices.end(),
+    [&pool_info](int idx1, int idx2) {return pool_info[idx1].second > pool_info[idx2].second;});
+
+  std::map<size_t, NDArray> data_pool_by_idx;
   // remake the data pool
-  data_pool_.clear();
   for (size_t i = 0; i < pool_info.size(); ++i) {
-    const Context& ctx = pool_info[i].first;
-    size_t bytes = pool_info[i].second;
+    size_t desc_size_idx = pool_info_desc_size_indices[i];
+    const Context& ctx = pool_info[desc_size_idx].first;
+    size_t bytes = pool_info[desc_size_idx].second;
     bool allocated = false;
     for (auto it = free_pool.lower_bound(bytes); it != free_pool.end(); ++it) {
       if (it->second.ctx() == ctx && it->first >= bytes) {
-        data_pool_.push_back(it->second);
+        data_pool_by_idx[desc_size_idx] = it->second;
         free_pool.erase(it);
         allocated = true;
         break;
@@ -498,9 +507,15 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
       CHECK_LE(nword, std::numeric_limits<index_t>::max());
       // allocate float arrays
       TShape shape{index_t(nword)};
-      data_pool_.emplace_back(NDArray(shape, ctx));
+      data_pool_by_idx.emplace(desc_size_idx, NDArray(shape, ctx));
     }
   }
+
+  data_pool_.clear();
+  for (size_t i = 0; i < data_pool_by_idx.size(); ++i) {
+    data_pool_.push_back(data_pool_by_idx[i]);
+  }
+
   CHECK_EQ(data_pool_.size(), pool_info.size());
   // assign the data entries
   for (size_t i = 0; i < data_entry_.size(); ++i) {
