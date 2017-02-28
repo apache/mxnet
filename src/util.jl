@@ -18,7 +18,7 @@ function get_mnist_ubyte()
   filenames = Dict(map((x) -> x[1] => joinpath(mnist_dir, x[2]), filenames))
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
-      mnist_dir = download("http://data.dmlc.ml/mxnet/data/mnist.zip", "mnist.zip")
+      mnist_dir = download("http://data.mxnet.io/mxnet/data/mnist.zip", "mnist.zip")
         try
           run(`unzip -u $mnist_dir`)
         catch
@@ -41,7 +41,7 @@ function get_cifar10()
   filenames = Dict(map((x) -> x[1] => joinpath(cifar10_dir, x[2]), filenames))
   if !all(isfile, values(filenames))
     cd(cifar10_dir) do
-      download("http://data.dmlc.ml/mxnet/data/cifar10.zip", "cifar10.zip")
+      download("http://data.mxnet.io/mxnet/data/cifar10.zip", "cifar10.zip")
         try
           run(`unzip -u cifar10.zip`)
         catch
