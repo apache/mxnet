@@ -32,7 +32,10 @@ class ImageRecordIOParser2 {
   // set record to the head
   inline void BeforeFirst(void) {
     if (batch_param_.round_batch == 0 || !overflow)
+    {
+      n_parsed_ = 0;
       return source_->BeforeFirst();
+    }
     else
       overflow = false;
   }
