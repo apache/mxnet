@@ -5,6 +5,7 @@
 from __future__ import absolute_import as _abs
 
 import ctypes
+import warnings
 from numbers import Number
 
 import os as _os
@@ -368,7 +369,8 @@ class Symbol(SymbolBase):
                 self.handle, c_str(key), c_str(str(value))))
 
     def get_internals(self):
-        """Get a new grouped symbol whose output contains all the internal outputs of this symbol.
+        """Get a new grouped symbol whose output contains
+        internal outputs of this symbol.
 
         Returns
         -------
@@ -379,6 +381,24 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolGetInternals(
             self.handle, ctypes.byref(handle)))
         return Symbol(handle=handle)
+
+    def get_children(self):
+        """Get a new grouped symbol whose output contains
+        inputs to output nodes of the original symbol
+
+        Returns
+        -------
+        sgroup : Symbol or None
+            The children of the head node. If the symbol has no
+            inputs None will be returned.
+        """
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetChildren(
+            self.handle, ctypes.byref(handle)))
+        ret = Symbol(handle=handle)
+        if len(ret.list_outputs()) == 0:
+            return None
+        return ret
 
     def list_arguments(self):
         """List all the arguments in the symbol.
@@ -539,7 +559,23 @@ class Symbol(SymbolBase):
             The order is in the same order as list_auxiliary()
         """
         try:
-            return self._infer_shape_impl(False, *args, **kwargs)
+            res = self._infer_shape_impl(False, *args, **kwargs)
+            if res[1] is None:
+                arg_shapes, _, _ = self._infer_shape_impl(True, *args, **kwargs)
+                arg_names = self.list_arguments()
+                unknowns = []
+                for name, shape in zip(arg_names, arg_shapes):
+                    if not shape or not _numpy.prod(shape):
+                        if len(unknowns) >= 10:
+                            unknowns.append('...')
+                            break
+                        unknowns.append('%s: %s'%(name, str(shape)))
+                warnings.warn(
+                    "Cannot decide shape for the following arguments " +
+                    "(0s in shape means unknown dimensions). " +
+                    "Consider providing them as input:\n\t" +
+                    "\n\t".join(unknowns), stacklevel=2)
+            return res
         except MXNetError:
             print("infer_shape error. Arguments:")
             for i, arg in enumerate(args):

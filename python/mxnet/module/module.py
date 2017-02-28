@@ -5,6 +5,7 @@ more `Executor` for data parallelization.
 """
 
 import logging
+import warnings
 
 from .. import context as ctx
 from .. import ndarray as nd
@@ -15,8 +16,9 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 
-from .base_module import BaseModule
+from .base_module import BaseModule, _check_input_names
 from ..io import DataDesc
+
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -38,9 +40,13 @@ class Module(BaseModule):
         Default `None`, indicating uniform workload.
     fixed_param_names: list of str
         Default `None`, indicating no network parameters are fixed.
+    state_names : list of str
+        states are similar to data and label, but not provided by data iterator.
+        Instead they are initialized to 0 and can be set by set_states()
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
-                 logger=logging, context=ctx.cpu(), work_load_list=None, fixed_param_names=None):
+                 logger=logging, context=ctx.cpu(), work_load_list=None,
+                 fixed_param_names=None, state_names=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -53,16 +59,24 @@ class Module(BaseModule):
 
         self._symbol = symbol
 
-        data_names = list(data_names)
+        data_names = list(data_names) if data_names is not None else []
         label_names = list(label_names) if label_names is not None else []
+        state_names = list(state_names) if state_names is not None else []
+        fixed_param_names = list(fixed_param_names) if fixed_param_names is not None else []
+
+        _check_input_names(symbol, data_names, "data", True)
+        _check_input_names(symbol, label_names, "label", False)
+        _check_input_names(symbol, state_names, "state", True)
+        _check_input_names(symbol, fixed_param_names, "fixed_param", True)
 
         arg_names = symbol.list_arguments()
-        input_names = data_names + label_names
+        input_names = data_names + label_names + state_names
         self._param_names = [x for x in arg_names if x not in input_names]
         self._fixed_param_names = fixed_param_names
         self._aux_names = symbol.list_auxiliary_states()
         self._data_names = data_names
         self._label_names = label_names
+        self._state_names = state_names
         self._output_names = symbol.list_outputs()
 
         self._arg_params = None
@@ -342,7 +356,8 @@ class Module(BaseModule):
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
-                                                     grad_req=grad_req)
+                                                     grad_req=grad_req,
+                                                     state_names=self._state_names)
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params
@@ -402,10 +417,12 @@ class Module(BaseModule):
         (kvstore, update_on_kvstore) = \
                 _create_kvstore(kvstore, len(self._context), self._arg_params)
 
+        batch_size = self._exec_group.batch_size
+        if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:
+            batch_size *= kvstore.num_workers
+        rescale_grad = 1.0/batch_size
+
         if isinstance(optimizer, str):
-            batch_size = self._exec_group.batch_size
-            if kvstore and kvstore.type == 'dist_sync':
-                batch_size *= kvstore.num_workers
             idx2name = {}
             if update_on_kvstore:
                 idx2name.update(enumerate(self._exec_group.param_names))
@@ -415,12 +432,19 @@ class Module(BaseModule):
                                      for i, n in enumerate(self._exec_group.param_names)})
             optimizer_params = dict(optimizer_params)
             if 'rescale_grad' not in optimizer_params:
-                optimizer_params['rescale_grad'] = 1.0/batch_size
+                optimizer_params['rescale_grad'] = rescale_grad
             optimizer = opt.create(optimizer,
                                    sym=self.symbol, param_idx2name=idx2name,
                                    **optimizer_params)
         else:
             assert isinstance(optimizer, opt.Optimizer)
+            if optimizer.rescale_grad != rescale_grad:
+                #pylint: disable=no-member
+                warnings.warn(
+                    "Optimizer created manually outside Module but rescale_grad " +
+                    "is not normalized to 1.0/batch_size/num_workers (%s vs. %s). "%(
+                        optimizer.rescale_grad, rescale_grad) +
+                    "Is this intended?", stacklevel=2)
 
         self._optimizer = optimizer
         self._kvstore = kvstore
@@ -543,6 +567,40 @@ class Module(BaseModule):
         """
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._exec_group.get_input_grads(merge_multi_context=merge_multi_context)
+
+    def get_states(self, merge_multi_context=True):
+        """Get states from all devices
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert self.binded and self.params_initialized
+        return self._exec_group.get_states(merge_multi_context=merge_multi_context)
+
+    def set_states(self, states=None, value=None):
+        """Set value for states. Only one of states & value can be specified.
+
+        Parameters
+        ----------
+        states : list of list of NDArrays
+            source states arrays formatted like [[state1_dev1, state1_dev2],
+            [state2_dev1, state2_dev2]].
+        value : number
+            a single scalar value for all state arrays.
+        """
+        assert self.binded and self.params_initialized
+        self._exec_group.set_states(states, value)
 
     def update_metric(self, eval_metric, labels):
         """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
