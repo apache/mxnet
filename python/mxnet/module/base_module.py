@@ -153,6 +153,7 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
+        self._total_exec_bytes = 0
 
     ################################################################################
     # High Level API

@@ -384,6 +384,7 @@ class Module(BaseModule):
                                                      fixed_param_names=self._fixed_param_names,
                                                      grad_req=grad_req,
                                                      state_names=self._state_names)
+        self._total_exec_bytes = self._exec_group._total_exec_bytes
         if shared_module is not None:
             self.params_initialized = True
             self._arg_params = shared_module._arg_params

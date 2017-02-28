@@ -108,8 +108,63 @@ def test_module_states():
     for x1, x2 in zip(out1, out2):
         assert not mx.test_utils.almost_equal(x1.asnumpy(), x2.asnumpy(), rtol=1e-3)
 
+def test_module_switch_bucket():
+    vocab_dim = 5000
+    num_hidden = 100
+    num_embedding = 100
+    num_layer = 2
+    default_key = 10
+    test_key = 5
+    batch_size = 32
+    contexts = [mx.cpu(0)]
+    initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
+
+    #generate symbols for an LSTM network
+    def sym_gen(seq_len):
+        data = mx.sym.Variable('data')
+        label = mx.sym.Variable('softmax_label')
+        embed = mx.sym.Embedding(data=data, input_dim=vocab_dim,
+                                 output_dim=num_embedding, name='embed')
+        stack = mx.rnn.SequentialRNNCell()
+        for i in range(num_layer):
+            stack.add(mx.rnn.LSTMCell(num_hidden=num_hidden, prefix='lstm_l%d_'%i))
+        outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
+
+        pred = mx.sym.Reshape(outputs, shape=(-1, num_hidden))
+        pred = mx.sym.FullyConnected(data=pred, num_hidden=vocab_dim, name='pred')
+
+        label = mx.sym.Reshape(label, shape=(-1,))
+        pred = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
+
+        return pred, ('data',), ('softmax_label',)
+
+    def create_bucketing_module(key):
+        model = mx.mod.BucketingModule(
+            sym_gen             = sym_gen,
+            default_bucket_key  = key,
+            context             = contexts)
+        model.bind([('data', (batch_size, key))],
+                    [('softmax_label', (batch_size, key))], True, False)
+        model.init_params(initializer=initializer)
+        return model
+    #initialize the bucketing module with the default bucket key
+    bucketing_model = create_bucketing_module(default_key)
+    #switch to test_key
+    bucketing_model.switch_bucket(test_key, [('data', (batch_size, test_key))],
+                                  [('softmax_label', (batch_size, test_key))])
+    total_bytes_before = bucketing_model._buckets[default_key]._total_exec_bytes
+
+    #remove test_key and switch again
+    del bucketing_model._buckets[test_key]
+    bucketing_model.switch_bucket(test_key, [('data', (batch_size, test_key))],
+                                  [('softmax_label', (batch_size, test_key))])
+    total_bytes_after = bucketing_model._buckets[default_key]._total_exec_bytes
+    #the default bucket is expected to reuse the bytes allocated
+    assert total_bytes_after == total_bytes_before
+
 if __name__ == '__main__':
     test_module_states()
     test_module_reshape()
     test_save_load()
     test_module_layout()
+    test_module_switch_bucket()
