@@ -43,13 +43,29 @@ def test_symbol_internal():
     data = mx.symbol.Variable('data')
     oldfc = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
     net1 = mx.symbol.FullyConnected(data=oldfc, name='fc2', num_hidden=100)
-    net1.list_arguments() == ['data',
-                              'fc1_weight', 'fc1_bias',
-                              'fc2_weight', 'fc2_bias']
+    assert net1.list_arguments() == ['data', 'fc1_weight', 'fc1_bias', 'fc2_weight', 'fc2_bias']
+
     internal =  net1.get_internals()
     fc1 = internal['fc1_output']
     assert fc1.list_arguments() == oldfc.list_arguments()
 
+def test_symbol_children():
+    data = mx.symbol.Variable('data')
+    oldfc = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
+    net1 = mx.symbol.FullyConnected(data=oldfc, name='fc2', num_hidden=100)
+
+    assert net1.get_children().list_outputs() == ['fc1_output', 'fc2_weight', 'fc2_bias']
+    assert net1.get_children().get_children().list_outputs() == ['data', 'fc1_weight', 'fc1_bias']
+    assert net1.get_children()['fc2_weight'].list_arguments() == ['fc2_weight']
+    assert net1.get_children()['fc2_weight'].get_children() is None
+
+    data = mx.sym.Variable('data')
+    sliced = mx.sym.SliceChannel(data, num_outputs=3, name='slice')
+    concat = mx.sym.Concat(*list(sliced))
+
+    assert concat.get_children().list_outputs() == \
+        ['slice_output0', 'slice_output1', 'slice_output2']
+    assert sliced.get_children().list_outputs() == ['data']
 
 def test_symbol_pickle():
     mlist = [models.mlp2(), models.conv()]
@@ -166,6 +182,7 @@ def test_load_000800():
 
 
 if __name__ == '__main__':
+    test_symbol_children()
     test_load_000800()
     test_symbol_infer_shape_var()
     test_symbol_infer_shape()

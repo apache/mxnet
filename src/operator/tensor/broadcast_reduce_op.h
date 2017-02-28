@@ -165,11 +165,16 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
   CHECK_EQ(ishape.ndim(), param.shape.ndim())
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
+  TShape oshape = param.shape;
   for (index_t i = 0; i < ishape.ndim(); ++i) {
-    CHECK(ishape[i] == param.shape[i] || ishape[i] == 1)
-      << "Broadcasting axis must have size 1";
+    if (oshape[i] != 0) {
+      CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
+        << "Array cannot be broadcasted from " << ishape << " to " << param.shape;
+    } else {
+      oshape[i] = ishape[i];
+    }
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
 

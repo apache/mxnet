@@ -4,6 +4,10 @@
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
 
 import ctypes
 import warnings
@@ -255,7 +259,7 @@ class NDArray(NDArrayBase):
             sliced_arr = self._at(in_slice)
             sliced_arr[:] = value
             return
-        if isinstance(in_slice, slice):
+        if isinstance(in_slice, py_slice):
             if in_slice.step is not None:
                 raise ValueError('NDArray only support continuous slicing on axis 0')
             if in_slice.start is not None or in_slice.stop is not None:
@@ -276,7 +280,7 @@ class NDArray(NDArrayBase):
             my_shape = self.shape
             assert len(in_slice) == len(my_shape)
             for slice_i in in_slice:
-                assert isinstance(slice_i, (slice, int))
+                assert isinstance(slice_i, (py_slice, int))
             begin = [0 for _ in my_shape]
             end = [x for x in my_shape]
             for i, slice_i in enumerate(in_slice):
@@ -284,7 +288,7 @@ class NDArray(NDArrayBase):
                     assert slice_i < my_shape[i]
                     begin[i] = slice_i
                     end[i] = slice_i + 1
-                if isinstance(slice_i, slice):
+                if isinstance(slice_i, py_slice):
                     # only support continuous slicing
                     assert slice_i.step is None
                     begin[i] = slice_i.start or 0
@@ -313,7 +317,7 @@ class NDArray(NDArrayBase):
         """Get ndarray"""
         if isinstance(in_slice, int):
             return self._at(in_slice)
-        if not isinstance(in_slice, slice) or in_slice.step is not None:
+        if not isinstance(in_slice, py_slice) or in_slice.step is not None:
             raise ValueError('NDArray only support continuous slicing on axis 0')
         if in_slice.start is not None or in_slice.stop is not None:
             return self._slice(in_slice.start, in_slice.stop)

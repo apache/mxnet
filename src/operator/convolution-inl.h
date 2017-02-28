@@ -406,9 +406,6 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_y <= dshape[2] + 2 * param_.pad[0]
-            && ksize_x <= dshape[3] + 2 * param_.pad[1])
-          << "kernel size exceed input";
       Shape<4> oshape;
       oshape[0] = dshape[0];
       oshape[1] = param_.num_filter;
@@ -417,6 +414,26 @@ class ConvolutionProp : public OperatorProperty {
       oshape[3] = (dshape[3] + 2 * param_.pad[1] -
           (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
+      // Perform incomplete shape inference. Fill in the missing values in data shape.
+      // 1) We can always fill in the batch_size.
+      // 2) We can back-calculate the input height/width if the corresponding stride is 1.
+      oshape = ConvertLayout((*out_shape)[0].get<4>(), param_.layout.value(), kNCHW);
+      dshape[0] = oshape[0];
+      if (param_.stride[0] == 1) {
+        dshape[2] = oshape[2] + param_.dilate[0] * (ksize_y - 1) - 2 * param_.pad[0];
+      }
+      if (param_.stride[1] == 1) {
+        dshape[3] = oshape[3] + param_.dilate[1] * (ksize_x - 1) - 2 * param_.pad[1];
+      }
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
+                          ConvertLayout(dshape, kNCHW, param_.layout.value()));
+      // Check whether the kernel sizes are valid
+      if (dshape[2] != 0) {
+        CHECK_LE(ksize_y, dshape[2] + 2 * param_.pad[0]) << "kernel size exceed input";
+      }
+      if (dshape[3] != 0) {
+        CHECK_LE(ksize_x, dshape[3] + 2 * param_.pad[1]) << "kernel size exceed input";
+      }
       return true;
     } else if (param_.kernel.ndim() == 3) {
       // 3d conv
@@ -445,10 +462,6 @@ class ConvolutionProp : public OperatorProperty {
         << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
         << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_d <= dshape[2] + 2 * param_.pad[0]
-            && ksize_y <= dshape[3] + 2 * param_.pad[1]
-            && ksize_x <= dshape[4] + 2 * param_.pad[2])
-        << "kernel size exceed input";
       CHECK_EQ(param_.dilate.Size(), 1)
         << "Dilate is not supported in 3d convolution";
       Shape<5> oshape;
@@ -461,6 +474,32 @@ class ConvolutionProp : public OperatorProperty {
       oshape[4] = (dshape[4] + 2 * param_.pad[2] -
           (1 * (ksize_x - 1) + 1)) / param_.stride[2] + 1;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
+      // Perform incomplete shape inference. Fill in the missing values in data shape.
+      // 1) We can always fill in the batch_size.
+      // 2) We can back-calculate the input depth/height/width if the corresponding stride is 1.
+      oshape = ConvertLayout((*out_shape)[0].get<5>(), param_.layout.value(), kNCDHW);
+      dshape[0] = oshape[0];
+      if (param_.stride[0] == 1) {
+        dshape[2] = oshape[2] + 1 * (ksize_d - 1) - 2 * param_.pad[0];
+      }
+      if (param_.stride[1] == 1) {
+        dshape[3] = oshape[3] + 1 * (ksize_y - 1) - 2 * param_.pad[1];
+      }
+      if (param_.stride[2] == 1) {
+        dshape[4] = oshape[4] + 1 * (ksize_x - 1) - 2 * param_.pad[2];
+      }
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
+                          ConvertLayout(dshape, kNCDHW, param_.layout.value()));
+      // Check whether the kernel sizes are valid
+      if (dshape[2] != 0) {
+        CHECK_LT(ksize_d, dshape[2] + 2 * param_.pad[0]) << "kernel size exceed input";
+      }
+      if (dshape[3] != 0) {
+        CHECK_LE(ksize_y, dshape[3] + 2 * param_.pad[1]) << "kernel size exceed input";
+      }
+      if (dshape[4] != 0) {
+        CHECK_LE(ksize_x, dshape[4] + 2 * param_.pad[2]) << "kernel size exceed input";
+      }
       return true;
     } else {
       LOG(FATAL) << "Unknown convolution type";

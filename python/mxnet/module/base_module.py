@@ -1,8 +1,9 @@
 # pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
 """`BaseModule` defines an API for modules."""
 
-import logging
 import time
+import logging
+import warnings
 
 from .. import metric
 from .. import ndarray
@@ -27,6 +28,25 @@ def _as_list(obj):
     else:
         return [obj]
 
+def _check_input_names(symbol, names, typename, throw):
+    """Check that all input names are in symbol's argument"""
+    args = symbol.list_arguments()
+    for name in names:
+        if name in args:
+            continue
+        candidates = [arg for arg in args if
+                      not arg.endswith('_weight') and
+                      not arg.endswith('_bias') and
+                      not arg.endswith('_gamma') and
+                      not arg.endswith('_beta')]
+        msg = "\033[91mYou created Module with Module(..., %s_names=%s) but " \
+              "input with name '%s' is not found in symbol.list_arguments(). " \
+              "Did you mean one of:\n\t%s\033[0m"%(
+                  typename, str(names), name, '\n\t'.join(candidates))
+        if throw:
+            raise ValueError(msg)
+        else:
+            warnings.warn(msg)
 
 class BaseModule(object):
     """The base class of a modules. A module represents a computation component. The design
@@ -599,6 +619,41 @@ class BaseModule(object):
             else:
                 raise ValueError("Invalid param file " + fname)
         self.set_params(arg_params, aux_params)
+
+    def get_states(self, merge_multi_context=True):
+        """Get states from all devices
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert self.binded and self.params_initialized
+        assert not merge_multi_context
+        return []
+
+    def set_states(self, states=None, value=None):
+        """Set value for states. Only one of states & value can be specified.
+
+        Parameters
+        ----------
+        states : list of list of NDArrays
+            source states arrays formatted like [[state1_dev1, state1_dev2],
+            [state2_dev1, state2_dev2]].
+        value : number
+            a single scalar value for all state arrays.
+        """
+        assert self.binded and self.params_initialized
+        assert not states and not value
 
     def install_monitor(self, mon):
         """Install monitor on all executors"""
