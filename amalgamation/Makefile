@@ -66,7 +66,7 @@ mxnet_predict-all.o: mxnet_predict-all.cc
 libmxnet_predict.a: mxnet_predict-all.o
 	ar rcs libmxnet_predict.a $+
 
-jni_libmxnet_predict.o: mxnet_predict-all.cc
+jni_libmxnet_predict.o: mxnet_predict-all.cc jni/predictor.cc 
 	${CXX} ${CFLAGS} -fPIC -o $@ -c jni/predictor.cc
 
 jni_libmxnet_predict.so: jni_libmxnet_predict.o

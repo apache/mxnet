@@ -102,10 +102,10 @@ if [ ${TASK} == "python_test" ]; then
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         python -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/unittest || exit -1
-        make cython3
+        # make cython3
         # cython tests
-        export MXNET_ENFORCE_CYTHON=1
-        python3 -m nose tests/python/unittest || exit -1
+        # export MXNET_ENFORCE_CYTHON=1
+        # python3 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/train || exit -1
     else
         nosetests tests/python/unittest || exit -1
