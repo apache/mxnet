@@ -35,7 +35,14 @@ parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size.')
 parser.add_argument('--disp-batches', type=int, default=50,
                     help='show progress for every n batches')
-
+# When training a deep, complex model, it's recommended to stack fused RNN cells (one
+# layer per cell) together instead of one with all layers. The reason is that fused RNN
+# cells doesn't set gradients to be ready until the computation for the entire layer is
+# completed. Breaking a multi-layer fused RNN cell into several one-layer ones allows
+# gradients to be processed ealier. This reduces communication overhead, especially with
+# multiple GPUs.
+parser.add_argument('--stack-rnn', default=False,
+                    help='stack fused RNN cells to reduce communication overhead')
 
 #buckets = [32]
 buckets = [10, 20, 30, 40, 50, 60]
@@ -64,15 +71,7 @@ def get_data(layout):
 
 def train(args):
     data_train, data_val, vocab = get_data('TN')
-
-    # When training a deep, complex model, it's recommended to stack fused RNN cells (one
-    # layer per cell) together instead of one with all layers. The reason is that fused RNN
-    # cells doesn't set gradients to be ready until the computation for the entire layer is
-    # completed. Breaking a multi-layer fused RNN cell into several one-layer ones allows
-    # gradients to be processed ealier. This reduces communication overhead, especially with
-    # multiple GPUs.
-    stack_fused_rnn = args.num_layers >= 4
-    if stack_fused_rnn:
+    if args.stack_rnn:
         cells = []
         for layer in xrange(args.num_layers):
             cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1, mode='lstm', prefix='fused_rnn' + str(layer))
@@ -85,7 +84,7 @@ def train(args):
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab), output_dim=args.num_embed,name='embed')
 
-        if stack_fused_rnn:
+        if args.stack_rnn:
             output = embed
             for i in xrange(args.num_layers):
                 cells[i].reset()
