@@ -21,7 +21,7 @@
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
-
+#include <mxnet/storage.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -346,7 +346,22 @@ class MKLConvolutionOp : public Operator {
     }
 #endif
   }
-
+  void AddToModeAllocAndStoreBuffer(void *src, int blob_size, Storage::Handle *pws) {
+    int blob_byte_size = blob_size * sizeof(DType);
+    *pws = Storage::Get()->Alloc(blob_byte_size, Context::CPU());
+    memcpy(pws->dptr, src, blob_byte_size);
+  }
+  void AddToModeAddAndReleaseBuffer(Storage::Handle *pws, void *dst_, int blob_size) {
+    DType *dst = reinterpret_cast<DType*>(dst_);
+    DType *src = reinterpret_cast<DType*>(pws->dptr);
+#pragma omp parallel for
+    for (int i = 0; i < blob_size; i++) {
+      dst[i] += src[i];
+    }
+    if (pws->dptr)
+      Storage::Get()->Free(*pws);
+    pws->dptr = NULL;
+  }
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -404,6 +419,7 @@ class MKLConvolutionOp : public Operator {
 #endif
       res_convolutionBwdData[dnnResourceFilter] =
         bwdd_filter_data->get_converted_prv(wmat.dptr_, false, in_weight_mem);
+     Storage::Handle addtoWorkspace;
      if (bwdd_bottom_diff->conversion_needed()) {
        res_convolutionBwdData[dnnResourceDiffSrc] =
          reinterpret_cast<void *>(bwdd_bottom_diff->prv_ptr());
@@ -414,6 +430,10 @@ class MKLConvolutionOp : public Operator {
 #endif
      } else {
        res_convolutionBwdData[dnnResourceDiffSrc] = gdata.dptr_;
+       if (req[0] == kAddTo) {
+         // wait mkl support addto mode
+         AddToModeAllocAndStoreBuffer(gdata.dptr_, in_grad[conv::kData].Size(), &addtoWorkspace);
+       }
      }
      status = dnnExecute<DType>(convolutionBwdData, res_convolutionBwdData);
      CHECK_EQ(status, 0) << "Backward Data conv failed with status " << status;
@@ -422,6 +442,9 @@ class MKLConvolutionOp : public Operator {
        bwdd_bottom_diff->convert_from_prv(gdata.dptr_);
      }
 #endif
+     if (!bwdd_bottom_diff->conversion_needed() && req[0] == kAddTo) {
+       AddToModeAddAndReleaseBuffer(&addtoWorkspace, gdata.dptr_, in_grad[conv::kData].Size());
+     }
     }
     if (req[1]) {
       void *res_convolutionBwdFilter[dnnResourceNumber];
@@ -441,6 +464,7 @@ class MKLConvolutionOp : public Operator {
       res_convolutionBwdFilter[dnnResourceSrc] =
         bwdf_bottom_data->get_converted_prv(data.dptr_, false,
                                             in_data_mem);
+     Storage::Handle addtoWorkspace;
      if (bwdf_filter_diff->conversion_needed()) {
 #if MKL_EXPERIMENTAL == 1
        std::shared_ptr<MKLMemHolder> gwamt_mem =
@@ -451,6 +475,10 @@ class MKLConvolutionOp : public Operator {
          reinterpret_cast<void *>(bwdf_filter_diff->prv_ptr());
      } else {
        res_convolutionBwdFilter[dnnResourceDiffFilter] = gwmat.dptr_;
+       if (req[0] == kAddTo) {
+         // wait mkl support addto mode
+         AddToModeAllocAndStoreBuffer(gwmat.dptr_, in_grad[conv::kWeight].Size(), &addtoWorkspace);
+       }
      }
      status = dnnExecute<DType>(convolutionBwdFilter, res_convolutionBwdFilter);
      CHECK_EQ(status, 0) << "Backward Filter conv failed with status " << status;
@@ -459,6 +487,9 @@ class MKLConvolutionOp : public Operator {
        bwdf_filter_diff->convert_from_prv(gwmat.dptr_);
      }
 #endif
+     if (!bwdd_bottom_diff->conversion_needed() && req[0] == kAddTo) {
+       AddToModeAddAndReleaseBuffer(&addtoWorkspace, gwmat.dptr_, in_grad[conv::kWeight].Size());
+     }
     }
     if (!param_.no_bias) {
       Tensor<xpu, 1, DType> gbias =
