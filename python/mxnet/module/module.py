@@ -238,22 +238,10 @@ class Module(BaseModule):
             If true, will force re-initialize even if already initialized.
         """
         if self.params_initialized and not force_init:
+            warnings.warn("Parameters already initialized and force_init=False. "
+                          "init_params call ignored.", stacklevel=2)
             return
         assert self.binded, 'call bind before initializing the parameters'
-
-        if self._arg_params is None:
-            param_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
-                for x in self._exec_group.param_arrays
-            ]
-            self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
-
-        if self._aux_params is None:
-            aux_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
-                for x in self._exec_group.aux_arrays
-            ]
-            self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         def _impl(name, arr, cache):
             """Internal helper for parameter initialization"""
@@ -286,6 +274,44 @@ class Module(BaseModule):
 
         # copy the initialized parameters to devices
         self._exec_group.set_params(self._arg_params, self._aux_params)
+
+    def set_params(self, arg_params, aux_params, allow_missing=False, force_init=True):
+        """Assign parameter and aux state values.
+
+        Parameters
+        ----------
+        arg_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        aux_params : dict
+            Dictionary of name to value (`NDArray`) mapping.
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+
+        Examples
+        --------
+        An example of setting module parameters::
+            >>> sym, arg_params, aux_params = \
+            >>>     mx.model.load_checkpoint(model_prefix, n_epoch_load)
+            >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
+        """
+        if not allow_missing:
+            self.init_params(initializer=None, arg_params=arg_params, aux_params=aux_params,
+                             allow_missing=allow_missing, force_init=force_init)
+            return
+
+        if self.params_initialized and not force_init:
+            warnings.warn("Parameters already initialized and force_init=False. "
+                          "set_params call ignored.", stacklevel=2)
+            return
+
+        self._exec_group.set_params(arg_params, aux_params)
+
+        # because we didn't update self._arg_params, they are dirty now.
+        self._params_dirty = True
+        self.params_initialized = True
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
@@ -366,9 +392,23 @@ class Module(BaseModule):
             # if the parameters are already initialized, we are re-binding
             # so automatically copy the already initialized params
             self._exec_group.set_params(self._arg_params, self._aux_params)
+        else:
+            assert self._arg_params is None and self._aux_params is None
+            param_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.param_arrays
+            ]
+            self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
+
+            aux_arrays = [
+                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                for x in self._exec_group.aux_arrays
+            ]
+            self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
+
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshape the module for new input shapes.
@@ -619,6 +659,7 @@ class Module(BaseModule):
         latest parameters from `self._arg_params` and `self._aux_params`.
         """
         self._exec_group.get_params(self._arg_params, self._aux_params)
+        self._params_dirty = False
 
     def save_optimizer_states(self, fname):
         """Save optimizer (updater) state to file
