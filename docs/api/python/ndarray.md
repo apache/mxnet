@@ -185,6 +185,69 @@ In the rest of this document, we first overview the methods provided by the
     ones
     full
     arange
+    load
+    save
+```
+
+## Array manipulation routines
+
+### Changing array shape and type
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    cast
+    reshape
+    flatten
+    expand_dims
+```
+
+### Expanding array elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    broadcast_to
+    broadcast_axes
+    repeat
+    tile
+    pad
+```
+
+### Rearranging elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    transpose
+    swapaxes
+    flip
+```
+
+### Joining and splitting arrays
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    concat
+    split
+```
+
+### Indexing routines
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    slice
+    slice_axis
+    take
+    batch_take
+    one_hot
 ```
 
 ## Mathematical functions
@@ -304,6 +367,30 @@ In the rest of this document, we first overview the methods provided by the
     lesser
     lesser_equal
 ```
+### Random sampling
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    uniform
+    normal
+    mxnet.random.seed
+```
+
+### Sorting and searching
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sort
+    topk
+    argsort
+    argmax
+    argmin
+```
+
 ### Miscellaneous
 
 ```eval_rst
@@ -319,227 +406,65 @@ In the rest of this document, we first overview the methods provided by the
     gammaln
 ```
 
-## Array manipulation routines
-
-### Changing array shape and type
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    cast
-    reshape
-    flatten
-    expand_dims
-```
-
-### Expanding array elements
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    broadcast_to
-    broadcast_axes
-    repeat
-    tile
-    pad
-```
-
-### Rearranging elements
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    transpose
-    swapaxes
-    flip
-```
-
-### Joining and splitting arrays
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    concat
-    split
-```
-
-### Random sampling
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    uniform
-    normal
-    mxnet.random.seed
-```
-## Indexing routines
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    slice
-    slice_axis
-    take
-    batch_take
-    one_hot
-```
-
-## Input and output
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    load
-    save
-```
-
-
-## Sorting and searching
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sort
-    topk
-    argsort
-    argmax
-    argmin
-```
-
-
 ## Neural network
 
-### Fully-connection
+### Basic
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
     FullyConnected
-```
-
-### Convolution
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
     Convolution
-    Correlation --> http://dsp.stackexchange.com/questions/12684/difference-between-correlation-and-convolution-on-an-image
-    Deconvolution
-```
-
-### Recurrent layers
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    RNN
-```
-
-### Embedding
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    Embedding
-```
-
-### Activation
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
     Activation
-    LeakyReLU
-    SoftmaxActivation --> softmax
+    BatchNorm
+    Pooling
+    SoftmaxOutput
 ```
 
-### Normalization
+### More
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    BatchNorm
+    Correlation
+    Deconvolution
+    RNN
+    Embedding
+    LeakyReLU
     InstanceNorm
     L2Normalization
     LRN
-```
-
-
-### Sampling
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    Pooling
     ROIPooling
+    SoftmaxActivation
     Dropout
     BilinearSampler
     GridGenerator
     UpSampling
     SpatialTransformer
-```
-
-### Loss
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        SoftmaxOutput
-        LinearRegressionOutput
-        LogisticRegressionOutput
-        MAERegressionOutput
-        SVMOutput
-        softmax_cross_entropy
-```
-
-### Regularization
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        smooth_l1
-        IdentityAttachKLSparseReg
-```
-### Utilities
-
-```eval_rst
-    .. autosummary::
-        :nosignatures:
-
-        MakeLoss
-        BlockGrad
-        Custom
+    LinearRegressionOutput
+    LogisticRegressionOutput
+    MAERegressionOutput
+    SVMOutput
+    softmax_cross_entropy
+    smooth_l1
+    IdentityAttachKLSparseReg
+    MakeLoss
+    BlockGrad
+    Custom
 ```
 
 ### Weight updating functions
 
-remove from symbol
-
 ```eval_rst
-    .. autosummary::
-        :nosignatures:
+.. autosummary::
+    :nosignatures:
 
-        adam_update
-        rmsprop_update
-        sgd_mom_update
-        sgd_update
+    adam_update
+    rmsprop_update
+    sgd_mom_update
+    sgd_update
 ```
 
 ## API Reference

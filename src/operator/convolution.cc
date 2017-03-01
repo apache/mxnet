@@ -91,10 +91,14 @@ For general 2-D convolution, the shapes are
 - **bias**: *(num_filter,)*
 - **out**: *(batch_size, num_filter, out_height, out_weight)*.
 
-Define *f(x,k,p,s) = ceil((x+2*p-k+1)/s)*, then we have::
+Define::
 
-  out_height=f(height, kernel[0], pad[0], stride[0])
-  out_weight=f(weight, kernel[1], pad[1], stride[1])
+  f(x,k,p,s,d) = floor((x+2*p-d*(k-1)-1)/s)+1
+
+then we have::
+
+  out_height=f(height, kernel[0], pad[0], stride[0], dilate[0])
+  out_weight=f(weight, kernel[1], pad[1], stride[1], dilate[1])
 
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
@@ -118,6 +122,8 @@ weight. The shapes are
 - **bias**: *(num_filter,)*
 - **out**: *(batch_size, num_filter, out_depth, out_height, out_weight)*.
 
+Both ``weight`` and ``bias`` are learnable parameters.
+
 There are other options to tune the performance.
 
 - **cudnn_tune**: enable this option leads to higher startup time but may give
@@ -133,6 +139,7 @@ There are other options to tune the performance.
 
 - **workspace**: A large number leads to more (GPU) memory usage but may improve
   the performance.
+
 )code" ADD_FILELINE)
 .add_argument("data", "ndarray-or-symbol", "Input data to the ConvolutionOp.")
 .add_argument("weight", "ndarray-or-symbol", "Weight matrix.")
