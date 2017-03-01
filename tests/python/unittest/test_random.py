@@ -32,7 +32,7 @@ def check_symbolic_random(dev):
     xgrad = mx.nd.zeros(shape, ctx=dev)
     yexec = Y.bind(dev, {'X' : x}, {'X': xgrad})
     mx.random.seed(128)
-    yexec.forward()
+    yexec.forward(is_train=True)
     yexec.backward(yexec.outputs[0])
     un1 = (yexec.outputs[0] - x).copyto(dev)
     assert same(xgrad.asnumpy(), un1.asnumpy())

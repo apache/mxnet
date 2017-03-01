@@ -308,7 +308,7 @@ class RNNCell(BaseRNNCell):
         output = self._get_activation(i2h + h2h, self._activation,
                                       name='%sout'%name)
 
-        return output, output
+        return output, [output]
 
 
 class LSTMCell(BaseRNNCell):
@@ -646,7 +646,7 @@ class FusedRNNCell(BaseRNNCell):
         if self._mode == 'lstm':
             states = {'state': states[0], 'state_cell': states[1]}
         else:
-            states = {'state': states}
+            states = {'state': states[0]}
 
         rnn = symbol.RNN(data=inputs, parameters=self._parameter,
                          state_size=self._num_hidden, num_layers=self._num_layers,
@@ -660,12 +660,12 @@ class FusedRNNCell(BaseRNNCell):
         elif self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]
         else:
-            outputs, states = rnn[0], rnn[1]
+            outputs, states = rnn[0], [rnn[1]]
 
         if not merge_outputs:
             warnings.warn("Call FusedRNNCell.unroll with merge_outputs=True "
                           "for faster speed")
-            outputs = list(symbol.SliceChannel(outputs, axis=axis, num_outputs=length,
+            outputs = list(symbol.SliceChannel(outputs, axis=0, num_outputs=length,
                                                squeeze_axis=1))
         elif axis == 1:
             outputs = symbol.SwapAxis(outputs, dim1=0, dim2=1)
@@ -900,7 +900,7 @@ class DropoutCell(ModifierCell):
         if self.dropout_outputs > 0:
             output = symbol.Dropout(data=output, p=self.dropout_outputs)
         if self.dropout_states > 0:
-            states = symbol.Dropout(data=states, p=self.dropout_states)
+            states = [symbol.Dropout(data=i, p=self.dropout_states) for i in states]
         return output, states
 
 

@@ -250,6 +250,16 @@ def test_embedding_with_type():
     check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
                       arg_params=arg_params)
 
+def test_svmoutput_with_type():
+    sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
+    ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
+                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
+                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}},
+                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
+                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
+                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
+    check_consistency(sym, ctx_list)
+
 def test_take_with_type():
     sym = mx.sym.take(name='take')
     for data_ndim in range(2, 5):
@@ -358,6 +368,7 @@ if __name__ == '__main__':
     test_fullyconnected_with_type()
     test_activation_with_type()
     test_embedding_with_type()
+    test_svmoutput_with_type()
     test_take_with_type()
     test_bilinear_sampler_with_type()
     test_grid_generator_with_type()
