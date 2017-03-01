@@ -11,6 +11,8 @@ from .. import ndarray
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
+from ..io import DataDesc
+
 
 def _as_list(obj):
     """A utility function that treat the argument as a list.
@@ -27,6 +29,7 @@ def _as_list(obj):
         return obj
     else:
         return [obj]
+
 
 def _check_input_names(symbol, names, typename, throw):
     """Check that all input names are in symbol's argument"""
@@ -47,6 +50,31 @@ def _check_input_names(symbol, names, typename, throw):
             raise ValueError(msg)
         else:
             warnings.warn(msg)
+
+
+def _check_names_match(data_names, data_shapes, name, throw):
+    """Check that input names matches input data descriptors"""
+    actual = [x[0] for x in data_shapes]
+    if data_names != actual:
+        msg = "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)"%(
+            name, name, str(data_shapes), str(data_names))
+        if throw:
+            raise ValueError(msg)
+        else:
+            warnings.warn(msg)
+
+
+def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
+    """parse data_shapes into DataDesc format and check that names match"""
+    data_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
+    _check_names_match(data_names, data_shapes, 'data', True)
+    if label_shapes is not None:
+        label_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        _check_names_match(label_names, label_shapes, 'label', False)
+    else:
+        _check_names_match(label_names, [], 'label', False)
+    return data_shapes, label_shapes
+
 
 class BaseModule(object):
     """The base class of a modules. A module represents a computation component. The design
