@@ -37,9 +37,9 @@ READ_WRITE_SAL real_t Outputs[FLOAT_COUNT]  ALIGNED(CACHE_LINE_SIZE);
 //peace visual studio
 extern bool __sync_bool_compare_and_swap(void* location, uint64_t old, uint64_t desired);
 extern bool __sync_bool_compare_and_swap(void* location, int old, int desired);
-#define BUSY_WAIT_NO_OP
+#define BUSY_WAIT_NO_OPTIMIZE
 #else
-#define BUSY_WAIT_NO_OP asm("")
+#define BUSY_WAIT_NO_OPTIMIZE asm("")
 #endif
 
 void GetRange(
@@ -142,6 +142,36 @@ void RunNaivePass(int proc, void* additionalArgs)
 }
 #pragma endregion
 
+
+#pragma region RunRandomizedNaivePass
+void RunRandomizedNaivePass(int proc, void* additionalArgs)
+{
+	var offset = rand();
+	var start = 0;
+	var end = 0;
+	var copyId = 0;
+	var numProcs = PROC_CNT;
+	GetRange(FLOAT_COUNT, COPIES, numProcs, proc, copyId, start, end);
+	var rands = (int*)additionalArgs;
+	for (int i = start + rands[copyId]; i < end + rands[copyId]; i++)
+	{
+		//printf("[%d]i = %d, start = %d, end = %d\n", proc, i, start + rands[copyId], end + rands[copyId]);
+		var idx = i % FLOAT_COUNT;
+		TaggedFloat old, target;
+		do
+		{
+			old = ScratchNaive[idx];
+			target.fv[1] = old.fv[1] + 1;
+			target.fv[0] = old.fv[0] + Inputs[idx];
+		} while (!__sync_bool_compare_and_swap(&ScratchNaive[idx].backingStore, old.backingStore, target.backingStore));
+		if (target.fv[1] == numProcs)
+		{
+			Outputs[i % FLOAT_COUNT] = target.fv[0];
+		}
+	}
+}
+#pragma endregion
+
 #pragma region RunReductionTree
 
 class ReductionTreeScratch
@@ -217,7 +247,7 @@ void RunNaiveReductionTreePass(int proc, void* additionalArgs)
 			bool complained = false;
 			while (sources[s]->ReadyCursor < i)
 			{
-				BUSY_WAIT_NO_OP;
+				BUSY_WAIT_NO_OPTIMIZE;
 				//if (complained == false)
 				//{
 				//	printf("Proc %d waiting for source sid=%d (%llx) whose redyCursor is %d\n", proc, sources[s]->sid, sources[s], sources[s]->ReadyCursor);
@@ -308,7 +338,7 @@ void TestIterator(
 	double delayms = std::chrono::duration_cast<std::chrono::milliseconds>(endNow - start).count();
 	cout << "[" << identifier << "] Average Time=" << delayms / iterations <<
 		"ms | Throughput=" <<
-		(1000 * iterations / delayms) * FLOAT_COUNT * sizeof(real_t) / 1024 / 1024 / 1024 <<
+		(1000 * iterations / delayms) * FLOAT_COUNT * COPIES * sizeof(real_t) / 1024 / 1024 / 1024 <<
 		"GB/s" <<
 		endl;
 }
@@ -319,6 +349,7 @@ int main(int argc, char* argv[])
 	const char* Baseline = "BASELINE";
 	const char* Optimal = "OPTIMAL";
 	const char* NaivePass = "NAIVE_FLAT_PASS";
+	const char* NaiveRandomizedPass = "NAIVE_RANDOMIZED_FLAT_PASS";
 	const char* ReductionTree = "NAIVE_REDUCTION_TREE_BASE2";
 	const char* NaiveShardedStridedPass = "NAIVE_SHARDED_STRIDED_FLAT_PASS";
 	unordered_set<string> acceptedSet;
@@ -370,6 +401,25 @@ int main(int argc, char* argv[])
 			args.push_back(NULL);
 		}
 		TestIterator(ITERATION, kernels, args, string(NaivePass));
+	}
+#pragma endregion
+
+#pragma region RunRandomizedNaivePass
+	if (acceptedSet.count(string(NaiveRandomizedPass)) != 0)
+	{
+		kernels.clear();
+		args.clear();
+		int randomizedOffsets[COPIES];
+		for (int i = 0; i < COPIES; i++)
+		{
+			randomizedOffsets[i] = ((rand() % FLOAT_COUNT) + FLOAT_COUNT) % FLOAT_COUNT;
+		}
+		for (int i = 0; i < numProcs; i++)
+		{
+			kernels.push_back(RunRandomizedNaivePass);
+			args.push_back(randomizedOffsets);
+		}
+		TestIterator(ITERATION, kernels, args, string(NaiveRandomizedPass));
 	}
 #pragma endregion
 
