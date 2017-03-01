@@ -4,7 +4,7 @@
 .. currentmodule:: mxnet.ndarray
 ```
 
-This document lists the routines of `mxnet.ndarray` (or `mxnet.nd` for short)
+This document lists the routines of the `ndarray` (or `nd` for short) package
 grouped by functionality. Many docstrings contain example code, which
 demonstrates the basic usage of the routine. The examples assume that `MXNet` is
 imported with:
@@ -70,8 +70,8 @@ We provide some basic NDArray operations, like arithmetic and slice operations.
 ```
 
 In the rest of this document, we first overview the methods provided by the
-`mxnet.ndarray.NDArray` class, and then list other routines provided by the
-`mxnet.ndarray` package.
+`ndarray.NDArray` class, and then list other routines provided by the
+`ndarray` package.
 
 
 ## The `NDArray` class
@@ -141,7 +141,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.__idiv__
 ```
 
-### Comparison operators:
+### Comparison operators
 
 ```eval_rst
 .. autosummary::
@@ -164,6 +164,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.__getitem__
     NDArray.__setitem__
 ```
+
 ### Lazy evaluation
 
 ```eval_rst

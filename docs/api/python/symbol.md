@@ -1,23 +1,229 @@
 # Symbol API
 
-The symbol API provides a way to construct computation graphs.
-A tutorial is avaible at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html)
-
-
 ```eval_rst
     .. currentmodule:: mxnet.symbol
 ```
 
-## Creation routines
+This document lists the routines of `symbol` (or `sym` for short) package
+grouped by functionality. Many docstrings contain example code, which
+demonstrates the basic usage of the routine. The examples assume that `MXNet` is
+imported with:
+
+```python
+>>> import mxnet as mx
+```
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
 
-        Variable
-        zeros
-        ones
-        arange
+.. note:: A convenient way to execute examples is the ``%doctest_mode`` mode of
+    Jupyter notebook, which allows for pasting of multi-line examples contains
+    ``>>>`` and preserves indentation. Run ``%doctest_mode?`` in Jupyter notebook
+    for more details.
+
+```
+
+A symbol declares computation. It is composited by operators, such as simple
+matrix operations (e.g. “+”), or a neural network layer (e.g. convolution
+layer). We can bind data to a symbol to execute the computation.
+
+```python
+>>> a = mx.sym.var('a')
+>>> b = mx.sym.var('b')
+>>> c = 2 * a + b
+>>> type(c)
+<class 'mxnet.symbol.Symbol'>
+>>> e = c.bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
+>>> y = e.forward()
+>>> y
+[<NDArray 2 @cpu(0)>]
+>>> y[0].asnumpy()
+array([ 4.,  7.], dtype=float32)
+```
+
+A tutorial is avaible at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html)
+
+
+.. note:: Compare to NDArray.
+
+
+In the rest of this document, we first overview the methods provided by the
+`symbol.Symbol` class, and then list other routines provided by the
+`symbol` package.
+
+## The `Symbol` class
+
+### Composition
+
+Composite multiple symbols into a new one by an operator.
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.__call__
+```
+
+#### Arithmetic operations
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.__add__
+    Symbol.__sub__
+    Symbol.__rsub__
+    Symbol.__neg__
+    Symbol.__mul__
+    Symbol.__div__
+    Symbol.__rdiv__
+    Symbol.__pow__
+```
+
+#### Comparison operators
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.__lt__
+    Symbol.__le__
+    Symbol.__gt__
+    Symbol.__ge__
+    Symbol.__eq__
+    Symbol.__ne__
+```
+
+### Query information
+
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.name
+    Symbol.list_arguments
+    Symbol.list_outputs
+    Symbol.list_auxiliary_states
+    Symbol.list_attr
+    Symbol.attr
+    Symbol.attr_dict
+```
+
+### Get internal and output symbol
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.__getitem__
+    Symbol.__iter__
+    Symbol.get_internals
+    Symbol.get_children
+```
+
+### Inference type and shape
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.infer_type
+    Symbol.infer_shape
+    Symbol.infer_shape_partial
+```
+
+
+### Bind
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.bind
+    Symbol.simple_bind
+```
+
+### Save
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.save
+    Symbol.tojson
+    Symbol.debug_str
+```
+
+## Symbol creation routines
+
+```eval_rst
+.. autosummary::
+
+    var
+    zeros
+    ones
+    arange
+```
+
+## Array manipulation routines
+
+### Changing array shape and type
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    cast
+    reshape
+    flatten
+    expand_dims
+```
+
+### Expanding array elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    broadcast_to
+    broadcast_axes
+    repeat
+    tile
+    pad
+```
+
+### Rearranging elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    transpose
+    swapaxes
+    flip
+```
+
+### Joining and splitting arrays
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    concat
+    split
+```
+
+### Indexing routines
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    slice
+    slice_axis
+    take
+    batch_take
+    one_hot
 ```
 
 ## Mathematical functions
@@ -25,397 +231,208 @@ A tutorial is avaible at [http://mxnet.io/tutorials/python/symbol.html](http://m
 ### Arithmetic operations
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        elemwise_add
-        dot
-        batch_dot
-        broadcast_plus
-        broadcast_add
-        broadcast_sub
-        broadcast_minus
-        broadcast_mul
-        broadcast_div
-        broadcast_power
+    broadcast_add
+    broadcast_sub
+    broadcast_mul
+    broadcast_div
+    negative
+    dot
+    batch_dot
+    add_n
 ```
 
 ### Trigonometric functions
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        sin
-        cos
-        tan
-        arcsin
-        arccos
-        arctan
-        hypot
-        broadcast_hypot
-        degrees
-        radians
-```
-
-### Sums and products
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        sum
-        sum_axis
-        ElementWiseSum
-        nansum
-        prod
-        nanprod
+    sin
+    cos
+    tan
+    arcsin
+    arccos
+    arctan
+    hypot
+    broadcast_hypot
+    degrees
+    radians
 ```
 
 ### Hyperbolic functions
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        sinh
-        cosh
-        tanh
-        arcsinh
-        arccosh
-        arctanh
+    sinh
+    cosh
+    tanh
+    arcsinh
+    arccosh
+    arctanh
+```
+
+### Reduce functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sum
+    nansum
+    prod
+    nanprod
+    mean
+    max
+    min
+    norm
 ```
 
 ### Rounding
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        round
-        rint
-        fix
-        floor
-        ceil
+    round
+    rint
+    fix
+    floor
+    ceil
 ```
 
 
 ### Exponents and logarithms
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        exp
-        expm1
-        log
-        log10
-        log2
-        log1p
-        sqrt
-        rsqrt
-        square
+    exp
+    expm1
+    log
+    log10
+    log2
+    log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    broadcast_power
+    sqrt
+    rsqrt
+    square
+```
+
+### Logic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    broadcast_equal
+    broadcast_not_equal
+    broadcast_greater
+    broadcast_greater_equal
+    broadcast_lesser
+    broadcast_lesser_equal
+```
+### Random sampling
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    uniform
+    normal
+    mxnet.random.seed
+```
+
+### Sorting and searching
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sort
+    topk
+    argsort
+    argmax
+    argmin
 ```
 
 ### Miscellaneous
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        maximum
-        minimum
-        broadcast_maximum
-        broadcast_minimum
-        clip
-        abs
-        sign
-        identity
-        gamma
-        gammaln
-        smooth_l1
-```
-
-## manipulation routines
-
-### Changing type
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        cast
-```
-
-### Changing shape
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        Reshape
-        Flatten
-```
-
-### Changing both shape and elements
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        broadcast_to
-        broadcast_axis
-        expand_dims
-        Crop
-        crop
-        Pad
-```
-
-
-### Joining symbols
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        concatenate
-        Concat
-```
-
-### Splitting symbols
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        slice_axis
-        SliceChannel
-```
-
-### Tiling symbols
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        repeat
-        tile
-```
-
-
-### Rearranging elements
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        transpose
-        SwapAxis
-        flip
-
-```
-
-## Indexing routines
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        take
-        batch_take
-        choose_element_0index
-        fill_element_0index
-        one_hot
-        onehot_encode
-        SequenceLast
-        SequenceMask
-        SequenceReverse
-```
-
-## Input and output
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        load
-        Symbol.save
-```
-
-## Logic functions
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        broadcast_equal
-        broadcast_not_equal
-        broadcast_greater
-        broadcast_greater_equal
-        broadcast_lesser
-        broadcast_lesser_equal
-```
-
-## Random sampling
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        uniform
-        normal
-```
-
-## Sorting and searching
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        sort
-        topk
-        argsort
-        argmax
-        argmax_channel
-        argmin
-```
-
-## Statistics
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        mean
-        norm
-        max
-        min
-        max_axis
-        min_axis
+    maximum
+    minimum
+    broadcast_maximum
+    broadcast_minimum
+    clip
+    abs
+    sign
+    gamma
+    gammaln
 ```
 
 ## Neural network
 
-### Fully-connection
+### Basic
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        FullyConnected
+    FullyConnected
+    Convolution
+    Activation
+    BatchNorm
+    Pooling
+    SoftmaxOutput
 ```
 
-### Convolution
+### More
 
 ```eval_rst
-    .. autosummary::
-        :toctree: generated/
+.. autosummary::
+    :nosignatures:
 
-        Convolution
-        Correlation
-        Deconvolution
-```
-
-### Recurrent layers
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        RNN
-```
-
-### Embedding
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        Embedding
-```
-
-### Activation
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        Activation
-        LeakyReLU
-        SoftmaxActivation
-```
-
-### Normalization
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        BatchNorm
-        InstanceNorm
-        L2Normalization
-        LRN
-```
-
-
-### Sampling
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        Pooling
-        ROIPooling
-        Dropout
-        BilinearSampler
-        GridGenerator
-        UpSampling
-        SpatialTransformer
-```
-
-### Output
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        SoftmaxOutput
-        LinearRegressionOutput
-        LogisticRegressionOutput
-        MAERegressionOutput
-        SVMOutput
-        softmax_cross_entropy
-```
-
-### Regularization
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        IdentityAttachKLSparseReg
-```
-### Utilities
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        MakeLoss
-        BlockGrad
-        Custom
-```
-
-### Weight updating functions
-
-```eval_rst
-    .. autosummary::
-        :toctree: generated/
-
-        adam_update
-        rmsprop_update
-        sgd_mom_update
-        sgd_update
+    Correlation
+    Deconvolution
+    RNN
+    Embedding
+    LeakyReLU
+    InstanceNorm
+    L2Normalization
+    LRN
+    ROIPooling
+    SoftmaxActivation
+    Dropout
+    BilinearSampler
+    GridGenerator
+    UpSampling
+    SpatialTransformer
+    LinearRegressionOutput
+    LogisticRegressionOutput
+    MAERegressionOutput
+    SVMOutput
+    softmax_cross_entropy
+    smooth_l1
+    IdentityAttachKLSparseReg
+    MakeLoss
+    BlockGrad
+    Custom
 ```
 
 ## API Reference

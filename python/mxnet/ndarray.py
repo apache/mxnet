@@ -113,11 +113,11 @@ fixed-size items.
                                 shape_info, self.context)
 
     def __add__(self, other):
-        """x.__add__(y) <==> x+y <==> mx.nd.add(x, y) """
+        """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
         return add(self, other)
 
     def __iadd__(self, other):
-        """x.__iadd__(y) <==> x+=y """
+        """x.__iadd__(y) <=> x+=y """
         if not self.writable:
             raise ValueError('trying to add to a readonly NDArray')
         if isinstance(other, NDArray):
@@ -131,11 +131,11 @@ fixed-size items.
         return self.__add__(other)
 
     def __sub__(self, other):
-        """x.__sub__(y) <==> x-y <==> mx.nd.subtract(x, y) """
+        """x.__sub__(y) <=> x-y <=> mx.nd.subtract(x, y) """
         return subtract(self, other)
 
     def __isub__(self, other):
-        """x.__isub__(y) <==> x-=y """
+        """x.__isub__(y) <=> x-=y """
         if not self.writable:
             raise ValueError('trying to subtract from a readonly NDArray')
         if isinstance(other, NDArray):
@@ -146,19 +146,19 @@ fixed-size items.
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
-        """x.__rsub__(y) <==> y-x <==> mx.nd.subtract(y, x) """
+        """x.__rsub__(y) <=> y-x <=> mx.nd.subtract(y, x) """
         return subtract(other, self)
 
     def __mul__(self, other):
-        """x.__mul__(y) <==> x*y <==> mx.nd.multiply(x, y) """
+        """x.__mul__(y) <=> x*y <=> mx.nd.multiply(x, y) """
         return multiply(self, other)
 
     def __neg__(self):
-        """x.__neg__(y) <==> -x """
+        """x.__neg__(y) <=> -x """
         return _internal._mul_scalar(self, -1.0)
 
     def __imul__(self, other):
-        """x.__imul__(y) <==> x*=y """
+        """x.__imul__(y) <=> x*=y """
         if not self.writable:
             raise ValueError('trying to multiply to a readonly NDArray')
         if isinstance(other, NDArray):
@@ -172,15 +172,15 @@ fixed-size items.
         return self.__mul__(other)
 
     def __div__(self, other):
-        """x.__div__(y) <==> x/y <==> mx.nd.divide(x, y) """
+        """x.__div__(y) <=> x/y <=> mx.nd.divide(x, y) """
         return divide(self, other)
 
     def __rdiv__(self, other):
-        """x.__rdiv__(y) <==> y/x <==> mx.nd.divide(y, x) """
+        """x.__rdiv__(y) <=> y/x <=> mx.nd.divide(y, x) """
         return divide(other, self)
 
     def __idiv__(self, other):
-        """x.__rdiv__(y) <==> x/=y """
+        """x.__rdiv__(y) <=> x/=y """
         if not self.writable:
             raise ValueError('trying to divide from a readonly NDArray')
         if isinstance(other, NDArray):
@@ -200,35 +200,35 @@ fixed-size items.
         return self.__idiv__(other)
 
     def __pow__(self, other):
-        """x.__pow__(y) <==> x**y <==> mx.nd.power(x,y) """
+        """x.__pow__(y) <=> x**y <=> mx.nd.power(x,y) """
         return power(self, other)
 
     def __rpow__(self, other):
-        """x.__pow__(y) <==> y**x <==> mx.nd.power(y,x) """
+        """x.__pow__(y) <=> y**x <=> mx.nd.power(y,x) """
         return power(other, self)
 
     def __eq__(self, other):
-        """x.__eq__(y) <==> x==y <==> mx.nd.equal(x, y) """
+        """x.__eq__(y) <=> x==y <=> mx.nd.equal(x, y) """
         return equal(self, other)
 
     def __ne__(self, other):
-        """x.__ne__(y) <==> x!=y <==> mx.nd.not_equal(x, y) """
+        """x.__ne__(y) <=> x!=y <=> mx.nd.not_equal(x, y) """
         return not_equal(self, other)
 
     def __gt__(self, other):
-        """x.__gt__(y) <==> x>y <==> mx.nd.greater(x, y) """
+        """x.__gt__(y) <=> x>y <=> mx.nd.greater(x, y) """
         return greater(self, other)
 
     def __ge__(self, other):
-        """x.__ge__(y) <==> x>=y <==> mx.nd.greater_equal(x, y) """
+        """x.__ge__(y) <=> x>=y <=> mx.nd.greater_equal(x, y) """
         return greater_equal(self, other)
 
     def __lt__(self, other):
-        """x.__lt__(y) <==> x<y <==> mx.nd.lesser(x, y) """
+        """x.__lt__(y) <=> x<y <=> mx.nd.lesser(x, y) """
         return lesser(self, other)
 
     def __le__(self, other):
-        """x.__le__(y) <==> x<=y <==> mx.nd.less_equal(x, y) """
+        """x.__le__(y) <=> x<=y <=> mx.nd.less_equal(x, y) """
         return lesser_equal(self, other)
 
     def __getstate__(self):
@@ -257,7 +257,7 @@ fixed-size items.
             self.handle = None
 
     def __setitem__(self, key, value):
-        """x.__setitem__(i, y) <==> x[i]=y
+        """x.__setitem__(i, y) <=> x[i]=y
 
         Set self[key] to value.
 
@@ -357,7 +357,7 @@ fixed-size items.
         # pylint: enable=too-many-branches
 
     def __getitem__(self, key):
-        """x.__getitem__(i) <==> x[i]
+        """x.__getitem__(i) <=> x[i]
 
         Return a sliced view of this array
 
