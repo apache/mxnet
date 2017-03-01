@@ -80,6 +80,15 @@ class GraphExecutor : public Executor {
   void InitDataEntryMemory(std::vector<NDArray>* shared_pool);
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
+  /*!
+   * \brief Try to create a cached operator to run segments between start and end
+   * \param topo_start beginning of segment
+   * \param topo_end end of segment
+   * \return the cached operator.
+   *  Can be nullptr if cached operator cannot be created.
+  */
+  Engine::OprHandle CreateCachedOpr(size_t topo_start, size_t topo_end);
+
   // internal graph
   nnvm::Graph graph_;
   // operator node
@@ -106,6 +115,10 @@ class GraphExecutor : public Executor {
   size_t num_forward_nodes_{0};
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
+  // whether to enable bulk execution
+  bool prefer_bulk_execution_;
+  // cached segment operator
+  std::unordered_map<size_t, Engine::OprHandle> cached_seg_opr_;
 };
 
 }  // namespace exec
