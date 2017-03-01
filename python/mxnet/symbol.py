@@ -1266,8 +1266,7 @@ def hypot(left, right):
 
 
 def zeros(shape, dtype=None, **kwargs):
-    """Create a Tensor filled with zeros, similar to numpy.zeros
-        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.zeros.html.
+    """Return a new symbol of given shape and type, filled with zeros.
 
     Parameters
     ----------
@@ -1287,8 +1286,7 @@ def zeros(shape, dtype=None, **kwargs):
 
 
 def ones(shape, dtype=None, **kwargs):
-    """Create a Tensor filled with ones, similar to numpy.ones
-        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html.
+    """Return a new symbol of given shape and type, filled with ones.
 
     Parameters
     ----------
@@ -1308,8 +1306,7 @@ def ones(shape, dtype=None, **kwargs):
 
 
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
-    """Simlar function in the MXNet ndarray as numpy.arange
-        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
+    """Return evenly spaced values within a given interval.
 
     Parameters
     ----------

@@ -40,11 +40,22 @@ layer). We can bind data to a symbol to execute the computation.
 array([ 4.,  7.], dtype=float32)
 ```
 
-A tutorial is avaible at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html)
+A detailed tutorial is avaible at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html)
 
 
-.. note:: Compare to NDArray.
+```eval_rst
 
+.. note:: most operators provided in ``symbol`` are similar to ``ndarray``. But
+   also note that ``symbol`` differs to ``ndarray`` in several aspects:
+
+   - ``symbol`` adopts declare programming. In other words, we need to first
+     composite the computations, and then feed with data to execute.
+
+   - Most binary operators such as ``+`` and ``>`` are not enabled broadcasting.
+     We need to call the broadcasted version such as ``broadcast_plus``
+     explicitly.
+
+```
 
 In the rest of this document, we first overview the methods provided by the
 `symbol.Symbol` class, and then list other routines provided by the
@@ -158,6 +169,7 @@ Composite multiple symbols into a new one by an operator.
 
 ```eval_rst
 .. autosummary::
+    :nosignatures:
 
     var
     zeros
@@ -165,9 +177,9 @@ Composite multiple symbols into a new one by an operator.
     arange
 ```
 
-## Array manipulation routines
+## Symbol manipulation routines
 
-### Changing array shape and type
+### Changing shape and type
 
 ```eval_rst
 .. autosummary::
@@ -179,7 +191,7 @@ Composite multiple symbols into a new one by an operator.
     expand_dims
 ```
 
-### Expanding array elements
+### Expanding elements
 
 ```eval_rst
 .. autosummary::
@@ -203,7 +215,7 @@ Composite multiple symbols into a new one by an operator.
     flip
 ```
 
-### Joining and splitting arrays
+### Joining and splitting symbols
 
 ```eval_rst
 .. autosummary::
@@ -440,8 +452,8 @@ Composite multiple symbols into a new one by an operator.
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
-    .. automodule:: mxnet.symbol
-        :members:
+.. automodule:: mxnet.symbol
+    :members:
 
 ```
 

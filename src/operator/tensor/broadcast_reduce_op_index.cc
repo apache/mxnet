@@ -30,7 +30,7 @@ NNVM_REGISTER_OP(argmax_channel)
 .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
-.add_argument("src", "NDArray", "Source input");
+.add_argument("src", "ndarray-or-symbol", "Source input");
 
 }  // namespace op
 }  // namespace mxnet
