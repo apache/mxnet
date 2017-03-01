@@ -10,6 +10,7 @@
 #include <dmlc/logging.h>
 #include "mxnet/base.h"
 #include "../common/cuda_utils.h"
+#include "./pooled_storage_manager.h"
 
 namespace mxnet {
 namespace storage {
@@ -32,12 +33,14 @@ class PinnedMemoryStorage {
 
 inline void* PinnedMemoryStorage::Alloc(size_t size) {
   void* ret = nullptr;
+  std::lock_guard<std::mutex> lock(GPUPooledStorageManager::mutex_);
   // make the memory available across all devices
   CUDA_CALL(cudaHostAlloc(&ret, size, cudaHostAllocPortable));
   return ret;
 }
 
 inline void PinnedMemoryStorage::Free(void* ptr) {
+  std::lock_guard<std::mutex> lock(GPUPooledStorageManager::mutex_);
   cudaError_t err = cudaFreeHost(ptr);
   // ignore unloading error, as memory has already been recycled
   if (err != cudaSuccess && err != cudaErrorCudartUnloading) {

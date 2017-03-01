@@ -54,6 +54,11 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+#whether to use NCCL library
+USE_NCCL = 0
+#add the path to NCCL library
+USE_NCCL_PATH = NONE
+
 # CUDA architecture setting: going with all of them.
 # For CUDA < 6.0, comment the *_50 lines for compatibility.
 CUDA_ARCH := -gencode arch=compute_30,code=sm_30 \
