@@ -11,6 +11,7 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
+#include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
 #include <algorithm>
@@ -102,6 +103,7 @@ public:
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
+    CHECK_EQ(req[conv::kOut], kWriteTo);
     using namespace mshadow;
     LayerSetUp(in_data, out_data);
     Stream<xpu>* s = ctx.get_stream<xpu>();
@@ -117,8 +119,23 @@ public:
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
 
+    // initialize weight and col_buffer 3D tensors for using gemm
+    index_t M = conv_out_channels_ / group_;
+    index_t N = conv_out_spatial_dim_;
+    index_t K = kernel_dim_;
+    Tensor<xpu, 3, DType> weight_3d = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(
+      Shape3(group_, M, K), s);
+    Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
+      Shape3(group_, K, N), s);
+    Tensor<xpu, 4, DType> output_4d = out_data[0].get_with_shape<xpu, 4, DType>(
+      Shape4(num_, group_, M, N), s);
     for (index_t n = 0; n < num_; ++n) {
-      ForwardGEMM(n, in_data, out_data, &col_buffer);
+      // transform image to col_buffer in order to use gemm
+      ConvIm2Col(n, in_data[conv::kData], &col_buffer, xpu());
+      Tensor<xpu, 3, DType> output_3d = output_4d[n];
+      for (index_t g = 0; g < group_; ++g) {
+        ASSIGN_DISPATCH(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
+      }
     }
   }
 
@@ -162,16 +179,11 @@ private:
     // input/output image size (#channels * height * width)
     input_dim_ = in_data[conv::kData].shape_.ProdShape(1, in_data[conv::kData].shape_.ndim());
     output_dim_ = out_data[conv::kOut].shape_.ProdShape(1, out_data[conv::kOut].shape_.ndim());
+    num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_;
   }
 
-  void ForwardGEMM(const index_t n,
-                   const std::vector<TBlob> &in_data,
-                   const std::vector<TBlob> &out_data,
-                   TBlob* col_buffer) const {
-    ConvIm2Col(n, in_data[conv::kData], col_buffer, xpu());
-  }
-
-  // data is image
+  // n is the current n-th image in the batch
+  // data is an image batch
   void ConvIm2Col(const index_t n, const TBlob& data, TBlob* col_buffer, const cpu& dev_cpu) const;
   void ConvIm2Col(const index_t n, const TBlob& data, TBlob* col_buffer, const gpu& dev_gpu) const;
 
@@ -192,6 +204,7 @@ private:
   index_t col_buffer_size_;
   index_t input_dim_;
   index_t output_dim_;
+  index_t num_kernels_im2col_;
   bool bias_term_;  // has bias term?
   bool force_nd_im2col_;
   bool is_1x1_;

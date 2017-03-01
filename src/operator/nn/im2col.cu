@@ -83,11 +83,11 @@ template void im2col_gpu<double>(const double* data_im, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w, double* data_col);
-template void im2col_gpu<mshadow::half::half_t>(const mshadow::half::half_t* data_im, const int channels,
-    const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w, const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w, mshadow::half::half_t* data_col);
-
+template void im2col_gpu<mshadow::half::half_t>(const mshadow::half::half_t* data_im,
+    const int channels, const int height, const int width, const int kernel_h,
+    const int kernel_w, const int pad_h, const int pad_w, const int stride_h,
+    const int stride_w, const int dilation_h, const int dilation_w,
+    mshadow::half::half_t* data_col);
 
 template <typename DType, int num_axes>
 __global__ void im2col_nd_gpu_kernel(const int n, const DType* data_im,
@@ -260,6 +260,11 @@ template void im2col_nd_gpu<double>(const double* data_im,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, double* data_col);
+template void im2col_nd_gpu<mshadow::half::half_t>(const mshadow::half::half_t* data_im,
+    const int num_spatial_axes, const int col_size,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    const int* dilation, mshadow::half::half_t* data_col);
 
 template <typename DType>
 __global__ void col2im_gpu_kernel(const int n, const DType* data_col,

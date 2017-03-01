@@ -30,6 +30,15 @@ void Convolution2Op<xpu, DType>::ConvIm2Col(const index_t n, const TBlob& data,
                param_.kernel[0], param_.kernel[1], param_.pad[0], param_.pad[1],
                param_.stride[0], param_.stride[1], param_.dilate[0], param_.dilate[1],
                col_buffer->dptr<DType>());
+  } else {
+    im2col_nd_cpu(data_ptr, num_spatial_axes_,
+                  reinterpret_cast<const int*>(&(data.shape_[1])),
+                  reinterpret_cast<int*>(col_buffer->shape_.data()),
+                  reinterpret_cast<const int*>(param_.kernel.data()),
+                  reinterpret_cast<const int*>(param_.pad.data()),
+                  reinterpret_cast<const int*>(param_.stride.data()),
+                  reinterpret_cast<const int*>(param_.dilate.data()),
+                  col_buffer->dptr<DType>());
   }
 }
 
