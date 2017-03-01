@@ -173,10 +173,13 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
 #ifdef __CUDACC__
 #include "broadcast_reduce-inl.cuh"
 
-template<typename Reducer, typename DType, typename OP, typename... OPs>
-void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
-            const Tensor<gpu, 1, char>& workspace, const TBlob& inp, const TBlob& inps...) {
+template<typename Reducer, typename DType, typename OP1, typename OP2>
+void Reduce(Stream<gpu> *s, const TBlob& outgrad, const OpReqType req,
+            const Tensor<gpu, 1, char>& workspace, const TBlob& ingrad, const TBlob& lhs,
+            const TBlob& rhs) {
+  LOG(INFO) << "Reduce (gpu) not implemented";
 }
+
 #else
 
 #if 0

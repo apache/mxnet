@@ -316,13 +316,13 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       if (new_oshape.ndim() == 2) {
-        if (ctx.dev_type == kCPU) {
+        // if (xpu == Context::kCPU) {
           BinaryBroadcastBackwardUseInImpl_NEW<xpu, 2, DType, LOP, ROP>(
             ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
-        } else {
-          BinaryBroadcastBackwardUseInImpl<xpu, 2, DType, LOP, ROP>(
-            ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
-        }
+        // } else {
+        //   BinaryBroadcastBackwardUseInImpl<xpu, 2, DType, LOP, ROP>(
+        //     ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
+        // }
       } else {
         BinaryBroadcastBackwardUseInImpl<xpu, broadcast::MAX_DIM, DType, LOP, ROP>(
           ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
