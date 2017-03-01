@@ -455,18 +455,6 @@ In the rest of this document, we first overview the methods provided by the
     Custom
 ```
 
-### Weight updating functions
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    adam_update
-    rmsprop_update
-    sgd_mom_update
-    sgd_update
-```
-
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
