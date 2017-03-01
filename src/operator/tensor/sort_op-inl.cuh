@@ -7,7 +7,9 @@
 #define MXNET_OPERATOR_TENSOR_SORT_OP_INL_CUH_
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
+#ifndef _MSC_VER
 #include <cub/device/device_radix_sort.cuh>
+#endif
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif
@@ -18,12 +20,16 @@ namespace op {
 template <typename KDType, typename VDType, typename xpu>
 inline typename std::enable_if<std::is_same<xpu, gpu>::value, size_t>::type
 SortByKeyWorkspaceSize(const size_t num_keys) {
+#ifdef _MSC_VER
+  return 0;
+#else
   size_t sortpairs_bytes = 0;
   cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
       NULL, NULL, NULL, NULL, num_keys);
   size_t keys_bytes = num_keys*sizeof(KDType);
   size_t values_bytes = num_keys*sizeof(VDType);
   return (keys_bytes + values_bytes + sortpairs_bytes);
+#endif
 }
 
 template<typename KDType, typename VDType>
@@ -34,6 +40,7 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu,
   CHECK_EQ(values.CheckContiguous(), true);
 #if CUDA_VERSION >= 7000
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys.stream_);
+#ifndef _MSC_VER
   if (workspace != NULL) {
     // Workspace given, sort using CUB
     CHECK_EQ(workspace->CheckContiguous(), true);
@@ -75,6 +82,7 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu,
     mshadow::Copy(keys, keys_out, keys.stream_);
     mshadow::Copy(values, values_out, values.stream_);
   } else {
+#endif // _MSC_VER
     // No workspace, sort using thrust
     thrust::device_ptr<KDType> key_iter = thrust::device_pointer_cast(keys.dptr_);
     thrust::device_ptr<VDType> value_iter = thrust::device_pointer_cast(values.dptr_);
@@ -87,7 +95,9 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu,
         thrust::cuda::par.on(stream),
         key_iter, key_iter + keys.size(0), value_iter, thrust::greater<KDType>());
     }
+#ifndef _MSC_VER
   }
+#endif // _MSC_VER
   MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
 #else
   LOG(FATAL) << "SortByKey is only supported for CUDA version >=7.0!";
