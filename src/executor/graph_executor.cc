@@ -667,6 +667,40 @@ void GraphExecutor::InitCachedOps() {
 }
 
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
+
+   // heurestic, only enable bulk on forward only
+  bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
+       && topo_start == 0;
+   //TODO Add this criteria && num_forward_nodes_ == topo_order_.size();
+  if (bulk_exec) {
+    // encode things into a key
+    size_t key = topo_start * op_nodes_.size() + topo_end;
+    if (cached_seg_opr_.count(key) == 0) {
+      cached_seg_opr_[key] = this->CreateCachedOpr(topo_start, topo_end);
+      if (cached_seg_opr_.at(key) != nullptr) {
+        LOG(INFO) << "Created bulk execution on segment ["
+                  << topo_start << ", " << topo_end << ")";
+      }
+    }
+    auto cached_op = cached_seg_opr_.at(key);
+    if (cached_op != nullptr) {
+      Context* pctx = nullptr;
+      const auto& idx = graph_.indexed_graph();
+      for (size_t nid = topo_start; nid < topo_end; ++nid) {
+        //uint32_t nid = topo_order_[i];
+        //if (!op_nodes_[nid].activated) continue;
+        const auto& inode = idx[nid];
+        if (inode.source->is_variable()) continue;
+        OpNode& opnode = op_nodes_[nid];
+        opnode.exec->op_ctx.is_train = is_train;
+        pctx = &(opnode.ctx);
+      }
+      Engine::Get()->Push(cached_op, *pctx);
+      return;
+    }
+  }
+
+  // Normal mode
   static const auto& flist_outputs =
       nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   const auto& idx = graph_.indexed_graph();
