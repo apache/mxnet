@@ -16,8 +16,7 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 
-from .base_module import BaseModule, _check_input_names
-from ..io import DataDesc
+from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
 
 class Module(BaseModule):
@@ -166,6 +165,11 @@ class Module(BaseModule):
     def data_names(self):
         """A list of names for data required by this module."""
         return self._data_names
+
+    @property
+    def label_names(self):
+        """A list of names for labels required by this module."""
+        return self._label_names
 
     @property
     def output_names(self):
@@ -361,13 +365,8 @@ class Module(BaseModule):
             # that consumes the labels
             # assert label_shapes is not None
 
-        self._data_shapes = \
-            [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
-        if label_shapes is not None:
-            self._label_shapes = \
-                [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
-        else:
-            self._label_shapes = None
+        self._data_shapes, self._label_shapes = _parse_data_desc(
+            self.data_names, self.label_names, data_shapes, label_shapes)
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
@@ -422,13 +421,8 @@ class Module(BaseModule):
             Typically is `data_iter.provide_label`.
         """
         assert self.binded
-        self._data_shapes = \
-            [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
-        if label_shapes is not None:
-            self._label_shapes = \
-                [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
-        else:
-            self._label_shapes = None
+        self._data_shapes, self._label_shapes = _parse_data_desc(
+            self.data_names, self.label_names, data_shapes, label_shapes)
 
         self._exec_group.reshape(self._data_shapes, self._label_shapes)
 
