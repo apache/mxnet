@@ -22,19 +22,19 @@ DMLC_REGISTER_PARAMETER(Convolution2Param);
 
 template<typename xpu, typename DType>
 inline
-void Convolution2Op<xpu, DType>::ConvIm2Col(const index_t n, const DType* im_data_ptr,
-                                            const TShape& im_data_shape, DType* col_buffer_ptr,
+void Convolution2Op<xpu, DType>::ConvIm2Col(const DType* data_ptr,
+                                            const TShape& data_shape,
+                                            DType* col_buffer_ptr,
                                             const TShape& col_buffer_shape,
                                             const cpu& dev_cpu) const {
-  const DType* data_ptr = im_data_ptr + n * input_dim_;
   if (!force_nd_im2col_ && num_spatial_axes_ == 2) {
-    im2col_cpu(data_ptr, conv_in_channels_, im_data_shape[2], im_data_shape[3],
+    im2col_cpu(data_ptr, conv_in_channels_, data_shape[2], data_shape[3],
                param_.kernel[0], param_.kernel[1], param_.pad[0], param_.pad[1],
                param_.stride[0], param_.stride[1], param_.dilate[0], param_.dilate[1],
                col_buffer_ptr);
   } else {
     im2col_nd_cpu(data_ptr, num_spatial_axes_,
-                  reinterpret_cast<const int*>(&(im_data_shape[1])),  // skip batch dim
+                  reinterpret_cast<const int*>(&(data_shape[1])),  // skip batch dim
                   reinterpret_cast<const int*>(col_buffer_shape.data()),
                   reinterpret_cast<const int*>(param_.kernel.data()),
                   reinterpret_cast<const int*>(param_.pad.data()),
@@ -46,19 +46,20 @@ void Convolution2Op<xpu, DType>::ConvIm2Col(const index_t n, const DType* im_dat
 
 template<typename xpu, typename DType>
 inline
-void Convolution2Op<xpu, DType>::ConvCol2Im(const index_t n, const DType* col_buffer_ptr,
-                                            const TShape& col_buffer_shape, DType* im_data_ptr,
-                                            const TShape& im_data_shape, OpReqType req,
+void Convolution2Op<xpu, DType>::ConvCol2Im(const DType* col_buffer_ptr,
+                                            const TShape& col_buffer_shape,
+                                            DType* data_ptr,
+                                            const TShape& data_shape,
+                                            OpReqType req,
                                             const cpu& dev_cpu) const {
-  DType* data_ptr = im_data_ptr + n * input_dim_;
   if (!force_nd_im2col_ && num_spatial_axes_ == 2) {
-    col2im_cpu(col_buffer_ptr, conv_in_channels_, im_data_shape[2], im_data_shape[3],
+    col2im_cpu(col_buffer_ptr, conv_in_channels_, data_shape[2], data_shape[3],
                param_.kernel[0], param_.kernel[1], param_.pad[0], param_.pad[1],
                param_.stride[0], param_.stride[1], param_.dilate[0], param_.dilate[1],
                data_ptr, req);
   } else {
     col2im_nd_cpu(col_buffer_ptr, num_spatial_axes_,
-                  reinterpret_cast<const int*>(&(im_data_shape[1])),  // skip batch dim
+                  reinterpret_cast<const int*>(&(data_shape[1])),  // skip batch dim
                   reinterpret_cast<const int*>(col_buffer_shape.data()),
                   reinterpret_cast<const int*>(param_.kernel.data()),
                   reinterpret_cast<const int*>(param_.pad.data()),

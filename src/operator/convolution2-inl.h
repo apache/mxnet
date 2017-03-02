@@ -136,7 +136,7 @@ public:
       Shape4(num_, group_, M, N), s);
     for (index_t n = 0; n < num_; ++n) {
       // transform image to col_buffer in order to use gemm
-      ConvIm2Col(n, in_data[conv::kData].dptr<DType>(), in_data[conv::kData].shape_,
+      ConvIm2Col(in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
                  col_buffer.dptr<DType>(), col_buffer.shape_, xpu());
       Tensor<xpu, 3, DType> output_3d = output_4d[n];
       for (index_t g = 0; g < group_; ++g) {
@@ -181,24 +181,46 @@ public:
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
 
     // initialize weight and col_buffer 3D tensors for using gemm
+    // For computing dLoss/d(in_data[kData])
     index_t M = kernel_dim_;
     index_t N = conv_out_spatial_dim_;
     index_t K = conv_out_channels_ / group_;
     Tensor<xpu, 3, DType> weight_3d = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(
       Shape3(group_, K, M), s);
-    Tensor<xpu, 4, DType> output_4d = out_grad[conv::kOut].get_with_shape<xpu, 4, DType>(
+    Tensor<xpu, 4, DType> out_grad_4d = out_grad[conv::kOut].get_with_shape<xpu, 4, DType>(
       Shape4(num_, group_, K, N), s);
     Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
       Shape3(group_, M, N), s);
+    // For computing dLoss/dWeight
+    Tensor<xpu, 3, DType> dweight_3d = in_grad[conv::kWeight].get_with_shape<xpu, 3, DType>(
+      Shape3(group_, K, M), s);
+
     for (index_t n = 0; n < num_; ++n) {
-      Tensor<xpu, 3, DType> output_3d = output_4d[n];
+      Tensor<xpu, 3, DType> out_grad_3d = out_grad_4d[n];
       // gradient w.r.t. input data
       for (index_t g = 0; g < group_; ++g) {
-        col_buffer_3d[g] = dot(weight_3d[g].T(), output_3d[g]);
+        col_buffer_3d[g] = dot(weight_3d[g].T(), out_grad_3d[g]);
       }
-      ConvCol2Im(n, col_buffer.dptr<DType>(), col_buffer.shape_,
-                 in_grad[conv::kData].dptr<DType>(), in_grad[conv::kData].shape_,
+      ConvCol2Im(col_buffer.dptr<DType>(), col_buffer.shape_,
+                 in_grad[conv::kData].dptr<DType>()+n*input_dim_, in_grad[conv::kData].shape_,
                  req[conv::kData], xpu());
+
+      // gradient w.r.t. weight, dWeight should accumulate across the batch and group
+      ConvIm2Col(in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
+                 col_buffer.dptr<DType>(), col_buffer.shape_, xpu());
+      for (index_t g = 0; g < group_; ++g) {
+        if (0 == n) {
+          ASSIGN_DISPATCH(dweight_3d[g], req[conv::kWeight], dot(out_grad_3d[g], col_buffer_3d[g].T()));
+        } else {
+          dweight_3d[g] += dot(out_grad_3d[g], col_buffer_3d[g].T());
+        }
+      }
+    }
+
+    // gradient w.r.t bias
+    if (bias_term_) {
+      Tensor<xpu, 1, DType> dbias = in_grad[conv::kBias].get<xpu, 1, DType>(s);
+      ASSIGN_DISPATCH(dbias, req[conv::kBias], sumall_except_dim<1>(out_grad_4d));
     }
   }
 
@@ -237,17 +259,17 @@ private:
     num_kernels_col2im_ = input_dim_;
   }
 
-  // n is the current n-th image in the batch
-  // data is an image batch
-  void ConvIm2Col(const index_t n, const DType* data_ptr, const TShape& data_shape,
+  // the following functions should be called in looping through the image batch
+  // data is an image in the batch
+  void ConvIm2Col(const DType* data_ptr, const TShape& data_shape,
                   DType* col_buffer_ptr, const TShape& col_buffer_shape, const cpu&) const;
-  void ConvIm2Col(const index_t n, const DType* data_ptr, const TShape& data_shape,
+  void ConvIm2Col(const DType* data_ptr, const TShape& data_shape,
                   DType* col_buffer_ptr, const TShape& col_buffer_shape, const gpu&) const;
 
-  void ConvCol2Im(const index_t n, const DType* col_buffer_ptr, const TShape& col_buffer_shape,
-                  DType* im_data_ptr, const TShape& im_data_shape, OpReqType req, const cpu&) const;
-  void ConvCol2Im(const index_t n, const DType* col_buffer_ptr, const TShape& col_buffer_shape,
-                  DType* im_data_ptr, const TShape& im_data_shape, OpReqType req, const gpu&) const;
+  void ConvCol2Im(const DType* col_buffer_ptr, const TShape& col_buffer_shape,
+                  DType* data_ptr, const TShape& data_shape, OpReqType req, const cpu&) const;
+  void ConvCol2Im(const DType* col_buffer_ptr, const TShape& col_buffer_shape,
+                  DType* data_ptr, const TShape& data_shape, OpReqType req, const gpu&) const;
 
 private:
   Convolution2Param param_;
