@@ -166,7 +166,7 @@ public:
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
-    LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
+    LayerSetUp(in_grad[conv::kData].shape_, out_grad[conv::kOut].shape_);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // allocate workspace for col_buffer
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
@@ -175,7 +175,7 @@ public:
     TShape col_buffer_shape(num_spatial_axes_ + 1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
-      col_buffer_shape[i] = out_data[0].shape_[i+1];
+      col_buffer_shape[i] = out_grad[conv::kData].shape_[i+1];
     }
     // create a column buffer using workspace and col_buffer_shape
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
