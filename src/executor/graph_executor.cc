@@ -16,6 +16,7 @@
 namespace mxnet {
 namespace exec {
 GraphExecutor::~GraphExecutor() {
+  //TODO Delete cached_seg_ops
   for (auto& n : op_nodes_) {
     if (n.cached_opr != nullptr) {
       Engine::Get()->DeleteOperator(n.cached_opr);
@@ -671,7 +672,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 
    // heurestic, only enable bulk on forward only
   bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
-       && topo_start == 0 && num_forward_nodes_ == op_nodes_.size();
+       && topo_start == 0 && num_forward_nodes_ == topo_end; //op_nodes_.size();
   if (bulk_exec) {
     // encode things into a key
     size_t key = topo_start * op_nodes_.size() + topo_end;
@@ -687,11 +688,10 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       Context* pctx = nullptr;
       const auto& idx = graph_.indexed_graph();
       for (size_t nid = topo_start; nid < topo_end; ++nid) {
-        //uint32_t nid = topo_order_[i];
-        //if (!op_nodes_[nid].activated) continue;
+        OpNode& opnode = op_nodes_[nid];
+        if (opnode.skip_exec_node) continue;
         const auto& inode = idx[nid];
         if (inode.source->is_variable()) continue;
-        OpNode& opnode = op_nodes_[nid];
         opnode.exec->op_ctx.is_train = is_train;
         pctx = &(opnode.ctx);
       }
@@ -754,7 +754,7 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     const auto& inode = idx[nid];
     OpNode& op_node = op_nodes_[nid];
-    // if (!op_nodes_[nid].activated) continue;
+    if (op_node.skip_exec_node) continue;
     if (inode.source->is_variable()) continue;
     if (op_node.exec->exec_type() != Operator::kSync) {
       return nullptr;
