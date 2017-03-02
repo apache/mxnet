@@ -7,10 +7,10 @@ import sys
 import ctypes
 import atexit
 import warnings
-warnings.filterwarnings('default', category=DeprecationWarning)
-import numpy as np
 import inspect
+import numpy as np
 from . import libinfo
+warnings.filterwarnings('default', category=DeprecationWarning)
 
 __all__ = ['MXNetError']
 #----------------------------
@@ -239,14 +239,13 @@ def add_fileline_to_docstring(module, incursive=True):
             return
         try:
             line = inspect.getsourcelines(obj)[-1]
-        except:
+        except IOError:
             return
         obj.__doc__ += '\n\nFrom:%s:%d' % (fname, line)
 
     if isinstance(module, str):
         module = sys.modules[module]
-    for name, obj in inspect.getmembers(module):
-        # print(name)
+    for _, obj in inspect.getmembers(module):
         if inspect.isbuiltin(obj):
             continue
         if inspect.isfunction(obj):

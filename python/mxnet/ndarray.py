@@ -380,7 +380,7 @@ fixed-size items.
         array([[ 2.,  2.,  2.],
                [ 3.,  4.,  5.]], dtype=float32)
         """
-        # TODO(mli) multi-dimensional slicing
+        # multi-dimensional slicing is not supported yet
         if isinstance(key, int):
             return self._at(key)
         if isinstance(key, py_slice):
@@ -1269,17 +1269,17 @@ def divide(lhs, rhs):
         _internal._rdiv_scalar)
     # pylint: enable= no-member, protected-access
 
-def power(x, y):
+def power(base, exp):
     """First array elements raised to powers from second array, element-wise
     with broadcasting.
 
-    Equals to ``x ** y``
+    Equals to ``base ** exp``
 
     Parameters
     ----------
-    lhs : scalar or array
-    rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+    base : scalar or NDArray
+    exp : scalar or NDArray
+        The arrays to be added. If ``base.shape != exp.shape``, they must be
         broadcastable to a common shape
 
     Returns
@@ -1304,8 +1304,8 @@ def power(x, y):
     """
     # pylint: disable= no-member, protected-access
     return _ufunc_helper(
-        lhs,
-        rhs,
+        base,
+        exp,
         broadcast_power,
         operator.pow,
         _internal._power_scalar,
@@ -1536,7 +1536,8 @@ def greater_equal(lhs, rhs):
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is greater equal than rhs and False otherwise.
+        For each element in lhs, rhs, return True if lhs is greater equal than
+        rhs and False otherwise.
 
     Examples
     --------
@@ -1621,7 +1622,8 @@ def lesser_equal(lhs, rhs):
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is lesser equal than rhs and False otherwise.
+        For each element in lhs, rhs, return True if lhs is lesser equal than
+        rhs and False otherwise.
 
     Examples
     --------
@@ -1653,20 +1655,20 @@ def true_divide(lhs, rhs):
     """
     return divide(lhs, rhs)
 
-def negative(x):
+def negative(arr):
     """Numerical negative, element-wise.
 
-    Equals ``-x``
+    Equals ``-arr``
 
     Parameters
     ----------
-    x : array
+    arr : NDArray
         The input array
 
     Returns
     -------
     NDArray
-        ``-x``
+        ``-arr``
 
     Examples
     --------
@@ -1675,7 +1677,7 @@ def negative(x):
     array([[-1., -1., -1.],
            [-1., -1., -1.]], dtype=float32)
     """
-    return multiply(x, -1.0)
+    return multiply(arr, -1.0)
 
 def load(fname):
     """Load array from file.
