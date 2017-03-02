@@ -129,4 +129,3 @@ List of Contributors
 * [Sergey Kolychev](https://github.com/sergeykolychev)
   - Sergey is original author and current maintainer of Perl5 interface.
 * [Robert Stone](https://github.com/tlby)
-

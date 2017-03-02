@@ -903,28 +903,37 @@ __PACKAGE__->register;
 
     RMSProp optimizer of Tieleman & Hinton, 2012,
 
-    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
-    by Alex Graves, 2013.
+    For centered=False, the code follows the version in
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    Tieleman & Hinton, 2012
+
+    For centered=True, the code follows the version in
+    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
     Parameters
     ----------
     learning_rate : float, optional
         Step size.
-        Default value is set to 0.002.
+        Default value is set to 0.001.
     gamma1: float, optional
-        decay factor of moving average for gradient, gradient^2.
-        Default value is set to 0.95.
+        decay factor of moving average for gradient^2.
+        Default value is set to 0.9.
     gamma2: float, optional
         "momentum" factor.
         Default value if set to 0.9.
+        Only used if centered=True
     epsilon : float, optional
         Default value is set to 1e-8.
+    centered : bool, optional
+        Use Graves or Tielemans & Hintons version of RMSProp
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
+        rescaling factor of gradient.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
+    clip_weights : float, optional
+        clip weights in range [-clip_weights, clip_weights]
 =cut
 
 package AI::MXNet::RMSProp;
@@ -932,43 +941,62 @@ use Mouse;
 
 extends 'AI::MXNet::Optimizer';
 
-has '+learning_rate' => (default => 0.002);
-has 'gamma1'    => (is => "ro", isa => "Num", default => 0.95);
-has 'gamma2'    => (is => "ro", isa => "Num", default => 0.9);
-has 'epsilon'   => (is => "ro", isa => "Num", default => 1e-8);
-has 'kwargs'    => (is => "rw", init_arg => undef);
+has '+learning_rate' => (default => 0.001);
+has 'gamma1'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'gamma2'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'epsilon'        => (is => "ro", isa => "Num",  default => 1e-8);
+has 'centered'       => (is => "ro", isa => "Bool", default => 0);
+has 'clip_weights'   => (is => "ro", isa => "Num");
+has 'kwargs'         => (is => "rw", init_arg => undef);
 
 sub BUILD
 {
     my $self = shift;
-    $self->kwargs({ 
+    $self->kwargs({
         rescale_grad => $self->rescale_grad,
         gamma1       => $self->gamma1,
-        gamma2       => $self->gamma2,
         epsilon      => $self->epsilon
     });
+    if($self->centered)
+    {
+        $self->kwargs->{gamma2} = $self->gamma2;
+    }
     if($self->clip_gradient)
     {
         $self->kwargs->{clip_gradient} = $self->clip_gradient;
     }
+    if($self->clip_weights)
+    {
+        $self->kwargs->{clip_weights} = $self->clip_weights;
+    }
 }
 
-
+# For centered=False: n
+# For centered=True: n, g, delta
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     return [
-            AI::MXNet::NDArray->zeros(
-                $weight->shape,
-                ctx => $weight->context
-            ),  # n
-            AI::MXNet::NDArray->zeros(
-                $weight->shape,
-                ctx => $weight->context
-            ),  # g
-            AI::MXNet::NDArray->zeros(
-                $weight->shape,
-                ctx => $weight->context
+            $self->centered
+            ? (
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # n
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # g
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                )
             )   # delta
+            : (
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # n
+            )
     ];
 }
 
@@ -983,15 +1011,30 @@ method update(
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
     my ($n, $g, $delta) = @{ $state };
-    AI::MXNet::NDArray->rmsprop_update(
-        $weight, $grad, $n, $g, $delta,
-        {
-            out => $weight,
-            lr  => $lr,
-            wd  => $wd,
-            %{ $self->kwargs }
-        }
-    );
+    if($self->centered)
+    {
+        AI::MXNet::NDArray->rmspropalex_update(
+            $weight, $grad, $n, $g, $delta,
+            {
+                out => $weight,
+                lr  => $lr,
+                wd  => $wd,
+                %{ $self->kwargs }
+            }
+        );
+    }
+    else
+    {
+        AI::MXNet::NDArray->rmsprop_update(
+            $weight, $grad, $n,
+            {
+                out => $weight,
+                lr  => $lr,
+                wd  => $wd,
+                %{ $self->kwargs }
+            }
+        );
+    }
 }
 
 __PACKAGE__->register;

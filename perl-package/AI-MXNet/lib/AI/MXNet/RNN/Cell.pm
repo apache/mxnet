@@ -991,7 +991,7 @@ method unroll(
         $outputs = [@ {
             AI::MXNet::Symbol->SliceChannel(
                 $outputs,
-                axis         => $axis,
+                axis         => 0,
                 num_outputs  => $length,
                 squeeze_axis => 1
             )
