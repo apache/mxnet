@@ -321,6 +321,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::vector<OpReqType>& grad_req_type,
                          const std::vector<NDArray>& aux_states,
                          Executor* shared_exec) {
+  prefer_bulk_execution_ = dmlc::GetEnv("MXNET_EXEC_PREFER_BULK_EXEC", false);
   nnvm::Graph g = InitGraph(symbol, default_ctx,
                             ctx_map, in_args, arg_grad_store,
                             grad_req_type, aux_states);
@@ -670,8 +671,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 
    // heurestic, only enable bulk on forward only
   bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
-       && topo_start == 0;
-   //TODO Add this criteria && num_forward_nodes_ == topo_order_.size();
+       && topo_start == 0 && num_forward_nodes_ == op_nodes_.size();
   if (bulk_exec) {
     // encode things into a key
     size_t key = topo_start * op_nodes_.size() + topo_end;
@@ -768,11 +768,6 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
       write_vars.push_back(out.var());
       //if (out.type == kTobeBindByExternal) return nullptr;
     }
-
-    //for (const DataEntryInfo& aux : op_node.aux_states) {
-    //  write_vars.push_back(aux.data.var());
-    //  if (aux.type == kTobeBindByExternal) return nullptr;
-    //}
 
     for (const auto& entry : inode.source->inputs) {
       uint32_t input_nid = idx.node_id(entry.node.get());
