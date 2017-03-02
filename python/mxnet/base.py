@@ -232,6 +232,8 @@ def add_fileline_to_docstring(module, incursive=True):
     """
 
     def _add_fileline(obj):
+        """add fileinto to a object
+        """
         if obj.__doc__ is None or 'From:' in obj.__doc__:
             return
         fname = inspect.getsourcefile(obj)
