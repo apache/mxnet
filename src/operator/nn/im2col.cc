@@ -224,6 +224,11 @@ template void col2im_cpu<double>(const double* data_col, const int channels,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
     double* data_im, OpReqType req);
+template void col2im_cpu<mshadow::half::half_t>(const mshadow::half::half_t* data_col,
+    const int channels, const int height, const int width, const int kernel_h, const int kernel_w,
+    const int pad_h, const int pad_w, const int stride_h,
+    const int stride_w, const int dilation_h, const int dilation_w,
+    mshadow::half::half_t* data_im, OpReqType req);
 
 template <typename DType>
 void col2im_nd_cpu(const DType* data_col, const int num_spatial_axes,
@@ -246,5 +251,10 @@ template void col2im_nd_cpu<double>(const double* data_col,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, double* data_im, OpReqType req);
+template void col2im_nd_cpu<mshadow::half::half_t>(const mshadow::half::half_t* data_col,
+    const int num_spatial_axes,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    const int* dilation, mshadow::half::half_t* data_im, OpReqType req);
 }  // namespace op
 }  // namespace mxnet
