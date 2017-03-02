@@ -58,7 +58,8 @@ method update($index, $weight, $grad, $state)
     $self->_update_count($index);
     my $t = $self->_index_update_count->{$index};
     my ($mean, $variance) = @$state;
-    $grad *= $self->rescale_grad;
+    my $wd = $self->_get_wd($index);
+    $grad = $grad * $self->rescale_grad + $wd * $weight;
     if($self->clip_gradient)
     {
         mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, { out => $grad });
@@ -73,12 +74,6 @@ method update($index, $weight, $grad, $state)
     my $coef2 = 1 - $self->beta2**$t;
     $lr *= sqrt($coef2)/$coef1;
     $weight -= $lr*$mean/(mx->nd->sqrt($variance) + $self->epsilon);
-
-    my $wd = $self->_get_wd($index);
-    if($wd > 0)
-    {
-        $weight -= ($lr * $wd) * $weight;
-    }
 }
 
 package main;

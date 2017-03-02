@@ -13,6 +13,10 @@
 #include <fstream>
 #include "./profiler.h"
 
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+#include <Windows.h>
+#endif
+
 namespace mxnet {
 namespace engine {
 #if MXNET_USE_PROFILER
@@ -180,8 +184,15 @@ void Profiler::DumpProfile() {
 
 
 inline uint64_t NowInUsec() {
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+  LARGE_INTEGER frequency, counter;
+  QueryPerformanceFrequency(&frequency);
+  QueryPerformanceCounter(&counter);
+  return counter.QuadPart * 1000000 / frequency.QuadPart;
+#else
   return std::chrono::duration_cast<std::chrono::microseconds>(
     std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+#endif
 }
 
 void SetOprStart(OprExecStat* opr_stat) {

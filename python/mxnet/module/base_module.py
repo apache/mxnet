@@ -1,8 +1,9 @@
 # pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
 """`BaseModule` defines an API for modules."""
 
-import logging
 import time
+import logging
+import warnings
 
 from .. import metric
 from .. import ndarray
@@ -10,6 +11,8 @@ from .. import ndarray
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
+from ..io import DataDesc
+
 
 def _as_list(obj):
     """A utility function that treat the argument as a list.
@@ -26,6 +29,51 @@ def _as_list(obj):
         return obj
     else:
         return [obj]
+
+
+def _check_input_names(symbol, names, typename, throw):
+    """Check that all input names are in symbol's argument"""
+    args = symbol.list_arguments()
+    for name in names:
+        if name in args:
+            continue
+        candidates = [arg for arg in args if
+                      not arg.endswith('_weight') and
+                      not arg.endswith('_bias') and
+                      not arg.endswith('_gamma') and
+                      not arg.endswith('_beta')]
+        msg = "\033[91mYou created Module with Module(..., %s_names=%s) but " \
+              "input with name '%s' is not found in symbol.list_arguments(). " \
+              "Did you mean one of:\n\t%s\033[0m"%(
+                  typename, str(names), name, '\n\t'.join(candidates))
+        if throw:
+            raise ValueError(msg)
+        else:
+            warnings.warn(msg)
+
+
+def _check_names_match(data_names, data_shapes, name, throw):
+    """Check that input names matches input data descriptors"""
+    actual = [x[0] for x in data_shapes]
+    if data_names != actual:
+        msg = "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)"%(
+            name, name, str(data_shapes), str(data_names))
+        if throw:
+            raise ValueError(msg)
+        else:
+            warnings.warn(msg)
+
+
+def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
+    """parse data_shapes into DataDesc format and check that names match"""
+    data_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in data_shapes]
+    _check_names_match(data_names, data_shapes, 'data', True)
+    if label_shapes is not None:
+        label_shapes = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in label_shapes]
+        _check_names_match(label_names, label_shapes, 'label', False)
+    else:
+        _check_names_match(label_names, [], 'label', False)
+    return data_shapes, label_shapes
 
 
 class BaseModule(object):
@@ -133,6 +181,7 @@ class BaseModule(object):
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
+        self._total_exec_bytes = 0
 
     ################################################################################
     # High Level API
@@ -599,6 +648,41 @@ class BaseModule(object):
             else:
                 raise ValueError("Invalid param file " + fname)
         self.set_params(arg_params, aux_params)
+
+    def get_states(self, merge_multi_context=True):
+        """Get states from all devices
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert self.binded and self.params_initialized
+        assert not merge_multi_context
+        return []
+
+    def set_states(self, states=None, value=None):
+        """Set value for states. Only one of states & value can be specified.
+
+        Parameters
+        ----------
+        states : list of list of NDArrays
+            source states arrays formatted like [[state1_dev1, state1_dev2],
+            [state2_dev1, state2_dev2]].
+        value : number
+            a single scalar value for all state arrays.
+        """
+        assert self.binded and self.params_initialized
+        assert not states and not value
 
     def install_monitor(self, mon):
         """Install monitor on all executors"""
