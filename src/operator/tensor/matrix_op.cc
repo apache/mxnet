@@ -16,10 +16,10 @@ DMLC_REGISTER_PARAMETER(ClipParam);
 DMLC_REGISTER_PARAMETER(SimpleCropAssignScalarParam);
 DMLC_REGISTER_PARAMETER(SliceParam);
 DMLC_REGISTER_PARAMETER(SliceAxisParam);
-DMLC_REGISTER_PARAMETER(FlipParam);
 DMLC_REGISTER_PARAMETER(DotParam);
 DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
+DMLC_REGISTER_PARAMETER(ReverseParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -300,30 +300,6 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxisGrad_<cpu>);
 
-NNVM_REGISTER_OP(flip)
-.describe(R"code(Reverse the order of elements in an array along the given axis.
-
-Examples::
-
-  x = [[ 1, 2],
-       [ 3, 4]]
-
-  flip(x, axis=0) = [[ 3.,  4.],
-                     [ 1.,  2.]]
-
-  flip(x, axis=1) = [[ 2.,  1.],
-                     [ 4.,  3.]]
-)code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<FlipParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", Flip<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"flip"})
-.add_argument("data", "ndarray-or-symbol", "Source input")
-.add_arguments(FlipParam::__FIELDS__());
-
 NNVM_REGISTER_OP(dot)
 .describe(R"doc(Dot product of two arrays.
 
@@ -531,5 +507,37 @@ NNVM_REGISTER_OP(_backward_tile)
 .set_attr_parser(ParamParser<TileParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", TileOpBackward<cpu>);
+
+NNVM_REGISTER_OP(reverse)
+.MXNET_DESCRIBE("Reverse elements of an array with axis")
+.set_num_outputs(1)
+.set_num_inputs(1)
+.add_alias("flip")
+.set_attr_parser(ParamParser<ReverseParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+  return std::vector<std::string> {"data"};
+})
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_reverse" })
+.add_argument("data", "NDArray", "Input data array")
+.add_arguments(ReverseParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_reverse)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ReverseParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+})
+.set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>);
 }  // namespace op
 }  // namespace mxnet
