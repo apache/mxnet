@@ -749,6 +749,8 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
   std::vector<Engine::VarHandle> read_vars;
   std::vector<Engine::VarHandle> write_vars;
   Context *pctx = nullptr;
+  // Setup data for operators
+  std::vector<OpExecutor*>* exec_list = new std::vector<OpExecutor*>();
 
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
@@ -771,15 +773,29 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
 
     for (const auto& entry : inode.source->inputs) {
       uint32_t input_nid = idx.node_id(entry.node.get());
-      const auto& data = op_nodes_[input_nid].exec->out_array[entry.index];
-      read_vars.push_back(data.var());
+      auto& input_exec = op_nodes_[input_nid].exec;
+      // aux node doesn't have exec
+      if (input_exec != nullptr) {
+        const auto& data = input_exec->out_array[entry.index];
+        read_vars.push_back(data.var());
+      }
       //if (info.type == kTobeBindByExternal) return nullptr;
     }
 
     for (const Resource& r : op_node.exec->op_ctx.requested) {
       write_vars.push_back(r.var);
     }
+
+    //Refactor var name
+    auto& exec = op_nodes_[nid].exec;
+    Engine::Get()->PushSync([exec](RunContext rctx) {
+      exec->Setup();
+    //}, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
+    }, Context::CPU(), {}, {}, FnProperty::kNormal, 0,
+    PROFILER_MESSAGE("SetupExec"));
+    exec_list->push_back(exec.get());
   }
+
   if (pctx == nullptr) return nullptr;
   // deduplication
   std::sort(write_vars.begin(), write_vars.end());
@@ -799,19 +815,6 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
   }
   read_vars.resize(rtop - read_vars.begin());
 
-  // Setup data for operators
-  std::vector<OpExecutor*>* exec_list = new std::vector<OpExecutor*>();
-  {
-    for (size_t nid = topo_start; nid < topo_end; ++nid) {
-      auto& exec = op_nodes_[nid].exec;
-      Engine::Get()->PushSync([exec](RunContext rctx) {
-        exec->Setup();
-      //}, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
-      }, Context::CPU(), {}, {}, FnProperty::kNormal, 0,
-      PROFILER_MESSAGE("SetupExec"));
-      exec_list->push_back(exec.get());
-    }
-  }
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [exec_list, is_gpu] (
       RunContext ctx, Engine::CallbackOnComplete on_complete) {
