@@ -60,6 +60,18 @@ class GraphExecutor : public Executor {
     // cached operator handle
     Engine::OprHandle cached_opr{nullptr};
   };
+  // a cached segment operator that executes a segment
+  struct CachedSegOpr {
+    // context of the operator
+    Context ctx;
+    // begin in topo order
+    size_t topo_begin;
+    // end in topo order
+    size_t topo_end;
+    // the cached operator
+    Engine::OprHandle opr;
+  };
+
   // internal initialization of the graph.
   Graph InitGraph(nnvm::Symbol symbol,
                   const Context& default_ctx,

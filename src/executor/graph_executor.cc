@@ -775,10 +775,9 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
     //}
 
     for (const auto& entry : inode.source->inputs) {
-      //Get the id of the entry source
-      //TODO FIXME const auto& out = entry.node->out_array[entry.index]; //.outputs[e.index];
-      //read_vars.push_back(out.var());
-      (void) entry;
+      uint32_t input_nid = idx.node_id(entry.node.get());
+      const auto& data = op_nodes_[input_nid].exec->out_array[entry.index];
+      read_vars.push_back(data.var());
       //if (info.type == kTobeBindByExternal) return nullptr;
     }
 
@@ -805,52 +804,24 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
   }
   read_vars.resize(rtop - read_vars.begin());
 
-  bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
-  auto exec_fun = [this, topo_start, topo_end, is_gpu]
-      (RunContext ctx, Engine::CallbackOnComplete on_complete) {
-    std::vector<OpReqType> req;
-    std::vector<TBlob> in_data, out_data, aux_data;
-    const auto& idx = graph_.indexed_graph();
+  // Setup data for operators
+  std::vector<OpExecutor*>* exec_list = new std::vector<OpExecutor*>();
+  {
     for (size_t nid = topo_start; nid < topo_end; ++nid) {
-      //if (!op_nodes_[nid].activated) continue;
-      const auto& inode = idx[nid];
-      if (inode.source->is_variable()) continue;
-      OpNode& op_node = op_nodes_[nid];
-      CHECK_NE(op_node.exec->exec_type(), Operator::kCrossDeviceCopy);
-      CHECK_NE(op_node.exec->exec_type(), Operator::kAsync);
-      req.clear();
-      in_data.clear();
-      out_data.clear();
-      aux_data.clear();
-
-      size_t num_output = op_node.exec->out_array.size();
-      CHECK_EQ(num_output, op_node.exec->req.size());
-      for (size_t i = 0; i < num_output; i++) {
-        req.push_back(op_node.exec->req[i]);
-        out_data.push_back(op_node.exec->out_array[i].data());
-      }
-      /*
-      for (size_t i = 0; i < gnode.addto_index.size(); ++i) {
-        CHECK_EQ(req[gnode.addto_index[i]], kWriteInplace);
-        req[gnode.addto_index[i]] = kAddTo;
-        const StaticGraph::DataEntry& e = graph_.nodes[nid].inputs[i + ninput];
-        const DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
-        CHECK_EQ(info.inplace_op_id, static_cast<int>(nid));
-      }
-      */
-
-      // TODO FIXME input
-      /*for (size_t i = 0; i < ninput; ++i) {
-        const StaticGraph::DataEntry& e = graph_.nodes[nid].inputs[i];
-        const DataEntryInfo &info = op_nodes_[e.source_id].outputs[e.index];
-        in_data.push_back(info.data.data());
-      }*/
-      // run the function.
-      //FIXME which op?
-      Operator* op = nullptr; //op_node.op.get();
-      OpContext* op_ctx_ptr = &(op_node.exec->op_ctx);
-      op_ctx_ptr->run_ctx = ctx;
-      op->Forward(*op_ctx_ptr, in_data, req, out_data, aux_data);
+      auto& exec = op_nodes_[nid].exec;
+      Engine::Get()->PushSync([exec](RunContext rctx) {
+        exec->Setup();
+      //}, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
+      }, Context::CPU(), {}, {}, FnProperty::kNormal, 0,
+      PROFILER_MESSAGE("SetupExec"));
+      exec_list->push_back(exec.get());
+    }
+  }
+  bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
+  auto exec_fun = [exec_list, is_gpu] (
+      RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    for (auto &exec : *exec_list) {
+      exec->Run(ctx);
     }
     if (is_gpu) {
 #if MXNET_USE_CUDA
