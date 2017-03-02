@@ -125,3 +125,4 @@ List of Contributors
 * [Piyush Singh](https://github.com/Piyush3dB)
 * [Freddy Chua](https://github.com/freddycct)
 * [Jie Zhang](https://github.com/luoyetx)
+* [Leonard Lausen](https://github.com/leezu)
