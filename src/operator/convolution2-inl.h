@@ -2,7 +2,7 @@
  * Copyright (c) 2017 by Contributors
  * \file convolution2-inl.h
  * \brief Ref: https://www.zhihu.com/question/28385679
- * \author Jun Wu
+ * \author Bing Xu, Jun Wu
 */
 #ifndef MXNET_OPERATOR_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_CONVOLUTION_INL_H_
@@ -103,9 +103,14 @@ public:
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    CHECK_EQ(req[conv::kOut], kWriteTo);
     using namespace mshadow;
-    LayerSetUp(in_data, out_data);
+    using namespace mshadow::expr;
+    CHECK_EQ(req[conv::kOut], kWriteTo);
+    size_t expected = param_.no_bias ? 2 : 3;
+    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(req[conv::kOut], kWriteTo);
+    LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
     Stream<xpu>* s = ctx.get_stream<xpu>();
     // allocate workspace for col_buffer
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace].get_space_typed<xpu, 1, DType>(
@@ -127,7 +132,7 @@ public:
       Shape3(group_, M, K), s);
     Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
       Shape3(group_, K, N), s);
-    Tensor<xpu, 4, DType> output_4d = out_data[0].get_with_shape<xpu, 4, DType>(
+    Tensor<xpu, 4, DType> output_4d = out_data[conv::kOut].get_with_shape<xpu, 4, DType>(
       Shape4(num_, group_, M, N), s);
     for (index_t n = 0; n < num_; ++n) {
       // transform image to col_buffer in order to use gemm
@@ -137,19 +142,66 @@ public:
         ASSIGN_DISPATCH(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
       }
     }
+    if (bias_term_) {
+      Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
+      Tensor<xpu, 3, DType> output_3d = out_data[conv::kOut].get_with_shape<xpu, 3, DType>(
+        Shape3(num_, conv_out_channels_, conv_out_spatial_dim_), s);
+      // has bias term, broadcast it to the same shape of output_3d in channel dim
+      output_3d += mshadow::expr::broadcast<1>(bias, output_3d.shape_);
+    }
   }
 
   virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {}
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_args) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    CHECK_EQ(out_grad.size(), 1);
+    size_t expected = param_.no_bias == 0 ? 3 : 2;
+    CHECK(in_data.size() == expected && in_grad.size() == expected);
+    CHECK_EQ(req.size(), expected);
+    CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
+    LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // allocate workspace for col_buffer
+    Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
+      .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
+    // calculate the shape of col_buffer
+    TShape col_buffer_shape(num_spatial_axes_ + 1);
+    col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
+    for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
+      col_buffer_shape[i] = out_data[0].shape_[i+1];
+    }
+    // create a column buffer using workspace and col_buffer_shape
+    TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
+
+    // initialize weight and col_buffer 3D tensors for using gemm
+    index_t M = kernel_dim_;
+    index_t N = conv_out_spatial_dim_;
+    index_t K = conv_out_channels_ / group_;
+    Tensor<xpu, 3, DType> weight_3d = in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(
+      Shape3(group_, K, M), s);
+    Tensor<xpu, 4, DType> output_4d = out_grad[conv::kOut].get_with_shape<xpu, 4, DType>(
+      Shape4(num_, group_, K, N), s);
+    Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
+      Shape3(group_, M, N), s);
+    for (index_t n = 0; n < num_; ++n) {
+      Tensor<xpu, 3, DType> output_3d = output_4d[n];
+      // gradient w.r.t. input data
+      for (index_t g = 0; g < group_; ++g) {
+        col_buffer_3d[g] = dot(weight_3d[g].T(), output_3d[g]);
+        const TBlob& gdata = in_grad[conv::kData];
+        ConvCol2Im(n, col_buffer, const_cast<TBlob*>(&gdata), req[conv::kData], xpu());
+      }
+    }
+  }
 
 private:
-  void LayerSetUp(const std::vector<TBlob>& in_data,
-                  const std::vector<TBlob>& out_data) {
+  void LayerSetUp(const TShape& ishape, const TShape& oshape) {
     force_nd_im2col_ = false;  // hard code as false for now
     channel_axis_ = 1;  // hard code channel axis
     const index_t first_spatial_axis = channel_axis_ + 1;
@@ -162,30 +214,36 @@ private:
     }
 
     // batch size
-    num_ = in_data[conv::kData].size(0);
+    num_ = ishape[0];
     // number of input channels
-    channels_ = in_data[conv::kData].size(1);
+    channels_ = ishape[1];
     group_ = param_.num_group;
     conv_out_channels_ = param_.num_filter;
     conv_in_channels_ = channels_;
     bias_term_ = !param_.no_bias;
     kernel_dim_ = conv_in_channels_ / group_ * param_.kernel.Size();
     weight_offset_ = conv_out_channels_ * kernel_dim_ / group_;
-    conv_out_spatial_dim_ = out_data[0].shape_.ProdShape(2, out_data[0].shape_.ndim());
+    conv_out_spatial_dim_ = oshape.ProdShape(2, oshape.ndim());
     col_offset_ = kernel_dim_ * conv_out_spatial_dim_;
     output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_;
     // size of the column buffer used for storing im2col-ed pixels
     col_buffer_size_ = kernel_dim_ * group_ * conv_out_spatial_dim_;
     // input/output image size (#channels * height * width)
-    input_dim_ = in_data[conv::kData].shape_.ProdShape(1, in_data[conv::kData].shape_.ndim());
-    output_dim_ = out_data[conv::kOut].shape_.ProdShape(1, out_data[conv::kOut].shape_.ndim());
+    input_dim_ = ishape.ProdShape(1, ishape.ndim());
+    output_dim_ = oshape.ProdShape(1, oshape.ndim());
     num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_;
+    num_kernels_col2im_ = input_dim_;
   }
 
   // n is the current n-th image in the batch
   // data is an image batch
   void ConvIm2Col(const index_t n, const TBlob& data, TBlob* col_buffer, const cpu& dev_cpu) const;
   void ConvIm2Col(const index_t n, const TBlob& data, TBlob* col_buffer, const gpu& dev_gpu) const;
+
+  void ConvCol2Im(const index_t n, const TBlob& col_buffer, TBlob* gdata,
+                  OpReqType req, const cpu& dev_cpu) const;
+  void ConvCol2Im(const index_t n, const TBlob& col_buffer, TBlob* gdata,
+                  OpReqType req, const gpu& dev_gpu) const;
 
 private:
   Convolution2Param param_;
@@ -205,6 +263,7 @@ private:
   index_t input_dim_;
   index_t output_dim_;
   index_t num_kernels_im2col_;
+  index_t num_kernels_col2im_;
   bool bias_term_;  // has bias term?
   bool force_nd_im2col_;
   bool is_1x1_;

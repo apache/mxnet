@@ -274,7 +274,7 @@ __global__ void col2im_gpu_kernel(const int n, const DType* data_col,
     const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w,
     const int height_col, const int width_col,
-    DType* data_im) {
+    DType* data_im, OpReqType req) {
   CUDA_KERNEL_LOOP(index, n) {
     DType val = 0;
     const int w_im = index % width + pad_w;
@@ -303,7 +303,7 @@ __global__ void col2im_gpu_kernel(const int n, const DType* data_col,
         }
       }
     }
-    data_im[index] = val;
+    KERNEL_ASSIGN(data_im[index], req, val);
   }
 }
 
@@ -312,7 +312,7 @@ void col2im_gpu(const DType* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
-    DType* data_im) {
+    DType* data_im, OpReqType req) {
   int height_col = (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) /
       stride_h + 1;
   int width_col = (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) /
@@ -325,7 +325,7 @@ void col2im_gpu(const DType* data_col, const int channels,
                              mshadow::cuda::kBaseThreadNum>>>(
       num_kernels, data_col, height, width, channels, kernel_h, kernel_w,
       pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
-      height_col, width_col, data_im);
+      height_col, width_col, data_im, req);
   MSHADOW_CUDA_POST_KERNEL_CHECK(col2im_gpu_kernel);
 }
 
@@ -334,18 +334,18 @@ template void col2im_gpu<float>(const float* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
-    float* data_im);
+    float* data_im, OpReqType req);
 template void col2im_gpu<double>(const double* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
-    double* data_im);
+    double* data_im, OpReqType req);
 
 template <typename DType, int num_axes>
 __global__ void col2im_nd_gpu_kernel(const int n, const DType* data_col,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, DType* data_im) {
+    const int* dilation, DType* data_im, OpReqType req) {
   int d_im[num_axes];  // NOLINT(runtime/arrays)
   int d_col_iter[num_axes];  // NOLINT(runtime/arrays)
   int d_col_start[num_axes];  // NOLINT(runtime/arrays)
@@ -441,7 +441,7 @@ __global__ void col2im_nd_gpu_kernel(const int n, const DType* data_col,
         }
       }  // for (int i = num_axes - 1; i >= 0; --i)
     }  while (incremented);
-    data_im[index] = val;
+    KERNEL_ASSIGN(data_im[index], req, val);
   }  // CUDA_KERNEL_LOOP(index, n)
 }
 
@@ -449,7 +449,7 @@ template <typename DType>
 void col2im_nd_gpu(const DType* data_col, const int num_spatial_axes,
     const int im_size, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, DType* data_im) {
+    const int* dilation, DType* data_im, OpReqType req) {
   // num_axes should be smaller than block size
   CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
   switch (num_spatial_axes) {
@@ -457,61 +457,61 @@ void col2im_nd_gpu(const DType* data_col, const int num_spatial_axes,
     col2im_nd_gpu_kernel<DType, 1>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 2:
     col2im_nd_gpu_kernel<DType, 2>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 3:
     col2im_nd_gpu_kernel<DType, 3>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 4:
     col2im_nd_gpu_kernel<DType, 4>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 5:
     col2im_nd_gpu_kernel<DType, 5>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 6:
     col2im_nd_gpu_kernel<DType, 6>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 7:
     col2im_nd_gpu_kernel<DType, 7>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 8:
     col2im_nd_gpu_kernel<DType, 8>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 9:
     col2im_nd_gpu_kernel<DType, 9>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 10:
     col2im_nd_gpu_kernel<DType, 10>  // NOLINT_NEXT_LINE(whitespace/operators)
           <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
           im_size, data_col, im_shape, col_shape,
-          kernel_shape, pad, stride, dilation, data_im);
+          kernel_shape, pad, stride, dilation, data_im, req);
     break;
   default:
     LOG(FATAL) << "col2im_nd_gpu does not support computation with "
@@ -525,11 +525,11 @@ template void col2im_nd_gpu<float>(const float* data_col,
     const int num_spatial_axes, const int im_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, float* data_im);
+    const int* dilation, float* data_im, OpReqType req);
 template void col2im_nd_gpu<double>(const double* data_col,
     const int num_spatial_axes, const int im_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, double* data_im);
+    const int* dilation, double* data_im, OpReqType req);
 }  // namespace op
 }  // namespace mxnet

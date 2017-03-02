@@ -16,13 +16,13 @@ inline bool is_a_ge_zero_and_a_lt_b(int a, int b) {
   return static_cast<unsigned>(a) < static_cast<unsigned>(b);
 }
 
-template <typename Dtype>
-void im2col_cpu(const Dtype* data_im, const int channels,
+template <typename DType>
+void im2col_cpu(const DType* data_im, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w,
     const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w,
-    Dtype* data_col) {
+    DType* data_col) {
   const int output_h = (height + 2 * pad_h -
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
   const int output_w = (width + 2 * pad_w -
@@ -72,17 +72,20 @@ template void im2col_cpu<mshadow::half::half_t>(const mshadow::half::half_t* dat
     const int stride_w, const int dilation_h, const int dilation_w,
     mshadow::half::half_t* data_col);
 
-template <typename Dtype>
-inline void im2col_nd_core_cpu(const Dtype* data_input, const bool im2col,
+template <typename DType>
+inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
     const int num_spatial_axes, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, Dtype* data_output) {
+    const int* dilation, DType* data_output, OpReqType req = mxnet::kWriteTo) {
+  if (mxnet::kNullOp == req) return;
   if (!im2col) {
     int im_size = im_shape[0];
     for (int i = 0; i < num_spatial_axes; ++i) {
       im_size *= im_shape[1 + i];
     }
-    fill_array(im_size, Dtype(0), data_output);
+    if (mxnet::kAddTo != req) {
+      fill_array(im_size, DType(0), data_output);
+    }
   }
   int kernel_size = 1;
   for (int i = 0; i < num_spatial_axes; ++i) {
@@ -143,11 +146,11 @@ inline void im2col_nd_core_cpu(const Dtype* data_input, const bool im2col,
   }  // for (int c = 0; c < channels_col; ++c) {
 }
 
-template <typename Dtype>
-void im2col_nd_cpu(const Dtype* data_im, const int num_spatial_axes,
+template <typename DType>
+void im2col_nd_cpu(const DType* data_im, const int num_spatial_axes,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, Dtype* data_col) {
+    const int* dilation, DType* data_col) {
   const bool kIm2Col = true;
   im2col_nd_core_cpu(data_im, kIm2Col, num_spatial_axes, im_shape, col_shape,
                   kernel_shape, pad, stride, dilation, data_col);
@@ -170,14 +173,17 @@ template void im2col_nd_cpu<mshadow::half::half_t>(const mshadow::half::half_t* 
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, mshadow::half::half_t* data_col);
 
-template <typename Dtype>
-void col2im_cpu(const Dtype* data_col, const int channels,
+template <typename DType>
+void col2im_cpu(const DType* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w,
     const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w,
-    Dtype* data_im) {
-  fill_array(height * width * channels, Dtype(0), data_im);
+    DType* data_im, OpReqType req) {
+  if (mxnet::kNullOp == req) return;
+  if (mxnet::kAddTo != req) {
+    fill_array(height * width * channels, static_cast<DType>(0), data_im);
+  }
   const int output_h = (height + 2 * pad_h -
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
   const int output_w = (width + 2 * pad_w -
@@ -212,21 +218,21 @@ template void col2im_cpu<float>(const float* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
-    float* data_im);
+    float* data_im, OpReqType req);
 template void col2im_cpu<double>(const double* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
-    double* data_im);
+    double* data_im, OpReqType req);
 
-template <typename Dtype>
-void col2im_nd_cpu(const Dtype* data_col, const int num_spatial_axes,
+template <typename DType>
+void col2im_nd_cpu(const DType* data_col, const int num_spatial_axes,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, Dtype* data_im) {
+    const int* dilation, DType* data_im, OpReqType req) {
   const bool kIm2Col = false;
   im2col_nd_core_cpu(data_col, kIm2Col, num_spatial_axes, im_shape, col_shape,
-                     kernel_shape, pad, stride, dilation, data_im);
+                     kernel_shape, pad, stride, dilation, data_im, req);
 }
 
 // Explicit instantiation
@@ -234,11 +240,11 @@ template void col2im_nd_cpu<float>(const float* data_col,
     const int num_spatial_axes,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, float* data_im);
+    const int* dilation, float* data_im, OpReqType req);
 template void col2im_nd_cpu<double>(const double* data_col,
     const int num_spatial_axes,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, double* data_im);
+    const int* dilation, double* data_im, OpReqType req);
 }  // namespace op
 }  // namespace mxnet

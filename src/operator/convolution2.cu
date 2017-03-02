@@ -2,7 +2,7 @@
  * Copyright (c) 2017 by Contributors
  * \file convolution.cu
  * \brief
- * \author Jun Wu
+ * \author Bing Xu, Jun Wu
 */
 
 #include "./convolution2-inl.h"
@@ -36,6 +36,12 @@ void Convolution2Op<xpu, DType>::ConvIm2Col(const index_t n, const TBlob& data,
                   reinterpret_cast<const int*>(param_.dilate.data()),
                   col_buffer->dptr<DType>());
   }
+}
+
+template<typename xpu, typename DType>
+inline
+void Convolution2Op<xpu, DType>::ConvCol2Im(const index_t n, const TBlob& col_buffer, TBlob* gdata,
+                                            OpReqType req, const gpu& dev_gpu) const {
 }
 
 template<>
