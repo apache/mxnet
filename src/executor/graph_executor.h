@@ -28,6 +28,7 @@ using nnvm::Graph;
 class GraphExecutor : public Executor {
  public:
   using Executor::MonitorCallback;
+
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
@@ -76,7 +77,7 @@ class GraphExecutor : public Executor {
   // initialize the resources in the graph
   // initialize the memory of data entries
   // shared_pool: extra memory shared from other parts
-  void InitDataEntryMemory(const std::vector<NDArray>& shared_pool);
+  void InitDataEntryMemory(std::vector<NDArray>* shared_pool);
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
   // internal graph
