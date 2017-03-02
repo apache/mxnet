@@ -30,7 +30,7 @@ class Agent(object):
         # Negative entropy.
         neg_entropy = policy * log_policy
         neg_entropy = mx.sym.MakeLoss(
-            data=neg_entropy, grad_scale=config.entropy_wt, name='net_entropy')
+            data=neg_entropy, grad_scale=config.entropy_wt, name='neg_entropy')
 
         # Value network.
         value = mx.sym.FullyConnected(data=net, name='value', num_hidden=1)
