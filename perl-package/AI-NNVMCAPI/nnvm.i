@@ -1,13 +1,12 @@
 %module  "AI::NNVMCAPI"
 %include typemaps.i
 %rename("%(strip:[NN])s") "";
-%wrapper %{
-static int _p_NNOp_inited = 0;
-static int _p_NNSymbol_inited = 0;
-static int _p_NNGraph_inited = 0;
-static char _p_NNOp_module_name[50];
-static char _p_NNSymbol_module_name[50];
-static char _p_NNGraph_module_name[50];
+%init %{
+    /* These SWIG_TypeClientData() calls might break in the future, but
+     * %rename should work on these types before that happens. */
+    SWIG_TypeClientData(SWIGTYPE_p_NNOp, (void *)"OpHandle");
+    SWIG_TypeClientData(SWIGTYPE_p_NNSymbol, (void *)"SymbolHandle");
+    SWIG_TypeClientData(SWIGTYPE_p_NNGraph, (void *)"GraphHandle");
 %}
 %inline %{
 #include <c_api.h>
