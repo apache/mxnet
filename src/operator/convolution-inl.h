@@ -492,7 +492,7 @@ class ConvolutionProp : public OperatorProperty {
                           ConvertLayout(dshape, kNCDHW, param_.layout.value()));
       // Check whether the kernel sizes are valid
       if (dshape[2] != 0) {
-        CHECK_LT(ksize_d, dshape[2] + 2 * param_.pad[0]) << "kernel size exceed input";
+        CHECK_LE(ksize_d, dshape[2] + 2 * param_.pad[0]) << "kernel size exceed input";
       }
       if (dshape[3] != 0) {
         CHECK_LE(ksize_y, dshape[3] + 2 * param_.pad[1]) << "kernel size exceed input";
