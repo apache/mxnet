@@ -34,7 +34,7 @@ package.DeepMXNet = {
       DeepOpenCV = 2.4.x;
 
       # Scala build
-      JDK8 = 1.0;
+      JDK = 1.7;
       Maven = 3.0_jdk8;
       ScalaMavenBuilder = 1.0;
       Libgfortran1 = 1.0;
