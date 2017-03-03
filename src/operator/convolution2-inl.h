@@ -78,11 +78,12 @@ struct Convolution2Param : public dmlc::Parameter<Convolution2Param> {
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Turn off cudnn for this layer.");
     DMLC_DECLARE_FIELD(layout)
+    .add_enum("NCH", mshadow::kNCW)
     .add_enum("NCHW", mshadow::kNCHW)
     .add_enum("NCDHW", mshadow::kNCDHW)
     .set_default(dmlc::optional<int>())
     .describe("Set layout for input, output and weight. Empty for\n    "
-              "default layout: NCHW for 2d and NCDHW for 3d.");
+              "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
   }
 };
 
@@ -315,7 +316,13 @@ class Convolution2Prop : public OperatorProperty {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     using namespace mshadow;
     param_.Init(kwargs);
-    if (param_.kernel.ndim() == 2) {
+    if (param_.kernel.ndim() == 1) {
+      param_.layout = param_.layout? param_.layout.value() : mshadow::kNCW;
+      if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
+      if (param_.dilate.ndim() == 0) param_.dilate = Shape1(1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
+    }
+    else if (param_.kernel.ndim() == 2) {
       param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
       if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
       if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
@@ -346,7 +353,41 @@ class Convolution2Prop : public OperatorProperty {
     out_shape->resize(1, TShape());
     const TShape &dshp = (*in_shape)[conv::kData];
     if (dshp.ndim() ==  0) return false;
-    if (param_.kernel.ndim() == 2) {
+    if (param_.kernel.ndim() == 1) {
+      // 1d conv
+      CHECK_EQ(dshp.ndim(), 3) << "Input data should be 3D in batch-num_filter-y";
+      Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
+      Shape<3> wshape = Shape3(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
+                               param_.kernel[0]);
+      wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
+      wshape[0] *= param_.num_group;
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, wshape);
+      if (!param_.no_bias) {
+        SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
+      }
+
+      const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
+      CHECK_EQ(dshape[1] % param_.num_group, 0) \
+          << "input num_filter must divide group size";
+      CHECK_EQ(param_.num_filter % param_.num_group, 0) \
+          << "output num_filter must divide group size";
+      CHECK_GT(param_.kernel.Size(), 0) \
+          << "incorrect kernel size: " << param_.kernel;
+      CHECK_GT(param_.stride.Size(), 0) \
+          << "incorrect stride size: " << param_.stride;
+      CHECK_GT(param_.dilate.Size(), 0) \
+          << "incorrect dilate size: " << param_.dilate;
+      CHECK(ksize_y <= dshape[2] + 2 * param_.pad[0])
+          << "kernel size exceed input";
+      Shape<3> oshape;
+      oshape[0] = dshape[0];
+      oshape[1] = param_.num_filter;
+      oshape[2] = (dshape[2] + 2 * param_.pad[0] -
+          (param_.dilate[0] * (ksize_y - 1) + 1)) / param_.stride[0] + 1;
+      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
+      return true;
+    }
+    else if (param_.kernel.ndim() == 2) {
       // 2d conv
       CHECK_EQ(dshp.ndim(), 4) \
           << "Input data should be 4D in batch-num_filter-y-x";
