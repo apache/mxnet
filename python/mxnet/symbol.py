@@ -22,7 +22,7 @@ from .executor import Executor
 from . import _symbol_internal as _internal
 from .attribute import AttrScope
 
-# Use different verison of SymbolBase
+# Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
@@ -54,6 +54,7 @@ class Symbol(SymbolBase):
         return (self[i] for i in self.list_outputs())
 
     def __add__(self, other):
+        """x.__add__(y) <=> x+y """
         if isinstance(other, Symbol):
             return _internal._Plus(self, other)
         if isinstance(other, Number):
@@ -65,6 +66,7 @@ class Symbol(SymbolBase):
         return self.__add__(other)
 
     def __sub__(self, other):
+        """x.__sub__(y) <=> x-y """
         if isinstance(other, Symbol):
             return _internal._Minus(self, other)
         if isinstance(other, Number):
@@ -73,12 +75,14 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rsub__(self, other):
+        """x.__rsub__(y) <=> y-x """
         if isinstance(other, Number):
             return _internal._RMinusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __mul__(self, other):
+        """x.__mul__(y) <=> x*y """
         if isinstance(other, Symbol):
             return _internal._Mul(self, other)
         if isinstance(other, Number):
@@ -90,6 +94,7 @@ class Symbol(SymbolBase):
         return self.__mul__(other)
 
     def __div__(self, other):
+        """x.__div__(y) <=> x/y """
         if isinstance(other, Symbol):
             return _internal._Div(self, other)
         if isinstance(other, Number):
@@ -98,6 +103,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rdiv__(self, other):
+        """x.__rdiv__(y) <=> y/x """
         if isinstance(other, Number):
             return _internal._RDivScalar(self, scalar=other)
         else:
@@ -110,6 +116,7 @@ class Symbol(SymbolBase):
         return self.__rdiv__(other)
 
     def __pow__(self, other):
+        """x.__pow__(y) <=> x**y """
         if isinstance(other, Symbol):
             return _internal._Power(self, other)
         if isinstance(other, Number):
@@ -118,6 +125,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
+        """x.__neg__(y) <=> -x """
         return self.__mul__(-1.0)
 
     def __copy__(self):
@@ -130,6 +138,7 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
     def __eq__(self, other):
+        """x.__eq__(y) <=> x==y """
         if isinstance(other, Symbol):
             return _internal._equal(self, other)
         if isinstance(other, numeric_types):
@@ -138,6 +147,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __ne__(self, other):
+        """x.__ne__(y) <=> x!=y """
         if isinstance(other, Symbol):
             return _internal._not_equal(self, other)
         if isinstance(other, numeric_types):
@@ -146,6 +156,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __gt__(self, other):
+        """x.__gt__(y) <=> x>y """
         if isinstance(other, Symbol):
             return _internal._greater(self, other)
         if isinstance(other, numeric_types):
@@ -154,6 +165,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __ge__(self, other):
+        """x.__ge__(y) <=> x>=y """
         if isinstance(other, Symbol):
             return _internal._greater_equal(self, other)
         if isinstance(other, numeric_types):
@@ -162,6 +174,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __lt__(self, other):
+        """x.__lt__(y) <=> x<y """
         if isinstance(other, Symbol):
             return _internal._lesser(self, other)
         if isinstance(other, numeric_types):
@@ -170,6 +183,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __le__(self, other):
+        """x.__le__(y) <=> x<=y """
         if isinstance(other, Symbol):
             return _internal._lesser_equal(self, other)
         if isinstance(other, numeric_types):
@@ -196,7 +210,9 @@ class Symbol(SymbolBase):
             self.handle = None
 
     def __call__(self, *args, **kwargs):
-        """Invoke symbol as function on inputs.
+        """Compose symbol on inputs.
+
+        x.__call__(y, z) <=> x(y,z)
 
         Parameters
         ----------
@@ -255,6 +271,16 @@ class Symbol(SymbolBase):
             self.handle, name, num_args, keys, args))
 
     def __getitem__(self, index):
+        """x.__getitem__(i) <=> x[i]
+
+        Get an output of this symbol
+
+        Parameters
+        ----------
+        index : int or str
+            indexing key
+
+        """
         if isinstance(index, string_types):
             idx = None
             for i, name in enumerate(self.list_outputs()):
@@ -1000,7 +1026,7 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
 
-def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
+def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
     """Create a symbolic variable with specified name.
 
     Parameters
@@ -1047,6 +1073,8 @@ def Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None
     ret._set_attr(**attr)
     return ret
 
+# for back compatibility
+Variable = var
 
 def Group(symbols):
     """Create a symbol that groups symbols together.
@@ -1238,8 +1266,7 @@ def hypot(left, right):
 
 
 def zeros(shape, dtype=None, **kwargs):
-    """Create a Tensor filled with zeros, similar to numpy.zeros
-        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.zeros.html.
+    """Return a new symbol of given shape and type, filled with zeros.
 
     Parameters
     ----------
@@ -1259,8 +1286,7 @@ def zeros(shape, dtype=None, **kwargs):
 
 
 def ones(shape, dtype=None, **kwargs):
-    """Create a Tensor filled with ones, similar to numpy.ones
-        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html.
+    """Return a new symbol of given shape and type, filled with ones.
 
     Parameters
     ----------
@@ -1280,8 +1306,7 @@ def ones(shape, dtype=None, **kwargs):
 
 
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
-    """Simlar function in the MXNet ndarray as numpy.arange
-        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
+    """Return evenly spaced values within a given interval.
 
     Parameters
     ----------

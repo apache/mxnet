@@ -31,37 +31,19 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     int tmp[] = {0, 0};
     DMLC_DECLARE_FIELD(target_shape)
     .set_default(TShape(tmp, tmp + 2))
-    .describe("(Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, "
+    .describe("(Deprecated! Use ``shape`` instead.) "
+              "Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
-    .describe("(Deprecated! Use shape instead.) Whether keep the highest dim unchanged."
+    .describe("(Deprecated! Use ``shape`` instead.) Whether keep the highest dim unchanged."
               "If set to true, then the first dim in target_shape is ignored,"
               "and always fixed as input");
     DMLC_DECLARE_FIELD(shape)
     .set_default(nnvm::Tuple<int>())
-    .describe("Target shape, a tuple, t=(t_1,t_2,..,t_m).\n"
-              "Let the input dims be s=(s_1,s_2,..,s_n).\n"
-              "The output dims u=(u_1,u_2,..,u_p) are computed from s and t.\n"
-              "The target shape tuple elements t_i are read in order, and used to "
-              " generate successive output dims u_p:\n"
-              "t_i:       meaning:      behavior:\n"
-              "+ve        explicit      u_p = t_i\n"
-              "0          copy          u_p = s_i\n"
-              "-1         infer         u_p = (Prod s_i) / (Prod u_j | j != p)\n"
-              "-2         copy all      u_p = s_i, u_p+1 = s_i+1, ...\n"
-              "-3         merge two     u_p = s_i * s_i+1\n"
-              "-4,a,b     split two     u_p = a, u_p+1 = b | a * b = s_i\n"
-              "The split directive (-4) in the target shape tuple is followed by "
-              "two dimensions, one of which can be -1, which means it will be "
-              "inferred from the other one and the original dimension.\n"
-              "The can only be one globally inferred dimension (-1), aside from "
-              "any -1 occuring in a split directive.");
+    .describe("The target shape");
     DMLC_DECLARE_FIELD(reverse)
-      .set_default(false)
-      .describe("Whether to match the shapes from the backward. If reverse is true, "
-      "0 values in the `shape` argument will be searched from the backward. E.g the "
-      "original shape is (10, 5, 4) and the shape argument is (-1, 0). If reverse is true, "
-      "the new shape should be (50, 4). Otherwise it will be (40, 5).");
+    .set_default(false)
+    .describe("If true then translating the input shape from right to left");
   }
 };
 
@@ -342,10 +324,10 @@ struct DotParam : public dmlc::Parameter<DotParam> {
   bool transpose_b;
   DMLC_DECLARE_PARAMETER(DotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
-      .describe("True if the first matrix is transposed.")
+      .describe("If true then transpose the first input before dot.")
       .set_default(false);
     DMLC_DECLARE_FIELD(transpose_b)
-      .describe("True if the second matrix is tranposed.")
+      .describe("If true then transpose the second input before dot.")
       .set_default(false);
   }
 };

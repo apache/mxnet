@@ -55,7 +55,14 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
-.MXNET_DESCRIBE("Convert data type to dtype")
+.describe(R"code(Cast to a specified type, element-wise.
+
+For example::
+
+   cast([1e20, 11.1], dtype='float16') = [inf, 11.09375]
+   cast([300, 11.1, 10.9, -1, -3], dtype='uint8') = [44, 11, 10, 255, 253]
+
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CastParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", CastType)
@@ -65,7 +72,7 @@ NNVM_REGISTER_OP(Cast)
   })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
-.add_argument("data", "NDArray", "Source input")
+.add_argument("data", "ndarray-or-symbol", "Source input")
 .add_arguments(CastParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_cast)
@@ -80,7 +87,12 @@ MXNET_OPERATOR_REGISTER_UNARY(negative)
 
 // abs
 MXNET_OPERATOR_REGISTER_UNARY(abs)
-.MXNET_DESCRIBE("Take absolute value of the src")
+.describe(R"code(Returns the absolute value of array elements, element-wise.
+
+For example:
+   abs([-2, 0, 3]) = [2, 0, 3]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::abs>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
 
@@ -89,7 +101,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_abs)
 
 // sign
 MXNET_OPERATOR_REGISTER_UNARY(sign)
-.MXNET_DESCRIBE("Take sign of the src")
+.describe(R"code(Returns the indication sign of array elements, element-wise.
+
+For example::
+   sign([-2, 0, 3]) = [-1, 0, 1]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::sign>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
 
@@ -98,33 +115,63 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sign)
 
 // round
 MXNET_OPERATOR_REGISTER_UNARY(round)
-.MXNET_DESCRIBE("Take round of the src")
+.describe(R"code(Round elements of the array to the nearest integer, element-wise.
+
+For example::
+   round([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -2.,  2.,  2.,  2.]
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::round>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
 MXNET_OPERATOR_REGISTER_UNARY(ceil)
-.MXNET_DESCRIBE("Take ceil of the src")
+.describe(R"code(Return the ceiling of the input, element-wise.
+
+For example::
+   ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::ceil>);
 
 // floor
 MXNET_OPERATOR_REGISTER_UNARY(floor)
-.MXNET_DESCRIBE("Take floor of the src")
+.describe(R"code(Return the floor of the input, element-wise.
+
+For example::
+   floor([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-3., -2.,  1.,  1.,  2.]
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::floor>);
 
 // rint
 MXNET_OPERATOR_REGISTER_UNARY(rint)
-.MXNET_DESCRIBE("Take round of the src to nearest integer")
+.describe(R"code(Round elements of the array to the nearest integer, element-wise.
+
+For example::
+   rint([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -2.,  1.,  2.,  2.]
+
+The difference to ``round`` is that ``rint`` returns ``n`` for input ``n.5``
+while ``round`` returns ``n+1`` for ``n>=0``.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::rint>);
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY(fix)
-.MXNET_DESCRIBE("Take round of the src to integer nearest 0")
+.describe(R"code(Round elements of the array to the nearest integer towards
+zero, element-wise.
+
+For example::
+   fix([-2.1, -1.9, 1.9, 2.1]) = [-2., -1.,  1., 2.]
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::fix>);
 
 // square
 MXNET_OPERATOR_REGISTER_UNARY(square)
-.MXNET_DESCRIBE("Take square of the src")
+.describe(R"code(Calculate the square of an array, element-wise.
+
+For example::
+   square(x) = x^2
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::square>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
 
@@ -133,7 +180,11 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_square)
 
 // sqrt
 MXNET_OPERATOR_REGISTER_UNARY(sqrt)
-.MXNET_DESCRIBE("Take square root of the src")
+.describe(R"code(Calculate the square-root of an array, element-wise.
+
+For example::
+   sqrt(x) = \sqrt{x}
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::square_root>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sqrt"});
 
@@ -142,7 +193,11 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sqrt)
 
 // rsqrt
 MXNET_OPERATOR_REGISTER_UNARY(rsqrt)
-.MXNET_DESCRIBE("Take reciprocal square root of the src")
+.describe(R"code(Calculate the inverse square-root of an array, element-wise.
+
+For example::
+   rsqrt(x) = 1/\sqrt{x}
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::reciprocal_square_root>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rsqrt"});
 
@@ -152,25 +207,42 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rsqrt)
 
 // exp
 MXNET_OPERATOR_REGISTER_UNARY(exp)
-.MXNET_DESCRIBE("Take exp of the src")
+.describe(R"code(Calculate the exponential of the array, element-wise
+
+For example::
+   exp(x) = e^x \approx 2.718^x
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::exp>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
 
 // log
 MXNET_OPERATOR_REGISTER_UNARY(log)
-.MXNET_DESCRIBE("Take log of the src")
+.describe(R"code(Natural logarithm, element-wise.
+
+The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
 // log10
 MXNET_OPERATOR_REGISTER_UNARY(log10)
-.MXNET_DESCRIBE("Take base-10 log of the src")
+.describe(R"code(Calculate the base 10 logarithm of the array, element-wise.
+
+``10**log10(x) = x``
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log10>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
 // log2
 MXNET_OPERATOR_REGISTER_UNARY(log2)
-.MXNET_DESCRIBE("Take base-2 log of the src")
+.describe(R"code(Calculate the base 2 logarithm of the array, element-wise.
+
+``2**log2(x) = x``
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log2>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
@@ -179,7 +251,14 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log)
 
 // sin
 MXNET_OPERATOR_REGISTER_UNARY(sin)
-.MXNET_DESCRIBE("Take sin of the src")
+.describe(R"code(Trigonometric sine, element-wise.
+
+Then input is in radians (:math:`2\pi` rad equals 360 degress).
+
+.. math::
+   sin([0, \pi/4, \pi/2]) = [0, 0.707, 1]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::sin>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sin" });
 
@@ -188,7 +267,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sin)
 
 // log1p
 MXNET_OPERATOR_REGISTER_UNARY(log1p)
-.MXNET_DESCRIBE("Take `log(1 + x)` in a numerically stable way")
+.describe(R"code(Calculate ``log(1 + x)``
+
+This function is more accurate than ``log(1 + x)``  for small ``x`` so that
+:math:`1+x\approx 1`
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::log1p>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log1p"});
 
@@ -197,7 +281,11 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_log1p)
 
 // expm1
 MXNET_OPERATOR_REGISTER_UNARY(expm1)
-.MXNET_DESCRIBE("Take `exp(x) - 1` in a numerically stable way")
+.describe(R"code(Calculate ``exp(x) - 1``
+
+This function provides greater precision than ``exp(x) - 1`` for small values of ``x``.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::expm1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_expm1"});
 
@@ -206,7 +294,14 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_expm1)
 
 // cos
 MXNET_OPERATOR_REGISTER_UNARY(cos)
-.MXNET_DESCRIBE("Take cos of the src")
+.describe(R"code(Cosine, element-wise.
+
+Then input is in radians (:math:`2\pi` rad equals 360 degress).
+
+.. math::
+   cos([0, \pi/4, \pi/2]) = [1, 0.707, 0]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::cos>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_cos"});
 
@@ -215,7 +310,14 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_cos)
 
 // tan
 MXNET_OPERATOR_REGISTER_UNARY(tan)
-.MXNET_DESCRIBE("Take tan of the src")
+.describe(R"code(Tangent, element-wise.
+
+Then input is in radians (:math:`2\pi` rad equals 360 degress).
+
+.. math::
+   tan([0, \pi/4, \pi/2]) = [0, 1, -inf]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::tan>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
 
@@ -224,7 +326,15 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_tan)
 
 // arcsin
 MXNET_OPERATOR_REGISTER_UNARY(arcsin)
-.MXNET_DESCRIBE("Take arcsin of the src")
+.describe(R"code(Inverse sine, element-wise.
+
+The input should be in range :math:`[-1, 1]`.
+The output is in the closed interval :math:`[-\pi/2, \pi/2]`
+
+.. math::
+   arcsin([-1, -.707, 0, .707, 1]) = [-\pi/2, -\pi/4, 0, \pi/4, \pi/2]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arcsin>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsin" });
 
@@ -233,7 +343,15 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arcsin)
 
 // arccos
 MXNET_OPERATOR_REGISTER_UNARY(arccos)
-.MXNET_DESCRIBE("Take arccos of the src")
+.describe(R"code(Inverse cosine, element-wise.
+
+The input should be in range :math:`[-1, 1]`.
+The output is in the closed interval :math:`[0, \pi]`
+
+.. math::
+   arccos([-1, -.707, 0, .707, 1]) = [\pi, 3\pi/4, \pi/2, \pi/4, 0]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arccos>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccos" });
 
@@ -242,7 +360,14 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arccos)
 
 // arctan
 MXNET_OPERATOR_REGISTER_UNARY(arctan)
-.MXNET_DESCRIBE("Take arctan of the src")
+.describe(R"code(Inverse tangent, element-wise.
+
+The output is in the closed interval :math:`[-\pi/2, \pi/2]`
+
+.. math::
+   arccos([-1, 0, 1]) = [-\pi/4, 0, \pi/4]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arctan>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
 
@@ -251,7 +376,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arctan)
 
 // degrees
 MXNET_OPERATOR_REGISTER_UNARY(degrees)
-.MXNET_DESCRIBE("Take degrees of the src")
+.describe(R"code(Convert angles from radians to degrees.
+
+.. math::
+   degrees([0, \pi/2, \pi, 3\pi/2, 2\pi]) = [0, 90, 180, 270, 360]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::degrees>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_degrees" });
 
@@ -260,7 +390,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_degrees)
 
 // radians
 MXNET_OPERATOR_REGISTER_UNARY(radians)
-.MXNET_DESCRIBE("Take radians of the src")
+.describe(R"code(Convert angles from degrees to radians.
+
+.. math::
+   radians([0, 90, 180, 270, 360]) = [0, \pi/2, \pi, 3\pi/2, 2\pi]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::radians>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_radians" });
 
@@ -269,7 +404,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_radians)
 
 // sinh
 MXNET_OPERATOR_REGISTER_UNARY(sinh)
-.MXNET_DESCRIBE("Take sinh of the src")
+.describe(R"code(Hyperbolic sine, element-wise.
+
+For example::
+   sinh(x) = 0.5\times(exp(x) - exp(-x))
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::sinh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sinh" });
 
@@ -278,7 +418,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sinh)
 
 // cosh
 MXNET_OPERATOR_REGISTER_UNARY(cosh)
-.MXNET_DESCRIBE("Take cosh of the src")
+.describe(R"code(Hyperbolic cosine, element-wise.
+
+For example::
+   cosh(x) = 0.5\times(exp(x) + exp(-x))
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::cosh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_cosh" });
 
@@ -287,7 +432,12 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_cosh)
 
 // tanh
 MXNET_OPERATOR_REGISTER_UNARY(tanh)
-.MXNET_DESCRIBE("Take tanh of the src")
+.describe(R"code(Hyperbolic tangent element-wise.
+
+For example::
+   tanh(x) = sinh(x) / cosh(x)
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::tanh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tanh" });
 
@@ -296,7 +446,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_tanh)
 
 // arcsinh
 MXNET_OPERATOR_REGISTER_UNARY(arcsinh)
-.MXNET_DESCRIBE("Take arcsinh of the src")
+.describe(R"code(Inverse hyperbolic sine, element-wise.
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arcsinh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsinh" });
 
@@ -305,7 +456,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arcsinh)
 
 // arccosh
 MXNET_OPERATOR_REGISTER_UNARY(arccosh)
-.MXNET_DESCRIBE("Take arccosh of the src")
+.describe(R"code(Inverse hyperbolic cosine, element-wise.
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arccosh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccosh" });
 
@@ -314,7 +466,8 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arccosh)
 
 // arctanh
 MXNET_OPERATOR_REGISTER_UNARY(arctanh)
-.MXNET_DESCRIBE("Take arctanh of the src")
+.describe(R"code(Inverse hyperbolic tangent, element-wise.
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::arctanh>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
 
@@ -323,7 +476,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_arctanh)
 
 // gamma
 MXNET_OPERATOR_REGISTER_UNARY(gamma)
-.MXNET_DESCRIBE("Take the gamma function (extension of the factorial function) of the src")
+.MXNET_DESCRIBE("The gamma function (extension of the factorial function), element-wise")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::gamma>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_gamma"});
 
@@ -332,7 +485,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_gamma)
 
 // gammaln
 MXNET_OPERATOR_REGISTER_UNARY(gammaln)
-.MXNET_DESCRIBE("Take gammaln (log of the absolute value of gamma(x)) of the src")
+.MXNET_DESCRIBE("Log of the absolute value of the gamma function, element-wise")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::gammaln>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_gammaln"});
 
