@@ -126,3 +126,6 @@ List of Contributors
 * [Freddy Chua](https://github.com/freddycct)
 * [Jie Zhang](https://github.com/luoyetx)
 * [Leonard Lausen](https://github.com/leezu)
+* [Sergey Kolychev](https://github.com/sergeykolychev)
+  - Sergey is original author and current maintainer of Perl5 interface.
+* [Robert Stone](https://github.com/tlby)

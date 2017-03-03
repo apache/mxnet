@@ -6,12 +6,12 @@
 package AI::MXNet::Module::Private;
 use Mouse;
 has [qw/_param_names _fixed_param_names
-        _aux_names _data_names _label_names
+        _aux_names _data_names _label_names _state_names
         _output_names _arg_params _aux_params
         _params_dirty _optimizer _kvstore
          _update_on_kvstore _updater _work_load_list
         _preload_opt_states _exec_group
-        _data_shapes _label_shapes _context/
+        _data_shapes _label_shapes _context _grad_req/
 ] => (is => 'rw', init_arg => undef);
 
 package AI::MXNet::Module;
@@ -226,15 +226,19 @@ func load_checkpoint(Str $prefix, Int $epoch)
         Default `None`, indicating uniform workload.
     fixed_param_names: list of str
         Default `None`, indicating no network parameters are fixed.
+    state_names : list of str
+        states are similar to data and label, but not provided by data iterator.
+        Instead they are initialized to 0 and can be set by set_states()
 =cut
 
 extends 'AI::MXNet::Module::Base';
 
 has '_symbol'           => (is => 'ro', init_arg => 'symbol', isa => 'AI::MXNet::Symbol', required => 1);
-has 'data_names'        => (is => 'rw', isa => 'ArrayRef[Str]', default => sub { ['data'] });
-has 'label_names'       => (is => 'ro', isa => 'Maybe[ArrayRef[Str]]', default => sub { ['softmax_label'] });
+has '_data_names'       => (is => 'ro', init_arg => 'data_names', isa => 'ArrayRef[Str]');
+has '_label_names'      => (is => 'ro', init_arg => 'label_names', isa => 'Maybe[ArrayRef[Str]]');
 has 'work_load_list'    => (is => 'rw', isa => 'ArrayRef[Int]');
 has 'fixed_param_names' => (is => 'rw', isa => 'ArrayRef[Str]');
+has 'state_names'       => (is => 'rw', isa => 'ArrayRef[Str]');
 has 'logger'            => (is => 'ro', default => sub { AI::MXNet::Logging->get_logger });
 has '_p'                => (is => 'rw', init_arg => undef);
 has 'context'           => (
@@ -242,6 +246,13 @@ has 'context'           => (
     isa => 'AI::MXNet::Context|ArrayRef[AI::MXNet::Context]',
     default => sub { AI::MXNet::Context->cpu }
 );
+
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(symbol => $_[0]) if @_ == 1;
+    return $class->$orig(@_);
+};
 
 sub BUILD
 {
@@ -260,20 +271,28 @@ sub BUILD
     }
     assert(@{ $work_load_list } == @{ $self->_p->_context });
     $self->_p->_work_load_list($work_load_list);
-    my @data_names  = @{ $self->data_names };
-    my @label_names = @{ $self->label_names//[] };
+    my @data_names  = @{ $self->_data_names//['data'] };
+    my @label_names = @{ $self->_label_names//['softmax_label'] };
+    my @state_names = @{ $self->state_names//[] };
     my $arg_names   = $self->_symbol->list_arguments;
-    my @input_names = (@data_names, @label_names);
+    my @input_names = (@data_names, @label_names, @state_names);
     my %input_names = map { $_ => 1 } @input_names;
     $self->_p->_param_names([grep { not exists $input_names{$_} } @{ $arg_names }]);
-    $self->_p->_fixed_param_names($self->fixed_param_names);
+    $self->_p->_fixed_param_names($self->fixed_param_names//[]);
+    $self->_p->_state_names(\@state_names);
     $self->_p->_aux_names($self->_symbol->list_auxiliary_states);
     $self->_p->_data_names(\@data_names);
     $self->_p->_label_names(\@label_names);
     $self->_p->_output_names($self->_symbol->list_outputs);
     $self->_p->_params_dirty(0);
-    $self->data_names($self->_p->_data_names);
+    $self->_check_input_names($self->_symbol, $self->_p->_data_names, "data", 1);
+    $self->_check_input_names($self->_symbol, $self->_p->_label_names, "label", 0);
+    $self->_check_input_names($self->_symbol, $self->_p->_state_names, "state", 1);
+    $self->_check_input_names($self->_symbol, $self->_p->_fixed_param_names, "fixed_param", 1);
 }
+
+sub Module { my $class = shift; return $class->new(@_) }
+sub BucketingModule { shift; return AI::MXNet::Module::Bucketing->new(@_) }
 
 =head load
 
@@ -357,6 +376,45 @@ method save_checkpoint(Str $prefix, Int $epoch, Bool $save_optimizer_states=0)
     }
 }
 
+=head2 model_save_checkpoint
+
+    Checkpoint the model data into file.
+
+    Parameters
+    ----------
+    prefix : str
+        Prefix of model name.
+    epoch : int
+        The epoch number of the model.
+    symbol : AI::MXNet::Symbol
+        The input symbol
+    arg_params : hash ref of str to AI::MXNet::NDArray
+        Model parameter, hash ref of name to AI::MXNet::NDArray of net's weights.
+    aux_params : hash ref of str to NDArray
+        Model parameter, hash ref of name to AI::MXNet::NDArray of net's auxiliary states.
+    Notes
+    -----
+    - prefix-symbol.json will be saved for symbol.
+    - prefix-epoch.params will be saved for parameters.
+=cut
+
+method model_save_checkpoint(
+    Str                         $prefix,
+    Int                         $epoch,
+    Maybe[AI::MXNet::Symbol]    $symbol,
+    HashRef[AI::MXNet::NDArray] $arg_params,
+    HashRef[AI::MXNet::NDArray] $aux_params
+)
+{
+    if(defined $symbol)
+    {
+        $symbol->save("$prefix-symbol.json");
+    }
+    my $param_name = sprintf('%s-%04d.params', $prefix, $epoch);
+    $self->save_params($param_name, $arg_params, $aux_params);
+    AI::MXNet::Logging->info('Saved checkpoint to "%s"', $param_name);
+}
+
 # Internal function to reset binded state.
 method _reset_bind()
 {
@@ -370,6 +428,21 @@ method _reset_bind()
 
         A list of names for data required by this module.
 =cut
+
+method data_names()
+{
+    return $self->_p->_data_names;
+}
+
+=head2 label_names
+
+        A list of names for labels required by this module.
+=cut
+
+method label_names()
+{
+    return $self->_p->_label_names;
+}
 
 =head2 output_names
 
@@ -475,29 +548,13 @@ method init_params(
 {
     if($self->params_initialized and not $force_init)
     {
+        AI::MXNet::Logging->warning(
+            "Parameters already initialized and force_init=0. "
+            ."init_params call ignored."
+        );
         return;
     }
     assert($self->binded, 'call bind before initializing the parameters');
-    if(not defined $self->_p->_arg_params)
-    {
-        my @param_arrays = (
-            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype) }
-            @{ $self->_p->_exec_group->_p->param_arrays }
-        );
-        my %arg_params;
-        @arg_params{ @{ $self->_p->_param_names } } = @param_arrays;
-        $self->_p->_arg_params(\%arg_params);
-    }
-    if(not defined $self->_p->_aux_params)
-    {
-        my @aux_arrays = (
-            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype) }
-            @{ $self->_p->_exec_group->_p->aux_arrays }
-        );
-        my %aux_params;
-        @aux_params{ @{ $self->_p->_aux_names } } = @aux_arrays;
-        $self->_p->_aux_params(\%aux_params);
-    }
     my $_impl = sub {
             my ($name, $arr, $cache) = @_;
             # Internal helper for parameter initialization
@@ -529,19 +586,61 @@ method init_params(
                 &{$initializer}($name, $arr) if defined $initializer;
             }
     };
+    my $attrs = $self->_symbol->attr_dict;
     while(my ($name, $arr) = each %{ $self->_p->_arg_params })
     {
-        $_impl->($name, $arr, $arg_params);
+        $_impl->(
+            AI::MXNet::InitDesc->new(
+                name  => $name,
+                ($attrs->{$name} ? (attrs => $attrs->{$name}) : ())
+            ),
+            $arr, $arg_params
+        );
     }
     while(my ($name, $arr) = each %{ $self->_p->_aux_params })
     {
-        $_impl->($name, $arr, $aux_params);
+        $_impl->(
+            AI::MXNet::InitDesc->new(
+                name  => $name,
+                ($attrs->{$name} ? (attrs => $attrs->{$name}) : ())
+            ),
+            $arr, $aux_params
+        );
     }
     $self->params_initialized(1);
     $self->_p->_params_dirty(0);
 
     # copy the initialized parameters to devices
     $self->_p->_exec_group->set_params($self->_p->_arg_params, $self->_p->_aux_params);
+}
+
+method set_params(
+    HashRef[AI::MXNet::NDArray]  $arg_params,
+    HashRef[AI::MXNet::NDArray]  $aux_params,
+    Bool                        :$allow_missing=0,
+    Bool                        :$force_init=1
+)
+{
+    if(not $allow_missing)
+    {
+        $self->init_params(
+            arg_params    => $arg_params,    aux_params => $aux_params,
+            allow_missing => $allow_missing, force_init => $force_init
+        );
+        return;
+    }
+
+    if($self->params_initialized and not $force_init)
+    {
+        AI::MXNet::Logging->warning(
+            "Parameters already initialized and force_init=False. "
+            ."set_params call ignored."
+        );
+        return;
+    }
+    $self->_p->_exec_group->set_params($arg_params, $aux_params);
+    $self->_p->_params_dirty(1);
+    $self->params_initialized(1);
 }
 
 =head2 bind
@@ -577,7 +676,8 @@ method bind(
     Bool                                           :$inputs_need_grad=0,
     Bool                                           :$force_rebind=0,
     Maybe[AI::MXNet::Module]                       :$shared_module=,
-    GradReq|HashRef[GradReq]|ArrayRef[GradReq]     :$grad_req='write'
+    GradReq|HashRef[GradReq]|ArrayRef[GradReq]     :$grad_req='write',
+    Maybe[ArrayRef[Str]]                           :$state_names=$self->_p->_state_names
 )
 {
     # force rebinding is typically used when one want to switch from
@@ -594,30 +694,17 @@ method bind(
     $self->for_training($for_training);
     $self->inputs_need_grad($inputs_need_grad);
     $self->binded(1);
+    $self->_p->_grad_req($grad_req);
 
     if(not $for_training)
     {
         assert(not $inputs_need_grad);
     }
-    $self->_p->_data_shapes([
-        map {
-            blessed $_ ? $_ : AI::MXNet::DataDesc->new(name => $_->[0], shape => $_->[1])
-        } @{ $data_shapes }
-    ]);
-
-    if($label_shapes)
-    {
-        $self->_p->_label_shapes([
-            map {
-                blessed $_ ? $_ : AI::MXNet::DataDesc->new(name => $_->[0], shape => $_->[1]) 
-            } @{ $label_shapes }
-        ]);
-    }
-    else
-    {
-        $self->_p->_label_shapes(undef);
-    }
-
+    ($data_shapes, $label_shapes) = $self->_parse_data_desc(
+        $self->data_names, $self->label_names, $data_shapes, $label_shapes
+    );
+    $self->_p->_data_shapes($data_shapes);
+    $self->_p->_label_shapes($label_shapes);
     my $shared_group;
     if($shared_module)
     {
@@ -625,11 +712,6 @@ method bind(
         $shared_group = $shared_module->_p->_exec_group;
     }
 
-    my %input_types = map { $_->name => $_->dtype } @{ $self->_p->_data_shapes };
-    if($self->_p->_label_shapes)
-    {
-        %input_types = (%input_types, map { $_->name => $_->dtype } @{ $self->_p->_label_shapes });
-    }
     $self->_p->_exec_group(
         AI::MXNet::DataParallelExecutorGroup->new(
             symbol            => $self->_symbol,
@@ -643,8 +725,7 @@ method bind(
             shared_group      => $shared_group,
             logger            => $self->logger,
             fixed_param_names => $self->_p->_fixed_param_names,
-            grad_req          => $grad_req,
-            input_types       => \%input_types
+            grad_req          => $grad_req
         )
     );
     if($shared_module)
@@ -659,10 +740,53 @@ method bind(
         # so automatically copy the already initialized params
         $self->_p->_exec_group->set_params($self->_p->_arg_params, $self->_p->_aux_params);
     }
+    else
+    {
+        assert(not defined $self->_p->_arg_params and not $self->_p->_aux_params);
+        my @param_arrays = (
+            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype) }
+            @{ $self->_p->_exec_group->_p->param_arrays }
+        );
+        my %arg_params;
+        @arg_params{ @{ $self->_p->_param_names } } = @param_arrays;
+        $self->_p->_arg_params(\%arg_params);
+        my @aux_arrays = (
+            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype) }
+            @{ $self->_p->_exec_group->_p->aux_arrays }
+        );
+        my %aux_params;
+        @aux_params{ @{ $self->_p->_aux_names } } = @aux_arrays;
+        $self->_p->_aux_params(\%aux_params);
+    }
     if($shared_module and $shared_module->optimizer_initialized)
     {
         $self->borrow_optimizer($shared_module)
     }
+}
+
+=head2 reshape
+
+        Reshape the module for new input shapes.
+        Parameters
+        ----------
+        data_shapes : ArrayRef[AI::MXNet::DataDesc]
+            Typically is $data_iter->provide_data.
+        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc]]
+            Typically is $data_iter->provide_label.
+=cut
+
+method reshape(
+    ArrayRef[AI::MXNet::DataDesc|NameShape]        $data_shapes,
+    Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]] $label_shapes=
+)
+{
+    assert($self->binded);
+    ($data_shapes, $label_shapes) = $self->_parse_data_desc(
+        $self->data_names, $self->label_names, $data_shapes, $label_shapes
+    );
+    $self->_p->_data_shapes($data_shapes);
+    $self->_p->_label_shapes($label_shapes);
+    $self->_p->_exec_group->reshape($self->_p->_data_shapes, $self->_p->_label_shapes);
 }
 
 =head2 init_optimizer
@@ -701,13 +825,15 @@ method init_optimizer(
         scalar(@{$self->_p->_context}),
         $self->_p->_arg_params
     );
+    my $batch_size = $self->_p->_exec_group->_p->batch_size;
+    if($kvstore and $kvstore->type =~ /dist/ and $kvstore->type =~ /_sync/)
+    {
+        $batch_size *= $kvstore->num_workers;
+    }
+    my $rescale_grad = 1/$batch_size;
+
     if(not blessed $optimizer)
     {
-        my $batch_size = $self->_p->_exec_group->_p->batch_size;
-        if($kvstore and $kvstore->type eq 'dist_sync')
-        {
-            $batch_size *= $kvstore->num_workers;
-        }
         my %idx2name;
         if($update_on_kvstore)
         {
@@ -722,7 +848,7 @@ method init_optimizer(
         }
         if(not exists $optimizer_params->{rescale_grad})
         {
-            $optimizer_params->{rescale_grad} = 1/$batch_size;
+            $optimizer_params->{rescale_grad} = $rescale_grad;
         }
         $optimizer = AI::MXNet::Optimizer->create(
             $optimizer,
@@ -730,6 +856,15 @@ method init_optimizer(
             param_idx2name => \%idx2name,
             %{ $optimizer_params }
         );
+        if($optimizer->rescale_grad != $rescale_grad)
+        {
+            AI::MXNet::Logging->warning(
+                "Optimizer created manually outside Module but rescale_grad "
+                ."is not normalized to 1.0/batch_size/num_workers (%s vs. %s). "
+                ."Is this intended?",
+                $optimizer->rescale_grad, $rescale_grad
+            );
+        }
     }
 
     $self->_p->_optimizer($optimizer);
@@ -904,6 +1039,18 @@ method get_input_grads(Bool $merge_multi_context=1)
     return $self->_p->_exec_group->get_input_grads($merge_multi_context);
 }
 
+method get_states(Bool $merge_multi_context=1)
+{
+    assert($self->binded and $self->params_initialized);
+    return $self->_p->_exec_group->get_states($merge_multi_context);
+}
+
+method set_states($states=, $value=)
+{
+    assert($self->binded and $self->params_initialized);
+    return $self->_p->_exec_group->set_states($states, $value);
+}
+
 =head2 update_metric
         Evaluate and accumulate evaluation metric on outputs of the last forward computation.
 
@@ -931,6 +1078,7 @@ method update_metric(
 method _sync_params_from_devices()
 {
     $self->_p->_exec_group->get_params($self->_p->_arg_params, $self->_p->_aux_params);
+    $self->_p->_params_dirty(0);
 }
 
 =head2 save_optimizer_states

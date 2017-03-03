@@ -4,19 +4,23 @@ author:
   - 'Sergey Kolychev <sergeykolychev.github@gmail.com>'
 build_requires: {}
 configure_requires:
-  ExtUtils::MakeMaker: 6.30
+  ExtUtils::MakeMaker: '6.30'
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 5.008, CPAN::Meta::Converter version 2.143240'
-license: perl
+generated_by: 'ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.143240'
+license: apache
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
+  version: '1.4'
 name: AI-MXNet
+no_index:
+  directory:
+    - t
+    - inc
 requires:
-  AI::MXNetCAPI: 0.02
-  AI::NNVMCAPI: 0.02
-  Function::Parameters: 1.0705
+  AI::MXNetCAPI: '0.03'
+  AI::NNVMCAPI: '0.03'
+  Function::Parameters: '1.0705'
+  GraphViz: '2.14'
   Mouse: v2.1.0
-  PDL: 2.007
-  perl: v5.14.0
-version: 0.02
+  PDL: '2.007'
+version: '0.03'

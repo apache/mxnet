@@ -1,5 +1,5 @@
 This archive contains the distribution AI-MXNet,
-version 0.02:
+version 0.03:
 
   Perl interface to MXNet machine learning library
 
