@@ -90,7 +90,7 @@ class SliceChannelOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), static_cast<size_t>(size_));
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3> > grad_out(size_);
     Tensor<xpu, 3> grad;

@@ -93,8 +93,8 @@ class SequenceLastOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2 : 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2U : 1U);
 
     // break immediately if null grad
     if (req[seq_last::kData] == kNullOp) return;

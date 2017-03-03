@@ -134,7 +134,7 @@ class CuDNNConvolutionOp : public Operator {
     DType *wmat_ptr = NULL;
     DType *out_ptr = NULL;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     GetTempSize(ctx);
     Tensor<gpu, 1, DType> workspace =

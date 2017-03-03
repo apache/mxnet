@@ -109,7 +109,7 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(req[conv::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.kernel.ndim() > 2) {
       LOG(FATAL) << "Volume convolution is not implmented in mshadow";
@@ -191,7 +191,7 @@ class ConvolutionOp : public Operator {
     if (param_.kernel.ndim() > 2) {
       LOG(FATAL) << "Volume convolution is not implmented in mshadow";
     }
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
@@ -398,7 +398,7 @@ class ConvolutionProp : public OperatorProperty {
       const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
       CHECK_EQ(dshape[1] % param_.num_group, 0U) \
           << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0) \
+      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
           << "output num_filter must divide group size";
       CHECK_GT(param_.kernel.Size(), 0U) \
           << "incorrect kernel size: " << param_.kernel;
@@ -435,9 +435,9 @@ class ConvolutionProp : public OperatorProperty {
       const index_t ksize_d = static_cast<index_t>(param_.kernel[0]);
       const index_t ksize_y = static_cast<index_t>(param_.kernel[1]);
       const index_t ksize_x = static_cast<index_t>(param_.kernel[2]);
-      CHECK_EQ(dshape[1] % param_.num_group, 0)
+      CHECK_EQ(dshape[1] % param_.num_group, 0U)
         << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0)
+      CHECK_EQ(param_.num_filter % param_.num_group, 0U)
         << "output num_filter must divide group size";
       CHECK_GT(param_.kernel.Size(), 0U) \
         << "incorrect kernel size: " << param_.kernel;

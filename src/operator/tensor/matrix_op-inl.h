@@ -760,8 +760,8 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
                       std::vector<TShape> *in_attrs,
                       std::vector<TShape> *out_attrs) {
   const SimpleCropParam& param = nnvm::get<SimpleCropParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
   CHECK_EQ(shp.ndim(), param.begin.ndim());
   CHECK_EQ(shp.ndim(), param.end.ndim());
@@ -1035,8 +1035,8 @@ inline bool SliceShape(const nnvm::NodeAttrs& attrs,
                        std::vector<TShape> *in_attrs,
                        std::vector<TShape> *out_attrs) {
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   int axis, begin, end;
   GetSliceParams(param, ishape, &axis, &begin, &end);
@@ -1238,8 +1238,8 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
   const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const TShape& ishape = (*in_attrs)[0];
   int repeats = 0;
   dmlc::optional<int> axisOpt;
@@ -1277,7 +1277,7 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
 inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
                          std::vector<int>* in_attrs,
                          std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
   if ((*in_attrs)[0] != -1) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   } else if ((*out_attrs)[0] != -1) {
@@ -1383,8 +1383,8 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   const TShape& oshape = outputs[0].shape_;
   if (oshape.ndim() == 0) return;
@@ -1424,8 +1424,8 @@ struct TileParam : public dmlc::Parameter<TileParam> {
 inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const TileParam& param = nnvm::get<TileParam>(attrs.parsed);
   const TShape& ishape = (*in_attrs)[0];
   const TShape& reps = param.reps;
@@ -1453,7 +1453,7 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
 inline bool TileOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int>* in_attrs,
                        std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
   if ((*in_attrs)[0] != -1) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   } else if ((*out_attrs)[0] != -1) {
@@ -1518,8 +1518,8 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   if (inputs[0].Size() == 0) return;
   const TShape& ishape = inputs[0].shape_;
@@ -1558,8 +1558,8 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   if (inputs[0].Size() == 0) return;
   const TShape& oshape = outputs[0].shape_;
