@@ -25,10 +25,6 @@ mxnet_option(USE_SCALA "Build Scala packages" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
-if(USE_MKL_IF_AVAILABLE)
-  find_package(MKL)
-endif()
-
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-DDMLC_USE_CXX11)
@@ -83,6 +79,16 @@ include_directories("mshadow")
 include_directories("cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
+
+if(USE_MKL_IF_AVAILABLE)
+  #set(MKL_USE_STATIC_LIBS ON)
+  find_package(MKL)
+  if(MKL_FOUND)
+    include_directories(${MKL_INCLUDE_DIR})
+    list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
+  endif()
+endif()
+
 
 if(UNIX)
   find_library(RTLIB rt)
