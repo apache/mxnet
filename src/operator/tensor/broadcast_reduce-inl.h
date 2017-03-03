@@ -173,12 +173,12 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
 #ifdef __CUDACC__
 #include "broadcast_reduce-inl.cuh"
 
-template<typename Reducer, typename DType, typename OP1, typename OP2>
-void Reduce(Stream<gpu> *s, const TBlob& outgrad, const OpReqType req,
-            const Tensor<gpu, 1, char>& workspace, const TBlob& ingrad, const TBlob& lhs,
-            const TBlob& rhs) {
-  LOG(INFO) << "Reduce (gpu) not implemented";
-}
+// template<typename Reducer, typename DType, typename OP1, typename OP2>
+// void Reduce(Stream<gpu> *s, const TBlob& outgrad, const OpReqType req,
+//             const Tensor<gpu, 1, char>& workspace, const TBlob& ingrad, const TBlob& lhs,
+//             const TBlob& rhs) {
+//   LOG(INFO) << "Reduce (gpu) not implemented";
+// }
 
 #else
 
@@ -330,34 +330,52 @@ void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
     small.shape_.get<MAX_DIM>(), rshape, rstride);
 }
 
-template<typename Reducer, typename DType, typename OP>
+template<typename DType>
 size_t ReduceWorkspaceSize(Stream<cpu> *s, const TBlob& small, const OpReqType req,
                            const TBlob& big) {
   return 0;
 }
 
-// template<typename Reducer, typename DType, typename OP1, typename OP2>
+// template<typename Reducer, typename DType, typename OP>
 // MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
-//                                        const DType* __restrict big,
-//                                        const DType* __restrict lhs,
-//                                        const DType* __restrict rhs,
-//                                        DType *small,
-//                                        const CShape& big_shape, const CShape& small_shape,
-//                                        const CShape& rshape, const CShape& rstride,
-//                                        const CShape& lhs_shape, const CShape& rhs_shape) {
+//                                        const DType* __restrict ingrad,
+//                                        DType *outgrad,
+//                                        const CShape& ingrad_shape, const CShape& outgrad_shape,
+//                                        const CShape& out2in_shape, const CShape& out2in_stride) {
+//   CShape coord = unravel(idx, outgrad_shape);
+//   const int idx_ingrad0 = ravel(coord, ingrad_shape);
+//   DType val;
+//   Reducer::SetInitValue(val);
+//   for (int k = 0; k < M; ++k) {
+//     CShape coord_ingrad = unravel(k, out2in_shape);
+//     int idx_ingrad = idx_ingrad0 + dot(coord_ingrad, out2in_stride);
+
+//     Reducer::Reduce(val, OP::Map(ingrad[idx_ingrad]));
+//   }
+//   assign(&outgrad[idx], addto, val);
+// }
 
 // Reduce<MUL, OP>(lgrad, req[0], ograd, lhs, rhs)
 // ReduceToAssign<red::sum>(lgrad, req[0], ograd*F<LOP>(broadcast_to(lhs, new_oshape), broadcast_to(rhs, new_oshape)));
 template<typename Reducer, typename DType, typename OP1, typename OP2>
 MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool addto,
                                        const DType* __restrict ingrad,
-                                       const DType* __restrict lhs, const DType* __restrict rhs,
+                                       const DType* __restrict lhs,
+                                       const DType* __restrict rhs,
                                        DType *outgrad,
-                                       const CShape& ingrad_shape, const CShape& outgrad_shape,
-                                       const CShape& out2in_shape, const CShape& out2in_stride,
-                                       const CShape out2lhs_shape, const CShape out2lhs_stride,
-                                       const CShape out2rhs_shape, const CShape out2rhs_stride,
-                                       const CShape& lhs_shape, const CShape& rhs_shape) {
+                                       const CShape& ingrad_shape,
+                                       const CShape& lhs_shape,
+                                       const CShape& rhs_shape,
+                                       const CShape& outgrad_shape,
+
+                                       const CShape& out2in_shape,
+                                       const CShape& out2lhs_shape,
+                                       const CShape& out2rhs_shape,
+
+                                       const CShape& out2in_stride,
+                                       const CShape& out2lhs_stride,
+                                       const CShape& out2rhs_stride
+                                       ) {
   CShape coord = unravel(idx, outgrad_shape);
   const int idx_ingrad0 = ravel(coord, ingrad_shape);
   const int idx_lhs0 = ravel(coord, lhs_shape);
@@ -390,13 +408,23 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
   for (int idx = 0; idx < N; ++idx) {
     seq_reduce_assign<Reducer, DType, OP1, OP2>(idx, M, addto,
       ingrad,
-      lhs, rhs,
+      lhs,
+      rhs,
       outgrad,
-      ingrad_shape, outgrad_shape,
-      out2in_shape, out2in_stride,
-      out2lhs_shape, out2lhs_stride,
-      out2rhs_shape, out2rhs_stride,
-      lhs_shape, rhs_shape);
+      
+      ingrad_shape,
+      lhs_shape,
+      rhs_shape,
+      outgrad_shape,
+
+      out2in_shape,
+      out2lhs_shape,
+      out2rhs_shape,
+
+      out2in_stride,
+      out2lhs_stride,
+      out2rhs_stride
+      );
   }
 }
 
