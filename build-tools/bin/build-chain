@@ -7,12 +7,21 @@ set -e
 # Never put a brazil-path command in here, for instance.
 #
 
-if [ -z "$1" ] || [ "$1" != "mvn" ]; then
-  brazilcmake $@
+if [[ "$1" != "clean" && "$1" != "generate" && -f tmp/lib/libmxnet.so ]]; then
+  echo "********************************************************"
+  echo "STUBBING BUILD BINARIES"
+  echo "********************************************************"
+  cp -ruP tmp/* build/
+else
+  if [ -z "$1" ] || [ "$1" != "mvn" ]; then
+    brazilcmake $@
+  fi
 fi
 
 if [ "$1" == "clean" ] || [ "$1" == "generate" ]; then
   exit 0
 fi
 
-$(brazil-path [ScalaMavenBuilder]pkg.bin)/bmvn $@
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(brazil-path [Cuda]pkg.lib)/stubs"
+
+COMPUTE=gpu $(brazil-path [ScalaMavenBuilder]pkg.bin)/bmvn $@

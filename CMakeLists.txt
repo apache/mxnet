@@ -29,10 +29,6 @@ if(USE_MKL_IF_AVAILABLE)
   find_package(MKL)
 endif()
 
-#if(USE_OPENCV)
-#  set(OpenCV_STATIC ON)
-#endif()
-
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-DDMLC_USE_CXX11)
@@ -356,10 +352,10 @@ else()
   #set_property(TARGET ${objlib} PROPERTY POSITION_INDEPENDENT_CODE 1)
   add_library(mxnet_static STATIC ${SOURCE})
   add_library(mxnet SHARED src/common/stub.cc)
-  target_link_libraries(mxnet 
+  target_link_libraries(mxnet
       -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
       #mxnet_static
-  )   
+  )
   add_custom_target(
       Name ALL
       BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
