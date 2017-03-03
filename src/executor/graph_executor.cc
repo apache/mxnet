@@ -669,21 +669,25 @@ void GraphExecutor::InitCachedOps() {
 }
 
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
-
    // heurestic, only enable bulk on forward only
   bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
-       && topo_start == 0 && num_forward_nodes_ == topo_end; //op_nodes_.size();
+       && topo_start == 0 && num_forward_nodes_ == topo_end;
+  // Create default cached seg oprs
+  cached_seg_opr_.clear();
+  CachedSegOpr p;
+  cached_seg_opr_.resize(op_nodes_.size(), p);
+
   if (bulk_exec) {
     // encode things into a key
     size_t key = topo_start * op_nodes_.size() + topo_end;
-    if (cached_seg_opr_.count(key) == 0) {
-      cached_seg_opr_[key] = this->CreateCachedOpr(topo_start, topo_end);
-      if (cached_seg_opr_.at(key) != nullptr) {
+    if (cached_seg_opr_.at(key).initialized == false) {
+      cached_seg_opr_[key] = this->CreateCachedSegOpr(topo_start, topo_end);
+      if (cached_seg_opr_.at(key).opr != nullptr) {
         LOG(INFO) << "Created bulk execution on segment ["
                   << topo_start << ", " << topo_end << ")";
       }
     }
-    auto cached_op = cached_seg_opr_.at(key);
+    auto cached_op = cached_seg_opr_.at(key).opr;
     if (cached_op != nullptr) {
       Context* pctx = nullptr;
       const auto& idx = graph_.indexed_graph();
@@ -745,65 +749,73 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   }
 }
 
-Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_end) {
+GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
   std::vector<Engine::VarHandle> read_vars;
   std::vector<Engine::VarHandle> write_vars;
   Context *pctx = nullptr;
-  // Setup data for operators
-  std::vector<OpExecutor*>* exec_list = new std::vector<OpExecutor*>();
+  GraphExecutor::CachedSegOpr ret;
+  ret.topo_start = topo_start;
+  ret.topo_end = topo_end;
+  ret.initialized = true;
+  auto& exec_list = ret.exec_list;
+
+  // dedup util function
+  auto dedup = [] (std::vector<Engine::VarHandle>& vars) {  // NOLINT(*)
+    std::sort(vars.begin(), vars.end());
+    vars.resize(std::unique(vars.begin(), vars.end()) - vars.begin());
+  };
 
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
+    std::vector<Engine::VarHandle> all_vars;
     const auto& inode = idx[nid];
     OpNode& op_node = op_nodes_[nid];
     if (op_node.skip_exec_node) continue;
     if (inode.source->is_variable()) continue;
     if (op_node.exec->exec_type() != Operator::kSync) {
-      return nullptr;
+      return ret;
     }
     if (pctx == nullptr) pctx = &(op_node.ctx);
     if (*pctx != op_node.ctx) {
-      return nullptr;
+      return ret;
     }
-
+    // out
     for (const auto& out : op_node.exec->out_array) {
+      all_vars.push_back(out.var());
       write_vars.push_back(out.var());
       //if (out.type == kTobeBindByExternal) return nullptr;
     }
-
+    // input
     for (const auto& entry : inode.source->inputs) {
       uint32_t input_nid = idx.node_id(entry.node.get());
       auto& input_exec = op_nodes_[input_nid].exec;
-      // aux node doesn't have exec
       if (input_exec != nullptr) {
         const auto& data = input_exec->out_array[entry.index];
+        all_vars.push_back(data.var());
         read_vars.push_back(data.var());
       }
       //if (info.type == kTobeBindByExternal) return nullptr;
     }
-
+    // requested resource
     for (const Resource& r : op_node.exec->op_ctx.requested) {
+      all_vars.push_back(r.var);
       write_vars.push_back(r.var);
     }
 
-    //Refactor var name
+    dedup(all_vars);
     auto& exec = op_nodes_[nid].exec;
     Engine::Get()->PushSync([exec](RunContext rctx) {
       exec->Setup();
-    //}, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
-    }, Context::CPU(), {}, {}, FnProperty::kNormal, 0,
+    }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
     PROFILER_MESSAGE("SetupExec"));
-    exec_list->push_back(exec.get());
+    ret.exec_list.push_back(exec.get());
   }
 
-  if (pctx == nullptr) return nullptr;
+  if (pctx == nullptr) return ret;
+
   // deduplication
-  std::sort(write_vars.begin(), write_vars.end());
-  write_vars.resize(std::unique(write_vars.begin(), write_vars.end()) -
-                    write_vars.begin());
-  std::sort(read_vars.begin(), read_vars.end());
-  read_vars.resize(std::unique(read_vars.begin(), read_vars.end()) -
-                   read_vars.begin());
+  dedup(write_vars);
+  dedup(read_vars);
   auto wit = write_vars.begin();
   auto rtop = read_vars.begin();
   for (auto rit = read_vars.begin(); rit != read_vars.end(); ++rit) {
@@ -818,7 +830,7 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [exec_list, is_gpu] (
       RunContext ctx, Engine::CallbackOnComplete on_complete) {
-    for (auto &exec : *exec_list) {
+    for (auto &exec : exec_list) {
       exec->Run(ctx);
     }
     if (is_gpu) {
@@ -831,8 +843,9 @@ Engine::OprHandle GraphExecutor::CreateCachedOpr(size_t topo_start, size_t topo_
     }
     on_complete();
   };
-  return Engine::Get()->NewOperator(
+  ret.opr = Engine::Get()->NewOperator(
       exec_fun, read_vars, write_vars, FnProperty::kNormal);
+  return ret;
 }
 }  // namespace exec
 

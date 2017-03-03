@@ -62,14 +62,16 @@ class GraphExecutor : public Executor {
   };
   // a cached segment operator that executes a segment
   struct CachedSegOpr {
-    // context of the operator
-    Context ctx;
     // begin in topo order
-    size_t topo_begin;
+    size_t topo_start;
     // end in topo order
     size_t topo_end;
     // the cached operator
-    Engine::OprHandle opr;
+    Engine::OprHandle opr = nullptr;
+    // whether it's initialized
+    bool initialized = false;
+    // list of op executors
+    std::vector<OpExecutor*> exec_list;
   };
 
   // internal initialization of the graph.
@@ -97,9 +99,9 @@ class GraphExecutor : public Executor {
    * \param topo_start beginning of segment
    * \param topo_end end of segment
    * \return the cached operator.
-   *  Can be nullptr if cached operator cannot be created.
+   *  ret.opr Can be nullptr if creation failed.
   */
-  Engine::OprHandle CreateCachedOpr(size_t topo_start, size_t topo_end);
+  CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
 
   // internal graph
   nnvm::Graph graph_;
@@ -130,7 +132,7 @@ class GraphExecutor : public Executor {
   // whether to enable bulk execution
   bool prefer_bulk_execution_;
   // cached segment operator
-  std::unordered_map<size_t, Engine::OprHandle> cached_seg_opr_;
+  std::vector<CachedSegOpr> cached_seg_opr_;
 };
 
 }  // namespace exec
