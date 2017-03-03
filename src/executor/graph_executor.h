@@ -88,6 +88,8 @@ class GraphExecutor : public Executor {
                       const std::vector<NDArray>& arg_grad_store);
   // initialize the cached operator
   void InitCachedOps();
+  // initialize the opr segments for bulk exec
+  void InitOpSegs();
   // initialize the resources in the graph
   // initialize the memory of data entries
   // shared_pool: extra memory shared from other parts

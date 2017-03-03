@@ -350,6 +350,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
     }
   }
   this->InitCachedOps();
+  this->InitOpSegs();
 }
 
 Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
@@ -668,24 +669,27 @@ void GraphExecutor::InitCachedOps() {
   }
 }
 
-void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
-   // heurestic, only enable bulk on forward only
-  bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
-       && topo_start == 0 && num_forward_nodes_ == topo_end;
-  // Create default cached seg oprs
+void GraphExecutor::InitOpSegs() {
   cached_seg_opr_.clear();
   CachedSegOpr p;
   cached_seg_opr_.resize(op_nodes_.size(), p);
+  if (!prefer_bulk_execution_) return;
+  if (monitor_callback_) return;
+  // TODO heurestic, only enable bulk on forward only
+  return;
+}
 
+void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
+  // FIXME determine number_forward_nodes_
+  bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
+       && topo_start == 0 && num_forward_nodes_ == topo_end;
+
+  // TODO Move initialization to InitOpSegs()
   if (bulk_exec) {
     // encode things into a key
     size_t key = topo_start * op_nodes_.size() + topo_end;
     if (cached_seg_opr_.at(key).initialized == false) {
       cached_seg_opr_[key] = this->CreateCachedSegOpr(topo_start, topo_end);
-      if (cached_seg_opr_.at(key).opr != nullptr) {
-        LOG(INFO) << "Created bulk execution on segment ["
-                  << topo_start << ", " << topo_end << ")";
-      }
     }
     auto cached_op = cached_seg_opr_.at(key).opr;
     if (cached_op != nullptr) {
@@ -783,6 +787,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     for (const auto& out : op_node.exec->out_array) {
       all_vars.push_back(out.var());
       write_vars.push_back(out.var());
+      //FIXME fix the missing types.
       //if (out.type == kTobeBindByExternal) return nullptr;
     }
     // input
@@ -830,6 +835,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [exec_list, is_gpu] (
       RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    // Run all opr in the sub-graph
     for (auto &exec : exec_list) {
       exec->Run(ctx);
     }
