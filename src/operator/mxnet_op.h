@@ -136,6 +136,49 @@ struct clip_grad {
   }
 };
 
+#define REVERSE_MAX_DIM 10
+
+struct reverse {
+  MSHADOW_XINLINE static int ReverseIndex(index_t idx,
+                                          index_t nreversedim,
+                                          const index_t * stride_,
+                                          const index_t * trailing_) {
+    index_t outputIndex = idx;
+    for (index_t i = 0; i < nreversedim; ++i) {
+      const index_t low = outputIndex % trailing_[i];
+      index_t high = outputIndex / trailing_[i];
+      const index_t x = high%stride_[i];
+      high /= stride_[i];
+      outputIndex = (high*stride_[i] + stride_[i] - 1 - x)*trailing_[i] + low;
+    }
+    return outputIndex;
+  }
+#ifdef __CUDACC__
+  template<typename DType>
+  __device__  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
+                              const index_t * stride_,
+                              const index_t * trailing_) {
+    __shared__ index_t stride_share[REVERSE_MAX_DIM];
+    __shared__ index_t trailing_share[REVERSE_MAX_DIM];
+    if (threadIdx.x < REVERSE_MAX_DIM) {
+      stride_share[threadIdx.x] = stride_[threadIdx.x];
+      trailing_share[threadIdx.x] = trailing_[threadIdx.x];
+    }
+    __syncthreads();
+    index_t new_idx = ReverseIndex(index, nreversedim, stride_share, trailing_share);
+    dst[new_idx] = src[index];
+  }
+#else
+  template<typename DType>
+  MSHADOW_XINLINE  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
+                                   const index_t * stride_,
+                                   const index_t * trailing_) {
+    index_t new_idx = ReverseIndex(index, nreversedim, stride_, trailing_);
+    dst[new_idx] = src[index];
+  }
+#endif
+};
+
 }  // namespace mxnet_op
 }  // namespace op
 }  // namespace mxnet

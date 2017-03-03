@@ -20,7 +20,8 @@ use overload
     '>='  => \&greater_equal,
     '<'   => \&lesser,
     '<='  => \&lesser_equal,
-    '&{}' => sub { my $self = shift; sub { $self->call(@_) } };
+    '&{}' => sub { my $self = shift; sub { $self->call(@_) } },
+    '@{}' => sub { my $self = shift; [map { $self->slice($_) } @{ $self->list_outputs }] };
 
 extends 'AI::MXNet::Symbol::Base';
 has 'handle'   => (is => 'rw', isa => 'SymbolHandle', required => 1);
@@ -210,70 +211,41 @@ method deepcopy()
         the resulting symbol
 =cut
 
-method call(ArrayRef $args, HashRef $kwargs)
+method call(@args)
 {
     my $s = $self->deepcopy();
-    $s->_compose(@$args, $kwargs);
+    $s->_compose(@args);
     return $s;
 }
 
-method slice(ArrayRef|HashRef|Str|Index @args)
+method slice(Str|Index $index)
 {
-    confess("No arguments supplied") unless @args;
     ## __getitem__ tie needs to die
-    if(not grep { ref } @args)
+    if(not find_type_constraint('Index')->check($index))
     {
-        confess("can only get one item from the symbol")
-            if @args > 1;
-        my $index = $args[0];
-        if(not find_type_constraint('Index')->check($index))
+        my $i = 0;
+        my $idx;
+        for my $name (@{ $self->list_outputs() })
         {
-            my $i = 0;
-            my $idx;
-            for my $name (@{ $self->list_outputs() })
+            if($name eq $index)
             {
-                if($name eq $index)
+                if(defined $idx)
                 {
-                    if(defined $idx)
-                    {
-                        confess(qq/There are multiple outputs with name "$index"/);
-                    }
-                    $idx = $i;
+                    confess(qq/There are multiple outputs with name "$index"/);
                 }
-                $i++;
+                $idx = $i;
             }
-            confess(qq/Cannot find output that matches name "$index"/) unless defined $idx;
-            $index = $idx;
+            $i++;
         }
-        my $handle = check_call(AI::MXNetCAPI::SymbolGetOutput($self->handle, $index));
-        return __PACKAGE__->new(handle => $handle);
+        confess(qq/Cannot find output that matches name "$index"/) unless defined $idx;
+        $index = $idx;
     }
-    else
+    elsif($index >= @{ $self->list_outputs() })
     {
-        confess("call expects no more than two arguments that must be either hash or array refs")
-            unless(@args > 2 or grep { not ref } @args);
-        my @call_args;
-        if(@args == 1)
-        {
-            if(ref($args[0]) eq 'HASH')
-            {
-                @call_args = ([], $args[0]);
-            }
-            else
-            {
-                @call_args = ($args[0], {});
-            }
-        }
-        else
-        {
-            my @hash = grep { ref($_) eq 'HASH' } @args;
-            my @array = grep { ref($_) eq 'ARRAY' } @args;
-            confess("call expects no more than one hash ref and no more than one array ref")
-                unless(@hash == 1 and @array == 1);
-            @call_args = ($array[0], $hash[0]);
-        }
-        return &{$self}(@call_args);
+        confess("Index: [$index] is outside of the range of the symbol: $self outputs");
     }
+    my $handle = check_call(AI::MXNetCAPI::SymbolGetOutput($self->handle, $index));
+    return __PACKAGE__->new(handle => $handle);
 }
 
 =head2 name
@@ -388,6 +360,27 @@ method get_internals()
 {
     my $handle = check_call(AI::MXNetCAPI::SymbolGetInternals($self->handle));
     return __PACKAGE__->new(handle => $handle);
+}
+
+=head2 get_children
+
+        "Get a new grouped symbol whose output contains
+        inputs to output nodes of the original symbol
+
+        Returns
+        -------
+        sgroup : Symbol or undef
+            The children of the head node. If the symbol has no
+            inputs undef will be returned.
+=cut
+
+
+method get_children()
+{
+    my $handle = check_call(AI::MXNetCAPI::SymbolGetChildren($self->handle));
+    my $ret = __PACKAGE__->new(handle => $handle);
+    return undef unless @{ $ret->list_outputs };
+    return $ret;
 }
 
 =head2 list_arguments
@@ -542,7 +535,36 @@ method infer_type(Str|Undef @args)
 
 method infer_shape(Maybe[Str|Shape] @args)
 {
-    $self->_infer_shape_impl(0, @args)
+    my @res = $self->_infer_shape_impl(0, @args);
+    if(not defined $res[1])
+    {
+        my ($arg_shapes) = $self->_infer_shape_impl(1, @args);
+        my $arg_names    = $self->list_arguments;
+        my @unknowns;
+        zip(sub {
+            my ($name, $shape) = @_;
+            if(not ref $shape or not @$shape or not product(@$shape))
+            {
+                if(@unknowns >= 10)
+                {
+                    $unknowns[10] = '...';
+                }
+                else
+                {
+                    my @shape = eval { @$shape };
+                    push @unknowns, "$name @shape";
+                }
+            }
+        }, $arg_names, $arg_shapes);
+        AI::MXNet::Logging->warning(
+            "Cannot decide shape for the following arguments "
+            ."(0s in shape means unknown dimensions). "
+            ."Consider providing them as input:\n\t"
+            ."\n\t"
+            .join(", ", @unknowns)
+        );
+    }
+    return @res;
 }
 
 =head2 infer_shape_partial
@@ -765,7 +787,14 @@ method simple_bind(
     if(not defined $type_dict)
     {
         $type_dict =  {};
-        %$type_dict = map { $_ => 'float32' } @{ $self->list_arguments };
+        my $attrs = $self->attr_dict;
+        for my $k (@{ $self->list_arguments })
+        {
+            if(not exists $attrs->{$k} or not exists $attrs->{$k}{__dtype__})
+            {
+                $type_dict->{ $k } = 'float32';
+            }
+        }
     }
     my @keys = keys %$shapes;
     my @shape_input;
@@ -1002,7 +1031,6 @@ method bind(
         }
     }
     my $shared_handle = $shared_exec->handle if $shared_exec;
-#map { print AI::MXNet::NDArray->new(handle => $_)->aspdl, "\n"; } @{$args_handle};
     my $handle = check_call(AI::MXNetCAPI::ExecutorBindEX(
                 $self->handle,
                 $ctx->device_type_id,
@@ -1060,7 +1088,7 @@ method grad(ArrayRef[Str] $wrt)
     return __PACKAGE__->new(handle => $handle);
 }
 
-=head2 Variable(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None):
+=head2 Variable
 
     Create a symbolic variable with specified name.
 
@@ -1080,14 +1108,23 @@ method grad(ArrayRef[Str] $wrt)
         Specify weight decay muliplier for this variable.
     dtype : Dtype
         Similar to shape, we can specify dtype for this variable.
-
+    init : initializer (mx->init->*)
+        Specify initializer for this variable to override the default initializer
     Returns
     -------
     variable : Symbol
         The created variable symbol.
 =cut
 
-method Variable(Str $name, HashRef[Str] :$attr={}, Shape|Undef :$shape=, Num|Undef :$lr_mult=, Num|Undef :$wd_mult=, Dtype|Undef :$dtype=)
+method Variable(
+    Str                            $name,
+    HashRef[Str]                  :$attr={},
+    Maybe[Shape]                  :$shape=,
+    Maybe[Num]                    :$lr_mult=,
+    Maybe[Num]                    :$wd_mult=,
+    Maybe[Dtype]                  :$dtype=,
+    Maybe[AI::MXNet::Initializer] :$init=
+)
 {
     my $handle = check_call(AI::MXNetCAPI::SymbolCreateVariable($name));
     my $ret = __PACKAGE__->new(handle => $handle);
@@ -1096,6 +1133,7 @@ method Variable(Str $name, HashRef[Str] :$attr={}, Shape|Undef :$shape=, Num|Und
     $attr->{__lr_mult__} =  $lr_mult if defined $lr_mult;
     $attr->{__wd_mult__} =  $wd_mult if defined $wd_mult;
     $attr->{__dtype__}   = DTYPE_STR_TO_MX->{ $dtype } if $dtype;
+    $attr->{__init__}    = "$init" if defined $init;
     $ret->_set_attr(%{ $attr });
     return $ret;
 }
@@ -1117,7 +1155,8 @@ method Variable(Str $name, HashRef[Str] :$attr={}, Shape|Undef :$shape=, Num|Und
 
 method Group(ArrayRef[AI::MXNet::Symbol] $symbols)
 {
-    my $handle = check_call(AI::MXNetCAPI::SymbolCreateGroup($symbols));
+    my @handles = map { $_->handle } @{ $symbols };
+    my $handle = check_call(AI::MXNetCAPI::SymbolCreateGroup(scalar(@handles), \@handles));
     return __PACKAGE__->new(handle => $handle);
 }
 
@@ -1196,7 +1235,7 @@ method load_json(Str $json)
         The created Symbol
 =cut
 
-method zeros(Shape $shape, Dtype :$dtype='float32', Str :$name)
+method zeros(Shape :$shape, Dtype :$dtype='float32', Str :$name)
 {
     return __PACKAGE__->_zeros({ shape => $shape, dtype => $dtype, name => $name });
 }
@@ -1218,7 +1257,7 @@ method zeros(Shape $shape, Dtype :$dtype='float32', Str :$name)
         The created Symbol
 =cut
 
-method ones(Shape $shape, Dtype :$dtype='float32', Str :$name)
+method ones(Shape :$shape, Dtype :$dtype='float32', Str :$name)
 {
     return __PACKAGE__->_ones({ shape => $shape, dtype => $dtype, name => $name });
 }

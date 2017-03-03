@@ -61,12 +61,19 @@ method init_data(
 
 package AI::MXNet::DataDesc;
 use Mouse;
-use overload '""' => \&stringify;
-
+use overload '""'  => \&stringify,
+             '@{}' => \&to_nameshape;
 has 'name'   => (is => 'ro', isa => "Str",   required => 1);
 has 'shape'  => (is => 'ro', isa => "Shape", required => 1);
 has 'dtype'  => (is => 'ro', isa => "Dtype", default => 'float32');
 has 'layout' => (is => 'ro', isa => "Str",   default => 'NCHW');
+
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(name => $_[0], shape => $_[1]) if @_ == 2;
+    return $class->$orig(@_);
+};
 
 method stringify($other=, $reverse=)
 {
@@ -77,6 +84,11 @@ method stringify($other=, $reverse=)
         $self->dtype,
         $self->layout
     );
+}
+
+method to_nameshape($other=, $reverse=)
+{
+    [$self->name, $self->shape];
 }
 
 =head2 get_batch_axis
@@ -134,8 +146,8 @@ use Mouse;
     Default object for holding a mini-batch of data and related information.
 =cut
 
-has 'data'          => (is => 'rw', required => 1);
-has 'label'         => (is => 'rw', required => 1);
+has 'data'          => (is => 'rw', isa => 'Maybe[ArrayRef[AI::MXNet::NDArray]]', required => 1);
+has 'label'         => (is => 'rw', isa => 'Maybe[ArrayRef[AI::MXNet::NDArray]]', required => 1);
 has 'pad'           => (is => 'rw');
 has 'index'         => (is => 'rw');
 has 'bucket_key'    => (is => 'rw');
@@ -289,9 +301,22 @@ has 'size'           => (is => 'ro', isa => 'Int', required => 1);
 has 'reset_internal' => (is => 'rw', isa => 'Int', default => 1);
 has 'cur'            => (is => 'rw', isa => 'Int', default => 0);
 has 'current_batch'  => (is => 'rw', isa => 'Maybe[AI::MXNet::DataBatch]');
-has 'provide_data'   => (is => 'rw', default => sub { shift->data_iter->provide_data  }, lazy => 1);
-has 'provide_label'  => (is => 'rw', default => sub { shift->data_iter->provide_label }, lazy => 1);
-has 'batch_size'     => (is => 'rw', default => sub { shift->data_iter->batch_size    }, lazy => 1);
+has [qw/provide_data
+    default_bucket_key
+    provide_label
+    batch_size/]     => (is => 'rw', init_arg => undef);
+
+sub BUILD
+{
+    my $self = shift;
+    $self->provide_data($self->data_iter->provide_data);
+    $self->provide_label($self->data_iter->provide_label);
+    $self->batch_size($self->data_iter->batch_size);
+    if($self->data_iter->can('default_bucket_key'))
+    {
+        $self->default_bucket_key($self->data_iter->can('default_bucket_key'));
+    }
+}
 
 method reset()
 {

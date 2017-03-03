@@ -15,7 +15,7 @@ TEST(Storage, Basic_CPU) {
   handle = storage->Alloc(kSize, context_cpu);
   EXPECT_EQ(handle.ctx, context_cpu);
   EXPECT_EQ(handle.size, kSize);
-  EXPECT_EQ(handle.dptr, ptr);
+  storage->Free(handle);
 }
 
 #if MXNET_USE_CUDA

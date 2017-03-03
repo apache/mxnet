@@ -46,7 +46,7 @@ method register()
             of a subclass of Optimizer. Case insensitive.
 
         rescale_grad : float
-            Rescaling factor on gradient.
+            Rescaling factor on gradient. Normally should be 1/batch_size.
 
         kwargs: dict
             Parameters for optimizer
@@ -283,7 +283,7 @@ method _get_wd(Index $index)
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -395,6 +395,139 @@ method update(
 
 __PACKAGE__->register;
 
+package AI::MXNet::DCASGD;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::Optimizer';
+
+=head1 NAME
+
+    AI::MXNet::DCASGD
+=cut
+
+=head1 DESCRIPTION
+
+    DCASGD optimizer with momentum and weight regularization.
+
+    implement paper "Asynchronous Stochastic Gradient Descent with
+                    Delay Compensation for Distributed Deep Learning"
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        learning_rate of SGD
+
+    momentum : float, optional
+       momentum value
+
+    lamda : float, optional
+       scale DC value
+
+    wd : float, optional
+        L2 regularization coefficient add to all the weights
+
+    rescale_grad : float, optional
+        rescaling factor of gradient. Normally should be 1/batch_size.
+
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+
+    param_idx2name : hash ref of string/int to float, optional
+        special treat weight decay in parameter ends with bias, gamma, and beta
+=cut
+has 'momentum'        => (is => 'ro', isa => 'Num', default => 0);
+has 'lamda'           => (is => 'ro', isa => 'Num', default => 0.04);
+has 'weight_previous' => (is => 'rw', init_arg => undef);
+
+sub BUILD
+{
+    my $self = shift;
+    $self->weight_previous({});
+}
+
+=head2 create_state
+
+    Create additional optimizer state such as momentum.
+
+        Parameters
+        ----------
+        weight : NDArray
+            The weight data
+=cut
+
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+        return [
+            $self->momentum ? AI::MXNet::NDArray->zeros(
+                $weight->shape, ctx => $weight->context, dtype => $weight->dtype
+            ) : undef,
+            $weight->copy
+        ];
+}
+
+=head2 update
+
+        Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+            An unique integer key used to index the parameters
+
+        weight : NDArray
+            weight ndarray
+
+        grad : NDArray
+            grad ndarray
+
+        state : NDArray or other objects returned by init_state
+            The auxiliary state used in optimization.
+=cut
+
+method update(
+    Index                     $index,
+    AI::MXNet::NDArray        $weight,
+    AI::MXNet::NDArray        $grad,
+    Maybe[AI::MXNet::NDArray] $state
+)
+{
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    $self->_update_count($index);
+    $grad *= $self->rescale_grad;
+    if($self->clip_gradient)
+    {
+        $grad = AI::MXNet::NDArray->clip(
+            $grad,
+            -$self->clip_gradient,
+            $self->clip_gradient
+        );
+    }
+    my ($mom, $weight_previous) = @{ $state };
+    if(defined $mom)
+    {
+        $mom *= $self->momentum;
+        $mom += -$lr * (
+                $grad + $wd * $weight
+                    +
+                $self->lamda * $grad * $grad * ($weight - $weight_previous)
+        );
+    }
+    else
+    {
+        assert($self->momentum == 0);
+        $mom = -$lr * (
+                $grad + $wd * $weight
+                    +
+                $self->lamda * $grad * $grad * ($weight - $weight_previous)
+        );
+    }
+    $weight_previous .= $weight;
+    $weight += $mom;
+}
+
+__PACKAGE__->register;
+
 =begin
     SGD with nesterov
     It is implemented according to
@@ -474,7 +607,7 @@ __PACKAGE__->register;
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -541,8 +674,8 @@ method update(
              $self->clip_gradient
         );
     }
-    $weight +=  - $lr/2 * ($grad + $wd * $weight) 
-                    + 
+    $weight +=  - $lr/2 * ($grad + $wd * $weight)
+                    +
                 AI::MXNet::Random->normal(
                         0, sqrt($lr),
                         $weight->shape,
@@ -582,7 +715,7 @@ __PACKAGE__->register;
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
@@ -703,7 +836,7 @@ __PACKAGE__->register;
         L2 regularization coefficient add to all the weights
 
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
 
     eps: float, optional
         A small float number to make the updating processing stable
@@ -770,51 +903,100 @@ __PACKAGE__->register;
 
     RMSProp optimizer of Tieleman & Hinton, 2012,
 
-    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
-    by Alex Graves, 2013.
+    For centered=False, the code follows the version in
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    Tieleman & Hinton, 2012
+
+    For centered=True, the code follows the version in
+    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
     Parameters
     ----------
     learning_rate : float, optional
         Step size.
-        Default value is set to 0.002.
+        Default value is set to 0.001.
     gamma1: float, optional
-        decay factor of moving average for gradient, gradient^2.
-        Default value is set to 0.95.
+        decay factor of moving average for gradient^2.
+        Default value is set to 0.9.
     gamma2: float, optional
         "momentum" factor.
         Default value if set to 0.9.
+        Only used if centered=True
+    epsilon : float, optional
+        Default value is set to 1e-8.
+    centered : bool, optional
+        Use Graves or Tielemans & Hintons version of RMSProp
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
         rescaling factor of gradient.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
+    clip_weights : float, optional
+        clip weights in range [-clip_weights, clip_weights]
 =cut
+
 package AI::MXNet::RMSProp;
 use Mouse;
 
 extends 'AI::MXNet::Optimizer';
 
-has '+learning_rate' => (default => 0.002);
-has 'gamma1'    => (is => "rw", isa => "Num", default => 0.95);
-has 'gamma2'    => (is => "rw", isa => "Num", default => 0.9);
+has '+learning_rate' => (default => 0.001);
+has 'gamma1'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'gamma2'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'epsilon'        => (is => "ro", isa => "Num",  default => 1e-8);
+has 'centered'       => (is => "ro", isa => "Bool", default => 0);
+has 'clip_weights'   => (is => "ro", isa => "Num");
+has 'kwargs'         => (is => "rw", init_arg => undef);
 
+sub BUILD
+{
+    my $self = shift;
+    $self->kwargs({
+        rescale_grad => $self->rescale_grad,
+        gamma1       => $self->gamma1,
+        epsilon      => $self->epsilon
+    });
+    if($self->centered)
+    {
+        $self->kwargs->{gamma2} = $self->gamma2;
+    }
+    if($self->clip_gradient)
+    {
+        $self->kwargs->{clip_gradient} = $self->clip_gradient;
+    }
+    if($self->clip_weights)
+    {
+        $self->kwargs->{clip_weights} = $self->clip_weights;
+    }
+}
+
+# For centered=False: n
+# For centered=True: n, g, delta
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     return [
-            AI::MXNet::NDArray->zeros(
-                $weight->shape,
-                ctx => $weight->context
-            ),  # n
-            AI::MXNet::NDArray->zeros(
-                $weight->shape,
-                ctx => $weight->context
-            ),  # g
-            AI::MXNet::NDArray->zeros(
-                $weight->shape,
-                ctx => $weight->context
+            $self->centered
+            ? (
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # n
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # g
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                )
             )   # delta
+            : (
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # n
+            )
     ];
 }
 
@@ -828,22 +1010,31 @@ method update(
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    $grad *= $self->rescale_grad;
-    if($self->clip_gradient)
+    my ($n, $g, $delta) = @{ $state };
+    if($self->centered)
     {
-        $grad = AI::MXNet::NDArray->clip(
-            $grad,
-            -$self->clip_gradient,
-             $self->clip_gradient
+        AI::MXNet::NDArray->rmspropalex_update(
+            $weight, $grad, $n, $g, $delta,
+            {
+                out => $weight,
+                lr  => $lr,
+                wd  => $wd,
+                %{ $self->kwargs }
+            }
         );
     }
-    my ($n, $g, $delta) = @{ $state };
-    $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
-    $g .= (1 - $self->gamma1) * $grad + $self->gamma1 * $g;
-    $delta .= ($self->gamma2) * $delta 
-                -
-              $lr * ($grad/(AI::MXNet::NDArray->sqrt($n - $g*$g) + 1e-8) + $wd * $weight);
-    $weight += $delta;
+    else
+    {
+        AI::MXNet::NDArray->rmsprop_update(
+            $weight, $grad, $n,
+            {
+                out => $weight,
+                lr  => $lr,
+                wd  => $wd,
+                %{ $self->kwargs }
+            }
+        );
+    }
 }
 
 __PACKAGE__->register;
@@ -865,7 +1056,7 @@ __PACKAGE__->register;
     wd : float
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
-        rescaling factor of gradient.
+        rescaling factor of gradient. Normally should be 1/batch_size.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut

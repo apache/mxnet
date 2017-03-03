@@ -1,6 +1,7 @@
 Changes
 Makefile.PL
 MANIFEST
+META.json
 META.yml
 README
 t/AI-NNVMCAPI.t
