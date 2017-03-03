@@ -3,7 +3,6 @@ import mxnet as mx
 import numpy as np
 import argparse
 import re
-
 import sys
 
 from convert_symbol import proto2symbol
