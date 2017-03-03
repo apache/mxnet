@@ -221,7 +221,9 @@ public:
     // gradient w.r.t bias
     if (bias_term_) {
       Tensor<xpu, 1, DType> dbias = in_grad[conv::kBias].get<xpu, 1, DType>(s);
-      ASSIGN_DISPATCH(dbias, req[conv::kBias], sumall_except_dim<1>(out_grad_4d));
+      Tensor<xpu, 3, DType> dout = out_grad[conv::kOut].get_with_shape<xpu, 3, DType>(
+          Shape3(num_, conv_out_channels_, conv_out_spatial_dim_), s);
+      ASSIGN_DISPATCH(dbias, req[conv::kBias], sumall_except_dim<1>(dout));
     }
   }
 
