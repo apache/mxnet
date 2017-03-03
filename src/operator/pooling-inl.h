@@ -37,8 +37,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
-    .describe("Ignore kernel size, do global pooling based on current input feature map. "
-              "This is useful for input with different shape");
+    .describe("Ignore kernel size, do global pooling based on current input feature map. ");
 
     DMLC_DECLARE_FIELD(kernel)
     .enforce_nonzero()
@@ -53,9 +52,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
     .add_enum("full", pool_enum::kFull)
     .add_enum("valid", pool_enum::kValid)
-    .describe("Pooling convention to be applied."
-              "kValid is default setting of Mxnet and rounds down the output pooling size."
-              "kFull is compatible with Caffe and rounds up the output pooling size.");
+    .describe("Pooling convention to be applied.");
 
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
     .enforce_nonzero()
