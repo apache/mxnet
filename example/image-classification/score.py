@@ -5,7 +5,6 @@ import time
 import os
 import logging
 
-
 def score(model, data_val, metrics, gpus, batch_size, rgb_mean,
           image_shape='3,224,224', data_nthreads=4, label_name='softmax_label'):
     # create data iterator
