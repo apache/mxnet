@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=no-member, invalid-name, protected-access, no-self-use
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
+# pylint: disable=too-many-lines
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 
@@ -442,6 +443,8 @@ class LSTMCell(BaseRNNCell):
 
 class GRUCell(BaseRNNCell):
     """Gated Rectified Unit (GRU) network cell.
+    Note: this is an implementation of the cuDNN version of GRUs
+    (slight modification compared to Cho et al. 2014).
 
     Parameters
     ----------
@@ -459,8 +462,6 @@ class GRUCell(BaseRNNCell):
         self._num_hidden = num_hidden
         self._i2h_weight = self.params.get("i2h_weight")
         self._i2h_bias = self.params.get("i2h_bias")
-        self._h2h_gates_weight = self.params.get("h2h_gates_weight")
-        self._h2h_gates_bias = self.params.get("h2h_gates_bias")
         self._h2h_weight = self.params.get("h2h_weight")
         self._h2h_bias = self.params.get("h2h_bias")
 
@@ -487,17 +488,17 @@ class GRUCell(BaseRNNCell):
         """
         args = args.copy()
 
-        out_names = {'i2h': ['_o', '_z', '_r'],
-                     'h2h_gates': ['_z', '_r'],
-                     'h2h': ['_o']}
+        out_names = ['i2h', 'h2h']
+
         h = self._num_hidden
         for group_name in out_names:
             weight = args.pop('%s%s_weight'%(self._prefix, group_name))
-            bias = args.pop('%s%s_bias'%(self._prefix, group_name))
-            for j, name in enumerate(out_names[group_name]):
-                wname = '%s%s%s_weight'%(self._prefix, group_name, name)
+            bias = args.pop('%s%s_bias' % (self._prefix, group_name))
+
+            for j, name in enumerate(['_z', '_r', '_o']):
+                wname = '%s%s%s_weight' % (self._prefix, group_name, name)
                 args[wname] = weight[j*h:(j+1)*h].copy()
-                bname = '%s%s%s_bias'%(self._prefix, group_name, name)
+                bname = '%s%s%s_bias' % (self._prefix, group_name, name)
                 args[bname] = bias[j*h:(j+1)*h].copy()
         return args
 
@@ -517,20 +518,20 @@ class GRUCell(BaseRNNCell):
             this cell packed.
         """
         args = args.copy()
-        out_names = {'i2h': ['_o', '_z', '_r'],
-                     'h2h_gates': ['_z', '_r'],
-                     'h2h': ['_o']}
+
+        out_names = ['i2h', 'h2h']
 
         for group_name in out_names:
             weight = []
             bias = []
-            for name in out_names[group_name]:
-                wname = '%s%s%s_weight'%(self._prefix, group_name, name)
+            for name in ['_z', '_r', '_o']:
+                wname = '%s%s%s_weight' % (self._prefix, group_name, name)
                 weight.append(args.pop(wname))
-                bname = '%s%s%s_bias'%(self._prefix, group_name, name)
+                bname = '%s%s%s_bias' % (self._prefix, group_name, name)
                 bias.append(args.pop(bname))
-            args['%s%s_weight'%(self._prefix, group_name)] = ndarray.concatenate(weight)
-            args['%s%s_bias'%(self._prefix, group_name)] = ndarray.concatenate(bias)
+            args['%s%s_weight'% (self._prefix, group_name)] = ndarray.concatenate(weight)
+            args['%s%s_bias' % (self._prefix, group_name)] = ndarray.concatenate(bias)
+
         return args
 
     def __call__(self, inputs, states):
@@ -550,6 +551,7 @@ class GRUCell(BaseRNNCell):
         states : Symbol
             state to next step of RNN.
         """
+        # pylint: disable=too-many-locals
         self._counter += 1
 
         seq_idx = self._counter
@@ -562,26 +564,23 @@ class GRUCell(BaseRNNCell):
                                     num_hidden=self._num_hidden * 3,
                                     name="%s_i2h" % name)
         h2h = symbol.FullyConnected(data=prev_state_h,
-                                    weight=self._h2h_gates_weight,
-                                    bias=self._h2h_gates_bias,
-                                    num_hidden=self._num_hidden * 2,
-                                    name="%s_h2h_gates" % name)
-        i2h, i2h_z, i2h_r = symbol.SliceChannel(i2h, num_outputs=3,
-                                                name="%s_i2h_slice" % name)
-        h2h_z, h2h_r = symbol.SliceChannel(h2h, num_outputs=2,
-                                           name="%s_h2h_gates_slice" % name)
+                                    weight=self._h2h_weight,
+                                    bias=self._h2h_bias,
+                                    num_hidden=self._num_hidden * 3,
+                                    name="%s_h2h" % name)
 
-        update_gate = symbol.Activation(i2h_z + h2h_z, act_type="sigmoid", name="%s_z_act" % name)
-        reset_gate = symbol.Activation(i2h_r + h2h_r, act_type="sigmoid", name="%s_r_act" % name)
+        i2h_z, i2h_r, i2h = symbol.SliceChannel(i2h, num_outputs=3, name="%s_i2h_slice" % name)
+        h2h_z, h2h_r, h2h = symbol.SliceChannel(h2h, num_outputs=3, name="%s_h2h_slice" % name)
 
-        next_h_tmp = symbol.FullyConnected(data=(reset_gate * prev_state_h),
-                                           weight=self._h2h_weight,
-                                           bias=self._h2h_bias,
-                                           num_hidden=self._num_hidden,
-                                           name="%s_h2h" % name)
-        next_h_tmp = symbol.Activation(i2h + next_h_tmp, act_type="tanh", name="%s_h_act" % name)
+        update_gate = symbol.Activation(i2h_z + h2h_z, act_type="sigmoid",
+                                        name="%s_z_act" % name)
+        reset_gate = symbol.Activation(i2h_r + h2h_r, act_type="sigmoid",
+                                       name="%s_r_act" % name)
 
-        next_h = symbol._internal._plus(update_gate * next_h_tmp, (1. - update_gate) * prev_state_h,
+        next_h_tmp = symbol.Activation(i2h + reset_gate * h2h, act_type="tanh",
+                                       name="%s_h_act" % name)
+
+        next_h = symbol._internal._plus((1. - update_gate) * next_h_tmp, update_gate * prev_state_h,
                                         name='%sout' % name)
 
         return next_h, [next_h]
@@ -793,7 +792,7 @@ class FusedRNNCell(BaseRNNCell):
         if self._mode == 'lstm':
             states = {'state': states[0], 'state_cell': states[1]}
         else:
-            states = {'state': states}
+            states = {'state': states[0]}
 
         rnn = symbol.RNN(data=inputs, parameters=self._parameter,
                          state_size=self._num_hidden, num_layers=self._num_layers,
