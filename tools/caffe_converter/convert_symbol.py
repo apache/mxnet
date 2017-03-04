@@ -1,31 +1,12 @@
 from __future__ import print_function
 import argparse
-from google.protobuf import text_format
 import re
 import caffe_parser
-
-def _read_prototxt(fname):
-    """Read caffe prototxt to return a caffe_pb2.NetParameter obj
-    """
-    proto = caffe_parser.caffe_pb2.NetParameter()
-    with open(fname, 'r') as f:
-        text_format.Merge(str(f.read()), proto)
-    return proto
-
-def _get_layers(proto):
-    """Returns layers from a proto obj
-    """
-    if len(proto.layer):
-        return proto.layer
-    elif len(proto.layers):
-        return proto.layers
-    else:
-        raise ValueError('Invalid proto file.')
 
 def _get_input(proto):
     """Get input size
     """
-    layer = _get_layers(proto)
+    layer = caffe_parser.get_layers(proto)
     if len(proto.input_dim) > 0:
         input_dim = proto.input_dim
     elif len(proto.input_shape) > 0:
@@ -93,20 +74,24 @@ def _convert_pooling_param(param):
 def _parse_proto(prototxt_fname):
     """Parse Caffe prototxt into symbol string
     """
+    proto = caffe_parser.read_prototxt(prototxt_fname)
+
+    # process data layer
+    input_name, input_dim, layer = _get_input(proto)
+    # only support single input, so always use `data` as the input data
+    mapping = {input_name: 'data'}
+    need_flatten = {input_name: False}
+    symbol_string = "import mxnet as mx\n" \
+                    + "data = mx.symbol.Variable(name='data')\n";
+
     connection = dict()
     symbols = dict()
     top = dict()
     flatten_count = 0
-    symbol_string = ""
-
-    proto = _read_prototxt(prototxt_fname)
-    input_name, input_dim, layer = _get_input(proto)
-
-    mapping = {input_name: 'data'}
-    need_flatten = {input_name: False}
     output_name = ""
-
     prev_name = None
+
+    # convert reset layers one by one
     for i in range(len(layer)):
         type_string = ''
         param_string = ''
@@ -236,9 +221,6 @@ def convert_symbol(prototxt_fname):
         Input shape
     """
     sym, output_name, input_dim = _parse_proto(prototxt_fname)
-    sym = "import mxnet as mx\n" \
-          + "data = mx.symbol.Variable(name='data')\n" \
-          + sym
     exec(sym)
     _locals = locals()
     exec("ret = " + output_name, globals(), _locals)

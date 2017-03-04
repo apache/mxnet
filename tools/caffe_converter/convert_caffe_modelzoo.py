@@ -2,8 +2,7 @@ import os
 import requests
 import argparse
 import logging
-# from convert_model import convert_model
-from convert_model import process_caffe_model
+from convert_model import convert_model
 # from convert_mean import convert_mean
 import mxnet as mx
 
@@ -112,13 +111,8 @@ def convert_caffe_model(model_name, meta_info, dst_dir='./model'):
     """Download, convert and save a caffe model"""
 
     (prototxt, caffemodel, mean) = _download_caffe_model(model_name, meta_info, dst_dir)
-
-    sym, arg_params, aux_params, input_dim = process_caffe_model(prototxt, caffemodel)
-    model = mx.mod.Module(symbol=sym, label_names=['prob_label', ])
-    model.bind(data_shapes=[('data', tuple(input_dim))])
-    model.init_params(arg_params=arg_params, aux_params=aux_params)
     model_name = os.path.join(dst_dir, model_name)
-    model.save_checkpoint(model_name, 0)
+    convert_model(prototxt, caffemodel, model_name)
 
     # convert_model(prototxt, caffemodel, model_name)
     # if isinstance(mean, str):
@@ -131,4 +125,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert Caffe model zoo')
     parser.add_argument('model_name', help='can be '+', '.join(model_meta_info.keys()))
     args = parser.parse_args()
-    convert_caffe_model(args.model_name)
+    assert args.model_name in model_meta_info, 'Unknown model ' + args.model_name
+    model_name, _ = convert_caffe_model(args.model_name, model_meta_info[args.model_name])
+    print('Model is saved into '+model_name)
