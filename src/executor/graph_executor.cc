@@ -16,10 +16,14 @@
 namespace mxnet {
 namespace exec {
 GraphExecutor::~GraphExecutor() {
-  //TODO Delete cached_seg_ops
   for (auto& n : op_nodes_) {
     if (n.cached_opr != nullptr) {
       Engine::Get()->DeleteOperator(n.cached_opr);
+    }
+  }
+  for (auto& seg : cached_seg_opr_) {
+    if (seg.opr != nullptr) {
+      Engine::Get()->DeleteOperator(seg.opr);
     }
   }
 }
@@ -670,49 +674,45 @@ void GraphExecutor::InitCachedOps() {
 }
 
 void GraphExecutor::InitOpSegs() {
+  size_t total_num_nodes = graph_.indexed_graph().num_nodes();
   cached_seg_opr_.clear();
   CachedSegOpr p;
-  cached_seg_opr_.resize(op_nodes_.size(), p);
+  cached_seg_opr_.resize(total_num_nodes, p);
   if (!prefer_bulk_execution_) return;
   if (monitor_callback_) return;
-  // TODO heurestic, only enable bulk on forward only
+  // Generate segments based on the graph structure
+  if (num_forward_nodes_ == total_num_nodes) {
+    // no backward nodes, bulk the whole graph for inference
+    cached_seg_opr_[0] = this->CreateCachedSegOpr(0, num_forward_nodes_);
+    return;
+  }
+  // TODO for training
   return;
 }
 
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
-  // FIXME determine number_forward_nodes_
-  bool bulk_exec = prefer_bulk_execution_ && !monitor_callback_
-       && topo_start == 0 && num_forward_nodes_ == topo_end;
-
-  // TODO Move initialization to InitOpSegs()
-  if (bulk_exec) {
-    // encode things into a key
-    size_t key = topo_start * op_nodes_.size() + topo_end;
-    if (cached_seg_opr_.at(key).initialized == false) {
-      cached_seg_opr_[key] = this->CreateCachedSegOpr(topo_start, topo_end);
-    }
-    auto cached_op = cached_seg_opr_.at(key).opr;
-    if (cached_op != nullptr) {
-      Context* pctx = nullptr;
-      const auto& idx = graph_.indexed_graph();
-      for (size_t nid = topo_start; nid < topo_end; ++nid) {
-        OpNode& opnode = op_nodes_[nid];
-        if (opnode.skip_exec_node) continue;
-        const auto& inode = idx[nid];
-        if (inode.source->is_variable()) continue;
-        opnode.exec->op_ctx.is_train = is_train;
-        pctx = &(opnode.ctx);
-      }
-      Engine::Get()->Push(cached_op, *pctx);
-      return;
-    }
-  }
-
-  // Normal mode
-  static const auto& flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  // Update context
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
+    OpNode& opnode = op_nodes_[nid];
+    if (opnode.skip_exec_node) continue;
+    const auto& inode = idx[nid];
+    if (inode.source->is_variable()) continue;
+    opnode.exec->op_ctx.is_train = is_train;
+  }
+
+  // Push Ops
+  static const auto& flist_outputs =
+      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  for (size_t nid = topo_start; nid < topo_end; ++nid) {
+    auto seg_op = cached_seg_opr_[nid];
+    // Check segments first
+    if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
+      Engine::Get()->Push(seg_op.opr, seg_op.ctx);
+      nid = seg_op.topo_end - 1;
+      continue;
+    }
+    // Normal mode
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
@@ -760,7 +760,6 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   GraphExecutor::CachedSegOpr ret;
   ret.topo_start = topo_start;
   ret.topo_end = topo_end;
-  ret.initialized = true;
   auto& exec_list = ret.exec_list;
 
   // dedup util function
@@ -787,8 +786,6 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     for (const auto& out : op_node.exec->out_array) {
       all_vars.push_back(out.var());
       write_vars.push_back(out.var());
-      //FIXME fix the missing types.
-      //if (out.type == kTobeBindByExternal) return nullptr;
     }
     // input
     for (const auto& entry : inode.source->inputs) {
@@ -799,7 +796,6 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
         all_vars.push_back(data.var());
         read_vars.push_back(data.var());
       }
-      //if (info.type == kTobeBindByExternal) return nullptr;
     }
     // requested resource
     for (const Resource& r : op_node.exec->op_ctx.requested) {
@@ -817,6 +813,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   }
 
   if (pctx == nullptr) return ret;
+  ret.ctx = *pctx;
 
   // deduplication
   dedup(write_vars);

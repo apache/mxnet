@@ -62,14 +62,14 @@ class GraphExecutor : public Executor {
   };
   // a cached segment operator that executes a segment
   struct CachedSegOpr {
+    // context of the operator
+    Context ctx;
     // begin in topo order
     size_t topo_start;
     // end in topo order
     size_t topo_end;
     // the cached operator
     Engine::OprHandle opr = nullptr;
-    // whether it's initialized
-    bool initialized = false;
     // list of op executors
     std::vector<OpExecutor*> exec_list;
   };
