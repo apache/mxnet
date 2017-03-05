@@ -137,6 +137,17 @@ class TBlob {
     return shape_[shape_.ndim() - 1] == stride_;
   }
   /*!
+   * \brief reshape to shape
+   * \param shape desired shape
+   * \return reshaped blob
+   */
+  inline TBlob reshape(const TShape& shape) const {
+    CHECK_EQ(this->shape_.Size(), shape.Size()) << "Shape size mismatch "
+    << this->shape_.Size() << " v.s. "  << shape.Size();
+    TBlob ret(this->dptr_, shape, this->dev_mask_, this->type_flag_);
+    return ret;
+  }
+  /*!
    * \brief flatten the tensor to 2 dimension, collapse the higher dimensions together
    * \param stream the possible stream target tensor should reside on
    * \tparam Device which device the tensor is on

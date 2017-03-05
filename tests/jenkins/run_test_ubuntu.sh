@@ -11,16 +11,6 @@ echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 user=`id -u -n`
 make -j$(nproc) || exit 1
 
-echo "BUILD lint"
-make lint || exit 1
-
-echo "BUILD cpp_test"
-make -j$(nproc) test || exit 1
-export MXNET_ENGINE_INFO=true
-#for test in tests/cpp/*_test; do
-#    ./$test || exit 1
-#done
-export MXNET_ENGINE_INFO=false
 export PYTHONPATH=${PWD}/python
 
 echo "BUILD python_test"
@@ -40,6 +30,3 @@ export PATH=$PATH:/opt/apache-maven/bin
 make scalapkg || exit 1
 make scalatest || exit 1
 
-# echo "BUILD julia_test"
-# export MXNET_HOME="${PWD}"
-# /home/ubuntu/julia/bin/julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit 1

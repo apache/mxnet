@@ -156,11 +156,11 @@ object Model {
   }
 
   // Initialize kvstore
-  private def initializeKVStore(kvStore: KVStore,
-                                paramArrays: IndexedSeq[Array[NDArray]],
-                                argParams: Map[String, NDArray],
-                                paramNames: IndexedSeq[String],
-                                updateOnKVStore: Boolean): Unit = {
+  private[mxnet] def initializeKVStore(kvStore: KVStore,
+                                       paramArrays: IndexedSeq[Array[NDArray]],
+                                       argParams: Map[String, NDArray],
+                                       paramNames: IndexedSeq[String],
+                                       updateOnKVStore: Boolean): Unit = {
     require(paramArrays.length == paramNames.length)
     for (idx <- 0 until paramArrays.length) {
       val paramOnDevs = paramArrays(idx)
@@ -172,9 +172,9 @@ object Model {
   }
 
   // Perform update of param_arrays from grad_arrays on kvstore
-  private def updateParamsOnKVStore(paramArrays: IndexedSeq[Array[NDArray]],
-                                    gradArrays: IndexedSeq[Array[NDArray]],
-                                    kvStore: Option[KVStore]): Unit = {
+  private[mxnet] def updateParamsOnKVStore(paramArrays: IndexedSeq[Array[NDArray]],
+                                           gradArrays: IndexedSeq[Array[NDArray]],
+                                           kvStore: Option[KVStore]): Unit = {
     (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
       if (gradList != null) {
         // push gradient, priority is negative index
@@ -186,11 +186,11 @@ object Model {
   }
 
   // Perform update of param_arrays from grad_arrays not on kvstore
-  private def updateParams(paramArrays: IndexedSeq[Array[NDArray]],
-                           gradArrays: IndexedSeq[Array[NDArray]],
-                           updater: MXKVStoreUpdater,
-                           numDevice: Int,
-                           kvStore: Option[KVStore] = None) {
+  private[mxnet] def updateParams(paramArrays: IndexedSeq[Array[NDArray]],
+                                  gradArrays: IndexedSeq[Array[NDArray]],
+                                  updater: MXKVStoreUpdater,
+                                  numDevice: Int,
+                                  kvStore: Option[KVStore] = None) {
     (paramArrays zip gradArrays).zipWithIndex.foreach { case ((argList, gradList), index) =>
       if (gradList != null) {
         kvStore.foreach(kv => {

@@ -58,6 +58,54 @@ struct Kernel<OP, gpu> {
 };
 #endif  // __CUDACC__
 
+/*! \brief operator request type switch */
+#define MXNET_ASSIGN_REQ_SWITCH(req, ReqType, ...)  \
+  switch (req) {                                    \
+  case kNullOp:                                     \
+    break;                                          \
+  case kWriteInplace:                               \
+  case kWriteTo:                                    \
+    {                                               \
+      const int ReqType = kWriteTo;                 \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case kAddTo:                                      \
+    {                                               \
+      const int ReqType = kAddTo;                   \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    break;                                          \
+  }
+
+/*!
+ * \brief assign the val to out according
+ * to request in Kernel::Launch
+ * \param out the data to be assigned
+ * \param req the assignment request
+ * \param val the value to be assigned to out
+ * \tparam OType output type
+ * \tparam VType value type
+ */
+#define KERNEL_ASSIGN(out, req, val)  \
+  {                                   \
+    switch (req) {                    \
+      case kNullOp:                   \
+        break;                        \
+      case kWriteTo:                  \
+      case kWriteInplace:             \
+        (out) = (val);                \
+        break;                        \
+      case kAddTo:                    \
+        (out) += (val);               \
+        break;                        \
+      default:                        \
+        break;                        \
+    }                                 \
+  }
+
 struct clip {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas,
@@ -86,6 +134,49 @@ struct clip_grad {
       out[i] = grad[i];
     }
   }
+};
+
+#define REVERSE_MAX_DIM 10
+
+struct reverse {
+  MSHADOW_XINLINE static int ReverseIndex(index_t idx,
+                                          index_t nreversedim,
+                                          const index_t * stride_,
+                                          const index_t * trailing_) {
+    index_t outputIndex = idx;
+    for (index_t i = 0; i < nreversedim; ++i) {
+      const index_t low = outputIndex % trailing_[i];
+      index_t high = outputIndex / trailing_[i];
+      const index_t x = high%stride_[i];
+      high /= stride_[i];
+      outputIndex = (high*stride_[i] + stride_[i] - 1 - x)*trailing_[i] + low;
+    }
+    return outputIndex;
+  }
+#ifdef __CUDACC__
+  template<typename DType>
+  __device__  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
+                              const index_t * stride_,
+                              const index_t * trailing_) {
+    __shared__ index_t stride_share[REVERSE_MAX_DIM];
+    __shared__ index_t trailing_share[REVERSE_MAX_DIM];
+    if (threadIdx.x < REVERSE_MAX_DIM) {
+      stride_share[threadIdx.x] = stride_[threadIdx.x];
+      trailing_share[threadIdx.x] = trailing_[threadIdx.x];
+    }
+    __syncthreads();
+    index_t new_idx = ReverseIndex(index, nreversedim, stride_share, trailing_share);
+    dst[new_idx] = src[index];
+  }
+#else
+  template<typename DType>
+  MSHADOW_XINLINE  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
+                                   const index_t * stride_,
+                                   const index_t * trailing_) {
+    index_t new_idx = ReverseIndex(index, nreversedim, stride_, trailing_);
+    dst[new_idx] = src[index];
+  }
+#endif
 };
 
 }  // namespace mxnet_op

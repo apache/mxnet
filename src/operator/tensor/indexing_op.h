@@ -467,6 +467,7 @@ inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
 }
 
 /*! \brief take scalar value from 2d data array */
+template<int req>
 struct batch_take {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
@@ -474,22 +475,27 @@ struct batch_take {
     int j = idx[i];
     if (j < 0) j = 0;
     else if (j >= M) j = M-1;
-    out[i] = a[i*M+j];
+    KERNEL_ASSIGN(out[i], req, a[i*M+j]);
   }
 };
 
 template<typename xpu>
 void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 2);
+  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(req.size(), 1);
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<batch_take, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                    inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
-                                    inputs[0].Size()/inputs[0].shape_[0]);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<batch_take<req_type>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                                inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                                inputs[0].Size()/inputs[0].shape_[0]);
+    });
   });
 }
 
@@ -571,14 +577,15 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<int req>
 struct one_hot {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const int* indices,
-                                  int depth, DType on_value, DType off_value) {
+                                  int depth, DType on_value) {
     int offset = i * depth;
     int j = indices[i];
     if (j >= 0 && j < depth) {
-      out[offset+j] = on_value;
+      KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
   }
 };
@@ -591,6 +598,7 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(req.size(), 1);
   // The following line is needed to guard the situation when
   // an output array is empty on GPU. In that case, out.dptr() = 0x0
   if (outputs[0].Size() == 0) return;
@@ -605,10 +613,12 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    out = static_cast<DType>(off_value);
-    Kernel<one_hot, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-        inputs[0].dptr<int>(), depth,
-        static_cast<DType>(on_value), static_cast<DType>(off_value));
+    ASSIGN_DISPATCH(out, req[0], static_cast<DType>(off_value));
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<one_hot<req_type>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                             inputs[0].dptr<int>(), depth,
+                                             static_cast<DType>(on_value));
+    });
   });
 }
 
