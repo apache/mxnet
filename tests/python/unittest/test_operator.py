@@ -40,11 +40,11 @@ def check_softmax_activation_with_shape(shape, mode):
         numeric_eps=1e-2, rtol=2e-2, atol=1e-3)
 
 def test_sofmax_activation():
-    test_softmax_activation_with_shape((2, 3), "instance")
-    test_softmax_activation_with_shape((2, 3, 2), "instance")
-    test_softmax_activation_with_shape((1, 2, 1, 3), "instance")
-    test_softmax_activation_with_shape((2, 3, 2), "channel")
-    test_softmax_activation_with_shape((2, 3, 1, 1), "channel")
+    check_softmax_activation_with_shape((2, 3), "instance")
+    check_softmax_activation_with_shape((2, 3, 2), "instance")
+    check_softmax_activation_with_shape((1, 2, 1, 3), "instance")
+    check_softmax_activation_with_shape((2, 3, 2), "channel")
+    check_softmax_activation_with_shape((2, 3, 1, 1), "channel")
 
 def check_elementwise_sum_with_shape(shape, n):
     # forward
