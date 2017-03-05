@@ -20,7 +20,7 @@ def np_softmax_channel(x):
     x_temp = np.swapaxes(x_temp, -1, 1)
     return x_temp
 
-def test_softmax_activation_with_shape(shape, mode):
+def check_softmax_activation_with_shape(shape, mode):
     data_sym = mx.symbol.Variable('data')
     x = mx.random.uniform(-1, 1, shape, ctx=default_context())
     g = mx.random.uniform(-1, 1, shape, ctx=default_context())
