@@ -5,26 +5,12 @@
 ```
 
 This document lists the routines of `symbol` (or `sym` for short) package
-grouped by functionality. Many docstrings contain example code, which
-demonstrates the basic usage of the routine. The examples assume that `MXNet` is
-imported with:
+grouped by functionality.
 
-```python
->>> import mxnet as mx
-```
-
-```eval_rst
-
-.. note:: A convenient way to execute examples is the ``%doctest_mode`` mode of
-    Jupyter notebook, which allows for pasting of multi-line examples contains
-    ``>>>`` and preserves indentation. Run ``%doctest_mode?`` in Jupyter notebook
-    for more details.
-
-```
-
-A symbol declares computation. It is composited by operators, such as simple
-matrix operations (e.g. “+”), or a neural network layer (e.g. convolution
-layer). We can bind data to a symbol to execute the computation.
+A symbol declares computation. It is composited by
+operators, such as simple matrix operations (e.g. “+”), or a neural network
+layer (e.g. convolution layer). We can bind data to a symbol to execute the
+computation.
 
 ```python
 >>> a = mx.sym.var('a')
