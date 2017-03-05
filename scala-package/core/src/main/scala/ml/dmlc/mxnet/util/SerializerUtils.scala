@@ -21,7 +21,7 @@ import java.io.{ObjectInputStream, ByteArrayInputStream, ObjectOutputStream, Byt
 
 import ml.dmlc.mxnet.NDArray
 
-object SerializerUtils {
+private[mxnet] object SerializerUtils {
   /**
    * Serialize NDArrays to bytes
    * @param arrays NDArrays to be serialized

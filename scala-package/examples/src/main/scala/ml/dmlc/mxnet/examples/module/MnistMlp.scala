@@ -46,6 +46,7 @@ object MnistMlp {
     val mod = if (loadModelEpoch == -1) {
       new Module(getSymbol)
     } else {
+      logger.info("Load checkpoint from epoch {}", loadModelEpoch)
       Module.loadCheckpoint("model/mnist_mlp", loadModelEpoch, loadOptimizerStates = true)
     }
     mod.bind(dataShapes = train.provideData, labelShapes = Some(train.provideLabel))

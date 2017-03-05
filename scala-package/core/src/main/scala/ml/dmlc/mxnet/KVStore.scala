@@ -273,11 +273,16 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    */
   def saveOptimizerStates(fname: String): Unit = {
     require(updaterFunc != null, "Cannot save states for distributed training")
-    val target = new BufferedOutputStream(new FileOutputStream(fname))
-    try {
-      updaterFunc.serializeState().foreach(target.write(_))
-    } finally {
-      target.close()
+    updaterFunc match {
+      case cachedStates: MXKVStoreCachedStates =>
+        val target = new BufferedOutputStream(new FileOutputStream(fname))
+        try {
+          target.write(cachedStates.serializeState())
+        } finally {
+          target.close()
+        }
+      case _ =>
+        logger.warn("Updater does not have states, skip saving to {}", fname)
     }
   }
 
@@ -287,12 +292,17 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    */
   def loadOptimizerStates(fname: String): Unit = {
     assert(updaterFunc != null, "Cannot load states for distributed training")
-    val bis = new BufferedInputStream(new FileInputStream(fname))
-    try {
-      val bArray = Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
-      updaterFunc.deserializeState(bArray)
-    } finally {
-      bis.close()
+    updaterFunc match {
+      case cachedStates: MXKVStoreCachedStates =>
+        val bis = new BufferedInputStream (new FileInputStream (fname) )
+        try {
+        val bArray = Stream.continually (bis.read).takeWhile (- 1 !=).map (_.toByte).toArray
+          cachedStates.deserializeState(bArray)
+        } finally {
+          bis.close ()
+        }
+      case _ =>
+        logger.warn("Updater does not have states, skip loading from {}", fname)
     }
   }
 }

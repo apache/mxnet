@@ -84,10 +84,10 @@ class SGLD(val learningRate: Float = 0.01f, val rescaleGradient: Float = 1.0f,
   override def disposeState(state: AnyRef): Unit = {}
 
   override def serializeState(state: AnyRef): Array[Byte] = {
-    null
+    throw new UnsupportedOperationException("SGLD does not have states")
   }
 
   override def deserializeState(bytes: Array[Byte]): AnyRef = {
-    null
+    throw new UnsupportedOperationException("SGLD does not have states")
   }
 }

@@ -318,8 +318,8 @@ class Module(symbolVar: Symbol,
       optimizerInitialized = true
       preloadOptStates.foreach { optStates =>
         loadOptimizerStates(optStates)
-        preloadOptStates = None
       }
+      preloadOptStates = None
     }
   }
 
@@ -448,15 +448,20 @@ class Module(symbolVar: Symbol,
    * @param fname Path to output states file.
    */
   def saveOptimizerStates(fname: String): Unit = {
-    require(optimizerInitialized)
+    require(optimizerInitialized, "Optimizer should be initialized before saving.")
     if (updateOnKVStore) {
       kvstore.foreach(_.saveOptimizerStates(fname))
     } else {
-      val target = new BufferedOutputStream(new FileOutputStream(fname))
-      try {
-        updater.foreach(_.serializeState().foreach(target.write(_)))
-      } finally {
-        target.close()
+      updater.foreach {
+        case cachedStates: MXKVStoreCachedStates =>
+          val target = new BufferedOutputStream(new FileOutputStream(fname))
+          try {
+            target.write(cachedStates.serializeState())
+          } finally {
+            target.close()
+          }
+        case _ =>
+          logger.warn("Updater does not have states, skip saving to {}", fname)
       }
     }
   }
@@ -466,16 +471,21 @@ class Module(symbolVar: Symbol,
    * @param fname Path to input states file.
    */
   def loadOptimizerStates(fname: String): Unit = {
-    require(optimizerInitialized)
+    require(optimizerInitialized, "Optimizer should be initialized before loading.")
     if (updateOnKVStore) {
       kvstore.foreach(_.loadOptimizerStates(fname))
     } else {
-      val bis = new BufferedInputStream(new FileInputStream(fname))
-      try {
-        val bArray = Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
-        updater.foreach(_.deserializeState(bArray))
-      } finally {
-        bis.close()
+      updater.foreach {
+        case cachedStates: MXKVStoreCachedStates =>
+          val bis = new BufferedInputStream(new FileInputStream(fname))
+          try {
+            val bArray = Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
+            cachedStates.deserializeState(bArray)
+          } finally {
+            bis.close()
+          }
+        case _ =>
+          logger.warn("Updater does not have states, skip loading from {}", fname)
       }
     }
   }
