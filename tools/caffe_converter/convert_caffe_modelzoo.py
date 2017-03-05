@@ -3,7 +3,7 @@ import requests
 import argparse
 import logging
 from convert_model import convert_model
-# from convert_mean import convert_mean
+from convert_mean import convert_mean
 import mxnet as mx
 
 _mx_caffe_model = 'http://data.mxnet.io/models/imagenet/test/caffe/'
@@ -52,8 +52,7 @@ model_meta_info = {
     'resnet-50' : {
         'prototxt' : _mx_caffe_model+'ResNet-50-deploy.prototxt',
         'caffemodel' : _mx_caffe_model+'ResNet-50-model.caffemodel',
-        # 'mean' : _mx_caffe_model+'ResNet_mean.binaryproto',
-        'mean' : (123.68,116.779,103.939),
+        'mean' : _mx_caffe_model+'ResNet_mean.binaryproto',
         'top-1-acc' : 0.753,
         'top-5-acc' : 0.922
     },
@@ -113,12 +112,10 @@ def convert_caffe_model(model_name, meta_info, dst_dir='./model'):
     (prototxt, caffemodel, mean) = _download_caffe_model(model_name, meta_info, dst_dir)
     model_name = os.path.join(dst_dir, model_name)
     convert_model(prototxt, caffemodel, model_name)
-
-    # convert_model(prototxt, caffemodel, model_name)
-    # if isinstance(mean, str):
-    #     out = model_name + '-mean.nd'
-    #     convert_mean(mean, out)
-    #     mean = out
+    if isinstance(mean, str):
+        mx_mean = model_name + '-mean.nd'
+        convert_mean(mean, mx_mean)
+        mean = mx_mean
     return (model_name, mean)
 
 if __name__ == '__main__':

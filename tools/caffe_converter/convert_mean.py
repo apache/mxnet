@@ -18,8 +18,6 @@ def convert_mean(binaryproto_fname, output=None):
     NDArray
         Mean in ndarray
     """
-
-def protoBlobFileToND(proto_file):
     mean_blob = caffe_parser.caffe_pb2.BlobProto()
     with open(binaryproto_fname, 'rb') as f:
         mean_blob.ParseFromString(f.read())
@@ -29,15 +27,11 @@ def protoBlobFileToND(proto_file):
         mean_blob.channels, mean_blob.height, mean_blob.width
     )
     # swap channels from Caffe BGR to RGB
-    img_mean_np2 = img_mean_np
-    img_mean_np[0] = img_mean_np2[2]
-    img_mean_np[2] = img_mean_np2[0]
-
+    img_mean_np[[0,2],:,:] = img_mean_np[[2,0],:,:]
     nd = mx.nd.array(img_mean_np)
     if output is not None:
         mx.nd.save(output, {"mean_image": nd})
     return nd
-
 
 def main():
     parser = argparse.ArgumentParser(description='Convert caffe mean')

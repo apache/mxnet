@@ -5,23 +5,27 @@ import time
 import os
 import logging
 
-def score(model, data_val, metrics, gpus, batch_size, rgb_mean,
+def score(model, data_val, metrics, gpus, batch_size, rgb_mean=None, mean_img=None,
           image_shape='3,224,224', data_nthreads=4, label_name='softmax_label'):
     # create data iterator
-    rgb_mean = [float(i) for i in rgb_mean.split(',')]
     data_shape = tuple([int(i) for i in image_shape.split(',')])
+    if mean_img is not None:
+        mean_args = {'mean_img':mean_img}
+    elif rgb_mean is not None:
+        rgb_mean = [float(i) for i in rgb_mean.split(',')]
+        mean_args = {'mean_r':rgb_mean[0], 'mean_g':rgb_mean[1],
+          'mean_b':rgb_mean[2]}
+
     data = mx.io.ImageRecordIter(
         path_imgrec        = data_val,
         label_width        = 1,
-        mean_r             = rgb_mean[0],
-        mean_g             = rgb_mean[1],
-        mean_b             = rgb_mean[2],
         preprocess_threads = data_nthreads,
         batch_size         = batch_size,
         data_shape         = data_shape,
         label_name         = label_name,
         rand_crop          = False,
-        rand_mirror        = False)
+        rand_mirror        = False,
+        **mean_args)
 
     if isinstance(model, str):
         # download model

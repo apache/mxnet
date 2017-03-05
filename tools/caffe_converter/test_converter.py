@@ -18,25 +18,30 @@ def test_imagenet_model(model_name, val_data, gpus, batch_size):
     [model_name, mean] = convert_caffe_model(model_name, meta_info)
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, 0)
     acc = [mx.metric.create('acc'), mx.metric.create('top_k_accuracy', top_k = 5)]
+    if isinstance(mean, str):
+        mean_args = {'mean_img':mean}
+    else:
+        mean_args = {'rgb_mean':','.join([str(i) for i in mean])}
+
     (speed,) = score(model=(sym, arg_params, aux_params),
                      data_val=val,
                      label_name = 'prob_label',
-                     rgb_mean=','.join([str(i) for i in mean]),
-                     metrics=acc, gpus=gpus, batch_size=batch_size)
+                     metrics=acc,
+                     gpus=gpus,
+                     batch_size=batch_size,
+                     **mean_args)
     logging.info('speed : %f image/sec', speed)
     for a in acc:
         logging.info(a.get())
     assert acc[0].get()[1] > meta_info['top-1-acc'] - 0.3
     assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.3
 
-
 if __name__ == '__main__':
     gpus = get_gpus()
     assert len(gpus) > 0
     batch_size = 32 * len(gpus)
 
-    # models = ['bvlc_googlenet', 'vgg-16', 'vgg-19', 'resnet-50']
-    models = ['resnet-50']
+    models = ['bvlc_googlenet', 'vgg-16', 'vgg-19', 'resnet-50']
 
     val = download_data()
     for m in models:
