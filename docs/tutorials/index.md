@@ -135,7 +135,7 @@ The following tutorials explain how to develop applications that use machine lea
 *An advanced example of using a large pre-trained model to classify the ImageNet dataset*
 
 - [Dogs vs. Cats classification with mxnet and R](https://statist-bhfz.github.io/cats_dogs_finetune) *End-to-end tutorial with an example of fine-tuning in R* 
-[source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd)
+([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
 
 
 #### Natural Language Processing
