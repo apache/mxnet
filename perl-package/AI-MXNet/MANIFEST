@@ -1,7 +1,10 @@
 MANIFEST
+META.json
+META.yml
 Makefile.PL
 README
 Changes
+examples/plot_network.pl
 lib/AI/MXNet.pm
 lib/AI/MXNet/Base.pm
 lib/AI/MXNet/Callback.pm

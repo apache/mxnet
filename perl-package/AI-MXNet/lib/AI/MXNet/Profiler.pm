@@ -41,4 +41,15 @@ method profiler_set_state(ProfilerState $state='stop')
     check_call(AI::MXNet::SetProfilerState($state2int{ $state }));
 }
 
+=head2 dump_profile
+
+    Dump profile and stop profiler. Use this to save profile
+    in advance in case your program cannot exit normally
+=cut
+
+method dump_profile()
+{
+    check_call(AI::MXNetCAPI::DumpProfile());
+}
+
 1;

@@ -15,6 +15,10 @@
 #include "../mxnet_op.h"
 #include "broadcast_reduce_op.h"
 
+#if MXNET_USE_CUDA
+#include <thrust/device_vector.h>
+#endif
+
 namespace mxnet {
 namespace op {
 
@@ -27,37 +31,19 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     int tmp[] = {0, 0};
     DMLC_DECLARE_FIELD(target_shape)
     .set_default(TShape(tmp, tmp + 2))
-    .describe("(Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, "
+    .describe("(Deprecated! Use ``shape`` instead.) "
+              "Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
-    .describe("(Deprecated! Use shape instead.) Whether keep the highest dim unchanged."
+    .describe("(Deprecated! Use ``shape`` instead.) Whether keep the highest dim unchanged."
               "If set to true, then the first dim in target_shape is ignored,"
               "and always fixed as input");
     DMLC_DECLARE_FIELD(shape)
     .set_default(nnvm::Tuple<int>())
-    .describe("Target shape, a tuple, t=(t_1,t_2,..,t_m).\n"
-              "Let the input dims be s=(s_1,s_2,..,s_n).\n"
-              "The output dims u=(u_1,u_2,..,u_p) are computed from s and t.\n"
-              "The target shape tuple elements t_i are read in order, and used to "
-              " generate successive output dims u_p:\n"
-              "t_i:       meaning:      behavior:\n"
-              "+ve        explicit      u_p = t_i\n"
-              "0          copy          u_p = s_i\n"
-              "-1         infer         u_p = (Prod s_i) / (Prod u_j | j != p)\n"
-              "-2         copy all      u_p = s_i, u_p+1 = s_i+1, ...\n"
-              "-3         merge two     u_p = s_i * s_i+1\n"
-              "-4,a,b     split two     u_p = a, u_p+1 = b | a * b = s_i\n"
-              "The split directive (-4) in the target shape tuple is followed by "
-              "two dimensions, one of which can be -1, which means it will be "
-              "inferred from the other one and the original dimension.\n"
-              "The can only be one globally inferred dimension (-1), aside from "
-              "any -1 occuring in a split directive.");
+    .describe("The target shape");
     DMLC_DECLARE_FIELD(reverse)
-      .set_default(false)
-      .describe("Whether to match the shapes from the backward. If reverse is true, "
-      "0 values in the `shape` argument will be searched from the backward. E.g the "
-      "original shape is (10, 5, 4) and the shape argument is (-1, 0). If reverse is true, "
-      "the new shape should be (50, 4). Otherwise it will be (40, 5).");
+    .set_default(false)
+    .describe("If true then translating the input shape from right to left");
   }
 };
 
@@ -338,10 +324,10 @@ struct DotParam : public dmlc::Parameter<DotParam> {
   bool transpose_b;
   DMLC_DECLARE_PARAMETER(DotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
-      .describe("True if the first matrix is transposed.")
+      .describe("If true then transpose the first input before dot.")
       .set_default(false);
     DMLC_DECLARE_FIELD(transpose_b)
-      .describe("True if the second matrix is tranposed.")
+      .describe("If true then transpose the second input before dot.")
       .set_default(false);
   }
 };
@@ -1207,67 +1193,6 @@ void ClipGrad_(const nnvm::NodeAttrs& attrs,
   });
 }
 
-struct FlipParam : public dmlc::Parameter<FlipParam> {
-  int axis;
-  DMLC_DECLARE_PARAMETER(FlipParam) {
-    DMLC_DECLARE_FIELD(axis)
-    .describe("The dimension to flip");
-  }
-};
-
-// matrix crop
-template<typename xpu>
-void Flip(const nnvm::NodeAttrs& attrs,
-          const OpContext& ctx,
-          const std::vector<TBlob>& inputs,
-          const std::vector<OpReqType>& req,
-          const std::vector<TBlob>& outputs) {
-  const FlipParam& param = nnvm::get<FlipParam>(attrs.parsed);
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    switch (inputs[0].shape_.ndim()) {
-     case 0:
-      break;
-     case 1: {
-      Tensor<xpu, 1, DType> in = inputs[0].get<xpu, 1, DType>(s);
-      Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 2: {
-      Tensor<xpu, 2, DType> in = inputs[0].get<xpu, 2, DType>(s);
-      Tensor<xpu, 2, DType> out = outputs[0].get<xpu, 2, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 3: {
-      Tensor<xpu, 3, DType> in = inputs[0].get<xpu, 3, DType>(s);
-      Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 4: {
-      Tensor<xpu, 4, DType> in = inputs[0].get<xpu, 4, DType>(s);
-      Tensor<xpu, 4, DType> out = outputs[0].get<xpu, 4, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 5: {
-      Tensor<xpu, 5, DType> in = inputs[0].get<xpu, 5, DType>(s);
-      Tensor<xpu, 5, DType> out = outputs[0].get<xpu, 5, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     default:
-      LOG(FATAL) << "flip supports at most 5 dimensions";
-      break;
-    }
-  });
-}
-
 /*!
  * \brief The parameters of the repeat operator include
  * the number of repeating time and axis (optional).
@@ -1656,6 +1581,77 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
       attrs, ctx, newInputs, req, newOutputs, rshapes.first);
 }
+
+struct ReverseParam : public dmlc::Parameter<ReverseParam> {
+  nnvm::Tuple<int> axis;
+  DMLC_DECLARE_PARAMETER(ReverseParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("The axis which to reverse elements.");
+  }
+};
+
+
+template<typename xpu>
+void ReverseOpForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  const ReverseParam& param = nnvm::get<ReverseParam>(attrs.parsed);
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  CHECK_LT(param.axis.ndim(), REVERSE_MAX_DIM);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const TShape& ishape = inputs[0].shape_;
+
+  std::vector<index_t> stride_(param.axis.ndim());
+  std::vector<index_t>  trailing_(param.axis.ndim());
+  index_t reverse_index = 0;
+  for (auto axis_iter = param.axis.begin() ; axis_iter!= param.axis.end(); ++axis_iter) {
+    CHECK_LT(*axis_iter, ishape.ndim());
+    stride_[reverse_index] = ishape[*axis_iter];
+    trailing_[reverse_index] = 1;
+    for (int i2 = *axis_iter + 1; i2 < ishape.ndim(); ++i2) {
+      trailing_[reverse_index] *= ishape[i2];
+    }
+    reverse_index++;
+  }
+
+#ifdef __CUDACC__
+  mshadow::Tensor<xpu, 1, uint8_t> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, uint8_t>(
+      mshadow::Shape1(reverse_index * sizeof(index_t) * 2), s);
+
+  auto stride_workspace = workspace.dptr_;
+  auto trailing_workspace = workspace.dptr_ + reverse_index * sizeof(index_t);
+
+  cudaMemcpyAsync(stride_workspace, thrust::raw_pointer_cast(stride_.data()),
+                  stride_.size() * sizeof(index_t),
+                  cudaMemcpyHostToDevice, mshadow::Stream<gpu>::GetStream(s));
+  cudaMemcpyAsync(trailing_workspace, thrust::raw_pointer_cast(trailing_.data()),
+                  trailing_.size() * sizeof(index_t),
+                  cudaMemcpyHostToDevice, mshadow::Stream<gpu>::GetStream(s));
+
+#endif
+
+#ifdef __CUDACC__
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<reverse, xpu>::Launch(s, inputs[0].Size(), reverse_index,
+    inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+    reinterpret_cast<index_t*>(stride_workspace), reinterpret_cast<index_t*>(trailing_workspace));
+  });
+#else
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<reverse, xpu>::Launch(s, inputs[0].Size(), reverse_index,
+    inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+    stride_.data(), trailing_.data());
+  });
+#endif
+}
+
+
 
 }  // namespace op
 }  // namespace mxnet

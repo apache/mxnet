@@ -58,7 +58,8 @@ method update($index, $weight, $grad, $state)
     $self->_update_count($index);
     my $t = $self->_index_update_count->{$index};
     my ($mean, $variance) = @$state;
-    $grad *= $self->rescale_grad;
+    my $wd = $self->_get_wd($index);
+    $grad = $grad * $self->rescale_grad + $wd * $weight;
     if($self->clip_gradient)
     {
         mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, { out => $grad });
@@ -73,16 +74,120 @@ method update($index, $weight, $grad, $state)
     my $coef2 = 1 - $self->beta2**$t;
     $lr *= sqrt($coef2)/$coef1;
     $weight -= $lr*$mean/(mx->nd->sqrt($variance) + $self->epsilon);
+}
 
+=head
+
+    RMSProp optimizer of Tieleman & Hinton, 2012,
+
+    For centered=False, the code follows the version in
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    Tieleman & Hinton, 2012
+
+    For centered=True, the code follows the version in
+    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
+
+    Parameters
+    ----------
+    learning_rate : float, optional
+        Step size.
+        Default value is set to 0.001.
+    gamma1: float, optional
+        decay factor of moving average for gradient, gradient^2.
+        Default value is set to 0.9.
+    gamma2: float, optional
+        "momentum" factor.
+        Default value if set to 0.9.
+        Only used if centered=True
+    epsilon : float, optional
+        Default value is set to 1e-8.
+    centered : boolean, optional
+        Use Graves or Tielemans & Hintons version of RMSProp
+    wd : float, optional
+        L2 regularization coefficient add to all the weights
+    rescale_grad : float, optional
+        rescaling factor of gradient.
+    clip_gradient : float, optional
+        clip gradient in range [-clip_gradient, clip_gradient]
+    clip_weights : float, optional
+        clip weights in range [-clip_weights, clip_weights]
+=cut
+
+package PerlRMSProp;
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+has '+learning_rate' => (default => 0.001);
+has 'gamma1'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'gamma2'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'epsilon'        => (is => "ro", isa => "Num",  default => 1e-8);
+has 'centered'       => (is => "ro", isa => "Bool", default => 0);
+has 'clip_weights'   => (is => "ro", isa => "Num");
+
+# For centered=False: n
+# For centered=True: n, g, delta
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+    return [
+            $self->centered
+            ? (
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # n
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # g
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                )
+            )   # delta
+            : (
+                AI::MXNet::NDArray->zeros(
+                    $weight->shape,
+                    ctx => $weight->context
+                ),  # n
+            )
+    ];
+}
+
+method update($index, $weight, $grad, $state)
+{
+    my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
-    if($wd > 0)
+    $self->_update_count($index);
+    $grad = $grad * $self->rescale_grad + $wd * $weight;
+    if(not $self->centered)
     {
-        $weight -= ($lr * $wd) * $weight;
+        my ($n) = @$state;
+        if(defined $self->clip_gradient)
+        {
+            $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
+        }
+        $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
+        $weight -= $lr * $grad/(mx->nd->sqrt($n) + $self->epsilon);
+    }
+    else
+    {
+        my ($n, $g, $delta) = @$state;
+        if(defined $self->clip_gradient)
+        {
+            $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
+        }
+        $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
+        $g .= (1 - $self->gamma1) * $grad + $self->gamma1 * $g;
+        $delta .= ($self->gamma2) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g) + $self->epsilon);
+        $weight += $delta;
+    }
+    if($self->clip_weights)
+    {
+        mx->nd->clip($weight, -$self->clip_weights, $self->clip_weights, { out => $weight });
     }
 }
 
 package main;
-use Test::More tests => 25;
+use Test::More tests => 162;
 use AI::MXNet::Base;
 use Data::Dumper;
 use PDL::NiceSlice;
@@ -135,6 +240,45 @@ func test_adam()
     }
 }
 
+func test_rms()
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlRMSProp';
+    my $opt2 = 'AI::MXNet::RMSProp';
+    my $shape = [3, 4, 5];
+    my @kwargs = ({},
+              {clip_gradient => 0.5},
+              {clip_gradient => 0.4, rescale_grad => 0.14},
+              {rescale_grad  => 0.8},
+              {clip_gradient => 0.5, wd => 0.07},
+              {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03},
+              {rescale_grad  => 0.8, wd => 0.05},
+              {centered => 1},
+              {clip_gradient => 0.5, centered => 1},
+              {clip_gradient => 0.4, rescale_grad => 0.14, centered => 1},
+              {rescale_grad  => 0.8, centered => 1},
+              {clip_gradient => 0.5, wd => 0.07, centered => 1},
+              {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03, centered => 1},
+              {rescale_grad  => 0.8, wd => 0.05, centered => 1},
+              {clip_gradient => 0.5, clip_weights => 0.01},
+              {clip_gradient => 0.4, rescale_grad => 0.14, clip_weights => 0.01},
+              {rescale_grad  => 0.8, clip_weights => 0.01},
+              {clip_gradient => 0.5, wd => 0.07, clip_weights => 0.01},
+              {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03, clip_weights => 0.01},
+              {rescale_grad  => 0.8, wd => 0.05, clip_weights => 0.01},
+              {centered => 1, clip_weights => 0.01},
+              {clip_gradient => 0.5, centered => 1, clip_weights => 0.01},
+              {clip_gradient => 0.4, rescale_grad => 0.14, centered => 1, clip_weights => 0.01},
+              {rescale_grad  => 0.8, centered => 1, clip_weights => 0.01},
+              {clip_gradient => 0.5, wd => 0.07, centered => 1, clip_weights => 0.01},
+              {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03, centered => 1, clip_weights => 0.01},
+              {rescale_grad  => 0.8, wd => 0.05, centered => 1, clip_weights => 0.01});
+    for my $kwarg (@kwargs)
+    {
+        compare_optimizer($opt1->new(%$kwarg), $opt2->new(%$kwarg), $shape);
+    }
+}
+
 func test_lr_wd_mult()
 {
     my $data = mx->sym->Variable('data');
@@ -167,5 +311,6 @@ func test_lr_wd_mult()
 }
 
 test_adam();
+test_rms();
 test_lr_wd_mult();
 
