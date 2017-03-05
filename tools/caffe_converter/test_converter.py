@@ -4,7 +4,7 @@ import os, sys
 curr_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.join(curr_path, "../../example/image-classification"))
 
-from test_score import get_gpus, download_data
+from test_score import download_data
 from score import score
 from convert_caffe_modelzoo import convert_caffe_model, get_model_meta_info
 import logging
@@ -37,7 +37,7 @@ def test_imagenet_model(model_name, val_data, gpus, batch_size):
     assert acc[1].get()[1] > meta_info['top-5-acc'] - 0.3
 
 if __name__ == '__main__':
-    gpus = get_gpus()
+    gpus = mx.test_utils.list_gpus()
     assert len(gpus) > 0
     batch_size = 32 * len(gpus)
 
