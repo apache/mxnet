@@ -105,7 +105,7 @@ void GPUPooledStorageManager::Free(void* ptr, size_t raw_size) {
 void GPUPooledStorageManager::ReleaseAll() {
   for (auto&& i : memory_pool_) {
     for (auto&& j : i.second) {
-      DirectFree(j, i.first);
+      DirectFree(j, i.first - ndev_);
     }
   }
   memory_pool_.clear();
