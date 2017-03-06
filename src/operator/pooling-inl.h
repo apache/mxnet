@@ -37,8 +37,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
-    .describe("Ignore kernel size, do global pooling based on current input feature map. "
-              "This is useful for input with different shape");
+    .describe("Ignore kernel size, do global pooling based on current input feature map. ");
 
     DMLC_DECLARE_FIELD(kernel)
     .enforce_nonzero()
@@ -53,17 +52,13 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
     .add_enum("full", pool_enum::kFull)
     .add_enum("valid", pool_enum::kValid)
-    .describe("Pooling convention to be applied."
-              "kValid is default setting of Mxnet and rounds down the output pooling size."
-              "kFull is compatible with Caffe and rounds up the output pooling size.");
+    .describe("Pooling convention to be applied.");
 
-    int stride_shape[] = {1, 1};
-    DMLC_DECLARE_FIELD(stride).set_default(TShape(stride_shape, stride_shape + 2))
+    DMLC_DECLARE_FIELD(stride).set_default(TShape())
     .enforce_nonzero()
     .describe("stride: for pooling (y, x) or (d, y, x)");
 
-    int pad_shape[] = {0, 0};
-    DMLC_DECLARE_FIELD(pad).set_default(TShape(pad_shape, pad_shape + 2))
+    DMLC_DECLARE_FIELD(pad).set_default(TShape())
     .describe("pad for pooling: (y, x) or (d, y, x)");
   }
 };
@@ -183,7 +178,20 @@ Operator* CreateOp(PoolingParam param, int dtype);
 class PoolingProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
+    using namespace mshadow;
     param_.Init(kwargs);
+    if (param_.kernel.ndim() == 2) {
+      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+    } else {
+      CHECK_EQ(param_.kernel.ndim(), 3) << param_.kernel.ndim() << "D pooling not supported";
+      if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
+    }
+    CHECK_EQ(param_.stride.ndim(), param_.kernel.ndim())
+      << "stride and kernel should have the same length";
+    CHECK_EQ(param_.pad.ndim(), param_.kernel.ndim())
+      << "pad and kernel should have the same length";
   }
 
   std::map<std::string, std::string> GetParams() const override {
@@ -229,7 +237,7 @@ class PoolingProp : public OperatorProperty {
       out_shape->push_back(oshape);
     } else if (param_.kernel.ndim() == 3) {
       CHECK_EQ(dshape.ndim(), 5) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
-      CHECK_LT(param_.kernel[0], dshape[2] + 2 * param_.pad[0]) << "kernel size exceeds input";
+      CHECK_LE(param_.kernel[0], dshape[2] + 2 * param_.pad[0]) << "kernel size exceeds input";
       CHECK_LE(param_.kernel[1], dshape[3] + 2 * param_.pad[1]) << "kernel size exceeds input";
       CHECK_LE(param_.kernel[2], dshape[4] + 2 * param_.pad[2]) << "kernel size exceeds input";
       if (param_.global_pool) {

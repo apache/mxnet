@@ -190,7 +190,9 @@ class MKLPoolingOp : public Operator {
       algorithm = dnnAlgorithmPoolingMax;
       break;
     case pool_enum::kAvgPooling:
-      algorithm = dnnAlgorithmPoolingAvg;
+      algorithm = (param_.pooling_convention == pool_enum::kValid) ?
+          dnnAlgorithmPoolingAvgIncludePadding : dnnAlgorithmPoolingAvg;
+
       break;
     default:
       LOG(FATAL) << "Unknown pooling method.";

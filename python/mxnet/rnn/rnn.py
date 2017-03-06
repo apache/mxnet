@@ -1,57 +1,104 @@
 # coding: utf-8
 # pylint: disable=too-many-arguments, no-member
 """Functions for constructing recurrent neural networks."""
-from .. import symbol
+import warnings
 
+from ..model import save_checkpoint, load_checkpoint
+from .rnn_cell import BaseRNNCell
 
 def rnn_unroll(cell, length, inputs=None, begin_state=None, input_prefix='', layout='NTC'):
-    """Unroll an RNN cell across time steps.
+    """Deprecated. Please use cell.unroll instead"""
+    warnings.warn('rnn_unroll is deprecated. Please call cell.unroll directly.')
+    return cell.unroll(length=length, inputs=inputs, begin_state=begin_state,
+                       input_prefix=input_prefix, layout=layout)
+
+def save_rnn_checkpoint(cells, prefix, epoch, symbol, arg_params, aux_params):
+    """Save checkpoint for model using RNN cells.
+    Unpacks weight before saving.
 
     Parameters
     ----------
-    cell : children of BaseRNNCell
-        the cell to be unrolled.
-    length : int
-        number of steps to unroll
-    inputs : Symbol, list of Symbol, or None
-        if inputs is a single Symbol (usually the output
-        of Embedding symbol), it should have shape
-        (batch_size, length, ...) if layout == 'NTC',
-        or (length, batch_size, ...) if layout == 'TNC'.
+    cells : RNNCells or list of RNNCells
+        The RNN cells used by this symbol.
+    prefix : str
+        Prefix of model name.
+    epoch : int
+        The epoch number of the model.
+    symbol : Symbol
+        The input symbol
+    arg_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's weights.
+    aux_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's auxiliary states.
 
-        If inputs is a grouped symbol or a list of
-        symbols (usually output of SliceChannel or previous
-        unroll), they should all have shape (batch_size, ...).
-
-        if inputs is None, Placeholder ariables are
-        automatically created.
-    begin_state : nested list of Symbol
-        input states. Created by cell.begin_state()
-        or output state of another cell. Created
-        from cell.begin_state() if None.
-    input_prefix : str
-        prefix for automatically created input
-        placehodlers.
-    layout : str
-        layout of input symbol. Only used if inputs
-        is a single Symbol.
+    Notes
+    -----
+    - ``prefix-symbol.json`` will be saved for symbol.
+    - ``prefix-epoch.params`` will be saved for parameters.
     """
-    if inputs is None:
-        inputs = [symbol.Variable('%st%d_data'%(input_prefix, i)) for i in range(length)]
-    elif isinstance(inputs, symbol.Symbol):
-        if len(inputs.list_outputs()) != length:
-            assert len(inputs.list_outputs()) == 1
-            axis = layout.find('T')
-            inputs = symbol.SliceChannel(inputs, axis=axis, num_outputs=length, squeeze_axis=1)
-    else:
-        assert len(inputs) == length
-    if begin_state is None:
-        begin_state = cell.begin_state()
+    if isinstance(cells, BaseRNNCell):
+        cells = [cells]
+    for cell in cells:
+        arg_params = cell.unpack_weights(arg_params)
+    save_checkpoint(prefix, epoch, symbol, arg_params, aux_params)
 
-    states = begin_state
-    outputs = []
-    for i in range(length):
-        output, states = cell(inputs[i], states)
-        outputs.append(output)
+def load_rnn_checkpoint(cells, prefix, epoch):
+    """Load model checkpoint from file.
+    Pack weights after loading.
 
-    return outputs, states
+    Parameters
+    ----------
+    cells : RNNCells or list of RNNCells
+        The RNN cells used by this symbol.
+    prefix : str
+        Prefix of model name.
+    epoch : int
+        Epoch number of model we would like to load.
+
+    Returns
+    -------
+    symbol : Symbol
+        The symbol configuration of computation network.
+    arg_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's weights.
+    aux_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's auxiliary states.
+
+    Notes
+    -----
+    - symbol will be loaded from ``prefix-symbol.json``.
+    - parameters will be loaded from ``prefix-epoch.params``.
+    """
+    sym, arg, aux = load_checkpoint(prefix, epoch)
+    if isinstance(cells, BaseRNNCell):
+        cells = [cells]
+    for cell in cells:
+        arg = cell.pack_weights(arg)
+
+    return sym, arg, aux
+
+def do_rnn_checkpoint(cells, prefix, period=1):
+    """Make a callback to checkpoint Module to prefix every epoch.
+    unpacks weights used by cells before saving.
+
+    Parameters
+    ----------
+    cells : subclass of BaseRNNCell
+        RNN cells used by this module.
+    prefix : str
+        The file prefix to checkpoint to
+    period : int
+        How many epochs to wait before checkpointing. Default is 1.
+
+    Returns
+    -------
+    callback : function
+        The callback function that can be passed as iter_end_callback to fit.
+    """
+    period = int(max(1, period))
+    # pylint: disable=unused-argument
+    def _callback(iter_no, sym=None, arg=None, aux=None):
+        """The checkpoint function."""
+        if (iter_no + 1) % period == 0:
+            save_rnn_checkpoint(cells, prefix, iter_no+1, sym, arg, aux)
+    return _callback

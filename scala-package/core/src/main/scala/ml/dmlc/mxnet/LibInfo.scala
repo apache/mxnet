@@ -294,4 +294,9 @@ class LibInfo {
 
   // CustomOp
   @native def mxCustomOpRegister(regName: String, opProp: CustomOpProp): Int
+
+  // Profiler
+  @native def mxSetProfilerConfig(mode: Int, fileName: String): Int
+  @native def mxSetProfilerState(state: Int): Int
+  @native def mxDumpProfile(): Int
 }

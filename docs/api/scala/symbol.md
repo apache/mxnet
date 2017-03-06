@@ -10,7 +10,7 @@ Topics:
 * [Multiple Outputs](#multiple-outputs) explains how to configure multiple outputs.
 * [Symbol Creation API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Symbol) documents functions.
 
-We also highly encouraged you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
+We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
 
 ## How to Compose Symbols
 
@@ -44,21 +44,21 @@ The following example creates a computation graph that adds two inputs together.
 
 ## Symbol Attributes
 
-You can add attributes to symbols by providing an attribute dictionary when creating a symbol.
+You can add an attribute to a symbol by providing an attribute dictionary when you create a symbol.
 
 ```scala
     val data = Symbol.Variable("data", Map("mood"-> "angry"))
     val op   = Symbol.Convolution()()(
       Map("data" -> data, "kernel" -> "(1, 1)", "num_filter" -> 1, "mood"-> "so so"))
 ```
-For proper communication with the C++ back end, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use `attr(key)`:
+For proper communication with the C++ backend, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use `attr(key)`:
 
 ```
-    scala> data.attr("mood")
+    data.attr("mood")
     res6: Option[String] = Some(angry)
 ```
 
-To attach attributes, we can use ```AttrScope```. ```AttrScope``` automatically adds the specified attributes to all of the symbols created within that scope. The user can also inherit this object to change naming behavior. For example:
+To attach attributes, you can use ```AttrScope```. ```AttrScope``` automatically adds the specified attributes to all of the symbols created within that scope. The user can also inherit this object to change naming behavior. For example:
 
 ```scala
     val (data, gdata) =
@@ -76,11 +76,10 @@ To attach attributes, we can use ```AttrScope```. ```AttrScope``` automatically 
 
 ## Serialization
 
-There are two ways to save and load the symbols. You can pickle to serialize the ```Symbol``` objects.
-Or, you can use the [mxnet.Symbol.save] and [mxnet.symbol.load] functions.
-The advantage of using save and load is that it's  language agnostic and cloud friendly.
-The symbol is saved in JSON format. You can also directly get a JSON string using [mxnet.Symbol.toJson].
-Refer to API documentation for more details. (http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Symbol)
+There are two ways to save and load the symbols. You can use the `mxnet.Symbol.save` and `mxnet.Symbol.load` functions to serialize the ```Symbol``` objects.
+The advantage of using `save` and `load` functions is that it is language agnostic and cloud friendly.
+The symbol is saved in JSON format. You can also get a JSON string directly using `mxnet.Symbol.toJson`.
+Refer to [API documentation](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Symbol) for more details.
 
 The following example shows how to save a symbol to an S3 bucket, load it back, and compare two symbols using a JSON string.
 
@@ -97,7 +96,7 @@ The following example shows how to save a symbol to an S3 bucket, load it back, 
 
 ## Executing Symbols
 
-After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate those symbols.
+After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate them.
 If you are training a neural network, this is typically
 handled by the high-level [Model class](model.md) and the [`fit()`] function.
 

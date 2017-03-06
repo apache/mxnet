@@ -54,10 +54,9 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
-    .describe("Number of group partitions. Equivalent to slicing input into num_group\n    "
-              "partitions, apply convolution on each, then concatenate the results");
+    .describe("Number of group partitions.");
     DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
-    .describe("Maximum tmp workspace allowed for convolution (MB).");
+    .describe("Maximum temperal workspace allowed for convolution (MB).");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)
@@ -65,15 +64,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .add_enum("limited_workspace", conv::kLimited)
     .add_enum("fastest", conv::kFastest)
     .set_default(dmlc::optional<int>())
-    .describe("Whether to pick convolution algo by running performance test.\n    "
-              "Leads to higher startup time but may give faster speed. Options are:\n    "
-              "\'off\': no tuning\n    "
-              "\'limited_workspace\': run test and pick the fastest algorithm "
-              "that doesn't exceed workspace limit.\n    "
-              "\'fastest\': pick the fastest algorithm and ignore workspace limit.\n    "
-              "If set to None (default), behavior is determined by environment\n    "
-              "variable MXNET_CUDNN_AUTOTUNE_DEFAULT: 0 for off,\n    "
-              "1 for limited workspace (default), 2 for fastest.");
+        .describe("Whether to pick convolution algo by running performance test.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Turn off cudnn for this layer.");
     DMLC_DECLARE_FIELD(layout)
@@ -406,9 +397,6 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_y <= dshape[2] + 2 * param_.pad[0]
-            && ksize_x <= dshape[3] + 2 * param_.pad[1])
-          << "kernel size exceed input";
       Shape<4> oshape;
       oshape[0] = dshape[0];
       oshape[1] = param_.num_filter;
@@ -417,6 +405,26 @@ class ConvolutionProp : public OperatorProperty {
       oshape[3] = (dshape[3] + 2 * param_.pad[1] -
           (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
+      // Perform incomplete shape inference. Fill in the missing values in data shape.
+      // 1) We can always fill in the batch_size.
+      // 2) We can back-calculate the input height/width if the corresponding stride is 1.
+      oshape = ConvertLayout((*out_shape)[0].get<4>(), param_.layout.value(), kNCHW);
+      dshape[0] = oshape[0];
+      if (param_.stride[0] == 1) {
+        dshape[2] = oshape[2] + param_.dilate[0] * (ksize_y - 1) - 2 * param_.pad[0];
+      }
+      if (param_.stride[1] == 1) {
+        dshape[3] = oshape[3] + param_.dilate[1] * (ksize_x - 1) - 2 * param_.pad[1];
+      }
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
+                          ConvertLayout(dshape, kNCHW, param_.layout.value()));
+      // Check whether the kernel sizes are valid
+      if (dshape[2] != 0) {
+        CHECK_LE(ksize_y, dshape[2] + 2 * param_.pad[0]) << "kernel size exceed input";
+      }
+      if (dshape[3] != 0) {
+        CHECK_LE(ksize_x, dshape[3] + 2 * param_.pad[1]) << "kernel size exceed input";
+      }
       return true;
     } else if (param_.kernel.ndim() == 3) {
       // 3d conv
@@ -445,10 +453,6 @@ class ConvolutionProp : public OperatorProperty {
         << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
         << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_d < dshape[2] + 2 * param_.pad[0]
-            && ksize_y <= dshape[3] + 2 * param_.pad[1]
-            && ksize_x <= dshape[4] + 2 * param_.pad[2])
-        << "kernel size exceed input";
       CHECK_EQ(param_.dilate.Size(), 1)
         << "Dilate is not supported in 3d convolution";
       Shape<5> oshape;
@@ -461,6 +465,32 @@ class ConvolutionProp : public OperatorProperty {
       oshape[4] = (dshape[4] + 2 * param_.pad[2] -
           (1 * (ksize_x - 1) + 1)) / param_.stride[2] + 1;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
+      // Perform incomplete shape inference. Fill in the missing values in data shape.
+      // 1) We can always fill in the batch_size.
+      // 2) We can back-calculate the input depth/height/width if the corresponding stride is 1.
+      oshape = ConvertLayout((*out_shape)[0].get<5>(), param_.layout.value(), kNCDHW);
+      dshape[0] = oshape[0];
+      if (param_.stride[0] == 1) {
+        dshape[2] = oshape[2] + 1 * (ksize_d - 1) - 2 * param_.pad[0];
+      }
+      if (param_.stride[1] == 1) {
+        dshape[3] = oshape[3] + 1 * (ksize_y - 1) - 2 * param_.pad[1];
+      }
+      if (param_.stride[2] == 1) {
+        dshape[4] = oshape[4] + 1 * (ksize_x - 1) - 2 * param_.pad[2];
+      }
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
+                          ConvertLayout(dshape, kNCDHW, param_.layout.value()));
+      // Check whether the kernel sizes are valid
+      if (dshape[2] != 0) {
+        CHECK_LE(ksize_d, dshape[2] + 2 * param_.pad[0]) << "kernel size exceed input";
+      }
+      if (dshape[3] != 0) {
+        CHECK_LE(ksize_y, dshape[3] + 2 * param_.pad[1]) << "kernel size exceed input";
+      }
+      if (dshape[4] != 0) {
+        CHECK_LE(ksize_x, dshape[4] + 2 * param_.pad[2]) << "kernel size exceed input";
+      }
       return true;
     } else {
       LOG(FATAL) << "Unknown convolution type";

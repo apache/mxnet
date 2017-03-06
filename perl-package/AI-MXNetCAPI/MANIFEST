@@ -1,0 +1,10 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+META.json
+META.yml
+t/AI-MXNetCAPI.t
+lib/AI/MXNetCAPI.pm
+mxnet.i
+mxnet_typemaps.i

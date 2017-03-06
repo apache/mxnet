@@ -17,7 +17,7 @@ The following figure shows two examples of computation graphs.
 ![Comp Graph Example](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/memory/comp_graph_example.png)
 
 The concept of a computation graph is deeply rooted in packages such as Theano and CGT. Actually, they also exist implicitly
-in most libraries as the network configuration. The major difference in these library comes down to how they calculate gradient.
+in most libraries as the network configuration. The major difference in these libraries comes down to how they calculate gradient.
 There are mainly two ways: doing back-propagation on the same graph or having an explicit backward path that calculates
 the gradient needed.
 
@@ -178,7 +178,7 @@ To parallelize computation, we need to take greater care.
 ### Be Correct and Safe First
 Being correct is our first principle. This means to execute in a way that takes implicit dependency
 memory sharing into consideration. You can do this by adding the implicit dependency edge to the execution graph.
-Or, even simpler, if the execution engine is mutate aware, as described in the
+Or, even simpler, if the execution engine is mutated aware, as described in the
 [dependency engine topic](http://mxnet.io/architecture/note_engine.html), push the operation
 in sequence and write to the same variable tag that represents the same memory region.
 

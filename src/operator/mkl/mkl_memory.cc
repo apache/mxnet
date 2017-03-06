@@ -24,7 +24,7 @@
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
 #include "mkl_memory-inl.h"
-
+#include "mkl_util-inl.h"
 
 namespace mxnet {
 
@@ -169,8 +169,7 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
 template <typename Dtype>
 Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     Dtype *cpu_ptr, bool set_prv_ptr,
-    std::shared_ptr<MKLMemHolder> dnn_chunk,
-    MKLMemoryDescriptor<Dtype>* converted_in_fwd) {
+    std::shared_ptr<MKLMemHolder> dnn_chunk) {
   Dtype* prv_ptr = NULL;
 #if MKL_EXPERIMENTAL == 1
   if (dnn_chunk != NULL)
@@ -183,9 +182,6 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     void *convert_resources[dnnResourceNumber];
 #endif
     if (prv_ptr == NULL) {
-      if (converted_in_fwd) {
-        return converted_in_fwd->internal_ptr;
-      }
       this->allocate();
       this->convert_to_prv(cpu_ptr);
 #if MKL_EXPERIMENTAL == 1
@@ -197,23 +193,10 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     }
 #if MKL_EXPERIMENTAL == 1
     if (prv_ptr != NULL)  {
-      // This section helps if padding needs to be added (or removed...)
-      // TODO(intel): consider removing when no longer needed.
-      std::shared_ptr<PrvMemDescr> prv_mem_descriptor = dnn_chunk->get_prv_descriptor();
-      CHECK_EQ(prv_mem_descriptor->get_descr_type(),
-        PrvMemDescr::PRV_DESCR_MKL2017);
-      std::shared_ptr<MKLMemoryDescriptor<Dtype> > current_descr =
-        std::static_pointer_cast<MKLMemoryDescriptor<Dtype> >
-        (prv_mem_descriptor);
+      std::shared_ptr<MKLData<Dtype> > current_descr =
+        op::mkl_get_mem_desc<Dtype>(dnn_chunk);
       if (!dnnLayoutCompare<Dtype>(current_descr->layout_int,
         this->layout_int)) {
-        if (converted_in_fwd) {
-          // hack for reusing previously done conversion
-          // if(dnnLayoutCompare(converted_in_fwd->layout_int,this->layout_int))
-          if (true) {
-            return converted_in_fwd->internal_ptr;
-          }
-        }
         if (this->convert_prv2prv) {
           CHECK_EQ(dnnLayoutCompare<Dtype>(
             this->descr_prv2prv_conversion->layout_int,

@@ -33,7 +33,7 @@ struct PrvMemDescr {
   virtual void convert_from_prv(void* cpu_ptr) = 0;
   virtual void convert_to_prv(void* cpu_ptr) = 0;
   virtual void convert_from_other(std::shared_ptr<PrvMemDescr> other) = 0;
-  virtual void* prv_ptr() = 0;
+  virtual void* prv_ptr(bool allocate_when_uninit = true) = 0;
   // returns true for matching layouts
   virtual bool layout_compare(std::shared_ptr<PrvMemDescr> other) = 0;
   virtual size_t prv_count() = 0;
@@ -69,7 +69,7 @@ struct MKLMemHolder {
   bool head_at_prv() {
     return (head_ == HEAD_AT_PRV) ? true : false;
   }
-  void* prv_data() {
+  void* prv_data(bool allocate_when_uninit = true) {
     if (head_ != HEAD_AT_PRV) {
       return NULL;
     }
@@ -77,7 +77,7 @@ struct MKLMemHolder {
       LOG(FATAL) << " prv_descriptor_  is NULL";
     }
     CHECK(prv_descriptor_.get());
-    return reinterpret_cast<void*>(prv_descriptor_->prv_ptr());
+    return reinterpret_cast<void*>(prv_descriptor_->prv_ptr(allocate_when_uninit));
   }
 
   int prv_count() {

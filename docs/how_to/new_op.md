@@ -87,7 +87,7 @@ def create_operator(self, ctx, shapes, dtypes):
     return Softmax()
 ```
 
-To use the custom operator, create an mx.sym.Custom symbol with op_type as the registered name:
+To use the custom operator, create a mx.sym.Custom symbol with op_type as the registered name:
 
 ```python
 mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')

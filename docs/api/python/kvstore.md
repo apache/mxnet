@@ -13,7 +13,7 @@ Provides basic operation over multiple devices (GPUs) on a single device.
 ### Initialization
 
 Let's consider a simple example. It initializes
-a (`int`, `NDAarray`) pair into the store, and then pulls the value out.
+a (`int`, `NDArray`) pair into the store, and then pulls the value out.
 
 ```python
     >>> kv = mx.kv.create('local') # create a local kv store.
@@ -28,7 +28,7 @@ a (`int`, `NDAarray`) pair into the store, and then pulls the value out.
 
 ### Push, Aggregation, and Updater
 
-For any key that's been initialized, you can push a new value with the same shape to the key.
+For any key that's been initialized, you can push a new value with the same shape to the key, as follows:
 
 ```python
     >>> kv.push(3, mx.nd.ones(shape)*8)
@@ -40,7 +40,7 @@ For any key that's been initialized, you can push a new value with the same shap
 
 The data that you want to push can be stored on any device. Furthermore, you can push multiple
 values into the same key, where KVStore first sums all of these
-values, and then pushes the aggregated value.
+values, and then pushes the aggregated value, as follows:
 
 ```python
     >>> gpus = [mx.gpu(i) for i in range(4)]
@@ -52,8 +52,8 @@ values, and then pushes the aggregated value.
      [ 4.  4.  4.]]
 ```
 
-For each push command, KVStore applies the pushed value to the value stored by a
-`updater`. The default updater is `ASSGIN`, and you can replace the default to
+For each push command, KVStore applies the pushed value to the value stored by an
+`updater`. The default updater is `ASSIGN`. You can replace the default to
 control how data is merged.
 
 ```python

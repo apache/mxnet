@@ -215,7 +215,7 @@ One convolution might have several implementations, and you might want to switch
 ```c++
            struct ResourceRequest {
              enum Type {
-               kRandom,  // get an mshadow::Random<xpu> object
+               kRandom,  // get a mshadow::Random<xpu> object
                kTempSpace,  // request temporary space
              };
              Type type;
@@ -415,8 +415,8 @@ of l1 loss and l2 loss. The loss itself can be written as:
 ```
  `.*` stands for element-wise multiplication, and `f`, `f'` is the smooth l1 loss function,
 which we are assuming is in `mshadow` for now. At first glance, it's impossible to implement
-this particular loss as an unary or binary operator. But we have automatic differentiation in symbolic execution. That simplifies the loss to `f` and `f'` directly. This
-loss is no more complex than a `sin` or a `abs` function, and can certainly be implemented as a
+this particular loss as a unary or binary operator. But we have automatic differentiation in symbolic execution. That simplifies the loss to `f` and `f'` directly. This
+loss is no more complex than a `sin` or an `abs` function, and can certainly be implemented as a
 unary operator.
 
 ## SimpleOp: The Unified Operator API
@@ -521,7 +521,7 @@ In our smooth l1 loss example, we use `UnaryFunction` to define the function of 
     }
 ```
 After obtaining `mshadow::Stream` from `RunContext`, we get `mshadow::Tensor` from `mshadow::TBlob`.
-`mshadow::F` is a shortcut to initiate an `mshadow` expression. The macro `MSHADOW_TYPE_SWITCH(type, DType, ...)`
+`mshadow::F` is a shortcut to initiate a `mshadow` expression. The macro `MSHADOW_TYPE_SWITCH(type, DType, ...)`
 handles details on different types, and the macro `ASSIGN_DISPATCH(out, req, exp)` checks `OpReqType` and
 performs actions accordingly. `sigma2` is a special parameter in this loss, which we will cover later.
 
@@ -682,9 +682,9 @@ in the registration process, we use `set_enable_scalar(true)`, and use `env.scal
 declarations.
 
 ### Crafting a Tensor Operation
-Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we  
+Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we 
 can craft tensor operations in operator implementations. If you define such functions as element-wise, you
-can implement them as an `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` that contains a lot of `mshadow_op`,
+can implement them as a `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` that contains a lot of `mshadow_op`,
 for example. `mshadow_op` are expression mappers. They deal with the scalar case of desired functions. For details, see
 [mshadow expression API guide](https://github.com/dmlc/mshadow/tree/master/doc).
 

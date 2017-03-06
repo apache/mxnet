@@ -84,7 +84,7 @@ This package provides two callback functions:
 ```
 
 
-- `mx.callback.log.train.metric` logs a training metric each period. You can use it either as a `batch.end.callback` or a
+- `mx.callback.log.train.metric` logs a training metric each period. You can use it either as a `batch.end.callback` or an
 `epoch.end.callback`.
 
 

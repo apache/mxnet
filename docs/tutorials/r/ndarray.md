@@ -1,7 +1,7 @@
 # NDArray: Vectorized Tensor Computations on CPUs and GPUs
 
 `NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations.
-Users can perform usual calculations as on a R"s array, but with two additional features:
+Users can perform usual calculations as on an R"s array, but with two additional features:
 
 
 

@@ -41,6 +41,7 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
     scala> // inplace operation, b's contents will be modified, but c and d won't be affected.
     scala> b += d
 ```
+
 ### Multiplication/Division Operations
 
 ```scala
@@ -104,8 +105,7 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 
 ### Save and Load NDArray
 
-You can use pickle to save and load NDArrays.
-Or, you can use MXNet functions to save and load a list or dictionary of NDArrays from file systems.
+You can use MXNet functions to save and load a list or dictionary of NDArrays from file systems, as follows:
 
 ```scala
     scala> import ml.dmlc.mxnet._
@@ -125,7 +125,7 @@ The good thing about using the `save` and `load` interface is that you can use t
 
 ### Multi-Device Support
 
-Device information is stored in the `mxnet.Context` structure. When creating NDArray in MXNet, you can use either the context argument (the default is the CPU context) to create arrays on specific devices as follows:
+Device information is stored in the `mxnet.Context` structure. When creating NDArray in MXNet, you can use the context argument (the default is the CPU context) to create arrays on specific devices as follows:
 
 ```scala
     scala> import ml.dmlc.mxnet._
@@ -146,7 +146,8 @@ Currently, we *do not* allow operations among arrays from different contexts. To
     scala> val ctx = Context.gpu(0)
     scala> val y = NDArray.zeros(Shape(100, 200), ctx)
     scala> val z = x + y
-    mxnet.base.MXNetError: [13:29:12] src/ndarray/ndarray.cc:33: Check failed: lhs.ctx() == rhs.ctx() operands context mismatch
+    mxnet.base.MXNetError: [13:29:12] src/ndarray/ndarray.cc:33:
+    Check failed: lhs.ctx() == rhs.ctx() operands context mismatch
     scala> val cpu_y = NDArray.zeros(100, 200)
     scala> y.copyto(cpu_y)
     scala> val z = x + cpu_y
