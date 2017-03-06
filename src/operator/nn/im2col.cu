@@ -349,7 +349,7 @@ __global__ void col2im_gpu_kernel(const int n, const DType* data_col,
     const int h_col_start =
         (h_im < kernel_extent_h) ? 0 : (h_im - kernel_extent_h) / stride_h + 1;
     const int h_col_end = min(h_im / stride_h + 1, height_col);
-    // TODO: use LCM of stride and dilation to avoid unnecessary loops
+    // TODO(caffe): use LCM of stride and dilation to avoid unnecessary loops
     for (int h_col = h_col_start; h_col < h_col_end; h_col += 1) {
       for (int w_col = w_col_start; w_col < w_col_end; w_col += 1) {
         int h_k = (h_im - h_col * stride_h);
