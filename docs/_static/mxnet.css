@@ -13,12 +13,12 @@ body {
 body, div {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
     font-size: 16px;
-    color: #444444;
+    color: #000;
 }
 
 p {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
-    color: #444444;
+    color: #000;
     font-size: 16px;
     line-height: 1.5em;
 }
@@ -45,7 +45,7 @@ div.content p {
 /*------------------ Headings -------------------*/
 h1, h2, h3 {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
-    color: #444444;
+    color: #000;
 }
 
 h1 {
@@ -238,7 +238,7 @@ img {
     display: block;
     position: fixed;
     top: 15px;
-    right: 155px;
+    right: 40px;
     width: 140px;
 }
 
@@ -634,8 +634,8 @@ div.sphinxsidebar {
     width: 250px;
     padding:20px 30px 15px 0;
     height: calc(100% - 80px);
-    overflow: scroll;
     display: none;
+    overflow: hidden;
 }
 
 div.sphinxsidebar ul {
