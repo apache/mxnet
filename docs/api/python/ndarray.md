@@ -3,25 +3,10 @@
 ```eval_rst
 .. currentmodule:: mxnet.ndarray
 ```
+## Overview
 
 This document lists the routines of the `ndarray` (or `nd` for short) package
-grouped by functionality. Many docstrings contain example code, which
-demonstrates the basic usage of the routine. The examples assume that `MXNet` is
-imported with:
-
-```python
->>> import mxnet as mx
-```
-
-```eval_rst
-
-.. note:: A convenient way to execute examples is the ``%doctest_mode`` mode of
-    Jupyter notebook, which allows for pasting of multi-line examples contains
-    ``>>>`` and preserves indentation. Run ``%doctest_mode?`` in Jupyter notebook
-    for more details.
-
-```
-
+grouped by functionality.
 A `NDArray` is a multidimensional container of items of the same type and
 size. Various methods for data manipulation and computation are provided.
 
@@ -40,7 +25,8 @@ size. Various methods for data manipulation and computation are provided.
 <NDArray 2x3 @gpu(0)>
 ```
 
-We provide some basic NDArray operations, like arithmetic and slice operations.
+A detailed tutorial is available at
+[http://mxnet.io/tutorials/python/ndarray.html](http://mxnet.io/tutorials/python/ndarray.html)..
 
 ```eval_rst
 
