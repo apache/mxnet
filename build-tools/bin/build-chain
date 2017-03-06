@@ -13,7 +13,7 @@ if [[ "$1" != "clean" && "$1" != "generate" && -f tmp/lib/libmxnet.so ]]; then
   echo "********************************************************"
   cp -ruP tmp/* build/
 else
-  if [ -z "$1" ] || [ "$1" != "mvn" ]; then
+  if [ -z "$1" ] || [ "$1" != "mvn" ] || [ "$1" != "validate" ]; then
     brazilcmake $@
   fi
 fi
@@ -23,5 +23,6 @@ if [ "$1" == "clean" ] || [ "$1" == "generate" ]; then
 fi
 
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(brazil-path [Cuda]pkg.lib)/stubs"
+export MXNET_DATA_DIR="$(brazil-path [DeepMXNetTestData]pkg.lib)/../data"
 
 COMPUTE=gpu $(brazil-path [ScalaMavenBuilder]pkg.bin)/bmvn $@
