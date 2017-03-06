@@ -2857,7 +2857,36 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), True)
     test_where_numeric_gradient((5, 7, 9), False)
 
+def test_pick():
+    for _ in range(100):
+        ndim = np.random.randint(1, 5)
+        bshape = np.random.randint(1, 10, size=ndim)
+        axis = np.random.randint(0, ndim)
+        sshape = bshape.copy()
+        sshape[axis] = 1
+        data = np.random.uniform(-1, 1, size=bshape)
+        index = np.random.randint(0, bshape[axis], size=sshape)
+        exp = []
+        for i in range(ndim):
+            if i == axis:
+                exp.append(index)
+            else:
+                ishape = [1 for _ in range(ndim)]
+                ishape[i] = bshape[i]
+                exp.append(np.arange(bshape[i]).reshape(ishape))
+        expected = data[exp]
+        data = mx.nd.array(data, dtype='float32')
+        index = mx.nd.array(index, dtype='int32')
+        out = mx.nd.pick(data, index, axis=axis, keepdims=True)
+        assert_almost_equal(out.asnumpy(), expected)
+
+        sym = mx.sym.pick(axis=axis, keepdims=True)
+        check_numeric_gradient(sym, [data, index])
+
+
+
 if __name__ == '__main__':
+    test_pick()
     test_l2_normalization()
     test_sequence_mask()
     test_roipooling()

@@ -13,6 +13,7 @@
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_broadcast_op.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -63,19 +64,12 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
   }
 };
 
-inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
-                            std::vector<TShape> *in_attrs,
-                            std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
-  TShape& ishape = (*in_attrs)[0];
-  if (ishape.ndim() == 0) return false;
-  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+inline TShape ReduceAxisShapeImpl(const ReduceAxisParam& param, const TShape& ishape) {
   if (param.axis == -1 || ishape.ndim() == 1) {
     if (param.keepdims) {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(ishape.ndim()));
+      return TShape(ishape.ndim());
     } else {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
+      return mshadow::Shape1(1);
     }
   } else {
     CHECK_LT(param.axis, static_cast<int>(ishape.ndim()))
@@ -84,16 +78,28 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
     if (param.keepdims) {
       TShape oshape = ishape;
       oshape[param.axis] = 1;
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+      return oshape;
     } else {
       TShape oshape(ishape.ndim() - 1);
       for (int i = 0; i < param.axis; ++i) oshape[i] = ishape[i];
       for (int i = param.axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
         oshape[i-1] = ishape[i];
       }
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+      return oshape;
     }
   }
+}
+
+inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
+                            std::vector<TShape> *in_attrs,
+                            std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  TShape& ishape = (*in_attrs)[0];
+  if (ishape.ndim() == 0) return false;
+
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ReduceAxisShapeImpl(param, ishape));
   return true;
 }
 
@@ -455,6 +461,129 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
       mshadow::Shape1(inputs[0].shape_.Size()), s);
     mshadow::VectorDot(out, in, in);
     ASSIGN_DISPATCH(out, req[0], mshadow::expr::F<mxnet::op::mshadow_op::square_root>(out));
+  });
+}
+
+/*! \brief index element from array along axes */
+template<int ndim>
+struct pick {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
+                                  const int *idx, int M, int stride,
+                                  mshadow::Shape<ndim> bshape,
+                                  mshadow::Shape<ndim> sshape) {
+    using namespace broadcast;
+    int j = idx[i];
+    if (j < 0) j = 0;
+    else if (j >= M) j = M-1;
+    j = ravel(unravel(i, sshape), bshape) + j*stride;
+    out[i] = a[j];
+  }
+};
+
+/*! \brief index element from array along axes */
+template<int ndim>
+struct pick_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* igrad, const DType* ograd,
+                                  const int *idx, int M, int stride,
+                                  mshadow::Shape<ndim> bshape,
+                                  mshadow::Shape<ndim> sshape) {
+    using namespace broadcast;
+    int j = idx[i];
+    if (j < 0) j = 0;
+    else if (j >= M) j = M-1;
+    j = ravel(unravel(i, sshape), bshape) + j*stride;
+    igrad[j] += ograd[i];
+  }
+};
+
+inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_attrs,
+                        std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+  const TShape& ishape = (*in_attrs)[0];
+  if (ishape.ndim() == 0) return false;
+
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  TShape oshape = ReduceAxisShapeImpl(param, ishape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  SHAPE_ASSIGN_CHECK(*in_attrs, 1, oshape);
+  return true;
+}
+
+inline bool PickOpType(const nnvm::NodeAttrs& attrs,
+                       std::vector<int> *in_attrs,
+                       std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kInt32);
+  return (*out_attrs)[0] != -1;
+}
+
+template<typename xpu>
+void PickOpForward(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(req[0], kWriteTo);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  const TShape& ishape = inputs[0].shape_;
+  int leading = 1, trailing = 1, M = ishape[param.axis];
+  for (index_t i = 0; i < param.axis; ++i) leading *= ishape[i];
+  for (index_t i = param.axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    if (trailing == 1) {
+      Kernel<pick<2>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                   M, 1, Shape2(leading, M), Shape2(leading, 1));
+    } else {
+      Kernel<pick<3>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                   M, trailing, Shape3(leading, M, trailing),
+                                   Shape3(leading, 1, trailing));
+    }
+  });
+}
+
+template<typename xpu>
+void PickOpBackward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  const TShape& ishape = outputs[0].shape_;
+  int leading = 1, trailing = 1, M = ishape[param.axis];
+  for (index_t i = 0; i < param.axis; ++i) leading *= ishape[i];
+  for (index_t i = param.axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    if (req[0] != kAddTo) outputs[0].FlatTo1D<xpu, DType>(s) = 0;
+    if (trailing == 1) {
+      Kernel<pick_grad<2>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                   M, 1, Shape2(leading, M), Shape2(leading, 1));
+    } else {
+      Kernel<pick_grad<3>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                   M, trailing, Shape3(leading, M, trailing),
+                                   Shape3(leading, 1, trailing));
+    }
   });
 }
 
