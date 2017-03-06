@@ -4,6 +4,8 @@
     .. currentmodule:: mxnet.symbol
 ```
 
+## Overview
+
 This document lists the routines of `symbol` (or `sym` for short) package
 grouped by functionality.
 
@@ -26,7 +28,7 @@ computation.
 array([ 4.,  7.], dtype=float32)
 ```
 
-A detailed tutorial is avaible at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html)
+A detailed tutorial is available at [http://mxnet.io/tutorials/python/symbol.html](http://mxnet.io/tutorials/python/symbol.html).
 
 
 ```eval_rst

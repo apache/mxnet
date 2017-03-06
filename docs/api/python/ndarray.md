@@ -3,6 +3,7 @@
 ```eval_rst
 .. currentmodule:: mxnet.ndarray
 ```
+## Overview
 
 This document lists the routines of the `ndarray` (or `nd` for short) package
 grouped by functionality.
@@ -24,7 +25,8 @@ size. Various methods for data manipulation and computation are provided.
 <NDArray 2x3 @gpu(0)>
 ```
 
-We provide some basic NDArray operations, like arithmetic and slice operations.
+A detailed tutorial is available at
+[http://mxnet.io/tutorials/python/ndarray.html](http://mxnet.io/tutorials/python/ndarray.html)..
 
 ```eval_rst
 
