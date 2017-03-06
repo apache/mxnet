@@ -82,7 +82,7 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
 
 template<typename xpu, typename DType>
 class ConvolutionOp : public Operator {
-public:
+ public:
   explicit ConvolutionOp(ConvolutionParam p) {
     this->param_ = p;
     // convert MBytes first to Bytes and then to elements.
@@ -108,8 +108,8 @@ public:
     LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
     Stream<xpu>* s = ctx.get_stream<xpu>();
     // allocate workspace for col_buffer
-    Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace].get_space_typed<xpu, 1, DType>(
-      Shape1(col_buffer_size_), s);
+    Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
+      .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
     // calculate the shape of col_buffer
     TShape col_buffer_shape(num_spatial_axes_ + 1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
@@ -205,7 +205,8 @@ public:
                  col_buffer.dptr<DType>(), col_buffer.shape_, xpu());
       for (index_t g = 0; g < group_; ++g) {
         if (0 == n) {
-          ASSIGN_DISPATCH(dweight_3d[g], req[conv::kWeight], dot(out_grad_3d[g], col_buffer_3d[g].T()));
+          ASSIGN_DISPATCH(dweight_3d[g], req[conv::kWeight],
+                          dot(out_grad_3d[g], col_buffer_3d[g].T()));
         } else {
           dweight_3d[g] += dot(out_grad_3d[g], col_buffer_3d[g].T());
         }
@@ -221,7 +222,7 @@ public:
     }
   }
 
-private:
+ private:
   void LayerSetUp(const TShape& ishape, const TShape& oshape) {
     force_nd_im2col_ = false;  // hard code as false for now
     channel_axis_ = 1;  // hard code channel axis
@@ -268,7 +269,7 @@ private:
   void ConvCol2Im(const DType* col_buffer_ptr, const TShape& col_buffer_shape,
                   DType* data_ptr, const TShape& data_shape, OpReqType req, const gpu&) const;
 
-private:
+ private:
   ConvolutionParam param_;
   index_t channel_axis_;  // channel axis of the input
   index_t channels_;  // number of channels of input image
@@ -317,8 +318,7 @@ class ConvolutionProp : public OperatorProperty {
       if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
       if (param_.dilate.ndim() == 0) param_.dilate = Shape1(1);
       if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
-    }
-    else if (param_.kernel.ndim() == 2) {
+    } else if (param_.kernel.ndim() == 2) {
       param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
       if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
       if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
@@ -351,7 +351,7 @@ class ConvolutionProp : public OperatorProperty {
     if (dshp.ndim() ==  0) return false;
     if (param_.kernel.ndim() == 1) {
       // 1d conv
-      CHECK_EQ(dshp.ndim(), 3) << "Input data should be 3D in batch-num_filter-y";
+      CHECK_EQ(dshp.ndim(), 3) << "Input data should be 3D in batch-num_filter-x";
       Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
       Shape<3> wshape = Shape3(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
                                param_.kernel[0]);
@@ -362,7 +362,7 @@ class ConvolutionProp : public OperatorProperty {
         SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
       }
 
-      const index_t ksize_y = static_cast<index_t>(param_.kernel[0]);
+      const index_t ksize_x = static_cast<index_t>(param_.kernel[0]);
       CHECK_EQ(dshape[1] % param_.num_group, 0) \
           << "input num_filter must divide group size";
       CHECK_EQ(param_.num_filter % param_.num_group, 0) \
@@ -373,17 +373,16 @@ class ConvolutionProp : public OperatorProperty {
           << "incorrect stride size: " << param_.stride;
       CHECK_GT(param_.dilate.Size(), 0) \
           << "incorrect dilate size: " << param_.dilate;
-      CHECK(ksize_y <= dshape[2] + 2 * param_.pad[0])
+      CHECK(ksize_x <= dshape[2] + 2 * param_.pad[0])
           << "kernel size exceed input";
       Shape<3> oshape;
       oshape[0] = dshape[0];
       oshape[1] = param_.num_filter;
       oshape[2] = (dshape[2] + 2 * param_.pad[0] -
-          (param_.dilate[0] * (ksize_y - 1) + 1)) / param_.stride[0] + 1;
+          (param_.dilate[0] * (ksize_x - 1) + 1)) / param_.stride[0] + 1;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
       return true;
-    }
-    else if (param_.kernel.ndim() == 2) {
+    } else if (param_.kernel.ndim() == 2) {
       // 2d conv
       CHECK_EQ(dshp.ndim(), 4U) \
           << "Input data should be 4D in batch-num_filter-y-x";
@@ -564,9 +563,6 @@ class ConvolutionProp : public OperatorProperty {
 
   Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                              std::vector<int> *in_type) const override;
-
- private:
-  void init();
 
  private:
   ConvolutionParam param_;
