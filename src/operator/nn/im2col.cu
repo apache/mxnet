@@ -112,12 +112,14 @@ __global__ void im2col_gpu_kernel(const int n, const DType* data_im,
 }
 
 template <typename DType>
-void im2col_gpu(const DType* data_im, const int channels,
-    const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w,
-    const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w,
-    DType* data_col) {
+void im2col_gpu(mshadow::Stream<gpu>* s,
+                const DType* data_im, const int channels,
+                const int height, const int width,
+                const int kernel_h, const int kernel_w,
+                const int pad_h, const int pad_w,
+                const int stride_h, const int stride_w,
+                const int dilation_h, const int dilation_w,
+                DType* data_col) {
   // We are going to launch channels * height_col * width_col kernels, each
   // kernel responsible for copying a single-channel grid.
   int height_col = (height + 2 * pad_h -
@@ -126,8 +128,8 @@ void im2col_gpu(const DType* data_im, const int channels,
       (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
   int num_kernels = channels * height_col * width_col;
   // NOLINT_NEXT_LINE(whitespace/operators)
-  im2col_gpu_kernel<DType><<<cuda_get_num_blocks(num_kernels),
-                             mshadow::cuda::kBaseThreadNum>>>(
+  im2col_gpu_kernel<DType><<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+                             0, mshadow::Stream<gpu>::GetStream(s)>>>(
       num_kernels, data_im, height, width, kernel_h, kernel_w, pad_h,
       pad_w, stride_h, stride_w, dilation_h, dilation_w, height_col,
       width_col, data_col);
@@ -135,15 +137,18 @@ void im2col_gpu(const DType* data_im, const int channels,
 }
 
 // Explicit instantiation
-template void im2col_gpu<float>(const float* data_im, const int channels,
+template void im2col_gpu<float>(mshadow::Stream<gpu>* s,
+    const float* data_im, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w, float* data_col);
-template void im2col_gpu<double>(const double* data_im, const int channels,
+template void im2col_gpu<double>(mshadow::Stream<gpu>* s,
+    const double* data_im, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w, double* data_col);
-template void im2col_gpu<mshadow::half::half_t>(const mshadow::half::half_t* data_im,
+template void im2col_gpu<mshadow::half::half_t>(mshadow::Stream<gpu> *s,
+    const mshadow::half::half_t* data_im,
     const int channels, const int height, const int width, const int kernel_h,
     const int kernel_w, const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
@@ -235,7 +240,8 @@ __global__ void im2col_nd_gpu_kernel(const int n, const DType* data_im,
 }
 
 template <typename DType>
-void im2col_nd_gpu(const DType* data_im, const int num_spatial_axes,
+void im2col_nd_gpu(mshadow::Stream<gpu>* s,
+    const DType* data_im, const int num_spatial_axes,
     const int num_kernels, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, DType* data_col) {
@@ -244,61 +250,71 @@ void im2col_nd_gpu(const DType* data_im, const int num_spatial_axes,
   switch (num_spatial_axes) {
   case 1:
     im2col_nd_gpu_kernel<DType, 1>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 2:
     im2col_nd_gpu_kernel<DType, 2>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 3:
     im2col_nd_gpu_kernel<DType, 3>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 4:
     im2col_nd_gpu_kernel<DType, 4>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 5:
     im2col_nd_gpu_kernel<DType, 5>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 6:
     im2col_nd_gpu_kernel<DType, 6>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 7:
     im2col_nd_gpu_kernel<DType, 7>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 8:
     im2col_nd_gpu_kernel<DType, 8>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 9:
     im2col_nd_gpu_kernel<DType, 9>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
   case 10:
     im2col_nd_gpu_kernel<DType, 10>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum>>>(
+        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+           0, mshadow::Stream<gpu>::GetStream(s)>>>(
         num_kernels, data_im, im_shape, col_shape,
         kernel_shape, pad, stride, dilation, data_col);
     break;
@@ -310,17 +326,20 @@ void im2col_nd_gpu(const DType* data_im, const int num_spatial_axes,
 }
 
 // Explicit instantiation
-template void im2col_nd_gpu<float>(const float* data_im,
+template void im2col_nd_gpu<float>(mshadow::Stream<gpu>* s,
+    const float* data_im,
     const int num_spatial_axes, const int col_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, float* data_col);
-template void im2col_nd_gpu<double>(const double* data_im,
+template void im2col_nd_gpu<double>(mshadow::Stream<gpu>* s,
+    const double* data_im,
     const int num_spatial_axes, const int col_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, double* data_col);
-template void im2col_nd_gpu<mshadow::half::half_t>(const mshadow::half::half_t* data_im,
+template void im2col_nd_gpu<mshadow::half::half_t>(mshadow::Stream<gpu>* s,
+    const mshadow::half::half_t* data_im,
     const int num_spatial_axes, const int col_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
@@ -368,7 +387,7 @@ __global__ void col2im_gpu_kernel(const int n, const DType* data_col,
 }
 
 template <typename DType>
-void col2im_gpu(const DType* data_col, const int channels,
+void col2im_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
@@ -381,8 +400,8 @@ void col2im_gpu(const DType* data_col, const int channels,
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
   // NOLINT_NEXT_LINE(whitespace/operators)
-  col2im_gpu_kernel<DType><<<cuda_get_num_blocks(num_kernels),
-                             mshadow::cuda::kBaseThreadNum>>>(
+  col2im_gpu_kernel<DType><<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
+                             0, mshadow::Stream<gpu>::GetStream(s)>>>(
       num_kernels, data_col, height, width, channels, kernel_h, kernel_w,
       pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
       height_col, width_col, data_im, req);
@@ -390,17 +409,20 @@ void col2im_gpu(const DType* data_col, const int channels,
 }
 
 // Explicit instantiation
-template void col2im_gpu<float>(const float* data_col, const int channels,
+template void col2im_gpu<float>(mshadow::Stream<gpu>* s,
+    const float* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
     float* data_im, OpReqType req);
-template void col2im_gpu<double>(const double* data_col, const int channels,
+template void col2im_gpu<double>(mshadow::Stream<gpu>* s,
+    const double* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
     double* data_im, OpReqType req);
-template void col2im_gpu<mshadow::half::half_t>(const mshadow::half::half_t* data_col,
+template void col2im_gpu<mshadow::half::half_t>(mshadow::Stream<gpu>* s,
+    const mshadow::half::half_t* data_col,
     const int channels, const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h,
     const int stride_w, const int dilation_h, const int dilation_w,
@@ -511,7 +533,7 @@ __global__ void col2im_nd_gpu_kernel(const int n, const DType* data_col,
 }
 
 template <typename DType>
-void col2im_nd_gpu(const DType* data_col, const int num_spatial_axes,
+void col2im_nd_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int num_spatial_axes,
     const int im_size, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, DType* data_im, OpReqType req) {
@@ -520,61 +542,71 @@ void col2im_nd_gpu(const DType* data_col, const int num_spatial_axes,
   switch (num_spatial_axes) {
   case 1:
     col2im_nd_gpu_kernel<DType, 1>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 2:
     col2im_nd_gpu_kernel<DType, 2>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 3:
     col2im_nd_gpu_kernel<DType, 3>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 4:
     col2im_nd_gpu_kernel<DType, 4>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 5:
     col2im_nd_gpu_kernel<DType, 5>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 6:
     col2im_nd_gpu_kernel<DType, 6>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 7:
     col2im_nd_gpu_kernel<DType, 7>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 8:
     col2im_nd_gpu_kernel<DType, 8>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 9:
     col2im_nd_gpu_kernel<DType, 9>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
   case 10:
     col2im_nd_gpu_kernel<DType, 10>  // NOLINT_NEXT_LINE(whitespace/operators)
-          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum>>>(
+          <<<cuda_get_num_blocks(im_size), mshadow::cuda::kBaseThreadNum,
+             0, mshadow::Stream<gpu>::GetStream(s)>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im, req);
     break;
@@ -586,17 +618,18 @@ void col2im_nd_gpu(const DType* data_col, const int num_spatial_axes,
 }
 
 // Explicit instantiation
-template void col2im_nd_gpu<float>(const float* data_col,
+template void col2im_nd_gpu<float>(mshadow::Stream<gpu>* s, const float* data_col,
     const int num_spatial_axes, const int im_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, float* data_im, OpReqType req);
-template void col2im_nd_gpu<double>(const double* data_col,
+template void col2im_nd_gpu<double>(mshadow::Stream<gpu>* s, const double* data_col,
     const int num_spatial_axes, const int im_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, double* data_im, OpReqType req);
-template void col2im_nd_gpu<mshadow::half::half_t>(const mshadow::half::half_t* data_col,
+template void col2im_nd_gpu<mshadow::half::half_t>(mshadow::Stream<gpu>* s,
+    const mshadow::half::half_t* data_col,
     const int num_spatial_axes, const int im_size,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,

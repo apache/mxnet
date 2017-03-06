@@ -22,11 +22,11 @@ DMLC_REGISTER_PARAMETER(ConvolutionParam);
 
 template<typename xpu, typename DType>
 inline
-void ConvolutionOp<xpu, DType>::ConvIm2Col(const DType* data_ptr,
+void ConvolutionOp<xpu, DType>::ConvIm2Col(mshadow::Stream<cpu>* s,
+                                           const DType* data_ptr,
                                            const TShape& data_shape,
                                            DType* col_buffer_ptr,
-                                           const TShape& col_buffer_shape,
-                                           const cpu& dev_cpu) const {
+                                           const TShape& col_buffer_shape) const {
   if (!force_nd_im2col_ && num_spatial_axes_ == 2) {
     im2col_cpu(data_ptr, conv_in_channels_, data_shape[2], data_shape[3],
                param_.kernel[0], param_.kernel[1], param_.pad[0], param_.pad[1],
@@ -46,12 +46,12 @@ void ConvolutionOp<xpu, DType>::ConvIm2Col(const DType* data_ptr,
 
 template<typename xpu, typename DType>
 inline
-void ConvolutionOp<xpu, DType>::ConvCol2Im(const DType* col_buffer_ptr,
+void ConvolutionOp<xpu, DType>::ConvCol2Im(mshadow::Stream<cpu>* s,
+                                           const DType* col_buffer_ptr,
                                            const TShape& col_buffer_shape,
                                            DType* data_ptr,
                                            const TShape& data_shape,
-                                           OpReqType req,
-                                           const cpu& dev_cpu) const {
+                                           OpReqType req) const {
   if (!force_nd_im2col_ && num_spatial_axes_ == 2) {
     col2im_cpu(col_buffer_ptr, conv_in_channels_, data_shape[2], data_shape[3],
                param_.kernel[0], param_.kernel[1], param_.pad[0], param_.pad[1],
@@ -75,6 +75,13 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
+  // If 1D convolution, use MXNet implementation
+  if (param.kernel.ndim() == 1) {
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      op = new ConvolutionOp<cpu, DType>(param);
+    })
+    return op;
+  }
 #if MXNET_USE_MKL2017 == 1
   if ((param.dilate[0] == 1 && param.dilate[1] == 1)
       && param.kernel.ndim() == 2) {
