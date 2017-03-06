@@ -32,6 +32,10 @@ class MXNetError(Exception):
     """Error that will be throwed by all mxnet functions"""
     pass
 
+class _Sentinel(object):
+    """Place holder for deprecated non-empty default vaules"""
+    pass
+
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = libinfo.find_lib_path()
