@@ -19,17 +19,16 @@ package ml.dmlc.mxnet.spark.transformer
 
 import java.util.UUID
 
-import ml.dmlc.mxnet.{Context, Shape, Symbol}
 import ml.dmlc.mxnet.spark.{MXNetModel, MXNetParams}
-import org.apache.spark.ml.{Estimator, PredictionModel, Predictor}
+import ml.dmlc.mxnet.{Context, Shape, Symbol}
+import org.apache.spark.SparkContext
 import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable, MLWriter}
+import org.apache.spark.ml.{PredictionModel, Predictor}
+import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.types.StructType
 import org.slf4j.{Logger, LoggerFactory}
-import org.apache.spark.mllib.linalg.Vector
-import org.apache.spark.SparkContext
-import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable, MLWriter}
 
 /**
   * MXNet Training On Spark
@@ -39,7 +38,7 @@ import org.apache.spark.ml.util.{MLReadable, MLReader, MLWritable, MLWriter}
 class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
 
   private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
-  private val params: MXNetParams = new MXNetParams
+  private val p: MXNetParams = new MXNetParams
   private var _featuresCol: String = _
   private var _labelCol: String = _
 
@@ -49,23 +48,21 @@ class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
     val lps = dataset.select(_featuresCol, _labelCol).rdd
       .map(row => new LabeledPoint(row.getAs[Double](_labelCol), row.getAs[Vector](_featuresCol)))
     val mxNet = new ml.dmlc.mxnet.spark.MXNet()
-      .setBatchSize(params.batchSize)
-      .setLabelName(params.labelName)
-      .setContext(params.context)
-      .setDimension(params.dimension)
-      .setNetwork(params.getNetwork)
-      .setNumEpoch(params.numEpoch)
-      .setNumServer(params.numServer)
-      .setNumWorker(params.numWorker)
-      .setLabelName(params.labelName)
-      .setExecutorJars(params.jars.mkString(","))
+      .setBatchSize(p.batchSize)
+      .setLabelName(p.labelName)
+      .setContext(p.context)
+      .setDimension(p.dimension)
+      .setNetwork(p.getNetwork)
+      .setNumEpoch(p.numEpoch)
+      .setNumServer(p.numServer)
+      .setNumWorker(p.numWorker)
+      .setLabelName(p.labelName)
+      .setExecutorJars(p.jars.mkString(","))
     val fitted = mxNet.fit(lps)
     new MXNetModelWrap(lps.sparkContext, fitted, uid)
   }
 
-  override def transformSchema(schema: StructType) : StructType = null
-
-  override def copy(extra: ParamMap) : Estimator[MXNetModelWrap] = null
+  override def copy(extra: ParamMap) : MXNet = copyValues(new MXNet)
 
   override def setFeaturesCol(inputCol: String) : MXNet = {
     this._featuresCol = inputCol
@@ -78,47 +75,47 @@ class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
   }
 
   def setBatchSize(batchSize: Int): this.type = {
-    params.batchSize = batchSize
+    p.batchSize = batchSize
     this
   }
 
   def setNumEpoch(numEpoch: Int): this.type = {
-    params.numEpoch = numEpoch
+    p.numEpoch = numEpoch
     this
   }
 
   def setDimension(dimension: Shape): this.type = {
-    params.dimension = dimension
+    p.dimension = dimension
     this
   }
 
   def setNetwork(network: Symbol): this.type = {
-    params.setNetwork(network)
+    p.setNetwork(network)
     this
   }
 
   def setContext(ctx: Array[Context]): this.type = {
-    params.context = ctx
+    p.context = ctx
     this
   }
 
   def setNumWorker(numWorker: Int): this.type = {
-    params.numWorker = numWorker
+    p.numWorker = numWorker
     this
   }
 
   def setNumServer(numServer: Int): this.type = {
-    params.numServer = numServer
+    p.numServer = numServer
     this
   }
 
   def setDataName(name: String): this.type = {
-    params.dataName = name
+    p.dataName = name
     this
   }
 
   def setLabelName(name: String): this.type = {
-    params.labelName = name
+    p.labelName = name
     this
   }
 
@@ -128,7 +125,7 @@ class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
     * @param timeout timeout in seconds (default 300)
     */
   def setTimeout(timeout: Int): this.type = {
-    params.timeout = timeout
+    p.timeout = timeout
     this
   }
 
@@ -138,22 +135,22 @@ class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
     * @param jars jars required by the KVStore at runtime.
     */
   def setExecutorJars(jars: String): this.type = {
-    params.jars = jars.split(",|:")
+    p.jars = jars.split(",|:")
     this
   }
 
   def setJava(java: String): this.type = {
-    params.javabin = java
+    p.javabin = java
     this
   }
 
 }
 
 class MXNetModelWrap(sc: SparkContext, mxNet: MXNetModel, uuid: String)
-  extends PredictionModel[Vector, MXNetModel] with Serializable with MLWritable {
+  extends PredictionModel[Vector, MXNetModelWrap] with Serializable with MLWritable {
 
-  override def copy(extra: ParamMap): MXNetModel = {
-    copyValues(new MXNetModelWrap(sc, mxNet, uuid)).setParent(parent)
+  override def copy(extra: ParamMap): MXNetModelWrap = {
+    copyValues(new MXNetModelWrap(sc, mxNet, uuid))
   }
 
   override val uid: String = uuid
@@ -182,4 +179,3 @@ class MXNetModelWrap(sc: SparkContext, mxNet: MXNetModel, uuid: String)
   }
 
 }
-
