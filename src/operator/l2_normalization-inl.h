@@ -124,9 +124,9 @@ class L2NormalizationOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK(in_data.size() == 1 && in_grad.size() == 1);
-    CHECK_EQ(req.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK(in_data.size() == 1U && in_grad.size() == 1U);
+    CHECK_EQ(req.size(), 1U);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     TShape orig_shape = out_data[l2_normalization::kOut].shape_;
@@ -147,7 +147,7 @@ class L2NormalizationOp : public Operator {
         (grad_out - data * broadcast<0>(temp, data.shape_)) /
         broadcast<0>(norm, data.shape_));
     } else if (param_.mode == l2_normalization::kChannel) {
-      CHECK_GE(orig_shape.ndim(), 3);
+      CHECK_GE(orig_shape.ndim(), 3U);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3> data = out_data[l2_normalization::kOut]
@@ -166,7 +166,7 @@ class L2NormalizationOp : public Operator {
         (grad_out - data * broadcast_with_axis(temp, 0, orig_shape[1])) /
         broadcast_with_axis(norm, 0, orig_shape[1]));
     } else if (param_.mode == l2_normalization::kSpatial) {
-      CHECK_GE(orig_shape.ndim(), 3);
+      CHECK_GE(orig_shape.ndim(), 3U);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3> data = out_data[l2_normalization::kOut]

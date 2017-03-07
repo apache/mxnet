@@ -117,8 +117,8 @@ class CuDNNBilinearSamplerOp : public Operator {
     #if CUDNN_MAJOR == 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 2);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 2U);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       Tensor<gpu, 4, DType> data = in_data[bs::kData].get<gpu, 4, DType>(s);
