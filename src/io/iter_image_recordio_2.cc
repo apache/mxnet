@@ -201,8 +201,7 @@ inline void ImageRecordIOParser2<DType>::Init(
 }
 
 template<typename DType>
-inline bool ImageRecordIOParser2<DType>::
-ParseNext(DataBatch *out) {
+inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
   if (overflow)
     return false;
   CHECK(source_ != nullptr);
@@ -255,19 +254,19 @@ ParseNext(DataBatch *out) {
       unit_size_.resize(first_batch.data.size());
       for (size_t i = 0; i < out->data.size(); ++i) {
         TShape src_shape = first_batch.data[i].shape_;
-      int src_type_flag = first_batch.data[i].type_flag_;
-      // init object attributes
-      std::vector<index_t> shape_vec;
-      shape_vec.push_back(batch_param_.batch_size);
-      for (index_t dim = 0; dim < src_shape.ndim(); ++dim) {
-        shape_vec.push_back(src_shape[dim]);
-      }
-      TShape dst_shape(shape_vec.begin(), shape_vec.end());
-      auto dtype = prefetch_param_.dtype
-        ? prefetch_param_.dtype.value()
-        : first_batch.data[i].type_flag_;
-      out->data.at(i) = NDArray(dst_shape, Context::CPU(), false , src_type_flag);
-      unit_size_[i] = src_shape.Size();
+        int src_type_flag = first_batch.data[i].type_flag_;
+        // init object attributes
+        std::vector<index_t> shape_vec;
+        shape_vec.push_back(batch_param_.batch_size);
+        for (index_t dim = 0; dim < src_shape.ndim(); ++dim) {
+          shape_vec.push_back(src_shape[dim]);
+        }
+        TShape dst_shape(shape_vec.begin(), shape_vec.end());
+        auto dtype = prefetch_param_.dtype
+          ? prefetch_param_.dtype.value()
+          : first_batch.data[i].type_flag_;
+        out->data.at(i) = NDArray(dst_shape, Context::CPU(), false , src_type_flag);
+        unit_size_[i] = src_shape.Size();
       }
     }
 
