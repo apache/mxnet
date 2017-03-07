@@ -79,4 +79,4 @@ In Neural Information Processing Systems, Workshop on Machine Learning Systems, 
 
 History
 -------
-MXNet is initiated and designed in collaboration by the authors of [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva) and [purine2](https://github.com/purine/purine2). The project reflects what we have learnt from the past projects. It combines important flavors of the existing projects for efficiency, flexibility and memory efficiency.
+MXNet emerged from a collaboration by the authors of [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva), and [purine2](https://github.com/purine/purine2). The project reflects what we have learned from the past projects. MXNet combines aspects of these prior projects to achieve flexibility, speed, and the efficient use of memory.
