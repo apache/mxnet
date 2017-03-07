@@ -65,7 +65,7 @@ NNVM_REGISTER_OP(_backward_broadcast_minimum)
                                                               mshadow_op::gt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_hypot)
-.describe(R"code(Given the “legs” of a right triangle, return its hypotenuse
+.describe(R"code(Given the "legs" of a right triangle, return its hypotenuse
 with broadcasting.
 
 )code" ADD_FILELINE)
