@@ -64,76 +64,196 @@
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <cstring>
+#include <vector>
 #include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
 
-template <typename DType>
-inline void fill_array(const int N, const DType val, DType* a) {
-  if (static_cast<DType>(0) == val) {
-    std::memset(a, static_cast<DType>(0), sizeof(DType) * N);
-    return;
-  }
+// Function uses casting from int to unsigned to compare if value of
+// parameter a is greater or equal to zero and lower than value of
+// parameter b. The b parameter is of type signed and is always positive,
+// therefore its value is always lower than 0x800... where casting
+// negative value of a parameter converts it to value higher than 0x800...
+// The casting allows to use one condition instead of two.
+inline bool is_a_ge_zero_and_a_lt_b(int a, int b) {
+  return static_cast<unsigned>(a) < static_cast<unsigned>(b);
+}
 
-  for (int i = 0; i < N; ++i) {
-    a[i] = val;
+template <typename DType>
+inline void im2col_cpu(const DType* data_im, const int channels,
+    const int height, const int width, const int kernel_h, const int kernel_w,
+    const int pad_h, const int pad_w,
+    const int stride_h, const int stride_w,
+    const int dilation_h, const int dilation_w,
+    DType* data_col) {
+  const int output_h = (height + 2 * pad_h -
+    (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
+  const int output_w = (width + 2 * pad_w -
+    (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
+  const int channel_size = height * width;
+  for (int channel = channels; channel--; data_im += channel_size) {
+    for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
+      for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
+        int input_row = -pad_h + kernel_row * dilation_h;
+        for (int output_rows = output_h; output_rows; output_rows--) {
+          if (!is_a_ge_zero_and_a_lt_b(input_row, height)) {
+            for (int output_cols = output_w; output_cols; output_cols--) {
+              *(data_col++) = 0;
+            }
+          } else {
+            int input_col = -pad_w + kernel_col * dilation_w;
+            for (int output_col = output_w; output_col; output_col--) {
+              if (is_a_ge_zero_and_a_lt_b(input_col, width)) {
+                *(data_col++) = data_im[input_row * width + input_col];
+              } else {
+                *(data_col++) = 0;
+              }
+              input_col += stride_w;
+            }
+          }
+          input_row += stride_h;
+        }
+      }
+    }
   }
 }
 
 template <typename DType>
-void im2col_nd_cpu(const DType* data_im, const int num_spatial_axes,
+inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
+    const int num_spatial_axes, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    const int* dilation, DType* data_output, OpReqType req = mxnet::kWriteTo) {
+  if (mxnet::kNullOp == req) return;
+  if (!im2col) {
+    int im_size = im_shape[0];
+    for (int i = 0; i < num_spatial_axes; ++i) {
+      im_size *= im_shape[1 + i];
+    }
+    if (mxnet::kAddTo != req) {
+      std::fill(data_output, data_output+im_size, static_cast<DType>(0));
+      // fill_array(im_size, DType(0), data_output);
+    }
+  }
+  int kernel_size = 1;
+  for (int i = 0; i < num_spatial_axes; ++i) {
+    kernel_size *= kernel_shape[i];
+  }
+  const int channels_col = col_shape[0];
+  std::vector<int> d_offset(num_spatial_axes, 0);
+  std::vector<int> d_iter(num_spatial_axes, 0);
+  for (int c_col = 0; c_col < channels_col; ++c_col) {
+    // Loop over spatial axes in reverse order to compute a per-axis offset.
+    int offset = c_col;
+    for (int d_i = num_spatial_axes - 1; d_i >= 0; --d_i) {
+      if (d_i < num_spatial_axes - 1) {
+        offset /= kernel_shape[d_i + 1];
+      }
+      d_offset[d_i] = offset % kernel_shape[d_i];
+    }
+    for (bool incremented = true; incremented; ) {
+      // Loop over spatial axes in forward order to compute the indices in the
+      // image and column, and whether the index lies in the padding.
+      int index_col = c_col;
+      int index_im = c_col / kernel_size;
+      bool is_padding = false;
+      for (int d_i = 0; d_i < num_spatial_axes; ++d_i) {
+        const int d = d_iter[d_i];
+        const int d_im = d * stride[d_i] - pad[d_i] +
+            d_offset[d_i] * dilation[d_i];
+        is_padding |= d_im < 0 || d_im >= im_shape[d_i + 1];
+        index_col *= col_shape[d_i + 1];
+        index_col += d;
+        index_im *= im_shape[d_i + 1];
+        index_im += d_im;
+      }
+      if (im2col) {
+        if (is_padding) {
+          data_output[index_col] = 0;
+        } else {
+          data_output[index_col] = data_input[index_im];
+        }
+      } else if (!is_padding) {  // col2im
+        data_output[index_im] += data_input[index_col];
+      }
+      // Loop over spatial axes in reverse order to choose an index,
+      // like counting.
+      incremented = false;
+      for (int d_i = num_spatial_axes - 1; d_i >= 0; --d_i) {
+        const int d_max = col_shape[d_i + 1];
+        CHECK_LT(d_iter[d_i], d_max);
+        if (d_iter[d_i] == d_max - 1) {
+          d_iter[d_i] = 0;
+        } else {  // d_iter[d_i] < d_max - 1
+          ++d_iter[d_i];
+          incremented = true;
+          break;
+        }
+      }
+    }  // while(incremented)
+  }  // for (int c = 0; c < channels_col; ++c)
+}
+
+template <typename DType>
+inline void im2col_nd_cpu(const DType* data_im, const int num_spatial_axes,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, DType* data_col);
+    const int* dilation, DType* data_col) {
+  const bool kIm2Col = true;
+  im2col_nd_core_cpu(data_im, kIm2Col, num_spatial_axes, im_shape, col_shape,
+                  kernel_shape, pad, stride, dilation, data_col);
+}
 
 template <typename DType>
-void im2col_cpu(const DType* data_im, const int channels,
+inline void col2im_cpu(const DType* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w, const int stride_h,
-    const int stride_w, const int dilation_h, const int dilation_w,
-    DType* data_col);
+    const int pad_h, const int pad_w,
+    const int stride_h, const int stride_w,
+    const int dilation_h, const int dilation_w,
+    DType* data_im, OpReqType req) {
+  if (mxnet::kNullOp == req) return;
+  if (mxnet::kAddTo != req) {
+    std::fill(data_im, data_im+height*width*channels, static_cast<DType>(0));
+    //fill_array(height * width * channels, static_cast<DType>(0), data_im);
+  }
+  const int output_h = (height + 2 * pad_h -
+    (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
+  const int output_w = (width + 2 * pad_w -
+    (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
+  const int channel_size = height * width;
+  for (int channel = channels; channel--; data_im += channel_size) {
+    for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
+      for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
+        int input_row = -pad_h + kernel_row * dilation_h;
+        for (int output_rows = output_h; output_rows; output_rows--) {
+          if (!is_a_ge_zero_and_a_lt_b(input_row, height)) {
+            data_col += output_w;
+          } else {
+            int input_col = -pad_w + kernel_col * dilation_w;
+            for (int output_col = output_w; output_col; output_col--) {
+              if (is_a_ge_zero_and_a_lt_b(input_col, width)) {
+                data_im[input_row * width + input_col] += *data_col;
+              }
+              data_col++;
+              input_col += stride_w;
+            }
+          }
+          input_row += stride_h;
+        }
+      }
+    }
+  }
+}
 
 template <typename DType>
-void col2im_nd_cpu(const DType* data_col, const int num_spatial_axes,
+inline void col2im_nd_cpu(const DType* data_col, const int num_spatial_axes,
     const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, DType* data_im, OpReqType req);
-
-template <typename DType>
-void col2im_cpu(const DType* data_col, const int channels,
-    const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w, const int stride_h,
-    const int stride_w, const int dilation_h, const int dilation_w,
-    DType* data_im, OpReqType req);
-
-template <typename DType>
-void im2col_nd_gpu(mshadow::Stream<gpu>* s,
-    const DType* data_im, const int num_spatial_axes, const int num_kernels,
-    const TShape& im_shape, const TShape& col_shape,
-    const TShape& kernel_shape, const TShape& pad, const TShape& stride,
-    const TShape& dilation, DType* data_col);
-
-template <typename DType>
-void im2col_gpu(mshadow::Stream<gpu>* s, const DType* data_im, const int channels,
-    const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w, const int stride_h,
-    const int stride_w, const int dilation_h, const int dilation_w,
-    DType* data_col);
-
-template <typename DType>
-void col2im_nd_gpu(mshadow::Stream<gpu>* s, const DType* data_col,
-    const int num_spatial_axes, const int im_size,
-    const TShape& im_shape, const TShape& col_shape,
-    const TShape& kernel_shape, const TShape& pad, const TShape& stride,
-    const TShape& dilation, DType* data_im, OpReqType req);
-
-template <typename DType>
-void col2im_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int channels,
-    const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w, const int stride_h,
-    const int stride_w, const int dilation_h, const int dilation_w,
-    DType* data_im, OpReqType req);
+    const int* dilation, DType* data_im, OpReqType req) {
+  const bool kIm2Col = false;
+  im2col_nd_core_cpu(data_col, kIm2Col, num_spatial_axes, im_shape, col_shape,
+                     kernel_shape, pad, stride, dilation, data_im, req);
+}
 
 }  // namespace op
 }  // namespace mxnet
