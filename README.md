@@ -8,7 +8,7 @@
 ![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
 
 MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
-It allows you to ***mix*** [symbolic and imperative programming](http://mxnet.io/architecture/index.html#deep-learning-system-design-concepts) of symbolic
+It allows you to ***mix*** [symbolic and imperative programming](http://mxnet.io/architecture/index.html#deep-learning-system-design-concepts)
 to ***maximize*** efficiency and productivity.
 At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly.
 A graph optimization layer on top of that makes symbolic execution fast and memory efficient.
