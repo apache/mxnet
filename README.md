@@ -55,7 +55,7 @@ Features
 --------
 * Design notes providing useful insights that can re-used by other DL projects
 * Flexible configuration for arbitrary computation graph
-* Mix and match good flavours of programming to maximize flexibility and efficiency
+* Mix and match imperative and symbolic programming to maximize flexibility and efficiency
 * Lightweight, memory efficient and portable to smart devices
 * Scales up to multi GPUs and distributed setting with auto parallelism
 * Support for Python, R, C++ and Julia
@@ -79,4 +79,4 @@ In Neural Information Processing Systems, Workshop on Machine Learning Systems, 
 
 History
 -------
-MXNet is initiated and designed in collaboration by the authors of [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva) and [purine2](https://github.com/purine/purine2). The project reflects what we have learnt from the past projects. It combines important flavours of the existing projects for efficiency, flexibility and memory efficiency.
+MXNet is initiated and designed in collaboration by the authors of [cxxnet](https://github.com/dmlc/cxxnet), [minerva](https://github.com/dmlc/minerva) and [purine2](https://github.com/purine/purine2). The project reflects what we have learnt from the past projects. It combines important flavors of the existing projects for efficiency, flexibility and memory efficiency.
