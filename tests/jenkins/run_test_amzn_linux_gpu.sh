@@ -9,9 +9,10 @@ echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
 echo "GTEST_PATH=/usr/local/gtest" >> config.mk
 echo 'export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH' >> ~/.profile
 echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.profile
-echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.x86_64' >> ~/.profile
-echo 'export JRE_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.x86_64/jre' >> ~/.profile
-echo 'export PATH=$PATH:/apache-maven-3.3.9/bin/:/usr/bin:/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.x86_64/bin:/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.111-1.b15.25.amzn1.x86_64/jre/bin' >> ~/.profile
+JAVA_HOME=`/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.*.amzn1.x86_64[-1]`
+echo 'export JAVA_HOME=${JAVA_HOME}' >> ~/.profile
+echo 'export JRE_HOME=${JAVA_HOME}/jre' >> ~/.profile
+echo 'export PATH=$PATH:/apache-maven-3.3.9/bin/:/usr/bin:${JAVA_HOME}/bin' >> ~/.profile
 source ~/.profile
 user=`id -u -n`
 make -j 4 || exit -1
