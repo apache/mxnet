@@ -452,4 +452,4 @@ class ImageIter(io.DataIter):
             if not i:
                 raise StopIteration
 
-        return io.DataBatch([batch_data], [batch_label], batch_size-1-i)
+        return io.DataBatch([batch_data], [batch_label], batch_size-i)

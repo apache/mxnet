@@ -16,26 +16,6 @@ source ~/.profile
 user=`id -u -n`
 make -j 4 || exit -1
 
-echo "BUILD python2 mxnet"
-cd python
-if [ $user == 'root' ]
-then
-    python setup.py install || exit 1
-else
-    python setup.py install --prefix ~/.local || exit 1
-fi
-cd ..
-
-echo "BUILD python3 mxnet"
-cd python
-if [ $user == 'root' ]
-then
-    python3 setup.py install || exit 1
-else
-    python3 setup.py install --prefix ~/.local || exit 1
-fi
-cd ..
-
 echo "BUILD lint"
 make lint || exit -1
 
@@ -46,6 +26,7 @@ for test in tests/cpp/*_test; do
     ./$test || exit -1
 done
 export MXNET_ENGINE_INFO=false
+export PYTHONPATH=${PWD}/python
 
 echo "BUILD python_test"
 nosetests --verbose tests/python/unittest || exit -1
@@ -55,9 +36,9 @@ echo "BUILD python3_test"
 nosetests3 --verbose tests/python/unittest || exit -1
 nosetests3 --verbose tests/python/train || exit -1
 
-echo "BUILD julia_test"
-export MXNET_HOME="${PWD}"
-julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
+#echo "BUILD julia_test"
+#export MXNET_HOME="${PWD}"
+#julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
 
 echo "BUILD scala_test"
 make scalapkg || exit -1

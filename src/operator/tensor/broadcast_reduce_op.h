@@ -21,10 +21,9 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
-      .describe("Empty or unsigned or tuple. The axes to perform the reduction."
-                "If left empty, a global reduction will be performed.");
+        .describe("The axes to perform the reduction.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axis which is reduced is left "
+      .describe("If true, the axes which are reduced are left "
                 "in the result as dimension with size one.");
   }
 };
@@ -165,11 +164,16 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
   CHECK_EQ(ishape.ndim(), param.shape.ndim())
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
+  TShape oshape = param.shape;
   for (index_t i = 0; i < ishape.ndim(); ++i) {
-    CHECK(ishape[i] == param.shape[i] || ishape[i] == 1)
-      << "Broadcasting axis must have size 1";
+    if (oshape[i] != 0) {
+      CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
+        << "Array cannot be broadcasted from " << ishape << " to " << param.shape;
+    } else {
+      oshape[i] = ishape[i];
+    }
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
 
@@ -461,7 +465,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(ParamParser<ReduceAxisParam>)                \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "NDArray", "Source input")               \
+  .add_argument("data", "ndarray-or-symbol", "The input")       \
   .add_arguments(ReduceAxisParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE(name)                    \
@@ -471,7 +475,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "NDArray", "Source input")               \
+  .add_argument("data", "ndarray-or-symbol", "The input")       \
   .add_arguments(ReduceAxesParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
@@ -491,7 +495,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
       return MakeGradNode("_broadcast_backward", n, ograds,     \
                           {{"keepdims", "true"}});              \
     })                                                          \
-  .add_argument("data", "NDArray", "Source input")
+  .add_argument("data", "ndarray-or-symbol", "The input")
 
 }  // namespace op
 }  // namespace mxnet

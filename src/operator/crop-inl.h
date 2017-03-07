@@ -145,7 +145,7 @@ class CropProp : public OperatorProperty {
     // return {"data", "crop_like"};
     std::vector<std::string> ret;
     for (int i = 0; i < param_.num_args; ++i) {
-      ret.push_back(std::string("arg") + static_cast<char>('0' + i));
+      ret.push_back(std::string("arg") + std::to_string(i));
     }
     return ret;
   }

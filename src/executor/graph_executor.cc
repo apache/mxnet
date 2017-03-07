@@ -328,9 +328,9 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   g = AttachOpResources(g);
   graph_ = std::move(g);
   if (shared_exec != nullptr) {
-    this->InitDataEntryMemory(dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_);
+    this->InitDataEntryMemory(&(dynamic_cast<GraphExecutor*>(shared_exec)->data_pool_));
   } else {
-    this->InitDataEntryMemory({});
+    this->InitDataEntryMemory(nullptr);
   }
   {
     // initialize output arrays
@@ -420,7 +420,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
 }
 
 // initialize the memory of each entries
-void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool) {
+void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   using nnvm::DTypeVector;
   using nnvm::ShapeVector;
   using nnvm::StorageVector;
@@ -475,19 +475,33 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
   }
   // construct the re-use pool, if needed
   std::multimap<size_t, NDArray> free_pool;
-  for (const NDArray& nd : shared_pool) {
-    size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
-    free_pool.insert(std::make_pair(bytes, nd));
+  if (shared_pool != nullptr) {
+    for (const NDArray& nd : *shared_pool) {
+      size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+      free_pool.insert(std::make_pair(bytes, nd));
+    }
   }
   // remake the data pool
   data_pool_.clear();
-  for (size_t i = 0; i < pool_info.size(); ++i) {
+  data_pool_.resize(pool_info.size());
+
+  // sort the pool info the descending order before allocating memory
+  std::vector<size_t> sorted_pool_index;
+  for (size_t i = 0; i < pool_info.size(); i++) {
+    sorted_pool_index.push_back(i);
+  }
+  auto pool_comparator = [&pool_info](int lhs, int rhs){
+    return pool_info[lhs].second > pool_info[rhs].second;
+  };
+  std::sort(sorted_pool_index.begin(), sorted_pool_index.end(), pool_comparator);
+
+  for (size_t i : sorted_pool_index) {
     const Context& ctx = pool_info[i].first;
     size_t bytes = pool_info[i].second;
     bool allocated = false;
     for (auto it = free_pool.lower_bound(bytes); it != free_pool.end(); ++it) {
       if (it->second.ctx() == ctx && it->first >= bytes) {
-        data_pool_.push_back(it->second);
+        data_pool_[i] = it->second;
         free_pool.erase(it);
         allocated = true;
         break;
@@ -498,7 +512,12 @@ void GraphExecutor::InitDataEntryMemory(const std::vector<NDArray>& shared_pool)
       CHECK_LE(nword, std::numeric_limits<index_t>::max());
       // allocate float arrays
       TShape shape{index_t(nword)};
-      data_pool_.emplace_back(NDArray(shape, ctx));
+      NDArray nd(shape, ctx);
+      data_pool_[i] = nd;
+      // put the new allocated arrays to shared pool
+      if (shared_pool != nullptr)  {
+        shared_pool->push_back(nd);
+      }
     }
   }
   CHECK_EQ(data_pool_.size(), pool_info.size());
