@@ -688,8 +688,9 @@ void GraphExecutor::InitOpSegs() {
   }
   // TODO for training
   // FIXME experiment with LSTM Cell segmentation
-  size_t lstm_cell_num_nodes = 14;
-  for (size_t topo_start = 10 + lstm_cell_num_nodes;
+  size_t lstm_cell_num_nodes = 53;
+  size_t lstm_cell_num_prefix_nodes = 28;
+  for (size_t topo_start = lstm_cell_num_prefix_nodes;
        topo_start + lstm_cell_num_nodes < num_forward_nodes_;
        topo_start += lstm_cell_num_nodes) {
     cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start,
