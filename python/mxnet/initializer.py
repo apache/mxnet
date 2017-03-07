@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=too-many-branches, too-many-arguments
 """Initialization helper for mxnet"""
 from __future__ import absolute_import, print_function
 
@@ -153,7 +152,7 @@ class Initializer(object):
 
     def _init_loc_bias(self, _, arr):
         shape = arr.shape
-        assert(shape[0] == 6)
+        assert shape[0] == 6
         arr[:] = np.array([1.0, 0, 0, 0, 1.0, 0])
 
     def _init_zero(self, _, arr):
@@ -469,4 +468,3 @@ class FusedRNN(Initializer):
             desc = InitDesc(name)
             self._init(desc, args[name])
         arr[:] = cell.pack_weights(args)['parameters']
-

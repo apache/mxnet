@@ -1,12 +1,11 @@
 # coding: utf-8
-# pylint: disable=no-member, protected-access, unused-import, no-name-in-module
 """Random Number interface of mxnet."""
 from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call
-from ._ndarray_internal import _sample_uniform as uniform
-from ._ndarray_internal import _sample_normal as normal
+from ._ndarray_internal import _sample_uniform as uniform  # pylint: disable=unused-import
+from ._ndarray_internal import _sample_normal as normal  # pylint: disable=unused-import
 
 def seed(seed_state):
     """Seed the random number generators in mxnet.

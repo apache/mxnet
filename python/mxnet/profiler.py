@@ -1,6 +1,4 @@
 # coding: utf-8
-# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
-# pylint: disable=too-many-branches, too-many-statements
 """profiler setting methods."""
 from __future__ import absolute_import
 

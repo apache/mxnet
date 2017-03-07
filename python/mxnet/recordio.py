@@ -1,6 +1,4 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, no-member
-
 """Python interface for DLMC RecrodIO data format"""
 from __future__ import absolute_import
 from collections import namedtuple
@@ -170,8 +168,8 @@ class MXIndexedRecordIO(MXRecordIO):
 
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
-_IRFormat = 'IfQQ'
-_IRSize = struct.calcsize(_IRFormat)
+_ir_format = 'IfQQ'
+_ir_size = struct.calcsize(_ir_format)
 
 def pack(header, s):
     """pack an string into MXImageRecord
@@ -191,7 +189,7 @@ def pack(header, s):
         label = np.asarray(header.label, dtype=np.float32)
         header = header._replace(flag=label.size, label=0)
         s = label.tostring() + s
-    s = struct.pack(_IRFormat, *header) + s
+    s = struct.pack(_ir_format, *header) + s
     return s
 
 def unpack(s):
@@ -209,8 +207,8 @@ def unpack(s):
     s : str
         unpacked string
     """
-    header = IRHeader(*struct.unpack(_IRFormat, s[:_IRSize]))
-    s = s[_IRSize:]
+    header = IRHeader(*struct.unpack(_ir_format, s[:_ir_size]))
+    s = s[_ir_size:]
     if header.flag > 0:
         header = header._replace(label=np.fromstring(s, np.float32, header.flag))
         s = s[header.flag*4:]

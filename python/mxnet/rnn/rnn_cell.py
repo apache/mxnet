@@ -1,6 +1,4 @@
 # coding: utf-8
-# pylint: disable=no-member, invalid-name, protected-access, no-self-use
-# pylint: disable=too-many-branches, too-many-arguments, no-self-use
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 
@@ -270,10 +268,10 @@ class RNNCell(BaseRNNCell):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
         self._activation = activation
-        self._iW = self.params.get('i2h_weight')
-        self._iB = self.params.get('i2h_bias')
-        self._hW = self.params.get('h2h_weight')
-        self._hB = self.params.get('h2h_bias')
+        self.i2h_weight = self.params.get('i2h_weight')
+        self.i2h_bias = self.params.get('i2h_bias')
+        self.h2h_weight = self.params.get('h2h_weight')
+        self.h2h_bias = self.params.get('h2h_bias')
 
     @property
     def state_shape(self):
@@ -299,10 +297,10 @@ class RNNCell(BaseRNNCell):
         """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
-        i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
+        i2h = symbol.FullyConnected(data=inputs, weight=self.i2h_weight, bias=self.i2h_bias,
                                     num_hidden=self._num_hidden,
                                     name='%si2h'%name)
-        h2h = symbol.FullyConnected(data=states[0], weight=self._hW, bias=self._hB,
+        h2h = symbol.FullyConnected(data=states[0], weight=self.h2h_weight, bias=self.h2h_bias,
                                     num_hidden=self._num_hidden,
                                     name='%sh2h'%name)
         output = self._get_activation(i2h + h2h, self._activation,
@@ -328,10 +326,10 @@ class LSTMCell(BaseRNNCell):
     def __init__(self, num_hidden, prefix='lstm_', params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
-        self._iW = self.params.get('i2h_weight')
-        self._iB = self.params.get('i2h_bias')
-        self._hW = self.params.get('h2h_weight')
-        self._hB = self.params.get('h2h_bias')
+        self.i2h_weight = self.params.get('i2h_weight')
+        self.i2h_bias = self.params.get('i2h_bias')
+        self.h2h_weight = self.params.get('h2h_weight')
+        self.h2h_bias = self.params.get('h2h_bias')
 
     @property
     def state_shape(self):
@@ -356,15 +354,14 @@ class LSTMCell(BaseRNNCell):
         """
         args = args.copy()
         outs = ['_i', '_f', '_c', '_o']
-        h = self._num_hidden
         for i in ['i2h', 'h2h']:
             weight = args.pop('%s%s_weight'%(self._prefix, i))
             bias = args.pop('%s%s_bias'%(self._prefix, i))
             for j, name in enumerate(outs):
                 wname = '%s%s%s_weight'%(self._prefix, i, name)
-                args[wname] = weight[j*h:(j+1)*h].copy()
+                args[wname] = weight[j*self._num_hidden:(j+1)*self._num_hidden].copy()
                 bname = '%s%s%s_bias'%(self._prefix, i, name)
-                args[bname] = bias[j*h:(j+1)*h].copy()
+                args[bname] = bias[j*self._num_hidden:(j+1)*self._num_hidden].copy()
         return args
 
     def pack_weights(self, args):
@@ -415,10 +412,10 @@ class LSTMCell(BaseRNNCell):
         """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
-        i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
+        i2h = symbol.FullyConnected(data=inputs, weight=self.i2h_weight, bias=self.i2h_bias,
                                     num_hidden=self._num_hidden*4,
                                     name='%si2h'%name)
-        h2h = symbol.FullyConnected(data=states[0], weight=self._hW, bias=self._hB,
+        h2h = symbol.FullyConnected(data=states[0], weight=self.h2h_weight, bias=self.h2h_bias,
                                     num_hidden=self._num_hidden*4,
                                     name='%sh2h'%name)
         gates = i2h + h2h
@@ -930,4 +927,3 @@ class ZoneoutCell(ModifierCell):
             state to next step of RNN.
         """
         raise NotImplementedError
-

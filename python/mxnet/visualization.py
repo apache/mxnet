@@ -1,8 +1,4 @@
 # coding: utf-8
-# pylint: disable=invalid-name, too-many-locals, fixme
-# pylint: disable=too-many-branches, too-many-statements
-# pylint: disable=too-many-arguments
-# pylint: disable=dangerous-default-value
 """Visualization module"""
 from __future__ import absolute_import
 
@@ -26,7 +22,7 @@ def _str2tuple(string):
     """
     return re.findall(r"\d+", string)
 
-def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.]):
+def print_summary(symbol, shape=None, line_length=120, positions=(.44, .64, .74, 1.)):
     """convert symbol for detail information
 
     Parameters
@@ -164,7 +160,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('Total params: %s' % total_params)
     print('_' * line_length)
 
-def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
+def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs=None,
                  hide_weights=True):
     """convert symbol to dot object for visualization
 
@@ -213,11 +209,12 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
     # merge the dict provided by user and the default one
-    node_attr.update(node_attrs)
+    if node_attrs is not None:
+        node_attr.update(node_attrs)
     dot = Digraph(name=title, format=save_format)
     # color map
-    cm = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
-          "#fdb462", "#b3de69", "#fccde5")
+    color_map = ("#8dd3c7", "#fb8072", "#ffffb3", "#bebada", "#80b1d3",
+                 "#fdb462", "#b3de69", "#fccde5")
 
     def looks_like_weight(name):
         """Internal helper to figure out if node should be hidden with hide_weights
@@ -247,41 +244,41 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                 continue
             attr["shape"] = "oval" # inputs get their own shape
             label = node["name"]
-            attr["fillcolor"] = cm[0]
+            attr["fillcolor"] = color_map[0]
         elif op == "Convolution":
             label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["attr"]["kernel"])[0],
                                                     _str2tuple(node["attr"]["kernel"])[1],
                                                     _str2tuple(node["attr"]["stride"])[0]
                                                     if "stride" in node["attr"] else '1',
                                                     node["attr"]["num_filter"])
-            attr["fillcolor"] = cm[1]
+            attr["fillcolor"] = color_map[1]
         elif op == "FullyConnected":
             label = r"FullyConnected\n%s" % node["attr"]["num_hidden"]
-            attr["fillcolor"] = cm[1]
+            attr["fillcolor"] = color_map[1]
         elif op == "BatchNorm":
-            attr["fillcolor"] = cm[3]
+            attr["fillcolor"] = color_map[3]
         elif op == "Activation" or op == "LeakyReLU":
             label = r"%s\n%s" % (op, node["attr"]["act_type"])
-            attr["fillcolor"] = cm[2]
+            attr["fillcolor"] = color_map[2]
         elif op == "Pooling":
             label = r"Pooling\n%s, %sx%s/%s" % (node["attr"]["pool_type"],
                                                 _str2tuple(node["attr"]["kernel"])[0],
                                                 _str2tuple(node["attr"]["kernel"])[1],
                                                 _str2tuple(node["attr"]["stride"])[0]
                                                 if "stride" in node["attr"] else '1')
-            attr["fillcolor"] = cm[4]
+            attr["fillcolor"] = color_map[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
-            attr["fillcolor"] = cm[5]
+            attr["fillcolor"] = color_map[5]
         elif op == "Softmax":
-            attr["fillcolor"] = cm[6]
+            attr["fillcolor"] = color_map[6]
         else:
-            attr["fillcolor"] = cm[7]
+            attr["fillcolor"] = color_map[7]
             if op == "Custom":
                 label = node["attr"]["op_type"]
 
         dot.node(name=name, label=label, **attr)
 
-    # add edges
+    # add edges  pylint: disable=too-many-nested-blocks
     for node in nodes:
         op = node["op"]
         name = node["name"]

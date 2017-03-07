@@ -259,13 +259,13 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: rcpplint jnilint cpplint pylint
+lint: cpplint pylint rcpplint jnilint
 
 cpplint:
 	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin
 
 pylint:
-	python2 dmlc-core/scripts/lint.py mxnet python python/mxnet --pylint-rc $(ROOTDIR)/tests/ci_build/pylintrc
+	python dmlc-core/scripts/lint.py mxnet python python/mxnet --pylint-rc $(ROOTDIR)/tests/ci_build/pylintrc
 
 doxygen:
 	doxygen docs/Doxyfile

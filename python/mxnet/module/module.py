@@ -1,5 +1,3 @@
-# pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
-# pylint: disable=too-many-public-methods
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
 more `Executor` for data parallelization.
 """

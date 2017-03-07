@@ -1,4 +1,3 @@
-# pylint: disable=too-many-instance-attributes, too-many-arguments
 """Provide some handy classes for user to implement a simple computation module
 in Python easily.
 """

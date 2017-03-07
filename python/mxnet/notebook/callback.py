@@ -1,5 +1,3 @@
-# pylint: disable=fixme, invalid-name, missing-docstring, no-init, old-style-class, multiple-statements
-# pylint: disable=arguments-differ, too-many-arguments, no-member
 """Visualization callback function
 """
 try:
@@ -26,8 +24,6 @@ except ImportError:
     pd = Pandas_Failed_To_Import
 
 import time
-# pylint: enable=missing-docstring, no-init, old-style-class, multiple-statements
-
 
 def _add_new_columns(dataframe, metrics):
     """Add new metrics as new columns to selected pandas dataframe.
@@ -380,5 +376,3 @@ def args_wrapper(*args):
         for k, v in callback_args.iteritems():
             out[k].append(v)
     return dict(out)
-
-

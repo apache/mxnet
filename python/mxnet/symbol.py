@@ -1,6 +1,5 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
-# pylint: disable=import-error, no-name-in-module
+# pylint: disable=too-many-lines
 """Symbolic configuration API of mxnet."""
 from __future__ import absolute_import as _abs
 
@@ -36,11 +35,9 @@ except ImportError:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.symbol import SymbolBase, _init_symbol_module
 
-
 class Symbol(SymbolBase):
     """Symbol is symbolic graph of the mxnet."""
     # disable dictionary storage, also do not have parent type.
-    # pylint: disable=no-member
     __slots__ = []
 
     def __repr__(self):
@@ -199,7 +196,6 @@ class Symbol(SymbolBase):
             return {'handle': None}
 
     def __setstate__(self, state):
-        # pylint: disable=assigning-non-slot
         handle = state['handle']
         if handle is not None:
             json_str = handle
@@ -225,9 +221,9 @@ class Symbol(SymbolBase):
         -------
         the resulting symbol
         """
-        s = self.__copy__()
-        s._compose(*args, **kwargs)
-        return s
+        symbol = self.__copy__()
+        symbol._compose(*args, **kwargs)
+        return symbol
 
     def _compose(self, *args, **kwargs):
         """Compose symbol on inputs.
@@ -503,7 +499,6 @@ class Symbol(SymbolBase):
             List of types of outputs.
             The order is in the same order as list_auxiliary()
         """
-        # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
                     types either by positional or kwargs way.')
@@ -554,7 +549,6 @@ class Symbol(SymbolBase):
             return (arg_types, out_types, aux_types)
         else:
             return (None, None, None)
-        # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
         """Infer the shape of outputs and arguments of given known shapes of arguments.
@@ -618,7 +612,6 @@ class Symbol(SymbolBase):
 
     def _infer_shape_impl(self, partial, *args, **kwargs):
         """The actual implementation for calling shape inference API."""
-        # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
                     shapes either by positional or kwargs way.')
@@ -679,7 +672,6 @@ class Symbol(SymbolBase):
             return (arg_shapes, out_shapes, aux_shapes)
         else:
             return (None, None, None)
-        # pylint: enable=too-many-locals
 
     def debug_str(self):
         """Get a debug string.
@@ -823,7 +815,6 @@ class Symbol(SymbolBase):
         executor : mxnet.Executor
             The generated Executor
         """
-        # pylint: disable=too-many-locals
         if type_dict is None:
             attrs = self.attr_dict()
             type_dict = {k: mx_real_t for k in self.list_arguments()
@@ -933,7 +924,6 @@ class Symbol(SymbolBase):
         User can give up gradient by using a dict in args_grad and only specify
         gradient they interested in.
         """
-        # pylint: disable=too-many-locals, too-many-branches
         if not isinstance(ctx, Context):
             raise TypeError("Context type error")
 
@@ -1023,7 +1013,6 @@ class Symbol(SymbolBase):
                                      c_wrt,
                                      ctypes.byref(handle)))
         return Symbol(handle)
-    # pylint: enable= no-member
 
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
@@ -1074,9 +1063,9 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
     return ret
 
 # for back compatibility
-Variable = var
+Variable = var                  # pylint: disable=invalid-name
 
-def Group(symbols):
+def Group(symbols):             # pylint: disable=invalid-name
     """Create a symbol that groups symbols together.
 
     Parameters
@@ -1157,13 +1146,10 @@ def load_json(json_str):
     check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
     return Symbol(handle)
 
-
 # Initialize the atomic symbol in startups
 _init_symbol_module(Symbol, "mxnet")
 
-# pylint: disable=no-member
-# pylint: disable=redefined-builtin
-def pow(base, exp):
+def pow(base, exp):             # pylint: disable=redefined-builtin
     """ Raise base to an exp.
 
     Parameters
@@ -1186,9 +1172,6 @@ def pow(base, exp):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
 
-
-# pylint: disable=no-member
-# pylint: disable=redefined-builtin
 def maximum(left, right):
     """ maximum left and right
 
@@ -1212,9 +1195,6 @@ def maximum(left, right):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
-
-# pylint: disable=no-member
-# pylint: disable=redefined-builtin
 def minimum(left, right):
     """ minimum left and right
 
@@ -1238,9 +1218,6 @@ def minimum(left, right):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
-
-# pylint: disable=no-member
-# pylint: disable=redefined-builtin
 def hypot(left, right):
     """ minimum left and right
 

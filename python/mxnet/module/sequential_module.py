@@ -1,4 +1,3 @@
-# pylint: disable=too-many-arguments, too-many-locals, too-many-instance-attributes
 """`SequentialModule` is a container module that chains a number of modules together."""
 
 import logging
@@ -63,7 +62,7 @@ class SequentialModule(BaseModule):
         self._modules.append(module)
 
         # a sanity check to avoid typo
-        for key in kwargs.keys():
+        for key in kwargs:
             assert key in self._meta_keys, ('Unknown meta "%s", a typo?' % key)
 
         self._metas.append(kwargs)

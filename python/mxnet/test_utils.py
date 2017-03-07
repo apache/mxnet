@@ -1,6 +1,5 @@
 # coding: utf-8
 """Tools for testing."""
-# pylint: disable=invalid-name, no-member, too-many-arguments, too-many-locals, too-many-branches, too-many-statements, broad-except, line-too-long, unused-import
 from __future__ import absolute_import, print_function, division
 import time
 import traceback
@@ -192,18 +191,18 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
     assert_almost_equal(a, b, rtol, atol, names)
 
 
-def retry(n):
+def retry(num):
     """Retry n times before failing for stochastic test cases"""
-    assert n > 0
+    assert num > 0
     def decorate(f):
         """Decorate a test case"""
         def wrapper(*args, **kwargs):
             """Wrapper for tests function"""
-            for _ in range(n):
+            for _ in range(num):
                 try:
                     f(*args, **kwargs)
-                except AssertionError as e:
-                    err = e
+                except AssertionError as error:
+                    err = error
                     continue
                 return
             raise err
@@ -503,9 +502,9 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx) for k, v in location.items()}
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
-    for g in executor.grad_arrays:
-        if g:
-            g[:] = 0
+    for grad in executor.grad_arrays:
+        if grad:
+            grad[:] = 0
 
     executor.forward(is_train=False)
     outputs = [x.asnumpy() for x in executor.outputs]
@@ -591,7 +590,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
             raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
 
-def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
+def check_speed(sym, location=None, ctx=None, num=20, grad_req=None, typ="whole",
                 **kwargs):
     """Check the running speed of a symbol
 
@@ -603,7 +602,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         location to evaluate the inner executor
     ctx : Context
         running context
-    N : int, optional
+    num : int, optional
         repeat times
     grad_req : None or str or list of str or dict of str to str, optional
         gradient requirements
@@ -640,12 +639,12 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
             output.wait_to_read()
         # Test forward + backward
         tic = time.time()
-        for _ in range(N):
+        for _ in range(num):
             exe.forward(is_train=True)
             exe.backward(out_grads=exe.outputs)
         mx.nd.waitall()
         toc = time.time()
-        forward_backward_time = (toc - tic) * 1.0 / N
+        forward_backward_time = (toc - tic) * 1.0 / num
         return forward_backward_time
     elif typ == "forward":
         # Warm up
@@ -655,11 +654,11 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
         # Test forward only
         tic = time.time()
-        for _ in range(N):
+        for _ in range(num):
             exe.forward(is_train=False)
         mx.nd.waitall()
         toc = time.time()
-        forward_time = (toc - tic) * 1.0 / N
+        forward_time = (toc - tic) * 1.0 / num
         return forward_time
     else:
         raise ValueError('typ can only be "whole" or "forward".')
@@ -736,12 +735,12 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     arg_params = {} if arg_params is None else arg_params
     aux_params = {} if aux_params is None else aux_params
-    for n, arr in exe_list[0].arg_dict.items():
-        if n not in arg_params:
-            arg_params[n] = np.random.normal(size=arr.shape, scale=scale)
-    for n, arr in exe_list[0].aux_dict.items():
-        if n not in aux_params:
-            aux_params[n] = 0
+    for name, arr in exe_list[0].arg_dict.items():
+        if name not in arg_params:
+            arg_params[name] = np.random.normal(size=arr.shape, scale=scale)
+    for name, arr in exe_list[0].aux_dict.items():
+        if name not in aux_params:
+            aux_params[name] = 0
     for exe in exe_list:
         for name, arr in exe.arg_dict.items():
             arr[:] = arg_params[name]
@@ -750,11 +749,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
     max_idx = np.argmax(dtypes)
-    gt = ground_truth
-    if gt is None:
-        gt = exe_list[max_idx].output_dict.copy()
+    g_truth = ground_truth
+    if g_truth is None:
+        g_truth = exe_list[max_idx].output_dict.copy()
         if grad_req != 'null':
-            gt.update(exe_list[max_idx].grad_dict)
+            g_truth.update(exe_list[max_idx].grad_dict)
 
     # test
     for exe in exe_list:
@@ -764,17 +763,17 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         if i == max_idx:
             continue
         for name, arr in zip(output_names, exe.outputs):
-            gtarr = gt[name].astype(dtypes[i]).asnumpy()
+            gtarr = g_truth[name].astype(dtypes[i]).asnumpy()
             arr = arr.asnumpy()
             try:
                 assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-            except Exception as e:
+            except AssertionError as err:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
-                    raise e
+                    raise err
                 else:
-                    print(str(e))
+                    print(str(err))
 
     # train
     if grad_req != 'null':
@@ -787,19 +786,19 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 continue
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
-                if gt[name] is None:
+                if g_truth[name] is None:
                     assert arr is None
                     continue
-                gtarr = gt[name].astype(dtypes[i]).asnumpy()
+                gtarr = g_truth[name].astype(dtypes[i]).asnumpy()
                 arr = arr.asnumpy()
                 try:
                     assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
-                except Exception as e:
+                except AssertionError as err:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
-                        raise e
+                        raise err
                     else:
-                        print(str(e))
+                        print(str(err))
 
-    return gt
+    return g_truth

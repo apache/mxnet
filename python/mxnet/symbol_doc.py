@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=unused-argument, too-many-arguments
 """Extra symbol documents
 
 Guidelines

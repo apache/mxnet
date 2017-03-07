@@ -1,6 +1,5 @@
 # coding: utf-8
-# pylint: disable= too-many-lines, redefined-builtin, protected-access
-# pylint: disable=import-error, no-name-in-module, undefined-variable
+# pylint: disable=too-many-lines
 """NDArray API of mxnet."""
 from __future__ import absolute_import
 from __future__ import division
@@ -39,7 +38,6 @@ except ImportError:
     from ._ctypes.ndarray import NDArrayBase, _init_ndarray_module
 
 
-# pylint: disable= no-member
 _DTYPE_NP_TO_MX = {
     np.float32 : 0,
     np.float64 : 1,
@@ -55,7 +53,6 @@ _DTYPE_MX_TO_NP = {
     3 : np.uint8,
     4 : np.int32
 }
-# pylint: enable= no-member
 
 def _new_empty_handle():
     """Return a new empty handle.
@@ -105,7 +102,6 @@ fixed-size items.
 
     """
     __slots__ = []
-    # pylint: disable= no-member, undefined-variable
     def __repr__(self):
         """Return a string representation of the array"""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
@@ -244,7 +240,6 @@ fixed-size items.
         return this
 
     def __setstate__(self, state):
-        # pylint: disable=assigning-non-slot
         handle = state['handle']
         if handle is not None:
             buf = handle
@@ -295,7 +290,6 @@ fixed-size items.
         array([[ 1.,  2.,  1.],
                [ 0.,  0.,  4.]], dtype=float32)
         """
-        # pylint: disable=too-many-branches
         if not self.writable:
             raise ValueError('Failed to assign to a readonly NDArray')
         if isinstance(key, int):
@@ -354,7 +348,6 @@ fixed-size items.
                                        begin=begin, end=end)
             else:
                 raise TypeError('type %s not supported' % str(type(value)))
-        # pylint: enable=too-many-branches
 
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
@@ -485,7 +478,6 @@ fixed-size items.
                                          ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
         """Broadcast an array to a new shape.
 
@@ -533,7 +525,6 @@ fixed-size items.
             return broadcast_to(self.reshape(cur_shape), shape=shape)
         else:
             return broadcast_to(self, shape=tuple(shape))
-    # pylint: enable= undefined-variable
 
     def wait_to_read(self):
         """Wait until all previous writes operations on current array are finished.
@@ -638,8 +629,7 @@ fixed-size items.
 
 
     @property
-    # pylint: disable= invalid-name, undefined-variable
-    def T(self):
+    def T(self):  # pylint: disable=invalid-name
         """Return a copy of the array with axes transposed
 
         Equals to ``mx.nd.transpose(self)``
@@ -662,7 +652,6 @@ fixed-size items.
         if len(self.shape) != 2:
             raise ValueError('Only 2D matrix is allowed to be transposed')
         return transpose(self)
-    # pylint: enable= invalid-name, undefined-variable
 
     def asnumpy(self):
         """Return a ``numpy.ndarray`` object with value copied from this array
@@ -824,9 +813,7 @@ def onehot_encode(indices, out):
 
     Deprecated, use ``one_hot`` instead.
     """
-    # pylint: disable= no-member, protected-access
     return _internal._onehot_encode(indices, out, out=out)
-    # pylint: enable= no-member, protected-access
 
 
 def empty(shape, ctx=None, dtype=mx_real_t):
@@ -889,9 +876,7 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
-    # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype)
-    # pylint: enable= no-member, protected-access
 
 def ones(shape, ctx=None, dtype=mx_real_t):
     """Return a new array of given shape and type, filled with ones.
@@ -921,9 +906,7 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
-    # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype)
-    # pylint: enable= no-member, protected-access
 
 def full(shape, val, ctx=None, dtype=mx_real_t):
     """Return a new array of given shape and type, filled with given value.
@@ -996,7 +979,6 @@ def array(source_array, ctx=None, dtype=mx_real_t):
     arr[:] = source_array
     return arr
 
-# pylint: disable= no-member, protected-access, too-many-arguments
 def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     """Return evenly spaced values within a given interval.
 
@@ -1049,9 +1031,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
         ctx = Context.default_ctx
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              dtype=dtype, ctx=str(ctx))
-# pylint: enable= no-member, protected-access, too-many-arguments
 
-#pylint: disable= too-many-arguments, no-member, protected-access
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
     """ Helper function for element-wise operation
     The function will perform numpy-like broadcasting if needed and call different functions
@@ -1097,7 +1077,6 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
         return fn_array(lhs, rhs)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
-#pylint: enable= too-many-arguments, no-member, protected-access
 
 def add(lhs, rhs):
     """Add arguments, element-wise with broadcasting
@@ -1131,7 +1110,6 @@ def add(lhs, rhs):
     array([[ 0.,  1.],
            [ 1.,  2.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1139,7 +1117,6 @@ def add(lhs, rhs):
         operator.add,
         _internal._plus_scalar,
         None)
-    # pylint: enable= no-member, protected-access
 
 def subtract(lhs, rhs):
     """Subtract arguments element-wisely with broadcasting
@@ -1173,7 +1150,6 @@ def subtract(lhs, rhs):
     array([[ 0.,  1.],
            [-1.,  0.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1181,7 +1157,6 @@ def subtract(lhs, rhs):
         operator.sub,
         _internal._minus_scalar,
         _internal._rminus_scalar)
-    # pylint: enable= no-member, protected-access
 
 def multiply(lhs, rhs):
     """Multiply arguments element-wisely with broadcasting
@@ -1215,7 +1190,6 @@ def multiply(lhs, rhs):
     array([[ 0.,  0.],
            [ 0.,  1.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1223,7 +1197,6 @@ def multiply(lhs, rhs):
         operator.mul,
         _internal._mul_scalar,
         None)
-    # pylint: enable= no-member, protected-access
 
 def divide(lhs, rhs):
     """Divide arguments element-wisely with broadcasting
@@ -1259,7 +1232,6 @@ def divide(lhs, rhs):
     array([[ nan,   0.],
            [ inf,   1.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1267,7 +1239,6 @@ def divide(lhs, rhs):
         operator.truediv,
         _internal._div_scalar,
         _internal._rdiv_scalar)
-    # pylint: enable= no-member, protected-access
 
 def power(base, exp):
     """First array elements raised to powers from second array, element-wise
@@ -1302,7 +1273,6 @@ def power(base, exp):
     array([[ 1.],
            [ 4.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         base,
         exp,
@@ -1310,7 +1280,6 @@ def power(base, exp):
         operator.pow,
         _internal._power_scalar,
         _internal._rpower_scalar)
-    # pylint: enable= no-member, protected-access
 
 def maximum(lhs, rhs):
     """Element-wise maximum of array elements with broadcasting.
@@ -1342,7 +1311,6 @@ def maximum(lhs, rhs):
     array([[ 0.,  1.],
            [ 1.,  1.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1350,7 +1318,6 @@ def maximum(lhs, rhs):
         lambda x, y: x if x > y else y,
         _internal._maximum_scalar,
         None)
-    # pylint: enable= no-member, protected-access
 
 def minimum(lhs, rhs):
     """Element-wise minimum of array elements with broadcasting.
@@ -1382,7 +1349,6 @@ def minimum(lhs, rhs):
     array([[ 0.,  0.],
            [ 0.,  1.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1390,7 +1356,6 @@ def minimum(lhs, rhs):
         lambda x, y: x if x < y else y,
         _internal._minimum_scalar,
         None)
-    # pylint: enable= no-member, protected-access
 
 def equal(lhs, rhs):
     """Return (lhs == rhs), element-wise with broadcasting
@@ -1424,7 +1389,6 @@ def equal(lhs, rhs):
     array([[ 1.,  0.],
            [ 0.,  1.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1432,7 +1396,6 @@ def equal(lhs, rhs):
         lambda x, y: 1 if x == y else 0,
         _internal._equal_scalar,
         None)
-    # pylint: enable= no-member, protected-access
 
 def not_equal(lhs, rhs):
     """Return (lhs != rhs), element-wise with broadcasting
@@ -1469,7 +1432,6 @@ def not_equal(lhs, rhs):
     array([[ 0.,  1.],
            [ 1.,  0.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1477,7 +1439,6 @@ def not_equal(lhs, rhs):
         lambda x, y: 1 if x != y else 0,
         _internal._not_equal_scalar,
         None)
-    # pylint: enable= no-member, protected-access
 
 def greater(lhs, rhs):
     """Return (lhs > rhs), element-wise with broadcasting
@@ -1511,7 +1472,6 @@ def greater(lhs, rhs):
     array([[ 0.,  1.],
            [ 0.,  0.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1519,7 +1479,6 @@ def greater(lhs, rhs):
         lambda x, y: 1 if x > y else 0,
         _internal._greater_scalar,
         _internal._lesser_scalar)
-    # pylint: enable= no-member, protected-access
 
 def greater_equal(lhs, rhs):
     """Return (lhs >= rhs), element-wise with broadcasting
@@ -1554,7 +1513,6 @@ def greater_equal(lhs, rhs):
     array([[ 1.,  1.],
            [ 0.,  1.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1562,7 +1520,6 @@ def greater_equal(lhs, rhs):
         lambda x, y: 1 if x >= y else 0,
         _internal._greater_equal_scalar,
         _internal._lesser_equal_scalar)
-    # pylint: enable= no-member, protected-access
 
 def lesser(lhs, rhs):
     """Return (lhs < rhs), element-wise with broadcasting
@@ -1596,7 +1553,6 @@ def lesser(lhs, rhs):
     array([[ 0.,  0.],
            [ 1.,  0.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1604,7 +1560,6 @@ def lesser(lhs, rhs):
         lambda x, y: 1 if x < y else 0,
         _internal._lesser_scalar,
         _internal._greater_scalar)
-    # pylint: enable= no-member, protected-access
 
 
 def lesser_equal(lhs, rhs):
@@ -1640,7 +1595,6 @@ def lesser_equal(lhs, rhs):
     array([[ 1.,  0.],
            [ 1.,  1.]], dtype=float32)
     """
-    # pylint: disable= no-member, protected-access
     return _ufunc_helper(
         lhs,
         rhs,
@@ -1648,7 +1602,6 @@ def lesser_equal(lhs, rhs):
         lambda x, y: 1 if x <= y else 0,
         _internal._lesser_equal_scalar,
         _internal._greater_equal_scalar)
-    # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
     """Same as ``divide``
@@ -1809,11 +1762,9 @@ def concatenate(arrays, axis=0, always_copy=True):
         else:
             begin[axis] = idx
             end[axis] = idx+arr.shape[axis]
-            # pylint: disable=no-member,protected-access
             _internal._crop_assign(ret, arr, out=ret,
                                    begin=tuple(begin),
                                    end=tuple(end))
-            # pylint: enable=no-member,protected-access
         idx += arr.shape[axis]
 
     return ret
@@ -1836,7 +1787,6 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
     mean : NDArray
         subtract mean from decode image before outputing.
     """
-    # pylint: disable= no-member, protected-access, too-many-arguments
     if mean is None:
         mean = NDArray(_new_empty_handle())
     if out is None:

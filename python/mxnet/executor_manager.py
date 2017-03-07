@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments, too-many-statements
 """Executor manager"""
 from __future__ import absolute_import
 
@@ -104,11 +103,11 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
                base_exec=None, shared_data_arrays=None, input_types=None, logger=logging):
     """bind executor for bucketing, potentially sharing data with an existing executor."""
     arg_shape, _, aux_shape = sym.infer_shape(**input_shapes)
-    assert(arg_shape is not None)
+    assert arg_shape is not None
     if input_types is None:
         input_types = {k: mx_real_t for k in input_shapes.keys()}
     arg_types, _, aux_types = sym.infer_type(**input_types)
-    assert(arg_types is not None)
+    assert arg_types is not None
 
     arg_arrays = []
     grad_arrays = {} if need_grad != False else None
@@ -136,7 +135,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
 
                 if np.prod(arg_arr.shape) >= np.prod(arg_shape[i]):
                     # good, we can share this memory
-                    assert(arg_types[i] == arg_arr.dtype)
+                    assert arg_types[i] == arg_arr.dtype
                     arg_arr = arg_arr.reshape(arg_shape[i])
                 else:
                     logger.warning(('bucketing: data "%s" has a shape %s' % (name, arg_shape[i])) +

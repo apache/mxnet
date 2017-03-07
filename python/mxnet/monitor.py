@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=protected-access, logging-format-interpolation, invalid-name, no-member, too-many-branches
 """Monitor outputs, weights, and gradients for debugging."""
 from __future__ import absolute_import
 
@@ -104,23 +103,23 @@ class Monitor(object):
         res = []
         if self.sort:
             self.queue.sort(key=lambda x: x[1])
-        for n, k, v_list in self.queue:
+        for num, key, v_list in self.queue:
             if isinstance(v_list, NDArray):
                 v_list = [v_list]
             assert isinstance(v_list, list)
-            s = ''
-            for v in v_list:
-                assert isinstance(v, NDArray)
-                if v.shape == (1,):
-                    s += str(v.asscalar()) + '\t'
+            string = ''
+            for val in v_list:
+                assert isinstance(val, NDArray)
+                if val.shape == (1,):
+                    string += str(val.asscalar()) + '\t'
                 else:
-                    s += str(v.asnumpy()) + '\t'
-            res.append((n, k, s))
+                    string += str(val.asnumpy()) + '\t'
+            res.append((num, key, string))
         self.queue = []
         return res
 
     def toc_print(self):
         """End collecting and print results"""
         res = self.toc()
-        for n, k, v in res:
-            logging.info('Batch: {:7d} {:30s} {:s}'.format(n, k, v))
+        for num, key, val in res:
+            logging.info('Batch: {:7d} {:30s} {:s}'.format(num, key, val))

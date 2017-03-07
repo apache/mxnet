@@ -1,22 +1,17 @@
 # coding: utf-8
-# pylint: disable=no-member, too-many-lines, redefined-builtin, protected-access, unused-import, invalid-name
-# pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
 """Image IO API of mxnet."""
 from __future__ import absolute_import, print_function
-from .base import numeric_types
-
 import os
 import random
 import logging
 import numpy as np
-
+from .base import numeric_types
+from . import ndarray as nd
+from . import _ndarray_internal as _internal
 try:
     import cv2
 except ImportError:
     cv2 = None
-
-from . import ndarray as nd
-from . import _ndarray_internal as _internal
 from ._ndarray_internal import _cvimresize as imresize
 from ._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
 from . import io
@@ -43,51 +38,51 @@ def imdecode(buf, **kwargs):
 
 def scale_down(src_size, size):
     """Scale down crop size if it's bigger than image size"""
-    w, h = size
-    sw, sh = src_size
-    if sh < h:
-        w, h = float(w*sh)/h, sh
-    if sw < w:
-        w, h = sw, float(h*sw)/w
-    return int(w), int(h)
+    weight, height = size
+    src_weight, src_height = src_size
+    if src_height < height:
+        weight, height = float(weight*src_height)/height, src_height
+    if src_weight < weight:
+        weight, height = src_weight, float(height*src_weight)/weight
+    return int(weight), int(height)
 
 def resize_short(src, size, interp=2):
     """Resize shorter edge to size"""
-    h, w, _ = src.shape
-    if h > w:
-        new_h, new_w = size*h/w, size
+    height, weight, _ = src.shape
+    if height > weight:
+        new_height, new_weight = size*height/weight, size
     else:
-        new_h, new_w = size, size*w/h
-    return imresize(src, new_w, new_h, interp=interp)
+        new_height, new_weight = size, size*weight/height
+    return imresize(src, new_weight, new_height, interp=interp)
 
-def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
+def fixed_crop(src, x_0, y_0, weight, height, size=None, interp=2):
     """Crop src at fixed location, and (optionally) resize it to size"""
-    out = nd.crop(src, begin=(y0, x0, 0), end=(y0+h, x0+w, int(src.shape[2])))
-    if size is not None and (w, h) != size:
+    out = nd.crop(src, begin=(y_0, x_0, 0), end=(y_0+height, x_0+weight, int(src.shape[2])))
+    if size is not None and (weight, height) != size:
         out = imresize(out, *size, interp=interp)
     return out
 
 def random_crop(src, size, interp=2):
     """Randomly crop src with size. Upsample result if src is smaller than size"""
-    h, w, _ = src.shape
-    new_w, new_h = scale_down((w, h), size)
+    height, weight, _ = src.shape
+    new_weight, new_height = scale_down((weight, height), size)
 
-    x0 = random.randint(0, w - new_w)
-    y0 = random.randint(0, h - new_h)
+    x_0 = random.randint(0, weight - new_weight)
+    y_0 = random.randint(0, height - new_height)
 
-    out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
-    return out, (x0, y0, new_w, new_h)
+    out = fixed_crop(src, x_0, y_0, new_weight, new_height, size, interp)
+    return out, (x_0, y_0, new_weight, new_height)
 
 def center_crop(src, size, interp=2):
     """Randomly crop src with size. Upsample result if src is smaller than size"""
-    h, w, _ = src.shape
-    new_w, new_h = scale_down((w, h), size)
+    height, weight, _ = src.shape
+    new_weight, new_height = scale_down((weight, height), size)
 
-    x0 = (w - new_w)/2
-    y0 = (h - new_h)/2
+    x_0 = (weight - new_weight)/2
+    y_0 = (height - new_height)/2
 
-    out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
-    return out, (x0, y0, new_w, new_h)
+    out = fixed_crop(src, x_0, y_0, new_weight, new_height, size, interp)
+    return out, (x_0, y_0, new_weight, new_height)
 
 def color_normalize(src, mean, std=None):
     """Normalize src with mean and std"""
@@ -98,26 +93,26 @@ def color_normalize(src, mean, std=None):
 
 def random_size_crop(src, size, min_area, ratio, interp=2):
     """Randomly crop src with size. Randomize area and aspect ratio"""
-    h, w, _ = src.shape
+    height, weight, _ = src.shape
     new_ratio = random.uniform(*ratio)
-    if new_ratio * h > w:
-        max_area = w*int(w/new_ratio)
+    if new_ratio * height > weight:
+        max_area = weight*int(weight/new_ratio)
     else:
-        max_area = h*int(h*new_ratio)
+        max_area = height*int(height*new_ratio)
 
-    min_area *= h*w
+    min_area *= height*weight
     if max_area < min_area:
         return random_crop(src, size, interp)
     new_area = random.uniform(min_area, max_area)
-    new_w = int(np.sqrt(new_area*new_ratio))
-    new_h = int(np.sqrt(new_area/new_ratio))
+    new_weight = int(np.sqrt(new_area*new_ratio))
+    new_height = int(np.sqrt(new_area/new_ratio))
 
-    assert new_w <= w and new_h <= h
-    x0 = random.randint(0, w - new_w)
-    y0 = random.randint(0, h - new_h)
+    assert new_weight <= weight and new_height <= height
+    x_0 = random.randint(0, weight - new_weight)
+    y_0 = random.randint(0, height - new_height)
 
-    out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
-    return out, (x0, y0, new_w, new_h)
+    out = fixed_crop(src, x_0, y_0, new_weight, new_height, size, interp)
+    return out, (x_0, y_0, new_weight, new_height)
 
 def ResizeAug(size, interp=2):
     """Make resize shorter edge to size augumenter"""
@@ -213,11 +208,11 @@ def ColorNormalizeAug(mean, std):
         return [color_normalize(src, mean, std)]
     return aug
 
-def HorizontalFlipAug(p):
+def HorizontalFlipAug(prob):
     """Random horizontal flipping"""
     def aug(src):
         """Augumenter body"""
-        if random.random() < p:
+        if random.random() < prob:
             src = nd.flip(src, axis=1)
         return [src]
     return aug
@@ -320,7 +315,7 @@ class ImageIter(io.DataIter):
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
                  shuffle=False, part_index=0, num_parts=1, aug_list=None, imglist=None, **kwargs):
         super(ImageIter, self).__init__()
-        assert(path_imgrec or path_imglist or (isinstance(imglist, list)))
+        assert path_imgrec or path_imglist or (isinstance(imglist, list))
         if path_imgrec:
             print('loading recordio...')
             if path_imgidx:
@@ -384,9 +379,8 @@ class ImageIter(io.DataIter):
 
         if num_parts > 1:
             assert part_index < num_parts
-            N = len(self.seq)
-            C = N/num_parts
-            self.seq = self.seq[part_index*C:(part_index+1)*C]
+            seg_size = len(self.seq)/num_parts
+            self.seq = self.seq[part_index*seg_size:(part_index+1)*seg_size]
         if aug_list is None:
             self.auglist = CreateAugmenter(data_shape, **kwargs)
         else:
@@ -430,8 +424,8 @@ class ImageIter(io.DataIter):
 
     def next(self):
         batch_size = self.batch_size
-        c, h, w = self.data_shape
-        batch_data = nd.empty((batch_size, c, h, w))
+        channel, height, weight = self.data_shape
+        batch_data = nd.empty((batch_size, channel, height, weight))
         batch_label = nd.empty(self.provide_label[0][1])
         i = 0
         try:
@@ -443,9 +437,9 @@ class ImageIter(io.DataIter):
                     continue
                 for aug in self.auglist:
                     data = [ret for src in data for ret in aug(src)]
-                for d in data:
+                for dat in data:
                     assert i < batch_size, 'Batch size must be multiples of augmenter output length'
-                    batch_data[i][:] = nd.transpose(d, axes=(2, 0, 1))
+                    batch_data[i][:] = nd.transpose(dat, axes=(2, 0, 1))
                     batch_label[i][:] = label
                     i += 1
         except StopIteration:
