@@ -50,7 +50,7 @@ package.DeepMXNet = {
       Libgfortran1 = 1.0;
       Googletest = 1.x;
       CMake = 3.5.x;
-      OpenBLAS = 0.2.x_live;
+      #OpenBLAS = 0.2.x_live;
       DeepDmlc-core = 0.9;
       DeepMShadow = 2.x;
       DeepJemalloc = 4.x;
@@ -121,7 +121,7 @@ package.DeepMXNet = {
     #mxnet-core_2.11-0.1.2   = { type = javalibrary; };
     #mxnet-macros_2.11-0.1.2 = { type = javalibrary; };
     #mxnet-init_2.11-0.1.2   = { type = javalibrary; };
-    #mxnet-full_2.11-linux-x86_64-gpu-0.1.2-SNAPSHOT = { type = javalibrary; };
+    mxnet-full_2.11-linux-x86_64-gpu-0.1.2-SNAPSHOT = { type = javalibrary; };
   };
 
 };
