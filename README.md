@@ -58,12 +58,12 @@ Features
 * Mix and match good flavours of programming to maximize flexibility and efficiency
 * Lightweight, memory efficient and portable to smart devices
 * Scales up to multi GPUs and distributed setting with auto parallelism
-* Support for python, R, C++ and Julia
+* Support for Python, R, C++ and Julia
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
 Ask Questions
 -------------
-* Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for how to use mxnet and reporting bugs 
+* Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for how to use mxnet and reporting bugs
 
 License
 -------
