@@ -227,7 +227,7 @@ class ConvolutionOp : public Operator {
 
  private:
   void LayerSetUp(const TShape& ishape, const TShape& oshape) {
-    force_nd_im2col_ = param_.force_nd_im2col;  // hard code as false for now
+    force_nd_im2col_ = param_.force_nd_im2col;
     channel_axis_ = 1;  // hard code channel axis
     const index_t first_spatial_axis = channel_axis_ + 1;
     const index_t num_axes = param_.kernel.ndim() + 2;

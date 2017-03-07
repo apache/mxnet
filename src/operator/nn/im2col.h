@@ -108,10 +108,11 @@ void col2im_cpu(const DType* data_col, const int channels,
     DType* data_im, OpReqType req);
 
 template <typename DType>
-void im2col_nd_gpu(mshadow::Stream<gpu>* s, const DType* data_im, const int num_spatial_axes,
-    const int col_size, const int* im_shape, const int* col_shape,
-    const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, DType* data_col);
+void im2col_nd_gpu(mshadow::Stream<gpu>* s,
+    const DType* data_im, const int num_spatial_axes, const int num_kernels,
+    const TShape& im_shape, const TShape& col_shape,
+    const TShape& kernel_shape, const TShape& pad, const TShape& stride,
+    const TShape& dilation, DType* data_col);
 
 template <typename DType>
 void im2col_gpu(mshadow::Stream<gpu>* s, const DType* data_im, const int channels,
@@ -121,10 +122,11 @@ void im2col_gpu(mshadow::Stream<gpu>* s, const DType* data_im, const int channel
     DType* data_col);
 
 template <typename DType>
-void col2im_nd_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int num_spatial_axes,
-    const int im_size, const int* im_shape, const int* col_shape,
-    const int* kernel_shape, const int* pad, const int* stride,
-    const int* dilation, DType* data_im, OpReqType req);
+void col2im_nd_gpu(mshadow::Stream<gpu>* s, const DType* data_col,
+    const int num_spatial_axes, const int im_size,
+    const TShape& im_shape, const TShape& col_shape,
+    const TShape& kernel_shape, const TShape& pad, const TShape& stride,
+    const TShape& dilation, DType* data_im, OpReqType req);
 
 template <typename DType>
 void col2im_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int channels,

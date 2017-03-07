@@ -29,13 +29,8 @@ void ConvolutionOp<xpu, DType>::ConvIm2Col(mshadow::Stream<gpu>* s,
                col_buffer_ptr);
   } else {
     im2col_nd_gpu(s, data_ptr, num_spatial_axes_, num_kernels_im2col_,
-                  reinterpret_cast<const int*>(&(data_shape[1])),
-                  reinterpret_cast<const int*>(col_buffer_shape.data()),
-                  reinterpret_cast<const int*>(param_.kernel.data()),
-                  reinterpret_cast<const int*>(param_.pad.data()),
-                  reinterpret_cast<const int*>(param_.stride.data()),
-                  reinterpret_cast<const int*>(param_.dilate.data()),
-                  col_buffer_ptr);
+                  data_shape, col_buffer_shape, param_.kernel, param_.pad,
+                  param_.stride, param_.dilate, col_buffer_ptr);
   }
 }
 
@@ -53,14 +48,9 @@ void ConvolutionOp<xpu, DType>::ConvCol2Im(mshadow::Stream<gpu>* s,
                param_.stride[0], param_.stride[1], param_.dilate[0], param_.dilate[1],
                data_ptr, req);
   } else {
-    col2im_nd_gpu(s, col_buffer_ptr, num_spatial_axes_, num_kernels_im2col_,
-                  reinterpret_cast<const int*>(&(data_shape[1])),  // skip batch dim
-                  reinterpret_cast<const int*>(col_buffer_shape.data()),
-                  reinterpret_cast<const int*>(param_.kernel.data()),
-                  reinterpret_cast<const int*>(param_.pad.data()),
-                  reinterpret_cast<const int*>(param_.stride.data()),
-                  reinterpret_cast<const int*>(param_.dilate.data()),
-                  data_ptr, req);
+    col2im_nd_gpu(s, col_buffer_ptr, num_spatial_axes_, num_kernels_col2im_,
+                  data_shape, col_buffer_shape, param_.kernel, param_.pad,
+                  param_.stride, param_.dilate, data_ptr, req);
   }
 }
 
