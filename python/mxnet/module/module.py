@@ -179,6 +179,7 @@ class Module(BaseModule):
     @property
     def data_shapes(self):
         """Get data shapes.
+
         Returns
         -------
         A list of `(name, shape)` pairs.
@@ -189,11 +190,12 @@ class Module(BaseModule):
     @property
     def label_shapes(self):
         """Get label shapes.
+
         Returns
         -------
-        A list of `(name, shape)` pairs. The return value could be `None` if
-        the module does not need labels, or if the module is not binded for
-        training (in this case, label information is not available).
+            A list of `(name, shape)` pairs. The return value could be `None` if
+            the module does not need labels, or if the module is not binded for
+            training (in this case, label information is not available).
         """
         assert self.binded
         return self._label_shapes
@@ -201,6 +203,7 @@ class Module(BaseModule):
     @property
     def output_shapes(self):
         """Get output shapes.
+
         Returns
         -------
         A list of `(name, shape)` pairs.
@@ -566,6 +569,11 @@ class Module(BaseModule):
     def get_outputs(self, merge_multi_context=True):
         """Get outputs of the previous forward computation.
 
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`. When `merge_multi_context` is `False`, those `NDArray`
+        might live on different devices.
+
         Parameters
         ----------
         merge_multi_context : bool
@@ -576,9 +584,8 @@ class Module(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
-        elements are `NDArray`.
+        list of NDArray or list of list of NDArray
+            Output
         """
         assert self.binded and self.params_initialized
         return self._exec_group.get_outputs(merge_multi_context=merge_multi_context)
@@ -586,6 +593,10 @@ class Module(BaseModule):
     def get_input_grads(self, merge_multi_context=True):
         """Get the gradients with respect to the inputs of the module.
 
+        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
+        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+        elements are `NDArray`.
+
         Parameters
         ----------
         merge_multi_context : bool
@@ -596,15 +607,18 @@ class Module(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
-        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
-        elements are `NDArray`.
+        list of NDArray or list of list of NDArray
+              Input gradients
         """
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._exec_group.get_input_grads(merge_multi_context=merge_multi_context)
 
     def get_states(self, merge_multi_context=True):
         """Get states from all devices
+
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
 
         Parameters
         ----------
@@ -616,9 +630,8 @@ class Module(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
-        elements are `NDArray`.
+        list of NDArray or list of list of NDArray
+            States
         """
         assert self.binded and self.params_initialized
         return self._exec_group.get_states(merge_multi_context=merge_multi_context)
