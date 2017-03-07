@@ -686,17 +686,96 @@ void GraphExecutor::InitOpSegs() {
     cached_seg_opr_[0] = this->CreateCachedSegOpr(0, num_forward_nodes_);
     return;
   }
-  // TODO for training
+  size_t num_forward_vars = 0;
+  for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
+    auto &node = graph_.indexed_graph()[nid].source;
+    if (node != nullptr && node->is_variable()) {
+      num_forward_vars++;
+    }
+  }
+  // std::cout << "num_forward_nodes_ = " << num_forward_nodes_ << std::endl;
+  // TODO more efficient way of reading env var
+  size_t forward_bulk_percent = dmlc::GetEnv("MXNET_BULK_FORWARD_PERCENT", 20);
+  bool bulk_forward = dmlc::GetEnv("MXNET_BULK_FORWARD_ON", false);
+  //std::cout << std::endl << std::flush;
+  //std::cout << num_forward_nodes_ << std::endl;
+  //std::cout << total_num_nodes - num_forward_nodes_ << std::endl;
+
+  // create segments for training
   // FIXME experiment with LSTM Cell segmentation
-  size_t lstm_cell_num_nodes = 53;
+if (bulk_forward) {
+/*  size_t lstm_cell_num_nodes = 53;
   size_t lstm_cell_num_prefix_nodes = 28;
   for (size_t topo_start = lstm_cell_num_prefix_nodes;
        topo_start + lstm_cell_num_nodes < num_forward_nodes_;
        topo_start += lstm_cell_num_nodes) {
+    size_t nid = topo_start;
+    auto &node = graph_.indexed_graph()[nid].source;
+    if (op_nodes_[nid].skip_exec_node) {std::cout << "Skip "; continue;}
+    if (node->is_variable()) {
+      std::cout << "Var ";
+    } else {
+      std::cout << node->attrs.op->name << " ";
+    }
     cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start,
                                   topo_start + lstm_cell_num_nodes);
+    std::cout << std::endl;
+  }*/
+  size_t topo_start = 0;
+  size_t nid = 0;
+  size_t num_vars = 0;
+  // take the ceil as threshold
+  size_t num_vars_threshold = (forward_bulk_percent * num_forward_vars + 99) / 100;
+  std::cout << "num_vars_threshold = " << num_vars_threshold << std::endl;
+  std::cout << "num_forward_vars = " << num_forward_vars << std::endl;
+  while (nid < num_forward_nodes_) {
+    if (op_nodes_[nid].skip_exec_node) {
+        nid++;
+        continue;
+    }
+    auto &node = graph_.indexed_graph()[nid].source;
+    // check if it's a variable
+    if (node->is_variable()) {
+      num_vars++;
+      // if threshold is met, create a new segment
+      if (num_vars > num_vars_threshold) {
+        //std::cout << "A new segment [" << topo_start << ", " << nid << ") is created\n";
+        // exclude the current variable node
+        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+        // reset state
+        num_vars = 0;
+        topo_start = nid;
+      }
+    }
+    nid++;
   }
-
+  // the last segmenet
+  if (topo_start != num_forward_nodes_) {
+    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
+  }
+}
+/*
+  bool bulk_backward = false;
+if (bulk_backward) {
+  size_t lstm_cell_num_nodes = 61;
+  size_t lstm_cell_num_prefix_nodes = 28;
+  for (size_t topo_start = lstm_cell_num_prefix_nodes;
+       topo_start + lstm_cell_num_nodes < num_forward_nodes_;
+       topo_start += lstm_cell_num_nodes) {
+    size_t nid = topo_start;
+    auto &node = graph_.indexed_graph()[nid].source;
+    if (op_nodes_[nid].skip_exec_node) {std::cout << "Skip "; continue;}
+    if (node->is_variable()) {
+      std::cout << "Var ";
+    } else {
+      std::cout << node->attrs.op->name << " ";
+    }
+    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start,
+                                  topo_start + lstm_cell_num_nodes);
+    std::cout << std::endl;
+  }
+}
+*/
   return;
 }
 
