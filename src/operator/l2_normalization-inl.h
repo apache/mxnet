@@ -67,8 +67,8 @@ class L2NormalizationOp : public Operator {
     using namespace mshadow::expr;
     if (req[l2_normalization::kOut] == kNullOp) return;
     CHECK_EQ(req[l2_normalization::kOut], kWriteTo);
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 2);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 2U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     TShape orig_shape = in_data[l2_normalization::kData].shape_;
     if (param_.mode == l2_normalization::kInstance) {
@@ -83,7 +83,7 @@ class L2NormalizationOp : public Operator {
       norm = F<mxnet::op::mshadow_op::square_root>(norm + param_.eps);
       out = data / broadcast<0>(norm, out.shape_);
     } else if (param_.mode == l2_normalization::kChannel) {
-      CHECK_GE(orig_shape.ndim(), 3);
+      CHECK_GE(orig_shape.ndim(), 3U);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3> data = in_data[l2_normalization::kData]
@@ -97,7 +97,7 @@ class L2NormalizationOp : public Operator {
       norm = F<mxnet::op::mshadow_op::square_root>(norm + param_.eps);
       out = data / broadcast_with_axis(norm, 0, orig_shape[1]);
     } else if (param_.mode == l2_normalization::kSpatial) {
-      CHECK_GE(orig_shape.ndim(), 3);
+      CHECK_GE(orig_shape.ndim(), 3U);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3> data = in_data[l2_normalization::kData]

@@ -67,8 +67,8 @@ class PadOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // Get any size input + output into required form
     int rank = in_data[pad_enum::kData].ndim();

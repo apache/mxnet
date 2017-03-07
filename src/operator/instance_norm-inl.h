@@ -44,8 +44,8 @@ class InstanceNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
 
     CHECK_GE(in_data[instance_norm::kData].ndim(), 3)
         << "InstanceNorm only supports input tensors of rank > 2.";
@@ -91,10 +91,10 @@ class InstanceNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
 
-    CHECK_GE(in_data[instance_norm::kData].Size(), 3)
+    CHECK_GE(in_data[instance_norm::kData].Size(), 3U)
         << "InstanceNorm only supports input tensors of rank > 2.";
 
     Stream<xpu> *s = ctx.get_stream<xpu>();

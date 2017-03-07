@@ -127,7 +127,7 @@ class LeakyReLUOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.act_type == leakyrelu::kPReLU ? 2 : 1;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data.size(), expected);
     Stream<xpu> *s = ctx.get_stream<xpu>();

@@ -220,7 +220,7 @@ class CuDNNDeconvolutionOp : public Operator {
     #endif
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));

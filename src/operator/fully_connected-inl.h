@@ -93,7 +93,7 @@ class FullyConnectedOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
@@ -168,7 +168,7 @@ class FullyConnectedProp : public OperatorProperty {
     } else {
       CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
-    CHECK_EQ(out_shape->size(), 1);
+    CHECK_EQ(out_shape->size(), 1U);
     TShape dshape = (*in_shape)[fullc::kData];
     TShape oshape = (*out_shape)[0];
     // require data to be known

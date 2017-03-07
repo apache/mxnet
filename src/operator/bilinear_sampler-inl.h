@@ -137,12 +137,12 @@ class BilinearSamplerProp : public OperatorProperty {
     CHECK_EQ(lshape.ndim(), 4U) \
       << "Sampler grid should be 4D in batch-2-y-x";
     CHECK_EQ(dshape[0], lshape[0]);
-    CHECK_EQ(lshape[1], 2) << "incorrect grid shape[1], should be 2";
+    CHECK_EQ(lshape[1], 2U) << "incorrect grid shape[1], should be 2";
     // target height
-    CHECK_GT(lshape[2], 0) \
+    CHECK_GT(lshape[2], 0U) \
             << "incorrect grid_shape: " << lshape[2];
     // target width
-    CHECK_GT(lshape[3], 0) \
+    CHECK_GT(lshape[3], 0U) \
         << "incorrect grid_shape: " << lshape[3];
     out_shape->clear();
     // output_shape : (data.shape[0], data.shape[1], grid.shape[2], grid.shape[3])

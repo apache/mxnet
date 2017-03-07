@@ -80,9 +80,9 @@ class DropoutOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
     if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 2);
+      CHECK_EQ(out_data.size(), 2U);
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
@@ -119,8 +119,8 @@ class DropoutOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);

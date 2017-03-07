@@ -219,7 +219,7 @@ class CuDNNConvolutionOp : public Operator {
     DType *gwmat_ptr = NULL;
     DType *data_ptr = NULL;
     DType *gdata_ptr = NULL;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     if (param_.kernel.ndim() == 2) {
