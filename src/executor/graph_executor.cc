@@ -678,6 +678,7 @@ void GraphExecutor::InitOpSegs() {
   cached_seg_opr_.clear();
   CachedSegOpr p;
   cached_seg_opr_.resize(total_num_nodes, p);
+
   if (!prefer_bulk_execution_) return;
   if (monitor_callback_) return;
   // Generate segments based on the graph structure
@@ -754,28 +755,52 @@ if (bulk_forward) {
     cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
   }
 }
-/*
-  bool bulk_backward = false;
-if (bulk_backward) {
-  size_t lstm_cell_num_nodes = 61;
-  size_t lstm_cell_num_prefix_nodes = 28;
-  for (size_t topo_start = lstm_cell_num_prefix_nodes;
-       topo_start + lstm_cell_num_nodes < num_forward_nodes_;
-       topo_start += lstm_cell_num_nodes) {
-    size_t nid = topo_start;
-    auto &node = graph_.indexed_graph()[nid].source;
-    if (op_nodes_[nid].skip_exec_node) {std::cout << "Skip "; continue;}
-    if (node->is_variable()) {
-      std::cout << "Var ";
-    } else {
-      std::cout << node->attrs.op->name << " ";
+for (auto& entry: graph_.outputs) {
+  //std::cout << entry.node->attrs.name << " ";
+} 
+  /*std::unordered_set<void *> ptr_set;
+  for (auto& entry : graph_.outputs) {
+    for (auto &input_entry : entry.node->inputs) {
+      ptr_set.insert((void *)input_entry.node.get());
     }
-    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start,
-                                  topo_start + lstm_cell_num_nodes);
-    std::cout << std::endl;
+  }
+  std::vector<NDArray> out_arrays;
+  for (auto &kv : grad_store_) {
+    out_arrays.push_back(kv.second);
+  }*/
+
+  bool bulk_backward = dmlc::GetEnv("MXNET_BULK_BACKWARD_ON", false); 
+if (bulk_backward) {
+  //std::cout << "Finding grad nodes" << std::endl;
+  size_t nid = num_forward_nodes_;
+  size_t topo_start = num_forward_nodes_;
+  while (nid < total_num_nodes) {
+    void *node_ptr = (void *) &graph_.indexed_graph()[nid].source;
+    auto &op_node = op_nodes_[nid];
+    bool found = false;
+    if (op_node.skip_exec_node) { nid++; continue;}
+    for (auto &arr : op_node.exec->out_array) {
+    // FIXME this is slow
+    //for (auto& entry: graph_.outputs) {
+      //const auto entry_node_ptr = entry.node.get();
+      //if ((void *)node_ptr == (void *)entry_node_ptr) {
+      //if (ptr_set.find(node_ptr) != ptr_set.end()) {
+      for (auto &kv : grad_store_) {
+        if (kv.second.var() == arr.var()) found = true;
+      }
+   }
+   if (found) {
+        std::cout << "Found matching node ptr\n" << std::endl;
+        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+        topo_start = nid + 1;
+        //break;
+    }
+    nid++;
+  }
+  if (topo_start < total_num_nodes) {
+    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, total_num_nodes);
   }
 }
-*/
   return;
 }
 
