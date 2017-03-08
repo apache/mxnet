@@ -465,6 +465,7 @@ if __name__ == '__main__':
     test_rnn()
     test_unfuse()
     test_convolution_options()
+    test_convolution_versions()
     test_convolution_with_type()
     test_pooling_with_type()
     test_batchnorm_with_type()
