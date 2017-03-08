@@ -39,9 +39,6 @@
         <artifactId>native-maven-plugin</artifactId>
         <extensions>true</extensions>
         <configuration>
-          <compilerArguments>
-            <verbose/>
-          </compilerArguments>
           <!--  trigger javah -->
           <javahOS>linux</javahOS>
           <compilerProvider>generic-classic</compilerProvider>
