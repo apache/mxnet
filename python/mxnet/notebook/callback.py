@@ -3,7 +3,7 @@
 try:
     import datetime
 except ImportError:
-    class DatetimeFailedToImport:
+    class DatetimeFailedToImport(object): # pylint: disable=no-init
         pass
     datetime = DatetimeFailedToImport  # pylint: disable=invalid-name
 
@@ -15,14 +15,14 @@ except ImportError:
 try:
     from collections import defaultdict
 except ImportError:
-    class DefaultdictFailedToImport:
+    class DefaultdictFailedToImport(object): # pylint: disable=no-init
         pass
     defaultdict = DefaultdictFailedToImport  # pylint: disable=invalid-name
 
 try:
     import pandas as pd
 except ImportError:
-    class PandasFailedToImport:
+    class PandasFailedToImport(object): # pylint: disable=no-init
         pass
     pd = PandasFailedToImport   # pylint: disable=invalid-name
 

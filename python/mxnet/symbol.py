@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=too-many-lines
 """Symbolic configuration API of mxnet."""
+from __future__ import print_function
 from __future__ import absolute_import as _abs
 
 import ctypes

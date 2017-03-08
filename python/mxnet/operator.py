@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=broad-except
 """numpy interface for operators."""
+from __future__ import print_function
 from __future__ import absolute_import
 
 import traceback
