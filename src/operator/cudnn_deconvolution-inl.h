@@ -44,7 +44,7 @@ class CuDNNDeconvolutionOp : public Operator {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> data = in_data[deconv::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> wmat = in_data[deconv::kWeight].get<gpu, 4, DType>(s);
@@ -127,7 +127,7 @@ class CuDNNDeconvolutionOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.no_bias == 0 ? 3 : 2;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_NE(req[deconv::kWeight], kWriteInplace);
     CHECK_NE(req[deconv::kBias], kWriteInplace);
@@ -220,7 +220,7 @@ class CuDNNDeconvolutionOp : public Operator {
     #endif
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));

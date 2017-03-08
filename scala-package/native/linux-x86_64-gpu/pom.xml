@@ -55,19 +55,29 @@
           </sources>
           <compilerStartOptions>
             <compilerStartOption>-std=c++0x</compilerStartOption>
+            <compilerStartOption>-fPIC</compilerStartOption>
+            <compilerStartOption>-g</compilerStartOption>
+            <compilerStartOption>-O2</compilerStartOption>
+            <compilerStartOption>-D__USE_XOPEN2K8</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
             <compilerEndOption>-I../../../include</compilerEndOption>
+            <compilerEndOption>${all_includes}</compilerEndOption>
             <compilerEndOption>${cflags}</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
+            <linkerStartOption>-fPIC</linkerStartOption>
+            <linkerStartOption>-g</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
+            <linkerMiddleOption>${all_ldpaths}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
+            <linkerMiddleOption>-lmxnet</linkerMiddleOption>
+            <linkerMiddleOption>-ldmlccore</linkerMiddleOption>
+            <linkerMiddleOption>-lnnvm</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>

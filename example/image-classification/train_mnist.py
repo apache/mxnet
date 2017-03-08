@@ -53,15 +53,16 @@ if __name__ == '__main__':
                         help='the number of classes')
     parser.add_argument('--num-examples', type=int, default=60000,
                         help='the number of training examples')
+    parser.add_argument('--num_epochs', type=int, default=20,
+                        help='the number of training epochs to run')
     fit.add_fit_args(parser)
     parser.set_defaults(
         # network
         network        = 'mlp',
         # train
         gpus           = None,
-        batch_size      = 64,
-        disp_batches = 100,
-        num_epochs     = 20,
+        batch_size     = 64,
+        disp_batches   = 100,
         lr             = .05,
         lr_step_epochs = '10',
     )

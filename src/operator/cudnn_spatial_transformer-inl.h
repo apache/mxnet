@@ -39,8 +39,8 @@ class CuDNNSpatialTransformerOp : public Operator {
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 3U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> data = in_data[st::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> out = out_data[st::kOut].get<gpu, 4, DType>(s);
@@ -81,9 +81,9 @@ class CuDNNSpatialTransformerOp : public Operator {
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 3);
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 3U);
+    CHECK_EQ(out_grad.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> data = in_data[st::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> grad = out_grad[st::kOut].get<gpu, 4, DType>(s);
@@ -129,8 +129,8 @@ class CuDNNSpatialTransformerOp : public Operator {
     #if CUDNN_MAJOR == 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 3U);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       Tensor<gpu, 4, DType> data = in_data[st::kData].get<gpu, 4, DType>(s);
