@@ -186,8 +186,8 @@ Examples::
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
      std::vector<TShape> *out_attrs) {
-    CHECK_EQ(in_attrs->size(), 1);
-    CHECK_EQ(out_attrs->size(), 1);
+    CHECK_EQ(in_attrs->size(), 1U);
+    CHECK_EQ(out_attrs->size(), 1U);
     if ((*in_attrs)[0].ndim() == 0) return false;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
     return true;

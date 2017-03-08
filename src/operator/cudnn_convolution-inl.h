@@ -134,7 +134,7 @@ class CuDNNConvolutionOp : public Operator {
     DType *wmat_ptr = NULL;
     DType *out_ptr = NULL;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     GetTempSize(ctx);
     Tensor<gpu, 1, DType> workspace =
@@ -219,7 +219,7 @@ class CuDNNConvolutionOp : public Operator {
     DType *gwmat_ptr = NULL;
     DType *data_ptr = NULL;
     DType *gdata_ptr = NULL;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     if (param_.kernel.ndim() == 2) {
@@ -331,7 +331,7 @@ class CuDNNConvolutionOp : public Operator {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_shape.size(), expected);
-    CHECK_EQ(out_shape.size(), 1);
+    CHECK_EQ(out_shape.size(), 1U);
     CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
     CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
     CHECK_EQ(cudnnCreateTensorDescriptor(&bias_desc_), CUDNN_STATUS_SUCCESS);

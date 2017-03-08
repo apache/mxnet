@@ -38,8 +38,8 @@ class CuDNNBilinearSamplerOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     CHECK_EQ(req[bs::kOut], kWriteTo);
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 2);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 2U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
 
     Tensor<gpu, 4, DType> data = in_data[bs::kData].get<gpu, 4, DType>(s);
@@ -77,9 +77,9 @@ class CuDNNBilinearSamplerOp : public Operator {
     using namespace mshadow;
     CHECK_NE(req[bs::kData], kWriteInplace);
     CHECK_NE(req[bs::kGrid], kWriteInplace);
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 2);
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 2U);
+    CHECK_EQ(out_grad.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> data = in_data[bs::kData].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> grid_tmp = out_data[bs::kTmp].get<gpu, 4, DType>(s);
@@ -117,8 +117,8 @@ class CuDNNBilinearSamplerOp : public Operator {
     #if CUDNN_MAJOR == 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 2);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 2U);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       Tensor<gpu, 4, DType> data = in_data[bs::kData].get<gpu, 4, DType>(s);
