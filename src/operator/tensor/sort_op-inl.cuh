@@ -70,7 +70,7 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu,
     VDType* values_out_ptr = reinterpret_cast<VDType *>(workspace->dptr_ + keys_bytes);
     void* temp_storage = reinterpret_cast<void *>(workspace->dptr_ + keys_bytes + values_bytes);
     // Sort
-	if (is_ascend) {
+    if (is_ascend) {
       cub::DeviceRadixSort::SortPairs(temp_storage, sortpairs_bytes,
         keys.dptr_, keys_out_ptr, values.dptr_, values_out_ptr,
         keys.size(0), begin_bit, end_bit, stream);
