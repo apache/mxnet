@@ -12,7 +12,6 @@
 #include "./thread_pool.h"
 #include "../common/lazy_alloc_array.h"
 #include "../common/utils.h"
-
 namespace mxnet {
 namespace engine {
 /*!
@@ -51,13 +50,11 @@ class ThreadedEnginePerDeviceLite : public ThreadedEngine {
     cpu_priority_worker_.reset(nullptr);
   }
 
- static void emptyFunc(RunContext cntx, CallbackOnComplete cb)
- {
-   cb();
- }
+
 
  protected:
   void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
+    RunContext run_ctx;
     const Context& ctx = opr_block->ctx;
      #if MXNET_USE_PROFILER
         if (opr_block->profiling && 
@@ -73,7 +70,8 @@ class ThreadedEnginePerDeviceLite : public ThreadedEngine {
       //  sizeof(opr_block->opr_stat->opr_name) - 1);
       // record operator start timestamp
       //SetOprStart(opr_block->opr_stat);
-              opr_block->opr->fn = emptyFunc;
+              run_ctx.oprName.assign(opr_block->opr->opr_name);
+              opr_block->opr->fn = emptyFunc2;
          } 
     #endif
 
@@ -83,7 +81,6 @@ class ThreadedEnginePerDeviceLite : public ThreadedEngine {
         MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
         #endif
       }
-      RunContext run_ctx;
       run_ctx.stream = nullptr;
       this->ExecuteOprBlock(run_ctx, opr_block);
     } else {
@@ -131,6 +128,7 @@ class ThreadedEnginePerDeviceLite : public ThreadedEngine {
   }
 
  private:
+  
   // working unit for each of the task.
   template<dmlc::ConcurrentQueueType type>
   struct ThreadWorkerBlock {
@@ -184,12 +182,7 @@ class ThreadedEnginePerDeviceLite : public ThreadedEngine {
     while (task_queue->Pop(&opr_block)) {
     //#if MXNET_USE_PROFILER
     //if (opr_block->profiling && opr_block->opr->opr_name) {
-      //printf("[GPU][%s]\r\n",opr_block->opr->opr_name);
-      //strncpy(opr_block->opr_stat->opr_name,
-      //  threaded_opr->opr_name,
-      //  sizeof(opr_block->opr_stat->opr_name) - 1);
-      // record operator start timestamp
-      //SetOprStart(opr_block->opr_stat);
+    //  printf("[GPU][%s]\r\n",opr_block->opr->opr_name);
     //}
     //#endif
       this->ExecuteOprBlock(run_ctx, opr_block);
@@ -212,12 +205,7 @@ class ThreadedEnginePerDeviceLite : public ThreadedEngine {
     while (task_queue->Pop(&opr_block)) {
     //#if MXNET_USE_PROFILER
     //if (opr_block->profiling && opr_block->opr->opr_name) {
-      //printf("[CPU][%s]\r\n",opr_block->opr->opr_name);
-      //strncpy(opr_block->opr_stat->opr_name,
-      //  threaded_opr->opr_name,
-      //  sizeof(opr_block->opr_stat->opr_name) - 1);
-      // record operator start timestamp
-      //SetOprStart(opr_block->opr_stat);
+    //  printf("[CPU][%s]\r\n",opr_block->opr->opr_name);
     //}
     //#endif
       this->ExecuteOprBlock(run_ctx, opr_block);

@@ -107,11 +107,19 @@ class NaiveEngineLite final : public Engine {
       ctx_.stream = &cpu_stream_;
       exec_fun(ctx_, callback);
     }
+    if(this->req_completed_==false)
+    {
+      printf("Unset command:%s\r\n", opr_name);
+    }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
     }
     else
     {
+          RunContext rcntx;
+          rcntx.oprName.assign(opr_name);
+          emptyFunc1(rcntx);
+        
         this->req_completed_ = true;
         //if(opr_name!=nullptr)
         //printf("[%s]%s\r\n", exec_ctx.dev_mask() == gpu::kDevMask? "GPU":"CPU", opr_name);

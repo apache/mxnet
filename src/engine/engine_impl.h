@@ -7,6 +7,8 @@
 #define MXNET_ENGINE_ENGINE_IMPL_H_
 
 #include <mxnet/engine.h>
+#include <mxnet/base.h>
+#include <mxnet/RunProfile.h>
 
 /*! \brief MACRO on whether or not enable debug option*/
 #define ENGINE_DEBUG 0

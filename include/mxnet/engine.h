@@ -14,6 +14,9 @@
 #endif
 #include <vector>
 #include "./base.h"
+#include <mxnet/RunProfile.h>
+#include <thread>
+
 
 namespace mxnet {
 
@@ -52,7 +55,25 @@ class CallbackOnComplete {
   /*! \brief the parameter set on callback */
   void* param_;
 };
+inline void emptyFunc1(RunContext cntx)
+{
+    int sleepTime = 0;
+   sleepTime = RuntimeProfile::Get()->GetRuntime(cntx.oprName);
+   std::this_thread::sleep_for (std::chrono::milliseconds(sleepTime));
+}
+void emptyFunc2(RunContext cntx, CallbackOnComplete cb)
+{
+   //cntx.
+   //RuntimeProfile::Get()->GetRuntime()
+   emptyFunc1(cntx);
+   //if(cb!=NULL)
+   cb();
+}
+
 }  // namespace engine
+
+
+
 
 #if DMLC_USE_CXX11
 /*! \brief Function property, used to hint what action is pushed to engine. */
@@ -227,6 +248,8 @@ class MXNET_API Engine {
     return ret;
   }
 };  // class Engine
+
+
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet
 #endif  // MXNET_ENGINE_H_
