@@ -15,8 +15,8 @@ layer (e.g. convolution layer). We can bind data to a symbol to execute the
 computation.
 
 ```python
->>> a = mx.sym.var('a')
->>> b = mx.sym.var('b')
+>>> a = mx.sym.Variable('a')
+>>> b = mx.sym.Variable('b')
 >>> c = 2 * a + b
 >>> type(c)
 <class 'mxnet.symbol.Symbol'>
