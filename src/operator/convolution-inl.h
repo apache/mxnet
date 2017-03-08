@@ -1,7 +1,8 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file convolution-inl.h
- * \brief Ref: https://www.zhihu.com/question/28385679
+ * \brief
+ * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo
  * \author Bing Xu, Jun Wu
 */
 #ifndef MXNET_OPERATOR_CONVOLUTION_INL_H_
@@ -44,7 +45,6 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   bool no_bias;
   dmlc::optional<int> cudnn_tune;
   bool cudnn_off;
-  bool force_nd_im2col;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (h, w) or (d, h, w)");
@@ -70,8 +70,6 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
         .describe("Whether to pick convolution algo by running performance test.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Turn off cudnn for this layer.");
-    DMLC_DECLARE_FIELD(force_nd_im2col).set_default(false)
-    .describe("Force 2D convolution to use xpu_nd_im2col algorithm.");
     DMLC_DECLARE_FIELD(layout)
     .add_enum("NCW", mshadow::kNCW)
     .add_enum("NCHW", mshadow::kNCHW)
@@ -230,7 +228,6 @@ class ConvolutionOp : public Operator {
 
  private:
   void LayerSetUp(const TShape& ishape, const TShape& oshape) {
-    force_nd_im2col_ = param_.force_nd_im2col;
     channel_axis_ = 1;  // hard code channel axis
     const index_t first_spatial_axis = channel_axis_ + 1;
     const index_t num_axes = param_.kernel.ndim() + 2;
@@ -283,7 +280,6 @@ class ConvolutionOp : public Operator {
   index_t num_kernels_im2col_;
   index_t num_kernels_col2im_;
   bool bias_term_;  // has bias term?
-  bool force_nd_im2col_;
   bool is_1x1_;
 };  // class ConvolutionOp
 

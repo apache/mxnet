@@ -85,6 +85,10 @@ inline int cuda_get_num_blocks(const int N) {
   return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
 }
 
+/*!
+ * \brief im2col gpu kernel.
+ * DO NOT call this directly. Use wrapper function im2col() instead;
+ */
 template <typename DType>
 __global__ void im2col_gpu_kernel(const int n, const DType* data_im,
     const int height, const int width, const int kernel_h, const int kernel_w,
@@ -118,6 +122,9 @@ __global__ void im2col_gpu_kernel(const int n, const DType* data_im,
   }
 }
 
+/*!
+ * \brief DO NOT call this directly. Use wrapper function im2col() instead;
+ */
 template <typename DType>
 inline void im2col_gpu(mshadow::Stream<gpu>* s,
                        const DType* data_im, const int channels,
@@ -143,6 +150,9 @@ inline void im2col_gpu(mshadow::Stream<gpu>* s,
   MSHADOW_CUDA_POST_KERNEL_CHECK(im2col_gpu_kernel);
 }
 
+/*!
+ * \brief DO NOT call this directly. Use wrapper function col2im() instead;
+ */
 template <typename DType>
 __global__ void col2im_gpu_kernel(const int n, const DType* data_col,
     const int channels, const int height, const int width,
@@ -184,10 +194,9 @@ __global__ void col2im_gpu_kernel(const int n, const DType* data_col,
   }
 }
 
-// new implementation
-// num_axes is the number of axes of param.kernel
-// im_shape has num_axes+2 axes (one batch dim and one color dim)
-// col_shape has num_axes+1 axes (one color dim)
+/*!
+ * \brief DO NOT call this directly. Use wrapper function col2im() instead;
+ */
 using mshadow::Shape;
 template <typename DType, int num_axes>
 __global__ void im2col_nd_gpu_kernel(const int n, const DType* data_im,
@@ -324,45 +333,9 @@ inline void im2col(mshadow::Stream<gpu>* s,
   MSHADOW_CUDA_POST_KERNEL_CHECK(im2col_nd_gpu_kernel);
 }
 
-#if 0
-template <typename DType>
-inline void im2col_nd_gpu(mshadow::Stream<gpu>* s,
-    const DType* data_im, const int num_spatial_axes, const int num_kernels,
-    const TShape& im_shape, const TShape& col_shape,
-    const TShape& kernel_shape, const TShape& pad, const TShape& stride,
-    const TShape& dilation, DType* data_col) {
-  // num_axes should be smaller than block size
-  CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
-  switch (num_spatial_axes) {
-  case 1:
-    im2col_nd_gpu_kernel<DType, 1>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
-           0, mshadow::Stream<gpu>::GetStream(s)>>>(
-        num_kernels, data_im, im_shape.get<3>(), col_shape.get<2>(),
-        kernel_shape.get<1>(), pad.get<1>(), stride.get<1>(), dilation.get<1>(), data_col);
-    break;
-  case 2:
-    im2col_nd_gpu_kernel<DType, 2>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
-           0, mshadow::Stream<gpu>::GetStream(s)>>>(
-        num_kernels, data_im, im_shape.get<4>(), col_shape.get<3>(),
-        kernel_shape.get<2>(), pad.get<2>(), stride.get<2>(), dilation.get<2>(), data_col);
-    break;
-  case 3:
-    im2col_nd_gpu_kernel<DType, 3>  // NOLINT_NEXT_LINE(whitespace/operators)
-        <<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
-           0, mshadow::Stream<gpu>::GetStream(s)>>>(
-        num_kernels, data_im, im_shape.get<5>(), col_shape.get<4>(),
-        kernel_shape.get<3>(), pad.get<3>(), stride.get<3>(), dilation.get<3>(), data_col);
-    break;
-  default:
-    LOG(FATAL) << "im2col_nd_gpu does not support computation with "
-               << num_spatial_axes << " spatial axes";
-  }
-  MSHADOW_CUDA_POST_KERNEL_CHECK(im2col_nd_gpu_kernel);
-}
-#endif
-
+/*!
+ * \brief DO NOT call this directly. Use wrapper function col2im() instead;
+ */
 template <typename DType>
 inline void col2im_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
@@ -385,6 +358,9 @@ inline void col2im_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int
   MSHADOW_CUDA_POST_KERNEL_CHECK(col2im_gpu_kernel);
 }
 
+/*!
+ * \brief DO NOT call this directly. Use wrapper function col2im() instead;
+ */
 template <typename DType, int num_axes>
 __global__ void col2im_nd_gpu_kernel(const int n, const DType* data_col,
     const Shape<num_axes+2> im_shape, const Shape<num_axes+1> col_shape,
