@@ -195,7 +195,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].ptr_ = &space[i];
         resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
         space[i].ctx = ctx;
-        CHECK_EQ(space[i].handle.size, 0);
+        CHECK_EQ(space[i].handle.size, 0U);
       }
     }
     ~ResourceTempSpace() {

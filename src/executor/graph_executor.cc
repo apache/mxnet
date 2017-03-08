@@ -451,7 +451,7 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     uint32_t nid = idx.input_nodes().at(i);
     uint32_t oid = head_grad_map_.at(idx[nid].source);
     uint32_t eid = idx.entry_id(idx.outputs()[oid]);
-    CHECK_NE(vshape[eid].ndim(), 0);
+    CHECK_NE(vshape[eid].ndim(), 0U);
     CHECK_NE(vdtype[eid], -1);
     data_entry_[idx.entry_id(nid, 0)] =
         NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
@@ -562,8 +562,8 @@ void GraphExecutor::InitCachedOps() {
     op_nodes_[nid].exec = op_execs[nid];
     op_nodes_[nid].ctx = vctx[nid];
     auto& exec = op_nodes_[nid].exec;
-    CHECK_EQ(exec->in_array.size(), 0);
-    CHECK_EQ(exec->out_array.size(), 0);
+    CHECK_EQ(exec->in_array.size(), 0U);
+    CHECK_EQ(exec->out_array.size(), 0U);
     for (const auto& e : inode.inputs) {
       exec->in_array.push_back(data_entry_[idx.entry_id(e)]);
     }
@@ -677,9 +677,9 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     if (op_nodes_[nid].skip_exec_node) continue;
     opnode.exec->op_ctx.is_train = is_train;
     if (opnode.exec->exec_type() == Operator::kCrossDeviceCopy) {
-      CHECK_EQ(inode.inputs.size(), 1);
-      CHECK_EQ(opnode.exec->in_array.size(), 1);
-      CHECK_EQ(opnode.exec->out_array.size(), 1);
+      CHECK_EQ(inode.inputs.size(), 1U);
+      CHECK_EQ(opnode.exec->in_array.size(), 1U);
+      CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
     } else if (opnode.cached_opr != nullptr) {
 #if MXNET_USE_PROFILER

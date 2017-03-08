@@ -159,7 +159,7 @@ class SwapAxisProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
 
     TShape &shape0 = (*in_shape)[swapaxisenum::kData];
     out_shape->clear();
@@ -174,7 +174,7 @@ class SwapAxisProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 1);
+    CHECK_EQ(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "Input must have specified type";
     out_type->clear();
