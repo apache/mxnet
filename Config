@@ -75,7 +75,7 @@ package.DeepMXNet = {
  remove-dependencies = {
    0.9 = {
      #JDK = 1.6_64;
-     JDK8 = 1.0;
+     #JDK8 = 1.0;
    };
  };
 
