@@ -308,6 +308,7 @@ scalapkg:
 		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/lib" \
+			-Dall_ldpaths=""
 			-Dlddeps="$(LIB_DEP)")
 
 scalatest:

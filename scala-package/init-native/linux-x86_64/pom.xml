@@ -74,10 +74,9 @@
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
              <linkerMiddleOption>${lddeps}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
-            <linkerMiddleOption>-lmxnet</linkerMiddleOption>
-            <linkerMiddleOption>-ldmlccore</linkerMiddleOption>
-            <linkerMiddleOption>-lnnvm</linkerMiddleOption>
-            <!-- <linkerMiddleOption>${all_linklibs}</linkerMiddleOption> -->
+            <!--<linkerMiddleOption>-lmxnet</linkerMiddleOption>-->
+            <!--<linkerMiddleOption>-ldmlccore</linkerMiddleOption>-->
+            <!--<linkerMiddleOption>-lnnvm</linkerMiddleOption>-->
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>
