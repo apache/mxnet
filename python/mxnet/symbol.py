@@ -1025,7 +1025,7 @@ class Symbol(SymbolBase):
         return Symbol(handle)
     # pylint: enable= no-member
 
-    def eval(self, args=None, ctx=cpu()):
+    def eval(self, ctx=cpu(), **kwargs):
         """Evaluate a symbol given arguments
 
         The `eval` method combines a call to `bind` (which returns an executor) with a call to `forward` (executor method).
@@ -1034,7 +1034,10 @@ class Symbol(SymbolBase):
 
         Parameters
         ----------
-        args : list of NDArray or dict of str to NDArray
+        ctx : Context
+            The device context the generated executor to run on.
+
+        kwargs : list of NDArray or dict of str to NDArray
             Input arguments to the symbol.
 
             - If type is list of NDArray, the position is in the same order of list_arguments.
@@ -1042,17 +1045,11 @@ class Symbol(SymbolBase):
               to the corresponding NDArray.
             - In either case, all the arguments must be provided.
 
-        ctx : Context
-            The device context the generated executor to run on.
-
         Returns
         ----------
         result :  a list of NDArrays corresponding to the values taken by each symbol when evaluated on given args. When called on a single symbol (not a group), the result will be a list with one element.
         """
-        if args == None:
-            args = {}
-
-        return self.bind(ctx, args).forward()
+        return self.bind(ctx, kwargs).forward()
 
 
 
