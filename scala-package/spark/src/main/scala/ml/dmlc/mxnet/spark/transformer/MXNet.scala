@@ -30,11 +30,7 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.sql.DataFrame
 import org.slf4j.{Logger, LoggerFactory}
 
-/**
-  * MXNet Training On Spark
-  *
-  * @author Derek Miller
-  */
+
 class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
 
   private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
@@ -42,7 +38,7 @@ class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
   private var _featuresCol: String = _
   private var _labelCol: String = _
 
-  override val uid : String = UUID.randomUUID().toString
+  override val uid = UUID.randomUUID().toString
 
   override def train(dataset: DataFrame) : MXNetModelWrap = {
     val lps = dataset.select(_featuresCol, _labelCol).rdd

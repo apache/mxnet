@@ -196,7 +196,6 @@ class MXNet extends Serializable {
         dataName = params.dataName, labelName = params.labelName))
     }.cache()
 
-
     // force job to run
     job.foreachPartition(() => _)
     // simply the first model
