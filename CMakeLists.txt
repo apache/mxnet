@@ -318,11 +318,11 @@ if(USE_CUDA)
       if(NOT CMAKE_SYSTEM_HAS_CUDA)
         message(STATUS " NOT CMAKE_SYSTEM_HAS_CUDA")
         # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
-      	# so use the stub cuda driver shared library
-      	if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+        # so use the stub cuda driver shared library
+        if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
           message(STATUS " ADDING CUDA PATH TO LINK DIRS: ${CUDA_LIBRARY_PATH}/stubs")
-      	  link_directories(${CUDA_LIBRARY_PATH}/stubs)
-      	endif()
+          link_directories(${CUDA_LIBRARY_PATH}/stubs)
+        endif()
       endif()
     endif()
   endif()
@@ -353,13 +353,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-  #add_library(objlib OBJECT ${SOURCE})
-  #set_property(TARGET ${objlib} PROPERTY POSITION_INDEPENDENT_CODE 1)
   add_library(mxnet_static STATIC ${SOURCE})
   add_library(mxnet SHARED src/common/stub.cc)
   target_link_libraries(mxnet
       -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
-      #mxnet_static
   )
   add_custom_target(
       Name ALL
@@ -368,13 +365,6 @@ else()
       COMMAND ln -sf libmxnet_static.a libmxnet.a
       DEPENDS mxnet_static
   )
-  #add_library(mxnet SHARED $<TARGET_OBJECTS:objlib>)
-  #add_library(mxnet_static STATIC $<TARGET_OBJECTS:objlib>)
-  #add_library(mxnet_static STATIC ${SOURCE})
-#    add_custom_command(TARGET mxnet_static POST_BUILD
-#       COMMAND ln -sf libmxnet_static.a libmxnet.a
-#       WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-#    )
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()
@@ -405,16 +395,6 @@ endif()
 if(IS_CONTAINER_BUILD)
   # Do tests before chrpath so that we use the cuda stub driver
   add_subdirectory(tests)
-#  find_program(CHRPATH_EXE chrpath HINTS ${PATH})
-#  if(CHRPATH_EXE)
-#    message(STATUS " Found chrpath executable: ${CHRPATH_EXE}")
-#    add_custom_command(TARGET mxnet
-#      COMMAND echo "Removing rpath from mxnet library"
-#      COMMAND ${CHRPATH_EXE} -d ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmxnet.so
-#    )
-#  else()
-#    message(ERROR "Unable to find chrpath executable")
-#  endif()
 else()
   # Do tests after chrpath so that we use the "real" cuda driver
   add_subdirectory(tests)
