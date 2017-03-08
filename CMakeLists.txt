@@ -81,7 +81,6 @@ include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 
 if(USE_MKL_IF_AVAILABLE)
-  #set(MKL_USE_STATIC_LIBS ON)
   find_package(MKL)
   if(MKL_FOUND)
     include_directories(${MKL_INCLUDE_DIR})
