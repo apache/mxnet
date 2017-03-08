@@ -83,13 +83,6 @@ class CuDNNBatchNormOp : public Operator {
       CHECK_EQ(cudnnDeriveBNTensorDescriptor(mean_desc_,
                                              io_desc_,
                                              CUDNN_BATCHNORM_SPATIAL), CUDNN_STATUS_SUCCESS);
-      // CHECK_EQ(cudnnSetTensor4dDescriptor(mean_desc_,
-      //                                     CUDNN_TENSOR_NCHW,
-      //                                     dtype_param_,
-      //                                     1,
-      //                                     shape_[1],
-      //                                     1,
-      //                                     1), CUDNN_STATUS_SUCCESS);
       init_cudnn_  = true;
     }
 
