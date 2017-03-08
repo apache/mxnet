@@ -1,0 +1,31 @@
+#!/bin/sh
+set -e
+
+#
+# DO NOT add build logic here. Builds should build completely and correctly with the given
+# Brazil builder tools (ie cmake, modified bmvn (brazilmvn) script, etc).
+# Never put a brazil-path command in here, for instance.
+#
+
+#if [[ "$1" != "clean" && "$1" != "generate" && -f tmp/lib/libmxnet.so ]]; then
+#  echo "********************************************************"
+#  echo "STUBBING BUILD BINARIES"
+#  echo "********************************************************"
+#  cp -ruP tmp/* build/
+#else
+#  if [ -z "$1" ] || [ "$1" != "mvn" ] || [ "$1" != "validate" ]; then
+#    brazilcmake $@
+#  fi
+#fi
+#
+#if [ "$1" == "clean" ] || [ "$1" == "generate" ]; then
+#  exit 0
+#fi
+
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(brazil-path [Cuda]pkg.lib)/stubs"
+export MXNET_DATA_DIR="$(brazil-path [DeepMXNetTestData]pkg.lib)/../data"
+
+export EXTRA_LINKLIBS="-lmxnet -ldmlccore -lnnvm"
+export EXTRA_CFLAGS="-std=c++0x -fPIC -g -O2 -D__USE_XOPEN2K8"
+
+COMPUTE=gpu $(brazil-path [ScalaMavenBuilder]pkg.bin)/bmvn $@

@@ -1,0 +1,126 @@
+package.DeepMXNet = {
+  interfaces = (0.9);
+
+  build-system = build-chain;
+
+  deploy = {
+      generic = false;
+  };
+
+  build-environment = {
+    chroot = basic;
+    network-access = blocked;
+  };
+
+  build-tools = {
+    0.9 = {
+      BrazilPath = 1.1;
+      Chrpath = 1.0;
+      GnuMake = 3.81;
+      CMake = 3.5.x;
+      Cuda = 7.x;
+      DeepBrazilCmakeBuildSystem = 2.0;
+      DeepMShadow = 2.x;
+      BrazilPython = 2.0;
+      Python27 = 1.0;
+      Python34 = 1.0;
+      Python-setuptools = 2.x;
+      C-ares = 1.x;
+      CFlagsGCC = 4.9.x;
+      GCC = 4.9.x;
+
+      DeepOpenCV = 2.4.x;
+
+      # Scala build
+      JDK = 1.7;
+      Maven = 3.0_jdk8;
+      ScalaMavenBuilder = 1.0;
+      Libgfortran1 = 1.0;
+      DeepMXNetTestData = 1.0;
+      #Scala-Java8-compat = 1.0;
+    };
+  };
+
+  dependencies = {
+    0.9 = {
+      CRuntime = 1.0;
+      LibStdCppNoCFlags = 4.9;
+      Libgfortran1 = 1.0;
+      Googletest = 1.x;
+      CMake = 3.5.x;
+      #OpenBLAS = 0.2.x_live;
+      DeepDmlc-core = 0.9;
+      DeepMShadow = 2.x;
+      DeepJemalloc = 4.x;
+      Cuda = 7.x;
+      C-ares = 1.x;
+      DeepCudnn = 5.x;
+      DeepNNVM = 0.9;
+      DeepMKL = 1.0;
+      CUB = 1.6;
+      DeepOpenCV = 2.4.x;
+      DeepPS-Lite = 0.9;
+      GoogleProtoBuf = 3.1.x;
+    };
+  };
+
+ resolves-conflict-dependencies = {
+   0.9 = {
+     Zlib = 1.0;
+   };
+ };
+
+ remove-dependencies = {
+   0.9 = {
+     #JDK = 1.6_64;
+     #JDK8 = 1.0;
+   };
+ };
+
+  runtime-dependencies = {
+    0.9 = {
+        CRuntime = 1.0;
+        C-ares = 1.x;
+        DeepMXNetApolloDeploymentHelper = 1.0;
+    };
+  };
+
+  python = {
+        default-version = "2.7";
+        setup-type = setuptools;
+        unittesttype = pytest;
+        # this test line must be modified by adding --cov
+        # YOUR_PYTHON_MODULE and uncommented in order to enable
+        # coverage.  You really, really should create tests.
+        #
+        # You must specify the python module or package root you wish to
+        # cover using the --cov command line flag. As an example, "--cov
+        # bender.core" would collect coverage for every module and
+        # package in the bender.core namespace.
+
+        testargs_release = "--cov-report html --cov-report xml -v";
+        testargs = "--cov-report term-missing";
+  };
+
+  targets = {
+    libmxnet = {
+      type = clibrary;
+      visibility = external;
+      builtLibraries = ("libmxnet");
+      libraryLinkageMode = {
+        all = preferDynamic;
+      };
+    };
+
+    # This target is needed for upstream python packages to include mxnet
+    # in the PYTHONPATH correctly.
+    python = { type = python; };
+
+    #mxnet-core_2.11-0.1.2   = { type = javalibrary; };
+    #mxnet-macros_2.11-0.1.2 = { type = javalibrary; };
+    #mxnet-init_2.11-0.1.2   = { type = javalibrary; };
+    mxnet-full_2.11-linux-x86_64-gpu-0.1.2-SNAPSHOT = { type = javalibrary; };
+  };
+
+};
+# vim: set ft=perl ts=2 sw=2 tw=79 :
