@@ -21,6 +21,7 @@ mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
+mxnet_option(USE_SCALA "Build Scala packages" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
