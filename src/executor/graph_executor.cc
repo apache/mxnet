@@ -21,6 +21,7 @@ GraphExecutor::~GraphExecutor() {
       Engine::Get()->DeleteOperator(n.cached_opr);
     }
   }
+  // clean up seg ops
   for (auto& seg : cached_seg_opr_) {
     if (seg.opr != nullptr) {
       Engine::Get()->DeleteOperator(seg.opr);
@@ -326,7 +327,6 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::vector<OpReqType>& grad_req_type,
                          const std::vector<NDArray>& aux_states,
                          Executor* shared_exec) {
-  prefer_bulk_execution_ = dmlc::GetEnv("MXNET_EXEC_PREFER_BULK_EXEC", false);
   nnvm::Graph g = InitGraph(symbol, default_ctx,
                             ctx_map, in_args, arg_grad_store,
                             grad_req_type, aux_states);
@@ -678,129 +678,88 @@ void GraphExecutor::InitOpSegs() {
   cached_seg_opr_.clear();
   CachedSegOpr p;
   cached_seg_opr_.resize(total_num_nodes, p);
-
-  if (!prefer_bulk_execution_) return;
   if (monitor_callback_) return;
+
   // Generate segments based on the graph structure
-  if (num_forward_nodes_ == total_num_nodes) {
-    // no backward nodes, bulk the whole graph for inference
+  bool prefer_bulk_exec_inference = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
+  if (prefer_bulk_exec_inference && num_forward_nodes_ == total_num_nodes) {
+    // bulk the whole graph for inference
     cached_seg_opr_[0] = this->CreateCachedSegOpr(0, num_forward_nodes_);
     return;
   }
-  size_t num_forward_vars = 0;
-  for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
-    auto &node = graph_.indexed_graph()[nid].source;
-    if (node != nullptr && node->is_variable()) {
-      num_forward_vars++;
+
+
+  // create forward segments for training
+  size_t bulk_forward_percent = dmlc::GetEnv("MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN", 1);
+  if (bulk_forward_percent > 0) {
+    // count total number of variables during forward
+    size_t total_num_forward_vars = 0;
+    for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
+      auto &node = graph_.indexed_graph()[nid].source;
+      if (node != nullptr && node->is_variable()) {
+        total_num_forward_vars++;
+      }
+    }
+    // calculate max number of variable per segment
+    size_t num_vars_threshold = (bulk_forward_percent * total_num_forward_vars + 99) / 100;
+    size_t topo_start = 0, nid = 0, num_vars = 0;
+    while (nid < num_forward_nodes_) {
+      if (op_nodes_[nid].skip_exec_node) {
+          nid++;
+          continue;
+      }
+      auto &node = graph_.indexed_graph()[nid].source;
+      // check if it's a variable
+      if (node->is_variable()) {
+        // if threshold is met, create a new segment
+        if (num_vars + 1 > num_vars_threshold) {
+          cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+          // reset state
+          num_vars = 0;
+          topo_start = nid;
+        }
+        num_vars++;
+      }
+      nid++;
+    }
+    // the last segmenet
+    if (topo_start != num_forward_nodes_) {
+      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
     }
   }
-  // std::cout << "num_forward_nodes_ = " << num_forward_nodes_ << std::endl;
-  // TODO more efficient way of reading env var
-  size_t forward_bulk_percent = dmlc::GetEnv("MXNET_BULK_FORWARD_PERCENT", 20);
-  bool bulk_forward = dmlc::GetEnv("MXNET_BULK_FORWARD_ON", false);
-  //std::cout << std::endl << std::flush;
-  //std::cout << num_forward_nodes_ << std::endl;
-  //std::cout << total_num_nodes - num_forward_nodes_ << std::endl;
 
-  // create segments for training
-  // FIXME experiment with LSTM Cell segmentation
-if (bulk_forward) {
-/*  size_t lstm_cell_num_nodes = 53;
-  size_t lstm_cell_num_prefix_nodes = 28;
-  for (size_t topo_start = lstm_cell_num_prefix_nodes;
-       topo_start + lstm_cell_num_nodes < num_forward_nodes_;
-       topo_start += lstm_cell_num_nodes) {
-    size_t nid = topo_start;
-    auto &node = graph_.indexed_graph()[nid].source;
-    if (op_nodes_[nid].skip_exec_node) {std::cout << "Skip "; continue;}
-    if (node->is_variable()) {
-      std::cout << "Var ";
-    } else {
-      std::cout << node->attrs.op->name << " ";
+  // create backward segments for training
+  bool bulk_backward = dmlc::GetEnv("MXNET_EXEC_BULK_BWD_TRAIN", true); 
+  if (bulk_backward) {
+    // get all gradient variables
+    std::unordered_set<engine::VarHandle> grad_vars;
+    for (auto &kv : grad_store_) {
+      grad_vars.insert(kv.second.var());
     }
-    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start,
-                                  topo_start + lstm_cell_num_nodes);
-    std::cout << std::endl;
-  }*/
-  size_t topo_start = 0;
-  size_t nid = 0;
-  size_t num_vars = 0;
-  // take the ceil as threshold
-  size_t num_vars_threshold = (forward_bulk_percent * num_forward_vars + 99) / 100;
-  std::cout << "num_vars_threshold = " << num_vars_threshold << std::endl;
-  std::cout << "num_forward_vars = " << num_forward_vars << std::endl;
-  while (nid < num_forward_nodes_) {
-    if (op_nodes_[nid].skip_exec_node) {
+    size_t nid = num_forward_nodes_, topo_start = num_forward_nodes_;
+    while (nid < total_num_nodes) {
+      auto &op_node = op_nodes_[nid];
+      if (op_node.skip_exec_node) {
         nid++;
         continue;
-    }
-    auto &node = graph_.indexed_graph()[nid].source;
-    // check if it's a variable
-    if (node->is_variable()) {
-      num_vars++;
-      // if threshold is met, create a new segment
-      if (num_vars > num_vars_threshold) {
-        //std::cout << "A new segment [" << topo_start << ", " << nid << ") is created\n";
-        // exclude the current variable node
-        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-        // reset state
-        num_vars = 0;
-        topo_start = nid;
       }
-    }
-    nid++;
-  }
-  // the last segmenet
-  if (topo_start != num_forward_nodes_) {
-    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
-  }
-}
-for (auto& entry: graph_.outputs) {
-  //std::cout << entry.node->attrs.name << " ";
-} 
-  /*std::unordered_set<void *> ptr_set;
-  for (auto& entry : graph_.outputs) {
-    for (auto &input_entry : entry.node->inputs) {
-      ptr_set.insert((void *)input_entry.node.get());
-    }
-  }
-  std::vector<NDArray> out_arrays;
-  for (auto &kv : grad_store_) {
-    out_arrays.push_back(kv.second);
-  }*/
-
-  bool bulk_backward = dmlc::GetEnv("MXNET_BULK_BACKWARD_ON", false); 
-if (bulk_backward) {
-  //std::cout << "Finding grad nodes" << std::endl;
-  size_t nid = num_forward_nodes_;
-  size_t topo_start = num_forward_nodes_;
-  while (nid < total_num_nodes) {
-    void *node_ptr = (void *) &graph_.indexed_graph()[nid].source;
-    auto &op_node = op_nodes_[nid];
-    bool found = false;
-    if (op_node.skip_exec_node) { nid++; continue;}
-    for (auto &arr : op_node.exec->out_array) {
-    // FIXME this is slow
-    //for (auto& entry: graph_.outputs) {
-      //const auto entry_node_ptr = entry.node.get();
-      //if ((void *)node_ptr == (void *)entry_node_ptr) {
-      //if (ptr_set.find(node_ptr) != ptr_set.end()) {
-      for (auto &kv : grad_store_) {
-        if (kv.second.var() == arr.var()) found = true;
+      bool output_gradient = false;
+      for (auto &out_arr : op_node.exec->out_array) {
+        if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
+          output_gradient = true;
+        }
       }
-   }
-   if (found) {
-        std::cout << "Found matching node ptr\n" << std::endl;
+      if (output_gradient) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
-        //break;
+      }
+      nid++;
     }
-    nid++;
+    // last segment for backward
+    if (topo_start < total_num_nodes) {
+      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, total_num_nodes);
+    }
   }
-  if (topo_start < total_num_nodes) {
-    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, total_num_nodes);
-  }
-}
   return;
 }
 
