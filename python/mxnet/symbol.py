@@ -1026,9 +1026,6 @@ class Symbol(SymbolBase):
     # pylint: enable= no-member
 
     def eval(self, args=None, ctx=cpu()):
-        if args == None:
-            args = {}
-        # print("hello world!")
         """Evaluate a symbol given arguments
 
         The `eval` method combines a call to `bind` (which returns an executor) with a call to `forward` (executor method).
@@ -1052,6 +1049,9 @@ class Symbol(SymbolBase):
         ----------
         result :  a list of NDArrays corresponding to the values taken by each symbol when evaluated on given args. When called on a single symbol (not a group), the result will be a list with one element.
         """
+        if args == None:
+            args = {}
+
         return self.bind(ctx, args).forward()
 
 
