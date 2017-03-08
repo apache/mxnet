@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./nn/im2col.h"
 
 
 namespace mxnet {
@@ -134,8 +135,9 @@ class ConvolutionOp : public Operator {
       Shape4(num_, group_, M, N), s);
     for (index_t n = 0; n < num_; ++n) {
       // transform image to col_buffer in order to use gemm
-      ConvIm2Col(s, in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
-                 col_buffer.dptr<DType>(), col_buffer.shape_);
+      im2col(s, in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
+             col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
+             col_buffer.dptr<DType>());
       Tensor<xpu, 3, DType> output_3d = output_4d[n];
       for (index_t g = 0; g < group_; ++g) {
         ASSIGN_DISPATCH(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
@@ -199,13 +201,14 @@ class ConvolutionOp : public Operator {
       for (index_t g = 0; g < group_; ++g) {
         col_buffer_3d[g] = dot(weight_3d[g].T(), out_grad_3d[g]);
       }
-      ConvCol2Im(s, col_buffer.dptr<DType>(), col_buffer.shape_,
-                 in_grad[conv::kData].dptr<DType>()+n*input_dim_, in_grad[conv::kData].shape_,
-                 req[conv::kData]);
+      col2im(s, col_buffer.dptr<DType>(), in_grad[conv::kData].shape_, col_buffer.shape_,
+             param_.kernel, param_.pad, param_.stride, param_.dilate,
+             in_grad[conv::kData].dptr<DType>()+n*input_dim_, req[conv::kData]);
 
       // gradient w.r.t. weight, dWeight should accumulate across the batch and group
-      ConvIm2Col(s, in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
-                 col_buffer.dptr<DType>(), col_buffer.shape_);
+      im2col(s, in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
+             col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
+             col_buffer.dptr<DType>());
       for (index_t g = 0; g < group_; ++g) {
         if (0 == n) {
           ASSIGN_DISPATCH(dweight_3d[g], req[conv::kWeight],
@@ -259,20 +262,6 @@ class ConvolutionOp : public Operator {
     num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_;
     num_kernels_col2im_ = input_dim_;
   }
-
-  // the following functions should be called in looping through the image batch
-  // data is an image in the batch
-  void ConvIm2Col(mshadow::Stream<cpu>* s, const DType* data_ptr, const TShape& data_shape,
-                  DType* col_buffer_ptr, const TShape& col_buffer_shape) const;
-  void ConvIm2Col(mshadow::Stream<gpu>* s, const DType* data_ptr, const TShape& data_shape,
-                  DType* col_buffer_ptr, const TShape& col_buffer_shape) const;
-
-  void ConvCol2Im(mshadow::Stream<cpu>* s, const DType* col_buffer_ptr,
-                  const TShape& col_buffer_shape, DType* data_ptr, const TShape& data_shape,
-                  OpReqType req) const;
-  void ConvCol2Im(mshadow::Stream<gpu>* s, const DType* col_buffer_ptr,
-                  const TShape& col_buffer_shape, DType* data_ptr, const TShape& data_shape,
-                  OpReqType req) const;
 
  private:
   ConvolutionParam param_;

@@ -80,6 +80,11 @@ inline bool is_a_ge_zero_and_a_lt_b(int a, int b) {
   return static_cast<unsigned>(a) < static_cast<unsigned>(b);
 }
 
+/*!
+ * \brief im2col 2D cpu version.
+ * DO NOT call this function directly.
+ * Use the wrapper function im2col() instead.
+ */
 template <typename DType>
 inline void im2col_cpu(const DType* data_im, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
@@ -119,6 +124,7 @@ inline void im2col_cpu(const DType* data_im, const int channels,
   }
 }
 
+#if 0
 template <typename DType>
 inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
     const int num_spatial_axes, const int* im_shape, const int* col_shape,
@@ -203,7 +209,126 @@ inline void im2col_nd_cpu(const DType* data_im, const int num_spatial_axes,
   im2col_nd_core_cpu(data_im, kIm2Col, num_spatial_axes, im_shape, col_shape,
                   kernel_shape, pad, stride, dilation, data_col);
 }
+#endif
 
+/*!\brief core function of im2col algorithm. DO NOT call this function directly.
+ * Use wrapper function im2col() instead.
+ * \param data_input image pointer pointing the first element of channel dim
+ * \param im2col determine whether the algorithm is im2col or col2im
+ * \param im_shape input image shape in dimensions (N, C, H, W,)
+ * \param col_shape column buffer shape
+ * \param kernel_shape kernel filter shape
+ * \param pad pad shape
+ * \param stride stride shape
+ * \param dilation dilation shape
+ * \param data_output start pointer of the column buffer to be filled
+ */
+template <typename DType>
+inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
+    const TShape& im_shape, const TShape& col_shape,
+    const TShape& kernel_shape, const TShape& pad, const TShape& stride,
+    const TShape& dilation, DType* data_output, OpReqType req = mxnet::kWriteTo) {
+  if (mxnet::kNullOp == req) return;
+  index_t num_spatial_axes = kernel_shape.ndim();
+  if (!im2col) {
+    index_t im_size = im_shape[1];  // skip batch dim
+    for (index_t i = 0; i < num_spatial_axes; ++i) {
+      im_size *= im_shape[2 + i];
+    }
+    if (mxnet::kAddTo != req) {
+      std::fill(data_output, data_output+im_size, static_cast<DType>(0));
+    }
+  }
+  index_t kernel_size = 1;
+  for (index_t i = 0; i < num_spatial_axes; ++i) {
+    kernel_size *= kernel_shape[i];
+  }
+  const index_t channels_col = col_shape[0];
+  std::vector<index_t> d_offset(num_spatial_axes, 0);
+  std::vector<index_t> d_iter(num_spatial_axes, 0);
+  for (index_t c_col = 0; c_col < channels_col; ++c_col) {
+    // Loop over spatial axes in reverse order to compute a per-axis offset.
+    index_t offset = c_col;
+    for (int d_i = static_cast<int>(num_spatial_axes) - 1; d_i >= 0; --d_i) {
+      if (d_i < static_cast<int>(num_spatial_axes) - 1) {
+        offset /= kernel_shape[d_i + 1];
+      }
+      d_offset[d_i] = offset % kernel_shape[d_i];
+    }
+    for (bool incremented = true; incremented; ) {
+      // Loop over spatial axes in forward order to compute the indices in the
+      // image and column, and whether the index lies in the padding.
+      index_t index_col = c_col;
+      int index_im = c_col / kernel_size;
+      bool is_padding = false;
+      for (index_t d_i = 0; d_i < num_spatial_axes; ++d_i) {
+        const index_t d = d_iter[d_i];
+        const int d_im = static_cast<int>(d * stride[d_i] + d_offset[d_i] * dilation[d_i])
+          - static_cast<int>(pad[d_i]);
+        is_padding |= d_im < 0 || d_im >= static_cast<int>(im_shape[d_i + 2]);
+        index_col *= col_shape[d_i + 1];
+        index_col += d;
+        index_im *= static_cast<int>(im_shape[d_i + 2]);
+        index_im += d_im;
+      }
+      if (im2col) {
+        if (is_padding) {
+          data_output[index_col] = 0;
+        } else {
+          data_output[index_col] = data_input[index_im];
+        }
+      } else if (!is_padding) {  // col2im
+        data_output[index_im] += data_input[index_col];
+      }
+      // Loop over spatial axes in reverse order to choose an index,
+      // like counting.
+      incremented = false;
+      for (int d_i = static_cast<int>(num_spatial_axes) - 1; d_i >= 0; --d_i) {
+        const index_t d_max = col_shape[d_i + 1];
+        CHECK_LT(d_iter[d_i], d_max);
+        if (d_iter[d_i] + 1 == d_max) {
+          d_iter[d_i] = 0;
+        } else {  // d_iter[d_i] < d_max - 1
+          ++d_iter[d_i];
+          incremented = true;
+          break;
+        }
+      }
+    }  // while(incremented)
+  }  // for (int c = 0; c < channels_col; ++c)
+}
+
+/*!\brief
+ * cpu function of im2col algorithm
+ * \param data_im pointer of a image (C, H, W,...) in the image batch
+ * \param im_shape input image shape in dimensions (N, C, H, W,)
+ * \param col_shape column buffer shape
+ * \param kernel_shape kernel filter shape
+ * \param pad pad shape
+ * \param stride stride shape
+ * \param dilation dilation shape
+ * \param data_col start pointer of the column buffer to be filled
+ */
+template <typename DType>
+inline void im2col(mshadow::Stream<cpu>* s,
+                   const DType* data_im, const TShape& im_shape,
+                   const TShape& col_shape, const TShape& kernel_shape,
+                   const TShape& pad, const TShape& stride,
+                   const TShape& dilation, DType* data_col) {
+  if (2 == kernel_shape.ndim()) {
+    im2col_cpu(data_im, im_shape[1], im_shape[2], im_shape[3],
+               kernel_shape[0], kernel_shape[1], pad[0], pad[1],
+               stride[0], stride[1], dilation[1], dilation[1], data_col);
+  } else {
+    im2col_nd_core_cpu(data_im, true, im_shape, col_shape,
+                       kernel_shape, pad, stride, dilation, data_col);
+  }
+}
+
+/*!\brief
+ * col2im 2D cpu version. DO NOT call this function direclty.
+ * Use wrapper function col2im() instead.
+ */
 template <typename DType>
 inline void col2im_cpu(const DType* data_col, const int channels,
     const int height, const int width, const int kernel_h, const int kernel_w,
@@ -214,7 +339,6 @@ inline void col2im_cpu(const DType* data_col, const int channels,
   if (mxnet::kNullOp == req) return;
   if (mxnet::kAddTo != req) {
     std::fill(data_im, data_im+height*width*channels, static_cast<DType>(0));
-    //fill_array(height * width * channels, static_cast<DType>(0), data_im);
   }
   const int output_h = (height + 2 * pad_h -
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
@@ -245,6 +369,7 @@ inline void col2im_cpu(const DType* data_col, const int channels,
   }
 }
 
+#if 0
 template <typename DType>
 inline void col2im_nd_cpu(const DType* data_col, const int num_spatial_axes,
     const int* im_shape, const int* col_shape,
@@ -254,8 +379,40 @@ inline void col2im_nd_cpu(const DType* data_col, const int num_spatial_axes,
   im2col_nd_core_cpu(data_col, kIm2Col, num_spatial_axes, im_shape, col_shape,
                      kernel_shape, pad, stride, dilation, data_im, req);
 }
+#endif
+
+/*!\brief
+ * cpu function of col2im algorithm
+ * \param s device stream
+ * \param data_col start pointer of the column buffer to be filled
+ * \param im_shape input image shape in dimensions (N, C, H, W,)
+ * \param col_shape column buffer shape
+ * \param kernel_shape kernel filter shape
+ * \param pad pad shape
+ * \param stride stride shape
+ * \param dilation dilation shape
+ * \param data_im pointer of a image (C, H, W,...) in the image batch
+ */
+template <typename DType>
+inline void col2im(mshadow::Stream<cpu>* s,
+                   const DType* data_col, const TShape& im_shape,
+                   const TShape& col_shape, const TShape& kernel_shape,
+                   const TShape& pad, const TShape& stride,
+                   const TShape& dilation, DType* data_im, OpReqType req) {
+  index_t num_spatial_axes = kernel_shape.ndim();
+  if (2 == num_spatial_axes) {
+    col2im_cpu(data_col, im_shape[1], im_shape[2], im_shape[3],
+               kernel_shape[0], kernel_shape[1], pad[0], pad[1],
+               stride[0], stride[1], dilation[0], dilation[1], data_im, req);
+  } else {
+    im2col_nd_core_cpu(data_col, false, im_shape, col_shape,
+                       kernel_shape, pad, stride, dilation, data_im, req);
+  }
+}
 
 }  // namespace op
 }  // namespace mxnet
-
+#ifdef __CUDACC__
+#include "./im2col.cuh"
+#endif
 #endif  // MXNET_OPERATOR_NN_IM2COL_H_
