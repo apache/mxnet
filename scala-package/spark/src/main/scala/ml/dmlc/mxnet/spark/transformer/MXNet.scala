@@ -155,7 +155,7 @@ class MXNetModelWrap(sc: SparkContext, mxNet: MXNetModel, uuid: String)
     val probArrays = mxNet.predict(features)
     val prob = probArrays(0)
     val arr = prob.get.toArray
-    arr.max
+    arr.indexOf(arr.max)
   }
 
   protected[MXNetModelWrap] class MXNetModelWriter(instance: MXNetModelWrap) extends MLWriter {
