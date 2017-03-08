@@ -224,11 +224,14 @@ struct RunContext {
   inline mshadow::Stream<xpu>* get_stream() const {
     return static_cast<mshadow::Stream<xpu>*>(stream);
   }
+  std::string oprName;
 };
 }  // namespace mxnet
 
 //! \cond Doxygen_Suppress
 namespace mxnet {
+
+
 // implementing Context
 inline bool Context::operator<(const Context &b) const {
   if (dev_type == b.dev_type) {
