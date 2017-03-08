@@ -674,11 +674,13 @@ def register(reg_name):
 
                     list_auxiliary_states_entry._ref_holder = [out]
                 except Exception:
-                    print('Error in %s.list_auxiliary_states: %s' % (reg_name, traceback.format_exc()))
+                    print('Error in %s.list_auxiliary_states: %s' % (
+                        reg_name, traceback.format_exc()))
                     return False
                 return True
 
-            def declare_backward_dependency_entry(out_grad, in_data, out_data, num_dep, deps, _):
+            def declare_backward_dependency_entry(  # pylint: disable=invalid-name
+                    out_grad, in_data, out_data, num_dep, deps, _):
                 """C Callback for CustomOpProp::DeclareBacwardDependency"""
                 try:
                     out_grad = [out_grad[i] for i in range(len(op_prop.list_outputs()))]
@@ -691,7 +693,8 @@ def register(reg_name):
 
                     declare_backward_dependency_entry._ref_holder = [deps]
                 except Exception:
-                    print('Error in %s.declare_backward_dependency: %s' % (reg_name, traceback.format_exc()))
+                    print('Error in %s.declare_backward_dependency: %s' % (
+                        reg_name, traceback.format_exc()))
                     return False
                 return True
 

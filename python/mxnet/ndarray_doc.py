@@ -14,8 +14,8 @@ def _build_doc(func_name,
                arg_names,
                arg_types,
                arg_desc,
-               key_var_num_args=None,
-               ret_type=None):
+               key_var_num_args=None, # pylint: disable=unused-argument
+               ret_type=None):  # pylint: disable=unused-argument
     """Build docstring for imperative functions."""
     param_str = _build_param_doc(arg_names, arg_types, arg_desc)
     # if key_var_num_args:

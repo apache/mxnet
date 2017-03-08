@@ -259,13 +259,14 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: cpplint pylint rcpplint jnilint
+lint: cpplint rcpplint jnilint pylint
 
 cpplint:
 	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin
 
 pylint:
-	python dmlc-core/scripts/lint.py mxnet python python/mxnet --pylint-rc $(ROOTDIR)/tests/ci_build/pylintrc
+# ideally we want to check all, such as: python tools example tests
+	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc -r y
 
 doxygen:
 	doxygen docs/Doxyfile

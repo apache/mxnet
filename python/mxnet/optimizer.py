@@ -472,9 +472,9 @@ class SGLD(Optimizer):
         weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr),
                                                             weight.shape, weight.context)
 
-
+# pylint: disable=invalid-name
 @register
-class ccSGD(SGD):               # pylint: disable=invalid-name
+class ccSGD(SGD):
     """[Deprecated] Same as sgd. Left here for backward compatibility."""
     def __init__(self, *args, **kwargs):
         super(ccSGD, self).__init__(*args, **kwargs)

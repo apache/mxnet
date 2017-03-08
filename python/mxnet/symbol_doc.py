@@ -43,7 +43,6 @@ class SymbolDoc(object):
         _, s_outputs, _ = sym.infer_shape(**input_shapes)
         return dict(zip(sym.list_outputs(), s_outputs))
 
-
 class ActivationDoc(SymbolDoc):
     """
     Examples
@@ -79,7 +78,6 @@ class ActivationDoc(SymbolDoc):
     softrelu: True
     """
 
-
 class DropoutDoc(SymbolDoc):
     """
     Examples
@@ -105,7 +103,6 @@ class DropoutDoc(SymbolDoc):
     >>> set(numpy.unique(y)) == set([0, 2])
     True
     """
-
 
 class EmbeddingDoc(SymbolDoc):
     """
@@ -136,7 +133,6 @@ class EmbeddingDoc(SymbolDoc):
     True
     """
 
-
 class FlattenDoc(SymbolDoc):
     """
     Examples
@@ -162,7 +158,6 @@ class FlattenDoc(SymbolDoc):
     (2, 3): True
     (2,): True
     """
-
 
 class FullyConnectedDoc(SymbolDoc):
     """
@@ -202,15 +197,13 @@ class FullyConnectedDoc(SymbolDoc):
     True
     """
 
-
-
 def _build_doc(func_name,
                desc,
                arg_names,
                arg_types,
                arg_desc,
                key_var_num_args=None,
-               ret_type=None):
+               ret_type=None): # pylint: disable=unused-argument
     """Build docstring for symbolic functions."""
     param_str = _build_param_doc(arg_names, arg_types, arg_desc)
     if key_var_num_args:
@@ -230,7 +223,6 @@ def _build_doc(func_name,
     doc_str = _re.sub('ndarray-or-symbol', 'Symbol', doc_str)
     return doc_str
 
-
 class ConcatDoc(SymbolDoc):
     """
     Examples
@@ -248,7 +240,6 @@ class ConcatDoc(SymbolDoc):
     Note the shape should be the same except on the dimension that is being
     concatenated.
     """
-
 
 class BroadcastPlusDoc(SymbolDoc):
     """

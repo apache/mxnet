@@ -168,8 +168,8 @@ class MXIndexedRecordIO(MXRecordIO):
 
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
-_ir_format = 'IfQQ'
-_ir_size = struct.calcsize(_ir_format)
+_IR_FORMAT = 'IfQQ'
+_IR_SIZE = struct.calcsize(_IR_FORMAT)
 
 def pack(header, s):
     """pack an string into MXImageRecord
@@ -189,7 +189,7 @@ def pack(header, s):
         label = np.asarray(header.label, dtype=np.float32)
         header = header._replace(flag=label.size, label=0)
         s = label.tostring() + s
-    s = struct.pack(_ir_format, *header) + s
+    s = struct.pack(_IR_FORMAT, *header) + s
     return s
 
 def unpack(s):
@@ -207,8 +207,8 @@ def unpack(s):
     s : str
         unpacked string
     """
-    header = IRHeader(*struct.unpack(_ir_format, s[:_ir_size]))
-    s = s[_ir_size:]
+    header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
+    s = s[_IR_SIZE:]
     if header.flag > 0:
         header = header._replace(label=np.fromstring(s, np.float32, header.flag))
         s = s[header.flag*4:]

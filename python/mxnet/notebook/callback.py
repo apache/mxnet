@@ -3,8 +3,9 @@
 try:
     import datetime
 except ImportError:
-    class Datetime_Failed_To_Import: pass
-    datetime = Datetime_Failed_To_Import
+    class DatetimeFailedToImport:
+        pass
+    datetime = DatetimeFailedToImport  # pylint: disable=invalid-name
 
 try:
     import bokeh.plotting
@@ -14,14 +15,16 @@ except ImportError:
 try:
     from collections import defaultdict
 except ImportError:
-    class Defaultdict_Failed_To_Import: pass
-    defaultdict = Defaultdict_Failed_To_Import
+    class DefaultdictFailedToImport:
+        pass
+    defaultdict = DefaultdictFailedToImport  # pylint: disable=invalid-name
 
 try:
     import pandas as pd
 except ImportError:
-    class Pandas_Failed_To_Import: pass
-    pd = Pandas_Failed_To_Import
+    class PandasFailedToImport:
+        pass
+    pd = PandasFailedToImport   # pylint: disable=invalid-name
 
 import time
 
@@ -41,10 +44,10 @@ def _add_new_columns(dataframe, metrics):
         dataframe[col] = None
 
 
-def _extend(baseData, newData):
+def _extend(base_data, new_data):
     """Assuming a is shorter than b, copy the end of b onto a
     """
-    baseData.extend(newData[len(baseData):])
+    base_data.extend(new_data[len(base_data):])
 
 
 class PandasLogger(object):
@@ -270,7 +273,7 @@ class LiveTimeSeries(LiveBokehChart):
         """
         return datetime.datetime.now() - self.start_time
 
-    def update_chart_data(self, value):
+    def update_chart_data(self, value): # pylint: disable=arguments-differ
         self.x_axis_val.append(self.elapsed())
         self.y_axis_val.append(value)
         self._push_render()

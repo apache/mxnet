@@ -8,11 +8,11 @@ import numpy as np
 import numpy.testing as npt
 import mxnet as mx
 
-from .context import cpu, gpu, Context
+from .context import Context
 from .ndarray import array
 from .symbol import Symbol
 
-_rng = np.random.RandomState(1234)
+_RNG = np.random.RandomState(1234)
 
 
 def default_context():
@@ -393,7 +393,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         """
         # random_projection should not have elements too small,
         # otherwise too much precision is lost in numerical gradient
-        plain = _rng.rand(*shape) + 0.1
+        plain = _RNG.rand(*shape) + 0.1
         return plain
 
     location = _parse_location(sym=sym, location=location, ctx=ctx)
@@ -423,8 +423,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]), ctx=ctx))])
-    args_grad_npy = dict([(k, _rng.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
-                         + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
+    args_grad_npy = dict([(k, _RNG.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
+                         + [("__random_proj", _RNG.normal(0, 0.01, size=out_shape[0]))])
 
     args_grad = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
 
@@ -558,7 +558,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
-    args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
+    args_grad_npy = {k:_RNG.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
     if isinstance(grad_req, str):
         grad_req = {k:grad_req for k in sym.list_arguments()}
@@ -621,7 +621,7 @@ def check_speed(sym, location=None, ctx=None, num=20, grad_req=None, typ="whole"
         grad_req = 'write'
     if location is None:
         exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
-        location = {k: _rng.normal(size=arr.shape, scale=1.0) for k, arr in
+        location = {k: _RNG.normal(size=arr.shape, scale=1.0) for k, arr in
                     exe.arg_dict.items()}
     else:
         assert isinstance(location, dict), "Expect dict, get \"location\"=%s" %str(location)

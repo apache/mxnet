@@ -374,10 +374,10 @@ def load_checkpoint(prefix, epoch):
     arg_params = {}
     aux_params = {}
     for k, v in save_dict.items():
-        tp, name = k.split(':', 1)
-        if tp == 'arg':
+        typ, name = k.split(':', 1)
+        if typ == 'arg':
             arg_params[name] = v
-        if tp == 'aux':
+        if typ == 'aux':
             aux_params[name] = v
     return (symbol, arg_params, aux_params)
 

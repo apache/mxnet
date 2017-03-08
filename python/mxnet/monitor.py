@@ -122,4 +122,4 @@ class Monitor(object):
         """End collecting and print results"""
         res = self.toc()
         for num, key, val in res:
-            logging.info('Batch: {:7d} {:30s} {:s}'.format(num, key, val))
+            logging.info('Batch: %7d %30s %s', num, key, val)
