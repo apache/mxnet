@@ -34,7 +34,7 @@ func _make_ndarray_function($handle, $func_name)
     my @arguments;
     for my $i (0..(@$arg_names-1))
     {
-        if(not $arg_types->[$i] =~ /^(?:NDArray|Symbol)/)
+        if(not $arg_types->[$i] =~ /^(?:NDArray|Symbol|ndarray\-or\-symbol)/)
         {
             push @arguments, $arg_names->[$i];
         }

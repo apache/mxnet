@@ -36,6 +36,12 @@ mini-batch of data
         Default `cpu()`
     work_load_list : array ref of Num
         Default undef, indicating uniform workload.
+    fixed_param_names: arrayref of str
+        Default undef, indicating no network parameters are fixed.
+    state_names : arrayref of str
+        states are similar to data and label, but not provided by data iterator.
+        Instead they are initialized to 0 and can be set by set_states()
+
 =cut
 
 extends 'AI::MXNet::Module::Base';
@@ -48,8 +54,23 @@ has '_context'            => (
 );
 has '_work_load_list'     => (is => 'rw', init_arg => 'work_load_list', isa => 'ArrayRef[Num]');
 has '_curr_module'        => (is => 'rw', init_arg => undef);
-has '_buckets'            => (is => 'rw', init_arg => undef, lazy => 1, default => sub { +{} });
+has '_buckets'            => (is => 'rw', init_arg => undef, default => sub { +{} });
+has '_fixed_param_names'  => (is => 'rw', isa => 'ArrayRef[Str]', init_arg => 'fixed_param_names');
+has '_state_names'        => (is => 'rw', isa => 'ArrayRef[Str]', init_arg => 'state_names');
+has '_params_dirty'       => (is => 'rw', init_arg => undef);
 
+sub BUILD
+{
+    my ($self, $original_params) = @_;
+    $self->_fixed_param_names([]) unless defined $original_params->{fixed_param_names};
+    $self->_state_names([]) unless defined $original_params->{state_names};
+    $self->_params_dirty(0);
+    my ($symbol, $data_names, $label_names) = &{$self->_sym_gen}($self->_default_bucket_key);
+    $self->_check_input_names($symbol, $data_names//[], "data", 1);
+    $self->_check_input_names($symbol, $label_names//[], "label", 0);
+    $self->_check_input_names($symbol, $self->_state_names, "state", 1);
+    $self->_check_input_names($symbol, $self->_fixed_param_names, "fixed_param", 1);
+}
 
 method _reset_bind()
 {
@@ -150,7 +171,58 @@ method output_shapes()
 method get_params()
 {
     assert($self->binded and $self->params_initialized);
-    return $self->_curr_module->get_params;
+    $self->_curr_module->_params_dirty($self->_params_dirty);
+    my $params = $self->_curr_module->get_params;
+    $self->_params_dirty(0);
+    return $params;
+}
+
+=head2 set_params
+
+        Assign parameter and aux state values.
+
+        Parameters
+        ----------
+        arg_params : HashRef[AI::MXNet::NDArray]
+        aux_params : HashRef[AI::MXNet::NDArray]
+        allow_missing : bool
+            If true, params could contain missing values, and the initializer will be
+            called to fill those missing params.
+        force_init : bool
+            If true, will force re-initialize even if already initialized.
+=cut
+
+method set_params(
+    HashRef[AI::MXNet::NDArray] $arg_params,
+    HashRef[AI::MXNet::NDArray] $aux_params,
+    Bool                        $allow_missing=0,
+    Bool                        $force_init=1
+)
+{
+    if(not $allow_missing)
+    {
+        $self->init_params(
+            arg_params    => $arg_params,    aux_params => $aux_params,
+            allow_missing => $allow_missing, force_init => $force_init
+        );
+       return;
+    }
+    if($self->params_initialized and not $force_init)
+    {
+        AI::MXNet::Logging->warning(
+            "Parameters already initialized and force_init=False. "
+            ."set_params call ignored."
+        );
+        return;
+    }
+    $self->_curr_module->set_params(
+        $arg_params, $aux_params,
+        allow_missing => $allow_missing,
+        force_init    => $force_init
+    );
+    # because we didn't update self._arg_params, they are dirty now.
+    $self->_params_dirty(1);
+    $self->params_initialized(1);
 }
 
 =head2 init_params
@@ -188,7 +260,20 @@ method init_params(
         allow_missing => $allow_missing,
         force_init    => $force_init
     );
+    $self->_params_dirty(0);
     $self->params_initialized(1);
+}
+
+method get_states(Bool $merge_multi_context=1)
+{
+    assert($self->binded and $self->params_initialized);
+    $self->_curr_module->get_states($merge_multi_context);
+}
+
+method set_states($states, $value)
+{
+    assert($self->binded and $self->params_initialized);
+    $self->_curr_module->set_states($states, $value);
 }
 
 =head2 bind
@@ -215,6 +300,8 @@ method init_params(
             Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
             (default to 'write').
             Can be specified globally (str) or for each argument (array ref, hash ref).
+        bucket_key : str
+            bucket key for binding. by default use the default_bucket_key
 =cut
 
 method bind(
@@ -224,7 +311,8 @@ method bind(
     Bool                                                      :$inputs_need_grad=0,
     Bool                                                      :$force_rebind=0,
     Maybe[AI::MXNet::BaseModule]                              :$shared_module=,
-    Str|ArrayRef[Str]|HashRef[Str]                            :$grad_req='write'
+    Str|ArrayRef[Str]|HashRef[Str]                            :$grad_req='write',
+    Str                                                       :$bucket_key
 )
 {
     # in case we already initialized params, keep it
@@ -250,14 +338,16 @@ method bind(
     $self->inputs_need_grad($inputs_need_grad);
     $self->binded(1);
 
-    my ($symbol, $data_names, $label_names) = &{$self->_sym_gen}($self->_default_bucket_key);
+    my ($symbol, $data_names, $label_names) = &{$self->_sym_gen}($bucket_key//$self->_default_bucket_key);
     my $module = AI::MXNet::Module->new(
-            symbol         => $symbol,
-            data_names     => $data_names,
-            label_names    => $label_names,
-            logger         => $self->logger,
-            context        => $self->_context,
-            work_load_list => $self->_work_load_list
+            symbol            => $symbol,
+            data_names        => $data_names,
+            label_names       => $label_names,
+            logger            => $self->logger,
+            context           => $self->_context,
+            work_load_list    => $self->_work_load_list,
+            state_names       => $self->_state_names,
+            fixed_param_names => $self->_fixed_param_names
     );
     $module->bind(
         data_shapes      => $data_shapes,
@@ -316,7 +406,7 @@ method switch_bucket(
             for_training     => $self->_curr_module->for_training,
             inputs_need_grad => $self->_curr_module->inputs_need_grad,
             force_rebind     => 0,
-            shared_module    => $self->_curr_module,
+            shared_module    => $self->_buckets->{ $self->_default_bucket_key },
         );
         $self->_curr_module($module);
         $self->_buckets->{ $bucket_key } = $module;
@@ -419,6 +509,7 @@ method backward(Maybe[ArrayRef[AI::MXNet::NDArray]|AI::MXNet::NDArray] $out_grad
 method update()
 {
     assert($self->binded and $self->params_initialized and $self->optimizer_initialized);
+    $self->_params_dirty(1);
     $self->_curr_module->update;
 }
 

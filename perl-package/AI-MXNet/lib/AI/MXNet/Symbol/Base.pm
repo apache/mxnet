@@ -42,11 +42,11 @@ sub _compose
 {
     my $self = shift;
     my (@args, %kwargs);
-    if(@_ and ref $_[-1] eq 'HASH')
+    while(ref $_[0])
     {
-        %kwargs = %{ pop(@_) };
+        push @args, shift(@_);
     }
-    @args = @_;
+    %kwargs = @_;
     my $name = delete $kwargs{'name'};
     if(@args and %kwargs)
     {
@@ -162,7 +162,7 @@ func _make_atomic_symbol_function($handle, $name)
         my $s = $class->new(handle => $sym_handle);
         my $hint = lc($func_name);
         $name = AI::MXNet::Symbol::NameManager->current->get($name, $hint);
-        $s->_compose(@args, { name => $name, %$symbol_kwargs });
+        $s->_compose(@args, name => $name, %$symbol_kwargs);
         return $s;
     };
     $function_meta{ $creator }{__name__} = $func_name;

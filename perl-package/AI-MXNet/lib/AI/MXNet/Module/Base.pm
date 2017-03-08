@@ -28,6 +28,89 @@ func _as_list($obj)
     return $obj;
 }
 
+# Check that all input names are in symbol's argument
+method _check_input_names(
+    AI::MXNet::Symbol $symbol,
+    ArrayRef[Str]     $names,
+    Str               $typename,
+    Bool              $throw
+)
+{
+    my @candidates;
+    my %args = map {
+        push @candidates, $_ if not /_(?:weight|bias|gamma|beta)$/;
+        $_ => 1
+    } @{ $symbol->list_arguments };
+    for my $name (@$names)
+    {
+        my $msg;
+        if(not exists $args{$name} and $name ne 'softmax_label')
+        {
+            $msg = sprintf("\033[91mYou created Module with Module(..., %s_names=%s) but "
+                ."input with name '%s' is not found in symbol.list_arguments(). "
+                ."Did you mean one of:\n\t%s\033[0m",
+                $typename, "@$names", $name, join("\n\t", @candidates)
+            );
+            if($throw)
+            {
+                confess($msg);
+            }
+            else
+            {
+                AI::MXNet::Logging->warning($msg);
+            }
+        }
+    }
+}
+
+# Check that input names matches input data descriptors
+method _check_names_match(
+    ArrayRef[Str]                  $data_names,
+    ArrayRef[NameShapeOrDataDesc]  $data_shapes,
+    Str                            $name,
+    Bool                           $throw
+)
+{
+    return if (not @$data_shapes and @$data_names == 1 and  $data_names->[0] eq 'softmax_label');
+    my @actual = map { @{$_}[0] } @{ $data_shapes };
+    if("@$data_names" ne "@actual")
+    {
+        my $msg = sprintf(
+            "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)",
+            $name, $name, "@$data_shapes", "@$data_names"
+        );
+        if($throw)
+        {
+            confess($msg);
+        }
+        else
+        {
+            AI::MXNet::Logging->warning($msg);
+        }
+    }
+}
+
+method _parse_data_desc(
+    ArrayRef[Str]                                  $data_names,
+    Maybe[ArrayRef[Str]]                           $label_names,
+    ArrayRef[NameShapeOrDataDesc]                  $data_shapes,
+    Maybe[ArrayRef[NameShapeOrDataDesc]]           $label_shapes
+)
+{
+    $data_shapes = [map { blessed $_ ? $_ : AI::MXNet::DataDesc->new(@$_) } @$data_shapes];
+    $self->_check_names_match($data_names, $data_shapes, 'data', 1);
+    if($label_shapes)
+    {
+        $label_shapes = [map { blessed $_ ? $_ : AI::MXNet::DataDesc->new(@$_) } @$label_shapes];
+        $self->_check_names_match($label_names, $label_shapes, 'label', 0);
+    }
+    else
+    {
+        $self->_check_names_match($label_names, [], 'label', 0);
+    }
+    return ($data_shapes, $label_shapes);
+}
+
 =head1 DESCRIPTION
 
     The base class of a modules. A module represents a computation component. The design
@@ -112,12 +195,12 @@ func _as_list($obj)
     - `score`: run prediction on a data set and evaluate performance
 =cut
 
-has 'logger'  => (is => 'rw', default => sub { AI::MXNet::Logging->get_logger });
+has 'logger'            => (is => 'rw', default => sub { AI::MXNet::Logging->get_logger });
+has '_symbol'           => (is => 'rw', init_arg => 'symbol', isa => 'AI::MXNet::Symbol');
 has [
     qw/binded for_training inputs_need_grad
     params_initialized optimizer_initialized/
-]             => (is => 'rw', isa => 'Bool', init_arg => undef, default => 0);
-has '_symbol' => (is => 'rw', init_arg => 'symbol', isa => 'AI::MXNet::Symbol');
+]                       => (is => 'rw', isa => 'Bool', init_arg => undef, default => 0);
 
 ################################################################################
 # High Level API
@@ -644,9 +727,14 @@ method set_params(
             Path to output param file.
 =cut
 
-method save_params(Str $fname)
+method save_params(
+    Str $fname,
+    Maybe[HashRef[AI::MXNet::NDArray]] $arg_params=,
+    Maybe[HashRef[AI::MXNet::NDArray]] $aux_params=
+)
 {
-    my ($arg_params, $aux_params) = $self->get_params;
+    ($arg_params, $aux_params) = $self->get_params
+        unless (defined $arg_params and defined $aux_params);
     my %save_dict;
     while(my ($k, $v) = each %{ $arg_params })
     {
@@ -692,6 +780,52 @@ method load_params(Str $fname)
     }
     $self->set_params(\%arg_params, \%aux_params);
 }
+
+=head2 get_states
+
+        Get states from all devices
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is true (1). In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A true value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If merge_multi_context is 1, it is like [out1, out2]. Otherwise, it
+        is like [[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]. All the output
+        elements are AI::MXNet::NDArray.
+=cut
+
+method get_states(Bool $merge_multi_context=1)
+{
+    assert($self->binded and $self->params_initialized);
+    assert(not $merge_multi_context);
+    return [];
+}
+
+=head2 set_states
+
+        Set value for states. Only one of states & value can be specified.
+
+        Parameters
+        ----------
+        states : list of list of NDArrays
+            source states arrays formatted like [[state1_dev1, state1_dev2],
+            [state2_dev1, state2_dev2]].
+        value : number
+            a single scalar value for all state arrays.
+=cut
+
+method set_states(Maybe[ArrayRef[ArrayRef[AI::MXNet::NDArray]]] $states=, Maybe[Num] $value=)
+{
+    assert($self->binded and $self->params_initialized);
+    assert(not $states and not $value);
+}
+
 
 =head2 install_monitor
 
