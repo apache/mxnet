@@ -3,6 +3,7 @@
  * \file engine.h
  * \brief Engine that schedules all the operations according to dependency.
  */
+#pragma once
 #ifndef MXNET_ENGINE_H_
 #define MXNET_ENGINE_H_
 

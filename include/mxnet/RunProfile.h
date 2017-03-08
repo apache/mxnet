@@ -2,7 +2,6 @@
 #include <unordered_map>
 #include <string>
 #include <fstream>
-using namespace std;
 
 class RuntimeProfile
 {
@@ -10,20 +9,20 @@ class RuntimeProfile
     static RuntimeProfile* Get() {
         static RuntimeProfile e; return &e;
     }
-    int GetRuntime(string& oprName)
+    int GetRuntime(std::string& oprName)
     {
         return store[oprName];
     }
     private:
     RuntimeProfile()
     {
-        ifstream infile("runProfile.txt");
-        string name;
+        std::ifstream infile("runProfile.txt");
+        std::string name;
         int time;
         while(infile>> name>>time)
         {
             store[name] = time;
         }
     }
-    unordered_map<string,int> store;
+    std::unordered_map<std::string,int> store;
 };
