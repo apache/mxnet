@@ -33,7 +33,7 @@ class CuDNNBatchNormOp : public Operator {
     dtype_ = DataType<DType>::kCudnnFlag;
     // For float16 input type beta, gamma, mean, and average are stored in float32.
     // For other input types, these parameters have the same type as input
-    dtype_param_ = (dtype_ == CUDNN_DATA_HALF) ? CUDNN_DATA_FLOAT : dtype_;
+    dtype_param_ = (dtype_ == CUDNN_DATA_HALF) ? kFloat32 : DataType<DType>::kFlag;
   }
 
   ~CuDNNBatchNormOp() {
@@ -240,7 +240,7 @@ class CuDNNBatchNormOp : public Operator {
  private:
   bool init_cudnn_;
   cudnnDataType_t dtype_;
-  cudnnDataType_t dtype_param_;
+  int dtype_param_;
   cudnnTensorDescriptor_t io_desc_, mean_desc_;
   mshadow::Shape<4> shape_;
   BatchNormParam param_;
