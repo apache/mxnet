@@ -29,14 +29,14 @@ data = mx.Variable(:data)
 and then cascading fully-connected layers and activation functions:
 
 ```julia
-fc1  = mx.FullyConnected(data = data, name=:fc1, num_hidden=128)
-act1 = mx.Activation(data = fc1, name=:relu1, act_type=:relu)
-fc2  = mx.FullyConnected(data = act1, name=:fc2, num_hidden=64)
-act2 = mx.Activation(data = fc2, name=:relu2, act_type=:relu)
-fc3  = mx.FullyConnected(data = act2, name=:fc3, num_hidden=10)
+fc1  = mx.FullyConnected(data, name=:fc1, num_hidden=128)
+act1 = mx.Activation(fc1, name=:relu1, act_type=:relu)
+fc2  = mx.FullyConnected(act1, name=:fc2, num_hidden=64)
+act2 = mx.Activation(fc2, name=:relu2, act_type=:relu)
+fc3  = mx.FullyConnected(act2, name=:fc3, num_hidden=10)
 ```
 
-Note each composition we take the previous symbol as the data argument,
+Note each composition we take the previous symbol as the first argument,
 forming a feedforward chain. The architecture looks like
 
 ```
@@ -49,7 +49,7 @@ where the last 10 units correspond to the 10 output classes (digits
 classes:
 
 ```julia
-mlp  = mx.SoftmaxOutput(data = fc3, name=:softmax)
+mlp  = mx.SoftmaxOutput(fc3, name=:softmax)
 ```
 
 As we can see, the MLP is just a chain of layers. For this case, we can
@@ -148,12 +148,12 @@ listed below:
 data = mx.Variable(:data)
 
 # first conv
-conv1 = @mx.chain mx.Convolution(data=data, kernel=(5,5), num_filter=20)  =>
+conv1 = @mx.chain mx.Convolution(data, kernel=(5,5), num_filter=20)  =>
                   mx.Activation(act_type=:tanh) =>
                   mx.Pooling(pool_type=:max, kernel=(2,2), stride=(2,2))
 
 # second conv
-conv2 = @mx.chain mx.Convolution(data=conv1, kernel=(5,5), num_filter=50) =>
+conv2 = @mx.chain mx.Convolution(conv1, kernel=(5,5), num_filter=50) =>
                   mx.Activation(act_type=:tanh) =>
                   mx.Pooling(pool_type=:max, kernel=(2,2), stride=(2,2))
 ```
@@ -168,17 +168,17 @@ a tensor of shape `(28,28,1,100)`. The convolution and pooling operates
 in the spatial axis, so `kernel=(5,5)` indicate a square region of
 5-width and 5-height. The rest of the architecture follows as:
 
-```ulia
+```julia
 # first fully-connected
-fc1   = @mx.chain mx.Flatten(data=conv2) =>
+fc1   = @mx.chain mx.Flatten(conv2) =>
                   mx.FullyConnected(num_hidden=500) =>
                   mx.Activation(act_type=:tanh)
 
 # second fully-connected
-fc2   = mx.FullyConnected(data=fc1, num_hidden=10)
+fc2   = mx.FullyConnected(fc1, num_hidden=10)
 
 # softmax loss
-lenet = mx.Softmax(data=fc2, name=:softmax)
+lenet = mx.Softmax(fc2, name=:softmax)
 ```
 
 Note a fully-connected operator expects the input to be a matrix.
