@@ -275,14 +275,14 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           int idx_rhs[unroll];
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            idx_big[u] = idx_big0 + unravel_dot(k + u*blockDim.x, big_shape, big_stride);
-            idx_lhs[u] = idx_lhs0 + unravel_dot(k + u*blockDim.x, lhs_shape, lhs_stride);
-            idx_rhs[u] = idx_rhs0 + unravel_dot(k + u*blockDim.x, rhs_shape, rhs_stride);
+            idx_big[u] = idx_big0 + unravel_dot(k + u*blockDim.y, big_shape, big_stride);
+            idx_lhs[u] = idx_lhs0 + unravel_dot(k + u*blockDim.y, lhs_shape, lhs_stride);
+            idx_rhs[u] = idx_rhs0 + unravel_dot(k + u*blockDim.y, rhs_shape, rhs_stride);
           }
           DType tmp[unroll];
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            if (k + u*blockDim.x < Mend) {
+            if (k + u*blockDim.y < Mend) {
               tmp[u] = OP1::Map(big[idx_big[u]], OP2::Map(lhs[idx_lhs[u]], rhs[idx_rhs[u]]));
             }
           }
