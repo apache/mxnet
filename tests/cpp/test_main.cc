@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <string.h>
 
 bool unitTestsWithCuda = false;
 
