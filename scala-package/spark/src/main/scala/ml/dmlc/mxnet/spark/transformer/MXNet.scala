@@ -41,8 +41,9 @@ class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
   override val uid = UUID.randomUUID().toString
 
   override def train(dataset: DataFrame) : MXNetModelWrap = {
-    val lps = dataset.select(_featuresCol, _labelCol).rdd
-      .map(row => new LabeledPoint(row.getAs[Double](_labelCol), row.getAs[Vector](_featuresCol)))
+    val lps = dataset.select(getFeaturesCol, getLabelCol).rdd
+      .map(row => new LabeledPoint(row.getAs[Double](getLabelCol),
+        row.getAs[Vector](getFeaturesCol)))
     val mxNet = new ml.dmlc.mxnet.spark.MXNet()
       .setBatchSize(p.batchSize)
       .setLabelName(p.labelName)
@@ -52,23 +53,12 @@ class MXNet extends Predictor[Vector, MXNet, MXNetModelWrap] {
       .setNumEpoch(p.numEpoch)
       .setNumServer(p.numServer)
       .setNumWorker(p.numWorker)
-      .setLabelName(p.labelName)
       .setExecutorJars(p.jars.mkString(","))
     val fitted = mxNet.fit(lps)
     new MXNetModelWrap(lps.sparkContext, fitted, uid)
   }
 
-  override def copy(extra: ParamMap) : MXNet = copyValues(new MXNet)
-
-  override def setFeaturesCol(inputCol: String) : MXNet = {
-    this._featuresCol = inputCol
-    this
-  }
-
-  override def setLabelCol(outputCol: String) : MXNet = {
-    this._labelCol = outputCol
-    this
-  }
+  override def copy(extra: ParamMap) : MXNet = defaultCopy(extra)
 
   def setBatchSize(batchSize: Int): this.type = {
     p.batchSize = batchSize
@@ -146,7 +136,7 @@ class MXNetModelWrap(sc: SparkContext, mxNet: MXNetModel, uuid: String)
   extends PredictionModel[Vector, MXNetModelWrap] with Serializable with MLWritable {
 
   override def copy(extra: ParamMap): MXNetModelWrap = {
-    copyValues(new MXNetModelWrap(sc, mxNet, uuid))
+    copyValues(new MXNetModelWrap(sc, mxNet, uuid)).setParent(parent)
   }
 
   override val uid: String = uuid
