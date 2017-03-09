@@ -36,13 +36,15 @@ CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall $(DEFS)
 ifneq ($(MIN), 1)
 	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
 	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib
-        ifeq ($(USE_BLAS), openblas)
-                LDFLAGS += -lopenblas
-        else ifeq ($(USE_BLAS), atlas)
+        
+	# Define which blas is installed. Uses OpenBLAS by default.
+	ifeq ($(USE_BLAS), atlas)
                 LDFLAGS += -lcblas
         else ifeq ($(USE_BLAS), blas)
                 LDFLAGS += -lblas
-        endif
+        else
+		LDFLAGS += -lopenblas
+	endif
 endif
 
 
