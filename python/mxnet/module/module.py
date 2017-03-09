@@ -1,5 +1,5 @@
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods, too-many-statements
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
 more `Executor` for data parallelization.
 """
@@ -59,7 +59,7 @@ class Module(BaseModule):
         assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
 
-        if isinstance(symbol, loss.BaseLoss):
+        if isinstance(symbol, loss.Loss):
             self._loss = symbol
             self._symbol = _sym.Group([self._loss.output_symbol, self._loss.loss_symbol])
             num_output = len(self._loss.output_symbol.list_outputs())
@@ -180,6 +180,8 @@ class Module(BaseModule):
 
     def _reset_bind(self):
         """Internal function to reset binded state."""
+        if self.binded and params_initialized:
+            self._sync_params_from_devices()
         self.binded = False
         self._exec_group = None
         self._data_shapes = None

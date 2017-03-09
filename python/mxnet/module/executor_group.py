@@ -371,10 +371,8 @@ class DataParallelExecutorGroup(object):
         if is_train is None:
             is_train = self.for_training
 
-        if self.label_arrays is not None:
-            assert not is_train or data_batch.label
-            if data_batch.label:
-                _load_label(data_batch, self.label_arrays, self.label_layouts)
+        if self.label_arrays is not None and data_batch.label:
+            _load_label(data_batch, self.label_arrays, self.label_layouts)
 
         for exec_ in self.execs:
             exec_.forward(is_train=is_train)

@@ -1,34 +1,44 @@
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=too-many-arguments, no-member
 """ losses for training neural networks """
 from __future__ import absolute_import
 
 from .base import numeric_types
 from . import symbol
 
-class BaseLoss(object):
-    def __init__(self, loss, outputs, label_names, weight=None,
-                 sample_weight=None, metrics=()):
-        assert len(loss.list_outputs()) == 1, "loss symbol must have a single output"
-        label_names = list(label_names) if label_names else []
 
-        if sample_weight is not None:
-            assert isinstance(sample_weight, symbol.Symbol), "sample_weight must be a Symbol"
-            label_names += [name for name in sample_weight.list_arguments()
-                            if x not in loss.list_arguments()]
-            loss = symbol.broadcast_mul(loss, sample_weight)
+def _apply_weight(loss, weight=None, sample_weight=None):
+    assert len(loss.list_outputs()) == 1, "loss symbol must have a single output"
 
-        if weight is not None:
-            assert isinstance(weight, numeric_types), "weight must be a number"
-            loss *= weight
+    if sample_weight is not None:
+        assert isinstance(sample_weight, symbol.Symbol), "sample_weight must be a Symbol"
+        loss = symbol.broadcast_mul(loss, sample_weight)
 
-        loss = symbol.make_loss(loss)
-        outputs = symbol.Group([symbol.stop_gradient(x) for x in outputs])
+    if weight is not None:
+        assert isinstance(weight, numeric_types), "weight must be a number"
+        loss *= weight
 
-        self._loss_symbol = loss
-        self._output_symbol = outputs
-        self._label_names = label_names
-        self._metrics = metrics
+    return loss
+
+
+class Loss(object):
+    """Base class for all loss layers.
+
+    """
+    def __init__(self, loss, output, label_names, name,
+                 output_head_grad=False, loss_head_grad=False):
+        if not loss_head_grad:
+            self._loss_symbol = symbol.Group([symbol.make_loss(x, name=x.name+'_loss')
+                                              for x in loss])
+        if not output_head_grad:
+            self._output_symbol = symbol.Group([symbol.stop_gradient(x, name=x.name+'_out')
+                                                for x in output])
+        self._label_names = list(label_names) if label_names else []
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def label_names(self):
@@ -42,57 +52,72 @@ class BaseLoss(object):
     def output_symbol(self):
         return self._output_symbol
 
-    def get_metrics(self):
-        return self._metrics
+
+def custom_loss(loss, output, label_names, weight=None,
+                sample_weight=None, name='custom', **kwargs):
+    label_names = list(label_names)
+    if sample_weight is not None:
+        label_names += [i for i in sample_weight.list_arguments()
+                        if i not in loss.list_arguments()]
+    loss = _apply_weight(loss, weight=weight, sample_weight=sample_weight)
+    loss._set_attr(name=name)
+    return Loss(loss, output, label_names, name, **kwargs)
 
 
-class GenericLoss(BaseLoss):
-    def __init__(self, *args, **kwargs):
-        super(GenericLoss, self).__init__(*args, **kwargs)
+def multi_loss(losses, name='multi'):
+    loss = sum([list(l.loss_symbol) for l in losses], [])
+    output = sum([list(l.output_symbol) for l in losses], [])
+    label_names = []
+    for l in losses:
+        for name in l.label_names:
+            if name not in label_names:
+                label_names.append(name)
+    return Loss(loss, output, label_names, name,
+                output_head_grad=False, loss_head_grad=False)
 
 
-class MultiLoss(BaseLoss):
-    """docstring for MultiLoss"""
-    def __init__(self, losses):
-        super(MultiLoss, self).__init__()
-        
-
-class L2Loss(BaseLoss):
-    def __init__(self, output, label, extra_outputs=(), **kwargs):
-        loss = symbol.square(output - label)
-        label_names = [x for x in label.list_arguments()
-                       if x not in output.list_arguments()]
-        outputs = [output] + list(extra_outputs)
-        super(L2Loss, self).__init__(loss, outputs, label_names, **kwargs)
+def l2_loss(output, label, extra_outputs=(), name='l2',
+            weight=1., sample_weight=None, **kwargs):
+    loss = symbol.square(output - label)
+    loss = _apply_weight(loss, weight/2., sample_weight)
+    loss._set_attr(name=name)
+    label_names = [x for x in loss.list_arguments()
+                   if x not in output.list_arguments()]
+    outputs = [output] + list(extra_outputs)
+    return Loss(loss, outputs, label_names, name, **kwargs)
 
 
-class L1Loss(BaseLoss):
-    def __init__(self, output, label, extra_outputs=(), **kwargs):
-        loss = symbol.abs(output - label)
-        label_names = [x for x in label.list_arguments()
-                       if x not in output.list_arguments()]
-        outputs = [output] + list(extra_outputs)
-        super(L1Loss, self).__init__(loss, outputs, label_names, **kwargs)
+def l1_loss(output, label, extra_outputs=(), name='l1',
+            weight=None, sample_weight=None, **kwargs):
+    loss = symbol.abs(output - label)
+    loss = _apply_weight(loss, weight, sample_weight)
+    loss._set_attr(name=name)
+    label_names = [x for x in loss.list_arguments()
+                   if x not in output.list_arguments()]
+    outputs = [output] + list(extra_outputs)
+    return Loss(loss, outputs, label_names, name, **kwargs)
 
 
-class CrossEntropyLoss(BaseLoss):
-    def __init__(self, output, label, sparse_label=True, axis=1,
-                 extra_outputs=(), **kwargs):
-        # TODO(Eric): make a log_softmax op
-        basis = symbol.max(output, axis=axis, keepdims=True)
-        basis = symbol.stop_gradient(basis)
-        output = symbol.broadcast_sub(output, basis)
-        norm = symbol.log(symbol.sum(symbol.exp(output), axis=axis, keepdims=True))
-        output = symbol.broadcast_sub(output, norm)
+def cross_entropy_loss(output, label, sparse_label=True, axis=1,
+                       extra_outputs=(), name='ce',
+                       weight=None, sample_weight=None, **kwargs):
+    # TODO(Eric): make a log_softmax op
+    basis = symbol.max(output, axis=axis, keepdims=True)
+    basis = symbol.stop_gradient(basis)
+    output = symbol.broadcast_sub(output, basis)
+    norm = symbol.log(symbol.sum(symbol.exp(output), axis=axis, keepdims=True))
+    output = symbol.broadcast_sub(output, norm)
 
-        if sparse_label:
-            loss = -symbol.pick(output, label, axis=axis, keepdims=False)
-        else:
-            loss = -symbol.sum(output*label, axis=axis, keepdims=False)
+    if sparse_label:
+        loss = -symbol.pick(output, label, axis=axis, keepdims=False)
+    else:
+        loss = -symbol.sum(output*label, axis=axis, keepdims=False)
 
-        label_names = [x for x in label.list_arguments()
-                       if x not in output.list_arguments()]
-        outputs = [output] + list(extra_outputs)
-        super(CrossEntropyLoss, self).__init__(loss, outputs, label_names, **kwargs)
+    loss = _apply_weight(loss, weight, sample_weight)
+    loss._set_attr(name=name)
+    label_names = [x for x in loss.list_arguments()
+                   if x not in output.list_arguments()]
+    outputs = [output] + list(extra_outputs)
+    return Loss(loss, outputs, label_names, name, **kwargs)
 
 
