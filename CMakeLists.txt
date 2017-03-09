@@ -354,7 +354,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
 else()
   if(UNIX)
   add_library(mxnet_static STATIC ${SOURCE})
-  add_library(mxnet SHARED src/common/stub.cc)
+  # Need an arbitrary source file to trigger CMake to build the library
+  add_library(mxnet SHARED src/initialize.cc)
   target_link_libraries(mxnet
       -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
   )

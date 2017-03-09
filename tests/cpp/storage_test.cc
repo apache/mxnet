@@ -12,7 +12,6 @@ TEST(Storage, Basic_CPU) {
   auto&& handle = storage->Alloc(kSize, context_cpu);
   EXPECT_EQ(handle.ctx, context_cpu);
   EXPECT_EQ(handle.size, kSize);
-  auto ptr = handle.dptr;
   storage->Free(handle);
   handle = storage->Alloc(kSize, context_cpu);
   EXPECT_EQ(handle.ctx, context_cpu);
