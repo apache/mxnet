@@ -179,6 +179,47 @@ function reset!(metric :: MSE)
   metric.n_sample = 0
 end
 
+doc"""
+    NMSE
+
+Normalized Mean Squared Error
+
+```math
+\sum_i (\frac{label_i - pred_i}{label_i})^2
+```
+"""
+type NMSE <: AbstractEvalMetric
+  nmse_sum  :: Float64
+  n_sample :: Int
+
+  NMSE() = new(0.0, 0)
+end
+
+function _update_single_output(metric :: NMSE, label :: NDArray, pred :: NDArray)
+  label = copy(label)
+  pred  = copy(pred)
+
+  n_sample = size(pred)[end]
+  metric.n_sample += n_sample
+
+  for i = 1:n_sample
+    if label[i] == 0.0f0  # in case of batch padding
+        continue
+    end
+
+    metric.nmse_sum += ((label[i] - pred[i]) / label[i])^2
+  end
+end
+
+function get(metric :: NMSE)
+  return [(:NMSE, metric.nmse_sum / metric.n_sample)]
+end
+
+function reset!(metric :: NMSE)
+  metric.nmse_sum = 0.0
+  metric.n_sample = 0
+end
+
 """
     ACE
 
