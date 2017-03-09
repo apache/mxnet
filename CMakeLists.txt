@@ -393,13 +393,8 @@ if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
-if(IS_CONTAINER_BUILD)
-  # Do tests before chrpath so that we use the cuda stub driver
-  add_subdirectory(tests)
-else()
-  # Do tests after chrpath so that we use the "real" cuda driver
-  add_subdirectory(tests)
-endif()
+# Do tests after chrpath so that we use the "real" cuda driver
+add_subdirectory(tests)
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
 if(AUTO_INSTALL_DIR)
