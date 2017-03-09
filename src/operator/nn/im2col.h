@@ -96,28 +96,36 @@ inline void im2col_cpu(const DType* data_im, const int channels,
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
   const int output_w = (width + 2 * pad_w -
     (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
-  const int channel_size = height * width;
-  for (int channel = channels; channel--; data_im += channel_size) {
-    for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
-      for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
-        int input_row = -pad_h + kernel_row * dilation_h;
-        for (int output_rows = output_h; output_rows; output_rows--) {
+  const int im_shift = height * width;
+  const int data_col_shift3 = output_h * output_w;
+  const int data_col_shift2 = kernel_w * data_col_shift3;
+  const int data_col_shift1 = kernel_h * data_col_shift2;
+  #pragma omp parallel for collapse(4)
+  for (int channel = 0; channel < channels; ++channel) {
+    for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
+      for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
+        for (int output_rows = 0; output_rows < output_h; ++output_rows) {
+          DType* data_col_local = data_col + channel * data_col_shift1
+                                + kernel_row * data_col_shift2
+                                + kernel_col * data_col_shift3
+                                + output_rows * output_w;
+          const DType* data_im_local = data_im + channel * im_shift;
+          const int input_row = -pad_h + kernel_row * dilation_h + output_rows * stride_h;
           if (!is_a_ge_zero_and_a_lt_b(input_row, height)) {
             for (int output_cols = output_w; output_cols; output_cols--) {
-              *(data_col++) = 0;
+              *(data_col_local++) = 0;
             }
           } else {
             int input_col = -pad_w + kernel_col * dilation_w;
             for (int output_col = output_w; output_col; output_col--) {
               if (is_a_ge_zero_and_a_lt_b(input_col, width)) {
-                *(data_col++) = data_im[input_row * width + input_col];
+                *(data_col_local++) = data_im_local[input_row * width + input_col];
               } else {
-                *(data_col++) = 0;
+                *(data_col_local++) = 0;
               }
               input_col += stride_w;
             }
           }
-          input_row += stride_h;
         }
       }
     }
@@ -258,25 +266,33 @@ inline void col2im_cpu(const DType* data_col, const int channels,
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
   const int output_w = (width + 2 * pad_w -
     (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
-  const int channel_size = height * width;
-  for (int channel = channels; channel--; data_im += channel_size) {
-    for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
-      for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
-        int input_row = -pad_h + kernel_row * dilation_h;
-        for (int output_rows = output_h; output_rows; output_rows--) {
-          if (!is_a_ge_zero_and_a_lt_b(input_row, height)) {
-            data_col += output_w;
-          } else {
+  const int im_shift = height * width;
+  const int data_col_shift3 = output_h * output_w;
+  const int data_col_shift2 = kernel_w * data_col_shift3;
+  const int data_col_shift1 = kernel_h * data_col_shift2;
+  for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
+    const int input_row_tmp = -pad_h + kernel_row * dilation_h;
+    const DType* data_col_tmp1 = data_col + kernel_row * data_col_shift2;
+    for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
+      const DType* data_col_tmp = data_col_tmp1 + kernel_col * data_col_shift3;
+      // TODO(junwu): revisit the performance change of using collpase clause
+      #pragma omp parallel for collapse(2)
+      for (int channel = 0; channel < channels; ++channel) {
+        for (int output_rows = 0; output_rows < output_h; ++output_rows) {
+          const DType* data_col_local = data_col_tmp + channel * data_col_shift1
+                                      + output_rows * output_w;
+          DType* data_im_local = data_im + channel * im_shift;
+          const int input_row = input_row_tmp + output_rows * stride_h;
+          if (is_a_ge_zero_and_a_lt_b(input_row, height)) {
             int input_col = -pad_w + kernel_col * dilation_w;
             for (int output_col = output_w; output_col; output_col--) {
               if (is_a_ge_zero_and_a_lt_b(input_col, width)) {
-                data_im[input_row * width + input_col] += *data_col;
+                data_im_local[input_row * width + input_col] += *data_col_local;
               }
-              data_col++;
+              ++data_col_local;
               input_col += stride_w;
             }
           }
-          input_row += stride_h;
         }
       }
     }
