@@ -469,4 +469,3 @@ class FusedRNN(Initializer):
             desc = InitDesc(name)
             self._init(desc, args[name])
         arr[:] = cell.pack_weights(args)['parameters']
-
