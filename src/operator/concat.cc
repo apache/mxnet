@@ -18,7 +18,8 @@ template<>
 Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
-  if (1 == param.dim) {
+  if ((1 == param.dim) &&
+    (param.num_args < (dnnResourceMultipleDst - dnnResourceMultipleSrc))) {
     switch (dtype) {
       case mshadow::kFloat32:
       return new MKLConcatOp<cpu, float>(param);
