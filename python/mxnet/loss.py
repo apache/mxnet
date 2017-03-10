@@ -140,7 +140,13 @@ class Loss(object):
 def custom_loss(loss, output, label_names, extra_outputs=(),
                 weight=None, sample_weight=None, name='loss',
                 metric=None, **kwargs):
-    """User defined custom loss.
+    """User defined custom loss. For example, the following
+    custom loss has the same effect as l2_loss::
+        data = mx.sym.Variable('data')
+        label = mx.sym.Variable('label')
+        output = mx.sym.FullyConnected(data, num_hidden=1)
+        L = mx.sym.square(output-label)/2
+        loss = mx.sym.custom_loss(L, output, label_names=['label'])
 
     Parameters
     ----------

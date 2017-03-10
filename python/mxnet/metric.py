@@ -100,7 +100,7 @@ class EvalMetric(object):
         else:
             names = ['%s_%d'%(self.name, i) for i in range(self.num)]
             values = [x / y if y != 0 else float('nan') \
-                for x, y in zip(self.sum_metric, self.num_inst)]
+                for x, y in list(zip(self.sum_metric, self.num_inst))]
             return (names, values)
 
     def get_name_value(self):
@@ -110,7 +110,7 @@ class EvalMetric(object):
             name = [name]
         if not isinstance(value, list):
             value = [value]
-        return zip(name, value)
+        return list(zip(name, value))
 
 
 class CompositeEvalMetric(EvalMetric):

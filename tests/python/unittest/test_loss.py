@@ -117,11 +117,11 @@ def test_multi_loss():
     mod = mx.mod.Module(loss)
 
     mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200,
-            optimizer_params={'learning_rate': 0.2},
+            optimizer_params={'learning_rate': 0.5},
             initializer=mx.init.Uniform(0.1))
     score = mod.score(data_iter, loss.metric)
     assert score[0][1] == 1.0
-    assert score[2][1] < 0.05
+    assert score[2][1] < 0.1
 
 
 if __name__ == '__main__':
