@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit script with error if any errors occur
+set -e
+
 echo "BUILD make"
 cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk

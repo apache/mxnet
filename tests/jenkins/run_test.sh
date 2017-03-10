@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit script with error if any errors occur
+set -e
+
 echo "BUILD make"
 cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
@@ -13,9 +16,8 @@ make -j$(nproc) || exit -1
 echo "BUILD cpp_test"
 make -j$(nproc) test || exit -1
 export MXNET_ENGINE_INFO=true
-for test in tests/cpp/*_test; do
-    ./$test || exit -1
-done
+./build/tests/cpp/mxnet_test
+
 export MXNET_ENGINE_INFO=false
 export PYTHONPATH=$(pwd)/python
 
