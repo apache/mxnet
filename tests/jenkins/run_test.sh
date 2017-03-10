@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Exit script with error if any errors occur
-set -e
 
 echo "BUILD make"
 cp make/config.mk .
@@ -11,6 +10,9 @@ echo "USE_CUDNN=1" >> config.mk
 echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
+
+set -e
+
 make -j$(nproc) || exit -1
 
 echo "BUILD cpp_test"
