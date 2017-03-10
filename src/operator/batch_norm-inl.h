@@ -255,7 +255,7 @@ class BatchNormProp : public OperatorProperty {
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
     using namespace mshadow;
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     // For float16 input type beta, gamma, mean, and average are stored in float32.
