@@ -5,12 +5,12 @@ from __future__ import absolute_import, print_function, division
 import time
 import traceback
 import numbers
-import numpy as np
-import numpy.testing as npt
-import mxnet as mx
 import subprocess
 import os
 import errno
+import numpy as np
+import numpy.testing as npt
+import mxnet as mx
 from .context import cpu, gpu, Context
 from .ndarray import array
 from .symbol import Symbol

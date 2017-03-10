@@ -609,8 +609,8 @@ class FusedRNNCell(BaseRNNCell):
         if initializer is None:
             initializer = init.Xavier(factor_type='in', magnitude=2.34)
         if not isinstance(initializer, init.FusedRNN):
-            initializer = init.FusedRNN(initializer, num_hidden, num_layers,
-                                        mode, bidirectional)
+            initializer = init.FusedRNN( # pylint: disable=redefined-variable-type
+                initializer, num_hidden, num_layers, mode, bidirectional)
         self._parameter = self.params.get('parameters', init=initializer)
 
         self._directions = self._bidirectional + 1
@@ -790,7 +790,7 @@ class FusedRNNCell(BaseRNNCell):
 
         states = begin_state
         if self._mode == 'lstm':
-            states = {'state': states[0], 'state_cell': states[1]}
+            states = {'state': states[0], 'state_cell': states[1]} # pylint: disable=redefined-variable-type
         else:
             states = {'state': states[0]}
 
@@ -1076,4 +1076,3 @@ class ZoneoutCell(ModifierCell):
             state to next step of RNN.
         """
         raise NotImplementedError
-

@@ -17,9 +17,6 @@ source ~/.profile
 user=`id -u -n`
 make -j 4 || exit -1
 
-echo "BUILD lint"
-make lint || exit -1
-
 echo "BUILD cpp_test"
 make -j 4 test || exit -1
 export MXNET_ENGINE_INFO=true
