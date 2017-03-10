@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Exit script with error if any errors occur
-set -e
 
 echo "BUILD make"
 cp make/config.mk .
@@ -18,6 +17,9 @@ echo 'export JRE_HOME=${JAVA_HOME}/jre' >> ~/.profile
 echo 'export PATH=$PATH:/apache-maven-3.3.9/bin/:/usr/bin:${JAVA_HOME}/bin' >> ~/.profile
 source ~/.profile
 user=`id -u -n`
+
+set -e
+
 make -j 4
 
 echo "BUILD cpp_test"
