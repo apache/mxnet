@@ -737,7 +737,7 @@ void GraphExecutor::InitOpSegs() {
     size_t topo_start = num_forward_nodes_;
     for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
       auto &op_node = op_nodes_[nid];
-      if (op_node.skip_exec_node) {
+      if (op_node.skip_exec_node || op_node.exec == nullptr) {
         continue;
       }
       bool output_gradient = false;
