@@ -4,9 +4,9 @@
 """Online evaluation metric module."""
 from __future__ import absolute_import
 
-import numpy
-
 from collections import OrderedDict
+
+import numpy
 
 from .base import numeric_types
 from . import ndarray
@@ -33,6 +33,9 @@ class EvalMetric(object):
         self.output_names = output_names
         self.label_names = label_names
         self.reset()
+
+    def __str__(self):
+        return "EvalMetric: {}".format(dict(self.get_name_value()))
 
     def update_dict(self, label, pred):
         """Update the internal evaluation with named label and pred
@@ -108,9 +111,6 @@ class EvalMetric(object):
         if not isinstance(value, list):
             value = [value]
         return zip(name, value)
-
-    def __str__(self):
-        return "EvalMetric: {}".format(dict(self.get_name_value()))
 
 
 class CompositeEvalMetric(EvalMetric):

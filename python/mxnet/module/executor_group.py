@@ -3,8 +3,9 @@
 """Executor group is a convenient tool for managing a group of executors."""
 
 import logging
-import numpy as np
 from collections import OrderedDict
+
+import numpy as np
 
 from .. import context as ctx
 from .. import ndarray as nd
