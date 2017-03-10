@@ -350,8 +350,20 @@ def test_lstm():
     check_rnn_consistency(stack, fused)
 
 
+def test_gru():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.GRUCell(100, prefix='l0_'))
+    stack.add(mx.rnn.GRUCell(100, prefix='l1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
+
 if __name__ == '__main__':
     test_lstm()
+    test_gru()
     test_rnn()
     test_convolution_options()
     test_convolution_with_type()

@@ -13,7 +13,7 @@ namespace op {
 #if CUDNN_MAJOR == 4
 template<>
 Operator *CreateOp_CuDNNv4<gpu>(BatchNormParam param) {
-  return new CuDNNBatchNormOp(param);
+  return new CuDNNBatchNormOp<float>(param);
 }
 #endif  // CUDNN_MAJOR == 4
 }  // namespace op
