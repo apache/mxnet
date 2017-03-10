@@ -17,14 +17,16 @@ source ~/.profile
 user=`id -u -n`
 make -j 4 || exit -1
 
-echo "BUILD lint"
-make lint || exit -1
-
 echo "BUILD cpp_test"
 make -j 4 test || exit -1
 export MXNET_ENGINE_INFO=true
 for test in tests/cpp/*_test; do
     ./$test || exit -1
+done
+
+echo "BUILD valgrind_test"
+for test in tests/cpp/*_test; do
+    valgrind ./$test || exit -1
 done
 export MXNET_ENGINE_INFO=false
 export PYTHONPATH=${PWD}/python
