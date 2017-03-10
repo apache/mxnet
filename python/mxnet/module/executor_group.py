@@ -4,6 +4,7 @@
 
 import logging
 import numpy as np
+from collections import OrderedDict
 
 from .. import context as ctx
 from .. import ndarray as nd
@@ -197,10 +198,13 @@ class DataParallelExecutorGroup(object):
 
         self.data_shapes = None
         self.label_shapes = None
+        self.data_names = None
+        self.label_names = None
         self.data_layouts = None
         self.label_layouts = None
+        self.output_names = self.symbol.list_outputs()
         self.output_layouts = [DataDesc.get_batch_axis(self.symbol[name].attr('__layout__'))
-                               for name in self.symbol.list_outputs()]
+                               for name in self.output_names]
         self.num_outputs = len(self.symbol.list_outputs())
 
         self.bind_exec(data_shapes, label_shapes, shared_group)
@@ -303,6 +307,8 @@ class DataParallelExecutorGroup(object):
 
         self.data_shapes = data_shapes
         self.label_shapes = label_shapes
+        self.label_names = [i.name for i in self.label_shapes]
+        self.data_names = [i.name for i in self.data_shapes]
         self._collect_arrays()
 
     def reshape(self, data_shapes, label_shapes):
@@ -515,7 +521,7 @@ class DataParallelExecutorGroup(object):
 
             exec_.backward(out_grads=out_grads_slice)
 
-    def update_metric(self, eval_metric, labels, begin=0, end=None):
+    def update_metric(self, eval_metric, labels):
         """Accumulate the performance according to `eval_metric` on all devices
         by comparing outputs from [begin, end) to labels. By default use all
         outputs.
@@ -531,9 +537,6 @@ class DataParallelExecutorGroup(object):
         end : int or None
             Ending index of used outputs.
         """
-        if end is None:
-            end = self.num_outputs
-
         for texec, islice in zip(self.execs, self.slices):
             labels_slice = []
             for label, axis in zip(labels, self.label_layouts):
@@ -549,7 +552,9 @@ class DataParallelExecutorGroup(object):
                 else:
                     labels_slice.append(label)
 
-            eval_metric.update(labels_slice, texec.outputs[begin:end])
+            labels = OrderedDict(zip(self.label_names, labels_slice))
+            preds = OrderedDict(zip(self.output_names, texec.outputs))
+            eval_metric.update_dict(labels, preds)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):
         """Internal utility function to bind the i-th executor.

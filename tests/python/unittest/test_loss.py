@@ -12,6 +12,8 @@ def get_net(num_hidden):
 
 
 def test_ce_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
     nclass = 10
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, nclass))
@@ -21,11 +23,13 @@ def test_ce_loss():
     l = mx.symbol.Variable('label')
     loss = mx.loss.cross_entropy_loss(output, l)
     mod = mx.mod.Module(loss)
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.})
-    assert mod.score(data_iter, 'acc')[0][1] == 1.0
+    mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200, optimizer_params={'learning_rate': 1.})
+    assert mod.score(data_iter, loss.metric)[0][1] == 1.0
 
 
 def test_l2_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
     label = mx.random.uniform(-1, 1, shape=(N, 1))
@@ -34,11 +38,13 @@ def test_l2_loss():
     l = mx.symbol.Variable('label')
     loss = mx.loss.l2_loss(output, l)
     mod = mx.mod.Module(loss)
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.})
-    assert mod.score(data_iter, 'mse')[0][1] < 0.05
+    mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200, optimizer_params={'learning_rate': 1.})
+    assert mod.score(data_iter, loss.metric)[0][1] < 0.05
 
 
 def test_l1_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
     label = mx.random.uniform(-1, 1, shape=(N, 1))
@@ -47,12 +53,14 @@ def test_l1_loss():
     l = mx.symbol.Variable('label')
     loss = mx.loss.l1_loss(output, l)
     mod = mx.mod.Module(loss)
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.1},
+    mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200, optimizer_params={'learning_rate': 0.1},
             initializer=mx.init.Uniform(0.5))
-    assert mod.score(data_iter, 'mse')[0][1] < 0.05
+    assert mod.score(data_iter, loss.metric)[0][1] < 0.1
 
 
 def test_custom_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
     label = mx.random.uniform(-1, 1, shape=(N, 1))
@@ -62,11 +70,14 @@ def test_custom_loss():
     loss = mx.sym.square(output - l)
     loss = mx.loss.custom_loss(loss, output, ['label'], weight=0.5)
     mod = mx.mod.Module(loss)
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.})
-    assert mod.score(data_iter, 'mse')[0][1] < 0.05
+    mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200,
+            optimizer_params={'learning_rate': 1.})
+    assert mod.score(data_iter, loss.metric)[0][1] < 0.05
 
 
 def test_sample_weight_loss():
+    mx.random.seed(1234)
+    np.random.seed(1234)
     nclass = 10
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, nclass))
@@ -78,8 +89,10 @@ def test_sample_weight_loss():
     w = mx.symbol.Variable('w')
     loss = mx.loss.cross_entropy_loss(output, l, sample_weight=w)
     mod = mx.mod.Module(loss)
-    mod.fit(data_iter, eval_metric=None, num_epoch=200, optimizer_params={'learning_rate': 1.})
-    #assert mod.score(data_iter, 'acc')[0][1] == 1.0
+    mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200,
+            optimizer_params={'learning_rate': 1.})
+    score =  mod.score(data_iter, loss.metric)[0][1]
+    assert score >= 0.5 and score <= 0.75
 
 
 if __name__ == '__main__':

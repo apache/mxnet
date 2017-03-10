@@ -685,9 +685,7 @@ class Module(BaseModule):
         labels : list of NDArray
             Typically `data_batch.label`.
         """
-        self._exec_group.update_metric(eval_metric, labels,
-                                       begin=self._output_range[0],
-                                       end=self._output_range[1])
+        self._exec_group.update_metric(eval_metric, labels)
 
     def _sync_params_from_devices(self):
         """Synchronize parameters from devices to CPU. This function should be called after
