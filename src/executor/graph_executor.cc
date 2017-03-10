@@ -702,10 +702,9 @@ void GraphExecutor::InitOpSegs() {
     }
     // calculate max number of variable per segment
     size_t num_vars_threshold = (bulk_forward_percent * total_num_forward_vars + 99) / 100;
-    size_t topo_start = 0, nid = 0, num_vars = 0;
-    while (nid < num_forward_nodes_) {
+    size_t topo_start = 0, num_vars = 0;
+    for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
       if (op_nodes_[nid].skip_exec_node) {
-          nid++;
           continue;
       }
       auto &node = graph_.indexed_graph()[nid].source;
@@ -720,7 +719,6 @@ void GraphExecutor::InitOpSegs() {
         }
         num_vars++;
       }
-      nid++;
     }
     // the last segmenet
     if (topo_start != num_forward_nodes_) {
@@ -736,11 +734,10 @@ void GraphExecutor::InitOpSegs() {
     for (auto &kv : grad_store_) {
       grad_vars.insert(kv.second.var());
     }
-    size_t nid = num_forward_nodes_, topo_start = num_forward_nodes_;
-    while (nid < total_num_nodes) {
+    size_t topo_start = num_forward_nodes_;
+    for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
       auto &op_node = op_nodes_[nid];
       if (op_node.skip_exec_node) {
-        nid++;
         continue;
       }
       bool output_gradient = false;
@@ -753,7 +750,6 @@ void GraphExecutor::InitOpSegs() {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
       }
-      nid++;
     }
     // last segment for backward
     if (topo_start < total_num_nodes) {
@@ -781,7 +777,12 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
     if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
-      Engine::Get()->Push(seg_op.opr, seg_op.ctx);
+#if MXNET_USE_PROFILER
+      bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;
+#else
+      bool profiling = false;
+#endif
+      Engine::Get()->Push(seg_op.opr, seg_op.ctx, 0, profiling);
       nid = seg_op.topo_end - 1;
       continue;
     }
@@ -920,7 +921,8 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     on_complete();
   };
   ret.opr = Engine::Get()->NewOperator(
-      exec_fun, read_vars, write_vars, FnProperty::kNormal);
+      exec_fun, read_vars, write_vars, FnProperty::kNormal,
+      PROFILER_MESSAGE("Bulk Exec"));
   return ret;
 }
 }  // namespace exec
