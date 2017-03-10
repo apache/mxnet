@@ -958,7 +958,7 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     return arr
 
 
-def array(source_array, ctx=None, dtype=mx_real_t):
+def array(source_array, ctx=None, dtype=None):
     """Create a new array from any object exposing the array interface
 
     Parameters

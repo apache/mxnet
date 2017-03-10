@@ -308,8 +308,9 @@ class DataParallelExecutorGroup(object):
 
         self.data_shapes = data_shapes
         self.label_shapes = label_shapes
-        self.label_names = [i.name for i in self.label_shapes]
         self.data_names = [i.name for i in self.data_shapes]
+        if label_shapes is not None:
+            self.label_names = [i.name for i in self.label_shapes]
         self._collect_arrays()
 
     def reshape(self, data_shapes, label_shapes):

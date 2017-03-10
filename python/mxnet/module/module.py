@@ -72,8 +72,7 @@ class Module(BaseModule):
         else:
             self._symbol = symbol
             self._loss = None
-            self._num_visible_outputs = len(self._symbol.list_outputs())
-            self._num_invisible_outputs = 0
+            self._output_range = (0, len(self._symbol.list_outputs()))
             if label_names is _Sentinel:
                 label_names = ('softmax_label',)
             else:
