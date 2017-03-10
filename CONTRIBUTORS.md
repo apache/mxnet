@@ -122,3 +122,10 @@ List of Contributors
 * [Yu Du](https://github.com/Answeror)
 * [Xu Dong](https://github.com/dsqx71)
 * [Chihiro Komaki](https://github.com/ckomaki)
+* [Piyush Singh](https://github.com/Piyush3dB)
+* [Freddy Chua](https://github.com/freddycct)
+* [Jie Zhang](https://github.com/luoyetx)
+* [Leonard Lausen](https://github.com/leezu)
+* [Sergey Kolychev](https://github.com/sergeykolychev)
+  - Sergey is original author and current maintainer of Perl5 interface.
+* [Robert Stone](https://github.com/tlby)

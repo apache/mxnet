@@ -382,7 +382,7 @@ def load_checkpoint(prefix, epoch):
             aux_params[name] = v
     return (symbol, arg_params, aux_params)
 
-from .callback import LogValidationMetricsCallback
+from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position
 
 class FeedForward(BASE_ESTIMATOR):
     """Model class of MXNet for training and predicting feedforward nets.

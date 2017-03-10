@@ -10,6 +10,10 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_power)
+.describe(R"code(First array elements raised to powers from second array,
+element-wise with broadcasting.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_power"});
 
@@ -25,6 +29,9 @@ NNVM_REGISTER_OP(_backward_broadcast_power)
                                                               mshadow_op::power_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_maximum)
+.describe(R"code(Element-wise maximum of array elements with broadcasting.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_maximum"});
 
@@ -40,6 +47,9 @@ NNVM_REGISTER_OP(_backward_broadcast_maximum)
                                                               mshadow_op::lt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_minimum)
+.describe(R"code(Element-wise minimum of array elements with broadcasting.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_minimum"});
 
@@ -55,6 +65,10 @@ NNVM_REGISTER_OP(_backward_broadcast_minimum)
                                                               mshadow_op::gt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_hypot)
+.describe(R"code(Given the "legs" of a right triangle, return its hypotenuse
+with broadcasting.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::hypot>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_broadcast_hypot" });
 

@@ -67,4 +67,17 @@ class Context(deviceTypeName: String, val deviceId: Int = 0) extends Serializabl
   override def toString: String = {
     s"$deviceType($deviceId)"
   }
+
+  override def equals(other: Any): Boolean = {
+    if (other != null && other.isInstanceOf[Context]) {
+      val otherInst = other.asInstanceOf[Context]
+      otherInst.deviceId == deviceId && otherInst.deviceTypeid == deviceTypeid
+    } else {
+      false
+    }
+  }
+
+  override def hashCode: Int = {
+    toString.hashCode
+  }
 }

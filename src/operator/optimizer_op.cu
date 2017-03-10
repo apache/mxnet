@@ -21,5 +21,8 @@ NNVM_REGISTER_OP(adam_update)
 NNVM_REGISTER_OP(rmsprop_update)
 .set_attr<FCompute>("FCompute<gpu>", RMSPropUpdate<gpu>);
 
+NNVM_REGISTER_OP(rmspropalex_update)
+.set_attr<FCompute>("FCompute<gpu>", RMSPropAlexUpdate<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

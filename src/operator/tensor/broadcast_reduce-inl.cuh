@@ -168,7 +168,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
 }
 
 // Simple reduction of lines when M is small
-template<typename Reducer, typename DType, typename OP>
+template<typename Reducer, typename DType>
 __launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
   const int small_in_stride, const DType* __restrict small_in, DType *small_out) {
@@ -177,7 +177,7 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
     DType val;
     Reducer::SetInitValue(val);
     for (int k = 0; k < M; k++) {
-      Reducer::Reduce(val, OP::Map(small_in[idx + k*small_in_stride]));
+      Reducer::Reduce(val, small_in[idx + k*small_in_stride]);
     }
 
     if (idx < N) {
@@ -310,7 +310,7 @@ size_t ReduceImpl(Stream<gpu> *s, const TBlob& small, const OpReqType req,
       if (!getWorkspaceSize) {
         int blockSize = kMaxThreadsPerBlock;
         int gridSize = std::min((int)kBaseGridNum, (N + blockSize - 1)/blockSize );
-        reduce_lines_kernel<Reducer, DType, OP><<< gridSize, blockSize, 0, stream >>>
+        reduce_lines_kernel<Reducer, DType><<< gridSize, blockSize, 0, stream >>>
         (N, Mnext, req == kAddTo, N, out1_dptr, small.dptr<DType>());
       }
     }

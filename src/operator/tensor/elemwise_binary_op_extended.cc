@@ -58,6 +58,9 @@ NNVM_REGISTER_OP(_backward_minimum)
 
 MXNET_OPERATOR_REGISTER_BINARY(_hypot)
 .add_alias("_Hypot")
+.describe(R"code(Given the "legs" of a right triangle, return its hypotenuse.
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, mshadow_op::hypot>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_hypot" });
 

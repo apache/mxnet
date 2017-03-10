@@ -124,6 +124,27 @@ class LocalResponseNormProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_GE(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    for (index_t i = 0; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
+                                       << "Expected " << dtype << " v.s. given "
+                                       << (*in_type)[i] << " at " << ListArguments()[i];
+      }
+    }
+    int n_out = this->ListOutputs().size();
+    out_type->clear();
+    for (int i = 0; i < n_out; ++i ) out_type->push_back(dtype);
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     auto ptr = new LocalResponseNormProp();
     ptr->param_ = param_;
