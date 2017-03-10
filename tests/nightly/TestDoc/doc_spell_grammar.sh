@@ -15,12 +15,8 @@ source ~/.profile
 make clean
 make -j 4 || exit -1
 
-echo "BUILD python2 mxnet"
-cd ./python
-python setup.py install || exit 1
-
-echo "BUILD python3 mxnet"
-python3 setup.py install || exit 1
+echo "Add python path"
+export PYTHONPATH=$PYTHONPATH:python
 
 
 echo "BUILD mxnet document"
