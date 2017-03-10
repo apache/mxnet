@@ -6,7 +6,6 @@ import logging
 import math
 import sys
 import time
-from .model import save_checkpoint
 
 def module_checkpoint(mod, prefix, period=1, save_optimizer_states=False):
     """Callback to checkpoint Module to prefix every epoch.
@@ -52,6 +51,7 @@ def do_checkpoint(prefix, period=1):
         The callback function that can be passed as iter_end_callback to fit.
     """
     period = int(max(1, period))
+    from .model import save_checkpoint
     def _callback(iter_no, sym, arg, aux):
         """The checkpoint function."""
         if (iter_no + 1) % period == 0:
