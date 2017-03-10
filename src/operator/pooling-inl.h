@@ -184,7 +184,7 @@ class PoolingProp : public OperatorProperty {
       if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
       if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
     } else {
-      CHECK_EQ(param_.kernel.ndim(), 3) << param_.kernel.ndim() << "D pooling not supported";
+      CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D pooling not supported";
       if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
       if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
     }

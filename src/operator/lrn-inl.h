@@ -55,10 +55,10 @@ class LocalResponseNormOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(xxx): Test with gradient chceker
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 2);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 2U);
     // CHECK_EQ(req.size(), 2);
-    CHECK_EQ(param_.nsize % 2, 1) << "LRN only supports odd values for local_size";
+    CHECK_EQ(param_.nsize % 2, 1U) << "LRN only supports odd values for local_size";
     const real_t salpha = param_.alpha / param_.nsize;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[lrn_enum::kData].get<xpu, 4, real_t>(s);
@@ -77,9 +77,9 @@ class LocalResponseNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 2);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 2U);
     const real_t salpha = param_.alpha / param_.nsize;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> grad = out_grad[lrn_enum::kOut].get<xpu, 4, real_t>(s);
@@ -127,7 +127,7 @@ class LocalResponseNormProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

@@ -108,7 +108,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
         if (d1 == -1) d1 = d0 / d2;
         if (d2 == -1) d2 = d0 / d1;
-        CHECK_EQ(d1 * d2, (int)d0) <<
+        CHECK_EQ(d1 * d2, static_cast<int>(d0)) <<
           "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
         tmp.push_back(d1);
         tmp.push_back(d2);
@@ -1610,7 +1610,7 @@ void ReverseOpForward(const nnvm::NodeAttrs& attrs,
   std::vector<index_t>  trailing_(param.axis.ndim());
   index_t reverse_index = 0;
   for (auto axis_iter = param.axis.begin() ; axis_iter!= param.axis.end(); ++axis_iter) {
-    CHECK_LT(*axis_iter, ishape.ndim());
+    CHECK_LT(*axis_iter, static_cast<int>(ishape.ndim()));
     stride_[reverse_index] = ishape[*axis_iter];
     trailing_[reverse_index] = 1;
     for (int i2 = *axis_iter + 1; i2 < ishape.ndim(); ++i2) {
