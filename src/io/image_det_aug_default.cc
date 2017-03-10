@@ -12,13 +12,6 @@
 #include "./image_augmenter.h"
 #include "../common/utils.h"
 
-#if MXNET_USE_OPENCV
-// Registers
-// namespace dmlc {
-// DMLC_REGISTRY_ENABLE(::mxnet::io::ImageAugmenterReg);
-// }  // namespace dmlc
-#endif
-
 namespace mxnet {
 namespace io {
 using nnvm::Tuple;
@@ -29,143 +22,132 @@ enum ImageDetAugDefaultCropEmitMode {kCenter, kOverlap};
 enum ImageDetAugDefaultResizeMode {kForce, kShrink, kFit};
 }
 
-/*! \brief image augmentation parameters*/
+/*! \brief image detection augmentation parameters*/
 struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugmentParam> {
   /*! \brief resize shorter edge to size before applying other augmentations */
   int resize;
-  /*! \brief whether we do random cropping */
+  /*! \brief probability we do random cropping, use prob <= 0 to disable */
   float rand_crop_prob;
-  /*! \brief where to nonrandom crop on y */
+  /*! \brief min crop scales */
   Tuple<float> min_crop_scales;
-  /*! \brief where to nonrandom crop on x */
+  /*! \brief max crop scales */
   Tuple<float> max_crop_scales;
-  /*! \brief [-max_rotate_angle, max_rotate_angle] */
+  /*! \brief min crop aspecct ratios */
   Tuple<float> min_crop_aspect_ratios;
-  /*! \brief max aspect ratio */
+  /*! \brief max crop aspect ratios */
   Tuple<float> max_crop_aspect_ratios;
-  /*! \brief random shear the image [-max_shear_ratio, max_shear_ratio] */
+  /*! \brief min IOUs between ground-truths and crop boxes */
   Tuple<float> min_crop_overlaps;
-  /*! \brief max crop size */
+  /*! \brief max IOUs between ground-truths and crop boxes */
   Tuple<float> max_crop_overlaps;
-  /*! \brief min crop size */
+  /*! \brief min itersection/gt_area between ground-truths and crop boxes */
   Tuple<float> min_crop_sample_coverages;
-  /*! \brief max scale ratio */
+  /*! \brief max itersection/gt_area between ground-truths and crop boxes */
   Tuple<float> max_crop_sample_coverages;
-  /*! \brief min scale_ratio */
+  /*! \brief min itersection/crop_area between ground-truths and crop boxes */
   Tuple<float> min_crop_object_coverages;
-  /*! \brief min image size */
+  /*! \brief max itersection/crop_area between ground-truths and crop boxes */
   Tuple<float> max_crop_object_coverages;
+  /*! \brief number of crop samplers, skip random crop if <= 0 */
   int num_crop_sampler;
+  /*! \beief 0-emit ground-truth if center out of crop area, 1-emit if overlap < emit_overlap_thresh */
   int crop_emit_mode;
+  /*! \brief ground-truth emition threshold specific for crop_emit_mode == 1 */
   float emit_overlap_thresh;
-  /*! \brief */
+  /*! \brief maximum trials for cropping, skip cropping if fails exceed this number */
   Tuple<int> max_crop_trials;
   /*! \brief random padding prob */
   float rand_pad_prob;
   /*!< \brief maximum padding scale */
   float max_pad_scale;
-  // int max_img_size;
-  // int min_img_size;
-  /*! \brief max image size */
-
   /*! \brief max random in H channel */
   int max_random_hue;
+  /*! \brief random H prob */
   float random_hue_prob;
   /*! \brief max random in S channel */
   int max_random_saturation;
+  /*! \brief random saturation prob */
   float random_saturation_prob;
   /*! \brief max random in L channel */
   int max_random_illumination;
+  /*! \brief random illumination change prob */
   float random_illumination_prob;
+  /*! \brief max random contrast */
   float max_random_contrast;
+  /*! \brief random contrast prob */
   float random_contrast_prob;
-  /*! \brief rotate angle */
+  /*! \brief random mirror prob */
   float rand_mirror_prob;
   /*! \brief filled color while padding */
   int fill_value;
   /*! \brief interpolation method 0-NN 1-bilinear 2-cubic 3-area 4-lanczos4 9-auto 10-rand  */
   int inter_method;
-  /*! \brief shape of the image data*/
+  /*! \brief shape of the image data */
   TShape data_shape;
+  /*! \brief resize mode, 0-force 1-Shrink to data_shape, preserve ratio, 2-fit to data_shape, preserve ratio*/
   int resize_mode;
-
-  /*! \brief mean value for r channel */
-  // float mean_r;
-  // /*! \brief mean value for g channel */
-  // float mean_g;
-  // /*! \brief mean value for b channel */
-  // float mean_b;
-  // /*! \brief mean value for alpha channel */
-  // float mean_a;
-  /*! \brief scale on color space */
-  // float std_r;
-  // float std_g;
-  // float std_b;
-  // float std_a;
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageDetAugmentParam) {
     DMLC_DECLARE_FIELD(resize).set_default(-1)
         .describe("Augmentation Param: scale shorter edge to size "
                   "before applying other augmentations, -1 to disable.");
     DMLC_DECLARE_FIELD(rand_crop_prob).set_default(0.0f)
-        .describe("Augmentation Param: Whether to random crop on the image");
+        .describe("Augmentation Param: Probability of random cropping, <= 0 to disable");
     DMLC_DECLARE_FIELD(min_crop_scales).set_default(Tuple<float>({0.0f}))
-        .describe("Augmentation Param: Where to nonrandom crop on y.");
+        .describe("Augmentation Param: Min crop scales.");
     DMLC_DECLARE_FIELD(max_crop_scales).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Where to nonrandom crop on x.");
+        .describe("Augmentation Param: Max crop scales.");
     DMLC_DECLARE_FIELD(min_crop_aspect_ratios).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: rotated randomly in [-max_rotate_angle, max_rotate_angle].");
+        .describe("Augmentation Param: Min crop aspecct ratios.");
     DMLC_DECLARE_FIELD(max_crop_aspect_ratios).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: denotes the max ratio of random aspect ratio augmentation.");
+        .describe("Augmentation Param: Max crop aspect ratios.");
     DMLC_DECLARE_FIELD(min_crop_overlaps).set_default(Tuple<float>({0.0f}))
-        .describe("Augmentation Param: denotes the max random shearing ratio.");
+        .describe("Augmentation Param: Minimum crop IOU between crop_box and ground-truths.");
     DMLC_DECLARE_FIELD(max_crop_overlaps).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Maximum crop size.");
+        .describe("Augmentation Param: Maximum crop IOU between crop_box and ground-truth.");
     DMLC_DECLARE_FIELD(min_crop_sample_coverages).set_default(Tuple<float>({0.0f}))
-        .describe("Augmentation Param: Minimum crop size.");
+        .describe("Augmentation Param: Minimum ratio of intersect/crop_area between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(max_crop_sample_coverages).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Maximum scale ratio.");
+        .describe("Augmentation Param: Maximum ratio of intersect/crop_area between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(min_crop_object_coverages).set_default(Tuple<float>({0.0f}))
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Augmentation Param: Minimum ratio of intersect/gt_area between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(max_crop_object_coverages).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Augmentation Param: Maximum ratio of intersect/gt_area between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(num_crop_sampler).set_default(1)
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Augmentation Param: Number of crop samplers.");
     DMLC_DECLARE_FIELD(crop_emit_mode)
         .add_enum("center", image_det_aug_default_enum::kCenter)
         .add_enum("overlap", image_det_aug_default_enum::kOverlap)
         .set_default(image_det_aug_default_enum::kOverlap)
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Augmentation Param: Emition mode for invalid ground-truths after crop. "
+                  "center: emit if centroid of object is out of crop region; "
+                  "overlap: emit if overlap is less than emit_overlap_thresh. ");
     DMLC_DECLARE_FIELD(emit_overlap_thresh).set_default(0.3f)
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Augmentation Param: Emit overlap thresh for emit mode overlap only.");
     DMLC_DECLARE_FIELD(max_crop_trials).set_default(Tuple<int>({25}))
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Augmentation Param: Skip cropping if fail crop trail count exceeds this number.");
     DMLC_DECLARE_FIELD(rand_pad_prob).set_default(0.0f)
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Augmentation Param: Probability for random padding.");
     DMLC_DECLARE_FIELD(max_pad_scale).set_default(1.0f)
-        .describe("Augmentation Param: Minimum scale ratio.");
-    // DMLC_DECLARE_FIELD(max_img_size).set_default(1e10)
-    //     .describe("Augmentation Param: Maximum image size after resizing.");
-    // DMLC_DECLARE_FIELD(min_img_size).set_default(0.0)
-    //     .describe("Augmentation Param: Minimum image size after resizing.");
+        .describe("Augmentation Param: Maximum padding scale.");
     DMLC_DECLARE_FIELD(max_random_hue).set_default(0)
         .describe("Augmentation Param: Maximum random value of H channel in HSL color space.");
     DMLC_DECLARE_FIELD(random_hue_prob).set_default(0.0f)
-        .describe("Augmentation Param: Maximum random value of S channel in HSL color space.");
+        .describe("Augmentation Param: Probability to apply random hue.");
     DMLC_DECLARE_FIELD(max_random_saturation).set_default(0)
         .describe("Augmentation Param: Maximum random value of S channel in HSL color space.");
     DMLC_DECLARE_FIELD(random_saturation_prob).set_default(0.0f)
-        .describe("Augmentation Param: Maximum random value of S channel in HSL color space.");
+        .describe("Augmentation Param: Probability to apply random saturation.");
     DMLC_DECLARE_FIELD(max_random_illumination).set_default(0)
-        .describe("Augmentation Param: Maximum random value of S channel in HSL color space.");
+        .describe("Augmentation Param: Maximum random value of L channel in HSL color space.");
     DMLC_DECLARE_FIELD(random_illumination_prob).set_default(0.0f)
-        .describe("Augmentation Param: Maximum random value of L channel in HSL color space.");
+        .describe("Augmentation Param: Probability to apply random illumination.");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0)
-        .describe("Augmentation Param: Maximum random value of S channel in HSL color space.");
+        .describe("Augmentation Param: Maximum random value of delta contrast.");
     DMLC_DECLARE_FIELD(random_contrast_prob).set_default(0.0f)
-        .describe("Augmentation Param: Maximum random value of L channel in HSL color space.");
+        .describe("Augmentation Param: Probability to apply random contrast.");
     DMLC_DECLARE_FIELD(rand_mirror_prob).set_default(0.0f)
-        .describe("Augmentation Param: Rotate angle.");
+        .describe("Augmentation Param: Probability to apply horizontal flip aka. mirror.");
     DMLC_DECLARE_FIELD(fill_value).set_default(127)
         .describe("Augmentation Param: Filled color value while padding.");
     DMLC_DECLARE_FIELD(inter_method).set_default(1)
@@ -178,23 +160,10 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
       .add_enum("shrink", image_det_aug_default_enum::kShrink)
       .add_enum("fit", image_det_aug_default_enum::kFit)
       .set_default(image_det_aug_default_enum::kForce)
-      .describe("Augmentation Param: How image data fit in data_shape.");
-    // DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on R channel.");
-    // DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on G channel.");
-    // DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on B channel.");
-    // DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on Alpha channel.");
-    // DMLC_DECLARE_FIELD(std_r).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on R channel.");
-    // DMLC_DECLARE_FIELD(std_g).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on G channel.");
-    // DMLC_DECLARE_FIELD(std_b).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on B channel.");
-    // DMLC_DECLARE_FIELD(std_a).set_default(0.0f)
-    //     .describe("Augmentation Param: Mean value on Alpha channel.");
+      .describe("Augmentation Param: How image data fit in data_shape. "
+                "force: force reshape to data_shape regardless of aspect ratio; "
+                "shrink: ensure each side fit in data_shape, preserve aspect ratio; "
+                "fit: fit image to data_shape, preserve ratio, will upscale if applicable.");
   }
 };
 
@@ -210,41 +179,24 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
 #define M_PI CV_PI
 #endif
 
-// struct Rect {
-//   float left;
-//   float top;
-//   float right;
-//   float bottom;
-//   Rect(float l, float t, float r, float b):
-//     left(l), top(t), right(r), bottom(b) {
-//     CHECK_GE(r, l);
-//     CHECK_GE(b, t);
-//   }
-// };
-//
-// class BBox : public cv::Rect_<float> {
-// public:
-//   float overlap(const BBox &r) const {
-//     float inter = (*this & r).area();
-//     if (inter <= 0.f) return 0.f;
-//     return inter / (area() + r.area() - inter);
-//   }
-// };
-
 /*! \brief helper class for better detection label handling */
 class ImageDetLabel {
  public:
+   /*! \brief Helper struct to store the coordinates and id for each object */
    struct ImageDetObject {
      float id;
      float left;
      float top;
      float right;
      float bottom;
-     std::vector<float> extra;
+     std::vector<float> extra;  // store extra info other than id and coordinates
+
+     /*! \brief Return converted Rect object */
      Rect ToRect() const {
        return Rect(left, top, right - left, bottom - top);
      }
 
+     /*! \brief Return projected coordinates according to new region */
      ImageDetObject Project(Rect box) const {
        ImageDetObject ret = *this;
        ret.left = std::max(0.f, (ret.left - box.x) / box.width);
@@ -254,17 +206,24 @@ class ImageDetLabel {
        return ret;
      }
 
+     /*! \brief Return Horizontally fliped coordinates */
      ImageDetObject HorizontalFlip() const {
        ImageDetObject ret = *this;
        ret.left = 1.f - this->right;
        ret.right = 1.f - this->left;
        return ret;
      }
-   };
+   };  // struct ImageDetObject
+
+   /*! \brief constructor from raw array of detection labels */
    explicit ImageDetLabel(const std::vector<float> &raw_label) {
      FromArray(raw_label);
    }
 
+   /*! \brief construct from raw array with following format
+    * header_width, object_width, (extra_headers...),
+    * [id, xmin, ymin, xmax, ymax, (extra_object_info)] x N
+    */
    void FromArray(const std::vector<float> &raw_label) {
      int label_width = static_cast<int>(raw_label.size());
      CHECK_GE(label_width, 7);  // at least 2(header) + 5(1 object)
@@ -291,6 +250,7 @@ class ImageDetLabel {
      }
    }
 
+   /*! \brief Convert back to raw array */
    std::vector<float> ToArray() const {
      std::vector<float> out(header_);
      out.reserve(out.size() + objects_.size() * object_width_);
@@ -305,28 +265,17 @@ class ImageDetLabel {
      return out;
    }
 
-  //  static float RectIntersect(Rect a, Rect b) {
-  //    float w = std::min(a.right, b.right) - std::max(a.left, b.left);
-  //    if (w < 0) return 0.f;
-  //    float h = std::min(a.bottom, b.bottom) - std::max(a.top, b.top);
-  //    if (h < 0) return 0.f;
-  //    return w * h;
-  //  }
-   //
-  //  static float RectSize(Rect a) {
-  //    return std::max(0.f, a.right - a.left) * std::max(0.f, a.bottom - a.top);
-  //  }
-   //
-  //  static float RectUnion(Rect a, Rect b) {
-  //    return RectSize(a) + RectSize(b) - RectIntersect(a, b);
-  //  }
-   //
+   /*! \brief Intersection over Union between two rects */
    static float RectIOU(Rect a, Rect b) {
      float intersect = (a & b).area();
      if (intersect <= 0.f) return 0.f;
      return intersect / (a.area() + b.area() - intersect);
    }
 
+   /*! \brief try crop image with given crop_box
+    * return false if fail to meet any of the constraints
+    * convert all objects if success
+    */
    bool TryCrop(const Rect crop_box,
      const float min_crop_overlap, const float max_crop_overlap,
      const float min_crop_sample_coverage, const float max_crop_sample_coverage,
@@ -391,6 +340,9 @@ class ImageDetLabel {
     return true;
    }
 
+   /*! \brief try pad image with given pad_box
+    * convert all objects afterwards
+    */
    bool TryPad(const Rect pad_box) {
      // update all objects inplace
      for (auto it = objects_.begin(); it != objects_.end(); ++it) {
@@ -399,6 +351,7 @@ class ImageDetLabel {
      return true;
    }
 
+   /*! \brief flip image and object coordinates horizontally */
    bool TryMirror() {
      // flip all objects horizontally
      for (auto it = objects_.begin(); it != objects_.end(); ++it) {
@@ -408,9 +361,11 @@ class ImageDetLabel {
    }
 
  private:
-   /*! \brief  */
+   /*! \brief width for each object information, 5 at least */
    int object_width_;
+   /*! \brief vector to store original header info */
    std::vector<float> header_;
+   /*! \brief storing objects in more convenient formats */
    std::vector<ImageDetObject> objects_;
 };  // class ImageDetLabel
 
@@ -418,28 +373,16 @@ class ImageDetLabel {
 class DefaultImageDetAugmenter : public ImageAugmenter {
  public:
   // contructor
-  DefaultImageDetAugmenter() {
-    rotateM_ = cv::Mat(2, 3, CV_32F);
-  }
+  DefaultImageDetAugmenter() {}
+
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    for (size_t i = 0; i < kwargs_left.size(); i++) {
-        if (!strcmp(kwargs_left[i].first.c_str(), "rotate_list")) {
-          const char* val = kwargs_left[i].second.c_str();
-          const char *end = val + strlen(val);
-          char buf[128];
-          while (val < end) {
-            sscanf(val, "%[^,]", buf);
-            val += strlen(buf) + 1;
-            rotate_list_.push_back(atoi(buf));
-          }
-        }
-    }
 
     CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
      (param_.inter_method >= 9 && param_.inter_method <= 10))
       << "invalid inter_method: valid value 0,1,2,3,9,10";
+
     // validate crop parameters
     ValidateCropParameters(param_.min_crop_scales, param_.num_crop_sampler);
     ValidateCropParameters(param_.max_crop_scales, param_.num_crop_sampler);
@@ -486,6 +429,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     }
   }
 
+  /*! \brief Check number of crop samplers and given parameters */
   template<typename DType>
   void ValidateCropParameters(nnvm::Tuple<DType> &param, const int num_sampler) {
     if (num_sampler == 1) {
@@ -500,6 +444,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     }
   }
 
+  /*! \brief Generate crop box region given cropping parameters */
   Rect GenerateCropBox(const float min_crop_scale,
     const float max_crop_scale, const float min_crop_aspect_ratio,
     const float max_crop_aspect_ratio, common::RANDOM_ENGINE *prnd,
@@ -519,6 +464,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     return Rect(x0, y0, new_width, new_height);
   }
 
+ /*! \brief Generate padding box region given padding parameters */
   Rect GeneratePadBox(const float max_pad_scale,
     common::RANDOM_ENGINE *prnd, const float threshold = 1.05f) {
       float new_scale = std::uniform_real_distribution<float>(
@@ -550,100 +496,6 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     } else {
       res = src;
     }
-
-    // normal augmentation by affine transformation.
-    // if (param_.max_rotate_angle > 0 || param_.max_shear_ratio > 0.0f
-    //     || param_.rotate > 0 || rotate_list_.size() > 0 || param_.max_random_scale != 1.0
-    //     || param_.min_random_scale != 1.0 || param_.max_aspect_ratio != 0.0f
-    //     || param_.max_img_size != 1e10f || param_.min_img_size != 0.0f) {
-    //   std::uniform_real_distribution<float> rand_uniform(0, 1);
-    //   // shear
-    //   float s = rand_uniform(*prnd) * param_.max_shear_ratio * 2 - param_.max_shear_ratio;
-    //   // rotate
-    //   int angle = std::uniform_int_distribution<int>(
-    //       -param_.max_rotate_angle, param_.max_rotate_angle)(*prnd);
-    //   if (param_.rotate > 0) angle = param_.rotate;
-    //   if (rotate_list_.size() > 0) {
-    //     angle = rotate_list_[std::uniform_int_distribution<int>(0, rotate_list_.size() - 1)(*prnd)];
-    //   }
-    //   float a = cos(angle / 180.0 * M_PI);
-    //   float b = sin(angle / 180.0 * M_PI);
-    //   // scale
-    //   float scale = rand_uniform(*prnd) *
-    //       (param_.max_random_scale - param_.min_random_scale) + param_.min_random_scale;
-    //   // aspect ratio
-    //   float ratio = rand_uniform(*prnd) *
-    //       param_.max_aspect_ratio * 2 - param_.max_aspect_ratio + 1;
-    //   float hs = 2 * scale / (1 + ratio);
-    //   float ws = ratio * hs;
-    //   // new width and height
-    //   float new_width = std::max(param_.min_img_size,
-    //                              std::min(param_.max_img_size, scale * res.cols));
-    //   float new_height = std::max(param_.min_img_size,
-    //                               std::min(param_.max_img_size, scale * res.rows));
-    //   cv::Mat M(2, 3, CV_32F);
-    //   M.at<float>(0, 0) = hs * a - s * b * ws;
-    //   M.at<float>(1, 0) = -b * ws;
-    //   M.at<float>(0, 1) = hs * b + s * a * ws;
-    //   M.at<float>(1, 1) = a * ws;
-    //   float ori_center_width = M.at<float>(0, 0) * res.cols + M.at<float>(0, 1) * res.rows;
-    //   float ori_center_height = M.at<float>(1, 0) * res.cols + M.at<float>(1, 1) * res.rows;
-    //   M.at<float>(0, 2) = (new_width - ori_center_width) / 2;
-    //   M.at<float>(1, 2) = (new_height - ori_center_height) / 2;
-    //   CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
-    //     (param_.inter_method >= 9 && param_.inter_method <= 10))
-    //      << "invalid inter_method: valid value 0,1,2,3,9,10";
-    //   int interpolation_method = GetInterMethod(param_.inter_method,
-    //                 res.cols, res.rows, new_width, new_height, prnd);
-    //   cv::warpAffine(res, temp_, M, cv::Size(new_width, new_height),
-    //                  interpolation_method,
-    //                  cv::BORDER_CONSTANT,
-    //                  cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
-    //   res = temp_;
-    // }
-
-    // pad logic
-    // if (param_.pad > 0) {
-    //   cv::copyMakeBorder(res, res, param_.pad, param_.pad, param_.pad, param_.pad,
-    //                      cv::BORDER_CONSTANT,
-    //                      cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
-    // }
-
-    // crop logic
-    // if (param_.max_crop_size != -1 || param_.min_crop_size != -1) {
-    //   CHECK(res.cols >= param_.max_crop_size && res.rows >= \
-    //           param_.max_crop_size && param_.max_crop_size >= param_.min_crop_size)
-    //       << "input image size smaller than max_crop_size";
-    //   index_t rand_crop_size =
-    //       std::uniform_int_distribution<index_t>(param_.min_crop_size, param_.max_crop_size)(*prnd);
-    //   index_t y = res.rows - rand_crop_size;
-    //   index_t x = res.cols - rand_crop_size;
-    //   if (param_.rand_crop != 0) {
-    //     y = std::uniform_int_distribution<index_t>(0, y)(*prnd);
-    //     x = std::uniform_int_distribution<index_t>(0, x)(*prnd);
-    //   } else {
-    //     y /= 2; x /= 2;
-    //   }
-    //   cv::Rect roi(x, y, rand_crop_size, rand_crop_size);
-    //   int interpolation_method = GetInterMethod(param_.inter_method, rand_crop_size, rand_crop_size,
-    //                                             param_.data_shape[2], param_.data_shape[1], prnd);
-    //   cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1])
-    //             , 0, 0, interpolation_method);
-    // } else {
-    //   CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]
-    //         && static_cast<index_t>(res.cols) >= param_.data_shape[2])
-    //       << "input image size smaller than input shape";
-    //   index_t y = res.rows - param_.data_shape[1];
-    //   index_t x = res.cols - param_.data_shape[2];
-    //   if (param_.rand_crop != 0) {
-    //     y = std::uniform_int_distribution<index_t>(0, y)(*prnd);
-    //     x = std::uniform_int_distribution<index_t>(0, x)(*prnd);
-    //   } else {
-    //     y /= 2; x /= 2;
-    //   }
-    //   cv::Rect roi(x, y, param_.data_shape[2], param_.data_shape[1]);
-    //   res = res(roi);
-    // }
 
     // build a helper class for processing labels
     ImageDetLabel det_label(label);
@@ -726,9 +578,8 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     if (param_.rand_mirror_prob > 0 && rand_uniform(*prnd) < param_.rand_mirror_prob) {
       if (det_label.TryMirror()) {
         // flip image
-        cv::Mat tmp;
-        cv::flip(res, tmp, 1);
-        res = tmp;
+        cv::flip(res, temp_, 1);
+        res = temp_;
       }
     }
 
@@ -739,60 +590,17 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
         if (pad_box.area() > 0) {
           if (det_label.TryPad(pad_box)) {
             // pad image
-            cv::Mat tmp = res;
+            temp_ = res;
             int left = static_cast<int>(-pad_box.x * res.cols);
             int top = static_cast<int>(-pad_box.y * res.rows);
             int right = static_cast<int>((pad_box.width + pad_box.x - 1) * res.cols);
             int bot = static_cast<int>((pad_box.height + pad_box.y - 1) * res.rows);
-            cv::copyMakeBorder(tmp, res, top, bot, left, right, cv::BORDER_ISOLATED,
+            cv::copyMakeBorder(temp_, res, top, bot, left, right, cv::BORDER_ISOLATED,
               cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
           }
         }
       }
     }
-
-    // mean and std
-    // if (param_.mean_r > 0.f || param_.mean_g > 0.f || param_.mean_b > 0.f ||
-    //     param_.mean_a > 0.f || param_.std_r > 0.f || param_.std_g > 0.f ||
-    //     param_.std_b > 0.f || param_.std_a > 0.f) {
-    //   CHECK_GT(res.channels(), 0);
-    //   if (res.channels() == 1) {
-    //     res -= param_.mean_b;
-    //   } else {
-    //     CHECK_GE(res.channels(), 3);
-    //     std::vector<cv::Mat> splits;
-    //     cv::split(res, splits);
-    //     splits[0] -= param.mean_b;
-    //     splits[1] -= param_.mean_g;
-    //     splits[2] -= param_.mean_r;
-    //     if (res.channels() == 4 && param_.mean_a > 0) {
-    //       splits[3] -= param_.mean_a;
-    //     }
-    //     cv::merge(splits, res);
-    //   }
-    // }
-
-    // color space augmentation
-    // if (param_.random_h != 0 || param_.random_s != 0 || param_.random_l != 0) {
-    //   std::uniform_real_distribution<float> rand_uniform(0, 1);
-    //   cvtColor(res, res, CV_BGR2HLS);
-    //   int h = rand_uniform(*prnd) * param_.random_h * 2 - param_.random_h;
-    //   int s = rand_uniform(*prnd) * param_.random_s * 2 - param_.random_s;
-    //   int l = rand_uniform(*prnd) * param_.random_l * 2 - param_.random_l;
-    //   int temp[3] = {h, l, s};
-    //   int limit[3] = {180, 255, 255};
-    //   for (int i = 0; i < res.rows; ++i) {
-    //     for (int j = 0; j < res.cols; ++j) {
-    //       for (int k = 0; k < 3; ++k) {
-    //         int v = res.at<cv::Vec3b>(i, j)[k];
-    //         v += temp[k];
-    //         v = std::max(0, std::min(limit[k], v));
-    //         res.at<cv::Vec3b>(i, j)[k] = v;
-    //       }
-    //     }
-    //   }
-    //   cvtColor(res, res, CV_HLS2BGR);
-    // }
 
     if (image_det_aug_default_enum::kForce == param_.resize_mode) {
       // force resize to specified data_shape, regardless of aspect ratio
@@ -834,17 +642,9 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
  private:
   // temporal space
   cv::Mat temp_;
-  // rotation param
-  cv::Mat rotateM_;
   // parameters
   DefaultImageDetAugmentParam param_;
-  /*! \brief list of possible rotate angle */
-  std::vector<int> rotate_list_;
 };
-
-// ImageAugmenter* ImageAugmenter::Create(const std::string& name) {
-//   return dmlc::Registry<ImageAugmenterReg>::Find(name)->body();
-// }
 
 MXNET_REGISTER_IMAGE_AUGMENTER(det_aug_default)
 .describe("default detection augmenter")
