@@ -1,5 +1,5 @@
 # For spell checker
-FROM ubuntu:14.04
+FROM mxnet/aml:latest
 
 RUN yum install -y enchant
 RUN pip install pyenchant grammar-check html2text
