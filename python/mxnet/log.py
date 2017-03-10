@@ -77,7 +77,7 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
             mode = filemode if filemode else 'a'
             hdlr = logging.FileHandler(filename, mode)
         else:
-            hdlr = logging.StreamHandler()
+            hdlr = logging.StreamHandler() # pylint: disable=redefined-variable-type
             # the `_Formatter` contain some escape character to
             # represent color, which is not suitable for FileHandler,
             # (TODO) maybe we can add another Formatter for FileHandler.

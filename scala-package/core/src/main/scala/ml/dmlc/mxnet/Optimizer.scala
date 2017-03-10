@@ -50,7 +50,7 @@ abstract class Optimizer extends Serializable {
   protected var specialized: Boolean = false
   protected val weightSet: mutable.Set[Int] = mutable.HashSet.empty[Int]
   protected var rescaleGrad: Float = 1
-  protected var symbol: Symbol = null
+  @transient protected var symbol: Symbol = null
   protected var idx2name: Map[Int, String] = null
 
   /**

@@ -3,12 +3,12 @@
 # pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
 """Image IO API of mxnet."""
 from __future__ import absolute_import, print_function
-from .base import numeric_types
 
 import os
 import random
 import logging
 import numpy as np
+from .base import numeric_types
 
 try:
     import cv2
@@ -327,7 +327,7 @@ class ImageIter(io.DataIter):
                 self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')
                 self.imgidx = list(self.imgrec.keys)
             else:
-                self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')
+                self.imgrec = recordio.MXRecordIO(path_imgrec, 'r') # pylint: disable=redefined-variable-type
                 self.imgidx = None
         else:
             self.imgrec = None
@@ -350,7 +350,7 @@ class ImageIter(io.DataIter):
             imgkeys = []
             index = 1
             for img in imglist:
-                key = str(index)
+                key = str(index) # pylint: disable=redefined-variable-type
                 index += 1
                 if isinstance(img[0], numeric_types):
                     label = nd.array([img[0]])
