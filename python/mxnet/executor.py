@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
 """Symbolic Executor component of MXNet."""
 from __future__ import absolute_import
 
@@ -63,11 +62,8 @@ class Executor(object):
     @staticmethod
     def _get_dict(names, ndarrays):
         """Get the dictionary given name and ndarray pairs."""
-        nset = set()
-        for nm in names:
-            if nm in nset:
-                raise ValueError('Duplicate names detected, %s' % str(names))
-            nset.add(nm)
+        if len(names) != len(set(names)):
+            raise ValueError('Duplicate names detected, %s' % str(names))
         return dict(zip(names, ndarrays))
 
     def _get_outputs(self):

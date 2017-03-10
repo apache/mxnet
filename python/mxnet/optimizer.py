@@ -1,4 +1,3 @@
-# pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
 """Common Optimization algorithms with regularizations."""
 import math
 import pickle
@@ -14,7 +13,7 @@ class Optimizer(object):
     @staticmethod
     def register(klass):
         """Register optimizers to the optimizer factory"""
-        assert(isinstance(klass, type))
+        assert isinstance(klass, type)
         name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
             print('WARNING: New optimizer %s.%s is overriding '
@@ -87,8 +86,7 @@ class Optimizer(object):
     def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
 
-    # pylint: disable=no-self-use
-    def set_lr_scale(self, args_lrscale):
+    def set_lr_scale(self, args_lrscale): # pylint: disable=unused-argument
         """set lr scale is deprecated. Use set_lr_mult instead."""
         raise DeprecationWarning
 
@@ -192,8 +190,7 @@ class Optimizer(object):
         return wd
 
 # convenience wrapper for Optimizer.Register
-register = Optimizer.register
-
+register = Optimizer.register # pylint: disable=invalid-name
 
 @register
 class SGD(Optimizer):
@@ -259,8 +256,8 @@ class SGD(Optimizer):
         state : NDArray or other objects returned by init_state
             The auxiliary state used in optimization.
         """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
@@ -341,8 +338,8 @@ class DCASGD(Optimizer):
         state : NDArray or other objects returned by init_state
             The auxiliary state used in optimization.
         """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
@@ -357,7 +354,7 @@ class DCASGD(Optimizer):
             mom[:] += -lr * (grad + wd * weight + self.lamda \
                       * grad * grad * (weight - previous_weight))
         else:
-            assert(self.momentum == 0.0)
+            assert self.momentum == 0.0
             mom = -lr * (grad + wd * weight + self.lamda \
                       * grad * grad * (weight - previous_weight))
         previous_weight[:] = weight
@@ -389,8 +386,8 @@ class NAG(SGD):
         state : NDArray or other objects returned by init_state
             The auxiliary state used in optimization.
         """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
@@ -463,8 +460,8 @@ class SGLD(Optimizer):
         state : NDArray or other objects returned by init_state
             The auxiliary state used in optimization.
         """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
@@ -475,7 +472,7 @@ class SGLD(Optimizer):
         weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr),
                                                             weight.shape, weight.context)
 
-
+# pylint: disable=invalid-name
 @register
 class ccSGD(SGD):
     """[Deprecated] Same as sgd. Left here for backward compatibility."""
@@ -518,7 +515,7 @@ class Adam(Optimizer):
         clip gradient in range [-clip_gradient, clip_gradient]
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), **kwargs):
+                 decay_factor=(1 - 1e-8), **kwargs): # pylint: disable=unused-argument
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
@@ -556,8 +553,8 @@ class Adam(Optimizer):
         state : NDArray or other objects returned by init_state
             The auxiliary state used in optimization.
         """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
@@ -607,8 +604,8 @@ class AdaGrad(Optimizer):
         return zeros(weight.shape, weight.context)  # history
 
     def update(self, index, weight, grad, state):
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
@@ -711,8 +708,8 @@ class RMSProp(Optimizer):
         state : NDArray or other objects returned by init_state
             The auxiliary state used in optimization.
         """
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
@@ -758,8 +755,8 @@ class AdaDelta(Optimizer):
                 zeros(weight.shape, weight.context))  # accumulated delta
 
     def update(self, index, weight, grad, state):
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert isinstance(weight, NDArray)
+        assert isinstance(grad, NDArray)
         wd = self._get_wd(index)
         self._update_count(index)
 
@@ -796,6 +793,7 @@ class Test(Optimizer):
         weight[:] += grad * self.rescale_grad
         state[:] = weight
 
+# pylint: disable=invalid-name
 # backward compatibility wrapper for Optimizer.CreateOptimizer
 create = Optimizer.create_optimizer
 

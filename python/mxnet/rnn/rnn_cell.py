@@ -1,7 +1,5 @@
 # coding: utf-8
-# pylint: disable=no-member, invalid-name, protected-access, no-self-use
-# pylint: disable=too-many-branches, too-many-arguments, no-self-use
-# pylint: disable=too-many-lines
+# pylint: disable=invalid-name
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 
@@ -38,7 +36,6 @@ class RNNParams(object):
         if name not in self._params:
             self._params[name] = symbol.Variable(name, **kwargs)
         return self._params[name]
-
 
 class BaseRNNCell(object):
     """Abstract base class for RNN cells
@@ -149,7 +146,7 @@ class BaseRNNCell(object):
             dictionary with weights associated to
             this cell unpacked.
         """
-        #pylint: disable=R0201
+        #pylint: disable=
         return args.copy()
 
     def pack_weights(self, args):
@@ -167,7 +164,7 @@ class BaseRNNCell(object):
             dictionary with weights associated to
             this cell packed.
         """
-        #pylint: disable=R0201
+        #pylint: disable=
         return args.copy()
 
     def unroll(self, length, inputs=None, begin_state=None,
@@ -242,7 +239,6 @@ class BaseRNNCell(object):
             outputs = symbol.Concat(*outputs, dim=axis)
         return outputs, states
 
-    #pylint: disable=no-self-use
     def _get_activation(self, inputs, activation, **kwargs):
         """Get activation function. Convert if is string"""
         if isinstance(activation, string_types):
@@ -271,10 +267,10 @@ class RNNCell(BaseRNNCell):
         super(RNNCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
         self._activation = activation
-        self._iW = self.params.get('i2h_weight')
-        self._iB = self.params.get('i2h_bias')
-        self._hW = self.params.get('h2h_weight')
-        self._hB = self.params.get('h2h_bias')
+        self._i2h_weight = self.params.get('i2h_weight')
+        self._i2h_bias = self.params.get('i2h_bias')
+        self._h2h_weight = self.params.get('h2h_weight')
+        self._h2h_bias = self.params.get('h2h_bias')
 
     @property
     def state_shape(self):
@@ -300,10 +296,10 @@ class RNNCell(BaseRNNCell):
         """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
-        i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
+        i2h = symbol.FullyConnected(data=inputs, weight=self._i2h_weight, bias=self._i2h_bias,
                                     num_hidden=self._num_hidden,
                                     name='%si2h'%name)
-        h2h = symbol.FullyConnected(data=states[0], weight=self._hW, bias=self._hB,
+        h2h = symbol.FullyConnected(data=states[0], weight=self._h2h_weight, bias=self._h2h_bias,
                                     num_hidden=self._num_hidden,
                                     name='%sh2h'%name)
         output = self._get_activation(i2h + h2h, self._activation,
@@ -329,10 +325,10 @@ class LSTMCell(BaseRNNCell):
     def __init__(self, num_hidden, prefix='lstm_', params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
-        self._iW = self.params.get('i2h_weight')
-        self._iB = self.params.get('i2h_bias')
-        self._hW = self.params.get('h2h_weight')
-        self._hB = self.params.get('h2h_bias')
+        self._i2h_weight = self.params.get('i2h_weight')
+        self._i2h_bias = self.params.get('i2h_bias')
+        self._h2h_weight = self.params.get('h2h_weight')
+        self._h2h_bias = self.params.get('h2h_bias')
 
     @property
     def state_shape(self):
@@ -357,15 +353,14 @@ class LSTMCell(BaseRNNCell):
         """
         args = args.copy()
         outs = ['_i', '_f', '_c', '_o']
-        h = self._num_hidden
         for i in ['i2h', 'h2h']:
             weight = args.pop('%s%s_weight'%(self._prefix, i))
             bias = args.pop('%s%s_bias'%(self._prefix, i))
             for j, name in enumerate(outs):
                 wname = '%s%s%s_weight'%(self._prefix, i, name)
-                args[wname] = weight[j*h:(j+1)*h].copy()
+                args[wname] = weight[j*self._num_hidden:(j+1)*self._num_hidden].copy()
                 bname = '%s%s%s_bias'%(self._prefix, i, name)
-                args[bname] = bias[j*h:(j+1)*h].copy()
+                args[bname] = bias[j*self._num_hidden:(j+1)*self._num_hidden].copy()
         return args
 
     def pack_weights(self, args):
@@ -416,10 +411,10 @@ class LSTMCell(BaseRNNCell):
         """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
-        i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
+        i2h = symbol.FullyConnected(data=inputs, weight=self._i2h_weight, bias=self._i2h_bias,
                                     num_hidden=self._num_hidden*4,
                                     name='%si2h'%name)
-        h2h = symbol.FullyConnected(data=states[0], weight=self._hW, bias=self._hB,
+        h2h = symbol.FullyConnected(data=states[0], weight=self._h2h_weight, bias=self._h2h_bias,
                                     num_hidden=self._num_hidden*4,
                                     name='%sh2h'%name)
         gates = i2h + h2h
@@ -609,8 +604,8 @@ class FusedRNNCell(BaseRNNCell):
         if initializer is None:
             initializer = init.Xavier(factor_type='in', magnitude=2.34)
         if not isinstance(initializer, init.FusedRNN):
-            initializer = init.FusedRNN(initializer, num_hidden, num_layers,
-                                        mode, bidirectional)
+            initializer = init.FusedRNN( # pylint: disable=redefined-variable-type
+                initializer, num_hidden, num_layers, mode, bidirectional)
         self._parameter = self.params.get('parameters', init=initializer)
 
         self._directions = self._bidirectional + 1
@@ -790,7 +785,7 @@ class FusedRNNCell(BaseRNNCell):
 
         states = begin_state
         if self._mode == 'lstm':
-            states = {'state': states[0], 'state_cell': states[1]}
+            states = {'state': states[0], 'state_cell': states[1]} # pylint: disable=redefined-variable-type
         else:
             states = {'state': states[0]}
 
@@ -1076,4 +1071,3 @@ class ZoneoutCell(ModifierCell):
             state to next step of RNN.
         """
         raise NotImplementedError
-

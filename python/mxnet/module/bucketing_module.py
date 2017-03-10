@@ -1,5 +1,3 @@
-# pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access
-# pylint: disable=too-many-public-methods
 """A `BucketingModule` implement the `BaseModule` API, and allows multiple
 symbols to be used depending on the `bucket_key` provided by each different
 mini-batch of data.

@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=no-member
 
 """Online evaluation metric module."""
 from __future__ import absolute_import

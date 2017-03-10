@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable= protected-access, invalid-name
 """Logging utilities."""
 import logging
 import sys
@@ -16,7 +15,6 @@ PY3 = sys.version_info[0] == 3
 
 
 class _Formatter(logging.Formatter):
-    # pylint: disable= no-self-use
     """Customized log formatter."""
 
     def __init__(self):
@@ -24,7 +22,6 @@ class _Formatter(logging.Formatter):
         super(_Formatter, self).__init__(datefmt=datefmt)
 
     def _get_color(self, level):
-        # pylint: disable= missing-docstring
         if logging.WARNING <= level:
             return '\x1b[31m'
         elif logging.INFO <= level:
@@ -33,7 +30,6 @@ class _Formatter(logging.Formatter):
             return '\x1b[34m'
 
     def _get_label(self, level):
-        # pylint: disable= missing-docstring
         if level == logging.CRITICAL:
             return 'C'
         elif level == logging.ERROR:
@@ -48,19 +44,18 @@ class _Formatter(logging.Formatter):
             return 'U'
 
     def format(self, record):
-        # pylint: disable= missing-docstring
         fmt = self._get_color(record.levelno)
         fmt += self._get_label(record.levelno)
         fmt += '%(asctime)s %(process)d %(pathname)s:%(funcName)s:%(lineno)d'
         fmt += ']\x1b[0m'
         fmt += ' %(message)s'
         if PY3:
-            self._style._fmt = fmt # pylint: disable= no-member
+            self._style._fmt = fmt
         else:
             self._fmt = fmt
         return super(_Formatter, self).format(record)
 
-def getLogger(name=None, filename=None, filemode=None, level=WARNING):
+def getLogger(name=None, filename=None, filemode=None, level=WARNING): # pylint: disable=invalid-name
     """Get customized logger.
 
     Args:
@@ -77,7 +72,7 @@ def getLogger(name=None, filename=None, filemode=None, level=WARNING):
             mode = filemode if filemode else 'a'
             hdlr = logging.FileHandler(filename, mode)
         else:
-            hdlr = logging.StreamHandler()
+            hdlr = logging.StreamHandler() # pylint: disable=redefined-variable-type
             # the `_Formatter` contain some escape character to
             # represent color, which is not suitable for FileHandler,
             # (TODO) maybe we can add another Formatter for FileHandler.

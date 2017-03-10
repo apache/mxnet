@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, W0221, W0201, no-self-use, no-member
 
 """NDArray interface of mxnet"""
 from __future__ import absolute_import
@@ -257,8 +256,8 @@ class PrefetchingIter(DataIter):
         self.batch_size = self.provide_data[0][1][0]
         self.data_ready = [threading.Event() for i in range(self.n_iter)]
         self.data_taken = [threading.Event() for i in range(self.n_iter)]
-        for e in self.data_taken:
-            e.set()
+        for data in self.data_taken:
+            data.set()
         self.started = True
         self.current_batch = [None for i in range(self.n_iter)]
         self.next_batch = [None for i in range(self.n_iter)]
@@ -282,8 +281,8 @@ class PrefetchingIter(DataIter):
 
     def __del__(self):
         self.started = False
-        for e in self.data_taken:
-            e.set()
+        for data in self.data_taken:
+            data.set()
         for thread in self.prefetch_threads:
             thread.join()
 
@@ -312,18 +311,18 @@ class PrefetchingIter(DataIter):
             ] for r, i in zip(self.rename_label, self.iters)], [])
 
     def reset(self):
-        for e in self.data_ready:
-            e.wait()
+        for data in self.data_ready:
+            data.wait()
         for i in self.iters:
             i.reset()
-        for e in self.data_ready:
-            e.clear()
-        for e in self.data_taken:
-            e.set()
+        for data in self.data_ready:
+            data.clear()
+        for data in self.data_taken:
+            data.set()
 
     def iter_next(self):
-        for e in self.data_ready:
-            e.wait()
+        for data in self.data_ready:
+            data.wait()
         if self.next_batch[0] is None:
             for i in self.next_batch:
                 assert i is None, "Number of entry mismatches between iterators"
@@ -338,10 +337,10 @@ class PrefetchingIter(DataIter):
                                            self.next_batch[0].index,
                                            provide_data=self.provide_data,
                                            provide_label=self.provide_label)
-            for e in self.data_ready:
-                e.clear()
-            for e in self.data_taken:
-                e.set()
+            for data in self.data_ready:
+                data.clear()
+            for data in self.data_taken:
+                data.set()
             return True
 
     def next(self):
@@ -372,10 +371,12 @@ def _init_data(data, allow_empty, default_name):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
-            assert(len(data) > 0)
+            assert len(data) > 0
         if len(data) == 1:
+            # pylint: disable=redefined-variable-type
             data = OrderedDict([(default_name, data[0])])
         else:
+            # pylint: disable=redefined-variable-type
             data = OrderedDict([('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
     if not isinstance(data, dict):
         raise TypeError("Input must be NDArray, numpy.ndarray, " + \
@@ -437,6 +438,7 @@ class NDArrayIter(DataIter):
                 data_dict[k] = data_dict[k][:new_n]
             for k, _ in self.label:
                 label_dict[k] = label_dict[k][:new_n]
+            # pylint: disable=redefined-variable-type
             self.data = data_dict.items()
             self.label = label_dict.items()
 

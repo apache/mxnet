@@ -1,5 +1,3 @@
-# pylint: disable=too-many-instance-attributes,too-many-locals
-# pylint: disable=too-many-branches,too-many-statements,too-many-arguments
 """Executor group is a convenient tool for managing a group of executors."""
 
 import logging

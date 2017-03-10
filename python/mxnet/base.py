@@ -1,5 +1,4 @@
 # coding: utf-8
-# pylint: disable=invalid-name, no-member
 """ ctypes library of mxnet and helper functions """
 from __future__ import absolute_import
 
@@ -16,6 +15,7 @@ __all__ = ['MXNetError']
 #----------------------------
 # library loading
 #----------------------------
+# pylint: disable=invalid-name
 if sys.version_info[0] == 3:
     string_types = str,
     numeric_types = (float, int, np.float32, np.int32)

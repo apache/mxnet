@@ -20,13 +20,13 @@ def _ctype_key_value(keys, vals):
                     c_array(NDArrayHandle, [vals.handle]))
         else:
             for value in vals:
-                assert(isinstance(value, NDArray))
+                assert isinstance(value, NDArray)
             return (c_array(ctypes.c_int, [keys] * len(vals)),
                     c_array(NDArrayHandle, [value.handle for value in vals]))
     else:
-        assert(len(keys) == len(vals))
+        assert len(keys) == len(vals)
         for k in keys:
-            assert(isinstance(k, int))
+            assert isinstance(k, int)
         c_keys = []
         c_vals = []
         for key, val in zip(keys, vals):
@@ -223,7 +223,7 @@ class KVStore(object):
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         """
-        assert(out is not None)
+        assert out is not None
         ckeys, cvals = _ctype_key_value(key, out)
         check_call(_LIB.MXKVStorePull(
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,

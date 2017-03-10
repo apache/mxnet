@@ -1,5 +1,3 @@
-# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
-# pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 
@@ -21,8 +19,9 @@ from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
 from .io import DataDesc
 from .base import mx_real_t
+from .callback import LogValidationMetricsCallback
 
-BASE_ESTIMATOR = object
+BASE_ESTIMATOR = object         # pylint: disable=invalid-name
 
 try:
     from sklearn.base import BaseEstimator
@@ -108,12 +107,12 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             kvstore.push(index, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.
             kvstore.pull(index, grad_list, priority=-index)
-        for k, p in enumerate(zip(arg_list, grad_list)):
+        for key, pair in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
             # use a better solution latter
-            w, g = p
-            updater(index*num_device+k, g, w)
+            weight, grad = pair
+            updater(index*num_device+key, grad, weight)
 
 
 def _multiple_callbacks(callbacks, *args, **kwargs):
@@ -122,8 +121,8 @@ def _multiple_callbacks(callbacks, *args, **kwargs):
     is None, a single function, or a list.
     """
     if isinstance(callbacks, list):
-        for cb in callbacks:
-            cb(*args, **kwargs)
+        for callback in callbacks:
+            callback(*args, **kwargs)
         return
     if callbacks:
         callbacks(*args, **kwargs)
@@ -375,14 +374,13 @@ def load_checkpoint(prefix, epoch):
     arg_params = {}
     aux_params = {}
     for k, v in save_dict.items():
-        tp, name = k.split(':', 1)
-        if tp == 'arg':
+        typ, name = k.split(':', 1)
+        if typ == 'arg':
             arg_params[name] = v
-        if tp == 'aux':
+        if typ == 'aux':
             aux_params[name] = v
     return (symbol, arg_params, aux_params)
 
-from .callback import LogValidationMetricsCallback
 
 class FeedForward(BASE_ESTIMATOR):
     """Model class of MXNet for training and predicting feedforward nets.
@@ -438,7 +436,7 @@ class FeedForward(BASE_ESTIMATOR):
             self.symbol = symbol
             self.sym_gen = None
         else:
-            assert(callable(symbol))
+            assert callable(symbol)
             self.symbol = None
             self.sym_gen = symbol
 
@@ -473,7 +471,7 @@ class FeedForward(BASE_ESTIMATOR):
         if self.argument_checked:
             return
 
-        assert(self.symbol is not None)
+        assert self.symbol is not None
         self.argument_checked = True
 
         # check if symbol contain duplicated names.
@@ -498,7 +496,7 @@ class FeedForward(BASE_ESTIMATOR):
     def _init_params(self, input_shapes, overwrite=False):
         """Initialize weight parameters and auxiliary states"""
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
-        assert(arg_shapes is not None)
+        assert arg_shapes is not None
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
@@ -549,30 +547,30 @@ class FeedForward(BASE_ESTIMATOR):
         _check_arguments(self.symbol)
         self._pred_exec = pred_exec
 
-    def _init_iter(self, X, y, is_train):
+    def _init_iter(self, x, y, is_train):
         """Initialize the iterator given input."""
-        if isinstance(X, (np.ndarray, nd.NDArray)):
+        if isinstance(x, (np.ndarray, nd.NDArray)):
             if y is None:
                 if is_train:
-                    raise ValueError('y must be specified when X is numpy.ndarray')
+                    raise ValueError('y must be specified when x is numpy.ndarray')
                 else:
-                    y = np.zeros(X.shape[0])
+                    y = np.zeros(x.shape[0])
             if not isinstance(y, (np.ndarray, nd.NDArray)):
-                raise TypeError('y must be ndarray when X is numpy.ndarray')
-            if X.shape[0] != y.shape[0]:
+                raise TypeError('y must be ndarray when x is numpy.ndarray')
+            if x.shape[0] != y.shape[0]:
                 raise ValueError("The numbers of data points and labels not equal")
             if y.ndim == 2 and y.shape[1] == 1:
                 y = y.flatten()
             if y.ndim != 1:
                 raise ValueError("Label must be 1D or 2D (with 2nd dimension being 1)")
             if is_train:
-                return io.NDArrayIter(X, y, min(X.shape[0], self.numpy_batch_size),
+                return io.NDArrayIter(x, y, min(x.shape[0], self.numpy_batch_size),
                                       shuffle=is_train, last_batch_handle='roll_over')
             else:
-                return io.NDArrayIter(X, y, min(X.shape[0], self.numpy_batch_size), shuffle=False)
-        if not isinstance(X, io.DataIter):
-            raise TypeError('X must be DataIter, NDArray or numpy.ndarray')
-        return X
+                return io.NDArrayIter(x, y, min(x.shape[0], self.numpy_batch_size), shuffle=False)
+        if not isinstance(x, io.DataIter):
+            raise TypeError('x must be DataIter, NDArray or numpy.ndarray')
+        return x
 
     def _init_eval_iter(self, eval_data):
         """Initialize the iterator given eval_data."""
