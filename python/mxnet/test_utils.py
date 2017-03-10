@@ -8,10 +8,17 @@ import numbers
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-
+import subprocess
+import os
+import errno
 from .context import cpu, gpu, Context
 from .ndarray import array
 from .symbol import Symbol
+try:
+    import requests
+except ImportError:
+    # in rare cases requests may be not installed
+    pass
 
 _rng = np.random.RandomState(1234)
 
@@ -803,3 +810,61 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                         print(str(e))
 
     return gt
+
+def list_gpus():
+    """Return a list of GPUs
+
+    Returns
+    -------
+    list of int:
+        If there are n GPUs, then return a list [0,1,...,n-1]. Otherwise returns
+        [].
+    """
+    try:
+        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
+    except OSError:
+        return []
+    return range(len([i for i in re.split('\n') if 'GPU' in i]))
+
+def download(url, fname=None, overwrite=False):
+    """Download an given URL
+
+    Parameters
+    ----------
+
+    url : str
+        URL to download
+    fname : str, optional
+        filename of the downloaded file. If None, then will guess a filename
+        from url.
+    overwrite : bool, optional
+        Default is false, which means skipping download if the local file
+        exists. If true, then download the url to overwrite the local file if
+        exists.
+
+    Returns
+    -------
+    str
+        The filename of the downloaded file
+    """
+    if fname is None:
+        fname = url.split('/')[-1]
+    if not overwrite and os.path.exists(fname):
+        return fname
+
+    dir_name = os.path.dirname(fname)
+    if dir_name != "":
+        if not os.path.exists(dir_name):
+            try: # try to create the directory if it doesn't exists
+                os.makedirs(dir_name)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise OSError('failed to create ' + dir_name)
+
+    r = requests.get(url, stream=True)
+    assert r.status_code == 200, "failed to open %s" % url
+    with open(fname, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+    return fname
