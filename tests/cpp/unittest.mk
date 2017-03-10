@@ -12,6 +12,5 @@ build/tests/cpp/%.o : tests/cpp/%.cc
 
 $(TEST): $(TEST_OBJ) lib/libmxnet.a
 	$(CXX) -std=c++0x $(CFLAGS) -I$(GTEST_INC) -o $@ $^ $(LDFLAGS) -L$(GTEST_LIB) -lgtest
-	$(TEST)
 
 -include build/tests/cpp/*.d
