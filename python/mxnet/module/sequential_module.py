@@ -63,7 +63,7 @@ class SequentialModule(BaseModule):
         self._modules.append(module)
 
         # a sanity check to avoid typo
-        for key in kwargs.keys():
+        for key in kwargs:
             assert key in self._meta_keys, ('Unknown meta "%s", a typo?' % key)
 
         self._metas.append(kwargs)
