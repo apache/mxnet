@@ -10,9 +10,6 @@ echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 make -j$(nproc) || exit -1
 
-echo "BUILD lint"
-make lint || exit -1
-
 echo "BUILD cpp_test"
 make -j$(nproc) test || exit -1
 export MXNET_ENGINE_INFO=true
