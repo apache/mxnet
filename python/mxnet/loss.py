@@ -413,4 +413,3 @@ def cross_entropy_loss(output, label, sparse_label=True, axis=1,
     label_names = [x for x in loss.list_arguments()
                    if x not in output.list_arguments()]
     return Loss(loss, outputs, label_names, name, metric=metric, **kwargs)
-
