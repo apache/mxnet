@@ -45,8 +45,8 @@ NNVM_REGISTER_OP(pick)
 .set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-  	std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-  	heads.push_back(n->inputs[1]);
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[1]);
     auto ret = MakeGradNode("_backward_pick", n, heads, n->attrs.dict);
 
     nnvm::NodePtr p = nnvm::Node::Create();

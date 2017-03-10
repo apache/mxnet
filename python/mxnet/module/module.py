@@ -180,7 +180,7 @@ class Module(BaseModule):
 
     def _reset_bind(self):
         """Internal function to reset binded state."""
-        if self.binded and params_initialized:
+        if self.binded and self.params_initialized:
             self._sync_params_from_devices()
         self.binded = False
         self._exec_group = None

@@ -8,7 +8,9 @@ import numpy
 
 from collections import OrderedDict
 
+from .base import numeric_types
 from . import ndarray
+
 
 def check_label_shapes(labels, preds, shape=0):
     """Check to see if the two arrays are the same size."""
@@ -33,6 +35,16 @@ class EvalMetric(object):
         self.reset()
 
     def update_dict(self, label, pred):
+        """Update the internal evaluation with named label and pred
+
+        Parameters
+        ----------
+        labels : OrderedDict of str -> NDArray
+            name to array mapping for labels.
+
+        preds : list of NDArray
+            name to array mapping of predicted outputs.
+        """
         if self.output_names is not None:
             pred = [pred[name] for name in self.output_names]
         else:
@@ -146,12 +158,16 @@ class CompositeEvalMetric(EvalMetric):
 
     def get(self):
         names = []
-        results = []
+        values = []
         for metric in self.metrics:
-            result = metric.get()
-            names.append(result[0])
-            results.append(result[1])
-        return (names, results)
+            name, value = metric.get()
+            if isinstance(name, str):
+                name = [name]
+            if isinstance(value, numeric_types):
+                value = [value]
+            names.extend(name)
+            values.extend(value)
+        return (names, values)
 
 ########################
 # CLASSIFICATION METRICS
@@ -386,8 +402,8 @@ class Loss(EvalMetric):
 
     def update(self, _, preds):
         for pred in preds:
-            self.sum_metric += ndarray.mean(pred).asscalar()
-        self.num_inst += 1
+            self.sum_metric += ndarray.sum(pred).asscalar()
+            self.num_inst += pred.size
 
 
 class Torch(Loss):
