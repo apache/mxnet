@@ -352,6 +352,25 @@ class BucketingModule(BaseModule):
 
         self.optimizer_initialized = True
 
+    def prepare(self, data_batch):
+        '''Prepare a data batch
+        TODO: add doc
+        '''
+        bucket_key = data_batch.bucket_key
+        if not bucket_key in self._buckets:
+            data_shapes = data_batch.provide_data
+            label_shapes = data_batch.provide_label
+            symbol, data_names, label_names = self._sym_gen(bucket_key)
+            module = Module(symbol, data_names, label_names,
+                        logger=self.logger, context=self._context,
+                        work_load_list=self._work_load_list,
+                        fixed_param_names=self._fixed_param_names,
+                        state_names=self._state_names)
+            module.bind(data_shapes, label_shapes, self._curr_module.for_training,
+                    self._curr_module.inputs_need_grad,
+                    force_rebind=False, shared_module=self._buckets[self._default_bucket_key])
+            self._buckets[bucket_key] = module
+
     def forward(self, data_batch, is_train=None):
         """Forward computation.
 
