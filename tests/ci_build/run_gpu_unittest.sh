@@ -5,9 +5,12 @@ cp make/config.mk .
 echo "USE_CUDA=1" | tee -a config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" | tee -a config.mk
 echo "USE_CUDNN=1" | tee -a config.mk
+echo "USE_BLAS=openblas" | tee -a config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" | tee -a config.mk
 make -j$(nproc) || exit -1
 
+export PYTHONPATH=`pwd`/python/
+echo $PYTHONPATH
 echo "BUILD python_test"
 nosetests --verbose tests/python/unittest || exit -1
 
