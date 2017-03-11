@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file broadcast_reduce_op-inl.h
+ * \file matrix_op-inl.h
  * \brief Function defintion of matrix related operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
