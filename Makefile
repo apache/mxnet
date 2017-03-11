@@ -259,8 +259,14 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: rcpplint jnilint
-	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python
+lint: cpplint rcpplint jnilint pylint
+
+cpplint:
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin
+
+pylint:
+# ideally we want to check all, such as: python tools example tests
+	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc -r y
 
 doc: doxygen
 

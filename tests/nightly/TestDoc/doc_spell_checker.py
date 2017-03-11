@@ -148,6 +148,7 @@ if __name__ == "__main__":
                 continue
             rd_file = open(os.path.join(root, read_file), 'r')
             content = rd_file.read()
+            DOC_PARSER.clear_res()
             DOC_PARSER.feed(content)
             DOC_PARSER.check_grammar(os.path.join(root, read_file))
             spell_check_res = DOC_PARSER.get_res()[0]
