@@ -17,18 +17,18 @@ make -j 4 || exit -1
 
 echo "BUILD python2 mxnet"
 cd ./python
-python setup.py install || exit 1
+sudo python setup.py install || exit 1
 
 echo "BUILD python3 mxnet"
-python3 setup.py install || exit 1
+sudo python3 setup.py install || exit 1
 
 echo "Install other dependencies"
 cd ..
-yum -y install enchant
-pip install pyenchant
-pip install grammar-check
-pip install html2text
-pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
+sudo yum -y install enchant
+sudo pip install pyenchant
+sudo pip install grammar-check
+sudo pip install html2text
+sudo pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
 
 
 echo "BUILD mxnet document"
@@ -37,9 +37,9 @@ make html
 
 echo "Check spell and grammar for documentation"
 cd ../tests/nightly/TestDoc
-rm -rf web-data
-git clone https://github.com/dmlc/web-data.git
-cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
-python doc_spell_checker.py
+sudo rm -rf web-data
+sudo git clone https://github.com/dmlc/web-data.git
+sudo cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
+sudo python doc_spell_checker.py
 
 echo "Check spell and grammar End"
