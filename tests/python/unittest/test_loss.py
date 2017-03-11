@@ -121,7 +121,7 @@ def test_multi_loss():
             initializer=mx.init.Uniform(0.1))
     score = mod.score(data_iter, loss.metric)
     assert score[0][1] == 1.0
-    assert score[2][1] < 0.1
+    assert score[2][1] < 0.2
 
 
 if __name__ == '__main__':
