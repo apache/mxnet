@@ -307,6 +307,7 @@ class BucketingModule(BaseModule):
             Typically `data_batch.provide_label`.
         """
         assert self.binded, 'call bind before switching bucket'
+        # (haibin) we could just reuse prepare() here
         if not bucket_key in self._buckets:
             symbol, data_names, label_names = self._sym_gen(bucket_key)
             module = Module(symbol, data_names, label_names,
@@ -353,9 +354,13 @@ class BucketingModule(BaseModule):
         self.optimizer_initialized = True
 
     def prepare(self, data_batch):
-        '''Prepare a data batch
-        TODO: add doc
+        '''Prepare a data batch for forward
+
+        Parameters
+        ----------
+        data_batch : DataBatch
         '''
+        # perform bind if haven't done so
         bucket_key = data_batch.bucket_key
         if not bucket_key in self._buckets:
             data_shapes = data_batch.provide_data

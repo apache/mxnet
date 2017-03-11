@@ -714,6 +714,15 @@ class BaseModule(object):
     ################################################################################
     # Computations
     ################################################################################
+    def prepare(self, data_batch):
+        '''Prepare a data batch for forward
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+        '''
+        pass
+
     def forward(self, data_batch, is_train=None):
         """Forward computation.
 
