@@ -75,7 +75,7 @@ def train(args):
     data_train, data_val, vocab = get_data('TN')
     cells = []
     if args.stack_rnn:
-        for layer in xrange(args.num_layers):
+        for layer in range(args.num_layers):
             cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
                     mode='lstm', prefix='fused_rnn' + str(layer),
                     bidirectional=args.bidirectional)
@@ -95,7 +95,8 @@ def train(args):
             cell.reset()
             output, _ = cell.unroll(seq_len, inputs=output, merge_outputs=True, layout='TNC')
 
-        pred = mx.sym.Reshape(output, shape=(-1, args.num_hidden))
+        pred = mx.sym.Reshape(output,
+                shape=(-1, args.num_hidden*(1+args.bidirectional)))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')
 
         label = mx.sym.Reshape(label, shape=(-1,))
@@ -149,7 +150,7 @@ def test(args):
             cell = mx.rnn.BidirectionalCell(
                     cell,
                     mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_r%d_'%i),
-                    prefix='bi_lstm_%d'%i)
+                    output_prefix='bi_lstm_%d'%i)
         stack.add(cell)
 
     def sym_gen(seq_len):
@@ -161,7 +162,8 @@ def test(args):
         stack.reset()
         outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
 
-        pred = mx.sym.Reshape(outputs, shape=(-1, args.num_hidden))
+        pred = mx.sym.Reshape(outputs,
+                shape=(-1, args.num_hidden*(1+args.bidirectional)))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')
 
         label = mx.sym.Reshape(label, shape=(-1,))
