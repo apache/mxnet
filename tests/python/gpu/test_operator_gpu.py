@@ -368,11 +368,11 @@ def test_bidirectional():
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.GRUCell(100, prefix='l0_'),
                 mx.rnn.GRUCell(100, prefix='r0_'),
-                prefix='bi_gru_0_'))
+                output_prefix='bi_gru_0_'))
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.GRUCell(100, prefix='l1_'),
                 mx.rnn.GRUCell(100, prefix='r1_'),
-                prefix='bi_gru_1_'))
+                output_prefix='bi_gru_1_'))
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)

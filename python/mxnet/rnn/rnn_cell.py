@@ -423,6 +423,7 @@ class LSTMCell(BaseRNNCell):
         """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
+        print(states)
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
                                     num_hidden=self._num_hidden*4,
                                     name='%si2h'%name)
@@ -949,8 +950,9 @@ class SequentialRNNCell(BaseRNNCell):
             If inputs is None, Placeholder variables are
             automatically created.
         begin_state : nested list of Symbol
-            input states. Outmost length must be equal to number of
-            cells, one for each cell.
+            input states. Created by begin_state()
+            or output state of another cell. Created
+            from begin_state() if None.
         input_prefix : str
             prefix for automatically created input
             placehodlers.
@@ -974,16 +976,16 @@ class SequentialRNNCell(BaseRNNCell):
 
         axis = layout.find('T')
         num_cells = len(self._cells)
-        if begin_state:
-            assert len(begin_state) == num_cells, \
-                "begin_state must have the same length as number of cells," \
-                " one for each cell."
-        else:
-            begin_state = [None] * num_cells
+        if begin_state is None:
+            begin_state = self.begin_state()
 
+        p = 0
         for i, cell in enumerate(self._cells):
+            n = len(cell.state_shape)
+            states = begin_state[p:p+n]
+            p += n
             inputs, states = cell.unroll(length, inputs=inputs,
-                    input_prefix=input_prefix, begin_state=begin_state[i],
+                    input_prefix=input_prefix, begin_state=states,
                     layout=layout, merge_outputs=(i == num_cells-1 and
                         merge_outputs))
 
@@ -1166,23 +1168,51 @@ class BidirectionalCell(BaseRNNCell):
         prefix for name of node
         (and prefix of output)
     """
-    def __init__(self, l_cell, r_cell, prefix='bi_'):
-        super(BidirectionalCell, self).__init__(prefix)
-        self._l_cell = l_cell
-        self._r_cell = r_cell
+    def __init__(self, l_cell, r_cell, params=None, output_prefix='bi_'):
+        super(BidirectionalCell, self).__init__('', params=params)
+        self._override_cell_params = params is not None
+        self._cells = [l_cell, r_cell]
+        self._output_prefix = output_prefix
 
     def unpack_weights(self, args):
-        args = self._l_cell.unpack_weights(args)
-        args = self._r_cell.unpack_weights(args)
+        for cell in self._cells:
+            args = cell.unpack_weights(args)
         return args
 
     def pack_weights(self, args):
-        args = self._l_cell.pack_weights(args)
-        args = self._r_cell.pack_weights(args)
+        for cell in self._cells:
+            args = cell.pack_weights(args)
         return args
 
     def __call__(self, inputs, states):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
+
+    @property
+    def state_shape(self):
+        """shape(s) of states"""
+        return sum([c.state_shape for c in self._cells], [])
+
+    def begin_state(self, **kwargs):
+        """Initial state for this cell.
+
+        Parameters
+        ----------
+        init_sym : Symbol, default symbol.zeros
+            Symbol for generating initial state. Can be zeros,
+            ones, uniform, normal, etc.
+        **kwargs :
+            more keyword arguments passed to init_sym. For example
+            mean, std, dtype, etc.
+
+        Returns
+        -------
+        states : nested list of Symbol
+            starting states for first RNN step
+        """
+        assert not self._modified, \
+            "After applying modifier cells (e.g. DropoutCell) the base " \
+            "cell cannot be called directly. Call the modifier cell instead."
+        return sum([c.begin_state(**kwargs) for c in self._cells], [])
 
     def unroll(self, length, inputs=None, begin_state=None,
                input_prefix='', layout='NTC', merge_outputs=False):
@@ -1205,8 +1235,9 @@ class BidirectionalCell(BaseRNNCell):
             If inputs is None, Placeholder variables are
             automatically created.
         begin_state : nested list of Symbol
-            input states. Outmost length must be 2, one for
-            each cell.
+            input states. Created by begin_state()
+            or output state of another cell. Created
+            from begin_state() if None.
         input_prefix : str
             prefix for automatically created input
             placehodlers.
@@ -1241,21 +1272,20 @@ class BidirectionalCell(BaseRNNCell):
         else:
             assert len(inputs) == length
 
-        if begin_state:
-            assert len(begin_state) == 2, \
-                "begin_state length must be 2, one for each cell."
-        else:
-            begin_state = [None]*2
+        if begin_state is None:
+            begin_state = self.begin_state()
 
-
-        l_cell, r_cell = self._l_cell, self._r_cell
+        states = begin_state
+        l_cell, r_cell = self._cells
         l_outputs, l_states = l_cell.unroll(length, inputs=inputs,
-                begin_state=begin_state[0], layout=layout, merge_outputs=False)
+                begin_state=states[:len(l_cell.state_shape)],
+                layout=layout, merge_outputs=False)
         r_outputs, r_states = r_cell.unroll(length,
-                inputs=list(reversed(inputs)), begin_state=begin_state[1],
+                inputs=list(reversed(inputs)),
+                begin_state=states[len(l_cell.state_shape):],
                 layout=layout, merge_outputs=False)
 
-        outputs = [symbol.Concat(l_o, r_o, dim=1, name='%st%d'%(self._prefix, i))
+        outputs = [symbol.Concat(l_o, r_o, dim=1, name='%st%d'%(self._output_prefix, i))
                 for i, l_o, r_o in
                 zip(range(length), l_outputs, reversed(r_outputs))]
         states = [l_states, r_states]
