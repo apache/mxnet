@@ -179,6 +179,85 @@ function reset!(metric :: MSE)
   metric.n_sample = 0
 end
 
+doc"""
+    NMSE
+
+Normalized Mean Squared Error
+
+```math
+\sum_i (\frac{label_i - pred_i}{label_i})^2
+```
+
+Note that there are various ways to do the *normalization*.
+It depends on your own context. Please judge the problem setting you have
+first. If the current implementation do not suitable for you,
+feel free to file it on GitHub.
+
+Let me show you a use case of this kind of normalization:
+
+Bob is training a network for option pricing. The option pricing problem is
+a regression problem (pirce predicting). There are lots of option contracts
+on same target stock but different strike price.
+For example, there is a stock `S`; it's market price is 1000.
+And, there are two call option contracts with different strike price.
+Assume Bob obtains the outcome as following table:
+
+```
++--------+----------------+----------------+--------------+
+|        | Strike Price   | Market Price   | Pred Price   |
++--------+----------------+----------------+--------------+
+| Op 1   | 1500           |  100           | 80           |
++--------+----------------+----------------+--------------+
+| Op 2   | 500            |  10            | 8            |
++--------+----------------+----------------+--------------+
+```
+
+Now, obviously, Bob will calculate the normalized MSE as:
+
+```math
+    (\frac{100 - 80}{100})^2
+    \text{ vs }
+    (\frac{10 - 8}{10}) ^2
+```
+
+Both of the pred prices got the same degree of error.
+
+For more discussion about normalized MSE, please see
+[#211](https://github.com/dmlc/MXNet.jl/pull/211) also.
+
+"""
+type NMSE <: AbstractEvalMetric
+  nmse_sum  :: Float64
+  n_sample :: Int
+
+  NMSE() = new(0.0, 0)
+end
+
+function _update_single_output(metric :: NMSE, label :: NDArray, pred :: NDArray)
+  label = copy(label)
+  pred  = copy(pred)
+
+  n_sample = size(pred)[end]
+  metric.n_sample += n_sample
+
+  for i = 1:n_sample
+    if label[i] == 0.0f0  # in case of batch padding
+        continue
+    end
+
+    metric.nmse_sum += ((label[i] - pred[i]) / label[i])^2
+  end
+end
+
+function get(metric :: NMSE)
+  return [(:NMSE, metric.nmse_sum / metric.n_sample)]
+end
+
+function reset!(metric :: NMSE)
+  metric.nmse_sum = 0.0
+  metric.n_sample = 0
+end
+
 """
     ACE
 
