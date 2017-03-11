@@ -170,7 +170,7 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 // Returns integer log2(a) rounded up
-static int ilog2(unsigned int a) {
+inline int ilog2(unsigned int a) {
   int k = 1;
   while (a >>= 1) k++;
   return k;
