@@ -1,26 +1,7 @@
 FROM nvidia/cuda:7.5-cudnn5-devel
-MAINTAINER Ly Nguyen <lynguyen@amazon.com>
 
-# deps
-RUN apt-get update && apt-get -y install \
-    build-essential git libopenblas-dev libopencv-dev \
-    libgtest-dev cmake wget unzip \
-    python-pip python-dev python-numpy python3-pip \
-    maven default-jdk \
-    software-properties-common r-base-core libcurl4-openssl-dev libssl-dev libxml2-dev
+COPY install/*.sh /install/
 
-RUN apt-get clean
-
-# cpp test
-RUN cd /usr/src/gtest && cmake CMakeLists.txt && make && cp *.a /usr/lib
-
-# python
-RUN pip install numpy nose scipy
-RUN pip3 install numpy nose scipy
-
-# R
-# RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
-# RUN add-apt-repository -y ppa:marutter/rdev
-# RUN apt-get update
-# RUN DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" install r-base r-base-dev
-# RUN Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+RUN /install/ubuntu_install_core.sh
+RUN /install/ubuntu_install_python.sh
+RUN /install/ubuntu_install_scala.sh
