@@ -24,8 +24,6 @@ import ml.dmlc.mxnet.Random
 /**
  * Stochastic Langevin Dynamics Updater to sample from a distribution.
  *
- * @author Depeng Liang
- *
  * @param learningRate Float, Step size.
  * @param rescaleGradient Float, rescaling factor of gradient.
  * @param wd Float, L2 regularization coefficient add to all the weights
@@ -84,4 +82,12 @@ class SGLD(val learningRate: Float = 0.01f, val rescaleGradient: Float = 1.0f,
 
   // Dispose the state it created
   override def disposeState(state: AnyRef): Unit = {}
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    throw new UnsupportedOperationException("SGLD does not have states")
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    throw new UnsupportedOperationException("SGLD does not have states")
+  }
 }
