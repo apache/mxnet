@@ -15,20 +15,8 @@ source ~/.profile
 make clean
 make -j 4 || exit -1
 
-echo "BUILD python2 mxnet"
-cd ./python
-python setup.py install || exit 1
-
-echo "BUILD python3 mxnet"
-python3 setup.py install || exit 1
-
-echo "Install other dependencies"
-cd ..
-yum -y install enchant
-pip install pyenchant
-pip install grammar-check
-pip install html2text
-pip install sphinx==1.5.1 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
+echo "Add python path"
+export PYTHONPATH=$PYTHONPATH:python
 
 
 echo "BUILD mxnet document"
@@ -39,7 +27,7 @@ echo "Check spell and grammar for documentation"
 cd ../tests/nightly/TestDoc
 rm -rf web-data
 git clone https://github.com/dmlc/web-data.git
-cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
-python doc_spell_checker.py
+sudo cp web-data/mxnet/doc/en_US-large.aff web-data/mxnet/doc/en_US-large.dic web-data/mxnet/doc/en_US.aff web-data/mxnet/doc/en_US.dic /usr/share/myspell
+python doc_spell_checker.py || exit 1
 
 echo "Check spell and grammar End"
