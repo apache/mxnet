@@ -727,7 +727,7 @@ void GraphExecutor::InitOpSegs() {
   }
 
   // create backward segments for training
-  bool bulk_backward = dmlc::GetEnv("MXNET_EXEC_BULK_BWD_TRAIN", true); 
+  bool bulk_backward = dmlc::GetEnv("MXNET_EXEC_BULK_BWD_TRAIN", true);
   if (bulk_backward) {
     // get all gradient variables
     std::unordered_set<engine::VarHandle> grad_vars;
