@@ -59,6 +59,10 @@ class GraphExecutor : public Executor {
     bool skip_exec_node{false};
     // cached operator handle
     Engine::OprHandle cached_opr{nullptr};
+    // cached const vars, used for seg ops creation
+    std::vector<Engine::VarHandle> use_vars;
+    // cached mutate vars, used for seg ops creation
+    std::vector<Engine::VarHandle> mutate_vars;
   };
   // a cached segment operator that executes a segment
   struct CachedSegOpr {

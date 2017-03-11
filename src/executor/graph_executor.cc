@@ -670,6 +670,8 @@ void GraphExecutor::InitCachedOps() {
     op_nodes_[nid].cached_opr = Engine::Get()->NewOperator(
         exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
         PROFILER_MESSAGE(op_nodes_[nid].opr_name));
+    op_nodes_[nid].mutate_vars = mutate_vars;
+    op_nodes_[nid].use_vars = use_vars;
   }
 }
 
@@ -828,8 +830,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 }
 
 GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
-  std::vector<Engine::VarHandle> read_vars;
-  std::vector<Engine::VarHandle> write_vars;
+  std::vector<Engine::VarHandle> use_vars;
+  std::vector<Engine::VarHandle> mutate_vars;
   Context *pctx = nullptr;
   GraphExecutor::CachedSegOpr ret;
   ret.topo_start = topo_start;
@@ -856,33 +858,9 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     if (*pctx != op_node.ctx) {
       return ret;
     }
-    // out
-    for (const auto& out : op_node.exec->out_array) {
-      all_vars.push_back(out.var());
-      write_vars.push_back(out.var());
-    }
-    // input
-    for (const auto& entry : inode.source->inputs) {
-      uint32_t input_nid = idx.node_id(entry.node.get());
-      auto& input_exec = op_nodes_[input_nid].exec;
-      if (input_exec != nullptr) {
-        const auto& data = input_exec->out_array[entry.index];
-        all_vars.push_back(data.var());
-        read_vars.push_back(data.var());
-      }
-    }
-    // requested resource
-    for (const Resource& r : op_node.exec->op_ctx.requested) {
-      all_vars.push_back(r.var);
-      write_vars.push_back(r.var);
-    }
-
-    dedup(all_vars);
     auto& exec = op_nodes_[nid].exec;
-    Engine::Get()->PushSync([exec](RunContext rctx) {
-      exec->Setup();
-    }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
-    PROFILER_MESSAGE("SetupExec"));
+    mutate_vars.insert(mutate_vars.end(), op_node.mutate_vars.begin(), op_node.mutate_vars.end());
+    use_vars.insert(use_vars.end(), op_node.use_vars.begin(), op_node.use_vars.end());
     ret.exec_list.push_back(exec.get());
   }
 
@@ -890,18 +868,19 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   ret.ctx = *pctx;
 
   // deduplication
-  dedup(write_vars);
-  dedup(read_vars);
-  auto wit = write_vars.begin();
-  auto rtop = read_vars.begin();
-  for (auto rit = read_vars.begin(); rit != read_vars.end(); ++rit) {
-    while (wit != write_vars.end() && *wit < *rit) ++wit;
+  dedup(mutate_vars);
+  dedup(use_vars);
+  // remove mutate var from use vars
+  auto wit = mutate_vars.begin();
+  auto rtop = use_vars.begin();
+  for (auto rit = use_vars.begin(); rit != use_vars.end(); ++rit) {
+    while (wit != mutate_vars.end() && *wit < *rit) ++wit;
     if (*wit != *rit) {
       *rtop = *rit;
       ++rtop;
     }
   }
-  read_vars.resize(rtop - read_vars.begin());
+  use_vars.resize(rtop - use_vars.begin());
 
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [exec_list, is_gpu] (
@@ -921,7 +900,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     on_complete();
   };
   ret.opr = Engine::Get()->NewOperator(
-      exec_fun, read_vars, write_vars, FnProperty::kNormal,
+      exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
       PROFILER_MESSAGE("Bulk Exec"));
   return ret;
 }
