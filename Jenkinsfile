@@ -14,16 +14,16 @@ def mx_lib = 'libxx'
 def pack_lib(name, mx_lib) {
   sh """
 echo "Packing ${mx_lib} into ${name}"
-md5sum '${mx_lib}'
+md5sum ${mx_lib}
 """
   stash includes: mx_lib, name: name
 }
 
-def unpacklib(name) {
+def unpack_lib(name, mx_lib) {
   unstash name
   sh """
-md5sum ${lib}
-cat ${lib}
+echo "Unpacking ${mx_lib} from ${name}"
+md5sum ${mx_lib}
 """
 }
 
@@ -33,8 +33,7 @@ stage('Build') {
     node {
       checkout scm
       sh 'git submodule update --init'
-      sh "tests/ci_build/ci_build.sh lint touch ${mx_lib}"
-      sh "echo ${mx_lib}"      
+      sh "tests/ci_build/ci_build.sh lint 'date >${mx_lib}'"
       pack_lib 'cpu', mx_lib
     }
   },
@@ -49,8 +48,9 @@ stage('Build') {
 //USE_BLAS=openblas \
 //EXTRA_OPERATORS=example/ssd/operator
 //      '''
-      //sh 'tests/ci_build/ci_build.sh lint date >${lib}'
-      //pack_lib('gpu')
+      sh "sleep 2; tests/ci_build/ci_build.sh lint 'date >${mx_lib}'"
+      pack_lib 'gpu', mx_lib
+
     }
   }
 }
@@ -59,13 +59,13 @@ stage('Unit Test') {
   parallel 'Python2': {
     node {
       echo "python2"
-      //unpack_lib('cpu')
+      unpack_lib 'cpu', mx_lib
     }
   },
   'Python3': {
     node {
       echo "python3"
-      //unpack_lib 'gpu'
+      unpack_lib 'gpu', mx_lib
     }
   },
   'Scala': {
