@@ -37,7 +37,7 @@ stage('Build') {
       echo "${lib}"
       sh "echo ${lib}"
       sh "tests/ci_build/ci_build.sh lint touch ${lib}"
-      pack_lib('cpu')
+      pack_lib 'cpu'
     }
   },
   'CUDA 7.5+cuDNN5': {
