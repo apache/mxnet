@@ -166,21 +166,13 @@ class MKLReluOp : public Operator {
     dnnError_t e;
     void* relu_res[dnnResourceNumber];
     relu_res[dnnResourceSrc] = bottom_data;
-    if (fwd_top_data_->conversion_needed()) {
+
+    std::shared_ptr<MKLMemHolder> top_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLMemHolder> top_mem = out_data[activation::kOut].Mkl_mem_;
-      if (top_mem->prv_data(false)) {
-        fwd_top_data_ = mkl_get_mem_desc<DType>(top_mem);
-      } else {
-        top_mem->set_prv_descriptor(fwd_top_data_);
-      }
+    top_mem = out_data[activation::kOut].Mkl_mem_;
 #endif
-      relu_res[dnnResourceDst] =
-        reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
-    } else {
-      relu_res[dnnResourceDst] =
-      reinterpret_cast<void *>(out.dptr_);
-    }
+    relu_res[dnnResourceDst] = fwd_top_data_->get_output_ptr(
+      out.dptr_, fwd_top_data_, top_mem);
     e = dnnExecute<DType>(reluFwd_, relu_res);
     CHECK_EQ(e, E_SUCCESS);
 #if MKL_EXPERIMENTAL == 0
@@ -247,29 +239,14 @@ class MKLReluOp : public Operator {
         reinterpret_cast<void *>(const_cast<DType*>(m_in_data.dptr_));
     }
     relu_res[dnnResourceSrc] = bottom_data;
-
-    std::shared_ptr<MKLMemHolder> top_diff_mem =
-#if MKL_EXPERIMENTAL == 1
-      out_grad[activation::kOut].Mkl_mem_;
-#else
-      NULL;
-#endif
     relu_res[dnnResourceDiffDst] = bwd_top_diff_->get_converted_prv(m_out_grad.dptr_,
-                                                                    true, top_diff_mem);
-    if (bwd_bottom_diff_->conversion_needed()) {
+                true, out_grad[activation::kOut]);
+    std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-      std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[activation::kData].Mkl_mem_;
-      // Need to check in_grad[activation::kData]  is the same with out_grad[activation::kOut]
-      if (bottom_diff_mem->prv_data(false)) {
-        bwd_bottom_diff_ = mkl_get_mem_desc<DType>(bottom_diff_mem);
-      } else {
-        bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
-      }
+    bottom_diff_mem = in_grad[activation::kData].Mkl_mem_;
 #endif
-      relu_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
-    } else {
-      relu_res[dnnResourceDiffSrc] = m_in_grad.dptr_;
-    }
+    relu_res[dnnResourceDiffSrc] = bwd_bottom_diff_->get_output_ptr(
+      m_in_grad.dptr_, bwd_bottom_diff_, bottom_diff_mem);
     e = dnnExecute<DType>(reluBwd_, relu_res);
     CHECK_EQ(e, E_SUCCESS);
 #if MKL_EXPERIMENTAL == 0

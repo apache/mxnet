@@ -38,10 +38,8 @@
 namespace mxnet {
 namespace op {
 template<typename xpu, typename DType>
-void LayerSetUp(const std::vector<mshadow::Tensor<xpu, 4, DType> > &data,
-  const mshadow::Tensor<xpu, 4, DType> &out,
-  size_t data_shape_size, size_t num_bottoms,
-  std::vector< std::shared_ptr<MKLData<DType> > > *fwd_bottom_data_,
+static void LayerSetUp(const std::vector<mshadow::Tensor<xpu, 1, DType> > &data,
+  size_t data_shape_size,
   std::shared_ptr<MKLData<DType> > fwd_top_data) {
   // Whether to use an asymptotically slower (for >2 inputs) but stabler method
   // of computing the gradient for the PROD operation. (No effect for SUM op.)
@@ -52,12 +50,6 @@ void LayerSetUp(const std::vector<mshadow::Tensor<xpu, 4, DType> > &data,
   for (size_t d = 0; d < dim_src; ++d) {
     sizes_src[d] = data[0].shape_[dim_src - d - 1];
     strides_src[d] = (d == 0) ? 1 : strides_src[d - 1] * sizes_src[d - 1];
-  }
-
-  for (size_t i = 0; i < num_bottoms; ++i) {
-    fwd_bottom_data_->push_back(MKLData<DType>::create());
-    CHECK_EQ(dim_src, data_shape_size);
-    (*fwd_bottom_data_)[i]->create_user_layout(dim_src, sizes_src, strides_src);
   }
 
   fwd_top_data->create_user_layout(dim_src, sizes_src, strides_src);
@@ -74,149 +66,48 @@ void MKLElementWiseSumCompute_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   if (req[0] == kNullOp) return;
-  size_t size_ = in_data.size();
+  size_t size = in_data.size();
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  std::vector<Tensor<xpu, 4, DType> > data(size_);
-  Tensor<xpu, 4, DType> out;
-  if (in_data[0].ndim() == 1) {
-    for (int i = 0; i < size_; ++i) {
-      Shape<4> dshape = Shape4(in_data[i].shape_[0], 1, 1, 1);
-      data[i] = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-        in_data[i], dshape, s);
-    }
-    Shape<4> dshape = Shape4(out_data[0].shape_[0], 1, 1, 1);
-    out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-      out_data[0], dshape, s);
-  } else if (in_data[0].ndim() == 2) {
-    for (int i = 0; i < size_; ++i) {
-      Shape<4> dshape = Shape4(in_data[i].shape_[0],
-        in_data[i].shape_[1], 1, 1);
-      data[i] = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-        in_data[i], dshape, s);
-    }
-    Shape<4> dshape = Shape4(out_data[0].shape_[0],
-      out_data[0].shape_[1], 1, 1);
-    out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-      out_data[0], dshape, s);
-  } else if (in_data[0].ndim() == 3) {
-    for (int i = 0; i < size_; ++i) {
-      Shape<4> dshape = Shape4(in_data[i].shape_[0],
-        in_data[i].shape_[1], in_data[i].shape_[2], 1);
-      data[i] = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-        in_data[i], dshape, s);
-    }
-    Shape<4> dshape = Shape4(out_data[0].shape_[0],
-      out_data[0].shape_[1],
-      out_data[0].shape_[2], 1);
-    out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
-      out_data[0], dshape, s);
-  } else {
-    out = mkl_experimental_direct_get<xpu, 4, DType>(out_data[0], s);
-    for (int i = 0; i < size_; ++i) {
-      data[i] = mkl_experimental_direct_get<xpu, 4, DType>(in_data[i], s);
+  std::vector<Tensor<xpu, 1, DType> > data(size);
+  Tensor<xpu, 1, DType> out = out_data[0].FlatTo1D<xpu, DType>(s);
+  bool in_place_flag = false;
+  int in_place_idx = 0;
+
+  for (size_t i = 0; i < size; ++i) {
+    data[i]  = in_data[i].FlatTo1D<xpu, DType>(s);
+    if (data[i].dptr_ == out.dptr_) {
+      in_place_idx = i;
+      in_place_flag = true;
     }
   }
-  std::vector< std::shared_ptr<MKLData<DType> > > fwd_bottom_data_;
   std::shared_ptr<MKLData<DType> > fwd_top_data = MKLData<DType>::create();
-  std::vector<DType> coeffs_  = std::vector<DType>(data.size(), 1);;
-  size_t num_bottoms = size_;
-  LayerSetUp(data, out, 4, num_bottoms, &fwd_bottom_data_, fwd_top_data);
+  std::vector<DType> coeffs_  = std::vector<DType>(data.size(), 1);
+  LayerSetUp(data, 1, fwd_top_data);
+
 
   dnnError_t e;
-  std::vector<void*> bottom_data;
-
-  int num_prv = 0;
-
-  for (size_t i = 0; i < num_bottoms; i++) {
-    void * i_data = NULL;
-#if MKL_EXPERIMENTAL == 1
-    i_data = reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[i]));
-    if (i_data != NULL) {
-      bottom_data.push_back(i_data);
-      num_prv += 1;
-    }
-#endif
-    if (i_data == NULL) {
-      bottom_data.push_back(reinterpret_cast<void *>(in_data[i].dptr_));
-    }
-  }
-  dnnPrimitive_t sumPrimitive = NULL;
-#if MKL_EXPERIMENTAL == 1
-  if (num_prv > 0) {
-    if (sumPrimitive == NULL) {
-      dnnLayout_t int_layout = NULL;
-      for (size_t i = 0; i < num_bottoms; ++i) {
-        if (mkl_prv_data<DType>(in_data[i]) != NULL) {
-          std::shared_ptr<MKLData<DType> > mem_descr =
-            mkl_get_mem_desc<DType>(in_data[i].Mkl_mem_);
-          fwd_bottom_data_[i] = mem_descr;
-          if (int_layout == NULL) {
-            int_layout = mem_descr->layout_int;
-          }
-        }
-      }
-      e = dnnSumCreate<DType>(&sumPrimitive, NULL,
-        num_bottoms, int_layout, &coeffs_[0]);
-      CHECK_EQ(e, E_SUCCESS);
-
-      fwd_top_data->create_internal_layout(sumPrimitive, dnnResourceDst);
-
-      for (size_t i = 0; i < num_bottoms; ++i) {
-        if (mkl_prv_data<DType>(in_data[i]) == NULL) {
-          fwd_bottom_data_[i]->create_internal_layout(sumPrimitive,
-            (dnnResourceType_t)(dnnResourceMultipleSrc + i));
-        }
-      }
-    }
-  }
-#endif
-  if (num_prv == 0) {
-    if (sumPrimitive == NULL) {
-      e = dnnSumCreate<DType>(&sumPrimitive, NULL, num_bottoms,
-        fwd_top_data->layout_usr, &coeffs_[0]);
-      CHECK_EQ(e, E_SUCCESS);
-    }
-  }
   void *eltwise_res[dnnResourceNumber];
-  for (size_t i = 0; i < num_bottoms; ++i) {
-    if (fwd_bottom_data_[i]->conversion_needed()) {
-      std::shared_ptr<MKLMemHolder> in_data_mem =
-#if MKL_EXPERIMENTAL == 1
-        in_data[i].Mkl_mem_;
-#else
-        NULL;
-#endif
-      eltwise_res[dnnResourceMultipleSrc + i] =
-        fwd_bottom_data_[i]->get_converted_prv(data[i].dptr_, false, in_data_mem);
-    } else {
-      eltwise_res[dnnResourceMultipleSrc + i] =
-        reinterpret_cast<void *>(bottom_data[i]);
-    }
-  }
+  dnnPrimitive_t sumPrimitive = NULL;
+  e = dnnSumCreate<DType>(&sumPrimitive, NULL, size, fwd_top_data->layout_usr,
+    &coeffs_[0]);
+  CHECK_EQ(e, E_SUCCESS);
 
-  if (fwd_top_data->conversion_needed()) {
-#if MKL_EXPERIMENTAL == 1
-    std::shared_ptr<MKLMemHolder> top_mem = out_data[0].Mkl_mem_;
-    if (top_mem->prv_data(false)) {
-      fwd_top_data = mkl_get_mem_desc<DType>(top_mem);
-    } else {
-      top_mem->set_prv_descriptor(fwd_top_data);
-    }
-#endif
-    eltwise_res[dnnResourceDst] =
-      reinterpret_cast<void*>(fwd_top_data->prv_ptr());
-  } else {
-    eltwise_res[dnnResourceDst] =
-      reinterpret_cast<void*>(const_cast<DType*>(out.dptr_));
+  eltwise_res[dnnResourceDst] = reinterpret_cast<void*>(const_cast<DType*>(out.dptr_));
+  eltwise_res[dnnResourceMultipleSrc] =
+    reinterpret_cast<void *>(reinterpret_cast<void *>(in_data[in_place_idx].dptr_));
+  for (size_t i = 1; i < size; ++i) {
+    if (i == in_place_idx) continue;
+    eltwise_res[dnnResourceMultipleSrc + i] =
+      reinterpret_cast<void *>(reinterpret_cast<void *>(in_data[i].dptr_));
   }
 
   e = dnnExecute<DType>(sumPrimitive, eltwise_res);
   CHECK_EQ(e, E_SUCCESS);
-#if MKL_EXPERIMENTAL == 0
-  if (fwd_top_data->conversion_needed()) {
-    fwd_top_data->convert_from_prv(out.dptr_);
+
+  if (sumPrimitive != NULL) {
+    dnnDelete<DType>(sumPrimitive);
+    sumPrimitive = NULL;
   }
-#endif
 }
 
 
