@@ -175,6 +175,7 @@ class CuDNNBatchNormOp : public Operator {
     Tensor<gpu, 4, DType> dy =
       out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 
+#if CUDNN_VERSION >= 4007
     MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
       Tensor<gpu, 1, DTypeParam> gamma =
         in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
@@ -194,7 +195,6 @@ class CuDNNBatchNormOp : public Operator {
 
       if (param_.fix_gamma) gamma = 1.f;
 
-#if CUDNN_VERSION >= 4007
       CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
                                                CUDNN_BATCHNORM_SPATIAL,
                                                &a,
@@ -214,7 +214,27 @@ class CuDNNBatchNormOp : public Operator {
                                                param_.eps,
                                                save_mean.dptr_,
                                                save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+      if (param_.fix_gamma) dgamma = 0.f;
+    })
 #else  // CUDNN_VERSION < 4007
+    MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
+      Tensor<gpu, 1, DTypeParam> gamma =
+        in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dbeta =
+        in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dgamma =
+        in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_mean =
+        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_inv_var =
+        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+
+      typename DataType<DType>::ScaleType a = 1.0f;
+      typename DataType<DType>::ScaleType b = 0.0f;
+      typename DataType<DType>::ScaleType b_add = 1.0f;
+      CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
+
+      if (param_.fix_gamma) gamma = 1.f;
       CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
                                                CUDNN_BATCHNORM_SPATIAL,
                                                &a,
@@ -232,9 +252,9 @@ class CuDNNBatchNormOp : public Operator {
                                                param_.eps,
                                                save_mean.dptr_,
                                                save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
-#endif
       if (param_.fix_gamma) dgamma = 0.f;
     })
+#endif
   }
 
  private:
