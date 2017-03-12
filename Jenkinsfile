@@ -8,6 +8,8 @@ stage('Test') {
   parallel linux: {
     node {
       echo "test"
+      sh "ls"
+      sh "pwd"
     }
   },
   windows: {
