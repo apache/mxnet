@@ -25,7 +25,6 @@ stage('Build') {
       catchError {
         sh 'exit 1'
       }
-      echo "mkl"
     }
   },
   'Amalgamation': {
