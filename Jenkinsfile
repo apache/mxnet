@@ -13,9 +13,9 @@ stage('Build') {
     node {
       checkout scm
       sh 'git submodule update --init'     
-      sh '''make -j$(nproc) 
-      
+      sh '''echo "cpu hahaha" >lib/mx.a
       '''
+      stash includes: 'lib/mx.*', name: 'cpu'
       echo "CPU Build"
     }
   },
@@ -23,13 +23,15 @@ stage('Build') {
     node('GPU') {
       checkout scm
       sh 'git submodule update --init'     
-      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
-USE_CUDA=1 \
-USE_CUDA_PATH=/usr/local/cuda \
-USE_CUDNN=1 \
-USE_BLAS=openblas \
-EXTRA_OPERATORS=example/ssd/operator 
-      '''
+//      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
+//USE_CUDA=1 \
+//USE_CUDA_PATH=/usr/local/cuda \
+//USE_CUDNN=1 \
+//USE_BLAS=openblas \
+//EXTRA_OPERATORS=example/ssd/operator 
+//      '''
+      sh 'echo "gpu hehehe" >lib/mx.b'
+      stash includes: 'lib/mx.*', name: 'gpu'
     }
   },
   'CUDA 8+cuDNN5': {
@@ -63,6 +65,8 @@ stage('Unit Test') {
       echo "test"
       sh "ls"
       sh "pwd"
+      unstash 'gpu'
+      sh 'cat lib/mx.*'
     }
   },
   'Python3': {
@@ -73,6 +77,8 @@ stage('Unit Test') {
   'Scala': {
     node {
       echo "xxx"
+      unstash 'cpu'
+      sh 'cat lib/mx.*'
     }
   }
 }
