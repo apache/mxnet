@@ -99,10 +99,7 @@ class BaseRNNCell(object):
         """shape(s) of states"""
         raise NotImplementedError()
 
-    @property
-    def _gate_names(self):
-        """name(s) of gates"""
-        raise NotImplementedError()
+    _gate_names = []
 
     def begin_state(self, func=symbol.zeros, **kwargs):
         """Initial state for this cell.
@@ -154,8 +151,17 @@ class BaseRNNCell(object):
             dictionary with weights associated to
             this cell unpacked.
         """
-        #pylint: disable=R0201
-        return args.copy()
+        args = args.copy()
+        h = self._num_hidden
+        for group_name in ['i2h', 'h2h']:
+            weight = args.pop('%s%s_weight'%(self._prefix, group_name))
+            bias = args.pop('%s%s_bias' % (self._prefix, group_name))
+            for j, gate in enumerate(self._gate_names):
+                wname = '%s%s%s_weight' % (self._prefix, group_name, gate)
+                args[wname] = weight[j*h:(j+1)*h].copy()
+                bname = '%s%s%s_bias' % (self._prefix, group_name, gate)
+                args[bname] = bias[j*h:(j+1)*h].copy()
+        return args
 
     def pack_weights(self, args):
         """Pack separate weight matrices into fused
@@ -172,11 +178,21 @@ class BaseRNNCell(object):
             dictionary with weights associated to
             this cell packed.
         """
-        #pylint: disable=R0201
-        return args.copy()
+        args = args.copy()
+        for group_name in ['i2h', 'h2h']:
+            weight = []
+            bias = []
+            for gate in self._gate_names:
+                wname = '%s%s%s_weight'%(self._prefix, group_name, gate)
+                weight.append(args.pop(wname))
+                bname = '%s%s%s_bias'%(self._prefix, group_name, gate)
+                bias.append(args.pop(bname))
+            args['%s%s_weight'%(self._prefix, group_name)] = ndarray.concatenate(weight)
+            args['%s%s_bias'%(self._prefix, group_name)] = ndarray.concatenate(bias)
+        return args
 
     def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=False):
+               input_prefix='', layout='NTC', merge_outputs=None):
         """Unroll an RNN cell across time steps.
 
         Parameters
@@ -206,11 +222,12 @@ class BaseRNNCell(object):
             layout of input symbol. Only used if inputs
             is a single Symbol.
         merge_outputs : bool
-            if False, return outputs as a list of Symbols.
+            If False, return outputs as a list of Symbols.
             If True, concatenate output across time steps
             and return a single symbol with shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
+            If None, output whatever is faster
 
         Returns
         -------
@@ -286,7 +303,7 @@ class RNNCell(BaseRNNCell):
         """shape(s) of states"""
         return [(0, self._num_hidden)]
 
-    _gate_names = []
+    _gate_names = ['']
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -346,63 +363,7 @@ class LSTMCell(BaseRNNCell):
         """shape(s) of states"""
         return [(0, self._num_hidden), (0, self._num_hidden)]
 
-    _gate_names = ['i', 'f', 'c', 'o']
-
-    def unpack_weights(self, args):
-        """Unpack fused weight matrices into separate
-        weight matrices
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing packed weights.
-            usually from Module.get_output()
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell unpacked.
-        """
-        args = args.copy()
-        h = self._num_hidden
-        for i in ['i2h', 'h2h']:
-            weight = args.pop('%s%s_weight'%(self._prefix, i))
-            bias = args.pop('%s%s_bias'%(self._prefix, i))
-            for j, name in enumerate(self._gate_names):
-                wname = '%s%s_%s_weight'%(self._prefix, i, name)
-                args[wname] = weight[j*h:(j+1)*h].copy()
-                bname = '%s%s_%s_bias'%(self._prefix, i, name)
-                args[bname] = bias[j*h:(j+1)*h].copy()
-        return args
-
-    def pack_weights(self, args):
-        """Pack separate weight matrices into fused
-        weight.
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing unpacked weights.
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell packed.
-        """
-        args = args.copy()
-        for i in ['i2h', 'h2h']:
-            weight = []
-            bias = []
-            for name in self._gate_names:
-                wname = '%s%s_%s_weight'%(self._prefix, i, name)
-                weight.append(args.pop(wname))
-                bname = '%s%s_%s_bias'%(self._prefix, i, name)
-                bias.append(args.pop(bname))
-            args['%s%s_weight'%(self._prefix, i)] = ndarray.concatenate(weight)
-            args['%s%s_bias'%(self._prefix, i)] = ndarray.concatenate(bias)
-        return args
+    _gate_names = ['_i', '_f', '_c', '_o']
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -423,7 +384,6 @@ class LSTMCell(BaseRNNCell):
         """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
-        print(states)
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
                                     num_hidden=self._num_hidden*4,
                                     name='%si2h'%name)
@@ -478,71 +438,7 @@ class GRUCell(BaseRNNCell):
         """shape(s) of states"""
         return [(0, self._num_hidden)]
 
-    _gate_names = ['r', 'z', 'o']
-
-    def unpack_weights(self, args):
-        """Unpack fused weight matrices into separate
-        weight matrices
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing packed weights.
-            usually from Module.get_output()
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell unpacked.
-        """
-        args = args.copy()
-
-        out_names = ['i2h', 'h2h']
-
-        h = self._num_hidden
-        for group_name in out_names:
-            weight = args.pop('%s%s_weight'%(self._prefix, group_name))
-            bias = args.pop('%s%s_bias' % (self._prefix, group_name))
-
-            for j, gate in enumerate(self._gate_names):
-                wname = '%s%s_%s_weight' % (self._prefix, group_name, gate)
-                args[wname] = weight[j*h:(j+1)*h].copy()
-                bname = '%s%s_%s_bias' % (self._prefix, group_name, gate)
-                args[bname] = bias[j*h:(j+1)*h].copy()
-        return args
-
-    def pack_weights(self, args):
-        """Pack separate weight matrices into fused
-        weight.
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing unpacked weights.
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell packed.
-        """
-        args = args.copy()
-
-        out_names = ['i2h', 'h2h']
-
-        for group_name in out_names:
-            weight = []
-            bias = []
-            for gate in self._gate_names:
-                wname = '%s%s_%s_weight' % (self._prefix, group_name, gate)
-                weight.append(args.pop(wname))
-                bname = '%s%s_%s_bias' % (self._prefix, group_name, gate)
-                bias.append(args.pop(bname))
-            args['%s%s_weight'% (self._prefix, group_name)] = ndarray.concatenate(weight)
-            args['%s%s_bias' % (self._prefix, group_name)] = ndarray.concatenate(bias)
-
-        return args
+    _gate_names = ['_r', '_z', '_o']
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -623,8 +519,7 @@ class FusedRNNCell(BaseRNNCell):
                 initializer, num_hidden, num_layers, mode, bidirectional)
         self._parameter = self.params.get('parameters', init=initializer)
 
-        self._directions = self._bidirectional + 1
-        self._num_gates = len(self._gate_names)
+        self._directions = ['l', 'r'] if bidirectional else ['l']
 
     @property
     def state_shape(self):
@@ -636,46 +531,49 @@ class FusedRNNCell(BaseRNNCell):
     @property
     def _gate_names(self):
         """name(s) of gates"""
-        gates= {'rnn_relu': RNNCell,
+        return {'rnn_relu': RNNCell,
                 'rnn_tanh': RNNCell,
                 'lstm': LSTMCell,
                 'gru': GRUCell}[self._mode]._gate_names
-        return gates if gates else ['']
+
+    @property
+    def _num_gates(self):
+        """number of gates"""
+        return len(self._gate_names)
 
     def _slice_weights(self, arr, li, lh):
         """slice fused rnn weights"""
         args = {}
-        b = self._directions
-        m = self._num_gates
-        c = [('_%s'%name if name else '') for name in self._gate_names]
-        d = ['l', 'r']
+        gate_names = self._gate_names
+        directions = self._directions
 
+        b = len(directions)
         p = 0
-        for i in range(self._num_layers):
-            for j in range(b):
-                for k in range(m):
-                    name = '%s%s%d_i2h%s_weight'%(self._prefix, d[j], i, c[k])
-                    if i > 0:
+        for layer in range(self._num_layers):
+            for direction in directions:
+                for gate in gate_names:
+                    name = '%s%s%d_i2h%s_weight'%(self._prefix, direction, layer, gate)
+                    if layer > 0:
                         size = b*lh*lh
                         args[name] = arr[p:p+size].reshape((lh, b*lh))
                     else:
                         size = li*lh
                         args[name] = arr[p:p+size].reshape((lh, li))
                     p += size
-                for k in range(m):
-                    name = '%s%s%d_h2h%s_weight'%(self._prefix, d[j], i, c[k])
+                for gate in gate_names:
+                    name = '%s%s%d_h2h%s_weight'%(self._prefix, direction, layer, gate)
                     size = lh**2
                     args[name] = arr[p:p+size].reshape((lh, lh))
                     p += size
 
-        for i in range(self._num_layers):
-            for j in range(b):
-                for k in range(m):
-                    name = '%s%s%d_i2h%s_bias'%(self._prefix, d[j], i, c[k])
+        for layer in range(self._num_layers):
+            for direction in directions:
+                for gate in gate_names:
+                    name = '%s%s%d_i2h%s_bias'%(self._prefix, direction, layer, gate)
                     args[name] = arr[p:p+lh]
                     p += lh
-                for k in range(m):
-                    name = '%s%s%d_h2h%s_bias'%(self._prefix, d[j], i, c[k])
+                for gate in gate_names:
+                    name = '%s%s%d_h2h%s_bias'%(self._prefix, direction, layer, gate)
                     args[name] = arr[p:p+lh]
                     p += lh
 
@@ -700,7 +598,7 @@ class FusedRNNCell(BaseRNNCell):
         """
         args = args.copy()
         arr = args.pop(self._parameter.name)
-        b = self._directions
+        b = len(self._directions)
         m = self._num_gates
         h = self._num_hidden
         num_input = arr.size//b//h//m - (self._num_layers - 1)*(h+b*h+2) - h - 2
@@ -727,7 +625,7 @@ class FusedRNNCell(BaseRNNCell):
         args = args.copy()
         b = self._bidirectional + 1
         m = self._num_gates
-        c = [('_%s'%name if name else '') for name in self._gate_names]
+        c = self._gate_names
         h = self._num_hidden
         w0 = args['%sl0_i2h%s_weight'%(self._prefix, c[0])]
         num_input = w0.shape[1]
@@ -743,7 +641,7 @@ class FusedRNNCell(BaseRNNCell):
         raise NotImplementedError("FusedRNNCell cannot be stepped. Please use unroll")
 
     def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=False):
+               input_prefix='', layout='NTC', merge_outputs=None):
         """Unroll an RNN cell across time steps.
 
         Parameters
@@ -773,6 +671,13 @@ class FusedRNNCell(BaseRNNCell):
             placehodlers.
         layout : str
             layout of input/output symbol.
+        merge_outputs : bool
+            If False, return outputs as a list of Symbols.
+            If True, concatenate output across time steps
+            and return a single symbol with shape
+            (batch_size, length, ...) if layout == 'NTC',
+            or (length, batch_size, ...) if layout == 'TNC'.
+            If None, output whatever is faster
 
         Returns
         -------
@@ -823,7 +728,7 @@ class FusedRNNCell(BaseRNNCell):
         else:
             outputs, states = rnn[0], [rnn[1]]
 
-        if not merge_outputs:
+        if merge_outputs is not None and not merge_outputs:
             warnings.warn("Call FusedRNNCell.unroll with merge_outputs=True "
                           "for faster speed")
             outputs = list(symbol.SliceChannel(outputs, axis=0, num_outputs=length,
@@ -866,7 +771,7 @@ class SequentialRNNCell(BaseRNNCell):
     @property
     def state_shape(self):
         """shape(s) of states"""
-        return sum([c.state_shape for c in self._cells], [])
+        return _cells_state_shape(self._cells)
 
     def begin_state(self, **kwargs):
         """Initial state for this cell.
@@ -888,17 +793,13 @@ class SequentialRNNCell(BaseRNNCell):
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
-        return sum([c.begin_state(**kwargs) for c in self._cells], [])
+        return _cells_begin_state(self._cells, **kwargs)
 
     def unpack_weights(self, args):
-        for cell in self._cells:
-            args = cell.unpack_weights(args)
-        return args
+        return _cells_unpack_weights(self._cells, args)
 
     def pack_weights(self, args):
-        for cell in self._cells:
-            args = cell.pack_weights(args)
-        return args
+        return _cells_pack_weights(self._cells, args)
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -921,7 +822,7 @@ class SequentialRNNCell(BaseRNNCell):
         next_states = []
         p = 0
         for cell in self._cells:
-            assert type(cell) is not BidirectionalCell
+            assert not isinstance(cell, BidirectionalCell)
             n = len(cell.state_shape)
             state = states[p:p+n]
             p += n
@@ -930,7 +831,7 @@ class SequentialRNNCell(BaseRNNCell):
         return inputs, sum(next_states, [])
 
     def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=False):
+               input_prefix='', layout='NTC', merge_outputs=None):
         """Unroll an RNN cell across time steps.
 
         Parameters
@@ -960,11 +861,12 @@ class SequentialRNNCell(BaseRNNCell):
             layout of input symbol. Only used if inputs
             is a single Symbol.
         merge_outputs : bool
-            if False, return outputs as a list of Symbols.
+            If False, return outputs as a list of Symbols.
             If True, concatenate output across time steps
             and return a single symbol with shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
+            If None, output whatever is faster
 
         Returns
         -------
@@ -974,7 +876,6 @@ class SequentialRNNCell(BaseRNNCell):
             has the same structure as begin_state()
         """
 
-        axis = layout.find('T')
         num_cells = len(self._cells)
         if begin_state is None:
             begin_state = self.begin_state()
@@ -985,9 +886,9 @@ class SequentialRNNCell(BaseRNNCell):
             states = begin_state[p:p+n]
             p += n
             inputs, states = cell.unroll(length, inputs=inputs,
-                    input_prefix=input_prefix, begin_state=states,
-                    layout=layout, merge_outputs=(i == num_cells-1 and
-                        merge_outputs))
+                                         input_prefix=input_prefix, begin_state=states,
+                                         layout=layout, merge_outputs=(None if i < num_cells-1 else
+                                                                       merge_outputs))
 
         return inputs, states
 
@@ -1164,9 +1065,8 @@ class BidirectionalCell(BaseRNNCell):
         cell for forward unrolling
     r_cell : BaseRNNCell
         cell for backward unrolling
-    prefix : str, default 'bi_'
-        prefix for name of node
-        (and prefix of output)
+    output_prefix : str, default 'bi_'
+        prefix for name of output
     """
     def __init__(self, l_cell, r_cell, params=None, output_prefix='bi_'):
         super(BidirectionalCell, self).__init__('', params=params)
@@ -1175,14 +1075,10 @@ class BidirectionalCell(BaseRNNCell):
         self._output_prefix = output_prefix
 
     def unpack_weights(self, args):
-        for cell in self._cells:
-            args = cell.unpack_weights(args)
-        return args
+        return _cells_unpack_weights(self._cells, args)
 
     def pack_weights(self, args):
-        for cell in self._cells:
-            args = cell.pack_weights(args)
-        return args
+        return _cells_pack_weights(self._cells, args)
 
     def __call__(self, inputs, states):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
@@ -1190,7 +1086,7 @@ class BidirectionalCell(BaseRNNCell):
     @property
     def state_shape(self):
         """shape(s) of states"""
-        return sum([c.state_shape for c in self._cells], [])
+        return _cells_state_shape(self._cells)
 
     def begin_state(self, **kwargs):
         """Initial state for this cell.
@@ -1212,10 +1108,10 @@ class BidirectionalCell(BaseRNNCell):
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
-        return sum([c.begin_state(**kwargs) for c in self._cells], [])
+        return _cells_begin_state(self._cells, **kwargs)
 
     def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=False):
+               input_prefix='', layout='NTC', merge_outputs=None):
         """Unroll a bidirectional RNN cell across time steps.
 
         Parameters
@@ -1245,11 +1141,12 @@ class BidirectionalCell(BaseRNNCell):
             layout of input symbol. Only used if inputs
             is a single Symbol.
         merge_outputs : bool
-            if False, return outputs as a list of Symbols.
+            If False, return outputs as a list of Symbols.
             If True, concatenate output across time steps
             and return a single symbol with shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
+            If None, output whatever is faster
 
         Returns
         -------
@@ -1268,7 +1165,7 @@ class BidirectionalCell(BaseRNNCell):
                 "unroll doesn't allow grouped symbol as input. Please " \
                 "convert to list first or let unroll handle slicing"
             inputs = list(symbol.SliceChannel(inputs, axis=axis, num_outputs=length,
-                                         squeeze_axis=1))
+                                              squeeze_axis=1))
         else:
             assert len(inputs) == length
 
@@ -1278,19 +1175,54 @@ class BidirectionalCell(BaseRNNCell):
         states = begin_state
         l_cell, r_cell = self._cells
         l_outputs, l_states = l_cell.unroll(length, inputs=inputs,
-                begin_state=states[:len(l_cell.state_shape)],
-                layout=layout, merge_outputs=False)
+                                            begin_state=states[:len(l_cell.state_shape)],
+                                            layout=layout, merge_outputs=merge_outputs)
         r_outputs, r_states = r_cell.unroll(length,
-                inputs=list(reversed(inputs)),
-                begin_state=states[len(l_cell.state_shape):],
-                layout=layout, merge_outputs=False)
+                                            inputs=list(reversed(inputs)),
+                                            begin_state=states[len(l_cell.state_shape):],
+                                            layout=layout, merge_outputs=merge_outputs)
 
-        outputs = [symbol.Concat(l_o, r_o, dim=1, name='%st%d'%(self._output_prefix, i))
-                for i, l_o, r_o in
-                zip(range(length), l_outputs, reversed(r_outputs))]
-        states = [l_states, r_states]
+        if merge_outputs is None:
+            merge_outputs = (isinstance(l_outputs, symbol.Symbol)
+                             and isinstance(r_outputs, symbol.Symbol))
+            if not merge_outputs:
+                if isinstance(l_outputs, symbol.Symbol):
+                    l_outputs = list(symbol.SliceChannel(l_outputs, axis=axis,
+                                                         num_outputs=length, sequeeze_axis=1))
+                if isinstance(r_outputs, symbol.Symbol):
+                    r_outputs = list(symbol.SliceChannel(r_outputs, axis=axis,
+                                                         num_outputs=length, sequeeze_axis=1))
 
         if merge_outputs:
-            outputs = [symbol.expand_dims(i, axis=axis) for i in outputs]
-            outputs = symbol.Concat(*outputs, dim=axis)
+            l_outputs = [l_outputs]
+            r_outputs = [symbol.reverse(r_outputs, axis=axis)]
+        else:
+            r_outputs = list(reversed(r_outputs))
+
+        outputs = [symbol.Concat(l_o, r_o, dim=1+merge_outputs,
+                                 name=('%sout'%(self._output_prefix) if merge_outputs
+                                       else '%st%d'%(self._output_prefix, i)))
+                   for i, l_o, r_o in
+                   zip(range(len(l_outputs)), l_outputs, r_outputs)]
+
+        if merge_outputs:
+            outputs = outputs[0]
+
+        states = [l_states, r_states]
         return outputs, states
+
+def _cells_state_shape(cells):
+    return sum([c.state_shape for c in cells], [])
+
+def _cells_begin_state(cells, **kwargs):
+    return sum([c.begin_state(**kwargs) for c in cells], [])
+
+def _cells_unpack_weights(cells, args):
+    for cell in cells:
+        args = cell.unpack_weights(args)
+    return args
+
+def _cells_pack_weights(cells, args):
+    for cell in cells:
+        args = cell.pack_weights(args)
+    return args

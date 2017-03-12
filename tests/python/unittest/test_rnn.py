@@ -60,7 +60,6 @@ def test_bidirectional():
     assert outputs.list_outputs() == ['rnn_bi_t0_output', 'rnn_bi_t1_output', 'rnn_bi_t2_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
-    print(outs)
     assert outs == [(10, 200), (10, 200), (10, 200)]
 
 if __name__ == '__main__':
