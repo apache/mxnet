@@ -99,7 +99,10 @@ class BaseRNNCell(object):
         """shape(s) of states"""
         raise NotImplementedError()
 
-    _gate_names = []
+    @property
+    def _gate_names(self):
+        """name(s) of gates"""
+        raise NotImplementedError()
 
     def begin_state(self, func=symbol.zeros, **kwargs):
         """Initial state for this cell.
@@ -303,7 +306,10 @@ class RNNCell(BaseRNNCell):
         """shape(s) of states"""
         return [(0, self._num_hidden)]
 
-    _gate_names = ['']
+    @property
+    def _gate_names(self):
+        """name(s) of gates"""
+        return ['']
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -363,7 +369,10 @@ class LSTMCell(BaseRNNCell):
         """shape(s) of states"""
         return [(0, self._num_hidden), (0, self._num_hidden)]
 
-    _gate_names = ['_i', '_f', '_c', '_o']
+    @property
+    def _gate_names(self):
+        """name(s) of gates"""
+        return ['_i', '_f', '_c', '_o']
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -438,7 +447,10 @@ class GRUCell(BaseRNNCell):
         """shape(s) of states"""
         return [(0, self._num_hidden)]
 
-    _gate_names = ['_r', '_z', '_o']
+    @property
+    def _gate_names(self):
+        """name(s) of gates"""
+        return ['_r', '_z', '_o']
 
     def __call__(self, inputs, states):
         """Construct symbol for one step of RNN.
@@ -531,10 +543,10 @@ class FusedRNNCell(BaseRNNCell):
     @property
     def _gate_names(self):
         """name(s) of gates"""
-        return {'rnn_relu': RNNCell,
-                'rnn_tanh': RNNCell,
-                'lstm': LSTMCell,
-                'gru': GRUCell}[self._mode]._gate_names
+        return {'rnn_relu': [''],
+                'rnn_tanh': [''],
+                'lstm': ['_i', '_f', '_c', '_o'],
+                'gru': ['_r', '_z', '_o']}[self._mode]
 
     @property
     def _num_gates(self):
