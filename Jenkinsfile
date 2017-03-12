@@ -33,7 +33,8 @@ stage('Build') {
     node {
       checkout scm
       sh 'git submodule update --init'
-      sh "tests/ci_build/ci_build.sh lint 'date >${mx_lib}'"
+      //sh "tests/ci_build/ci_build.sh lint ' >${mx_lib}'"
+      sh "date >${mx_lib}"
       pack_lib 'cpu', mx_lib
     }
   },
@@ -48,7 +49,7 @@ stage('Build') {
 //USE_BLAS=openblas \
 //EXTRA_OPERATORS=example/ssd/operator
 //      '''
-      sh "sleep 2; tests/ci_build/ci_build.sh lint 'date >${mx_lib}'"
+      sh "sleep 2; date >${mx_lib}"
       pack_lib 'gpu', mx_lib
 
     }
