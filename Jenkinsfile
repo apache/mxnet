@@ -2,59 +2,37 @@ stage("Sanity Check") {
   node('master') {
     checkout scm
     sh 'git submodule update --init'
-    sh 'tests/ci_build/ci_build.sh lint make cpplint'
-    sh 'tests/ci_build/ci_build.sh lint make rcpplint'
-    sh 'tests/ci_build/ci_build.sh lint make jnilint'
-    sh 'tests/ci_build/ci_build.sh lint make pylint'
+    // sh 'tests/ci_build/ci_build.sh lint make cpplint'
+    // sh 'tests/ci_build/ci_build.sh lint make rcpplint'
+    // sh 'tests/ci_build/ci_build.sh lint make jnilint'
+    // sh 'tests/ci_build/ci_build.sh lint make pylint'
   }
 }
+
+String[] lib='libxx'
+
 stage('Build') {
   parallel 'CPU': {
     node {
       checkout scm
-      sh 'git submodule update --init'     
-      sh '''echo "cpu hahaha" >src/mx.a
-      '''
-      stash includes: 'src/mx.*', name: 'cpu'
-      echo "CPU Build"
+      sh 'git submodule update --init'
+      sh 'tests/ci_build/ci_build.sh lint date >${lib}'
+      pack_lib('cpu')
     }
   },
   'CUDA 7.5+cuDNN5': {
     node('GPU') {
       checkout scm
-      sh 'git submodule update --init'     
+      sh 'git submodule update --init'
 //      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
 //USE_CUDA=1 \
 //USE_CUDA_PATH=/usr/local/cuda \
 //USE_CUDNN=1 \
 //USE_BLAS=openblas \
-//EXTRA_OPERATORS=example/ssd/operator 
+//EXTRA_OPERATORS=example/ssd/operator
 //      '''
-      sh 'echo "gpu hehehe" >src/mx.b'
-      stash includes: 'src/mx.*', name: 'gpu'
-    }
-  },
-  'CUDA 8+cuDNN5': {
-    node {
-      echo "yy"
-    }
-  },
-  'MKL' : {
-    node {
-      catchError {
-        sh 'exit 1'
-      }
-    }
-  },
-  'Amalgamation': {
-    node {
-      try {
-        sh 'exit 1'
-      }
-      catch (exc) {
-        echo 'Something failed, I should sound the klaxons!'
-      }
-      echo "xxx"
+      sh 'tests/ci_build/ci_build.sh lint date >${lib}'
+      pack_lib('gpu')
     }
   }
 }
@@ -62,23 +40,33 @@ stage('Build') {
 stage('Unit Test') {
   parallel 'Python2': {
     node {
-      echo "test"
-      sh "ls"
-      sh "pwd"
-      unstash 'gpu'
-      sh 'cat src/mx.*'
+      unpack_lib('cpu')
     }
   },
   'Python3': {
     node {
-      echo "test"
+      unpack_lib 'gpu'
     }
   },
   'Scala': {
     node {
       echo "xxx"
-      unstash 'cpu'
-      sh 'cat src/mx.*'
     }
   }
+}
+
+def pack_lib(String[] name) {
+  sh '''
+echo "Packing ${lib}"
+md5sum ${lib}
+'''
+  stash includes: lib, name: name
+}
+
+def unpack_lib(String[] name) {
+  unstash name
+  sh '''
+md5sum ${lib}
+cat ${lib}
+'''
 }
