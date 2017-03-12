@@ -31,6 +31,7 @@ md5sum ${mx_lib}
 stage('Build') {
   parallel 'CPU': {
     node {
+      ws 'workspace/cpu-build'
       checkout scm
       sh 'git submodule update --init'
       //sh "tests/ci_build/ci_build.sh lint ' >${mx_lib}'"
@@ -40,6 +41,7 @@ stage('Build') {
   },
   'CUDA 7.5+cuDNN5': {
     node('GPU') {
+      ws 'gpu-build'
       checkout scm
       sh 'git submodule update --init'
 //      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
