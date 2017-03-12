@@ -22,6 +22,7 @@
 #ifndef MXNET_OPERATOR_MKL_MKL_MEMORY_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_MEMORY_INL_H_
 
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -42,9 +43,18 @@ struct MKLMemoryDescriptorBase : public PrvMemDescr,
       dnnReleaseBuffer<DType>(internal_ptr);
       internal_ptr = NULL;
     }
-    dnnDelete<DType>(convert_to_int);
-    dnnDelete<DType>(convert_from_int);
-    dnnDelete<DType>(convert_prv2prv);
+    if (convert_to_int != NULL) {
+      dnnDelete<DType>(convert_to_int);
+      convert_to_int = NULL;
+    }
+    if (convert_from_int != NULL) {
+      dnnDelete<DType>(convert_from_int);
+      convert_from_int = NULL;
+    }
+    if (convert_prv2prv != NULL) {
+      dnnDelete<DType>(convert_prv2prv);
+      convert_prv2prv = NULL;
+    }
   }
   std::shared_ptr<MKLMemoryDescriptorBase<DType> > get_shared_ptr() {
     return this->shared_from_this();
@@ -107,7 +117,10 @@ struct MKLMemoryDescriptor : MKLMemoryDescriptorBase<DType> {
   // The last get_converted_prv() argument is a hack for reusing
   // in backward a conversion done already in the forward direction.
   DType* get_converted_prv(DType *data_ptr, bool set_prv_ptr,
-              std::shared_ptr<MKLMemHolder> dnn_chunk = NULL);
+      const TBlob &blob);
+  void* get_output_ptr(DType *data_ptr,
+    std::shared_ptr<MKLMemoryDescriptor<DType> > self_ptr,
+    std::shared_ptr<MKLMemHolder> dnn_chunk = NULL);
   bool copy_from(std::shared_ptr<MKLMemHolder> dnn_chunk);
   MKLMemoryDescriptor() {}
 };

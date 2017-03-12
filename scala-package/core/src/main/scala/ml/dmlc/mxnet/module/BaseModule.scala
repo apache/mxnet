@@ -312,8 +312,8 @@ abstract class BaseModule {
   def saveParams(fname: String): Unit = {
     val (argParams, auxParams) = getParams
     val saveDict = (
-      argParams.map { case (k, v) => (k, v.asInContext(Context.cpu())) }
-      ++ auxParams.map { case (k, v) => (k, v.asInContext(Context.cpu())) }
+      argParams.map { case (k, v) => (s"arg:$k", v.asInContext(Context.cpu())) }
+      ++ auxParams.map { case (k, v) => (s"aux:$k", v.asInContext(Context.cpu())) }
     )
     NDArray.save(fname, saveDict)
   }
@@ -330,8 +330,8 @@ abstract class BaseModule {
     val auxParams = scala.collection.mutable.HashMap.empty[String, NDArray]
     (saveDict._1 zip saveDict._2) foreach { case (key, value) =>
       key.split(":", 2) match {
-        case Array(argType, name) if argType == "arg " => argParams.put(name, value)
-        case Array(argType, name) if argType == "aux " => auxParams.put(name, value)
+        case Array(argType, name) if argType == "arg" => argParams.put(name, value)
+        case Array(argType, name) if argType == "aux" => auxParams.put(name, value)
         case _ => throw new IOException("Invalid param file " + fname)
       }
     }

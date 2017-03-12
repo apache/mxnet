@@ -251,6 +251,43 @@ class BatchNormProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    using namespace mshadow;
+    CHECK_GE(in_type->size(), 1);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    // For float16 input type beta, gamma, mean, and average are stored in float32.
+    // For other input types, these parameters have the same type as input
+    // NOTE: This requirement is from cuDNN (v. 4 and 5)
+    int dtype_param = (dtype == kFloat16) ? kFloat32 : dtype;
+    for (index_t i = 1; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype_param;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype_param) << "This layer requires uniform type. "
+                                             << "Expected " << dtype_param << " v.s. given "
+                                             << (*in_type)[i] << " at " << ListArguments()[i];
+      }
+    }
+    for (index_t i = 0; i < aux_type->size(); ++i) {
+      if ((*aux_type)[i] != -1) {
+        CHECK_EQ((*aux_type)[i], dtype_param) << "This layer requires uniform type. "
+                                              << "Expected " << dtype_param << " v.s. given "
+                                              << (*aux_type)[i] << " at " << ListArguments()[i];
+      }
+    }
+    int n_aux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (int i = 0; i < n_aux; ++i ) aux_type->push_back(dtype_param);
+    int n_out = this->ListOutputs().size();
+    out_type->clear();
+    out_type->push_back(dtype);
+    for (int i = 1; i < n_out; ++i ) out_type->push_back(dtype_param);
+    return true;
+  }
+
   OperatorProperty* Copy() const override {
     auto ptr = new BatchNormProp();
     ptr->param_ = param_;
