@@ -18,7 +18,7 @@ stage('Build') {
       sh 'git submodule update --init'
       echo "${lib}"
       sh "echo ${lib}"
-      sh 'tests/ci_build/ci_build.sh lint touch ${lib}'
+      sh "tests/ci_build/ci_build.sh lint touch ${lib}"
       pack_lib('cpu')
     }
   },
@@ -60,17 +60,17 @@ stage('Unit Test') {
 }
 
 def pack_lib(String[] name) {
-  sh '''
+  sh """
 echo "Packing ${lib}"
 md5sum ${lib}
-'''
+"""
   stash includes: lib, name: name
 }
 
 def unpack_lib(String[] name) {
   unstash name
-  sh '''
+  sh """
 md5sum ${lib}
 cat ${lib}
-'''
+"""
 }
