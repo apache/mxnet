@@ -1,7 +1,9 @@
 stage("Sanity Check") {
   node('master') {
-    echo "hello world"
-    sh 'tests/ci_build/ci_build.sh lint pylint python/mxnet --rcfile=./tests/ci_build/pylintrc -r y'
+    checkout scm
+    sh 'git submodule update --init'
+    sh 'tests/ci_build/ci_build.sh lint make cpplint'
+    sh 'tests/ci_build/ci_build.sh lint make pylint'
   }
 }
 stage('Build') {
