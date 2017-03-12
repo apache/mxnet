@@ -9,15 +9,14 @@ stage("Sanity Check") {
   }
 }
 
-def lib = 'libxx'
+def mx_lib = 'libxx'
 
-
-def packlib(name) {
+def pack_lib(name, mx_lib) {
   sh """
-echo "Packing ${name}"
-md5sum 'libxx'
+echo "Packing ${mx_lib} into ${name}"
+md5sum '${mx_lib}'
 """
-  // stash includes: lib, name: name
+  stash includes: mx_lib, name: name
 }
 
 def unpacklib(name) {
@@ -34,10 +33,9 @@ stage('Build') {
     node {
       checkout scm
       sh 'git submodule update --init'
-      echo "${lib}"
-      sh "tests/ci_build/ci_build.sh lint touch ${lib}"
-      sh "echo ${lib}"      
-      packlib 'cpu'
+      sh "tests/ci_build/ci_build.sh lint touch ${mx_lib}"
+      sh "echo ${mx_lib}"      
+      pack_lib 'cpu', mx_lib
     }
   },
   'CUDA 7.5+cuDNN5': {
