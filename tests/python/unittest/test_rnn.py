@@ -50,8 +50,21 @@ def test_stack():
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
+def test_bidirectional():
+    cell = mx.rnn.BidirectionalCell(
+            mx.rnn.LSTMCell(100, prefix='rnn_l0_'),
+            mx.rnn.LSTMCell(100, prefix='rnn_r0_'),
+            output_prefix='rnn_bi_')
+    outputs, _ = cell.unroll(3, input_prefix='rnn_')
+    outputs = mx.sym.Group(outputs)
+    assert outputs.list_outputs() == ['rnn_bi_t0_output', 'rnn_bi_t1_output', 'rnn_bi_t2_output']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    assert outs == [(10, 200), (10, 200), (10, 200)]
+
 if __name__ == '__main__':
     test_rnn()
     test_lstm()
     test_gru()
     test_stack()
+    test_bidirectional()
