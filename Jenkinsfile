@@ -15,7 +15,7 @@ stage('Build') {
       sh 'git submodule update --init'     
       sh '''echo "cpu hahaha" >lib/mx.a
       '''
-      stash includes: 'lib/mx.*', name: 'cpu'
+      stash includes: 'src/mx.*', name: 'cpu'
       echo "CPU Build"
     }
   },
@@ -31,7 +31,7 @@ stage('Build') {
 //EXTRA_OPERATORS=example/ssd/operator 
 //      '''
       sh 'echo "gpu hehehe" >lib/mx.b'
-      stash includes: 'lib/mx.*', name: 'gpu'
+      stash includes: 'src/mx.*', name: 'gpu'
     }
   },
   'CUDA 8+cuDNN5': {
@@ -66,7 +66,7 @@ stage('Unit Test') {
       sh "ls"
       sh "pwd"
       unstash 'gpu'
-      sh 'cat lib/mx.*'
+      sh 'cat src/mx.*'
     }
   },
   'Python3': {
@@ -78,7 +78,7 @@ stage('Unit Test') {
     node {
       echo "xxx"
       unstash 'cpu'
-      sh 'cat lib/mx.*'
+      sh 'cat src/mx.*'
     }
   }
 }
