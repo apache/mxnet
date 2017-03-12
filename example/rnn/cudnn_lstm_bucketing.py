@@ -73,27 +73,23 @@ def get_data(layout):
 
 def train(args):
     data_train, data_val, vocab = get_data('TN')
-    cells = []
     if args.stack_rnn:
+        stack = mx.rnn.SequentialRNNCell()
         for layer in range(args.num_layers):
-            cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
+            stack.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
                     mode='lstm', prefix='fused_rnn' + str(layer),
-                    bidirectional=args.bidirectional)
-            cells.append(cell)
+                    bidirectional=args.bidirectional))
+        cell = stack
     else:
         cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers,
                 mode='lstm', bidirectional=args.bidirectional)
-        cells.append(cell)
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab), output_dim=args.num_embed,name='embed')
 
-        output = embed
-        for cell in cells:
-            cell.reset()
-            output, _ = cell.unroll(seq_len, inputs=output, merge_outputs=True, layout='TNC')
+        output, _ = cell.unroll(seq_len, inputs=embed, merge_outputs=True, layout='TNC')
 
         pred = mx.sym.Reshape(output,
                 shape=(-1, args.num_hidden*(1+args.bidirectional)))
