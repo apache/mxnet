@@ -12,7 +12,7 @@ stage("Sanity Check") {
 def lib = 'libxx'
 
 
-def pack_lib(name) {
+def packlib(name) {
   sh """
 echo "Packing ${lib}"
 md5sum ${lib}
@@ -20,7 +20,7 @@ md5sum ${lib}
   stash includes: lib, name: name
 }
 
-def unpack_lib(name) {
+def unpacklib(name) {
   unstash name
   sh """
 md5sum ${lib}
@@ -35,9 +35,9 @@ stage('Build') {
       checkout scm
       sh 'git submodule update --init'
       echo "${lib}"
-      sh "echo ${lib}"
       sh "tests/ci_build/ci_build.sh lint touch ${lib}"
-      pack_lib 'cpu'
+      sh "echo ${lib}"      
+      packlib 'cpu'
     }
   },
   'CUDA 7.5+cuDNN5': {
