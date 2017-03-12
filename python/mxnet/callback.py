@@ -128,13 +128,13 @@ class Speedometer(object):
                         logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
                                      param.epoch, count, speed, name, value)
                         if self.summary_writer is not None:
-                            self.summary_writer.add_scalar(name='Training-Speed', scalar_value=speed)
-                            self.summary_writer.add_scalar(name='Training-%s' % name, scalar_value=value)
+                            self.summary_writer.add_scalar('Training-Speed', speed)
+                            self.summary_writer.add_scalar('Training-%s' % name, value)
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)
                     if self.summary_writer is not None:
-                        self.summary_writer.add_scalar(name='Training-Speed', scalar_value=speed)
+                        self.summary_writer.add_scalar('Training-Speed', speed)
                 self.tic = time.time()
         else:
             self.init = True
