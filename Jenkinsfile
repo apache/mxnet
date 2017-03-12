@@ -16,8 +16,10 @@ stage('Build') {
     node {
       checkout scm
       sh 'git submodule update --init'
-      sh 'tests/ci_build/ci_build.sh lint date >${lib}'
-      pack_lib('cpu')
+      echo "${lib}"
+      sh "echo ${lib}"
+      //sh 'tests/ci_build/ci_build.sh lint date >${lib}'
+      //pack_lib('cpu')
     }
   },
   'CUDA 7.5+cuDNN5': {
@@ -31,8 +33,8 @@ stage('Build') {
 //USE_BLAS=openblas \
 //EXTRA_OPERATORS=example/ssd/operator
 //      '''
-      sh 'tests/ci_build/ci_build.sh lint date >${lib}'
-      pack_lib('gpu')
+      //sh 'tests/ci_build/ci_build.sh lint date >${lib}'
+      //pack_lib('gpu')
     }
   }
 }
@@ -40,12 +42,14 @@ stage('Build') {
 stage('Unit Test') {
   parallel 'Python2': {
     node {
-      unpack_lib('cpu')
+      echo "python2"
+      //unpack_lib('cpu')
     }
   },
   'Python3': {
     node {
-      unpack_lib 'gpu'
+      echo "python3"
+      //unpack_lib 'gpu'
     }
   },
   'Scala': {
