@@ -18,8 +18,8 @@ stage('Build') {
       sh 'git submodule update --init'
       echo "${lib}"
       sh "echo ${lib}"
-      //sh 'tests/ci_build/ci_build.sh lint date >${lib}'
-      //pack_lib('cpu')
+      sh 'tests/ci_build/ci_build.sh lint touch ${lib}'
+      pack_lib('cpu')
     }
   },
   'CUDA 7.5+cuDNN5': {
