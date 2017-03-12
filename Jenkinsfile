@@ -13,7 +13,7 @@ stage('Build') {
     node {
       checkout scm
       sh 'git submodule update --init'     
-      sh '''echo "cpu hahaha" >lib/mx.a
+      sh '''echo "cpu hahaha" >src/mx.a
       '''
       stash includes: 'src/mx.*', name: 'cpu'
       echo "CPU Build"
@@ -30,7 +30,7 @@ stage('Build') {
 //USE_BLAS=openblas \
 //EXTRA_OPERATORS=example/ssd/operator 
 //      '''
-      sh 'echo "gpu hehehe" >lib/mx.b'
+      sh 'echo "gpu hehehe" >src/mx.b'
       stash includes: 'src/mx.*', name: 'gpu'
     }
   },
