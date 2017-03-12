@@ -461,8 +461,9 @@ class BaseModule(object):
             tic = time.time()
             eval_metric.reset()
             nbatch = 0
+            data_iter = iter(train_data)
             end_of_batch = False
-            next_data_batch = train_data.next()
+            next_data_batch = data_iter.next()
             while not end_of_batch:
                 data_batch = next_data_batch
                 if monitor is not None:
@@ -471,7 +472,7 @@ class BaseModule(object):
                 self.update()
                 try:
                     # pre fetch next batch
-                    next_data_batch = train_data.next()
+                    next_data_batch = data_iter.next()
                     self.prepare(next_data_batch)
                 except StopIteration:
                     end_of_batch = True
