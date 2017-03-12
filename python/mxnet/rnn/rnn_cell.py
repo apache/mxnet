@@ -102,7 +102,7 @@ class BaseRNNCell(object):
     @property
     def _gate_names(self):
         """name(s) of gates"""
-        raise NotImplementedError()
+        return ('',)
 
     def begin_state(self, func=symbol.zeros, **kwargs):
         """Initial state for this cell.
