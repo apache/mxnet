@@ -14,10 +14,10 @@ def lib = 'libxx'
 
 def packlib(name) {
   sh """
-echo "Packing ${lib}"
-md5sum ${lib}
+echo "Packing ${name}"
+md5sum 'libxx'
 """
-  stash includes: lib, name: name
+  // stash includes: lib, name: name
 }
 
 def unpacklib(name) {
