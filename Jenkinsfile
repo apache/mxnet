@@ -31,17 +31,18 @@ md5sum ${mx_lib}
 stage('Build') {
   parallel 'CPU': {
     node {
-      ws 'workspace/cpu-build'
-      checkout scm
-      sh 'git submodule update --init'
-      //sh "tests/ci_build/ci_build.sh lint ' >${mx_lib}'"
-      sh "date >${mx_lib}"
-      pack_lib 'cpu', mx_lib
+      ws 'workspace/cpu-build' {
+        checkout scm
+        sh 'git submodule update --init'
+       //sh "tests/ci_build/ci_build.sh lint ' >${mx_lib}'"
+       sh "date >${mx_lib}"
+       pack_lib 'cpu', mx_lib
+      }
     }
   },
   'CUDA 7.5+cuDNN5': {
     node('GPU') {
-      ws 'gpu-build'
+      ws 'gpu-build' {
       checkout scm
       sh 'git submodule update --init'
 //      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
@@ -53,7 +54,7 @@ stage('Build') {
 //      '''
       sh "sleep 2; date >${mx_lib}"
       pack_lib 'gpu', mx_lib
-
+      }
     }
   }
 }
