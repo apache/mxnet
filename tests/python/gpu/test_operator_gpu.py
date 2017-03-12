@@ -269,36 +269,36 @@ def test_take_with_type():
                 data_shape += (np.random.randint(low=3, high=6), )
             idx_shape = ()
             for _ in range(idx_ndim):
-                idx_shape += (np.random.randint(low=3, high=5), ) 
-            ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float64, 
+                idx_shape += (np.random.randint(low=3, high=5), )
+            ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float64,
                                        'take_a': np.float64}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float32, 
+                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float32,
                                        'take_a': np.float32}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float16, 
+                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float16,
                                        'take_a': np.float16}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float64, 
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float64,
                                        'take_a': np.float64}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float32, 
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float32,
                                        'take_a': np.float32}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float16, 
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float16,
                                        'take_a': np.float16}}]
-            arg_params = {'take_indices': np.random.randint(low=0, 
-                                                            high=data_shape[0], 
-                                                            size=idx_shape), 
+            arg_params = {'take_indices': np.random.randint(low=0,
+                                                            high=data_shape[0],
+                                                            size=idx_shape),
                           'take_a': np.random.normal(size=data_shape)}
-            check_consistency(sym, ctx_list, 
+            check_consistency(sym, ctx_list,
                               grad_req={'take_indices': 'null',
                                         'take_a': 'write'},
                               arg_params=arg_params)
@@ -360,8 +360,26 @@ def test_gru():
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
 
+def test_bidirectional():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
+            bidirectional=True)
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(100, prefix='l0_'),
+                mx.rnn.GRUCell(100, prefix='r0_'),
+                output_prefix='bi_gru_0_'))
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(100, prefix='l1_'),
+                mx.rnn.GRUCell(100, prefix='r1_'),
+                output_prefix='bi_gru_1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
 
 if __name__ == '__main__':
+    test_bidirectional()
     test_lstm()
     test_gru()
     test_rnn()
