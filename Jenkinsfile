@@ -1,12 +1,12 @@
 stage("Sanity Check") {
   parallel 'C++ Lint': {
-    node {
-      sh 'tests/ci_build/ci_build.sh cpu make cpplint'
+    node('master') {
+      sh 'tests/ci_build/ci_build.sh lint make cpplint'
     }
   },
   'Python Lint': {
-    node {
-      sh 'tests/ci_build/ci_build.sh cpu make pylint'
+    node('master') {
+      sh 'tests/ci_build/ci_build.sh lint make pylint'
     }
   }
 }
