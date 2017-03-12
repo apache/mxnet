@@ -22,6 +22,7 @@ stage('Build') {
   },
   'MKL' : {
     node {
+      sh 'exit 1'
       echo "mkl"
     }
   },
