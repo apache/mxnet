@@ -11,6 +11,24 @@ stage("Sanity Check") {
 
 def lib = 'libxx'
 
+
+def pack_lib(name) {
+  sh """
+echo "Packing ${lib}"
+md5sum ${lib}
+"""
+  stash includes: lib, name: name
+}
+
+def unpack_lib(name) {
+  unstash name
+  sh """
+md5sum ${lib}
+cat ${lib}
+"""
+}
+
+
 stage('Build') {
   parallel 'CPU': {
     node {
@@ -57,20 +75,4 @@ stage('Unit Test') {
       echo "xxx"
     }
   }
-}
-
-def pack_lib(String[] name) {
-  sh """
-echo "Packing ${lib}"
-md5sum ${lib}
-"""
-  stash includes: lib, name: name
-}
-
-def unpack_lib(String[] name) {
-  unstash name
-  sh """
-md5sum ${lib}
-cat ${lib}
-"""
 }
