@@ -9,7 +9,7 @@ stage("Sanity Check") {
   }
 }
 
-String[] lib='libxx'
+def lib = 'libxx'
 
 stage('Build') {
   parallel 'CPU': {
