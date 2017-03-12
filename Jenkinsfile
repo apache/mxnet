@@ -22,7 +22,9 @@ stage('Build') {
   },
   'MKL' : {
     node {
-      sh 'exit 1'
+      catchError {
+        sh 'exit 1'
+      }
       echo "mkl"
     }
   },
