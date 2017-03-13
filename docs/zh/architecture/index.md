@@ -8,7 +8,7 @@
 这部分包含不同的角度来描述深度学习系统的设计文档, 包含对系统的抽象, 优化策略以及不同选择中如何做权衡.
 
 * [深度学习编程模型](program_model.md)
-* [深度学习依赖引擎](note_engine.md)
+* [深度学习依赖引擎](https://github.com/dmlc/mxnet/blob/master/docs/zh/mxnet-dep-engine-implemention.md)
 * [Squeeze the Memory Consumption of Deep Learning](note_memory.md)
 * [压缩深度学习的内存开销](note_data_loading.md)
 * [RNN 接口](rnn_interface.md)
