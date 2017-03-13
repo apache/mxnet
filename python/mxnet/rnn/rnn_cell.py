@@ -1200,10 +1200,10 @@ class BidirectionalCell(BaseRNNCell):
             if not merge_outputs:
                 if isinstance(l_outputs, symbol.Symbol):
                     l_outputs = list(symbol.SliceChannel(l_outputs, axis=axis,
-                                                         num_outputs=length, sequeeze_axis=1))
+                                                         num_outputs=length, squeeze_axis=1))
                 if isinstance(r_outputs, symbol.Symbol):
                     r_outputs = list(symbol.SliceChannel(r_outputs, axis=axis,
-                                                         num_outputs=length, sequeeze_axis=1))
+                                                         num_outputs=length, squeeze_axis=1))
 
         if merge_outputs:
             l_outputs = [l_outputs]
