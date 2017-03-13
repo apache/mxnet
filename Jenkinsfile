@@ -27,21 +27,25 @@ md5sum ${mx_lib}
 """
 }
 
+def checkout_git() {
+  checkout scm
+  sh 'git submodule update --init'
+}
 
 stage('Build') {
   parallel 'CPU': {
     node {
-      ws('workspace/cpu-build') {
+      ws('workspace/build-cpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh '''tests/ci_build/ci_build.sh cpu  make -j$(nproc) USE_BLAS=openblas'''
+        sh '''tests/ci_build/ci_build.sh cpu make -j$(nproc) USE_BLAS=openblas'''
         pack_lib 'cpu', mx_lib
       }
     }
   },
   'GPU: CUDA7.5+cuDNN5': {
     node('GPU') {
-      ws('workspace/gpu-build') {
+      ws('workspace/build-gpu') {
       checkout scm
       sh 'git submodule update --init'
 //      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
@@ -61,8 +65,11 @@ stage('Build') {
 stage('Unit Test') {
   parallel 'CPU: Python2/3': {
     node {
-      echo "python2"
-      unpack_lib 'cpu', mx_lib
+      ws('workspace/ut-python-cpu') {
+        checkout_git
+        unpack_lib 'cpu', mx_lib
+        sh 'tests/ci_build/ci_build.sh cpu "PYTHONPATH=`pwd`/python/; nosetests --verbose tests/python/unittest" '
+        sh 'tests/ci_build/ci_build.sh cpu "PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest" '
     }
   },
   'GPU: Python2/3': {
