@@ -1028,9 +1028,11 @@ class Symbol(SymbolBase):
     def eval(self, ctx=cpu(), **kwargs):
         """Evaluate a symbol given arguments
 
-        The `eval` method combines a call to `bind` (which returns an executor) with a call to `forward` (executor method).
-        For the common use case where you plan to repeatedly evaluate the same symbol with the same NDArray inputs, this is slow.
-        In that case, you should call `bind` once and then repeatedly call forward. Eval allows simpler syntax for less cumbersome introspection.
+        The `eval` method combines a call to `bind` (which returns an executor)
+        with a call to `forward` (executor method).
+        For the common use case, where you might repeatedly evaluate with same arguments, eval is slow.
+        In that case, you should call `bind` once and then repeatedly call forward.
+        Eval allows simpler syntax for less cumbersome introspection.
 
         Parameters
         ----------
@@ -1047,7 +1049,10 @@ class Symbol(SymbolBase):
 
         Returns
         ----------
-        result :  a list of NDArrays corresponding to the values taken by each symbol when evaluated on given args. When called on a single symbol (not a group), the result will be a list with one element.
+        result :  a list of NDArrays corresponding to the values
+        taken by each symbol when evaluated on given args.
+        When called on a single symbol (not a group),
+        the result will be a list with one element.
         """
         return self.bind(ctx, kwargs).forward()
 
