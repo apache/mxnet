@@ -23,7 +23,7 @@ md5sum ${mx_lib}
 def unpack_lib(name, mx_lib) {
   unstash name
   sh """
-echo "Unpacking ${mx_lib} from ${name}"
+echo "Unpacked ${mx_lib} from ${name}"
 md5sum ${mx_lib}
 """
 }
@@ -42,17 +42,10 @@ stage('Build') {
   'GPU: CUDA7.5+cuDNN5': {
     node('GPU') {
       ws('workspace/build-gpu') {
-      checkout scm
-      sh 'git submodule update --init'
-//      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
-//USE_CUDA=1 \
-//USE_CUDA_PATH=/usr/local/cuda \
-//USE_CUDNN=1 \
-//USE_BLAS=openblas \
-//EXTRA_OPERATORS=example/ssd/operator
-//      '''
-      // sh "sleep 2; date >${mx_lib}"
-      // pack_lib 'gpu', mx_lib
+        checkout scm
+        sh 'git submodule update --init'
+        sh "${mx_run} gpu make -j\$(nproc) USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1"
+        pack_lib 'gpu', mx_lib
       }
     }
   }
@@ -71,10 +64,14 @@ stage('Unit Test') {
     }
   },
   'Python2/3: GPU': {
-    node {
-      echo "python3"
-      unpack_lib 'cpu', mx_lib
-      // unpack_lib 'gpu', mx_lib
+    node('GPU') {
+      ws('workspace/ut-python-gpu') {
+        checkout scm
+        sh 'git submodule update --init'
+        unpack_lib 'gpu', mx_lib
+        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --verbose tests/python/unittest'"
+        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests3 --verbose tests/python/unittest'"
+      }
     }
   },
   'Scala': {
