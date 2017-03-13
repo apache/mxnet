@@ -1,4 +1,4 @@
-def mx_lib = 'lib/libmxnet.so'
+def mx_lib = 'lib/libmxnet.so lib/libmxnet.a dmlc-core/libdmlc.a nnvm/lib/libnnvm.a'
 def mx_run = 'tests/ci_build/ci_build.sh'
 
 def pack_lib(name, mx_lib) {
