@@ -66,7 +66,8 @@ stage('Unit Test') {
   parallel 'CPU: Python2/3': {
     node {
       ws('workspace/ut-python-cpu') {
-        checkout_git
+        checkout scm
+        sh 'git submodule update --init'
         unpack_lib 'cpu', mx_lib
         sh 'tests/ci_build/ci_build.sh cpu "PYTHONPATH=`pwd`/python/; nosetests --verbose tests/python/unittest" '
         sh 'tests/ci_build/ci_build.sh cpu "PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest" '
