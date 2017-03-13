@@ -59,18 +59,18 @@ stage('Build') {
 }
 
 stage('Unit Test') {
-  parallel 'CPU: Python2/3': {
+  parallel 'Python2/3: CPU': {
     node {
       ws('workspace/ut-python-cpu') {
         checkout scm
         sh 'git submodule update --init'
         unpack_lib 'cpu', mx_lib
-        sh "${mx_run} cpu 'export PYTHONPATH=`pwd`/python/; nosetests --verbose tests/python/unittest' "
-        sh "${mx_run} cpu \"export PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest\" "
+        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --verbose tests/python/unittest'"
+        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests3 --verbose tests/python/unittest'"
       }
     }
   },
-  'GPU: Python2/3': {
+  'Python2/3: GPU': {
     node {
       echo "python3"
       unpack_lib 'cpu', mx_lib
