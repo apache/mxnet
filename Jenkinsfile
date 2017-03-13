@@ -62,7 +62,7 @@ stage('Unit Test') {
         sh 'git submodule update --init'
         unpack_lib 'cpu', mx_lib
         sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --verbose tests/python/unittest'"
-        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests3 --verbose tests/python/unittest'"
+        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests-3.4 --verbose tests/python/unittest'"
       }
     }
   },
@@ -73,7 +73,7 @@ stage('Unit Test') {
         sh 'git submodule update --init'
         unpack_lib 'gpu', mx_lib
         sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --verbose tests/python/unittest'"
-        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests3 --verbose tests/python/unittest'"
+        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests-3.4 --verbose tests/python/unittest'"
       }
     }
   },
