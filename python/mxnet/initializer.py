@@ -66,7 +66,7 @@ class Initializer(object):
 
         Parameters
         ----------
-        name : InitDesc
+        desc : InitDesc
             Initialization pattern Descriptor
 
         arr : NDArray

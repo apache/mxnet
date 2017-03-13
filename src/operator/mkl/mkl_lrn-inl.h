@@ -195,19 +195,13 @@ class MKLLRNOp : public Operator {
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
     lrn_res[dnnResourceSrc] = const_cast<void*>(bottom_data);
+
+    std::shared_ptr<MKLMemHolder> top_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-    if (fwd_top_data_->conversion_needed()) {
-      std::shared_ptr<MKLMemHolder> top_mem = out_data[lrn_enum::kOut].Mkl_mem_;
-      lrn_res[dnnResourceDst] =
-        reinterpret_cast<void *>(fwd_top_data_->prv_ptr());
-      top_mem->set_prv_descriptor(fwd_top_data_);
-    } else {
+    top_mem = out_data[lrn_enum::kOut].Mkl_mem_;
 #endif
-    lrn_res[dnnResourceDst] =
-      reinterpret_cast<void *>(out.dptr_);
-#if MKL_EXPERIMENTAL == 1
-    }
-#endif
+    lrn_res[dnnResourceDst] = fwd_top_data_->get_output_ptr(
+      out.dptr_, fwd_top_data_, top_mem);
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
     e = dnnExecute<DType>(lrnFwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
@@ -234,35 +228,18 @@ class MKLLRNOp : public Operator {
       in_grad[lrn_enum::kData], s);
     dnnError_t e;
     void* lrn_res[dnnResourceNumber];
-    std::shared_ptr<MKLMemHolder> top_diff_mem =
-#if MKL_EXPERIMENTAL == 1
-      out_grad[lrn_enum::kOut].Mkl_mem_;
-#else
-      NULL;
-#endif
     lrn_res[dnnResourceDiffDst] =
-      bwd_top_diff_->get_converted_prv(grad.dptr_, true, top_diff_mem);
-
+      bwd_top_diff_->get_converted_prv(grad.dptr_, true, out_grad[lrn_enum::kOut]);
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
-
     lrn_res[dnnResourceSrc] =
-      fwd_bottom_data_->get_converted_prv(data.dptr_, false);
-    std::shared_ptr<MKLMemHolder> bottom_diff_mem =
+      fwd_bottom_data_->get_converted_prv(data.dptr_, false, in_data[lrn_enum::kData]);
+
+    std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-      in_grad[lrn_enum::kData].Mkl_mem_;
-#else
-      NULL;
+    bottom_diff_mem = in_grad[lrn_enum::kData].Mkl_mem_;
 #endif
-#if MKL_EXPERIMENTAL == 1
-    if (bwd_bottom_diff_->conversion_needed()) {
-      lrn_res[dnnResourceDiffSrc] = bwd_bottom_diff_->prv_ptr();
-      bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_);
-    } else {
-#endif
-    lrn_res[dnnResourceDiffSrc] = grad_in.dptr_;
-#if MKL_EXPERIMENTAL == 1
-    }
-#endif
+    lrn_res[dnnResourceDiffSrc] = bwd_bottom_diff_->get_output_ptr(
+      grad_in.dptr_, bwd_bottom_diff_, bottom_diff_mem);
     e = dnnExecute<DType>(lrnBwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
   }
