@@ -12,16 +12,15 @@ include(CTest)
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
-mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
-mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
-mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
+mxnet_option(USE_CUDNN   "Build with cudnn support"  OFF) # one could set CUDNN_ROOT for search path
+mxnet_option(USE_CUDA    "Build with CUDA support"   OFF)
+mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" OFF)
 mxnet_option(USE_JEMALLOC "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
-mxnet_option(USE_SCALA "Build Scala packages" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -359,19 +358,20 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-  add_library(mxnet_static STATIC ${SOURCE})
-  # Need an arbitrary source file to trigger CMake to build the library
-  add_library(mxnet SHARED src/initialize.cc)
-  target_link_libraries(mxnet
-      -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
-  )
-  add_custom_target(
-      Name ALL
-      BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-      WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-      COMMAND ln -sf libmxnet_static.a libmxnet.a
-      DEPENDS mxnet_static
-  )
+    #add_library(mxnet_static STATIC ${SOURCE})
+    add_library(mxnet SHARED ${SOURCE})
+    # Need an arbitrary source file to trigger CMake to build the library
+#    add_library(mxnet SHARED src/initialize.cc)
+#    target_link_libraries(mxnet
+#        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
+#    )
+#    add_custom_target(
+#        Name ALL
+#        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+#        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+#        COMMAND ln -sf libmxnet_static.a libmxnet.a
+#        DEPENDS mxnet_static
+#    )
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()

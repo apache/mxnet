@@ -27,7 +27,7 @@ if(GTEST_FOUND)
   target_link_libraries(${PROJECT_NAME}_unit_tests
     ${GTEST_LIBRARY}
     rt
-    mxnet_static
+    mxnet
     ${mxnet_LINKER_LIBS}
     )
 

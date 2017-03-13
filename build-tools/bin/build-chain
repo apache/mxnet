@@ -22,4 +22,10 @@ export MXNET_DATA_DIR="$(brazil-path [DeepMXNetTestData]pkg.lib)/../data"
 export EXTRA_LINKLIBS="-lmxnet -ldmlccore -lnnvm"
 export EXTRA_CFLAGS="-std=c++0x -fPIC -g -O2 -D__USE_XOPEN2K8"
 
-COMPUTE=gpu $(brazil-path [ScalaMavenBuilder]pkg.bin)/bmvn $@
+if [ "$1" == "mvn" ]; then
+  ARGS=""
+else
+  ARGS=$@
+fi
+
+COMPUTE=gpu $(brazil-path [ScalaMavenBuilder]pkg.bin)/bmvn $ARGS
