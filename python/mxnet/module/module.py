@@ -1,5 +1,5 @@
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods, too-many-statements
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
 more `Executor` for data parallelization.
 """
@@ -9,7 +9,10 @@ import warnings
 
 from .. import context as ctx
 from .. import ndarray as nd
+from .. import symbol as _sym
 from .. import optimizer as opt
+from .. import loss
+from ..base import _Sentinel
 
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
@@ -43,7 +46,7 @@ class Module(BaseModule):
         states are similar to data and label, but not provided by data iterator.
         Instead they are initialized to 0 and can be set by set_states()
     """
-    def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
+    def __init__(self, symbol, data_names=('data',), label_names=_Sentinel,
                  logger=logging, context=ctx.cpu(), work_load_list=None,
                  fixed_param_names=None, state_names=None):
         super(Module, self).__init__(logger=logger)
@@ -56,27 +59,47 @@ class Module(BaseModule):
         assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
 
-        self._symbol = symbol
+        if isinstance(symbol, loss.Loss):
+            self._loss = symbol
+            self._symbol = _sym.Group([self._loss.output_symbol, self._loss.loss_symbol])
+            num_output = len(self._loss.output_symbol.list_outputs())
+            num_loss = len(self._loss.loss_symbol.list_outputs())
+            self._output_range = (0, num_output)
+            self._loss_range = (num_output, num_output+num_loss)
+            assert label_names is _Sentinel, \
+                "label_names has been deprecated. do not use"
+            label_names = self._loss.label_names
+        else:
+            self._symbol = symbol
+            self._loss = None
+            self._output_range = (0, len(self._symbol.list_outputs()))
+            if label_names is _Sentinel:
+                label_names = ('softmax_label',)
+            else:
+                warnings.warn(
+                    "label_names has been deprecated. For prediction only, "
+                    "do not set label_names. For training, please use the new "
+                    "mxnet.loss.* classes for symbol", stacklevel=2)
 
         data_names = list(data_names) if data_names is not None else []
         label_names = list(label_names) if label_names is not None else []
         state_names = list(state_names) if state_names is not None else []
         fixed_param_names = list(fixed_param_names) if fixed_param_names is not None else []
 
-        _check_input_names(symbol, data_names, "data", True)
-        _check_input_names(symbol, label_names, "label", False)
-        _check_input_names(symbol, state_names, "state", True)
-        _check_input_names(symbol, fixed_param_names, "fixed_param", True)
+        _check_input_names(self._symbol, data_names, "data", True)
+        _check_input_names(self._symbol, label_names, "label", False)
+        _check_input_names(self._symbol, state_names, "state", True)
+        _check_input_names(self._symbol, fixed_param_names, "fixed_param", True)
 
-        arg_names = symbol.list_arguments()
+        arg_names = self._symbol.list_arguments()
         input_names = data_names + label_names + state_names
         self._param_names = [x for x in arg_names if x not in input_names]
         self._fixed_param_names = fixed_param_names
-        self._aux_names = symbol.list_auxiliary_states()
+        self._aux_names = self._symbol.list_auxiliary_states()
         self._data_names = data_names
         self._label_names = label_names
         self._state_names = state_names
-        self._output_names = symbol.list_outputs()
+        self._output_names = self._symbol.list_outputs()
 
         self._arg_params = None
         self._aux_params = None
@@ -156,6 +179,8 @@ class Module(BaseModule):
 
     def _reset_bind(self):
         """Internal function to reset binded state."""
+        if self.binded and self.params_initialized:
+            self._sync_params_from_devices()
         self.binded = False
         self._exec_group = None
         self._data_shapes = None
@@ -174,7 +199,7 @@ class Module(BaseModule):
     @property
     def output_names(self):
         """A list of names for the outputs of this module."""
-        return self._output_names
+        return self._output_names[self._output_range[0]:self._output_range[1]]
 
     @property
     def data_shapes(self):
@@ -362,11 +387,11 @@ class Module(BaseModule):
 
         if not for_training:
             assert not inputs_need_grad
-        else:
-            pass
-            # this is not True, as some module might not contains a loss function
-            # that consumes the labels
-            # assert label_shapes is not None
+        elif self._loss is None:
+            warnings.warn(
+                "Training with ***Output symbols is deprecated. "
+                "Please use mxnet.loss.* classes instead. See "
+                "mxnet.mod.Module's document for usage")
 
         self._data_shapes, self._label_shapes = _parse_data_desc(
             self.data_names, self.label_names, data_shapes, label_shapes)
@@ -378,14 +403,12 @@ class Module(BaseModule):
         else:
             shared_group = None
 
-        self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
-                                                     self._work_load_list, self._data_shapes,
-                                                     self._label_shapes, self._param_names,
-                                                     for_training, inputs_need_grad,
-                                                     shared_group, logger=self.logger,
-                                                     fixed_param_names=self._fixed_param_names,
-                                                     grad_req=grad_req,
-                                                     state_names=self._state_names)
+        self._exec_group = DataParallelExecutorGroup(
+            self._symbol, self._context, self._work_load_list, self._data_shapes,
+            self._label_shapes, self._param_names, for_training, inputs_need_grad,
+            shared_group, logger=self.logger, fixed_param_names=self._fixed_param_names,
+            grad_req=grad_req, state_names=self._state_names)
+
         self._total_exec_bytes = self._exec_group._total_exec_bytes
         if shared_module is not None:
             self.params_initialized = True
@@ -472,7 +495,7 @@ class Module(BaseModule):
             if 'rescale_grad' not in optimizer_params:
                 optimizer_params['rescale_grad'] = rescale_grad
             optimizer = opt.create(optimizer,
-                                   sym=self.symbol, param_idx2name=idx2name,
+                                   sym=self._symbol, param_idx2name=idx2name,
                                    **optimizer_params)
         else:
             assert isinstance(optimizer, opt.Optimizer)
@@ -588,7 +611,9 @@ class Module(BaseModule):
             Output
         """
         assert self.binded and self.params_initialized
-        return self._exec_group.get_outputs(merge_multi_context=merge_multi_context)
+        return self._exec_group.get_outputs(merge_multi_context=merge_multi_context,
+                                            begin=self._output_range[0],
+                                            end=self._output_range[1])
 
     def get_input_grads(self, merge_multi_context=True):
         """Get the gradients with respect to the inputs of the module.

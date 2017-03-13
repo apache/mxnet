@@ -4,8 +4,13 @@
 """Online evaluation metric module."""
 from __future__ import absolute_import
 
+from collections import OrderedDict
+
 import numpy
+
+from .base import numeric_types
 from . import ndarray
+
 
 def check_label_shapes(labels, preds, shape=0):
     """Check to see if the two arrays are the same size."""
@@ -22,10 +27,45 @@ def check_label_shapes(labels, preds, shape=0):
 class EvalMetric(object):
     """Base class of all evaluation metrics."""
 
-    def __init__(self, name, num=None):
+    def __init__(self, name, num=None, output_names=None, label_names=None):
         self.name = name
         self.num = num
+        self.output_names = output_names
+        self.label_names = label_names
         self.reset()
+
+    def __str__(self):
+        return "EvalMetric: {}".format(dict(self.get_name_value()))
+
+    def __getstate__(self):
+        return self.__dict__.copy()
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.reset()
+
+    def update_dict(self, label, pred):
+        """Update the internal evaluation with named label and pred
+
+        Parameters
+        ----------
+        labels : OrderedDict of str -> NDArray
+            name to array mapping for labels.
+
+        preds : list of NDArray
+            name to array mapping of predicted outputs.
+        """
+        if self.output_names is not None:
+            pred = [pred[name] for name in self.output_names]
+        else:
+            pred = pred.values()
+
+        if self.label_names is not None:
+            label = [label[name] for name in self.label_names]
+        else:
+            label = label.values()
+
+        self.update(label, pred)
 
     def update(self, label, pred):
         """Update the internal evaluation.
@@ -67,7 +107,7 @@ class EvalMetric(object):
         else:
             names = ['%s_%d'%(self.name, i) for i in range(self.num)]
             values = [x / y if y != 0 else float('nan') \
-                for x, y in zip(self.sum_metric, self.num_inst)]
+                for x, y in list(zip(self.sum_metric, self.num_inst))]
             return (names, values)
 
     def get_name_value(self):
@@ -77,21 +117,17 @@ class EvalMetric(object):
             name = [name]
         if not isinstance(value, list):
             value = [value]
-        return zip(name, value)
-
-    def __str__(self):
-        return "EvalMetric: {}".format(dict(self.get_name_value()))
+        return list(zip(name, value))
 
 
 class CompositeEvalMetric(EvalMetric):
     """Manage multiple evaluation metrics."""
 
-    def __init__(self, **kwargs):
-        super(CompositeEvalMetric, self).__init__('composite')
-        try:
-            self.metrics = kwargs['metrics']
-        except KeyError:
-            self.metrics = []
+    def __init__(self, metrics=None, **kwargs):
+        super(CompositeEvalMetric, self).__init__('composite', **kwargs)
+        if metrics is None:
+            metrics = []
+        self.metrics = metrics
 
     def add(self, metric):
         """Add a child metric."""
@@ -104,6 +140,17 @@ class CompositeEvalMetric(EvalMetric):
         except IndexError:
             return ValueError("Metric index {} is out of range 0 and {}".format(
                 index, len(self.metrics)))
+
+    def update_dict(self, labels, preds):
+        if self.label_names is not None:
+            labels = OrderedDict([i for i in labels.items()
+                                  if i[0] in self.label_names])
+        if self.output_names is not None:
+            preds = OrderedDict([i for i in preds.items()
+                                 if i[0] in self.output_names])
+
+        for metric in self.metrics:
+            metric.update_dict(labels, preds)
 
     def update(self, labels, preds):
         for metric in self.metrics:
@@ -118,29 +165,39 @@ class CompositeEvalMetric(EvalMetric):
 
     def get(self):
         names = []
-        results = []
+        values = []
         for metric in self.metrics:
-            result = metric.get()
-            names.append(result[0])
-            results.append(result[1])
-        return (names, results)
+            name, value = metric.get()
+            if isinstance(name, str):
+                name = [name]
+            if isinstance(value, numeric_types):
+                value = [value]
+            names.extend(name)
+            values.extend(value)
+        return (names, values)
 
 ########################
 # CLASSIFICATION METRICS
 ########################
 
 class Accuracy(EvalMetric):
-    """Calculate accuracy"""
+    """Calculate accuracy
 
-    def __init__(self):
-        super(Accuracy, self).__init__('accuracy')
+    Parameters
+    ----------
+    axis : int, default=1
+        The axis that represents classes
+    """
+    def __init__(self, axis=1, **kwargs):
+        super(Accuracy, self).__init__('accuracy', **kwargs)
+        self.axis = axis
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
 
         for label, pred_label in zip(labels, preds):
             if pred_label.shape != label.shape:
-                pred_label = ndarray.argmax_channel(pred_label)
+                pred_label = ndarray.argmax(pred_label, axis=self.axis)
             pred_label = pred_label.asnumpy().astype('int32')
             label = label.asnumpy().astype('int32')
 
@@ -152,12 +209,9 @@ class Accuracy(EvalMetric):
 class TopKAccuracy(EvalMetric):
     """Calculate top k predictions accuracy"""
 
-    def __init__(self, **kwargs):
-        super(TopKAccuracy, self).__init__('top_k_accuracy')
-        try:
-            self.top_k = kwargs['top_k']
-        except KeyError:
-            self.top_k = 1
+    def __init__(self, top_k=1, **kwargs):
+        super(TopKAccuracy, self).__init__('top_k_accuracy', **kwargs)
+        self.top_k = top_k
         assert(self.top_k > 1), 'Please use Accuracy if top_k is no more than 1'
         self.name += '_%d' % self.top_k
 
@@ -183,8 +237,8 @@ class TopKAccuracy(EvalMetric):
 class F1(EvalMetric):
     """Calculate the F1 score of a binary classification problem."""
 
-    def __init__(self):
-        super(F1, self).__init__('f1')
+    def __init__(self, **kwargs):
+        super(F1, self).__init__('f1', **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -237,8 +291,8 @@ class Perplexity(EvalMetric):
         counting. usually should be -1. Include
         all entries if None.
     """
-    def __init__(self, ignore_label):
-        super(Perplexity, self).__init__('Perplexity')
+    def __init__(self, ignore_label, **kwargs):
+        super(Perplexity, self).__init__('Perplexity', **kwargs)
         self.ignore_label = ignore_label
 
     def update(self, labels, preds):
@@ -275,8 +329,8 @@ class Perplexity(EvalMetric):
 class MAE(EvalMetric):
     """Calculate Mean Absolute Error loss"""
 
-    def __init__(self):
-        super(MAE, self).__init__('mae')
+    def __init__(self, **kwargs):
+        super(MAE, self).__init__('mae', **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -293,8 +347,8 @@ class MAE(EvalMetric):
 
 class MSE(EvalMetric):
     """Calculate Mean Squared Error loss"""
-    def __init__(self):
-        super(MSE, self).__init__('mse')
+    def __init__(self, **kwargs):
+        super(MSE, self).__init__('mse', **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -311,8 +365,8 @@ class MSE(EvalMetric):
 
 class RMSE(EvalMetric):
     """Calculate Root Mean Squred Error loss"""
-    def __init__(self):
-        super(RMSE, self).__init__('rmse')
+    def __init__(self, **kwargs):
+        super(RMSE, self).__init__('rmse', **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -329,8 +383,8 @@ class RMSE(EvalMetric):
 
 class CrossEntropy(EvalMetric):
     """Calculate Cross Entropy loss"""
-    def __init__(self, eps=1e-8):
-        super(CrossEntropy, self).__init__('cross-entropy')
+    def __init__(self, eps=1e-8, **kwargs):
+        super(CrossEntropy, self).__init__('cross-entropy', **kwargs)
         self.eps = eps
 
     def update(self, labels, preds):
@@ -347,20 +401,29 @@ class CrossEntropy(EvalMetric):
             self.sum_metric += (-numpy.log(prob + self.eps)).sum()
             self.num_inst += label.shape[0]
 
-class Torch(EvalMetric):
-    """Dummy metric for torch criterions"""
-    def __init__(self, name='torch'):
-        super(Torch, self).__init__(name)
+
+class Loss(EvalMetric):
+    """Dummy metric for directly printing loss"""
+    def __init__(self, name='loss', **kwargs):
+        super(Loss, self).__init__(name, **kwargs)
 
     def update(self, _, preds):
         for pred in preds:
-            self.sum_metric += pred.asnumpy().mean()
-        self.num_inst += 1
+            self.sum_metric += ndarray.sum(pred).asscalar()
+            self.num_inst += pred.size
 
-class Caffe(Torch):
+
+class Torch(Loss):
+    """Dummy metric for torch criterions"""
+    def __init__(self, name='torch', **kwargs):
+        super(Torch, self).__init__(name, **kwargs)
+
+
+class Caffe(Loss):
     """Dummy metric for caffe criterions"""
-    def __init__(self):
-        super(Caffe, self).__init__('caffe')
+    def __init__(self, name='caffe', **kwargs):
+        super(Caffe, self).__init__(name, **kwargs)
+
 
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
@@ -376,12 +439,12 @@ class CustomMetric(EvalMetric):
         This is useful in RNN, where the states are also produced
         in outputs for forwarding.
     """
-    def __init__(self, feval, name=None, allow_extra_outputs=False):
+    def __init__(self, feval, name=None, allow_extra_outputs=False, **kwargs):
         if name is None:
             name = feval.__name__
             if name.find('<') != -1:
                 name = 'custom(%s)' % name
-        super(CustomMetric, self).__init__(name)
+        super(CustomMetric, self).__init__(name, **kwargs)
         self._feval = feval
         self._allow_extra_outputs = allow_extra_outputs
 
