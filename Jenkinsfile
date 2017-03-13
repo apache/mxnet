@@ -9,7 +9,7 @@ stage("Sanity Check") {
   }
 }
 
-def mx_lib = 'lib/mxnet.so'
+def mx_lib = 'lib/libmxnet.so'
 
 def pack_lib(name, mx_lib) {
   sh """
@@ -39,7 +39,7 @@ stage('Build') {
       }
     }
   },
-  'CUDA 7.5+cuDNN5': {
+  'GPU: CUDA7.5+cuDNN5': {
     node('GPU') {
       ws('workspace/gpu-build') {
       checkout scm
@@ -59,13 +59,13 @@ stage('Build') {
 }
 
 stage('Unit Test') {
-  parallel 'Python2': {
+  parallel 'CPU: Python2/3': {
     node {
       echo "python2"
       unpack_lib 'cpu', mx_lib
     }
   },
-  'Python3': {
+  'GPU: Python2/3': {
     node {
       echo "python3"
       unpack_lib 'cpu', mx_lib
