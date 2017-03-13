@@ -37,7 +37,7 @@ stage('Build') {
       ws('workspace/build-cpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh "${mx_run} cpu make -j\$(nproc) USE_BLAS=openblas"
+        sh "${mx_run} cpu 'make clean; make -j\$(nproc) USE_BLAS=openblas'"
         pack_lib 'cpu', mx_lib
       }
     }
@@ -47,7 +47,7 @@ stage('Build') {
       ws('workspace/build-gpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh "${mx_run} gpu make -j\$(nproc) USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1"
+        sh "${mx_run} gpu 'make clean; make -j\$(nproc) USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1'"
         pack_lib 'gpu', mx_lib
       }
     }
