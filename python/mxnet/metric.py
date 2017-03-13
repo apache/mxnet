@@ -37,6 +37,13 @@ class EvalMetric(object):
     def __str__(self):
         return "EvalMetric: {}".format(dict(self.get_name_value()))
 
+    def __getstate__(self):
+        return self.__dict__.copy()
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.reset()
+
     def update_dict(self, label, pred):
         """Update the internal evaluation with named label and pred
 
