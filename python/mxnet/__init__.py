@@ -59,4 +59,6 @@ from . import test_utils
 
 from . import rnn
 
+from . import loss
+
 __version__ = base.__version__

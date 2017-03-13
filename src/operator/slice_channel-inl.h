@@ -189,7 +189,7 @@ class SliceChannelProp : public OperatorProperty {
       << "You are trying to split the " << real_axis
       << "-th axis of input tensor with shape " << dshape
       << " into num_outputs=" << param_.num_outputs
-      << " evenly sized chunks, but this is not possible because "
+      << " chunks, but this is not possible because "
       << param_.num_outputs << " does not evenly divide "
       << dshape[real_axis];
     if (param_.squeeze_axis && ishape[real_axis] != 0) {
