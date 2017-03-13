@@ -11,7 +11,7 @@ stage("Sanity Check") {
 
 def mx_lib = 'lib/libmxnet.so'
 
-def run = 'tests/ci_build/ci_build.sh'
+def mx_run = 'tests/ci_build/ci_build.sh'
 
 def pack_lib(name, mx_lib) {
   sh """
@@ -35,7 +35,8 @@ stage('Build') {
       ws('workspace/build-cpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh "${run} cpu make -j$(nproc) USE_BLAS=openblas"
+        sh "echo ${mx_run}"
+        // sh "${mx_run} cpu make -j$(nproc) USE_BLAS=openblas"
         pack_lib 'cpu', mx_lib
       }
     }
@@ -66,8 +67,8 @@ stage('Unit Test') {
         checkout scm
         sh 'git submodule update --init'
         unpack_lib 'cpu', mx_lib
-        sh "${run} cpu 'export PYTHONPATH=`pwd`/python/; nosetests --verbose tests/python/unittest' "
-        sh "${run} cpu \"export PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest\" "
+        // sh "${run} cpu 'export PYTHONPATH=`pwd`/python/; nosetests --verbose tests/python/unittest' "
+        // sh "${run} cpu \"export PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest\" "
       }
     }
   },
