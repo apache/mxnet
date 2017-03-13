@@ -1,14 +1,3 @@
-stage("Sanity Check") {
-  node('master') {
-    checkout scm
-    sh 'git submodule update --init'
-    // sh 'tests/ci_build/ci_build.sh lint make cpplint'
-    // sh 'tests/ci_build/ci_build.sh lint make rcpplint'
-    // sh 'tests/ci_build/ci_build.sh lint make jnilint'
-    // sh 'tests/ci_build/ci_build.sh lint make pylint'
-  }
-}
-
 def mx_lib = 'lib/libmxnet.so'
 def mx_run = 'tests/ci_build/ci_build.sh'
 
@@ -27,6 +16,20 @@ echo "Unpacked ${mx_lib} from ${name}"
 md5sum ${mx_lib}
 """
 }
+
+stage("Sanity Check") {
+  node {
+    ws('workspace/sanity') {
+      checkout scm
+      sh 'git submodule update --init'
+      sh '${mx_run} lint make cpplint'
+      sh '${mx_run} lint make rcpplint'
+      sh '${mx_run} lint make jnilint'
+      sh '${mx_run} lint make pylint'
+    }
+  }
+}
+
 
 stage('Build') {
   parallel 'CPU': {
@@ -74,9 +77,15 @@ stage('Unit Test') {
       }
     }
   },
-  'Scala': {
+  'Scala: CPU': {
     node {
-      echo "xxx"
+      ws('workspace/ut-scala-cpu') {
+        checkout scm
+        sh 'git submodule update --init'
+        unpack_lib 'cpu', mx_lib
+        sh "${mx_run} cpu make scalapkg"
+        sh "${mx_run} cpu make scalatest"
+      }
     }
   }
 }
