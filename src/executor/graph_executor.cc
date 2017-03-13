@@ -754,7 +754,8 @@ void GraphExecutor::InitOpSegs() {
           output_gradient = true;
         }
       }
-      if (output_gradient || (op_node.exec != nullptr && op_node.exec->exec_type() != Operator::kSync)) {
+      if (output_gradient ||
+         (op_node.exec != nullptr && op_node.exec->exec_type() != Operator::kSync)) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
       }
