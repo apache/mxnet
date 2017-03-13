@@ -35,7 +35,7 @@ stage('Build') {
       ws('workspace/build-cpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh "echo ${mx_run}"
+        sh "${mx_run} cpu uname -a"
         // sh "${mx_run} cpu make -j$(nproc) USE_BLAS=openblas"
         pack_lib 'cpu', mx_lib
       }
