@@ -36,7 +36,7 @@ include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
-WARNFLAGS= -Wall
+WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
@@ -69,7 +69,7 @@ endif
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
-	LDFLAGS += -ljpeg -lpng -lz $(shell pkg-config --libs opencv)
+	LDFLAGS += $(shell pkg-config --libs opencv)
 	BIN += bin/im2rec
 else
 	CFLAGS+= -DMXNET_USE_OPENCV=0
@@ -259,8 +259,14 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: rcpplint jnilint
-	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python
+lint: cpplint rcpplint jnilint pylint
+
+cpplint:
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin
+
+pylint:
+# ideally we want to check all, such as: python tools example tests
+	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc -r y
 
 doc: doxygen
 

@@ -24,15 +24,27 @@ ifndef EMCC
     EMCC=emcc
 endif
 
+ifndef DISABLE_OPENMP
+       DEFS+=-DDISABLE_OPENMP=1
+endif
 
 .PHONY: all clean
 
 DEFS+=-DMSHADOW_USE_CUDA=0 -DMSHADOW_USE_MKL=0 -DMSHADOW_RABIT_PS=0 -DMSHADOW_DIST_PS=0 -DDMLC_LOG_STACK_TRACE=0
-DEFS+=-DMSHADOW_FORCE_STREAM -DMXNET_USE_OPENCV=0 -DMXNET_PREDICT_ONLY=1 -DDISABLE_OPENMP=1
+DEFS+=-DMSHADOW_FORCE_STREAM -DMXNET_USE_OPENCV=0 -DMXNET_PREDICT_ONLY=1
 CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall $(DEFS)
 ifneq ($(MIN), 1)
 	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
-	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib -lopenblas
+	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib
+        
+	# Define which blas is installed. Uses OpenBLAS by default.
+	ifeq ($(USE_BLAS), atlas)
+                LDFLAGS += -lcblas
+        else ifeq ($(USE_BLAS), blas)
+                LDFLAGS += -lblas
+        else
+		LDFLAGS += -lopenblas
+	endif
 endif
 
 

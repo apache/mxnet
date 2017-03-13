@@ -59,8 +59,8 @@ class SpatialTransformerOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 3U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = in_data[st::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[st::kOut].get<xpu, 4, DType>(s);
@@ -99,8 +99,8 @@ class SpatialTransformerOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 3U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = in_data[st::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> grad = out_grad[st::kOut].get<xpu, 4, DType>(s);

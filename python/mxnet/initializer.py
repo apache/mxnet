@@ -66,7 +66,7 @@ class Initializer(object):
 
         Parameters
         ----------
-        name : InitDesc
+        desc : InitDesc
             Initialization pattern Descriptor
 
         arr : NDArray
@@ -469,4 +469,3 @@ class FusedRNN(Initializer):
             desc = InitDesc(name)
             self._init(desc, args[name])
         arr[:] = cell.pack_weights(args)['parameters']
-

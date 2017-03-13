@@ -236,7 +236,8 @@ class PoolingProp : public OperatorProperty {
       out_shape->clear();
       out_shape->push_back(oshape);
     } else if (param_.kernel.ndim() == 3) {
-      CHECK_EQ(dshape.ndim(), 5U) << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
+      CHECK_EQ(dshape.ndim(), 5U)
+        << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
       CHECK_LE(param_.kernel[0], dshape[2] + 2 * param_.pad[0]) << "kernel size exceeds input";
       CHECK_LE(param_.kernel[1], dshape[3] + 2 * param_.pad[1]) << "kernel size exceeds input";
       CHECK_LE(param_.kernel[2], dshape[4] + 2 * param_.pad[2]) << "kernel size exceeds input";

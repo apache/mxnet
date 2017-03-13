@@ -282,7 +282,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         dot.node(name=name, label=label, **attr)
 
     # add edges
-    for node in nodes:
+    for node in nodes:          # pylint: disable=too-many-nested-blocks
         op = node["op"]
         name = node["name"]
         if op == "null":

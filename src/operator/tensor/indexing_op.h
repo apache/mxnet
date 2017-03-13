@@ -170,7 +170,7 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 // Returns integer log2(a) rounded up
-static int ilog2(unsigned int a) {
+inline int ilog2(unsigned int a) {
   int k = 1;
   while (a >>= 1) k++;
   return k;
@@ -485,9 +485,9 @@ void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 2);
-  CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(req.size(), 1);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {

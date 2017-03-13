@@ -40,9 +40,15 @@ object MnistMlp {
     softmax
   }
 
-  def runIntermediateLevelApi(train: DataIter, eval: DataIter, cmdLine: MnistMlp): Unit = {
+  def runIntermediateLevelApi(train: DataIter, eval: DataIter,
+      cmdLine: MnistMlp, loadModelEpoch: Int = -1): Unit = {
     // Intermediate-level API
-    val mod = new Module(getSymbol)
+    val mod = if (loadModelEpoch == -1) {
+      new Module(getSymbol)
+    } else {
+      logger.info("Load checkpoint from epoch {}", loadModelEpoch)
+      Module.loadCheckpoint("model/mnist_mlp", loadModelEpoch, loadOptimizerStates = true)
+    }
     mod.bind(dataShapes = train.provideData, labelShapes = Some(train.provideLabel))
     mod.initParams()
     mod.initOptimizer(optimizer = new SGD(learningRate = 0.01f, momentum = 0.9f))
@@ -58,17 +64,18 @@ object MnistMlp {
         mod.update()
       }
 
+      mod.saveCheckpoint("model/mnist_mlp", epoch, saveOptStates = true)
+
       val (name, value) = metric.get
       logger.info(s"epoch $epoch $name=$value")
       metric.reset()
       train.reset()
     }
-
-    // High-level API
-    train.reset()
   }
 
   def runHighLevelApi(train: DataIter, test: DataIter, cmdLine: MnistMlp): Unit = {
+    // High-level API
+    train.reset()
     val mod = new Module(getSymbol)
     mod.fit(train, evalData = scala.Option(test), numEpoch = cmdLine.numEpoch)
 
@@ -137,7 +144,11 @@ object MnistMlp {
         "batch_size" -> inst.batchSize.toString,
         "flat" -> "True", "silent" -> "False"))
 
+      logger.info("Run intermediate level api from beginning.")
       runIntermediateLevelApi(train, eval, inst)
+      logger.info("Run intermediate level api, start with last trained epoch.")
+      runIntermediateLevelApi(train, eval, inst, loadModelEpoch = inst.numEpoch - 1)
+      logger.info("Run high level api")
       runHighLevelApi(train, eval, inst)
     } catch {
       case ex: Exception =>
