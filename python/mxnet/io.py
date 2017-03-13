@@ -374,9 +374,10 @@ def _init_data(data, allow_empty, default_name):
         if not allow_empty:
             assert(len(data) > 0)
         if len(data) == 1:
-            data = OrderedDict([(default_name, data[0])])
+            data = OrderedDict([(default_name, data[0])]) # pylint: disable=redefined-variable-type
         else:
-            data = OrderedDict([('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
+            data = OrderedDict( # pylint: disable=redefined-variable-type
+                [('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
     if not isinstance(data, dict):
         raise TypeError("Input must be NDArray, numpy.ndarray, " + \
                 "a list of them or dict with them as values")
