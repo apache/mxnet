@@ -750,6 +750,36 @@ class FusedRNNCell(BaseRNNCell):
 
         return outputs, states
 
+    def unfuse(self):
+        """Unfuse the fused RNN
+
+        Returns
+        -------
+        cell : SequentialRNNCell
+            unfused cell that can be used for stepping, and can run on CPU.
+        """
+        stack = SequentialRNNCell()
+        get_cell = {'rnn_relu': lambda cell_prefix: RNNCell(self._num_hidden,
+                                                            activation='relu',
+                                                            prefix=cell_prefix),
+                    'rnn_tanh': lambda cell_prefix: RNNCell(self._num_hidden,
+                                                            activation='tanh',
+                                                            prefix=cell_prefix),
+                    'lstm': lambda cell_prefix: LSTMCell(self._num_hidden,
+                                                         prefix=cell_prefix),
+                    'gru': lambda cell_prefix: GRUCell(self._num_hidden,
+                                                       prefix=cell_prefix)}[self._mode]
+        for i in range(self._num_layers):
+            if self._bidirectional:
+                stack.add(BidirectionalCell(
+                    get_cell('%sl%d_'%(self._prefix, i)),
+                    get_cell('%sr%d_'%(self._prefix, i)),
+                    output_prefix='%sbi_%s_%d'%(self._prefix, self._mode, i)))
+            else:
+                stack.add(get_cell('%sl%d_'%(self._prefix, i)))
+        return stack
+
+
 
 class SequentialRNNCell(BaseRNNCell):
     """Sequantially stacking multiple RNN cells
