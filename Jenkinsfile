@@ -83,7 +83,7 @@ stage('Unit Test') {
         checkout scm
         sh 'git submodule update --init'
         unpack_lib 'cpu', mx_lib
-        sh "${mx_run} cpu make scalapkg"
+        sh "${mx_run} cpu make scalapkg USE_BLAS=openblas"
         sh "${mx_run} cpu make scalatest"
       }
     }
