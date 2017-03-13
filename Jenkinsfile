@@ -1,10 +1,9 @@
-def mx_lib = 'lib/libmxnet.so lib/libmxnet.a dmlc-core/libdmlc.a nnvm/lib/libnnvm.a'
+def mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 def mx_run = 'tests/ci_build/ci_build.sh'
 
 def pack_lib(name, mx_lib) {
   sh """
 echo "Packing ${mx_lib} into ${name}"
-md5sum ${mx_lib}
 """
   stash includes: mx_lib, name: name
 }
@@ -13,7 +12,6 @@ def unpack_lib(name, mx_lib) {
   unstash name
   sh """
 echo "Unpacked ${mx_lib} from ${name}"
-md5sum ${mx_lib}
 """
 }
 
