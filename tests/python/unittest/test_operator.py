@@ -1263,13 +1263,13 @@ def test_expand_dims():
 
 def test_crop():
     for ndim in range(1, 6):
-        for t in range(50):
+        for t in range(10):
             dims = []
             begin = []
             end = []
             idx = []
             for i in range(ndim):
-                d = random.randint(1, 10)
+                d = random.randint(1, 5)
                 b = random.randint(0, d-1)
                 e = random.randint(b+1, d)
                 if b == 0 and random.randint(0, 1):
