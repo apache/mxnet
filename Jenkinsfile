@@ -9,7 +9,7 @@ stage("Sanity Check") {
   }
 }
 
-def mx_lib = 'libxx'
+def mx_lib = 'lib/mxnet.so'
 
 def pack_lib(name, mx_lib) {
   sh """
@@ -34,15 +34,14 @@ stage('Build') {
       ws('workspace/cpu-build') {
         checkout scm
         sh 'git submodule update --init'
-        //sh "tests/ci_build/ci_build.sh lint ' >${mx_lib}'"
-        sh "date >${mx_lib}"
+        sh '''tests/ci_build/ci_build.sh cpu  make -j$(nproc) USE_BLAS=openblas'''
         pack_lib 'cpu', mx_lib
       }
     }
   },
   'CUDA 7.5+cuDNN5': {
     node('GPU') {
-      ws('gpu-build') {
+      ws('workspace/gpu-build') {
       checkout scm
       sh 'git submodule update --init'
 //      sh '''tests/ci_build/ci_build.sh gpu make -j$(nproc) \
@@ -52,8 +51,8 @@ stage('Build') {
 //USE_BLAS=openblas \
 //EXTRA_OPERATORS=example/ssd/operator
 //      '''
-      sh "sleep 2; date >${mx_lib}"
-      pack_lib 'gpu', mx_lib
+      // sh "sleep 2; date >${mx_lib}"
+      // pack_lib 'gpu', mx_lib
       }
     }
   }
@@ -69,7 +68,8 @@ stage('Unit Test') {
   'Python3': {
     node {
       echo "python3"
-      unpack_lib 'gpu', mx_lib
+      unpack_lib 'cpu', mx_lib
+      // unpack_lib 'gpu', mx_lib
     }
   },
   'Scala': {
