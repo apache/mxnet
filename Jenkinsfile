@@ -63,7 +63,7 @@ stage('Build') {
 }
 
 stage('Unit Test') {
-  parallel 'CPU: Python2/3': {
+  parallel 'CPU: Python2+3': {
     node {
       ws('workspace/ut-python-cpu') {
         checkout_git
@@ -72,7 +72,7 @@ stage('Unit Test') {
         sh 'tests/ci_build/ci_build.sh cpu "PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest" '
     }
   },
-  'GPU: Python2/3': {
+  'GPU: Python2+3': {
     node {
       echo "python3"
       unpack_lib 'cpu', mx_lib
