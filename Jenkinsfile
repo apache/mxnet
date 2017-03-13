@@ -22,10 +22,10 @@ stage("Sanity Check") {
     ws('workspace/sanity') {
       checkout scm
       sh 'git submodule update --init'
-      sh '${mx_run} lint make cpplint'
-      sh '${mx_run} lint make rcpplint'
-      sh '${mx_run} lint make jnilint'
-      sh '${mx_run} lint make pylint'
+      sh "${mx_run} lint make cpplint"
+      sh "${mx_run} lint make rcpplint"
+      sh "${mx_run} lint make jnilint"
+      sh "${mx_run} lint make pylint"
     }
   }
 }
