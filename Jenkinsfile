@@ -11,6 +11,8 @@ stage("Sanity Check") {
 
 def mx_lib = 'lib/libmxnet.so'
 
+def run = 'tests/ci_build/ci_build.sh'
+
 def pack_lib(name, mx_lib) {
   sh """
 echo "Packing ${mx_lib} into ${name}"
@@ -27,18 +29,13 @@ md5sum ${mx_lib}
 """
 }
 
-def checkout_git() {
-  checkout scm
-  sh 'git submodule update --init'
-}
-
 stage('Build') {
   parallel 'CPU': {
     node {
       ws('workspace/build-cpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh '''tests/ci_build/ci_build.sh cpu make -j$(nproc) USE_BLAS=openblas'''
+        sh "${run} cpu make -j$(nproc) USE_BLAS=openblas"
         pack_lib 'cpu', mx_lib
       }
     }
@@ -66,10 +63,11 @@ stage('Unit Test') {
   parallel 'CPU: Python2/3': {
     node {
       ws('workspace/ut-python-cpu') {
-        checkout_git
+        checkout scm
+        sh 'git submodule update --init'
         unpack_lib 'cpu', mx_lib
-        sh 'tests/ci_build/ci_build.sh cpu "export PYTHONPATH=`pwd`/python/; nosetests --verbose tests/python/unittest" '
-        sh 'tests/ci_build/ci_build.sh cpu "export PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest" '
+        sh "${run} cpu 'export PYTHONPATH=`pwd`/python/; nosetests --verbose tests/python/unittest' "
+        sh "${run} cpu \"export PYTHONPATH=`pwd`/python/; nosetests3 --verbose tests/python/unittest\" "
       }
     }
   },
