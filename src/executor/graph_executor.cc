@@ -706,8 +706,9 @@ void GraphExecutor::InitOpSegs() {
     size_t num_vars_threshold = (bulk_forward_percent * total_num_forward_vars + 99) / 100;
     size_t topo_start = 0, num_vars = 0;
     for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
-      if (op_nodes_[nid].skip_exec_node) {
-          continue;
+      auto &op_node = op_nodes_[nid];
+      if (op_node.skip_exec_node) {
+        continue;
       }
       auto &node = graph_.indexed_graph()[nid].source;
       // check if it's a variable
@@ -720,6 +721,11 @@ void GraphExecutor::InitOpSegs() {
           topo_start = nid;
         }
         num_vars++;
+      } else if (op_node.exec != nullptr && op_node.exec->exec_type() != Operator::kSync) {
+        // create a new segment for the previous nodes if the current one cannot be bulked
+        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+        num_vars = 0;
+        topo_start = nid + 1;
       }
     }
     // the last segmenet
@@ -748,7 +754,7 @@ void GraphExecutor::InitOpSegs() {
           output_gradient = true;
         }
       }
-      if (output_gradient) {
+      if (output_gradient || (op_node.exec != nullptr && op_node.exec->exec_type() != Operator::kSync)) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
       }
@@ -837,7 +843,10 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   ret.topo_start = topo_start;
   ret.topo_end = topo_end;
   auto& exec_list = ret.exec_list;
-
+  // invalid segment
+  if (topo_end <= topo_start) {
+    return ret;
+  }
   // dedup util function
   auto dedup = [] (std::vector<Engine::VarHandle>& vars) {  // NOLINT(*)
     std::sort(vars.begin(), vars.end());
