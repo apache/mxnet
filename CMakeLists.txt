@@ -14,14 +14,13 @@ mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
-mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
+mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" OFF)
 mxnet_option(USE_JEMALLOC "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
-mxnet_option(USE_SCALA "Build Scala packages" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -55,6 +54,18 @@ else(MSVC)
   endif()
 endif(MSVC)
 
+set(mxnet_LINKER_LIBS "")
+set(mxnet_LINKER_LIBS_DEBUG "")
+set(mxnet_LINKER_LIBS_RELEASE "")
+
+if(USE_MKL_IF_AVAILABLE)
+  find_package(MKL)
+  if(MKL_FOUND)
+    include_directories(${MKL_INCLUDE_DIR})
+    list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
+  endif()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
   include(mshadow/cmake/mshadow.cmake)
   include(mshadow/cmake/Utils.cmake)
@@ -65,29 +76,17 @@ else()
   include(mshadow)
 endif()
 
+list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+
 foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
  	include_directories(${var})
 endforeach()
-
-set(mxnet_LINKER_LIBS "")
-set(mxnet_LINKER_LIBS_DEBUG "")
-set(mxnet_LINKER_LIBS_RELEASE "")
-list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
 
 include_directories("include")
 include_directories("mshadow")
 include_directories("cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
-
-if(USE_MKL_IF_AVAILABLE)
-  find_package(MKL)
-  if(MKL_FOUND)
-    include_directories(${MKL_INCLUDE_DIR})
-    list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
-  endif()
-endif()
-
 
 if(UNIX)
   find_library(RTLIB rt)
@@ -313,6 +312,7 @@ if(USE_CUDA)
     list(APPEND mxnet_LINKER_LIBS ${CUDA_cuda_LIBRARY})
   else(MSVC)
     list(APPEND mxnet_LINKER_LIBS nvrtc cuda)
+    message(STATUS "LIBS SO FAR: ${mxnet_LINKER_LIBS}")
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
@@ -359,19 +359,20 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-  add_library(mxnet_static STATIC ${SOURCE})
-  # Need an arbitrary source file to trigger CMake to build the library
-  add_library(mxnet SHARED src/initialize.cc)
-  target_link_libraries(mxnet
-      -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
-  )
-  add_custom_target(
-      Name ALL
-      BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-      WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-      COMMAND ln -sf libmxnet_static.a libmxnet.a
-      DEPENDS mxnet_static
-  )
+    #add_library(mxnet_static STATIC ${SOURCE})
+    add_library(mxnet SHARED ${SOURCE})
+    # Need an arbitrary source file to trigger CMake to build the library
+#    add_library(mxnet SHARED src/initialize.cc)
+#    target_link_libraries(mxnet
+#        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
+#    )
+#    add_custom_target(
+#        Name ALL
+#        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+#        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+#        COMMAND ln -sf libmxnet_static.a libmxnet.a
+#        DEPENDS mxnet_static
+#    )
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()
