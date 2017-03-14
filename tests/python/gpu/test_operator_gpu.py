@@ -377,12 +377,23 @@ def test_bidirectional():
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
 
+def test_unfuse():
+    for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
+        fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode=mode,
+                prefix='test_%s'%mode,
+                bidirectional=True)
+
+        stack = fused.unfuse()
+
+        check_rnn_consistency(fused, stack)
+        check_rnn_consistency(stack, fused)
 
 if __name__ == '__main__':
     test_bidirectional()
     test_lstm()
     test_gru()
     test_rnn()
+    test_unfuse()
     test_convolution_options()
     test_convolution_with_type()
     test_pooling_with_type()
