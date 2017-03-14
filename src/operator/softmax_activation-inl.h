@@ -62,8 +62,8 @@ class SoftmaxActivationOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.mode == softmax_activation::kInstance) {
       Tensor<xpu, 2> data = in_data[softmax_activation::kData].FlatTo2D<xpu, real_t>(s);
@@ -92,9 +92,9 @@ class SoftmaxActivationOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
-    CHECK_EQ(req.size(), 1);
+    CHECK_EQ(req.size(), 1U);
     // Use 3d tensor for both mode -> {instance, channel}. Get shapes
     int total_size = in_grad[softmax_activation::kData].Size();
     int batch_size = in_grad[softmax_activation::kData].shape_[0];
@@ -140,7 +140,7 @@ class SoftmaxActivationProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
+    CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
     const TShape &dshape = in_shape->at(softmax_activation::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();

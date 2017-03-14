@@ -58,15 +58,16 @@
           </compilerStartOptions>
           <compilerEndOptions>
             <compilerEndOption>-I../../../include</compilerEndOption>
+            <compilerEndOption>${all_includes}</compilerEndOption>
             <compilerEndOption>${cflags}</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
           <linkerMiddleOptions>
+            <linkerMiddleOption>${all_ldpaths}</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <linkerMiddleOption>../../../lib/libmxnet.a</linkerMiddleOption>
             <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
