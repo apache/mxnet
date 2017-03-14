@@ -25,7 +25,7 @@ stage('Build') {
         checkout scm
         sh 'git submodule update --init'    
         dir 'amalgamation'
-        flag = 'USE_BLAS=atlas MIN=1'        
+        def flag = 'USE_BLAS=atlas MIN=1'        
         sh "${mx_run} cpu make ${flag}"        
       }
     }
