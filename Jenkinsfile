@@ -22,7 +22,7 @@ echo ${mx_lib} | sed -e 's/,/ /g' | xargs md5sum
 
 def init_git() {
   checkout scm
-  sh 'timeout 5m git submodule update --init --depth=1'
+  sh 'timeout 5m git submodule update --init'
 }
 
 stage("Sanity Check") {
