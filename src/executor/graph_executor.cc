@@ -839,6 +839,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
   std::vector<Engine::VarHandle> use_vars;
   std::vector<Engine::VarHandle> mutate_vars;
+  std::unordered_set<Engine::VarHandle> use_var_set;
+  std::unordered_set<Engine::VarHandle> mutate_var_set;
   Context *pctx = nullptr;
   GraphExecutor::CachedSegOpr ret;
   ret.topo_start = topo_start;
@@ -869,28 +871,23 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
       return ret;
     }
     auto& exec = op_nodes_[nid].exec;
-    mutate_vars.insert(mutate_vars.end(), op_node.mutate_vars.begin(), op_node.mutate_vars.end());
-    use_vars.insert(use_vars.end(), op_node.use_vars.begin(), op_node.use_vars.end());
+    std::copy(op_node.mutate_vars.begin(), op_node.mutate_vars.end(), std::inserter(mutate_var_set, mutate_var_set.end()));
+    // avoid copying mutate vars to const var list
+    for (auto use_var : op_node.use_vars) {
+      if (mutate_var_set.find(use_var) == mutate_var_set.end()) {
+        use_var_set.insert(use_var);
+      }
+    }
     ret.exec_list.push_back(exec.get());
   }
 
   if (pctx == nullptr) return ret;
   ret.ctx = *pctx;
-
+  std::copy(mutate_var_set.begin(), mutate_var_set.end(), std::back_inserter(mutate_vars));
+  std::copy(use_var_set.begin(), use_var_set.end(), std::back_inserter(use_vars));
   // deduplication
   dedup(mutate_vars);
   dedup(use_vars);
-  // remove mutate var from use vars
-  auto wit = mutate_vars.begin();
-  auto rtop = use_vars.begin();
-  for (auto rit = use_vars.begin(); rit != use_vars.end(); ++rit) {
-    while (wit != mutate_vars.end() && *wit < *rit) ++wit;
-    if (*wit != *rit) {
-      *rtop = *rit;
-      ++rtop;
-    }
-  }
-  use_vars.resize(rtop - use_vars.begin());
 
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [exec_list, is_gpu] (
