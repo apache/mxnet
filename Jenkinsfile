@@ -25,7 +25,7 @@ stage('Build') {
         sh 'timeout 60s git submodule update --init'    
         dir('amalgamation') {
           def flag = 'USE_BLAS=atlas MIN=1'        
-          sh "${mx_run} cpu make ${flag}"        
+          sh "../${mx_run} cpu make ${flag}"        
         }
       }
     }
