@@ -57,7 +57,6 @@ endif(MSVC)
 set(mxnet_LINKER_LIBS "")
 set(mxnet_LINKER_LIBS_DEBUG "")
 set(mxnet_LINKER_LIBS_RELEASE "")
-list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
 
 if(USE_MKL_IF_AVAILABLE)
   find_package(MKL)
@@ -76,6 +75,8 @@ else()
   include(Cuda)
   include(mshadow)
 endif()
+
+list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
 
 foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
  	include_directories(${var})
