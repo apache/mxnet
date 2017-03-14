@@ -34,8 +34,8 @@ class CuDNNSoftmaxActivationOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4> data;
     Tensor<gpu, 4> out;
@@ -100,10 +100,10 @@ class CuDNNSoftmaxActivationOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
-    CHECK_EQ(req.size(), 1);
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
+    CHECK_EQ(req.size(), 1U);
+    CHECK_EQ(in_grad.size(), 1U);
     float alpha = 1.0f;
     float beta = 0.0f;
     Stream<gpu> *s = ctx.get_stream<gpu>();

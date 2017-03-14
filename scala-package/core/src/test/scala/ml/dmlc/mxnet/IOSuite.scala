@@ -23,13 +23,16 @@ import scala.sys.process._
 
 
 class IOSuite extends FunSuite with BeforeAndAfterAll {
+
+  private var tu = new TestUtil
+
   test("test MNISTIter & MNISTPack") {
     // get data
     "./scripts/get_mnist_data.sh" !
 
     val params = Map(
-      "image" -> "data/train-images-idx3-ubyte",
-      "label" -> "data/train-labels-idx1-ubyte",
+      "image" -> tu.dataFile("train-images-idx3-ubyte"),
+      "label" -> tu.dataFile("train-labels-idx1-ubyte"),
       "data_shape" -> "(784,)",
       "batch_size" -> "100",
       "shuffle" -> "1",
@@ -88,8 +91,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     "./scripts/get_cifar_data.sh" !
 
     val params = Map(
-      "path_imgrec" -> "data/cifar/train.rec",
-      "mean_img" -> "data/cifar/cifar10_mean.bin",
+      "path_imgrec" -> tu.dataFile("cifar/train.rec"),
+      "mean_img" -> tu.dataFile("cifar/cifar10_mean.bin"),
       "rand_crop" -> "False",
       "and_mirror" -> "False",
       "shuffle" -> "False",
@@ -135,8 +138,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     "./scripts/get_mnist_data.sh" !
 
     val params = Map(
-      "image" -> "data/train-images-idx3-ubyte",
-      "label" -> "data/train-labels-idx1-ubyte",
+      "image" -> tu.dataFile("train-images-idx3-ubyte"),
+      "label" -> tu.dataFile("train-labels-idx1-ubyte"),
       "data_shape" -> "(784,)",
       "batch_size" -> "100",
       "shuffle" -> "1",
@@ -172,8 +175,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     "./scripts/get_mnist_data.sh" !
 
     val params = Map(
-      "image" -> "data/train-images-idx3-ubyte",
-      "label" -> "data/train-labels-idx1-ubyte",
+      "image" -> tu.dataFile("train-images-idx3-ubyte"),
+      "label" -> tu.dataFile("train-labels-idx1-ubyte"),
       "data_shape" -> "(784,)",
       "batch_size" -> "100",
       "shuffle" -> "1",

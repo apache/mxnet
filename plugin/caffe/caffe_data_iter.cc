@@ -14,7 +14,6 @@
 #include "caffe_blob.h"
 #include "../../src/io/inst_vector.h"
 #include "../../src/io/iter_prefetcher.h"
-#include "../../src/operator/cast-inl.h"
 
 #define CHECK_NEXT_TIMING
 

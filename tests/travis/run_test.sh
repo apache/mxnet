@@ -46,9 +46,7 @@ if [ ${TASK} == "cpp_test" ]; then
     echo "GTEST_PATH="${CACHE_PREFIX} >> config.mk
     make test || exit -1
     export MXNET_ENGINE_INFO=true
-    for test in tests/cpp/*_test; do
-        ./$test || exit -1
-    done
+    ./build/tests/cpp/mxnet_test
     exit 0
 fi
 
@@ -61,13 +59,13 @@ if [ ${TASK} == "r_test" ]; then
 
     set -e
     export _R_CHECK_TIMINGS_=0
-    
+
     if [[ ${TRAVIS_OS_NAME} == "osx" ]]; then
         wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
         sudo installer -pkg "/tmp/R-latest.pkg" -target /
         Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
-    fi        
-    
+    fi
+
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
@@ -162,7 +160,7 @@ if [ ${TASK} == "perl_test" ]; then
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         install_name_tool -change lib/libmxnet.so \
             ${MXNET_HOME}/lib/libmxnet.so \
-            blib/arch/auto/AI/MXNetCAPI/MXNetCAPI.bundle 
+            blib/arch/auto/AI/MXNetCAPI/MXNetCAPI.bundle
     fi
     make install || exit -1
 
@@ -172,7 +170,7 @@ if [ ${TASK} == "perl_test" ]; then
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         install_name_tool -change lib/libmxnet.so \
             ${MXNET_HOME}/lib/libmxnet.so \
-            blib/arch/auto/AI/NNVMCAPI/NNVMCAPI.bundle 
+            blib/arch/auto/AI/NNVMCAPI/NNVMCAPI.bundle
     fi
     make install || exit -1
 
