@@ -65,7 +65,7 @@ NNVM_REGISTER_OP(_backward_broadcast_mul)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::right,
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn_OLD<cpu, mshadow_op::right,
                                                               mshadow_op::left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_div)
@@ -84,7 +84,7 @@ NNVM_REGISTER_OP(_backward_broadcast_div)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::div_grad,
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn_OLD<cpu, mshadow_op::div_grad,
                                                               mshadow_op::div_rgrad>);
 
 }  // namespace op
