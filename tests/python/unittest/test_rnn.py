@@ -1,5 +1,4 @@
 import mxnet as mx
-import numpy as np
 
 def test_rnn():
     cell = mx.rnn.RNNCell(100, prefix='rnn_')
@@ -11,8 +10,8 @@ def test_rnn():
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
-def test_lstm():
-    cell = mx.rnn.LSTMCell(100, prefix='rnn_')
+def test_lstm(forget_bias):
+    cell = mx.rnn.LSTMCell(100, prefix='rnn_', forget_bias=forget_bias)
     outputs, _ = cell.unroll(3, input_prefix='rnn_')
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.params._params.keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
@@ -74,7 +73,8 @@ def test_unfuse():
 
 if __name__ == '__main__':
     test_rnn()
-    test_lstm()
+    test_lstm(forget_bias=0.0)
+    test_lstm(forget_bias=1.0)
     test_gru()
     test_stack()
     test_bidirectional()

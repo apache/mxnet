@@ -355,14 +355,19 @@ class LSTMCell(BaseRNNCell):
     params : RNNParams or None
         container for weight sharing between cells.
         created if None.
+    forget_bias : bias added to forget gate, default 0.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0
+        but the default is set to 0.0 for backward compatibility.
+
     """
-    def __init__(self, num_hidden, prefix='lstm_', params=None):
+    def __init__(self, num_hidden, prefix='lstm_', params=None, forget_bias=0.0):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
         self._num_hidden = num_hidden
         self._iW = self.params.get('i2h_weight')
         self._iB = self.params.get('i2h_bias')
         self._hW = self.params.get('h2h_weight')
         self._hB = self.params.get('h2h_bias')
+        self._forget_bias = forget_bias
 
     @property
     def state_shape(self):
@@ -404,7 +409,7 @@ class LSTMCell(BaseRNNCell):
                                           name="%sslice"%name)
         in_gate = symbol.Activation(slice_gates[0], act_type="sigmoid",
                                     name='%si'%name)
-        forget_gate = symbol.Activation(slice_gates[1], act_type="sigmoid",
+        forget_gate = symbol.Activation(slice_gates[1] + self._forget_bias, act_type="sigmoid",
                                         name='%sf'%name)
         in_transform = symbol.Activation(slice_gates[2], act_type="tanh",
                                          name='%sc'%name)
