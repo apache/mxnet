@@ -19,7 +19,7 @@ fi
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(brazil-path [Cuda]pkg.lib)/stubs"
 export MXNET_DATA_DIR="$(brazil-path [DeepMXNetTestData]pkg.lib)/../data"
 
-export EXTRA_LINKLIBS="-lmxnet -ldmlccore -lnnvm"
+export EXTRA_LINKLIBS="-lmxnet_static -ldmlccore -lnnvm"
 export EXTRA_CFLAGS="-std=c++0x -fPIC -g -O2 -D__USE_XOPEN2K8"
 
 if [ "$1" == "mvn" ]; then
