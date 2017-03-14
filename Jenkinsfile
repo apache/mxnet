@@ -19,7 +19,8 @@ echo ${mx_lib} | sed -e 's/,/ /g' | xargs md5sum
 
 
 stage('Build') {
-  parallel 'Amalgamation': {
+  parallel 'Amalgamation': 
+    node {
       ws('workspace/amalgamation') {
         checkout scm
         sh 'git submodule update --init'    
@@ -27,5 +28,6 @@ stage('Build') {
         flag = 'USE_BLAS=atlas MIN=1'        
         sh "${mx_run} cpu make ${flag}"        
       }
+    }
   }
 }
