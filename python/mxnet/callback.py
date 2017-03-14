@@ -97,19 +97,12 @@ class Speedometer(object):
         How many batches between calculations.
         Defaults to calculating & logging every 50 batches.
     """
-    def __init__(self, batch_size, frequent=50, logging_dir=None):
+    def __init__(self, batch_size, frequent=50):
         self.batch_size = batch_size
         self.frequent = frequent
         self.init = False
         self.tic = 0
         self.last_count = 0
-        self.summary_writer = None
-        if logging_dir is not None:
-            try:
-                from tensorboard import SummaryWriter
-                self.summary_writer = SummaryWriter(logging_dir)
-            except ImportError:
-                logging.error('You can install tensorboard via `pip install tensorboard`.')
 
     def __call__(self, param):
         """Callback to Show speed."""
@@ -127,14 +120,9 @@ class Speedometer(object):
                     for name, value in name_value:
                         logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
                                      param.epoch, count, speed, name, value)
-                        if self.summary_writer is not None:
-                            self.summary_writer.add_scalar('Training-Speed', speed)
-                            self.summary_writer.add_scalar('Training-%s' % name, value)
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)
-                    if self.summary_writer is not None:
-                        self.summary_writer.add_scalar('Training-Speed', speed)
                 self.tic = time.time()
         else:
             self.init = True
