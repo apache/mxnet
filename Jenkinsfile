@@ -19,12 +19,12 @@ echo ${mx_lib} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 def init_git() {
+  checkout scm
   sh 'timeout 50s git submodule update --init'            
 }
 stage('Build') {
     node {
       ws('workspace/amalgamation') {
-        checkout scm
         init_git()
         def flag = '-C amalgamation/ USE_BLAS=openblas MIN=1'        
         sh "${mx_run} cpu make ${flag}"        
