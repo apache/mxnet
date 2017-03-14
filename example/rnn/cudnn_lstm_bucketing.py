@@ -77,7 +77,7 @@ def train(args):
         stack = mx.rnn.SequentialRNNCell()
         for layer in range(args.num_layers):
             stack.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
-                    mode='lstm', prefix='fused_rnn' + str(layer),
+                    mode='lstm', prefix='lstm_%d'%layer,
                     bidirectional=args.bidirectional))
         cell = stack
     else:
@@ -139,15 +139,19 @@ def test(args):
     assert args.model_prefix, "Must specifiy path to load from"
     _, data_val, vocab = get_data('NT')
 
-    stack = mx.rnn.SequentialRNNCell()
-    for i in range(args.num_layers):
-        cell = mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i)
-        if args.bidirectional:
-            cell = mx.rnn.BidirectionalCell(
-                    cell,
-                    mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_r%d_'%i),
-                    output_prefix='bi_lstm_%d'%i)
-        stack.add(cell)
+    if not args.stack_rnn:
+        stack = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers,
+                mode='lstm', bidirectional=args.bidirectional).unfuse()
+    else:
+        stack = mx.rnn.SequentialRNNCell()
+        for i in range(args.num_layers):
+            cell = mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_%dl0_'%i)
+            if args.bidirectional:
+                cell = mx.rnn.BidirectionalCell(
+                        cell,
+                        mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_%dr0_'%i),
+                        output_prefix='bi_lstm_%d'%i)
+            stack.add(cell)
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
