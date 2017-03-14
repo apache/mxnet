@@ -23,10 +23,8 @@ stage('Build') {
       ws('workspace/amalgamation') {
         checkout scm
         sh 'timeout 60s git submodule update --init'    
-        dir('amalgamation') {
-          def flag = 'USE_BLAS=atlas MIN=1'        
-          sh "../${mx_run} cpu make ${flag}"        
-        }
+        def flag = '-C amalgamation/ USE_BLAS=openblas MIN=1'        
+        sh "${mx_run} cpu 'make -j\$(nproc) ${flag}"        
       }
     }
   
