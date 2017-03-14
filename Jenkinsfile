@@ -44,7 +44,7 @@ stage('Build') {
         try {
           echo 'Try incremental build from a previous workspace'
           //sh "${mx_run} cpu make -j\$(nproc) ${flag}"
-        } catch {
+        } catch (exc) {
           echo 'Fall back to build from scratch'
           //sh "${mx_run} cpu make clean"
           //sh "${mx_run} cpu make -j\$(nproc) ${flag}"
@@ -62,7 +62,7 @@ stage('Build') {
         try {
           echo 'Try incremental build from a previous workspace'
           //sh "${mx_run} gpu make -j\$(nproc) ${flag}"
-        } catch {
+        } catch (exc) {
           echo 'Fall back to build from scratch'
           //sh "${mx_run} gpu make clean"
           //sh "${mx_run} gpu make -j\$(nproc) ${flag}"
