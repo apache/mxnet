@@ -1774,6 +1774,8 @@ def check_instance_norm_with_shape(shape, xpu):
                            numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 def test_instance_normalization():
+    check_instance_norm_with_shape((1, 1, 1), default_context())
+    check_instance_norm_with_shape((2, 1, 2), default_context())
     check_instance_norm_with_shape((2,4,5,6), default_context())
     check_instance_norm_with_shape((3,3,2,3,2,1,1), default_context())
 
