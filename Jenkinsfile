@@ -1,3 +1,6 @@
+// Jenkins pipeline
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
 def mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 def mx_run = 'tests/ci_build/ci_build.sh'
 
@@ -37,7 +40,15 @@ stage('Build') {
       ws('workspace/build-cpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh "${mx_run} cpu make -j\$(nproc) USE_BLAS=openblas"
+        def flag = 'USE_BLAS=openblas'
+        try {
+          echo 'Try incremental build from a previous workspace'
+          sh "${mx_run} cpu make -j\$(nproc) ${flag}"
+        } catch (exc) {
+          echo 'Fall back to build from scratch'
+          sh "${mx_run} cpu make clean"
+          sh "${mx_run} cpu make -j\$(nproc) ${flag}"
+        }
         pack_lib 'cpu', mx_lib
       }
     }
@@ -47,7 +58,15 @@ stage('Build') {
       ws('workspace/build-gpu') {
         checkout scm
         sh 'git submodule update --init'
-        sh "${mx_run} gpu make -j\$(nproc) USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1"
+        def flag = 'USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1'
+        try {
+          echo 'Try incremental build from a previous workspace'
+          sh "${mx_run} gpu make -j\$(nproc) ${flag}"
+        } catch (exc) {
+          echo 'Fall back to build from scratch'
+          sh "${mx_run} gpu make clean"
+          sh "${mx_run} gpu make -j\$(nproc) ${flag}"
+        }
         pack_lib 'gpu', mx_lib
       }
     }
