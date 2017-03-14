@@ -359,20 +359,19 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-    #add_library(mxnet_static STATIC ${SOURCE})
-    add_library(mxnet SHARED ${SOURCE})
+    add_library(mxnet_static STATIC ${SOURCE})
     # Need an arbitrary source file to trigger CMake to build the library
-#    add_library(mxnet SHARED src/initialize.cc)
-#    target_link_libraries(mxnet
-#        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
-#    )
-#    add_custom_target(
-#        Name ALL
-#        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-#        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-#        COMMAND ln -sf libmxnet_static.a libmxnet.a
-#        DEPENDS mxnet_static
-#    )
+    add_library(mxnet SHARED src/initialize.cc)
+    target_link_libraries(mxnet
+        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
+    )
+    add_custom_target(
+        Name ALL
+        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        COMMAND ln -sf libmxnet_static.a libmxnet.a
+        DEPENDS mxnet_static
+    )
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()
