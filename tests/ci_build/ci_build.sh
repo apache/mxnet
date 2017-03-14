@@ -101,11 +101,18 @@ fi
 
 # Run the command inside the container.
 echo "Running '${COMMAND[@]}' inside ${DOCKER_IMG_NAME}..."
+
 # By default we cleanup - remove the container once it finish running (--rm)
 # and share the PID namespace (--pid=host) so the process inside does not have
 # pid 1 and SIGKILL is propagated to the process inside (jenkins can kill it).
 ${DOCKER_BINARY} run --rm --pid=host \
     -v ${WORKSPACE}:/workspace \
     -w /workspace \
+    -e "CI_BUILD_HOME=${WORKSPACE}" \
+    -e "CI_BUILD_USER=$(id -u -n)" \
+    -e "CI_BUILD_UID=$(id -u)" \
+    -e "CI_BUILD_GROUP=$(id -g -n)" \
+    -e "CI_BUILD_GID=$(id -g)" \
     "${DOCKER_IMG_NAME}" \
+    tests/ci_build/with_the_same_user \
     ${COMMAND[@]}
