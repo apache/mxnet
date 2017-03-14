@@ -19,7 +19,6 @@ echo ${mx_lib} | sed -e 's/,/ /g' | xargs md5sum
 
 
 stage('Build') {
-  parallel 'Amalgamation': 
     node {
       ws('workspace/amalgamation') {
         checkout scm
@@ -29,5 +28,5 @@ stage('Build') {
         sh "${mx_run} cpu make ${flag}"        
       }
     }
-  }
+  
 }
