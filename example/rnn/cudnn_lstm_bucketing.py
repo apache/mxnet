@@ -78,7 +78,7 @@ def train(args):
     if args.stack_rnn:
         stack = mx.rnn.SequentialRNNCell()
         for layer in range(args.num_layers):
-            dropout = 1.0
+            dropout = 0.0
             if layer < (args.num_layers - 1):
                 dropout = args.dropout
             stack.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
