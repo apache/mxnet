@@ -79,6 +79,10 @@ class EvalMetric(object):
             value = [value]
         return zip(name, value)
 
+    def __str__(self):
+        return "EvalMetric: {}".format(dict(self.get_name_value()))
+
+
 class CompositeEvalMetric(EvalMetric):
     """Manage multiple evaluation metrics."""
 

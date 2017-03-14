@@ -1263,13 +1263,13 @@ def test_expand_dims():
 
 def test_crop():
     for ndim in range(1, 6):
-        for t in range(50):
+        for t in range(5):
             dims = []
             begin = []
             end = []
             idx = []
             for i in range(ndim):
-                d = random.randint(1, 10)
+                d = random.randint(1, 5)
                 b = random.randint(0, d-1)
                 e = random.randint(b+1, d)
                 if b == 0 and random.randint(0, 1):
@@ -1823,7 +1823,7 @@ def sequence_mask_numpy(array, lengths, value):
     shape = array.shape
     batch = shape[1]
     for i in range(batch):
-        arrayMask[int(lengths[i]):, i] = value 
+        arrayMask[int(lengths[i]):, i] = value
     return arrayMask
 
 def check_sequence_mask(shape, xpu, mask_value):
@@ -2202,7 +2202,7 @@ def test_blockgrad():
 
 def test_take():
     def check_output_n_grad(data_shape, idx_shape):
-        exe = result.simple_bind(default_context(), a=data_shape, 
+        exe = result.simple_bind(default_context(), a=data_shape,
                                  indices=idx_shape)
         data_real = np.random.normal(size=data_shape).astype('float32')
         idx_real = np.random.randint(low=0, high=data_shape[0], size=idx_shape)
@@ -2232,7 +2232,7 @@ def test_take():
                 data_shape += (np.random.randint(low=3, high=6), )
             idx_shape = ()
             for _ in range(idx_ndim):
-                idx_shape += (np.random.randint(low=3, high=5), ) 
+                idx_shape += (np.random.randint(low=3, high=5), )
             check_output_n_grad(data_shape, idx_shape)
 
 
@@ -2243,7 +2243,7 @@ def test_grid_generator():
         affine_matrix =  mx.sym.Variable('affine')
         grid = mx.sym.GridGenerator(data=affine_matrix,transform_type='affine', target_shape=target_shape)
         exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='write')
-        
+
         # check forward
         exe.arg_dict['affine'][:] = np.array([[1.0,0,0,0,1.0,0]])
         exe.forward(is_train=True)
@@ -2253,7 +2253,7 @@ def test_grid_generator():
         xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
         assert_almost_equal(output[0,0], yv.T)
         assert_almost_equal(output[0,1], xv.T)
-        
+
         # check backward
         out_grad = np.random.normal(size=(1,2)+target_shape)
         exe.backward(mx.nd.array(out_grad))
@@ -2331,7 +2331,7 @@ def test_bilinear_sampler():
 
                     xInTopLeft = int(floor(xcoord))
                     xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
-                    
+
                     yInTopLeft = int(floor(ycoord))
                     yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
 
@@ -2346,7 +2346,7 @@ def test_bilinear_sampler():
                             if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
                         inBottomRight = data[i,channel,yInTopLeft+1, xInTopLeft+1] \
                             if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
-                        
+
                         out[i,channel,yout,xout] = xWeightTopLeft * yWeightTopLeft * inTopLeft\
                                 +  (1-xWeightTopLeft)*yWeightTopLeft * inTopRight\
                                 +  xWeightTopLeft * (1-yWeightTopLeft) * inBottomLeft\
@@ -2369,24 +2369,24 @@ def test_bilinear_sampler():
         for i in range(batchsize):
             for yout in range(output_height):
                 for xout in range(output_width):
-                    
+
                     top_left_y_gw = np.float32(0.0);
                     top_left_x_gw = np.float32(0.0);
-            
+
                     xcoord = np.float32((grid[i, 0, yout, xout] + 1) * (input_width-1) / 2.0)
                     ycoord = np.float32((grid[i, 1, yout, xout] + 1) * (input_height-1) / 2.0)
 
                     xInTopLeft = int(floor(xcoord))
                     xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
-                    
+
                     yInTopLeft = int(floor(ycoord))
                     yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
-                    
+
                     topLeftDotProduct = np.float32(0)
                     topRightDotProduct = np.float32(0)
                     bottomLeftDotProduct = np.float32(0)
                     bottomRightDotProduct = np.float32(0)
-                        
+
                     for channel in range(num_channel):
                         # left top
                         if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1):
@@ -2397,7 +2397,7 @@ def test_bilinear_sampler():
                         # right top
                         if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1):
                             topRightDotProduct += data[i, channel, yInTopLeft,xInTopLeft+1] * \
-                                out_grad[i, channel, yout,xout] 
+                                out_grad[i, channel, yout,xout]
                             data_grad[i, channel,yInTopLeft, xInTopLeft+1] += (1-xWeightTopLeft) * \
                                 yWeightTopLeft * out_grad[i,channel,yout,xout]
                         # left bottom
@@ -2420,18 +2420,18 @@ def test_bilinear_sampler():
 
                     grid_grad[i,0,yout,xout] = xf * (input_width-1) / 2.0
                     grid_grad[i,1,yout,xout] = yf * (input_height-1) / 2.0
-                    
+
         return data_grad, grid_grad
-    
+
     data = mx.sym.Variable('data')
     grid = mx.sym.Variable('grid')
     net = mx.sym.BilinearSampler(data=data,grid=grid)
-    
+
     test_case = [[(1,3,15,16),(1,2,10,10)],
                  [(1,6,7,16),(1,2,10,4)],
                  [(1,7,3,16),(1,2,8,11)],
                  [(1,9,50,50),(1,2,50,50)]]
-    
+
     for ctx in [default_context()]:
         for item in test_case:
             data_shape, grid_shape = item
@@ -2446,7 +2446,7 @@ def test_bilinear_sampler():
             # check backward
             out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
             exe.backward(mx.nd.array(out_grad))
-            data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(), 
+            data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(),
                                                        exe.arg_dict['grid'].asnumpy())
             assert_almost_equal(exe.grad_dict['data'].asnumpy(), data_grad, rtol=1e-3, atol=1e-5)
             assert_almost_equal(exe.grad_dict['grid'].asnumpy(), grid_grad, rtol=1e-3, atol=1e-5)
@@ -2463,7 +2463,7 @@ def test_bilinear_sampler():
             exe_addto.backward(mx.nd.array(out_grad))
             assert_almost_equal(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid, rtol=1e-3,atol=1e-5)
             assert_almost_equal(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid, rtol=1e-3,atol=1e-5)
-            
+
 def test_index2d():
     for _ in range(30):
         n = np.random.randint(1, 100)

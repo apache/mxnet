@@ -501,7 +501,7 @@ class Symbol(SymbolBase):
             The order is in the same order as list_outputs()
         aux_types : list of numpy.dtype or None
             List of types of outputs.
-            The order is in the same order as list_auxiliary()
+            The order is in the same order as list_auxiliary_states()
         """
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
@@ -582,7 +582,7 @@ class Symbol(SymbolBase):
             The order is in the same order as list_outputs()
         aux_shapes : list of tuple or None
             List of shapes of outputs.
-            The order is in the same order as list_auxiliary()
+            The order is in the same order as list_auxiliary_states()
         """
         try:
             res = self._infer_shape_impl(False, *args, **kwargs)
