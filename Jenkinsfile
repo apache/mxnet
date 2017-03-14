@@ -72,6 +72,15 @@ stage('Build') {
         pack_lib 'gpu', mx_lib
       }
     }
+  },
+  'Amalgamation': {
+    node() {
+      ws('workspace/amalgamation') {
+        init_git()
+        def flag = '-C amalgamation/ USE_BLAS=openblas MIN=1'
+        sh "${mx_run} cpu make ${flag}"
+      }
+    }
   }
 }
 
@@ -79,7 +88,7 @@ stage('Unit Test') {
   parallel 'Python2/3: CPU': {
     node {
       ws('workspace/ut-python-cpu') {
-        init_git
+        init_git()
         unpack_lib 'cpu', mx_lib
         sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
         sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest'"
@@ -89,7 +98,7 @@ stage('Unit Test') {
   'Python2/3: GPU': {
     node('GPU') {
       ws('workspace/ut-python-gpu') {
-        init_git
+        init_git()
         unpack_lib 'gpu', mx_lib
         sh "${mx_run} gpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
         sh "${mx_run} gpu 'PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest'"
@@ -99,8 +108,7 @@ stage('Unit Test') {
   'Scala: CPU': {
     node {
       ws('workspace/ut-scala-cpu') {
-        checkout scm
-        sh 'git submodule update --init'
+        init_git()
         unpack_lib 'cpu', mx_lib
         sh "${mx_run} cpu make scalapkg USE_BLAS=openblas"
         sh "${mx_run} cpu make scalatest USE_BLAS=openblas"
