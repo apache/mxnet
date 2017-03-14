@@ -29,7 +29,7 @@ DMLC_REGISTER_PARAMETER(InstanceNormParam);
 
 MXNET_REGISTER_OP_PROPERTY(InstanceNorm, InstanceNormProp)
     .add_argument("data", "Symbol",
-                  "A n-dimensional tensor (n > 2) of the form [batch, "
+                  "A n-dimensional tensor (n > 1) of the form [batch, "
                   "channel, spatial_dim1, spatial_dim2, ...].")
     .add_argument("gamma", "Symbol",
                   "A vector of length \'channel\', which multiplies the "
@@ -39,7 +39,7 @@ MXNET_REGISTER_OP_PROPERTY(InstanceNorm, InstanceNormProp)
                   "product of the normalized input and the weight.")
     .add_arguments(InstanceNormParam::__FIELDS__())
     .describe(
-        "An operator taking in a n-dimensional input tensor (n > 2), and "
+        "An operator taking in a n-dimensional input tensor (n > 1), and "
         "normalizing the input by subtracting the mean and variance calculated "
         "over the spatial dimensions. This is an implemention of "
         "the operator described in \"Instance Normalization: The "
