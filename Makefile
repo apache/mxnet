@@ -88,8 +88,8 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLROOT)/include
-	LDFLAGS += -L$(MKLROOT)/lib
+	CFLAGS += -I$(MKLML_ROOT)/include
+	LDFLAGS += -L$(MKLML_ROOT)/lib
 ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 else
