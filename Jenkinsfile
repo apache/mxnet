@@ -50,7 +50,7 @@ def python_ut(docker_run) {
 }
 
 timetime = 5
-def run() {
+def myrun() {
   timeout(time: timetime, unit: 'SECONDS') {
     sh "sleep 20"
   }
@@ -58,7 +58,7 @@ def run() {
 
 stage("Test") {
   node {
-    run()
+    myrun()
   }
 }
 // stage("Sanity Check") {
