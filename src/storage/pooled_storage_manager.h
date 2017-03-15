@@ -40,11 +40,12 @@ class GPUPooledStorageManager final : public StorageManager {
     ReleaseAll();
   }
 
-  void* Alloc(size_t size) override;
-  void Free(void* ptr, size_t size) override;
+  void* Alloc(size_t raw_size) override;
+  void Free(void* ptr, size_t raw_size) override;
 
-  void DirectFree(void* ptr, size_t size) override {
+  void DirectFree(void* ptr, size_t raw_size) override {
     cudaError_t err = cudaFree(ptr);
+    size_t size = raw_size + NDEV;
     // ignore unloading error, as memory has already been recycled
     if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
       LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
@@ -60,13 +61,16 @@ class GPUPooledStorageManager final : public StorageManager {
   size_t used_memory_ = 0;
   // percentage of reserved memory
   int reserve_;
+  // number of devices
+  const int NDEV = 32;
   // memory pool
   std::unordered_map<size_t, std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
 };  // class GPUPooledStorageManager
 
-void* GPUPooledStorageManager::Alloc(size_t size) {
+void* GPUPooledStorageManager::Alloc(size_t raw_size) {
   std::lock_guard<std::mutex> lock(mutex_);
+  size_t size = raw_size + NDEV;
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
     size_t free, total;
@@ -89,8 +93,9 @@ void* GPUPooledStorageManager::Alloc(size_t size) {
   }
 }
 
-void GPUPooledStorageManager::Free(void* ptr, size_t size) {
+void GPUPooledStorageManager::Free(void* ptr, size_t raw_size) {
   std::lock_guard<std::mutex> lock(mutex_);
+  size_t size = raw_size + NDEV;
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(ptr);
 }
@@ -98,7 +103,7 @@ void GPUPooledStorageManager::Free(void* ptr, size_t size) {
 void GPUPooledStorageManager::ReleaseAll() {
   for (auto&& i : memory_pool_) {
     for (auto&& j : i.second) {
-      DirectFree(j, i.first);
+      DirectFree(j, i.first - NDEV);
     }
   }
   memory_pool_.clear();
