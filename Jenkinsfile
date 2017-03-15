@@ -9,31 +9,24 @@ docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
 max_time = 60
 
-// pack libraries for later use
-def pack_lib(name, libs=mx_lib) {
-  sh """
-echo "Packing ${libs} into ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-"""
-  stash includes: libs, name: name
-}
-
-
-// unpack libraries saved before
-def unpack_lib(name, libs=mx_lib) {
-  unstash name
-  sh """
-echo "Unpacked ${libs} from ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-"""
-}
-
 // initialize source codes
 def init_git() {
   checkout scm
   retry(5) {
     timeout(time: 2, unit: 'MINUTES') {
       sh 'git submodule update --init'
+    }
+  }
+}
+
+stage("Sanity Check") {
+  timeout(time: max_time, unit: 'MINUTES') {
+    node {
+      ws('workspace/sanity') {
+        init_git()
+        make('lint', 'cpplint rcpplint jnilint')
+        make('lint', 'pylint')
+      }
     }
   }
 }
@@ -53,26 +46,24 @@ def make(docker_type, make_flag) {
   }
 }
 
-// Python unittest
-def python_ut(docker_type) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
-  }
+// pack libraries for later use
+def pack_lib(name, libs=mx_lib) {
+  sh """
+echo "Packing ${libs} into ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+  stash includes: libs, name: name
 }
 
-stage("Sanity Check") {
-  timeout(time: max_time, unit: 'MINUTES') {
-    node {
-      ws('workspace/sanity') {
-        init_git()
-        make('lint', 'cpplint rcpplint jnilint')
-        make('lint', 'pylint')
-      }
-    }
-  }
-}
 
+// unpack libraries saved before
+def unpack_lib(name, libs=mx_lib) {
+  unstash name
+  sh """
+echo "Unpacked ${libs} from ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+}
 
 stage('Build') {
   parallel 'CPU: openblas': {
@@ -126,50 +117,52 @@ MKLML_ROOT=\$(pwd)/mklml   \
   }
 }
 
-// stage('Unit Test') {
-//   parallel 'Python2/3: CPU': {
-//     timeout(time: max_time, unit: 'MINUTES') {
-//       node {
-//         ws('workspace/ut-python-cpu') {
-//           init_git()
-//           unpack_lib('cpu', mx_lib)
-//           sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
-//           sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest'"
-//         }
-//       }
-//     }
-//   },
-//   'Python2/3: GPU': {
-//       node('GPU') {
-//         ws('workspace/ut-python-gpu') {
-//           init_git()
-//           unpack_lib('gpu', mx_lib)
-//         }
-//       }
-//     }
-//   },
-//   'Python2/3: MKL': {
-//     timeout(time: max_time, unit: 'MINUTES') {
-//       node {
-//         ws('workspace/ut-python-mkl') {
-//         init_git()
-//         unpack_lib('mkl', mx_lib)
-//         sh "${mx_run} mkl PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-//         sh "${mx_run} mkl PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
-//         }
-//       }
-//     }
-//   },
-//   'Scala: CPU': {
-//     timeout(time: max_time, unit: 'MINUTES') {
-//       node {
-//         ws('workspace/ut-scala-cpu') {
-//           init_git()
-//           unpack_lib 'cpu', mx_lib
-//           sh "${mx_run} cpu make scalapkg USE_BLAS=openblas"
-//           sh "${mx_run} cpu make scalatest USE_BLAS=openblas"
-//         }
-//       }
-//     }
-//   }
-// }
+// Python unittest
+def python_ut(docker_type) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
+  }
+}
+
+stage('Unit Test') {
+  parallel 'Python2/3: CPU': {
+    node {
+      ws('workspace/ut-python-cpu') {
+        init_git()
+        unpack_lib('cpu')
+        python_ut('cpu')
+      }
+    }
+  },
+  'Python2/3: GPU': {
+    node('GPU') {
+      ws('workspace/ut-python-gpu') {
+        init_git()
+        unpack_lib('gpu', mx_lib)
+        python_ut('gpu')
+      }
+    }
+  },
+  'Python2/3: MKL': {
+    node {
+      ws('workspace/ut-python-mkl') {
+        init_git()
+        unpack_lib('mkl')
+        python_ut('mkl')
+      }
+    }
+  },
+  'Scala: CPU': {
+    node {
+      ws('workspace/ut-scala-cpu') {
+        init_git()
+        unpack_lib('cpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${mx_run} cpu make scalapkg USE_BLAS=openblas"
+          sh "${mx_run} cpu make scalatest USE_BLAS=openblas"
+        }
+      }
+    }
+  }
+}
