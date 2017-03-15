@@ -113,7 +113,6 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_UID=$(id -u)" \
     -e "CI_BUILD_GROUP=$(id -g -n)" \
     -e "CI_BUILD_GID=$(id -g)" \
-    -ti \
     "${DOCKER_IMG_NAME}" \
     tests/ci_build/with_the_same_user \
     ${COMMAND[@]}
