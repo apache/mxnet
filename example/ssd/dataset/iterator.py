@@ -90,8 +90,8 @@ class DetIter(mx.io.DataIter):
     def next(self):
         if self.iter_next():
             self._get_batch()
-            data_batch = mx.io.DataBatch(data=self._data.values(),
-                                   label=self._label.values(),
+            data_batch = mx.io.DataBatch(data=self._data['data'],
+                                   label=self._label['label'],
                                    pad=self.getpad(), index=self.getindex())
             self._current += self.batch_size
             return data_batch
@@ -130,9 +130,16 @@ class DetIter(mx.io.DataIter):
             batch_data[i] = data
             if self.is_train:
                 batch_label.append(label)
+
+        if not isinstance(batch_data, list):
+            batch_data = [batch_data]
+        batch_label=mx.nd.array(np.array(batch_label))
+        if not isinstance(batch_label, list):
+            batch_label = [batch_label]
+
         self._data = {'data': batch_data}
         if self.is_train:
-            self._label = {'label': mx.nd.array(np.array(batch_label))}
+            self._label = {'label': batch_label}
         else:
             self._label = {'label': None}
 

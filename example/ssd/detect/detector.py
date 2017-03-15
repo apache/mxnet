@@ -55,8 +55,8 @@ class Detector(object):
         list of detection results
         """
         num_images = det_iter._size
-        if not isinstance(det_iter, mx.io.PrefetchingIter):
-            det_iter = mx.io.PrefetchingIter(det_iter)
+        # if not isinstance(DetIter, mx.io.PrefetchingIter): #TODO make the code compatible with PrefetchingIter
+        #      det_iter = mx.io.PrefetchingIter(det_iter)
         start = timer()
         detections = self.mod.predict(det_iter).asnumpy()
         time_elapsed = timer() - start
@@ -161,11 +161,12 @@ class Detector(object):
 
         """
         import cv2
+        import os
         dets = self.im_detect(im_list, root_dir, extension, show_timer=show_timer)
         if not isinstance(im_list, list):
             im_list = [im_list]
         assert len(dets) == len(im_list)
         for k, det in enumerate(dets):
-            img = cv2.imread(im_list[k])
+            img = cv2.imread(os.path.join(root_dir,im_list[k]+extension))
             img[:, :, (0, 1, 2)] = img[:, :, (2, 1, 0)]
             self.visualize_detection(img, det, classes, thresh)
