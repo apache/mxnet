@@ -1,4 +1,4 @@
-FROM nvidia/cuda:7.5-cudnn5-devel
+FROM ubuntu
 MAINTAINER Aran Khanna <arankhan@amazon.com>
 
 # UPDATE BOX
@@ -6,7 +6,7 @@ RUN apt-get update && apt-get -y upgrade
 
 # TOOLCHAIN DEPS
 RUN apt-get install -y python python-setuptools python-pip python-dev unzip gfortran
-RUN apt-get install -y install git bison cvs flex gperf texinfo automake libtool help2man make libtool-bin libncurses5-dev g++ cmake wget
+RUN apt-get install -y git bison cvs flex gperf texinfo automake libtool help2man make libtool-bin libncurses5-dev g++ cmake wget
 RUN pip install numpy nose scipy
 
 # BUILD TOOLCHAIN
