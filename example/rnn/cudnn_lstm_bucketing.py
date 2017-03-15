@@ -45,6 +45,8 @@ parser.add_argument('--disp-batches', type=int, default=50,
 # multiple GPUs.
 parser.add_argument('--stack-rnn', default=False,
                     help='stack fused RNN cells to reduce communication overhead')
+parser.add_argument('--dropout', type=float, default='0.0',
+                    help='dropout probability (1.0 - keep probability)')
 
 #buckets = [32]
 buckets = [10, 20, 30, 40, 50, 60]
@@ -76,12 +78,15 @@ def train(args):
     if args.stack_rnn:
         stack = mx.rnn.SequentialRNNCell()
         for layer in range(args.num_layers):
+            dropout = 0.0
+            if layer < (args.num_layers - 1):
+                dropout = args.dropout
             stack.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
-                    mode='lstm', prefix='lstm_%d'%layer,
+                    mode='lstm', prefix='lstm_%d'%layer, dropout=dropout,
                     bidirectional=args.bidirectional))
         cell = stack
     else:
-        cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers,
+        cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, dropout=args.dropout,
                 mode='lstm', bidirectional=args.bidirectional)
 
     def sym_gen(seq_len):
@@ -117,15 +122,21 @@ def train(args):
         arg_params = None
         aux_params = None
 
+    opt_params = {
+      'learning_rate': args.lr,
+      'wd': args.wd
+    }
+
+    if args.optimizer not in ['adadelta', 'adagrad', 'adam', 'rmsprop']:
+        opt_params['momentum'] = args.mom
+
     model.fit(
         train_data          = data_train,
         eval_data           = data_val,
         eval_metric         = mx.metric.Perplexity(invalid_label),
         kvstore             = args.kv_store,
         optimizer           = args.optimizer,
-        optimizer_params    = { 'learning_rate': args.lr,
-                                'momentum': args.mom,
-                                'wd': args.wd },
+        optimizer_params    = opt_params, 
         initializer         = mx.init.Xavier(factor_type="in", magnitude=2.34),
         arg_params          = arg_params,
         aux_params          = aux_params,
