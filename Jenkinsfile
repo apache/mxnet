@@ -65,7 +65,7 @@ stage('Unit Test') {
         init_git()
         unpack_lib('mkl', mk_lib)
         sh "${mx_run} cpu ./prepare_mkl.sh \$(pwd)/mklml"
-        sh "${mx_run} cpu 'LD_LIBRARY_PATH=\$\{LD_LIBRARY_PATH\} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
+        sh "${mx_run} cpu 'LD_LIBRARY_PATH=\${LD_LIBRARY_PATH} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
         // sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest''"
       }
     }
