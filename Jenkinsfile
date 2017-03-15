@@ -108,7 +108,7 @@ USE_MKL2017_EXPERIMENTAL=1 \
 MKLML_ROOT=\$(pwd)/mklml \
 -j\$(nproc)
 """
-          make("${mx_run} cpu", flag)
+          make("${mx_run} mkl", flag)
           pack_lib('mkl', mx_lib)
         }
       }
@@ -147,8 +147,8 @@ stage('Unit Test') {
         ws('workspace/ut-python-mkl') {
         init_git()
         unpack_lib('mkl', mk_lib)
-        sh "${mx_run} cpu PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-        sh "${mx_run} cpu PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
+        sh "${mx_run} mkl PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
+        sh "${mx_run} mkl PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
         }
       }
     }
