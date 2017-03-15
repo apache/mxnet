@@ -2,23 +2,26 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-def mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
-def mx_run = 'tests/ci_build/ci_build.sh'
-def max_time = 30  // in minutes
+// mxnet libraries
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+// command to start a docker container
+docker_run = 'tests/ci_build/ci_build.sh'
+// timeout in minutes
+max_time = 60
 
-def pack_lib(name, mx_lib) {
+def pack_lib(name, libs=mx_lib) {
   sh """
-echo "Packing ${mx_lib} into ${name}"
-echo ${mx_lib} | sed -e 's/,/ /g' | xargs md5sum
+echo "Packing ${libs} into ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
-  stash includes: mx_lib, name: name
+  stash includes: libs, name: name
 }
 
-def unpack_lib(name, mx_lib) {
+def unpack_lib(name, libs=mx_lib) {
   unstash name
   sh """
-echo "Unpacked ${mx_lib} from ${name}"
-echo ${mx_lib} | sed -e 's/,/ /g' | xargs md5sum
+echo "Unpacked ${libs} from ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
 }
 
@@ -31,51 +34,37 @@ def init_git() {
   }
 }
 
-def make(docker_run, make_flag) {
-  try {
-    echo 'Try incremental build from a previous workspace'
-    sh "${docker_run} make ${make_flag}"
-  } catch (exc) {
-    echo 'Fall back to build from scratch'
-    sh "${docker_run} make clean"
-    sh "${docker_run} make ${make_flag}"
+def make(docker_type, make_flag) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    try {
+      echo 'Try incremental build from a previous workspace'
+      sh "${docker_run} ${docker_type} make ${make_flag}"
+    } catch (exc) {
+      echo 'Fall back to build from scratch'
+      sh "${docker_run} ${docker_type} make clean"
+      sh "${docker_run} ${docker_type} make ${make_flag}"
+    }
   }
 }
 
-def python_ut(docker_run) {
-  timeout(time: 60, unit: 'MINUTES') {
-    sh "${docker_run} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
+def python_ut(docker_type) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
   }
 }
 
-timetime = 5
-def myrun(xx=timetime) {
-  // timeout(time: timetime, unit: 'SECONDS') {
-    echo "$xx"
-    // sh "sleep 20"
-  // }
-}
-
-stage("Test") {
-  node {
-    myrun()
-    myrun('adsfadsf')
+stage("Sanity Check") {
+  timeout(time: max_time, unit: 'MINUTES') {
+    node {
+      ws('workspace/sanity') {
+        init_git()
+        make('lint', 'cpplint rcpplint jnilint')
+        make('lint', 'pylint')
+      }
+    }
   }
 }
-// stage("Sanity Check") {
-//   timeout(time: max_time, unit: 'MINUTES') {
-//     node {
-//       ws('workspace/sanity') {
-//         init_git()
-//         sh "${mx_run} lint make cpplint"
-//         sh "${mx_run} lint make rcpplint"
-//         sh "${mx_run} lint make jnilint"
-//         sh "${mx_run} lint make pylint"
-//       }
-//     }
-//   }
-// }
 
 
 // stage('Build') {
