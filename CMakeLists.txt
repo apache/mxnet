@@ -8,7 +8,6 @@ endif()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
-include(CTest)
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
@@ -66,7 +65,7 @@ if(USE_MKL_IF_AVAILABLE)
   endif()
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
+if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
   include(mshadow/cmake/mshadow.cmake)
   include(mshadow/cmake/Utils.cmake)
   include(mshadow/cmake/Cuda.cmake)
@@ -87,23 +86,6 @@ include_directories("mshadow")
 include_directories("cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
-
-if(UNIX)
-  find_library(RTLIB rt)
-  if(RTLIB)
-    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
-  endif()
-endif()
-
-# ---[ jemalloc
-if(USE_JEMALLOC)
-  find_package(JeMalloc)
-  if(JEMALLOC_FOUND)
-    add_definitions(-DUSE_JEMALLOC)
-    include_directories(${JEMALLOC_INCLUDE_DIRS})
-    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
-  endif()
-endif()
 
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
@@ -130,6 +112,25 @@ if(USE_OPENMP)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
   endif()
 endif()
+
+if(UNIX)
+  find_library(RTLIB rt)
+  if(RTLIB)
+    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
+  endif()
+endif()
+
+# ---[ jemalloc
+if(USE_JEMALLOC)
+  find_package(JeMalloc)
+  if(JEMALLOC_FOUND)
+    add_definitions(-DUSE_JEMALLOC)
+    include_directories(${JEMALLOC_INCLUDE_DIRS})
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
+  endif()
+endif()
+
+include(CTest)
 
 # cudnn detection
 if(USE_CUDNN AND USE_CUDA)
