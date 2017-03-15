@@ -382,6 +382,10 @@ fixed-size items.
         """
         # multi-dimensional slicing is not supported yet
         if isinstance(key, int):
+            if key > self.shape[0] - 1:
+                raise IndexError(
+                    'index {} is out of bounds for axis 0 with size {}'.format(
+                        key, self.shape[0]))
             return self._at(key)
         if isinstance(key, py_slice):
             if key.step is not None:
