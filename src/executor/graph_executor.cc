@@ -871,7 +871,8 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
       return ret;
     }
     auto& exec = op_nodes_[nid].exec;
-    std::copy(op_node.mutate_vars.begin(), op_node.mutate_vars.end(), std::inserter(mutate_var_set, mutate_var_set.end()));
+    std::copy(op_node.mutate_vars.begin(), op_node.mutate_vars.end(),
+              std::inserter(mutate_var_set, mutate_var_set.end()));
     // avoid copying mutate vars to const var list
     for (auto use_var : op_node.use_vars) {
       if (mutate_var_set.find(use_var) == mutate_var_set.end()) {
