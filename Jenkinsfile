@@ -52,7 +52,6 @@ def python_ut(docker_run) {
 timetime = 5
 def myrun() {
   timeout(time: timetime, unit: 'SECONDS') {
-    echo timetime
     echo "$timetime"
     sh "sleep 20"
   }
