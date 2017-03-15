@@ -55,6 +55,8 @@ if [ ! -d "$HOME_MKL" ]; then
 fi
 MXNET_ROOT=`dirname $0`
 USE_MKLML=0
+# NOTE: if you update the following line, please also update the dockerfile at
+# tests/ci_build/Dockerfile.mkl
 VERSION_MATCH=20170210
 ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20170209.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
