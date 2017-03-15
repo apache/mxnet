@@ -364,6 +364,7 @@ class BucketingModule(BaseModule):
         data_batch : DataBatch
         '''
         # perform bind if haven't done so
+        assert self.binded and self.params_initialized
         bucket_key = data_batch.bucket_key
         original_bucket_key = self._curr_bucket_key
         data_shapes = data_batch.provide_data

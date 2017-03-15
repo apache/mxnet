@@ -716,7 +716,9 @@ class BaseModule(object):
     # Computations
     ################################################################################
     def prepare(self, data_batch):
-        '''Prepare a data batch for forward
+        '''Prepare the module for processing a data batch.
+
+        Usually involves switching bucket and reshaping.
 
         Parameters
         ----------

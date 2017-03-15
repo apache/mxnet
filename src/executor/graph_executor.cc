@@ -690,41 +690,22 @@ void GraphExecutor::InitOpSegs() {
     return;
   }
 
-
+  // Whether to perform bulk exec for training
+  bool prefer_bulk_exec = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1);
+  // The maximum number of node in a segment executed in bulk
+  size_t num_nodes_threshold = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
   // create forward segments for training
-  size_t bulk_forward_percent = dmlc::GetEnv("MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN", 1);
-  if (bulk_forward_percent > 0) {
-    // count total number of variables during forward
-    size_t total_num_forward_vars = 0;
+  if (prefer_bulk_exec > 0) {
+    size_t topo_start = 0;
     for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
       auto &node = graph_.indexed_graph()[nid].source;
-      if (node != nullptr && node->is_variable()) {
-        total_num_forward_vars++;
-      }
-    }
-    // calculate max number of variable per segment
-    size_t num_vars_threshold = (bulk_forward_percent * total_num_forward_vars + 99) / 100;
-    size_t topo_start = 0, num_vars = 0;
-    for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
       auto &op_node = op_nodes_[nid];
-      if (op_node.skip_exec_node) {
-        continue;
-      }
-      auto &node = graph_.indexed_graph()[nid].source;
-      // check if it's a variable
-      if (node->is_variable()) {
-        // if threshold is met, create a new segment
-        if (num_vars + 1 > num_vars_threshold) {
-          cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-          // reset state
-          num_vars = 0;
-          topo_start = nid;
-        }
-        num_vars++;
-      } else if (op_node.exec != nullptr && op_node.exec->exec_type() != Operator::kSync) {
+      // check if the segment relies on external input, or exceeds maxinum number of node,
+      // or requires async ops
+      if (node->is_variable() || nid - topo_start > num_nodes_threshold ||
+          op_node.exec->exec_type() != Operator::kSync) {
         // create a new segment for the previous nodes if the current one cannot be bulked
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-        num_vars = 0;
         topo_start = nid + 1;
       }
     }
@@ -735,27 +716,32 @@ void GraphExecutor::InitOpSegs() {
   }
 
   // create backward segments for training
-  bool bulk_backward = dmlc::GetEnv("MXNET_EXEC_BULK_BWD_TRAIN", true);
-  if (bulk_backward) {
+  if (prefer_bulk_exec) {
     // get all gradient variables
     std::unordered_set<engine::VarHandle> grad_vars;
     for (auto &kv : grad_store_) {
       grad_vars.insert(kv.second.var());
     }
+    auto &idx = graph_.indexed_graph();
     size_t topo_start = num_forward_nodes_;
     for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
       auto &op_node = op_nodes_[nid];
       if (op_node.skip_exec_node || op_node.exec == nullptr) {
         continue;
       }
+      if (idx[nid].source->is_variable() || nid - topo_start > num_nodes_threshold ||
+          op_node.exec->exec_type() != Operator::kSync) {
+        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+        topo_start = nid + 1;
+      }
+      // If it produces output gradient, don't include it in the segment
       bool output_gradient = false;
       for (auto &out_arr : op_node.exec->out_array) {
         if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
           output_gradient = true;
         }
       }
-      if (output_gradient ||
-         (op_node.exec != nullptr && op_node.exec->exec_type() != Operator::kSync)) {
+      if (output_gradient) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
       }
