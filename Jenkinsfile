@@ -45,7 +45,13 @@ stage('Build') {
   node {
     ws('workspace/build-mkl') {
       init_git()
-      def flag = "USE_MKL2017=1 USE_MKL2017_EXPERIMENTAL=1 MKLML_ROOT=\$(pwd) ADD_CFLAGS=-I\$(pwd)/include"
+      def flag = """
+USE_MKL2017=1
+USE_MKL2017_EXPERIMENTAL=1
+MKLML_ROOT=\$(pwd)
+ADD_CFLAGS=-I\$(pwd)/include
+-j\$(nproc)
+"""
       make("${mx_run} cpu", flag)
     }
   }
