@@ -157,7 +157,7 @@ stage('Unit Test') {
       node {
         ws('workspace/ut-python-mkl') {
         init_git()
-        unpack_lib('mkl', mk_lib)
+        unpack_lib('mkl', mx_lib)
         sh "${mx_run} mkl PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
         sh "${mx_run} mkl PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
         }
