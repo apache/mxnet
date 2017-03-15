@@ -3,6 +3,7 @@
 
 def mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 def mx_run = 'tests/ci_build/ci_build.sh'
+def max_time = 30  // in minutes
 
 def pack_lib(name, mx_lib) {
   sh """
@@ -30,13 +31,15 @@ def init_git() {
 }
 
 stage("Sanity Check") {
-  node {
-    ws('workspace/sanity') {
-      init_git()
-      sh "${mx_run} lint make cpplint"
-      sh "${mx_run} lint make rcpplint"
-      sh "${mx_run} lint make jnilint"
-      sh "${mx_run} lint make pylint"
+  timeout(time: max_time, unit: 'MINUTES') {
+    node {
+      ws('workspace/sanity') {
+        init_git()
+        sh "${mx_run} lint make cpplint"
+        sh "${mx_run} lint make rcpplint"
+        sh "${mx_run} lint make jnilint"
+        sh "${mx_run} lint make pylint"
+      }
     }
   }
 }
@@ -44,45 +47,51 @@ stage("Sanity Check") {
 
 stage('Build') {
   parallel 'CPU': {
-    node {
-      ws('workspace/build-cpu') {
-        init_git()
-        def flag = 'USE_BLAS=openblas'
-        try {
-          echo 'Try incremental build from a previous workspace'
-          sh "${mx_run} cpu make -j\$(nproc) ${flag}"
-        } catch (exc) {
-          echo 'Fall back to build from scratch'
-          sh "${mx_run} cpu make clean"
-          sh "${mx_run} cpu make -j\$(nproc) ${flag}"
+    timeout(time: max_time, unit: 'MINUTES') {
+      node {
+        ws('workspace/build-cpu') {
+          init_git()
+          def flag = 'USE_BLAS=openblas'
+          try {
+            echo 'Try incremental build from a previous workspace'
+            sh "${mx_run} cpu make -j\$(nproc) ${flag}"
+          } catch (exc) {
+            echo 'Fall back to build from scratch'
+            sh "${mx_run} cpu make clean"
+            sh "${mx_run} cpu make -j\$(nproc) ${flag}"
+          }
+          pack_lib 'cpu', mx_lib
         }
-        pack_lib 'cpu', mx_lib
       }
     }
   },
   'GPU: CUDA7.5+cuDNN5': {
-    node('GPU') {
-      ws('workspace/build-gpu') {
-        init_git()
-        def flag = 'USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1'
-        try {
-          echo 'Try incremental build from a previous workspace'
-          sh "${mx_run} gpu make -j\$(nproc) ${flag}"
-        } catch (exc) {
-          echo 'Fall back to build from scratch'
-          sh "${mx_run} gpu make clean"
-          sh "${mx_run} gpu make -j\$(nproc) ${flag}"
+    timeout(time: max_time, unit: 'MINUTES') {
+      node('GPU') {
+        ws('workspace/build-gpu') {
+          init_git()
+          def flag = 'USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1'
+          try {
+            echo 'Try incremental build from a previous workspace'
+            sh "${mx_run} gpu make -j\$(nproc) ${flag}"
+          } catch (exc) {
+            echo 'Fall back to build from scratch'
+            sh "${mx_run} gpu make clean"
+            sh "${mx_run} gpu make -j\$(nproc) ${flag}"
+          }
+          pack_lib 'gpu', mx_lib
         }
-        pack_lib 'gpu', mx_lib
       }
     }
   },
   'Amalgamation': {
-    node() {
-      ws('workspace/amalgamation') {
-        init_git()
-        def flag = '-C amalgamation/ USE_BLAS=openblas MIN=1'
-        sh "${mx_run} cpu make ${flag}"
+    timeout(time: max_time, unit: 'MINUTES') {
+      node() {
+        ws('workspace/amalgamation') {
+          init_git()
+          def flag = '-C amalgamation/ USE_BLAS=openblas MIN=1'
+          sh "${mx_run} cpu make ${flag}"
+        }
       }
     }
   }
@@ -90,32 +99,38 @@ stage('Build') {
 
 stage('Unit Test') {
   parallel 'Python2/3: CPU': {
-    node {
-      ws('workspace/ut-python-cpu') {
-        init_git()
-        unpack_lib 'cpu', mx_lib
-        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
-        sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest'"
+    timeout(time: max_time, unit: 'MINUTES') {
+      node {
+        ws('workspace/ut-python-cpu') {
+          init_git()
+          unpack_lib 'cpu', mx_lib
+          sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
+          sh "${mx_run} cpu 'PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest'"
+        }
       }
     }
   },
   'Python2/3: GPU': {
-    node('GPU') {
-      ws('workspace/ut-python-gpu') {
-        init_git()
-        unpack_lib 'gpu', mx_lib
-        sh "${mx_run} gpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
-        sh "${mx_run} gpu 'PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest'"
+    timeout(time: max_time, unit: 'MINUTES') {
+      node('GPU') {
+        ws('workspace/ut-python-gpu') {
+          init_git()
+          unpack_lib 'gpu', mx_lib
+          sh "${mx_run} gpu 'PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'"
+          sh "${mx_run} gpu 'PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest'"
+        }
       }
     }
   },
   'Scala: CPU': {
-    node {
-      ws('workspace/ut-scala-cpu') {
-        init_git()
-        unpack_lib 'cpu', mx_lib
-        sh "${mx_run} cpu make scalapkg USE_BLAS=openblas"
-        sh "${mx_run} cpu make scalatest USE_BLAS=openblas"
+    timeout(time: max_time, unit: 'MINUTES') {
+      node {
+        ws('workspace/ut-scala-cpu') {
+          init_git()
+          unpack_lib 'cpu', mx_lib
+          sh "${mx_run} cpu make scalapkg USE_BLAS=openblas"
+          sh "${mx_run} cpu make scalatest USE_BLAS=openblas"
+        }
       }
     }
   }
