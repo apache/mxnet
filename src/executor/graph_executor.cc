@@ -850,11 +850,11 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   if (topo_end <= topo_start) {
     return ret;
   }
-  // dedup util function
-  auto dedup = [] (std::vector<Engine::VarHandle>& vars) {  // NOLINT(*)
-    std::sort(vars.begin(), vars.end());
-    vars.resize(std::unique(vars.begin(), vars.end()) - vars.begin());
-  };
+#if MXNET_USE_PROFILER
+  std::string opr_names = "[";
+#else
+  std::string opr_names = "Bulk Execution";
+#endif
 
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
@@ -873,22 +873,27 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     auto& exec = op_nodes_[nid].exec;
     std::copy(op_node.mutate_vars.begin(), op_node.mutate_vars.end(),
               std::inserter(mutate_var_set, mutate_var_set.end()));
-    // avoid copying mutate vars to const var list
-    for (auto use_var : op_node.use_vars) {
-      if (mutate_var_set.find(use_var) == mutate_var_set.end()) {
-        use_var_set.insert(use_var);
-      }
-    }
+    std::copy(op_node.use_vars.begin(), op_node.use_vars.end(),
+              std::inserter(use_var_set, use_var_set.end()));
     ret.exec_list.push_back(exec.get());
+#if MXNET_USE_PROFILER
+    opr_names += inode.source->op()->name + ",";
+#endif
   }
 
   if (pctx == nullptr) return ret;
   ret.ctx = *pctx;
+  // remove mutate vars to const var list
+  for (auto iter = use_var_set.begin(); iter != use_var_set.end();) {
+    if (mutate_var_set.find(*iter) != mutate_var_set.end()) {
+      iter = use_var_set.erase(iter);
+    } else {
+      iter++;
+    }
+  }
+
   std::copy(mutate_var_set.begin(), mutate_var_set.end(), std::back_inserter(mutate_vars));
   std::copy(use_var_set.begin(), use_var_set.end(), std::back_inserter(use_vars));
-  // deduplication
-  dedup(mutate_vars);
-  dedup(use_vars);
 
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
   auto exec_fun = [exec_list, is_gpu] (
@@ -907,9 +912,12 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     }
     on_complete();
   };
+#if MXNET_USE_PROFILER
+    opr_names += "]";
+#endif
   ret.opr = Engine::Get()->NewOperator(
       exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-      PROFILER_MESSAGE("Bulk Exec"));
+      PROFILER_MESSAGE(opr_names.c_str()));
   return ret;
 }
 }  // namespace exec
