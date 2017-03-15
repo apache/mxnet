@@ -159,8 +159,8 @@ stage('Unit Test') {
         init_git()
         unpack_lib('cpu')
         timeout(time: max_time, unit: 'MINUTES') {
-          sh "${mx_run} cpu make scalapkg USE_BLAS=openblas"
-          sh "${mx_run} cpu make scalatest USE_BLAS=openblas"
+          sh "${docker_run} cpu make scalapkg USE_BLAS=openblas"
+          sh "${docker_run} cpu make scalatest USE_BLAS=openblas"
         }
       }
     }
