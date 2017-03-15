@@ -26,12 +26,6 @@ endif
 # use customized config file
 include $(config)
 
-ifeq ($(USE_MKL2017), 1)
-	RETURN_STRING=$(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT=$(firstword $(RETURN_STRING))
-	export USE_MKLML=$(lastword $(RETURN_STRING))
-endif
-
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
@@ -99,6 +93,16 @@ ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
 endif
+
+ifeq ($(USE_MKL2017), 1)
+	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT = $(firstword $(RETURN_STRING))
+	export USE_MKLML = $(lastword $(RETURN_STRING))
+	CFLAGS += -I$(MKLROOT)/include
+	LDFLAGS += -L$(MKLROOT)/lib
+endif
+
+
 
 ifeq ($(USE_THREADED_ENGINE), 1)
 	CFLAGS += -DMXNET_USE_THREADED_ENGINE
