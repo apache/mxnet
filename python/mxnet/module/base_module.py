@@ -160,20 +160,26 @@ class BaseModule(object):
     - `predict`: run prediction on a data set and collect outputs
     - `score`: run prediction on a data set and evaluate performance
 
-    Examples
-    --------
-    An example of creating a mxnet module::
-        >>> import mxnet as mx
+    To create a module for training classification::
+        data = mx.sym.Variable('data')
+        output = mx.sym.FullyConnected(data, num_hidden=10)
+        label = mx.sym.Variable('label')
+        loss = mx.loss.softmax_cross_entropy_loss(output, label)
+        model = mx.mod.Module(loss, data_names=('data',))
+        model.fit(..., eval_metric=loss.metric)
+        model.score(..., eval_metric=loss.metric)
 
-        >>> data = mx.symbol.Variable('data')
-        >>> fc1  = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
-        >>> act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-        >>> fc2  = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
-        >>> act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
-        >>> fc3  = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
-        >>> out  = mx.symbol.SoftmaxOutput(fc3, name = 'softmax')
+    To create a module for prediction only::
+        data = mx.sym.Variable('data')
+        output = mx.sym.FullyConnected(data, num_hidden=10)
+        model = mx.mod.Module(output, data_names=('data',))
+        model.bind(data_shapes=[('data', (128, 100))], label_shapes=None)
+        model.load_params('save-0001.params')
+        model.predict(...)
 
-        >>> mod = mx.mod.Module(out)
+    You can also load from saved checkpoints::
+        model.save_checkpoint('save', 1)
+        model2 = mx.mod.Module.load('save', 1, context=mx.cpu(0))
     """
     def __init__(self, logger=logging):
         self.logger = logger

@@ -8,28 +8,47 @@
 
 The module API, defined in the `module` (or simply `mod`) package, provides an
 intermediate and high-level interface for performing computation with a
-`Symbol`. One can roughly think a module is a machine which can execute a
-program defined by a `Symbol`.
+`Symbol` or `Loss`. One can roughly think a module is a machine which can execute a
+program defined by a `Symbol` or `Loss`.
 
-The class `module.Module` is a commonly used module, which accepts a `Symbol` as
+The class `module.Module` is a commonly used module, which accepts a `Symbol` or `Loss` as
 the input:
 
 ```python
 data = mx.symbol.Variable('data')
+label = mx.sym.Variable('label')
 fc1  = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
 act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
 fc2  = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
-out  = mx.symbol.SoftmaxOutput(fc2, name = 'softmax')
-mod = mx.mod.Module(out)  # create a module by given a Symbol
+
+loss = mx.loss.softmax_cross_entropy_loss(fc2, label)
+mod = mx.mod.Module(loss, data_names=('data',))
 ```
+
+Alternatively, if you only want to do prediction or want to compute loss manually outside
+of module and feed gradient back using Module.backward(out_grads=...), you can also directly
+feed a `Symbol` into module:
+
+```python
+data = mx.symbol.Variable('data')
+label = mx.sym.Variable('label')
+fc1  = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+fc2  = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
+
+mod = mx.mod.Module(fc2, data_names=('data',))
+```
+
 
 Assume there is a valid MXNet data iterator `data`. We can initialize the
 module:
 
 ```python
+# allocate memory by given input shapes
 mod.bind(data_shapes=data.provide_data,
-         label_shapes=data.provide_label)  # create memory by given input shapes
-mod.init_params()  # initial parameters with the default random initializer
+         label_shapes=data.provide_label)
+# initial parameters with uniform distribution in [-0.05, 0.05]
+mod.init_params(mx.init.Uniform(0.05))
 ```
 
 Now the module is able to compute. We can call high-level API to train and
@@ -43,9 +62,10 @@ mod.predict(new_data)  # predict on new data
 or use intermediate APIs to perform step-by-step computations
 
 ```python
-mod.forward(data_batch)  # forward on the provided data batch
-mod.backward()  # backward to calculate the gradients
-mod.update()  # update parameters using the default optimizer
+for data_batch in data:
+    mod.forward(data_batch)  # forward on the provided data batch
+    mod.backward()  # backward to calculate the gradients
+    mod.update()  # update parameters using the default optimizer
 ```
 
 A detailed tutorial is available at [http://mxnet.io/tutorials/python/module.html](http://mxnet.io/tutorials/python/module.html).

@@ -7,9 +7,12 @@ from __future__ import absolute_import
 from collections import OrderedDict
 
 import numpy
+import pickle
 
-from .base import numeric_types
+from . import base
+from .base import numeric_types, string_types
 from . import ndarray
+from . import registry
 
 
 def check_label_shapes(labels, preds, shape=0):
@@ -24,25 +27,36 @@ def check_label_shapes(labels, preds, shape=0):
         raise ValueError("Shape of labels {} does not match shape of "
                          "predictions {}".format(label_shape, pred_shape))
 
+
 class EvalMetric(object):
     """Base class of all evaluation metrics."""
 
-    def __init__(self, name, num=None, output_names=None, label_names=None):
+    def __init__(self, name, num=None, output_names=None,
+                 label_names=None, **kwargs):
         self.name = name
         self.num = num
         self.output_names = output_names
         self.label_names = label_names
+        self._kwargs = kwargs
         self.reset()
 
     def __str__(self):
         return "EvalMetric: {}".format(dict(self.get_name_value()))
 
-    def __getstate__(self):
-        return self.__dict__.copy()
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.reset()
+    def get_config(self):
+        """Save configurations of metric. Can be recreated
+        from configs with metric.create(**config)
+        """
+        config = self._kwargs.copy()
+        config.update({
+            'metric': self.__class__.__name__,
+            'name': self.name,
+            'num': self.num,
+            'output_names': self.output_names,
+            'label_names': self.label_names,
+            '__type__': 'metric',
+            '__version__': base.__version__})
+        return config
 
     def update_dict(self, label, pred):
         """Update the internal evaluation with named label and pred
@@ -119,7 +133,44 @@ class EvalMetric(object):
             value = [value]
         return list(zip(name, value))
 
+# pylint: disable=invalid-name
+register = registry.get_register_func(EvalMetric, 'metric')
+alias = registry.get_alias_func(EvalMetric, 'metric')
+_create = registry.get_create_func(EvalMetric, 'metric')
+# pylint: enable=invalid-name
 
+
+def create(metric, *args, **kwargs):
+    """Create an evaluation metric.
+
+    Parameters
+    ----------
+    metric : str or callable
+        The name of the metric, or a function
+        providing statistics given pred, label NDArray.
+    *args : list
+        additional arguments to metric constructor
+    **kwargs : dict
+        additional arguments to metric constructor
+
+    Returns
+    -------
+    created metric
+    """
+
+    if callable(metric):
+        return CustomMetric(metric, *args, **kwargs)
+    elif isinstance(metric, list):
+        composite_metric = CompositeEvalMetric()
+        for child_metric in metric:
+            composite_metric.add(create(child_metric, *args, **kwargs))
+        return composite_metric
+
+    return _create(metric, *args, **kwargs)
+
+
+@register
+@alias('composite')
 class CompositeEvalMetric(EvalMetric):
     """Manage multiple evaluation metrics."""
 
@@ -176,10 +227,19 @@ class CompositeEvalMetric(EvalMetric):
             values.extend(value)
         return (names, values)
 
+    def get_config(self):
+        config = super(CompositeEvalMetric, self).get_config()
+        config.update({'metrics': [i.get_config() for i in self.metrics]})
+        return config
+
+
 ########################
 # CLASSIFICATION METRICS
 ########################
 
+
+@register
+@alias('acc')
 class Accuracy(EvalMetric):
     """Calculate accuracy
 
@@ -188,8 +248,8 @@ class Accuracy(EvalMetric):
     axis : int, default=1
         The axis that represents classes
     """
-    def __init__(self, axis=1, **kwargs):
-        super(Accuracy, self).__init__('accuracy', **kwargs)
+    def __init__(self, axis=1, name='accuracy', **kwargs):
+        super(Accuracy, self).__init__(name, axis=axis, **kwargs)
         self.axis = axis
 
     def update(self, labels, preds):
@@ -206,11 +266,14 @@ class Accuracy(EvalMetric):
             self.sum_metric += (pred_label.flat == label.flat).sum()
             self.num_inst += len(pred_label.flat)
 
+
+@register
+@alias('top_k_accuracy', 'top_k_acc')
 class TopKAccuracy(EvalMetric):
     """Calculate top k predictions accuracy"""
 
-    def __init__(self, top_k=1, **kwargs):
-        super(TopKAccuracy, self).__init__('top_k_accuracy', **kwargs)
+    def __init__(self, top_k=1, name='top_k_accuracy', **kwargs):
+        super(TopKAccuracy, self).__init__(name, top_k=top_k, **kwargs)
         self.top_k = top_k
         assert(self.top_k > 1), 'Please use Accuracy if top_k is no more than 1'
         self.name += '_%d' % self.top_k
@@ -234,11 +297,13 @@ class TopKAccuracy(EvalMetric):
                     self.sum_metric += (pred_label[:, num_classes - 1 - j].flat == label.flat).sum()
             self.num_inst += num_samples
 
+
+@register
 class F1(EvalMetric):
     """Calculate the F1 score of a binary classification problem."""
 
-    def __init__(self, **kwargs):
-        super(F1, self).__init__('f1', **kwargs)
+    def __init__(self, name='f1', **kwargs):
+        super(F1, self).__init__(name, **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -281,6 +346,7 @@ class F1(EvalMetric):
             self.num_inst += 1
 
 
+@register
 class Perplexity(EvalMetric):
     """Calculate perplexity
 
@@ -291,8 +357,8 @@ class Perplexity(EvalMetric):
         counting. usually should be -1. Include
         all entries if None.
     """
-    def __init__(self, ignore_label, **kwargs):
-        super(Perplexity, self).__init__('Perplexity', **kwargs)
+    def __init__(self, ignore_label, name='perplexity', **kwargs):
+        super(Perplexity, self).__init__(name, ignore_label=ignore_label, **kwargs)
         self.ignore_label = ignore_label
 
     def update(self, labels, preds):
@@ -326,11 +392,13 @@ class Perplexity(EvalMetric):
 # REGRESSION METRICS
 ####################
 
+
+@register
 class MAE(EvalMetric):
     """Calculate Mean Absolute Error loss"""
 
-    def __init__(self, **kwargs):
-        super(MAE, self).__init__('mae', **kwargs)
+    def __init__(self, name='mae', **kwargs):
+        super(MAE, self).__init__(name, **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -345,10 +413,12 @@ class MAE(EvalMetric):
             self.sum_metric += numpy.abs(label - pred).mean()
             self.num_inst += 1 # numpy.prod(label.shape)
 
+
+@register
 class MSE(EvalMetric):
     """Calculate Mean Squared Error loss"""
-    def __init__(self, **kwargs):
-        super(MSE, self).__init__('mse', **kwargs)
+    def __init__(self, name='mse', **kwargs):
+        super(MSE, self).__init__(name, **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -363,10 +433,12 @@ class MSE(EvalMetric):
             self.sum_metric += ((label - pred)**2.0).mean()
             self.num_inst += 1 # numpy.prod(label.shape)
 
+
+@register
 class RMSE(EvalMetric):
     """Calculate Root Mean Squred Error loss"""
-    def __init__(self, **kwargs):
-        super(RMSE, self).__init__('rmse', **kwargs)
+    def __init__(self, name='rmse', **kwargs):
+        super(RMSE, self).__init__(name, **kwargs)
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -381,10 +453,13 @@ class RMSE(EvalMetric):
             self.sum_metric += numpy.sqrt(((label - pred)**2.0).mean())
             self.num_inst += 1
 
+
+@register
+@alias('ce')
 class CrossEntropy(EvalMetric):
     """Calculate Cross Entropy loss"""
-    def __init__(self, eps=1e-8, **kwargs):
-        super(CrossEntropy, self).__init__('cross-entropy', **kwargs)
+    def __init__(self, eps=1e-8, name='cross-entropy', **kwargs):
+        super(CrossEntropy, self).__init__(name, eps=eps, **kwargs)
         self.eps = eps
 
     def update(self, labels, preds):
@@ -402,6 +477,7 @@ class CrossEntropy(EvalMetric):
             self.num_inst += label.shape[0]
 
 
+@register
 class Loss(EvalMetric):
     """Dummy metric for directly printing loss"""
     def __init__(self, name='loss', **kwargs):
@@ -413,18 +489,21 @@ class Loss(EvalMetric):
             self.num_inst += pred.size
 
 
+@register
 class Torch(Loss):
     """Dummy metric for torch criterions"""
     def __init__(self, name='torch', **kwargs):
         super(Torch, self).__init__(name, **kwargs)
 
 
+@register
 class Caffe(Loss):
     """Dummy metric for caffe criterions"""
     def __init__(self, name='caffe', **kwargs):
         super(Caffe, self).__init__(name, **kwargs)
 
 
+@register
 class CustomMetric(EvalMetric):
     """Custom evaluation metric that takes a NDArray function.
 
@@ -440,11 +519,16 @@ class CustomMetric(EvalMetric):
         in outputs for forwarding.
     """
     def __init__(self, feval, name=None, allow_extra_outputs=False, **kwargs):
+        if isinstance(feval, string_types):
+            feval = pickle.loads(feval)
         if name is None:
             name = feval.__name__
             if name.find('<') != -1:
                 name = 'custom(%s)' % name
-        super(CustomMetric, self).__init__(name, **kwargs)
+        super(CustomMetric, self).__init__(
+            name, feval=pickle.dumps(feval),
+            allow_extra_outputs=allow_extra_outputs,
+            **kwargs)
         self._feval = feval
         self._allow_extra_outputs = allow_extra_outputs
 
@@ -464,6 +548,7 @@ class CustomMetric(EvalMetric):
             else:
                 self.sum_metric += reval
                 self.num_inst += 1
+
 
 # pylint: disable=invalid-name
 def np(numpy_feval, name=None, allow_extra_outputs=False):
@@ -489,40 +574,3 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
     feval.__name__ = numpy_feval.__name__
     return CustomMetric(feval, name, allow_extra_outputs)
 # pylint: enable=invalid-name
-
-def create(metric, **kwargs):
-    """Create an evaluation metric.
-
-    Parameters
-    ----------
-    metric : str or callable
-        The name of the metric, or a function
-        providing statistics given pred, label NDArray.
-    """
-
-    if callable(metric):
-        return CustomMetric(metric)
-    elif isinstance(metric, EvalMetric):
-        return metric
-    elif isinstance(metric, list):
-        composite_metric = CompositeEvalMetric()
-        for child_metric in metric:
-            composite_metric.add(create(child_metric, **kwargs))
-        return composite_metric
-
-    metrics = {
-        'acc': Accuracy,
-        'accuracy': Accuracy,
-        'ce': CrossEntropy,
-        'f1': F1,
-        'mae': MAE,
-        'mse': MSE,
-        'rmse': RMSE,
-        'top_k_accuracy': TopKAccuracy
-    }
-
-    try:
-        return metrics[metric.lower()](**kwargs)
-    except:
-        raise ValueError("Metric must be either callable or in {}".format(
-            metrics.keys()))

@@ -3,8 +3,9 @@
 """ losses for training neural networks """
 from __future__ import absolute_import
 
-from .base import numeric_types, string_types
+from .base import numeric_types, string_types, __version__
 from . import symbol
+from . import registry
 from . import metric as _metric
 
 
@@ -58,16 +59,16 @@ def _parse_metric(metric, output, label):
     return metric
 
 
-class Loss(object):
+class BaseLoss(object):
     """Base class for all loss layers.
 
     Parameters
     ----------
-    loss : Symbol
+    losses : Symbol
         a symbol whose output is the loss. Can be a scalar value
         or an array. If loss is an array, the sum of its elements
         will be the final loss.
-    output : Symbol
+    outputs : Symbol
         output of the model when predicting.
     label_names : list of str
         names of label variables. labels are used for training
@@ -84,22 +85,47 @@ class Loss(object):
 
     Returns
     -------
-    loss : Loss
+    loss : BaseLoss
         created loss
     """
-    def __init__(self, loss, output, label_names, name, metric=None,
-                 output_head_grad=False, loss_head_grad=False):
+    def __init__(self, losses, outputs, label_names, name, metric=None,
+                 output_head_grad=False, loss_head_grad=False, **kwargs):
+        if losses is None:
+            sym = list(symbol.load_json(kwargs['__group_sym__']))
+            num = kwargs['__num_losses__']
+            losses = symbol.Group(sym[:num])
+            outputs = symbol.Group(sym[num:])
+            if metric is not None:
+                metric = _metric.create(**metric)
+
+        losses = symbol.Group(list(losses))
+        outputs = symbol.Group(list(outputs))
+        self._kwargs = kwargs
+        self._kwargs.update({
+            'loss': self.__class__.__name__,
+            'losses': None,
+            'outputs': None,
+            'label_names': label_names,
+            'name': name,
+            'metric': metric.get_config() if metric is not None else None,
+            'output_head_grad': output_head_grad,
+            'loss_head_grad': loss_head_grad,
+            '__group_sym__': symbol.Group(list(losses)+list(outputs)).tojson(),
+            '__num_losses__': len(list(losses)),
+            '__type__': 'loss',
+            '__version__': __version__})
+
         if not loss_head_grad:
             self._loss_symbol = symbol.Group([symbol.make_loss(x, name=x.name+'_loss')
-                                              for x in loss])
+                                              for x in losses])
         else:
-            self._loss_symbol = loss
+            self._loss_symbol = losses
 
         if not output_head_grad:
             self._output_symbol = symbol.Group([symbol.stop_gradient(x, name=x.name+'_out')
-                                                for x in output])
+                                                for x in outputs])
         else:
-            self._output_symbol = output
+            self._output_symbol = outputs
 
         self._label_names = list(label_names) if label_names else []
         self._name = name
@@ -135,6 +161,17 @@ class Loss(object):
     def metric(self):
         """Metric for evaluation"""
         return self._metric
+
+    def get_config(self):
+        """get configs for serialization"""
+        return self._kwargs.copy()
+
+
+# pylint: disable=invalid-name
+register = registry.get_register_func(BaseLoss, 'loss')
+create = registry.get_create_func(BaseLoss, 'loss')
+register(BaseLoss)
+# pylint: enable=invalid-name
 
 
 def custom_loss(loss, output, label_names, extra_outputs=(),
@@ -182,7 +219,7 @@ def custom_loss(loss, output, label_names, extra_outputs=(),
 
     Returns
     -------
-    loss : Loss
+    loss : BaseLoss
         created loss
     """
     label_names = list(label_names)
@@ -193,7 +230,7 @@ def custom_loss(loss, output, label_names, extra_outputs=(),
                         if i not in loss.list_arguments()]
     loss = _apply_weight(loss, weight=weight, sample_weight=sample_weight)
     loss._set_attr(name=name)
-    return Loss(loss, output, label_names, name, **kwargs)
+    return BaseLoss(loss, output, label_names, name, **kwargs)
 
 
 def multi_loss(losses, extra_outputs=(), name='multi'):
@@ -202,7 +239,7 @@ def multi_loss(losses, extra_outputs=(), name='multi'):
 
     Parameters
     ----------
-    losses : list of Loss
+    losses : list of BaseLoss
         a list of individual losses with no extra outputs.
     extra_outputs : list of Symbol
         extra outputs for predition but not used for evaluating
@@ -213,7 +250,7 @@ def multi_loss(losses, extra_outputs=(), name='multi'):
 
     Returns
     -------
-    loss : Loss
+    loss : BaseLoss
         created loss
     """
     loss = symbol.Group(sum([list(i.loss_symbol) for i in losses], []))
@@ -223,8 +260,8 @@ def multi_loss(losses, extra_outputs=(), name='multi'):
         for name in i.label_names:
             if name not in label_names:
                 label_names.append(name)
-    ret = Loss(loss, output, label_names, name,
-               output_head_grad=True, loss_head_grad=True)
+    ret = BaseLoss(loss, output, label_names, name,
+                   output_head_grad=True, loss_head_grad=True)
     del ret.metric.metrics[:]
     for i in losses:
         ret.metric.add(i.metric)
@@ -272,7 +309,7 @@ def l2_loss(output, label, extra_outputs=(), weight=1.,
 
     Returns
     -------
-    loss : Loss
+    loss : BaseLoss
         created loss
     """
     metric = _parse_metric(metric, output, label)
@@ -286,7 +323,7 @@ def l2_loss(output, label, extra_outputs=(), weight=1.,
 
     label_names = [x for x in loss.list_arguments()
                    if x not in output.list_arguments()]
-    return Loss(loss, outputs, label_names, name, metric=metric, **kwargs)
+    return BaseLoss(loss, outputs, label_names, name, metric=metric, **kwargs)
 
 
 def l1_loss(output, label, extra_outputs=(), name='l1',
@@ -329,7 +366,7 @@ def l1_loss(output, label, extra_outputs=(), name='l1',
 
     Returns
     -------
-    loss : Loss
+    loss : BaseLoss
         created loss
     """
     metric = _parse_metric(metric, output, label)
@@ -343,12 +380,12 @@ def l1_loss(output, label, extra_outputs=(), name='l1',
 
     label_names = [x for x in loss.list_arguments()
                    if x not in output.list_arguments()]
-    return Loss(loss, outputs, label_names, name, metric=metric, **kwargs)
+    return BaseLoss(loss, outputs, label_names, name, metric=metric, **kwargs)
 
 
-def cross_entropy_loss(output, label, sparse_label=True, axis=1,
-                       extra_outputs=(), name='ce', weight=None,
-                       sample_weight=None, metric='acc', **kwargs):
+def softmax_cross_entropy_loss(output, label, sparse_label=True, axis=1,
+                               extra_outputs=(), name='ce', weight=None,
+                               sample_weight=None, metric='acc', **kwargs):
     """Compute the softmax cross entropy loss.
 
     If sparse_label is True, label should contain integer category indicators:
@@ -395,7 +432,7 @@ def cross_entropy_loss(output, label, sparse_label=True, axis=1,
 
     Returns
     -------
-    loss : Loss
+    loss : BaseLoss
         created loss
     """
     metric = _parse_metric(metric, output, label)
@@ -418,4 +455,4 @@ def cross_entropy_loss(output, label, sparse_label=True, axis=1,
 
     label_names = [x for x in loss.list_arguments()
                    if x not in output.list_arguments()]
-    return Loss(loss, outputs, label_names, name, metric=metric, **kwargs)
+    return BaseLoss(loss, outputs, label_names, name, metric=metric, **kwargs)

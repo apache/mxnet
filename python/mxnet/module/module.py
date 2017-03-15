@@ -4,6 +4,8 @@
 more `Executor` for data parallelization.
 """
 
+import os
+import json
 import logging
 import warnings
 
@@ -12,7 +14,7 @@ from .. import ndarray as nd
 from .. import symbol as _sym
 from .. import optimizer as opt
 from .. import loss
-from ..base import _Sentinel
+from ..base import _Sentinel, __version__, string_types
 
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
@@ -23,8 +25,8 @@ from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
 
 class Module(BaseModule):
-    """Module is a basic module that wrap a `Symbol`. It is functionally the same
-    as the `FeedForward` model, except under the module API.
+    """Module is a basic module that wrap a `Loss` or `Symbol`.
+    It is functionally the same as the `FeedForward` model.
 
     Parameters
     ----------
@@ -48,8 +50,13 @@ class Module(BaseModule):
     """
     def __init__(self, symbol, data_names=('data',), label_names=_Sentinel,
                  logger=logging, context=ctx.cpu(), work_load_list=None,
-                 fixed_param_names=None, state_names=None):
+                 fixed_param_names=None, state_names=None, **kwargs):
         super(Module, self).__init__(logger=logger)
+
+        if isinstance(symbol, string_types):
+            symbol = _sym.load_json(symbol)
+        elif isinstance(symbol, dict):
+            symbol = loss.create(**symbol)
 
         if isinstance(context, ctx.Context):
             context = [context]
@@ -59,7 +66,19 @@ class Module(BaseModule):
         assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
 
-        if isinstance(symbol, loss.Loss):
+        self._kwargs = kwargs
+        if isinstance(symbol, loss.BaseLoss):
+            self._kwargs['symbol'] = symbol.get_config()
+        else:
+            self._kwargs['symbol'] = symbol.tojson()
+        self._kwargs.update({
+            'data_names': data_names,
+            'fixed_param_names': fixed_param_names,
+            'state_names': state_names,
+            '__type__': 'module',
+            '__version__': __version__})
+
+        if isinstance(symbol, loss.BaseLoss):
             self._loss = symbol
             self._symbol = _sym.Group([self._loss.output_symbol, self._loss.loss_symbol])
             num_output = len(self._loss.output_symbol.list_outputs())
@@ -67,7 +86,7 @@ class Module(BaseModule):
             self._output_range = (0, num_output)
             self._loss_range = (num_output, num_output+num_loss)
             assert label_names is _Sentinel, \
-                "label_names has been deprecated. do not use"
+                "label_names has been deprecated. Do not set."
             label_names = self._loss.label_names
         else:
             self._symbol = symbol
@@ -120,34 +139,38 @@ class Module(BaseModule):
     def load(prefix, epoch, load_optimizer_states=False, **kwargs):
         """Create a model from previously saved checkpoint.
 
+        For example, use::
+            mod = mx.mod.Module.load('test', 100, context=mx.gpu(0))
+
+        to load from "test-module.json" and "test-0100.params"
+
         Parameters
         ----------
         prefix : str
             path prefix of saved model files. You should have
-            "prefix-symbol.json", "prefix-xxxx.params", and
-            optionally "prefix-xxxx.states", where xxxx is the
-            epoch number.
+            "prefix-symbol.json"/"prefix-module.json",
+            "prefix-xxxx.params", and optionally "prefix-xxxx.states",
+            where xxxx is the epoch number.
         epoch : int
             epoch to load.
         load_optimizer_states : bool
             whether to load optimizer states. Checkpoint needs
             to have been made with save_optimizer_states=True.
-        data_names : list of str
-            Default is `('data')` for a typical model used in image classification.
-        label_names : list of str
-            Default is `('softmax_label')` for a typical model used in image
-            classification.
-        logger : Logger
-            Default is `logging`.
         context : Context or list of Context
             Default is `cpu()`.
         work_load_list : list of number
             Default `None`, indicating uniform workload.
-        fixed_param_names: list of str
-            Default `None`, indicating no network parameters are fixed.
+        logger : Logger
+            Default is `logging`.
         """
         sym, args, auxs = load_checkpoint(prefix, epoch)
-        mod = Module(symbol=sym, **kwargs)
+        if os.path.exists('%s-module.json'%prefix):
+            config = json.loads(open('%s-module.json'%prefix).read())
+            config.update(kwargs)
+            mod = Module(**config)
+        else:
+            mod = Module(sym, **kwargs)
+
         mod._arg_params = args
         mod._aux_params = auxs
         mod.params_initialized = True
@@ -157,7 +180,11 @@ class Module(BaseModule):
 
     def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
         """Save current progress to checkpoint.
-        Use mx.callback.module_checkpoint as epoch_end_callback to save during training.
+        Use mx.callback.module_checkpoint as
+        epoch_end_callback to save during training.
+
+        Outputs 'prefix-module.json', 'prefix-symbol.json',
+        'prefix-(epoch).params', and optionally 'prefix-(epoch).states'.
 
         Parameters
         ----------
@@ -168,7 +195,13 @@ class Module(BaseModule):
         save_optimizer_states : bool
             Whether to save optimizer states for continue training
         """
-        self._symbol.save('%s-symbol.json'%prefix)
+        if self._loss is not None:
+            self._loss.output_symbol.save('%s-symbol.json'%prefix)
+        else:
+            self._symbol.save('%s-symbol.json'%prefix)
+        with open('%s-module.json'%prefix, 'w') as fout:
+            json.dump(self._kwargs, fout)
+
         param_name = '%s-%04d.params' % (prefix, epoch)
         self.save_params(param_name)
         logging.info('Saved checkpoint to \"%s\"', param_name)
