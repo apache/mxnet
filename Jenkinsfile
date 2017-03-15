@@ -3,7 +3,7 @@
 
 def mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 def mx_run = 'tests/ci_build/ci_build.sh'
-def max_time = 30  // in minutes
+def max_time = 60  // in minutes
 
 def pack_lib(name, mx_lib) {
   sh """
