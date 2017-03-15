@@ -1,8 +1,8 @@
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2017 by Contributors
  * \file pooling.cc
  * \brief
- * \author Bing Xu
+ * \author Bing Xu, Jun Wu
 */
 #include "./pooling-inl.h"
 #if MXNET_USE_MKL2017 == 1
@@ -51,21 +51,15 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   }
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    switch (param.pool_type) {
-      case pool_enum::kMaxPooling:
-        op = new PoolingOp<cpu, mshadow::red::maximum, DType>(param);
-        break;
-      case pool_enum::kAvgPooling:
-        op = new PoolingOp<cpu, mshadow::red::sum, DType>(param);
-        break;
-      case pool_enum::kSumPooling:
-        op = new PoolingOp<cpu, mshadow::red::sum, DType>(param);
-        break;
-      default:
-        LOG(FATAL) << "unknown pooling type";
-        return NULL;
+    if (pool_enum::kMaxPooling == param.pool_type
+        || pool_enum::kAvgPooling == param.pool_type
+        || pool_enum::kSumPooling == param.pool_type) {
+      op = new PoolingOp<cpu, DType>(param);
+    } else {
+      LOG(FATAL) << "unknown pooling type";
+      return NULL;
     }
-  })
+  });
 
   return op;
 }

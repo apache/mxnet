@@ -139,6 +139,22 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
 }
 
 
+struct fill {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType val) {
+    out[i] = val;
+  }
+};
+
+
+struct set_zero {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out) {
+    out[i] = static_cast<DType>(0);
+  }
+};
+
+
 template<typename OP, typename xpu>
 struct Kernel;
 
