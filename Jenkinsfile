@@ -46,6 +46,7 @@ stage('Build') {
     ws('workspace/build-mkl') {
       init_git()
       def flag = """ \
+USE_BLAS=openblas \
 USE_MKL2017=1 \
 USE_MKL2017_EXPERIMENTAL=1 \
 MKLML_ROOT=\$(pwd) \
