@@ -31,6 +31,17 @@ def init_git() {
   }
 }
 
+def make(docker_run, make_flag) {
+  try {
+    echo 'Try incremental build from a previous workspace'
+    sh "${docker_run} make ${make_flag}"
+  } catch (exc) {
+    echo 'Fall back to build from scratch'
+    sh "${docker_run} make clean"
+    sh "${docker_run} make ${make_flag}"
+  }
+}
+
 stage("Sanity Check") {
   timeout(time: max_time, unit: 'MINUTES') {
     node {
