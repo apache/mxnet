@@ -33,12 +33,11 @@ __device__ void atomic_add(double* address, double val) {
   //      #atomic-functions
 
   // NOLINT_NEXT_LINE(runtime/int)
-  uint64_t* address_as_ull = reinterpret_cast<uint64_t*>(address);
-  // NOLINT_NEXT_LINE(runtime/int)
-  uint64_t old = *address_as_ull, assumed;
+  unsigned long long int* address_as_ull = (unsigned long long int*) address;  // NOLINT(*)
+  unsigned long long int old = *address_as_ull, assumed;                     // NOLINT(*)
   do {
     assumed = old;
-    old = atomicCAS((unsigned long long int*)address_as_ull, (unsigned long long int)assumed,
+    old = atomicCAS(address_as_ull, assumed,
             __double_as_longlong(val + __longlong_as_double(assumed)));
     // Note: uses integer comparison to avoid hang in case of NaN
     // (since NaN != NaN)
