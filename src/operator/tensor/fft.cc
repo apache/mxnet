@@ -9,12 +9,12 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(FFTParam param, int dtype){
+Operator *CreateOp<cpu>(FFTParam param, int dtype) {
     LOG(FATAL) << "fft is only available for GPU.";
     return NULL;
 }
 
-Operator *FFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape, 
+Operator *FFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                                     std::vector<int> *in_type) const {
     std::vector<TShape> out_shape, aux_shape;
     std::vector<int> out_type, aux_type;

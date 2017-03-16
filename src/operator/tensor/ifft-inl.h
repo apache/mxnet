@@ -107,7 +107,8 @@ class IFFTOp : public Operator {
         reinterpret_cast<const cufftComplex*>(data.dptr_ + 2*num_compute*stride_));
       cufftComplex* out_tmp = reinterpret_cast<cufftComplex*>(complex_data.dptr_);
       CHECK_EQ(cufftExecC2C(plan_remain, in_tmp, out_tmp, CUFFT_INVERSE), CUFFT_SUCCESS);
-        Assign(out.Slice(param_.compute_size*num_compute, param_.compute_size*num_compute+remain_num), 
+        Assign(out.Slice(param_.compute_size*num_compute,
+                         param_.compute_size*num_compute+remain_num),
              req[ifft::kOut], complex_toreal(complex_data));
       cufftDestroy(plan_remain);
     }
@@ -175,7 +176,7 @@ class IFFTOp : public Operator {
     // commenting this out to be consistant with caffe
     // gdata /= dim_;
   }
-    
+
  private:
   IFFTParam param_;
   int dim_, stride_, num_compute, n_iffts;
