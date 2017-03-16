@@ -383,7 +383,9 @@ class BaseModule(object):
             If not `None`, will be used as validation set and evaluate the performance
             after each epoch.
         eval_metric : str or EvalMetric
-            Default `'acc'`. The performance measure used to display during training.
+            Default `'accuracy'`. The performance measure used to display during training.
+            Other possible predefined metrics are:
+            'ce' (CrossEntropy), 'f1', 'mae', 'mse', 'rmse', 'top_k_accuracy'
         epoch_end_callback : function or list of function
             Each callback will be called with the current `epoch`, `symbol`, `arg_params`
             and `aux_params`.
