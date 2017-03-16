@@ -4,8 +4,8 @@
  * \brief
  * \author Chen Zhu
 */
-#ifndef MXNET_OPERATOR_TENSOR_FFT_INL_H
-#define MXNET_OPERATOR_TENSOR_FFT_INL_H
+#ifndef MXNET_OPERATOR_TENSOR_FFT_INL_H_
+#define MXNET_OPERATOR_TENSOR_FFT_INL_H_
 #include <cufft.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -89,7 +89,7 @@ class FFTOp : public Operator {
     cufftHandle plan;
     cufftPlanMany(&plan, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0, CUFFT_C2C, param_.compute_size);
     for (size_t idx=0; idx < num_compute; ++idx) {
-      complex_data = complex_pad_imag(data.Slice(idx*param_.compute_size, 
+      complex_data = complex_pad_imag(data.Slice(idx*param_.compute_size,
                                                  idx*param_.compute_size+param_.compute_size));
 
       cufftComplex* in_tmp = const_cast<cufftComplex*>(
@@ -144,7 +144,7 @@ class FFTOp : public Operator {
     Tensor<xpu, 1, DType> workspace =
             ctx.requested[fft::kTempSpace].get_space_typed<xpu, 1, DType>(
                 Shape1(param_.compute_size*dim_*2), s);
-    Tensor<xpu, 2, DType> complex_data = Tensor<xpu, 2, DType>(workspace.dptr_, 
+    Tensor<xpu, 2, DType> complex_data = Tensor<xpu, 2, DType>(workspace.dptr_,
                                               Shape2(param_.compute_size, dim_*2), s);
 
     // by default, we think forward is firstly conducted
@@ -178,7 +178,8 @@ class FFTOp : public Operator {
       cufftComplex* out_tmp = reinterpret_cast<cufftComplex*>(complex_data.dptr_);
       CHECK_EQ(cufftExecC2C(plan_remain, in_tmp, out_tmp, CUFFT_INVERSE), CUFFT_SUCCESS);
 
-      Assign(gdata.Slice(param_.compute_size*num_compute, param_.compute_size*num_compute+remain_num),
+      Assign(gdata.Slice(param_.compute_size*num_compute,
+                         param_.compute_size*num_compute+remain_num),
              req[fft::kData], complex_toreal(complex_data));
       cufftDestroy(plan_remain);
     }
