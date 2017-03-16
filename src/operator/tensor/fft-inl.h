@@ -14,7 +14,7 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <utility>    
+#include <utility>
 #include <iostream>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
