@@ -17,22 +17,23 @@
 using namespace mxnet;
 
 void SetOpAttrs(const nnvm::Op *op,
-                nnvm::NodeAttrs* attrs,
+                nnvm::NodeAttrs *p_attrs,
                 const int& num_inputs,
                 const int& num_params,
                 const char **param_keys,
                 const char **param_vals) {
   static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
-  attrs->op = op;
+  nnvm::NodeAttrs& attrs = *p_attrs;
+  attrs.op = op;
   for (int i = 0; i < num_params; ++i) {
-    attrs->dict.emplace(param_keys[i], param_vals[i]);
+    attrs.dict.emplace(param_keys[i], param_vals[i]);
   }
 
   if (num_args.count(op)) {
-    attrs->dict.emplace(num_args[op], std::to_string(num_inputs));
+    attrs.dict.emplace(num_args[op], std::to_string(num_inputs));
   }
   if (op->attr_parser != nullptr) {
-    op->attr_parser(attrs);
+    op->attr_parser(&attrs);
   }
 }
 
