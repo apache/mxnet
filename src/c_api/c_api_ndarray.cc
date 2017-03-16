@@ -251,7 +251,8 @@ void PushFCompute(const FCompute& fn,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-void PushOperator(Operator* opr,
+void PushOperator(const nnvm::Op* op,
+                  const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<engine::VarHandle>& read_vars,
                   const std::vector<engine::VarHandle>& write_vars,
@@ -259,6 +260,9 @@ void PushOperator(Operator* opr,
                   const std::vector<uint32_t>& auxidx,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
+  static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  Operator* opr = createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
   struct Capture {
     engine::CallbackOnComplete on_complete;
     Operator *opr;
@@ -361,8 +365,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
     } else if (createop.count(op)) {
-      Operator* opr = createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
-      PushOperator(opr, ctx, read_vars, write_vars,
+      PushOperator(op, attrs, ctx, read_vars, write_vars,
           requested, auxidx, ndinputs, ndoutputs);
     } else {
       LOG(FATAL)
