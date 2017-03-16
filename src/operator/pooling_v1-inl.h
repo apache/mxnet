@@ -294,7 +294,7 @@ class PoolingV1Prop : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "PoolingV1";
+    return "Pooling_v1";
   }
 
   std::vector<int> DeclareBackwardDependency(

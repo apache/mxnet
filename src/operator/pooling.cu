@@ -15,43 +15,34 @@ namespace op {
 
 template<>
 Operator *CreateOp<gpu>(PoolingParam param, int dtype) {
-  Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    switch (param.pool_type) {
-      case pool_enum::kMaxPooling:
-        op = new CuDNNPoolingOp<DType>(param);
-        break;
-      case pool_enum::kAvgPooling:
-        op = new CuDNNPoolingOp<DType>(param);
-        break;
-      case pool_enum::kSumPooling:
-        LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
-        op = new PoolingOp<gpu, DType>(param);
-        break;
-      default:
-        LOG(FATAL) << "unknown pooling type";
-        return NULL;
-    }
-  });
-#else
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    switch (param.pool_type) {
-      case pool_enum::kMaxPooling:
-        op = new PoolingOp<gpu, DType>(param);
-        break;
-      case pool_enum::kAvgPooling:
-        op = new PoolingOp<gpu, DType>(param);
-        break;
-      case pool_enum::kSumPooling:
-        op = new PoolingOp<gpu, DType>(param);
-        break;
-      default:
-        LOG(FATAL) << "unknown pooling type";
-        return NULL;
+    if (!param.cudnn_off) {
+      switch (param.pool_type) {
+        case pool_enum::kMaxPooling:
+          return new CuDNNPoolingOp<DType>(param);
+        case pool_enum::kAvgPooling:
+          return new CuDNNPoolingOp<DType>(param);
+        case pool_enum::kSumPooling:
+          LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
+          return new PoolingOp<gpu, DType>(param);
+        default:
+          LOG(FATAL) << "unknown pooling type";
+          return NULL;
+      }
     }
   });
 #endif  // MXNET_USE_CUDNN
+  Operator *op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    if (pool_enum::kMaxPooling == param.pool_type
+        || pool_enum::kAvgPooling == param.pool_type
+        || pool_enum::kSumPooling == param.pool_type) {
+      op = new PoolingOp<gpu, DType>(param);
+    } else {
+      LOG(FATAL) << "unknown pooling type";
+    }
+  });
   return op;
 }
 

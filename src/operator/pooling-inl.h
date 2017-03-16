@@ -22,15 +22,6 @@
 namespace mxnet {
 namespace op {
 
-#if 0
-namespace pool_enum {
-enum PoolingOpInputs {kData};
-enum PoolingOpOutputs {kOut};
-enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling};
-enum PoolingOpPadConventionType {kValid, kFull};
-}  // namespace pool_enum
-#endif
-
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   TShape kernel;
   TShape stride;
@@ -38,9 +29,13 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   int pool_type;
   int pooling_convention;
   bool global_pool;
+  bool cudnn_off;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
     .describe("Ignore kernel size, do global pooling based on current input feature map. ");
+
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
+    .describe("Turn off cudnn pooling and use MXNet pooling operator. ");
 
     DMLC_DECLARE_FIELD(kernel)
     .enforce_nonzero()
@@ -82,17 +77,19 @@ class PoolingOp : public Operator {
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    const TShape& ishape = in_data[pool_enum::kData].shape_;
+
     pool(s, in_data[pool_enum::kData].dptr<DType>(),
          in_data[pool_enum::kData].shape_,
          out_data[pool_enum::kOut].shape_,
-         param_.global_pool? in_data[pool_enum::kData].shape_ : param_.kernel,
+         param_.global_pool?
+           TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
+           : param_.kernel,
          param_.pad,
          param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
          param_.pool_type,
          req[pool_enum::kOut],
-         out_data[pool_enum::kOut].dptr<DType>(),
-         pool_enum::kMaxPooling == param_.pool_type? out_data[pool_enum::kMask].dptr<int32_t>()
-                                                   : nullptr);
+         out_data[pool_enum::kOut].dptr<DType>());
   }
 
   virtual void Backward(const OpContext& ctx,
@@ -109,17 +106,21 @@ class PoolingOp : public Operator {
     CHECK_EQ(req.size(), 1U);
     CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    unpool(s, out_data[pool_enum::kOut].dptr<DType>(),
-           in_data[pool_enum::kData].shape_,
-           out_data[pool_enum::kOut].shape_,
-           param_.global_pool? in_data[pool_enum::kData].shape_ : param_.kernel,
+    const TShape& ishape = in_data[pool_enum::kData].shape_;
+
+    unpool(s, out_grad[pool_enum::kOut].dptr<DType>(),
+           in_data[pool_enum::kData].dptr<DType>(),
+           out_data[pool_enum::kOut].dptr<DType>(),
+           in_grad[pool_enum::kData].shape_,
+           out_grad[pool_enum::kOut].shape_,
+           param_.global_pool?
+             TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
+             : param_.kernel,
            param_.pad,
            param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
            param_.pool_type,
            req[pool_enum::kData],
-           in_data[pool_enum::kData].dptr<DType>(),
-           pool_enum::kMaxPooling == param_.pool_type? out_data[pool_enum::kMask].dptr<int32_t>()
-                                                     : nullptr);
+           in_grad[pool_enum::kData].dptr<DType>());
   }
 
  private:
@@ -191,9 +192,6 @@ class PoolingProp : public OperatorProperty {
       }
       out_shape->clear();
       out_shape->push_back(oshape);  // save output shape
-      if (pool_enum::kMaxPooling == param_.pool_type) {
-        out_shape->push_back(oshape);  // save mask shape
-      }
     } else if (param_.kernel.ndim() == 3) {
       CHECK_EQ(dshape.ndim(), 5U)
         << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
@@ -227,9 +225,6 @@ class PoolingProp : public OperatorProperty {
 
       out_shape->clear();
       out_shape->push_back(oshape);  // save output shape
-      if (pool_enum::kMaxPooling == param_.pool_type) {
-        out_shape->push_back(oshape);  // save mask shape
-      }
     }
     return true;
   }
@@ -247,9 +242,6 @@ class PoolingProp : public OperatorProperty {
 
     out_type->clear();
     out_type->push_back(dtype);
-    if (pool_enum::kMaxPooling == param_.pool_type) {
-      out_type->push_back(mshadow::kInt32);
-    }
     return true;
   }
 
@@ -267,10 +259,8 @@ class PoolingProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    if (pool_enum::kMaxPooling == param_.pool_type) {
-      return {out_grad[pool_enum::kOut], out_data[pool_enum::kMask]};
-    }
-    return {out_grad[pool_enum::kOut], in_data[pool_enum::kData], out_data[pool_enum::kOut]};
+    return {out_grad[pool_enum::kOut], in_data[pool_enum::kData],
+            out_data[pool_enum::kOut]};
   }
 
   std::vector<std::pair<int, void*> > BackwardInplaceOption(
@@ -283,16 +273,6 @@ class PoolingProp : public OperatorProperty {
 #else
     return {{in_data[pool_enum::kData], in_grad[pool_enum::kData]}};
 #endif
-  }
-
-  int NumVisibleOutputs() const override {
-    return 1;
-  }
-
-  int NumOutputs() const override {
-    // For max pooling, need to return mask as well
-    if (pool_enum::kMaxPooling == param_.pool_type) return 2;
-    return 1;
   }
 
   Operator* CreateOperator(Context ctx) const override {
