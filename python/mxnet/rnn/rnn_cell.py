@@ -360,14 +360,15 @@ class LSTMCell(BaseRNNCell):
         but the default is set to 0.0 for backward compatibility.
 
     """
-    def __init__(self, num_hidden, prefix='lstm_', params=None, forget_bias=0.0):
+    def __init__(self, num_hidden, prefix='lstm_', params=None, forget_bias=1.0):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
+
         self._num_hidden = num_hidden
         self._iW = self.params.get('i2h_weight')
-        self._iB = self.params.get('i2h_bias')
         self._hW = self.params.get('h2h_weight')
-        self._hB = self.params.get('h2h_bias')
-        self._forget_bias = forget_bias
+        forget_bias_init = init.LSTMCellForgetBias(num_hidden=num_hidden, forget_bias=forget_bias)
+        self._iB = self.params.get('i2h_bias', init=forget_bias_init)
+        self._hB = self.params.get('h2h_bias', init=forget_bias_init)
 
     @property
     def state_shape(self):
@@ -409,7 +410,7 @@ class LSTMCell(BaseRNNCell):
                                           name="%sslice"%name)
         in_gate = symbol.Activation(slice_gates[0], act_type="sigmoid",
                                     name='%si'%name)
-        forget_gate = symbol.Activation(slice_gates[1] + self._forget_bias, act_type="sigmoid",
+        forget_gate = symbol.Activation(slice_gates[1], act_type="sigmoid",
                                         name='%sf'%name)
         in_transform = symbol.Activation(slice_gates[2], act_type="tanh",
                                          name='%sc'%name)
@@ -517,7 +518,7 @@ class FusedRNNCell(BaseRNNCell):
     Parameters
     ----------
     """
-    def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
+    def __init__(self, num_hidden, num_layers=1, forget_bias=1.0, mode='lstm', bidirectional=False,
                  dropout=0., get_next_state=False, initializer=None,
                  prefix=None, params=None):
         if prefix is None:
@@ -533,7 +534,7 @@ class FusedRNNCell(BaseRNNCell):
             initializer = init.Xavier(factor_type='in', magnitude=2.34)
         if not isinstance(initializer, init.FusedRNN):
             initializer = init.FusedRNN( # pylint: disable=redefined-variable-type
-                initializer, num_hidden, num_layers, mode, bidirectional)
+                initializer, num_hidden, num_layers, forget_bias, mode, bidirectional)
         self._parameter = self.params.get('parameters', init=initializer)
 
         self._directions = ['l', 'r'] if bidirectional else ['l']

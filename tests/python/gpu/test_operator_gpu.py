@@ -350,6 +350,25 @@ def test_lstm():
     check_rnn_consistency(stack, fused)
 
 
+def test_lstm_forget_bias():
+    forget_bias = 2.0
+    fused = mx.rnn.FusedRNNCell(100, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
+
+    dshape = (32, 1, 200)
+    data = mx.sym.Variable('data')
+
+    sym, _ = fused.unroll(1, data, merge_outputs=True)
+    mod = mx.mod.Module(sym, label_names=None, context=mx.gpu(0))
+    mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
+
+    mod.init_params()
+
+    bias_arguments = filter(lambda x: x.endswith('_bias'), sym.list_arguments())
+    for bias_argument in bias_arguments:
+        expected_bias = np.hstack([np.zeros((100,)), forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
+        assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
+
+
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
 
@@ -359,6 +378,7 @@ def test_gru():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
+
 
 def test_bidirectional():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
@@ -391,6 +411,7 @@ def test_unfuse():
 if __name__ == '__main__':
     test_bidirectional()
     test_lstm()
+    test_lstm_forget_bias()
     test_gru()
     test_rnn()
     test_unfuse()
