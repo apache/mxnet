@@ -83,7 +83,7 @@ class FFTOp : public Operator {
                 Shape1(param_.compute_size*dim_*2), s);
     Tensor<xpu, 2, DType> complex_data = Tensor<xpu, 2, DType>(workspace.dptr_,
                                               Shape2(param_.compute_size, dim_*2), s);
-    #ifdef MSHADOW_USE_CUDNN
+    #if MSHADOW_USE_CUDNN
     // start fft
     cufftHandle plan;
     cufftPlanMany(&plan, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0, CUFFT_C2C, param_.compute_size);
@@ -151,7 +151,7 @@ class FFTOp : public Operator {
     // In this solution, out_grad must comes from a fft of real signal,
     // so that it is Hermitian symmetric, giving a real output
     // but if it is not, remember that we have implemented complex_take_real, and use this
-    #ifdef MSHADOW_USE_CUDNN
+    #if MSHADOW_USE_CUDNN
     cufftHandle plan;
     cufftPlanMany(&plan, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0, CUFFT_C2C, param_.compute_size);
     for (size_t idx = 0; idx < num_compute; ++idx) {
