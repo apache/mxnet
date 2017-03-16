@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.0.2)
 
 project(mxnet C CXX)
 
@@ -13,8 +13,10 @@ mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
+mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" OFF)
+mxnet_option(USE_JEMALLOC "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
-mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
+mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
@@ -51,6 +53,18 @@ else(MSVC)
   endif()
 endif(MSVC)
 
+set(mxnet_LINKER_LIBS "")
+set(mxnet_LINKER_LIBS_DEBUG "")
+set(mxnet_LINKER_LIBS_RELEASE "")
+
+if(USE_MKL_IF_AVAILABLE)
+  find_package(MKL)
+  if(MKL_FOUND)
+    include_directories(${MKL_INCLUDE_DIR})
+    list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
+  endif()
+endif()
+
 if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
   include(mshadow/cmake/mshadow.cmake)
   include(mshadow/cmake/Utils.cmake)
@@ -61,14 +75,11 @@ else()
   include(mshadow)
 endif()
 
+list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+
 foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
  	include_directories(${var})
 endforeach()
-
-set(mxnet_LINKER_LIBS "")
-set(mxnet_LINKER_LIBS_DEBUG "")
-set(mxnet_LINKER_LIBS_RELEASE "")
-list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
 
 include_directories("include")
 include_directories("mshadow")
@@ -83,15 +94,19 @@ if(USE_OPENCV)
   endif()
   include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
   list(APPEND mxnet_LINKER_LIBS ${OpenCV_LIBS})
+  message(STATUS " OpenCV_LIBS=${OpenCV_LIBS}")
   message(STATUS "OpenCV found (${OpenCV_CONFIG_PATH})")
   add_definitions(-DMXNET_USE_OPENCV=1)
+  if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--no-undefined")
+  endif()
 else(USE_OPENCV)
   message(STATUS "OpenCV Disabled")
   add_definitions(-DMXNET_USE_OPENCV=0)
 endif()
 
 if(USE_OPENMP)
-  FIND_PACKAGE( OpenMP REQUIRED)
+  find_package(OpenMP REQUIRED)
   if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -99,6 +114,25 @@ if(USE_OPENMP)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
   endif()
 endif()
+
+if(UNIX)
+  find_library(RTLIB rt)
+  if(RTLIB)
+    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
+  endif()
+endif()
+
+# ---[ jemalloc
+if(USE_JEMALLOC)
+  find_package(JeMalloc)
+  if(JEMALLOC_FOUND)
+    add_definitions(-DUSE_JEMALLOC)
+    include_directories(${JEMALLOC_INCLUDE_DIRS})
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
+  endif()
+endif()
+
+include(CTest)
 
 # cudnn detection
 if(USE_CUDNN AND USE_CUDA)
@@ -111,13 +145,15 @@ if(USE_CUDNN AND USE_CUDA)
   endif()
 endif()
 
-if(EXISTS ${PROJECT_SOURCE_DIR}/dmlc-core/cmake)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake)
   add_subdirectory("dmlc-core")
 endif()
 
 if(USE_DIST_KVSTORE)
-  if(EXISTS ${PROJECT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
-	  add_subdirectory("ps-lite")
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
+    add_subdirectory("ps-lite")
+  else()
+    set(pslite_LINKER_LIBS protobuf zmq-static pslite)
   endif()
 endif()
 
@@ -215,7 +251,7 @@ endif()
 
 if(USE_PLUGIN_CAFFE)
   if(NOT DEFINED CAFFE_PATH)
-    if(EXISTS ${PROJECT_SOURCE_DIR}/caffe)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
       # Need newer FindCUDA.cmake that correctly handles -std=c++11
       cmake_minimum_required(VERSION 3.3)
       set(CAFFE_PATH ${PROJECT_SOURCE_DIR}/caffe)
@@ -273,19 +309,31 @@ if(USE_CUDA)
     list(APPEND mxnet_LINKER_LIBS ${CUDA_cuda_LIBRARY})
   else(MSVC)
     list(APPEND mxnet_LINKER_LIBS nvrtc cuda)
+    message(STATUS "LIBS SO FAR: ${mxnet_LINKER_LIBS}")
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
   add_definitions(-DMXNET_USE_NVRTC=1)
   if(CUDA_LIBRARY_PATH)
-    link_directories(${CUDA_LIBRARY_PATH}/stubs)
+    if(IS_CONTAINER_BUILD)
+      # In case of building on a production-like build container which may not have Cuda installed
+      if(NOT CMAKE_SYSTEM_HAS_CUDA)
+        message(STATUS " NOT CMAKE_SYSTEM_HAS_CUDA")
+        # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
+        # so use the stub cuda driver shared library
+        if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+          message(STATUS " ADDING CUDA PATH TO LINK DIRS: ${CUDA_LIBRARY_PATH}/stubs")
+          link_directories(${CUDA_LIBRARY_PATH}/stubs)
+        endif()
+      endif()
+    endif()
   endif()
 endif()
 
 # unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
 if(USE_PLUGIN_CAFFE)
-  if(EXISTS ${PROJECT_SOURCE_DIR}/caffe)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
     add_subdirectory(caffe)
   endif()
 endif()
@@ -307,7 +355,23 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
-  add_library(mxnet SHARED ${SOURCE})
+  if(UNIX)
+    add_library(mxnet_static STATIC ${SOURCE})
+    # Need an arbitrary source file to trigger CMake to build the library
+    add_library(mxnet SHARED src/initialize.cc)
+    target_link_libraries(mxnet
+        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
+    )
+    add_custom_target(
+        Name ALL
+        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        COMMAND ln -sf libmxnet_static.a libmxnet.a
+        DEPENDS mxnet_static
+    )
+  else()
+    add_library(mxnet SHARED ${SOURCE})
+  endif()
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
 
@@ -318,29 +382,45 @@ endif()
 
 target_link_libraries(mxnet dmlccore)
 
-
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
-
 endif()
 
 if(USE_DIST_KVSTORE)
-	add_definitions(-DMXNET_USE_DIST_KVSTORE)
-	target_link_libraries(mxnet pslite)
-	target_link_libraries(mxnet ${pslite_LINKER_LIBS})
-	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+  add_definitions(-DMXNET_USE_DIST_KVSTORE)
+  target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+  include_directories(SYSTEM ${pslite_INCLUDE_DIR})
 endif()
 
 if(USE_PROFILER)
 	add_definitions(-DMXNET_USE_PROFILER)
 endif()
 
+# Do tests after chrpath so that we use the "real" cuda driver
+add_subdirectory(tests)
+
+# AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
+if(AUTO_INSTALL_DIR)
+  # ---[ Install Includes
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${PROJECT_SOURCE_DIR}/include ${AUTO_INSTALL_DIR}/include
+    )
+
+  # ---[ Install Examples
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${PROJECT_SOURCE_DIR}/example ${AUTO_INSTALL_DIR}/example
+    )
+endif()
+
 if(INSTALL_PYTHON_VERSIONS)
+  message(STATUS "Installing for python versions: ${INSTALL_PYTHON_VERSIONS}")
   foreach(version ${INSTALL_PYTHON_VERSIONS})
     set(outdir ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python${version}/site-packages/mxnet)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND mkdir -p ${outdir}
-      COMMAND cp -rul ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
+      COMMAND cp -ru ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
       )
   endforeach()
 endif()
@@ -353,5 +433,4 @@ endif()
 set(LINT_DIRS include src scripts python)
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
 
-add_subdirectory(tests/cpp)
 add_subdirectory(example/image-classification/predict-cpp)

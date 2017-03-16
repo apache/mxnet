@@ -61,7 +61,7 @@ class FullyConnectedOp : public Operator {
     CHECK_EQ(req[fullc::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
@@ -94,7 +94,7 @@ class FullyConnectedOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
@@ -165,11 +165,11 @@ class FullyConnectedProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
-    CHECK_EQ(out_shape->size(), 1);
+    CHECK_EQ(out_shape->size(), 1U);
     TShape dshape = (*in_shape)[fullc::kData];
     TShape oshape = (*out_shape)[0];
     // require data to be known
@@ -192,7 +192,7 @@ class FullyConnectedProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     nnvm::NodeAttrs attrs;
     attrs.name = "FullyConnected";
     return ElemwiseAttr<int, type_is_none, type_assign, true>(

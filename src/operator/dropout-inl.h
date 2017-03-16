@@ -80,9 +80,9 @@ class DropoutOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
     if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 2);
+      CHECK_EQ(out_data.size(), 2U);
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
@@ -119,8 +119,8 @@ class DropoutOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
@@ -164,7 +164,7 @@ class DropoutProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
@@ -176,7 +176,7 @@ class DropoutProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 1);
+    CHECK_EQ(in_type->size(), 1U);
     int dtype = in_type->at(0);
 
     if (dtype == -1) {

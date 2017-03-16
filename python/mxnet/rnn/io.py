@@ -48,7 +48,7 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', 
         coded = []
         for word in sent:
             if word not in vocab:
-                assert new_vocab, "Unknow token %s"%word
+                assert new_vocab, "Unknown token %s"%word
                 if idx == invalid_label:
                     idx += 1
                 vocab[word] = idx
