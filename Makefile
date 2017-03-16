@@ -26,10 +26,12 @@ endif
 # use customized config file
 include $(config)
 
+CFLAGS =
 ifeq ($(USE_MKL2017), 1)
 	RETURN_STRING=$(shell ./prepare_mkl.sh $(MKLML_ROOT))
 	MKLROOT=$(firstword $(RETURN_STRING))
 	export USE_MKLML=$(lastword $(RETURN_STRING))
+	CFLAGS += -I$(MKLML_ROOT)/include
 endif
 
 include mshadow/make/mshadow.mk
@@ -37,7 +39,7 @@ include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
 WARNFLAGS= -Wall
-CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+CFLAGS += -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror

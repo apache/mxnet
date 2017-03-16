@@ -2,6 +2,15 @@
 
 echo "BUILD make"
 cp make/config.mk .
+if [[ $1 && $1 == "-m" ]];
+then
+    echo "${HOME}"
+    echo "USE_MKL2017=1" >> config.mk
+    echo "USE_MKL2017_EXPERIMENTAL=1" >> config.mk
+    echo "MKLML_ROOT=${HOME}" >> config.mk
+    echo 'export LD_LIBRARY_PATH=${HOME}/lib:$LD_LIBRARY_PATH' >> ~/.profile
+    echo 'export LIBRARY_PATH=${HOME}/lib:$LIBRARY_PATH' >> ~/.profile
+fi
 echo "USE_CUDA=0" >> config.mk
 echo "USE_CUDNN=0" >> config.mk
 echo "USE_BLAS=openblas" >> config.mk
