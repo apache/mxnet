@@ -7,7 +7,9 @@
 
 #ifndef MXNET_OPERATOR_TENSOR_IFFT_INL_H_
 #define MXNET_OPERATOR_TENSOR_IFFT_INL_H_
+#ifdef MSHADOW_USE_CUDNN
 #include <cufft.h>
+#endif
 #include <stdio.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
