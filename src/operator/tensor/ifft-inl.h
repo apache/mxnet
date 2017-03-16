@@ -146,7 +146,7 @@ class IFFTOp : public Operator {
                 Shape1(param_.compute_size*dim_*2), s);
     Tensor<xpu, 2, DType> complex_data = Tensor<xpu, 2, DType>(workspace.dptr_,
                                               Shape2(param_.compute_size, dim_*2), s);
-    #ifdef MSHADOW_USE_CUDNN
+    #if MSHADOW_USE_CUDNN
     // start fft
     cufftHandle plan;
     cufftPlanMany(&plan, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0, CUFFT_C2C, param_.compute_size);
