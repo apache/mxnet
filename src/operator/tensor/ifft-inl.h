@@ -5,8 +5,8 @@
  * \author Chen Zhu
 */
 
-#ifndef MXNET_OPERATOR_TENSOR_IFFT_INL_H
-#define MXNET_OPERATOR_TENSOR_IFFT_INL_H
+#ifndef MXNET_OPERATOR_TENSOR_IFFT_INL_H_
+#define MXNET_OPERATOR_TENSOR_IFFT_INL_H_
 #include <cufft.h>
 #include <stdio.h>
 #include <dmlc/logging.h>
@@ -89,7 +89,7 @@ class IFFTOp : public Operator {
       cufftComplex* out_tmp = reinterpret_cast<cufftComplex*>(complex_data.dptr_);
       CHECK_EQ(cufftExecC2C(plan, in_tmp, out_tmp, CUFFT_INVERSE), CUFFT_SUCCESS);
 
-      Assign(out.Slice(idx*param_.compute_size, (idx+1)*param_.compute_size), 
+      Assign(out.Slice(idx*param_.compute_size, (idx+1)*param_.compute_size),
              req[ifft::kOut], complex_toreal(complex_data));
     }
     cufftDestroy(plan);
@@ -107,8 +107,7 @@ class IFFTOp : public Operator {
         reinterpret_cast<const cufftComplex*>(data.dptr_ + 2*num_compute*stride_));
       cufftComplex* out_tmp = reinterpret_cast<cufftComplex*>(complex_data.dptr_);
       CHECK_EQ(cufftExecC2C(plan_remain, in_tmp, out_tmp, CUFFT_INVERSE), CUFFT_SUCCESS);
-
-      Assign(out.Slice(param_.compute_size*num_compute, param_.compute_size*num_compute+remain_num), 
+        Assign(out.Slice(param_.compute_size*num_compute, param_.compute_size*num_compute+remain_num), 
              req[ifft::kOut], complex_toreal(complex_data));
       cufftDestroy(plan_remain);
     }
@@ -146,7 +145,7 @@ class IFFTOp : public Operator {
     cufftHandle plan;
     cufftPlanMany(&plan, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0, CUFFT_C2C, param_.compute_size);
     for (size_t idx = 0; idx < num_compute; ++idx) {
-      complex_data = complex_pad_imag(grad.Slice(idx*param_.compute_size, 
+      complex_data = complex_pad_imag(grad.Slice(idx*param_.compute_size,
                                                  idx*param_.compute_size+param_.compute_size));
 
       cufftComplex* in_tmp = const_cast<cufftComplex*>(
@@ -162,7 +161,7 @@ class IFFTOp : public Operator {
       cufftHandle plan_remain;
       cufftPlanMany(&plan_remain, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0,
                     CUFFT_C2C, remain_num);
-      complex_data = Tensor<xpu, 2, DType>(workspace.dptr_, 
+      complex_data = Tensor<xpu, 2, DType>(workspace.dptr_,
                                           Shape2(remain_num, dim_*2), s);
       complex_data = complex_pad_imag(grad.Slice(
           num_compute*param_.compute_size, num_compute*param_.compute_size+remain_num));
@@ -176,7 +175,7 @@ class IFFTOp : public Operator {
     // commenting this out to be consistant with caffe
     // gdata /= dim_;
   }
- 
+    
  private:
   IFFTParam param_;
   int dim_, stride_, num_compute, n_iffts;
@@ -290,4 +289,4 @@ class IFFTProp : public OperatorProperty {
 #endif
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_TENSOR_IFFT_INL_H
+#endif  // MXNET_OPERATOR_TENSOR_IFFT_INL_H_

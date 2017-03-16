@@ -5,9 +5,10 @@
  * \author Chen Zhu, Yang Shi
 */
 #include "./count_sketch-inl.h"
+#include <mshadow/tensor.h>
 #include <stdio.h>
 #include <algorithm>
-#include <mshadow/tensor.h>
+
 
 
 #define WARPS_PER_BLOCK 1
@@ -32,7 +33,7 @@ __device__ void atomic_add(double* address, double val) {
   //      #atomic-functions
 
   // NOLINT_NEXT_LINE(runtime/int)
-  uint64_t* address_as_ull = (uint64_t*) address;
+  uint64_t* address_as_ull = reinterpret_cast<uint64_t*>(address);
   // NOLINT_NEXT_LINE(runtime/int)
   uint64_t old = *address_as_ull, assumed;
   do {
@@ -101,10 +102,11 @@ inline void CountSketchForward(const Tensor<gpu, 2, DType> &out,
   upper_bound = upper_bound > 0? upper_bound:0;
   int bstart = 0;
     for ( int i = 0; i <= upper_bound; i++ ) {
-        const int batchlen = min(processing_batch_size, n_samples - bstart );
+        const int batchlen = min(processing_batch_size, n_samples - bstart);
         const int nthreads = batchlen * in_dim;
-        const int threads_per_block = min(THREADS_PER_BLOCK, nthreads);// to make number of threads the same as input
-        int nblocks = (nthreads + threads_per_block - 1) / threads_per_block ;
+        // to make number of threads the same as input
+        const int threads_per_block = min(THREADS_PER_BLOCK, nthreads);
+        int nblocks = (nthreads + threads_per_block - 1) / threads_per_block;
         cuda::sketch_forward_kernel<DType><<<nblocks, threads_per_block>>>(
                                     nthreads, out_ptr+bstart*out_dim, h_ptr,
                                     s_ptr, in_ptr+bstart*in_dim, batchlen,
@@ -116,13 +118,13 @@ inline void CountSketchForward(const Tensor<gpu, 2, DType> &out,
 
 template<typename DType>
 inline void CountSketchBackward(const Tensor<gpu, 2, DType> &in_grad,
-                                                                const Tensor<gpu, 2, DType> &out_grad,
-                                                                const Tensor<gpu, 1, DType> &h,
-                                                                const Tensor<gpu, 1, DType> &s,
-                                                                const int n_samples,
-                                                                const int processing_batch_size,
-                                                                const int in_dim,
-                                                                const int out_dim    ) {
+                                const Tensor<gpu, 2, DType> &out_grad,
+                                const Tensor<gpu, 1, DType> &h,
+                                const Tensor<gpu, 1, DType> &s,
+                                const int n_samples,
+                                const int processing_batch_size,
+                                const int in_dim,
+                                const int out_dim) {
     DType *in_grad_ptr = in_grad.dptr_;
     const DType *out_grad_ptr = out_grad.dptr_;
     const DType *h_ptr = h.dptr_;
@@ -139,8 +141,8 @@ inline void CountSketchBackward(const Tensor<gpu, 2, DType> &in_grad,
 
         const int nthreads = batchlen * in_dim;
         // to make number of threads the same as input
-        const int threads_per_block = min(THREADS_PER_BLOCK, nthreads);  
-        int nblocks = (nthreads + threads_per_block - 1) / threads_per_block ;
+        const int threads_per_block = min(THREADS_PER_BLOCK, nthreads);
+        int nblocks = (nthreads + threads_per_block - 1) / threads_per_block;
         cuda::sketch_backward_kernel<DType><<<nblocks, threads_per_block>>>(
                                     nthreads, in_grad_ptr+bstart*in_dim, h_ptr,
                             s_ptr, out_grad_ptr+bstart*out_dim, batchlen,

@@ -26,7 +26,7 @@ enum  CountSketchOpOutputs{kOut};
 
 // seems that we can infer all the parameters from data shapes at the moment
 struct CountSketchParam : public dmlc::Parameter<CountSketchParam> {
-    int out_dim; 
+    int out_dim;
     int processing_batch_size;
     DMLC_DECLARE_PARAMETER(CountSketchParam) {
         DMLC_DECLARE_FIELD(out_dim)
@@ -59,14 +59,15 @@ class CountSketchOp : public Operator {
 
         const TShape& hshape = in_data[CountSketch::kH].shape_;
         const TShape& sshape = in_data[CountSketch::kS].shape_;
-        Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get_with_shape<xpu, 1, DType>(Shape1(hshape.ProdShape(0, hshape.ndim())), s);
-        Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get_with_shape<xpu, 1, DType>(Shape1(sshape.ProdShape(0, sshape.ndim())), s);
+        Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get_with_shape<xpu, 1, DType>(
+            Shape1(hshape.ProdShape(0, hshape.ndim())), s);
+        Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get_with_shape<xpu, 1, DType>(
+            Shape1(sshape.ProdShape(0, sshape.ndim())), s);
         Tensor<xpu, 2, DType> out = out_data[CountSketch::kOut].FlatTo2D<xpu, DType>(s);
-        
         n_samples = data.shape_[0];
         in_dim = data.shape_[1];
     // firstly set out to zero as we will use sum
-    out=0;
+    out = 0;
         CountSketchForward(out, data, h, ss, n_samples,
                            this->param_.processing_batch_size, in_dim, this->param_.out_dim);
     }
@@ -138,29 +139,28 @@ class CountSketchProp : public OperatorProperty {
       // check the shapes of h and s
         CHECK_EQ((*in_shape)[CountSketch::kH][1], dshape[3])
             << "H should be 2D tensor with same length as input shape[3], "
-                        << (*in_shape)[CountSketch::kH][1]<<" v.s. "<<dshape[3];
+                        << (*in_shape)[CountSketch::kH][1] << " v.s. " << dshape[3];
         CHECK_EQ((*in_shape)[CountSketch::kS][1], dshape[3])
             << "S should be 2D tensor with same length as input shape[3], "
-                        << (*in_shape)[CountSketch::kS][1]<<" v.s. "<<dshape[3];
+                        << (*in_shape)[CountSketch::kS][1] << " v.s. " << dshape[3];
 
         out_shape->push_back(Shape4(dshape[0], dshape[1], dshape[2], param_.out_dim));
     } else if (dshape.ndim() == 2) {
-        CHECK_EQ((*in_shape)[CountSketch::kH][1], dshape[1]) 
+        CHECK_EQ((*in_shape)[CountSketch::kH][1], dshape[1])
            << "H should be 2D tensor with same length as input shape[1], "
-                        << (*in_shape)[CountSketch::kH][1]<<" v.s. "<<dshape[1];
+                        << (*in_shape)[CountSketch::kH][1] << " v.s. " << dshape[1];
         CHECK_EQ((*in_shape)[CountSketch::kS][1], dshape[1])
             << "S should be 2D tensor with same length as input shape[1], "
-                        << (*in_shape)[CountSketch::kS][1]<<" v.s. "<<dshape[1];
+                        << (*in_shape)[CountSketch::kS][1] << " v.s. " << dshape[1];
         out_shape->push_back(Shape2(dshape[0], param_.out_dim));
     } else {
         CHECK_EQ(dshape.ndim(), 2) <<"Data should be 2D or 4D!";
     return false;
     }
-    
     return true;
   }
 
-  bool InferType(std::vector<int> *in_type, 
+  bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
     CHECK_GE(in_type->size(), 1);
@@ -214,7 +214,6 @@ class CountSketchProp : public OperatorProperty {
 
   Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                               std::vector<int> *in_type) const override;
-    
  private:
     CountSketchParam param_;
 };
