@@ -62,8 +62,8 @@ TEST(CPDecomp, 2DTensor) {
   Tensor<cpu, 2, DType> ts(Shape2(5, 4));
   AllocSpace(&ts);
 
-  int k0 = 3;
-  int k = 2;
+  const int k0 = 3;
+  const int k = 2;
 
   // Generate 2D tensor
   DType eigvals0_[k0] {10, 6, 1};
@@ -90,7 +90,7 @@ TEST(CPDecomp, 2DTensor) {
     AllocSpace(&m);
 
   int info;
-  info = CPDecompForward(eigvals, factors_T, ts, k);
+  info = CPDecomp(eigvals, factors_T, ts, k);
 
   std::cerr << "Eigvals expected:\n";
   print1DTensor_(eigvals0);
@@ -116,8 +116,8 @@ TEST(CPDecomp, 3DTensor) {
   Tensor<cpu, 3, DType> ts(Shape3(5, 4, 3));
   AllocSpace(&ts);
 
-  int k0 = 3;
-  int k = 2;
+  const int k0 = 3;
+  const int k = 2;
 
   // Generate 2D tensor
   DType eigvals0_[k0] {10, 6, 1};
@@ -148,7 +148,7 @@ TEST(CPDecomp, 3DTensor) {
     AllocSpace(&m);
 
   int info;
-  info = CPDecompForward(eigvals, factors_T, ts, k);
+  info = CPDecomp(eigvals, factors_T, ts, k);
 
   std::cerr << "Eigvals expected:\n";
   print1DTensor_(eigvals0);
