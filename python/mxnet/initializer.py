@@ -433,13 +433,15 @@ class Bilinear(Initializer):
 
 @register
 class LSTMCellForgetBias(Initializer):
-    """Initialize the bias of an LSTM to 0.0 except for the forget gate whose bias is set to custom value.
+    """Initialize the bias of an LSTM to 0.0
+    except for the forget gate whose bias is set to custom value.
 
     Parameters
     ----------
     num_hidden: int, number of hidden nodes in LSTMCell.
 
-    forget_bias: float, bias for the forget gate, Jozefowicz et al. 2015 recommends setting this to 1.0.
+    forget_bias: float, bias for the forget gate.
+    Jozefowicz et al. 2015 recommends setting this to 1.0.
     """
     def __init__(self, num_hidden, forget_bias):
         super(LSTMCellForgetBias, self).__init__(num_hidden=num_hidden, forget_bias=forget_bias)
@@ -491,12 +493,13 @@ class FusedRNN(Initializer):
         args = cell.unpack_weights({'parameters': arr})
         for name in args:
             desc = InitDesc(name)
-            # for lstm bias, we use a custom initializer which adds a bias to the forget gate
+            # for lstm bias, we use a custom initializer
+            # which adds a bias to the forget gate
             if self.mode == 'lstm' and name.endswith("bias"):
-                forget_bias_init = LSTMCellForgetBias(num_hidden=self._num_hidden, forget_bias=self.forget_bias)
+                forget_bias_init = LSTMCellForgetBias(num_hidden=self._num_hidden,
+                                                      forget_bias=self.forget_bias)
                 forget_bias_init._init_weight(desc, args[name])
             else:
                 self._init(desc, args[name])
 
         arr[:] = cell.pack_weights(args)['parameters']
-
