@@ -39,27 +39,22 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
-    .describe("the label value will be ignored during backward (only works if "
-      "use_ignore is set to be true).");
+    .describe("the labels with value equals to ``ignore_label`` will be ignored "
+              "during backward (only works if "
+              "use_ignore is set to be true).");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
-    .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional "
-      "input tensor, softmax will generate n*x_1*...*x_n output, each "
-      "has k classes");
+    .describe("If set to true, softmax will applied on axis 1");
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
     .describe("If set to true, the ignore_label value will not contribute "
       "to the backward gradient");
     DMLC_DECLARE_FIELD(preserve_shape).set_default(false)
-    .describe("If true, for a (n_1, n_2, ..., n_d, k) dimensional "
-      "input tensor, softmax will generate (n1, n2, ..., n_d, k) output, "
-      "normalizing the k classes as the last dimension.");
+    .describe("If true, softmax will applied on the last axis");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", softmaxout_enum::kNull)
     .add_enum("batch", softmaxout_enum::kBatch)
     .add_enum("valid", softmaxout_enum::kValid)
     .set_default(softmaxout_enum::kNull)
-    .describe("If set to null, op will do nothing on output gradient."
-              "If set to batch, op will normalize gradient by divide batch size"
-              "If set to valid, op will normalize gradient by divide sample not ignored");
+    .describe("Normalize the gradient");
     DMLC_DECLARE_FIELD(out_grad)
     .set_default(false)
     .describe("Apply weighting from output gradient");

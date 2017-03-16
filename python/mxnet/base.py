@@ -7,9 +7,10 @@ import sys
 import ctypes
 import atexit
 import warnings
-warnings.filterwarnings('default', category=DeprecationWarning)
+import inspect
 import numpy as np
 from . import libinfo
+warnings.filterwarnings('default', category=DeprecationWarning)
 
 __all__ = ['MXNetError']
 #----------------------------
@@ -201,6 +202,8 @@ def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):
     for key, type_info, desc in zip(arg_names, arg_types, arg_descs):
         if key in param_keys and remove_dup:
             continue
+        if key == 'num_args':
+            continue
         param_keys.add(key)
         ret = '%s : %s' % (key, type_info)
         if len(desc) != 0:
@@ -218,3 +221,38 @@ def _notify_shutdown():
     check_call(_LIB.MXNotifyShutdown())
 
 atexit.register(_notify_shutdown)
+
+def add_fileline_to_docstring(module, incursive=True):
+    """Append the definition position to each function contained in module
+
+    Examples
+    --------
+    # Put the following codes at the end of a file
+    add_fileline_to_docstring(__name__)
+    """
+
+    def _add_fileline(obj):
+        """add fileinto to a object
+        """
+        if obj.__doc__ is None or 'From:' in obj.__doc__:
+            return
+        fname = inspect.getsourcefile(obj)
+        if fname is None:
+            return
+        try:
+            line = inspect.getsourcelines(obj)[-1]
+        except IOError:
+            return
+        obj.__doc__ += '\n\nFrom:%s:%d' % (fname, line)
+
+    if isinstance(module, str):
+        module = sys.modules[module]
+    for _, obj in inspect.getmembers(module):
+        if inspect.isbuiltin(obj):
+            continue
+        if inspect.isfunction(obj):
+            _add_fileline(obj)
+        if inspect.ismethod(obj):
+            _add_fileline(obj.__func__)
+        if inspect.isclass(obj) and incursive:
+            add_fileline_to_docstring(obj, False)

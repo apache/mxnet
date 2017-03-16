@@ -20,8 +20,6 @@ def download_file(url, local_fname=None, force_write=False):
                 if exc.errno != errno.EEXIST:
                     raise
 
-
-
     r = requests.get(url, stream=True)
     assert r.status_code == 200, "failed to open %s" % url
     with open(local_fname, 'wb') as f:
