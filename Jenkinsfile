@@ -99,25 +99,27 @@ USE_CUDNN=1                   \
       }
     }
   },
-  'CPU: MKL': {
+  'CPU: MKLML': {
     node() {
-      ws('workspace/build-mkl') {
+      ws('workspace/build-mklml') {
         init_git()
         def flag = """ \
 USE_BLAS=openblas          \
 USE_MKL2017=1              \
 USE_MKL2017_EXPERIMENTAL=1 \
 MKLML_ROOT=\$(pwd)/mklml   \
+USE_CUDA=1                    \
+USE_CUDA_PATH=/usr/local/cuda \
 -j\$(nproc)
 """
-        make('mkl', flag)
-        pack_lib('mkl')
+        make('mklml_gpu', flag)
+        pack_lib('mklml')
       }
     }
   }
 }
 
-// Python unittest
+// Python unittest for CPU
 def python_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
@@ -125,6 +127,8 @@ def python_ut(docker_type) {
   }
 }
 
+// GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
+// both CPU and GPU
 def python_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
@@ -147,17 +151,17 @@ stage('Unit Test') {
       ws('workspace/ut-python-gpu') {
         init_git()
         unpack_lib('gpu', mx_lib)
-        python_ut('gpu')
         python_gpu_ut('gpu')
       }
     }
   },
-  'Python2/3: MKL': {
+  'Python2/3: MKLML': {
     node {
-      ws('workspace/ut-python-mkl') {
+      ws('workspace/ut-python-mklml') {
         init_git()
-        unpack_lib('mkl')
-        python_ut('mkl')
+        unpack_lib('mklml')
+        python_ut('mklml_gpu')
+        python_gpu_ut('mklml_gpu')
       }
     }
   },

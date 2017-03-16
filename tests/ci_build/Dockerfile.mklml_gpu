@@ -1,4 +1,6 @@
-FROM ubuntu:14.04
+FROM nvidia/cuda:7.5-cudnn5-devel
+# the reason we used a gpu base container because we are going to test MKLDNN
+# operator implementation against GPU implementation
 
 COPY install/ubuntu_*.sh /install/
 
