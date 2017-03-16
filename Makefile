@@ -36,7 +36,7 @@ include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
-WARNFLAGS= -Wall
+WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
@@ -313,25 +313,26 @@ scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)")
+			-Dcurrent_libdir="$(ROOTDIR)/lib" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scalatest:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)")
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)")
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src

@@ -136,7 +136,7 @@ struct clip_grad {
   }
 };
 
-#define REVERSE_MAX_DIM 10
+#define REVERSE_MAX_DIM 10U
 
 struct reverse {
   MSHADOW_XINLINE static int ReverseIndex(index_t idx,

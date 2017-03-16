@@ -51,8 +51,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
   CHECK_EQ(param_.target_shape.ndim() > 0 ||
            param_.shape.ndim() > 0, true) << "targe_shape or shape must be present.";
   const TShape &dshape = (*in_attrs)[0];
@@ -108,7 +108,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
         if (d1 == -1) d1 = d0 / d2;
         if (d2 == -1) d2 = d0 / d1;
-        CHECK_EQ(d1 * d2, d0) <<
+        CHECK_EQ(d1 * d2, static_cast<int>(d0)) <<
           "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
         tmp.push_back(d1);
         tmp.push_back(d2);
@@ -173,8 +173,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
 inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *in_attrs,
                          std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
   const TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
   out_attrs->clear();
@@ -272,10 +272,10 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 5) << "Transpose support at most 5 dimensions";
+  CHECK_LE(shp.ndim(), 5U) << "Transpose support at most 5 dimensions";
   TShape ret(shp.ndim());
   if (param.axes.ndim() == 0) {
     for (index_t i = 0; i < shp.ndim(); ++i) {
@@ -306,8 +306,8 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
                            std::vector<TShape> *in_attrs,
                            std::vector<TShape> *out_attrs) {
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
   CHECK_LE(param.axis, shp.ndim())
       << "axis exceeds the dimension of the array";
@@ -480,8 +480,8 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
                      std::vector<TShape> *out_attrs) {
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
@@ -645,8 +645,8 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
@@ -1050,8 +1050,8 @@ inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
                        std::vector<TShape> *in_attrs,
                        std::vector<TShape> *out_attrs) {
   const SliceAxisParam& param = nnvm::get<SliceAxisParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   int axis, begin, end;
   GetSliceAxisParams(param, ishape, &axis, &begin, &end);
@@ -1237,8 +1237,8 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
   const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const TShape& ishape = (*in_attrs)[0];
   int repeats = 0;
   dmlc::optional<int> axisOpt;
@@ -1276,7 +1276,7 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
 inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
                          std::vector<int>* in_attrs,
                          std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
   if ((*in_attrs)[0] != -1) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   } else if ((*out_attrs)[0] != -1) {
@@ -1382,8 +1382,8 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   const TShape& oshape = outputs[0].shape_;
   if (oshape.ndim() == 0) return;
@@ -1423,8 +1423,8 @@ struct TileParam : public dmlc::Parameter<TileParam> {
 inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const TileParam& param = nnvm::get<TileParam>(attrs.parsed);
   const TShape& ishape = (*in_attrs)[0];
   const TShape& reps = param.reps;
@@ -1452,7 +1452,7 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
 inline bool TileOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int>* in_attrs,
                        std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
   if ((*in_attrs)[0] != -1) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   } else if ((*out_attrs)[0] != -1) {
@@ -1517,8 +1517,8 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   if (inputs[0].Size() == 0) return;
   const TShape& ishape = inputs[0].shape_;
@@ -1557,8 +1557,8 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   if (inputs[0].Size() == 0) return;
   const TShape& oshape = outputs[0].shape_;
@@ -1610,7 +1610,7 @@ void ReverseOpForward(const nnvm::NodeAttrs& attrs,
   std::vector<index_t>  trailing_(param.axis.ndim());
   index_t reverse_index = 0;
   for (auto axis_iter = param.axis.begin() ; axis_iter!= param.axis.end(); ++axis_iter) {
-    CHECK_LT(*axis_iter, ishape.ndim());
+    CHECK_LT(*axis_iter, static_cast<int>(ishape.ndim()));
     stride_[reverse_index] = ishape[*axis_iter];
     trailing_[reverse_index] = 1;
     for (int i2 = *axis_iter + 1; i2 < ishape.ndim(); ++i2) {
