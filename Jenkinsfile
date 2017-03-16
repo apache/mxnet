@@ -107,7 +107,6 @@ USE_CUDNN=1                   \
 USE_BLAS=openblas          \
 USE_MKL2017=1              \
 USE_MKL2017_EXPERIMENTAL=1 \
-MKLML_ROOT=\$(pwd)/mklml   \
 USE_CUDA=1                    \
 USE_CUDA_PATH=/usr/local/cuda \
 USE_CUDNN=1                   \
