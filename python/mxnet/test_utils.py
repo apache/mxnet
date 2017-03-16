@@ -821,10 +821,13 @@ def list_gpus():
         If there are n GPUs, then return a list [0,1,...,n-1]. Otherwise returns
         [].
     """
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return []
+    re = ''
+    nvidia_smi = ['nvidia-smi', '/usr/bin/nvidia-smi', '/usr/local/nvidia/bin/nvidia-smi']
+    for cmd in nvidia_smi:
+        try:
+            re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
+        except OSError:
+            pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
 def download(url, fname=None, dirname=None, overwrite=False):

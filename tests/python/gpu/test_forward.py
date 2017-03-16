@@ -3,12 +3,12 @@ import numpy as np
 import mxnet as mx
 from mxnet.test_utils import *
 
-def get_model():
+def _get_model():
     if not os.path.exists('model/Inception-7-symbol.json'):
         download('http://data.mxnet.io/models/imagenet/inception-v3.tar.gz', dirname='model')
         os.system("cd model; tar -xf inception-v3.tar.gz --strip-components 1")
 
-def dump_images(shape):
+def _dump_images(shape):
     import skimage.io
     import skimage.transform
     img_list = []
@@ -23,16 +23,16 @@ def dump_images(shape):
     imgs = np.asarray(img_list, dtype=np.float32).transpose((0, 3, 1, 2)) - 128
     np.save('data/test_images_%d_%d.npy'%shape, imgs)
 
-def get_test_data(shape):
+def _get_data(shape):
     download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape), dirname='data')
     download("http://data.mxnet.io/data/inception-v3-dump.npz", dirname="data")
 
 def test_consistency(dump=False):
     shape = (299, 299)
-    get_model()
-    get_test_data(shape)
+    _get_model()
+    _get_data(shape)
     if dump:
-        dump_images(shape)
+        _dump_images(shape)
         gt = None
     else:
         gt = {n: mx.nd.array(a) for n, a in np.load('data/inception-v3-dump.npz').items()}
