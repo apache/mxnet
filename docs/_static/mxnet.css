@@ -765,10 +765,6 @@ dl.class > dt:before, dl.function > dt:before {
     margin: -50px 0 0; /* negative fixed header height */
 }
 
-dt {
-    background-color: white !important;
-}
-
 dl.method, dl.attribute {
     padding-top: 15px;
 }
