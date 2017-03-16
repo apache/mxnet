@@ -776,6 +776,8 @@ class FusedRNNCell(BaseRNNCell):
             get_cell = get_vanilla_cell
 
         for i in range(self._num_layers):
+            if i == self._num_layers - 1:
+                get_cell = get_vanilla_cell
             if self._bidirectional:
                 stack.add(BidirectionalCell(
                     get_cell('%sl%d_'%(self._prefix, i)),
