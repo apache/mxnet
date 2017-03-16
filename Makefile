@@ -22,14 +22,14 @@ ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
 
-
 # use customized config file
 include $(config)
 
 ifeq ($(USE_MKL2017), 1)
-	RETURN_STRING=$(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT=$(firstword $(RETURN_STRING))
-	export USE_MKLML=$(lastword $(RETURN_STRING))
+# must run ./prepare_mkl before including mshadow.mk
+	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT = $(firstword $(RETURN_STRING))
+	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
 
 include mshadow/make/mshadow.mk
@@ -88,6 +88,8 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
+	CFLAGS += -I$(MKLML_ROOT)/include
+	LDFLAGS += -L$(MKLML_ROOT)/lib
 ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 else
@@ -99,6 +101,8 @@ ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
 endif
+
+
 
 ifeq ($(USE_THREADED_ENGINE), 1)
 	CFLAGS += -DMXNET_USE_THREADED_ENGINE
