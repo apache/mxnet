@@ -125,6 +125,13 @@ def python_ut(docker_type) {
   }
 }
 
+def python_gpu_ut(docker_type) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/gpu"
+  }
+}
+
 stage('Unit Test') {
   parallel 'Python2/3: CPU': {
     node {
@@ -141,6 +148,7 @@ stage('Unit Test') {
         init_git()
         unpack_lib('gpu', mx_lib)
         python_ut('gpu')
+        python_gpu_ut('gpu')
       }
     }
   },
