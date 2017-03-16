@@ -33,7 +33,9 @@ class GraphExecutor : public Executor {
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
+  void Run(nnvm::NodeEntryMap<NDArray> feed_dict) override;
   const std::vector<NDArray>& outputs() const override;
+  const std::vector<NDArray>& grads() const override;
   void Print(std::ostream &os) const override; // NOLINT(*)
   void SetMonitorCallback(const MonitorCallback& callback) override;
   // initialized the executor
@@ -45,6 +47,8 @@ class GraphExecutor : public Executor {
             const std::vector<OpReqType>& grad_req_type,
             const std::vector<NDArray>& aux_states,
             Executor* shared_exec = nullptr);
+
+  nnvm::NodeEntryMap<TShape> shape_hints_;
 
  protected:
   // Information about operational node
@@ -92,6 +96,7 @@ class GraphExecutor : public Executor {
   std::vector<NDArray> output_arrays_;
   // gradient store
   std::vector<std::pair<OpReqType, NDArray> > grad_store_;
+  std::vector<NDArray> grad_arrays_;
   // array to hold head gradient.
   std::vector<NDArray> head_grad_array_;
   // entry to hold head gradient

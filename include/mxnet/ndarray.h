@@ -11,6 +11,7 @@
 #include <dmlc/io.h>
 #include <dmlc/type_traits.h>
 #include <dmlc/registry.h>
+#include <nnvm/node.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -27,6 +28,10 @@
 #endif
 
 namespace mxnet {
+
+namespace ndarray {
+  class AutogradRuntime;
+}
 /*!
  * \brief ndarray interface
  */
@@ -67,6 +72,15 @@ class NDArray {
       Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
+
+  NDArray(const NDArray& nd) = default;
+
+  NDArray& operator=(const NDArray& ) = default;
+
+  NDArray(NDArray&& nd)
+    : ptr_(nd.ptr_), shape_(nd.shape_), offset_(nd.offset_),
+    dtype_(nd.dtype_), entry_(nd.entry_) {}
+
   /*!
    * \return the shape of current NDArray
    */
@@ -344,6 +358,7 @@ class NDArray {
                    std::vector<std::string>* keys);
 
  private:
+  friend class ::mxnet::ndarray::AutogradRuntime;
   /*! \brief the real data chunk that backs NDArray */
   struct Chunk {
     /*! \brief storage handlefrom storage engine */
@@ -414,6 +429,8 @@ class NDArray {
   size_t offset_;
   /*! \brief type of data */
   int dtype_ = -1;
+
+  nnvm::NodeEntry entry_{nnvm::Node::Create(), 0, 0};
 };
 
 /*!

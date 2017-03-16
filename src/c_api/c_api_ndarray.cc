@@ -11,10 +11,13 @@
 #include <mxnet/op_attr_types.h>
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
+#include <string>
 #include "./c_api_common.h"
 #include "../common/utils.h"
+#include "../ndarray/autograd.h"
 
 using namespace mxnet;
+using namespace mxnet::ndarray;
 
 void SetOpAttrs(const nnvm::Op *op,
                 nnvm::NodeAttrs *p_attrs,
@@ -385,6 +388,10 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     }
   }
 
+  if (AutogradRuntime::Get()->IsRecording()) {
+    AutogradRuntime::Get()->RecordImperative(op, attrs, ndinputs, ndoutputs);
+  }
+
   if (outarray == nullptr) {
     ret->ret_handles.clear();
     for (int i = 0; i < num_visible_outputs; ++i) {
@@ -397,5 +404,54 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
+  API_END();
+}
+
+int MXAutogradSetRecording(int recording) {
+  API_BEGIN();
+  AutogradRuntime::Get()->SetRecording(bool(recording));
+  API_END();
+}
+
+int MXAutogradSetMarkForRecord(mx_uint num_arr, NDArrayHandle *arrays, int mark) {
+  API_BEGIN();
+  std::vector<NDArray*> data(num_arr);
+  for (mx_uint i = 0; i < num_arr; ++i) {
+    data[i] = static_cast<NDArray*>(arrays[i]);
+  }
+  AutogradRuntime::Get()->SetMarkForRecord(data, bool(mark));
+  API_END();
+}
+
+int MXAutogradComputeGradient(mx_uint num_input,
+                              NDArrayHandle *input_handles,
+                              mx_uint num_output,
+                              NDArrayHandle *output_handles,
+                              mx_uint* num_grad,
+                              NDArrayHandle **grad_handles) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  std::vector<NDArray> inputs;
+  inputs.reserve(num_input);
+  for (mx_uint i = 0; i < num_input; ++i) {
+    inputs.emplace_back(*static_cast<NDArray*>(input_handles[i]));
+  }
+  std::vector<NDArray> outputs;
+  outputs.reserve(num_output);
+  for (mx_uint i = 0; i < num_output; ++i) {
+    outputs.emplace_back(*static_cast<NDArray*>(output_handles[i]));
+  }
+
+  std::vector<NDArray> grads =
+    AutogradRuntime::Get()->ComputeGradient(inputs, outputs);
+
+  for (size_t i = 0; i < grads.size(); ++i) {
+    NDArray *ptr = new NDArray();
+    *ptr = grads[i];
+    ret->ret_handles[i] = ptr;
+  }
+  *num_grad = static_cast<mx_uint>(grads.size());
+  *grad_handles = dmlc::BeginPtr(ret->ret_handles);
+
   API_END();
 }

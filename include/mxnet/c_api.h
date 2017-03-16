@@ -516,6 +516,17 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  const char **param_keys,
                                  const char **param_vals);
 
+MXNET_DLL int MXAutogradSetRecording(int recording);
+MXNET_DLL int MXAutogradSetMarkForRecord(mx_uint num_arr,
+                                         NDArrayHandle *arrays,
+                                         int mark);
+MXNET_DLL int MXAutogradComputeGradient(mx_uint num_input,
+                                        NDArrayHandle* input_handles,
+                                        mx_uint num_output,
+                                        NDArrayHandle* output_handles,
+                                        mx_uint* num_grad,
+                                        NDArrayHandle** grad_handles);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
