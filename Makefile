@@ -22,15 +22,15 @@ ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
 
+# use customized config file
+include $(config)
+
 ifeq ($(USE_MKL2017), 1)
 # must run ./prepare_mkl before including mshadow.mk
 	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
 	MKLROOT = $(firstword $(RETURN_STRING))
 	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
-
-# use customized config file
-include $(config)
 
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk

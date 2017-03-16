@@ -66,7 +66,7 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 stage('Build') {
-  parallel 'CPU: openblas': {
+  parallel 'CPU: Openblas': {
     node {
       ws('workspace/build-cpu') {
         init_git()
