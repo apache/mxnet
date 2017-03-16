@@ -97,7 +97,7 @@ endif
 
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
-	LDFLAGS += -lcudnn
+	LDFLAGS += -lcudnn -lcufft
 endif
 
 ifeq ($(USE_THREADED_ENGINE), 1)
