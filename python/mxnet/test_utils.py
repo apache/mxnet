@@ -8,6 +8,7 @@ import numbers
 import subprocess
 import os
 import errno
+import logging
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
@@ -826,7 +827,7 @@ def list_gpus():
         return []
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-def download(url, fname=None, overwrite=False):
+def download(url, fname=None, dirname=None, overwrite=False):
     """Download an given URL
 
     Parameters
@@ -837,6 +838,9 @@ def download(url, fname=None, overwrite=False):
     fname : str, optional
         filename of the downloaded file. If None, then will guess a filename
         from url.
+    dirname : str, optional
+        output directory name. If None, then guess from fname or use the current
+        directory
     overwrite : bool, optional
         Default is false, which means skipping download if the local file
         exists. If true, then download the url to overwrite the local file if
@@ -850,16 +854,21 @@ def download(url, fname=None, overwrite=False):
     if fname is None:
         fname = url.split('/')[-1]
     if not overwrite and os.path.exists(fname):
+        logging.info("%s exists, skip to downloada", fname)
         return fname
 
-    dir_name = os.path.dirname(fname)
-    if dir_name != "":
-        if not os.path.exists(dir_name):
-            try: # try to create the directory if it doesn't exists
-                os.makedirs(dir_name)
+    if dirname is None:
+        dirname = os.path.dirname(fname)
+    else:
+        fname = os.path.join(dirname, fname)
+    if dirname != "":
+        if not os.path.exists(dirname):
+            try:
+                logging.info('create directory %s', dirname)
+                os.makedirs(dirname)
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
-                    raise OSError('failed to create ' + dir_name)
+                    raise OSError('failed to create ' + dirname)
 
     r = requests.get(url, stream=True)
     assert r.status_code == 200, "failed to open %s" % url
@@ -867,4 +876,5 @@ def download(url, fname=None, overwrite=False):
         for chunk in r.iter_content(chunk_size=1024):
             if chunk: # filter out keep-alive new chunks
                 f.write(chunk)
+    logging.info("downloaded %s into %s successfully", url, fname)
     return fname
