@@ -42,7 +42,7 @@ def read_caffemodel(prototxt_fname, caffemodel_fname):
         return (layers, layer_names)
     else:
         proto = caffe_pb2.NetParameter()
-        with open(fname, 'rb') as f:
+        with open(caffemodel_fname, 'rb') as f:
             proto.ParseFromString(f.read())
         return (get_layers(proto), None)
 
