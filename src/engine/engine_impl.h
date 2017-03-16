@@ -15,7 +15,20 @@
 
 namespace mxnet {
 namespace engine {
-
+static inline void emptyFunc1(mxnet::RunContext cntx)
+{
+    int sleepTime = 0;
+   sleepTime = RuntimeProfile::Get()->GetRuntime(cntx.oprName);
+   std::this_thread::sleep_for (std::chrono::milliseconds(sleepTime));
+}
+static void emptyFunc2(mxnet::RunContext cntx, mxnet::engine::CallbackOnComplete cb)
+{
+   //cntx.
+   //RuntimeProfile::Get()->GetRuntime()
+   emptyFunc1(cntx);
+   //if(cb!=NULL)
+   cb();
+}
 /*! \brief base class of engine variables, used for type checking */
 struct Var {
 #if ENGINE_DEBUG
