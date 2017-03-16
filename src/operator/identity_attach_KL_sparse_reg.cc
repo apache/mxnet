@@ -4,6 +4,7 @@
  * \brief\
 */
 #include "./identity_attach_KL_sparse_reg-inl.h"
+#include <nnvm/op_attr_types.h>
 
 namespace mxnet {
 namespace op {
@@ -23,7 +24,14 @@ MXNET_REGISTER_OP_PROPERTY(IdentityAttachKLSparseReg, IdentityAttachKLSparseRegP
 .add_argument("data", "Symbol", "Input data.")
 .add_arguments(IdentityAttachKLSparseRegParam::__FIELDS__());
 
-
+NNVM_REGISTER_OP(IdentityAttachKLSparseReg)
+.set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
+    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+      if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
+      if (index == 1) {
+        var->attrs.dict["__init__"] = "[\"zero\", {}]";
+      }
+    });
 }  // namespace op
 }  // namespace mxnet
 

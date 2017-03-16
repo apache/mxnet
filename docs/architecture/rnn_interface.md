@@ -80,7 +80,7 @@ Recurrent networks are first-class citizens in CNTK. In section 5.2.1.8 of the C
 
 The function `ColumnSlice(start_col, num_col)` takes out the packed data for that time index, as described above (here `m_samplesInRecurrentStep` must be the mini-batch size).
 
-The low-level API for recurrent connection seem to be a *delay node*. But I'm not sure how to use this low-level API. The [example of ptb language model](https://cntk.codeplex.com/SourceControl/latest#Examples/Text/PennTreebank/Config/rnn.config) uses a very high-level API (simply setting `recurrentLayer = 1` in the config).
+The low-level API for recurrent connection seem to be a *delay node*. But I'm not sure how to use this low-level API. The [example of PTB language model](https://cntk.codeplex.com/SourceControl/latest#Examples/Text/PennTreebank/Config/rnn.config) uses a very high-level API (simply setting `recurrentLayer = 1` in the config).
 
 ## TensorFlow
 

@@ -1,4 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
+
+import java.io._
 
 import ml.dmlc.mxnet.Base._
 import org.slf4j.{LoggerFactory, Logger}
@@ -246,6 +265,45 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    */
   private def sendCommandToServers(head: Int, body: String): Unit = {
     checkCall(_LIB.mxKVStoreSendCommmandToServers(handle, head, body))
+  }
+
+  /**
+   * Save optimizer (updater) state to file
+   * @param fname Path to output states file.
+   */
+  def saveOptimizerStates(fname: String): Unit = {
+    require(updaterFunc != null, "Cannot save states for distributed training")
+    updaterFunc match {
+      case cachedStates: MXKVStoreCachedStates =>
+        val target = new BufferedOutputStream(new FileOutputStream(fname))
+        try {
+          target.write(cachedStates.serializeState())
+        } finally {
+          target.close()
+        }
+      case _ =>
+        logger.warn("Updater does not have states, skip saving to {}", fname)
+    }
+  }
+
+  /**
+   * Load optimizer (updater) state from file
+   * @param fname Path to input states file.
+   */
+  def loadOptimizerStates(fname: String): Unit = {
+    assert(updaterFunc != null, "Cannot load states for distributed training")
+    updaterFunc match {
+      case cachedStates: MXKVStoreCachedStates =>
+        val bis = new BufferedInputStream (new FileInputStream (fname) )
+        try {
+        val bArray = Stream.continually (bis.read).takeWhile (- 1 !=).map (_.toByte).toArray
+          cachedStates.deserializeState(bArray)
+        } finally {
+          bis.close ()
+        }
+      case _ =>
+        logger.warn("Updater does not have states, skip loading from {}", fname)
+    }
   }
 }
 // scalastyle:off finalize

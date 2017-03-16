@@ -31,7 +31,7 @@ The following example shows how to configure multiple input neural networks.
 ## Bind and Execute Symbol
 
 When you need to execute a symbol graph, you call the bind function to bind ```NDArrays``` to the argument nodes
-in order to obtain a ```Executor```.
+in order to obtain an ```Executor```.
 
 ![Bind](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/bind_basic.png)
 
@@ -42,7 +42,8 @@ To get the output results, given the bound NDArrays as input, you can call ```Ex
 
 ## Bind Multiple Outputs
 
-To group symbols, then bind them to get outputs of both, use ```mx.symbol.Group```.
+To group symbols, then bind them to
+get the outputs of both, use ```mx.symbol.Group```.
 
 ![MultiOut](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_multi_out.png)
 
@@ -67,10 +68,10 @@ the Executor for you.
 
 ## Auxiliary States
 
-Auxiliary states are just like arguments, except that you can't take the gradient of them. Although auxiliary states might not be part of the computation, they can be helpful to track. You can pass auxiliary states in the same way that you pass arguments.
+Auxiliary states are just like arguments, except that you can't take the gradient of them. Although auxiliary states might not be part of the computation, they can be helpful for tracking. You can pass auxiliary states in the same way that you pass arguments.
 
 ![SimpleBind](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_aux_state.png)
 
-## More Information
+## Next Steps
 
 See [Symbolic API](symbol.md) and [Python Documentation](index.md).

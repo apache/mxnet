@@ -108,6 +108,19 @@ The following tutorials explain how to develop applications for discovering exis
 - [Recommendation Systems](http://mxnet.io/tutorials/general_ml/recommendation_systems.html)
 *An example of using an autoencoder and matrix factorization to make a complete end to end recommendation system*
 
+#### Visualization
+
+The following tutorials show how visualization helps us in daily work, and better understanding towards neural network.
+
+- [Understanding the vanishing gradient problem through visualization](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/understanding_vanish_gradient.ipynb)
+*An example of using the visualization component, [TensorBoard](https://github.com/dmlc/tensorboard), to have an intuitive understanding on the well-known vanished gradient problem in deep learning.*
+
+#### Embedded
+
+The following tutorials explain how to develop machine learning applications running on embedded devices, such as the Raspberry Pi
+
+- [Raspberry Pi Object Classifier](http://mxnet.io/tutorials/embedded/wine_detector.html)
+*An example using a Raspberry Pi equipped with the standard camera module to identify objects in real-time using a pretrained imageNet model*
 
 ### R
 
@@ -120,6 +133,9 @@ The following tutorials explain how to develop applications that use machine lea
 
 - [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 *An advanced example of using a large pre-trained model to classify the ImageNet dataset*
+
+- [Dogs vs. Cats classification with mxnet and R](https://statist-bhfz.github.io/cats_dogs_finetune) *End-to-end tutorial with an example of fine-tuning in R*
+([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
 
 
 #### Natural Language Processing
@@ -139,9 +155,20 @@ Applications that use traditional methods to model classification and regression
 
 ### Scala
 
+#### Get Started
+- [MXNet Scala from IntelliJ](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
+*How to create MXNet Scala examples or applications with the IntelliJ IDE.*
+
+#### Applications
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/scala/mnist.html)
 *A simple example of classifying handwritten digits from the MNIST dataset using a multilayer perceptron.*
 
+- [Character Level LSTM](http://mxnet.io/tutorials/scala/char_lstm.html)
+*An example using an LSTM network to generate text, character by character, in the style of Barack Obama's speeches*
+
+## Contributing Tutorials
+
+Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 ## Other Resources
 - [MXNet Code Examples](https://github.com/dmlc/mxnet/tree/master/example)

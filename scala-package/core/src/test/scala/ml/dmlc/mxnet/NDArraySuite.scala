@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
 import java.io.File
@@ -266,12 +283,20 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(argmax.toArray === Array(1f, 0f))
   }
 
-  test("concatenate") {
+  test("concatenate axis-0") {
     val arr1 = NDArray.array(Array(1f, 2f, 4f, 3f, 3f, 3f), shape = Shape(2, 3))
     val arr2 = NDArray.array(Array(8f, 7f, 6f), shape = Shape(1, 3))
     val arr = NDArray.concatenate(arr1, arr2)
     assert(arr.shape === Shape(3, 3))
     assert(arr.toArray === Array(1f, 2f, 4f, 3f, 3f, 3f, 8f, 7f, 6f))
+  }
+
+  test("concatenate axis-1") {
+    val arr1 = NDArray.array(Array(1f, 2f, 3f, 4f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(5f, 6f), shape = Shape(2, 1))
+    val arr = NDArray.concatenate(Array(arr1, arr2), axis = 1)
+    assert(arr.shape === Shape(2, 3))
+    assert(arr.toArray === Array(1f, 2f, 5f, 3f, 4f, 6f))
   }
 
   test("transpose") {

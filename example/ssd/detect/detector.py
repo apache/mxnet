@@ -37,7 +37,7 @@ class Detector(object):
         self.mod.bind(data_shapes=[('data', (batch_size, 3, data_shape, data_shape))])
         self.mod.set_params(args, auxs)
         self.data_shape = data_shape
-        self.mean_pixels = mx.nd.array(mean_pixels).reshape((3,1,1))
+        self.mean_pixels = mean_pixels
 
     def detect(self, det_iter, show_timer=False):
         """

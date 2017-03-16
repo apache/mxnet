@@ -237,7 +237,7 @@ As you can see, the trade-off between restriction and flexibility is the same fo
 It's important to able to save a model and load it back later. There are different ways to *save* your work.
 Normally, to save a neural network, you need to save two things: a net configuration for the structure of the neural network and the weights of the neural network.
 
-The ability to check the configuration is a plus for symbolic programs. Because the symbolic construction phase does perform computation,
+The ability to check the configuration is a plus for symbolic programs. Because the symbolic construction phase does not perform computation,
 you can directly serialize the computation graph, and load it back later. This solves the problem of saving the configuration without introducing an additional layer.
 
 ```python
@@ -259,7 +259,7 @@ configuration layer on top of the imperative language.
 ### Parameter Updates
 
 Most symbolic programs are data flow  (computation) graphs. Data flow graphs describe computation.
-but it's is not obvious how to use graphs to describe parameter updates. That's because parameter updates introduce mutation,
+but it is not obvious how to use graphs to describe parameter updates. That's because parameter updates introduce mutation,
 which is not a data flow concept. Most symbolic programs introduce a special update statement to update some persistent
 states of the programs.
 

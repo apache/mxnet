@@ -70,7 +70,7 @@ Also it produces the native library in `native/{your-architecture}/target`, whic
 Once you've downloaded and unpacked MNIST dataset to `./data/`, run the training example by
 
 ```bash
-java -Xmx4m -cp \
+java -Xmx4G -cp \
   scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
   ml.dmlc.mxnet.examples.imclassification.TrainMnist \
   --data-dir=./data/ \
@@ -84,7 +84,7 @@ The following command runs the above example using 2 worker nodes (and 2 server 
 
 ```bash
 tracker/dmlc_local.py -n 2 -s 2 \
-  java -Xmx4m -cp \
+  java -Xmx4G -cp \
   scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
   ml.dmlc.mxnet.examples.imclassification.TrainMnist \
   --data-dir=./data/ \

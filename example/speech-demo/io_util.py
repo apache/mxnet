@@ -300,7 +300,6 @@ class TruncatedSentenceIter(mx.io.DataIter):
         self.pad_zeros = pad_zeros
 
         self.time_major = time_major
-        self.layout_mapper = mx.io.DefaultLayoutMapper(1 if time_major else 0)
 
         self.label = None
         if self.time_major:

@@ -1,6 +1,24 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet.io.{MXDataPack, MXDataIter}
 import org.slf4j.LoggerFactory
 
@@ -210,4 +228,28 @@ abstract class DataPack() extends Iterable[DataBatch] {
   def iterator: DataIter
 }
 
+// Named data desc description contains name, shape, type and other extended attributes.
+case class DataDesc(name: String, shape: Shape,
+                    dtype: DType = Base.MX_REAL_TYPE, layout: String = "NCHW") {
+  override def toString(): String = {
+    s"DataDesc[$name,$shape,$dtype,$layout]"
+  }
+}
 
+object DataDesc {
+  /**
+   * Get the dimension that corresponds to the batch size.
+   * @param layout layout string. For example, "NCHW".
+   * @return An axis indicating the batch_size dimension. When data-parallelism is used,
+   *         the data will be automatically split and concatenate along the batch_size dimension.
+   *         Axis can be -1, which means the whole array will be copied
+   *         for each data-parallelism device.
+   */
+  def getBatchAxis(layout: Option[String]): Int = {
+    layout.map(_.indexOf('N')).getOrElse(0)
+  }
+
+  implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
+    shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
+  }
+}

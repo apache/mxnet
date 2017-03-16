@@ -48,5 +48,5 @@ class TestDB(Imdb):
         assert os.path.exists(name), 'Path does not exist: {}'.format(name)
         return name
 
-    def label_from_inde(self, index):
+    def label_from_index(self, index):
         return RuntimeError("Testdb does not support label loading")

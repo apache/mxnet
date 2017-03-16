@@ -1,4 +1,29 @@
-// mexnet.cc
+// mxnet.cc
+
+#define MSHADOW_FORCE_STREAM
+
+#ifndef MSHADOW_USE_CBLAS
+#if (__MIN__ == 1)
+#define MSHADOW_USE_CBLAS   0
+#else
+#define MSHADOW_USE_CBLAS   1
+#endif
+#endif
+
+#define MSHADOW_USE_CUDA    0
+#define MSHADOW_USE_MKL     0
+#define MSHADOW_RABIT_PS    0
+#define MSHADOW_DIST_PS     0
+
+#if defined(__ANDROID__) || defined(__MXNET_JS__)
+#define MSHADOW_USE_SSE         0
+#endif
+
+#define MXNET_USE_OPENCV    0
+#define MXNET_PREDICT_ONLY  1
+#define DISABLE_OPENMP 1
+#define DMLC_LOG_STACK_TRACE 0
+
 
 #include "src/ndarray/ndarray_function.cc"
 #include "src/ndarray/ndarray.cc"

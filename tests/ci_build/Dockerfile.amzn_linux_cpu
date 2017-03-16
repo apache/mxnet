@@ -3,18 +3,9 @@ MAINTAINER Ly Nguyen <lynguyen@amazon.com>
 
 COPY install/* /install/
 
-RUN yum install -y openssh-server git wget
-RUN mkdir /var/run/sshd
-RUN adduser --password jenkins jenkins
-RUN chown -R jenkins /install
-RUN chgrp -R jenkins /install
+RUN yum install -y git wget sudo
 
-RUN /usr/bin/ssh-keygen -A
-RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
-
-ENV NOTVISIBLE "in users profile"
-RUN echo "export VISIBLE=now" >> /etc/profile
-
+RUN chmod -R 755 install
 RUN /install/install_opencv.sh
 RUN /install/install_openblas.sh
 RUN /install/install_python2.sh
@@ -22,14 +13,4 @@ RUN /install/install_python3.sh
 RUN /install/install_testdeps.sh
 RUN /install/install_julia.sh
 RUN /install/install_maven.sh
-
-RUN mkdir -p /home/jenkins/workspace/mxnet-main
-RUN mkdir /home/jenkins/.ssh
-COPY /files/authorized_keys /home/jenkins/.ssh/authorized_keys
-RUN chmod 600 /home/jenkins/.ssh/authorized_keys
-RUN chmod 700 /home/jenkins/.ssh
-RUN chown -R jenkins /home/jenkins
-RUN chgrp -R jenkins /home/jenkins
-
-EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
+RUN /install/install_library.sh

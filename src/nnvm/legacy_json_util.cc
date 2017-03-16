@@ -11,6 +11,7 @@
 #include <nnvm/node.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
+#include <nnvm/op_attr_types.h>
 #include <memory>
 #include <functional>
 #include "../c_api/c_api_common.h"
@@ -131,10 +132,31 @@ Graph UpgradeJSON_000800_000900(Graph g) {
   return g;
 }
 
+// Refactor initializer in v0.9.2
+Graph UpgradeJSON_000903_000904(Graph g) {
+  nnvm::DFSVisit(g.outputs, [](const std::shared_ptr<Node>& n) {
+      static auto& fset_attrs =
+        Op::GetAttr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose");
+
+      if (n->op() != nullptr) {
+        nnvm::FSetInputVarAttrOnCompose fn = fset_attrs.get(n->op(), nullptr);
+        if (fn != nullptr) {
+          for (size_t i = 0; i < n->inputs.size(); ++i) {
+            if (n->inputs[i].node->is_variable()) {
+              fn(n->attrs, n->inputs[i].node, i);
+            }
+          }
+        }
+      }
+    });
+  return g;
+}
+
 static std::vector<std::pair<int, std::function<Graph(Graph)> > > upgrader_list = {
   {MXNET_VERSION, UpgradeJSON_FixParsing},
   {MXNET_MAKE_VERSION(100, 0, 0), UpgradeJSON_Parse},
   {MXNET_MAKE_VERSION(0, 9, 0), UpgradeJSON_000800_000900},
+  {MXNET_MAKE_VERSION(0, 9, 4), UpgradeJSON_000903_000904},
 };
 
 Graph LoadLegacyJSONPass(Graph g) {

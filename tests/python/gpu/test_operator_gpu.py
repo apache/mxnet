@@ -3,6 +3,7 @@ import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from test_operator import *
+from test_optimizer import *
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import check_consistency, set_default_context
@@ -91,8 +92,40 @@ def test_deconvolution_with_type():
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
     check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+
+def test_bilinear_sampler_with_type():
+    data = mx.sym.Variable('data')
+    grid = mx.sym.Variable('grid')
+    sym = mx.sym.BilinearSampler(data=data, grid=grid)
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float64}},
+                {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float32}},
+                {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float16}},
+                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float64}},
+                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                 'type_dict': {'data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+
+def test_grid_generator_with_type():
+    data = mx.sym.Variable('data')
+    sym = mx.sym.GridGenerator(data=data, transform_type='affine', target_shape=(20, 20))
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}},
+                {'ctx': mx.cpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+    sym = mx.sym.GridGenerator(data=data, transform_type='warp', target_shape=(20, 20))
+    ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}},
+                {'ctx': mx.cpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
 
 def test_pooling_with_type():
+    np.random.seed(1234)
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
@@ -113,12 +146,21 @@ def test_pooling_with_type():
     check_consistency(sym, ctx_list)
 
 def test_upsampling_with_type():
-    sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type = 'nearest', num_args=1)
+    sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type='nearest', num_args=1)
     ctx_list = [{'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
                 {'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float32}},
                 {'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float16}},
                 {'ctx': mx.cpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
                 {'ctx': mx.cpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float32}}]
+    check_consistency(sym, ctx_list)
+
+def test_upsampling_bilinear_with_type():
+    sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type='bilinear', num_args=1)
+    ctx_list = [{'ctx': mx.gpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float64}},
+                {'ctx': mx.gpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float32}},
+                {'ctx': mx.gpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float16}},
+                {'ctx': mx.cpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float64}},
+                {'ctx': mx.cpu(0), 'up_data': (2, 2, 2, 10), 'type_dict': {'up_data': np.float32}}]
     check_consistency(sym, ctx_list)
 
 def test_concat_with_type():
@@ -208,6 +250,16 @@ def test_embedding_with_type():
     check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
                       arg_params=arg_params)
 
+def test_svmoutput_with_type():
+    sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
+    ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
+                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
+                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}},
+                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
+                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
+                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
+    check_consistency(sym, ctx_list)
+
 def test_take_with_type():
     sym = mx.sym.take(name='take')
     for data_ndim in range(2, 5):
@@ -217,41 +269,131 @@ def test_take_with_type():
                 data_shape += (np.random.randint(low=3, high=6), )
             idx_shape = ()
             for _ in range(idx_ndim):
-                idx_shape += (np.random.randint(low=3, high=5), ) 
-            ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float64, 
+                idx_shape += (np.random.randint(low=3, high=5), )
+            ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float64,
                                        'take_a': np.float64}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float32, 
+                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float32,
                                        'take_a': np.float32}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float16, 
+                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float16,
                                        'take_a': np.float16}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float64, 
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float64,
                                        'take_a': np.float64}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float32, 
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float32,
                                        'take_a': np.float32}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape, 
-                         'take_a': data_shape, 
-                         'type_dict': {'take_indices': np.float16, 
+                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                         'take_a': data_shape,
+                         'type_dict': {'take_indices': np.float16,
                                        'take_a': np.float16}}]
-            arg_params = {'take_indices': np.random.randint(low=0, 
-                                                            high=data_shape[0], 
-                                                            size=idx_shape), 
+            arg_params = {'take_indices': np.random.randint(low=0,
+                                                            high=data_shape[0],
+                                                            size=idx_shape),
                           'take_a': np.random.normal(size=data_shape)}
-            check_consistency(sym, ctx_list, 
+            check_consistency(sym, ctx_list,
                               grad_req={'take_indices': 'null',
                                         'take_a': 'write'},
                               arg_params=arg_params)
 
+def check_rnn_consistency(cell1, cell2):
+    dshape = (32, 5, 200)
+    data = mx.sym.Variable('data')
+
+    sym1, _ = cell1.unroll(5, data, merge_outputs=True)
+    mod1 = mx.mod.Module(sym1, label_names=None, context=mx.gpu(0))
+    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None)
+
+    sym2, _ = cell2.unroll(5, data, merge_outputs=True)
+    mod2 = mx.mod.Module(sym2, label_names=None, context=mx.gpu(0))
+    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None)
+
+    mod1.init_params()
+    args, auxs = mod1.get_params()
+    args = cell1.unpack_weights(args)
+    args = cell2.pack_weights(args)
+    mod2.set_params(args, auxs)
+
+    batch=mx.io.DataBatch(data=[mx.random.uniform(shape=dshape)], label=[])
+    mod1.forward(batch)
+    mod2.forward(batch)
+
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+
+
+def test_rnn():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l0_'))
+    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
+
+def test_lstm():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.LSTMCell(100, prefix='l0_'))
+    stack.add(mx.rnn.LSTMCell(100, prefix='l1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
+
+def test_gru():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.GRUCell(100, prefix='l0_'))
+    stack.add(mx.rnn.GRUCell(100, prefix='l1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
+def test_bidirectional():
+    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
+            bidirectional=True)
+
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(100, prefix='l0_'),
+                mx.rnn.GRUCell(100, prefix='r0_'),
+                output_prefix='bi_gru_0_'))
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(100, prefix='l1_'),
+                mx.rnn.GRUCell(100, prefix='r1_'),
+                output_prefix='bi_gru_1_'))
+
+    check_rnn_consistency(fused, stack)
+    check_rnn_consistency(stack, fused)
+
+def test_unfuse():
+    for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
+        fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode=mode,
+                prefix='test_%s'%mode,
+                bidirectional=True)
+
+        stack = fused.unfuse()
+
+        check_rnn_consistency(fused, stack)
+        check_rnn_consistency(stack, fused)
+
 if __name__ == '__main__':
+    test_bidirectional()
+    test_lstm()
+    test_gru()
+    test_rnn()
+    test_unfuse()
     test_convolution_options()
     test_convolution_with_type()
     test_pooling_with_type()
@@ -267,5 +409,7 @@ if __name__ == '__main__':
     test_fullyconnected_with_type()
     test_activation_with_type()
     test_embedding_with_type()
+    test_svmoutput_with_type()
     test_take_with_type()
-
+    test_bilinear_sampler_with_type()
+    test_grid_generator_with_type()

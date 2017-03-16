@@ -2279,3 +2279,21 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       creatorLambda);
   return MXCustomOpRegister(regName, creator);
 }
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSetProfilerConfig
+  (JNIEnv *env, jobject obj, jint jmode, jstring jfilename) {
+  const char *fileName = env->GetStringUTFChars(jfilename, 0);
+  int ret = MXSetProfilerConfig(jmode, fileName);
+  env->ReleaseStringUTFChars(jfilename, fileName);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSetProfilerState
+  (JNIEnv *env, jobject obj, jint jstate) {
+  return MXSetProfilerState(jstate);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDumpProfile
+  (JNIEnv *env, jobject obj) {
+  return MXDumpProfile();
+}

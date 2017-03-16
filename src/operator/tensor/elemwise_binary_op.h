@@ -103,8 +103,8 @@ void BinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};     \
     })                                                              \
-  .add_argument("lhs", "NDArray", "first input")                    \
-  .add_argument("rhs", "NDArray", "second input")
+  .add_argument("lhs", "ndarray-or-symbol", "first input")                    \
+  .add_argument("rhs", "ndarray-or-symbol", "second input")
 
 }  // namespace op
 }  // namespace mxnet

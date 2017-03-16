@@ -288,7 +288,8 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), const_vars, {ret.var()},
-        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2GPU"));
+        from.dtype() != ret.dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
+        priority, PROFILER_MESSAGE("CopyGPU2GPU"));
     } else {
       LOG(FATAL) << "unknown device mask";
     }

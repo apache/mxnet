@@ -2,11 +2,9 @@
 """Setup mxnet package."""
 from __future__ import absolute_import
 import os
-import sys
 import shutil
 
 from setuptools import setup, find_packages
-from setuptools.extension import Extension
 from setuptools.dist import Distribution
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
@@ -20,12 +18,15 @@ LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
 
 class BinaryDistribution(Distribution):
-    def is_pure(self):
-        return False
     def has_ext_modules(self):
         return True
 
-shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet'))#, ignore_errors=True)
+
+DEPENDENCIES = [
+    'numpy',
+]
+
+shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet'), ignore_errors=True)
 shutil.copytree(os.path.join(CURRENT_DIR, '../../python/mxnet'),
                 os.path.join(CURRENT_DIR, 'mxnet'))
 shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
@@ -37,5 +38,6 @@ setup(name='mxnet',
       packages=find_packages(),
       package_data={'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))]},
       include_package_data=True,
+      install_requires=DEPENDENCIES,
       distclass=BinaryDistribution,
       url='https://github.com/dmlc/mxnet')

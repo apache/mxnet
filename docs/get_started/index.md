@@ -6,7 +6,7 @@ A graph optimization layer on top of that makes symbolic execution fast and memo
 
 
 # Setup and Installation
-You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet can also be run on Docker and on Cloud like AWS. MXNet currently supports the Python, R, Julia and Scala languages.
+You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet can be run on Docker and on Cloud like AWS. MXNet can also be run on embedded devices, such as the Raspberry Pi running Raspbian. MXNet currently supports the Python, R, Julia and Scala languages.
 
 If you are running Python/R on Amazon Linux or Ubuntu, you can use Git Bash scripts to quickly install the MXNet libraries and all its dependencies.
 

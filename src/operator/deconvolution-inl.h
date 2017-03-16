@@ -271,16 +271,19 @@ class DeconvolutionOp : public Operator {
           gwmat[gid] += dot(temp_dst[gid], tmpc.T());
         }
       }
-      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace) {
+      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace
+                                         || req[deconv::kData] == kAddTo) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
           temp_dst[gid] = dot(wmat[gid], tmpc);
         }
-        gdata.Slice(i, i + step) = swapaxis<1, 0>(reshape(temp_dst,
-                                                    mshadow::Shape4(gdata.shape_[1],
-                                                    step,
-                                                    gdata.size(2),
-                                                    gdata.size(3))));
+        Assign(gdata.Slice(i, i + step),
+               req[deconv::kData],
+               (swapaxis<1, 0>(reshape(temp_dst,
+                                      mshadow::Shape4(gdata.shape_[1],
+                                                      step,
+                                                      gdata.size(2),
+                                                      gdata.size(3))))));
       }
     }
     if (!param_.no_bias) {

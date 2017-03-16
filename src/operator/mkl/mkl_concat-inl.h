@@ -59,7 +59,7 @@ class MKLConcatOp : public Operator {
  private:
   void LayerSetUp(const std::vector<mshadow::Tensor<xpu, 4, DType> > &data,
                   const mshadow::Tensor<xpu, 4, DType> &out,
-                  size_t data_shape_size) {
+                  size_t data_shape_size, size_t *split_channels_) {
     size_t dim_src = data_shape_size;
     size_t dim_dst = dim_src;
     num_concats_ = size_;
@@ -72,7 +72,6 @@ class MKLConcatOp : public Operator {
       }
     }
 
-    split_channels_ = new size_t[num_concats_];
     for (size_t i = 0; i < num_concats_; ++i) {
       CHECK_EQ((int)dim_src, data[i].shape_.kDimension);
 
@@ -92,8 +91,8 @@ class MKLConcatOp : public Operator {
       channels_ += split_channels_[i];
       fwd_bottom_data_[i]->create_user_layout(dim_src, sizes_src, strides_src);
       bwd_bottom_diff_[i]->create_user_layout(dim_src, sizes_src, strides_src);
-      free(sizes_src);
-      free(strides_src);
+      delete[] sizes_src;
+      delete[] strides_src;
     }
     size_t *sizes_dst = new size_t[dim_dst];
     size_t *strides_dst = new size_t[dim_dst];
@@ -106,8 +105,8 @@ class MKLConcatOp : public Operator {
     }
     bwd_top_diff_->create_user_layout(dim_dst, sizes_dst, strides_dst);
     fwd_top_data_->create_user_layout(dim_dst, sizes_dst, strides_dst);
-    free(sizes_dst);
-    free(strides_dst);
+    delete[] sizes_dst;
+    delete[] strides_dst;
     concatFwd_ = NULL;
     concatBwd_ = NULL;
   }
@@ -155,51 +154,41 @@ class MKLConcatOp : public Operator {
       }
       out = mkl_experimental_direct_get<xpu, 4, DType>(out_data[concat_enum::kOut], s);
     }
-
+    size_t *split_channels_ = new size_t[num_concats_];
     if (!init_mkldnn_) {
       init_mkldnn_ = true;
-      LayerSetUp(data, out, 4);
+      LayerSetUp(data, out, 4, split_channels_);
     }
 
     dnnError_t e;
-#if MKL_EXPERIMENTAL == 1
     std::vector<void*> bottom_data;
-#endif
     bool isFirstPass = (concatFwd_ == NULL);
     dnnLayout_t *layouts = NULL;
-    bool *isBottomDataFilled = NULL;
     if (isFirstPass) {
       layouts = new dnnLayout_t[num_concats_];
-      isBottomDataFilled = new bool[num_concats_]();
     }
 
-    for (size_t n = 0; n < num_concats_; n++) {
+    for (size_t i = 0; i < num_concats_; i++) {
+      void * bottom_i = NULL;
 #if MKL_EXPERIMENTAL == 1
-      bottom_data.push_back(reinterpret_cast<void *>(mkl_prv_data<DType>(in_data[n])));
-      if (bottom_data[n] == NULL) {
-        bottom_data[n] =
-          reinterpret_cast<void *>(const_cast<DType*>(data[n].dptr_));
-#endif
+      bottom_i = mkl_prv_data<DType>(in_data[i]);
+      if (bottom_i != NULL) {
         if (isFirstPass) {
-          layouts[n] = fwd_bottom_data_[n]->layout_usr;
-          isBottomDataFilled[n] = true;
+          std::shared_ptr<MKLData<DType> > mem_descr =
+            mkl_get_mem_desc<DType>(in_data[i].Mkl_mem_);
+          fwd_bottom_data_[i] = mem_descr;
+          layouts[i] = mem_descr->layout_int;
         }
-#if MKL_EXPERIMENTAL == 1
-      } else if (isFirstPass) {
-        std::shared_ptr<MKLMemHolder> bottom_data_mem = in_data[n].Mkl_mem_;
-        std::shared_ptr<PrvMemDescr> bottom_prv_descriptor =
-          bottom_data_mem->get_prv_descriptor();
-        CHECK_EQ(bottom_prv_descriptor->get_descr_type(),
-          PrvMemDescr::PRV_DESCR_MKL2017);
-        std::shared_ptr<MKLData<DType> > mem_descr
-          = std::static_pointer_cast<MKLData<DType>>
-          (bottom_prv_descriptor);
-        CHECK(mem_descr != NULL);
-        fwd_bottom_data_[n] = mem_descr;
-        layouts[n] = mem_descr->layout_int;
+      }
+#endif
+      if (bottom_i == NULL) {
+        bottom_i = data[i].dptr_;
+        if (isFirstPass) {
+          layouts[i] = fwd_bottom_data_[i]->layout_usr;
+        }
       }
 
-#endif
+      bottom_data.push_back(reinterpret_cast<void *>(bottom_i));
     }
 
     if (isFirstPass) {
@@ -214,8 +203,6 @@ class MKLConcatOp : public Operator {
       CHECK_EQ(e, E_SUCCESS);
 
       for (size_t n = 0; n < num_concats_; ++n) {
-        if (isBottomDataFilled[n]) continue;
-
         fwd_bottom_data_[n]->create_internal_layout(concatFwd_,
           (dnnResourceType_t)(dnnResourceMultipleSrc + n));
         bwd_bottom_diff_[n]->create_internal_layout(concatBwd_,
@@ -223,36 +210,22 @@ class MKLConcatOp : public Operator {
       }
     }
     delete[] layouts;
-    delete[] isBottomDataFilled;
 
     void *concat_res[dnnResourceNumber];
-    for (size_t n = 0; n < num_concats_; ++n) {
-#if MKL_EXPERIMENTAL == 1
-    void * src_res = bottom_data[n];
-#else
-    void * src_res = data[n].dptr_;
-#endif
-      concat_res[dnnResourceMultipleSrc + n]
-        = reinterpret_cast<void*>(src_res);
+    for (size_t i = 0; i < num_concats_; ++i) {
+      concat_res[dnnResourceMultipleSrc + i]
+        = reinterpret_cast<void*>(bottom_data[i]);
     }
 
+    std::shared_ptr<MKLMemHolder> top_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-    if (fwd_top_data_->conversion_needed()) {
-      std::shared_ptr<MKLMemHolder> top_mem = out_data[concat_enum::kOut].Mkl_mem_;
-        top_mem->set_prv_descriptor(fwd_top_data_);
-      concat_res[dnnResourceDst] =
-        reinterpret_cast<void*>(fwd_top_data_->prv_ptr());
-    } else {
+    top_mem = out_data[concat_enum::kOut].Mkl_mem_;
 #endif
-
-    concat_res[dnnResourceDst] =
-      reinterpret_cast<void*>(out.dptr_);
-#if MKL_EXPERIMENTAL == 1
-    }
-#endif
-
+    concat_res[dnnResourceDst] = fwd_top_data_->get_output_ptr(out.dptr_,
+      fwd_top_data_, top_mem);
     e = dnnExecute<DType>(concatFwd_, concat_res);
     CHECK_EQ(e, E_SUCCESS);
+    delete[] split_channels_;
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -309,29 +282,16 @@ class MKLConcatOp : public Operator {
 
     dnnError_t e;
     void *concat_res[dnnResourceNumber];
-    std::shared_ptr<MKLMemHolder> out_grad_mem =
-#if MKL_EXPERIMENTAL == 1
-      out_grad[concat_enum::kOut].Mkl_mem_;
-#else
-      NULL;
-#endif
     concat_res[dnnResourceSrc] = bwd_top_diff_->get_converted_prv(grad.dptr_, true,
-      out_grad_mem);
-
+      out_grad[concat_enum::kOut]);
     for (size_t i = 0; i < num_concats_; ++i) {
+      std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-      if (bwd_bottom_diff_[i]->conversion_needed()) {
-        std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[i].Mkl_mem_;
-        bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_[i]);
-        concat_res[dnnResourceMultipleDst + i] = bwd_bottom_diff_[i]->prv_ptr();
-      } else {
+      bottom_diff_mem = in_grad[i].Mkl_mem_;
 #endif
-        concat_res[dnnResourceMultipleDst + i] = grad_in[i].dptr_;
-#if MKL_EXPERIMENTAL == 1
-      }
-#endif
+      concat_res[dnnResourceMultipleDst + i] = bwd_bottom_diff_[i]->get_output_ptr(
+        grad_in[i].dptr_, bwd_bottom_diff_[i], bottom_diff_mem);
     }
-
     e = dnnExecute<DType>(concatBwd_, concat_res);
     CHECK_EQ(e, E_SUCCESS);
   }
@@ -348,7 +308,7 @@ class MKLConcatOp : public Operator {
   std::vector< std::shared_ptr<MKLData<DType> > > fwd_bottom_data_;
   std::shared_ptr<MKLData<DType> > bwd_top_diff_;
   std::vector< std::shared_ptr<MKLData<DType> > > bwd_bottom_diff_;
-  size_t *split_channels_;
+
 
   size_t width_;
   size_t height_;

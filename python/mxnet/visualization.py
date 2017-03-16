@@ -51,7 +51,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
         if out_shapes is None:
-            raise ValueError("Input shape is incompete")
+            raise ValueError("Input shape is incomplete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
@@ -205,7 +205,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
         if out_shapes is None:
-            raise ValueError("Input shape is incompete")
+            raise ValueError("Input shape is incomplete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
@@ -235,7 +235,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         name = node["name"]
         # input data
         attr = copy.deepcopy(node_attr)
-        label = op
+        label = name
 
         if op == "null":
             if looks_like_weight(node["name"]):
@@ -282,7 +282,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         dot.node(name=name, label=label, **attr)
 
     # add edges
-    for node in nodes:
+    for node in nodes:          # pylint: disable=too-many-nested-blocks
         op = node["op"]
         name = node["name"]
         if op == "null":
@@ -298,6 +298,11 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                     if draw_shape:
                         if input_node["op"] != "null":
                             key = input_name + "_output"
+                            if "attr" in input_node:
+                                params = input_node["attr"]
+                                if "num_outputs" in params:
+                                    key += str(int(params["num_outputs"]) - 1)
+                                    params["num_outputs"] = int(params["num_outputs"]) - 1
                             shape = shape_dict[key][1:]
                             label = "x".join([str(x) for x in shape])
                             attr["label"] = label

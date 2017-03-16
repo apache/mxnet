@@ -1,56 +1,46 @@
-"""References:
-
-Szegedy, Christian, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed, Dragomir
-Anguelov, Dumitru Erhan, Vincent Vanhoucke, and Andrew Rabinovich. "Going deeper
-with convolutions." arXiv preprint arXiv:1409.4842 (2014).
-
 """
+Reference:
 
-import find_mxnet
+Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. "Imagenet classification with deep convolutional neural networks." Advances in neural information processing systems. 2012.
+"""
 import mxnet as mx
 
-def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, suffix=''):
-    conv = mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='conv_%s%s' %(name, suffix))
-    act = mx.symbol.Activation(data=conv, act_type='relu', name='relu_%s%s' %(name, suffix))
-    return act
-
-def InceptionFactory(data, num_1x1, num_3x3red, num_3x3, num_d5x5red, num_d5x5, pool, proj, name):
-    # 1x1
-    c1x1 = ConvFactory(data=data, num_filter=num_1x1, kernel=(1, 1), name=('%s_1x1' % name))
-    # 3x3 reduce + 3x3
-    c3x3r = ConvFactory(data=data, num_filter=num_3x3red, kernel=(1, 1), name=('%s_3x3' % name), suffix='_reduce')
-    c3x3 = ConvFactory(data=c3x3r, num_filter=num_3x3, kernel=(3, 3), pad=(1, 1), name=('%s_3x3' % name))
-    # double 3x3 reduce + double 3x3
-    cd5x5r = ConvFactory(data=data, num_filter=num_d5x5red, kernel=(1, 1), name=('%s_5x5' % name), suffix='_reduce')
-    cd5x5 = ConvFactory(data=cd5x5r, num_filter=num_d5x5, kernel=(5, 5), pad=(2, 2), name=('%s_5x5' % name))
-    # pool + proj
-    pooling = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(1, 1), pad=(1, 1), pool_type=pool, name=('%s_pool_%s_pool' % (pool, name)))
-    cproj = ConvFactory(data=pooling, num_filter=proj, kernel=(1, 1), name=('%s_proj' %  name))
-    # concat
-    concat = mx.symbol.Concat(*[c1x1, c3x3, cd5x5, cproj], name='ch_concat_%s_chconcat' % name)
-    return concat
-
-def get_symbol(num_classes = 1000, **kwargs):
-    data = mx.sym.Variable("data")
-    conv1 = ConvFactory(data, 64, kernel=(7, 7), stride=(2,2), pad=(3, 3), name="conv1")
-    pool1 = mx.sym.Pooling(conv1, kernel=(3, 3), stride=(2, 2), pool_type="max")
-    conv2 = ConvFactory(pool1, 64, kernel=(1, 1), stride=(1,1), name="conv2")
-    conv3 = ConvFactory(conv2, 192, kernel=(3, 3), stride=(1, 1), pad=(1,1), name="conv3")
-    pool3 = mx.sym.Pooling(conv3, kernel=(3, 3), stride=(2, 2), pool_type="max")
-
-    in3a = InceptionFactory(pool3, 64, 96, 128, 16, 32, "max", 32, name="in3a")
-    in3b = InceptionFactory(in3a, 128, 128, 192, 32, 96, "max", 64, name="in3b")
-    pool4 = mx.sym.Pooling(in3b, kernel=(3, 3), stride=(2, 2), pool_type="max")
-    in4a = InceptionFactory(pool4, 192, 96, 208, 16, 48, "max", 64, name="in4a")
-    in4b = InceptionFactory(in4a, 160, 112, 224, 24, 64, "max", 64, name="in4b")
-    in4c = InceptionFactory(in4b, 128, 128, 256, 24, 64, "max", 64, name="in4c")
-    in4d = InceptionFactory(in4c, 112, 144, 288, 32, 64, "max", 64, name="in4d")
-    in4e = InceptionFactory(in4d, 256, 160, 320, 32, 128, "max", 128, name="in4e")
-    pool5 = mx.sym.Pooling(in4e, kernel=(3, 3), stride=(2, 2), pool_type="max")
-    in5a = InceptionFactory(pool5, 256, 160, 320, 32, 128, "max", 128, name="in5a")
-    in5b = InceptionFactory(in5a, 384, 192, 384, 48, 128, "max", 128, name="in5b")
-    pool6 = mx.sym.Pooling(in5b, kernel=(7, 7), stride=(1,1), pool_type="avg")
-    flatten = mx.sym.Flatten(data=pool6)
-    fc1 = mx.sym.FullyConnected(data=flatten, num_hidden=num_classes)
-    softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
+def get_symbol(num_classes, **kwargs):
+    input_data = mx.symbol.Variable(name="data")
+    # stage 1
+    conv1 = mx.symbol.Convolution(name='conv1',
+        data=input_data, kernel=(11, 11), stride=(4, 4), num_filter=96)
+    relu1 = mx.symbol.Activation(data=conv1, act_type="relu")
+    lrn1 = mx.symbol.LRN(data=relu1, alpha=0.0001, beta=0.75, knorm=2, nsize=5)
+    pool1 = mx.symbol.Pooling(
+        data=lrn1, pool_type="max", kernel=(3, 3), stride=(2,2))
+    # stage 2
+    conv2 = mx.symbol.Convolution(name='conv2',
+        data=pool1, kernel=(5, 5), pad=(2, 2), num_filter=256)
+    relu2 = mx.symbol.Activation(data=conv2, act_type="relu")
+    lrn2 = mx.symbol.LRN(data=relu2, alpha=0.0001, beta=0.75, knorm=2, nsize=5)
+    pool2 = mx.symbol.Pooling(data=lrn2, kernel=(3, 3), stride=(2, 2), pool_type="max")
+    # stage 3
+    conv3 = mx.symbol.Convolution(name='conv3',
+        data=pool2, kernel=(3, 3), pad=(1, 1), num_filter=384)
+    relu3 = mx.symbol.Activation(data=conv3, act_type="relu")
+    conv4 = mx.symbol.Convolution(name='conv4',
+        data=relu3, kernel=(3, 3), pad=(1, 1), num_filter=384)
+    relu4 = mx.symbol.Activation(data=conv4, act_type="relu")
+    conv5 = mx.symbol.Convolution(name='conv5',
+        data=relu4, kernel=(3, 3), pad=(1, 1), num_filter=256)
+    relu5 = mx.symbol.Activation(data=conv5, act_type="relu")
+    pool3 = mx.symbol.Pooling(data=relu5, kernel=(3, 3), stride=(2, 2), pool_type="max")
+    # stage 4
+    flatten = mx.symbol.Flatten(data=pool3)
+    fc1 = mx.symbol.FullyConnected(name='fc1', data=flatten, num_hidden=4096)
+    relu6 = mx.symbol.Activation(data=fc1, act_type="relu")
+    dropout1 = mx.symbol.Dropout(data=relu6, p=0.5)
+    # stage 5
+    fc2 = mx.symbol.FullyConnected(name='fc2', data=dropout1, num_hidden=4096)
+    relu7 = mx.symbol.Activation(data=fc2, act_type="relu")
+    dropout2 = mx.symbol.Dropout(data=relu7, p=0.5)
+    # stage 6
+    fc3 = mx.symbol.FullyConnected(name='fc3', data=dropout2, num_hidden=num_classes)
+    softmax = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
     return softmax

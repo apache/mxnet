@@ -24,7 +24,7 @@
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
 #include "mkl_memory-inl.h"
-
+#include "mkl_util-inl.h"
 
 namespace mxnet {
 
@@ -34,10 +34,12 @@ void MKLMemoryDescriptorBase<Dtype>::create_conversions() {
   if (this->convert_from_int) {
     status = dnnDelete<Dtype>(this->convert_from_int);
     CHECK_EQ(status, E_SUCCESS);
+    this->convert_from_int = NULL;
   }
   if (this->convert_to_int) {
     status = dnnDelete<Dtype>(this->convert_to_int);
     CHECK_EQ(status, E_SUCCESS);
+    this->convert_to_int = NULL;
   }
   if (layout_int
       && !dnnLayoutCompare<Dtype>(layout_usr, layout_int)) {
@@ -168,10 +170,12 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
 
 template <typename Dtype>
 Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
-    Dtype *cpu_ptr, bool set_prv_ptr,
-    std::shared_ptr<MKLMemHolder> dnn_chunk,
-    MKLMemoryDescriptor<Dtype>* converted_in_fwd) {
+    Dtype *cpu_ptr, bool set_prv_ptr, const TBlob &blob) {
   Dtype* prv_ptr = NULL;
+  std::shared_ptr<MKLMemHolder> dnn_chunk = NULL;
+#if MKL_EXPERIMENTAL == 1
+  dnn_chunk = blob.Mkl_mem_;
+#endif
 #if MKL_EXPERIMENTAL == 1
   if (dnn_chunk != NULL)
     prv_ptr = static_cast<Dtype*>(dnn_chunk->prv_data());
@@ -183,9 +187,6 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     void *convert_resources[dnnResourceNumber];
 #endif
     if (prv_ptr == NULL) {
-      if (converted_in_fwd) {
-        return converted_in_fwd->internal_ptr;
-      }
       this->allocate();
       this->convert_to_prv(cpu_ptr);
 #if MKL_EXPERIMENTAL == 1
@@ -197,23 +198,10 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     }
 #if MKL_EXPERIMENTAL == 1
     if (prv_ptr != NULL)  {
-      // This section helps if padding needs to be added (or removed...)
-      // TODO(intel): consider removing when no longer needed.
-      std::shared_ptr<PrvMemDescr> prv_mem_descriptor = dnn_chunk->get_prv_descriptor();
-      CHECK_EQ(prv_mem_descriptor->get_descr_type(),
-        PrvMemDescr::PRV_DESCR_MKL2017);
-      std::shared_ptr<MKLMemoryDescriptor<Dtype> > current_descr =
-        std::static_pointer_cast<MKLMemoryDescriptor<Dtype> >
-        (prv_mem_descriptor);
+      std::shared_ptr<MKLData<Dtype> > current_descr =
+        op::mkl_get_mem_desc<Dtype>(dnn_chunk);
       if (!dnnLayoutCompare<Dtype>(current_descr->layout_int,
         this->layout_int)) {
-        if (converted_in_fwd) {
-          // hack for reusing previously done conversion
-          // if(dnnLayoutCompare(converted_in_fwd->layout_int,this->layout_int))
-          if (true) {
-            return converted_in_fwd->internal_ptr;
-          }
-        }
         if (this->convert_prv2prv) {
           CHECK_EQ(dnnLayoutCompare<Dtype>(
             this->descr_prv2prv_conversion->layout_int,
@@ -251,9 +239,41 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     }
 #endif
     return const_cast<Dtype *>(prv_ptr);
+  } else {
+    if (prv_ptr != NULL) {
+#if MKL_EXPERIMENTAL == 1
+      std::shared_ptr<MKLMemoryDescriptorBase<float> > other_descr =
+        std::static_pointer_cast<MKLMemoryDescriptorBase<float> >
+        (dnn_chunk->prv_descriptor_);
+      dnn_chunk->check_and_prv_to_cpu(cpu_ptr);
+#endif
+      // printf("get_converted_prv release %s\n", other_descr->name.c_str());
+    }
   }
   return cpu_ptr;
 }
+
+template <typename Dtype>
+void* MKLMemoryDescriptor<Dtype>::get_output_ptr(Dtype *data_ptr,
+  std::shared_ptr<MKLMemoryDescriptor<Dtype> > self_ptr,
+  std::shared_ptr<MKLMemHolder> dnn_chunk) {
+  if (this->conversion_needed()) {
+    void * prv_ptr =  this->prv_ptr();
+#if MKL_EXPERIMENTAL == 1
+    dnn_chunk->set_prv_descriptor(self_ptr);
+#endif
+    return prv_ptr;
+  } else {
+#if MKL_EXPERIMENTAL == 1
+    std::shared_ptr<MKLMemoryDescriptorBase<float> > other_descr =
+      std::static_pointer_cast<MKLMemoryDescriptorBase<float> >
+      (dnn_chunk->prv_descriptor_);
+    dnn_chunk->check_and_prv_to_cpu(data_ptr);
+#endif
+    return data_ptr;
+  }
+}
+
 template class MKLMemoryDescriptor<double>;
 template class MKLMemoryDescriptor<float>;
 

@@ -129,8 +129,9 @@ class CuDNNDeconvolutionOp : public Operator {
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK_EQ(out_grad.size(), 1);
     CHECK(in_data.size() == expected && in_grad.size() == expected);
-    // TODO(bing): think about how to support add to
-    CHECK_EQ(req[deconv::kWeight], kWriteTo);
+    CHECK_NE(req[deconv::kWeight], kWriteInplace);
+    CHECK_NE(req[deconv::kBias], kWriteInplace);
+    CHECK_NE(req[deconv::kData], kWriteInplace);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> grad = out_grad[deconv::kOut].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> wmat = in_data[deconv::kWeight].get<gpu, 4, DType>(s);
@@ -142,60 +143,70 @@ class CuDNNDeconvolutionOp : public Operator {
                                  mshadow::Shape1(backward_workspace_), s);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
-      typename DataType<DType>::ScaleType beta = 0.0f;
+      typename DataType<DType>::ScaleType bias_beta =
+        req[deconv::kBias] == kAddTo ? 1.0f : 0.0f;
+      typename DataType<DType>::ScaleType data_beta =
+        req[deconv::kData] == kAddTo ? 1.0f : 0.0f;
+      typename DataType<DType>::ScaleType weight_beta =
+        req[deconv::kWeight] == kAddTo ? 1.0f : 0.0f;
       if (!param_.no_bias) {
+        CHECK_NE(req[deconv::kBias], kNullOp);
         Tensor<gpu, 1, DType> gbias = in_grad[deconv::kBias].get<gpu, 1, DType>(s);
         CHECK_EQ(cudnnConvolutionBackwardBias(s->dnn_handle_,
                                               &alpha,
                                               out_desc_,
                                               grad.dptr_ + out_offset_ * g,
-                                              &beta,
+                                              &bias_beta,
                                               bias_desc_,
                                               gbias.dptr_ + bias_offset_ * g),
                  CUDNN_STATUS_SUCCESS);
       }
-      #if CUDNN_MAJOR <= 4
-      CHECK_EQ(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
-               &alpha,
-               out_desc_,
-               grad.dptr_ + out_offset_ * g,
-               in_desc_,
-               data.dptr_ + data_offset_ * g,
-               conv_desc_,
-               back_algo_w_,
-               workspace.dptr_,
-               backward_workspace_byte_,
-               &beta,
-               filter_desc_,
-               gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
-      #elif CUDNN_MAJOR == 5
-      CHECK_EQ(cudnnConvolutionBackwardFilter(s->dnn_handle_,
-               &alpha,
-               out_desc_,
-               grad.dptr_ + out_offset_ * g,
-               in_desc_,
-               data.dptr_ + data_offset_ * g,
-               conv_desc_,
-               back_algo_w_,
-               workspace.dptr_,
-               backward_workspace_byte_,
-               &beta,
-               filter_desc_,
-               gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
-      #endif
-      CHECK_EQ(cudnnConvolutionForward(s->dnn_handle_,
-                                       &alpha,
-                                       out_desc_,
-                                       grad.dptr_ + out_offset_ * g,
-                                       filter_desc_,
-                                       wmat.dptr_ + weight_offset_ * g,
-                                       conv_desc_,
-                                       algo_,
-                                       workspace.dptr_,
-                                       forward_workspace_byte_,
-                                       &beta,
-                                       in_desc_,
-                                       gdata.dptr_ + data_offset_ * g), CUDNN_STATUS_SUCCESS);
+      if (req[deconv::kWeight] != kNullOp) {
+        #if CUDNN_MAJOR <= 4
+        CHECK_EQ(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
+                 &alpha,
+                 out_desc_,
+                 grad.dptr_ + out_offset_ * g,
+                 in_desc_,
+                 data.dptr_ + data_offset_ * g,
+                 conv_desc_,
+                 back_algo_w_,
+                 workspace.dptr_,
+                 backward_workspace_byte_,
+                 &weight_beta,
+                 filter_desc_,
+                 gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
+        #elif CUDNN_MAJOR == 5
+        CHECK_EQ(cudnnConvolutionBackwardFilter(s->dnn_handle_,
+                 &alpha,
+                 out_desc_,
+                 grad.dptr_ + out_offset_ * g,
+                 in_desc_,
+                 data.dptr_ + data_offset_ * g,
+                 conv_desc_,
+                 back_algo_w_,
+                 workspace.dptr_,
+                 backward_workspace_byte_,
+                 &weight_beta,
+                 filter_desc_,
+                 gwmat.dptr_ + weight_offset_ * g), CUDNN_STATUS_SUCCESS);
+        #endif
+      }
+      if (req[deconv::kData] != kNullOp) {
+        CHECK_EQ(cudnnConvolutionForward(s->dnn_handle_,
+                                         &alpha,
+                                         out_desc_,
+                                         grad.dptr_ + out_offset_ * g,
+                                         filter_desc_,
+                                         wmat.dptr_ + weight_offset_ * g,
+                                         conv_desc_,
+                                         algo_,
+                                         workspace.dptr_,
+                                         forward_workspace_byte_,
+                                         &data_beta,
+                                         in_desc_,
+                                         gdata.dptr_ + data_offset_ * g), CUDNN_STATUS_SUCCESS);
+      }
     }
   }
 
