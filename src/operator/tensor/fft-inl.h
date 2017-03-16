@@ -6,17 +6,16 @@
 */
 #ifndef MXNET_OPERATOR_TENSOR_FFT_INL_H_
 #define MXNET_OPERATOR_TENSOR_FFT_INL_H_
+#ifdef __CUDACC__
 #include <cufft.h>
+#endif
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <map>
 #include <vector>
 #include <string>
-#include <utility>
-
-
+#include <utility>    
 #include <iostream>
-
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 
