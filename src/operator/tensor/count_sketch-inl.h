@@ -214,6 +214,7 @@ class CountSketchProp : public OperatorProperty {
 
   Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                               std::vector<int> *in_type) const override;
+ 
  private:
     CountSketchParam param_;
 };
