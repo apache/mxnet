@@ -17,30 +17,30 @@
 using namespace mxnet;
 
 void SetOpAttrs(const nnvm::Op *op,
-                nnvm::NodeAttrs& attrs,
+                nnvm::NodeAttrs* attrs,
                 const int& num_inputs,
                 const int& num_params,
                 const char **param_keys,
                 const char **param_vals) {
   static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
-  attrs.op = op;
+  attrs->op = op;
   for (int i = 0; i < num_params; ++i) {
-    attrs.dict.emplace(param_keys[i], param_vals[i]);
+    attrs->dict.emplace(param_keys[i], param_vals[i]);
   }
 
   if (num_args.count(op)) {
-    attrs.dict.emplace(num_args[op], std::to_string(num_inputs));
+    attrs->dict.emplace(num_args[op], std::to_string(num_inputs));
   }
   if (op->attr_parser != nullptr) {
-    op->attr_parser(&attrs);
+    op->attr_parser(attrs);
   }
 }
 
 void SetNumOutputs(const nnvm::Op *op,
                    const nnvm::NodeAttrs& attrs,
                    const int& num_inputs,
-                   int& infered_num_outputs,
-                   int& num_visible_outputs) {
+                   int* infered_num_outputs,
+                   int* num_visible_outputs) {
   static auto& visible_out = nnvm::Op::GetAttr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs");
   int infered_num_inputs;
   if (op->get_num_inputs != nullptr) {
@@ -52,26 +52,28 @@ void SetNumOutputs(const nnvm::Op *op,
     << "Expecting " << infered_num_inputs << " inputs, got "
     << num_inputs << " in operator " << op->name;
   if (op->get_num_outputs != nullptr) {
-    infered_num_outputs = op->get_num_outputs(attrs);
+    *infered_num_outputs = op->get_num_outputs(attrs);
   } else {
-    infered_num_outputs = op->num_outputs;
+    *infered_num_outputs = op->num_outputs;
   }
-  num_visible_outputs = infered_num_outputs;
+  *num_visible_outputs = *infered_num_outputs;
   if (visible_out.count(op)) {
-    num_visible_outputs = visible_out[op](attrs);
-    CHECK_LE(num_visible_outputs, infered_num_outputs);
+    *num_visible_outputs = visible_out[op](attrs);
+    CHECK_LE(*num_visible_outputs, *infered_num_outputs);
   }
 }
 
 void SetNDInputsOutputs(const nnvm::Op* op,
-                        std::vector<NDArray>& ndinputs,
-                        std::vector<NDArray>& ndoutputs,
+                        std::vector<NDArray>* p_ndinputs,
+                        std::vector<NDArray>* p_ndoutputs,
                         const int& num_inputs,
                         const NDArrayHandle *inputs,
                         int *num_outputs,
                         const int& infered_num_outputs,
                         const int& num_visible_outputs,
                         NDArray** outarray) {
+  std::vector<NDArray>& ndinputs  = *p_ndinputs;
+  std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   ndinputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
     ndinputs.emplace_back(*reinterpret_cast<NDArray*>(inputs[i]));
@@ -92,25 +94,26 @@ void SetNDInputsOutputs(const nnvm::Op* op,
   }
 }
 
-void SetContext(Context& ctx,
+void SetContext(Context* p_ctx,
                 const nnvm::NodeAttrs& attrs,
                 const int& num_inputs,
                 const std::vector<NDArray>& ndinputs,
                 const int& infered_num_outputs,
                 const std::vector<NDArray>& ndoutputs) {
-    if (num_inputs) {
-      ctx = ndinputs[0].ctx();
-    } else if (infered_num_outputs && !ndoutputs[0].is_none()) {
-      ctx = ndoutputs[0].ctx();
-    } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
-      ctx = Context::FromString(attrs.dict.at("ctx"));
-    } else {
-      ctx = Context::CPU();
-    }
-    // Pinned context doesn't propagate
-    if (ctx.dev_type == Context::kCPUPinned) {
-      ctx = Context::CPU();
-    }
+  Context& ctx = *p_ctx;
+  if (num_inputs) {
+    ctx = ndinputs[0].ctx();
+  } else if (infered_num_outputs && !ndoutputs[0].is_none()) {
+    ctx = ndoutputs[0].ctx();
+  } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
+    ctx = Context::FromString(attrs.dict.at("ctx"));
+  } else {
+    ctx = Context::CPU();
+  }
+  // Pinned context doesn't propagate
+  if (ctx.dev_type == Context::kCPUPinned) {
+    ctx = Context::CPU();
+  }
 }
 
 void SetShapeType(const nnvm::Op* op,
@@ -118,7 +121,8 @@ void SetShapeType(const nnvm::Op* op,
                   const Context& ctx,
                   const std::vector<NDArray>& ndinputs,
                   const int& infered_num_outputs,
-                  std::vector<NDArray>& ndoutputs) {
+                  std::vector<NDArray>* p_ndoutputs) {
+  std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
@@ -172,10 +176,10 @@ void SetShapeType(const nnvm::Op* op,
   }
 }
 
-void SetDependency(std::vector<engine::VarHandle>& read_vars,
-                   std::vector<engine::VarHandle>& write_vars,
-                   std::vector<Resource>& requested,
-                   std::vector<uint32_t>& auxidx,
+void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
+                   std::vector<engine::VarHandle> *p_write_vars,
+                   std::vector<Resource> *p_requested,
+                   std::vector<uint32_t> *p_auxidx,
                    const nnvm::Op* op,
                    const nnvm::NodeAttrs& attrs,
                    const Context& ctx,
@@ -183,6 +187,11 @@ void SetDependency(std::vector<engine::VarHandle>& read_vars,
                    const std::vector<NDArray>& ndoutputs) {
   static auto& mutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   static auto& tmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+
+  std::vector<engine::VarHandle>& read_vars  = *p_read_vars;
+  std::vector<engine::VarHandle>& write_vars = *p_write_vars;
+  std::vector<Resource>& requested = *p_requested;
+  std::vector<uint32_t>& auxidx = *p_auxidx;
 
   if (tmp_resource.count(op)) {
     int ntmp = 0;
@@ -328,16 +337,16 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
 
   API_BEGIN();
   nnvm::NodeAttrs attrs;
-  SetOpAttrs(op, attrs,
+  SetOpAttrs(op, &attrs,
       num_inputs, num_params, param_keys, param_vals);
 
   int infered_num_outputs;
   int num_visible_outputs;
   SetNumOutputs(op, attrs, num_inputs,
-      infered_num_outputs, num_visible_outputs);
+      &infered_num_outputs, &num_visible_outputs);
 
   std::vector<NDArray> ndinputs, ndoutputs;
-  SetNDInputsOutputs(op, ndinputs, ndoutputs, num_inputs, inputs,
+  SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
       num_outputs, infered_num_outputs, num_visible_outputs, outarray);
 
   if (ndfunc.count(op)) {
@@ -345,13 +354,13 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   } else {
     // TODO(piiswrong): infer ctx
     Context ctx;
-    SetContext(ctx, attrs, num_inputs, ndinputs, infered_num_outputs, ndoutputs);
-    SetShapeType(op, attrs, ctx, ndinputs, infered_num_outputs, ndoutputs);
+    SetContext(&ctx, attrs, num_inputs, ndinputs, infered_num_outputs, ndoutputs);
+    SetShapeType(op, attrs, ctx, ndinputs, infered_num_outputs, &ndoutputs);
 
     std::vector<engine::VarHandle> read_vars, write_vars;
     std::vector<Resource> requested;
     std::vector<uint32_t> auxidx;
-    SetDependency(read_vars, write_vars, requested, auxidx,
+    SetDependency(&read_vars, &write_vars, &requested, &auxidx,
         op, attrs, ctx, ndinputs, ndoutputs);
 
     FCompute fn;
