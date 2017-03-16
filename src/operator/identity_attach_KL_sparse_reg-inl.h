@@ -60,8 +60,8 @@ class IdentityAttachKLSparseRegOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2> data = in_data[sparsereg::kData].FlatTo2D<xpu, real_t>(s);
     Tensor<xpu, 2> out = out_data[sparsereg::kOut].FlatTo2D<xpu, real_t>(s);
@@ -114,7 +114,7 @@ class IdentityAttachKLSparseRegProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     const TShape &dshape = in_shape->at(sparsereg::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();

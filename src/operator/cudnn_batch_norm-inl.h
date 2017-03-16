@@ -50,14 +50,14 @@ class CuDNNBatchNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(aux_states.size(), 2);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(aux_states.size(), 2U);
     if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 3);
-      CHECK_EQ(req.size(), 3);
+      CHECK_EQ(out_data.size(), 3U);
+      CHECK_EQ(req.size(), 3U);
     } else {
-      CHECK_GE(out_data.size(), 1);
-      CHECK_GE(req.size(), 1);
+      CHECK_GE(out_data.size(), 1U);
+      CHECK_GE(req.size(), 1U);
     }
     CHECK_EQ(req[cudnnbatchnorm::kOut], kWriteTo);
     CHECK_GE(in_data[cudnnbatchnorm::kData].ndim(), 2);
@@ -160,10 +160,10 @@ class CuDNNBatchNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
-    CHECK_EQ(in_grad.size(), 3);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
+    CHECK_EQ(in_grad.size(), 3U);
     CHECK(ctx.is_train && !param_.use_global_stats)
         << "use global statistics is not yet supported in CuDNNBatchNorm";
 
@@ -175,6 +175,7 @@ class CuDNNBatchNormOp : public Operator {
     Tensor<gpu, 4, DType> dy =
       out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 
+#if CUDNN_VERSION >= 4007
     MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
       Tensor<gpu, 1, DTypeParam> gamma =
         in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
@@ -194,7 +195,6 @@ class CuDNNBatchNormOp : public Operator {
 
       if (param_.fix_gamma) gamma = 1.f;
 
-#if CUDNN_VERSION >= 4007
       CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
                                                CUDNN_BATCHNORM_SPATIAL,
                                                &a,
@@ -214,7 +214,27 @@ class CuDNNBatchNormOp : public Operator {
                                                param_.eps,
                                                save_mean.dptr_,
                                                save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+      if (param_.fix_gamma) dgamma = 0.f;
+    })
 #else  // CUDNN_VERSION < 4007
+    MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
+      Tensor<gpu, 1, DTypeParam> gamma =
+        in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dbeta =
+        in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dgamma =
+        in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_mean =
+        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_inv_var =
+        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+
+      typename DataType<DType>::ScaleType a = 1.0f;
+      typename DataType<DType>::ScaleType b = 0.0f;
+      typename DataType<DType>::ScaleType b_add = 1.0f;
+      CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
+
+      if (param_.fix_gamma) gamma = 1.f;
       CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
                                                CUDNN_BATCHNORM_SPATIAL,
                                                &a,
@@ -232,9 +252,9 @@ class CuDNNBatchNormOp : public Operator {
                                                param_.eps,
                                                save_mean.dptr_,
                                                save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
-#endif
       if (param_.fix_gamma) dgamma = 0.f;
     })
+#endif
   }
 
  private:
@@ -266,7 +286,7 @@ class CuDNNBatchNormProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 3) << "Input:[data, gamma, beta]";
+    CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     in_shape->at(1) = TShape(Shape1(dshape[1]));

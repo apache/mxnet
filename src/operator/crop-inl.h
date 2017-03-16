@@ -60,7 +60,7 @@ class CropOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(static_cast<int>(in_data.size()), param_.num_args);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     CHECK_EQ(req[crop_enum::kOut], kWriteTo);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data = in_data[crop_enum::kData].get<xpu, 4, real_t>(s);
@@ -82,7 +82,7 @@ class CropOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_grad.size(), static_cast<size_t>(param_.num_args)) << in_grad.size();
-    CHECK_EQ(out_grad.size(), 1) << out_grad.size();
+    CHECK_EQ(out_grad.size(), 1U) << out_grad.size();
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> grad = out_grad[crop_enum::kOut].get<xpu, 4, real_t>(s);
     Tensor<xpu, 4> gdata = in_grad[crop_enum::kData].get<xpu, 4, real_t>(s);
@@ -157,7 +157,7 @@ class CropProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     TShape data_shape = in_shape->at(crop_enum::kData);
     if (data_shape.ndim() == 0) return false;
-    CHECK_EQ(data_shape.ndim(), 4) << \
+    CHECK_EQ(data_shape.ndim(), 4U) << \
         "Input data should be 4D in batch-num_filter-y-x";
     std::vector<int> crop_shape;
     if (param_.num_args == 1) {
@@ -177,7 +177,7 @@ class CropProp : public OperatorProperty {
       crop_shape.push_back(crop_like_shape[3]);
     }
     if (crop_shape.size() == 0) return false;
-    CHECK_EQ(crop_shape.size(), 2) << \
+    CHECK_EQ(crop_shape.size(), 2U) << \
         "Input crop_like should be 2D in height-width";
     out_shape->clear();
     data_shape[2] = crop_shape[0];

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit script with error if any errors occur
+set -e
+
 if [[ ! $1 || ! $2 || ! $3 || ! $4 || ! $5 ]];
 then
     echo "USAGE: " $(basename $"0") "USER_ID USER_NAME GROUP_ID GROUP_NAME SCRIPT"
