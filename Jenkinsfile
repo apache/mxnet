@@ -156,7 +156,7 @@ stage('Unit Test') {
     }
   },
   'Python2/3: MKLML': {
-    node {
+    node('GPU') {
       ws('workspace/ut-python-mklml') {
         init_git()
         unpack_lib('mklml')
@@ -193,9 +193,13 @@ stage('Integration Test') {
     }
   },
   'Caffe': {
-    node {
+    node('GPU') {
       ws('workspace/it-caffe') {
-        echo "Hello world"
+        init_git()
+        unpack_lib('gpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} caffe_gpu PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
+        }
       }
     }
   }
