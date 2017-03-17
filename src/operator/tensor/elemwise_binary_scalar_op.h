@@ -62,7 +62,7 @@ void BinaryScalarBackward(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
     })                                                              \
-  .add_argument("data", "NDArray", "source input")                   \
+  .add_argument("data", "ndarray-or-symbol", "source input")                   \
   .add_argument("scalar", "float", "scalar input")
 
 }  // namespace op

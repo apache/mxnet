@@ -18,7 +18,8 @@ template<>
 Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
-  if (1 == param.dim) {
+  if ((1 == param.dim) &&
+    (param.num_args < (dnnResourceMultipleDst - dnnResourceMultipleSrc))) {
     switch (dtype) {
       case mshadow::kFloat32:
       return new MKLConcatOp<cpu, float>(param);
@@ -45,10 +46,33 @@ Operator* ConcatProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shap
 DMLC_REGISTER_PARAMETER(ConcatParam);
 
 MXNET_REGISTER_OP_PROPERTY(Concat, ConcatProp)
-.add_argument("data", "Symbol[]", "List of tensors to concatenate")
+.describe(R"code(Concate a list of array along a given axis.
+
+The dimension sizes of the input arrays on the given axis should be the same.
+
+For example::
+
+  x = [[1,1],[1,1]]
+  y = [[2,2],[2,2]]
+  z = [[3,3],[3,3],[3,3]]
+
+  Concat(x,y,z,dim=0) = [[ 1.,  1.],
+                         [ 1.,  1.],
+                         [ 2.,  2.],
+                         [ 2.,  2.],
+                         [ 3.,  3.],
+                         [ 3.,  3.],
+                         [ 3.,  3.]]
+
+  Concat(x,y,z,dim=1) = [[ 1.,  1.,  2.,  2.],
+                         [ 1.,  1.,  2.,  2.]]
+
+)code" ADD_FILELINE)
+.add_argument("data", "ndarray-or-symbol[]", "List of tensors to concatenate")
 .add_arguments(ConcatParam::__FIELDS__())
-.set_key_var_num_args("num_args")
-.describe("Perform a feature concat on channel dim (defaut is 1) over all");
+.set_key_var_num_args("num_args");
+
+NNVM_REGISTER_OP(Concat).add_alias("concat");
 
 }  // namespace op
 }  // namespace mxnet

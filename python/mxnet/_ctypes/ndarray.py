@@ -73,7 +73,9 @@ def _make_ndarray_function(handle, name):
     arguments = []
     for i in range(num_args.value):
         dtype = py_str(arg_types[i])
-        if not (dtype.startswith('NDArray') or dtype.startswith('Symbol')):
+        if not (dtype.startswith('NDArray') or
+                dtype.startswith('Symbol') or
+                dtype.startswith('ndarray-or-symbol')):
             arguments.append(py_str(arg_names[i]))
 
     # Definition of internal functions.

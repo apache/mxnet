@@ -127,7 +127,7 @@ class LeakyReLUOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.act_type == leakyrelu::kPReLU ? 2 : 1;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data.size(), expected);
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -198,9 +198,9 @@ class LeakyReLUProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (param_.act_type == leakyrelu::kPReLU) {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, gamma]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, gamma]";
     } else {
-      CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
+      CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
     }
     const TShape &dshape = in_shape->at(leakyrelu::kData);
     if (dshape.ndim() == 0) return false;

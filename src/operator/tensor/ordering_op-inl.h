@@ -417,12 +417,12 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
 inline bool TopKShapeImpl(const TopKParam& param,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
   if (param.ret_typ == topk_enum::kReturnIndices ||
     param.ret_typ == topk_enum::kReturnMask) {
-    CHECK_EQ(out_attrs->size(), 1);
+    CHECK_EQ(out_attrs->size(), 1U);
   } else {
-    CHECK_EQ(out_attrs->size(), 2);
+    CHECK_EQ(out_attrs->size(), 2U);
   }
   TShape& in_shape = (*in_attrs)[0];
   int batch_size, element_num;  // number of batches + the size of each batch

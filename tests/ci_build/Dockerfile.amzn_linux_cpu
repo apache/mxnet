@@ -3,7 +3,7 @@ MAINTAINER Ly Nguyen <lynguyen@amazon.com>
 
 COPY install/* /install/
 
-RUN yum install -y git wget
+RUN yum install -y git wget sudo
 
 RUN chmod -R 755 install
 RUN /install/install_opencv.sh

@@ -10,6 +10,7 @@ from .base_module import BaseModule
 
 class SequentialModule(BaseModule):
     """A SequentialModule is a container module that can chain multiple modules together.
+
     Note building a computation graph with this kind of imperative container is less
     flexible and less efficient than the symbolic graph. So this should be only used as a
     handy utility.
@@ -48,8 +49,9 @@ class SequentialModule(BaseModule):
 
         Returns
         -------
-        This function returns `self` to allow us to easily chain a
-        series of `add` calls.
+        self
+            This function returns `self` to allow us to easily chain a
+            series of `add` calls.
 
         Examples
         --------
@@ -61,7 +63,7 @@ class SequentialModule(BaseModule):
         self._modules.append(module)
 
         # a sanity check to avoid typo
-        for key in kwargs.keys():
+        for key in kwargs:
             assert key in self._meta_keys, ('Unknown meta "%s", a typo?' % key)
 
         self._metas.append(kwargs)
@@ -91,10 +93,12 @@ class SequentialModule(BaseModule):
     @property
     def data_shapes(self):
         """Get data shapes.
+
         Returns
         -------
-        A list of `(name, shape)` pairs. The data shapes of the
-        first module is the data shape of a `SequentialModule`.
+        list
+            A list of `(name, shape)` pairs. The data shapes of the first module
+            is the data shape of a `SequentialModule`.
         """
         assert self.binded
         return self._modules[0].data_shapes
@@ -102,11 +106,13 @@ class SequentialModule(BaseModule):
     @property
     def label_shapes(self):
         """Get label shapes.
+
         Returns
         -------
-        A list of `(name, shape)` pairs. The return value could be `None` if
-        the module does not need labels, or if the module is not binded for
-        training (in this case, label information is not available).
+        list
+            A list of `(name, shape)` pairs. The return value could be `None` if
+            the module does not need labels, or if the module is not binded for
+            training (in this case, label information is not available).
         """
         assert self.binded
         return self._label_shapes
@@ -114,21 +120,24 @@ class SequentialModule(BaseModule):
     @property
     def output_shapes(self):
         """Get output shapes.
+
         Returns
         -------
-        A list of `(name, shape)` pairs. The output shapes of the last
-        module is the output shape of a `SequentialModule`.
+        list
+            A list of `(name, shape)` pairs. The output shapes of the last
+            module is the output shape of a `SequentialModule`.
         """
         assert self.binded
         return self._modules[-1].output_shapes
 
     def get_params(self):
         """Get current parameters.
+
         Returns
         -------
-        `(arg_params, aux_params)`, each a dictionary of name to parameters (in
-        `NDArray`) mapping. This is a merged dictionary of all the parameters
-        in the modules.
+        (arg_params, aux_params)
+            each a dictionary of name to parameters (in `NDArray`) mapping. This
+            is a merged dictionary of all the parameters in the modules.
         """
         assert self.binded and self.params_initialized
 
@@ -353,9 +362,10 @@ class SequentialModule(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
-        elements are numpy arrays.
+        list of NDArray or list of list of NDArray
+            If `merge_multi_context` is `True`, it is like `[out1,
+            out2]`. Otherwise, it is like `[[out1_dev1, out1_dev2], [out2_dev1,
+            out2_dev2]]`. All the output elements are numpy arrays.
         """
         assert self.binded and self.params_initialized
         return self._modules[-1].get_outputs(merge_multi_context=merge_multi_context)
@@ -373,9 +383,10 @@ class SequentialModule(BaseModule):
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
-        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
-        elements are `NDArray`.
+        list of NDArray or list of list of NDArray
+            If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
+            is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+            elements are `NDArray`.
         """
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._modules[0].get_input_grads(merge_multi_context=merge_multi_context)

@@ -122,7 +122,7 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
 inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int> *in_type,
                             std::vector<int> *out_type) {
-  CHECK_GE(in_type->size(), 1);
+  CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
   for (index_t i = 0; i < in_type->size(); ++i) {
@@ -148,9 +148,9 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(req[embedding::kOut], kWriteTo);
-  CHECK_EQ(inputs.size(), 2);
-  CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(inputs[embedding::kWeight].ndim(), 2)
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs[embedding::kWeight].ndim(), 2U)
           << "Embedding layer expects its weight to be two-dimensional. "
           << inputs[embedding::kWeight].ndim()
           << " dimensional input is given instead";
@@ -170,7 +170,7 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 // Returns integer log2(a) rounded up
-static int ilog2(unsigned int a) {
+inline int ilog2(unsigned int a) {
   int k = 1;
   while (a >>= 1) k++;
   return k;
@@ -222,8 +222,8 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  CHECK_EQ(inputs.size(), 2);
-  CHECK_EQ(outputs.size(), 2);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req[embedding::kData], kNullOp)
           << "Embedding layer doesn't support calculate data gradient";
 
@@ -326,7 +326,7 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_type,
                        std::vector<int> *out_type) {
   // using single dtype ("float32") for safety reason
-  CHECK_GE(in_type->size(), 2);
+  CHECK_GE(in_type->size(), 2U);
   int dtype = (*in_type)[1];
   CHECK_NE(dtype, -1) << "idx must have specified type";
   for (index_t i = 0; i < in_type->size(); ++i) {
@@ -352,9 +352,9 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[take_::kOut], kWriteTo);
-    CHECK_EQ(inputs.size(), 2);
-    CHECK_EQ(outputs.size(), 1);
-    CHECK_GE(inputs[take_::kArr].ndim(), 2)
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    CHECK_GE(inputs[take_::kArr].ndim(), 2U)
         << "take layer expects its array's size to be at least 2. "
         << inputs[take_::kArr].ndim()
         << " dimensional input is given instead";
@@ -385,8 +385,8 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(inputs.size(), 2);
-    CHECK_EQ(outputs.size(), 2);
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 2U);
     CHECK_EQ(req[take_::kIdx], kNullOp)
         << "take layer doesn't support gradient into index";
 
@@ -438,14 +438,14 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
 inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2) << "BatchTake op requires two inputs";
+  CHECK_EQ(in_attrs->size(), 2U) << "BatchTake op requires two inputs";
   if ((*in_attrs)[1].ndim() != 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
   } else if ((*out_attrs)[0].ndim() != 0) {
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, (*out_attrs)[0]);
   }
   if ((*in_attrs)[0].ndim() == 0) return false;
-  CHECK_GE((*in_attrs)[0].ndim(), 2) << "Data array must have at least 2 dimensional";
+  CHECK_GE((*in_attrs)[0].ndim(), 2U) << "Data array must have at least 2 dimensional";
   if ((*out_attrs)[0].ndim() == 0) return false;
   CHECK_EQ((*in_attrs)[0].Size()/(*in_attrs)[0][(*in_attrs)[0].ndim()-1],
            (*out_attrs)[0].Size())
@@ -456,7 +456,7 @@ inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
 inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_attrs,
                           std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(in_attrs->size(), 2U);
   if ((*in_attrs)[0] != -1) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   } else if ((*out_attrs)[0] != -1) {
@@ -467,6 +467,7 @@ inline bool BatchTakeOpType(const nnvm::NodeAttrs& attrs,
 }
 
 /*! \brief take scalar value from 2d data array */
+template<int req>
 struct batch_take {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
@@ -474,22 +475,27 @@ struct batch_take {
     int j = idx[i];
     if (j < 0) j = 0;
     else if (j >= M) j = M-1;
-    out[i] = a[i*M+j];
+    KERNEL_ASSIGN(out[i], req, a[i*M+j]);
   }
 };
 
 template<typename xpu>
 void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<batch_take, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                    inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
-                                    inputs[0].Size()/inputs[0].shape_[0]);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<batch_take<req_type>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                                inputs[0].dptr<DType>(), inputs[1].dptr<int>(),
+                                                inputs[0].Size()/inputs[0].shape_[0]);
+    });
   });
 }
 
@@ -535,8 +541,8 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   // The shape of indices
   const TShape& ishape = (*in_attrs)[0];
 
@@ -558,8 +564,8 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
 inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
                          std::vector<int>* in_attrs,
                          std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   int depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
@@ -571,14 +577,15 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<int req>
 struct one_hot {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const int* indices,
-                                  int depth, DType on_value, DType off_value) {
+                                  int depth, DType on_value) {
     int offset = i * depth;
     int j = indices[i];
     if (j >= 0 && j < depth) {
-      out[offset+j] = on_value;
+      KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
   }
 };
@@ -589,8 +596,9 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
   // The following line is needed to guard the situation when
   // an output array is empty on GPU. In that case, out.dptr() = 0x0
   if (outputs[0].Size() == 0) return;
@@ -605,10 +613,12 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    out = static_cast<DType>(off_value);
-    Kernel<one_hot, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-        inputs[0].dptr<int>(), depth,
-        static_cast<DType>(on_value), static_cast<DType>(off_value));
+    ASSIGN_DISPATCH(out, req[0], static_cast<DType>(off_value));
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<one_hot<req_type>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                             inputs[0].dptr<int>(), depth,
+                                             static_cast<DType>(on_value));
+    });
   });
 }
 

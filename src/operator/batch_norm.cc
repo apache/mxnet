@@ -18,12 +18,7 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(BatchNormParam param, int dtype) {
 #if MXNET_USE_MKL2017 == 1
-  if (!param.use_global_stats) {
-    return new MKLBatchNormOp<cpu, float>(param);
-  } else {
-    if (enableMKLWarnGenerated())
-      LOG(INFO) << MKLBatchNormOp<cpu, float>::getName() << " Skip MKL optimization";
-  }
+  return new MKLBatchNormOp<cpu, float>(param);
 #endif
   return new BatchNormOp<cpu>(param);
 }
@@ -41,10 +36,50 @@ Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
 DMLC_REGISTER_PARAMETER(BatchNormParam);
 
 MXNET_REGISTER_OP_PROPERTY(BatchNorm, BatchNormProp)
-.describe("Apply batch normalization to input.")
-.add_argument("data", "Symbol", "Input data to batch normalization")
-.add_argument("gamma", "Symbol", "gamma matrix")
-.add_argument("beta", "Symbol", "beta matrix")
+.describe(R"code(Batch normalization.
+
+Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
+well as offset ``beta``.
+
+Assume the input has more than one dimension and we normalize along axis 1.
+We first compute the mean and variance along this axis:
+
+.. math::
+
+  data\_mean[i] = mean(data[:,i,:,...]) \\
+  data\_var[i] = var(data[:,i,:,...])
+
+Then compute the normalized output, which has the same shape as input, as following:
+
+.. math::
+
+  out[:,i,:,...] = \frac{data[:,i,:,...] - data\_mean[i]}{\sqrt{data\_var[i]+\epsilon}} * gamma[i] + beta[i]
+
+Both *mean* and *var* returns a scalar by treating the input as a vector.
+
+Assume the input has size *k* on axis 1, then both ``gamma`` and ``beta``
+have shape *(k,)*. If ``output_mean_var`` is set to be true, then outputs both ``data_mean`` and
+``data_var`` as well, which are needed for the backward pass.
+
+Besides the inputs and the outputs, this operator accepts two auxiliary
+states, ``moving_mean`` and ``moving_var``, which are *k*-length
+vectors. They are global statistics for the whole dataset, which are updated
+by::
+
+  moving_mean = moving_mean * momentum + data_mean * (1 - momentum)
+  moving_var = moving_var * momentum + data_var * (1 - momentum)
+
+If ``use_global_stats`` is set to be true, then ``moving_mean`` and
+``moving_var`` are used instead of ``data_mean`` and ``data_var`` to compute
+the output. It is often used during inference.
+
+Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
+then set ``gamma`` to 1 and its gradient to 0.
+
+)code" ADD_FILELINE)
+.add_argument("data", "ndarray-or-symbol", "Input data to batch normalization")
+.add_argument("gamma", "ndarray-or-symbol", "gamma array")
+.add_argument("beta", "ndarray-or-symbol", "beta array")
 .add_arguments(BatchNormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(BatchNorm)
@@ -60,4 +95,3 @@ NNVM_REGISTER_OP(BatchNorm)
 
 }  // namespace op
 }  // namespace mxnet
-

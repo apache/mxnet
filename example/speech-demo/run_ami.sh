@@ -81,7 +81,7 @@ if [ $stage -le 0 ] ; then
             ark:- \| ali-to-post ark:- ark,scp:$dir/rawpost/post.JOB.ark,$dir/rawpost/post.JOB.scp || exit 1;
 
 
-    for n in $(seq $njdec); do
+    for n in $(seq $num); do
         cat $dir/rawpost/post.${n}.scp || exit 1;
     done > $dir/post.scp
 fi

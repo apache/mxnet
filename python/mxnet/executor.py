@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 import ctypes
 import copy
+import warnings
 import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
@@ -51,6 +52,7 @@ class Executor(object):
         self._aux_dict = None
         self._output_dict = None
         self._monitor_callback = None
+        self._output_dirty = False
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
         self._group2ctx = copy.deepcopy(group2ctx)
@@ -87,7 +89,9 @@ class Executor(object):
         Parameters
         ----------
         is_train: bool, optional
-            whether this forward is for evaluation purpose.
+            whether this forward is for evaluation purpose. If True,
+            a backward call is expected to follow. Otherwise following
+            backward is invalid.
 
         **kwargs
             Additional specification of input arguments.
@@ -118,6 +122,13 @@ class Executor(object):
         check_call(_LIB.MXExecutorForward(
             self.handle,
             ctypes.c_int(int(is_train))))
+
+        if self._output_dirty:
+            warnings.warn(
+                "Calling forward the second time after forward(is_train=True) "
+                "without calling backward first. Is this intended?", stacklevel=2)
+        self._output_dirty = is_train
+
         return self.outputs
 
     def backward(self, out_grads=None):
@@ -145,6 +156,12 @@ class Executor(object):
             self.handle,
             mx_uint(len(out_grads)),
             ndarray))
+
+        if not self._output_dirty:
+            warnings.warn(
+                "Calling backward without calling forward(is_train=True) "
+                "first. Behavior is undefined.", stacklevel=2)
+        self._output_dirty = False
 
     def set_monitor_callback(self, callback):
         """Install callback.
@@ -254,18 +271,18 @@ class Executor(object):
             if name in self.arg_dict:
                 dst = self.arg_dict[name]
                 array.astype(dst.dtype).copyto(dst)
-            else:
-                if not allow_extra_params:
-                    raise ValueError('Find name \"%s\" that is not in the arguments' % name)
+            elif not allow_extra_params:
+                raise ValueError('Find name \"%s\" that is not in the arguments' % name)
+
         if aux_params is None:
-            aux_params = {}
+            return
+
         for name, array in aux_params.items():
             if name in self.aux_dict:
                 dst = self.aux_dict[name]
                 array.astype(dst.dtype).copyto(dst)
-            else:
-                if not allow_extra_params:
-                    raise ValueError('Find name %s that is not in the auxiliary states' % name)
+            elif not allow_extra_params:
+                raise ValueError('Find name %s that is not in the auxiliary states' % name)
 
     def reshape(self, partial_shaping=False, allow_up_sizing=False, **kwargs):
         """Return a new executor with the same symbol and shared memory,

@@ -2,7 +2,8 @@ FROM nvidia/cuda:7.5-cudnn5-devel
 MAINTAINER Ly Nguyen <lynguyen@amazon.com>
 
 # OPENCV
-RUN apt-get update
+RUN apt-mark hold libcudnn5 libcudnn5-dev
+RUN apt-get update && apt-get -y upgrade
 RUN apt-get install -y libopencv-dev
 
 # BLAS
@@ -23,3 +24,11 @@ RUN pip install nose cpplint 'pylint==1.4.4' 'astroid==1.3.6'
 
 # MAVEN
 RUN apt-get install -y maven default-jdk
+
+# R
+RUN apt-get install -y software-properties-common r-base-core libcurl4-openssl-dev libssl-dev libxml2-dev
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
+RUN add-apt-repository -y ppa:marutter/rdev
+RUN apt-get update && apt-get -y upgrade
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" install r-base r-base-dev
+RUN Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"

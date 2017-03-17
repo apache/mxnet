@@ -1,3 +1,6 @@
+if(MKL_FOUND)
+  message(ERROR " OpenBLAS is not required since MKL is enabled")
+endif()
 file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
 file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
 
