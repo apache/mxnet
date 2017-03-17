@@ -108,7 +108,7 @@ class ConvolutionV1Op : public Operator {
     CHECK_EQ(req[conv_v1::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.kernel.ndim() > 2) {
       LOG(FATAL) << "Volume convolution is not implmented in mshadow";
@@ -354,7 +354,7 @@ class ConvolutionV1Prop : public OperatorProperty {
       if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
       if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
     } else {
-      CHECK_EQ(param_.kernel.ndim(), 3) << param_.kernel.ndim() << "D convolution not supported";
+      CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D convolution not supported";
       param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
       if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
       if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
@@ -371,9 +371,9 @@ class ConvolutionV1Prop : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
     // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
     out_shape->resize(1, TShape());
@@ -381,7 +381,7 @@ class ConvolutionV1Prop : public OperatorProperty {
     if (dshp.ndim() ==  0) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv_v1
-      CHECK_EQ(dshp.ndim(), 4) \
+      CHECK_EQ(dshp.ndim(), 4U) \
           << "Input data should be 4D in batch-num_filter-y-x";
       Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
       Shape<4> wshape = Shape4(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
@@ -419,7 +419,7 @@ class ConvolutionV1Prop : public OperatorProperty {
       return true;
     } else if (param_.kernel.ndim() == 3) {
       // 3d conv_v1
-      CHECK_EQ(dshp.ndim(), 5) \
+      CHECK_EQ(dshp.ndim(), 5U) \
         << "Input data should be 5D in batch-num_filter-depth-y-x";
       Shape<5> dshape = ConvertLayout(dshp.get<5>(), param_.layout.value(), kNCDHW);
       Shape<5> wshape = Shape5(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
@@ -448,7 +448,7 @@ class ConvolutionV1Prop : public OperatorProperty {
             && ksize_y <= dshape[3] + 2 * param_.pad[1]
             && ksize_x <= dshape[4] + 2 * param_.pad[2])
         << "kernel size exceed input";
-      CHECK_EQ(param_.dilate.Size(), 1)
+      CHECK_EQ(param_.dilate.Size(), 1U)
         << "Dilate is not supported in 3d convolution";
       Shape<5> oshape;
       oshape[0] = dshape[0];
