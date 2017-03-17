@@ -51,7 +51,7 @@ def pack_lib(name, libs=mx_lib) {
   sh """
 echo "Packing ${libs} into ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-echo ${libs} | sed -e 's/,/ /g' | tar -zcvf ${name}.tgz
+echo ${libs} | sed -e 's/,/ /g' | xargs tar -zcvf ${name}.tgz
 """
   stash includes: "${name}.tgz", name: name 
 }
