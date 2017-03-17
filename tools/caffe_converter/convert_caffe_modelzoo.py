@@ -37,14 +37,16 @@ model_meta_info = {
     },
     'vgg-16' : {
         'prototxt' : 'https://gist.githubusercontent.com/ksimonyan/211839e770f7b538e2d8/raw/c3ba00e272d9f48594acef1f67e5fd12aff7a806/VGG_ILSVRC_16_layers_deploy.prototxt',
-        'caffemodel' : 'http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel' ,
+        # 'caffemodel' : 'http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel',
+        'caffemodel' : 'http://data.mxnet.io/models/imagenet/test/caffe/VGG_ILSVRC_16_layers.caffemodel',
         'mean': (123.68,116.779,103.939),
         'top-1-acc' : 0.734,
         'top-5-acc' : 0.914
     },
     'vgg-19' : {
         'prototxt' : 'https://gist.githubusercontent.com/ksimonyan/3785162f95cd2d5fee77/raw/bb2b4fe0a9bb0669211cf3d0bc949dfdda173e9e/VGG_ILSVRC_19_layers_deploy.prototxt',
-        'caffemodel' : 'http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_19_layers.caffemodel',
+        # 'caffemodel' : 'http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_19_layers.caffemodel',
+        'caffemodel' : 'http://data.mxnet.io/models/imagenet/test/caffe/VGG_ILSVRC_19_layers.caffemodel',
         'mean' : (123.68,116.779,103.939),
         'top-1-acc' : 0.731,
         'top-5-acc' : 0.913
@@ -76,34 +78,19 @@ def get_model_meta_info(model_name):
     """returns a dict with model information"""
     return dict(dict(model_meta_info)[model_name])
 
-def _download_file(url, local_fname=None, force_write=False):
-    """download a file by using the given URL"""
-    if local_fname is None:
-        local_fname = url.split('/')[-1]
-    if not force_write and os.path.exists(local_fname):
-        return local_fname
-
-    r = requests.get(url, stream=True)
-    assert r.status_code == 200, "failed to open %s" % url
-    with open(local_fname, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
-    return local_fname
-
 def _download_caffe_model(model_name, meta_info, dst_dir='./model'):
     """Download caffe model into disk by the given meta info """
     if not os.path.isdir(dst_dir):
         os.mkdir(dst_dir)
     model_name = os.path.join(dst_dir, model_name)
     assert 'prototxt' in meta_info, "missing prototxt url"
-    prototxt = _download_file(meta_info['prototxt'], model_name+'_deploy.prototxt')
+    prototxt = mx.test_utils.download(meta_info['prototxt'], model_name+'_deploy.prototxt')
     assert 'caffemodel' in meta_info, "mssing caffemodel url"
-    caffemodel = _download_file(meta_info['caffemodel'], model_name+'.caffemodel')
+    caffemodel = mx.test_utils.download(meta_info['caffemodel'], model_name+'.caffemodel')
     assert 'mean' in meta_info, 'no mean info'
     mean = meta_info['mean']
     if isinstance(mean, str):
-        mean = _download_file(mean, model_name+'_mean.binaryproto')
+        mean = mx.test_utils.download(mean, model_name+'_mean.binaryproto')
     return (prototxt, caffemodel, mean)
 
 def convert_caffe_model(model_name, meta_info, dst_dir='./model'):

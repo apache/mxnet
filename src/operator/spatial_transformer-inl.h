@@ -59,8 +59,8 @@ class SpatialTransformerOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 3U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = in_data[st::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[st::kOut].get<xpu, 4, DType>(s);
@@ -99,8 +99,8 @@ class SpatialTransformerOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_data.size(), 3U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = in_data[st::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> grad = out_grad[st::kOut].get<xpu, 4, DType>(s);
@@ -158,25 +158,25 @@ class SpatialTransformerProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2) << "Input:[data, loc]";
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, loc]";
     CHECK_EQ(param_.transform_type, st::kAffine) << "only supports affine transform currently";
     CHECK_EQ(param_.sampler_type, st::kBilinear) << "only supports bilinear sampling currently";
     const TShape &dshape = (*in_shape)[st::kData];
     const TShape &lshape = (*in_shape)[st::kLoc];
     if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 4) \
+    CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
     if (lshape.ndim() ==  0) return false;
-    CHECK_EQ(lshape.ndim(), 2) \
+    CHECK_EQ(lshape.ndim(), 2U) \
         << "locolisation paramter should be 4D in batch-num_hidden";
     if (param_.transform_type == st::kAffine) {
-      CHECK_EQ(lshape[1], 6) << "incorrect locolisation network shape[1], should be 6";
+      CHECK_EQ(lshape[1], 6U) << "incorrect locolisation network shape[1], should be 6";
     }
     out_shape->clear();
     out_shape->push_back(dshape);
-    CHECK_GT(param_.target_shape[0], 0) \
+    CHECK_GT(param_.target_shape[0], 0U) \
         << "incorrect target_shape: " << param_.target_shape[0];
-    CHECK_GT(param_.target_shape[1], 0) \
+    CHECK_GT(param_.target_shape[1], 0U) \
         << "incorrect target_shape: " << param_.target_shape[1];
     (*out_shape)[st::kOut][2] = param_.target_shape[0];
     (*out_shape)[st::kOut][3] = param_.target_shape[1];

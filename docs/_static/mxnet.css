@@ -761,12 +761,8 @@ div.informaltable {
 dl.class > dt:before, dl.function > dt:before {
     content: " ";
     display: block;
-    height: 80px; /* fixed header height*/
-    margin: -50px 0 0; /* negative fixed header height */
-}
-
-dt {
-    background-color: white !important;
+    height: 60px; /* fixed header height*/
+    margin: 0 0 0; /* negative fixed header height */
 }
 
 dl.method, dl.attribute {

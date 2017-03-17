@@ -42,7 +42,7 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
       //   blockDim.x = 32
       //   blockDim.y = 4
       //   sorted[idx_begin:] = [4 4 4 9]
-      //   (3,4) denotes threadIdx.x=3, threadIdx.y=4, ":" is used for ranges 
+      //   (3,4) denotes threadIdx.x=3, threadIdx.y=4, ":" is used for ranges
       //   (0:31,0:3) sorted_value = 4
       idx_end = idx_begin + 1;
       unsigned int* sh_ballot = (unsigned int*)sh_grad_weight_char;
@@ -154,7 +154,7 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
         }
       }
     }
-  
+
   }
 }
 
@@ -167,7 +167,7 @@ AddTakeGradLargeBatchWorkspaceSize(size_t num_keys) {
   size_t exclusivesum_bytes = 0;
   cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>(NULL, exclusivesum_bytes,
     NULL, NULL, num_keys);
-  size_t temporary_bytes = max(encode_bytes, exclusivesum_bytes);
+  size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
   size_t unique_bytes = num_keys*sizeof(IndexType);
   size_t counts_bytes = num_keys*sizeof(IndexType);
   size_t num_runs_bytes = 1*sizeof(int);
@@ -202,17 +202,17 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
     size_t exclusivesum_bytes = 0;
     cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>
       (NULL, exclusivesum_bytes, NULL, NULL, sorted.size(0), stream);
-    size_t temporary_bytes = max(encode_bytes, exclusivesum_bytes);
+    size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
 
     // Check that we have enough storage
-    CHECK_GE(workspace->size(0), unique_bytes + counts_bytes + 
+    CHECK_GE(workspace->size(0), unique_bytes + counts_bytes +
       num_runs_bytes + temporary_bytes);
 
     IndexType* unique_out_ptr = reinterpret_cast<IndexType*>(workspace->dptr_);
     IndexType* counts_out_ptr = reinterpret_cast<IndexType*>(workspace->dptr_ + unique_bytes);
     num_runs_ptr = reinterpret_cast<int*>(workspace->dptr_ + unique_bytes +
       counts_bytes);
-    void* temporary_storage = reinterpret_cast<void *>(workspace->dptr_ + unique_bytes + 
+    void* temporary_storage = reinterpret_cast<void *>(workspace->dptr_ + unique_bytes +
       counts_bytes + num_runs_bytes);
 
     cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>

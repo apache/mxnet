@@ -9,6 +9,9 @@ echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 user=`id -u -n`
+
+set -e
+
 make -j$(nproc) || exit 1
 
 export PYTHONPATH=${PWD}/python

@@ -73,8 +73,8 @@ class SoftmaxOutputOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2) << "SoftmaxOutput Input: [data, label]";
-    CHECK_EQ(out_data.size(), 1) << "SoftmaxOutput Output: [output]";
+    CHECK_EQ(in_data.size(), 2U) << "SoftmaxOutput Input: [data, label]";
+    CHECK_EQ(out_data.size(), 1U) << "SoftmaxOutput Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.multi_output) {
       int n = in_data[softmaxout_enum::kData].size(0);
@@ -112,10 +112,10 @@ class SoftmaxOutputOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_GE(in_grad.size(), 1);
-    CHECK_GE(req.size(), 1);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_GE(in_grad.size(), 1U);
+    CHECK_GE(req.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     if (out_data[softmaxout_enum::kOut].shape_ ==
@@ -252,7 +252,7 @@ class SoftmaxOutputProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
 
@@ -292,7 +292,7 @@ class SoftmaxOutputProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {
