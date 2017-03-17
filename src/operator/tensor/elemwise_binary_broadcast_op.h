@@ -216,8 +216,8 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
   const TBlob ograd = inputs[0].reshape(new_oshape);
   const TBlob lhs = inputs[1].reshape(new_lshape);
   const TBlob rhs = inputs[2].reshape(new_rshape);
-  size_t workspace_size_l = ReduceWorkspaceSize<DType>(s, lgrad, req[0], ograd);
-  size_t workspace_size_r = ReduceWorkspaceSize<DType>(s, rgrad, req[1], ograd);
+  size_t workspace_size_l = ReduceWorkspaceSize<DType>(s, lgrad, req[0], ograd, lhs, rhs);
+  size_t workspace_size_r = ReduceWorkspaceSize<DType>(s, rgrad, req[1], ograd, lhs, rhs);
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
