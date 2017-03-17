@@ -178,3 +178,25 @@ stage('Unit Test') {
     }
   }
 }
+
+
+stage('Integration Test') {
+  parallel 'Python': {
+    node('GPU') {
+      ws('workspace/it-python-gpu') {
+        init_git()
+        unpack_lib('gpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu PYTHONPATH=./python/ python example/image-classification/test_score.py"
+        }
+      }
+    }
+  },
+  'Caffe': {
+    node {
+      ws('workspace/it-caffe') {
+        echo "Hello world"
+      }
+    }
+  }
+}
