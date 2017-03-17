@@ -400,6 +400,8 @@ Composite multiple symbols into a new one by an operator.
     BatchNorm
     Pooling
     SoftmaxOutput
+    softmax
+    log_softmax
 ```
 
 ### More
