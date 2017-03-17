@@ -20,6 +20,25 @@
 #include "./exec_pass.h"
 
 namespace mxnet {
+
+using NodeOperatorMap = std::unordered_map<const nnvm::Node*,
+    std::shared_ptr<Operator>>;
+
+// forward declaration
+namespace exec {
+class GraphExecutor;
+}
+
+// forward declaration
+// (TODO) This part should be put into executor in the future
+namespace autograd {
+exec::GraphExecutor *NewBind(nnvm::Symbol symbol,
+                       const nnvm::NodeEntryMap<TShape>& shapes,
+                       const NodeOperatorMap& saved_opr);
+std::vector<NDArray> Run(exec::GraphExecutor* exec,
+                         const nnvm::NodeEntryMap<NDArray>& feed_dict);
+}
+
 namespace exec {
 
 using nnvm::Graph;
@@ -27,15 +46,19 @@ using nnvm::Graph;
 // graph executors
 class GraphExecutor : public Executor {
  public:
+  friend GraphExecutor *autograd::NewBind(nnvm::Symbol symbol,
+                       const nnvm::NodeEntryMap<TShape>& shapes,
+                       const NodeOperatorMap& saved_opr);
+  friend std::vector<NDArray> autograd::Run(GraphExecutor* exec,
+    const nnvm::NodeEntryMap<NDArray>& feed_dict);
+
   using Executor::MonitorCallback;
 
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
   void Backward(const std::vector<NDArray> &head_grads) override;
-  void Run(nnvm::NodeEntryMap<NDArray> feed_dict) override;
   const std::vector<NDArray>& outputs() const override;
-  const std::vector<NDArray>& grads() const override;
   void Print(std::ostream &os) const override; // NOLINT(*)
   void SetMonitorCallback(const MonitorCallback& callback) override;
   // initialized the executor
@@ -47,8 +70,6 @@ class GraphExecutor : public Executor {
             const std::vector<OpReqType>& grad_req_type,
             const std::vector<NDArray>& aux_states,
             Executor* shared_exec = nullptr);
-
-  nnvm::NodeEntryMap<TShape> shape_hints_;
 
  protected:
   // Information about operational node
@@ -96,7 +117,6 @@ class GraphExecutor : public Executor {
   std::vector<NDArray> output_arrays_;
   // gradient store
   std::vector<std::pair<OpReqType, NDArray> > grad_store_;
-  std::vector<NDArray> grad_arrays_;
   // array to hold head gradient.
   std::vector<NDArray> head_grad_array_;
   // entry to hold head gradient
@@ -110,6 +130,9 @@ class GraphExecutor : public Executor {
   // number of forward nodes
   size_t num_forward_nodes_{0};
   // monitor call back
+  nnvm::NodeEntryMap<TShape> shape_hints_;
+  NodeOperatorMap saved_opr_;
+
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
 };
 

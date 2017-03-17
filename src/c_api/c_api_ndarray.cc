@@ -17,7 +17,7 @@
 #include "../ndarray/autograd.h"
 
 using namespace mxnet;
-using namespace mxnet::ndarray;
+using mxnet::autograd::AutogradRuntime;
 
 void SetOpAttrs(const nnvm::Op *op,
                 nnvm::NodeAttrs *p_attrs,
@@ -264,7 +264,8 @@ void PushFCompute(const FCompute& fn,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-void PushOperator(const nnvm::Op* op,
+void PushOperator(std::shared_ptr<Operator> opr,
+                  const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<engine::VarHandle>& read_vars,
@@ -273,12 +274,9 @@ void PushOperator(const nnvm::Op* op,
                   const std::vector<uint32_t>& auxidx,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs) {
-  static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
-  Operator* opr = createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
   struct Capture {
     engine::CallbackOnComplete on_complete;
-    Operator *opr;
+    std::shared_ptr<Operator> opr;
   };
 
   Engine::Get()->PushAsync(
@@ -305,7 +303,6 @@ void PushOperator(const nnvm::Op* op,
                         [](Engine* engine, void *cpt_handle) {
                             Capture* cpt = static_cast<Capture*>(cpt_handle);
                             cpt->on_complete();
-                            delete cpt->opr;
                             delete cpt;
                           }, static_cast<void*>(capture)),
                       requested};
@@ -315,7 +312,6 @@ void PushOperator(const nnvm::Op* op,
         if (ctx.dev_mask() == gpu::kDevMask) {
           rctx.get_stream<gpu>()->Wait();
         }
-        delete opr;
         delete capture;
         on_complete();
       }
@@ -375,10 +371,20 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     }
 
     if (fn) {
+      if (AutogradRuntime::Get()->IsRecording()) {
+        AutogradRuntime::Get()->RecordImperativeFCompute(fn, op,
+            attrs, ndinputs, ndoutputs);
+      }
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
     } else if (createop.count(op)) {
-      PushOperator(op, attrs, ctx, read_vars, write_vars,
+      std::shared_ptr<Operator> opr(
+          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types));
+      if (AutogradRuntime::Get()->IsRecording()) {
+        AutogradRuntime::Get()->RecordImperativeOperator(opr, op,
+            attrs, ndinputs, ndoutputs);
+      }
+      PushOperator(opr, op, attrs, ctx, read_vars, write_vars,
           requested, auxidx, ndinputs, ndoutputs);
     } else {
       LOG(FATAL)
@@ -388,9 +394,6 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     }
   }
 
-  if (AutogradRuntime::Get()->IsRecording()) {
-    AutogradRuntime::Get()->RecordImperative(op, attrs, ndinputs, ndoutputs);
-  }
 
   if (outarray == nullptr) {
     ret->ret_handles.clear();
@@ -415,9 +418,9 @@ int MXAutogradSetRecording(int recording) {
 
 int MXAutogradSetMarkForRecord(mx_uint num_arr, NDArrayHandle *arrays, int mark) {
   API_BEGIN();
-  std::vector<NDArray*> data(num_arr);
+  std::vector<NDArray*> data;
   for (mx_uint i = 0; i < num_arr; ++i) {
-    data[i] = static_cast<NDArray*>(arrays[i]);
+    data.emplace_back(static_cast<NDArray*>(arrays[i]));
   }
   AutogradRuntime::Get()->SetMarkForRecord(data, bool(mark));
   API_END();

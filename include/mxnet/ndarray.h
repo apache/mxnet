@@ -29,9 +29,11 @@
 
 namespace mxnet {
 
-namespace ndarray {
-  class AutogradRuntime;
+// forward declaration
+namespace autograd {
+class AutogradRuntime;
 }
+
 /*!
  * \brief ndarray interface
  */
@@ -358,7 +360,7 @@ class NDArray {
                    std::vector<std::string>* keys);
 
  private:
-  friend class ::mxnet::ndarray::AutogradRuntime;
+  friend class autograd::AutogradRuntime;
   /*! \brief the real data chunk that backs NDArray */
   struct Chunk {
     /*! \brief storage handlefrom storage engine */

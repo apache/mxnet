@@ -59,7 +59,6 @@ class Executor {
    * \param head_grads the gradient of head nodes to be backproped.
    */
   virtual void Backward(const std::vector<NDArray> &head_grads) = 0;
-  virtual void Run(nnvm::NodeEntryMap<NDArray> feed_dict) = 0;
   /*!
    * \brief print the execution plan info to output stream.
    * \param os the output stream we like to print to.
@@ -70,7 +69,6 @@ class Executor {
    * \return array of outputs in the executor.
    */
   virtual const std::vector<NDArray> &outputs() const = 0;
-  virtual const std::vector<NDArray> &grads() const = 0;
   /*!
    * \brief Create an operator by bind symbol with context and arguments.
    *  If user do not want to compute the gradients of i-th argument, grad_req_type[i] can be kNullOp.
@@ -93,9 +91,6 @@ class Executor {
                         const std::vector<OpReqType> &grad_req_type,
                         const std::vector<NDArray> &aux_states,
                         Executor* shared_exec = NULL);
-
-  static Executor *NewBind(nnvm::Symbol symbol,
-                           nnvm::NodeEntryMap<NDArray>& feed_dict);
   /*!
    * \brief the prototype of user-defined monitor callback
    */

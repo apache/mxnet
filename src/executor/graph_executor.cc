@@ -69,10 +69,6 @@ const std::vector<NDArray>& GraphExecutor::outputs() const {
   return output_arrays_;
 }
 
-const std::vector<NDArray>& GraphExecutor::grads() const {
-  return grad_arrays_;
-}
-
 nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
   static const Op* id_like = Op::Get("_identity_with_attr_like_rhs");
   nnvm::NodePtr n = nnvm::Node::Create();
@@ -328,6 +324,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   nnvm::Graph g = InitGraph(symbol, default_ctx,
                             ctx_map, in_args, arg_grad_store,
                             grad_req_type, aux_states);
+  g.attrs["saved_opr"] = std::make_shared<nnvm::any>(std::move(saved_opr_));
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
   graph_ = std::move(g);
@@ -731,95 +728,6 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
              in_args, arg_grad_store, grad_req_type, aux_states,
              reinterpret_cast<Executor*>(shared_exec));
   return exec;
-}
-
-Executor *Executor::NewBind(nnvm::Symbol symbol,
-    nnvm::NodeEntryMap<NDArray>& feed_dict) {
-  using nnvm::NodePtr;
-  using nnvm::NodeEntry;
-
-  LOG(INFO) << "feed_dict";
-  for (const auto& kv : feed_dict) {
-    LOG(INFO) << kv.first.node->attrs.name << "(" << kv.first.index << ")";
-  }
-
-  std::vector<NodePtr> input_nodes =
-    symbol.ListInputs(nnvm::Symbol::ListInputOption::kAll);
-  LOG(INFO) << "input_nodes";
-  for (const NodePtr& n : input_nodes) {
-    LOG(INFO) << n->attrs.name;
-  }
-
-  std::vector<NDArray> inputs;
-  inputs.reserve(input_nodes.size());
-  for (const NodePtr& n : input_nodes) {
-    NodeEntry e = nnvm::NodeEntry{n, 0, 0};
-    if (feed_dict.count(e)) {
-      NDArray nd = feed_dict.at(e);
-      inputs.push_back(nd);
-    } else {
-      LOG(FATAL) << "no corresponding ndarray: " << n->attrs.name;
-    }
-  }
-
-  std::vector<NDArray> grads;
-  std::vector<OpReqType> grad_reqs;
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    NDArray grad(inputs[i].shape(), inputs[i].ctx());
-    grad = static_cast<real_t>(1.0);
-    grads.push_back(grad);
-    grad_reqs.push_back(OpReqType::kWriteTo);
-  }
-
-  Context ctx = Context::CPU(); // (TODO) fixme
-  std::map<std::string, Context> ctx_map;
-  std::vector<NDArray> aux_states;
-
-  nnvm::NodeEntryMap<TShape> shapes;
-  for (const auto& kv : feed_dict) {
-    shapes.insert({kv.first, kv.second.shape()});
-  }
-  auto exec = new exec::GraphExecutor();
-  exec->shape_hints_ = shapes;
-  exec->Init(symbol, ctx, ctx_map,
-             inputs, grads, grad_reqs, aux_states);
-
-  return exec;
-}
-
-namespace exec {
-
-void GraphExecutor::Run(nnvm::NodeEntryMap<NDArray> feed_dict) {
-  const nnvm::IndexedGraph& idx = graph_.indexed_graph();
-
-  for (const auto& kv : feed_dict) {
-    if (idx.exist(kv.first.node.get())) {
-      uint32_t entry_id = idx.entry_id(kv.first);
-      LOG(INFO) << "Copy " << kv.first.node->attrs.name
-                << "(" << kv.first.index << ")";
-      CopyFromTo(kv.second, &(data_entry_[entry_id]));
-    }
-  }
-
-  std::vector<NDArray> head_grads;
-  head_grads.reserve(head_grad_array_.size());
-  LOG(INFO) << "head_grad_size: " << head_grad_array_.size();
-
-  for (size_t i = 0; i < output_arrays_.size(); ++i) {
-    NDArray grad(output_arrays_[i].shape(), output_arrays_[i].ctx());
-    grad = static_cast<real_t>(1.0);
-    head_grads.push_back(grad);
-  }
-
-  Backward(head_grads);
-
-  LOG(INFO) << grad_store_.size();
-  for (const auto& kv : grad_store_) {
-    LOG(INFO) << "push grad_store";
-    grad_arrays_.emplace_back(kv.second);
-  }
-}
-
 }
 
 }  // namespace mxnet
