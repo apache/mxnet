@@ -70,12 +70,12 @@ class DetIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        return [(k, v.shape) for k, v in self._data.items()]
+        return [(k, v[0].shape) for k, v in self._data.items()]
 
     @property
     def provide_label(self):
         if self.is_train:
-            return [(k, v.shape) for k, v in self._label.items()]
+            return [(k, v[0].shape) for k, v in self._label.items()]
         else:
             return []
 
