@@ -12,7 +12,7 @@ def _get_input(proto):
     elif len(proto.input_shape) > 0:
         input_dim = proto.input_shape[0].dim
     elif layer[0].type == "Input":
-        input_dim = layer[0].input_param.shape._values[0].dim
+        input_dim = layer[0].input_param.shape[0].dim
         layer.pop(0)
     else:
         raise ValueError('Cannot find input size')

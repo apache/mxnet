@@ -10,8 +10,11 @@ To run locally, we need to first install
 [docker](https://docs.docker.com/engine/installation/) and
 [nvidia-docker](https://github.com/NVIDIA/nvidia-docker/wiki).
 
-Then we can run the tasks defined in the [Jenkinsfile](../../Jenkinsfile) by using (`ci_build.sh`)[./ci_build.sh]. For
-example
+We may use the AWS EC2 AMI `ami-d73bb4b7` available at US West (Oregon) which
+has both pre-installed.
+
+Then we can run the tasks defined in the [Jenkinsfile](../../Jenkinsfile) by
+using (`ci_build.sh`)[./ci_build.sh]. For example
 
 - lint the python codes
 
