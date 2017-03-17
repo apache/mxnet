@@ -76,16 +76,16 @@ inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TS
           int hend = std::min(hstart + kernel_h, height + pad_h);
           int wend = std::min(wstart + kernel_w, width + pad_w);
           int pool_size = (hend - hstart) * (wend - wstart);
-          hstart = std::max(hstart, 0); 
-          wstart = std::max(wstart, 0); 
+          hstart = std::max(hstart, 0);
+          wstart = std::max(wstart, 0);
           hend = std::min(hend, height);
           wend = std::min(wend, width);
           DType sum = 0;
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
-              sum += in_data[h*width+w]; 
+              sum += in_data[h*width+w];
             }
-          } 
+          }
           KERNEL_ASSIGN(out_data[ph*pooled_width+pw], req_type, getAvg? sum/pool_size : sum);
         }
       }
@@ -166,16 +166,16 @@ inline void unpool_sum_2d_cpu(const DType* out_grad, const TShape& ishape,
           if (isAvg) {
             pool_size = (hend - hstart) * (wend - wstart);
           }
-          hstart = std::max(hstart, 0); 
-          wstart = std::max(wstart, 0); 
+          hstart = std::max(hstart, 0);
+          wstart = std::max(wstart, 0);
           hend = std::min(hend, height);
           wend = std::min(wend, width);
           const int pool_index = ph * pooled_width + pw;
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
-              in_grad[h*width+w] += out_grad[pool_index] / pool_size; 
+              in_grad[h*width+w] += out_grad[pool_index] / pool_size;
             }
-          } 
+          }
         }
       }
       in_grad += in_grad_offset;
@@ -183,7 +183,6 @@ inline void unpool_sum_2d_cpu(const DType* out_grad, const TShape& ishape,
     }
   }
 }
-
 
 template<typename DType>
 inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& ishape,

@@ -75,8 +75,8 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
 	  int hend = min(hstart + kernel_h, height + pad_h);
 	  int wend = min(wstart + kernel_w, width + pad_w);
 	  const int pool_size = (getAvg? (hend - hstart) * (wend - wstart) : 1);
-	  hstart = max(hstart, 0); 
-	  wstart = max(wstart, 0); 
+	  hstart = max(hstart, 0);
+	  wstart = max(wstart, 0);
 	  hend = min(hend, height);
 	  wend = min(wend, width);
 	  DType sum = 0;
@@ -84,8 +84,8 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
 	 		in_data + (n * channels + c) * height * width;
 	  for (int h = hstart; h < hend; ++h) {
 		  for (int w = wstart; w < wend; ++w) {
-		    sum += out_slice[h * width + w]; 
-		  }   
+		    sum += out_slice[h * width + w];
+		  }
 	  }
 	  KERNEL_ASSIGN(out_data[index], req_type, sum / pool_size);
   }
@@ -176,7 +176,7 @@ __global__ void unpool_sum_2d_gpu_kernel(const int nthreads, const DType* out_gr
 	  in_grad[index] += gradient;
   }
 }
-  
+
 template<typename DType>
 inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& ishape,
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
