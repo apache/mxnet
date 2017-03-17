@@ -1053,6 +1053,7 @@ def test_convolution_dilated_impulse_response():
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
+
 def test_reshape():
 
     def test_reshape_new(src_shape, shape_args, reverse, dst_shape):
