@@ -44,8 +44,7 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
       break;
     }
   }
-  if (enableMKLWarnGenerated())
-    LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
+  LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   const size_t batch_size = (*in_shape)[0][0];

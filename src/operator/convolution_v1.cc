@@ -25,37 +25,6 @@ Operator* CreateOp<cpu>(ConvolutionV1Param param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
-#if 0
-#if MXNET_USE_MKL2017 == 1
-  if ((param.dilate[0] == 1 && param.dilate[1] == 1)
-      && param.kernel.ndim() == 2) {
-    switch (dtype) {
-    case mshadow::kFloat32:
-      return new MKLConvolutionOp<cpu, float>(param);
-    case mshadow::kFloat64:
-      return new MKLConvolutionOp<cpu, double>(param);
-    default:
-      break;
-    }
-  }
-  LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
-#endif
-#if MXNET_USE_NNPACK == 1
-  const size_t batch_size = (*in_shape)[0][0];
-  if ((param.dilate[0] == 1 && param.dilate[1] == 1)
-      && param.kernel.ndim() == 2 && (!param.no_bias)
-      && param.num_group == 1 && (batch_size == 1 ||
-      ((batch_size > 1) && (param.stride[0] == 1) &&
-      (param.stride[1] == 1)))) {
-    switch (dtype) {
-    case mshadow::kFloat32:
-      return new NNPACKConvolutionOp<cpu, float>(param);
-    default:
-      break;
-    }
-  }
-#endif
-#endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConvolutionV1Op<cpu, DType>(param);
   })
