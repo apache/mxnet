@@ -39,10 +39,10 @@ def test_lstm_forget_bias():
 
     mod.init_params()
 
-    bias_arguments = filter(lambda x: x.endswith('_bias'), sym.list_arguments())
-    for bias_argument in bias_arguments:
-        expected_bias = np.hstack([np.zeros((100,)), forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
-        assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
+    bias_argument = filter(lambda x: x.endswith('i2h_bias'), sym.list_arguments())[0]
+    expected_bias = np.hstack([np.zeros((100,)),
+                               forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
+    assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
 
 
 def test_gru():

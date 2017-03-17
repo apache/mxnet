@@ -366,9 +366,9 @@ class LSTMCell(BaseRNNCell):
         self._num_hidden = num_hidden
         self._iW = self.params.get('i2h_weight')
         self._hW = self.params.get('h2h_weight')
-        forget_bias_init = init.LSTMCellForgetBias(num_hidden=num_hidden, forget_bias=forget_bias)
-        self._iB = self.params.get('i2h_bias', init=forget_bias_init)
-        self._hB = self.params.get('h2h_bias', init=forget_bias_init)
+        # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
+        self._iB = self.params.get('i2h_bias', init=init.LSTMBias(forget_bias=forget_bias))
+        self._hB = self.params.get('h2h_bias')
 
     @property
     def state_shape(self):
