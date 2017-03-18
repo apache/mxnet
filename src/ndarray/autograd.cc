@@ -35,17 +35,17 @@ bool AutogradRuntime::IsRecording() const {
 void AutogradRuntime::RecordImperativeFCompute(FCompute fn,
                                                const nnvm::Op* op,
                                                const nnvm::NodeAttrs& attrs,
-                                               std::vector<NDArray>& inputs,
-                                               std::vector<NDArray>& outputs) {
-  RecordOp(op, attrs, inputs, outputs);
+                                               std::vector<NDArray> *p_inputs,
+                                               std::vector<NDArray> *p_outputs) {
+  RecordOp(op, attrs, p_inputs, p_outputs);
 }
 
 void AutogradRuntime::RecordImperativeOperator(std::shared_ptr<Operator> opr,
                                                const nnvm::Op* op,
                                                const nnvm::NodeAttrs& attrs,
-                                               std::vector<NDArray>& inputs,
-                                               std::vector<NDArray>& outputs) {
-  NodePtr node = RecordOp(op, attrs, inputs, outputs);
+                                               std::vector<NDArray> *p_inputs,
+                                               std::vector<NDArray> *p_outputs) {
+  NodePtr node = RecordOp(op, attrs, p_inputs, p_outputs);
   saved_opr_.insert({node.get(), opr});
 }
 
@@ -53,14 +53,13 @@ std::vector<NDArray> Execute(Symbol sym,
                              const NodeEntryMap<NDArray>& feed_dict,
                              const NodeOperatorMap& saved_opr);
 
-std::vector<NDArray> AutogradRuntime::ComputeGradient(std::vector<NDArray>& inputs,
-                                                      std::vector<NDArray>& outputs) {
+std::vector<NDArray> AutogradRuntime::ComputeGradient(const std::vector<NDArray>& inputs,
+                                                      const std::vector<NDArray>& outputs) {
   // TODO(ziheng) for now, do gradient on all inputs
   Symbol ff_sym;
   for (size_t i = 0; i < outputs.size(); ++i) {
     ff_sym.outputs.push_back(outputs[i].entry_);
   }
-  // TODO(ziheng) should pass full_sym in the future
   std::vector<NDArray> result = Execute(ff_sym, saved_ndarray_, saved_opr_);
   ClearRecords();
   return result;
@@ -78,27 +77,29 @@ AutogradRuntime* AutogradRuntime::Get() {
 
 NodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
                                   const nnvm::NodeAttrs& attrs,
-                                  std::vector<NDArray>& inputs,
-                                  std::vector<NDArray>& outputs) {
+                                  std::vector<NDArray> *p_inputs,
+                                  std::vector<NDArray> *p_outputs) {
+  std::vector<NDArray>& inputs  = *p_inputs;
+  std::vector<NDArray>& outputs = *p_outputs;
 
   NodePtr node = Node::Create();
   node->attrs = attrs;
-  node->attrs.name = op->name + "_" + std::to_string(node_count_++);
-
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    NodeEntry &e = inputs[i].entry_;
-    if (e.node->is_variable() && !saved_ndarray_.count(e)) {
-      e.node->attrs.name = "variable_" + std::to_string(variable_count_++);
-      saved_ndarray_[e] = inputs[i];
-    }
-    node->inputs.push_back(e);
-  }
+  node->attrs.name = "ag_" + op->name + "_" + std::to_string(node_count_++);
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NodeEntry &e = outputs[i].entry_;
     e.node = node;
     e.index = i;
     saved_ndarray_[e] = outputs[i];
+  }
+
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    NodeEntry &e = inputs[i].entry_;
+    if (e.node->is_variable() && !saved_ndarray_.count(e)) {
+      e.node->attrs.name = "ag_variable_" + std::to_string(variable_count_++);
+      saved_ndarray_[e] = inputs[i];
+    }
+    node->inputs.push_back(e);
   }
   return node;
 }
@@ -110,47 +111,49 @@ void AutogradRuntime::ClearRecords() {
   saved_opr_.clear();
 }
 
-// (TODO) should remove saved_opr from arguments
-GraphExecutor *NewBind(Symbol symbol,
-                       const NodeEntryMap<TShape>& shapes,
-                       const NodeOperatorMap& saved_opr) {
+GraphExecutor *Bind(Symbol symbol,
+                    const NodeEntryMap<TShape>&  shapes,
+                    const NodeEntryMap<Context>& ctxs,
+                    const NodeOperatorMap& saved_opr) {
   std::vector<NodePtr> input_nodes =
     symbol.ListInputs(Symbol::ListInputOption::kAll);
+
+  size_t input_size = input_nodes.size();
   std::vector<NDArray> inputs;
+  inputs.reserve(input_size);
+  std::vector<NDArray> grads;
+  grads.reserve(input_size);
+  std::vector<OpReqType> grad_reqs;
+  grad_reqs.reserve(input_size);
 
-  // default context (TODO) fixme
-  Context ctx = Context::CPU();
-  std::map<std::string, Context> ctx_map;
-
-  // prepare inputs
-  inputs.reserve(input_nodes.size());
-  for (const NodePtr& n : input_nodes) {
-    NodeEntry e = NodeEntry{n, 0, 0};
-    if (shapes.count(e)) {
-      NDArray nd(shapes.at(e), ctx);
-      inputs.push_back(nd);
+  // prepare inputs and set grad for every input
+  for (size_t i = 0; i < input_size; ++i) {
+    NodeEntry e = NodeEntry{input_nodes[i], 0, 0};
+    if (shapes.count(e) && ctxs.count(e)) {
+      TShape  shape = shapes.at(e);
+      Context ctx   = ctxs.at(e);
+      inputs.emplace_back(shape, ctx);
+      NDArray grad(shape, ctx);
+      grad = static_cast<real_t>(1.0);
+      grads.emplace_back(grad);
+      grad_reqs.emplace_back(OpReqType::kWriteTo);
     } else {
       LOG(FATAL) << "no corresponding ndarray: "
-                 << n->attrs.name << "(0)";
+                 << input_nodes[i]->attrs.name << "(0)";
     }
+
   }
 
-  // grads for every inputs
-  std::vector<NDArray> grads;
-  std::vector<OpReqType> grad_reqs;
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    NDArray grad(inputs[i].shape(), inputs[i].ctx());
-    grad = static_cast<real_t>(1.0);
-    grads.push_back(grad);
-    grad_reqs.push_back(OpReqType::kWriteTo);
-  }
+  // default context, assuming use the same context
+  CHECK_GT(ctxs.size(), 0)
+    << "The size of context mapping should be greater than zero";
+  Context ctx = ctxs.begin()->second;
 
-  // empty aux_states
+  std::map<std::string, Context> ctx_map;
   std::vector<NDArray> aux_states;
 
   auto exec = new exec::GraphExecutor();
   // (TODO) too hack here
-  exec->shape_hints_ = shapes;
   exec->saved_opr_ = saved_opr;
   exec->Init(symbol, ctx, ctx_map,
              inputs, grads, grad_reqs, aux_states);
@@ -192,11 +195,13 @@ std::vector<NDArray> Execute(Symbol sym,
                              const NodeEntryMap<NDArray>& feed_dict,
                              const NodeOperatorMap& saved_opr) {
   NodeEntryMap<TShape> shapes;
+  NodeEntryMap<Context> ctxs;
   for (const auto& kv : feed_dict) {
     const NodeEntry& e = kv.first;
     shapes.insert({kv.first, kv.second.shape()});
+    ctxs.insert({kv.first, kv.second.ctx()});
   }
-  exec::GraphExecutor *exec = NewBind(sym, shapes, saved_opr);
+  exec::GraphExecutor *exec = Bind(sym, shapes, ctxs, saved_opr);
   std::vector<NDArray> res = Run(exec, feed_dict);
   return res;
 }

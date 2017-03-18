@@ -402,7 +402,6 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   arg_shapes.resize(idx.input_nodes().size(), TShape());
   arg_types.resize(idx.input_nodes().size(), -1);
   // other initializations
-  g.attrs["shape_hints"] = std::make_shared<dmlc::any>(shape_hints_);
   g = nnvm::pass::InferShape(g, arg_shapes, "__shape__");
   g = nnvm::pass::InferType(g, arg_types, "__dtype__");
 
@@ -729,5 +728,4 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
              reinterpret_cast<Executor*>(shared_exec));
   return exec;
 }
-
 }  // namespace mxnet

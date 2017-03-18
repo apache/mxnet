@@ -30,11 +30,11 @@ class GraphExecutor;
 }
 
 // forward declaration
-// (TODO) This part should be put into executor in the future
 namespace autograd {
-exec::GraphExecutor *NewBind(nnvm::Symbol symbol,
-                       const nnvm::NodeEntryMap<TShape>& shapes,
-                       const NodeOperatorMap& saved_opr);
+exec::GraphExecutor *Bind(nnvm::Symbol symbol,
+                          const nnvm::NodeEntryMap<TShape>& shapes,
+                          const nnvm::NodeEntryMap<Context>& ctxs,
+                          const NodeOperatorMap& saved_opr);
 std::vector<NDArray> Run(exec::GraphExecutor* exec,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict);
 }
@@ -46,11 +46,12 @@ using nnvm::Graph;
 // graph executors
 class GraphExecutor : public Executor {
  public:
-  friend GraphExecutor *autograd::NewBind(nnvm::Symbol symbol,
-                       const nnvm::NodeEntryMap<TShape>& shapes,
-                       const NodeOperatorMap& saved_opr);
+  friend GraphExecutor *autograd::Bind(nnvm::Symbol symbol,
+                                       const nnvm::NodeEntryMap<TShape>& shapes,
+                                       const nnvm::NodeEntryMap<Context>& ctxs,
+                                       const NodeOperatorMap& saved_opr);
   friend std::vector<NDArray> autograd::Run(GraphExecutor* exec,
-    const nnvm::NodeEntryMap<NDArray>& feed_dict);
+                                            const nnvm::NodeEntryMap<NDArray>& feed_dict);
 
   using Executor::MonitorCallback;
 
@@ -129,10 +130,9 @@ class GraphExecutor : public Executor {
   size_t num_forward_inputs_{0};
   // number of forward nodes
   size_t num_forward_nodes_{0};
-  // monitor call back
-  nnvm::NodeEntryMap<TShape> shape_hints_;
+  // saved operator for autograd
   NodeOperatorMap saved_opr_;
-
+  // monitor call back
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
 };
 

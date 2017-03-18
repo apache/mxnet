@@ -32,17 +32,17 @@ class AutogradRuntime {
   void RecordImperativeFCompute(FCompute fn,
                                 const nnvm::Op* op,
                                 const nnvm::NodeAttrs& attrs,
-                                std::vector<NDArray>& inputs,
-                                std::vector<NDArray>& outputs);
+                                std::vector<NDArray>* p_inputs,
+                                std::vector<NDArray>* p_outputs);
   /*! \brief record imperative operator which is executed by operator. */
   void RecordImperativeOperator(std::shared_ptr<Operator> opr,
                                 const nnvm::Op* op,
                                 const nnvm::NodeAttrs& attrs,
-                                std::vector<NDArray>& inputs,
-                                std::vector<NDArray>& outputs);
+                                std::vector<NDArray>* p_inputs,
+                                std::vector<NDArray>* p_outputs);
   /*! \brief compute the gradient of outputs w.r.t inputs. */
-  std::vector<NDArray> ComputeGradient(std::vector<NDArray>& inputs,
-                                       std::vector<NDArray>& outputs);
+  std::vector<NDArray> ComputeGradient(const std::vector<NDArray>& inputs,
+                                       const std::vector<NDArray>& outputs);
   /*! \return AutogradRuntime singleton */
   static AutogradRuntime* Get();
   /*! \brief Get shared pointer reference to AutogradRuntime singleton.
@@ -62,8 +62,8 @@ class AutogradRuntime {
   /*! \brief to record operator, return corresponding node. */
   nnvm::NodePtr RecordOp(const nnvm::Op* op,
                          const nnvm::NodeAttrs& attrs,
-                         std::vector<NDArray>& inputs,
-                         std::vector<NDArray>& outputs);
+                         std::vector<NDArray>* p_inputs,
+                         std::vector<NDArray>* p_outputs);
   /*! \brief clear the record data. */
   void ClearRecords();
   /*! \brief AutogradRuntime singleton. */

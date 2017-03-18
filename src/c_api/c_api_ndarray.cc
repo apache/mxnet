@@ -373,7 +373,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
     if (fn) {
       if (AutogradRuntime::Get()->IsRecording()) {
         AutogradRuntime::Get()->RecordImperativeFCompute(fn, op,
-            attrs, ndinputs, ndoutputs);
+            attrs, &ndinputs, &ndoutputs);
       }
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
@@ -382,7 +382,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types));
       if (AutogradRuntime::Get()->IsRecording()) {
         AutogradRuntime::Get()->RecordImperativeOperator(opr, op,
-            attrs, ndinputs, ndoutputs);
+            attrs, &ndinputs, &ndoutputs);
       }
       PushOperator(opr, op, attrs, ctx, read_vars, write_vars,
           requested, auxidx, ndinputs, ndoutputs);
@@ -412,7 +412,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
 
 int MXAutogradSetRecording(int recording) {
   API_BEGIN();
-  AutogradRuntime::Get()->SetRecording(bool(recording));
+  AutogradRuntime::Get()->SetRecording(static_cast<bool>(recording));
   API_END();
 }
 
@@ -446,6 +446,5 @@ int MXAutogradComputeGradient(mx_uint num_input,
   }
   *num_grad = static_cast<mx_uint>(grads.size());
   *grad_handles = dmlc::BeginPtr(ret->ret_handles);
-
   API_END();
 }

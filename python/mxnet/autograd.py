@@ -32,7 +32,6 @@ def compute_gradient(inputs, outputs):
     Returns
     -------
     gradients: list of NDArray
-        A
     """
     input_handles = []
     for arr in inputs:
