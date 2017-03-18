@@ -488,7 +488,7 @@ class FusedRNN(Initializer):
 
     def _init_weight(self, _, arr):
         from .rnn import rnn_cell
-        cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
+        cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers, self._forget_bias,
                                      self._mode, self._bidirectional, prefix='')
         args = cell.unpack_weights({'parameters': arr})
         for name in args:
