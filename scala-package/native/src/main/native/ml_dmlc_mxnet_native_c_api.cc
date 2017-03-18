@@ -8,13 +8,13 @@
 #include <mxnet/c_api.h>
 #include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
+#include <../src/common/cuda_utils.h>
 #include <mutex>
 #include <iostream>
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include "jni_helper_func.h"
- #include "../../../../../src/common/cuda_utils.h"
 
 JavaVM *_jvm;
 

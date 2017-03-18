@@ -92,9 +92,9 @@ struct where_batch_backward {
 inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape>* in_attrs,
                          std::vector<TShape>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 3)
+  CHECK_EQ(in_attrs->size(), 3U)
     << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1U);
 
   TShape tshape((*in_attrs)[1]);
   if (!shape_assign(&tshape, (*in_attrs)[2])) return false;
@@ -116,9 +116,9 @@ inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
 inline bool WhereOpType(const nnvm::NodeAttrs& attrs,
                         std::vector<int>* in_attrs,
                         std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 3)
+  CHECK_EQ(in_attrs->size(), 3U)
     << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1U);
 
   int dtype = -1;
   if (!type_assign(&dtype, (*in_attrs)[1])) return false;
@@ -139,9 +139,9 @@ void WhereOpForward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 3);
-  CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(req.size(), 1);
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& cond = inputs[0];
@@ -183,9 +183,9 @@ void WhereOpBackward(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 2);
-  CHECK_EQ(req.size(), 2);
-  CHECK_EQ(outputs.size(), 2);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(req.size(), 2U);
+  CHECK_EQ(outputs.size(), 2U);
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& grad_in = inputs[0];

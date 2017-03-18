@@ -16,6 +16,8 @@ parser.add_argument('--num-hidden', type=int, default=200,
                     help='hidden layer size')
 parser.add_argument('--num-embed', type=int, default=200,
                     help='embedding layer size')
+parser.add_argument('--bidirectional', type=bool, default=False,
+                    help='whether to use bidirectional layers')
 parser.add_argument('--gpus', type=str,
                     help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu. ' \
                          'Increase batch size when using multiple gpus for best performance.')
@@ -43,6 +45,8 @@ parser.add_argument('--disp-batches', type=int, default=50,
 # multiple GPUs.
 parser.add_argument('--stack-rnn', default=False,
                     help='stack fused RNN cells to reduce communication overhead')
+parser.add_argument('--dropout', type=float, default='0.0',
+                    help='dropout probability (1.0 - keep probability)')
 
 #buckets = [32]
 buckets = [10, 20, 30, 40, 50, 60]
@@ -72,28 +76,28 @@ def get_data(layout):
 def train(args):
     data_train, data_val, vocab = get_data('TN')
     if args.stack_rnn:
-        cells = []
-        for layer in xrange(args.num_layers):
-            cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1, mode='lstm', prefix='fused_rnn' + str(layer))
-            cells.append(cell)
+        stack = mx.rnn.SequentialRNNCell()
+        for layer in range(args.num_layers):
+            dropout = 0.0
+            if layer < (args.num_layers - 1):
+                dropout = args.dropout
+            stack.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
+                    mode='lstm', prefix='lstm_%d'%layer, dropout=dropout,
+                    bidirectional=args.bidirectional))
+        cell = stack
     else:
-        cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, mode='lstm')
+        cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, dropout=args.dropout,
+                mode='lstm', bidirectional=args.bidirectional)
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab), output_dim=args.num_embed,name='embed')
 
-        if args.stack_rnn:
-            output = embed
-            for i in xrange(args.num_layers):
-                cells[i].reset()
-                output, _ = cells[i].unroll(seq_len, inputs=output, merge_outputs=True, layout='TNC')
-        else:
-            cell.reset()
-            output, _ = cell.unroll(seq_len, inputs=embed, merge_outputs=True, layout='TNC')
+        output, _ = cell.unroll(seq_len, inputs=embed, merge_outputs=True, layout='TNC')
 
-        pred = mx.sym.Reshape(output, shape=(-1, args.num_hidden))
+        pred = mx.sym.Reshape(output,
+                shape=(-1, args.num_hidden*(1+args.bidirectional)))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')
 
         label = mx.sym.Reshape(label, shape=(-1,))
@@ -118,15 +122,21 @@ def train(args):
         arg_params = None
         aux_params = None
 
+    opt_params = {
+      'learning_rate': args.lr,
+      'wd': args.wd
+    }
+
+    if args.optimizer not in ['adadelta', 'adagrad', 'adam', 'rmsprop']:
+        opt_params['momentum'] = args.mom
+
     model.fit(
         train_data          = data_train,
         eval_data           = data_val,
         eval_metric         = mx.metric.Perplexity(invalid_label),
         kvstore             = args.kv_store,
         optimizer           = args.optimizer,
-        optimizer_params    = { 'learning_rate': args.lr,
-                                'momentum': args.mom,
-                                'wd': args.wd },
+        optimizer_params    = opt_params, 
         initializer         = mx.init.Xavier(factor_type="in", magnitude=2.34),
         arg_params          = arg_params,
         aux_params          = aux_params,
@@ -140,9 +150,19 @@ def test(args):
     assert args.model_prefix, "Must specifiy path to load from"
     _, data_val, vocab = get_data('NT')
 
-    stack = mx.rnn.SequentialRNNCell()
-    for i in range(args.num_layers):
-        stack.add(mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i))
+    if not args.stack_rnn:
+        stack = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers,
+                mode='lstm', bidirectional=args.bidirectional).unfuse()
+    else:
+        stack = mx.rnn.SequentialRNNCell()
+        for i in range(args.num_layers):
+            cell = mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_%dl0_'%i)
+            if args.bidirectional:
+                cell = mx.rnn.BidirectionalCell(
+                        cell,
+                        mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_%dr0_'%i),
+                        output_prefix='bi_lstm_%d'%i)
+            stack.add(cell)
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
@@ -153,7 +173,8 @@ def test(args):
         stack.reset()
         outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
 
-        pred = mx.sym.Reshape(outputs, shape=(-1, args.num_hidden))
+        pred = mx.sym.Reshape(outputs,
+                shape=(-1, args.num_hidden*(1+args.bidirectional)))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')
 
         label = mx.sym.Reshape(label, shape=(-1,))

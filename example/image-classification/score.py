@@ -6,7 +6,7 @@ import os
 import logging
 
 def score(model, data_val, metrics, gpus, batch_size, rgb_mean=None, mean_img=None,
-          image_shape='3,224,224', data_nthreads=4, label_name='softmax_label'):
+          image_shape='3,224,224', data_nthreads=4, label_name='softmax_label', max_num_examples=None):
     # create data iterator
     data_shape = tuple([int(i) for i in image_shape.split(',')])
     if mean_img is not None:
@@ -59,6 +59,8 @@ def score(model, data_val, metrics, gpus, batch_size, rgb_mean=None, mean_img=No
         for m in metrics:
             mod.update_metric(m, batch.label)
         num += batch_size
+        if max_num_examples is not None and num > max_num_examples:
+            break
     return (num / (time.time() - tic), )
 
 

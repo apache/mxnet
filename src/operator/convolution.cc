@@ -1,8 +1,8 @@
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2017 by Contributors
  * \file convolution.cc
  * \brief
- * \author Bing Xu
+ * \author Bing Xu, Jun Wu
 */
 
 #include "./convolution-inl.h"
@@ -25,6 +25,13 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
+  // If 1D convolution, use MXNet implementation
+  if (param.kernel.ndim() == 1) {
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      op = new ConvolutionOp<cpu, DType>(param);
+    })
+    return op;
+  }
 #if MXNET_USE_MKL2017 == 1
   if ((param.dilate[0] == 1 && param.dilate[1] == 1)
       && param.kernel.ndim() == 2) {

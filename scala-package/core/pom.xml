@@ -60,7 +60,7 @@
           <argLine>
             -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
-          </argLine> 
+          </argLine>
         </configuration>
       </plugin>
       <plugin>

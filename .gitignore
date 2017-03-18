@@ -64,7 +64,6 @@ __pycache__
 build
 data
 recommonmark
-bin
 deps
 
 # R
@@ -85,6 +84,7 @@ R-package/R/mxnet_generated.R
 *ubyte
 *.bin
 *.txt
+!CMakeLists.txt
 
 # ipython notebook
 *_pb2.py
@@ -141,7 +141,10 @@ tools/pip_package/mxnet.egg-info
 tools/pip_package/mxnet
 
 # temporary path for building dependencies when building wheel
-deps/
-
+./deps/
+bld
+./tmp/*
 *.jar
 target
+cmake-build
+
