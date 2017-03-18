@@ -451,7 +451,7 @@ class LSTMBias(Initializer):
         arr[:] = 0.0
         # the forget gate is the second gate of the 4 LSTM gates,
         # we modify the according values.
-        num_hidden = arr.shape[0] / 4
+        num_hidden = int(arr.shape[0] / 4)
         arr[num_hidden:2*num_hidden] = self.forget_bias
 
 

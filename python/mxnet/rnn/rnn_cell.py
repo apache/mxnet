@@ -355,10 +355,8 @@ class LSTMCell(BaseRNNCell):
     params : RNNParams or None
         container for weight sharing between cells.
         created if None.
-    forget_bias : bias added to forget gate, default 0.0.
+    forget_bias : bias added to forget gate, default 1.0.
         Jozefowicz et al. 2015 recommends setting this to 1.0
-        but the default is set to 0.0 for backward compatibility.
-
     """
     def __init__(self, num_hidden, prefix='lstm_', params=None, forget_bias=1.0):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
