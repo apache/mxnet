@@ -14,7 +14,7 @@ ifneq ($(OS), Darwin)
 	LDFLAGS += -lgomp
 endif
 
-all: mlp lenet lenet_with_mxdataiter alexnet googlenet inception_bn resnet
+all: mlp lenet lenet_with_mxdataiter alexnet googlenet resnet
 
 lenet_with_mxdataiter: ./lenet_with_mxdataiter.cpp
 	$(CXX) -c -std=c++11 $(CFLAGS) $^
@@ -58,7 +58,6 @@ travis:
 	$(CXX) -c -std=c++11 $(CFLAGS) ./lenet_with_mxdataiter.cpp && rm -f lenet_with_mxdataiter.o
 	$(CXX) -c -std=c++11 $(CFLAGS) ./alexnet.cpp && rm -f alexnet.o
 	$(CXX) -c -std=c++11 $(CFLAGS) ./googlenet.cpp && rm -f googlenet.o
-	$(CXX) -c -std=c++11 $(CFLAGS) ./inception_bn.cpp && rm -f inception_bn.o
 	$(CXX) -c -std=c++11 $(CFLAGS) ./resnet.cpp && rm -f resnet.o
 
 
@@ -68,5 +67,4 @@ clean:
 	-rm -f lenet_with_mxdataiter
 	-rm -f alexnet
 	-rm -f googlenet
-	-rm -f inception_bn
 	-rm -f resnet
