@@ -63,6 +63,7 @@ class BucketingModule(BaseModule):
 
         self._buckets = {}
         self._curr_module = None
+        self._curr_bucket_key = None
         self._params_dirty = False
 
     def _reset_bind(self):
@@ -70,6 +71,7 @@ class BucketingModule(BaseModule):
         self.binded = False
         self._buckets = {}
         self._curr_module = None
+        self._curr_bucket_key = None
 
     @property
     def data_names(self):
@@ -288,6 +290,7 @@ class BucketingModule(BaseModule):
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None, grad_req=grad_req)
         self._curr_module = module
+        self._curr_bucket_key = self._default_bucket_key
         self._buckets[self._default_bucket_key] = module
 
         # copy back saved params, if already initialized
@@ -320,6 +323,7 @@ class BucketingModule(BaseModule):
             self._buckets[bucket_key] = module
 
         self._curr_module = self._buckets[bucket_key]
+        self._curr_bucket_key = bucket_key
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),),
@@ -351,6 +355,23 @@ class BucketingModule(BaseModule):
                 mod.borrow_optimizer(self._curr_module)
 
         self.optimizer_initialized = True
+
+    def prepare(self, data_batch):
+        '''Prepare a data batch for forward.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+        '''
+        # perform bind if haven't done so
+        assert self.binded and self.params_initialized
+        bucket_key = data_batch.bucket_key
+        original_bucket_key = self._curr_bucket_key
+        data_shapes = data_batch.provide_data
+        label_shapes = data_batch.provide_label
+        self.switch_bucket(bucket_key, data_shapes, label_shapes)
+        # switch back
+        self.switch_bucket(original_bucket_key, None, None)
 
     def forward(self, data_batch, is_train=None):
         """Forward computation.
