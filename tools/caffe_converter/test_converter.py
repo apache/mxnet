@@ -29,6 +29,7 @@ def test_imagenet_model(model_name, val_data, gpus, batch_size):
                      metrics=acc,
                      gpus=gpus,
                      batch_size=batch_size,
+                     max_num_examples=500,
                      **mean_args)
     logging.info('speed : %f image/sec', speed)
     for a in acc:
@@ -41,7 +42,7 @@ if __name__ == '__main__':
     assert len(gpus) > 0
     batch_size = 32 * len(gpus)
 
-    models = ['bvlc_googlenet', 'vgg-16', 'vgg-19', 'resnet-50']
+    models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
 
     val = download_data()
     for m in models:
