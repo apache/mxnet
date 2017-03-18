@@ -261,9 +261,9 @@ class SGD(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         if state:
             sgd_mom_update(weight, grad, state, out=weight,
