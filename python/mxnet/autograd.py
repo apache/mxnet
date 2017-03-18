@@ -8,7 +8,6 @@ import functools
 from .base import _LIB, check_call
 from .base import mx_uint, NDArrayHandle, c_array
 from .ndarray import NDArray
-from .ndarray import array as ndarray
 
 def set_recording(recording):
     """Turn on or turn of operator recording.
