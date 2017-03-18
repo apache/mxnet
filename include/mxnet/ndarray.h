@@ -55,7 +55,7 @@ class NDArray {
   NDArray(const TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape.Size(), ctx, delay_alloc, dtype)),
-        shape_(shape), offset_(0), dtype_(dtype), entry_({nnvm::Node::Create(), 0, 0}) {
+        shape_(shape), offset_(0), dtype_(dtype), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
       Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -69,7 +69,7 @@ class NDArray {
    */
   NDArray(const TBlob &data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_), offset_(0),
-        dtype_(data.type_flag_), entry_({nnvm::Node::Create(), 0, 0}) {
+        dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
       Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif

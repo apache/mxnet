@@ -416,19 +416,25 @@ int MXAutogradSetRecording(int recording) {
   API_END();
 }
 
-int MXAutogradComputeGradient(mx_uint num_input,
-                              NDArrayHandle *input_handles,
-                              mx_uint num_output,
+int MXAutogradMarkVariables(mx_uint num_var,
+                            NDArrayHandle *var_handles) {
+  API_BEGIN();
+  std::vector<NDArray*> variables;
+  variables.reserve(num_var);
+  for (mx_uint i = 0; i < num_var; ++i) {
+    variables.emplace_back(static_cast<NDArray*>(var_handles[i]));
+  }
+  AutogradRuntime::Get()->MarkVariables(&variables);
+  API_END();
+}
+
+int MXAutogradComputeGradient(mx_uint num_output,
                               NDArrayHandle *output_handles,
                               mx_uint* num_grad,
                               NDArrayHandle **grad_handles) {
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
-  std::vector<NDArray> inputs;
-  inputs.reserve(num_input);
-  for (mx_uint i = 0; i < num_input; ++i) {
-    inputs.emplace_back(*static_cast<NDArray*>(input_handles[i]));
-  }
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+
   std::vector<NDArray> outputs;
   outputs.reserve(num_output);
   for (mx_uint i = 0; i < num_output; ++i) {
@@ -436,7 +442,7 @@ int MXAutogradComputeGradient(mx_uint num_input,
   }
 
   std::vector<NDArray> grads =
-    AutogradRuntime::Get()->ComputeGradient(inputs, outputs);
+    AutogradRuntime::Get()->ComputeGradient(outputs);
 
   ret->ret_handles.resize(grads.size());
   for (size_t i = 0; i < grads.size(); ++i) {

@@ -20,22 +20,31 @@ def set_recording(recording):
     check_call(_LIB.MXAutogradSetRecording(
         ctypes.c_int(recording)))
 
-def compute_gradient(inputs, outputs):
-    """Compute the gradients of outputs w.r.t inputs.
+def mark_variables(variables):
+    """Mark NDArrays as variables to compute gradient for autograd.
 
     Parameters
     ----------
-    inputs: list of NDArray
+    variables: list of NDArray
+    """
+    variable_handles = []
+    for var in variables:
+        variable_handles.append(var.handle)
+    check_call(_LIB.MXAutogradMarkVariables(
+        len(variable_handles),
+        c_array(NDArrayHandle, variable_handles)))
 
+def compute_gradient(outputs):
+    """Compute the gradients of outputs w.r.t variables.
+
+    Parameters
+    ----------
     outputs: list of NDArray
 
     Returns
     -------
     gradients: list of NDArray
     """
-    input_handles = []
-    for arr in inputs:
-        input_handles.append(arr.handle)
     output_handles = []
     for arr in outputs:
         output_handles.append(arr.handle)
@@ -43,8 +52,6 @@ def compute_gradient(inputs, outputs):
     num_grad = mx_uint()
     grad_handles = ctypes.POINTER(NDArrayHandle)()
     check_call(_LIB.MXAutogradComputeGradient(
-        len(input_handles),
-        c_array(NDArrayHandle, input_handles),
         len(output_handles),
         c_array(NDArrayHandle, output_handles),
         ctypes.byref(num_grad),
@@ -67,12 +74,14 @@ def grad_and_loss(func):
     @functools.wraps(func)
     def wrapped(*args):
         """Wrapped function."""
-        inputs  = [a if isinstance(a, NDArray) else ndarray(a) for a in args]
+        for x in args:
+            assert isinstance(x, NDArray), "type of autograd input should NDArray."
+        mark_variables(args)
         set_recording(True)
-        outputs = func(*inputs)
+        outputs = func(*args)
         set_recording(False)
         grad_vals = compute_gradient(
-            inputs, outputs if isinstance(outputs, list) else [outputs])
+            outputs if isinstance(outputs, list) else [outputs])
         return grad_vals, outputs
     return wrapped
 

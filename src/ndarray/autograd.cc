@@ -32,6 +32,15 @@ bool AutogradRuntime::IsRecording() const {
   return is_recording_;
 }
 
+void AutogradRuntime::MarkVariables(std::vector<NDArray*> *p_variables) {
+  std::vector<NDArray*>& variables = *p_variables;
+  for (NDArray* var : variables) {
+    NodeEntry& e = var->entry_;
+    e.node = Node::Create();
+    e.node->attrs.name = "ag_variables_" + std::to_string(variable_count_++);
+  }
+}
+
 void AutogradRuntime::RecordImperativeFCompute(FCompute fn,
                                                const nnvm::Op* op,
                                                const nnvm::NodeAttrs& attrs,
@@ -53,9 +62,7 @@ std::vector<NDArray> Execute(Symbol sym,
                              const NodeEntryMap<NDArray>& feed_dict,
                              const NodeOperatorMap& saved_opr);
 
-std::vector<NDArray> AutogradRuntime::ComputeGradient(const std::vector<NDArray>& inputs,
-                                                      const std::vector<NDArray>& outputs) {
-  // TODO(ziheng) for now, do gradient on all inputs
+std::vector<NDArray> AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs) {
   Symbol ff_sym;
   for (size_t i = 0; i < outputs.size(); ++i) {
     ff_sym.outputs.push_back(outputs[i].entry_);
@@ -95,8 +102,10 @@ NodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
 
   for (size_t i = 0; i < inputs.size(); ++i) {
     NodeEntry &e = inputs[i].entry_;
-    if (e.node->is_variable() && !saved_ndarray_.count(e)) {
-      e.node->attrs.name = "ag_variable_" + std::to_string(variable_count_++);
+    CHECK(e.node.get() != nullptr)
+      << "not support partial gradient yet, all the "
+      << "inputs of autograd should be marked as variable";
+    if (!saved_ndarray_.count(e)) {
       saved_ndarray_[e] = inputs[i];
     }
     node->inputs.push_back(e);
@@ -141,7 +150,6 @@ GraphExecutor *Bind(Symbol symbol,
       LOG(FATAL) << "no corresponding ndarray: "
                  << input_nodes[i]->attrs.name << "(0)";
     }
-
   }
 
   // default context, assuming use the same context

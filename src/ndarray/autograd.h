@@ -28,6 +28,8 @@ class AutogradRuntime {
   void SetRecording(bool recording);
   /*! \brief whether operator recording is on. */
   bool IsRecording() const;
+  /*! \brief mark variables for computing gradients. */
+  void MarkVariables(std::vector<NDArray*>* p_variables);
   /*! \brief record imperative operator which is executed by fcompute. */
   void RecordImperativeFCompute(FCompute fn,
                                 const nnvm::Op* op,
@@ -40,9 +42,8 @@ class AutogradRuntime {
                                 const nnvm::NodeAttrs& attrs,
                                 std::vector<NDArray>* p_inputs,
                                 std::vector<NDArray>* p_outputs);
-  /*! \brief compute the gradient of outputs w.r.t inputs. */
-  std::vector<NDArray> ComputeGradient(const std::vector<NDArray>& inputs,
-                                       const std::vector<NDArray>& outputs);
+  /*! \brief compute the gradient of outputs w.r.t variables. */
+  std::vector<NDArray> ComputeGradient(const std::vector<NDArray>& outputs);
   /*! \return AutogradRuntime singleton */
   static AutogradRuntime* Get();
   /*! \brief Get shared pointer reference to AutogradRuntime singleton.
