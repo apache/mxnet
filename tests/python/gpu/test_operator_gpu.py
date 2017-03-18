@@ -433,7 +433,7 @@ def test_lstm_forget_bias():
 
     mod.init_params()
 
-    bias_argument = next(x for x in sym.list_arguments() if x.endswith('i2h_bias'))
+    bias_argument = next(x for x in sym.list_arguments() if x.endswith('f_bias'))
     expected_bias = np.hstack([np.zeros((100,)),
                                forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
     assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
