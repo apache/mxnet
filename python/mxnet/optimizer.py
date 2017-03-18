@@ -143,8 +143,8 @@ class Optimizer(object):
         """
         if index not in self._index_update_count:
             self._index_update_count[index] = self.begin_num_update
+        self.num_update = self._index_update_count[index]
         self._index_update_count[index] += 1
-        self.num_update = max(self._index_update_count[index], self.num_update)
 
     def _get_lr(self, index):
         """get learning rate for index.
@@ -343,9 +343,9 @@ class DCASGD(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -391,9 +391,9 @@ class NAG(SGD):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -465,9 +465,9 @@ class SGLD(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -558,9 +558,9 @@ class Adam(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         t = self._index_update_count[index]
         coef1 = 1. - self.beta1**t
@@ -609,9 +609,9 @@ class AdaGrad(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -713,9 +713,9 @@ class RMSProp(Optimizer):
         """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
         if not self.centered:
             (n, ) = state
             rmsprop_update(
@@ -760,8 +760,8 @@ class AdaDelta(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
-        wd = self._get_wd(index)
         self._update_count(index)
+        wd = self._get_wd(index)
 
         # preprocess grad
         grad *= self.rescale_grad
