@@ -16,7 +16,7 @@ from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, MXNetError
-from .context import Context
+from .context import Context, cpu
 from .ndarray import NDArray, zeros as _nd_zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
 from . import _symbol_internal as _internal
@@ -1024,6 +1024,39 @@ class Symbol(SymbolBase):
                                      ctypes.byref(handle)))
         return Symbol(handle)
     # pylint: enable= no-member
+
+    def eval(self, ctx=cpu(), **kwargs):
+        """Evaluate a symbol given arguments
+
+        The `eval` method combines a call to `bind` (which returns an executor)
+        with a call to `forward` (executor method).
+        For the common use case, where you might repeatedly evaluate with same arguments,
+        eval is slow.
+        In that case, you should call `bind` once and then repeatedly call forward.
+        Eval allows simpler syntax for less cumbersome introspection.
+
+        Parameters
+        ----------
+        ctx : Context
+            The device context the generated executor to run on.
+
+        kwargs : list of NDArray or dict of str to NDArray
+            Input arguments to the symbol.
+
+            - If type is list of NDArray, the position is in the same order of list_arguments.
+            - If type is dict of str to NDArray, then it maps the name of arguments
+              to the corresponding NDArray.
+            - In either case, all the arguments must be provided.
+
+        Returns
+        ----------
+        result :  a list of NDArrays corresponding to the values
+        taken by each symbol when evaluated on given args.
+        When called on a single symbol (not a group),
+        the result will be a list with one element.
+        """
+        return self.bind(ctx, kwargs).forward()
+
 
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
