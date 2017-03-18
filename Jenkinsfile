@@ -156,7 +156,7 @@ stage('Unit Test') {
     }
   },
   'Python2/3: MKLML': {
-    node {
+    node('GPU') {
       ws('workspace/ut-python-mklml') {
         init_git()
         unpack_lib('mklml')
@@ -173,6 +173,32 @@ stage('Unit Test') {
         timeout(time: max_time, unit: 'MINUTES') {
           sh "${docker_run} cpu make scalapkg USE_BLAS=openblas"
           sh "${docker_run} cpu make scalatest USE_BLAS=openblas"
+        }
+      }
+    }
+  }
+}
+
+
+stage('Integration Test') {
+  parallel 'Python': {
+    node('GPU') {
+      ws('workspace/it-python-gpu') {
+        init_git()
+        unpack_lib('gpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} gpu PYTHONPATH=./python/ python example/image-classification/test_score.py"
+        }
+      }
+    }
+  },
+  'Caffe': {
+    node('GPU') {
+      ws('workspace/it-caffe') {
+        init_git()
+        unpack_lib('gpu')
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "${docker_run} caffe_gpu PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
         }
       }
     }
