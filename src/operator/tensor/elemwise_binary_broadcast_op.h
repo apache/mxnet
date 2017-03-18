@@ -22,8 +22,8 @@ namespace op {
 inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
                                  std::vector<TShape> *in_attrs,
                                  std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& lhs = (*in_attrs)[0];
   TShape& rhs = (*in_attrs)[1];
 
