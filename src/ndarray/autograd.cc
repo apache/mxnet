@@ -13,14 +13,6 @@
 #include "./autograd.h"
 
 namespace mxnet {
-
-// forward declaration
-namespace exec {
-nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like);
-nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v);
-}  // namespace exec
-
-
 namespace autograd {
 
 using nnvm::Symbol;
@@ -33,16 +25,11 @@ using exec::GraphExecutor;
 AutogradRuntime::AutogradRuntime() {}
 
 void AutogradRuntime::SetRecording(bool recording) {
-  if (recording) ClearRecords();
   is_recording_ = recording;
 }
 
 bool AutogradRuntime::IsRecording() const {
   return is_recording_;
-}
-
-void AutogradRuntime::SetMarkForRecord(const std::vector<NDArray*>& arrays, bool mark) {
-  // (TODO)
 }
 
 void AutogradRuntime::RecordImperativeFCompute(FCompute fn,
@@ -68,20 +55,15 @@ std::vector<NDArray> Execute(Symbol sym,
 
 std::vector<NDArray> AutogradRuntime::ComputeGradient(std::vector<NDArray>& inputs,
                                                       std::vector<NDArray>& outputs) {
-
+  // TODO(ziheng) for now, do gradient on all inputs
   Symbol ff_sym;
   for (size_t i = 0; i < outputs.size(); ++i) {
     ff_sym.outputs.push_back(outputs[i].entry_);
   }
   // TODO(ziheng) should pass full_sym in the future
-  // std::vector<NDArray> result = Execute(ff_sym, saved_ndarray_);
   std::vector<NDArray> result = Execute(ff_sym, saved_ndarray_, saved_opr_);
+  ClearRecords();
   return result;
-}
-
-void AutogradRuntime::ClearRecords() {
-  saved_ndarray_.clear();
-  saved_opr_.clear();
 }
 
 std::shared_ptr<AutogradRuntime> AutogradRuntime::_GetSharedRef() {
@@ -98,14 +80,15 @@ NodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
                                   const nnvm::NodeAttrs& attrs,
                                   std::vector<NDArray>& inputs,
                                   std::vector<NDArray>& outputs) {
+
   NodePtr node = Node::Create();
-  // (TODO) name of operator
   node->attrs = attrs;
-  node->attrs.name = op->name + "_temp";
+  node->attrs.name = op->name + "_" + std::to_string(node_count_++);
+
   for (size_t i = 0; i < inputs.size(); ++i) {
     NodeEntry &e = inputs[i].entry_;
-    if (e.node->is_variable() && e.node->attrs.name.empty()) {
-      e.node->attrs.name = "variable_" + std::to_string(i);
+    if (e.node->is_variable() && !saved_ndarray_.count(e)) {
+      e.node->attrs.name = "variable_" + std::to_string(variable_count_++);
       saved_ndarray_[e] = inputs[i];
     }
     node->inputs.push_back(e);
@@ -118,6 +101,13 @@ NodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
     saved_ndarray_[e] = outputs[i];
   }
   return node;
+}
+
+void AutogradRuntime::ClearRecords() {
+  node_count_ = 0;
+  variable_count_ = 0;
+  saved_ndarray_.clear();
+  saved_opr_.clear();
 }
 
 // (TODO) should remove saved_opr from arguments
@@ -140,7 +130,8 @@ GraphExecutor *NewBind(Symbol symbol,
       NDArray nd(shapes.at(e), ctx);
       inputs.push_back(nd);
     } else {
-      LOG(FATAL) << "no corresponding ndarray: " << n->attrs.name;
+      LOG(FATAL) << "no corresponding ndarray: "
+                 << n->attrs.name << "(0)";
     }
   }
 
@@ -158,7 +149,7 @@ GraphExecutor *NewBind(Symbol symbol,
   std::vector<NDArray> aux_states;
 
   auto exec = new exec::GraphExecutor();
-  // (TODO) too hack
+  // (TODO) too hack here
   exec->shape_hints_ = shapes;
   exec->saved_opr_ = saved_opr;
   exec->Init(symbol, ctx, ctx_map,
@@ -202,10 +193,12 @@ std::vector<NDArray> Execute(Symbol sym,
                              const NodeOperatorMap& saved_opr) {
   NodeEntryMap<TShape> shapes;
   for (const auto& kv : feed_dict) {
+    const NodeEntry& e = kv.first;
     shapes.insert({kv.first, kv.second.shape()});
   }
   exec::GraphExecutor *exec = NewBind(sym, shapes, saved_opr);
-  return Run(exec, feed_dict);
+  std::vector<NDArray> res = Run(exec, feed_dict);
+  return res;
 }
 
 }  // namespace autograd

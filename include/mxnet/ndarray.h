@@ -75,14 +75,6 @@ class NDArray {
 #endif
   }
 
-  NDArray(const NDArray& nd) = default;
-
-  NDArray& operator=(const NDArray& ) = default;
-
-  NDArray(NDArray&& nd)
-    : ptr_(nd.ptr_), shape_(nd.shape_), offset_(nd.offset_),
-    dtype_(nd.dtype_), entry_(nd.entry_) {}
-
   /*!
    * \return the shape of current NDArray
    */

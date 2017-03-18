@@ -416,16 +416,6 @@ int MXAutogradSetRecording(int recording) {
   API_END();
 }
 
-int MXAutogradSetMarkForRecord(mx_uint num_arr, NDArrayHandle *arrays, int mark) {
-  API_BEGIN();
-  std::vector<NDArray*> data;
-  for (mx_uint i = 0; i < num_arr; ++i) {
-    data.emplace_back(static_cast<NDArray*>(arrays[i]));
-  }
-  AutogradRuntime::Get()->SetMarkForRecord(data, bool(mark));
-  API_END();
-}
-
 int MXAutogradComputeGradient(mx_uint num_input,
                               NDArrayHandle *input_handles,
                               mx_uint num_output,
@@ -448,6 +438,7 @@ int MXAutogradComputeGradient(mx_uint num_input,
   std::vector<NDArray> grads =
     AutogradRuntime::Get()->ComputeGradient(inputs, outputs);
 
+  ret->ret_handles.resize(grads.size());
   for (size_t i = 0; i < grads.size(); ++i) {
     NDArray *ptr = new NDArray();
     *ptr = grads[i];
