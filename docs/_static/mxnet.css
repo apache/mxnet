@@ -755,21 +755,15 @@ div.informaltable {
   text-align: left; }
 
 /*----------------API class and function formatting---------------------*/
-dl.class > dt:before, dl.function > dt:before, dl.method > dt:before {
+dl.class > dt:before,
+dl.function > dt:before,
+dl.method > dt:before,
+dl.attribute > dt:before {
     content: " ";
     display: block;
     height: 70px; /* fixed header height*/
     margin-top: -70px; /* negative fixed header height */
 }
-
-dl.method, dl.attribute {
-    padding-top: 5px;
-    margin-bottom: 5px;
-}
-
-/* dl.class p, dl.function p { */
-/*     color: #cc6600; */
-/* } */
 
 p.rubric {
     margin-top: 10px;
