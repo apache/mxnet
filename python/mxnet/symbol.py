@@ -1030,7 +1030,8 @@ class Symbol(SymbolBase):
 
         The `eval` method combines a call to `bind` (which returns an executor)
         with a call to `forward` (executor method).
-        For the common use case, where you might repeatedly evaluate with same arguments, eval is slow.
+        For the common use case, where you might repeatedly evaluate with same arguments,
+        eval is slow.
         In that case, you should call `bind` once and then repeatedly call forward.
         Eval allows simpler syntax for less cumbersome introspection.
 
