@@ -755,11 +755,11 @@ div.informaltable {
   text-align: left; }
 
 /*----------------API class and function formatting---------------------*/
-dl.class > dt:before, dl.function > dt:before {
+dl.class > dt:before, dl.function > dt:before, dl.method > dt:before {
     content: " ";
     display: block;
-    height: 10px; /* fixed header height*/
-    margin: 0 0 0; /* negative fixed header height */
+    height: 70px; /* fixed header height*/
+    margin-top: -70px; /* negative fixed header height */
 }
 
 dl.method, dl.attribute {
