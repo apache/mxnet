@@ -495,7 +495,7 @@ class FusedRNN(Initializer):
             desc = InitDesc(name)
             # for lstm bias, we use a custom initializer
             # which adds a bias to the forget gate
-            if self.mode == 'lstm' and name.endswith("f_bias"):
+            if self._mode == 'lstm' and name.endswith("f_bias"):
                 forget_bias_init = LSTMBias(forget_bias=self.forget_bias)
                 forget_bias_init._init_weight(desc, args[name])
             else:
