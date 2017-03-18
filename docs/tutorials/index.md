@@ -134,6 +134,9 @@ The following tutorials explain how to develop applications that use machine lea
 - [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 *An advanced example of using a large pre-trained model to classify the ImageNet dataset*
 
+- [Dogs vs. Cats classification with mxnet and R](https://statist-bhfz.github.io/cats_dogs_finetune) *End-to-end tutorial with an example of fine-tuning in R*
+([source RMD](https://github.com/dmlc/mxnet/tree/master/docs/tutorials/r/CatsDogsFinetune.rmd))
+
 
 #### Natural Language Processing
 
@@ -152,6 +155,11 @@ Applications that use traditional methods to model classification and regression
 
 ### Scala
 
+#### Get Started
+- [MXNet Scala from IntelliJ](http://mxnet.io/tutorials/scala/mxnet_scala_on_intellij.html)
+*How to create MXNet Scala examples or applications with the IntelliJ IDE.*
+
+#### Applications
 - [Handwritten Digit Classification](http://mxnet.io/tutorials/scala/mnist.html)
 *A simple example of classifying handwritten digits from the MNIST dataset using a multilayer perceptron.*
 

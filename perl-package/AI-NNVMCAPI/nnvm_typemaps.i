@@ -1,16 +1,3 @@
-%wrapper %{
-void assert_class_name(int *inited, const char* mangled_name, const char* correct_name, char* static_buf)
-{
-  if(!*inited)
-  {
-    strcpy(static_buf, correct_name); 
-    swig_type_info *info = SWIG_TypeQuery(mangled_name);
-    info->clientdata = static_buf;
-    *inited = 1;
-  }
-}
-%}
-
 %typemap(in) (const char** in), (char** in)
 {
     AV *tempav;
@@ -260,7 +247,6 @@ void assert_class_name(int *inited, const char* mangled_name, const char* correc
 {
     if(!result)
     {
-        assert_class_name(&$*1_mangle_inited, "$*1_mangle", "AtomicSymbolCreator", $*1_mangle_module_name);
         $result =  SWIG_NewPointerObj(SWIG_as_voidptr(*$1), $*1_descriptor, 0); argvi++;
     }
 }
@@ -269,7 +255,6 @@ void assert_class_name(int *inited, const char* mangled_name, const char* correc
 {
     if(!result)
     {
-        assert_class_name(&$*1_mangle_inited, "$*1_mangle", "$*1_type", $*1_mangle_module_name);
         $result =  SWIG_NewPointerObj(SWIG_as_voidptr(*$1), $*1_descriptor, 0); argvi++;
     }
 }
@@ -286,7 +271,6 @@ void assert_class_name(int *inited, const char* mangled_name, const char* correc
         AV *myav;
         SV **svs;
         int i = 0;
-        assert_class_name(&_p_NNOp_inited, "_p_NNOp", "AtomicSymbolCreator", _p_NNOp_module_name);
         svs = (SV **)safemalloc(*$1*sizeof(SV *));
         for (i = 0; i < *$1 ; i++) {
             svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_NNOp, 0);
@@ -311,7 +295,6 @@ void assert_class_name(int *inited, const char* mangled_name, const char* correc
         AV *myav;
         SV **svs;
         int i = 0;
-        assert_class_name(&_p_NNSymbol_inited, "_p_NNSymbol", "SymbolHandle", _p_NNSymbol_module_name);
         svs = (SV **)safemalloc(*$1*sizeof(SV *));
         for (i = 0; i < *$1 ; i++) {
             svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_NNSymbol, 0);

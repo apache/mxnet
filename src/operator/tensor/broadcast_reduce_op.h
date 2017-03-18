@@ -21,10 +21,9 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
-      .describe("Empty or unsigned or tuple. The axes to perform the reduction."
-                "If left empty, a global reduction will be performed.");
+        .describe("The axes to perform the reduction.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axis which is reduced is left "
+      .describe("If true, the axes which are reduced are left "
                 "in the result as dimension with size one.");
   }
 };
@@ -67,8 +66,8 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
 inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   if (ishape.ndim() == 0) return false;
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
@@ -101,8 +100,8 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
 inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
                             std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   if ((*in_attrs)[0].ndim() == 0) return false;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   TShape &ishape = (*in_attrs)[0];
@@ -140,15 +139,15 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
 inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                std::vector<TShape> *in_attrs,
                                std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   if ((*in_attrs)[0].ndim() == 0) return false;
   const BroadcastAxesParam& param = nnvm::get<BroadcastAxesParam>(attrs.parsed);
   CHECK_EQ(param.axis.ndim() , param.size.ndim());
   TShape &ishape = (*in_attrs)[0];
   TShape oshape = ishape;
   for (index_t i = 0; i < param.axis.ndim(); ++i) {
-    CHECK_EQ(oshape[param.axis[i]], 1) << "Broadcasting axis must have size 1";
+    CHECK_EQ(oshape[param.axis[i]], 1U) << "Broadcasting axis must have size 1";
     oshape[param.axis[i]] = param.size[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
@@ -158,8 +157,8 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
 inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   if (ishape.ndim() == 0) return false;
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
@@ -466,7 +465,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(ParamParser<ReduceAxisParam>)                \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "NDArray", "Source input")               \
+  .add_argument("data", "ndarray-or-symbol", "The input")       \
   .add_arguments(ReduceAxisParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE(name)                    \
@@ -476,7 +475,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "NDArray", "Source input")               \
+  .add_argument("data", "ndarray-or-symbol", "The input")       \
   .add_arguments(ReduceAxesParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
@@ -496,7 +495,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
       return MakeGradNode("_broadcast_backward", n, ograds,     \
                           {{"keepdims", "true"}});              \
     })                                                          \
-  .add_argument("data", "NDArray", "Source input")
+  .add_argument("data", "ndarray-or-symbol", "The input")
 
 }  // namespace op
 }  // namespace mxnet

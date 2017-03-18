@@ -22,8 +22,9 @@ use AI::MXNet::Profiler;
 use AI::MXNet::Module::Base;
 use AI::MXNet::Module;
 use AI::MXNet::Module::Bucketing;
+use AI::MXNet::RNN;
 use AI::MXNet::Visualization;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub import
 {
@@ -51,6 +52,7 @@ sub import
             sub metric { 'AI::MXNet::Metric' }
             sub mod { 'AI::MXNet::Module' }
             sub viz { 'AI::MXNet::Visualization' }
+            sub rnn { 'AI::MXNet::RNN' }
             1;
 EOP
             eval $short_name_package;
@@ -139,7 +141,7 @@ This is WIP.
 =head1 SEE ALSO
 
 http://mxnet.io/
-https://github.com/sergeykolychev/mxnet/tree/master/perl-package
+https://github.com/dmlc/mxnet/tree/master/perl-package
 
 =head1 AUTHOR
 

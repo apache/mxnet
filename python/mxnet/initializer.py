@@ -66,7 +66,7 @@ class Initializer(object):
 
         Parameters
         ----------
-        name : InitDesc
+        desc : InitDesc
             Initialization pattern Descriptor
 
         arr : NDArray
@@ -269,7 +269,7 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initialize the weight to 1"""
+    """Initialize the weight to a scalar value"""
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
         self.value = value
@@ -469,4 +469,3 @@ class FusedRNN(Initializer):
             desc = InitDesc(name)
             self._init(desc, args[name])
         arr[:] = cell.pack_weights(args)['parameters']
-

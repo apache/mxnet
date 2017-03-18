@@ -217,20 +217,12 @@ class MKLConcatOp : public Operator {
         = reinterpret_cast<void*>(bottom_data[i]);
     }
 
+    std::shared_ptr<MKLMemHolder> top_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-    if (fwd_top_data_->conversion_needed()) {
-      std::shared_ptr<MKLMemHolder> top_mem = out_data[concat_enum::kOut].Mkl_mem_;
-        top_mem->set_prv_descriptor(fwd_top_data_);
-      concat_res[dnnResourceDst] =
-        reinterpret_cast<void*>(fwd_top_data_->prv_ptr());
-    } else {
+    top_mem = out_data[concat_enum::kOut].Mkl_mem_;
 #endif
-    concat_res[dnnResourceDst] =
-      reinterpret_cast<void*>(out.dptr_);
-#if MKL_EXPERIMENTAL == 1
-    }
-#endif
-
+    concat_res[dnnResourceDst] = fwd_top_data_->get_output_ptr(out.dptr_,
+      fwd_top_data_, top_mem);
     e = dnnExecute<DType>(concatFwd_, concat_res);
     CHECK_EQ(e, E_SUCCESS);
     delete[] split_channels_;
@@ -290,26 +282,15 @@ class MKLConcatOp : public Operator {
 
     dnnError_t e;
     void *concat_res[dnnResourceNumber];
-    std::shared_ptr<MKLMemHolder> out_grad_mem =
-#if MKL_EXPERIMENTAL == 1
-      out_grad[concat_enum::kOut].Mkl_mem_;
-#else
-      NULL;
-#endif
     concat_res[dnnResourceSrc] = bwd_top_diff_->get_converted_prv(grad.dptr_, true,
-      out_grad_mem);
+      out_grad[concat_enum::kOut]);
     for (size_t i = 0; i < num_concats_; ++i) {
+      std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
 #if MKL_EXPERIMENTAL == 1
-      if (bwd_bottom_diff_[i]->conversion_needed()) {
-        std::shared_ptr<MKLMemHolder> bottom_diff_mem = in_grad[i].Mkl_mem_;
-        bottom_diff_mem->set_prv_descriptor(bwd_bottom_diff_[i]);
-        concat_res[dnnResourceMultipleDst + i] = bwd_bottom_diff_[i]->prv_ptr();
-      } else {
+      bottom_diff_mem = in_grad[i].Mkl_mem_;
 #endif
-        concat_res[dnnResourceMultipleDst + i] = grad_in[i].dptr_;
-#if MKL_EXPERIMENTAL == 1
-      }
-#endif
+      concat_res[dnnResourceMultipleDst + i] = bwd_bottom_diff_[i]->get_output_ptr(
+        grad_in[i].dptr_, bwd_bottom_diff_[i], bottom_diff_mem);
     }
     e = dnnExecute<DType>(concatBwd_, concat_res);
     CHECK_EQ(e, E_SUCCESS);

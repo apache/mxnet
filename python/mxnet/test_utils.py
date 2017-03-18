@@ -5,13 +5,21 @@ from __future__ import absolute_import, print_function, division
 import time
 import traceback
 import numbers
+import subprocess
+import os
+import errno
+import logging
 import numpy as np
 import numpy.testing as npt
 import mxnet as mx
-
 from .context import cpu, gpu, Context
 from .ndarray import array
 from .symbol import Symbol
+try:
+    import requests
+except ImportError:
+    # in rare cases requests may be not installed
+    pass
 
 _rng = np.random.RandomState(1234)
 
@@ -803,3 +811,73 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                         print(str(e))
 
     return gt
+
+def list_gpus():
+    """Return a list of GPUs
+
+    Returns
+    -------
+    list of int:
+        If there are n GPUs, then return a list [0,1,...,n-1]. Otherwise returns
+        [].
+    """
+    re = ''
+    nvidia_smi = ['nvidia-smi', '/usr/bin/nvidia-smi', '/usr/local/nvidia/bin/nvidia-smi']
+    for cmd in nvidia_smi:
+        try:
+            re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
+        except OSError:
+            pass
+    return range(len([i for i in re.split('\n') if 'GPU' in i]))
+
+def download(url, fname=None, dirname=None, overwrite=False):
+    """Download an given URL
+
+    Parameters
+    ----------
+
+    url : str
+        URL to download
+    fname : str, optional
+        filename of the downloaded file. If None, then will guess a filename
+        from url.
+    dirname : str, optional
+        output directory name. If None, then guess from fname or use the current
+        directory
+    overwrite : bool, optional
+        Default is false, which means skipping download if the local file
+        exists. If true, then download the url to overwrite the local file if
+        exists.
+
+    Returns
+    -------
+    str
+        The filename of the downloaded file
+    """
+    if fname is None:
+        fname = url.split('/')[-1]
+    if not overwrite and os.path.exists(fname):
+        logging.info("%s exists, skip to downloada", fname)
+        return fname
+
+    if dirname is None:
+        dirname = os.path.dirname(fname)
+    else:
+        fname = os.path.join(dirname, fname)
+    if dirname != "":
+        if not os.path.exists(dirname):
+            try:
+                logging.info('create directory %s', dirname)
+                os.makedirs(dirname)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise OSError('failed to create ' + dirname)
+
+    r = requests.get(url, stream=True)
+    assert r.status_code == 200, "failed to open %s" % url
+    with open(fname, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+    logging.info("downloaded %s into %s successfully", url, fname)
+    return fname

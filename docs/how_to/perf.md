@@ -21,8 +21,8 @@ both `USE_MKL2017 = 1` and `USE_MKL2017_EXPERIMENTAL = 1` in
 details
 
 Also setting the following two environment variables may help:
-- `KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
-- `OMP_NUM_THREADS=vCPUs / 2` in which `vCPUs` is the number of virtual CPUs.
+- `export KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
+- `export OMP_NUM_THREADS=vCPUs / 2` in which `vCPUs` is the number of virtual CPUs.
   For linux we can get it by `cat /proc/cpuinfo  | grep processor | wc -l`
 
 Note that MXNet treats all CPU in a single machine as a single device. So when

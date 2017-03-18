@@ -142,7 +142,20 @@ int MXSymbolGetOutput(SymbolHandle symbol,
 
 int MXSymbolGetInternals(SymbolHandle symbol,
                          SymbolHandle *out) {
-  return NNSymbolGetInternals(symbol, out);
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  *s = static_cast<nnvm::Symbol*>(symbol)->GetInternals();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSymbolGetChildren(SymbolHandle symbol,
+                        SymbolHandle *out) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  *s = static_cast<nnvm::Symbol*>(symbol)->GetChildren();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
 }
 
 int MXSymbolFree(SymbolHandle symbol) {

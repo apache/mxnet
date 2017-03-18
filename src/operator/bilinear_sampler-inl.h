@@ -44,7 +44,7 @@ class BilinearSamplerOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[bs::kOut], kWriteTo);
-    CHECK_EQ(in_data.size(), 2);
+    CHECK_EQ(in_data.size(), 2U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 4, DType> data = in_data[bs::kData].get<xpu, 4, DType>(s);
@@ -63,7 +63,7 @@ class BilinearSamplerOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
+    CHECK_EQ(in_data.size(), 2U);
     CHECK_NE(req[bs::kData], kWriteInplace);
     CHECK_NE(req[bs::kGrid], kWriteInplace);
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -127,22 +127,22 @@ class BilinearSamplerProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2) << "Input:[data, grid]";
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, grid]";
     const TShape &dshape = (*in_shape)[bs::kData];
     const TShape &lshape = (*in_shape)[bs::kGrid];
     if (dshape.ndim() == 0) return false;
-    CHECK_EQ(dshape.ndim(), 4) \
+    CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
     if (lshape.ndim() ==  0) return false;
-    CHECK_EQ(lshape.ndim(), 4) \
+    CHECK_EQ(lshape.ndim(), 4U) \
       << "Sampler grid should be 4D in batch-2-y-x";
     CHECK_EQ(dshape[0], lshape[0]);
-    CHECK_EQ(lshape[1], 2) << "incorrect grid shape[1], should be 2";
+    CHECK_EQ(lshape[1], 2U) << "incorrect grid shape[1], should be 2";
     // target height
-    CHECK_GT(lshape[2], 0) \
+    CHECK_GT(lshape[2], 0U) \
             << "incorrect grid_shape: " << lshape[2];
     // target width
-    CHECK_GT(lshape[3], 0) \
+    CHECK_GT(lshape[3], 0U) \
         << "incorrect grid_shape: " << lshape[3];
     out_shape->clear();
     // output_shape : (data.shape[0], data.shape[1], grid.shape[2], grid.shape[3])

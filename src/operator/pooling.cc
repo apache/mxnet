@@ -83,8 +83,44 @@ Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sha
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
-.describe("Perform spatial pooling on inputs.")
-.add_argument("data", "Symbol", "Input data to the pooling operator.")
+.describe(R"code(Perform pooling on the input.
+
+The shapes for 2-D pooling is
+
+- **data**: *(batch_size, channel, height, width)*
+- **out**: *(batch_size, num_filter, out_height, out_width)*, with::
+
+    out_height = f(height, kernel[0], pad[0], stride[0])
+    out_width = f(width, kernel[1], pad[1], stride[1])
+
+The defintion of *f* depends on ``pooling_convention``, which has two options:
+
+- **valid** (default)::
+
+    f(x, k, p, s) = floor(x+2*p-k)/s+1
+
+- **full**, which is compatible with Caffe::
+
+    f(x, k, p, s) = ceil(x+2*p-k)/s+1
+
+But ``global_pool`` is set to be true, then do a global pooling, namely reset
+``kernel=(height, width)``.
+
+Three pooling options are supported by ``pool_type``:
+
+- **avg**: average pooling
+- **max**: max pooling
+- **sum**: sum pooling
+
+1-D pooling is special case of 2-D pooling with *weight=1* and
+*kernel[1]=1*.
+
+For 3-D pooling, an additional *depth* dimension is added before
+*height*. Namely the input data will have shape *(batch_size, channel, depth,
+height, width)*.
+
+)code" ADD_FILELINE)
+.add_argument("data", "ndarray-or-symbol", "Input data to the pooling operator.")
 .add_arguments(PoolingParam::__FIELDS__());
 
 }  // namespace op

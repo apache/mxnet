@@ -16,6 +16,9 @@ def _load_general(data, targets, major_axis):
     for d_src, d_targets, axis in zip(data, targets, major_axis):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
+        elif isinstance(d_src, (list, tuple)):
+            for src, dst in zip(d_src, d_targets):
+                src.copyto(dst)
         else:
             for slice_idx, d_dst in d_targets:
                 if axis >= 0:
@@ -54,7 +57,15 @@ def _merge_multi_context(outputs, major_axis):
     rets = []
     for tensors, axis in zip(outputs, major_axis):
         if axis >= 0:
-            rets.append(nd.concatenate(tensors, axis=axis, always_copy=False))
+            # pylint: disable=no-member,protected-access
+            if len(tensors) == 1:
+                rets.append(tensors[0])
+            else:
+                # Concatenate if necessary
+                rets.append(nd.concat(*[tensor.as_in_context(tensors[0].context)
+                                        for tensor in tensors],
+                                      dim=axis))
+            # pylint: enable=no-member,protected-access
         else:
             # negative axis means the there is no batch_size axis, and all the
             # results should be the same on each device. We simply take the
@@ -108,8 +119,8 @@ class DataParallelExecutorGroup(object):
         Can be specified globally (str) or for each argument (list, dict).
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
-                 for_training, inputs_need_grad, shared_group=None,
-                 logger=logging, fixed_param_names=None, grad_req='write'):
+                 for_training, inputs_need_grad, shared_group=None, logger=logging,
+                 fixed_param_names=None, grad_req='write', state_names=None):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -122,10 +133,15 @@ class DataParallelExecutorGroup(object):
         self.inputs_need_grad = inputs_need_grad
 
         self.logger = logger
-
+        #In the future we should have a better way to profile memory per device (haibin)
+        self._total_exec_bytes = 0
         self.fixed_param_names = fixed_param_names
         if self.fixed_param_names is None:
             self.fixed_param_names = []
+
+        self.state_names = state_names
+        if self.state_names is None:
+            self.state_names = []
 
         if not for_training:
             grad_req = 'null'
@@ -170,9 +186,11 @@ class DataParallelExecutorGroup(object):
         self.batch_size = None
         self.slices = None
         self.execs = []
+        self._default_execs = None
         self.data_arrays = None
         self.label_arrays = None
         self.param_arrays = None
+        self.state_arrays = None
         self.grad_arrays = None
         self.aux_arrays = None
         self.input_grad_arrays = None
@@ -217,6 +235,10 @@ class DataParallelExecutorGroup(object):
         # convenient data structures
         self.data_arrays = [[(self.slices[i], e.arg_dict[name]) for i, e in enumerate(self.execs)]
                             for name, _ in self.data_shapes]
+
+        self.state_arrays = [[e.arg_dict[name] for e in self.execs]
+                             for name in self.state_names]
+
         if self.label_shapes is not None:
             self.label_arrays = [[(self.slices[i], e.arg_dict[name])
                                   for i, e in enumerate(self.execs)]
@@ -272,8 +294,8 @@ class DataParallelExecutorGroup(object):
                 label_shapes_i = []
 
             if reshape:
-                self.execs[i] = self.execs[i].reshape(allow_up_sizing=True,
-                                                      **dict(data_shapes_i + label_shapes_i))
+                self.execs[i] = self._default_execs[i].reshape(
+                    allow_up_sizing=True, **dict(data_shapes_i + label_shapes_i))
             else:
                 self.execs.append(self._bind_ith_exec(i, data_shapes_i, label_shapes_i,
                                                       shared_group))
@@ -292,6 +314,8 @@ class DataParallelExecutorGroup(object):
         """
         if data_shapes == self.data_shapes and label_shapes == self.label_shapes:
             return
+        if self._default_execs is None:
+            self._default_execs = [i for i in self.execs]
         self.bind_exec(data_shapes, label_shapes, reshape=True)
 
     def set_params(self, arg_params, aux_params):
@@ -389,6 +413,48 @@ class DataParallelExecutorGroup(object):
         if merge_multi_context:
             outputs = _merge_multi_context(outputs, self.output_layouts)
         return outputs
+
+    def get_states(self, merge_multi_context=True):
+        """Get states from all devices
+
+        Parameters
+        ----------
+        merge_multi_context : bool
+            Default is `True`. In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A `True` value indicate that we
+            should merge the collected results so that they look like from a single
+            executor.
+
+        Returns
+        -------
+        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
+        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        elements are `NDArray`.
+        """
+        assert not merge_multi_context, \
+            "merge_multi_context=True is not supported for get_states yet."
+        return self.state_arrays
+
+    def set_states(self, states=None, value=None):
+        """Set value for states. Only one of states & value can be specified.
+
+        Parameters
+        ----------
+        states : list of list of NDArrays
+            source states arrays formatted like [[state1_dev1, state1_dev2],
+            [state2_dev1, state2_dev2]].
+        value : number
+            a single scalar value for all state arrays.
+        """
+        if states is not None:
+            assert value is None, "Only one of states & value can be specified."
+            _load_general(states, self.state_arrays, (0,)*len(states))
+        else:
+            assert value is not None, "At least one of states & value must be specified."
+            assert states is None, "Only one of states & value can be specified."
+            for d_dst in self.state_arrays:
+                for dst in d_dst:
+                    dst[:] = value
 
     def get_input_grads(self, merge_multi_context=True):
         """Get the gradients with respect to the inputs of the module.
@@ -522,7 +588,7 @@ class DataParallelExecutorGroup(object):
         # create or borrow arguments and gradients
         for j in range(len(self.arg_names)):
             name = self.arg_names[j]
-            if name in self.param_names: # model parameter
+            if name in self.param_names: # model parameters
                 if shared_exec is None:
                     arg_arr = nd.zeros(arg_shapes[j], context, dtype=arg_types[j])
                     if self.grad_req[name] != 'null':
@@ -534,7 +600,7 @@ class DataParallelExecutorGroup(object):
                     assert arg_arr.dtype == arg_types[j]
                     if self.grad_req[name] != 'null':
                         grad_arrays[name] = shared_exec.grad_dict[name]
-            else: # data or label
+            else: # data, label, or states
                 arg_arr = _get_or_reshape(name, shared_data_arrays, arg_shapes[j], arg_types[j],
                                           context, self.logger)
 
@@ -558,6 +624,8 @@ class DataParallelExecutorGroup(object):
         executor = self.symbol.bind(ctx=context, args=arg_arrays,
                                     args_grad=grad_arrays, aux_states=aux_arrays,
                                     grad_req=self.grad_req, shared_exec=shared_exec)
+        # Get the total bytes allocated for this executor
+        self._total_exec_bytes += int(executor.debug_str().split('\n')[-3].split()[1])
         return executor
 
     def _sliced_shape(self, shapes, i, major_axis):
