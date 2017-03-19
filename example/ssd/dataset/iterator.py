@@ -70,14 +70,18 @@ class DetIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        data = [(k, v.shape) for k, v in self._data.items()]
+        dict_data ={self._data.data[0][0]:self._data.data[0][1]}
+
+        data = [(k, v.shape) for k, v in dict_data.items()]
         print(data)
         return data
 
     @property
     def provide_label(self):
         if self.is_train:
-            label = [(k, v.shape) for k, v in self._label.items()]
+            dict_label = {self._label.data[0][0]: self._label.data[0][1]}
+
+            label = [(k, v.shape) for k, v in dict_label.items()]
             print(label)
             return label
         else:
@@ -94,8 +98,14 @@ class DetIter(mx.io.DataIter):
     def next(self):
         if self.iter_next():
             self._get_batch()
-            data_batch = mx.io.DataBatch(data=self._data['data'],
-                                   label=self._label['label'],
+            try:
+                label = self._label['label']
+                label=[]
+            except:
+                label = [self._label.data[0][1]]
+
+            data_batch = mx.io.DataBatch(data=[self._data.data[0][1]],
+                                   label=label,
                                    pad=self.getpad(), index=self.getindex())
             self._current += self.batch_size
             return data_batch
@@ -134,18 +144,22 @@ class DetIter(mx.io.DataIter):
             batch_data[i] = data
             if self.is_train:
                 batch_label.append(label)
-        #
+
         # if not isinstance(batch_data, list):
         #     batch_data = [batch_data]
-        # batch_label=mx.nd.array(np.array(batch_label))
+        # batch_label=mx.nd.array(batch_label)
         # if not isinstance(batch_label, list):
         #     batch_label = [batch_label]
-
-        self._data = {'data': batch_data}
+        #self._data = {'data': batch_data}
+        self._data = mx.io.NDArrayIter({'data': batch_data})
         if self.is_train:
-            self._label = {'label': mx.nd.array(batch_label)}
+            #self._label = {'label': batch_label}
+
+            self._label = mx.io.NDArrayIter({'label': batch_label})
         else:
-            self._label = {'label': None}
+            #self._label = {'label': None}
+
+            self._label = {'label': []}
 
     def _data_augmentation(self, data, label):
         """
