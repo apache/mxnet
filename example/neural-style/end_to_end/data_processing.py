@@ -13,7 +13,7 @@ def PreprocessContentImage(path, short_edge, dshape=None):
     new_size = (int(img.shape[0] * factor), int(img.shape[1] * factor))
     resized_img = transform.resize(img, new_size)
     sample = np.asarray(resized_img) * 256
-    if dshape != None:
+    if dshape is not None:
         # random crop
         xx = int((sample.shape[0] - dshape[2]))
         yy = int((sample.shape[1] - dshape[3]))

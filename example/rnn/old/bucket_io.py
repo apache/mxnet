@@ -117,11 +117,11 @@ class BucketSentenceIter(mx.io.DataIter):
                  seperate_char=' <eos> ', text2id=None, read_content=None, model_parallel=False):
         super(BucketSentenceIter, self).__init__()
 
-        if text2id == None:
+        if text2id is None:
             self.text2id = default_text2id
         else:
             self.text2id = text2id
-        if read_content == None:
+        if read_content is None:
             self.read_content = default_read_content
         else:
             self.read_content = read_content
