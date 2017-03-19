@@ -14,6 +14,8 @@ during training
     mxnet.lr_scheduler
 ```
 
+and how to develop a new optimization algorithm in MXNet.
+
 Assume there there is a pre-defined ``Symbol`` and a ``Module`` is created for
 it
 
@@ -116,7 +118,7 @@ implement various schemes to change the learning rate during training.
     MultiFactorScheduler
 ```
 
-## Implement a new algorithms.
+## Implement a new algorithm
 
 Most classes listed in this document are implemented in Python by using ``NDArray``.
 So implementing new weight updating or initialization functions is
