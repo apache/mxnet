@@ -23,7 +23,7 @@ def load_data(path, dic=None):
     content = content.split(' ')
     print("Loading %s, size of data = %d" % (path, len(content)))
     x = np.zeros(len(content))
-    if dic == None:
+    if dic is None:
         dic = {}
     idx = 0
     for i in range(len(content)):

@@ -78,11 +78,11 @@ def fit(args, network, data_loader, eval_metrics=None, batch_end_callback=None):
         initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
         **model_args)
 
-    if eval_metrics == None:
+    if eval_metrics is None:
         eval_metrics = ['accuracy']
         ## TopKAccuracy only allows top_k > 1
         for top_k in [5, 10, 20]:
-            eval_metrics.append(mx.metric.create('top_k_accuracy', top_k = top_k))
+            eval_metrics.append(mx.metric.create('top_k_accuracy', top_k=top_k))
 
     if batch_end_callback is not None:
         if not isinstance(batch_end_callback, list):
