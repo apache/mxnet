@@ -70,12 +70,16 @@ class DetIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        return [(k, v[0].shape) for k, v in self._data.items()]
+        data = [(k, v.shape) for k, v in self._data.items()]
+        print(data)
+        return data
 
     @property
     def provide_label(self):
         if self.is_train:
-            return [(k, v[0].shape) for k, v in self._label.items()]
+            label = [(k, v.shape) for k, v in self._label.items()]
+            print(label)
+            return label
         else:
             return []
 
@@ -130,16 +134,16 @@ class DetIter(mx.io.DataIter):
             batch_data[i] = data
             if self.is_train:
                 batch_label.append(label)
-
-        if not isinstance(batch_data, list):
-            batch_data = [batch_data]
-        batch_label=mx.nd.array(np.array(batch_label))
-        if not isinstance(batch_label, list):
-            batch_label = [batch_label]
+        #
+        # if not isinstance(batch_data, list):
+        #     batch_data = [batch_data]
+        # batch_label=mx.nd.array(np.array(batch_label))
+        # if not isinstance(batch_label, list):
+        #     batch_label = [batch_label]
 
         self._data = {'data': batch_data}
         if self.is_train:
-            self._label = {'label': batch_label}
+            self._label = {'label': mx.nd.array(batch_label)}
         else:
             self._label = {'label': None}
 
