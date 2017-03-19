@@ -37,7 +37,7 @@ import ml.dmlc.mxnet.{LRScheduler, NDArray, Optimizer}
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class Adam(learningRate: Float = 0.002f, beta1: Float = 0.9f, beta2: Float = 0.999f,
+class Adam(val learningRate: Float = 0.002f, beta1: Float = 0.9f, beta2: Float = 0.999f,
            epsilon: Float = 1e-8f, decayFactor: Float = 1-1e-8f, wd: Float = 0.0f,
            clipGradient: Float = 0f, lrScheduler: LRScheduler = null) extends Optimizer {
 

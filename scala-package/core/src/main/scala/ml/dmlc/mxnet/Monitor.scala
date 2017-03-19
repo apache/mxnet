@@ -30,7 +30,7 @@ import scala.collection.mutable
  *                 Takes a NDArray and returns a NDArray. defaults
  *                 to mean absolute value |x|/size(x).
  */
-private[mxnet] class Monitor(
+class Monitor(
     protected val interval: Int,
     protected var statFunc: (NDArray) => NDArray = null) {
 

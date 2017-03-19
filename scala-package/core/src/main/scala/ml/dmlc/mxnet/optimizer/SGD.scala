@@ -23,7 +23,7 @@ import ml.dmlc.mxnet.NDArrayConversions._
 /**
  * A very simple SGD optimizer with momentum and weight regularization.
  */
-class SGD(learningRate: Float = 0.01f, momentum: Float = 0.0f,
+class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
           wd: Float = 0.0001f, clipGradient: Float = 0f,
           lrScheduler: LRScheduler = null) extends Optimizer {
 

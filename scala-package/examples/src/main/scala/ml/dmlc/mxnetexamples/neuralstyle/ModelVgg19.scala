@@ -127,7 +127,7 @@ object ModelVgg19 {
     }
 
   def getModel(modelPath: String, inputSize: (Int, Int), ctx: Context): ConvExecutor = {
-    val (style, content) = getSymbol()
+    val (style, content) = getSymbol
     getExecutor(style, content, modelPath, inputSize, ctx)
   }
 }

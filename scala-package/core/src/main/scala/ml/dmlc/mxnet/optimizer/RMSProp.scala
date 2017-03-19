@@ -33,7 +33,7 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class RMSProp(learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
+class RMSProp(val learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
               gamma1: Float = 0.95f, gamma2: Float = 0.9f, wd: Float = 0.0f,
               lrScheduler: LRScheduler = null, clipGradient: Float = 0f) extends Optimizer {
 

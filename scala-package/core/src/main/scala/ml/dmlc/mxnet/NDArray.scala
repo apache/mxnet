@@ -31,7 +31,7 @@ import scala.ref.WeakReference
  * NDArray API of mxnet
  */
 @AddNDArrayFunctions
-private[mxnet] object NDArray {
+object NDArray {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 
@@ -884,7 +884,7 @@ private[mxnet] class NDArrayConversions(val value: Float) {
 
 private case class NDArrayFunction(handle: NDArrayHandle, arguments: List[String])
 
-private class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
+private[mxnet] class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def head: NDArray = apply(0)
   def get: NDArray = {
     require(arr.length == 1, s"return array length = ${arr.length}")
@@ -937,7 +937,7 @@ private class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def asInContext(context: Context): NDArray = head.asInContext(context)
 }
 
-private class NDArrayInternal (private val internal: Array[Byte], private val dtype: DType) {
+private[mxnet] class NDArrayInternal (private val internal: Array[Byte], private val dtype: DType) {
   private val unitSize = DType.numOfBytes(dtype)
   require(internal.length > 0 && internal.length % unitSize == 0,
     s"$dtype size $unitSize cannot divide byte array size ${internal.length}")

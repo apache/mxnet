@@ -169,7 +169,7 @@ object NeuralStyle {
       val styleNp = preprocessStyleImage(alle.styleImage, contentNp.shape, dev)
       val size = (contentNp.shape(2), contentNp.shape(3))
 
-      val (style, content) = ModelVgg19.getSymbol()
+      val (style, content) = ModelVgg19.getSymbol
       val (gram, gScale) = styleGramSymbol(size, style)
       var modelExecutor = ModelVgg19.getExecutor(gram, content, alle.modelPath, size, dev)
 

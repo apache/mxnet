@@ -31,7 +31,7 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class NAG(learningRate: Float = 0.01f, momentum: Float = 0.0f,
+class NAG(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
           wd: Float = 0.0001f, clipGradient: Float = 0f,
           lrScheduler: LRScheduler = null) extends Optimizer {
 

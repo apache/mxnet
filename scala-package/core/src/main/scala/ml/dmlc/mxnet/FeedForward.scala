@@ -44,7 +44,7 @@ import scala.collection.mutable.ListBuffer
  *                         contain extra parameters than needed.
  * @param beginEpoch The beginning training epoch.
  */
-private[mxnet] class FeedForward private(
+class FeedForward private(
     private var symbol: Symbol,
     symGen: SymbolGenerator,
     ctx: Array[Context],
