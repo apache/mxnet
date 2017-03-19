@@ -108,6 +108,7 @@ class DetIter(mx.io.DataIter):
                                    label=label,
                                    pad=self.getpad(), index=self.getindex())
             self._current += self.batch_size
+            print('%%%%%%%%%%%%%%%%%%%%%% ITER Data Loaded %%%%%%%%%%%%%%%%%%%')
             return data_batch
         else:
             raise StopIteration
