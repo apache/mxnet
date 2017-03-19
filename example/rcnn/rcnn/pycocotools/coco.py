@@ -73,7 +73,7 @@ class COCO:
         self.catToImgs = {}
         self.imgs = {}
         self.cats = {}
-        if not annotation_file == None:
+        if annotation_file is not None:
             print 'loading annotations into memory...'
             tic = time.time()
             dataset = json.load(open(annotation_file, 'r'))
@@ -149,7 +149,7 @@ class COCO:
                 anns = self.dataset['annotations']
             anns = anns if len(catIds)  == 0 else [ann for ann in anns if ann['category_id'] in catIds]
             anns = anns if len(areaRng) == 0 else [ann for ann in anns if ann['area'] > areaRng[0] and ann['area'] < areaRng[1]]
-        if not iscrowd == None:
+        if iscrowd is not None:
             ids = [ann['id'] for ann in anns if ann['iscrowd'] == iscrowd]
         else:
             ids = [ann['id'] for ann in anns]
@@ -325,7 +325,7 @@ class COCO:
         res.createIndex()
         return res
 
-    def download( self, tarDir = None, imgIds = [] ):
+    def download(self, tarDir=None, imgIds=[]):
         '''
         Download COCO images from mscoco.org server.
         :param tarDir (str): COCO results directory name
