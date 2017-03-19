@@ -2,6 +2,7 @@
 Proposal Target Operator selects foreground and background roi and assigns label, bbox_transform to them.
 """
 
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 from distutils.util import strtobool
@@ -43,16 +44,16 @@ class ProposalTargetOperator(mx.operator.CustomOp):
             sample_rois(all_rois, fg_rois_per_image, rois_per_image, self._num_classes, gt_boxes=gt_boxes)
 
         if DEBUG:
-            print "labels=", labels
-            print 'num fg: {}'.format((labels > 0).sum())
-            print 'num bg: {}'.format((labels == 0).sum())
+            print("labels=", labels)
+            print('num fg: {}'.format((labels > 0).sum()))
+            print('num bg: {}'.format((labels == 0).sum()))
             self._count += 1
             self._fg_num += (labels > 0).sum()
             self._bg_num += (labels == 0).sum()
-            print "self._count=", self._count
-            print 'num fg avg: {}'.format(self._fg_num / self._count)
-            print 'num bg avg: {}'.format(self._bg_num / self._count)
-            print 'ratio: {:.3f}'.format(float(self._fg_num) / float(self._bg_num))
+            print("self._count=", self._count)
+            print('num fg avg: {}'.format(self._fg_num / self._count))
+            print('num bg avg: {}'.format(self._bg_num / self._count))
+            print('ratio: {:.3f}'.format(float(self._fg_num) / float(self._bg_num)))
 
         for ind, val in enumerate([rois, labels, bbox_targets, bbox_weights]):
             self.assign(out_data[ind], req[ind], val)
