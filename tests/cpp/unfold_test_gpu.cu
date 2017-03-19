@@ -10,10 +10,10 @@ using namespace std;
 using namespace mshadow;
 using DType = double;
 
-__global__ 
+__global__
 void AccessElements(int n, const DType *dptr, DType *result, const int *indices) {
   for (int i = 0; i < n; ++i)
-    result[i] = dptr[indices[i]]; 
+    result[i] = dptr[indices[i]];
 }
 
 
@@ -42,8 +42,8 @@ TEST(Unfold, ravel_multi_index_2D_gpu) {
       ts_cpu[i][j] = ++c;
     }
   cudaDeviceSynchronize();
-  
-  cudaMemcpy2D(ts.dptr_, ts.stride_ * sizeof(DType), 
+
+  cudaMemcpy2D(ts.dptr_, ts.stride_ * sizeof(DType),
       ts_cpu.dptr_, ts_cpu.stride_ * sizeof(DType),
       ts.size(1) * sizeof(DType), ts.size(0),
       cudaMemcpyHostToDevice);
@@ -79,7 +79,7 @@ TEST(Unfold, ravel_multi_index_3D_gpu) {
   int c = 0;
   Shape<3> coord;
   for (int i = 0; i < (int) ts.size(0); ++i)
-    for (int j = 0; j < (int) ts.size(1); ++j) 
+    for (int j = 0; j < (int) ts.size(1); ++j)
       for (int k = 0; k < (int) ts.size(2); ++k) {
         coord[0] = i;
         coord[1] = j;
@@ -89,8 +89,8 @@ TEST(Unfold, ravel_multi_index_3D_gpu) {
         ts_cpu[i][j][k] = ++c;
       }
   cudaDeviceSynchronize();
-  
-  cudaMemcpy2D(ts.dptr_, ts.stride_ * sizeof(DType), 
+
+  cudaMemcpy2D(ts.dptr_, ts.stride_ * sizeof(DType),
       ts_cpu.dptr_, ts_cpu.stride_ * sizeof(DType),
       ts.size(2) * sizeof(DType), ts.size(0) * ts.size(1),
       cudaMemcpyHostToDevice);

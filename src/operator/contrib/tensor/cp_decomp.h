@@ -1,22 +1,23 @@
 /*!
  *  Copyright (c) 2014 by Contributors
+ *  \file cp_decomp.h
+ *  \brief Core function performing CP Decomposition
+ *  \author Jencir Lee
  */
-#ifndef MXNET_OPERATOR_TENSOR_CP_DECOMP_H_
-#define MXNET_OPERATOR_TENSOR_CP_DECOMP_H_
-#include <dmlc/logging.h>
-#include <dmlc/parameter.h>
-#include <mxnet/operator.h>
+#ifndef MXNET_OPERATOR_CONTRIB_TENSOR_CP_DECOMP_H_
+#define MXNET_OPERATOR_CONTRIB_TENSOR_CP_DECOMP_H_
 #include <mshadow/tensor.h>
 #include <vector>
 #include <cmath>
 #include <limits>
 #include <random>
+#include <algorithm>
 #include <utility>
 #include <numeric>
 #include <iostream>
 #include "./unfold.h"
 #include "./cp_decomp_linalg.h"
-#include "./broadcast_reduce-inl.h"
+#include "../../tensor/broadcast_reduce-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -31,18 +32,58 @@ inline void print1DTensor_(const Tensor<cpu, 1, DType> &t);
 template <typename DType>
 inline void print2DTensor_(const Tensor<cpu, 2, DType> &t);
 
+/*!
+ * \brief Evaluates the reconstruction error of the CP Decomposition
+ *
+ * Reconstruction error = \lVert t - [eigvals; factors] \rVert_2
+ *
+ * \param t input tensor
+ * \param eigvals eigen-value vector of the CP Decomposition
+ * \param factors_T array of transposed factor matrices
+ * \return the reconstruction error
+ */
 template <int order, typename DType>
 inline DType CPDecompReconstructionError
   (const Tensor<cpu, order, DType> &t,
   const Tensor<cpu, 1, DType> &eigvals,
   const std::vector<Tensor<cpu, 2, DType> > &factors_T);
 
+/*!
+ * \brief Randomly initialise the transposed factor matrices for the CP Decomposition
+ *
+ * All factor matrices will be filled with random numbers from the standard Gaussian distribution. Optionally they could be orthogonalised.
+ * This function is called by CPDecomp().
+ *
+ * \param factors_T array of transposed factor matrices to be initialised
+ * \param orthonormal whether to orthogonalise the factor matrices
+ * \param generator C++ random generator from <random>
+ * \return 0 for success, non-zero otherwise
+ */
 template <typename RandomEngine, typename DType>
 inline int CPDecompInitFactors
   (std::vector<Tensor<cpu, 2, DType> > factors_T,
   bool orthonormal,
-  RandomEngine &generator);
+  RandomEngine *generator);
 
+/*!
+ * \brief Update one factor matrix during one step of the ALS algorithm for the CP Decomposition
+ *
+ * Given the unfolded tensor and all the remaining factor matrices, this function solves a least-squre problem
+ *
+ *    min \lVert unfolding - [I; factors] \rVert_2
+ *
+ * then normalise all the columns of the newly updated factor matrix and record the norms of the columns into eigvals.
+ *
+ * This function is called by CPDecomp().
+ *
+ * \param eigvals eigen-value vector to be updated
+ * \param unfolding unfolded tensor along the specified mode
+ * \param mode the dimension for which we update the factor matrix
+ * \param kr_prod stores the intermediate Khatri-Rao products
+ * \param hd_prod stores the intermediate Hadamard product
+ * \param stream calculation stream (for GPU)
+ * \return 0 if success, non-zero otherwise
+ */
 template <typename DType>
 inline int CPDecompUpdate
   (Tensor<cpu, 1, DType> eigvals,
@@ -53,6 +94,22 @@ inline int CPDecompUpdate
   TensorContainer<cpu, 2, DType> hd_prod,
   Stream<cpu> *stream = NULL);
 
+/*!
+ * \brief Evaluates if the ALS algorithm has converged
+ *
+ * Evaluates if across two steps t, t+1 of the ALS algorithm, the norm of the change of a vector is less than or equal to eps times the norm of the vector at time t,
+ *
+ *   \lVert v^{(t+1)}-v^{(t)} \rVert_2 \le eps \lVert v^{(t)} \rVert_2,
+ *
+ * for the eigen-value vector and all the columns of all the factor matrices.
+ *
+ * \param eigvals eigen-value vector at time t+1
+ * \param factors_T transposed factor matrices at time t+1
+ * \param oldEigvals eigen-value vector at time t
+ * \param oldFactors_T transposed factor matrices at time t+1
+ * \param eps relative error threshold
+ * \return if all vectors converged
+ */
 template <typename DType>
 inline bool CPDecompConverged
   (const Tensor<cpu, 1, DType> &eigvals,
@@ -61,18 +118,48 @@ inline bool CPDecompConverged
   const std::vector<Tensor<cpu, 2, DType> > &oldFactors_T,
   DType eps);
 
+/*!
+ * \brief Sort the eigenvalue vector in descending order and re-arrange the columns in factor matrices accordingly
+ *
+ * \param eigvals eigenvalue vector obtained from CPDecomp
+ * \param factors_T transposed factor matrices obtained from CPDecomp
+ */
+template <typename DType>
+inline void CPDecompSortResults
+  (Tensor<cpu, 1, DType> eigvals,
+  std::vector<Tensor<cpu, 2, DType> > factors_T);
+
+/*!
+ * \brief Perform CANDECOMP/PARAFAC Decomposition on CPU
+ *
+ * This function performs CP Decompsition for input tensor of arbitrary order and shape on CPU. At success, it populates `eigvals` and `factors_T` with the eigen-value vector sorted in descending order and transposed factor matrices along each dimension, and returns 0; otherwise returns 1.
+ *
+ * Internally it uses an iterative algorithm with random initial matrices and may not necessarily converge to the same solution from run to run.
+ *
+ * \param eigvals eigen-value vector to be populated
+ * \param factors_T array of the transposed factor matrices to be populated
+ * \param in input tensor
+ * \param k rank for the CP Decomposition
+ * \param eps relative error thershold for checking convergence, default: 1e-6
+ * \param max_iter maximum iterations for each run of the ALS algorithm, default: 100
+ * \param restarts number of runs for the ALS algorithm, default: 5
+ * \param init_orthonormal_factors whether to initialise the factor matrices with orthonormal columns, default: true
+ * \param stream calculation stream (for GPU)
+ * \return 0 if success, 1 otherwise
+ */
 template <int order, typename DType>
 inline int CPDecomp
   (Tensor<cpu, 1, DType> eigvals,
   std::vector<Tensor<cpu, 2, DType> > factors_T,
   const Tensor<cpu, order, DType> &in,
   int k,
-  DType eps = 1e-6,
+  DType eps = 1e-3,
   int max_iter = 100,
-  int restarts = 5,
+  int restarts = 10,
   bool init_orthonormal_factors = true,
   Stream<cpu> *stream = NULL) {
   CHECK_GE(order, 2);
+  CHECK_GE(k, 1);
 
   CHECK_EQ((int) eigvals.size(0), k);
   CHECK_EQ((int) factors_T.size(), order);
@@ -86,8 +173,9 @@ inline int CPDecomp
   // Return value
   int status;
 
-  // in is unfolded mode-1 tensor
-  // Transform it into mode-2, mode-3 tensors
+  // Unfold the input tensor along specified mode
+  // unfoldings[id_mode] is a matrix of shape
+  // (in.size(id_mode), tensor_size / in.size(id_mode))
   std::vector<Tensor<cpu, 2, DType> > unfoldings;
   const int tensor_size = in.shape_.Size();
   for (int id_mode = 0; id_mode < order; ++id_mode) {
@@ -153,10 +241,12 @@ inline int CPDecomp
   DType currReconstructionError;
   for (int id_run = 0; id_run < restarts; ++id_run) {
     // Randomly initialise factor matrices
-    status = CPDecompInitFactors(currFactors_T, 
-      init_orthonormal_factors, generator);
+    status = CPDecompInitFactors(currFactors_T,
+      init_orthonormal_factors, &generator);
     if (status != 0) {
+#if DEBUG
       std::cerr << "Init error\n";
+#endif
       continue;
     }
 
@@ -177,7 +267,9 @@ inline int CPDecomp
           kr_prod_T[id_mode], hd_prod,
           stream);
         if (status != 0) {
+#if DEBUG
           std::cerr << "Iter " << iter << " Update error\n";
+#endif
           break;
         }
       }
@@ -190,8 +282,10 @@ inline int CPDecomp
 
     currReconstructionError = CPDecompReconstructionError
       (in, currEigvals, currFactors_T);
+#if DEBUG
     print1DTensor_(currEigvals);
     std::cerr << "Reconstruction error: " << currReconstructionError << "\n";
+#endif
     if (currReconstructionError < reconstructionError) {
       Copy(eigvals, currEigvals);
       for (int id_mode = 0; id_mode < order; ++id_mode)
@@ -210,10 +304,12 @@ inline int CPDecomp
   FreeSpace(&currEigvals);
   FreeSpace(&oldEigvals);
 
-  if (reconstructionError < std::numeric_limits<DType>::infinity())
+  if (reconstructionError < std::numeric_limits<DType>::infinity()) {
+    CPDecompSortResults(eigvals, factors_T);
     return 0;
-  else
+  } else {
     return 1;
+  }
 }
 
 template <int order, typename DType>
@@ -229,7 +325,8 @@ inline DType CPDecompReconstructionError
   Shape<order> coord;
   DType sum_sq = 0, delta;
   DType reconstructedElement, c;
-  for (int flat_id = 0; flat_id < (int) t.shape_.Size(); ++flat_id) {
+  for (int flat_id = 0;
+      flat_id < static_cast<int>(t.shape_.Size()); ++flat_id) {
     coord = mxnet::op::broadcast::unravel(flat_id, t.shape_);
 
     reconstructedElement = 0;
@@ -251,11 +348,11 @@ inline DType CPDecompReconstructionError
 template <typename RandomEngine, typename DType>
 inline int CPDecompInitFactors
   (std::vector<Tensor<cpu, 2, DType> > factors_T,
-  bool orthonormal, 
-  RandomEngine &generator) {
+  bool orthonormal,
+  RandomEngine *generator) {
   int status = 0;
 
-  int order = (int) factors_T.size();
+  int order = static_cast<int>(factors_T.size());
   int k = factors_T[0].size(0);
   for (const auto &mat : factors_T)
     CHECK_EQ((int) mat.size(0), k);
@@ -265,13 +362,13 @@ inline int CPDecompInitFactors
 
   for (int id_mode = 0; id_mode < order; ++id_mode) {
     for (int i = 0; i < k; ++i) {
-      for (int j = 0; j < (int) factors_T[id_mode].size(1); ++j)
-        factors_T[id_mode][i][j] = normal(generator);
+      for (int j = 0; j < static_cast<int>(factors_T[id_mode].size(1)); ++j)
+        factors_T[id_mode][i][j] = normal(*generator);
     }
 
     if (orthonormal) {
-      status = orgqr<cpu, DType>((int) factors_T[id_mode].size(1), k, k,
-          factors_T[id_mode].dptr_, factors_T[id_mode].stride_);
+      status = orgqr<cpu, DType>(static_cast<int>(factors_T[id_mode].size(1)),
+          k, k, factors_T[id_mode].dptr_, factors_T[id_mode].stride_);
       if (status != 0)
         return status;
     }
@@ -289,11 +386,11 @@ inline int CPDecompUpdate
   std::vector<TensorContainer<cpu, 2, DType> > kr_prod_T,
   TensorContainer<cpu, 2, DType> hd_prod,
   Stream<cpu> *stream) {
-  int order = (int) factors_T.size();
+  int order = static_cast<int>(factors_T.size());
   int k = eigvals.size(0);
 
   for (auto &m : factors_T)
-    CHECK_EQ((int) m.size(0), k);
+    CHECK_EQ(static_cast<int>(m.size(0)), k);
 
   // Return value
   int info;
@@ -375,7 +472,7 @@ inline bool CPDecompConverged
     return false;
 
   int d;
-  for (int p = 0; p < (int) factors_T.size(); ++p) {
+  for (int p = 0; p < static_cast<int>(factors_T.size()); ++p) {
     d = factors_T[p].size(1);
     TensorContainer<cpu, 2, DType> factors_diff(factors_T[p].shape_);
     factors_diff = factors_T[p] - oldFactors_T[p];
@@ -390,18 +487,65 @@ inline bool CPDecompConverged
   return true;
 }
 
+// Argsort 1D Tensor in descending order
+template <typename DType>
+std::vector<int> sort_indexes(const Tensor<cpu, 1, DType> &v) {
+  // initialize original index locations
+  std::vector<int> idx(v.size(0));
+  std::iota(idx.begin(), idx.end(), 0);
+
+  // sort indexes based on comparing values in v
+  sort(idx.begin(), idx.end(),
+       [&v](int i1, int i2) { return v[i1] > v[i2]; });
+
+  return idx;
+}
+
+template <typename DType>
+inline void CPDecompSortResults
+  (Tensor<cpu, 1, DType> eigvals,
+  std::vector<Tensor<cpu, 2, DType> > factors_T) {
+  int order = factors_T.size();
+  int k = eigvals.size(0);
+
+  TensorContainer<cpu, 1, DType> eigvals_(eigvals.shape_);
+  std::vector<TensorContainer<cpu, 2, DType> > factors_T_;
+
+  Copy(eigvals_, eigvals);
+  for (int id_mode = 0; id_mode < order; ++id_mode) {
+    factors_T_.emplace_back(factors_T[id_mode].shape_);
+    Copy(factors_T_[id_mode], factors_T[id_mode]);
+  }
+
+  std::vector<int> idx = sort_indexes(eigvals);
+
+  for (int i = 0; i < k; ++i) {
+    eigvals_[i] = eigvals[idx[i]];
+    for (int id_mode = 0; id_mode < order; ++id_mode) {
+      for (int j = 0; j < static_cast<int>(factors_T[id_mode].size(1)); ++j)
+        factors_T_[id_mode][i][j] = factors_T[id_mode][idx[i]][j];
+    }
+  }
+
+  Copy(eigvals, eigvals_);
+  for (int id_mode = 0; id_mode < order; ++id_mode) {
+    Copy(factors_T[id_mode], factors_T_[id_mode]);
+  }
+}
+
+
 
 template <typename DType>
 inline void print1DTensor_(const Tensor<cpu, 1, DType> &t) {
-  for (int i = 0; i < (int) t.size(0); ++i)
+  for (int i = 0; i < static_cast<int>(t.size(0)); ++i)
     std::cerr << t[i] << " ";
   std::cerr << "\n";
 }
 
 template <typename DType>
 inline void print2DTensor_(const Tensor<cpu, 2, DType> &t) {
-  for (int i = 0; i < (int) t.size(0); ++i) {
-    for (int j = 0; j < (int) t.size(1); ++j)
+  for (int i = 0; i < static_cast<int>(t.size(0)); ++i) {
+    for (int j = 0; j < static_cast<int>(t.size(1)); ++j)
       std::cerr << t[i][j] << " ";
     std::cerr << "\n";
   }
@@ -410,4 +554,4 @@ inline void print2DTensor_(const Tensor<cpu, 2, DType> &t) {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_CP_DECOMP_H_
+#endif  // MXNET_OPERATOR_CONTRIB_TENSOR_CP_DECOMP_H_
