@@ -246,7 +246,7 @@ class PoolingProp : public OperatorProperty {
         oshape[3] = 1;
         oshape[4] = 1;
       } else {
-        if (param_.pool_type == pool_enum::kValid) {
+        if (param_.pooling_convention == pool_enum::kValid) {
           oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
                               param_.stride[0];
           oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
