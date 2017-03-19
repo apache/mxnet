@@ -6,7 +6,7 @@ the predictions from the trained net.
 =#
 using MXNet
 using Distributions
-using PyPlot
+using Plots
 
 # data generating process
 generate_inputs(mean, var, size) = rand(MvNormal(mean, var), size)
@@ -56,7 +56,4 @@ mx.fit(model, optimizer, eval_metric=mx.MSE(), trainprovider, eval_data=evalprov
 # obtain predictions
 plotprovider = mx.ArrayDataProvider(:data => ValidationInput, :label => ValidationOutput)
 fit = mx.predict(model, plotprovider)
-plot(ValidationOutput,fit',".")
-xlabel("true")
-ylabel("predicted")
-title("outputs: true versus predicted. 45º line is what we hope for")
+scatter(ValidationOutput,fit',w = 3, xlabel="true", ylabel="predicted", title="45º line is what we hope for", show=true)
