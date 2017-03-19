@@ -9,19 +9,6 @@
 namespace mxnet {
 namespace op {
 
-#define CUDA_KERNEL_LOOP(i, n) \
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
-      i < (n); \
-      i += blockDim.x * gridDim.x)
-
-/*!
- * \brief Get the number of blocks for cuda kernel given N
- */
-inline int cuda_get_num_blocks(const int N) {
-  using namespace mshadow::cuda;
-  return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
-}
-
 template <typename DType>
 __global__ void pool_max_2d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int channels, const int height, const int width,
@@ -51,6 +38,50 @@ __global__ void pool_max_2d_gpu_kernel(const int nthreads, const DType* in_data,
         const DType in_val = in_slice[in_index];
         if (in_val > max_val) {
           max_val = in_val;
+        }
+      }
+    }
+    KERNEL_ASSIGN(out_data[index], req_type, max_val);
+  }
+}
+
+template <typename DType>
+__global__ void pool_max_3d_gpu_kernel(const int nthreads, const DType* in_data, const int channels,
+                                       const int depth, const int height, const int width,
+                                       const int pooled_depth, const int pooled_height,
+                                       const int pooled_width, const int kernel_d,
+                                       const int kernel_h, const int kernel_w, const int stride_d,
+                                       const int stride_h, const int stride_w, const int pad_d,
+                                       const int pad_h, const int pad_w, OpReqType req_type,
+                                       DType* out_data) {
+  using mshadow::red::limits::MinValue;
+  // index is the output image's pixel index in NCDHW
+  CUDA_KERNEL_LOOP(index, nthreads) {
+    const int pw = index % pooled_width;
+    const int ph = (index / pooled_width) % pooled_height;
+    const int pd = (index / pooled_width / pooled_height) % pooled_depth;
+    const int c = (index / pooled_width / pooled_height / pooled_depth) % channels;
+    const int n = index / pooled_width / pooled_height / pooled_depth / channels;
+    int dstart = pd * stride_d - pad_d;
+    int hstart = ph * stride_h - pad_h;
+    int wstart = pw * stride_w - pad_w;
+    const int dend = min(dstart + kernel_d, depth);
+    const int hend = min(hstart + kernel_h, height);
+    const int wend = min(wstart + kernel_w, width);
+    dstart = max(dstart, 0);
+    hstart = max(hstart, 0);
+    wstart = max(wstart, 0);
+    const DType* in_slice =
+        in_data + (n * channels + c) * depth * height * width;
+    DType max_val = MinValue<DType>();
+    for (int d = dstart; d < dend; ++d) {
+      for (int h = hstart; h < hend; ++h) {
+        for (int w = wstart; w < wend; ++w) {
+          const int in_index = (d * height + h) * width + w;
+          const DType in_val = in_slice[in_index];
+          if (in_val > max_val) {
+            max_val = in_val;
+          }
         }
       }
     }
@@ -142,6 +173,66 @@ __global__ void unpool_max_2d_gpu_kernel(const int nthreads, const DType* out_gr
   }
 }
 
+template <typename DType>
+__global__ void unpool_max_3d_gpu_kernel(const int nthreads, const DType* out_grad,
+                                         const DType* in_data, const DType* out_data,
+                                         const int channels, const int depth, const int height,
+                                         const int width, const int pooled_depth,
+                                         const int pooled_height, const int pooled_width,
+                                         const int kernel_d, const int kernel_h,
+                                         const int kernel_w, const int stride_d,
+                                         const int stride_h, const int stride_w, const int pad_d,
+                                         const int pad_h, const int pad_w,
+                                         DType* in_grad) {
+  // index is the output image's pixel index in NCDHW
+  // the order has to be consistent with pooling max
+  // to avoid adding out_grad to the wrong in_grad
+  // in the case where there are multiple max pixels
+  // covered by a kernel window
+  CUDA_KERNEL_LOOP(index, nthreads) {
+    const int pw = index % pooled_width;
+    const int ph = (index / pooled_width) % pooled_height;
+    const int pd = (index / pooled_width / pooled_height) % pooled_depth;
+    const int c = (index / pooled_width / pooled_height / pooled_depth) % channels;
+    const int n = index / pooled_width / pooled_height / pooled_depth / channels;
+    int dstart = pd * stride_d - pad_d;
+    int hstart = ph * stride_h - pad_h;
+    int wstart = pw * stride_w - pad_w;
+    const int dend = min(dstart + kernel_d, depth);
+    const int hend = min(hstart + kernel_h, height);
+    const int wend = min(wstart + kernel_w, width);
+    dstart = max(dstart, 0);
+    hstart = max(hstart, 0);
+    wstart = max(wstart, 0);
+    // in data/grad offset batch and channel dims
+    int in_offset = (n * channels + c) * depth * height * width;
+    const DType* in_data_slice = in_data + in_offset;
+    int max_idx = -1;
+    DType max_val = out_data[index];
+    bool found = false;
+    for (int d = dstart; d < dend; ++d) {
+      for (int h = hstart; h < hend; ++h) {
+        for (int w = wstart; w < wend; ++w) {
+          int idx = (d * height + h) * width + w;
+          if (in_data_slice[idx] == max_val) {
+            max_idx = idx;
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (found) break;
+    }
+
+    // In the case where pad > 0 and kernel = 1, for example,
+    // max_idx can be -1 reaching this step.
+    if (max_idx >= 0) {
+      atomicAdd(&in_grad[in_offset+max_idx], out_grad[index]);
+    }
+  }
+}
+
 template<typename DType>
 __global__ void unpool_sum_2d_gpu_kernel(const int nthreads, const DType* out_grad,
                                          const int channels, const int height, const int width,
@@ -187,6 +278,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
                  const TShape& stride, const int pool_type, OpReqType req_type,
                  DType* out_data) {
+  using namespace mxnet_op;
   if (kernel.ndim() == 2) {
     if (pool_enum::kMaxPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
@@ -215,6 +307,40 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
+  } else if (kernel.ndim() == 3) {
+    if (pool_enum::kMaxPooling == pool_type) {
+      // NOLINT_NEXT_LINE(whitespace/operators)
+      pool_max_3d_gpu_kernel<<<cuda_get_num_blocks(oshape.Size()), mshadow::cuda::kBaseThreadNum,
+                               0, mshadow::Stream<gpu>::GetStream(s)>>>(
+                                   oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
+                                   ishape[4], oshape[2], oshape[3], oshape[4],
+                                   kernel[0], kernel[1], kernel[2], stride[0],
+                                   stride[1], stride[2], pad[0], pad[1], pad[2], req_type,
+                                   out_data);
+      MSHADOW_CUDA_POST_KERNEL_CHECK(pool_max_2d_gpu_kernel);
+    } else if (pool_enum::kAvgPooling == pool_type) {
+      // NOLINT_NEXT_LINE(whitespace/operators)
+#if 0
+      pool_sum_3d_gpu_kernel<<<cuda_get_num_blocks(oshape.Size()), mshadow::cuda::kBaseThreadNum,
+                               0, mshadow::Stream<gpu>::GetStream(s)>>>(
+                                   oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
+                                   oshape[2], oshape[3], kernel[0], kernel[1],
+                                   stride[0], stride[1], pad[0], pad[1], req_type, out_data, true);
+      MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_2d_gpu_kernel);
+#endif
+    } else if (pool_enum::kSumPooling == pool_type) {
+      // NOLINT_NEXT_LINE(whitespace/operators)
+#if 0
+      pool_sum_3d_gpu_kernel<<<cuda_get_num_blocks(oshape.Size()), mshadow::cuda::kBaseThreadNum,
+                               0, mshadow::Stream<gpu>::GetStream(s)>>>(
+                                   oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
+                                   oshape[2], oshape[3], kernel[0], kernel[1],
+                                   stride[0], stride[1], pad[0], pad[1], req_type, out_data);
+      MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_2d_gpu_kernel);
+#endif
+    } else {
+      LOG(FATAL) << "Unknown pooling type " << pool_type;
+    }
   }
 }
 
@@ -227,6 +353,7 @@ inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* 
   if (mxnet::kAddTo != req_type) {
     mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(s, ishape.Size(), in_grad);
   }
+  using namespace mxnet_op;
   if (kernel.ndim() == 2) {
     if (pool_enum::kMaxPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
@@ -258,7 +385,44 @@ inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* 
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
+  } else if (kernel.ndim() == 3) {
+    if (pool_enum::kMaxPooling == pool_type) {
+      // NOLINT_NEXT_LINE(whitespace/operators)
+      unpool_max_3d_gpu_kernel<<<cuda_get_num_blocks(oshape.Size()), mshadow::cuda::kBaseThreadNum,
+                                 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+                                     oshape.Size(), out_grad, in_data, out_data,
+                                     ishape[1], ishape[2], ishape[3], ishape[4],
+                                     oshape[2], oshape[3], oshape[4], kernel[0], kernel[1],
+                                     kernel[2], stride[0], stride[1], stride[2],
+                                     pad[0], pad[1], pad[2], in_grad);
+      MSHADOW_CUDA_POST_KERNEL_CHECK(unpool_max_2d_gpu_kernel);
+    } else if (pool_enum::kAvgPooling == pool_type) {
+      // NOLINT_NEXT_LINE(whitespace/operators)
+#if 0
+      unpool_sum_3d_gpu_kernel<<<cuda_get_num_blocks(ishape.Size()), mshadow::cuda::kBaseThreadNum,
+                                 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+                                     ishape.Size(), out_grad,
+                                     ishape[1], ishape[2], ishape[3],
+                                     oshape[2], oshape[3], kernel[0], kernel[1],
+                                     stride[0], stride[1], pad[0], pad[1], in_grad, true);
+      MSHADOW_CUDA_POST_KERNEL_CHECK(unpool_sum_2d_gpu_kernel);
+#endif
+    } else if (pool_enum::kSumPooling == pool_type) {
+      // NOLINT_NEXT_LINE(whitespace/operators)
+#if 0
+      unpool_sum_3d_gpu_kernel<<<cuda_get_num_blocks(ishape.Size()), mshadow::cuda::kBaseThreadNum,
+                                 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+                                     ishape.Size(), out_grad,
+                                     ishape[1], ishape[2], ishape[3],
+                                     oshape[2], oshape[3], kernel[0], kernel[1],
+                                     stride[0], stride[1], pad[0], pad[1], in_grad);
+      MSHADOW_CUDA_POST_KERNEL_CHECK(unpool_sum_2d_gpu_kernel);
+#endif
+    } else {
+      LOG(FATAL) << "Unknown pooling type " << pool_type;
+    }
   }
+
 }
 
 }  // namespace op

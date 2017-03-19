@@ -23,6 +23,23 @@ using std::isnan;
 #endif
 
 
+#ifdef __CUDACC__
+#define CUDA_KERNEL_LOOP(i, n) \
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
+      i < (n); \
+      i += blockDim.x * gridDim.x)
+
+
+/*!
+ * \brief Get the number of blocks for cuda kernel given N
+ */
+inline int cuda_get_num_blocks(const int N) {
+  using namespace mshadow::cuda;
+  return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+}
+#endif  // __CUDACC__
+
+
 /*! \brief operator request type switch */
 #define MXNET_ASSIGN_REQ_SWITCH(req, ReqType, ...)  \
   switch (req) {                                    \
