@@ -30,6 +30,7 @@ import scala.collection.immutable.ListMap
  * So this should be only used as a handy utility.
  */
 class SequentialModule extends BaseModule {
+
   private val logger = LoggerFactory.getLogger(classOf[SequentialModule])
 
   private val META_TAKE_LABELS = "take_labels"

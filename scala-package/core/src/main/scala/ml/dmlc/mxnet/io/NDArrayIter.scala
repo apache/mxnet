@@ -28,14 +28,12 @@ import scala.collection.immutable.ListMap
 /**
  * NDArrayIter object in mxnet. Taking NDArray to get dataiter.
  *
- * @author Zixuan Huang
- *
  * @param data NDArrayIter supports single or multiple data and label.
  * @param label Same as data, but is not fed to the model during testing.
  * @param dataBatchSize Batch Size
  * @param shuffle Whether to shuffle the data
  * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
- * @note
+ *
  * This iterator will pad, discard or roll over the last batch if
  * the size of data does not match batch_size. Roll over is intended
  * for training and can cause problems if used for prediction.
