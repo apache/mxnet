@@ -29,6 +29,7 @@ __global__ void pool_max_2d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int kernel_h, const int kernel_w, const int stride_h,
                                        const int stride_w, const int pad_h, const int pad_w,
                                        OpReqType req_type, DType* out_data) {
+  using mshadow::red::limits::MinValue;
   // index is the output image's pixel index in NCHW
   CUDA_KERNEL_LOOP(index, nthreads) {
     const int pw = index % pooled_width;
@@ -43,7 +44,7 @@ __global__ void pool_max_2d_gpu_kernel(const int nthreads, const DType* in_data,
     wstart = max(wstart, 0);
     const DType* in_slice =
         in_data + (n * channels + c) * height * width;
-    DType max_val = in_slice[hstart * width + wstart];
+    DType max_val = MinValue<DType>();
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
         const int in_index = h * width + w;
@@ -119,7 +120,7 @@ __global__ void unpool_max_2d_gpu_kernel(const int nthreads, const DType* out_gr
     // in data/grad offset batch and channel dims
     int in_offset = (n * channels + c) * height * width;
     const DType* in_data_slice = in_data + in_offset;
-    int max_idx = hstart * width + wstart;
+    int max_idx = -1;
     DType max_val = out_data[index];
     bool found = false;
     for (int h = hstart; h < hend; ++h) {
@@ -133,7 +134,11 @@ __global__ void unpool_max_2d_gpu_kernel(const int nthreads, const DType* out_gr
       if (found) break;
     }
 
-    atomicAdd(&in_grad[in_offset+max_idx], out_grad[index]);
+    // In the case where pad > 0 and kernel = 1, for example,
+    // max_idx can be -1 reaching this step.
+    if (max_idx >= 0) {
+      atomicAdd(&in_grad[in_offset+max_idx], out_grad[index]);
+    }
   }
 }
 
