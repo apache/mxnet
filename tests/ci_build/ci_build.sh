@@ -2,7 +2,7 @@
 #
 # Execute command within a docker container
 #
-# Usage: ci_build.sh <CONTAINER_TYPE> [--dockerfile <DOCKERFILE_PATH>]
+# Usage: ci_build.sh <CONTAINER_TYPE> [--dockerfile <DOCKERFILE_PATH>] [-it]
 #                    <COMMAND>
 #
 # CONTAINER_TYPE: Type of the docker container used the run the build: e.g.,
@@ -30,6 +30,11 @@ if [[ "$1" == "--dockerfile" ]]; then
     echo "Using custom Dockerfile path: ${DOCKERFILE_PATH}"
     echo "Using custom docker build context path: ${DOCKER_CONTEXT_PATH}"
     shift 2
+fi
+
+if [[ "$1" == "-it" ]]; then
+    CI_DOCKER_EXTRA_PARAMS+=('-it')
+    shift 1
 fi
 
 if [[ ! -f "${DOCKERFILE_PATH}" ]]; then
@@ -81,6 +86,7 @@ DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | tr '[:upper:]' '[:lower:]')
 
 # Print arguments.
 echo "WORKSPACE: ${WORKSPACE}"
+echo "CI_DOCKER_EXTRA_PARAMS: ${CI_DOCKER_EXTRA_PARAMS[@]}"
 echo "COMMAND: ${COMMAND[@]}"
 echo "CONTAINER_TYPE: ${CONTAINER_TYPE}"
 echo "BUILD_TAG: ${BUILD_TAG}"
@@ -113,6 +119,7 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_UID=$(id -u)" \
     -e "CI_BUILD_GROUP=$(id -g -n)" \
     -e "CI_BUILD_GID=$(id -g)" \
-    "${DOCKER_IMG_NAME}" \
+    ${CI_DOCKER_EXTRA_PARAMS[@]} \
+    ${DOCKER_IMG_NAME} \
     tests/ci_build/with_the_same_user \
     ${COMMAND[@]}

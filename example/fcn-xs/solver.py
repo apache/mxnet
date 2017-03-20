@@ -92,7 +92,7 @@ class Solver(object):
                 self.exector.outputs[0].wait_to_read()
                 batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch, eval_metric=eval_metric)
                 batch_end_callback(batch_end_params)
-            if epoch_end_callback != None:
+            if epoch_end_callback is not None:
                 epoch_end_callback(epoch, self.symbol, self.arg_params, self.aux_params)
             name, value = eval_metric.get()
             logger.info("                     --->Epoch[%d] Train-%s=%f", epoch, name, value)
