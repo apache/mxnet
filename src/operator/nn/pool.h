@@ -2,33 +2,33 @@
  ******************* BEGIN Caffe Copyright Notice and Disclaimer ****************
  *
  * COPYRIGHT
- * 
+ *
  * All contributions by the University of California:
  * Copyright (c) 2014-2017 The Regents of the University of California (Regents)
  * All rights reserved.
- * 
+ *
  * All other contributions:
  * Copyright (c) 2014-2017, the respective contributors
  * All rights reserved.
- * 
+ *
  * Caffe uses a shared copyright model: each contributor holds copyright over
  * their contributions to Caffe. The project versioning records all such
  * contribution and copyright details. If a contributor wants to further mark
  * their specific copyright on a particular contribution, they should indicate
  * their copyright solely in the commit message of the change when it is
  * committed.
- * 
+ *
  * LICENSE
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met: 
- * 
+ * modification, are permitted provided that the following conditions are met:
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
- * list of conditions and the following disclaimer. 
+ * list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution. 
- * 
+ * and/or other materials provided with the distribution.
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -39,9 +39,9 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * CONTRIBUTION AGREEMENT
- * 
+ *
  * By contributing to the BVLC/caffe repository through pull-request, comment,
  * or otherwise, the contributor releases their content to the
  * license and copyright terms herein.
@@ -73,6 +73,10 @@ enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling};
 enum PoolingOpPadConventionType {kValid, kFull};
 }  // namespace pool_enum
 
+/*!
+ * \brief max pooling cpu function for 1-D images.
+ * Do not call this kernel directly. Use the interface pool().
+ */
 template<typename DType>
 inline void pool_max_1d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
@@ -105,6 +109,10 @@ inline void pool_max_1d_cpu(const DType* in_data, const TShape& ishape, const TS
   }
 }
 
+/*!
+ * \brief max pooling cpu function for 2-D images.
+ * Do not call this kernel directly. Use the interface pool().
+ */
 template<typename DType>
 inline void pool_max_2d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
@@ -146,6 +154,10 @@ inline void pool_max_2d_cpu(const DType* in_data, const TShape& ishape, const TS
   }
 }
 
+/*!
+ * \brief max pooling cpu function for 3-D images.
+ * Do not call this kernel directly. Use the interface pool().
+ */
 template<typename DType>
 inline void pool_max_3d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
@@ -194,6 +206,10 @@ inline void pool_max_3d_cpu(const DType* in_data, const TShape& ishape, const TS
   }
 }
 
+/*!
+ * \brief avg/sum pooling cpu function for 1-D images.
+ * Do not call this kernel directly. Use the interface pool().
+ */
 template<typename DType>
 inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
@@ -225,6 +241,10 @@ inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TS
   }
 }
 
+/*!
+ * \brief avg/sum pooling cpu function for 2-D images.
+ * Do not call this kernel directly. Use the interface pool().
+ */
 template<typename DType>
 inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
@@ -264,6 +284,10 @@ inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TS
   }
 }
 
+/*!
+ * \brief avg/sum pooling cpu function for 3-D images.
+ * Do not call this kernel directly. Use the interface pool().
+ */
 template<typename DType>
 inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
@@ -312,6 +336,10 @@ inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TS
   }
 }
 
+/*!
+ * \brief max unpooling cpu function for 1-D images.
+ * Do not call this kernel directly. Use the interface unpool().
+ */
 template<typename DType>
 inline void unpool_max_1d_cpu(const DType* out_grad, const DType* in_data,
                               const DType* out_data, const TShape& ishape,
@@ -352,6 +380,10 @@ inline void unpool_max_1d_cpu(const DType* out_grad, const DType* in_data,
   }
 }
 
+/*!
+ * \brief max unpooling cpu function for 2-D images.
+ * Do not call this kernel directly. Use the interface unpool().
+ */
 template<typename DType>
 inline void unpool_max_2d_cpu(const DType* out_grad, const DType* in_data,
                               const DType* out_data, const TShape& ishape,
@@ -404,6 +436,10 @@ inline void unpool_max_2d_cpu(const DType* out_grad, const DType* in_data,
   }
 }
 
+/*!
+ * \brief max unpooling cpu function for 3-D images.
+ * Do not call this kernel directly. Use the interface unpool().
+ */
 template<typename DType>
 inline void unpool_max_3d_cpu(const DType* out_grad, const DType* in_data,
                               const DType* out_data, const TShape& ishape,
@@ -464,6 +500,10 @@ inline void unpool_max_3d_cpu(const DType* out_grad, const DType* in_data,
   }
 }
 
+/*!
+ * \brief avg/sum unpooling cpu function for 1-D images.
+ * Do not call this kernel directly. Use the interface unpool().
+ */
 template<typename DType>
 inline void unpool_sum_1d_cpu(const DType* out_grad, const TShape& ishape,
                               const TShape& oshape, const TShape& kernel,
@@ -497,6 +537,10 @@ inline void unpool_sum_1d_cpu(const DType* out_grad, const TShape& ishape,
   }
 }
 
+/*!
+ * \brief avg/sum unpooling cpu function for 2-D images.
+ * Do not call this kernel directly. Use the interface unpool().
+ */
 template<typename DType>
 inline void unpool_sum_2d_cpu(const DType* out_grad, const TShape& ishape,
                               const TShape& oshape, const TShape& kernel,
@@ -539,6 +583,10 @@ inline void unpool_sum_2d_cpu(const DType* out_grad, const TShape& ishape,
   }
 }
 
+/*!
+ * \brief avg/sum unpooling cpu function for 3-D images.
+ * Do not call this kernel directly. Use the interface unpool().
+ */
 template<typename DType>
 inline void unpool_sum_3d_cpu(const DType* out_grad, const TShape& ishape,
                               const TShape& oshape, const TShape& kernel,
@@ -589,6 +637,19 @@ inline void unpool_sum_3d_cpu(const DType* out_grad, const TShape& ishape,
   }
 }
 
+/*!
+ * \brief This function serves as an interface for 1/2/3-D pooling operations.
+ * \param s context stream defining the device in use is cpu
+ * \param in_data pointer of the input tensor data in the format of NCW, NCHW, or NCDHW
+ * \param ishape input tensor shape
+ * \param oshape output tensor shape
+ * \param kernel kernel shape
+ * \param pad pad shape
+ * \param stride stride shape
+ * \param pool_type supported pooling type: max, avg, sum
+ * \param req_type operator request type: kNullOp, kNullWriteInplace, kNullWriteTo, kNullAddTo
+ * \param out_data pointer of the output tensor data in the format of NCW, NCHW, or NCDHW
+ */
 template<typename DType>
 inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& ishape,
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
@@ -629,6 +690,21 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
   }
 }
 
+/*!
+ * \brief This function serves as an interface for 1/2/3-D unpooling operations.
+ * \param s context stream defining the device in use is cpu
+ * \param out_grad pointer of the gradient of operator's output tensor
+ * \param in_data pointer of the input tensor in the format of NCW, NCHW, or NCDHW
+ * \param out_data pointer of the output tensor in the format of NCW, NCHW, or NCDHW
+ * \param ishape input tensor shape
+ * \param oshape output tensor shape
+ * \param kernel kernel shape
+ * \param pad pad shape
+ * \param stride stride shape
+ * \param pool_type supported pooling type: max, avg, sum
+ * \param req_type operator request type: kNullOp, kNullWriteInplace, kNullWriteTo, kNullAddTo
+ * \param in_grad pointer of the gradient of the operator's input tensor
+ */
 template<typename DType>
 inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* in_data,
                    const DType* out_data, const TShape& ishape, const TShape& oshape,
