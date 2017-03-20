@@ -15,7 +15,7 @@
 #include <string>
 #include <utility>
 #include <valarray>
-#include "./operator_common.h"
+#include <operator/operator_common.h>
 
 namespace mxnet {
 namespace op {

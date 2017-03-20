@@ -4,8 +4,8 @@
  * \brief MultiBoxTarget op
  * \author Joshua Zhang
 */
-#include "./multibox_target-inl.h"
-#include "./mshadow_op.h"
+#include "multibox_target-inl.h"
+#include <operator/mshadow_op.h>
 #include <algorithm>
 
 namespace mshadow {

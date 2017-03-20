@@ -5,7 +5,7 @@
  * \author Joshua Zhang
 */
 
-#include "./multibox_prior-inl.h"
+#include "multibox_prior-inl.h"
 #include <mshadow/cuda/tensor_gpu-inl.cuh>
 
 #define MULTIBOXPRIOR_CUDA_CHECK(condition) \

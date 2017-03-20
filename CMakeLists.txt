@@ -8,18 +8,22 @@ endif()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
+include(CTest)
 include(cmake/Utils.cmake)
-mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
-mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
-mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
-mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
-mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" OFF)
-mxnet_option(USE_JEMALLOC "Build with Jemalloc support"   OFF)
-mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
-mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support" OFF)
+mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
+mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
+mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
+mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
+mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
+mxnet_option(USE_MKLML_MKL        "Use MKLML variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
+mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and found)" OFF)
+mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
+mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
+mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
+mxnet_option(USE_EXTRA_OPERATORS  "Compile in extra operators such as RCNN and SSD" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -58,12 +62,33 @@ set(mxnet_LINKER_LIBS_DEBUG "")
 set(mxnet_LINKER_LIBS_RELEASE "")
 
 if(USE_MKL_IF_AVAILABLE)
+  if(USE_MKL_EXPERIMENTAL AND NOT USE_MKLML_MKL)
+    message(ERROR " USE_MKL_EXPERIMENTAL can only be used when USE_MKL_EXPERIMENTAL is enabled")
+  endif()
   find_package(MKL)
   if(MKL_FOUND)
     include_directories(${MKL_INCLUDE_DIR})
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/operator/mkl)
+    add_definitions(-DMXNET_USE_MKL2017=1)
+    add_definitions(-DUSE_MKL=1)
+    add_definitions(-DCUB_MKL=1)
     list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
+    if(NOT MSVC)
+      list(APPEND mxnet_LINKER_LIBS dl)
+    endif()
+    if(USE_MKL_EXPERIMENTAL)
+      add_definitions(-DMKL_EXPERIMENTAL=1)
+    else()
+      add_definitions(-DMKL_EXPERIMENTAL=0)
+    endif()
+  else()
+    message(STATUS " MKL not found")
   endif()
 endif()
+
+# Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
   include(mshadow/cmake/mshadow.cmake)
@@ -86,6 +111,28 @@ include_directories("mshadow")
 include_directories("cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
+
+if(NOT MSVC)
+  set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
+  set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
+endif()
+
+if(UNIX)
+  find_library(RTLIB rt)
+  if(RTLIB)
+    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
+  endif()
+endif()
+
+# ---[ jemalloc
+if(USE_JEMALLOC)
+  find_package(JeMalloc)
+  if(JEMALLOC_FOUND)
+    add_definitions(-DUSE_JEMALLOC)
+    include_directories(${JEMALLOC_INCLUDE_DIRS})
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
+  endif()
+endif()
 
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
@@ -202,7 +249,7 @@ mxnet_source_group("Source\\nnvm"   GLOB "src/nnvm/*.cc")
 
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
-FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
+FILE(GLOB_RECURSE CUDA   "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
 
@@ -225,6 +272,19 @@ mxnet_source_group("mshadow\\Include"   GLOB "mshadow/mshadow/*.h")
 mxnet_source_group("mshadow\\Include\\cuda"   GLOB "mshadow/mshadow/cuda/*.h" "mshadow/mshadow/cuda/*.cuh")
 mxnet_source_group("mshadow\\Include\\extension"   GLOB "mshadow/mshadow/extension/*.h")
 mxnet_source_group("mshadow\\Include\\packet"   GLOB "mshadow/mshadow/packet/*.h")
+
+if(USE_EXTRA_OPERATORS)
+  file(GLOB_RECURSE EXTRASOURCE
+    "example/rcnn/operator/*.cc" "example/rcnn/operator/*.h"
+    "example/ssd/operator/*.cc" "example/ssd/operator/*.h"
+    )
+  file(GLOB_RECURSE EXTRA_CUDASOURCE
+    "example/rcnn/operator/*.cu" "example/rcnn/operator/*.cuh"
+    "example/ssd/operator/*.cu"  "example/ssd/operator/*.cuh"
+    )
+  list(APPEND SOURCE ${EXTRASOURCE})
+  list(APPEND CUDA ${EXTRA_CUDASOURCE})
+endif()
 
 FILE(GLOB_RECURSE MSHADOWSOURCE "mshadow/mshadow/*.h")
 FILE(GLOB_RECURSE MSHADOW_CUDASOURCE "mshadow/mshadow/*.cuh")
@@ -323,7 +383,6 @@ if(USE_CUDA)
         # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
         # so use the stub cuda driver shared library
         if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
-          message(STATUS " ADDING CUDA PATH TO LINK DIRS: ${CUDA_LIBRARY_PATH}/stubs")
           link_directories(${CUDA_LIBRARY_PATH}/stubs)
         endif()
       endif()

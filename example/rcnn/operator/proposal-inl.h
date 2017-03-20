@@ -17,9 +17,9 @@
 #include <ctime>
 #include <cstring>
 #include <iostream>
-#include "./operator_common.h"
-#include "./mshadow_op.h"
-#include "./native_op-inl.h"
+#include <operator/operator_common.h>
+#include <operator/mshadow_op.h>
+#include <operator/native_op-inl.h>
 
 // extend NumericalParam
 namespace mxnet {

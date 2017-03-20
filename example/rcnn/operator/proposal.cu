@@ -18,10 +18,10 @@
 #include <thrust/sort.h>
 #include <thrust/execution_policy.h>
 #include <thrust/functional.h>
-#include "./operator_common.h"
-#include "./mshadow_op.h"
-#include "./native_op-inl.h"
-#include "./proposal-inl.h"
+#include <operator/operator_common.h>
+#include <operator/mshadow_op.h>
+#include <operator/native_op-inl.h>
+#include "proposal-inl.h"
 
 #define DIVUP(m,n) ((m) / (n) + ((m) % (n) > 0))
 
