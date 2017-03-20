@@ -58,48 +58,18 @@ Remember to enable CUDA if you want to be able to train, since CPU training is
 insanely slow. Using CUDNN is optional.
 
 ### Try the demo
-* Download the pretrained model: [`ssd_300.zip`](https://dl.dropboxusercontent.com/u/39265872/ssd_300_vgg16_reduced_voc0712_trainval.zip), and extract to `model/` directory. (This model is converted from VGG_VOC0712_SSD_300x300_iter_60000.caffemodel provided by paper author).
-* Run
-```
-# cd /path/to/mxnet/example/ssd/
-# grab demo images
-python data/demo/download_demo_images.py
-# run demo.py with defaults
-python demo.py
-# play with examples:
-python demo.py --epoch 0 --images ./data/demo/dog.jpg --thresh 0.5
+* Download the pretrained model: mxnet/example/ssd/ssd_prepare.ipynb
+* Run : mxnet/example/ssd/ssd_predict.ipynb
 ```
 * Check `python demo.py --help` for more options.
+```
 
 ### Train the model
 This example only covers training on Pascal VOC dataset. Other datasets should
 be easily supported by adding subclass derived from class `Imdb` in `dataset/imdb.py`.
 See example of `dataset/pascal_voc.py` for details.
-* Download the converted pretrained `vgg16_reduced` model [here](https://dl.dropboxusercontent.com/u/39265872/vgg16_reduced.zip), unzip `.param` and `.json` files
-into `model/` directory by default.
-* Download the PASCAL VOC dataset, skip this step if you already have one.
-```
-cd /path/to/where_you_store_datasets/
-wget http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar
-wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
-wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar
-# Extract the data.
-tar -xvf VOCtrainval_11-May-2012.tar
-tar -xvf VOCtrainval_06-Nov-2007.tar
-tar -xvf VOCtest_06-Nov-2007.tar
-```
-* We are goint to use `trainval` set in VOC2007/2012 as a common strategy.
-The suggested directory structure is to store `VOC2007` and `VOC2012` directories
-in the same `VOCdevkit` folder.
-* Then link `VOCdevkit` folder to `data/VOCdevkit` by default:
-```
-ln -s /path/to/VOCdevkit /path/to/mxnet/example/ssd/data/VOCdevkit
-```
-Use hard link instead of copy could save us a bit disk space.
-* Start training:
-```
-# cd /path/to/mxnet/example/ssd
-python train.py
+* Download the converted pretrained `vgg16_reduced` model and PASCAL VOC dataset : mxnet/example/ssd/ssd_prepare.ipynb
+* Run : mxnet/example/ssd/ssd_train.ipynb
 ```
 * By default, this example will use `batch-size=32` and `learning_rate=0.001`.
 You might need to change the parameters a bit if you have different configurations.
