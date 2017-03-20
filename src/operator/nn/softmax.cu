@@ -4,7 +4,6 @@
  * \brief CPU Implementation of softmax
  */
 #include "./softmax-inl.h"
-#include "./softmax-inl.cuh"
 #include "../tensor/elemwise_unary_op.h"
 
 namespace mxnet {
