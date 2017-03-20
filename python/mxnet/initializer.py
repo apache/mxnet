@@ -445,27 +445,6 @@ class LSTMBias(Initializer):
 
 
 @register
-class FusedLSTMBias(Initializer):
-    """Initialize all bias of an FusedLSTM to 0.0 except for
-    the forget gate whose bias is set to custom value.
-
-    Parameters
-    ----------
-    forget_bias: float, bias for the forget gate.
-    Jozefowicz et al. 2015 recommends setting this to 1.0.
-    """
-    def __init__(self, forget_bias):
-        super(FusedLSTMBias, self).__init__(forget_bias=forget_bias)
-        self.forget_bias = forget_bias
-
-    def _init_weight(self, name, arr):
-        if name.endswith("f_bias"):
-            arr[:] = self.forget_bias
-        else:
-            arr[:] = 0.0
-
-
-@register
 class FusedRNN(Initializer):
 
     """Initialize parameters for fused rnn layers
@@ -506,8 +485,8 @@ class FusedRNN(Initializer):
             desc = InitDesc(name)
             # for lstm bias, we use a custom initializer
             # which adds a bias to the forget gate
-            if self._mode == 'lstm':
-                FusedLSTMBias(forget_bias=self._forget_bias)._init_weight(desc, args[name])
+            if self._mode == 'lstm' and name.endswith("f_bias"):
+                args[name][:] = self._forget_bias
             else:
                 self._init(desc, args[name])
 
