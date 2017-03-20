@@ -21,7 +21,7 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 
     Parameters
     ----------
-    _cls : DataDesc
+    cls : DataDesc
          The class
     name : str
          Data name
@@ -32,8 +32,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     layout : str, optional
          Data layout
     """
-    def __new__(_cls, name, shape, dtype=mx_real_t, layout='NCHW'):
-        ret = super(_cls, DataDesc).__new__(_cls, name, shape)
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
+        ret = super(cls, DataDesc).__new__(cls, name, shape)
         ret.dtype = dtype
         ret.layout = layout
         return ret
@@ -296,7 +296,8 @@ class PrefetchingIter(DataIter):
     >>> piter = mx.io.PrefetchingIter([iter1, iter2],
     ...                               rename_data=[{'data': 'data_1'}, {'data': 'data_2'}])
     >>> print(piter.provide_data)
-    [DataDesc[data_1,(25, 10L),<type 'numpy.float32'>,NCHW], DataDesc[data_2,(25, 10L),<type 'numpy.float32'>,NCHW]]
+    [DataDesc[data_1,(25, 10L),<type 'numpy.float32'>,NCHW],
+     DataDesc[data_2,(25, 10L),<type 'numpy.float32'>,NCHW]]
     """
     def __init__(self, iters, rename_data=None, rename_label=None):
         super(PrefetchingIter, self).__init__()
@@ -310,8 +311,8 @@ class PrefetchingIter(DataIter):
         self.batch_size = self.provide_data[0][1][0]
         self.data_ready = [threading.Event() for i in range(self.n_iter)]
         self.data_taken = [threading.Event() for i in range(self.n_iter)]
-        for e in self.data_taken:
-            e.set()
+        for i in self.data_taken:
+            i.set()
         self.started = True
         self.current_batch = [None for i in range(self.n_iter)]
         self.next_batch = [None for i in range(self.n_iter)]
@@ -335,8 +336,8 @@ class PrefetchingIter(DataIter):
 
     def __del__(self):
         self.started = False
-        for e in self.data_taken:
-            e.set()
+        for i in self.data_taken:
+            i.set()
         for thread in self.prefetch_threads:
             thread.join()
 
@@ -363,18 +364,18 @@ class PrefetchingIter(DataIter):
             ] for r, i in zip(self.rename_label, self.iters)], [])
 
     def reset(self):
-        for e in self.data_ready:
-            e.wait()
+        for i in self.data_ready:
+            i.wait()
         for i in self.iters:
             i.reset()
-        for e in self.data_ready:
-            e.clear()
-        for e in self.data_taken:
-            e.set()
+        for i in self.data_ready:
+            i.clear()
+        for i in self.data_taken:
+            i.set()
 
     def iter_next(self):
-        for e in self.data_ready:
-            e.wait()
+        for i in self.data_ready:
+            i.wait()
         if self.next_batch[0] is None:
             for i in self.next_batch:
                 assert i is None, "Number of entry mismatches between iterators"
@@ -389,10 +390,10 @@ class PrefetchingIter(DataIter):
                                            self.next_batch[0].index,
                                            provide_data=self.provide_data,
                                            provide_label=self.provide_label)
-            for e in self.data_ready:
-                e.clear()
-            for e in self.data_taken:
-                e.set()
+            for i in self.data_ready:
+                i.clear()
+            for i in self.data_taken:
+                i.set()
             return True
 
     def next(self):
@@ -676,11 +677,9 @@ def _make_io_iterator(handle):
 
     doc_str = ('%s\n\n' +
                '%s\n' +
-               'name : string, required.\n' +
-               '    Name of the resulting data iterator.\n\n' +
                'Returns\n' +
                '-------\n' +
-               'iterator: DataIter\n'+
+               'MXDataIter\n'+
                '    The result iterator.')
     doc_str = doc_str % (desc.value, param_str)
 
@@ -734,5 +733,4 @@ def _init_io_module():
         dataiter = _make_io_iterator(hdl)
         setattr(module_obj, dataiter.__name__, dataiter)
 
-# Initialize the io in startups
 _init_io_module()

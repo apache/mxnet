@@ -83,7 +83,10 @@ Then we can call `mod.fit(nd_iter, num_epoch=2)` to train `loss` by 2 epochs.
     image.ImageIter
 ```
 
-## Helper class
+## Helper classes and functions
+
+
+Data structures and other iterators provided in the ``mxnet.io`` packages.
 
 ```eval_rst
 .. autosummary::
@@ -96,6 +99,8 @@ Then we can call `mod.fit(nd_iter, num_epoch=2)` to train `loss` by 2 epochs.
     io.PrefetchingIter
     io.MXDataIter
 ```
+
+A list of image modification functions provided by ``mxnet.image``.
 
 ```eval_rst
 .. autosummary::
@@ -122,6 +127,8 @@ Then we can call `mod.fit(nd_iter, num_epoch=2)` to train `loss` by 2 epochs.
     image.CreateAugmenter
 ```
 
+Functions to read and write RecordIO files.
+
 ```eval_rst
 .. autosummary::
     :nosignatures:
@@ -134,7 +141,41 @@ Then we can call `mod.fit(nd_iter, num_epoch=2)` to train `loss` by 2 epochs.
 
 ## Develop a new iterator
 
+Writing a new data iterator in Python is straightforward. Most MXNet
+training/inference program accepts an iteratable object with ``provide_data``
+and ``provide_label`` properties.
+This [tutorial](http://mxnet.io/tutorials/python/data.html#data-iterators) how to
+write an iterator from scratch.
 
+The following example demonstrates how to combine
+multiple data iterators into a single one. It can be used for multiple
+modality training such as image captioning, in which images can be  read by
+``ImageRecordIter`` while documents by ``CSVIter``
+
+```python
+class MultiIter:
+    def __init__(self, iter_list):
+        self.iters = iter_list
+    def next(self):
+        batches = [i.next() for i in self.iters]
+        return DataBatch(data=[*b.data for b in batches],
+                         label=[*b.label for b in batches])
+    def reset(self):
+        for i in self.iters:
+            i.reset()
+    @property
+    def provide_data(self):
+        return [*i.provide_data for i in self.iters]
+    @property
+    def provide_label(self):
+        return [*i.provide_label for i in self.iters]
+
+iter = MultiIter([mx.io.ImageRecordIter('image.rec'), mx.io.CSVIter('txt.csv')])
+```
+
+Parsing and another pre-processing such as augmentation may be expensive.
+If performance is critical, we can implement a data iterator in C++. Refer to
+[src/io](https://github.com/dmlc/mxnet/tree/master/src/io) for examples.
 
 ## API Reference
 
