@@ -55,7 +55,7 @@ class Detector(object):
         list of detection results
         """
         num_images = det_iter._size
-        if not isinstance(DetIter, mx.io.PrefetchingIter): #TODO make the code compatible with PrefetchingIter
+        if not isinstance(DetIter, mx.io.PrefetchingIter):
              det_iter = mx.io.PrefetchingIter(det_iter)
         start = timer()
         detections = self.mod.predict(det_iter).asnumpy()
@@ -113,6 +113,7 @@ class Detector(object):
         import matplotlib.pyplot as plt
         import random
         plt.imshow(img)
+        plt.axis('off')
         height = img.shape[0]
         width = img.shape[1]
         colors = dict()

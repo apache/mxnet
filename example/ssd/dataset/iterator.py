@@ -1,6 +1,7 @@
 import mxnet as mx
 import numpy as np
 import cv2
+from collections import namedtuple
 from tools.rand_sampler import RandSampler
 
 class DetIter(mx.io.DataIter):
@@ -70,22 +71,19 @@ class DetIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        dict_data ={self._data.data[0][0]:self._data.data[0][1]}
-
-        data = [(k, v.shape) for k, v in dict_data.items()]
-        print(data)
+        dict_data =dict(self._data._asdict())
+        data = [(k, v[0].shape) for k, v in dict_data.items()]
         return data
 
     @property
     def provide_label(self):
         if self.is_train:
-            dict_label = {self._label.data[0][0]: self._label.data[0][1]}
-
-            label = [(k, v.shape) for k, v in dict_label.items()]
-            print(label)
-            return label
+            dict_data = dict(self._label._asdict())
+            label = [(k, v[0].shape) for k, v in dict_data.items()]
         else:
-            return []
+            label = []
+
+        return label
 
     def reset(self):
         self._current = 0
@@ -98,17 +96,10 @@ class DetIter(mx.io.DataIter):
     def next(self):
         if self.iter_next():
             self._get_batch()
-            try:
-                label = self._label['label']
-                label=[]
-            except:
-                label = [self._label.data[0][1]]
-
-            data_batch = mx.io.DataBatch(data=[self._data.data[0][1]],
-                                   label=label,
+            data_batch = mx.io.DataBatch(data=self._data.data,
+                                   label=self._label.label,
                                    pad=self.getpad(), index=self.getindex())
             self._current += self.batch_size
-            print('%%%%%%%%%%%%%%%%%%%%%% ITER Data Loaded %%%%%%%%%%%%%%%%%%%')
             return data_batch
         else:
             raise StopIteration
@@ -146,21 +137,14 @@ class DetIter(mx.io.DataIter):
             if self.is_train:
                 batch_label.append(label)
 
-        # if not isinstance(batch_data, list):
-        #     batch_data = [batch_data]
-        # batch_label=mx.nd.array(batch_label)
-        # if not isinstance(batch_label, list):
-        #     batch_label = [batch_label]
-        #self._data = {'data': batch_data}
-        self._data = mx.io.NDArrayIter({'data': batch_data})
+        _Batch = namedtuple('Batch', ['data'])
+        self._data = _Batch([batch_data])
+        _Batch_label = namedtuple('Batch', ['label'])
+
         if self.is_train:
-            #self._label = {'label': batch_label}
-
-            self._label = mx.io.NDArrayIter({'label': batch_label})
+            self._label = _Batch_label([mx.nd.array(batch_label)])
         else:
-            #self._label = {'label': None}
-
-            self._label = {'label': []}
+            self._label = _Batch_label([])
 
     def _data_augmentation(self, data, label):
         """
