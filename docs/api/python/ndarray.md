@@ -407,6 +407,8 @@ In the rest of this document, we first overview the methods provided by the
     BatchNorm
     Pooling
     SoftmaxOutput
+    softmax
+    log_softmax
 ```
 
 ### More
