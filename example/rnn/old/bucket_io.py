@@ -1,5 +1,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+from __future__ import print_function
 import sys
 sys.path.insert(0, "../../python")
 import numpy as np
@@ -225,7 +226,7 @@ class BucketSentenceIter(mx.io.DataIter):
             # Model parallelism 
             if self.model_parallel:
                 if self.data[i_bucket][:, idx].shape[1] == 0:
-                    print "WARNING: detected shape " + str(self.data[i_bucket][:, idx].shape)
+                    print("WARNING: detected shape " + str(self.data[i_bucket][:, idx].shape))
                     continue
                 data[:] = self.data[i_bucket][:, idx]
                 data_batch = ModelParallelBatch(data, self.buckets[i_bucket])

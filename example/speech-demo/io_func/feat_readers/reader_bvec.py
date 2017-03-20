@@ -1,3 +1,4 @@
+from __future__ import print_function
 import struct
 import array
 import numpy
@@ -18,8 +19,8 @@ class bvecReader(BaseReader):
             numSamples = header[0]['numSamples']
             dim        = header[0]['dim']
 
-            print 'Num samples = {}'.format(numSamples)
-            print 'dim = {}'.format(dim)
+            print('Num samples = {}'.format(numSamples))
+            print('dim = {}'.format(dim))
 
             dt = numpy.dtype([('sample',(numpy.float32,dim))]) 
             samples = numpy.fromfile(f,dt.newbyteorder('>'),count=numSamples)
