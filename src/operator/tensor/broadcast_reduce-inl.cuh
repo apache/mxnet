@@ -491,10 +491,13 @@ ReduceImplConfig ConfigureReduceImpl(const TBlob& small, const TBlob& big, const
                              (config.N <= config.par_reduce_lim);
     }
 
+    config.do_par_reduce = (config.N <= config.par_reduce_lim);
+
     config.Mnext = 1;
     if (config.do_par_reduce) {
-      config.kernel_1.blockDim.x =
-        (config.M >= nthread_par_reduce) ? nthread_par_reduce : config.warpSize;
+      config.kernel_1.blockDim.x = nthread_par_reduce;
+      // config.kernel_1.blockDim.x =
+      //   (config.M >= nthread_par_reduce) ? nthread_par_reduce : config.warpSize;
       config.kernel_1.blockDim.y = nthread_par_reduce / config.kernel_1.blockDim.x;
       // config.kernel_1.shMemSize =
       //   config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType);
