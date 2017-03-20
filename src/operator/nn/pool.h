@@ -16,6 +16,38 @@ enum PoolingOpPadConventionType {kValid, kFull};
 }  // namespace pool_enum
 
 template<typename DType>
+inline void pool_max_1d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
+                            const TShape& kernel, const TShape& pad, const TShape& stride,
+                            OpReqType req_type, DType* out_data) {
+  using mshadow::red::limits::MinValue;
+  const int width = ishape[2];
+  const int pooled_width = oshape[2];
+  const int kernel_w = kernel[0];
+  const int pad_w = pad[0];
+  const int stride_w = stride[0];
+  const index_t in_data_offset = ishape[2];
+  const index_t out_data_offset = oshape[2];
+  for (index_t n = 0; n < oshape[0]; ++n) {
+    for (index_t c = 0; c < oshape[1]; ++c) {
+      for (int pw = 0; pw < pooled_width; ++pw) {
+        int wstart = pw * stride_w - pad_w;
+        int wend = std::min(wstart + kernel_w, width);
+        wstart = std::max(wstart, 0);
+        DType max_val = MinValue<DType>();
+        for (int w = wstart; w < wend; ++w) {
+          if (in_data[w] > max_val) {
+            max_val = in_data[w];
+          }
+        }
+        KERNEL_ASSIGN(out_data[pw], req_type, max_val);
+      }
+      in_data += in_data_offset;
+      out_data += out_data_offset;
+    }
+  }
+}
+
+template<typename DType>
 inline void pool_max_2d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             OpReqType req_type, DType* out_data) {
@@ -187,6 +219,46 @@ inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TS
       }
       in_data += in_data_offset;
       out_data += out_data_offset;
+    }
+  }
+}
+
+template<typename DType>
+inline void unpool_max_1d_cpu(const DType* out_grad, const DType* in_data,
+                              const DType* out_data, const TShape& ishape,
+                              const TShape& oshape, const TShape& kernel,
+                              const TShape& pad, const TShape& stride,
+                              DType* in_grad) {
+  const int width = ishape[2];
+  const int pooled_width = oshape[2];
+  const int kernel_w = kernel[0];
+  const int pad_w = pad[0];
+  const int stride_w = stride[0];
+  const index_t in_offset = ishape[2];
+  const index_t out_offset = oshape[2];
+  for (index_t n = 0; n < oshape[0]; ++n) {
+    for (index_t c = 0; c < oshape[1]; ++c) {
+      for (int pw = 0; pw < pooled_width; ++pw) {
+        int wstart = pw * stride_w - pad_w;
+        int wend = std::min(wstart + kernel_w, width);
+        wstart = std::max(wstart, 0);
+        int max_idx = -1;
+        for (int w = wstart; w < wend; ++w) {
+          if (in_data[w] == out_data[pw]) {
+            max_idx = w;
+            break;
+          }
+        }
+        // In the case where pad > 0 and kernel = 1, for example,
+        // max_idx can be -1 reaching this step.
+        if (max_idx >= 0) {
+          in_grad[max_idx] += out_grad[pw];
+        }
+      }
+      in_data += in_offset;
+      in_grad += in_offset;
+      out_data += out_offset;
+      out_grad += out_offset;
     }
   }
 }
@@ -400,7 +472,17 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
                  const TShape& stride, const int pool_type, OpReqType req_type,
                  DType* out_data) {
-  if (kernel.ndim() == 2) {
+  if (kernel.ndim() == 1) {
+    if (pool_enum::kMaxPooling == pool_type) {
+      pool_max_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+    } else if (pool_enum::kAvgPooling == pool_type) {
+      //pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data, true);
+    } else if (pool_enum::kSumPooling == pool_type) {
+      //pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+    } else {
+      LOG(FATAL) << "Unknown pooling type " << pool_type;
+    }
+  } else if (kernel.ndim() == 2) {
     if (pool_enum::kMaxPooling == pool_type) {
       pool_max_2d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
     } else if (pool_enum::kAvgPooling == pool_type) {
@@ -420,8 +502,9 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
+  } else {
+    LOG(FATAL) << "Unsupported " << kernel.ndim() << "-D pooling";
   }
-
 }
 
 template<typename DType>
@@ -433,7 +516,17 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
   if (mxnet::kAddTo != req_type) {
     mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, ishape.Size(), in_grad);
   }
-  if (kernel.ndim() == 2) {
+  if (kernel.ndim() == 1) {
+    if (pool_enum::kMaxPooling == pool_type) {
+      unpool_max_1d_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride, in_grad);
+    } else if (pool_enum::kAvgPooling == pool_type) {
+      //unpool_sum_1d_cpu(out_grad, ishape, oshape, kernel, pad, stride, in_grad, true);
+    } else if (pool_enum::kSumPooling == pool_type) {
+      //unpool_sum_1d_cpu(out_grad, ishape, oshape, kernel, pad, stride, in_grad);
+    } else {
+      LOG(FATAL) << "Unknown pooling type " << pool_type;
+    }
+  } else if (kernel.ndim() == 2) {
     if (pool_enum::kMaxPooling == pool_type) {
       unpool_max_2d_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride, in_grad);
     } else if (pool_enum::kAvgPooling == pool_type) {
@@ -453,6 +546,8 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
+  } else {
+    LOG(FATAL) << "Unsupported " << kernel.ndim() << "-D unpooling";
   }
 }
 

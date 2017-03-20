@@ -137,7 +137,10 @@ class PoolingProp : public OperatorProperty {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     using namespace mshadow;
     param_.Init(kwargs);
-    if (param_.kernel.ndim() == 2) {
+    if (param_.kernel.ndim() == 1) {
+      if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
+    } else if (param_.kernel.ndim() == 2) {
       if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
       if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
     } else {
@@ -160,11 +163,31 @@ class PoolingProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1U);
     const TShape &dshape = (*in_shape)[0];
-    CHECK_GE(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
-                               << "Or 5D in (batch, channel, d, y, x)";
+    CHECK_GE(dshape.ndim(), 3U) << "Pooling: Input data should be  3D in (batch, channel, x)"
+                                << " Or 4D in (batch, channel, y, x) "
+                                << " Or 5D in (batch, channel, d, y, x)";
     TShape oshape = dshape;
     if (dshape.ndim() ==  0) return false;
-    if (param_.kernel.ndim() == 2) {
+    if (param_.kernel.ndim() == 1) {
+      CHECK_EQ(dshape.ndim(), 3U) << "Pooling: Input data should be 3D in (batch, channel, x)";
+      if (param_.global_pool) {
+        oshape[2] = 1;
+      } else {
+        CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0])
+            << "kernel size (" << param_.kernel[0] << ") exceeds input (" << dshape[2]
+            << " padded to " << (dshape[2] + 2*param_.pad[0]) << ")";
+        if (param_.pooling_convention == pool_enum::kValid) {
+          oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
+                              param_.stride[0];
+        } else {
+          oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
+                              dshape[2] + 2 * param_.pad[0] -
+                              param_.kernel[0]) / param_.stride[0]));
+        }
+      }
+      out_shape->clear();
+      out_shape->push_back(oshape);  // save output shape
+    } else if (param_.kernel.ndim() == 2) {
       CHECK_EQ(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
       if (param_.global_pool) {
         oshape[2] = 1;
