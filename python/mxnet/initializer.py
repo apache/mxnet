@@ -424,13 +424,11 @@ class Bilinear(Initializer):
 
 @register
 class LSTMBias(Initializer):
-    """Initialize all bias of an LSTM to 0.0 except for
+    """Initialize all bias of an LSTMCell to 0.0 except for
     the forget gate whose bias is set to custom value.
 
     Parameters
     ----------
-    num_hidden: int, number of hidden nodes in LSTMCell.
-
     forget_bias: float, bias for the forget gate.
     Jozefowicz et al. 2015 recommends setting this to 1.0.
     """
@@ -440,10 +438,31 @@ class LSTMBias(Initializer):
 
     def _init_weight(self, name, arr):
         arr[:] = 0.0
-        # the forget gate is the second gate of the 4 LSTM gates,
-        # we modify the according values.
+        # in the case of LSTMCell the forget gate is the second
+        # gate of the 4 LSTM gates, we modify the according values.
         num_hidden = int(arr.shape[0] / 4)
         arr[num_hidden:2*num_hidden] = self.forget_bias
+
+
+@register
+class FusedLSTMBias(Initializer):
+    """Initialize all bias of an FusedLSTM to 0.0 except for
+    the forget gate whose bias is set to custom value.
+
+    Parameters
+    ----------
+    forget_bias: float, bias for the forget gate.
+    Jozefowicz et al. 2015 recommends setting this to 1.0.
+    """
+    def __init__(self, forget_bias):
+        super(FusedLSTMBias, self).__init__(forget_bias=forget_bias)
+        self.forget_bias = forget_bias
+
+    def _init_weight(self, name, arr):
+        if name.endswith("f_bias"):
+            arr[:] = self.forget_bias
+        else:
+            arr[:] = 0.0
 
 
 @register
@@ -487,9 +506,8 @@ class FusedRNN(Initializer):
             desc = InitDesc(name)
             # for lstm bias, we use a custom initializer
             # which adds a bias to the forget gate
-            if self._mode == 'lstm' and name.endswith("f_bias"):
-                forget_bias_init = LSTMBias(forget_bias=self._forget_bias)
-                forget_bias_init._init_weight(desc, args[name])
+            if self._mode == 'lstm':
+                FusedLSTMBias(forget_bias=self._forget_bias)._init_weight(desc, args[name])
             else:
                 self._init(desc, args[name])
 

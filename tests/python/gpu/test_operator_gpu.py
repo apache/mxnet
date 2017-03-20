@@ -437,9 +437,8 @@ def test_lstm_forget_bias():
     args = fused.unpack_weights(args)
 
     bias_name = next(x for x in args if x.endswith('f_bias'))
-    expected_bias = forget_bias * np.ones(20, )
+    expected_bias = forget_bias * np.ones(10, )
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
-
 
 
 def test_gru():
