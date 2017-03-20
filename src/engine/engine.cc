@@ -7,7 +7,6 @@
 #include <memory>
 #include <cstdlib>
 #include "./engine_impl.h"
-#include "./profiler.h"
 
 namespace mxnet {
 namespace engine {
@@ -47,20 +46,6 @@ std::shared_ptr<Engine> Engine::_GetSharedRef() {
 
 Engine* Engine::Get() {
   static Engine *inst = _GetSharedRef().get();
-#if MXNET_USE_PROFILER
-  static std::once_flag dump_profile_flag;
-  std::call_once(dump_profile_flag, [](){
-    // ensure profiler constructor is called before set atexit.
-    engine::Profiler::Get();
-    // dump trace file if profiler is enabled before engine is destructed.
-    std::atexit([](){
-      engine::Profiler* profiler = engine::Profiler::Get();
-      if (profiler->IsEnableOutput()) {
-        profiler->DumpProfile();
-      }
-    });
-  });
-#endif
   return inst;
 }
 }  // namespace mxnet
