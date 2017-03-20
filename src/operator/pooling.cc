@@ -79,6 +79,10 @@ DMLC_REGISTER_PARAMETER(PoolingParam);
 MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
 .describe(R"code(Perform pooling on the input.
 
+The shapes for 1-D pooling are
+- **data**: *(batch_size, channel, width)*,
+- **out**: *(batch_size, num_filter, out_width)*.
+
 The shapes for 2-D pooling is
 
 - **data**: *(batch_size, channel, height, width)*
@@ -106,7 +110,7 @@ Three pooling options are supported by ``pool_type``:
 - **max**: max pooling
 - **sum**: sum pooling
 
-1-D pooling is special case of 2-D pooling with *weight=1* and
+1-D pooling is special case of 2-D pooling with *width=1* and
 *kernel[1]=1*.
 
 For 3-D pooling, an additional *depth* dimension is added before
