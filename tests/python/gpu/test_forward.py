@@ -1,19 +1,14 @@
 import os
-import scipy as sp
 import numpy as np
 import mxnet as mx
 from mxnet.test_utils import *
 
-def GetModel():
-    if not os.path.isdir("model/"):
-        os.system("mkdir model/")
-    if not os.path.exists('model/inception-v3.tar.gz'):
-        os.system("wget http://data.mxnet.io/models/imagenet/inception-v3.tar.gz -P model/")
-        os.chdir("./model")
-        os.system("tar -xf inception-v3.tar.gz --strip-components 1")
-        os.chdir("..")
+def _get_model():
+    if not os.path.exists('model/Inception-7-symbol.json'):
+        download('http://data.mxnet.io/models/imagenet/inception-v3.tar.gz', dirname='model')
+        os.system("cd model; tar -xf inception-v3.tar.gz --strip-components 1")
 
-def DumpImages(shape):
+def _dump_images(shape):
     import skimage.io
     import skimage.transform
     img_list = []
@@ -28,20 +23,16 @@ def DumpImages(shape):
     imgs = np.asarray(img_list, dtype=np.float32).transpose((0, 3, 1, 2)) - 128
     np.save('data/test_images_%d_%d.npy'%shape, imgs)
 
-def GetTestData(shape):
-    if not os.path.isdir("data/"):
-        os.system("mkdir data/")
-    if not os.path.exists('data/test_images_%d_%d.npy'%shape):
-        os.system("wget http://data.mxnet.io/data/test_images_%d_%d.npy -P data/"%shape)
-    if not os.path.exists('data/inception-v3-dump.npz'):
-        os.system("wget http://data.mxnet.io/data/inception-v3-dump.npz -P data/")
+def _get_data(shape):
+    download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape), dirname='data')
+    download("http://data.mxnet.io/data/inception-v3-dump.npz", dirname="data")
 
 def test_consistency(dump=False):
     shape = (299, 299)
-    GetModel()
-    GetTestData(shape)
+    _get_model()
+    _get_data(shape)
     if dump:
-        DumpImages(shape)
+        _dump_images(shape)
         gt = None
     else:
         gt = {n: mx.nd.array(a) for n, a in np.load('data/inception-v3-dump.npz').items()}
@@ -57,5 +48,4 @@ def test_consistency(dump=False):
         np.savez('data/inception-v3-dump.npz', **{n: a.asnumpy() for n, a in gt.items()})
 
 if __name__ == '__main__':
-    #test_forward_inception()
     test_consistency(False)

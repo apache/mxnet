@@ -22,8 +22,8 @@ namespace op {
 inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
                                  std::vector<TShape> *in_attrs,
                                  std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& lhs = (*in_attrs)[0];
   TShape& rhs = (*in_attrs)[1];
 
@@ -311,8 +311,8 @@ void BinaryBroadcastBackwardUseOut(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                       \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};       \
     })                                                                \
-  .add_argument("lhs", "NDArray", "first input")                      \
-  .add_argument("rhs", "NDArray", "second input")
+  .add_argument("lhs", "ndarray-or-symbol", "first input")                      \
+  .add_argument("rhs", "ndarray-or-symbol", "second input")
 
 }  // namespace op
 }  // namespace mxnet

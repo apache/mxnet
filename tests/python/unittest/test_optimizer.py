@@ -94,7 +94,9 @@ class PyAdam(mx.optimizer.Optimizer):
 
         t = self._index_update_count[index]
         mean, variance = state
-        grad *= self.rescale_grad
+
+        wd = self._get_wd(index)
+        grad = grad * self.rescale_grad + wd * weight
         if self.clip_gradient is not None:
             mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
 
@@ -109,10 +111,6 @@ class PyAdam(mx.optimizer.Optimizer):
         lr *= math.sqrt(coef2)/coef1
 
         weight -= lr*mean/(mx.nd.sqrt(variance) + self.epsilon)
-
-        wd = self._get_wd(index)
-        if wd > 0.:
-            weight[:] -= (lr * wd) * weight
 
 
 def test_adam():
@@ -131,50 +129,68 @@ def test_adam():
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 
 # RMSProp
-
 class PyRMSProp(mx.optimizer.Optimizer):
     """RMSProp optimizer of Tieleman & Hinton, 2012,
 
-    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
-    by Alex Graves, 2013.
+    For centered=False, the code follows the version in
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    Tieleman & Hinton, 2012
+
+    For centered=True, the code follows the version in
+    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
     Parameters
     ----------
     learning_rate : float, optional
         Step size.
-        Default value is set to 0.002.
+        Default value is set to 0.001.
     gamma1: float, optional
         decay factor of moving average for gradient, gradient^2.
-        Default value is set to 0.95.
+        Default value is set to 0.9.
     gamma2: float, optional
         "momentum" factor.
         Default value if set to 0.9.
+        Only used if centered=True
+    epsilon : float, optional
+        Default value is set to 1e-8.
+    centered : boolean, optional
+        Use Graves or Tielemans & Hintons version of RMSProp
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
         rescaling factor of gradient.
     clip_gradient : float, optional
         clip gradient in range [-clip_gradient, clip_gradient]
+    clip_weights : float, optional
+        clip weights in range [-clip_weights, clip_weights]
+
     """
-    def __init__(self, learning_rate=0.001, gamma1=0.95, gamma2=0.9,
-                 epsilon=1e-8, **kwargs):
+    def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
+                 epsilon=1e-8, centered=False, clip_weights=None, **kwargs):
         super(PyRMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.centered = centered
         self.gamma1 = gamma1
         self.gamma2 = gamma2
         self.epsilon = epsilon
+        self.clip_weights = clip_weights
 
     def create_state(self, index, weight):
-        """Create additional optimizer state: mean, variance
+        """Create additional optimizer state.
+
+        For centered=False: n
+        For centered=True: n, g, delta
 
         Parameters
         ----------
         weight : NDArray
             The weight data
-
         """
-        return (mx.nd.zeros(weight.shape, weight.context),  # n
-                mx.nd.zeros(weight.shape, weight.context),  # g
-                mx.nd.zeros(weight.shape, weight.context))  # delta
+        if self.centered:
+            return (mx.nd.zeros(weight.shape, weight.context),  # n
+                    mx.nd.zeros(weight.shape, weight.context),  # g
+                    mx.nd.zeros(weight.shape, weight.context))  # delta
+        else:
+            return (mx.nd.zeros(weight.shape, weight.context), )  # n
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
@@ -196,14 +212,26 @@ class PyRMSProp(mx.optimizer.Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
-        n, g, delta = state
-        grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
-        n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
-        g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
-        delta[:] = (self.gamma2) * delta - lr * (grad/(mx.nd.sqrt(n - g*g) + self.epsilon) + wd * weight)
-        weight[:] += delta
+        grad = grad * self.rescale_grad + wd * weight
+
+        if not self.centered:
+            (n, ) = state
+            if self.clip_gradient is not None:
+                grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+            n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
+            weight[:] -= lr * grad/(mx.nd.sqrt(n) + self.epsilon)
+
+        else:
+            n, g, delta = state
+            if self.clip_gradient is not None:
+                grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+            n[:] = (1 - self.gamma1) * (grad * grad) + self.gamma1 * n
+            g[:] = (1 - self.gamma1) * grad + self.gamma1 * g
+            delta[:] = (self.gamma2) * delta - lr * grad/(mx.nd.sqrt(n - g*g) + self.epsilon)
+            weight[:] += delta
+
+        if self.clip_weights:
+             mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
 def test_rms():
     mx.random.seed(0)
@@ -216,7 +244,27 @@ def test_rms():
               {'rescale_grad': 0.8},
               {'clip_gradient': 0.5, 'wd': 0.07},
               {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
-              {'rescale_grad': 0.8, 'wd': 0.05}]
+              {'rescale_grad': 0.8, 'wd': 0.05},
+              {'centered': True},
+              {'clip_gradient': 0.5, 'centered': True},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'centered': True},
+              {'rescale_grad': 0.8, 'centered': True},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'centered': True},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'centered': True},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True},
+              {'clip_gradient': 0.5, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'clip_weights': 0.01},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'clip_weights': 0.01},
+              {'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.5, 'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'centered': True, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'centered': True, 'clip_weights': 0.01},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'centered': True, 'clip_weights': 0.01},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True, 'clip_weights': 0.01}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape)
 

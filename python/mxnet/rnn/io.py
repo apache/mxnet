@@ -48,7 +48,7 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', 
         coded = []
         for word in sent:
             if word not in vocab:
-                assert new_vocab, "Unknow token %s"%word
+                assert new_vocab, "Unknown token %s"%word
                 if idx == invalid_label:
                     idx += 1
                 vocab[word] = idx
@@ -94,13 +94,13 @@ class BucketSentenceIter(DataIter):
 
         ndiscard = 0
         self.data = [[] for _ in buckets]
-        for i in range(len(sentences)):
-            buck = bisect.bisect_left(buckets, len(sentences[i]))
+        for i, sent in enumerate(sentences):
+            buck = bisect.bisect_left(buckets, len(sent))
             if buck == len(buckets):
                 ndiscard += 1
                 continue
             buff = np.full((buckets[buck],), invalid_label, dtype=dtype)
-            buff[:len(sentences[i])] = sentences[i]
+            buff[:len(sent)] = sent
             self.data[buck].append(buff)
 
         self.data = [np.asarray(i, dtype=dtype) for i in self.data]
@@ -166,4 +166,3 @@ class BucketSentenceIter(DataIter):
                          bucket_key=self.buckets[i],
                          provide_data=[(self.data_name, data.shape)],
                          provide_label=[(self.label_name, label.shape)])
-

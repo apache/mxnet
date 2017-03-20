@@ -1,5 +1,6 @@
 __author__ = 'tsungyi'
 
+from __future__ import print_function
 import numpy as np
 import datetime
 import time
@@ -91,7 +92,7 @@ class COCOeval:
                 t = coco.imgs[obj['image_id']]
                 if type(obj['segmentation']) == list:
                     if type(obj['segmentation'][0]) == dict:
-                        print 'debug'
+                        print('debug')
                     obj['segmentation'] = mask.frPyObjects(obj['segmentation'],t['height'],t['width'])
                     if len(obj['segmentation']) == 1:
                         obj['segmentation'] = obj['segmentation'][0]
@@ -132,7 +133,7 @@ class COCOeval:
         :return: None
         '''
         tic = time.time()
-        print 'Running per image evaluation...      '
+        print('Running per image evaluation...      ')
         p = self.params
         p.imgIds = list(np.unique(p.imgIds))
         if p.useCats:
@@ -158,7 +159,7 @@ class COCOeval:
              ]
         self._paramsEval = copy.deepcopy(self.params)
         toc = time.time()
-        print 'DONE (t=%0.2fs).'%(toc-tic)
+        print('DONE (t=%0.2fs).'%(toc-tic))
 
     def computeIoU(self, imgId, catId):
         p = self.params
@@ -277,10 +278,10 @@ class COCOeval:
         :param p: input params for evaluation
         :return: None
         '''
-        print 'Accumulating evaluation results...   '
+        print('Accumulating evaluation results...   ')
         tic = time.time()
         if not self.evalImgs:
-            print 'Please run evaluate() first'
+            print('Please run evaluate() first')
         # allows input customized parameters
         if p is None:
             p = self.params
@@ -371,7 +372,7 @@ class COCOeval:
             'recall':   recall,
         }
         toc = time.time()
-        print 'DONE (t=%0.2fs).'%( toc-tic )
+        print('DONE (t=%0.2fs).'%( toc-tic ))
 
     def summarize(self):
         '''
@@ -406,7 +407,7 @@ class COCOeval:
                 mean_s = -1
             else:
                 mean_s = np.mean(s[s>-1])
-            print iStr.format(titleStr, typeStr, iouStr, areaStr, maxDetsStr, '%.3f'%(float(mean_s)))
+            print(iStr.format(titleStr, typeStr, iouStr, areaStr, maxDetsStr, '%.3f'%(float(mean_s))))
             return mean_s
 
         if not self.eval:

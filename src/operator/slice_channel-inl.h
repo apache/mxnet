@@ -36,7 +36,9 @@ struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
     DMLC_DECLARE_FIELD(axis).set_default(1)
     .describe("Dimension along which to slice.");
     DMLC_DECLARE_FIELD(squeeze_axis).set_default(0)
-    .describe("If true AND the sliced dimension becomes 1, squeeze that dimension.");
+    .describe("If true, the dimension will be squeezed."
+              " Also, input.shape[axis] must be the same as `num_outputs`"
+              " when squeeze_axis is turned on.");
   }
 };  // struct SliceChannelParam
 
@@ -53,7 +55,7 @@ class SliceChannelOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3> > outputs(size_);
@@ -90,7 +92,7 @@ class SliceChannelOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), static_cast<size_t>(size_));
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3> > grad_out(size_);
     Tensor<xpu, 3> grad;
@@ -155,8 +157,9 @@ class SliceChannelProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     TShape dshape = in_shape->at(slice_enum::kData);
+    TShape ishape = in_shape->at(slice_enum::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.axis >= 0) {
       CHECK_LT(static_cast<size_t>(param_.axis), dshape.ndim());
@@ -167,20 +170,46 @@ class SliceChannelProp : public OperatorProperty {
     if (real_axis < 0) {
       real_axis += dshape.ndim();
     }
-    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0)
+    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0U)
       << "num_outputs (" << param_.num_outputs
       << ") does not divide input dimension "
       << real_axis << " (" << dshape[real_axis] << ").";
+    if (param_.squeeze_axis && ishape[real_axis] != 0) {
+      CHECK_EQ(ishape[real_axis], param_.num_outputs)
+        << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
+        << " Input shape=" << ishape << ", axis=" << real_axis
+        << ", num_outputs=" << param_.num_outputs << ".";
+    }
     dshape[real_axis] /= param_.num_outputs;
-    if (param_.squeeze_axis && dshape[real_axis] == 1) {
+    if (param_.squeeze_axis && (dshape[real_axis] == 1 || ishape[real_axis] == 0)) {
       for (int d = real_axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
         dshape[d] = dshape[d+1];
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
-    out_shape->clear();
+    CHECK_EQ((*out_shape).size(), param_.num_outputs) << "Size of output shape mismatch!";
     for (int i = 0; i < param_.num_outputs; ++i) {
-      out_shape->push_back(dshape);
+      SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
+      // Perform incomplete shape inference.
+      // We can back-calculate the inshape based on the out_shape.
+      TShape back_calculate_dshape = ishape;
+      if (param_.squeeze_axis && (dshape.ndim() == ishape.ndim() - 1)) {
+        for (int d = 0; d < real_axis; ++d) {
+          back_calculate_dshape[d] = (*out_shape)[i][d];
+        }
+        back_calculate_dshape[real_axis] = param_.num_outputs;
+        for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
+          back_calculate_dshape[d] = (*out_shape)[i][d - 1];
+        }
+      } else {
+        for (int d = 0; d < static_cast<int>(ishape.ndim()); ++d) {
+          back_calculate_dshape[d] = (*out_shape)[i][d];
+          if (d == real_axis) {
+            back_calculate_dshape[d] *= param_.num_outputs;
+          }
+        }
+      }
+      SHAPE_ASSIGN_CHECK(*in_shape, slice_enum::kData, back_calculate_dshape);
     }
     return true;
   }

@@ -1,21 +1,21 @@
 #!/bin/bash
 # set -ex
-# 
+#
 # All modification made by Intel Corporation: © 2016 Intel Corporation
-# 
+#
 # All contributions by the University of California:
 # Copyright (c) 2014, 2015, The Regents of the University of California (Regents)
 # All rights reserved.
-# 
+#
 # All other contributions:
 # Copyright (c) 2014, 2015, the respective contributors
 # All rights reserved.
 # For the list of contributors go to https://github.com/BVLC/caffe/blob/master/CONTRIBUTORS.md
-# 
-# 
+#
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -24,7 +24,7 @@
 #     * Neither the name of Intel Corporation nor the names of its contributors
 #       may be used to endorse or promote products derived from this software
 #       without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,7 +35,7 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 GetVersionName()
 {
 VERSION_LINE=0
@@ -55,6 +55,8 @@ if [ ! -d "$HOME_MKL" ]; then
 fi
 MXNET_ROOT=`dirname $0`
 USE_MKLML=0
+# NOTE: if you update the following line, please also update the dockerfile at
+# tests/ci_build/Dockerfile.mkl
 VERSION_MATCH=20170210
 ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20170209.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
@@ -70,7 +72,7 @@ if [ -z $MKLROOT ]; then
     #echo $VERSION_LINE
     if [ $VERSION_LINE -lt $VERSION_MATCH ] ; then
       #...If it is not then downloaded and unpacked
-      wget --no-check-certificate -P $MXNET_ROOT $MKLURL -O $MXNET_ROOT/$ARCHIVE_BASENAME
+      wget --quiet --no-check-certificate -P $MXNET_ROOT $MKLURL -O $MXNET_ROOT/$ARCHIVE_BASENAME
       tar -xzf $MXNET_ROOT/$ARCHIVE_BASENAME -C $MXNET_ROOT
       #echo $HOME_MKL
       yes | cp -rf $MXNET_ROOT/$MKL_CONTENT_DIR/* $HOME_MKL

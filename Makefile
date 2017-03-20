@@ -22,21 +22,21 @@ ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
 
-
 # use customized config file
 include $(config)
 
 ifeq ($(USE_MKL2017), 1)
-	RETURN_STRING=$(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT=$(firstword $(RETURN_STRING))
-	export USE_MKLML=$(lastword $(RETURN_STRING))
+# must run ./prepare_mkl before including mshadow.mk
+	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT = $(firstword $(RETURN_STRING))
+	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
 
 include mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
-WARNFLAGS= -Wall
+WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
@@ -88,6 +88,8 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
+	CFLAGS += -I$(MKLML_ROOT)/include
+	LDFLAGS += -L$(MKLML_ROOT)/lib
 ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 else
@@ -99,6 +101,8 @@ ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
 endif
+
+
 
 ifeq ($(USE_THREADED_ENGINE), 1)
 	CFLAGS += -DMXNET_USE_THREADED_ENGINE
@@ -259,8 +263,14 @@ include tests/cpp/unittest.mk
 
 test: $(TEST)
 
-lint: rcpplint jnilint
-	python2 dmlc-core/scripts/lint.py mxnet ${LINT_LANG} include src plugin scripts python predict/python
+lint: cpplint rcpplint jnilint pylint
+
+cpplint:
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin
+
+pylint:
+# ideally we want to check all, such as: python tools example tests
+	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
 
 doc: doxygen
 
@@ -307,25 +317,26 @@ scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)")
+			-Dcurrent_libdir="$(ROOTDIR)/lib" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scalatest:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)" $(SCALA_TEST_ARGS))
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)")
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP)")
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src

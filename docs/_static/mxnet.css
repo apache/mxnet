@@ -3,7 +3,7 @@
 html, body {
     margin: 0;
     padding: 0;
-    background-color: #ffffff; 
+    background-color: #ffffff;
 }
 
 body {
@@ -13,87 +13,82 @@ body {
 body, div {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
     font-size: 16px;
-    color: #444444; 
+    color: #000;
 }
 
 p {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
-    color: #444444;
+    color: #000;
     font-size: 16px;
-    line-height: 1.5em; 
-}
-
-p.title {
-    margin-bottom: 12px; 
+    line-height: 1.5em;
 }
 
 #language-filter {
     float: right;
-    margin-top: 5px; 
+    margin-top: 5px;
 }
 
 li, dt a, dt span {
     font-size: 16px;
-    line-height: 1.5em; 
+    line-height: 1.5em;
 }
 
-/*Content paragraph space*/
-div.content p {
-    margin-top: 20px;
-}
+/* /\*Content paragraph space*\/ */
+/* div.content p { */
+/*     margin-top: 20px; */
+/* } */
 
 /*------------------ Headings -------------------*/
 h1, h2, h3 {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
-    color: #444444; 
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 h1 {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: bold;
-    padding-top: 25px; 
+    padding-top: 10px;
+    color: #cc6600;
 }
 
 h2 {
-    font-size: 18px;
-    font-weight: bold;
-    padding-top: 1.5em;
-    margin: 1em 0;
-    color: #cc6600; 
+    font-size: 20px;
+    /* font-weight: bold; */
+    padding-top: 10px;
+    color: #187dbb;
 }
 
 h3 {
-    font-size: 16px;
-    padding-top: 1.2em;
-    font-weight: bold;
-    color: #007697; 
+    font-size: 18px;
+    padding-top: 8px;
+    /* font-weight: bold; */
+    color: #187dbb;
 }
 
 h3.orange {
     color: #cc6600; }
 
 h4 {
-    color: #cc6600;
+    color: #187dbb;
     font-size: 16px;
-    padding-top: 1.8em;
+    padding-top: 6px;
     font-style: italic;
-    font-weight: bold; 
+    /* font-weight: bold; */
 }
 
 h5 {
     color: #333333;
     font-size: 16px;
-    padding-top: 1em;
     font-style: italic;
-    font-weight: bold; 
+    font-weight: bold;
 }
 
 h6 {
     color: #333333;
     font-size: 14px;
-    padding-top: 1em;
     font-style: italic;
-    font-weight: bold; 
+    font-weight: bold;
 }
 
 img {
@@ -102,14 +97,14 @@ img {
     border-color: #ffffff;
     /* white  */
     padding: 0px 0px 0px 0px;
-    margin: 0px 0px 0px 0px; 
+    margin: 0px 0px 0px 0px;
 }
 
 .topictitle {
     font-size: 24px;
     font-weight: bold;
     color: #e47911;
-    padding: 0 0 14px 0; 
+    padding: 0 0 14px 0;
 }
 
 .section:before {
@@ -124,7 +119,7 @@ img {
     background-color:#0079b2;
     opacity: 0.9;
     border: 0px;
-    height: 80px;
+    height: 60px;
     margin-bottom: 0px;
 }
 
@@ -135,7 +130,7 @@ img {
 
 @media screen and (max-width: 510px) {
     .navbar {
-        height: 100px;
+        height: 60px;
     }
 }
 
@@ -174,7 +169,7 @@ img {
     width: 125px;
 }
 
-@media screen and (max-width: 405px) {  
+@media screen and (max-width: 405px) {
     #logo-wrap {
         margin-left: -25px;
     }
@@ -226,7 +221,7 @@ img {
 
 #package-dropdown-menu {
     top: 36px;
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 0;
 }
 
@@ -240,7 +235,7 @@ img {
     display: block;
     position: fixed;
     top: 15px;
-    right: 155px;
+    right: 40px;
     width: 140px;
 }
 
@@ -276,11 +271,11 @@ img {
         margin-left: -100px;
         width: 200px;
     }
-    
+
     div .searchBox {
         width: 200px;
     }
-    
+
     #searchIcon {
         display: block;
     }
@@ -340,7 +335,7 @@ div .burgerIcon a {
     color: white;
 }
 
-@media screen and (max-width: 405px) { 
+@media screen and (max-width: 405px) {
     div .burgerIcon {
         margin-left: -25px;
     }
@@ -439,7 +434,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     display: none;
     position: fixed;
     top: 20px;
-    right: 285px;
+    right: 175px;
     width: 30px;
 }
 
@@ -451,7 +446,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     div .plusIcon, .nav-bar {
         display: none !important;
     }
-    
+
     div .burgerIcon {
         display: block;
         position: fixed;
@@ -551,6 +546,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 .section-tout h3{
     font-size:20px;
+    color: #0079b2;
 }
 
 .section-tout p {
@@ -607,7 +603,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 /*------------------content----------------------*/
 div.navbar + div.container {
-    padding-top: 85px;
+    padding-top: 65px;
 }
 
 div.content {
@@ -621,7 +617,7 @@ div.content {
 @media (max-width: 999px) {
     div.content {
         left: 0;
-        margin-left: 5%; 
+        margin-left: 5%;
         overflow-x: auto;
     }
 }
@@ -635,16 +631,16 @@ div.sphinxsidebar {
     width: 250px;
     padding:20px 30px 15px 0;
     height: calc(100% - 80px);
-    overflow: scroll;
     display: none;
+    overflow: auto;
 }
 
-div.sphinxsidebar ul { 
+div.sphinxsidebar ul {
     padding: 0;
     list-style-type: none !important;
 }
 
-div.sphinxsidebarwrapper > ul { 
+div.sphinxsidebarwrapper > ul {
     padding-left: 20px;
 }
 
@@ -759,23 +755,21 @@ div.informaltable {
   text-align: left; }
 
 /*----------------API class and function formatting---------------------*/
-dl.class > dt:before, dl.function > dt:before {
+dl > dt:before {
     content: " ";
     display: block;
-    height: 80px; /* fixed header height*/
-    margin: -50px 0 0; /* negative fixed header height */
+    height: 70px; /* fixed header height*/
+    margin-top: -70px; /* negative fixed header height */
 }
 
-dt {
-    background-color: white !important;
+p.rubric {
+    margin-top: 10px;
 }
 
-dl.method, dl.attribute {
-    padding-top: 15px;
-}
-
-dl.class p, dl.function p {
-    color: #cc6600;
+dt:target, .highlighted {
+    background-color: #fff;
+    border-bottom: 3px solid #c7254e;
+    margin-bottom: -3px;
 }
 
 /*----------------Model zoo page style------------------*/
@@ -802,4 +796,41 @@ dl.class p, dl.function p {
 
 #mxnet-model-zoo tr:nth-child(even) {
     background-color: #f2f2f2;
+}
+
+/*--------- note block -----------*/
+div.admonition {
+    padding: 15px;
+    background-color: #f6f8fa;
+    border: 1px solid rgb(204, 204, 204);
+    border-radius: 4px;
+}
+
+p.admonition-title {
+    color: #187dbb;
+}
+
+/*------------ code block ------------*/
+pre {
+    background-color: #f6f8fa;
+}
+
+/*-------------API table---------------------*/
+table.docutils {
+    margin-top: 15px;
+}
+
+table.docutils td, table.docutils th {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    /* border-top: 0; */
+    /* border-left: 0; */
+    /* border-right: 0; */
+    border: 1px solid rgb(223, 226, 229);
+}
+
+table.docutils tr:nth-child(even) {
+    background-color: #f6f8fa;
 }

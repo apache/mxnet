@@ -17,6 +17,7 @@
 
 package ml.dmlc.mxnet.module
 
+import java.io.{FileInputStream, BufferedInputStream, BufferedOutputStream, FileOutputStream}
 import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet._
 import ml.dmlc.mxnet.module.DataParallelExecutorGroup.Builder
@@ -61,6 +62,7 @@ class Module(symbolVar: Symbol,
   private var kvstore: Option[KVStore] = None
   private var updateOnKVStore: Boolean = false
   private var updater: Option[MXKVStoreUpdater] = None
+  private var preloadOptStates: Option[String] = None
 
   private var dataShapesVar: IndexedSeq[DataDesc] = null
   private var labelShapesVar: Option[IndexedSeq[DataDesc]] = None
@@ -314,7 +316,10 @@ class Module(symbolVar: Symbol,
         }
 
       optimizerInitialized = true
-      // TODO: preload optimizer states
+      preloadOptStates.foreach { optStates =>
+        loadOptimizerStates(optStates)
+      }
+      preloadOptStates = None
     }
   }
 
@@ -437,8 +442,104 @@ class Module(symbolVar: Symbol,
     require(binded)
     execGroup.installMonitor(monitor)
   }
+
+  /**
+   * Save optimizer (updater) state to file
+   * @param fname Path to output states file.
+   */
+  def saveOptimizerStates(fname: String): Unit = {
+    require(optimizerInitialized, "Optimizer should be initialized before saving.")
+    if (updateOnKVStore) {
+      kvstore.foreach(_.saveOptimizerStates(fname))
+    } else {
+      updater.foreach {
+        case cachedStates: MXKVStoreCachedStates =>
+          val target = new BufferedOutputStream(new FileOutputStream(fname))
+          try {
+            target.write(cachedStates.serializeState())
+          } finally {
+            target.close()
+          }
+        case _ =>
+          logger.warn("Updater does not have states, skip saving to {}", fname)
+      }
+    }
+  }
+
+  /**
+   * Load optimizer (updater) state from file
+   * @param fname Path to input states file.
+   */
+  def loadOptimizerStates(fname: String): Unit = {
+    require(optimizerInitialized, "Optimizer should be initialized before loading.")
+    if (updateOnKVStore) {
+      kvstore.foreach(_.loadOptimizerStates(fname))
+    } else {
+      updater.foreach {
+        case cachedStates: MXKVStoreCachedStates =>
+          val bis = new BufferedInputStream(new FileInputStream(fname))
+          try {
+            val bArray = Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
+            cachedStates.deserializeState(bArray)
+          } finally {
+            bis.close()
+          }
+        case _ =>
+          logger.warn("Updater does not have states, skip loading from {}", fname)
+      }
+    }
+  }
+
+  /**
+   * Save current progress to checkpoint.
+   * Use mx.callback.module_checkpoint as epoch_end_callback to save during training.
+   * @param prefix The file prefix to checkpoint to
+   * @param epoch The current epoch number
+   * @param saveOptStates Whether to save optimizer states for continue training
+   */
+  def saveCheckpoint(prefix: String, epoch: Int, saveOptStates: Boolean = false): Unit = {
+    symbol.save(s"$prefix-symbol.json")
+    val paramName = "%s-%04d.params".format(prefix, epoch)
+    saveParams(paramName)
+    logger.info("Saved checkpoint to {}", paramName)
+    if (saveOptStates) {
+      val stateName = "%s-%04d.states".format(prefix, epoch)
+      saveOptimizerStates(stateName)
+      logger.info("Saved optimizer state to {}", stateName)
+    }
+  }
 }
 
 object Module {
-  // TODO: Load & save model
+  /**
+   * Create a model from previously saved checkpoint.
+   * @param prefix Path prefix of saved model files. You should have "prefix-symbol.json",
+   *               "prefix-xxxx.params", and optionally "prefix-xxxx.states",
+   *               where xxxx is the epoch number.
+   * @param epoch Epoch to load.
+   * @param loadOptimizerStates Whether to load optimizer states.
+   *                            Checkpoint needs to have been made with saveOptimizerStates=True
+   * @param dataNames Input data names.
+   * @param labelNames Input label names
+   * @param contexts Default is cpu().
+   * @param workLoadList  Default `None`, indicating uniform workload.
+   * @param fixedParamNames Default `None`, indicating no network parameters are fixed.
+   */
+  def loadCheckpoint(prefix: String, epoch: Int, loadOptimizerStates: Boolean = false,
+                     dataNames: IndexedSeq[String] = IndexedSeq("data"),
+                     labelNames: IndexedSeq[String] = IndexedSeq("softmax_label"),
+                     contexts: Array[Context] = Context.cpu(),
+                     workLoadList: Option[IndexedSeq[Float]] = None,
+                     fixedParamNames: Option[Set[String]] = None): Module = {
+    val (sym, args, auxs) = Model.loadCheckpoint(prefix, epoch)
+    val mod = new Module(symbolVar = sym,
+      dataNames, labelNames, contexts, workLoadList, fixedParamNames)
+    mod.argParams = args
+    mod.auxParams = auxs
+    mod.paramsInitialized = true
+    if (loadOptimizerStates) {
+      mod.preloadOptStates = Some("%s-%04d.states".format(prefix, epoch))
+    }
+    mod
+  }
 }

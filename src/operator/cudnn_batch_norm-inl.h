@@ -23,12 +23,17 @@ enum CuDNNBatchNormOpAuxiliary {kMovingMean, kMovingInvVar};
 }  // namespace cudnnbatchnorm
 
 #if defined(__CUDACC__)
+template<typename DType>
 class CuDNNBatchNormOp : public Operator {
  public:
   explicit CuDNNBatchNormOp(BatchNormParam param) {
+    using namespace mshadow;
     this->param_ = param;
     init_cudnn_ = false;
-    dtype_ = CUDNN_DATA_FLOAT;
+    dtype_ = DataType<DType>::kCudnnFlag;
+    // For float16 input type beta, gamma, mean, and average are stored in float32.
+    // For other input types, these parameters have the same type as input
+    dtype_param_ = (dtype_ == CUDNN_DATA_HALF) ? kFloat32 : DataType<DType>::kFlag;
   }
 
   ~CuDNNBatchNormOp() {
@@ -45,14 +50,14 @@ class CuDNNBatchNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(aux_states.size(), 2);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(aux_states.size(), 2U);
     if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 3);
-      CHECK_EQ(req.size(), 3);
+      CHECK_EQ(out_data.size(), 3U);
+      CHECK_EQ(req.size(), 3U);
     } else {
-      CHECK_GE(out_data.size(), 1);
-      CHECK_GE(req.size(), 1);
+      CHECK_GE(out_data.size(), 1U);
+      CHECK_GE(req.size(), 1U);
     }
     CHECK_EQ(req[cudnnbatchnorm::kOut], kWriteTo);
     CHECK_GE(in_data[cudnnbatchnorm::kData].ndim(), 2);
@@ -75,70 +80,75 @@ class CuDNNBatchNormOp : public Operator {
                                           shape_[1],
                                           shape_[2],
                                           shape_[3]), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(mean_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          1,
-                                          shape_[1],
-                                          1,
-                                          1), CUDNN_STATUS_SUCCESS);
+      CHECK_EQ(cudnnDeriveBNTensorDescriptor(mean_desc_,
+                                             io_desc_,
+                                             CUDNN_BATCHNORM_SPATIAL), CUDNN_STATUS_SUCCESS);
       init_cudnn_  = true;
     }
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> x = in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> gamma =
-      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> beta =
-      in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 4> y = out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> moving_mean =
-      aux_states[cudnnbatchnorm::kMovingMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> moving_inv_var =
-      aux_states[cudnnbatchnorm::kMovingInvVar]
-      .get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    float a = 1.0f, b = 0.0f;
+    Tensor<gpu, 4, DType> x =
+      in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
 
-    if (param_.fix_gamma) gamma = 1.f;
+    Tensor<gpu, 4, DType> y =
+      out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 
-    if (ctx.is_train) {
-      Tensor<gpu, 1> save_mean =
-        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-      Tensor<gpu, 1> save_inv_var =
-        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-      CHECK_EQ(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
-                                                      CUDNN_BATCHNORM_SPATIAL,
-                                                      &a,
-                                                      &b,
-                                                      io_desc_,
-                                                      x.dptr_,
-                                                      io_desc_,
-                                                      y.dptr_,
-                                                      mean_desc_,
-                                                      gamma.dptr_,
-                                                      beta.dptr_,
-                                                      1 - param_.momentum,
-                                                      moving_mean.dptr_,
-                                                      moving_inv_var.dptr_,
-                                                      param_.eps,
-                                                      save_mean.dptr_,
-                                                      save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
-    } else {
-      CHECK_EQ(cudnnBatchNormalizationForwardInference(s->dnn_handle_,
-                                                       CUDNN_BATCHNORM_SPATIAL,
-                                                       &a,
-                                                       &b,
-                                                       io_desc_,
-                                                       x.dptr_,
-                                                       io_desc_,
-                                                       y.dptr_,
-                                                       mean_desc_,
-                                                       gamma.dptr_,
-                                                       beta.dptr_,
-                                                       moving_mean.dptr_,
-                                                       moving_inv_var.dptr_,
-                                                       param_.eps), CUDNN_STATUS_SUCCESS);
-    }
+    MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
+      Tensor<gpu, 1, DTypeParam> gamma =
+        in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> beta =
+        in_data[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> moving_mean =
+        aux_states[cudnnbatchnorm::kMovingMean]
+        .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> moving_inv_var =
+        aux_states[cudnnbatchnorm::kMovingInvVar]
+        .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      typename DataType<DType>::ScaleType a = 1.0f;
+      typename DataType<DType>::ScaleType b = 0.0f;
+
+      if (param_.fix_gamma) gamma = 1.f;
+
+      if (ctx.is_train) {
+        Tensor<gpu, 1, DTypeParam> save_mean =
+          out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+        Tensor<gpu, 1, DTypeParam> save_inv_var =
+          out_data[cudnnbatchnorm::kInvVar]
+          .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+        CHECK_EQ(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
+                                                        CUDNN_BATCHNORM_SPATIAL,
+                                                        &a,
+                                                        &b,
+                                                        io_desc_,
+                                                        x.dptr_,
+                                                        io_desc_,
+                                                        y.dptr_,
+                                                        mean_desc_,
+                                                        gamma.dptr_,
+                                                        beta.dptr_,
+                                                        1 - param_.momentum,
+                                                        moving_mean.dptr_,
+                                                        moving_inv_var.dptr_,
+                                                        param_.eps,
+                                                        save_mean.dptr_,
+                                                        save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+      } else {
+        CHECK_EQ(cudnnBatchNormalizationForwardInference(s->dnn_handle_,
+                                                         CUDNN_BATCHNORM_SPATIAL,
+                                                         &a,
+                                                         &b,
+                                                         io_desc_,
+                                                         x.dptr_,
+                                                         io_desc_,
+                                                         y.dptr_,
+                                                         mean_desc_,
+                                                         gamma.dptr_,
+                                                         beta.dptr_,
+                                                         moving_mean.dptr_,
+                                                         moving_inv_var.dptr_,
+                                                         param_.eps), CUDNN_STATUS_SUCCESS);
+      }
+    })
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -150,79 +160,107 @@ class CuDNNBatchNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
-    CHECK_EQ(in_grad.size(), 3);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
+    CHECK_EQ(in_grad.size(), 3U);
     CHECK(ctx.is_train && !param_.use_global_stats)
         << "use global statistics is not yet supported in CuDNNBatchNorm";
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Tensor<gpu, 4> x = in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 4> dx = in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 4> dy = out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, real_t>(shape_, s);
-    Tensor<gpu, 1> gamma =
-      in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> dbeta =
-      in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> dgamma =
-      in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> save_mean =
-      out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    Tensor<gpu, 1> save_inv_var =
-      out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, real_t>(Shape1(shape_[1]), s);
-    float a = 1.0f;
-    float b = 0.0f;
-    float b_add = 1.0f;
-    CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-
-    if (param_.fix_gamma) gamma = 1.f;
+    Tensor<gpu, 4, DType> x =
+      in_data[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
+    Tensor<gpu, 4, DType> dx =
+      in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
+    Tensor<gpu, 4, DType> dy =
+      out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 
 #if CUDNN_VERSION >= 4007
-    CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
-                                             CUDNN_BATCHNORM_SPATIAL,
-                                             &a,
-                                             &b,
-                                             &a,
-                                             req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
-                                             io_desc_,
-                                             x.dptr_,
-                                             io_desc_,
-                                             dy.dptr_,
-                                             io_desc_,
-                                             dx.dptr_,
-                                             mean_desc_,
-                                             gamma.dptr_,
-                                             dgamma.dptr_,
-                                             dbeta.dptr_,
-                                             param_.eps,
-                                             save_mean.dptr_,
-                                             save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+    MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
+      Tensor<gpu, 1, DTypeParam> gamma =
+        in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dbeta =
+        in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dgamma =
+        in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_mean =
+        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_inv_var =
+        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+
+      typename DataType<DType>::ScaleType a = 1.0f;
+      typename DataType<DType>::ScaleType b = 0.0f;
+      typename DataType<DType>::ScaleType b_add = 1.0f;
+      CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
+
+      if (param_.fix_gamma) gamma = 1.f;
+
+      CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
+                                               CUDNN_BATCHNORM_SPATIAL,
+                                               &a,
+                                               &b,
+                                               &a,
+                                               req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
+                                               io_desc_,
+                                               x.dptr_,
+                                               io_desc_,
+                                               dy.dptr_,
+                                               io_desc_,
+                                               dx.dptr_,
+                                               mean_desc_,
+                                               gamma.dptr_,
+                                               dgamma.dptr_,
+                                               dbeta.dptr_,
+                                               param_.eps,
+                                               save_mean.dptr_,
+                                               save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+      if (param_.fix_gamma) dgamma = 0.f;
+    })
 #else  // CUDNN_VERSION < 4007
-    CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
-                                             CUDNN_BATCHNORM_SPATIAL,
-                                             &a,
-                                             &b,
-                                             io_desc_,
-                                             x.dptr_,
-                                             io_desc_,
-                                             dy.dptr_,
-                                             io_desc_,
-                                             dx.dptr_,
-                                             mean_desc_,
-                                             gamma.dptr_,
-                                             dgamma.dptr_,
-                                             dbeta.dptr_,
-                                             param_.eps,
-                                             save_mean.dptr_,
-                                             save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+    MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
+      Tensor<gpu, 1, DTypeParam> gamma =
+        in_data[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dbeta =
+        in_grad[cudnnbatchnorm::kBeta].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> dgamma =
+        in_grad[cudnnbatchnorm::kGamma].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_mean =
+        out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+      Tensor<gpu, 1, DTypeParam> save_inv_var =
+        out_data[cudnnbatchnorm::kInvVar].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
+
+      typename DataType<DType>::ScaleType a = 1.0f;
+      typename DataType<DType>::ScaleType b = 0.0f;
+      typename DataType<DType>::ScaleType b_add = 1.0f;
+      CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
+
+      if (param_.fix_gamma) gamma = 1.f;
+      CHECK_EQ(cudnnBatchNormalizationBackward(s->dnn_handle_,
+                                               CUDNN_BATCHNORM_SPATIAL,
+                                               &a,
+                                               &b,
+                                               io_desc_,
+                                               x.dptr_,
+                                               io_desc_,
+                                               dy.dptr_,
+                                               io_desc_,
+                                               dx.dptr_,
+                                               mean_desc_,
+                                               gamma.dptr_,
+                                               dgamma.dptr_,
+                                               dbeta.dptr_,
+                                               param_.eps,
+                                               save_mean.dptr_,
+                                               save_inv_var.dptr_), CUDNN_STATUS_SUCCESS);
+      if (param_.fix_gamma) dgamma = 0.f;
+    })
 #endif
-    if (param_.fix_gamma) dgamma = 0.f;
   }
 
  private:
   bool init_cudnn_;
   cudnnDataType_t dtype_;
+  int dtype_param_;
   cudnnTensorDescriptor_t io_desc_, mean_desc_;
   mshadow::Shape<4> shape_;
   BatchNormParam param_;
@@ -248,7 +286,7 @@ class CuDNNBatchNormProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 3) << "Input:[data, gamma, beta]";
+    CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     in_shape->at(1) = TShape(Shape1(dshape[1]));

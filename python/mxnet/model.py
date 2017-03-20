@@ -261,7 +261,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
                 nbatch += 1
                 # batch callback (for print purpose)
-                if batch_end_callback != None:
+                if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch,
                                                      nbatch=nbatch,
                                                      eval_metric=eval_metric,
@@ -298,14 +298,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 executor_manager.load_data_batch(eval_batch)
                 executor_manager.forward(is_train=False)
                 executor_manager.update_metric(eval_metric, eval_batch.label)
-                if eval_batch_end_callback != None:
+                if eval_batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch,
                                                      nbatch=i,
                                                      eval_metric=eval_metric,
                                                      locals=locals())
                     _multiple_callbacks(eval_batch_end_callback, batch_end_params)
                 total_num_batch += 1
-            if eval_end_callback != None:
+            if eval_end_callback is not None:
                 eval_end_params = BatchEndParam(epoch=epoch,
                                                 nbatch=total_num_batch,
                                                 eval_metric=eval_metric,
@@ -382,7 +382,7 @@ def load_checkpoint(prefix, epoch):
             aux_params[name] = v
     return (symbol, arg_params, aux_params)
 
-from .callback import LogValidationMetricsCallback
+from .callback import LogValidationMetricsCallback # pylint: disable=wrong-import-position
 
 class FeedForward(BASE_ESTIMATOR):
     """Model class of MXNet for training and predicting feedforward nets.
@@ -705,7 +705,7 @@ class FeedForward(BASE_ESTIMATOR):
             self._pred_exec.forward(is_train=False)
             eval_metric.update(batch.label, self._pred_exec.outputs)
 
-            if batch_end_callback != None:
+            if batch_end_callback is not None:
                 batch_end_params = BatchEndParam(epoch=0,
                                                  nbatch=i,
                                                  eval_metric=eval_metric,

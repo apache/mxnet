@@ -170,11 +170,6 @@ inline bool type_assign(int *y, const int& x) {
   }
 #endif
 
-// describe op registration point
-// TODO(eric): move to dmlc-core
-#define STRINGIZE_DETAIL(x) #x
-#define STRINGIZE(x) STRINGIZE_DETAIL(x)
-#define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 
 // quick helper to make node
 inline std::vector<nnvm::NodeEntry> MakeGradNode(

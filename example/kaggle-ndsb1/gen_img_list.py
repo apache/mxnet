@@ -1,3 +1,4 @@
+from __future__ import print_function
 import csv
 import os
 import sys
@@ -72,13 +73,13 @@ if args.train:
         # unique_train, counts_train = np.unique(labels_train, return_counts=True) # To have a look at the frecuency distribution
         sss = StratifiedShuffleSplit(labels_train, 1, test_size=args.percent_val, random_state=0)
         for tr_idx, va_idx in sss:
-            print "Train subset has ", len(tr_idx), " cases. Validation subset has ", len(va_idx), "cases"
+            print("Train subset has ", len(tr_idx), " cases. Validation subset has ", len(va_idx), "cases")
     else:
         (nRows, nCols) = img_lst.shape
         splitat=int(round(nRows*(1-args.percent_val),0))
         tr_idx=range(0,splitat)
         va_idx=range(splitat,nRows)
-        print "Train subset has ", len(tr_idx), " cases. Validation subset has ", len(va_idx), "cases" 
+        print("Train subset has ", len(tr_idx), " cases. Validation subset has ", len(va_idx), "cases")
 
     tr_lst=img_lst[tr_idx,:].tolist()
     va_lst=img_lst[va_idx,:].tolist()

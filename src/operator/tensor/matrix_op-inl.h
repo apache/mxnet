@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file broadcast_reduce_op-inl.h
+ * \file matrix_op-inl.h
  * \brief Function defintion of matrix related operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
@@ -15,6 +15,10 @@
 #include "../mxnet_op.h"
 #include "broadcast_reduce_op.h"
 
+#if MXNET_USE_CUDA
+#include <thrust/device_vector.h>
+#endif
+
 namespace mxnet {
 namespace op {
 
@@ -27,37 +31,19 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     int tmp[] = {0, 0};
     DMLC_DECLARE_FIELD(target_shape)
     .set_default(TShape(tmp, tmp + 2))
-    .describe("(Deprecated! Use shape instead.) Target new shape. One and only one dim can be 0, "
+    .describe("(Deprecated! Use ``shape`` instead.) "
+              "Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
-    .describe("(Deprecated! Use shape instead.) Whether keep the highest dim unchanged."
+    .describe("(Deprecated! Use ``shape`` instead.) Whether keep the highest dim unchanged."
               "If set to true, then the first dim in target_shape is ignored,"
               "and always fixed as input");
     DMLC_DECLARE_FIELD(shape)
     .set_default(nnvm::Tuple<int>())
-    .describe("Target shape, a tuple, t=(t_1,t_2,..,t_m).\n"
-              "Let the input dims be s=(s_1,s_2,..,s_n).\n"
-              "The output dims u=(u_1,u_2,..,u_p) are computed from s and t.\n"
-              "The target shape tuple elements t_i are read in order, and used to "
-              " generate successive output dims u_p:\n"
-              "t_i:       meaning:      behavior:\n"
-              "+ve        explicit      u_p = t_i\n"
-              "0          copy          u_p = s_i\n"
-              "-1         infer         u_p = (Prod s_i) / (Prod u_j | j != p)\n"
-              "-2         copy all      u_p = s_i, u_p+1 = s_i+1, ...\n"
-              "-3         merge two     u_p = s_i * s_i+1\n"
-              "-4,a,b     split two     u_p = a, u_p+1 = b | a * b = s_i\n"
-              "The split directive (-4) in the target shape tuple is followed by "
-              "two dimensions, one of which can be -1, which means it will be "
-              "inferred from the other one and the original dimension.\n"
-              "The can only be one globally inferred dimension (-1), aside from "
-              "any -1 occuring in a split directive.");
+    .describe("The target shape");
     DMLC_DECLARE_FIELD(reverse)
-      .set_default(false)
-      .describe("Whether to match the shapes from the backward. If reverse is true, "
-      "0 values in the `shape` argument will be searched from the backward. E.g the "
-      "original shape is (10, 5, 4) and the shape argument is (-1, 0). If reverse is true, "
-      "the new shape should be (50, 4). Otherwise it will be (40, 5).");
+    .set_default(false)
+    .describe("If true then translating the input shape from right to left");
   }
 };
 
@@ -65,8 +51,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
   CHECK_EQ(param_.target_shape.ndim() > 0 ||
            param_.shape.ndim() > 0, true) << "targe_shape or shape must be present.";
   const TShape &dshape = (*in_attrs)[0];
@@ -122,7 +108,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
         if (d1 == -1) d1 = d0 / d2;
         if (d2 == -1) d2 = d0 / d1;
-        CHECK_EQ(d1 * d2, d0) <<
+        CHECK_EQ(d1 * d2, static_cast<int>(d0)) <<
           "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
         tmp.push_back(d1);
         tmp.push_back(d2);
@@ -187,8 +173,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
 inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *in_attrs,
                          std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1) << "Input: [data]";
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
   const TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
   out_attrs->clear();
@@ -286,10 +272,10 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 5) << "Transpose support at most 5 dimensions";
+  CHECK_LE(shp.ndim(), 5U) << "Transpose support at most 5 dimensions";
   TShape ret(shp.ndim());
   if (param.axes.ndim() == 0) {
     for (index_t i = 0; i < shp.ndim(); ++i) {
@@ -320,8 +306,8 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
                            std::vector<TShape> *in_attrs,
                            std::vector<TShape> *out_attrs) {
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
   CHECK_LE(param.axis, shp.ndim())
       << "axis exceeds the dimension of the array";
@@ -338,10 +324,10 @@ struct DotParam : public dmlc::Parameter<DotParam> {
   bool transpose_b;
   DMLC_DECLARE_PARAMETER(DotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
-      .describe("True if the first matrix is transposed.")
+      .describe("If true then transpose the first input before dot.")
       .set_default(false);
     DMLC_DECLARE_FIELD(transpose_b)
-      .describe("True if the second matrix is tranposed.")
+      .describe("If true then transpose the second input before dot.")
       .set_default(false);
   }
 };
@@ -494,8 +480,8 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
                      std::vector<TShape> *out_attrs) {
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
@@ -659,8 +645,8 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   TShape& lshape = (*in_attrs)[0];
   TShape& rshape = (*in_attrs)[1];
@@ -1064,8 +1050,8 @@ inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
                        std::vector<TShape> *in_attrs,
                        std::vector<TShape> *out_attrs) {
   const SliceAxisParam& param = nnvm::get<SliceAxisParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
   int axis, begin, end;
   GetSliceAxisParams(param, ishape, &axis, &begin, &end);
@@ -1172,6 +1158,39 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
   }
 };
 
+
+struct clip {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* datas,
+                                  DType a_min, DType a_max) {
+    DType data = datas[i];
+    if (data > a_max) {
+      out[i] = a_max;
+    } else if (data < a_min) {
+      out[i] = a_min;
+    } else {
+      out[i] = data;
+    }
+  }
+};
+
+
+struct clip_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* grad, const DType* datas,
+                                  DType a_min, DType a_max) {
+    DType data = datas[i];
+    if (data > a_max) {
+      out[i] = 0;
+    } else if (data < a_min) {
+      out[i] = 0;
+    } else {
+      out[i] = grad[i];
+    }
+  }
+};
+
+
 template<typename xpu>
 void Clip(const nnvm::NodeAttrs& attrs,
           const OpContext& ctx,
@@ -1204,67 +1223,6 @@ void ClipGrad_(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Kernel<clip_grad, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
     inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), DType(param.a_min), DType(param.a_max));
-  });
-}
-
-struct FlipParam : public dmlc::Parameter<FlipParam> {
-  int axis;
-  DMLC_DECLARE_PARAMETER(FlipParam) {
-    DMLC_DECLARE_FIELD(axis)
-    .describe("The dimension to flip");
-  }
-};
-
-// matrix crop
-template<typename xpu>
-void Flip(const nnvm::NodeAttrs& attrs,
-          const OpContext& ctx,
-          const std::vector<TBlob>& inputs,
-          const std::vector<OpReqType>& req,
-          const std::vector<TBlob>& outputs) {
-  const FlipParam& param = nnvm::get<FlipParam>(attrs.parsed);
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    switch (inputs[0].shape_.ndim()) {
-     case 0:
-      break;
-     case 1: {
-      Tensor<xpu, 1, DType> in = inputs[0].get<xpu, 1, DType>(s);
-      Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 2: {
-      Tensor<xpu, 2, DType> in = inputs[0].get<xpu, 2, DType>(s);
-      Tensor<xpu, 2, DType> out = outputs[0].get<xpu, 2, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 3: {
-      Tensor<xpu, 3, DType> in = inputs[0].get<xpu, 3, DType>(s);
-      Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 4: {
-      Tensor<xpu, 4, DType> in = inputs[0].get<xpu, 4, DType>(s);
-      Tensor<xpu, 4, DType> out = outputs[0].get<xpu, 4, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     case 5: {
-      Tensor<xpu, 5, DType> in = inputs[0].get<xpu, 5, DType>(s);
-      Tensor<xpu, 5, DType> out = outputs[0].get<xpu, 5, DType>(s);
-      out = flip(in, param.axis);
-      break;
-     }
-     default:
-      LOG(FATAL) << "flip supports at most 5 dimensions";
-      break;
-    }
   });
 }
 
@@ -1312,8 +1270,8 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
   const RepeatParam& param = nnvm::get<RepeatParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const TShape& ishape = (*in_attrs)[0];
   int repeats = 0;
   dmlc::optional<int> axisOpt;
@@ -1351,7 +1309,7 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
 inline bool RepeatOpType(const nnvm::NodeAttrs& attrs,
                          std::vector<int>* in_attrs,
                          std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
   if ((*in_attrs)[0] != -1) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   } else if ((*out_attrs)[0] != -1) {
@@ -1457,8 +1415,8 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   const TShape& oshape = outputs[0].shape_;
   if (oshape.ndim() == 0) return;
@@ -1498,8 +1456,8 @@ struct TileParam : public dmlc::Parameter<TileParam> {
 inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   const TileParam& param = nnvm::get<TileParam>(attrs.parsed);
   const TShape& ishape = (*in_attrs)[0];
   const TShape& reps = param.reps;
@@ -1527,7 +1485,7 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
 inline bool TileOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int>* in_attrs,
                        std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 1U);
   if ((*in_attrs)[0] != -1) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   } else if ((*out_attrs)[0] != -1) {
@@ -1592,8 +1550,8 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   if (inputs[0].Size() == 0) return;
   const TShape& ishape = inputs[0].shape_;
@@ -1632,8 +1590,8 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
 
   if (inputs[0].Size() == 0) return;
   const TShape& oshape = outputs[0].shape_;
@@ -1656,6 +1614,120 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
       attrs, ctx, newInputs, req, newOutputs, rshapes.first);
 }
+
+struct ReverseParam : public dmlc::Parameter<ReverseParam> {
+  nnvm::Tuple<int> axis;
+  DMLC_DECLARE_PARAMETER(ReverseParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("The axis which to reverse elements.");
+  }
+};
+
+
+#define REVERSE_MAX_DIM 10U
+
+struct reverse {
+  MSHADOW_XINLINE static int ReverseIndex(index_t idx,
+                                          index_t nreversedim,
+                                          const index_t * stride_,
+                                          const index_t * trailing_) {
+    index_t outputIndex = idx;
+    for (index_t i = 0; i < nreversedim; ++i) {
+      const index_t low = outputIndex % trailing_[i];
+      index_t high = outputIndex / trailing_[i];
+      const index_t x = high%stride_[i];
+      high /= stride_[i];
+      outputIndex = (high*stride_[i] + stride_[i] - 1 - x)*trailing_[i] + low;
+    }
+    return outputIndex;
+  }
+#ifdef __CUDACC__
+  template<typename DType>
+  __device__  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
+                              const index_t * stride_,
+                              const index_t * trailing_) {
+    __shared__ index_t stride_share[REVERSE_MAX_DIM];
+    __shared__ index_t trailing_share[REVERSE_MAX_DIM];
+    if (threadIdx.x < REVERSE_MAX_DIM) {
+      stride_share[threadIdx.x] = stride_[threadIdx.x];
+      trailing_share[threadIdx.x] = trailing_[threadIdx.x];
+    }
+    __syncthreads();
+    index_t new_idx = ReverseIndex(index, nreversedim, stride_share, trailing_share);
+    dst[new_idx] = src[index];
+  }
+#else
+  template<typename DType>
+  MSHADOW_XINLINE  static void Map(int index, index_t nreversedim, const DType *src, DType *dst,
+                                   const index_t * stride_,
+                                   const index_t * trailing_) {
+    index_t new_idx = ReverseIndex(index, nreversedim, stride_, trailing_);
+    dst[new_idx] = src[index];
+  }
+#endif
+};
+
+
+template<typename xpu>
+void ReverseOpForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  const ReverseParam& param = nnvm::get<ReverseParam>(attrs.parsed);
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  CHECK_LT(param.axis.ndim(), REVERSE_MAX_DIM);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const TShape& ishape = inputs[0].shape_;
+
+  std::vector<index_t> stride_(param.axis.ndim());
+  std::vector<index_t>  trailing_(param.axis.ndim());
+  index_t reverse_index = 0;
+  for (auto axis_iter = param.axis.begin() ; axis_iter!= param.axis.end(); ++axis_iter) {
+    CHECK_LT(*axis_iter, static_cast<int>(ishape.ndim()));
+    stride_[reverse_index] = ishape[*axis_iter];
+    trailing_[reverse_index] = 1;
+    for (int i2 = *axis_iter + 1; i2 < ishape.ndim(); ++i2) {
+      trailing_[reverse_index] *= ishape[i2];
+    }
+    reverse_index++;
+  }
+
+#ifdef __CUDACC__
+  mshadow::Tensor<xpu, 1, uint8_t> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, uint8_t>(
+      mshadow::Shape1(reverse_index * sizeof(index_t) * 2), s);
+
+  auto stride_workspace = workspace.dptr_;
+  auto trailing_workspace = workspace.dptr_ + reverse_index * sizeof(index_t);
+
+  cudaMemcpyAsync(stride_workspace, thrust::raw_pointer_cast(stride_.data()),
+                  stride_.size() * sizeof(index_t),
+                  cudaMemcpyHostToDevice, mshadow::Stream<gpu>::GetStream(s));
+  cudaMemcpyAsync(trailing_workspace, thrust::raw_pointer_cast(trailing_.data()),
+                  trailing_.size() * sizeof(index_t),
+                  cudaMemcpyHostToDevice, mshadow::Stream<gpu>::GetStream(s));
+
+#endif
+
+#ifdef __CUDACC__
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<reverse, xpu>::Launch(s, inputs[0].Size(), reverse_index,
+    inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+    reinterpret_cast<index_t*>(stride_workspace), reinterpret_cast<index_t*>(trailing_workspace));
+  });
+#else
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<reverse, xpu>::Launch(s, inputs[0].Size(), reverse_index,
+    inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+    stride_.data(), trailing_.data());
+  });
+#endif
+}
+
 
 }  // namespace op
 }  // namespace mxnet

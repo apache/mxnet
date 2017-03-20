@@ -26,14 +26,15 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(CSVIterParam) {
     DMLC_DECLARE_FIELD(data_csv)
-        .describe("Dataset Param: Data csv path.");
+        .describe("The filename of a CSV file or a directory path");
     DMLC_DECLARE_FIELD(data_shape)
-        .describe("Dataset Param: Shape of the data.");
+        .describe("The shape of one example");
     DMLC_DECLARE_FIELD(label_csv).set_default("NULL")
-        .describe("Dataset Param: Label csv path. If is NULL, all labels will be returned as 0");
+        .describe("The filename of a CSV file or a directory path. "
+                  "If NULL, all labels will be returned as 0");
     index_t shape1[] = {1};
     DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
-        .describe("Dataset Param: Shape of the label.");
+        .describe("The shape of one label.");
   }
 };
 
@@ -129,8 +130,34 @@ class CSVIter: public IIterator<DataInst> {
 DMLC_REGISTER_PARAMETER(CSVIterParam);
 
 MXNET_REGISTER_IO_ITER(CSVIter)
-.describe("Create iterator for dataset in csv.")
+.describe(R"code(Iterating on CSV files
+
+Assume there is CSV file at ``data/data.csv`` with content::
+
+  1,2,3
+  2,3,4
+  3,4,5
+  4,5,6
+
+If we set::
+
+  data_csv = 'data/data.csv'
+  data_shape = (3,)
+  batch_size = 2
+
+Then this iterator will reads two batches::
+
+  [[ 1.  2.  3.]
+   [ 2.  3.  4.]]
+  [[ 3.  4.  5.]
+   [ 4.  5.  6.]]
+
+If set ``data_csv = 'data/'``, then all files in this directory will be read.
+
+)code" ADD_FILELINE)
 .add_arguments(CSVIterParam::__FIELDS__())
+.add_arguments(BatchParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
 .set_body([]() {
     return new PrefetcherIter(
         new BatchLoader(

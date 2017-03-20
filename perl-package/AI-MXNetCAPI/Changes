@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNetCAPI
 
+0.03  Sat Feb 25 13:21:07 PST 2017
+	- sync up with the Python interface.
+
 0.02  Tue Feb 14 07:08:37 PST 2017
 	- prepared for inclusion to the mxnet code repository.
 

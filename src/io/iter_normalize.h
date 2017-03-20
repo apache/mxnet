@@ -50,29 +50,31 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageNormalizeParam) {
     DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("Augmentation Param: Random Seed.");
+        .describe("The Random Seed.");
     DMLC_DECLARE_FIELD(mirror).set_default(false)
-        .describe("Augmentation Param: Whether to mirror the image.");
+        .describe("If or not mirror the image.");
     DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("Augmentation Param: Whether to mirror the image randomly.");
+        .describe("If or not randomly the image.");
     DMLC_DECLARE_FIELD(mean_img).set_default("")
-        .describe("Augmentation Param: Mean Image to be subtracted.");
+        .describe("Filename of the The mean image.");
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on R channel.");
+        .describe("The mean value to be subtracted on the R channel");
     DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on G channel.");
+        .describe("The mean value to be subtracted on the G channel");
     DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on B channel.");
+        .describe("The mean value to be subtracted on the B channel");
     DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on Alpha channel.");
+        .describe("The mean value to be subtracted on the alpha channel");
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
-        .describe("Augmentation Param: Scale in color space.");
+        .describe("Multiply the image with a scale value.");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
-        .describe("Augmentation Param: Maximum ratio of contrast variation.");
+        .describe("Change the contrast with a value randomly chosen from "
+                  "``[-max_random_contrast, max_random_contrast]``");
     DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
-        .describe("Augmentation Param: Maximum value of illumination variation.");
+        .describe("Change the illumination with a value randomly chosen from "
+                  "``[-max_random_illumination, max_random_illumination]``");
     DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("Augmentation Param: Whether to print augmentor info.");
+        .describe("If or not output verbose information.");
   }
 };
 
@@ -109,7 +111,7 @@ class ImageNormalizeIter : public IIterator<DataInst> {
           std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param_.mean_img.c_str(), "r"));
           NDArray::Load(fi.get(), &data, &keys);
         }
-        CHECK_EQ(data.size(), 1)
+        CHECK_EQ(data.size(), 1U)
             << "Invalid mean image file format";
         data[0].WaitToRead();
         mshadow::Tensor<cpu, 3> src = data[0].data().get<cpu, 3, real_t>();
