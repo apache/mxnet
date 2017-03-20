@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import cPickle
 import os
@@ -38,7 +39,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print 'Called with argument:', args
+    print('Called with argument:', args)
     reeval(args)
 
 

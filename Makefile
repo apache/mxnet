@@ -270,7 +270,7 @@ cpplint:
 
 pylint:
 # ideally we want to check all, such as: python tools example tests
-	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc -r y
+	pylint python/mxnet --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
 
 doc: doxygen
 

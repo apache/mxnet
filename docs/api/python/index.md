@@ -28,4 +28,5 @@ imported with:
    module
    kvstore
    io
+   optimization
 ```
