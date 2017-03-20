@@ -433,10 +433,13 @@ def test_lstm_forget_bias():
 
     mod.init_params()
 
-    bias_argument = next(x for x in sym.list_arguments() if x.endswith('f_bias'))
+    args, auxs = mod.get_params()
+    args = fused.unpack_weights(args)
+
+    bias_name = next(x for x in args if x.endswith('f_bias'))
     expected_bias = np.hstack([np.zeros((100,)),
                                forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
-    assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
+    assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
 
 
