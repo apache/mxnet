@@ -137,6 +137,37 @@ inline void pool_max_3d_cpu(const DType* in_data, const TShape& ishape, const TS
 }
 
 template<typename DType>
+inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
+                            const TShape& kernel, const TShape& pad, const TShape& stride,
+                            OpReqType req_type, DType* out_data, bool getAvg = false) {
+  const int width = ishape[2];
+  const int pooled_width = oshape[2];
+  const int kernel_w = kernel[0];
+  const int pad_w = pad[0];
+  const int stride_w = stride[0];
+  const index_t in_data_offset = ishape[2];
+  const index_t out_data_offset = oshape[2];
+  for (index_t n = 0; n < oshape[0]; ++n) {
+    for (index_t c = 0; c < oshape[1]; ++c) {
+      for (int pw = 0; pw < pooled_width; ++pw) {
+        int wstart = pw * stride_w - pad_w;
+        int wend = std::min(wstart + kernel_w, width + pad_w);
+        int pool_size = (wend - wstart);
+        wstart = std::max(wstart, 0);
+        wend = std::min(wend, width);
+        DType sum = 0;
+        for (int w = wstart; w < wend; ++w) {
+          sum += in_data[w];
+        }
+        KERNEL_ASSIGN(out_data[pw], req_type, getAvg? sum/pool_size : sum);
+      }
+      in_data += in_data_offset;
+      out_data += out_data_offset;
+    }
+  }
+}
+
+template<typename DType>
 inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             OpReqType req_type, DType* out_data, bool getAvg = false) {
@@ -376,6 +407,39 @@ inline void unpool_max_3d_cpu(const DType* out_grad, const DType* in_data,
 }
 
 template<typename DType>
+inline void unpool_sum_1d_cpu(const DType* out_grad, const TShape& ishape,
+                              const TShape& oshape, const TShape& kernel,
+                              const TShape& pad, const TShape& stride,
+                              DType* in_grad, bool isAvg = false) {
+  const int width = ishape[2];
+  const int pooled_width = oshape[2];
+  const int kernel_w = kernel[0];
+  const int pad_w = pad[0];
+  const int stride_w = stride[0];
+  const index_t in_grad_offset = ishape[2];
+  const index_t out_grad_offset = oshape[2];
+  for (index_t n = 0; n < oshape[0]; ++n) {
+    for (index_t c = 0; c < oshape[1]; ++c) {
+      for (int pw = 0; pw < pooled_width; ++pw) {
+        int wstart = pw * stride_w - pad_w;
+        int wend = std::min(wstart + kernel_w, width + pad_w);
+        int pool_size = 1;
+        if (isAvg) {
+          pool_size = wend - wstart;
+        }
+        wstart = std::max(wstart, 0);
+        wend = std::min(wend, width);
+        for (int w = wstart; w < wend; ++w) {
+          in_grad[w] += out_grad[pw] / pool_size;
+        }
+      }
+      in_grad += in_grad_offset;
+      out_grad += out_grad_offset;
+    }
+  }
+}
+
+template<typename DType>
 inline void unpool_sum_2d_cpu(const DType* out_grad, const TShape& ishape,
                               const TShape& oshape, const TShape& kernel,
                               const TShape& pad, const TShape& stride,
@@ -476,9 +540,9 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
     if (pool_enum::kMaxPooling == pool_type) {
       pool_max_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
     } else if (pool_enum::kAvgPooling == pool_type) {
-      //pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data, true);
+      pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data, true);
     } else if (pool_enum::kSumPooling == pool_type) {
-      //pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+      pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
@@ -520,9 +584,9 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
     if (pool_enum::kMaxPooling == pool_type) {
       unpool_max_1d_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride, in_grad);
     } else if (pool_enum::kAvgPooling == pool_type) {
-      //unpool_sum_1d_cpu(out_grad, ishape, oshape, kernel, pad, stride, in_grad, true);
+      unpool_sum_1d_cpu(out_grad, ishape, oshape, kernel, pad, stride, in_grad, true);
     } else if (pool_enum::kSumPooling == pool_type) {
-      //unpool_sum_1d_cpu(out_grad, ishape, oshape, kernel, pad, stride, in_grad);
+      unpool_sum_1d_cpu(out_grad, ishape, oshape, kernel, pad, stride, in_grad);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
