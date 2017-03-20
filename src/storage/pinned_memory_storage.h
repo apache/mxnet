@@ -33,14 +33,18 @@ class PinnedMemoryStorage {
 
 inline void* PinnedMemoryStorage::Alloc(size_t size) {
   void* ret = nullptr;
+#if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(GPUPooledStorageManager::mutex_);
+#endif
   // make the memory available across all devices
   CUDA_CALL(cudaHostAlloc(&ret, size, cudaHostAllocPortable));
   return ret;
 }
 
 inline void PinnedMemoryStorage::Free(void* ptr) {
+#if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(GPUPooledStorageManager::mutex_);
+#endif
   cudaError_t err = cudaFreeHost(ptr);
   // ignore unloading error, as memory has already been recycled
   if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
