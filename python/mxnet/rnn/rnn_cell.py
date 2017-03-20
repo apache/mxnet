@@ -282,7 +282,7 @@ class BaseRNNCell(object):
         """
         self.reset()
 
-        inputs, axis = _normalize_sequence(length, inputs, layout, False)
+        inputs, _ = _normalize_sequence(length, inputs, layout, False)
         if begin_state is None:
             begin_state = self.begin_state()
 
@@ -774,7 +774,7 @@ class DropoutCell(BaseRNNCell):
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
         self.reset()
-        inputs, axis = _normalize_sequence(length, inputs, layout, merge_outputs)
+        inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, symbol.Symbol):
             return self(inputs, states)
         else:
