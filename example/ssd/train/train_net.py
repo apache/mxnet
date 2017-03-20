@@ -182,13 +182,13 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
     if resize_epoch > 1:
         batches_per_epoch = ((imdb.num_images - 1) // batch_size + 1) * resize_epoch
         train_iter = mx.io.ResizeIter(train_iter, batches_per_epoch)
-    #train_iter = mx.io.PrefetchingIter(train_iter)
+    train_iter = mx.io.PrefetchingIter(train_iter)
     if val_imdb:
         val_iter = DetIter(val_imdb, batch_size, data_shape, mean_pixels,
                            cfg.VALID.RAND_SAMPLERS, cfg.VALID.RAND_MIRROR,
                            cfg.VALID.EPOCH_SHUFFLE, cfg.VALID.RAND_SEED,
                            is_train=True)
-        #val_iter = mx.io.PrefetchingIter(val_iter)
+        val_iter = mx.io.PrefetchingIter(val_iter)
     else:
         val_iter = None
 

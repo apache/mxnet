@@ -105,7 +105,7 @@ class DetIter(mx.io.DataIter):
             raise StopIteration
 
     def getindex(self):
-        return self._current // self.batch_size
+        return self._current // seltrf.batch_size
 
     def getpad(self):
         pad = self._current + self.batch_size - self._size

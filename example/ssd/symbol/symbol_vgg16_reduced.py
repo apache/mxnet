@@ -120,7 +120,7 @@ def get_symbol_train(num_classes=20):
 
     tmp = mx.symbol.MultiBoxTarget(
         *[anchor_boxes, label, cls_preds], overlap_threshold=.5, \
-        ignore_label=-1, negative_mining_ratio=-1, minimum_negative_samples=0, \
+        ignore_label=-1, negative_mining_ratio=3, minimum_negative_samples=0, \
         negative_mining_thresh=.5, variances=(0.1, 0.1, 0.2, 0.2),
         name="multibox_target")
     loc_target = tmp[0]

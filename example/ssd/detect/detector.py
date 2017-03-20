@@ -55,8 +55,8 @@ class Detector(object):
         list of detection results
         """
         num_images = det_iter._size
-        if not isinstance(DetIter, mx.io.PrefetchingIter):
-             det_iter = mx.io.PrefetchingIter(det_iter)
+        if not isinstance(det_iter, mx.io.PrefetchingIter):
+            det_iter = mx.io.PrefetchingIter(det_iter)
         start = timer()
         detections = self.mod.predict(det_iter).asnumpy()
         time_elapsed = timer() - start
