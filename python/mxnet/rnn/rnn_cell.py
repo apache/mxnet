@@ -39,7 +39,7 @@ def _normalize_sequence(length, inputs, layout, merge, in_layout=None):
             assert len(inputs.list_outputs()) == 1, \
                 "unroll doesn't allow grouped symbol as input. Please convert " \
                 "to list with list(inputs) first or let unroll handle splitting."
-            inputs = list(symbol.split(inputs, axis=axis, num_outputs=length,
+            inputs = list(symbol.split(inputs, axis=in_axis, num_outputs=length,
                                        squeeze_axis=1))
     else:
         assert length is None or len(inputs) == length
