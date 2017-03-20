@@ -123,17 +123,17 @@ inline void IoUTransformInv(const mshadow::Tensor<cpu, 2>& boxes,
 
 // filter box by set confidence to zero
 // * height or width < rpn_min_size
-inline void FilterBox(const mshadow::Tensor<cpu, 2>& dets,
+inline void FilterBox(mshadow::Tensor<cpu, 2> *dets,
                       const float min_size) {
-  for (index_t i = 0; i < dets.size(0); i++) {
-    float iw = dets[i][2] - dets[i][0] + 1.0f;
-    float ih = dets[i][3] - dets[i][1] + 1.0f;
+  for (index_t i = 0; i < dets->size(0); i++) {
+    float iw = (*dets)[i][2] - (*dets)[i][0] + 1.0f;
+    float ih = (*dets)[i][3] - (*dets)[i][1] + 1.0f;
     if (iw < min_size || ih < min_size) {
-      dets[i][0] -= min_size / 2;
-      dets[i][1] -= min_size / 2;
-      dets[i][2] += min_size / 2;
-      dets[i][3] += min_size / 2;
-      dets[i][4] = -1.0f;
+      (*dets)[i][0] -= min_size / 2;
+      (*dets)[i][1] -= min_size / 2;
+      (*dets)[i][2] += min_size / 2;
+      (*dets)[i][3] += min_size / 2;
+      (*dets)[i][4] = -1.0f;
     }
   }
 }
@@ -352,7 +352,7 @@ class ProposalOp : public Operator{
       utils::BBoxTransformInv(workspace_proposals, bbox_deltas, im_info[0][0], im_info[0][1],
                               real_height, real_width, &(workspace_proposals));
     }
-    utils::FilterBox(workspace_proposals, param_.rpn_min_size * im_info[0][2]);
+    utils::FilterBox(&workspace_proposals, param_.rpn_min_size * im_info[0][2]);
 
     Tensor<cpu, 1> score = workspace_pre_nms[0];
     Tensor<cpu, 1> order = workspace_pre_nms[1];
