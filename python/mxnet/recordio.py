@@ -1,7 +1,4 @@
-# coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, no-member
-
-"""Python interface for DLMC RecrodIO data format"""
+"""Read and write for the RecrodIO data format"""
 from __future__ import absolute_import
 from collections import namedtuple
 
@@ -20,7 +17,7 @@ except ImportError:
     cv2 = None
 
 class MXRecordIO(object):
-    """Python interface for read/write RecordIO data formmat
+    """Read/write RecordIO formmat data
 
     Parameters
     ----------
@@ -101,8 +98,7 @@ class MXRecordIO(object):
             return None
 
 class MXIndexedRecordIO(MXRecordIO):
-    """Python interface for read/write RecordIO data formmat with index.
-    Support random access.
+    """Read/write RecordIO formmat data supporting random access.
 
     Parameters
     ----------
@@ -170,8 +166,8 @@ class MXIndexedRecordIO(MXRecordIO):
 
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
-_IRFormat = 'IfQQ'
-_IRSize = struct.calcsize(_IRFormat)
+_IR_FORMAT = 'IfQQ'
+_IR_SIZE = struct.calcsize(_IR_FORMAT)
 
 def pack(header, s):
     """pack an string into MXImageRecord
@@ -191,7 +187,7 @@ def pack(header, s):
         label = np.asarray(header.label, dtype=np.float32)
         header = header._replace(flag=label.size, label=0)
         s = label.tostring() + s
-    s = struct.pack(_IRFormat, *header) + s
+    s = struct.pack(_IR_FORMAT, *header) + s
     return s
 
 def unpack(s):
@@ -209,8 +205,8 @@ def unpack(s):
     s : str
         unpacked string
     """
-    header = IRHeader(*struct.unpack(_IRFormat, s[:_IRSize]))
-    s = s[_IRSize:]
+    header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
+    s = s[_IR_SIZE:]
     if header.flag > 0:
         header = header._replace(label=np.fromstring(s, np.float32, header.flag))
         s = s[header.flag*4:]
