@@ -72,10 +72,12 @@ See example of `dataset/pascal_voc.py` for details.
 * Run : mxnet/example/ssd/ssd_train.ipynb
 ```
 * By default, this example will use `batch-size=32` and `learning_rate=0.001`.
+```
 You might need to change the parameters a bit if you have different configurations.
 Check `python train.py --help` for more training options. For example, if you have 4 GPUs, use:
-```
+
 # note that a perfect training parameter set is yet to be discovered for multi-GPUs
+```
 python train.py --gpus 0,1,2,3 --batch-size 128 --lr 0.0005
 ```
 * Memory usage: MXNet is very memory efficient, training on `VGG16_reduced` model with `batch-size` 32 takes around 4684MB without CUDNN.
