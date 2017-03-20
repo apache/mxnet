@@ -239,7 +239,11 @@ class MNISTIter: public IIterator<TBlobBatch> {
 DMLC_REGISTER_PARAMETER(MNISTParam);
 
 MXNET_REGISTER_IO_ITER(MNISTIter)
-.describe("Create iterator for MNIST hand-written digit number recognition dataset.")
+.describe(R"code(Iterating on the MNIST dataset.
+
+One can download the dataset from http://yann.lecun.com/exdb/mnist/
+
+)code" ADD_FILELINE)
 .add_arguments(MNISTParam::__FIELDS__())
 .add_arguments(PrefetcherParam::__FIELDS__())
 .set_body([]() {
