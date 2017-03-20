@@ -30,7 +30,8 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
     DMLC_DECLARE_FIELD(data_shape)
         .describe("The shape of one example");
     DMLC_DECLARE_FIELD(label_csv).set_default("NULL")
-        .describe("The filename of a CSV file or a directory path. If NULL, all labels will be returned as 0");
+        .describe("The filename of a CSV file or a directory path. "
+                  "If NULL, all labels will be returned as 0");
     index_t shape1[] = {1};
     DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
         .describe("The shape of one label.");
