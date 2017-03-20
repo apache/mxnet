@@ -3,6 +3,7 @@ Proposal Operator transform anchor coordinates into ROI coordinates with predict
 classification probability and bounding box prediction results, and image size and scale information.
 """
 
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 import numpy.random as npr
@@ -31,9 +32,9 @@ class ProposalOperator(mx.operator.CustomOp):
         self._rpn_min_size = rpn_min_size
 
         if DEBUG:
-            print 'feat_stride: {}'.format(self._feat_stride)
-            print 'anchors:'
-            print self._anchors
+            print('feat_stride: {}'.format(self._feat_stride))
+            print('anchors:')
+            print(self._anchors)
 
     def forward(self, is_train, req, in_data, out_data, aux):
         nms = gpu_nms_wrapper(self._threshold, in_data[0].context.device_id)
@@ -64,16 +65,16 @@ class ProposalOperator(mx.operator.CustomOp):
         im_info = in_data[2].asnumpy()[0, :]
 
         if DEBUG:
-            print 'im_size: ({}, {})'.format(im_info[0], im_info[1])
-            print 'scale: {}'.format(im_info[2])
+            print('im_size: ({}, {})'.format(im_info[0], im_info[1]))
+            print('scale: {}'.format(im_info[2]))
 
         # 1. Generate proposals from bbox_deltas and shifted anchors
         # use real image size instead of padded feature map sizes
         height, width = int(im_info[0] / self._feat_stride), int(im_info[1] / self._feat_stride)
 
         if DEBUG:
-            print 'score map size: {}'.format(scores.shape)
-            print "resudial: {}".format((scores.shape[2] - height, scores.shape[3] - width))
+            print('score map size: {}'.format(scores.shape))
+            print("resudial: {}".format((scores.shape[2] - height, scores.shape[3] - width)))
 
         # Enumerate all shifts
         shift_x = np.arange(0, width) * self._feat_stride

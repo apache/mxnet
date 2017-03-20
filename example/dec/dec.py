@@ -1,4 +1,5 @@
 # pylint: skip-file
+from __future__ import print_function
 import sys
 import os
 # code to automatically download dataset
@@ -116,15 +117,15 @@ class DECModel(model.MXModel):
                 p = np.zeros((z.shape[0], self.num_centers))
                 self.dec_op.forward([z, args['dec_mu'].asnumpy()], [p])
                 y_pred = p.argmax(axis=1)
-                print np.std(np.bincount(y_pred)), np.bincount(y_pred)
-                print np.std(np.bincount(y.astype(np.int))), np.bincount(y.astype(np.int))
+                print(np.std(np.bincount(y_pred)), np.bincount(y_pred))
+                print(np.std(np.bincount(y.astype(np.int))), np.bincount(y.astype(np.int)))
                 if y is not None:
                     print(cluster_acc(y_pred, y)[0])
                 weight = 1.0/p.sum(axis=0)
                 weight *= self.num_centers/weight.sum()
                 p = (p**2)*weight
                 train_iter.data_list[1][:] = (p.T/p.sum(axis=1)).T
-                print np.sum(y_pred != self.y_pred), 0.001*y_pred.shape[0]
+                print(np.sum(y_pred != self.y_pred), 0.001*y_pred.shape[0])
                 if np.sum(y_pred != self.y_pred) < 0.001*y_pred.shape[0]:
                     self.y_pred = y_pred
                     return True

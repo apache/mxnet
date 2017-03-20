@@ -2,6 +2,7 @@
 This file has functions about generating bounding box regression targets
 """
 
+from __future__ import print_function
 import numpy as np
 
 from bbox_transform import bbox_overlaps, bbox_transform
@@ -21,12 +22,12 @@ def compute_bbox_regression_targets(rois, overlaps, labels):
 
     # Sanity check
     if len(rois) != len(overlaps):
-        print 'bbox regression: this should not happen'
+        print('bbox regression: this should not happen')
 
     # Indices of ground-truth ROIs
     gt_inds = np.where(overlaps == 1)[0]
     if len(gt_inds) == 0:
-        print 'something wrong : zero ground truth rois'
+        print('something wrong : zero ground truth rois')
     # Indices of examples for which we try to make predictions
     ex_inds = np.where(overlaps >= config.TRAIN.BBOX_REGRESSION_THRESH)[0]
 
@@ -51,7 +52,7 @@ def add_bbox_regression_targets(roidb):
     :param roidb: roidb to be processed. must have gone through imdb.prepare_roidb
     :return: means, std variances of targets
     """
-    print 'add bounding box regression targets'
+    print('add bounding box regression targets')
     assert len(roidb) > 0
     assert 'max_classes' in roidb[0]
 
