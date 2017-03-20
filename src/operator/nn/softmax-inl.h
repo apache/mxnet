@@ -6,6 +6,8 @@
 #ifndef MXNET_OPERATOR_NN_SOFTMAX_INL_H_
 #define MXNET_OPERATOR_NN_SOFTMAX_INL_H_
 
+#include <vector>
+
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 
