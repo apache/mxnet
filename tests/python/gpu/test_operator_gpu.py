@@ -422,9 +422,9 @@ def test_lstm():
 
 def test_lstm_forget_bias():
     forget_bias = 2.0
-    fused = mx.rnn.FusedRNNCell(100, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
+    fused = mx.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
 
-    dshape = (32, 1, 200)
+    dshape = (32, 1, 20)
     data = mx.sym.Variable('data')
 
     sym, _ = fused.unroll(1, data, merge_outputs=True)
@@ -437,8 +437,7 @@ def test_lstm_forget_bias():
     args = fused.unpack_weights(args)
 
     bias_name = next(x for x in args if x.endswith('f_bias'))
-    expected_bias = np.hstack([np.zeros((100,)),
-                               forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
+    expected_bias = forget_bias * np.ones(20, )
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
 
