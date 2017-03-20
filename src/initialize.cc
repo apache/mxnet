@@ -4,6 +4,10 @@
  * \brief initialize mxnet library
  */
 #include <dmlc/logging.h>
+#include <mxnet/engine.h>
+#include <mutex>
+
+#include "engine/profiler.h"
 
 namespace mxnet {
 
@@ -15,7 +19,7 @@ class LibraryInitializer {
     static std::once_flag dump_profile_flag;
     std::call_once(dump_profile_flag, []() {
       // ensure engine's and profiler's constructor are called before atexit.
-      engine::Engine::Get();
+      Engine::Get();
       engine::Profiler::Get();
       // DumpProfile will be called before engine's and profiler's destructor.
       std::atexit([](){
