@@ -1,6 +1,4 @@
-# coding: utf-8
-# pylint: disable=too-many-branches, too-many-arguments
-"""Initialization helper for mxnet"""
+"""Weight initialization"""
 from __future__ import absolute_import, print_function
 
 import re
@@ -31,7 +29,8 @@ class InitDesc(str):
 _INITIALIZER_REGISTRY = {}
 
 def register(klass):
-    """Register optimizers to the optimizer factory"""
+    """Register an intializer to the initializer factory
+    """
     assert issubclass(klass, Initializer), "Can only register subclass of Initializer"
     name = klass.__name__.lower()
     if name in _INITIALIZER_REGISTRY:
@@ -45,32 +44,25 @@ def register(klass):
     return klass
 
 class Initializer(object):
-    """Base class for Initializer.
-
-    subclasses should call base class with all keyword arguments. For example::
-        @register
-        class Constant(Initializer):
-            def __init__(self, value):
-                super(Constant, self).__init__(value=value)
+    """The base class of an initializer.
     """
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
     def dumps(self):
-        """Save initializer to string"""
+        """Save the initializer to string"""
         return json.dumps([self.__class__.__name__.lower(), self.kwargs])
 
-    # pylint: disable=protected-access
     def __call__(self, desc, arr):
-        """Override () function to do Initialization
+        """Initialize an array
 
         Parameters
         ----------
         desc : InitDesc
-            Initialization pattern Descriptor
+            Initialization pattern descriptor
 
         arr : NDArray
-            ndarray to be Initialized
+            The array to be Initialized
         """
         if not isinstance(desc, InitDesc):
             self._legacy_init(desc, arr)
@@ -139,7 +131,6 @@ class Initializer(object):
         else:
             self._init_default(name, arr)
 
-    # pylint: disable=no-self-use, missing-docstring, invalid-name
     def _init_bilinear(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
@@ -181,11 +172,10 @@ class Initializer(object):
             'Default initialization is now limited to '\
             '"weight", "bias", "gamma" (1.0), and "beta" (0.0).' \
             'Please use mx.sym.Variable(init=mx.init.*) to set initialization pattern' % name)
-    # pylint: enable=no-self-use, missing-docstring, invalid-name
 
 
 class Load(object):
-    """Initialize by loading pretrained param from file or dict
+    """Initialize by loading data from file or dict
 
     Parameters
     ----------
@@ -228,7 +218,7 @@ class Load(object):
 
 
 class Mixed(object):
-    """Initialize with mixed Initializer
+    """Initialize with multiple initializers
 
     Parameters
     ----------
@@ -279,7 +269,7 @@ class Constant(Initializer):
 
 @register
 class Uniform(Initializer):
-    """Initialize the weight with uniform [-scale, scale]
+    """Initialize the weight with value uniformly sampled from ``[-scale, scale]``
 
     Parameters
     ----------
@@ -295,7 +285,7 @@ class Uniform(Initializer):
 
 @register
 class Normal(Initializer):
-    """Initialize the weight with normal(0, sigma)
+    """Initialize the weight with value sampled according to ``normal(0, sigma)``
 
     Parameters
     ----------
@@ -311,7 +301,11 @@ class Normal(Initializer):
 
 @register
 class Orthogonal(Initializer):
-    """Intialize weight as Orthogonal matrix
+    """Initialize weight as orthogonal matrix
+
+    This initializer implements *Exact solutions to the nonlinear dynamics of
+    learning in deep linear neural networks*, available at
+    https://arxiv.org/abs/1312.6120
 
     Parameters
     ----------
@@ -321,17 +315,12 @@ class Orthogonal(Initializer):
     rand_type: string optional
         use "uniform" or "normal" random number to initialize weight
 
-    Reference
-    ---------
-    Exact solutions to the nonlinear dynamics of learning in deep linear neural networks
-    arXiv preprint arXiv:1312.6120 (2013).
     """
     def __init__(self, scale=1.414, rand_type="uniform"):
         super(Orthogonal, self).__init__(scale=scale, rand_type=rand_type)
         self.scale = scale
         self.rand_type = rand_type
 
-    # pylint: disable=invalid-name
     def _init_weight(self, _, arr):
         nout = arr.shape[0]
         nin = np.prod(arr.shape[1:])
@@ -339,25 +328,25 @@ class Orthogonal(Initializer):
             tmp = np.random.uniform(-1.0, 1.0, (nout, nin))
         elif self.rand_type == "normal":
             tmp = np.random.normal(0.0, 1.0, (nout, nin))
-        u, _, v = np.linalg.svd(tmp, full_matrices=False)
+        u, _, v = np.linalg.svd(tmp, full_matrices=False) # pylint: disable=invalid-name
         if u.shape == tmp.shape:
-            q = u
+            res = u
         else:
-            q = v
-        q = self.scale * q.reshape(arr.shape)
-        arr[:] = q
+            res = v
+        res = self.scale * res.reshape(arr.shape)
+        arr[:] = res
 
 @register
 class Xavier(Initializer):
-    """Initialize the weight with Xavier or similar initialization scheme.
+    """Initialize the weight with Xavier or other similar schemes.
 
     Parameters
     ----------
     rnd_type: str, optional
-        Use ```gaussian``` or ```uniform``` to init
+        Random generator type, can be ```gaussian`` or ``uniform``.
 
     factor_type: str, optional
-        Use ```avg```, ```in```, or ```out``` to init
+        Can be ``avg``, ``in``, or ``out``
 
     magnitude: float, optional
         scale of random number range
@@ -395,13 +384,16 @@ class Xavier(Initializer):
 
 @register
 class MSRAPrelu(Xavier):
-    """Initialize the weight with initialization scheme from
-        Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+    """Initialize the weight according to a MSRA paper.
+
+    This initializer implements *Delving Deep into Rectifiers: Surpassing
+    Human-Level Performance on ImageNet Classification*, available at
+    https://arxiv.org/abs/1502.01852
 
     Parameters
     ----------
     factor_type: str, optional
-        Use ```avg```, ```in```, or ```out``` to init
+        Can be ``avg``, ``in``, or ``out``
 
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
@@ -413,11 +405,10 @@ class MSRAPrelu(Xavier):
 
 @register
 class Bilinear(Initializer):
-    """Initialize weight for upsampling layer"""
+    """Initialize weight for upsampling layers"""
     def __init__(self):
         super(Bilinear, self).__init__()
 
-    # pylint: disable=no-self-use, missing-docstring, invalid-name
     def _init_weight(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
@@ -432,7 +423,7 @@ class Bilinear(Initializer):
 
 @register
 class FusedRNN(Initializer):
-    """Initialze parameters for fused rnn layer
+    """Initialze parameters for fused rnn layers
 
     Parameters
     ----------

@@ -51,8 +51,8 @@ def voc_ap(rec, prec, use_07_metric=False):
             ap += p / 11.
     else:
         # append sentinel values at both ends
-        mrec = np.concatenate([0.], rec, [1.])
-        mpre = np.concatenate([0.], prec, [0.])
+        mrec = np.concatenate(([0.], rec, [1.]))
+        mpre = np.concatenate(([0.], prec, [0.]))
 
         # compute precision integration ladder
         for i in range(mpre.size - 1, 0, -1):
