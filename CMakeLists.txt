@@ -6,8 +6,11 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
 
+#set(CMAKE_VERBOSE_MAKEFILE ON)
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
+include(CTest)
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
@@ -20,7 +23,7 @@ mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
-mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
+mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_EXTRA_OPERATORS  "Compile in extra operators such as RCNN and SSD" ON)
 
@@ -246,7 +249,6 @@ mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
 mxnet_source_group("Source\\executor"   GLOB "src/executor/*.cc")
 mxnet_source_group("Source\\nnvm"   GLOB "src/nnvm/*.cc")
 
-
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
 FILE(GLOB_RECURSE CUDA   "src/*.cu" "src/*.cuh")
 
@@ -378,7 +380,6 @@ if(USE_CUDA)
     if(IS_CONTAINER_BUILD)
       # In case of building on a production-like build container which may not have Cuda installed
       if(NOT CMAKE_SYSTEM_HAS_CUDA)
-        message(STATUS " NOT CMAKE_SYSTEM_HAS_CUDA")
         # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
         # so use the stub cuda driver shared library
         if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
