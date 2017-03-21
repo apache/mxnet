@@ -118,7 +118,7 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
     DMLC_DECLARE_FIELD(crop_emit_mode)
         .add_enum("center", image_det_aug_default_enum::kCenter)
         .add_enum("overlap", image_det_aug_default_enum::kOverlap)
-        .set_default(image_det_aug_default_enum::kOverlap)
+        .set_default(image_det_aug_default_enum::kCenter)
         .describe("Augmentation Param: Emition mode for invalid ground-truths after crop. "
                   "center: emit if centroid of object is out of crop region; "
                   "overlap: emit if overlap is less than emit_overlap_thresh. ");
@@ -502,44 +502,6 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     // random engine
     std::uniform_real_distribution<float> rand_uniform(0, 1);
 
-    // random crop logic
-    if (param_.rand_crop_prob > 0 && param_.num_crop_sampler > 0) {
-      if (rand_uniform(*prnd) < param_.rand_crop_prob) {
-        // random crop sampling logic: randomly pick a sampler, return if success
-        // continue to next sampler if failed(exceed max_trial)
-        // return original sample if every sampler has failed
-        std::vector<int> indices(param_.num_crop_sampler);
-        for (int i = 0; i < param_.num_crop_sampler; ++i) {
-          indices[i] = i;
-        }
-        std::shuffle(indices.begin(), indices.end(), *prnd);
-        int num_processed = 0;
-        for (auto idx : indices) {
-          if (num_processed > 0) break;
-          for (int t = 0; t < param_.max_crop_trials[idx]; ++t) {
-            Rect crop_box = GenerateCropBox(param_.min_crop_scales[idx],
-              param_.max_crop_scales[idx], param_.min_crop_aspect_ratios[idx],
-              param_.max_crop_aspect_ratios[idx], prnd,
-              static_cast<float>(res.cols) / res.rows);
-            if (det_label.TryCrop(crop_box, param_.min_crop_overlaps[idx],
-                param_.max_crop_overlaps[idx], param_.min_crop_sample_coverages[idx],
-                param_.max_crop_sample_coverages[idx], param_.min_crop_object_coverages[idx],
-                param_.max_crop_object_coverages[idx], param_.crop_emit_mode,
-                param_.emit_overlap_thresh)) {
-              ++num_processed;
-              // crop image
-              int left = static_cast<int>(crop_box.x * res.cols);
-              int top = static_cast<int>(crop_box.y * res.rows);
-              int width = static_cast<int>(crop_box.width * res.cols);
-              int height = static_cast<int>(crop_box.height * res.rows);
-              res = res(cv::Rect(left, top, width, height));
-              break;
-            }
-          }
-        }
-      }
-    }
-
     // color space augmentation
     if (param_.random_hue_prob > 0.f || param_.random_saturation_prob > 0.f ||
         param_.random_illumination_prob > 0.f || param_.random_contrast_prob > 0.f) {
@@ -597,6 +559,44 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
             int bot = static_cast<int>((pad_box.height + pad_box.y - 1) * res.rows);
             cv::copyMakeBorder(temp_, res, top, bot, left, right, cv::BORDER_ISOLATED,
               cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
+          }
+        }
+      }
+    }
+
+    // random crop logic
+    if (param_.rand_crop_prob > 0 && param_.num_crop_sampler > 0) {
+      if (rand_uniform(*prnd) < param_.rand_crop_prob) {
+        // random crop sampling logic: randomly pick a sampler, return if success
+        // continue to next sampler if failed(exceed max_trial)
+        // return original sample if every sampler has failed
+        std::vector<int> indices(param_.num_crop_sampler);
+        for (int i = 0; i < param_.num_crop_sampler; ++i) {
+          indices[i] = i;
+        }
+        std::shuffle(indices.begin(), indices.end(), *prnd);
+        int num_processed = 0;
+        for (auto idx : indices) {
+          if (num_processed > 0) break;
+          for (int t = 0; t < param_.max_crop_trials[idx]; ++t) {
+            Rect crop_box = GenerateCropBox(param_.min_crop_scales[idx],
+              param_.max_crop_scales[idx], param_.min_crop_aspect_ratios[idx],
+              param_.max_crop_aspect_ratios[idx], prnd,
+              static_cast<float>(res.cols) / res.rows);
+            if (det_label.TryCrop(crop_box, param_.min_crop_overlaps[idx],
+                param_.max_crop_overlaps[idx], param_.min_crop_sample_coverages[idx],
+                param_.max_crop_sample_coverages[idx], param_.min_crop_object_coverages[idx],
+                param_.max_crop_object_coverages[idx], param_.crop_emit_mode,
+                param_.emit_overlap_thresh)) {
+              ++num_processed;
+              // crop image
+              int left = static_cast<int>(crop_box.x * res.cols);
+              int top = static_cast<int>(crop_box.y * res.rows);
+              int width = static_cast<int>(crop_box.width * res.cols);
+              int height = static_cast<int>(crop_box.height * res.rows);
+              res = res(cv::Rect(left, top, width, height));
+              break;
+            }
           }
         }
       }
