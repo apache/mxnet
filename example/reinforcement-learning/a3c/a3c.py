@@ -154,8 +154,11 @@ def train():
                 module.forward(batch, is_train=True)
 
                 pi = module.get_outputs()[1]
-                h = args.beta*(mx.nd.log(pi+1e-6)+1)
-                module.backward([mx.nd.array(adv), h])
+                h = -args.beta*(mx.nd.log(pi+1e-7)*pi)
+                out_acts = np.amax(pi.asnumpy(), 1)
+                out_acts=np.reshape(out_acts,(-1,1))
+                out_acts_tile=np.tile(-np.log(out_acts + 1e-7),(1, dataiter.act_dim))
+                module.backward([mx.nd.array(out_acts_tile*adv), h])
 
                 print('pi', pi[0].asnumpy())
                 print('h', h[0].asnumpy())
