@@ -187,7 +187,8 @@ class SliceChannelProp : public OperatorProperty {
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
-    CHECK_EQ((*out_shape).size(), static_cast<size_t>(param_.num_outputs)) << "Size of output shape mismatch!";
+    CHECK_EQ((*out_shape).size(), static_cast<size_t>(param_.num_outputs))
+      << "Size of output shape mismatch!";
     for (int i = 0; i < param_.num_outputs; ++i) {
       SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
       // Perform incomplete shape inference.
