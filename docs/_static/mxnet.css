@@ -42,7 +42,7 @@ li, dt a, dt span {
 h1, h2, h3 {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
     margin-top: 10px;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
 }
 
 h1 {
@@ -632,7 +632,7 @@ div.sphinxsidebar {
     padding:20px 30px 15px 0;
     height: calc(100% - 80px);
     display: none;
-    overflow: hidden;
+    overflow: auto;
 }
 
 div.sphinxsidebar ul {
@@ -755,10 +755,7 @@ div.informaltable {
   text-align: left; }
 
 /*----------------API class and function formatting---------------------*/
-dl.class > dt:before,
-dl.function > dt:before,
-dl.method > dt:before,
-dl.attribute > dt:before {
+dl > dt:before {
     content: " ";
     display: block;
     height: 70px; /* fixed header height*/
@@ -767,6 +764,12 @@ dl.attribute > dt:before {
 
 p.rubric {
     margin-top: 10px;
+}
+
+dt:target, .highlighted {
+    background-color: #fff;
+    border-bottom: 3px solid #c7254e;
+    margin-bottom: -3px;
 }
 
 /*----------------Model zoo page style------------------*/

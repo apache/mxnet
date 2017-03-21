@@ -5,13 +5,13 @@ import random
 from numpy.testing import assert_allclose
 from mxnet.test_utils import *
 
-def np_softmax(x):
+def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
     # x = x - np.max(x, axis=-1, keepdims=True)
-    x = x - np.max(x, axis=-1).reshape(x.shape[:-1] + (1,))
+    x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x)
     # x /= np.sum(x, axis=-1, keepdims=True)
-    x /= np.sum(x, axis=-1).reshape(x.shape[:-1] + (1,))
+    x /= np.sum(x, axis=axis, keepdims=True)
     return x
 
 
@@ -2860,7 +2860,32 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), True)
     test_where_numeric_gradient((5, 7, 9), False)
 
+
+def test_new_softmax():
+    for ndim in range(1, 5):
+        for _ in range(5):
+            shape = np.random.randint(1, 5, size=ndim)
+            axis = np.random.randint(0, ndim)
+            data = np.random.uniform(-2, 2, size=shape)
+            sym = mx.sym.softmax(axis=axis)
+            check_symbolic_forward(sym, [data], [np_softmax(data, axis=axis)])
+            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
+
+
+def test_log_softmax():
+    for ndim in range(1, 5):
+        for _ in range(5):
+            shape = np.random.randint(1, 5, size=ndim)
+            axis = np.random.randint(0, ndim)
+            data = np.random.uniform(-2, 2, size=shape)
+            sym = mx.sym.log_softmax(axis=axis-ndim)
+            check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
+            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
+
+
 if __name__ == '__main__':
+    test_log_softmax()
+    test_new_softmax()
     test_l2_normalization()
     test_sequence_mask()
     test_roipooling()

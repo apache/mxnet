@@ -1,3 +1,4 @@
+from __future__ import print_function
 import find_mxnet
 import submission_dsb
 import mxnet as mx
@@ -45,7 +46,7 @@ test = mx.io.ImageRecordIter(
 # generate matrix of prediction prob
 tic=time.time()
 predictions = model.predict(test)
-print "Time required for prediction", time.time()-tic
+print("Time required for prediction", time.time()-tic)
 
 
 # create submission csv file to submit to kaggle

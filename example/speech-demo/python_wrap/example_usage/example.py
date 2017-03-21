@@ -1,3 +1,4 @@
+from __future__ import print_function
 import ctypes
 import numpy
 
@@ -40,16 +41,16 @@ decl(kaldi.MatrixF_SizeInBytes, c_int,       [c_void_p])
 decl(kaldi.MatrixF_Data,        c_float_ptr, [c_void_p])
 
 if __name__ == "__main__":
-    print "-------- Foo class example --------"
+    print("-------- Foo class example --------")
     a = kaldi.Foo_new()
-    print "Calling Foo_bar(): ",
+    print("Calling Foo_bar(): ",)
     kaldi.Foo_bar(a)
-    print
-    print "Result of Foo_getx(): ", kaldi.Foo_getx(a)
-    print "Result of Foo_sizex(): ", kaldi.Foo_sizex(a)
+    print()
+    print("Result of Foo_getx(): ", kaldi.Foo_getx(a))
+    print("Result of Foo_sizex(): ", kaldi.Foo_sizex(a))
 
-    print
-    print "-------- Kaldi SBFMReader and MatrixF class example --------"
+    print()
+    print("-------- Kaldi SBFMReader and MatrixF class example --------")
 
     reader = kaldi.SBFMReader_new_char("scp:data.scp")
     
@@ -78,17 +79,16 @@ if __name__ == "__main__":
     feats_numpy_ptr = ctypes.cast(feats.ctypes.data, c_float_ptr)
     kaldi.MatrixF_cpy_to_ptr(feat_value, feats_numpy_ptr, feats.strides[0]/4)
 
-    print "Read utterance:"
-    print "  ID: ", utt_id
-    print "  Rows: ", feat_rows
-    print "  Cols: ", feat_cols
-    print "  Value: ", feat_data
-    print feats
-    print "  This should match data.txt"
+    print("Read utterance:")
+    print("  ID: ", utt_id)
+    print("  Rows: ", feat_rows)
+    print("  Cols: ", feat_cols)
+    print("  Value: ", feat_data)
+    print(feats)
+    print("  This should match data.txt")
 
     # assert no more utterances left
     kaldi.SBFMReader_Next(reader)
     assert(kaldi.SBFMReader_Done(reader))
 
     kaldi.SBFMReader_Delete(reader)
-    

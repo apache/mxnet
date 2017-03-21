@@ -27,10 +27,6 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   int resize;
   /*! \brief whether we do random cropping */
   bool rand_crop;
-  /*! \brief where to nonrandom crop on y */
-  int crop_y_start;
-  /*! \brief where to nonrandom crop on x */
-  int crop_x_start;
   /*! \brief [-max_rotate_angle, max_rotate_angle] */
   int max_rotate_angle;
   /*! \brief max aspect ratio */
@@ -68,49 +64,59 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
     DMLC_DECLARE_FIELD(resize).set_default(-1)
-        .describe("Augmentation Param: scale shorter edge to size "
+        .describe("Down scale the shorter edge to a new size  "
                   "before applying other augmentations.");
     DMLC_DECLARE_FIELD(rand_crop).set_default(false)
-        .describe("Augmentation Param: Whether to random crop on the image");
-    DMLC_DECLARE_FIELD(crop_y_start).set_default(-1)
-        .describe("Augmentation Param: Where to nonrandom crop on y.");
-    DMLC_DECLARE_FIELD(crop_x_start).set_default(-1)
-        .describe("Augmentation Param: Where to nonrandom crop on x.");
+        .describe("If or not randomly crop the image");
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
-        .describe("Augmentation Param: rotated randomly in [-max_rotate_angle, max_rotate_angle].");
+        .describe("Rotate by a random degree in ``[-v, v]``");
     DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(0.0f)
-        .describe("Augmentation Param: denotes the max ratio of random aspect ratio augmentation.");
+        .describe("Change the aspect (namely width/height) to a random value "
+                  "in ``[1 - max_aspect_ratio, 1 + max_aspect_ratio]``");
     DMLC_DECLARE_FIELD(max_shear_ratio).set_default(0.0f)
-        .describe("Augmentation Param: denotes the max random shearing ratio.");
+        .describe("Apply a shear transformation (namely ``(x,y)->(x+my,y)``) "
+                  "with ``m`` randomly chose from "
+                  "``[-max_shear_ratio, max_shear_ratio]``");
     DMLC_DECLARE_FIELD(max_crop_size).set_default(-1)
-        .describe("Augmentation Param: Maximum crop size.");
+        .describe("Crop both width and height into a random size in "
+                  "``[min_crop_size, max_crop_size]``");
     DMLC_DECLARE_FIELD(min_crop_size).set_default(-1)
-        .describe("Augmentation Param: Minimum crop size.");
+        .describe("Crop both width and height into a random size in "
+                  "``[min_crop_size, max_crop_size]``");
     DMLC_DECLARE_FIELD(max_random_scale).set_default(1.0f)
-        .describe("Augmentation Param: Maximum scale ratio.");
+        .describe("Resize into ``[width*s, height*s]`` with ``s`` randsomly"
+                  " chosen from ``[min_random_scale, max_random_scale]``");
     DMLC_DECLARE_FIELD(min_random_scale).set_default(1.0f)
-        .describe("Augmentation Param: Minimum scale ratio.");
+        .describe("Resize into ``[width*s, height*s]`` with ``s`` randsomly"
+                  " chosen from ``[min_random_scale, max_random_scale]``");
     DMLC_DECLARE_FIELD(max_img_size).set_default(1e10f)
-        .describe("Augmentation Param: Maximum image size after resizing.");
+        .describe("Set the maximal width and height after all resize and"
+                  " rotate argumentation  are applied");
     DMLC_DECLARE_FIELD(min_img_size).set_default(0.0f)
-        .describe("Augmentation Param: Minimum image size after resizing.");
+        .describe("Set the minimal width and height after all resize and"
+                  " rotate argumentation  are applied");
     DMLC_DECLARE_FIELD(random_h).set_default(0)
-        .describe("Augmentation Param: Maximum random value of H channel in HSL color space.");
+        .describe("Add a random value in ``[-random_h, random_h]`` to "
+                  "the H channel in HSL color space.");
     DMLC_DECLARE_FIELD(random_s).set_default(0)
-        .describe("Augmentation Param: Maximum random value of S channel in HSL color space.");
+        .describe("Add a random value in ``[-random_s, random_s]`` to "
+                  "the S channel in HSL color space.");
     DMLC_DECLARE_FIELD(random_l).set_default(0)
-        .describe("Augmentation Param: Maximum random value of L channel in HSL color space.");
+        .describe("Add a random value in ``[-random_l, random_l]`` to "
+                  "the L channel in HSL color space.");
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
-        .describe("Augmentation Param: Rotate angle.");
+        .describe("Rotate by an angle. If set, it overrites the ``max_rotate_angle`` option.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
-        .describe("Augmentation Param: Filled color value while padding.");
+        .describe("Set the padding pixes value into ``fill_value``.");
     DMLC_DECLARE_FIELD(data_shape)
         .set_expect_ndim(3).enforce_nonzero()
-        .describe("Dataset Param: Shape of each instance generated by the DataIter.");
+        .describe("The shape of a output image.");
     DMLC_DECLARE_FIELD(inter_method).set_default(1)
-        .describe("Augmentation Param: 0-NN 1-bilinear 2-cubic 3-area 4-lanczos4 9-auto 10-rand.");
+        .describe("The interpolation method: 0-NN 1-bilinear 2-cubic 3-area "
+                  "4-lanczos4 9-auto 10-rand.");
     DMLC_DECLARE_FIELD(pad).set_default(0)
-        .describe("Augmentation Param: Padding size.");
+        .describe("Change size from ``[width, height]`` into "
+                  "``[pad + width + pad, pad + height + pad]`` by padding pixes");
   }
 };
 
