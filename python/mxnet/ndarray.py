@@ -58,14 +58,14 @@ _DTYPE_MX_TO_NP = {
 # pylint: enable= no-member
 
 def _new_empty_handle():
-    """Return a new empty handle.
+    """Returns a new empty handle.
 
-    Empty handle can be used to hold result
+    Empty handle can be used to hold result.
 
     Returns
     -------
     handle
-        A new empty ndarray handle
+        A new empty NDArray handle
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateNone(ctypes.byref(hdl)))
@@ -74,12 +74,12 @@ def _new_empty_handle():
 def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """Return a new handle with specified shape and context.
 
-    Empty handle is only used to hold results
+    Empty handle is only used to hold results.
 
     Returns
     -------
     handle
-        A new empty ndarray handle
+        A new empty NDArray handle
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateEx(
@@ -93,21 +93,21 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     return hdl
 
 def waitall():
-    """Wait all async operation to finish in MXNet
+    """Wait for all async operations to finish in MXNet.
 
-    This function is used for benchmark only
+    This function is used for benchmarking only.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
 class NDArray(NDArrayBase):
-    """An array object represents a multidimensional, homogeneous array of
+    """An array object representing a multidimensional, homogeneous array of
 fixed-size items.
 
     """
     __slots__ = []
     # pylint: disable= no-member, undefined-variable
     def __repr__(self):
-        """Return a string representation of the array"""
+        """Returns a string representation of the array."""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
                                 shape_info, self.context)
@@ -359,7 +359,7 @@ fixed-size items.
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
 
-        Return a sliced view of this array
+        Returns a sliced view of this array
 
         Parameters
         ----------
@@ -399,22 +399,22 @@ fixed-size items.
 
 
     def _sync_copyfrom(self, source_array):
-        """Peform an synchronize copy from the array.
+        """Peforms a synchronized copy from the array.
 
         Parameters
         ----------
         source_array : array_like)
-            The data source we should like to copy from.
+            The data source we would like to copy from.
         """
         if not isinstance(source_array, np.ndarray):
             try:
                 source_array = np.array(source_array, dtype=self.dtype)
             except:
-                raise TypeError('array must be an array_like data,' +
+                raise TypeError('array must consist of array-like data,' +
                                 'type %s is not supported' % str(type(array)))
         source_array = np.ascontiguousarray(source_array, dtype=self.dtype)
         if source_array.shape != self.shape:
-            raise ValueError('Shape inconsistant: expected %s vs got %s'%(
+            raise ValueError('Shape inconsistent: expected %s vs got %s'%(
                 str(self.shape), str(source_array.shape)))
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
@@ -422,7 +422,7 @@ fixed-size items.
             ctypes.c_size_t(source_array.size)))
 
     def _slice(self, start, stop):
-        """Return a sliced NDArray that shares memory with current one.
+        """Returns a sliced NDArray that shares memory with current one.
 
         Parameters
         ----------
@@ -439,7 +439,7 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def _at(self, idx):
-        """Return a sliced view of this array
+        """Returns a sliced view of this array.
 
         Parameters
         ----------
@@ -453,7 +453,7 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, shape):
-        """Return a view of this array with a new shape without changing the data
+        """Returns a view of this array with a new shape without altering any data.
 
         Parameters
         ----------
@@ -464,7 +464,7 @@ fixed-size items.
         Returns
         -------
         NDArray
-            An array with desired shape that is sharing data with this array.
+            An array with desired shape that shares data with this array.
 
         Examples
         --------
@@ -491,7 +491,7 @@ fixed-size items.
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
-        """Broadcast an array to a new shape.
+        """Broadcasts an array to a new shape.
 
         Broadcast only allows on axes with size 1. The new shape cannot change
         the number of dimensions such as from 2D to 3D.
@@ -504,8 +504,8 @@ fixed-size items.
         Returns
         -------
         NDArray
-            A NDArray with desired shape that is not sharing data with this
-            array, even the new shape is as same as ``self.shape``
+            A NDArray with the desired shape that is not sharing data with this
+            array, even if the new shape is the same as ``self.shape``
 
         Examples
         --------
@@ -540,9 +540,9 @@ fixed-size items.
     # pylint: enable= undefined-variable
 
     def wait_to_read(self):
-        """Wait until all previous writes operations on current array are finished.
+        """Waits until all previous write operations on the current array are finished.
 
-        The method guarantees that all previous writes operations that pushed
+        This method guarantees that all previous write operations that pushed
         into the backend engine for execution are actually finished.
 
         Examples
@@ -644,11 +644,11 @@ fixed-size items.
     @property
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
-        """Return a copy of the array with axes transposed
+        """Returns a copy of the array with axes transposed
 
         Equals to ``mx.nd.transpose(self)``
 
-        Different to ``numpy.ndarray.T``, this function only supports 2-D array,
+        Unlike ``numpy.ndarray.T``, this function only supports 2-D array,
         and returns a copy rather than a view of the array
 
         Examples
@@ -669,7 +669,7 @@ fixed-size items.
     # pylint: enable= invalid-name, undefined-variable
 
     def asnumpy(self):
-        """Return a ``numpy.ndarray`` object with value copied from this array
+        """Returns a ``numpy.ndarray`` object with value copied from this array
 
         Examples
         --------
@@ -693,9 +693,9 @@ fixed-size items.
         return data
 
     def asscalar(self):
-        """Return a scalar with value copied from this array
+        """Returns a scalar whose value is copied from this array
 
-        It equals to ``self.asnumpy()[0]``. This ndarray must have shape (1,).
+        This function is equivalent to ``self.asnumpy()[0]``. This NDArray must have shape (1,).
 
         Examples
         --------
@@ -710,7 +710,7 @@ fixed-size items.
         return self.asnumpy()[0]
 
     def astype(self, dtype):
-        """Return a copy of the array that is casted to a specified type.
+        """Returns a copy of the array after casting to a specified type.
 
         Parameters
         ----------
@@ -729,7 +729,7 @@ fixed-size items.
         return res
 
     def copyto(self, other):
-        """Copy the value of this array to another array.
+        """Copies the value of this array to another array.
 
         If ``other`` is a ``NDArray`` object, then ``other.shape`` and
         ``self.shape`` should be the same. This function copies the value from
@@ -773,7 +773,7 @@ fixed-size items.
             raise TypeError('copyto do not support type ' + str(type(other)))
 
     def copy(self):
-        """Make a copy of the ndarray on the same context
+        """Makes a copy of the NDArray on the same context.
 
         Returns
         -------
@@ -791,7 +791,7 @@ fixed-size items.
         return self.copyto(self.context)
 
     def as_in_context(self, context):
-        """Return an array on the target device with value as same as this array
+        """Returns an array on the target device with the same value as this array.
 
         If the target context is the same as ``self.context``, then ``self`` is
         returned.  Otherwise, a copy is made.
@@ -834,7 +834,7 @@ def onehot_encode(indices, out):
 
 
 def empty(shape, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, without initializing entries
+    """Returns a new array of given shape and type, without initializing entries.
 
     Parameters
     ----------
@@ -866,7 +866,7 @@ def empty(shape, ctx=None, dtype=mx_real_t):
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
 def zeros(shape, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, filled with zeros.
+    """Return a new array filled with all zeros, with the given shape and type.
 
     Parameters
     ----------
@@ -898,7 +898,7 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
     # pylint: enable= no-member, protected-access
 
 def ones(shape, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, filled with ones.
+    """Return a new array filled with all ones, with the given shape and type.
 
     Parameters
     ----------
@@ -962,7 +962,7 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     return arr
 
 def array(source_array, ctx=None, dtype=mx_real_t):
-    """Create a new array from any object exposing the array interface
+    """Create a new array from any object exposing the array interface.
 
     Parameters
     ----------
@@ -1057,8 +1057,8 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
 
 #pylint: disable= too-many-arguments, no-member, protected-access
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
-    """ Helper function for element-wise operation
-    The function will perform numpy-like broadcasting if needed and call different functions
+    """ Helper function for element-wise operation.
+    The function will perform numpy-like broadcasting if needed and call different functions.
 
     Parameters
     --------
@@ -1104,7 +1104,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 def add(lhs, rhs):
-    """Add arguments, element-wise with broadcasting
+    """Add arguments, element-wise with broadcasting.
 
     Equals to ``lhs + rhs``
 
@@ -1146,7 +1146,7 @@ def add(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def subtract(lhs, rhs):
-    """Subtract arguments element-wisely with broadcasting
+    """Subtracts arguments element-wise with broadcasting.
 
     Equals to ``lhs - rhs``
 
@@ -1188,7 +1188,7 @@ def subtract(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def multiply(lhs, rhs):
-    """Multiply arguments element-wisely with broadcasting
+    """Multiplies arguments element-wise with broadcasting.
 
     Equals to ``lhs * rhs``
 
@@ -1230,7 +1230,7 @@ def multiply(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def divide(lhs, rhs):
-    """Divide arguments element-wisely with broadcasting
+    """Divides arguments element-wise with broadcasting.
 
     Equals to ``lhs / rhs``
 
@@ -1277,7 +1277,7 @@ def power(base, exp):
     """First array elements raised to powers from second array, element-wise
     with broadcasting.
 
-    Equals to ``base ** exp``
+    Equivalent to ``base ** exp``
 
     Parameters
     ----------
@@ -1397,9 +1397,9 @@ def minimum(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def equal(lhs, rhs):
-    """Return (lhs == rhs), element-wise with broadcasting
+    """Returns (lhs == rhs), element-wise with broadcasting.
 
-    Equals ``lhs == rhs``
+    Equivalent to ``lhs == rhs``
 
     Parameters
     ----------
@@ -1439,7 +1439,7 @@ def equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def not_equal(lhs, rhs):
-    """Return (lhs != rhs), element-wise with broadcasting
+    """Returns (lhs != rhs), element-wise with broadcasting.
 
     Equals ``lhs != rhs``
 
@@ -1484,7 +1484,7 @@ def not_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater(lhs, rhs):
-    """Return (lhs > rhs), element-wise with broadcasting
+    """Returns (lhs > rhs), element-wise with broadcasting.
 
     Equals ``lhs > rhs``
 
@@ -1526,7 +1526,7 @@ def greater(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater_equal(lhs, rhs):
-    """Return (lhs >= rhs), element-wise with broadcasting
+    """Returns (lhs >= rhs), element-wise with broadcasting.
 
     Equals ``lhs >= rhs``
 
@@ -1569,7 +1569,7 @@ def greater_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def lesser(lhs, rhs):
-    """Return (lhs < rhs), element-wise with broadcasting
+    """Returns (lhs < rhs), element-wise with broadcasting.
 
     Equals ``lhs < rhs``
 
@@ -1612,7 +1612,7 @@ def lesser(lhs, rhs):
 
 
 def lesser_equal(lhs, rhs):
-    """Return (lhs <= rhs), element-wise with broadcasting
+    """Returns (lhs <= rhs), element-wise with broadcasting.
 
     Equals ``lhs <= rhs``
 
@@ -1655,7 +1655,7 @@ def lesser_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
-    """Same as ``divide``
+    """Same as ``divide``.
     """
     return divide(lhs, rhs)
 
