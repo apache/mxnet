@@ -99,6 +99,23 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
   return j;
 }
 
+#define NDIM_SWITCH(ndim, NDim, ...)  \
+  if (ndim <= 2) {                    \
+    const int NDim = 2;               \
+    {__VA_ARGS__}                     \
+  } else if (ndim <= 4) {             \
+    const int NDim = 4;               \
+    {__VA_ARGS__}                     \
+  } else if (ndim <= 6) {             \
+    const int NDim = 6;               \
+    {__VA_ARGS__}                     \
+  } else if (ndim <= 8) {             \
+    const int NDim = 8;               \
+    {__VA_ARGS__}                     \
+  } else {                            \
+    LOG(FATAL) << "NDim too large ";  \
+  }
+
 template<typename xpu, typename OP>
 void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
@@ -114,8 +131,10 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   } else {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      BinaryBroadcastComputeImpl<DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
-        inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
+      NDIM_SWITCH(ndim, NDim, {
+        BinaryBroadcastComputeImpl<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
+          inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
+      });
     });
   }
 }
@@ -187,14 +206,16 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
       const TBlob lhs = outputs[0].reshape(new_lshape);
       const TBlob rhs = outputs[1].reshape(new_rshape);
       const TBlob out = inputs[0].reshape(new_oshape);
-      // Request temporary storage
-      size_t workspace_size_l = ReduceWorkspaceSize<DType>(s, lhs, req[0], out);
-      size_t workspace_size_r = ReduceWorkspaceSize<DType>(s, rhs, req[1], out);
-      size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
-      Tensor<xpu, 1, char> workspace =
-        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      Reduce<red::sum, DType, LOP>(s, lhs, req[0], workspace, out);
-      Reduce<red::sum, DType, ROP>(s, rhs, req[1], workspace, out);
+      NDIM_SWITCH(ndim, NDim, {
+        // Request temporary storage
+        size_t workspace_size_l = ReduceWorkspaceSize<NDim, DType>(s, lhs, req[0], out);
+        size_t workspace_size_r = ReduceWorkspaceSize<NDim, DType>(s, rhs, req[1], out);
+        size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
+        Tensor<xpu, 1, char> workspace =
+          ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+        Reduce<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
+        Reduce<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
+      });
     });
   }
 }
@@ -216,14 +237,14 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
   const TBlob ograd = inputs[0].reshape(new_oshape);
   const TBlob lhs = inputs[1].reshape(new_lshape);
   const TBlob rhs = inputs[2].reshape(new_rshape);
-  size_t workspace_size_l = ReduceWorkspaceSize<DType>(s, lgrad, req[0], ograd, lhs, rhs);
-  size_t workspace_size_r = ReduceWorkspaceSize<DType>(s, rgrad, req[1], ograd, lhs, rhs);
+  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(s, lgrad, req[0], ograd, lhs, rhs);
+  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(s, rgrad, req[1], ograd, lhs, rhs);
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-  Reduce<red::sum, DType, mshadow::op::mul, LOP>(s, lgrad, req[0], workspace,
+  Reduce<red::sum, ndim, DType, mshadow::op::mul, LOP>(s, lgrad, req[0], workspace,
     ograd, lhs, rhs);
-  Reduce<red::sum, DType, mshadow::op::mul, ROP>(s, rgrad, req[0], workspace,
+  Reduce<red::sum, ndim, DType, mshadow::op::mul, ROP>(s, rgrad, req[0], workspace,
     ograd, lhs, rhs);
 }
 
@@ -267,13 +288,10 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     BinaryBackwardUseIn<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      if (new_oshape.ndim() == 2) {
-        BinaryBroadcastBackwardUseInImpl<xpu, 2, DType, LOP, ROP>(
+      NDIM_SWITCH(new_oshape.ndim(), NDim, {
+        BinaryBroadcastBackwardUseInImpl<xpu, NDim, DType, LOP, ROP>(
           ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
-      } else {
-        BinaryBroadcastBackwardUseInImpl<xpu, broadcast::MAX_DIM, DType, LOP, ROP>(
-          ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
-      }
+      });
     });
   }
 }
