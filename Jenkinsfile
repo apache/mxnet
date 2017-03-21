@@ -101,13 +101,7 @@ USE_CUDNN=1                   \
     node() {
       ws('workspace/amalgamation') {
         init_git()
-        def flag = """ \
-USE_PROFILER=1                \
--C amalgamation/              \
-USE_BLAS=openblas             \
-MIN=1                         \
-"""
-        make('cpu', flag)
+        make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
       }
     }
   },
