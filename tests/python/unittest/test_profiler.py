@@ -18,7 +18,7 @@ def test_profiler():
     B = mx.sym.Variable('B')
     C = mx.symbol.dot(A, B)
 
-    executor = C.simple_bind(mx.gpu(1), 'write', A=(4096, 4096), B=(4096, 4096))
+    executor = C.simple_bind(mx.cpu(1), 'write', A=(4096, 4096), B=(4096, 4096))
 
     a = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
     b = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
