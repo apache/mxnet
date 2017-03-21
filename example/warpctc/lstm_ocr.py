@@ -48,7 +48,8 @@ def get_label(buf):
 class OCRIter(mx.io.DataIter):
     def __init__(self, count, batch_size, num_label, init_states):
         super(OCRIter, self).__init__()
-        self.captcha = ImageCaptcha(fonts=['./data/Xerox.ttf'])
+        # you can get this font from http://font.ubuntu.com/
+        self.captcha = ImageCaptcha(fonts=['./font/Ubuntu-M.ttf'])
         self.batch_size = batch_size
         self.count = count
         self.num_label = num_label
@@ -131,6 +132,36 @@ def Accuracy(label, pred):
         total += 1.0
     return hit / total
 
+def LCS(p,l):
+    # Dynamic Programming Finding LCS
+    if len(p) == 0:
+        return 0
+    P = np.array(list(p)).reshape((1, len(p)))
+    L = np.array(list(l)).reshape((len(l), 1))
+    M = np.int32(P == L)
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            up = 0 if i == 0 else M[i-1,j]
+            left = 0 if j == 0 else M[i,j-1]
+            M[i,j] = max(up, left, M[i,j] if (i == 0 or j == 0) else M[i,j] + M[i-1,j-1])
+    return M.max()
+
+
+def Accuracy_LCS(label, pred):
+    global BATCH_SIZE
+    global SEQ_LENGTH
+    hit = 0.
+    total = 0.
+    for i in range(BATCH_SIZE):
+        l = remove_blank(label[i])
+        p = []
+        for k in range(SEQ_LENGTH):
+            p.append(np.argmax(pred[k * BATCH_SIZE + i]))
+        p = ctc_label(p)
+        hit += LCS(p,l) * 1.0 / len(l)
+        total += 1.0
+    return hit / total
+
 if __name__ == '__main__':
     num_hidden = 100
     num_lstm_layer = 2
@@ -140,7 +171,7 @@ if __name__ == '__main__':
     momentum = 0.9
     num_label = 4
 
-    contexts = [mx.context.gpu(1)]
+    contexts = [mx.context.gpu(0)]
 
     def sym_gen(seq_len):
         return lstm_unroll(num_lstm_layer, seq_len,
@@ -170,8 +201,12 @@ if __name__ == '__main__':
     
     print('begin fit')
 
+    prefix = 'ocr'
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Accuracy),
-              batch_end_callback=mx.callback.Speedometer(BATCH_SIZE, 50),)
+              # Use the following eval_metric if your num_label >= 10, or varies in a wide range
+              # eval_metric = mx.metric.np(Accuracy_LCS), 
+              batch_end_callback=mx.callback.Speedometer(BATCH_SIZE, 50),
+              epoch_end_callback = mx.callback.do_checkpoint(prefix, 1))
 
-    model.save("ocr")
+    model.save(prefix)

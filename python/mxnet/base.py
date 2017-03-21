@@ -6,8 +6,11 @@ from __future__ import absolute_import
 import sys
 import ctypes
 import atexit
+import warnings
+import inspect
 import numpy as np
 from . import libinfo
+warnings.filterwarnings('default', category=DeprecationWarning)
 
 __all__ = ['MXNetError']
 #----------------------------
@@ -32,7 +35,7 @@ class MXNetError(Exception):
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = libinfo.find_lib_path()
-    lib = ctypes.cdll.LoadLibrary(lib_path[0])
+    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_GLOBAL)
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
@@ -49,7 +52,7 @@ mx_float_p = ctypes.POINTER(mx_float)
 mx_real_t = np.float32
 NDArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
-SymbolCreatorHandle = ctypes.c_void_p
+OpHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
 ExecutorHandle = ctypes.c_void_p
 DataIterCreatorHandle = ctypes.c_void_p
@@ -57,8 +60,6 @@ DataIterHandle = ctypes.c_void_p
 KVStoreHandle = ctypes.c_void_p
 RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p
-OptimizerHandle = ctypes.c_void_p
-OptimizerCreator = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------
@@ -176,19 +177,16 @@ def ctypes2numpy_shared(cptr, shape):
     return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
 
 
-def ctypes2docstring(num_args, arg_names, arg_types, arg_descs, remove_dup=True):
-    """Convert ctypes returned doc string information into parameters docstring.
+def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):
+    """Build argument docs in python style.
 
-    num_args : mx_uint
-        Number of arguments.
-
-    arg_names : ctypes.POINTER(ctypes.c_char_p)
+    arg_names : list of str
         Argument names.
 
-    arg_types : ctypes.POINTER(ctypes.c_char_p)
+    arg_types : list of str
         Argument type information.
 
-    arg_descs : ctypes.POINTER(ctypes.c_char_p)
+    arg_descs : list of str
         Argument description information.
 
     remove_dup : boolean, optional
@@ -201,15 +199,15 @@ def ctypes2docstring(num_args, arg_names, arg_types, arg_descs, remove_dup=True)
     """
     param_keys = set()
     param_str = []
-    for i in range(num_args.value):
-        key = py_str(arg_names[i])
+    for key, type_info, desc in zip(arg_names, arg_types, arg_descs):
         if key in param_keys and remove_dup:
             continue
+        if key == 'num_args':
+            continue
         param_keys.add(key)
-        type_info = py_str(arg_types[i])
         ret = '%s : %s' % (key, type_info)
-        if len(arg_descs[i]) != 0:
-            ret += '\n    ' + py_str(arg_descs[i])
+        if len(desc) != 0:
+            ret += '\n    ' + desc
         param_str.append(ret)
     doc_str = ('Parameters\n' +
                '----------\n' +
@@ -217,8 +215,44 @@ def ctypes2docstring(num_args, arg_names, arg_types, arg_descs, remove_dup=True)
     doc_str = doc_str % ('\n'.join(param_str))
     return doc_str
 
+
 def _notify_shutdown():
     """Notify MXNet about a shutdown."""
     check_call(_LIB.MXNotifyShutdown())
 
 atexit.register(_notify_shutdown)
+
+def add_fileline_to_docstring(module, incursive=True):
+    """Append the definition position to each function contained in module
+
+    Examples
+    --------
+    # Put the following codes at the end of a file
+    add_fileline_to_docstring(__name__)
+    """
+
+    def _add_fileline(obj):
+        """add fileinto to a object
+        """
+        if obj.__doc__ is None or 'From:' in obj.__doc__:
+            return
+        fname = inspect.getsourcefile(obj)
+        if fname is None:
+            return
+        try:
+            line = inspect.getsourcelines(obj)[-1]
+        except IOError:
+            return
+        obj.__doc__ += '\n\nFrom:%s:%d' % (fname, line)
+
+    if isinstance(module, str):
+        module = sys.modules[module]
+    for _, obj in inspect.getmembers(module):
+        if inspect.isbuiltin(obj):
+            continue
+        if inspect.isfunction(obj):
+            _add_fileline(obj)
+        if inspect.ismethod(obj):
+            _add_fileline(obj.__func__)
+        if inspect.isclass(obj) and incursive:
+            add_fileline_to_docstring(obj, False)

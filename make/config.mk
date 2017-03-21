@@ -24,8 +24,14 @@ export CC = gcc
 export CXX = g++
 export NVCC = nvcc
 
+# whether compile with options for MXNet developer
+DEV = 0
+
 # whether compile with debug
 DEBUG = 0
+
+# whether compiler with profiler
+USE_PROFILER =
 
 # the additional link flags you want to add
 ADD_LDFLAGS =
@@ -84,7 +90,6 @@ USE_MKL2017_EXPERIMENTAL = 0
 
 # whether use NNPACK library
 USE_NNPACK = 0
-USE_NNPACK_NUM_THREADS = 4
 
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
@@ -100,9 +105,11 @@ endif
 # to environment variable
 USE_INTEL_PATH = NONE
 
-# If use MKL, choose static link automatically to allow python wrapper
+# If use MKL only for BLAS, choose static link automatically to allow python wrapper
+ifeq ($(USE_MKL2017), 0)
 ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
+endif
 else
 USE_STATIC_MKL = NONE
 endif

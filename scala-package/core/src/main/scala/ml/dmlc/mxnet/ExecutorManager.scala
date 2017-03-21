@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
+import ml.dmlc.mxnet.DType.DType
 import org.slf4j.{LoggerFactory, Logger}
 
 import scala.collection.immutable.ListMap
@@ -101,14 +119,17 @@ class DataParallelExecutorManager(private val symbol: Symbol,
    * @note This function will inplace update the NDArrays in arg_params and aux_params.
    */
   def copyTo(argParams: Map[String, NDArray], auxParams: Map[String, NDArray]): Unit = {
-    // TODO: dtype
     for ((name, block) <- paramNames zip paramArrays) {
       val weight = block.map(_.copyTo(Context.cpu())).reduce(_ + _) / block.length
-      weight.copyTo(argParams(name))
+      val typedWeight = weight.asType(argParams(name).dtype)
+      typedWeight.copyTo(argParams(name))
+      typedWeight.dispose()
     }
     for ((name, block) <- auxNames zip auxArrays) {
       val weight = block.map(_.copyTo(Context.cpu())).reduce(_ + _) / block.length
-      weight.copyTo(auxParams(name))
+      val typedWeight = weight.asType(auxParams(name).dtype)
+      typedWeight.copyTo(auxParams(name))
+      typedWeight.dispose()
     }
   }
 
@@ -221,7 +242,6 @@ object ExecutorManager {
         require(sliced.shape == dst.shape,
           s"src shape ${sliced.shape} mismatch dst shape ${dst.shape}")
         sliced.copyTo(dst)
-        // sliced.dispose()
       }
     }
   }
@@ -251,12 +271,12 @@ object ExecutorManager {
       paramNames: Set[String], needGrad: Boolean = false,
       grads: Set[String] = null, baseExec: Executor = null,
       sharedDataArrays: mutable.Map[String, NDArray] = null,
-      inputTypes: ListMap[String, Class[_ >: Float with Int with Double]] = null) = {
+      inputTypes: ListMap[String, DType] = null) = {
     val (argShape, _, auxShape) = sym.inferShape(inputShapes)
     require(argShape != null)
     val inputTypesUpdate =
       if (inputTypes == null) {
-        inputShapes.map { case (key, _) => (key, classOf[Float]) }
+        inputShapes.map { case (key, _) => (key, Base.MX_REAL_TYPE) }
       } else {
         inputTypes
       }
@@ -292,7 +312,7 @@ object ExecutorManager {
             val arr = sharedDataArrays(name)
             if (arr.shape.product >= argShape(i).product) {
               // good, we can share this memory
-              // TODO: assert(argTypes(i) == argArr.dtype)
+              require(argTypes(i) == arr.dtype)
               arr.reshape(argShape(i))
             } else {
               DataParallelExecutorManager.logger.warn(
@@ -300,7 +320,7 @@ object ExecutorManager {
                   s"which is larger than already allocated shape ${arr.shape}." +
                   "Need to re-allocate.Consider putting default_bucket_key" +
                   "to be the bucket taking the largest input for better memory sharing.")
-              val zeros = NDArray.zeros(argShape(i), ctx) // TODO: dtype = arg_types[i])
+              val zeros = NDArray.zeros(argShape(i), ctx, dtype = argTypes(i))
               // replace existing shared array because the new one is bigger
               sharedDataArrays.put(name, zeros)
               // TODO: shall we dispose the replaced array here?
@@ -308,7 +328,7 @@ object ExecutorManager {
               zeros
             }
           } else {
-            val zeros = NDArray.zeros(argShape(i), ctx) // TODO: dtype = arg_types[i])
+            val zeros = NDArray.zeros(argShape(i), ctx, dtype = argTypes(i))
             if (sharedDataArrays != null) {
               sharedDataArrays.put(name, zeros)
             }
@@ -320,14 +340,14 @@ object ExecutorManager {
         val argArr =
           if (baseExec == null) {
             if (gradSet.contains(name)) {
-              val gradArr = NDArray.zeros(argShape(i), ctx) // TODO: dtype = arg_types[i])
+              val gradArr = NDArray.zeros(argShape(i), ctx, dtype = argTypes(i))
               gradArrays.put(name, gradArr)
             }
-            NDArray.zeros(argShape(i), ctx) // TODO: dtype = arg_types[i])
+            NDArray.zeros(argShape(i), ctx, dtype = argTypes(i))
           } else {
             val arr = baseExec.argDict(name)
             require(arr.shape == argShape(i))
-            // TODO: require(argArr.dtype == argTypes(i))
+            require(arr.dtype == argTypes(i))
             if (gradSet.contains(name)) {
               gradArrays.put(name, baseExec.gradDict(name))
             }
@@ -340,12 +360,12 @@ object ExecutorManager {
     val auxArrays =
       if (baseExec == null) {
         (auxShape zip auxTypes) map { case (s, t) =>
-          NDArray.zeros(s, ctx) // TODO: dtype = t
+          NDArray.zeros(s, ctx, dtype = t)
         }
       } else {
         baseExec.auxArrays.zipWithIndex.map { case (a, i) =>
           require(auxShape(i) == a.shape)
-          // require(auxTypes(i) == a.dtype)
+          require(auxTypes(i) == a.dtype)
           a
         }.toSeq
       }

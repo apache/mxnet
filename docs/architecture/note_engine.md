@@ -7,14 +7,14 @@ Library designers then ask:
 How can we *parallelize* computation across devices? And, more important,
 how do we *synchronize* computation when we introduce multi-threading?
 
-A runtime dependency engine is a generic solution to these problems. 
+A runtime dependency engine is a generic solution to these problems.
 
 This topic examines how to use runtime dependency scheduling in deep learning, and how runtime dependency scheduling speeds and simplified multi-device deep learning. It also
-explores potential designs for a generic dependency engine that is library- and operation-independent.
+explores potential designs for a generic dependency engine that is a library and operation independent.
 
 Most of the design concepts in this topic inspired the MXNet dependency engine. The dependency tracking algorithm was primarily developed by [Yutian Li](https://github.com/hotpxl) and [Mingjie Wang](https://github.com/jermainewang).
 
-## Dependency Scheduling 
+## Dependency Scheduling
 
 Although most users want to take advantage of parallel computation,
 most of us are more familiar with serial programs. So, how do we write serial programs and build a library to automatically parallelize
@@ -58,11 +58,11 @@ data flow tracking engines include Minerva and Purine2.
 ### Memory Recycling
 When should we recycle memory we allocated to the arrays?
 In serial processing, this is simple because we can recycle the memory after the variable
-goes out of scope. However, as the following figure shows, this is a bit harder in parallel processing. 
+goes out of scope. However, as the following figure shows, this is a bit harder in parallel processing.
 
 ![Dep Del](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_del.png)
 
-In this example, because both computations needs to use values from A, we can't recycle
+In this example, because both computations need to use values from A, we can't recycle
 the memory until both complete. The engine
 needs to schedule the memory recycling operations according to the dependencies, and ensure that they
 are executed after both ```B = A + 1``` and ```C = A + 2``` complete.
@@ -75,7 +75,7 @@ interesting challenges for a dependency engine. Consider the following example:
 ![Dep Rand](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_rand.png)
 
 In this example, we are generating random numbers in a sequence. Although it seems that the two random number
-generations can be parallelized, this is usually not the case. A pseudo random
+generations can be parallelized, this is usually not the case. A pseudo-random
 number generator (PRNG) is not thread-safe because it might cause some internal state to mutate
 when generating a new number. Even if the PRNG is thread-safe, it is preferable to
 serialize number generation, so we can get reproducible random numbers.
@@ -87,7 +87,7 @@ In this case, we might want to serialize the operations that use the same PRNG.
 In the last section, we discussed the problems we might face in designing a dependency engine.
 Before thinking about how to design a generic engine to solve those problems,
 let's consider how a dependency engine can help in multi-GPU training of a neural network.
-The following pseudo Python program illustrates training one batch on a  two-layer
+The following pseudocode Python program illustrates training one batch on a  two-layer
 neural network.
 
 ```python
@@ -127,7 +127,7 @@ The following dependency graph shows how it can be parallelized:
 
 ***Notes:***
 
-- The gradient can be copied  to the CPU as soon as we get the gradient of a layer.
+- The gradient can be copied to the CPU as soon as we get the gradient of a layer.
 - The weight can be copied back soon as the weight is updated.
 - In the forward pass, we have a dependency on ```fc1_weight[cpu].copyto(fc1_weight[gpu0] , fc1_weight[gpu1])```
   from the previous iteration.
@@ -149,16 +149,16 @@ This solution isn't the only possible design for a dependency engine.
 It's an example that we think is useful in most cases.
 
 Our goal is to create a dependency engine that is *generic* and *lightweight*. Ideally, we'd like the engine
-to easily plug in to existing deep learning code, and to scale up to multiple machines with minor modifications.
+to easily plug into existing deep learning code, and to scale up to multiple machines with minor modifications.
 To do that, we need to focus only on dependency tracking, not on assumptions about what users can or can't do.
 
 Here's a summary of goals for the engine:
 
 - It should be unaware of operations that are being performed, so that users can perform any operations they define.
 - It shouldn't schedule only certain types of objects.
-	- We should be able to schedule dependency on GPU andCPU memory.
+	- We should be able to schedule dependency on GPU and CPU memory.
 	- We should be able to track dependency on the random number generator, etc.
-- It shouldn't allocate resources. It should only track  dependencies. Users can allocate their own memory, PRNG, etc.
+- It shouldn't allocate resources. It should only track dependencies. Users can allocate their own memory, PRNG, etc.
 
 The following Python snippet provides an engine interface that might help us reach our goal. Note that
 the real implementation is usually in C++.
@@ -170,7 +170,7 @@ the real implementation is usually in C++.
 		    Returns
 		    -------
 		    vtag : Variable Tag
-		        The token of engine to represent dependencies.
+		        The token of the engine to represent dependencies.
 		    """
 		    pass
 
@@ -222,7 +222,7 @@ The engine maintains a queue for each variable, as the following animation shows
 
 ![Dependency Queue](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_queue.gif)
 
-Upon building this queue, the engine sees that the first two green blocks at the beginning of A's queue could actually be run in parallel, because they are both read actions and won't conflict with each other. The following graph illustrates this point.
+Upon building this queue, the engine sees that the first two green blocks at the beginning of A's queue could actually be run in parallel because they are both read actions and won't conflict with each other. The following graph illustrates this point.
 
 ![Dependency Parallelism](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/engine/dep_parallel.png)
 
@@ -243,7 +243,7 @@ Because the generic interface doesn't control things like memory allocation and 
 ## Implementing the Generic Dependency Engine
 
 We have described the generic engine interface and how it can be used to schedule various operations.
-In this section, we provide a high-level discussion of how to implement  such an engine.
+In this section, we provide a high-level discussion of how to implement such an engine.
 
 The general idea is as follows:
 
@@ -272,26 +272,25 @@ on each device.
 
 This running policy is usually independent of dependency tracking, and can be separated out as either an independent module
 or a virtual interface of base-dependency tracking modules. Developing a runtime policy that is fair to all operations and schedules
-smoothly is an interesting systems problem itself.
+smoothly is an interesting system's problem itself.
 
 ## Discussion
 
 The design discussed in this article isn't the only solution to the dependency tracking problem,
 it's an example. There are several design choices that are debatable.
-We'll discuss some of of them in this section.
+We'll discuss some of them in this section.
 
 ### Dynamic vs. Static
 The dependency engine interface discussed in this topic is somewhat dynamic
 in the sense that the user can push operations one by one, instead of declaring the entire dependency graph (static).
 Dynamic scheduling can require more overhead than static declarations, in terms of data structure.
 However, it also enables more flexibility, such as supporting auto parallelism for imperative programs
-or a mixture of imperative and symbolic programs. You can also add some level of predeclared operations 
-to the interface to enable data structure reuse.
+or a mixture of imperative and symbolic programs. You can also add some level of predeclared operations to the interface to enable data structure reuse.
 
 ### Mutation vs. Immutable
 The generic engine interface in this topic supports explicit scheduling for mutation.
 In a typical data flow engine, the data are usually immutable. Immutable data have a lot of benefits.
-For example, they are usually suitable for better parallelization, and allow easier fault tolerance in a distributed setting by way of recomputation.
+For example, they are usually suitable for better parallelization, and allow easier fault tolerance in a distributed setting by way of re-computation.
 
 However, immutability presents several challenges:
 
@@ -300,14 +299,14 @@ However, immutability presents several challenges:
 - Preallocated static memory isn't available, again because the usual pattern is to write to a preallocated layer space,
   which is not supported if data is immutable.
 
-The mutation semantics makes these issues easier. It is in a lower level than a data flow engine, in the sense that if we
+The mutation semantics makes these issues easier. It is at a lower level than a data flow engine, in the sense that if we
 allocate a new variable and memory for each operation, it can be used to schedule immutable operations.
 It also makes things like random number generation easier because the operation is indeed a mutation of state.
 
 
 ## Source Code of the Generic Dependency Engine
 [MXNet](https://github.com/dmlc/mxnet) provides an implementation of the generic dependency engine described in this topic.
-You can find more details in [this topic](http://mxnet.io/architecture/note_engine.html). We welcome your contributions. 
+You can find more details in [this topic](http://mxnet.io/architecture/note_engine.html). We welcome your contributions.
 
 ## Next Steps
 

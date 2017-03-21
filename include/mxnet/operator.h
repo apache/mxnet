@@ -11,6 +11,7 @@
 #include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <dmlc/registry.h>
+#include <nnvm/node.h>
 #include <vector>
 #include <map>
 #include <string>

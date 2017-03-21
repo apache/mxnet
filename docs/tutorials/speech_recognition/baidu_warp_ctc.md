@@ -24,7 +24,7 @@ You can get the source code for the example on [GitHub](https://github.com/dmlc/
   comment out following lines in make/config.mk
   WARPCTC_PATH = $(HOME)/warp-ctc
   MXNET_PLUGINS += plugin/warpctc/warpctc.mk
-  
+
   rebuild mxnet by
   make clean && make -j4
 ```
@@ -39,12 +39,12 @@ There are two examples. One is a toy example that validates CTC integration. The
 ```
 
 The OCR example is constructed as follows:
-  
+
 1. It generates a 80x30-pixel image for a 4-digit captcha using a Python captcha library.
-2. The 80x30 image is used as 80 input for lstm, and every input is one column of the image (a 30 dim vector).
+2. The 80x30 image is used as 80 input for LSTM, and every input is one column of the image (a 30 dim vector).
 3. The output layer use CTC loss.
 
-The following code shows detailed construction of the net:
+The following code shows the detailed construction of the net: 
 
 ```
   def lstm_unroll(num_lstm_layer, seq_len,
@@ -62,7 +62,7 @@ The following code shows detailed construction of the net:
     assert(len(last_states) == num_lstm_layer)
     data = mx.sym.Variable('data')
     label = mx.sym.Variable('label')
-    
+
     #every column of image is an input, there are seq_len inputs
     wordvec = mx.sym.SliceChannel(data=data, num_outputs=seq_len, squeeze_axis=1)
     hidden_all = []
@@ -78,7 +78,7 @@ The following code shows detailed construction of the net:
         hidden_all.append(hidden)
     hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
     pred = mx.sym.FullyConnected(data=hidden_concat, num_hidden=11)
-    
+
     # here we do NOT need to transpose label as other lstm examples do
     label = mx.sym.Reshape(data=label, target_shape=(0,))
     #label should be int type, so use cast
@@ -86,7 +86,7 @@ The following code shows detailed construction of the net:
     sm = mx.sym.WarpCTC(data=pred, label=label, label_length = num_label, input_length = seq_len)
     return sm
 ```
-  
+
 ## Supporting Multi-label Length
 
 Provide labels with length b. For samples whose label length is smaller than b, append 0 to the label data to make it have length b.

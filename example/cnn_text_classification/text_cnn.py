@@ -256,4 +256,6 @@ def train_without_pretrained_embedding():
 
 
 if __name__ == '__main__':
+    if not os.path.exists("checkpoint"):
+        os.mkdir("checkpoint")
     train_without_pretrained_embedding()

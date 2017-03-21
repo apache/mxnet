@@ -2,7 +2,7 @@
 ######################################################################
 # This script installs MXNet for R along with all required dependencies on a Ubuntu Machine.
 # We recommend to install Microsoft RServer together with Intel MKL library for optimal performance
-# More information can be found here: 
+# More information can be found here:
 # https://blogs.technet.microsoft.com/machinelearning/2016/09/15/building-deep-neural-networks-in-the-cloud-with-azure-gpu-vms-mxnet-and-microsoft-r-server/
 # Tested on Ubuntu 14.04+ distro.
 ######################################################################
@@ -29,16 +29,18 @@ fi
 # libcurl4-openssl-dev and libssl-dev are needed for devtools.
 sudo apt-get -y install libcurl4-openssl-dev libssl-dev
 
+# Needed for R XML
+sudo apt-get install libxml2-dev
+
 sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package
 sudo Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
 cd ..
 
 echo "Compiling R package. This can take few minutes..."
-make rpkg
+sudo make rpkg
 
 echo "Installing R package..."
-sudo R CMD INSTALL mxnet_0.7.tar.gz
+sudo R CMD INSTALL mxnet_current_r.tar.gz
 
 echo "Done! MXNet for R installation is complete. Go ahead and explore MXNet with R :-)"
-

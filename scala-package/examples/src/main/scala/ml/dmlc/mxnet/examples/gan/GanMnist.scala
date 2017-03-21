@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet.examples.gan
 
 import org.kohsuke.args4j.{CmdLineParser, Option}
@@ -104,7 +121,11 @@ object GanMnist {
     val parser: CmdLineParser = new CmdLineParser(anst)
     try {
       parser.parseArgument(args.toList.asJava)
-      assert(anst.mnistDataPath != null)
+
+      val dataPath = if (anst.mnistDataPath == null) System.getenv("MXNET_DATA_DIR")
+        else anst.mnistDataPath
+
+      assert(dataPath != null)
 
       val lr = 0.0005f
       val beta1 = 0.5f
@@ -130,8 +151,8 @@ object GanMnist {
       gMod.initOptimizer(new Adam(learningRate = lr, wd = 0f, beta1 = beta1))
 
       val params = Map(
-        "image" -> s"${anst.mnistDataPath}/train-images-idx3-ubyte",
-        "label" -> s"${anst.mnistDataPath}/train-labels-idx1-ubyte",
+        "image" -> s"${dataPath}/train-images-idx3-ubyte",
+        "label" -> s"${dataPath}/train-labels-idx1-ubyte",
         "input_shape" -> s"(1, 28, 28)",
         "batch_size" -> s"$batchSize",
         "shuffle" -> "True"

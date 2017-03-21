@@ -1,4 +1,5 @@
 # pylint:skip-file
+import logging
 import sys, random, time
 sys.path.insert(0, "../../python")
 import mxnet as mx
@@ -83,6 +84,9 @@ class DataIter(mx.io.DataIter):
         pass
 
 if __name__ == '__main__':
+    head = '%(asctime)-15s %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=head)
+
     batch_size = 128
     vocab_size = 10000
     feature_size = 100
@@ -100,9 +104,6 @@ if __name__ == '__main__':
                                  momentum = 0.9,
                                  wd = 0.00001,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
-    import logging
-    head = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=head)
     
     metric = NceAccuracy()
     model.fit(X = data_train, eval_data = data_test,

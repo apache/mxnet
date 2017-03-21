@@ -16,7 +16,7 @@ def get_symbol(network, batch_size):
     if 'resnet' in network:
         num_layers = int(network.split('-')[1])
         network = 'resnet'
-    net = import_module('symbol.'+network)
+    net = import_module('symbols.'+network)
     sym = net.get_symbol(num_classes = 1000,
                          image_shape = ','.join([str(i) for i in image_shape]),
                          num_layers  = num_layers)
@@ -48,10 +48,9 @@ def score(network, dev, batch_size, num_batches):
     return num_batches*batch_size/(time.time() - tic)
 
 if __name__ == '__main__':
-    networks = ['alexnet', 'vgg', 'inception-bn', 'inception-v3'] # 'resnet-50', 'resnet-152'
-    # TODO(mli) resnet-50 cause core dump when USE_MKL2017_EXPERIMENTAL is enabled
-
+    networks = ['alexnet', 'vgg', 'inception-bn', 'inception-v3', 'resnet-50', 'resnet-152']
     devs = [mx.gpu(0)] if len(get_gpus()) > 0 else []
+    # Enable USE_MKL2017_EXPERIMENTAL for better CPU performance
     devs.append(mx.cpu())
 
     batch_sizes = [1, 2, 4, 8, 16, 32]

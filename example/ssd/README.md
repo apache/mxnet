@@ -105,10 +105,11 @@ python train.py
 You might need to change the parameters a bit if you have different configurations.
 Check `python train.py --help` for more training options. For example, if you have 4 GPUs, use:
 ```
-# note that a perfect training parameter set is yet to be discovered for multi-gpu
+# note that a perfect training parameter set is yet to be discovered for multi-GPUs
 python train.py --gpus 0,1,2,3 --batch-size 128 --lr 0.0005
 ```
 * Memory usage: MXNet is very memory efficient, training on `VGG16_reduced` model with `batch-size` 32 takes around 4684MB without CUDNN.
+* Initial lenarning rate: 0.001 is fine for single GPU. 0.0001 should be used for the first couple of epoches then go back to 0.001 via using parameter --resume.
 
 ### Evalute trained model
 Again, currently we only support evaluation on PASCAL VOC

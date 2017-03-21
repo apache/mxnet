@@ -149,6 +149,9 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
         fh = logging.FileHandler(log_file)
         logger.addHandler(fh)
 
+    # kvstore
+    kv = mx.kvstore.create("device")
+
     # check args
     if isinstance(data_shape, int):
         data_shape = (data_shape, data_shape)
@@ -254,6 +257,7 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
             epoch_end_callback=epoch_end_callback,
             optimizer='sgd',
             optimizer_params=optimizer_params,
+            kvstore = kv,
             begin_epoch=begin_epoch,
             num_epoch=end_epoch,
             initializer=initializer,

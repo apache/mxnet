@@ -53,7 +53,7 @@ struct SpaceAllocator {
 
   inline void* GetHostSpace(size_t size) {
     if (host_handle.size >= size) return host_handle.dptr;
-    if (handle.size != 0) {
+    if (host_handle.size != 0) {
       Storage::Get()->DirectFree(host_handle);
     }
     host_handle = Storage::Get()->Alloc(size, Context());
@@ -171,7 +171,8 @@ class ResourceManagerImpl : public ResourceManager {
       Engine::Get()->PushSync([r, seed](RunContext rctx) {
           r->set_stream(rctx.get_stream<xpu>());
           r->Seed(seed);
-        }, ctx, {}, {resource.var});
+        }, ctx, {}, {resource.var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
     }
   };
 
@@ -194,7 +195,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].ptr_ = &space[i];
         resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
         space[i].ctx = ctx;
-        CHECK_EQ(space[i].handle.size, 0);
+        CHECK_EQ(space[i].handle.size, 0U);
       }
     }
     ~ResourceTempSpace() {

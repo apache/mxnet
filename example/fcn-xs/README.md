@@ -7,16 +7,26 @@ This folder contains the examples of image segmentation in MXNet.
 
 we have trained a simple fcn-xs model, the parameter is below:
 
-| model | lr (fixed) | epoch |
-| ---- | ----: | ---------: |
-| fcn-32s | 1e-10 | 31 |
-| fcn-16s | 1e-12 | 27 |
-| fcn-8s | 1e-14 | 19 |
+| model   | lr (fixed) | epoch |
+| ------- | ---------: | ----: |
+| fcn-32s |      1e-10 |    31 |
+| fcn-16s |      1e-12 |    27 |
+| fcn-8s  |      1e-14 |    19 |
 (```when using the newest mxnet, you'd better using larger learning rate, such as 1e-4, 1e-5, 1e-6 instead, because the newest mxnet will do gradient normalization in SoftmaxOutput```)
 
 the training image number is only : 2027, and the Validation image number is: 462  
 
 ## How to train fcn-xs in mxnet
+#### Getting Started
+
+- Install python package `Pillow` (required by `image_segment.py`).
+```shell
+[sudo] pip install Pillow
+```
+- Assume that we are in a working directory, such as `~/train_fcn_xs`, and MXNet is built as `~/mxnet`. Now, copy example scripts into working directory.
+```shell
+cp ~/mxnet/example/fcn-xs/* .
+```
 #### step1: download the vgg16fc model and experiment data
 * vgg16fc model : you can download the ```VGG_FC_ILSVRC_16_layers-symbol.json``` and ```VGG_FC_ILSVRC_16_layers-0074.params```   [baidu yun](http://pan.baidu.com/s/1bgz4PC), [dropbox](https://www.dropbox.com/sh/578n5cxej7ofd6m/AACuSeSYGcKQDi1GoB72R5lya?dl=0).  
 this is the fully convolution style of the origin
@@ -25,6 +35,11 @@ this is the fully convolution style of the origin
 ```JPEGImages folder```, ```SegmentationClass folder```, ```train.lst```, ```val.lst```, ```test.lst```
 
 #### step2: train fcn-xs model
+* Configure GPU/CPU for training in `fcn_xs.py`.
+```python
+# ctx = mx.cpu(0)
+ctx = mx.gpu(0)
+```
 * if you want to train the fcn-8s model, it's better for you trained the fcn-32s and fcn-16s model firstly.
 when training the fcn-32s model, run in shell ```./run_fcnxs.sh```, the script in it is:
 ```shell

@@ -13,6 +13,7 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 * [Document](#documents)
 * [Test Cases](#test-cases)
 * [Examples](#examples)
+* [Tutorials](#tutorials)
 * [Core Library](#core-library)
 * [Python Package](#python-package)
 * [R Package](#r-package)
@@ -45,8 +46,8 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 
 *  Git might show some conflicts that prevent merging, for example,  ```conflicted.py```.
 	* Manually modify the file to resolve the conflict.
-	* After you resolve the conflict, mark it as resolved by using: 
- 
+	* After you resolve the conflict, mark it as resolved by using:
+
 ```bash
 git add conflicted.py.
 ```
@@ -64,7 +65,7 @@ git add conflicted.py.
     git push --force
  ```
 
-### Combining Multiple Commits 
+### Combining Multiple Commits
 If you are submitting multiple commits with later commits that are just fixes to previous ones, you can combine commits into meaningful groups before creating a push request.
 
 
@@ -90,7 +91,7 @@ git push --force.
 ```
 
 ### What Is the Consequence of Forcing a Push?
-The previous two tips requires forcing a push because we altered the path of the commits.
+The previous two tips require forcing a push because we altered the path of the commits.
 It's fine to force a push to your own fork, as long as only your commits are changed.
 
 ## Documents
@@ -109,6 +110,10 @@ It's fine to force a push to your own fork, as long as only your commits are cha
 * If you have blog posts about MXNet or
   tutorials that use MXNet, please tell us and we'll add
   a link to them in the examples on GitHub.
+
+## Tutorials
+
+Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 ## Core Library
 

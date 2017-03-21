@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet.optimizer
 
 import ml.dmlc.mxnet.{Optimizer, LRScheduler, NDArray}
@@ -7,8 +24,6 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * SGD with nesterov.
  * It is implemented according to
  * https://github.com/torch/optim/blob/master/sgd.lua
- *
- * @author Depeng Liang
  *
  * @param learningRate Float, Step size.
  * @param momentum Float, momentum value.
@@ -86,6 +101,22 @@ class NAG(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
   override def disposeState(state: AnyRef): Unit = {
     if (state != null) {
       state.asInstanceOf[NDArray].dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      state.asInstanceOf[NDArray].serialize()
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      NDArray.deserialize(bytes).asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }

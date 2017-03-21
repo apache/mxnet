@@ -8,22 +8,31 @@ computing and state-of-art deep learning to Scala. It enables you to write seaml
 
 You can perform tensor or matrix computation in pure Scala:
 
- ```scala
-    scala> import ml.dmlc.mxnet._
-    import ml.dmlc.mxnet._
+```scala
+   scala> import ml.dmlc.mxnet._
+   import ml.dmlc.mxnet._
 
-    scala> val arr = NDArray.ones(2, 3)
-    arr: ml.dmlc.mxnet.NDArray = ml.dmlc.mxnet.NDArray@f5e74790
+   scala> val arr = NDArray.ones(2, 3)
+   arr: ml.dmlc.mxnet.NDArray = ml.dmlc.mxnet.NDArray@f5e74790
 
-    scala> arr.shape
-    res0: ml.dmlc.mxnet.Shape = (2,3)
+   scala> arr.shape
+   res0: ml.dmlc.mxnet.Shape = (2,3)
 
-    scala> (arr * 2).toArray
-    res2: Array[Float] = Array(2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
+   scala> (arr * 2).toArray
+   res2: Array[Float] = Array(2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
 
-    scala> (arr * 2).shape
-    res3: ml.dmlc.mxnet.Shape = (2,3)
- ```
+   scala> (arr * 2).shape
+   res3: ml.dmlc.mxnet.Shape = (2,3)
+```
+
+ ## Scala API Reference
+ * [Module API](module.md) is a flexible high-level interface for training neural networks.
+ * [Model API](model.md) is an alternate simple high-level interface for training neural networks.
+ * [Symbolic API](symbol.md) performs operations on NDArrays to assemble neural networks from layers.
+ * [IO Data Loading API](io.md) performs parsing and data loading.
+ * [NDArray API](ndarray.md) performs vector/matrix/tensor operations.
+ * [KVStore API](kvstore.md) performs multi-GPU and multi-host distributed training.
+
 
 ## Resources
 

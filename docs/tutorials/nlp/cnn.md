@@ -1,10 +1,10 @@
 # Text Classification Using a Convolutional Neural Network on MXNet
 
-This tutorial is based off of Yoon Kim's [paper](https://arxiv.org/abs/1408.5882) on using convolutional neural networks for scentence sentiment classification.
+This tutorial is based of Yoon Kim's [paper](https://arxiv.org/abs/1408.5882) on using convolutional neural networks for sentence sentiment classification.
 
-For this tutorial we will train a convolutional deep network model on Rotten Tomatoes movie review sentences labled with their sentiment. The result will be a model that can classify a sentence based on it's sentiment (with 1 being a purely positive sentiment, 0 being a purely negative sentiment and 0.5 being neutral).
+For this tutorial, we will train a convolutional deep network model on movie review sentences from Rotten Tomatoes labeled with their sentiment. The result will be a model that can classify a sentence based on its sentiment (with 1 being a purely positive sentiment, 0 being a purely negative sentiment and 0.5 being neutral).
 
-Our first step will be to fetch the labeled training data of positive and negative senitment sentences and process it into sets of vectors that are then randomly split into train and test sets.
+Our first step will be to fetch the labeled training data of positive and negative sentiment sentences and process it into sets of vectors that are then randomly split into train and test sets.
 
 
 ```python
@@ -39,12 +39,12 @@ def load_data_and_labels():
     Loads MR polarity data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
-    # Pull scentences with positive sentiment
+    # Pull sentences with positive sentiment
     pos_file = urllib2.urlopen('https://raw.githubusercontent.com/yoonkim/CNN_sentence/master/rt-polarity.pos')
 
-    # Pull scentences with negative sentiment
+    # Pull sentences with negative sentiment
     neg_file = urllib2.urlopen('https://raw.githubusercontent.com/yoonkim/CNN_sentence/master/rt-polarity.neg')
-    
+
     # Load data from files
     positive_examples = list(pos_file.readlines())
     positive_examples = [s.strip() for s in positive_examples]
@@ -92,7 +92,7 @@ def build_vocab(sentences):
 
 def build_input_data(sentences, labels, vocabulary):
     """
-    Maps sentencs and labels to vectors based on a vocabulary.
+    Maps sentences and labels to vectors based on a vocabulary.
     """
     x = np.array([[vocabulary[word] for word in sentence] for sentence in sentences])
     y = np.array(labels)
@@ -117,7 +117,7 @@ x_shuffled = x[shuffle_indices]
 y_shuffled = y[shuffle_indices]
 
 # split train/dev set
-# there are a total of 10662 labled examples to train on
+# there are a total of 10662 labeled examples to train on
 x_train, x_dev = x_shuffled[:-1000], x_shuffled[-1000:]
 y_train, y_dev = y_shuffled[:-1000], y_shuffled[-1000:]
 
@@ -177,9 +177,9 @@ conv_input = mx.sym.Reshape(data=embed_layer, target_shape=(batch_size, 1, sente
 
 The next layer in the network performs convolutions over the ordered embedded word vectors in a sentence using multiple filter sizes, sliding over 3, 4 or 5 words at a time. This is the equivalent of looking at all 3-grams, 4-grams and 5-grams in a sentence and will allow us to understand how words contribute to sentiment in the context of those around them.
 
-After each convolution we add a max-pool layer to extract the most significant elements in each convolution and turn them into a feature vector.
+After each convolution, we add a max-pool layer to extract the most significant elements in each convolution and turn them into a feature vector.
 
-Because each convolution+pool filter produces tensors of different shapes we need to create a layer for each of them, and then concatonate the results of these layers into one big feature vector.
+Because each convolution+pool filter produces tensors of different shapes we need to create a layer for each of them, and then concatenate the results of these layers into one big feature vector.
 
 
 ```python
@@ -206,15 +206,15 @@ h_pool = mx.sym.Reshape(data=concat, target_shape=(batch_size, total_filters))
     convolution filters [3, 4, 5]
 
 
-Next, we add dropout regularization, which will randomly disable a fraction of neruons in the layer (set to 50% here) to ensure that that model does not overfit. This works by preventing neurons from co-adapting and forcing them to learn individually useful features. 
+Next, we add dropout regularization, which will randomly disable a fraction of neurons in the layer (set to 50% here) to ensure that that model does not overfit. This works by preventing neurons from co-adapting and forcing them to learn individually useful features.
 
-This is nessecary in our model becasuse the dataset has a vocabulary of size around 20k and only around 10k examples so since this data set is pretty small we’re likely to overfit with a powerful model (like this neural net).
+This is necessary for our model because the dataset has a vocabulary of size around 20k and only around 10k examples so since this data set is pretty small we’re likely to overfit with a powerful model (like this neural net).
 
 
 ```python
 # dropout layer
 dropout=0.5
-print 'dropout probablity', dropout
+print 'dropout probability', dropout
 
 if dropout > 0.0:
     h_drop = mx.sym.Dropout(data=h_pool, p=dropout)
@@ -223,10 +223,10 @@ else:
 
 ```
 
-    dropout probablity 0.5
+    dropout probability 0.5
 
 
-Finally we add a fully connected layer to add non-linearity to the model. We then classify the resulting output of this layer using a softmax function, yeilding a result between 0 (negative sentimet) and 1 (positive).
+Finally, we add a fully connected layer to add non-linearity to the model. We then classify the resulting output of this layer using a softmax function, yielding a result between 0 (negative sentiment) and 1 (positive).
 
 
 ```python
@@ -260,7 +260,7 @@ CNNModel = namedtuple("CNNModel", ['cnn_exec', 'symbol', 'data', 'label', 'param
 
 # Define what device to train/test on
 ctx=mx.gpu(0)
-# If you have no GPU on your machine change this to 
+# If you have no GPU on your machine change this to
 # ctx=mx.cpu(0)
 
 arg_names = cnn.list_arguments()
@@ -296,13 +296,13 @@ label = cnn_exec.arg_dict['softmax_label']
 cnn_model= CNNModel(cnn_exec=cnn_exec, symbol=cnn, data=data, label=label, param_blocks=param_blocks)
 ```
 
-We can now execute the training and testing of our network, which in-part mxnet automatically does for us with its forward and backwards propogation methods, along with its automatic gradient calculations.
+We can now execute the training and testing of our network, which in-part mxnet automatically does for us with its forward and backward propagation methods, along with its automatic gradient calculations.
 
 
 ```python
 '''
 Train the cnn_model using back prop
-''' 
+'''
 
 optimizer='rmsprop'
 max_grad_norm=5.0
@@ -328,7 +328,7 @@ for iteration in range(epoch):
     tic = time.time()
     num_correct = 0
     num_total = 0
-    
+
     # Over each batch of training data
     for begin in range(0, x_train.shape[0], batch_size):
         batchX = x_train[begin:begin+batch_size]
@@ -390,7 +390,7 @@ for iteration in range(epoch):
     # Evaluate model after this epoch on dev (test) set
     num_correct = 0
     num_total = 0
-    
+
     # For each test batch
     for begin in range(0, x_dev.shape[0], batch_size):
         batchX = x_dev[begin:begin+batch_size]
@@ -413,7 +413,7 @@ for iteration in range(epoch):
 Now that we have gone through the trouble of training the model, we have stored the learned parameters in the .params file in our local directory. We can now load this file whenever we want and predict the sentiment of new sentences by running them through a forward pass of the trained model.
 
 ## References
-- [“Implementing a CNN for Text Classification in Tensorflow” blog post](http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/)
+- [“Implementing a CNN for Text Classification in TensorFlow” blog post](http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/)
 - [Convolutional Neural Networks for Sentence Classification](https://arxiv.org/abs/1408.5882)
 
 ## Next Steps

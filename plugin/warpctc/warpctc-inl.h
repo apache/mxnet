@@ -120,7 +120,7 @@ class WarpCTCOp : public Operator {
     TBlob data = in_data[warpctc_enum::kData];
     TBlob label = in_data[warpctc_enum::kLabel];
     CHECK_EQ(data.shape_.ndim(), 2) << "input data shape should be 2 (t*n, p)";
-    ctcComputeInfo info;
+    ctcOptions info; //please updated to latest baidu/warp-ctc NOLINT(*)
     if (data.dev_mask_ == cpu::kDevMask) {
       info.loc = CTC_CPU;
       info.num_threads = 1;
@@ -132,6 +132,7 @@ class WarpCTCOp : public Operator {
 #endif
       LOG(FATAL) << "Unknown device type " << data.dev_mask_;
     }
+    info.blank_label = 0;
 
     int T = param_.input_length;
     int minibatch = data.shape_[0] / T;

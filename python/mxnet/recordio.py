@@ -1,11 +1,7 @@
-# coding: utf-8
-# pylint: disable=invalid-name, protected-access, fixme, too-many-arguments, no-member
-
-"""Python interface for DLMC RecrodIO data format"""
+"""Read and write for the RecrodIO data format"""
 from __future__ import absolute_import
 from collections import namedtuple
 
-import os
 import ctypes
 import struct
 import numbers
@@ -17,12 +13,11 @@ from .base import check_call
 from .base import c_str
 try:
     import cv2
-    opencv_available = True
 except ImportError:
-    opencv_available = False
+    cv2 = None
 
 class MXRecordIO(object):
-    """Python interface for read/write RecordIO data formmat
+    """Read/write RecordIO formmat data
 
     Parameters
     ----------
@@ -61,6 +56,7 @@ class MXRecordIO(object):
             check_call(_LIB.MXRecordIOWriterFree(self.handle))
         else:
             check_call(_LIB.MXRecordIOReaderFree(self.handle))
+        self.is_open = False
 
     def reset(self):
         """Reset pointer to first item. If record is opened with 'w',
@@ -102,8 +98,7 @@ class MXRecordIO(object):
             return None
 
 class MXIndexedRecordIO(MXRecordIO):
-    """Python interface for read/write RecordIO data formmat with index.
-    Support random access.
+    """Read/write RecordIO formmat data supporting random access.
 
     Parameters
     ----------
@@ -117,28 +112,30 @@ class MXIndexedRecordIO(MXRecordIO):
         data type for keys
     """
     def __init__(self, idx_path, uri, flag, key_type=int):
-        super(MXIndexedRecordIO, self).__init__(uri, flag)
         self.idx_path = idx_path
         self.idx = {}
+        self.keys = []
         self.key_type = key_type
-        if not self.writable and os.path.isfile(idx_path):
-            with open(idx_path) as fin:
-                for line in fin.readlines():
-                    line = line.strip().split('\t')
-                    self.idx[key_type(line[0])] = int(line[1])
+        self.fidx = None
+        super(MXIndexedRecordIO, self).__init__(uri, flag)
+
+    def open(self):
+        super(MXIndexedRecordIO, self).open()
+        self.idx = {}
+        self.keys = []
+        self.fidx = open(self.idx_path, self.flag)
+        if not self.writable:
+            for line in iter(self.fidx.readline, ''):
+                line = line.strip().split('\t')
+                key = self.key_type(line[0])
+                self.idx[key] = int(line[1])
+                self.keys.append(key)
 
     def close(self):
-        if self.writable:
-            with open(self.idx_path, 'w') as fout:
-                for k, v in self.idx.items():
-                    fout.write(str(k)+'\t'+str(v)+'\n')
+        if not self.is_open:
+            return
         super(MXIndexedRecordIO, self).close()
-
-    def reset(self):
-        if self.writable:
-            self.idx = {}
-            super(MXIndexedRecordIO, self).close()
-            super(MXIndexedRecordIO, self).open()
+        self.fidx.close()
 
     def seek(self, idx):
         """Query current read head position"""
@@ -160,20 +157,17 @@ class MXIndexedRecordIO(MXRecordIO):
 
     def write_idx(self, idx, buf):
         """Write record with index"""
+        key = self.key_type(idx)
         pos = self.tell()
-        self.idx[self.key_type(idx)] = pos
         self.write(buf)
-
-    def keys(self):
-        """List all keys from index"""
-        return list(self.idx.keys())
-
-
+        self.fidx.write('%s\t%d\n'%(str(key), pos))
+        self.idx[key] = pos
+        self.keys.append(key)
 
 
 IRHeader = namedtuple('HEADER', ['flag', 'label', 'id', 'id2'])
-_IRFormat = 'IfQQ'
-_IRSize = struct.calcsize(_IRFormat)
+_IR_FORMAT = 'IfQQ'
+_IR_SIZE = struct.calcsize(_IR_FORMAT)
 
 def pack(header, s):
     """pack an string into MXImageRecord
@@ -193,7 +187,7 @@ def pack(header, s):
         label = np.asarray(header.label, dtype=np.float32)
         header = header._replace(flag=label.size, label=0)
         s = label.tostring() + s
-    s = struct.pack(_IRFormat, *header) + s
+    s = struct.pack(_IR_FORMAT, *header) + s
     return s
 
 def unpack(s):
@@ -211,8 +205,8 @@ def unpack(s):
     s : str
         unpacked string
     """
-    header = IRHeader(*struct.unpack(_IRFormat, s[:_IRSize]))
-    s = s[_IRSize:]
+    header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
+    s = s[_IR_SIZE:]
     if header.flag > 0:
         header = header._replace(label=np.fromstring(s, np.float32, header.flag))
         s = s[header.flag*4:]
@@ -237,7 +231,7 @@ def unpack_img(s, iscolor=-1):
     """
     header, s = unpack(s)
     img = np.fromstring(s, dtype=np.uint8)
-    assert opencv_available
+    assert cv2 is not None
     img = cv2.imdecode(img, iscolor)
     return header, img
 
@@ -261,7 +255,7 @@ def pack_img(header, img, quality=95, img_fmt='.jpg'):
     s : str
         The packed string
     """
-    assert opencv_available
+    assert cv2 is not None
     jpg_formats = ['.JPG', '.JPEG']
     png_formats = ['.PNG']
     encode_params = None

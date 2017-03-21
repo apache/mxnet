@@ -10,7 +10,6 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>libmxnet-scala-osx-x86_64-cpu</artifactId>
   <version>0.1.2-SNAPSHOT</version>
   <name>MXNet Scala Package - Native OSX-x86_64 CPU-only</name>
@@ -69,6 +68,7 @@
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
             <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ../../../nnvm/lib/libnnvm.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>

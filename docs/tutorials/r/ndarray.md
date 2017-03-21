@@ -1,7 +1,7 @@
 # NDArray: Vectorized Tensor Computations on CPUs and GPUs
 
 `NDArray` is the basic vectorized operation unit in MXNet for matrix and tensor computations.
-Users can perform usual calculations as on a R"s array, but with two additional features:
+Users can perform usual calculations as on an R"s array, but with two additional features:
 
 
 
@@ -29,7 +29,7 @@ require(mxnet)
 ```r
 a <- mx.nd.zeros(c(2, 3)) # create a 2-by-3 matrix on cpu
 b <- mx.nd.zeros(c(2, 3), mx.cpu()) # create a 2-by-3 matrix on cpu
-# c <- mx.nd.zeros(c(2, 3), mx.gpu(0)) # create a 2-by-3 matrix on gpu 0, if you have CUA enabled.
+# c <- mx.nd.zeros(c(2, 3), mx.gpu(0)) # create a 2-by-3 matrix on gpu 0, if you have CUDA enabled.
 ```
 
 Typically for CUDA-enabled devices, the device id of a GPU starts from 0.

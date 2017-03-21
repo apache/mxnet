@@ -8,6 +8,7 @@
 
 #include <Rcpp.h>
 #include <mxnet/c_api.h>
+#include <nnvm/c_api.h>
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -43,6 +44,14 @@ class Symbol {
   std::vector<std::string> ListAuxiliaryStates() const;
   /*! \return the outputs in the symbol */
   std::vector<std::string> ListOuputs() const;
+
+  /*! \return the attributes of the symbol */
+  Rcpp::List getAttrs() const;
+  /*!
+   * \brief sets the attributes of the symbol
+   * \param attr list of keyword arguments
+   */
+  void setAttrs(Rcpp::List attr);
 
   /*!
    * \brief Save the symbol to file
@@ -175,9 +184,9 @@ class SymbolFunction : public ::Rcpp::CppFunction {
 
  private:
   // make constructor private
-  explicit SymbolFunction(AtomicSymbolCreator handle);
+  explicit SymbolFunction(OpHandle handle, std::string name);
   /*! \brief internal creator handle. */
-  AtomicSymbolCreator handle_;
+  OpHandle handle_;
   // name of the function
   std::string name_;
   // hint used to generate the names

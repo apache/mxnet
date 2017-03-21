@@ -8,7 +8,7 @@ of each, and explores how we can learn from them.
 We don't benchmark
 deep learning libraries in this topic. We focus on the programming models themselves, instead of the implementation.  We divide the libraries into several categories by the type of user interface,
 and discuss how interface style affects the performance and flexibility.
-The discussion isn't specific to deep learning, but we  use deep learning applications for our use cases and optimization as our goal.
+The discussion isn't specific to deep learning, but we use deep learning applications for our use cases and optimization as our goal.
 
 ## Symbolic vs. Imperative Programs
 
@@ -24,7 +24,7 @@ as is the following NumPy snippet.
     c = b * a
     d = c + 1
 ```
-When the program executes ```c = b * a```, it runs the actual computation. 
+When the program executes ```c = b * a```, it runs the actual computation.
 
 Symbolic programs are a bit different.
 The following snippet is an equivalent symbolic-style program that achieves the same goal of calculating ```d```.
@@ -95,7 +95,7 @@ Let's consider the same example we used in the beginning of this section.
 ![Comp Graph](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/prog_model/comp_graph.png)
 
 Assume that each cell in the array costs 8 bytes. How much memory do you need to execute this program in the Python console?
-You need memory for 4 arrays of size 10, that means you  need ```4 * 10 * 8 = 320``` bytes. On the other hand,
+You need memory for 4 arrays of size 10, that means you need ```4 * 10 * 8 = 320``` bytes. On the other hand,
 to execute the computation graph, you can reuse the memory of C and D, to do the last computation in-place. This requires just ```3 * 10 * 8 = 240```
 bytes.
 
@@ -104,7 +104,7 @@ Symbolic programs are more *restricted*. When you call ```compile``` on D, you t
 This allows symbolic programs to safely reuse the memory for in-place computation.
 
 On the other hand, imperative programs need to *be prepared to encounter all possible demands*. If you run the preceding program in a Python console,
-it's possible that any of the variables could be used in the future. This prevents the system from sharing variable  memory space.
+it's possible that any of the variables could be used in the future. This prevents the system from sharing variable memory space.
 
 Of course, this is somewhat misleading, because garbage collection can occur in imperative programs and memory could then be reused.
 However, imperative programs do need to be "prepared to encounter all possible demands," and this limits the optimization you can perform. This is true for non-trivial cases, such
@@ -123,7 +123,7 @@ boundary on which value is needed and which isn't. Imperative programs operate o
 
 In this section, we compare how the two programming models perform on the problem of auto differentiation, or backpropagation. All deep learning libraries need to solve the problem of gradient calculation. Both imperative and symbolic programs can perform gradient calculation.
 
-Let's start with imperative programs. The following example Python code performs automatic differentiation on the example we've used in this topic.
+Let's start with imperative programs. The following example Python code performs automatic differentiation in the example we've used in this topic.
 
 ```python
     class array(object) :
@@ -163,7 +163,7 @@ Let's start with imperative programs. The following example Python code performs
 
 In this code, each array object contains a grad function (it is actually a closure).
 When you run ```d.grad```, it recursively invokes the grad function of its inputs, backprops the gradient value back, and
-returns the gradient value of each input. 
+returns the gradient value of each input.
 
 This might look a bit complicated, so let's consider the gradient calculation for
 symbolic programs. The following program performs symbolic gradient calculation for the same task.
@@ -191,7 +191,7 @@ backtrack the graph to compute the gradient, and collect the results back.
 
 The gradient calculation in both symbolic and imperative programming follows the same
 pattern. What's the difference then? Recall the *be prepared to encounter all possible demands*
-requirement of imperative programs. If you are creating an array library that supports automatic differentiation,
+the requirement of imperative programs. If you are creating an array library that supports automatic differentiation,
 you have to keep the grad closure along with the computation. This means that none of the history variables can be
 garbage collected because they are referenced by variable ```d ``` by way of function closure.
 
@@ -235,9 +235,9 @@ As you can see, the trade-off between restriction and flexibility is the same fo
 ### Model Checkpoint
 
 It's important to able to save a model and load it back later. There are different ways to *save* your work.
-Normally, to save a neural network, you need to save two things: a net configuration for structure of the neural network and the weights of the neural network.
+Normally, to save a neural network, you need to save two things: a net configuration for the structure of the neural network and the weights of the neural network.
 
-The ability to check the configuration is a plus for symbolic programs. Because the symbolic construction phase does perform computation,
+The ability to check the configuration is a plus for symbolic programs. Because the symbolic construction phase does not perform computation,
 you can directly serialize the computation graph, and load it back later. This solves the problem of saving the configuration without introducing an additional layer.
 
 ```python
@@ -253,13 +253,13 @@ you can directly serialize the computation graph, and load it back later. This s
     ...
 ```
 
-Because an imperative programs executes as it describes the computation, you have to save the code itself as the ```configuration```, or build another
+Because an imperative program executes as it describes the computation, you have to save the code itself as the ```configuration```, or build another
 configuration layer on top of the imperative language.
 
 ### Parameter Updates
 
 Most symbolic programs are data flow  (computation) graphs. Data flow graphs describe computation.
-but it's is not obvious how to use graphs to describe parameter updates. That's because parameter updates introduce mutation,
+but it is not obvious how to use graphs to describe parameter updates. That's because parameter updates introduce mutation,
 which is not a data flow concept. Most symbolic programs introduce a special update statement to update some persistent
 states of the programs.
 
@@ -270,7 +270,7 @@ For symbolic programs, the update statement is also executed as you call it. So 
 
 In comparing the two programming styles, some of our arguments might not be strictly true. However, most of the principles hold true in general, and apply when creating deep learning
 libraries. We've concluded that there is no clear boundary between programming styles. For example, you can create a just-in-time (JIT) compiler in Python to compile imperative Python programs, which provides some of the advantages of global
-information held in symbolic programs. 
+information held in symbolic programs.
 
 
 ## Big vs. Small Operations
@@ -283,7 +283,7 @@ Let's talk about the operations supported by deep learning libraries. Usually, t
 Libraries like CXXNet and Caffe support layer-level operations. Libraries like Theano and Minerva support fine-grained operations.
 
 ### Smaller Operations Can Be More Flexible
-It's quite natural to use smaller operations to compose bigger operations. For example, the sigmoid unit can be simply be composed with division and an exponential:
+It's quite natural to use smaller operations to compose bigger operations. For example, the sigmoid unit can be simply be composed of division and an exponential:
 
 ```python
     sigmoid(x) = 1.0 / (1.0 + exp(-x))
@@ -311,13 +311,13 @@ with one or only some CUDA kernel launches. This makes these implementations mor
 
 ### Compilation and Optimization
 
-Can small operations be optimized? Of course they can. Let's look at the system optimization part of the compilation engine.
+Can small operations be optimized? Of course, they can. Let's look at the system optimization part of the compilation engine.
 Two types of optimization can be performed on the computation graph:
 
 - Memory allocation optimization, to reuse the memory of the intermediate computations.
 - Operator fusion, to detect sub-graph patterns, such as the sigmoid, and fuse them into a bigger operation kernel.
- 
-Memory allocation optimization isn't restricted to small operations graphs. You can use it with  bigger operations graph, too. However, optimization might not be essential for bigger operation libraries like CXXNet and Caffe, because you can't find the compilation step in them. However, there's a (dumb) ```compilation step``` in these libraries, that basically translates the layers into a fixed forward, backprop execution plan, by running each operation one by one.
+
+Memory allocation optimization isn't restricted to small operations graphs. You can use it with bigger operations graph, too. However, optimization might not be essential for bigger operation libraries like CXXNet and Caffe, because you can't find the compilation step in them. However, there's a (dumb) ```compilation step``` in these libraries, that basically translates the layers into a fixed forward, backprop execution plan, by running each operation one by one.
 
 For computation graphs with smaller operations, these optimizations are crucial to performance. Because the operations are small, there are many sub-graph patterns
 that can be matched. Also, because the final generated operations might not be able to be enumerated, an explicit recompilation of the kernels is required, as opposed to
@@ -329,7 +329,7 @@ so that you actually perform the sub-graph matching. This moves the compilation 
 
 ### Expression Template and Statically Typed Language
 You always have a need to write small operations and compose them.
-Libraries like Caffe use hand-crafted kernels to build  these bigger blocks. Otherwise, you would have to compose smaller operations using Python.
+Libraries like Caffe use hand-crafted kernels to build these bigger blocks. Otherwise, you would have to compose smaller operations using Python.
 
 There's a third choice that works pretty well. This is called the expression template. Basically, you use template programming to
 generate generic kernels from an expression tree at compile time. For details, see [Expression Template Tutorial](https://github.com/dmlc/mshadow/blob/master/guide/exp-template/README.md). CXXNet makes extensive use of an expression template, which enables creating much shorter and more readable code that matches
@@ -342,7 +342,7 @@ we've seen this trick used only in C++.
 Expression template libraries create a middle ground between Python operations and hand-crafted big kernels by allowing C++ users to craft efficient big
 operations by composing smaller operations. It's an option worth considering.
 
-## Mix the Approaches 
+## Mix the Approaches
 
 Now that we've compared the programming models, which should you choose?
 Before delving into that, we should emphasize that depending on the problems you're trying to solve, our comparison mighty not necessarily have a big impact.
@@ -358,7 +358,7 @@ We advocate *mixing* the approaches. Recall Amdahl's law. Sometimes the part tha
 isn't necessarily crucial to performance. It's okay to be a bit sloppy to support more flexible interfaces.
 In machine learning, combining methods usually works better than using just one.
 
-If you can combine the programming models correctly, you can get better results than you can using a single programming model.
+If you can combine the programming models correctly, you can get better results than you can use a single programming model.
 In this section, we discuss how to do so.
 
 ### Symbolic and Imperative Programs

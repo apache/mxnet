@@ -11,7 +11,7 @@ parser.add_argument('--network', type=str, default='dsb',
                     help = 'the cnn to use')
 parser.add_argument('--data-dir', type=str, default="data48/",
                     help='the input data directory')
-parser.add_argument('--model-prefix', type=str,default= "./models/sample_net",
+parser.add_argument('--save-model-prefix', type=str,default= "./models/sample_net",
                     help='the prefix of the model to load/save')
 parser.add_argument('--lr', type=float, default=.01,
                     help='the initial learning rate')

@@ -3,15 +3,15 @@
 
 no_optimization:
 	@echo "Estimating the cost with no optimization..."
-	@MXNET_EXEC_ENABLE_INPLACE=false MXNET_EXEC_MATCH_RANGE=0 python inception_memcost.py
+	@NNVM_EXEC_ENABLE_INPLACE=false NNVM_EXEC_MATCH_RANGE=0 python inception_memcost.py
 
 with_inplace:
 	@echo "Estimating the cost with inplace optimization..."
-	@MXNET_EXEC_ENABLE_INPLACE=true MXNET_EXEC_MATCH_RANGE=0 python inception_memcost.py
+	@NNVM_EXEC_ENABLE_INPLACE=true MXNET_EXEC_MATCH_RANGE=0 python inception_memcost.py
 
 with_sharing:
 	@echo "Estimating the cost with memory sharing ..."
-	@MXNET_EXEC_ENABLE_INPLACE=false python inception_memcost.py
+	@NNVM_EXEC_ENABLE_INPLACE=false python inception_memcost.py
 
 with_both:
 	@echo "Estimating the cost with all optimizations ..."

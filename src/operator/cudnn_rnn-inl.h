@@ -55,7 +55,7 @@ class CuDNNRNNOp : public Operator {
 
   ~CuDNNRNNOp() {
     if (init_cudnn_) {
-      for (int i = 0; i < x_desc_vec_.size(); ++i) {
+      for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
         CHECK_EQ(cudnnDestroyTensorDescriptor(x_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnDestroyTensorDescriptor(y_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
         CHECK_EQ(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]), CUDNN_STATUS_SUCCESS);
@@ -479,6 +479,42 @@ class CuDNNRNNOp : public Operator {
                                           format_,
                                           3,
                                           dim_w), CUDNN_STATUS_SUCCESS);
+
+      // Query weight layout
+      // cudnnFilterDescriptor_t m_desc;
+      // CHECK_EQ(cudnnCreateFilterDescriptor(&m_desc), CUDNN_STATUS_SUCCESS);
+      // DType *p;
+      // int n = 2;
+      // int64_t last = 0;
+      // if (param_.mode == rnn_enum::kLstm) n = 8;
+      // else if (param_.mode == rnn_enum::kGru) n = 6;
+
+      // for (int i = 0; i < param_.num_layers*(param_.bidirectional?2:1); ++i) {
+      //   for (int j = 0; j < n; ++j) {
+      //     CHECK_EQ(cudnnGetRNNLinLayerMatrixParams(s->dnn_handle_, rnn_desc_,
+      //       i, x_desc_vec_[0], w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
+      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
+      //     last = ((int64_t)(p - NULL))/sizeof(DType);
+      //     cudnnDataType_t t;
+      //     cudnnTensorFormat_t f;
+      //     int ndim = 5;
+      //     int dims[5] = {0, 0, 0, 0, 0};
+      //     CHECK_EQ(cudnnGetFilterNdDescriptor(m_desc, ndim, &t, &f, &ndim, &dims[0]),
+      //       CUDNN_STATUS_SUCCESS);
+      //     LOG(INFO) << "w: " <<  i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
+      //     for (int i = 0; i < ndim; ++i) LOG(INFO) << dims[i];
+      //   }
+      // }
+
+      // for (int i = 0; i < param_.num_layers*(param_.bidirectional?2:1); ++i) {
+      //   for (int j = 0; j < n; ++j) {
+      //     CHECK_EQ(cudnnGetRNNLinLayerBiasParams(s->dnn_handle_, rnn_desc_, i, x_desc_vec_[0],
+      //       w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
+      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
+      //     last = ((int64_t)(p - NULL))/sizeof(DType);
+      //     LOG(INFO) << "b: " << i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
+      //   }
+      // }
     }
   }
 

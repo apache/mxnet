@@ -32,6 +32,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float momentum;
   bool fix_gamma;
   bool use_global_stats;
+  bool output_mean_var;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
@@ -42,6 +43,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
     .describe("Whether use global moving statistics instead of local batch-norm. "
               "This will force change batch-norm into a scale shift operator.");
+    DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
+    .describe("Output All,normal mean and var");
   }
 };
 
@@ -59,14 +62,14 @@ class BatchNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(aux_states.size(), 2);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(aux_states.size(), 2U);
     if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 3);
-      CHECK_EQ(req.size(), 3);
+      CHECK_EQ(out_data.size(), 3U);
+      CHECK_EQ(req.size(), 3U);
     } else {
-      CHECK_GE(out_data.size(), 1);
-      CHECK_GE(req.size(), 1);
+      CHECK_GE(out_data.size(), 1U);
+      CHECK_GE(req.size(), 1U);
       CHECK_EQ(req[batchnorm::kOut], kWriteTo);
     }
 
@@ -123,10 +126,10 @@ class BatchNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
-    CHECK_EQ(in_grad.size(), 3);
+    CHECK_EQ(out_grad.size(), param_.output_mean_var ? 3U : 1U);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
+    CHECK_EQ(in_grad.size(), 3U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
     const real_t scale = static_cast<real_t>(out_grad[batchnorm::kOut].shape_[1]) /
@@ -232,7 +235,7 @@ class BatchNormProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 3) << "Input:[data, gamma, beta]";
+    CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     in_shape->at(1) = TShape(Shape1(dshape[1]));
@@ -245,6 +248,43 @@ class BatchNormProp : public OperatorProperty {
     aux_shape->clear();
     aux_shape->push_back(Shape1(dshape[1]));
     aux_shape->push_back(Shape1(dshape[1]));
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    using namespace mshadow;
+    CHECK_GE(in_type->size(), 1U);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    // For float16 input type beta, gamma, mean, and average are stored in float32.
+    // For other input types, these parameters have the same type as input
+    // NOTE: This requirement is from cuDNN (v. 4 and 5)
+    int dtype_param = (dtype == kFloat16) ? kFloat32 : dtype;
+    for (index_t i = 1; i < in_type->size(); ++i) {
+      if ((*in_type)[i] == -1) {
+        (*in_type)[i] = dtype_param;
+      } else {
+        CHECK_EQ((*in_type)[i], dtype_param) << "This layer requires uniform type. "
+                                             << "Expected " << dtype_param << " v.s. given "
+                                             << (*in_type)[i] << " at " << ListArguments()[i];
+      }
+    }
+    for (index_t i = 0; i < aux_type->size(); ++i) {
+      if ((*aux_type)[i] != -1) {
+        CHECK_EQ((*aux_type)[i], dtype_param) << "This layer requires uniform type. "
+                                              << "Expected " << dtype_param << " v.s. given "
+                                              << (*aux_type)[i] << " at " << ListArguments()[i];
+      }
+    }
+    int n_aux = this->ListAuxiliaryStates().size();
+    aux_type->clear();
+    for (int i = 0; i < n_aux; ++i ) aux_type->push_back(dtype_param);
+    int n_out = this->ListOutputs().size();
+    out_type->clear();
+    out_type->push_back(dtype);
+    for (int i = 1; i < n_out; ++i ) out_type->push_back(dtype_param);
     return true;
   }
 
@@ -276,6 +316,9 @@ class BatchNormProp : public OperatorProperty {
   }
 
   int NumVisibleOutputs() const override {
+    if (param_.output_mean_var) {
+      return 3;
+    }
     return 1;
   }
 

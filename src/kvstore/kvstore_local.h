@@ -30,7 +30,7 @@ class KVStoreLocal : public KVStore {
     } else {
       comm_ = new CommCPU();
     }
-    pinned_ctx_ = (MXNET_USE_CUDA != 0) ? Context::CPUPinned(0) : Context::CPU();
+    pinned_ctx_ = comm_->pinned_ctx();
   }
 
   virtual ~KVStoreLocal() {

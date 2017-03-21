@@ -23,11 +23,21 @@ void NotifyShutdown(int seed) {
   MX_CALL(MXNotifyShutdown());
 }
 
+void ProfilerSetConfig(int mode, const std::string &filename) {
+  MX_CALL(MXSetProfilerConfig(mode, filename.c_str()));
+}
+
+void ProfilerSetState(int state) {
+  MX_CALL(MXSetProfilerState(state));
+}
+
 // init rcpp module in base
 void InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   function("mx.internal.set.seed", &SetSeed);
   function("mx.internal.notify.shudown", &NotifyShutdown);
+  function("mx.internal.profiler.config", &ProfilerSetConfig);
+  function("mx.internal.profiler.state", &ProfilerSetState);
 }
 }  // namespace R
 }  // namespace mxnet

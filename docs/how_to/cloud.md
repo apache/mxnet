@@ -119,10 +119,11 @@ directory of the root computer, such as `~/train`, and MXNet is built as `~/mxne
   And then copy the training program:
 
   ```bash
-  cp ~/mxnet/example/image-classification/*.py 
+  cp ~/mxnet/example/image-classification/*.py .
+  cp -r ~/mxnet/example/image-classification/common .
   ```
 
-2. Prepare a host file with all slaves's private IPs. For example, `cat hosts`:
+2. Prepare a host file with all slaves private IPs. For example, `cat hosts`:
 
   ```bash
   172.30.0.172
@@ -147,7 +148,7 @@ benchmark for distributed training. Consider using other [examples](https://gith
 
 ### More Options
 #### Use Multiple Data Shards
-It is common to pack a dataset into multiple files, especially when working in a distributed environment. MXNet supports direct loading from multiple data shards. Pput all of the record files into a folder, and point the data path to the folder.
+It is common to pack a dataset into multiple files, especially when working in a distributed environment. MXNet supports direct loading from multiple data shards. Put all of the record files into a folder, and point the data path to the folder.
 
 #### Use YARN and SGE
 Although using SSH can be simple when you don't have a cluster scheduling framework, MXNet is designed to be portable to various platforms.  We provide other scripts in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker) to allow running on other cluster frameworks, including Hadoop (YARN) and SGE. We welcome your contribution of examples of running MXNet on your favorite distributed platform.

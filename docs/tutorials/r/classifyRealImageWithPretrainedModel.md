@@ -1,9 +1,9 @@
-Classify Images with a Pretrained Model
+Classify Images with a PreTrained Model
 =================================================
 MXNet is a flexible and efficient deep learning framework. One of the interesting things that a deep learning
 algorithm can do is classify real world images.
 
-In this tutorial, we show how to use a pretrained Inception-BatchNorm network to predict the class of an
+In this tutorial, we show how to use a pre-trained Inception-BatchNorm network to predict the class of an
 image. For information about the network architecture, see  [1].
 
 The pre-trained Inception-BatchNorm network is able to be downloaded from [this link](http://data.mxnet.io/mxnet/data/Inception.zip)
@@ -60,9 +60,9 @@ Now load the imager package to load and preprocess the images in R:
     ##     save.image
  ```
 
-Load the Pretrained Model
+Load the PreTrained Model
 -------------------------
-Make sure you unzip the pretrained model in the current folder. Use the model
+Make sure you unzip the pre-trained model in the current folder. Use the model
 loading function to load the model into R:
 
  ```r
@@ -104,9 +104,9 @@ Because MXNet is deeply integrated with R, we can do all the processing in an R 
       short.edge <- min(shape[1:2])
       xx <- floor((shape[1] - short.edge) / 2)
       yy <- floor((shape[2] - short.edge) / 2)
-      croped <- crop.borders(im, xx, yy)
+      cropped <- crop.borders(im, xx, yy)
       # resize to 224 x 224, needed by input of the model.
-      resized <- resize(croped, 224, 224)
+      resized <- resize(cropped, 224, 224)
       # convert to array (x, y, channel)
       arr <- as.array(resized) * 255
       dim(arr) <- c(224, 224, 3)

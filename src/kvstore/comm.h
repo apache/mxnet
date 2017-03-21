@@ -17,7 +17,14 @@ namespace kvstore {
 class Comm {
  public:
   Comm() {
-    pinned_ctx_ = (MXNET_USE_CUDA != 0) ? Context::CPUPinned(0) : Context::CPU();
+#if MXNET_USE_CUDA
+    int gpu_num;
+    int ret = cudaGetDeviceCount(&gpu_num);
+    pinned_ctx_ = (ret == 0 && gpu_num > 0) ?
+                  Context::CPUPinned(0) : Context::CPU();
+#else
+    pinned_ctx_ = Context::CPU();
+#endif
   }
   virtual ~Comm() { }
   /**
@@ -35,6 +42,13 @@ class Comm {
   virtual void Broadcast(
       int key, const NDArray& src,
       const std::vector<NDArray*> dst, int priority) = 0;
+
+  /**
+   * \brief return a pinned contex
+   */
+  Context pinned_ctx() const {
+    return pinned_ctx_;
+  }
 
  protected:
   Context pinned_ctx_;
@@ -84,7 +98,7 @@ class CommCPU : public Comm {
     Engine::Get()->PushSync([reduce, this](RunContext rctx) {
         ReduceSumCPU(reduce);
       }, Context::CPU(), const_vars, {reduce[0].var()},
-      FnProperty::kCPUPrioritized, priority);
+      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
 
     return buf.merged;
   }

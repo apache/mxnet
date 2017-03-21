@@ -1,11 +1,11 @@
 # MXNet documentation
 
-A built version of document is available at http://mxnet.dmlc.ml
+A built version of document is available at http://mxnet.io
 
-## To build docs with Docker
+## To build the docs with Docker
 
 The `Dockerfile` in this directory encapsulates all the dependencies needed
-to build the docs.  The default entrypoint builds the docs and serves them
+to build the docs.  The default entry-point builds the docs and serves them
 through a simple HTTP server for previewing.
 
 ```
@@ -23,11 +23,11 @@ docker image each time, you can do this with
 docker run -it -p 8008:8008 -v `pwd`:/opt/mxnet/docs mxnet/docs
 ```
 
-which maps your current directory into the docker image to get any local 
+which maps your current directory into the docker image to get any local
 changes.
 
 **NOTE:** Any changes to the API reference will not get rebuilt this way.
-The API reference docs are introspected from the built binaries, which 
+The API reference docs are introspected from the built binaries, which
 in this Dockerfile are pulled from github/dmlc/master.  To work-around
 this, map a volume with your code changes into the container, and rebuild
 MXNet in the container before doing the doc build.  Or use the local

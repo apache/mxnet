@@ -4,12 +4,14 @@ You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating sy
 
 Step by step instructions for setting up MXNet:
 
+- [Installing MXNet on OS X (Mac)](http://mxnet.io/get_started/osx_setup.html)
+- [Installing MXNet on Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html)
+- [Installing MXNet on Windows](http://mxnet.io/get_started/windows_setup.html)
+- [Installing MXNet on Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html)
+- [Installing MXNet on CentOS](http://mxnet.io/get_started/centos_setup.html)
 - [MXNet with Docker](http://mxnet.io/get_started/docker_setup.html)
 - [Installing MXNet on the Cloud (AWS AMI)](http://mxnet.io/get_started/cloud_setup.html)
-- [Installing MXNet on Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html)
-- [Installing MXNet on Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html)
-- [Installing MXNet on OS X (Mac)](http://mxnet.io/get_started/osx_setup.html)
-- [Installing MXNet on Windows](http://mxnet.io/get_started/windows_setup.html)
+- [Installing MXNet on Raspberry Pi (Raspbian)](http://mxnet.io/get_started/raspbian_setup.html)
 
 This topic also covers the following:
 - [Prerequisites for using MXNet](#prerequisites)
@@ -23,7 +25,7 @@ pull request. For details, see [contribution guidelines](http://mxnet.io/communi
 
 This section lists the basic requirements for running MXNet, requirements for using it with GPUs, and requirements to support computer vision and image augmentation.
 
-**Note:**  Setting up all basic(CPU only) required dependencies is covered as part of individual OS installation guide. This section is provided for power users who wants to set up alternate dependencies(GPU/Intel MKL etc..) and experiment.
+**Note:**  Setting up all basic(CPU only) required dependencies is covered as part of individual OS installation guide. This section is provided for power users who want to set up alternate dependencies(GPU/Intel MKL etc..) and experiment.
 
 ## Minimum Requirements
 
@@ -67,7 +69,7 @@ This section provides instructions on how to build MXNet's dependent libraries f
 - If you do not have root permission to install packages. In this case, you need to change the installation directory from /usr/local to one where you do have permission. The following examples use the directory ${HOME}.
 
 ## Building GCC from Source Code
-To build the GNU Complier Collection (GCC) from source code, you need the 32-bit libc library.
+To build the GNU Compiler Collection (GCC) from source code, you need the 32-bit libc library.
 
 1. Install libc with one of the following system-specific commands:
 

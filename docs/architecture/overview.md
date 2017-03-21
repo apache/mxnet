@@ -71,7 +71,7 @@ In the `AsyncFn` function, you can pass the heavy part to your own threads and s
 
 ### Context
 
-You can specify the `Context` of the function to be executed within. This usually includes whether the function should be run on a CPU or a GPU, and if you specify a GPU, which GPU to use. `Context` is different from `RunContext`. `Context` contains device type (gpu/cpu) and device id, while `RunContext` contains information that can be decided only during runtime, for example, on which stream the function should be executed.
+You can specify the `Context` of the function to be executed within. This usually includes whether the function should be run on a CPU or a GPU, and if you specify a GPU, which GPU to use. `Context` is different from `RunContext`. `Context` contains device type (GPU/CPU) and device id, while `RunContext` contains information that can be decided only during runtime, for example, on which stream the function should be executed.
 
 ### VarHandle
 
@@ -121,7 +121,7 @@ To delete it, call the `DeleteOperator(OprHandle op)` API. Ensure that the opera
 
 ## Operators in MXNet
 
-In MXNet, an operator is a class that contains both actual computation logic and auxiliary information that can aid the system in performing optimizations, like in-place updates and auto-derivatives. Before you continue with this document, we strongly recommend that you understand the `mshadow` library, because all operators compute on the tensor-like structure `mshadow::TBlob` provided by the system during runtime. 
+In MXNet, an operator is a class that contains both actual computation logic and auxiliary information that can aid the system in performing optimizations, like in-place updates and auto-derivatives. Before you continue with this document, we strongly recommend that you understand the `mshadow` library, because all operators compute on the tensor-like structure `mshadow::TBlob` provided by the system during runtime.
 
 MXNet's operator interface allows you to:
 
@@ -149,12 +149,12 @@ The `OpContext` structure is:
              RunContext run_ctx;
              std::vector<Resource> requested;
            }
-``` 
-It describes whether the operator is in the train or test phase, which device the operator should be run on (in `run_ctx`), and requested resources (covered in the following sections). 
+```
+It describes whether the operator is in the train or test phase, which device the operator should be run on (in `run_ctx`), and requested resources (covered in the following sections).
 
 
 - `in_data` and `out_data` represent the input and output tensors, respectively. All of the tensor spaces have been allocated by the system.
-- `req` denotes how the computation results are written into the `out_data`. In other words, `req.size() == out_data.size()` and `req[i]` correspond to the write type of `out_data[i]`. 
+- `req` denotes how the computation results are written into the `out_data`. In other words, `req.size() == out_data.size()` and `req[i]` correspond to the write type of `out_data[i]`.
 
 
 - The `OpReqType` is defined as:
@@ -203,7 +203,7 @@ One convolution might have several implementations, and you might want to switch
   This interface has two purposes: 1. Tell the system the size of each input and output tensor, so it can allocate space for them before the `Forward` and `Backward` call; 2. Perform a size check to make sure that there isn't an obvious error before running. The shape in `in_shape` is set by the system (from the `out_shape` of the previous operators). It returns `false` when there is not enough information to infer shapes or throws an error when the shape is inconsistent.
 
 * **Request Resources:** Operations like `cudnnConvolutionForward` need a work space for computation. If the system can manage that, it could then perform optimizations, like reuse the space, and so on. MXNet defines two interfaces to achieve this:
-  
+
 ```c++
            virtual std::vector<ResourceRequest> ForwardResource(
                const std::vector<TShape> &in_shape) const;
@@ -215,7 +215,7 @@ One convolution might have several implementations, and you might want to switch
 ```c++
            struct ResourceRequest {
              enum Type {
-               kRandom,  // get an mshadow::Random<xpu> object
+               kRandom,  // get a mshadow::Random<xpu> object
                kTempSpace,  // request temporary space
              };
              Type type;
@@ -226,7 +226,7 @@ One convolution might have several implementations, and you might want to switch
 ```c++
            auto tmp_space_res = ctx.requested[kTempSpace].get_space(some_shape, some_stream);
            auto rand_res = ctx.requested[kRandom].get_random(some_stream);
-``` 
+```
   For an example, see `src/operator/cudnn_convolution-inl.h`.
 
 * **Backward dependency:** Let's look at two different operator signatures (we name all of the arguments for demonstration purposes):
@@ -239,7 +239,7 @@ One convolution might have several implementations, and you might want to switch
            void PoolingBackward(TBlob in_data, TBlob out_data, TBlob out_grad, TBlob in_grad);
 ```
   Note that `out_data` in `FullyConnectedForward` is not used by `FullyConnectedBackward`, while `PoolingBackward` requires all of the arguments of `PoolingForward`. Therefore, for `FullyConnectedForward`, the `out_data` tensor once consumed could be safely freed because the backward function will not need it. This provides a chance for the system to collect some tensors as garbage as soon as possible. To specify this situation, we provide an interface:
-  
+
 ```c++
           virtual std::vector<int> DeclareBackwardDependency(
                const std::vector<int> &out_grad,
@@ -247,7 +247,7 @@ One convolution might have several implementations, and you might want to switch
                const std::vector<int> &out_data) const;
 ```
   The `int` element of the argument vector is an ID to distinguish different arrays. Let's see how this interface specifies different dependencies for `FullyConnected` and `Pooling`:
-  
+
  ```c++
            std::vector<int> FullyConnectedProperty::DeclareBackwardDependency(
                const std::vector<int> &out_grad,
@@ -263,8 +263,8 @@ One convolution might have several implementations, and you might want to switch
            }
 ```
 
-* **Inplace Option:** To further save the cost of memory allocation, you can use in-place updates. They are appropriate for element-wise operations when the input tensor and output tensor have the same shape. You specify and in-place update with the following interface:
-  
+* **In place Option:** To further save the cost of memory allocation, you can use in-place updates. They are appropriate for element-wise operations when the input tensor and output tensor have the same shape. You specify and in-place update with the following interface:
+
 ```c++
            virtual std::vector<std::pair<int, void*>>    ElewiseOpProperty::ForwardInplaceOption(
                const std::vector<int> &in_data,
@@ -280,7 +280,7 @@ One convolution might have several implementations, and you might want to switch
            }
 ```
   This tells the system that the `in_data[0]` and `out_data[0]` tensors could share the same memory spaces during `Forward`, and so do `out_grad[0]` and `in_grad[0]` during `Backward`.
-  
+
   >**Important:** Even if you use the preceding specification, it's *not* guaranteed that the input and output tensors will share the same space. In fact, this is only a suggestion for the system, which makes the final decision. However, in either case, the decision is completely transparent to you, so the actual `Forward` and `Backward` implementation does not need to consider that.
 
 * **Expose Operator to Python:** Because of the restrictions of C++, you need user to implement following interfaces:
@@ -387,60 +387,60 @@ We've almost covered the entire interface required to define a new operator. Let
   - [Optional] If in-place update is supported, check `ForwardInplaceOption` and `BackwardInplaceOption`.
 * Register the `OperatorProperty` class and the parameter class.
 
-## Unifying the NDArray Operator and Symbolic Operator 
-NDArray operations are similar to symbolic operations, except that sometimes you 
-can't write in place to the operands without a complete dependency graph. However, the 
-logic underlying NDArray and symbolic operations is almost identical. *SimpleOp*, a new unified operator API, unifies different 
-invoking processes and returns to the fundamental elements of operators. Because most mathematical operators attend to one or two 
-operands, and more operands make dependency-related optimization useful, the unified operator 
+## Unifying the NDArray Operator and Symbolic Operator
+NDArray operations are similar to symbolic operations, except that sometimes you
+can't write in place to the operands without a complete dependency graph. However, the
+logic underlying NDArray and symbolic operations are almost identical. *SimpleOp*, a new unified operator API, unifies different
+invoking processes and returns to the fundamental elements of operators. Because most mathematical operators attend to one or two
+operands, and more operands make dependency-related optimization useful, the unified operator
 is specifically designed for unary and binary operations.
 
 Consider the elements of an operation. Ideally, you need only functions and derivatives to  
-describe an operation. Let's restrict that to the space of unary and binary operations. How 
-do we classify all operations to maximize the possibility of in-place write optimization? Note 
-that you can separate functions by the number of operands. Derivatives are a bit more 
+describe an operation. Let's restrict that to the space of unary and binary operations. How
+do we classify all operations to maximize the possibility of in-place write optimization? Note
+that you can separate functions by the number of operands. Derivatives are a bit more
 complex. To construct a dependency graph, you need to know whether output value, input data, or neither are needed alongside head gradient. Gradient functions in the unified API are  
 differentiated by the types of operands it takes for calculation.
 
 Before you learn more about the SimpleOp interface, we recommend that you review the [mshadow
-library guide](https://github.com/dmlc/mshadow/tree/master/guide) because  calculations 
+library guide](https://github.com/dmlc/mshadow/tree/master/guide) because  calculations
 will be done in the `mshadow::TBlob` structure.
 
-In the following example, we'll create an operator functioning as smooth l1 loss, which is a mixture 
+In the following example, we'll create an operator functioning as a smooth l1 loss, which is a mixture
 of l1 loss and l2 loss. The loss itself can be written as:
 
 ```
     loss = outside_weight .* f(inside_weight .* (data - label))
     grad = outside_weight .* inside_weight .* f'(inside_weight .* (data -    label))
 ```
- `.*` stands for element-wise multiplication, and `f`, `f'` is the smooth l1 loss function, 
-which we are assuming is in `mshadow` for now. At first glance, it's impossible to implement 
-this particular loss as an unary or binary operator. But we have automatic differentiation in symbolic execution. That simplifies the loss to `f` and `f'` directly. This 
-loss is no more complex than a `sin` or a `abs` function, and can certainly be implemented as a 
+ `.*` stands for element-wise multiplication, and `f`, `f'` is the smooth l1 loss function,
+which we are assuming is in `mshadow` for now. At first glance, it's impossible to implement
+this particular loss as a unary or binary operator. But we have automatic differentiation in symbolic execution. That simplifies the loss to `f` and `f'` directly. This
+loss is no more complex than a `sin` or an `abs` function, and can certainly be implemented as a
 unary operator.
 
 ## SimpleOp: The Unified Operator API
 ### Define Shapes
 The `mshadow` library requires explicit memory allocation. As a consequence, all data shapes
-must be provided before any calculation occurs. Before we proceed with defining functions and gradient, 
+must be provided before any calculation occurs. Before we proceed with defining functions and gradient,
 let's check input data shape consistency and provide output shape.
 
 ```cpp
     typedef TShape (*UnaryShapeFunction)(const TShape& src,
                                          const EnvArguments& env);
     typedef TShape (*BinaryShapeFunction)(const TShape&                                         const TShape& rhs,lhs,
-  
+
                                           const EnvArguments& env);
 ```
 You can use `mshadow::TShape` to check input data shape and designate output data shape.
 If you don't define this function, the default output shape is the same as the input shape.
-In the case of binary operator, the shape of `lhs` and `rhs` is checked as the same by default.
+In the case of a binary operator, the shape of `lhs` and `rhs` is checked as the same by default.
 
 You can also use shape functions to check if any additional arguments and resources are present.
 Refer to the additional usages of `EnvArguments` to accomplish this.
 
-Before we start on our smooth l1 loss example, we define a `XPU` to `cpu` or `gpu` in the header 
-`smooth_l1_unary-inl.h` implementation so that we reuse the same code in `smooth_l1_unary.cc` and 
+Before we start on our smooth l1 loss example, we define a `XPU` to `cpu` or `gpu` in the header
+`smooth_l1_unary-inl.h` implementation so that we reuse the same code in `smooth_l1_unary.cc` and
 `smooth_l1_unary.cu`.
 
 ```cpp
@@ -451,9 +451,9 @@ Before we start on our smooth l1 loss example, we define a `XPU` to `cpu` or `gp
     #define XPU cpu
     #endif
 ```
-In our smooth l1 loss example, it's okay to use the default behavior whereby the output has the same shape as the source. 
+In our smooth l1 loss example, it's okay to use the default behavior whereby the output has the same shape as the source.
 Written explicitly, it is:
- 
+
 ```cpp
     inline TShape SmoothL1Shape_(const TShape& src,
                                  const EnvArguments& env) {
@@ -492,11 +492,11 @@ Create a unary or binary function with one output: `mshadow::TBlob`.
         enum OpReqType {
           kNullOp,  // no operation, do not write anything
           kWriteTo,  // write gradient to provided space
-          kWriteInplace,  // perform an inplace write
+          kWriteInplace,  // perform an in-place write
           kAddTo  // add to the provided space
         };
 ```
-  A macro is defined in `operator_util.h` for a simplified use of `OpReqType`. 
+  A macro is defined in `operator_util.h` for a simplified use of `OpReqType`.
   `ASSIGN_DISPATCH(out, req, exp)` checks `req` and performs an assignment.
 
 In our smooth l1 loss example, we use `UnaryFunction` to define the function of this operator.
@@ -520,10 +520,10 @@ In our smooth l1 loss example, we use `UnaryFunction` to define the function of 
       });
     }
 ```
-After obtaining `mshadow::Stream` from `RunContext`, we get `mshadow::Tensor` from `mshadow::TBlob`. 
-`mshadow::F` is a shortcut to initiate an `mshadow` expression. The macro `MSHADOW_TYPE_SWITCH(type, DType, ...)` 
-handles details on different types, and the macro `ASSIGN_DISPATCH(out, req, exp)` checks `OpReqType` and 
-performs actions accordingly. `sigma2` is a special parameter in this loss, which we will cover later. 
+After obtaining `mshadow::Stream` from `RunContext`, we get `mshadow::Tensor` from `mshadow::TBlob`.
+`mshadow::F` is a shortcut to initiate a `mshadow` expression. The macro `MSHADOW_TYPE_SWITCH(type, DType, ...)`
+handles details on different types, and the macro `ASSIGN_DISPATCH(out, req, exp)` checks `OpReqType` and
+performs actions accordingly. `sigma2` is a special parameter in this loss, which we will cover later.
 
 ### Define Gradients (Optional)
 Create a gradient function with various types of inputs.
@@ -555,7 +555,7 @@ are doubled.
 
 `GradFunctionArgument`
 
-  `Input0`, `Input`, `OutputValue`, and `OutputGrad` all share the structure of `GradFunctionArgument`, 
+  `Input0`, `Input`, `OutputValue`, and `OutputGrad` all share the structure of `GradFunctionArgument`,
   which is defined as:
 
   ```cpp
@@ -564,10 +564,10 @@ are doubled.
       }
   ```
 
-In our smooth l1 loss example, note that it's an `f'(x)`, which utilizes input for the gradient calculation, 
-so the `UnaryGradFunctionT2` is suitable. To enable the chain rule of gradient, we also need to multiply 
+In our smooth l1 loss example, note that it's an `f'(x)`, which utilizes input for the gradient calculation,
+so the `UnaryGradFunctionT2` is suitable. To enable the chain rule of the gradient, we also need to multiply
 `out_grad` from the top to the result of `in_grad`.
- 
+
 ```cpp
     template<typename xpu>
     void SmoothL1BackwardUseIn_(const OutputGrad& out_grad,
@@ -591,7 +591,7 @@ so the `UnaryGradFunctionT2` is suitable. To enable the chain rule of gradient, 
 ```
 
 ### Register SimpleOp to MXNet
-After creating the shape, function, and gradient, restore them into both an NDArray operator and 
+After creating the shape, function, and gradient, restore them into both an NDArray operator and
 a symbolic operator. To simplify this process, use the registration macro defined in `operator_util.h`.
 
 ```cpp
@@ -613,9 +613,9 @@ a symbolic operator. To simplify this process, use the registration macro define
     };
 ```
 
-In our example, we have a gradient function that relies on input data, so the function can't be written in 
+In our example, we have a gradient function that relies on input data, so the function can't be written in
 place. The output gradient has no purpose after gradient computation, so the gradient can be written in place.
- 
+
 ```cpp
     MXNET_REGISTER_SIMPLE_OP(smooth_l1, XPU)
     .set_function(XPU::kDevMask, SmoothL1Forward_<XPU>, kNoInplace)
@@ -623,7 +623,7 @@ place. The output gradient has no purpose after gradient computation, so the gra
     .set_enable_scalar(true)
     .describe("Calculate Smooth L1 Loss(lhs, scalar)");
 ```
-Remember from the discussion of shape functions that a default behavior without `set_shape_function` forces the inputs 
+Remember from the discussion of shape functions that a default behavior without `set_shape_function` forces the inputs
 (if they're binary) to be the same shape and yield the same shape for output. We'll discuss `set_enable_scalar` later.
 
 ### NDArray Operator Summary
@@ -634,8 +634,8 @@ Remember from the discussion of shape functions that a default behavior without 
 
 ## Additional Information on SimpleOp
 ### Using SimpleOp on EnvArguments
-Some operations might need a scalar as input, such as a  gradient scale, a set of keyword arguments 
-controlling behavior, or a temporary space to speed up calculations.`EnvArguments` provides additional arguments and resources to make calculations more scalable 
+Some operations might need a scalar as input, such as a  gradient scale, a set of keyword arguments
+controlling behavior, or a temporary space to speed up calculations.`EnvArguments` provides additional arguments and resources to make calculations more scalable
 and efficient.
 
 ```cpp
@@ -646,17 +646,17 @@ and efficient.
     };
 ```
 
-More registration parameters are required to enable these additional features. To prevent confusion on parameters, `scalar` and `kwargs` 
-can't be present at the same time. To enable `scalar`, use 
+More registration parameters are required to enable these additional features. To prevent confusion on parameters, `scalar` and `kwargs`
+can't be present at the same time. To enable `scalar`, use
 `set_enable_scalar(bool enable_scalar)` in registration. Then, in forward functions and gradients, the `scalar` can be accessed from `env.scalar` as in the function parameter `EnvArguments env`.
 
-To enable `kwargs`, use `set_enable_kwargs(bool enable_kwargs)` in registration. Then, in forward 
-functions and gradients, additional arguments are contained in `env.kwarg`, which is defined as 
-`std::vector<std::pair<std::string, std::string> >`. Use the DMLC parameter structure to 
+To enable `kwargs`, use `set_enable_kwargs(bool enable_kwargs)` in registration. Then, in forward
+functions and gradients, additional arguments are contained in `env.kwarg`, which is defined as
+`std::vector<std::pair<std::string, std::string> >`. Use the DMLC parameter structure to
 simplify parsing keyword arguments. For more details, see the [guide on parameter structure](https://github.com/dmlc/dmlc-core/blob/master/doc/parameter.md).
 
-Additional resources like `mshadow::Random<xpu>` and temporary memory space can also be requested and 
-accessed from `EnvArguments.resource`. The registration routine is `set_resource_request(ResourceRequest req)` 
+Additional resources like `mshadow::Random<xpu>` and temporary memory space can also be requested and
+accessed from `EnvArguments.resource`. The registration routine is `set_resource_request(ResourceRequest req)`
 or `set_resource_request(const std::vector<ResourceRequest>)`, where `mxnet::ResourceRequest` is defined as:
 
 ```cpp
@@ -668,7 +668,7 @@ or `set_resource_request(const std::vector<ResourceRequest>)`, where `mxnet::Res
       Type type;  // type of resources
     };
 ```
-Registration will request the declared resource requests from `mxnet::ResourceManager`, and place resources 
+Registration will request the declared resource requests from `mxnet::ResourceManager`, and place resources
 in `std::vector<Resource> resource` in `EnvArguments`. To access resources, use the following:
 
 ```cpp
@@ -677,15 +677,15 @@ in `std::vector<Resource> resource` in `EnvArguments`. To access resources, use 
 ```
 For an example, see `src/operator/loss_binary_op-inl.h`.
 
-In our smooth l1 loss example, a scalar input is needed to mark the turning point of loss function. Therefore, 
-in the registration process, we use `set_enable_scalar(true)`, and use `env.scalar` in function and gradient 
-declarations. 
+In our smooth l1 loss example, a scalar input is needed to mark the turning point of a loss function. Therefore,
+in the registration process, we use `set_enable_scalar(true)`, and use `env.scalar` in function and gradient
+declarations.
 
 ### Crafting a Tensor Operation
-Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we  
-can craft tensor operations in operator implementations. If you define such functions as element-wise, you 
-can implement them as an `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` that contains a lot of `mshadow_op`, 
-for example. `mshadow_op` are expression mappers. They deal with the scalar case of desired functions. For details, see 
+Because computation utilizes the `mshadow` library and we sometimes don't have functions readily available, we 
+can craft tensor operations in operator implementations. If you define such functions as element-wise, you
+can implement them as a `mxnet::op::mshadow_op`. `src/operator/mshadow_op.h` that contains a lot of `mshadow_op`,
+for example. `mshadow_op` are expression mappers. They deal with the scalar case of desired functions. For details, see
 [mshadow expression API guide](https://github.com/dmlc/mshadow/tree/master/doc).
 
 If an operation can't be done in an element-wise way, like the softmax loss and gradient, then you need to create a new tensor operation. You need to create as `mshadow` function and as `mshadow::cuda`
@@ -712,7 +712,7 @@ In our smooth l1 loss example, we create two mappers, namely the scalar cases of
 The gradient, which can be found in `src/operator/smooth_l1_unary-inl.h`, is similar.
 
 ### Beyond Two Operands
-The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs, 
+The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs,
 more than one output, or that need more features, see the original [Operator API](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
 
 ## KVStore: Multiple Devices and Multiple Computers
@@ -726,7 +726,7 @@ MXNet uses a two-level *parameter server* for data synchronization.
   unit. We often use the sequential consistency model, also known as BSP, on this
   level.
 
-- On the second layer, data are synchronize over multiple workers by way of servers. We can use either a sequential consistency model for guaranteed
+- On the second layer, data are synchronized over multiple workers by way of servers. We can use either a sequential consistency model for guaranteed
   convergence or a (partial)-asynchronous model for better system performance.
 
 ### KVStore
@@ -743,7 +743,7 @@ currently provide the following three types. Given the batch size *b*.
 ```
 
 The number of devices *k* used on a worker could vary for different
-workers. 
+workers.
 
 - **Number examples per update**: For each update, the number of examples used to
   calculate the averaged gradients. Often, the larger, the slower the convergence.
@@ -752,7 +752,7 @@ workers.
 - **Max delay** : The maximum delay of the weight for a worker. Given a worker,
   a delay *d* for weight *w* means that when this worker uses *w* (to calculate the
   gradient), *w* has been already updated by *d* times  in some other places. A
-  larger delay often improves the performance, but can slow 
+  larger delay often improves the performance, but can slow
   convergence.
 
 ### Multiple Devices on a Single Computer

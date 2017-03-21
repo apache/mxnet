@@ -108,7 +108,7 @@ class DeconvolutionOp : public Operator {
     CHECK_EQ(req[deconv::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = in_data[deconv::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[deconv::kOut].get<xpu, 4, DType>(s);
@@ -170,6 +170,8 @@ class DeconvolutionOp : public Operator {
                                    param_.kernel[0],
                                    param_.kernel[1],
                                    param_.stride[0],
+                                   param_.stride[1],
+                                   1,
                                    1);  // Deconvolution only support dilate equals 1
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
@@ -180,6 +182,8 @@ class DeconvolutionOp : public Operator {
                                         param_.kernel[0],
                                         param_.kernel[1],
                                         param_.stride[0],
+                                        param_.stride[1],
+                                        1,
                                         1),  // Deconvolution only support dilate equals 1
                                         out[i][0].shape_);
       }
@@ -201,7 +205,7 @@ class DeconvolutionOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
@@ -267,16 +271,19 @@ class DeconvolutionOp : public Operator {
           gwmat[gid] += dot(temp_dst[gid], tmpc.T());
         }
       }
-      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace) {
+      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace
+                                         || req[deconv::kData] == kAddTo) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
           temp_dst[gid] = dot(wmat[gid], tmpc);
         }
-        gdata.Slice(i, i + step) = swapaxis<1, 0>(reshape(temp_dst,
-                                                    mshadow::Shape4(gdata.shape_[1],
-                                                    step,
-                                                    gdata.size(2),
-                                                    gdata.size(3))));
+        Assign(gdata.Slice(i, i + step),
+               req[deconv::kData],
+               (swapaxis<1, 0>(reshape(temp_dst,
+                                      mshadow::Shape4(gdata.shape_[1],
+                                                      step,
+                                                      gdata.size(2),
+                                                      gdata.size(3))))));
       }
     }
     if (!param_.no_bias) {
@@ -348,13 +355,13 @@ class DeconvolutionProp : public OperatorProperty {
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3) << "Input:[data, weight, bias]";
+      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
     } else {
-      CHECK_EQ(in_shape->size(), 2) << "Input:[data, weight]";
+      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
     const TShape &dshape = (*in_shape)[deconv::kData];
     if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 4) \
+    CHECK_EQ(dshape.ndim(), 4U) \
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
                        deconv::kWeight,
@@ -370,13 +377,13 @@ class DeconvolutionProp : public OperatorProperty {
     const index_t ksize_x = static_cast<index_t>(param_.kernel[1]);
     index_t pad_y, pad_x, adj_y, adj_x;
     param_.InferPad(dshape[2], dshape[3], &pad_y, &pad_x, &adj_y, &adj_x);
-    CHECK_EQ(dshape[1] % param_.num_group, 0) \
+    CHECK_EQ(dshape[1] % param_.num_group, 0U) \
         << "input num_filter must divide group size";
-    CHECK_EQ(param_.num_filter % param_.num_group, 0) \
+    CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
         << "output num_filter must divide group size";
-    CHECK_GT(param_.kernel.Size(), 0) \
+    CHECK_GT(param_.kernel.Size(), 0U) \
         << "incorrect kernel size: " << param_.kernel;
-    CHECK_GT(param_.stride.Size(), 0) \
+    CHECK_GT(param_.stride.Size(), 0U) \
         << "incorrect stride size: " << param_.stride;
     CHECK_GE(ksize_y-1, adj_y) << "adj(y) must be samller than kernel(h)";
     CHECK_GE(ksize_x-1, adj_x) << "adj(x) must be samller than kernel(w)";
@@ -399,7 +406,7 @@ class DeconvolutionProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

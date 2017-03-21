@@ -1,9 +1,9 @@
 Char RNN Example
 =============================================
 
-This tutorial shows how to use an LSTM model to build a char-level language model, and generate text from it. For demonstration purposes, we use a Shakespearean text. You can find the data on [GitHub](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare). 
+This tutorial shows how to use an LSTM model to build a char-level language model, and generate text from it. For demonstration purposes, we use a Shakespearean text. You can find the data on [GitHub](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare).
 
-Load the Data 
+Load the Data
 ---------
 Load in the data and preprocess it:
 
@@ -75,7 +75,7 @@ Transfer the text into a data feature:
         lookup.table <- list()
         for (c in names(dic)) {
             idx <- dic[[c]]
-            lookup.table[[idx]] <- c 
+            lookup.table[[idx]] <- c
          }
 
         char.lst <- strsplit(text, '')[[1]]
@@ -156,22 +156,22 @@ Get the training data and evaluation data:
 
 Train the Model
 --------------
-In `mxnet`, we have a function called `mx.lstm` so that users can build a general LSTM model: 
+In `mxnet`, we have a function called `mx.lstm` so that users can build a general LSTM model:
 
 
  ```r
-    model <- mx.lstm(X.train, X.val, 
+    model <- mx.lstm(X.train, X.val,
                      ctx=mx.cpu(),
-                     num.round=num.round, 
+                     num.round=num.round,
                      update.period=update.period,
-                     num.lstm.layer=num.lstm.layer, 
+                     num.lstm.layer=num.lstm.layer,
                      seq.len=seq.len,
-                     num.hidden=num.hidden, 
-                     num.embed=num.embed, 
+                     num.hidden=num.hidden,
+                     num.embed=num.embed,
                      num.label=vocab,
-                     batch.size=batch.size, 
+                     batch.size=batch.size,
                      input.size=vocab,
-                     initializer=mx.init.uniform(0.1), 
+                     initializer=mx.init.uniform(0.1),
                      learning.rate=learning.rate,
                      wd=wd,
                      clip_gradient=clip_gradient)
@@ -231,7 +231,7 @@ Use the helper function for random sample:
 
     search.val <- function(cdf, x) {
         l <- 1
-        r <- length(cdf) 
+        r <- length(cdf)
         while (l <= r) {
             m <- as.integer((l+r)/2)
             if (cdf[m] < x) {

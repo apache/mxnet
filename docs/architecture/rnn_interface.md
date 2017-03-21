@@ -25,7 +25,7 @@ The `grad` function in Theano constructs a symbolic graph for computing gradient
     outputs = local_op(*outer_inputs)
 ```
 
-The [performance guide](http://deeplearning.net/software/theano/library/scan.html#optimizing-scan-s-performance) for Theano's scan operator suggests minimizing the usage of scan. This might be due to the fact that the loop is executed in Python, which might be a bit slow (due to context switching and the performance of Python itself). Moreover, because no unrolling is performed, the graph optimizer can't see the big picture.
+The [performance guide](http://deeplearning.net/software/theano/library/scan.html#optimizing-scan-s-performance) for Theano's scan operator suggests minimizing the usage of the scan. This might be due to the fact that the loop is executed in Python, which might be a bit slow (due to context switching and the performance of Python itself). Moreover, because no unrolling is performed, the graph optimizer can't see the big picture.
 
 If I understand correctly, when multiple RNN/LSTM layers are stacked, instead of a single loop with each iteration computing the whole feedforward network operation, the computation sequentially does a separate loop for each layer that uses the scan operator. If all of the intermediate values are stored to support computing the gradients, this is fine. Otherwise, using a single loop could be more memory efficient.
 
@@ -41,14 +41,14 @@ The recurrent layer also accepts a `mask_input`, to support variable length sequ
 
 The documentation for RNN in Keras can be found [here](http://keras.io/layers/recurrent/). The interface in Keras is similar to the interface in Lasagne. The input is expected to be of shape `(batch_size, sequence_length, feature_dimension)`, and the output shape (if `return_sequences` is `True`) is `(batch_size, sequence_length, feature_dimension)`.
 
-Keras currently supports both a Theano and a TensorFlow back end. RNN for the Theano back end is [implemented with the scan operator](https://github.com/fchollet/keras/blob/master/keras/backend/theano_backend.py#L432). For TensorFlow, it seem to be [implemented via explicitly unrolling](https://github.com/fchollet/keras/blob/master/keras/backend/tensorflow_backend.py#L396). The documentation says that for the TensorFlow back end, the sequence length must be specified beforehand, and masking is currently not working (because `tf.reduce_any` is not functioning yet).
+Keras currently supports both a Theano and a TensorFlow back end. RNN for the Theano back end is [implemented with the scan operator](https://github.com/fchollet/keras/blob/master/keras/backend/theano_backend.py#L432). For TensorFlow, it seems to be [implemented via explicitly unrolling](https://github.com/fchollet/keras/blob/master/keras/backend/tensorflow_backend.py#L396). The documentation says that for the TensorFlow back end, the sequence length must be specified beforehand, and masking is currently not working (because `tf.reduce_any` is not functioning yet).
 
 ## Torch
 
 [karpathy/char-rnn](https://github.com/karpathy/char-rnn) is implemented by [explicitly unrolling](https://github.com/karpathy/char-rnn/blob/master/model/RNN.lua#L15). On the contrary, [Element-Research/rnn](https://github.com/Element-Research/rnn) runs sequence iteration in Lua. It actually has a very modular design:
 
 * The basic RNN/LSTM modules run only *one* time step per one call of `forward` (and accumulate/store necessary information to support backward computation, if needed). You could have detailed control when using this API directly.
-* A collection of `Sequencer`s are defined to model common scenarios, like forward sequence, bi-directional sequence, attention models, etc.
+* A collection of `Sequencer`s are defined to model common scenarios, like forwarding sequence, bi-directional sequence, attention models, etc.
 * There are other utility modules, like masking to support variable length sequences, etc.
 
 ## CNTK
@@ -80,11 +80,11 @@ Recurrent networks are first-class citizens in CNTK. In section 5.2.1.8 of the C
 
 The function `ColumnSlice(start_col, num_col)` takes out the packed data for that time index, as described above (here `m_samplesInRecurrentStep` must be the mini-batch size).
 
-The low-level API for recurrent connection seem to be a *delay node*. But I'm not sure how to use this low-level API. The [example of ptb language model](https://cntk.codeplex.com/SourceControl/latest#Examples/Text/PennTreebank/Config/rnn.config) uses a very high-level API (simply setting `recurrentLayer = 1` in the config).
+The low-level API for recurrent connection seem to be a *delay node*. But I'm not sure how to use this low-level API. The [example of PTB language model](https://cntk.codeplex.com/SourceControl/latest#Examples/Text/PennTreebank/Config/rnn.config) uses a very high-level API (simply setting `recurrentLayer = 1` in the config).
 
 ## TensorFlow
 
-The [current example of RNNLM](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html#recurrent-neural-networks) in TensorFlow uses explicit unrolling for a predefined number of time steps. The whitepaper mentions that an advanced control flow API (Theano's scan-like) is planned.
+The [current example of RNNLM](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html#recurrent-neural-networks) in TensorFlow uses explicit unrolling for a predefined number of time steps. The white-paper mentions that an advanced control flow API (Theano's scan-like) is planned.
 
 ## Next Steps
 

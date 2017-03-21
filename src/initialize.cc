@@ -6,6 +6,7 @@
 #include <dmlc/logging.h>
 
 namespace mxnet {
+
 class LibraryInitializer {
  public:
   LibraryInitializer() {

@@ -15,7 +15,7 @@ The current implementation is based on the
 
 1. Download the trained model and sample inputs using `download.sh`. 
 
-1. Run `python run.py`. To see more options, use `-h`.
+1. Run `python nstyle.py`. To see more options, use `-h`.
 
 ## Sample Results
 

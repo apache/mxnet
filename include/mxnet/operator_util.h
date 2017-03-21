@@ -2,7 +2,7 @@
  *  Copyright (c) 2015 by Contributors
  * \file operator_util.h
  * \brief Utility functions and registries to help quickly build new operators.
- *
+ *  [Deprecated]
  *  Use the register functions in this file when possible to simplify operator creations.
  *  Operators registered in this file will be exposed to both NDArray API and symbolic API.
  *
@@ -453,7 +453,7 @@ class SimpleOpRegistry {
 /*!
 * \brief Maximum ndim supported for special operators like broadcasting with non contiguous lhs/rhs
 */
-#define MXNET_SPECIAL_MAX_NDIM 7
+#define MXNET_SPECIAL_MAX_NDIM 5
 
 
 //--------------------------------------------------------------

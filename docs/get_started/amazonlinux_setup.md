@@ -1,4 +1,4 @@
-# Installing MXNet on Ubuntu
+# Installing MXNet on Amazon Linux
 For users of Python on Amazon Linux operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
 The simple installation scripts set up MXNet for Python on computers running Amazon Linux. The scripts install MXNet in your home folder ```~/mxnet```.
@@ -85,18 +85,71 @@ Install these dependencies using the following commands:
       # Install Graphviz for visualization and Jupyter notebook for running examples and tutorials
       sudo pip install graphviz
       sudo pip install jupyter
-      
+
       # Export env variables for pkg config
       export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
 ```
+After installing the dependencies, use the following command to pull the MXNet source code from GitHub
+
+```bash
+    # Get MXNet source code
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+    # Move to source code parent directory
+    cd ~/mxnet
+    cp make/config.mk .
+    echo "USE_BLAS=openblas" >>config.mk
+    echo "ADD_CFLAGS += -I/usr/include/openblas" >>config.mk
+    echo "ADD_LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs" >>config.mk
+```
+
+If building with ```GPU``` support, run below commands to add GPU dependency configurations to config.mk file:
+
+```bash
+    echo "USE_CUDA=1" >>config.mk
+    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
+    echo "USE_CUDNN=1" >>config.mk
+```
+
+Then build mxnet:
+
+```bash
+    make -j$(nproc)
+```
+
+Executing these commands creates a library called ```libmxnet.so```
 
 
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for the programming language of your choice:
+- [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
+
+### Install the MXNet Package for Python
+Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
+
+```bash
+	# Install MXNet Python package
+	cd python
+	sudo python setup.py install
+```
+
+Check if MXNet is properly installed.
+
+```bash
+	# You can change mx.cpu to mx.gpu
+	python
+	>>> import mxnet as mx
+	>>> a = mx.nd.ones((2, 3), mx.cpu())
+	>>> print ((a * 2).asnumpy())
+	[[ 2.  2.  2.]
+	 [ 2.  2.  2.]]
+```
+If you don't get an import error, then MXNet is ready for python.
+
+Note: You can update mxnet for python by repeating this step after re-building `libmxnet.so`.
 
 ### Install the MXNet Package for R
 Run the following commands to install the MXNet dependencies and build the MXNet R package.
@@ -116,7 +169,7 @@ Run the following commands to install the MXNet dependencies and build the MXNet
 These commands create the MXNet R package as a tar.gz file that you can install as an R package. To install the R package, run the following command, use your MXNet version number:
 
 ```bash
-  R CMD INSTALL mxnet_0.7.tar.gz
+  R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
 ### Install the MXNet Package for Julia
@@ -159,12 +212,12 @@ For Linux users, MXNet provides prebuilt binary packages that support computers 
 </dependency>
 ```
 
-For example, to download and build the 64-bit CPU-only version for OS X, use:
+For example, to download and build the 64-bit CPU-only version for Linux, use:
 
 ```HTML
 <dependency>
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-full_2.10-linux-x86_64-gpu</artifactId>
+  <artifactId>mxnet-full_2.10-linux-x86_64-cpu</artifactId>
   <version>0.1.1</version>
 </dependency>
 ```

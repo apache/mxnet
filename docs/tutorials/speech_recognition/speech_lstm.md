@@ -24,7 +24,7 @@ To create the speech acoustic modeling example, use the following steps.
 
 ### Build Kaldi
 
-Build Kaldi as shared libraies if you have not already done so.
+Build Kaldi as shared libraries if you have not already done so.
 
 ```bash
 cd kaldi/src
@@ -55,7 +55,7 @@ The default `run_sdm.sh` script generates the force-alignment labels in their st
 . ./cmd.sh
 . ./path.sh
 
-# SDM - Signle Distant Microphone
+# SDM - Single Distant Microphone
 micid=1 #which mic from array should be used?
 mic=sdm$micid
 

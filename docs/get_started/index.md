@@ -5,56 +5,8 @@ MXNet is built on a dynamic dependency scheduler that automatically parallelizes
 A graph optimization layer on top of that makes symbolic execution fast and memory efficient. The MXNet library is portable and lightweight, and it scales to multiple GPUs and multiple machines.
 
 
-&nbsp;
-
-**Flexible Programming Model**
-Supports both imperative and symbolic programming, maximizing efficiency and productivity
-
-
-&nbsp;
-
-**Portable from the Cloud to the Client**
-Runs on CPUs or GPUs, and on clusters, servers, desktops, or mobile phones
-
-
-&nbsp;
-
-**Multiple Languages**
-Supports building and training models in Python, R, Scala, Julia, and C++.  Pre-trained models can be used for prediction in even more languages like Matlab or Javascript.
-
-
-&nbsp;
-
-**Native Distributed Training**
-Supports distributed training on multiple CPU/GPU machines to take advantage of cloud scale
-
-
-&nbsp;
-
-**Performance Optimized**
-Parallelizes both I/O and computation with an optimized C++ backend engine, and performs optimally no matter which language you program in
-
-
-&nbsp;
-
-# MXNet Open Source Community
-
-**Broad Model Support** – Train and deploy the latest deep convolutional neural networks (CNNs) and long short-term memory (LSTMs) models
-
-
-&nbsp;
-
-**Extensive Library of Reference Examples** – Build on sample tutorials (with code), such as image classification, language modeling, neural Art, and Speech speech recognition, and more.  
-
-
-&nbsp;
-
-**Open and Collaborative Community** – Support and contributions from many top tier universities and industry partners
-
-
-&nbsp;
 # Setup and Installation
-You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet can also be run on Docker and on Cloud like AWS. MXNet currently supports the Python, R, Julia and Scala languages.
+You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet can be run on Docker and on Cloud like AWS. MXNet can also be run on embedded devices, such as the Raspberry Pi running Raspbian. MXNet currently supports the Python, R, Julia and Scala languages.
 
 If you are running Python/R on Amazon Linux or Ubuntu, you can use Git Bash scripts to quickly install the MXNet libraries and all its dependencies.
 
@@ -63,12 +15,22 @@ Refer below for more details on setting up MXNet:
 * [Step by step instruction guide for installing MXNet](http://mxnet.io/get_started/setup.html#overview)
 * [Common installation problems](http://mxnet.io/get_started/setup.html#common-installation-problems)
 
-# Starting with the Basics | Tensor Computation
+# Start to use MXNet
 
-Now let's take a look at the tensor computation interface. The tensor computation interface is often more
-flexible than the symbolic interface. It is often used to
-implement the layers, define weight updating rules, and debug.
+While installation for  MXNet and language package is completed, we can run following codes to verify our installation is successful.
 
+## Julia
+```julia
+julia> using MXNet
+
+julia> a = mx.ones((2,3), mx.gpu())
+mx.NDArray{Float32}(2,3)
+
+julia> Array{Float32}(a * 2)
+2×3 Array{Float32,2}:
+ 2.0  2.0  2.0
+ 2.0  2.0  2.0
+```
 
 ## Python
 
@@ -123,8 +85,27 @@ You can perform tensor or matrix computation in pure Scala:
 * [Handwritten Digit Recognition using Convolutional Neural Networks](http://mxnet.io/tutorials/python/mnist.html) (Beginner)
 * [Character-level language models using LSTMs](http://mxnet.io/tutorials/python/char_lstm.html) (Advanced)
 
+
 # Next Steps
 * [Setup and Installation](http://mxnet.io/get_started/setup.html)
 * [Tutorials](http://mxnet.io/tutorials/index.html)
 * [How To](http://mxnet.io/how_to/index.html)
 * [Architecture](http://mxnet.io/architecture/index.html)
+
+
+# MXNet Open Source Community
+
+**Broad Model Support** – Train and deploy the latest deep convolutional neural networks (CNNs) and long short-term memory (LSTMs) models
+
+
+&nbsp;
+
+**Extensive Library of Reference Examples** – Build on sample tutorials (with code), such as image classification, language modeling, neural art, and speech recognition, and more.  
+
+
+&nbsp;
+
+**Open and Collaborative Community** – Support and contributions from many top tier universities and industry partners
+
+
+&nbsp;

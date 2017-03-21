@@ -1,4 +1,6 @@
 # pylint:skip-file
+from __future__ import print_function
+import logging
 import sys, random, time, math
 sys.path.insert(0, "../../python")
 import mxnet as mx
@@ -75,7 +77,7 @@ class DataIter(mx.io.DataIter):
         self.batch_size = batch_size
         self.data, self.negative, self.vocab, self.freq = load_data(name)
         self.vocab_size = 1 + len(self.vocab)
-        print self.vocab_size
+        print(self.vocab_size)
         self.num_label = num_label
         self.provide_data = [('data', (batch_size, num_label - 1))]
         self.provide_label = [('label', (self.batch_size, num_label)),
@@ -85,7 +87,7 @@ class DataIter(mx.io.DataIter):
         return self.negative[random.randint(0, len(self.negative) - 1)]
 
     def __iter__(self):
-        print 'begin'
+        print('begin')
         batch_data = []
         batch_label = []
         batch_label_weight = []
@@ -116,6 +118,9 @@ class DataIter(mx.io.DataIter):
         pass
 
 if __name__ == '__main__':
+    head = '%(asctime)-15s %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=head)
+
     parser = OptionParser()
     parser.add_option("-g", "--gpu", action = "store_true", dest = "gpu", default = False,
                       help = "use gpu")
@@ -138,9 +143,6 @@ if __name__ == '__main__':
                                  wd = 0.0000,
                                  initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
 
-    import logging
-    head = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=head)
     
     metric = NceAuc()
     model.fit(X = data_train,

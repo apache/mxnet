@@ -45,9 +45,17 @@ from . import monitor as mon
 from . import torch
 from . import torch as th
 
+from . import profiler
+from . import log
+
 from . import module
 from . import module as mod
 
+from . import image
+from . import image as img
+
 from . import test_utils
+
+from . import rnn
 
 __version__ = base.__version__

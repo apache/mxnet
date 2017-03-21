@@ -11,11 +11,11 @@ graph that describes the computation. The following picture shows how you compos
 ![Symbol Compose](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/compose_basic.png)
 
 - The ```mxnet.symbol.Variable``` function creates argument nodes that represent input to the computation.
-- The symbol is overloaded with basic element-wise mathematical operations. 
+- The symbol is overloaded with basic element-wise mathematical operations.
 
 ## Configure Neural Networks
 
-In addition to supporting fine-grained operations, MXNet  provides a way to perform big operations that is analogous to layers in neural networks.
+In addition to supporting fine-grained operations, MXNet provides a way to perform big operations that are analogous to layers in neural networks.
 You can use operators to describe the configuration of a neural network.
 
 ![Net Compose](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/compose_net.png)
@@ -28,7 +28,7 @@ The following example shows how to configure multiple input neural networks.
 ![Multi Input](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/compose_multi_in.png)
 
 
-## Bind and Execute Symbol 
+## Bind and Execute Symbol
 
 When you need to execute a symbol graph, you call the bind function to bind ```NDArrays``` to the argument nodes
 in order to obtain an ```Executor```.
@@ -42,8 +42,8 @@ To get the output results, given the bound NDArrays as input, you can call ```Ex
 
 ## Bind Multiple Outputs
 
-To group symbols, then bind them to 
-get outputs of both, use ```mx.symbol.Group```.
+To group symbols, then bind them to
+get the outputs of both, use ```mx.symbol.Group```.
 
 ![MultiOut](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_multi_out.png)
 
@@ -68,11 +68,10 @@ the Executor for you.
 
 ## Auxiliary States
 
-Auxiliary states are just like arguments, except that you can't take the gradient of them. Although auxiliary states  might 
-not be part of the computation, they can be helpful to track. You can pass auxiliary states in the same way that you pass arguments.
+Auxiliary states are just like arguments, except that you can't take the gradient of them. Although auxiliary states might not be part of the computation, they can be helpful for tracking. You can pass auxiliary states in the same way that you pass arguments.
 
 ![SimpleBind](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_aux_state.png)
 
-## More Information
+## Next Steps
 
 See [Symbolic API](symbol.md) and [Python Documentation](index.md).

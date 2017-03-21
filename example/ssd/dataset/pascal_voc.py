@@ -130,7 +130,7 @@ class PascalVoc(Imdb):
         full path of annotation file
         """
         label_file = os.path.join(self.data_path, 'Annotations', index + '.xml')
-        assert os.path.exists(label_file), 'Path does not exist: {}'.format(image_file)
+        assert os.path.exists(label_file), 'Path does not exist: {}'.format(label_file)
         return label_file
 
     def _load_image_labels(self):

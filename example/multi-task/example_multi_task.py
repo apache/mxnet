@@ -64,7 +64,7 @@ class Multi_Accuracy(mx.metric.EvalMetric):
     def update(self, labels, preds):
         mx.metric.check_label_shapes(labels, preds)
 
-        if self.num != None:
+        if self.num is not None:
             assert len(labels) == self.num
 
         for i in range(len(labels)):
@@ -73,7 +73,7 @@ class Multi_Accuracy(mx.metric.EvalMetric):
 
             mx.metric.check_label_shapes(label, pred_label)
 
-            if i == None:
+            if i is None:
                 self.sum_metric += (pred_label.flat == label.flat).sum()
                 self.num_inst += len(pred_label.flat)
             else:

@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 package ml.dmlc.mxnet.examples.rnn
 
 import ml.dmlc.mxnet.Callback.Speedometer
@@ -32,15 +50,7 @@ object LstmBucketing {
   private val logger: Logger = LoggerFactory.getLogger(classOf[LstmBucketing])
 
   def perplexity(label: NDArray, pred: NDArray): Float = {
-    val batchSize = label.shape(0)
-    // TODO: NDArray transpose
-    val labelArr = Array.fill(label.size)(0)
-    (0 until batchSize).foreach(row => {
-      val labelRow = label.slice(row)
-      labelRow.toArray.zipWithIndex.foreach { case (l, col) =>
-        labelArr(col * batchSize + row) = l.toInt
-      }
-    })
+    val labelArr = label.T.toArray.map(_.toInt)
     var loss = .0
     (0 until pred.shape(0)).foreach(i =>
       loss -= Math.log(Math.max(1e-10f, pred.slice(i).toArray(labelArr(i))))

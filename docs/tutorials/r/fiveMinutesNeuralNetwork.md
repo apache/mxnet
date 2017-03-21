@@ -4,7 +4,7 @@ Develop a Neural Network with MXNet in Five Minutes
 This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package.
 
 ## Classification
- 
+
 
 
  ```r
@@ -53,7 +53,7 @@ The following code shows an example usage of `mx.mlp`:
  ```r
     mx.set.seed(0)
     model <- mx.mlp(train.x, train.y, hidden_node=10, out_node=2, out_activation="softmax",
-                num.round=20, array.batch.size=15, learning.rate=0.07, momentum=0.9, 
+                num.round=20, array.batch.size=15, learning.rate=0.07, momentum=0.9,
                 eval.metric=mx.metric.accuracy)
  ```
 
@@ -97,7 +97,7 @@ To get an idea of what is happening, view the computation graph from R:
  ```
 
  ```
-    ## Auto detect layout of input matrix, use rowmajor..
+    ## Auto detect layout of input matrix, use rowmajor.
  ```
 
  ```r
@@ -157,7 +157,7 @@ Next, make prediction with this structure and other parameters with `mx.model.Fe
  ```
 
  ```
-    ## Auto detect layout of input matrix, use rowmajor..
+    ## Auto detect layout of input matrix, use rowmajor.
     ## Start training with 1 devices
     ## [1] Train-rmse=16.063282524034
     ## [2] Train-rmse=12.2792375712573
@@ -251,7 +251,7 @@ This is an example of the mean absolute error metric. Simply plug it into the tr
  ```
 
  ```
-    ## Auto detect layout of input matrix, use rowmajor..
+    ## Auto detect layout of input matrix, use rowmajor.
     ## Start training with 1 devices
     ## [1] Train-mae=13.1889538083225
     ## [2] Train-mae=9.81431959337658

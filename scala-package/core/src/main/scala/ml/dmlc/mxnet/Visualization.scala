@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.dmlc.mxnet
 
 import scala.util.parsing.json._
@@ -175,7 +192,7 @@ object Visualization {
       else {
         val internals = symbol.getInternals()
         val (_, outShapes, _) = internals.inferShape(shape)
-        require(outShapes != null, "Input shape is incompete")
+        require(outShapes != null, "Input shape is incomplete")
         val shapeDict = internals.listOutputs().zip(outShapes).toMap
         (true, shapeDict)
       }
@@ -212,7 +229,10 @@ object Visualization {
       val params = node.asInstanceOf[Map[String, Any]]
       val op = params("op").asInstanceOf[String]
       val name = params("name").asInstanceOf[String]
-      val param = params("param").asInstanceOf[Map[String, String]]
+      val attrs = {
+        if (params.contains("attr")) params("attr").asInstanceOf[Map[String, String]]
+        else Map[String, String]()
+      }
       // input data
       val attr = nodeAttr.clone()
       var label = op
@@ -228,26 +248,26 @@ object Visualization {
           attr("fillcolor") = cm(0)
         }
         case "Convolution" => {
-          val kernel = str2Tuple(param("kernel"))
-          val stride = str2Tuple(param("stride"))
+          val kernel = str2Tuple(attrs("kernel"))
+          val stride = if (attrs.contains("stride")) str2Tuple(attrs("stride")) else List(1)
           label =
-            s""""Convolution\\n${kernel(0)}x${kernel(1)}/${stride(0)}, ${param("num_filter")}""""
+            s""""Convolution\\n${kernel(0)}x${kernel(1)}/${stride(0)}, ${attrs("num_filter")}""""
           attr("fillcolor") = cm(1)
         }
         case "FullyConnected" => {
-          label = s""""FullyConnected\\n${param("num_hidden")}""""
+          label = s""""FullyConnected\\n${attrs("num_hidden")}""""
           attr("fillcolor") = cm(1)
         }
         case "BatchNorm" => attr("fillcolor") = cm(3)
         case "Activation" | "LeakyReLU" => {
-          label = s""""${op}\\n${param("act_type")}""""
+          label = s""""${op}\\n${attrs("act_type")}""""
           attr("fillcolor") = cm(2)
         }
         case "Pooling" => {
-          val kernel = str2Tuple(param("kernel"))
-          val stride = str2Tuple(param("stride"))
+          val kernel = str2Tuple(attrs("kernel"))
+          val stride = if (attrs.contains("stride")) str2Tuple(attrs("stride")) else List(1)
           label =
-            s""""Pooling\\n${param("pool_type")}, ${kernel(0)}x${kernel(1)}/${stride(0)}""""
+            s""""Pooling\\n${attrs("pool_type")}, ${kernel(0)}x${kernel(1)}/${stride(0)}""""
           attr("fillcolor") = cm(4)
         }
         case "Concat" | "Flatten" | "Reshape" => attr("fillcolor") = cm(5)

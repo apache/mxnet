@@ -1,5 +1,5 @@
 # pylint: disable=fixme, invalid-name, missing-docstring, no-init, old-style-class, multiple-statements
-# pylint: disable=arguments-differ, too-many-arguments
+# pylint: disable=arguments-differ, too-many-arguments, no-member
 """Visualization callback function
 """
 try:
@@ -380,5 +380,3 @@ def args_wrapper(*args):
         for k, v in callback_args.iteritems():
             out[k].append(v)
     return dict(out)
-
-

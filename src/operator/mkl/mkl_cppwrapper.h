@@ -32,6 +32,7 @@
 
 
 extern int getMKLBuildDate();
+extern bool enableMKLWarnGenerated();
 
 
 template <typename Dtype> inline dnnError_t dnnLayoutCreate(

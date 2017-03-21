@@ -487,7 +487,8 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
           ctx.get_stream<gpu>()->Wait();
         }
 #endif
-      }, ret.ctx(), {}, write_vars);
+      }, ret.ctx(), {}, write_vars,
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterSourceImperative"));
   };
   // register the function.
   NDArrayReg()
@@ -671,7 +672,8 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
           ctx.get_stream<gpu>()->Wait();
         }
 #endif
-      }, src.ctx(), const_vars, write_vars);
+      }, src.ctx(), const_vars, write_vars,
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterUnaryImperative"));
   };
   // register the function.
   NDArrayReg()
@@ -945,7 +947,8 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
           ctx.get_stream<gpu>()->Wait();
         }
         #endif
-      }, lhs.ctx(), const_vars, write_vars);
+      }, lhs.ctx(), const_vars, write_vars,
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterBinaryImperative"));
   };
   // register the function.
   NDArrayReg()

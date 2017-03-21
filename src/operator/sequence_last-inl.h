@@ -51,12 +51,12 @@ class SequenceLastOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
 
-    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2 : 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2U : 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
-    int n = in_data[seq_last::kData].size(1);
+    index_t n = in_data[seq_last::kData].size(1);
     int max_seq_len = in_data[seq_last::kData].size(0);
     int total_size = in_data[seq_last::kData].Size();
     Shape<2> s2 = Shape2(n, static_cast<int>(total_size / n / max_seq_len));
@@ -93,8 +93,8 @@ class SequenceLastOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2 : 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2U : 1U);
 
     // break immediately if null grad
     if (req[seq_last::kData] == kNullOp) return;
@@ -102,7 +102,7 @@ class SequenceLastOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
-    int n = in_grad[seq_last::kData].size(1);
+    index_t n = in_grad[seq_last::kData].size(1);
     int max_seq_len = in_grad[seq_last::kData].size(0);
     int total_size = in_grad[seq_last::kData].Size();
     Shape<2> s2 = Shape2(n, static_cast<int>(total_size / n / max_seq_len));
@@ -162,11 +162,11 @@ class SequenceLastProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2 : 1)
+    CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
 
     const TShape &dshape = (*in_shape)[seq_last::kData];
-    CHECK_GT(dshape.ndim(), 2)
+    CHECK_GT(dshape.ndim(), 2U)
         << "The data array must be of rank 3 or greater.";
     // seq length vector is same as batch size
     if (param_.use_sequence_length)
@@ -185,7 +185,7 @@ class SequenceLastProp : public OperatorProperty {
 
   bool InferType(std::vector<int> *in_type, std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), param_.use_sequence_length ? 2 : 1);
+    CHECK_GE(in_type->size(), param_.use_sequence_length ? 2U : 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

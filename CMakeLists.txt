@@ -1,37 +1,37 @@
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.0.2)
 
 project(mxnet C CXX)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+endif()
+
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV  "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP  "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN   "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA    "Build with CUDA support"   ON)
-mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support"   OFF)
+mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" OFF)
+mxnet_option(USE_JEMALLOC "Build with Jemalloc support"   OFF)
+mxnet_option(USE_PROFILER "Build with Profiler support"   OFF)
+mxnet_option(USE_DIST_KVSTORE    "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
+mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
-include(mshadow/cmake/mshadow.cmake)
-include(mshadow/cmake/Utils.cmake)
-include(mshadow/cmake/Cuda.cmake)
-
-set(mxnet_LINKER_LIBS "")
-list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
-
-include_directories("include")
-include_directories("mshadow")
-include_directories("dmlc-core/include")
-
 if(MSVC)
+  add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-DDMLC_USE_CXX11)
   add_definitions(-DMSHADOW_IN_CXX11)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
+  add_definitions(-DNNVM_EXPORTS)
+  add_definitions(-DDMLC_STRICT_CXX11)
   set(CMAKE_C_FLAGS "/MP")
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
@@ -53,6 +53,40 @@ else(MSVC)
   endif()
 endif(MSVC)
 
+set(mxnet_LINKER_LIBS "")
+set(mxnet_LINKER_LIBS_DEBUG "")
+set(mxnet_LINKER_LIBS_RELEASE "")
+
+if(USE_MKL_IF_AVAILABLE)
+  find_package(MKL)
+  if(MKL_FOUND)
+    include_directories(${MKL_INCLUDE_DIR})
+    list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
+  endif()
+endif()
+
+if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
+  include(mshadow/cmake/mshadow.cmake)
+  include(mshadow/cmake/Utils.cmake)
+  include(mshadow/cmake/Cuda.cmake)
+else()
+  include(mshadowUtils)
+  include(Cuda)
+  include(mshadow)
+endif()
+
+list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+
+foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
+ 	include_directories(${var})
+endforeach()
+
+include_directories("include")
+include_directories("mshadow")
+include_directories("cub")
+include_directories("nnvm/include")
+include_directories("dmlc-core/include")
+
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
@@ -60,15 +94,19 @@ if(USE_OPENCV)
   endif()
   include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
   list(APPEND mxnet_LINKER_LIBS ${OpenCV_LIBS})
+  message(STATUS " OpenCV_LIBS=${OpenCV_LIBS}")
   message(STATUS "OpenCV found (${OpenCV_CONFIG_PATH})")
   add_definitions(-DMXNET_USE_OPENCV=1)
+  if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--no-undefined")
+  endif()
 else(USE_OPENCV)
   message(STATUS "OpenCV Disabled")
   add_definitions(-DMXNET_USE_OPENCV=0)
 endif()
 
 if(USE_OPENMP)
-  FIND_PACKAGE( OpenMP REQUIRED)
+  find_package(OpenMP REQUIRED)
   if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -77,8 +115,27 @@ if(USE_OPENMP)
   endif()
 endif()
 
+if(UNIX)
+  find_library(RTLIB rt)
+  if(RTLIB)
+    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
+  endif()
+endif()
+
+# ---[ jemalloc
+if(USE_JEMALLOC)
+  find_package(JeMalloc)
+  if(JEMALLOC_FOUND)
+    add_definitions(-DUSE_JEMALLOC)
+    include_directories(${JEMALLOC_INCLUDE_DIRS})
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
+  endif()
+endif()
+
+include(CTest)
+
 # cudnn detection
-if(USE_CUDNN)
+if(USE_CUDNN AND USE_CUDA)
   detect_cuDNN()
   if(HAVE_CUDNN)
     add_definitions(-DUSE_CUDNN)
@@ -88,9 +145,16 @@ if(USE_CUDNN)
   endif()
 endif()
 
-add_subdirectory("dmlc-core")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake)
+  add_subdirectory("dmlc-core")
+endif()
+
 if(USE_DIST_KVSTORE)
-	add_subdirectory("ps-lite")
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
+    add_subdirectory("ps-lite")
+  else()
+    set(pslite_LINKER_LIBS protobuf zmq-static pslite)
+  endif()
 endif()
 
 mxnet_source_group("Include\\common"   GLOB "src/common/*.h")
@@ -100,10 +164,12 @@ mxnet_source_group("Include\\io"   GLOB "src/io/*.h")
 mxnet_source_group("Include\\kvstore"   GLOB "src/kvstore/*.h")
 mxnet_source_group("Include\\ndarray"   GLOB "src/ndarray/*.h")
 mxnet_source_group("Include\\operator"   GLOB "src/operator/*.h")
+mxnet_source_group("Include\\operator\\tensor"   GLOB "src/operator/tensor/*.h")
 mxnet_source_group("Include\\optimizer"   GLOB "src/optimizer/*.h")
 mxnet_source_group("Include\\resource.cc"   GLOB "src/resource.cc/*.h")
 mxnet_source_group("Include\\storage"   GLOB "src/storage/*.h")
 mxnet_source_group("Include\\symbol"   GLOB "src/symbol/*.h")
+mxnet_source_group("Include\\executor"   GLOB "src/executor/*.h")
 
 mxnet_source_group("Cuda\\common"   GLOB "src/common/*.cu")
 mxnet_source_group("Cuda\\c_api"   GLOB "src/c_api/*.cu")
@@ -112,6 +178,7 @@ mxnet_source_group("Cuda\\io"   GLOB "src/io/*.cu")
 mxnet_source_group("Cuda\\kvstore"   GLOB "src/kvstore/*.cu")
 mxnet_source_group("Cuda\\ndarray"   GLOB "src/ndarray/*.cu")
 mxnet_source_group("Cuda\\operator"   GLOB "src/operator/*.cu")
+mxnet_source_group("Cuda\\operator\\tensor"   GLOB "src/operator/tensor/*.cu"  "src/operator/tensor/*.cuh")
 mxnet_source_group("Cuda\\optimizer"   GLOB "src/optimizer/*.cu")
 mxnet_source_group("Cuda\\resource.cc"   GLOB "src/resource.cc/*.cu")
 mxnet_source_group("Cuda\\storage"   GLOB "src/storage/*.cu")
@@ -125,17 +192,52 @@ mxnet_source_group("Source\\io"   GLOB "src/io/*.cc")
 mxnet_source_group("Source\\kvstore"   GLOB "src/kvstore/*.cc")
 mxnet_source_group("Source\\ndarray"   GLOB "src/ndarray/*.cc")
 mxnet_source_group("Source\\operator"   GLOB "src/operator/*.cc")
+mxnet_source_group("Source\\operator\\tensor"   GLOB "src/operator/tensor/*.cc")
 mxnet_source_group("Source\\optimizer"   GLOB "src/optimizer/*.cc")
 mxnet_source_group("Source\\resource.cc"   GLOB "src/resource.cc/*.cc")
 mxnet_source_group("Source\\storage"   GLOB "src/storage/*.cc")
 mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
+mxnet_source_group("Source\\executor"   GLOB "src/executor/*.cc")
+mxnet_source_group("Source\\nnvm"   GLOB "src/nnvm/*.cc")
+
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
-FILE(GLOB_RECURSE CUDA "src/*.cu")
+FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
+
+# add nnvm to source
+
+mxnet_source_group("NNVM\\Include\\c_api"   GLOB "nnvm/src/c_api/*.h")
+mxnet_source_group("NNVM\\Include\\core"   GLOB "nnvm/src/core/*.h")
+mxnet_source_group("NNVM\\Include\\pass"   GLOB "nnvm/src/pass/*.h")
+mxnet_source_group("NNVM\\Include\\nnvm"   GLOB "nnvm/include/nnvm/*.h")
+mxnet_source_group("NNVM\\Include\\dmlc"   GLOB "nnvm/include/dmlc/*.h")
+
+mxnet_source_group("NNVM\\Source"   GLOB "nnvm/src/*.cc")
+mxnet_source_group("NNVM\\Source\\c_api"   GLOB "nnvm/src/c_api/*.cc")
+mxnet_source_group("NNVM\\Source\\core"   GLOB "nnvm/src/core/*.cc")
+mxnet_source_group("NNVM\\Source\\pass"   GLOB "nnvm/src/pass/*.cc")
+
+FILE(GLOB_RECURSE NNVMSOURCE "nnvm/src/*.cc" "nnvm/src/*.h" "nnvm/include/*.h")
+list(APPEND SOURCE ${NNVMSOURCE})
+
+# add mshadow file
+mxnet_source_group("mshadow\\Include"   GLOB "mshadow/mshadow/*.h")
+mxnet_source_group("mshadow\\Include\\cuda"   GLOB "mshadow/mshadow/cuda/*.h" "mshadow/mshadow/cuda/*.cuh")
+mxnet_source_group("mshadow\\Include\\extension"   GLOB "mshadow/mshadow/extension/*.h")
+mxnet_source_group("mshadow\\Include\\packet"   GLOB "mshadow/mshadow/packet/*.h")
+
+FILE(GLOB_RECURSE MSHADOWSOURCE "mshadow/mshadow/*.h")
+FILE(GLOB_RECURSE MSHADOW_CUDASOURCE "mshadow/mshadow/*.cuh")
+list(APPEND SOURCE ${MSHADOWSOURCE})
+list(APPEND CUDA ${MSHADOW_CUDASOURCE})
 
 if(USE_PLUGINS_WARPCTC)
 	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
-	set(WARPCTC_LIB  "" CACHE FILEPATH "WARPCTC lib")
+    set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
+    set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
+    set(mxnet_LINKER_LIBS_RELEASE ${WARPCTC_LIB_RELEASE})
+    set(mxnet_LINKER_LIBS_DEBUG ${WARPCTC_LIB_DEBUG})
+
 	include_directories(SYSTEM ${WARPCTC_INCLUDE})
 	list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
 	mxnet_source_group("Include\\plugin\\warpctc"   GLOB "plugin/warpctc/*.h")
@@ -149,7 +251,7 @@ endif()
 
 if(USE_PLUGIN_CAFFE)
   if(NOT DEFINED CAFFE_PATH)
-    if(EXISTS ${PROJECT_SOURCE_DIR}/caffe)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
       # Need newer FindCUDA.cmake that correctly handles -std=c++11
       cmake_minimum_required(VERSION 3.3)
       set(CAFFE_PATH ${PROJECT_SOURCE_DIR}/caffe)
@@ -197,6 +299,7 @@ if(MSVC)
 endif()
 
 if(USE_CUDA)
+  list(APPEND CUDA_INCLUDE_DIRS ${INCLUDE_DIRECTORIES})
   # define preprocessor macro so that we will not include the generated forcelink header
   mshadow_cuda_compile(cuda_objs ${CUDA})
   if(MSVC)
@@ -206,18 +309,37 @@ if(USE_CUDA)
     list(APPEND mxnet_LINKER_LIBS ${CUDA_cuda_LIBRARY})
   else(MSVC)
     list(APPEND mxnet_LINKER_LIBS nvrtc cuda)
+    message(STATUS "LIBS SO FAR: ${mxnet_LINKER_LIBS}")
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
   add_definitions(-DMXNET_USE_NVRTC=1)
+  if(CUDA_LIBRARY_PATH)
+    if(IS_CONTAINER_BUILD)
+      # In case of building on a production-like build container which may not have Cuda installed
+      if(NOT CMAKE_SYSTEM_HAS_CUDA)
+        message(STATUS " NOT CMAKE_SYSTEM_HAS_CUDA")
+        # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
+        # so use the stub cuda driver shared library
+        if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+          message(STATUS " ADDING CUDA PATH TO LINK DIRS: ${CUDA_LIBRARY_PATH}/stubs")
+          link_directories(${CUDA_LIBRARY_PATH}/stubs)
+        endif()
+      endif()
+    endif()
+  endif()
 endif()
 
 # unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
 if(USE_PLUGIN_CAFFE)
-  if(EXISTS ${PROJECT_SOURCE_DIR}/caffe)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
     add_subdirectory(caffe)
   endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
+  list(APPEND mxnet_LINKER_LIBS nnvm)
 endif()
 
 if(NOT MSVC)
@@ -233,9 +355,31 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
-  add_library(mxnet SHARED ${SOURCE})
+  if(UNIX)
+    add_library(mxnet_static STATIC ${SOURCE})
+    # Need an arbitrary source file to trigger CMake to build the library
+    add_library(mxnet SHARED src/initialize.cc)
+    target_link_libraries(mxnet
+        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
+    )
+    add_custom_target(
+        Name ALL
+        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        COMMAND ln -sf libmxnet_static.a libmxnet.a
+        DEPENDS mxnet_static
+    )
+  else()
+    add_library(mxnet SHARED ${SOURCE})
+  endif()
 endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
+
+if(USE_PLUGINS_WARPCTC)
+  target_link_libraries(mxnet debug ${mxnet_LINKER_LIBS_DEBUG})
+  target_link_libraries(mxnet optimized ${mxnet_LINKER_LIBS_RELEASE})
+endif()
+
 target_link_libraries(mxnet dmlccore)
 
 if(MSVC AND USE_MXNET_LIB_NAMING)
@@ -243,18 +387,50 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
 endif()
 
 if(USE_DIST_KVSTORE)
-	add_definitions(-DMXNET_USE_DIST_KVSTORE)
-	target_link_libraries(mxnet pslite)
-	target_link_libraries(mxnet ${pslite_LINKER_LIBS})
-	include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+  add_definitions(-DMXNET_USE_DIST_KVSTORE)
+  target_link_libraries(mxnet ${pslite_LINKER_LIBS})
+  include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+endif()
+
+if(USE_PROFILER)
+	add_definitions(-DMXNET_USE_PROFILER)
+endif()
+
+# Do tests after chrpath so that we use the "real" cuda driver
+add_subdirectory(tests)
+
+# AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
+if(AUTO_INSTALL_DIR)
+  # ---[ Install Includes
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${PROJECT_SOURCE_DIR}/include ${AUTO_INSTALL_DIR}/include
+    )
+
+  # ---[ Install Examples
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${PROJECT_SOURCE_DIR}/example ${AUTO_INSTALL_DIR}/example
+    )
+endif()
+
+if(INSTALL_PYTHON_VERSIONS)
+  message(STATUS "Installing for python versions: ${INSTALL_PYTHON_VERSIONS}")
+  foreach(version ${INSTALL_PYTHON_VERSIONS})
+    set(outdir ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python${version}/site-packages/mxnet)
+    add_custom_command(TARGET mxnet POST_BUILD
+      COMMAND mkdir -p ${outdir}
+      COMMAND cp -ru ${CMAKE_CURRENT_SOURCE_DIR}/python/mxnet/* ${outdir}
+      )
+  endforeach()
 endif()
 
 # ---[ Linter target
 if(MSVC)
-  find_package(PythonInterp 2)
-  set(PYTHON2_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 2.x executable")
-  find_package(PythonInterp 3)
-  set(PYTHON3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python 3.x executable")
+  find_package(PythonInterp)
+  set(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python executable")
 endif()
 set(LINT_DIRS include src scripts python)
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON2_EXECUTABLE=${PYTHON2_EXECUTABLE} -DPYTHON3_EXECUTABLE=${PYTHON3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+
+add_subdirectory(example/image-classification/predict-cpp)
