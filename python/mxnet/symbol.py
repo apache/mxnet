@@ -603,9 +603,10 @@ class Symbol(SymbolBase):
         """Given known shapes for some arguments, infers the shapes of all arguments
         and all outputs.
 
-        You can pass in the known shapes in either positional way or keyword argument way.
-        A tuple of Nones is returned if there is not enough information to deduce the missing shapes.
-        Inconsistencies in the known shapes will cause an error to be raised.
+        You can pass in the known shapes in either positional way or keyword argument
+        way. A tuple of Nones is returned if there is not enough information to deduce
+        the missing shapes. Inconsistencies in the known shapes will cause an error to
+        be raised.
 
         Example usage:
         ----------
