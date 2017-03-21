@@ -31,6 +31,7 @@ else
     echo "USE_BLAS=blas" >> config.mk
 fi
 echo "CXX=${CXX}" >>config.mk
+echo "USE_PROFILER=1" >> config.mk
 
 if [ ${TASK} == "build" ]; then
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
@@ -92,7 +93,6 @@ if [ ${TASK} == "r_test" ]; then
 fi
 
 if [ ${TASK} == "python_test" ]; then
-    echo "USE_PROFILER=1" >> config.mk
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
