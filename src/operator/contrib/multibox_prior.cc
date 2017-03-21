@@ -73,7 +73,7 @@ Operator* MultiBoxPriorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
 
 DMLC_REGISTER_PARAMETER(MultiBoxPriorParam);
 
-MXNET_REGISTER_OP_PROPERTY(MultiBoxPrior, MultiBoxPriorProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxPrior, MultiBoxPriorProp)
 .add_argument("data", "Symbol", "Input data.")
 .add_arguments(MultiBoxPriorParam::__FIELDS__())
 .describe("Generate prior(anchor) boxes from data, sizes and ratios.");

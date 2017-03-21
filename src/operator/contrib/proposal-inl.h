@@ -4,8 +4,8 @@
  * \brief Proposal Operator
  * \author Piotr Teterwak, Bing Xu, Jian Guo
 */
-#ifndef MXNET_OPERATOR_PROPOSAL_INL_H_
-#define MXNET_OPERATOR_PROPOSAL_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_PROPOSAL_INL_H_
+#define MXNET_OPERATOR_CONTRIB_PROPOSAL_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -17,9 +17,8 @@
 #include <ctime>
 #include <cstring>
 #include <iostream>
-#include "./operator_common.h"
-#include "./mshadow_op.h"
-#include "./native_op-inl.h"
+#include "../operator_common.h"
+#include "../mshadow_op.h"
 
 // extend NumericalParam
 namespace mxnet {
@@ -108,8 +107,8 @@ inline std::ostream &operator<<(std::ostream &os, const NumericalParam<VType> &p
   return os;
 }
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
 namespace mxnet {
 namespace op {
@@ -200,7 +199,7 @@ class ProposalProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "Proposal";
+    return "_contrib_Proposal";
   }
 
   std::vector<ResourceRequest> ForwardResource(
@@ -218,8 +217,7 @@ class ProposalProp : public OperatorProperty {
   int NumVisibleOutputs() const override {
     if (param_.output_score) {
       return 2;
-    }
-    else{
+    } else {
       return 1;
     }
   }
@@ -257,18 +255,18 @@ inline void _MakeAnchor(float w,
                         float h,
                         float x_ctr,
                         float y_ctr,
-                        std::vector<float>& out_anchors) {
-  out_anchors.push_back(x_ctr - 0.5f * (w - 1.0f));
-  out_anchors.push_back(y_ctr - 0.5f * (h - 1.0f));
-  out_anchors.push_back(x_ctr + 0.5f * (w - 1.0f));
-  out_anchors.push_back(y_ctr + 0.5f * (h - 1.0f));
-  out_anchors.push_back(0.0f);
+                        std::vector<float> *out_anchors) {
+  out_anchors->push_back(x_ctr - 0.5f * (w - 1.0f));
+  out_anchors->push_back(y_ctr - 0.5f * (h - 1.0f));
+  out_anchors->push_back(x_ctr + 0.5f * (w - 1.0f));
+  out_anchors->push_back(y_ctr + 0.5f * (h - 1.0f));
+  out_anchors->push_back(0.0f);
 }
 
 inline void _Transform(float scale,
                        float ratio,
                        const std::vector<float>& base_anchor,
-                       std::vector<float>& out_anchors) {
+                       std::vector<float>  *out_anchors) {
   float w = base_anchor[2] - base_anchor[1] + 1.0f;
   float h = base_anchor[3] - base_anchor[1] + 1.0f;
   float x_ctr = base_anchor[0] + 0.5 * (w - 1.0f);
@@ -286,7 +284,7 @@ inline void _Transform(float scale,
 inline void GenerateAnchors(const std::vector<float>& base_anchor,
                             const std::vector<float>& ratios,
                             const std::vector<float>& scales,
-                            std::vector<float>& out_anchors) {
+                            std::vector<float> *out_anchors) {
   for (size_t j = 0; j < ratios.size(); ++j) {
     for (size_t k = 0; k < scales.size(); ++k) {
       _Transform(scales[k], ratios[j], base_anchor, out_anchors);
@@ -298,4 +296,4 @@ inline void GenerateAnchors(const std::vector<float>& base_anchor,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  //  MXNET_OPERATOR_PROPOSAL_INL_H_
+#endif  //  MXNET_OPERATOR_CONTRIB_PROPOSAL_INL_H_

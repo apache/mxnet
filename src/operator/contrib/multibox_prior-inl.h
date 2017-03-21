@@ -4,8 +4,8 @@
  * \brief generate multibox prior boxes
  * \author Joshua Zhang
 */
-#ifndef MXNET_OPERATOR_MULTIBOX_PRIOR_INL_H_
-#define MXNET_OPERATOR_MULTIBOX_PRIOR_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_MULTIBOX_PRIOR_INL_H_
+#define MXNET_OPERATOR_CONTRIB_MULTIBOX_PRIOR_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -15,7 +15,7 @@
 #include <string>
 #include <utility>
 #include <valarray>
-#include "./operator_common.h"
+#include "../operator_common.h"
 
 
 namespace mxnet {
@@ -228,7 +228,7 @@ class MultiBoxPriorProp: public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "MultiBoxPrior";
+    return "_contrib_MultiBoxPrior";
   }
 
   Operator* CreateOperator(Context ctx) const override {
@@ -247,4 +247,4 @@ class MultiBoxPriorProp: public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_MULTIBOX_PRIOR_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_MULTIBOX_PRIOR_INL_H_
