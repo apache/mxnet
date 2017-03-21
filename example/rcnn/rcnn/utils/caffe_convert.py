@@ -1,5 +1,6 @@
 # This script will not work unless all paths are set right
 
+from __future__ import print_function
 import os
 import sys
 import mxnet as mx
@@ -32,19 +33,19 @@ def load_model(caffeproto, caffemodel, arg_shape_dic):
             wmat = np.array(layer_blobs[0].data).reshape(layer_blobs[0].num, layer_blobs[0].channels, layer_blobs[0].height, layer_blobs[0].width)
             bias = np.array(layer_blobs[1].data)
             if first_conv:
-                print 'Swapping BGR of caffe into RGB in mxnet'
+                print('Swapping BGR of caffe into RGB in mxnet')
                 wmat[:, [0, 2], :, :] = wmat[:, [2, 0], :, :]
 
             assert(wmat.flags['C_CONTIGUOUS'] is True)
             assert(bias.flags['C_CONTIGUOUS'] is True)
-            print 'converting layer {0}, wmat shape = {1}, bias shape = {2}'.format(layer_name, wmat.shape, bias.shape)
+            print('converting layer {0}, wmat shape = {1}, bias shape = {2}'.format(layer_name, wmat.shape, bias.shape))
             wmat = wmat.reshape((wmat.shape[0], -1))
             bias = bias.reshape((bias.shape[0], 1))
             weight_name = layer_name + "_weight"
             bias_name = layer_name + "_bias"
             
             if weight_name not in arg_shape_dic:
-                print weight_name + ' not found in arg_shape_dic.'
+                print(weight_name + ' not found in arg_shape_dic.')
                 continue
             wmat = wmat.reshape(arg_shape_dic[weight_name])
             arg_params[weight_name] = mx.nd.zeros(wmat.shape)

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import cPickle
 import os
 import time
@@ -78,8 +79,9 @@ def generate_proposals(predictor, test_data, imdb, vis=False, thresh=0.):
         if vis:
             vis_all_detection(data_dict['data'].asnumpy(), [dets], ['obj'], scale)
 
-        print 'generating %d/%d' % (i + 1, imdb.num_images), 'proposal %d' % (dets.shape[0]), \
-            'data %.4fs net %.4fs' % (t1, t2)
+        print('generating %d/%d' % (i + 1, imdb.num_images),
+              'proposal %d' % (dets.shape[0]),
+              'data %.4fs net %.4fs' % (t1, t2))
         i += 1
 
     assert len(imdb_boxes) == imdb.num_images, 'calculations not complete'
@@ -98,7 +100,7 @@ def generate_proposals(predictor, test_data, imdb, vis=False, thresh=0.):
         with open(full_rpn_file, 'wb') as f:
             cPickle.dump(original_boxes, f, cPickle.HIGHEST_PROTOCOL)
 
-    print 'wrote rpn proposals to {}'.format(rpn_file)
+    print('wrote rpn proposals to {}'.format(rpn_file))
     return imdb_boxes
 
 
@@ -187,7 +189,7 @@ def pred_eval(predictor, test_data, imdb, vis=False, thresh=1e-3):
 
         t3 = time.time() - t
         t = time.time()
-        print 'testing {}/{} data {:.4f}s net {:.4f}s post {:.4f}s'.format(i, imdb.num_images, t1, t2, t3)
+        print('testing {}/{} data {:.4f}s net {:.4f}s post {:.4f}s'.format(i, imdb.num_images, t1, t2, t3))
         i += 1
 
     det_file = os.path.join(imdb.cache_path, imdb.name + '_detections.pkl')
