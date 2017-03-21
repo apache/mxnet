@@ -86,7 +86,8 @@ class PoolingV1Op : public Operator {
     Tensor<xpu, 4, DType> data = in_data[pool_v1_enum::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[pool_v1_enum::kOut].get<xpu, 4, DType>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
-    if (param_.pool_type == pool_v1_enum::kMaxPooling || param_.pool_type == pool_v1_enum::kSumPooling) {
+    if (param_.pool_type == pool_v1_enum::kMaxPooling
+        || param_.pool_type == pool_v1_enum::kSumPooling) {
       Assign(out,
              req[pool_v1_enum::kOut],
              pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
@@ -136,7 +137,8 @@ class PoolingV1Op : public Operator {
 
     mshadow::Shape<2> in_shape = Shape2(data.shape_[2], data.shape_[3]);
 
-    if (param_.pool_type == pool_v1_enum::kMaxPooling || param_.pool_type == pool_v1_enum::kSumPooling) {
+    if (param_.pool_type == pool_v1_enum::kMaxPooling
+        || param_.pool_type == pool_v1_enum::kSumPooling) {
       Assign(input_grad, req[pool_v1_enum::kData],
              crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
                                   pad(output_data, 0, 0),

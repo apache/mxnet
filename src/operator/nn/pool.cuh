@@ -76,7 +76,7 @@ __global__ void pool_max_1d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int channels, const int width,
                                        const int pooled_width, const int kernel_w,
                                        const int stride_w, const int pad_w,
-                                       OpReqType req_type, DType* out_data) {
+                                       DType* out_data) {
   using mshadow::red::limits::MinValue;
   // index is the output image's pixel index in NCW
   CUDA_KERNEL_LOOP(index, nthreads) {
@@ -95,7 +95,7 @@ __global__ void pool_max_1d_gpu_kernel(const int nthreads, const DType* in_data,
         max_val = in_val;
       }
     }
-    KERNEL_ASSIGN(out_data[index], req_type, max_val);
+    out_data[index] = max_val;
   }
 }
 
@@ -109,7 +109,7 @@ __global__ void pool_max_2d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int pooled_height, const int pooled_width,
                                        const int kernel_h, const int kernel_w, const int stride_h,
                                        const int stride_w, const int pad_h, const int pad_w,
-                                       OpReqType req_type, DType* out_data) {
+                                       DType* out_data) {
   using mshadow::red::limits::MinValue;
   // index is the output image's pixel index in NCHW
   CUDA_KERNEL_LOOP(index, nthreads) {
@@ -134,7 +134,7 @@ __global__ void pool_max_2d_gpu_kernel(const int nthreads, const DType* in_data,
         }
       }
     }
-    KERNEL_ASSIGN(out_data[index], req_type, max_val);
+    out_data[index] = max_val;
   }
 }
 
@@ -149,7 +149,7 @@ __global__ void pool_max_3d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int pooled_width, const int kernel_d,
                                        const int kernel_h, const int kernel_w, const int stride_d,
                                        const int stride_h, const int stride_w, const int pad_d,
-                                       const int pad_h, const int pad_w, OpReqType req_type,
+                                       const int pad_h, const int pad_w,
                                        DType* out_data) {
   using mshadow::red::limits::MinValue;
   // index is the output image's pixel index in NCDHW
@@ -181,7 +181,7 @@ __global__ void pool_max_3d_gpu_kernel(const int nthreads, const DType* in_data,
         }
       }
     }
-    KERNEL_ASSIGN(out_data[index], req_type, max_val);
+    out_data[index] = max_val;
   }
 }
 
@@ -192,7 +192,7 @@ __global__ void pool_max_3d_gpu_kernel(const int nthreads, const DType* in_data,
 template <typename DType>
 __global__ void pool_sum_1d_gpu_kernel(const int nthreads, const DType* in_data, const int channels,
                                        const int width, const int pooled_width, const int kernel_w,
-                                       const int stride_w, const int pad_w, OpReqType req_type,
+                                       const int stride_w, const int pad_w,
                                        DType* out_data, bool getAvg = false) {
   CUDA_KERNEL_LOOP(index, nthreads) {
 	  const int pw = index % pooled_width;
@@ -209,7 +209,7 @@ __global__ void pool_sum_1d_gpu_kernel(const int nthreads, const DType* in_data,
     for (int w = wstart; w < wend; ++w) {
       sum += out_slice[w];
     }
-	  KERNEL_ASSIGN(out_data[index], req_type, sum / pool_size);
+    out_data[index] = sum / pool_size;
   }
 }
 
@@ -223,7 +223,7 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int pooled_height, const int pooled_width,
                                        const int kernel_h, const int kernel_w,
                                        const int stride_h, const int stride_w,
-                                       const int pad_h, const int pad_w, OpReqType req_type,
+                                       const int pad_h, const int pad_w,
                                        DType* out_data, bool getAvg = false) {
   CUDA_KERNEL_LOOP(index, nthreads) {
 	  const int pw = index % pooled_width;
@@ -247,7 +247,7 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
 		    sum += out_slice[h * width + w];
 		  }
 	  }
-	  KERNEL_ASSIGN(out_data[index], req_type, sum / pool_size);
+    out_data[index] = sum / pool_size;
   }
 }
 
@@ -263,7 +263,7 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int kernel_h, const int kernel_w,
                                        const int stride_d, const int stride_h, const int stride_w,
                                        const int pad_d, const int pad_h, const int pad_w,
-                                       OpReqType req_type, DType* out_data, bool getAvg = false) {
+                                       DType* out_data, bool getAvg = false) {
   CUDA_KERNEL_LOOP(index, nthreads) {
 	  const int pw = index % pooled_width;
 	  const int ph = (index / pooled_width) % pooled_height;
@@ -293,7 +293,7 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
         }
       }
     }
-	  KERNEL_ASSIGN(out_data[index], req_type, sum / pool_size);
+    out_data[index] = sum / pool_size;
   }
 }
 
@@ -600,7 +600,7 @@ __global__ void unpool_sum_3d_gpu_kernel(const int nthreads, const DType* out_gr
  * \param pad pad shape
  * \param stride stride shape
  * \param pool_type supported pooling type: max, avg, sum
- * \param req_type operator request type: kNullOp, kNullWriteInplace, kNullWriteTo, kNullAddTo
+ * \param req_type operator request type, only support kWriteTo for now
  * \param out_data pointer of the output tensor data in the format of NCW, NCHW, or NCDHW
  */
 template<typename DType>
@@ -608,6 +608,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
                  const TShape& stride, const int pool_type, OpReqType req_type,
                  DType* out_data) {
+  CHECK_EQ(req_type, kWriteTo) << "Only support req=kWriteTo in pooling operations";
   using namespace mxnet_op;
   if (kernel.ndim() == 1) {
     if (pool_enum::kMaxPooling == pool_type) {
@@ -615,21 +616,21 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
       pool_max_1d_gpu_kernel<<<cuda_get_num_blocks(oshape.Size()), mshadow::cuda::kBaseThreadNum,
                                0, mshadow::Stream<gpu>::GetStream(s)>>>(
                                    oshape.Size(), in_data, ishape[1], ishape[2],
-                                   oshape[2], kernel[0], stride[0], pad[0], req_type, out_data);
+                                   oshape[2], kernel[0], stride[0], pad[0], out_data);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_max_1d_gpu_kernel);
     } else if (pool_enum::kAvgPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
       pool_sum_1d_gpu_kernel<<<cuda_get_num_blocks(oshape.Size()), mshadow::cuda::kBaseThreadNum,
                                0, mshadow::Stream<gpu>::GetStream(s)>>>(
                                    oshape.Size(), in_data, ishape[1], ishape[2], oshape[2],
-                                   kernel[0], stride[0], pad[0], req_type, out_data, true);
+                                   kernel[0], stride[0], pad[0], out_data, true);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_1d_gpu_kernel);
     } else if (pool_enum::kSumPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
       pool_sum_1d_gpu_kernel<<<cuda_get_num_blocks(oshape.Size()), mshadow::cuda::kBaseThreadNum,
                                0, mshadow::Stream<gpu>::GetStream(s)>>>(
                                    oshape.Size(), in_data, ishape[1], ishape[2], oshape[2],
-                                   kernel[0], stride[0], pad[0], req_type, out_data);
+                                   kernel[0], stride[0], pad[0], out_data);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_1d_gpu_kernel);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
@@ -641,7 +642,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                                0, mshadow::Stream<gpu>::GetStream(s)>>>(
                                    oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
                                    oshape[2], oshape[3], kernel[0], kernel[1],
-                                   stride[0], stride[1], pad[0], pad[1], req_type, out_data);
+                                   stride[0], stride[1], pad[0], pad[1], out_data);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_max_2d_gpu_kernel);
     } else if (pool_enum::kAvgPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
@@ -649,7 +650,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                                0, mshadow::Stream<gpu>::GetStream(s)>>>(
                                    oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
                                    oshape[2], oshape[3], kernel[0], kernel[1],
-                                   stride[0], stride[1], pad[0], pad[1], req_type, out_data, true);
+                                   stride[0], stride[1], pad[0], pad[1], out_data, true);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_2d_gpu_kernel);
     } else if (pool_enum::kSumPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
@@ -657,7 +658,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                                0, mshadow::Stream<gpu>::GetStream(s)>>>(
                                    oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
                                    oshape[2], oshape[3], kernel[0], kernel[1],
-                                   stride[0], stride[1], pad[0], pad[1], req_type, out_data);
+                                   stride[0], stride[1], pad[0], pad[1], out_data);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_2d_gpu_kernel);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
@@ -670,8 +671,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                                    oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
                                    ishape[4], oshape[2], oshape[3], oshape[4],
                                    kernel[0], kernel[1], kernel[2], stride[0],
-                                   stride[1], stride[2], pad[0], pad[1], pad[2], req_type,
-                                   out_data);
+                                   stride[1], stride[2], pad[0], pad[1], pad[2], out_data);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_max_3d_gpu_kernel);
     } else if (pool_enum::kAvgPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
@@ -680,7 +680,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                                    oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
                                    ishape[4], oshape[2], oshape[3], oshape[4], kernel[0],
                                    kernel[1], kernel[2], stride[0], stride[1], stride[2],
-                                   pad[0], pad[1], pad[2], req_type, out_data, true);
+                                   pad[0], pad[1], pad[2], out_data, true);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_3d_gpu_kernel);
     } else if (pool_enum::kSumPooling == pool_type) {
       // NOLINT_NEXT_LINE(whitespace/operators)
@@ -689,7 +689,7 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
                                    oshape.Size(), in_data, ishape[1], ishape[2], ishape[3],
                                    ishape[4], oshape[2], oshape[3], oshape[4], kernel[0],
                                    kernel[1], kernel[2], stride[0], stride[1], stride[2],
-                                   pad[0], pad[1], pad[2], req_type, out_data);
+                                   pad[0], pad[1], pad[2], out_data);
       MSHADOW_CUDA_POST_KERNEL_CHECK(pool_sum_3d_gpu_kernel);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;

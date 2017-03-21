@@ -61,6 +61,7 @@
 
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
+#include <algorithm>
 #include "../mxnet_op.h"
 
 namespace mxnet {
@@ -80,7 +81,7 @@ enum PoolingOpPadConventionType {kValid, kFull};
 template<typename DType>
 inline void pool_max_1d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
-                            OpReqType req_type, DType* out_data) {
+                            DType* out_data) {
   using mshadow::red::limits::MinValue;
   const int width = ishape[2];
   const int pooled_width = oshape[2];
@@ -101,7 +102,7 @@ inline void pool_max_1d_cpu(const DType* in_data, const TShape& ishape, const TS
             max_val = in_data[w];
           }
         }
-        KERNEL_ASSIGN(out_data[pw], req_type, max_val);
+        out_data[pw] = max_val;
       }
       in_data += in_data_offset;
       out_data += out_data_offset;
@@ -116,7 +117,7 @@ inline void pool_max_1d_cpu(const DType* in_data, const TShape& ishape, const TS
 template<typename DType>
 inline void pool_max_2d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
-                            OpReqType req_type, DType* out_data) {
+                            DType* out_data) {
   using mshadow::red::limits::MinValue;
   const int height = ishape[2], width = ishape[3];
   const int pooled_height = oshape[2], pooled_width = oshape[3];
@@ -139,13 +140,13 @@ inline void pool_max_2d_cpu(const DType* in_data, const TShape& ishape, const TS
           DType max_val = MinValue<DType>();
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
-              const int in_index= h * width + w;
+              const int in_index = h * width + w;
               if (in_data[in_index] > max_val) {
                 max_val = in_data[in_index];
               }
             }
           }
-          KERNEL_ASSIGN(out_data[pool_index], req_type, max_val);
+          out_data[pool_index] = max_val;
         }
       }
       in_data += in_data_offset;
@@ -161,7 +162,7 @@ inline void pool_max_2d_cpu(const DType* in_data, const TShape& ishape, const TS
 template<typename DType>
 inline void pool_max_3d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
-                            OpReqType req_type, DType* out_data) {
+                            DType* out_data) {
   using mshadow::red::limits::MinValue;
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
   const int pooled_depth = oshape[2], pooled_height = oshape[3], pooled_width = oshape[4];
@@ -189,14 +190,14 @@ inline void pool_max_3d_cpu(const DType* in_data, const TShape& ishape, const TS
             for (int d = dstart; d < dend; ++d) {
               for (int h = hstart; h < hend; ++h) {
                 for (int w = wstart; w < wend; ++w) {
-                  const int in_index= (d * height + h) * width + w;
+                  const int in_index = (d * height + h) * width + w;
                   if (in_data[in_index] > max_val) {
                     max_val = in_data[in_index];
                   }
                 }
               }
             }
-            KERNEL_ASSIGN(out_data[pool_index], req_type, max_val);
+            out_data[pool_index] = max_val;
           }
         }
       }
@@ -213,7 +214,7 @@ inline void pool_max_3d_cpu(const DType* in_data, const TShape& ishape, const TS
 template<typename DType>
 inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
-                            OpReqType req_type, DType* out_data, bool getAvg = false) {
+                            DType* out_data, bool getAvg = false) {
   const int width = ishape[2];
   const int pooled_width = oshape[2];
   const int kernel_w = kernel[0];
@@ -233,7 +234,7 @@ inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TS
         for (int w = wstart; w < wend; ++w) {
           sum += in_data[w];
         }
-        KERNEL_ASSIGN(out_data[pw], req_type, getAvg? sum/pool_size : sum);
+        out_data[pw] = (getAvg? sum/pool_size : sum);
       }
       in_data += in_data_offset;
       out_data += out_data_offset;
@@ -248,7 +249,7 @@ inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TS
 template<typename DType>
 inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
-                            OpReqType req_type, DType* out_data, bool getAvg = false) {
+                            DType* out_data, bool getAvg = false) {
   const int height = ishape[2], width = ishape[3];
   const int pooled_height = oshape[2], pooled_width = oshape[3];
   const int kernel_h = kernel[0], kernel_w = kernel[1];
@@ -275,7 +276,7 @@ inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TS
               sum += in_data[h*width+w];
             }
           }
-          KERNEL_ASSIGN(out_data[ph*pooled_width+pw], req_type, getAvg? sum/pool_size : sum);
+          out_data[ph*pooled_width+pw] = (getAvg? sum/pool_size : sum);
         }
       }
       in_data += in_data_offset;
@@ -291,7 +292,7 @@ inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TS
 template<typename DType>
 inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
-                            OpReqType req_type, DType* out_data, bool getAvg = false) {
+                            DType* out_data, bool getAvg = false) {
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
   const int pooled_depth = oshape[2], pooled_height = oshape[3], pooled_width = oshape[4];
   const int kernel_d = kernel[0], kernel_h = kernel[1], kernel_w = kernel[2];
@@ -325,8 +326,7 @@ inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TS
                 }
               }
             }
-            KERNEL_ASSIGN(out_data[(pd*pooled_height+ph)*pooled_width+pw],
-                          req_type, getAvg? sum/pool_size : sum);
+            out_data[(pd*pooled_height+ph)*pooled_width+pw] = (getAvg? sum/pool_size : sum);
           }
         }
       }
@@ -647,7 +647,7 @@ inline void unpool_sum_3d_cpu(const DType* out_grad, const TShape& ishape,
  * \param pad pad shape
  * \param stride stride shape
  * \param pool_type supported pooling type: max, avg, sum
- * \param req_type operator request type: kNullOp, kNullWriteInplace, kNullWriteTo, kNullAddTo
+ * \param req_type operator request type, only support kWriteTo for now
  * \param out_data pointer of the output tensor data in the format of NCW, NCHW, or NCDHW
  */
 template<typename DType>
@@ -655,33 +655,34 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
                  const TShape& stride, const int pool_type, OpReqType req_type,
                  DType* out_data) {
+  CHECK_EQ(req_type, kWriteTo) << "Only support req=kWriteTo in pooling operations";
   if (kernel.ndim() == 1) {
     if (pool_enum::kMaxPooling == pool_type) {
-      pool_max_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+      pool_max_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
     } else if (pool_enum::kAvgPooling == pool_type) {
-      pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data, true);
+      pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data, true);
     } else if (pool_enum::kSumPooling == pool_type) {
-      pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+      pool_sum_1d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
   } else if (kernel.ndim() == 2) {
     if (pool_enum::kMaxPooling == pool_type) {
-      pool_max_2d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+      pool_max_2d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
     } else if (pool_enum::kAvgPooling == pool_type) {
-      pool_sum_2d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data, true);
+      pool_sum_2d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data, true);
     } else if (pool_enum::kSumPooling == pool_type) {
-      pool_sum_2d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+      pool_sum_2d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
   } else if (kernel.ndim() == 3) {
     if (pool_enum::kMaxPooling == pool_type) {
-      pool_max_3d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+      pool_max_3d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
     } else if (pool_enum::kAvgPooling == pool_type) {
-      pool_sum_3d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data, true);
+      pool_sum_3d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data, true);
     } else if (pool_enum::kSumPooling == pool_type) {
-      pool_sum_3d_cpu(in_data, ishape, oshape, kernel, pad, stride, req_type, out_data);
+      pool_sum_3d_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
     } else {
       LOG(FATAL) << "Unknown pooling type " << pool_type;
     }
