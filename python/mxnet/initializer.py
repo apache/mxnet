@@ -461,25 +461,28 @@ class FusedRNN(Initializer):
         should be the same with arguments passed to FusedRNNCell.
     bidirectional : bool
         should be the same with arguments passed to FusedRNNCell.
+    forget_bias : float
+        should be the same with arguments passed to FusedRNNCell.
     """
-    def __init__(self, init, num_hidden, num_layers, forget_bias, mode, bidirectional=False):
+    def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False, forget_bias=1.0):
         if not isinstance(init, Initializer):
             klass, kwargs = json.loads(init)
             init = _INITIALIZER_REGISTRY[klass.lower()](**kwargs)
         super(FusedRNN, self).__init__(init=init.dumps(), num_hidden=num_hidden,
-                                       num_layers=num_layers, forget_bias=forget_bias,
-                                       mode=mode, bidirectional=bidirectional)
+                                       num_layers=num_layers, mode=mode,
+                                       bidirectional=bidirectional, forget_bias=forget_bias)
+        self._init = init
         self._num_hidden = num_hidden
         self._num_layers = num_layers
-        self._forget_bias = forget_bias
-        self._bidirectional = bidirectional
         self._mode = mode
-        self._init = init
+        self._bidirectional = bidirectional
+        self._forget_bias = forget_bias
 
     def _init_weight(self, _, arr):
         from .rnn import rnn_cell
-        cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers, self._forget_bias,
-                                     self._mode, self._bidirectional, prefix='')
+        cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
+                                     self._mode, self._bidirectional,
+                                     forget_bias=self._forget_bias, prefix='')
         args = cell.unpack_weights({'parameters': arr})
         for name in args:
             desc = InitDesc(name)

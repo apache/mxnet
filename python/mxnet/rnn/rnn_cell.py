@@ -516,8 +516,8 @@ class FusedRNNCell(BaseRNNCell):
     Parameters
     ----------
     """
-    def __init__(self, num_hidden, num_layers=1, forget_bias=1.0, mode='lstm', bidirectional=False,
-                 dropout=0., get_next_state=False, initializer=None,
+    def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
+                 dropout=0., get_next_state=False, initializer=None, forget_bias=1.0,
                  prefix=None, params=None):
         if prefix is None:
             prefix = '%s_'%mode
@@ -532,7 +532,7 @@ class FusedRNNCell(BaseRNNCell):
             initializer = init.Xavier(factor_type='in', magnitude=2.34)
         if not isinstance(initializer, init.FusedRNN):
             initializer = init.FusedRNN( # pylint: disable=redefined-variable-type
-                initializer, num_hidden, num_layers, forget_bias, mode, bidirectional)
+                initializer, num_hidden, num_layers, mode, bidirectional, forget_bias)
         self._parameter = self.params.get('parameters', init=initializer)
 
         self._directions = ['l', 'r'] if bidirectional else ['l']
