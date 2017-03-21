@@ -115,6 +115,14 @@ class DataBatch(object):
         self.provide_data = provide_data
         self.provide_label = provide_label
 
+    def __str__(self):
+        data_shapes = [d.shape for d in self.data]
+        label_shapes = [l.shape for l in self.label]
+        return "{}: data shapes: {} label shapes: {}".format(
+            self.__class__.__name__,
+            data_shapes,
+            label_shapes)
+
 class DataIter(object):
     """The base class of a data iterator
 
