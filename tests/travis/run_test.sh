@@ -92,6 +92,7 @@ if [ ${TASK} == "r_test" ]; then
 fi
 
 if [ ${TASK} == "python_test" ]; then
+    echo "USE_PROFILER=1" >> config.mk
     make all || exit -1
     # use cached dir for storing data
     rm -rf ${PWD}/data
