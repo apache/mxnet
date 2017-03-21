@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas as pd
 import os
 import time as time
@@ -28,13 +29,13 @@ def gen_sub(predictions,test_lst_path="test.lst",submission_path="submission.csv
     df = pd.DataFrame(predictions,columns = header, index=img_lst)
     df.index.name = 'image'
     
-    print "Saving csv to %s" % submission_path
+    print("Saving csv to %s" % submission_path)
     df.to_csv(submission_path)
      
-    print "Compress with gzip"
+    print("Compress with gzip")
     os.system("gzip -f %s" % submission_path)
     
-    print "  stored in %s.gz" % submission_path
+    print("  stored in %s.gz" % submission_path)
 
    
 

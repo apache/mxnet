@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy
 
 class _StreamVariance(object):
@@ -70,10 +71,10 @@ class FeatureStats(object):
 
             samples = featureFileHandler.Read(featureFile)
 
-            print 'Process file : "{}"'.format(featureFile)
+            print('Process file : "{}"'.format(featureFile))
             stats.AddX(samples)
 
-        print 'Read {} samples'.format(stats.GetNumberOfSamples())
+        print('Read {} samples'.format(stats.GetNumberOfSamples()))
         self.mean           = stats.GetMean()
         self.invStd         = stats.GetInvStandardDeviation()
         self.populationSize = stats.GetNumberOfSamples()

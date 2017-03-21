@@ -1,3 +1,4 @@
+from __future__ import print_function
 import struct
 import numpy as num
 import sys
@@ -24,7 +25,7 @@ class KaldiParser(object):
         err, tok = self.next_token()
         if err is not None:
             self.f.seek(pos, 0)
-            print err, tok
+            print(err, tok)
             return None
         return tok.lower()
 
@@ -75,7 +76,7 @@ class KaldiParser(object):
                 dtype = 'a'
                 dsize = 1
             else:
-                print "unrecognized type"
+                print("unrecognized type")
                 return None
 
             assert(size == dsize)
@@ -132,7 +133,7 @@ def file2nnet_binary(filename):
     while True:
         tok = parser.try_next_token()
         if tok is None:
-            print "error"
+            print("error")
             break
         if tok == "<nnet>":
             continue
@@ -159,7 +160,7 @@ def file2nnet_binary(filename):
             #print "Done!"
             break
         else:
-            print "unrecognized token", tok
+            print("unrecognized token", tok)
             break
 
     if layer is not None:
@@ -173,9 +174,9 @@ def file2nnet_binary(filename):
 if __name__ == '__main__':
     filename = "exp/dnn4_pretrain-dbn_dnn/nnet_6.dbn_dnn.init"
     #filename = "/usr/users/leoliu/s5/exp/dnn4_pretrain-dbn_dnn/final.feature_transform"
-    print filename
+    print(filename)
 
-    print "isBinary:", fileIsBinary(filename)
+    print("isBinary:", fileIsBinary(filename))
     a = file2nnet_binary(filename)
 
 
@@ -184,7 +185,7 @@ if __name__ == '__main__':
     while True:
         err, tok = parser.next_token()
         if err != KaldiParser.NO_SPACE_AFTER and tok is not None:
-            print err, tok
+            print(err, tok)
     """
 
 """
