@@ -165,7 +165,7 @@ Operator* MultiBoxDetectionProp::CreateOperatorEx(Context ctx,
 }
 
 DMLC_REGISTER_PARAMETER(MultiBoxDetectionParam);
-MXNET_REGISTER_OP_PROPERTY(MultiBoxDetection, MultiBoxDetectionProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxDetection, MultiBoxDetectionProp)
 .describe("Convert multibox detection predictions.")
 .add_argument("cls_prob", "Symbol", "Class probabilities.")
 .add_argument("loc_pred", "Symbol", "Location regression predictions.")
