@@ -460,11 +460,23 @@ class BaseModule(object):
         for epoch in range(begin_epoch, num_epoch):
             tic = time.time()
             eval_metric.reset()
-            for nbatch, data_batch in enumerate(train_data):
+            nbatch = 0
+            data_iter = iter(train_data)
+            end_of_batch = False
+            next_data_batch = data_iter.next()
+            while not end_of_batch:
+                data_batch = next_data_batch
                 if monitor is not None:
                     monitor.tic()
                 self.forward_backward(data_batch)
                 self.update()
+                try:
+                    # pre fetch next batch
+                    next_data_batch = data_iter.next()
+                    self.prepare(next_data_batch)
+                except StopIteration:
+                    end_of_batch = True
+
                 self.update_metric(eval_metric, data_batch.label)
 
                 if monitor is not None:
@@ -476,6 +488,7 @@ class BaseModule(object):
                                                      locals=locals())
                     for callback in _as_list(batch_end_callback):
                         callback(batch_end_params)
+                nbatch += 1
 
             # one epoch of training is finished
             for name, val in eval_metric.get_name_value():
@@ -702,6 +715,17 @@ class BaseModule(object):
     ################################################################################
     # Computations
     ################################################################################
+    def prepare(self, data_batch):
+        '''Prepare the module for processing a data batch.
+
+        Usually involves switching bucket and reshaping.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+        '''
+        pass
+
     def forward(self, data_batch, is_train=None):
         """Forward computation.
 

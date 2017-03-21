@@ -1,5 +1,6 @@
 import numpy as np
 import mxnet as mx
+import os
 
 
 def reldiff(a, b):
@@ -60,7 +61,13 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     assert reldiff(rhs_grad.asnumpy(), rhs_grad2) < 1e-6
 
 
-def test_bind():
+def test_bind(disable_bulk_exec=False):
+    if disable_bulk_exec:
+        prev_fwd_var = os.environ.get("MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN", "1")
+        prev_bwd_var = os.environ.get("MXNET_EXEC_BULK_BWD_TRAIN", "1")
+        os.environ["MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN"] = "0"
+        os.environ["MXNET_EXEC_BULK_BWD_TRAIN"] = "0"
+
     np.random.seed(0)
     nrepeat = 10
     maxdim = 4
@@ -87,6 +94,9 @@ def test_bind():
                                     lambda g, x, y: (g * (x<y), g * (y<x)),
                                     dim,
                                     sf=mx.symbol.minimum)
+    if disable_bulk_exec:
+       os.environ["MXNET_EXEC_BULK_FWD_THRESHOLD_TRAIN"] = prev_fwd_var
+       os.environ["MXNET_EXEC_BULK_BWD_TRAIN"] = prev_bwd_var
 
 def test_dot():
     np.random.seed(0)
@@ -130,5 +140,6 @@ def test_reshape():
     assert np.all(exe.outputs[0].asnumpy() == 4)
 
 if __name__ == "__main__":
-    test_bind()
+    test_bind(disable_bulk_exec=False)
+    test_bind(disable_bulk_exec=True)
     test_reshape()

@@ -262,7 +262,7 @@ class Module(BaseModule):
                 else:
                     if not allow_missing:
                         raise RuntimeError("%s is not presented" % name)
-                    if initializer != None:
+                    if initializer is not None:
                         initializer(name, arr)
             else:
                 initializer(name, arr)

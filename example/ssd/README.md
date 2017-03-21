@@ -45,14 +45,10 @@ sudo apt-get install python-opencv python-matplotlib python-numpy
 sudo pip install easydict
 ```
 
-* Build MXNet: Follow the official instructions, make sure the extra operators for this example is enabled
+* Build MXNet: Follow the official instructions
 ```
 # for Ubuntu/Debian
 cp make/config.mk ./config.mk
-# modify it if with vim or whatever editor
-EXTRA_OPERATORS = example/ssd/operator
-# or add a line if you have other EXTRA_OPERATORS directory
-EXTRA_OPERATORS += example/ssd/operator
 ```
 Remember to enable CUDA if you want to be able to train, since CPU training is
 insanely slow. Using CUDNN is optional.
