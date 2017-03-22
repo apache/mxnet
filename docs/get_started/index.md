@@ -153,16 +153,7 @@ Instructions will come soon!
 
 <!-- <h2 id="install-inst-title"></h2> -->
 
-<div class="install-inst linux_python_pre-built-binaries mac-os-x_python_pre-built-binaries">
-
-There are multiple pre-builds based on different drivers:
-
-- **default**: supports CPU, suits for fast developing.
-- **mkl-dnn**: compiled with [MKL-DNN](https://github.com/01org/mkl-dnn) to accelerate
-  the Intel CPU performance.
-- **cuda**: compiled with both [CUDA](https://developer.nvidia.com/cuda-toolkit)
-  and [cuDNN](https://developer.nvidia.com/cudnn) to accelerate the performance on
-  Nvidia GPUs. It requires CUDA to be installed (cuDNN is not required).
+<div class="install-inst linux_python_pre-built-binaries"
 
 <h3>Install with pip</h3>
 
@@ -173,7 +164,16 @@ wget https://bootstrap.pypa.io/get-pip.py
 sudo python get-pip.py
 ```
 
-Then use one of following commands to install the desired release:
+There are multiple pre-builds based on different drivers:
+
+- **default**: supports CPU, suits for fast developing.
+- **mkl-dnn**: compiled with [MKL-DNN](https://github.com/01org/mkl-dnn) to accelerate
+  the Intel CPU performance.
+- **cuda**: compiled with both [CUDA](https://developer.nvidia.com/cuda-toolkit)
+  and [cuDNN](https://developer.nvidia.com/cudnn) to accelerate the performance on
+  Nvidia GPUs. It requires both CUDA and cuDNN are installed.
+
+Use one of following commands to install the desired release:
 
 ```bash
 pip install mxnet       # default
@@ -198,6 +198,24 @@ Trouble shoot:
   first removing the old version by `sudo apt-get purge python-pip`. Next
   install the new version using the above instructions.
 
+</div>
+
+<div class="install-inst mac-os-x_python_pre-built-binaries">
+
+<h3>Install with pip</h3>
+
+First install `pip` if necessary. For example
+
+```bash
+wget https://bootstrap.pypa.io/get-pip.py
+sudo python get-pip.py
+```
+
+Then install the CPU version by
+
+```bash
+pip install mxnet
+```
 </div>
 
 <div class="install-inst mac-os-x_python_docker
