@@ -899,11 +899,18 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     on_complete();
   };
 #if MXNET_USE_PROFILER
+    opr_names.pop_back();
     opr_names += "]";
+    // the lifetime of `opr_names.c_str()` is same with opr_names
+    // you need to copy it out. (potential memory leak risk)
+    char *p_opr_name = new char[opr_names.size() + 1];
+    memcpy(p_opr_name, opr_names.c_str(), opr_names.size() + 1);
+#else
+    char *p_opr_name = nullptr;
 #endif
   ret.opr = Engine::Get()->NewOperator(
       exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-      PROFILER_MESSAGE(opr_names.c_str()));
+      PROFILER_MESSAGE(p_opr_name));
   return ret;
 }
 }  // namespace exec

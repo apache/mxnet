@@ -70,7 +70,12 @@ stage('Build') {
     node {
       ws('workspace/build-cpu') {
         init_git()
-        make("cpu", "USE_BLAS=openblas -j\$(nproc)")
+        def flag = """ \
+USE_PROFILER=1                \
+USE_BLAS=openblas             \
+-j\$(nproc)
+"""
+        make("cpu", flag)
         pack_lib('cpu')
       }
     }
@@ -80,6 +85,7 @@ stage('Build') {
       ws('workspace/build-gpu') {
         init_git()
         def flag = """ \
+USE_PROFILER=1                \
 USE_BLAS=openblas             \
 USE_CUDA=1                    \
 USE_CUDA_PATH=/usr/local/cuda \
@@ -104,9 +110,10 @@ USE_CUDNN=1                   \
       ws('workspace/build-mklml') {
         init_git()
         def flag = """ \
-USE_BLAS=openblas          \
-USE_MKL2017=1              \
-USE_MKL2017_EXPERIMENTAL=1 \
+USE_PROFILER=1                \
+USE_BLAS=openblas             \
+USE_MKL2017=1                 \
+USE_MKL2017_EXPERIMENTAL=1    \
 USE_CUDA=1                    \
 USE_CUDA_PATH=/usr/local/cuda \
 USE_CUDNN=1                   \
