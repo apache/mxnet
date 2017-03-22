@@ -776,7 +776,7 @@ class DropoutCell(BaseRNNCell):
         self.reset()
         inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, symbol.Symbol):
-            return self(inputs, states)
+            return self(inputs, [])
         else:
             return super(DropoutCell, self).unroll(
                 length, inputs, begin_state=begin_state, layout=layout,
