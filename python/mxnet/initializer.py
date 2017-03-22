@@ -71,6 +71,7 @@ class Initializer(object):
         init = desc.attrs.get('__init__', "")
 
         if init:
+            # when calling Variable initializer
             klass, kwargs = json.loads(init)
             _INITIALIZER_REGISTRY[klass.lower()](**kwargs)._init_weight(desc, arr)
         else:
@@ -163,7 +164,7 @@ class Initializer(object):
         arr[:] = 0.0
 
     def _init_weight(self, name, arr):
-        """Abstruct method to Initialize weight"""
+        """Abstract method to Initialize weight"""
         raise NotImplementedError("Must override it")
 
     def _init_default(self, name, _):
@@ -422,8 +423,31 @@ class Bilinear(Initializer):
 
 
 @register
+class LSTMBias(Initializer):
+    """Initialize all bias of an LSTMCell to 0.0 except for
+    the forget gate whose bias is set to custom value.
+
+    Parameters
+    ----------
+    forget_bias: float, bias for the forget gate.
+    Jozefowicz et al. 2015 recommends setting this to 1.0.
+    """
+    def __init__(self, forget_bias):
+        super(LSTMBias, self).__init__(forget_bias=forget_bias)
+        self.forget_bias = forget_bias
+
+    def _init_weight(self, name, arr):
+        arr[:] = 0.0
+        # in the case of LSTMCell the forget gate is the second
+        # gate of the 4 LSTM gates, we modify the according values.
+        num_hidden = int(arr.shape[0] / 4)
+        arr[num_hidden:2*num_hidden] = self.forget_bias
+
+
+@register
 class FusedRNN(Initializer):
-    """Initialze parameters for fused rnn layers
+
+    """Initialize parameters for fused rnn layers
 
     Parameters
     ----------
@@ -437,26 +461,36 @@ class FusedRNN(Initializer):
         should be the same with arguments passed to FusedRNNCell.
     bidirectional : bool
         should be the same with arguments passed to FusedRNNCell.
+    forget_bias : float
+        should be the same with arguments passed to FusedRNNCell.
     """
-    def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False):
+    def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False, forget_bias=1.0):
         if not isinstance(init, Initializer):
             klass, kwargs = json.loads(init)
             init = _INITIALIZER_REGISTRY[klass.lower()](**kwargs)
         super(FusedRNN, self).__init__(init=init.dumps(), num_hidden=num_hidden,
                                        num_layers=num_layers, mode=mode,
-                                       bidirectional=bidirectional)
+                                       bidirectional=bidirectional, forget_bias=forget_bias)
+        self._init = init
         self._num_hidden = num_hidden
         self._num_layers = num_layers
-        self._bidirectional = bidirectional
         self._mode = mode
-        self._init = init
+        self._bidirectional = bidirectional
+        self._forget_bias = forget_bias
 
     def _init_weight(self, _, arr):
         from .rnn import rnn_cell
         cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
-                                     self._mode, self._bidirectional, prefix='')
+                                     self._mode, self._bidirectional,
+                                     forget_bias=self._forget_bias, prefix='')
         args = cell.unpack_weights({'parameters': arr})
         for name in args:
             desc = InitDesc(name)
-            self._init(desc, args[name])
+            # for lstm bias, we use a custom initializer
+            # which adds a bias to the forget gate
+            if self._mode == 'lstm' and name.endswith("f_bias"):
+                args[name][:] = self._forget_bias
+            else:
+                self._init(desc, args[name])
+
         arr[:] = cell.pack_weights(args)['parameters']
