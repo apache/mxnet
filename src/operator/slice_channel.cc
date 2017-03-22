@@ -10,8 +10,10 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<cpu>(SliceChannelParam param) {
-  return new SliceChannelOp<cpu>(param);
+Operator* CreateOp<cpu>(SliceChannelParam param, int dtype) {
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    return new SliceChannelOp<cpu, DType>(param);
+  })
 }
 
 Operator* SliceChannelProp::CreateOperator(Context ctx) const {

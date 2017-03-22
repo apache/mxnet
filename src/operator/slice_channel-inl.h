@@ -42,7 +42,7 @@ struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
   }
 };  // struct SliceChannelParam
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class SliceChannelOp : public Operator {
  public:
   explicit SliceChannelOp(SliceChannelParam param)
@@ -75,9 +75,9 @@ class SliceChannelOp : public Operator {
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    data = in_data[slice_enum::kData].get_with_shape<xpu, 3, real_t>(dshape, s);
+    data = in_data[slice_enum::kData].get_with_shape<xpu, 3, DType>(dshape, s);
     for (int i = 0; i < size_; ++i) {
-      outputs[i] = out_data[i].get_with_shape<xpu, 3, real_t>(slice_shape, s);
+      outputs[i] = out_data[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
     }
     Split(data, &outputs, 1, req);
   }
@@ -111,9 +111,9 @@ class SliceChannelOp : public Operator {
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    grad = in_grad[slice_enum::kData].get_with_shape<xpu, 3, real_t>(dshape, s);
+    grad = in_grad[slice_enum::kData].get_with_shape<xpu, 3, DType>(dshape, s);
     for (int i = 0; i < size_; ++i) {
-      grad_out[i] = out_grad[i].get_with_shape<xpu, 3, real_t>(slice_shape, s);
+      grad_out[i] = out_grad[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
     }
     Concatenate(grad_out, &grad, 1, req[slice_enum::kData]);
   }
@@ -125,7 +125,7 @@ class SliceChannelOp : public Operator {
 
 
 template<typename xpu>
-Operator *CreateOp(SliceChannelParam param);
+Operator *CreateOp(SliceChannelParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -151,6 +151,19 @@ class SliceChannelProp : public OperatorProperty {
 
   int NumOutputs() const override {
     return param_.num_outputs;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override{
+    CHECK_EQ(in_type->size(), 1U);
+    CHECK_EQ(static_cast<int>(out_type->size()), param_.num_outputs);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    for (size_t i = 0; i < out_type->size(); ++i) {
+      (*out_type)[i] = dtype;
+    }
+    return true;
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
