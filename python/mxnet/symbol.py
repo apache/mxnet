@@ -406,7 +406,6 @@ class Symbol(SymbolBase):
         outputs of all of the internal nodes.
 
         Consider the following code:
-        ~~~~
         >>> a = mxnet.sym.var('a')
         >>> b = mxnet.sym.var('b')
         >>> c = a + b
@@ -415,7 +414,6 @@ class Symbol(SymbolBase):
         <Symbol Grouped>
         >>> d.list_outputs()
         ['a', 'b', '_plus4_output']
-        ~~~~
 
         Returns
         -------
@@ -517,13 +515,11 @@ class Symbol(SymbolBase):
 
         Example usage:
         ----------
-        ~~~~
         >>> a = mxnet.sym.var('a')
         >>> b = mxnet.sym.var('b')
         >>> c = a + b
         >>> c.infer_type(a=float32)
         ([numpy.float32, numpy.float32], [numpy.float32], [])
-        ~~~~
 
         Parameters
         ----------
@@ -610,13 +606,11 @@ class Symbol(SymbolBase):
 
         Example usage:
         ----------
-        ~~~~
         >>> a = mxnet.sym.var('a')
         >>> b = mxnet.sym.var('b')
         >>> c = a + b
         >>> c.infer_shape(a=(3,3))
         ([(3L, 3L), (3L, 3L)], [(3L, 3L)], [])
-        ~~~~
 
         Parameters
         ----------

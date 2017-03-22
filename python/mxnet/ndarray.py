@@ -765,8 +765,9 @@ fixed-size items.
         """
         if isinstance(other, NDArray):
             if other.handle is self.handle:
-                warnings.warn('You are attempting to copy an array to itself, are you sure this is what you intended?',
-                              RuntimeWarning)
+                warnings.warn(
+                'You are attempting to copy an array to itself, ' \
+                + 'are you sure this is what you intended?', RuntimeWarning)
                 return
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
@@ -776,7 +777,7 @@ fixed-size items.
             raise TypeError('copyto does not support type ' + str(type(other)))
 
     def copy(self):
-        """Makes a copy of the NDArray on the same context.
+        """Makes a copy of this ``NDArray``, keeping the same context.
 
         Returns
         -------
@@ -908,14 +909,15 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     shape : int or tuple of int
         The shape of the empty array.
     ctx : Context, optional
-        An optional device context. Defaults to the current default context (``mxnet.Context.default_ctx``).
+        An optional device context.
+        Defaults to the current default context (``mxnet.Context.default_ctx``).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
 
     Returns
     -------
     NDArray
-        A created array of the specified shape filled with all ones.
+        A new array of the specified shape filled with all ones.
 
     Examples
     --------
@@ -933,7 +935,7 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     # pylint: enable= no-member, protected-access
 
 def full(shape, val, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, filled with given value.
+    """Returns a new array of given shape and type, filled with the given value ``val``.
 
     Parameters
     --------
@@ -1010,7 +1012,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     Values are generated within the half-open interval [start, stop). In other
     words, the interval includes start but excludes stop. For integer
     arguments, the function is equivalent to the built-in Python function ``range``
-    and to ``numpy.arange``, but returns a NDArray.
+    and to ``numpy.arange``, but returns an ``NDArray``.
 
     Parameters
     ----------
