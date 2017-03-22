@@ -9,7 +9,7 @@ SAVE_MODEL_PATH=.
 # LOAD_MODEL=seqModule-0001.params
 
 java -Xmx4G -cp $CLASSPATH \
-            ml.dmlc.mxnet.examples.module.SequentialModuleEx \
+            ml.dmlc.mxnetexamples.module.SequentialModuleEx \
             --data-dir $DATA_DIR \
             --batch-size 10 \
             --num-epoch 2 \

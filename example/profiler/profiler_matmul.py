@@ -1,3 +1,4 @@
+from __future__ import print_function
 import mxnet as mx
 import argparse
 import os, sys
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     b.copyto(executor.arg_dict['B'])
 
     flag = False
-    print "execution begin"
+    print("execution begin")
     for i in range(args.iter_num):
         if i == args.begin_profiling_iter:
             t0 = time.clock()
@@ -43,7 +44,7 @@ if __name__ == '__main__':
         executor.forward()
         c = executor.outputs[0]
         c.wait_to_read()
-    print "execution end"
+    print("execution end")
     duration = t1 - t0
     print('duration: {0}s'.format(duration))
     print('          {0}ms/operator'.format(duration*1000/args.iter_num))

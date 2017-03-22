@@ -20,8 +20,6 @@ package ml.dmlc.mxnet
 /**
  * Base class of all evaluation metrics
  * @param name Metric name
- *
- * @author Yuan Tang, Yizhi Liu, Depeng Liang
  */
 abstract class EvalMetric(protected val name: String) {
 
@@ -226,8 +224,8 @@ class RMSE extends EvalMetric("rmse") {
  * @param fEval Customized evaluation function.
  * @param name The name of the metric
  */
-class CustomMetric(private val fEval: (NDArray, NDArray) => Float,
-                   override val name: String) extends EvalMetric(name) {
+class CustomMetric(fEval: (NDArray, NDArray) => Float,
+                   name: String) extends EvalMetric(name) {
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.size == preds.size, "labels and predictions should have the same length.")
 

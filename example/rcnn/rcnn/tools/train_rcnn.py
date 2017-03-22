@@ -60,7 +60,7 @@ def train_rcnn(network, dataset, image_set, root_path, dataset_path,
     arg_shape_dict = dict(zip(sym.list_arguments(), arg_shape))
     out_shape_dict = dict(zip(sym.list_outputs(), out_shape))
     aux_shape_dict = dict(zip(sym.list_auxiliary_states(), aux_shape))
-    print 'output shape'
+    print('output shape')
     pprint.pprint(out_shape_dict)
 
     # load and initialize params
@@ -115,7 +115,7 @@ def train_rcnn(network, dataset, image_set, root_path, dataset_path,
     lr_epoch_diff = [epoch - begin_epoch for epoch in lr_epoch if epoch > begin_epoch]
     lr = base_lr * (lr_factor ** (len(lr_epoch) - len(lr_epoch_diff)))
     lr_iters = [int(epoch * len(roidb) / batch_size) for epoch in lr_epoch_diff]
-    print 'lr', lr, 'lr_epoch_diff', lr_epoch_diff, 'lr_iters', lr_iters
+    print('lr', lr, 'lr_epoch_diff', lr_epoch_diff, 'lr_iters', lr_iters)
     lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(lr_iters, lr_factor)
     # optimizer
     optimizer_params = {'momentum': 0.9,
@@ -166,7 +166,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print 'Called with argument:', args
+    print('Called with argument:', args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     train_rcnn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
                args.frequent, args.kvstore, args.work_load_list, args.no_flip, args.no_shuffle, args.resume,

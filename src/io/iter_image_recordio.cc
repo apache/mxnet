@@ -223,8 +223,8 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
     }
   }
 #else
-      LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
-#endif
+  LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
+#endif  // MXNET_USE_OPENCV
   return true;
 }
 
@@ -317,7 +317,15 @@ class ImageRecordIter : public IIterator<DataInst> {
 
 // OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
-.describe("Create iterator for dataset packed in recordio.")
+.describe(R"code(Iterating on image RecordIO files
+
+Read images batches from RecordIO files with a rich of data augmentation
+options.
+
+One can use ``tools/im2rec.py`` to pack individual image files into RecordIO
+files.
+
+)code" ADD_FILELINE)
 .add_arguments(ImageRecParserParam::__FIELDS__())
 .add_arguments(ImageRecordParam::__FIELDS__())
 .add_arguments(BatchParam::__FIELDS__())
@@ -333,7 +341,12 @@ MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
 
 // OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter_v1)
-.describe("Create iterator for dataset packed in recordio.")
+.describe(R"code(Iterating on image RecordIO files
+
+This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
+the data type instead of ``float``.
+
+)code" ADD_FILELINE)
 .add_arguments(ImageRecParserParam::__FIELDS__())
 .add_arguments(ImageRecordParam::__FIELDS__())
 .add_arguments(BatchParam::__FIELDS__())

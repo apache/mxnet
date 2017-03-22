@@ -31,9 +31,9 @@ import ml.dmlc.mxnet.{NDArray, Optimizer}
  * @param clipGradient clip gradient in range [-clip_gradient, clip_gradient]
  * @param wd L2 regularization coefficient add to all the weights
  */
-class AdaDelta(var rho: Float = 0.05f, val rescaleGradient: Float = 1.0f,
-               val epsilon: Float = 1e-8f, val wd: Float = 0.0f,
-               val clipGradient: Float = 0f) extends Optimizer {
+class AdaDelta(rho: Float = 0.05f, rescaleGradient: Float = 1.0f,
+               epsilon: Float = 1e-8f, wd: Float = 0.0f,
+               clipGradient: Float = 0f) extends Optimizer {
 
   /**
    * Update the parameters.
