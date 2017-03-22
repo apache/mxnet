@@ -85,9 +85,7 @@ class Storage {
 
  private:
   std::mutex cpu_mutex_;
-#if MXNET_USE_CUDA
   std::mutex gpu_mutex_;
-#endif
 };  // class Storage
 }  // namespace mxnet
 #endif  // MXNET_STORAGE_H_
