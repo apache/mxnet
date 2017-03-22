@@ -552,8 +552,8 @@ def check_rnn_consistency(cell1, cell2):
     mod2.set_params(args, auxs)
 
     batch=mx.io.DataBatch(data=[mx.random.uniform(shape=dshape)], label=[])
-    mod1.forward(batch)
-    mod2.forward(batch)
+    mod1.forward(batch, is_train=False)
+    mod2.forward(batch, is_train=False)
 
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
@@ -631,9 +631,11 @@ def test_bidirectional():
 
 def test_unfuse():
     for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
-        fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode=mode,
-                prefix='test_%s'%mode,
-                bidirectional=True)
+        fused = mx.rnn.FusedRNNCell(
+            100, num_layers=2, mode=mode,
+            prefix='test_%s'%mode,
+            bidirectional=True,
+            dropout=0.5)
 
         stack = fused.unfuse()
 

@@ -8,7 +8,51 @@ from __future__ import print_function
 import warnings
 
 from .. import symbol, init, ndarray
-from ..base import string_types
+from ..base import string_types, numeric_types
+
+
+def _cells_state_shape(cells):
+    return sum([c.state_shape for c in cells], [])
+
+def _cells_begin_state(cells, **kwargs):
+    return sum([c.begin_state(**kwargs) for c in cells], [])
+
+def _cells_unpack_weights(cells, args):
+    for cell in cells:
+        args = cell.unpack_weights(args)
+    return args
+
+def _cells_pack_weights(cells, args):
+    for cell in cells:
+        args = cell.pack_weights(args)
+    return args
+
+def _normalize_sequence(length, inputs, layout, merge, in_layout=None):
+    assert inputs is not None, \
+        "unroll(inputs=None) has been deprecated. " \
+        "Please create input variables outside unroll."
+
+    axis = layout.find('T')
+    in_axis = in_layout.find('T') if in_layout is not None else axis
+    if isinstance(inputs, symbol.Symbol):
+        if merge is False:
+            assert len(inputs.list_outputs()) == 1, \
+                "unroll doesn't allow grouped symbol as input. Please convert " \
+                "to list with list(inputs) first or let unroll handle splitting."
+            inputs = list(symbol.split(inputs, axis=in_axis, num_outputs=length,
+                                       squeeze_axis=1))
+    else:
+        assert length is None or len(inputs) == length
+        if merge is True:
+            inputs = [symbol.expand_dims(i, axis=axis) for i in inputs]
+            inputs = symbol.Concat(*inputs, dim=axis)
+            in_axis = axis
+
+    if isinstance(inputs, symbol.Symbol) and axis != in_axis:
+        inputs = symbol.swapaxes(inputs, dim0=axis, dim1=in_axis)
+
+    return inputs, axis
+
 
 class RNNParams(object):
     """Container for holding variables.
@@ -102,7 +146,7 @@ class BaseRNNCell(object):
     @property
     def _gate_names(self):
         """name(s) of gates"""
-        return ('',)
+        return ()
 
     def begin_state(self, func=symbol.zeros, **kwargs):
         """Initial state for this cell.
@@ -155,6 +199,8 @@ class BaseRNNCell(object):
             this cell unpacked.
         """
         args = args.copy()
+        if not self._gate_names:
+            return args
         h = self._num_hidden
         for group_name in ['i2h', 'h2h']:
             weight = args.pop('%s%s_weight'%(self._prefix, group_name))
@@ -182,6 +228,8 @@ class BaseRNNCell(object):
             this cell packed.
         """
         args = args.copy()
+        if not self._gate_names:
+            return args
         for group_name in ['i2h', 'h2h']:
             weight = []
             bias = []
@@ -194,8 +242,7 @@ class BaseRNNCell(object):
             args['%s%s_bias'%(self._prefix, group_name)] = ndarray.concatenate(bias)
         return args
 
-    def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=None):
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
         """Unroll an RNN cell across time steps.
 
         Parameters
@@ -211,16 +258,10 @@ class BaseRNNCell(object):
             If inputs is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
-
-            If inputs is None, Placeholder variables are
-            automatically created.
         begin_state : nested list of Symbol
             input states. Created by begin_state()
             or output state of another cell. Created
             from begin_state() if None.
-        input_prefix : str
-            prefix for automatically created input
-            placehodlers.
         layout : str
             layout of input symbol. Only used if inputs
             is a single Symbol.
@@ -241,18 +282,7 @@ class BaseRNNCell(object):
         """
         self.reset()
 
-        axis = layout.find('T')
-        if inputs is None:
-            inputs = [symbol.Variable('%st%d_data'%(input_prefix, i))
-                      for i in range(length)]
-        elif isinstance(inputs, symbol.Symbol):
-            assert len(inputs.list_outputs()) == 1, \
-                "unroll doesn't allow grouped symbol as input. Please " \
-                "convert to list first or let unroll handle slicing"
-            inputs = symbol.SliceChannel(inputs, axis=axis, num_outputs=length,
-                                         squeeze_axis=1)
-        else:
-            assert len(inputs) == length
+        inputs, _ = _normalize_sequence(length, inputs, layout, False)
         if begin_state is None:
             begin_state = self.begin_state()
 
@@ -262,9 +292,8 @@ class BaseRNNCell(object):
             output, states = self(inputs[i], states)
             outputs.append(output)
 
-        if merge_outputs:
-            outputs = [symbol.expand_dims(i, axis=axis) for i in outputs]
-            outputs = symbol.Concat(*outputs, dim=axis)
+        outputs, _ = _normalize_sequence(None, outputs, layout, merge_outputs)
+
         return outputs, states
 
     #pylint: disable=no-self-use
@@ -303,31 +332,13 @@ class RNNCell(BaseRNNCell):
 
     @property
     def state_shape(self):
-        """shape(s) of states"""
         return [(0, self._num_hidden)]
 
     @property
     def _gate_names(self):
-        """name(s) of gates"""
-        return ['']
+        return ('',)
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
-
-        Parameters
-        ----------
-        inputs : sym.Variable
-            input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
-
-        Returns
-        -------
-        output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
-        """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
@@ -370,31 +381,13 @@ class LSTMCell(BaseRNNCell):
 
     @property
     def state_shape(self):
-        """shape(s) of states"""
         return [(0, self._num_hidden), (0, self._num_hidden)]
 
     @property
     def _gate_names(self):
-        """name(s) of gates"""
         return ['_i', '_f', '_c', '_o']
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
-
-        Parameters
-        ----------
-        inputs : sym.Variable
-            input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
-
-        Returns
-        -------
-        output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
-        """
         self._counter += 1
         name = '%st%d_'%(self._prefix, self._counter)
         i2h = symbol.FullyConnected(data=inputs, weight=self._iW, bias=self._iB,
@@ -448,31 +441,13 @@ class GRUCell(BaseRNNCell):
 
     @property
     def state_shape(self):
-        """shape(s) of states"""
         return [(0, self._num_hidden)]
 
     @property
     def _gate_names(self):
-        """name(s) of gates"""
         return ['_r', '_z', '_o']
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
-
-        Parameters
-        ----------
-        inputs : sym.Variable
-            input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
-
-        Returns
-        -------
-        output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
-        """
         # pylint: disable=too-many-locals
         self._counter += 1
 
@@ -539,14 +514,12 @@ class FusedRNNCell(BaseRNNCell):
 
     @property
     def state_shape(self):
-        """shape(s) of states"""
         b = self._bidirectional + 1
         n = (self._mode == 'lstm') + 1
         return [(b*self._num_layers, 0, self._num_hidden)]*n
 
     @property
     def _gate_names(self):
-        """name(s) of gates"""
         return {'rnn_relu': [''],
                 'rnn_tanh': [''],
                 'lstm': ['_i', '_f', '_c', '_o'],
@@ -554,7 +527,6 @@ class FusedRNNCell(BaseRNNCell):
 
     @property
     def _num_gates(self):
-        """number of gates"""
         return len(self._gate_names)
 
     def _slice_weights(self, arr, li, lh):
@@ -597,21 +569,6 @@ class FusedRNNCell(BaseRNNCell):
         return args
 
     def unpack_weights(self, args):
-        """Unpack fused weight matrices into separate
-        weight matrices
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing packed weights.
-            usually from Module.get_output()
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell unpacked.
-        """
         args = args.copy()
         arr = args.pop(self._parameter.name)
         b = len(self._directions)
@@ -624,20 +581,6 @@ class FusedRNNCell(BaseRNNCell):
         return args
 
     def pack_weights(self, args):
-        """Pack separate weight matrices into fused
-        weight.
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing unpacked weights.
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell packed.
-        """
         args = args.copy()
         b = self._bidirectional + 1
         m = self._num_gates
@@ -656,71 +599,16 @@ class FusedRNNCell(BaseRNNCell):
     def __call__(self, inputs, states):
         raise NotImplementedError("FusedRNNCell cannot be stepped. Please use unroll")
 
-    def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=None):
-        """Unroll an RNN cell across time steps.
-
-        Parameters
-        ----------
-        length : int
-            number of steps to unroll
-        inputs : Symbol, list of Symbol, or None
-            if inputs is a single Symbol (usually the output
-            of Embedding symbol), it should have shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
-            using 'TNC' is more efficient for FusedRNNCell.
-
-            If inputs is a list of symbols (usually output of
-            previous unroll), they should all have shape
-            (batch_size, ...). using single symbol is
-            more efficient for FusedRNNCell.
-
-            If inputs is None, a single placeholder variable is
-            automatically created.
-        begin_state : nested list of Symbol
-            input states. Created by begin_state()
-            or output state of another cell. Created
-            from begin_state() if None.
-        input_prefix : str
-            prefix for automatically created input
-            placehodlers.
-        layout : str
-            layout of input/output symbol.
-        merge_outputs : bool
-            If False, return outputs as a list of Symbols.
-            If True, concatenate output across time steps
-            and return a single symbol with shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
-            If None, output whatever is faster
-
-        Returns
-        -------
-        outputs : list of Symbol
-            output symbols.
-        states : Symbol or nested list of Symbol
-            has the same structure as begin_state()
-        """
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
         self.reset()
 
-        axis = layout.find('T')
-        if inputs is None:
-            inputs = symbol.Variable('%sdata'%input_prefix)
-        if isinstance(inputs, symbol.Symbol):
-            assert len(inputs.list_outputs()) == 1, \
-                "unroll doesn't allow grouped symbol as input. Please " \
-                "convert to list first or let unroll handle slicing"
-            if axis == 1:
-                warnings.warn("NTC layout detected. Consider using "
-                              "TNC for FusedRNNCell for faster speed")
-                inputs = symbol.SwapAxis(inputs, dim1=0, dim2=1)
-            else:
-                assert axis == 0, "Unsupported layout %s"%layout
+        inputs, axis = _normalize_sequence(length, inputs, layout, True)
+        if axis == 1:
+            warnings.warn("NTC layout detected. Consider using "
+                          "TNC for FusedRNNCell for faster speed")
+            inputs = symbol.swapaxes(inputs, dim1=0, dim2=1)
         else:
-            assert len(inputs) == length
-            inputs = [symbol.expand_dims(i, axis=0) for i in inputs]
-            inputs = symbol.Concat(*inputs, dim=0)
+            assert axis == 0, "Unsupported layout %s"%layout
         if begin_state is None:
             begin_state = self.begin_state()
 
@@ -744,18 +632,15 @@ class FusedRNNCell(BaseRNNCell):
         else:
             outputs, states = rnn[0], [rnn[1]]
 
-        if merge_outputs is not None and not merge_outputs:
-            warnings.warn("Call FusedRNNCell.unroll with merge_outputs=True "
-                          "for faster speed")
-            outputs = list(symbol.SliceChannel(outputs, axis=0, num_outputs=length,
-                                               squeeze_axis=1))
-        elif axis == 1:
-            outputs = symbol.SwapAxis(outputs, dim1=0, dim2=1)
+        if axis == 1:
+            outputs = symbol.swapaxes(outputs, dim1=0, dim2=1)
+
+        outputs, _ = _normalize_sequence(None, outputs, layout, merge_outputs)
 
         return outputs, states
 
     def unfuse(self):
-        """Unfuse the fused RNN
+        """Unfuse the fused RNN in to a stack of rnn cells.
 
         Returns
         -------
@@ -778,11 +663,14 @@ class FusedRNNCell(BaseRNNCell):
                 stack.add(BidirectionalCell(
                     get_cell('%sl%d_'%(self._prefix, i)),
                     get_cell('%sr%d_'%(self._prefix, i)),
-                    output_prefix='%sbi_%s_%d'%(self._prefix, self._mode, i)))
+                    output_prefix='%sbi_l%d_'%(self._prefix, i)))
             else:
                 stack.add(get_cell('%sl%d_'%(self._prefix, i)))
-        return stack
 
+            if self._dropout > 0 and i != self._num_layers - 1:
+                stack.add(DropoutCell(self._dropout, prefix='%s_dropout%d_'%(self._prefix, i)))
+
+        return stack
 
 
 class SequentialRNNCell(BaseRNNCell):
@@ -816,28 +704,11 @@ class SequentialRNNCell(BaseRNNCell):
 
     @property
     def state_shape(self):
-        """shape(s) of states"""
         return _cells_state_shape(self._cells)
 
     def begin_state(self, **kwargs):
-        """Initial state for this cell.
-
-        Parameters
-        ----------
-        init_sym : Symbol, default symbol.zeros
-            Symbol for generating initial state. Can be zeros,
-            ones, uniform, normal, etc.
-        **kwargs :
-            more keyword arguments passed to init_sym. For example
-            mean, std, dtype, etc.
-
-        Returns
-        -------
-        states : nested list of Symbol
-            starting states for first RNN step
-        """
         assert not self._modified, \
-            "After applying modifier cells (e.g. DropoutCell) the base " \
+            "After applying modifier cells (e.g. ZoneoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
         return _cells_begin_state(self._cells, **kwargs)
 
@@ -848,22 +719,6 @@ class SequentialRNNCell(BaseRNNCell):
         return _cells_pack_weights(self._cells, args)
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
-
-        Parameters
-        ----------
-        inputs : sym.Variable
-            input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
-
-        Returns
-        -------
-        output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
-        """
         self._counter += 1
         next_states = []
         p = 0
@@ -876,51 +731,8 @@ class SequentialRNNCell(BaseRNNCell):
             next_states.append(state)
         return inputs, sum(next_states, [])
 
-    def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=None):
-        """Unroll an RNN cell across time steps.
-
-        Parameters
-        ----------
-        length : int
-            number of steps to unroll
-        inputs : Symbol, list of Symbol, or None
-            if inputs is a single Symbol (usually the output
-            of Embedding symbol), it should have shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
-
-            If inputs is a list of symbols (usually output of
-            previous unroll), they should all have shape
-            (batch_size, ...).
-
-            If inputs is None, Placeholder variables are
-            automatically created.
-        begin_state : nested list of Symbol
-            input states. Created by begin_state()
-            or output state of another cell. Created
-            from begin_state() if None.
-        input_prefix : str
-            prefix for automatically created input
-            placehodlers.
-        layout : str
-            layout of input symbol. Only used if inputs
-            is a single Symbol.
-        merge_outputs : bool
-            If False, return outputs as a list of Symbols.
-            If True, concatenate output across time steps
-            and return a single symbol with shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
-            If None, output whatever is faster
-
-        Returns
-        -------
-        outputs : list of Symbol
-            output symbols.
-        states : Symbol or nested list of Symbol
-            has the same structure as begin_state()
-        """
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        self.reset()
 
         num_cells = len(self._cells)
         if begin_state is None:
@@ -931,17 +743,50 @@ class SequentialRNNCell(BaseRNNCell):
             n = len(cell.state_shape)
             states = begin_state[p:p+n]
             p += n
-            inputs, states = cell.unroll(length, inputs=inputs,
-                                         input_prefix=input_prefix, begin_state=states,
-                                         layout=layout, merge_outputs=(None if i < num_cells-1 else
-                                                                       merge_outputs))
+            inputs, states = cell.unroll(length, inputs=inputs, begin_state=states, layout=layout,
+                                         merge_outputs=None if i < num_cells-1 else merge_outputs)
 
         return inputs, states
+
+
+class DropoutCell(BaseRNNCell):
+    """Apply dropout on input.
+
+    Parameters
+    ----------
+    dropout : float
+        percentage of elements to drop out, which
+        is 1 - percentage to retain.
+    """
+    def __init__(self, dropout, prefix='dropout_', params=None):
+        super(DropoutCell, self).__init__(prefix, params)
+        assert isinstance(dropout, numeric_types), "dropout probability must be a number"
+        self.dropout = dropout
+
+    @property
+    def state_shape(self):
+        return []
+
+    def __call__(self, inputs, states):
+        if self.dropout > 0:
+            inputs = symbol.Dropout(data=inputs, p=self.dropout)
+        return inputs, states
+
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        self.reset()
+        inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
+        if isinstance(inputs, symbol.Symbol):
+            return self(inputs, [])
+        else:
+            return super(DropoutCell, self).unroll(
+                length, inputs, begin_state=begin_state, layout=layout,
+                merge_outputs=merge_outputs)
+
 
 class ModifierCell(BaseRNNCell):
     """Base class for modifier cells. A modifier
     cell takes a base cell, apply modifications
-    on it (e.g. Dropout), and returns a new cell.
+    on it (e.g. Zoneout), and returns a new cell.
 
     After applying modifiers the base cell should
     no longer be called directly. The modifer cell
@@ -954,32 +799,14 @@ class ModifierCell(BaseRNNCell):
 
     @property
     def params(self):
-        """Parameters of this cell"""
         self._own_params = False
         return self.base_cell.params
 
     @property
     def state_shape(self):
-        """shape(s) of states"""
         return self.base_cell.state_shape
 
     def begin_state(self, init_sym=symbol.zeros, **kwargs):
-        """Initial state for this cell.
-
-        Parameters
-        ----------
-        init_sym : Symbol, default symbol.zeros
-            Symbol for generating initial state. Can be zeros,
-            ones, uniform, normal, etc.
-        **kwargs :
-            more keyword arguments passed to init_sym. For example
-            mean, std, dtype, etc.
-
-        Returns
-        -------
-        states : nested list of Symbol
-            starting states for first RNN step
-        """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
@@ -989,90 +816,13 @@ class ModifierCell(BaseRNNCell):
         return begin
 
     def unpack_weights(self, args):
-        """Unpack fused weight matrices into separate
-        weight matrices
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing packed weights.
-            usually from Module.get_output()
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell unpacked.
-        """
         return self.base_cell.unpack_weights(args)
 
     def pack_weights(self, args):
-        """Pack separate weight matrices into fused
-        weight.
-
-        Parameters
-        ----------
-        args : dict of str -> NDArray
-            dictionary containing unpacked weights.
-
-        Returns
-        -------
-        args : dict of str -> NDArray
-            dictionary with weights associated to
-            this cell packed.
-        """
         return self.base_cell.pack_weights(args)
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
-
-        Parameters
-        ----------
-        inputs : sym.Variable
-            input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
-
-        Returns
-        -------
-        output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
-        """
         raise NotImplementedError
-
-
-class DropoutCell(ModifierCell):
-    """Apply dropout on base cell"""
-    def __init__(self, base_cell, dropout_outputs=0., dropout_states=0.):
-        super(DropoutCell, self).__init__(base_cell)
-        self.dropout_outputs = dropout_outputs
-        self.dropout_states = dropout_states
-
-    def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
-
-        Parameters
-        ----------
-        inputs : sym.Variable
-            input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
-
-        Returns
-        -------
-        output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
-        """
-        output, states = self.base_cell(inputs, states)
-        if self.dropout_outputs > 0:
-            output = symbol.Dropout(data=output, p=self.dropout_outputs)
-        if self.dropout_states > 0:
-            states = [symbol.Dropout(data=i, p=self.dropout_states) for i in states]
-        return output, states
 
 
 class ZoneoutCell(ModifierCell):
@@ -1084,23 +834,8 @@ class ZoneoutCell(ModifierCell):
         self.prev_output = None
 
     def __call__(self, inputs, states):
-        """Construct symbol for one step of RNN.
-
-        Parameters
-        ----------
-        inputs : sym.Variable
-            input symbol, 2D, batch * num_units
-        states : sym.Variable
-            state from previous step or begin_state().
-
-        Returns
-        -------
-        output : Symbol
-            output symbol
-        states : Symbol
-            state to next step of RNN.
-        """
         raise NotImplementedError
+
 
 class BidirectionalCell(BaseRNNCell):
     """Bidirectional RNN cell
@@ -1131,90 +866,18 @@ class BidirectionalCell(BaseRNNCell):
 
     @property
     def state_shape(self):
-        """shape(s) of states"""
         return _cells_state_shape(self._cells)
 
     def begin_state(self, **kwargs):
-        """Initial state for this cell.
-
-        Parameters
-        ----------
-        init_sym : Symbol, default symbol.zeros
-            Symbol for generating initial state. Can be zeros,
-            ones, uniform, normal, etc.
-        **kwargs :
-            more keyword arguments passed to init_sym. For example
-            mean, std, dtype, etc.
-
-        Returns
-        -------
-        states : nested list of Symbol
-            starting states for first RNN step
-        """
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
         return _cells_begin_state(self._cells, **kwargs)
 
-    def unroll(self, length, inputs=None, begin_state=None,
-               input_prefix='', layout='NTC', merge_outputs=None):
-        """Unroll a bidirectional RNN cell across time steps.
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        self.reset()
 
-        Parameters
-        ----------
-        length : int
-            number of steps to unroll
-        inputs : Symbol, list of Symbol, or None
-            if inputs is a single Symbol (usually the output
-            of Embedding symbol), it should have shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
-
-            If inputs is a list of symbols (usually output of
-            previous unroll), they should all have shape
-            (batch_size, ...).
-
-            If inputs is None, Placeholder variables are
-            automatically created.
-        begin_state : nested list of Symbol
-            input states. Created by begin_state()
-            or output state of another cell. Created
-            from begin_state() if None.
-        input_prefix : str
-            prefix for automatically created input
-            placehodlers.
-        layout : str
-            layout of input symbol. Only used if inputs
-            is a single Symbol.
-        merge_outputs : bool
-            If False, return outputs as a list of Symbols.
-            If True, concatenate output across time steps
-            and return a single symbol with shape
-            (batch_size, length, ...) if layout == 'NTC',
-            or (length, batch_size, ...) if layout == 'TNC'.
-            If None, output whatever is faster
-
-        Returns
-        -------
-        outputs : list of Symbol
-            output symbols.
-        states : Symbol or nested list of Symbol
-            has the same structure as begin_state()
-        """
-
-        axis = layout.find('T')
-        if inputs is None:
-            inputs = [symbol.Variable('%st%d_data'%(input_prefix, i))
-                      for i in range(length)]
-        elif isinstance(inputs, symbol.Symbol):
-            assert len(inputs.list_outputs()) == 1, \
-                "unroll doesn't allow grouped symbol as input. Please " \
-                "convert to list first or let unroll handle slicing"
-            inputs = list(symbol.SliceChannel(inputs, axis=axis, num_outputs=length,
-                                              squeeze_axis=1))
-        else:
-            assert len(inputs) == length
-
+        inputs, axis = _normalize_sequence(length, inputs, layout, False)
         if begin_state is None:
             begin_state = self.begin_state()
 
@@ -1256,19 +919,3 @@ class BidirectionalCell(BaseRNNCell):
 
         states = [l_states, r_states]
         return outputs, states
-
-def _cells_state_shape(cells):
-    return sum([c.state_shape for c in cells], [])
-
-def _cells_begin_state(cells, **kwargs):
-    return sum([c.begin_state(**kwargs) for c in cells], [])
-
-def _cells_unpack_weights(cells, args):
-    for cell in cells:
-        args = cell.unpack_weights(args)
-    return args
-
-def _cells_pack_weights(cells, args):
-    for cell in cells:
-        args = cell.pack_weights(args)
-    return args
