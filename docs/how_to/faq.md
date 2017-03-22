@@ -51,7 +51,7 @@ copied_model =  mx.model.FeedForward(ctx=mx.gpu(), symbol=new_symbol,
 For information about copying model parameters from an existing ```old_arg_params```, see this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb).
 
 #### How to Extract the Feature Map of a Certain Layer
--See this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb).
+See this [notebook](https://github.com/dmlc/mxnet/blob/master/example/notebooks/predict-with-pretrained-model.ipynb).
 
 
 #### What Is the Relationship Between MXNet and CXXNet, Minerva, and Purine2?
