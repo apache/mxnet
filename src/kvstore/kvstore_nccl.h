@@ -37,8 +37,8 @@ class KVStoreNCCL : public KVStore {
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
     if (streams_.empty()) {
-      int ndev = 0;
       cudaGetDeviceCount(&ndev);
+      CHECK(ndev > 0) << "Used NCCL KVStore with no CUDA devices";
       streams_.resize(ndev);
       for (size_t i = 0; i < streams_.size(); ++i) {
         cudaSetDevice(i);
@@ -87,7 +87,7 @@ class KVStoreNCCL : public KVStore {
       if (updater_ != nullptr) {
         for (size_t j = 0; j < merged.size(); ++j) {
           if (merged[j].shape().Size() > 0) {
-            updater_(key, merged[j], &(e.sharded_value[j]));
+            updater_(key * ndev + merged[j].ctx().dev_id, merged[j], &(e.sharded_value[j]));
           } else {
             e.sharded_value[j] = merged[j];
           }
@@ -316,6 +316,8 @@ class KVStoreNCCL : public KVStore {
   std::map<std::vector<int32_t>, std::vector<ncclComm_t>> comms_;
   /// \brief CUDA streams used by NCCL
   std::vector<cudaStream_t> streams_;
+  /// \brief number of CUDA devices
+  int ndev;
 };
 }  // namespace kvstore
 }  // namespace mxnet

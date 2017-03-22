@@ -670,10 +670,9 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Update weight given gradient and index"""
-        key = (index, str(weight.context))
-        if key not in self.states:
-            self.states[key] = self.optimizer.create_state(index, weight)
-        self.optimizer.update(index, weight, grad, self.states[key])
+        if index not in self.states:
+            self.states[index] = self.optimizer.create_state(index, weight)
+        self.optimizer.update(index, weight, grad, self.states[index])
 
     def set_states(self, states):
         """set updater states"""
