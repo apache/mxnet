@@ -10,6 +10,7 @@
   #include <cuda_runtime.h>
 #endif  // MXNET_USE_CUDA
 #include <mxnet/base.h>
+#include <mxnet/storage.h>
 #include <unordered_map>
 #include <vector>
 #include <mutex>
@@ -44,7 +45,7 @@ class GPUPooledStorageManager final : public StorageManager {
   void Free(void* ptr, size_t raw_size) override;
 
   void DirectFree(void* ptr, size_t raw_size) override {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
     cudaError_t err = cudaFree(ptr);
     size_t size = raw_size + NDEV;
     // ignore unloading error, as memory has already been recycled
@@ -53,9 +54,6 @@ class GPUPooledStorageManager final : public StorageManager {
     }
     used_memory_ -= size;
   }
-
-  // internal mutex
-  static std::mutex mutex_;
 
  private:
   void ReleaseAll();
@@ -69,6 +67,47 @@ class GPUPooledStorageManager final : public StorageManager {
   std::unordered_map<size_t, std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
 };  // class GPUPooledStorageManager
+
+void* GPUPooledStorageManager::Alloc(size_t raw_size) {
+  std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
+  size_t size = raw_size + NDEV;
+  auto&& reuse_it = memory_pool_.find(size);
+  if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
+    size_t free, total;
+    cudaMemGetInfo(&free, &total);
+    if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
+      ReleaseAll();
+
+    void* ret = nullptr;
+    cudaError_t e = cudaMalloc(&ret, size);
+    if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
+      LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+    }
+    used_memory_ += size;
+    return ret;
+  } else {
+    auto&& reuse_pool = reuse_it->second;
+    auto ret = reuse_pool.back();
+    reuse_pool.pop_back();
+    return ret;
+  }
+}
+
+void GPUPooledStorageManager::Free(void* ptr, size_t raw_size) {
+  std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
+  size_t size = raw_size + NDEV;
+  auto&& reuse_pool = memory_pool_[size];
+  reuse_pool.push_back(ptr);
+}
+
+void GPUPooledStorageManager::ReleaseAll() {
+  for (auto&& i : memory_pool_) {
+    for (auto&& j : i.second) {
+      DirectFree(j, i.first - NDEV);
+    }
+  }
+  memory_pool_.clear();
+}
 
 #endif  // MXNET_USE_CUDA
 

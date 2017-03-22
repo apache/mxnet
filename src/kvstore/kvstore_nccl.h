@@ -16,7 +16,6 @@
 #include <utility>
 #include <algorithm>
 #include <map>
-#include "../storage/pooled_storage_manager.h"
 #include "../common/cuda_utils.h"
 
 namespace mxnet {
@@ -183,7 +182,7 @@ class KVStoreNCCL : public KVStore {
                               const std::vector<T> & grouped_vals,
                               const std::vector<int32_t> & devices) {
     {
-      std::lock_guard<std::mutex> l(mxnet::storage::GPUPooledStorageManager::mutex_);
+      std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
       if (comms_.find(devices) == comms_.end()) {
         e->communicators = std::vector<ncclComm_t>(devices.size());
         ncclCommInitAll(&(e->communicators[0]), devices.size(), &(devices[0]));
@@ -225,7 +224,7 @@ class KVStoreNCCL : public KVStore {
     }
     Engine::Get()->PushSync([e, src, stride, this](RunContext rctx) {
           {
-            std::lock_guard<std::mutex> l(storage::GPUPooledStorageManager::mutex_);
+            std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
             for (size_t i = 0; i < src.size(); ++i) {
               CHECK(src[i].ctx().dev_id == e->scratch_space[i].ctx().dev_id)
                 << "Different order of devices in push and pull";
@@ -268,7 +267,7 @@ class KVStoreNCCL : public KVStore {
     }
     Engine::Get()->PushSync([src, dst, stride, this](RunContext rctx) {
           {
-            std::lock_guard<std::mutex> l(storage::GPUPooledStorageManager::mutex_);
+            std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
             for (size_t i = 0; i < dst.size(); ++i) {
               cudaSetDevice(dst[i]->ctx().dev_id);
               MSHADOW_TYPE_SWITCH(dst[i]->dtype(), DType,

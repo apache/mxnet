@@ -9,8 +9,8 @@
 
 #include <dmlc/logging.h>
 #include "mxnet/base.h"
+#include "mxnet/storage.h"
 #include "../common/cuda_utils.h"
-#include "./pooled_storage_manager.h"
 
 namespace mxnet {
 namespace storage {
@@ -34,7 +34,7 @@ class PinnedMemoryStorage {
 inline void* PinnedMemoryStorage::Alloc(size_t size) {
   void* ret = nullptr;
 #if MXNET_USE_NCCL
-  std::lock_guard<std::mutex> lock(GPUPooledStorageManager::mutex_);
+  std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif
   // make the memory available across all devices
   CUDA_CALL(cudaHostAlloc(&ret, size, cudaHostAllocPortable));
@@ -43,7 +43,7 @@ inline void* PinnedMemoryStorage::Alloc(size_t size) {
 
 inline void PinnedMemoryStorage::Free(void* ptr) {
 #if MXNET_USE_NCCL
-  std::lock_guard<std::mutex> lock(GPUPooledStorageManager::mutex_);
+  std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif
   cudaError_t err = cudaFreeHost(ptr);
   // ignore unloading error, as memory has already been recycled
