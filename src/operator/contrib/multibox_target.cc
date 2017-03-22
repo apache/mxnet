@@ -4,9 +4,9 @@
  * \brief MultiBoxTarget op
  * \author Joshua Zhang
 */
-#include "./multibox_target-inl.h"
-#include "./mshadow_op.h"
 #include <algorithm>
+#include "./multibox_target-inl.h"
+#include "../mshadow_op.h"
 
 namespace mshadow {
 template<typename DType>
@@ -281,7 +281,7 @@ Operator* MultiBoxTargetProp::CreateOperatorEx(Context ctx, std::vector<TShape> 
 }
 
 DMLC_REGISTER_PARAMETER(MultiBoxTargetParam);
-MXNET_REGISTER_OP_PROPERTY(MultiBoxTarget, MultiBoxTargetProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxTarget, MultiBoxTargetProp)
 .describe("Compute Multibox training targets")
 .add_argument("anchor", "Symbol", "Generated anchor boxes.")
 .add_argument("label", "Symbol", "Object detection labels.")

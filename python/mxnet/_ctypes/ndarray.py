@@ -166,11 +166,16 @@ def _init_ndarray_module(ndarray_class, root_namespace):
 
     module_obj = _sys.modules["%s.ndarray" % root_namespace]
     module_internal = _sys.modules["%s._ndarray_internal" % root_namespace]
+    module_contrib = _sys.modules["%s.contrib.ndarray" % root_namespace]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
         function = _make_ndarray_function(hdl, name)
-        if function.__name__.startswith('_'):
+        if function.__name__.startswith('_contrib_'):
+            function.__name__ = function.__name__[9:]
+            function.__module__ = 'mxnet.contrib.ndarray'
+            setattr(module_contrib, function.__name__, function)
+        elif function.__name__.startswith('_'):
             setattr(module_internal, function.__name__, function)
         else:
             setattr(module_obj, function.__name__, function)
