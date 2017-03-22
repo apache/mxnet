@@ -24,7 +24,7 @@ import org.slf4j.{Logger, LoggerFactory}
  * Server node for the key value store
  * @author Yizhi Liu
  */
-class KVStoreServer(private val kvStore: KVStore) {
+private[mxnet] class KVStoreServer(private val kvStore: KVStore) {
   private val logger: Logger = LoggerFactory.getLogger(classOf[KVStoreServer])
   private val handle: KVStoreHandle = kvStore.handle
   private val controller = new KVServerControllerCallback {
@@ -113,6 +113,6 @@ object KVStoreServer {
   }
 }
 
-trait KVServerControllerCallback {
+private[mxnet] trait KVServerControllerCallback {
   def invoke(cmdId: Int, cmdBody: String): Unit
 }

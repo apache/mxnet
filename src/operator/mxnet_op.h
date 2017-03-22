@@ -23,6 +23,23 @@ using std::isnan;
 #endif
 
 
+#ifdef __CUDACC__
+#define CUDA_KERNEL_LOOP(i, n) \
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
+      i < (n); \
+      i += blockDim.x * gridDim.x)
+
+
+/*!
+ * \brief Get the number of blocks for cuda kernel given N
+ */
+inline int cuda_get_num_blocks(const int N) {
+  using namespace mshadow::cuda;
+  return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+}
+#endif  // __CUDACC__
+
+
 /*! \brief operator request type switch */
 #define MXNET_ASSIGN_REQ_SWITCH(req, ReqType, ...)  \
   switch (req) {                                    \
@@ -137,6 +154,22 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
   }
   return stride;
 }
+
+
+struct fill {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType val) {
+    out[i] = val;
+  }
+};
+
+
+struct set_zero {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out) {
+    out[i] = static_cast<DType>(0);
+  }
+};
 
 
 template<typename OP, typename xpu>

@@ -22,9 +22,6 @@ import java.io.File
 import java.io.PrintWriter
 import scala.collection.mutable.ArrayBuffer
 
-/**
- * @author Depeng Liang
- */
 object Visualization {
 
   /**
