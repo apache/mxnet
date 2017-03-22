@@ -58,8 +58,6 @@ class SliceChannelOp : public Operator {
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 3> > outputs(size_);
-    Tensor<xpu, 3> data;
     size_t leading = 1, trailing = 1;
     int real_axis = axis_;
     if (real_axis < 0) {
@@ -75,7 +73,9 @@ class SliceChannelOp : public Operator {
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    data = in_data[slice_enum::kData].get_with_shape<xpu, 3, DType>(dshape, s);
+    Tensor<xpu, 3, DType> data = in_data[slice_enum::kData].get_with_shape<xpu, 3, DType>(
+        dshape, s);
+    std::vector<Tensor<xpu, 3, DType> > outputs(size_);
     for (int i = 0; i < size_; ++i) {
       outputs[i] = out_data[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
     }
@@ -94,8 +94,6 @@ class SliceChannelOp : public Operator {
     CHECK_EQ(out_grad.size(), static_cast<size_t>(size_));
     CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 3> > grad_out(size_);
-    Tensor<xpu, 3> grad;
     size_t leading = 1, trailing = 1;
     int real_axis = axis_;
     if (real_axis < 0) {
@@ -111,7 +109,9 @@ class SliceChannelOp : public Operator {
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    grad = in_grad[slice_enum::kData].get_with_shape<xpu, 3, DType>(dshape, s);
+    Tensor<xpu, 3, DType> grad = in_grad[slice_enum::kData].get_with_shape<xpu, 3, DType>(
+        dshape, s);
+    std::vector<Tensor<xpu, 3, DType> > grad_out(size_);
     for (int i = 0; i < size_; ++i) {
       grad_out[i] = out_grad[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
     }
@@ -157,12 +157,14 @@ class SliceChannelProp : public OperatorProperty {
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override{
     CHECK_EQ(in_type->size(), 1U);
-    CHECK_EQ(static_cast<int>(out_type->size()), param_.num_outputs);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (size_t i = 0; i < out_type->size(); ++i) {
-      (*out_type)[i] = dtype;
+    out_type->clear();
+    out_type->reserve(param_.num_outputs);
+    for (int i = 0; i < param_.num_outputs; ++i) {
+      out_type->push_back(dtype);
     }
+    aux_type->clear();
     return true;
   }
 
@@ -200,30 +202,10 @@ class SliceChannelProp : public OperatorProperty {
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
-    CHECK_EQ((*out_shape).size(), static_cast<size_t>(param_.num_outputs))
-      << "Size of output shape mismatch!";
+    out_shape->clear();
+    out_shape->resize(param_.num_outputs, TShape());
     for (int i = 0; i < param_.num_outputs; ++i) {
-      SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
-      // Perform incomplete shape inference.
-      // We can back-calculate the inshape based on the out_shape.
-      TShape back_calculate_dshape = ishape;
-      if (param_.squeeze_axis && (dshape.ndim() == ishape.ndim() - 1)) {
-        for (int d = 0; d < real_axis; ++d) {
-          back_calculate_dshape[d] = (*out_shape)[i][d];
-        }
-        back_calculate_dshape[real_axis] = param_.num_outputs;
-        for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
-          back_calculate_dshape[d] = (*out_shape)[i][d - 1];
-        }
-      } else {
-        for (int d = 0; d < static_cast<int>(ishape.ndim()); ++d) {
-          back_calculate_dshape[d] = (*out_shape)[i][d];
-          if (d == real_axis) {
-            back_calculate_dshape[d] *= param_.num_outputs;
-          }
-        }
-      }
-      SHAPE_ASSIGN_CHECK(*in_shape, slice_enum::kData, back_calculate_dshape);
+      (*out_shape)[i] = dshape;
     }
     return true;
   }
@@ -245,7 +227,13 @@ class SliceChannelProp : public OperatorProperty {
     return out_grad;
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return nullptr;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   SliceChannelParam param_;
