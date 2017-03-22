@@ -763,17 +763,25 @@ class FusedRNNCell(BaseRNNCell):
             unfused cell that can be used for stepping, and can run on CPU.
         """
         stack = SequentialRNNCell()
-        get_cell = {'rnn_relu': lambda cell_prefix: RNNCell(self._num_hidden,
-                                                            activation='relu',
-                                                            prefix=cell_prefix),
-                    'rnn_tanh': lambda cell_prefix: RNNCell(self._num_hidden,
-                                                            activation='tanh',
-                                                            prefix=cell_prefix),
-                    'lstm': lambda cell_prefix: LSTMCell(self._num_hidden,
-                                                         prefix=cell_prefix),
-                    'gru': lambda cell_prefix: GRUCell(self._num_hidden,
-                                                       prefix=cell_prefix)}[self._mode]
+        get_vanilla_cell = {'rnn_relu': lambda cell_prefix: RNNCell(self._num_hidden,
+                                                                    activation='relu',
+                                                                    prefix=cell_prefix),
+                            'rnn_tanh': lambda cell_prefix: RNNCell(self._num_hidden,
+                                                                    activation='tanh',
+                                                                    prefix=cell_prefix),
+                            'lstm': lambda cell_prefix: LSTMCell(self._num_hidden,
+                                                                 prefix=cell_prefix),
+                            'gru': lambda cell_prefix: GRUCell(self._num_hidden,
+                                                               prefix=cell_prefix)}[self._mode]
+        if self._dropout != 0:
+            get_cell = lambda cell_prefix: DropoutCell(get_vanilla_cell(cell_prefix),
+                                                       dropout_outputs=self._dropout)
+        else:
+            get_cell = get_vanilla_cell
+
         for i in range(self._num_layers):
+            if i == self._num_layers - 1:
+                get_cell = get_vanilla_cell
             if self._bidirectional:
                 stack.add(BidirectionalCell(
                     get_cell('%sl%d_'%(self._prefix, i)),

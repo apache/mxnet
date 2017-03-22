@@ -473,7 +473,8 @@ def test_unfuse():
     for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
         fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode=mode,
                 prefix='test_%s'%mode,
-                bidirectional=True)
+                bidirectional=True,
+                dropout=0.000001)
 
         stack = fused.unfuse()
 
