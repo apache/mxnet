@@ -179,3 +179,9 @@ if [ ${TASK} == "perl_test" ]; then
     make test || exit -1
     exit 0
 fi
+
+if [ ${TASK} == "cpp_package_test" ]; then
+    MXNET_HOME=${PWD}
+    make travis -C ${MXNET_HOME}/cpp-package/example
+    exit 0
+fi

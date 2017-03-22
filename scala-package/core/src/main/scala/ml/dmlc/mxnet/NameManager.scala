@@ -22,7 +22,6 @@ import scala.collection.mutable
 /**
  * NameManager to do automatic naming.
  * User can also inherit this object to change naming behavior.
- * @author Yizhi Liu
  */
 class NameManager {
   val counter: mutable.Map[String, Int] = mutable.HashMap.empty[String, Int]

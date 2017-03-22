@@ -23,9 +23,8 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
  * JNI functions
- * @author Yizhi Liu
  */
-class LibInfo {
+private[mxnet] class LibInfo {
   @native def nativeLibInit(): Int
   @native def mxGetLastError(): String
   // Operators

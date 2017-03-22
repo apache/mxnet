@@ -14,7 +14,7 @@ DATA_PATH=$2
 SAVE_MODEL_PATH=$3
 
 java -Xmx4G -cp $CLASS_PATH \
-	ml.dmlc.mxnet.examples.rnn.TrainCharRnn \
+	ml.dmlc.mxnetexamples.rnn.TrainCharRnn \
 	--data-path $DATA_PATH \
 	--save-model-path $SAVE_MODEL_PATH \
 	--gpu $GPU \

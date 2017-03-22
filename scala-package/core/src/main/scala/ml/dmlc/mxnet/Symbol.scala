@@ -29,7 +29,6 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * WARNING: it is your responsibility to clear this object through dispose().
  * NEVER rely on the GC strategy
  * </b>
- * @author Yizhi Liu
  */
 // scalastyle:off finalize
 class Symbol private(private[mxnet] val handle: SymbolHandle) {
