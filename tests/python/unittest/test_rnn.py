@@ -126,7 +126,7 @@ def test_attention():
     # assert outputs.list_outputs() == ['rnn_stack4_t0_out_output', 'rnn_stack4_t1_out_output', 'rnn_stack4_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(encoder_data=(10, 3, 50), decoder_data=(10, 3, 50))
-    assert outs == [(10L, 100L), (10L, 100L), (10L, 100L)]
+    assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
 if __name__ == '__main__':
