@@ -663,7 +663,7 @@ class FusedRNNCell(BaseRNNCell):
                 stack.add(BidirectionalCell(
                     get_cell('%sl%d_'%(self._prefix, i)),
                     get_cell('%sr%d_'%(self._prefix, i)),
-                    output_prefix='%sbi_%s_%d'%(self._prefix, self._mode, i)))
+                    output_prefix='%sbi_l%d_'%(self._prefix, i)))
             else:
                 stack.add(get_cell('%sl%d_'%(self._prefix, i)))
 
@@ -750,7 +750,7 @@ class SequentialRNNCell(BaseRNNCell):
 
 
 class DropoutCell(BaseRNNCell):
-    """Apply dropout on base cell
+    """Apply dropout on input.
 
     Parameters
     ----------

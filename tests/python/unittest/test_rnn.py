@@ -94,12 +94,14 @@ def test_bidirectional():
 
 
 def test_unfuse():
-    cell = mx.rnn.FusedRNNCell(100, num_layers=1, mode='lstm',
-            prefix='test_', bidirectional=True).unfuse()
+    cell = mx.rnn.FusedRNNCell(100, num_layers=3, mode='lstm',
+                               prefix='test_', bidirectional=True,
+                               dropout=0.5)
+    cell = cell.unfuse()
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    assert outputs.list_outputs() == ['test_bi_lstm_0t0_output', 'test_bi_lstm_0t1_output', 'test_bi_lstm_0t2_output']
+    assert outputs.list_outputs() == ['test_bi_l2_t0_output', 'test_bi_l2_t1_output', 'test_bi_l2_t2_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 200), (10, 200), (10, 200)]
