@@ -355,13 +355,17 @@ class LSTMCell(BaseRNNCell):
     params : RNNParams or None
         container for weight sharing between cells.
         created if None.
+    forget_bias : bias added to forget gate, default 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0
     """
-    def __init__(self, num_hidden, prefix='lstm_', params=None):
+    def __init__(self, num_hidden, prefix='lstm_', params=None, forget_bias=1.0):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
+
         self._num_hidden = num_hidden
         self._iW = self.params.get('i2h_weight')
-        self._iB = self.params.get('i2h_bias')
         self._hW = self.params.get('h2h_weight')
+        # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
+        self._iB = self.params.get('i2h_bias', init=init.LSTMBias(forget_bias=forget_bias))
         self._hB = self.params.get('h2h_bias')
 
     @property
@@ -513,7 +517,7 @@ class FusedRNNCell(BaseRNNCell):
     ----------
     """
     def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
-                 dropout=0., get_next_state=False, initializer=None,
+                 dropout=0., get_next_state=False, initializer=None, forget_bias=1.0,
                  prefix=None, params=None):
         if prefix is None:
             prefix = '%s_'%mode
@@ -528,7 +532,7 @@ class FusedRNNCell(BaseRNNCell):
             initializer = init.Xavier(factor_type='in', magnitude=2.34)
         if not isinstance(initializer, init.FusedRNN):
             initializer = init.FusedRNN( # pylint: disable=redefined-variable-type
-                initializer, num_hidden, num_layers, mode, bidirectional)
+                initializer, num_hidden, num_layers, mode, bidirectional, forget_bias)
         self._parameter = self.params.get('parameters', init=initializer)
 
         self._directions = ['l', 'r'] if bidirectional else ['l']

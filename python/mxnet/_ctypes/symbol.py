@@ -211,11 +211,16 @@ def _init_symbol_module(symbol_class, root_namespace):
 
     module_obj = sys.modules["%s.symbol" % root_namespace]
     module_internal = sys.modules["%s._symbol_internal" % root_namespace]
+    module_contrib = sys.modules["%s.contrib.symbol" % root_namespace]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
         function = _make_atomic_symbol_function(hdl, name)
-        if function.__name__.startswith('_'):
+        if function.__name__.startswith('_contrib_'):
+            function.__name__ = function.__name__[9:]
+            function.__module__ = 'mxnet.contrib.symbol'
+            setattr(module_contrib, function.__name__, function)
+        elif function.__name__.startswith('_'):
             setattr(module_internal, function.__name__, function)
         else:
             setattr(module_obj, function.__name__, function)

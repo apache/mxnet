@@ -26,9 +26,9 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(BatchParam) {
     DMLC_DECLARE_FIELD(batch_size)
-        .describe("Batch Param: Batch size.");
+        .describe("Batch size.");
     DMLC_DECLARE_FIELD(round_batch).set_default(true)
-        .describe("Batch Param: Use round robin to handle overflow batch.");
+        .describe("If or not use round robin to handle overflow batch.");
   }
 };
 
