@@ -22,7 +22,6 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * Base class for operators implemented in Scala
- * @author Depeng Liang
  */
 abstract class CustomOp {
 

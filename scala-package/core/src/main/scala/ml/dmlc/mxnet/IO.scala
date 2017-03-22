@@ -27,7 +27,6 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * IO iterators for loading training & validation data
- * @author Zixuan Huang, Yizhi Liu
  */
 object IO {
   type IterCreateFunc = (Map[String, String]) => DataIter

@@ -9,7 +9,7 @@ OUTPUT_DIR=$3
 GPU=0
 
 java -Xmx1024m -cp $CLASS_PATH \
-	ml.dmlc.mxnet.examples.neuralstyle.end2end.BoostInference \
+	ml.dmlc.mxnetexamples.neuralstyle.end2end.BoostInference \
 	--model-path $MODEL_DIR \
 	--input-image $INPUT_IMG \
 	--output-path $OUTPUT_DIR \
