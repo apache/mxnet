@@ -133,6 +133,83 @@ __global__ void par_reduce_kernel(const int N, const int M, const bool addto,
 
 }
 
+#if 1
+template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2, int unroll, int blockDim_x,
+         int blockDim_y>
+__launch_bounds__(nthread_par_reduce)
+__global__ void par_reduce_kernel(const int N, const int M, const bool addto,
+                                  const DType* __restrict big,
+                                  const DType* __restrict lhs,
+                                  const DType* __restrict rhs,
+                                  DType *small,
+                                  const Shape<ndim> big_shape0,
+                                  const Shape<ndim> lhs_shape0,
+                                  const Shape<ndim> rhs_shape0,
+                                  const Shape<ndim> small_shape,
+                                  const Shape<ndim> big_shape,
+                                  const Shape<ndim> lhs_shape,
+                                  const Shape<ndim> rhs_shape,
+                                  const Shape<ndim> big_stride,
+                                  const Shape<ndim> lhs_stride,
+                                  const Shape<ndim> rhs_stride,
+                                  const int Mnext, const bool do_transpose) {
+  const int tid = threadIdx.x + threadIdx.y*blockDim_x;
+  const int tidx = (do_transpose) ? tid / blockDim_y : threadIdx.x;
+  const int tidy = (do_transpose) ? tid % blockDim_y : threadIdx.y;
+  for (int m0 = blockIdx.y; m0 < Mnext; m0 += gridDim.y) {
+    // This TB handles M range [Mstart, ...., Mend - 1]
+    const int Mstart = (int)((uint64_t)M*(uint64_t)m0/(uint64_t)Mnext);
+    const int Mend   = (int)((uint64_t)M*(uint64_t)(m0 + 1)/(uint64_t)Mnext);
+    for (int idx = tidy + blockIdx.x*blockDim_y; idx < N; idx += gridDim.x*blockDim_y) {
+      Shape<ndim> coord = unravel(idx, small_shape);
+      int idx_big0 = ravel(coord, big_shape0);
+      int idx_lhs0 = ravel(coord, lhs_shape0);
+      int idx_rhs0 = ravel(coord, rhs_shape0);
+
+      DType val;
+      Reducer::SetInitValue(val);
+      for (int k = tidx + Mstart; k < Mend; k += blockDim_x*unroll) {
+        int idx_big[unroll];
+        int idx_lhs[unroll];
+        int idx_rhs[unroll];
+        #pragma unroll
+        for (int u=0;u < unroll;u++) {
+          idx_big[u] = idx_big0 + unravel_dot(k + u*blockDim_x, big_shape, big_stride);
+          idx_lhs[u] = idx_lhs0 + unravel_dot(k + u*blockDim_x, lhs_shape, lhs_stride);
+          idx_rhs[u] = idx_rhs0 + unravel_dot(k + u*blockDim_x, rhs_shape, rhs_stride);
+        }
+        DType tmp[unroll];
+        #pragma unroll
+        for (int u=0;u < unroll;u++) {
+          if (k + u*blockDim_x < Mend) {
+            tmp[u] = OP1::Map(big[idx_big[u]], OP2::Map(lhs[idx_lhs[u]], rhs[idx_rhs[u]]));
+          }
+        }
+        #pragma unroll
+        for (int u=0;u < unroll;u++) {
+          if (k + u*blockDim_x < Mend) Reducer::Reduce(val, tmp[u]);
+        }
+      }
+
+      // Size of shared memory is (blockDim_x + 1)*blockDim_y*sizeof(DType)
+      volatile __shared__ DType shBuf[blockDim_y][blockDim_x+1];
+      shBuf[tidy][tidx] = val;
+      __syncthreads();
+      for (int t=1;t < blockDim_x;t <<= 1) {
+        DType tmp;
+        Reducer::SetInitValue(tmp);
+        if (threadIdx.x + t < blockDim_x) tmp = shBuf[threadIdx.y][threadIdx.x + t];
+        __syncthreads();
+        Reducer::Reduce(shBuf[threadIdx.y][threadIdx.x], tmp);
+        __syncthreads();
+      }
+      if (tidx == 0) {
+        assign(&small[idx + m0*N], addto, shBuf[tidy][0]);
+      }
+    }
+  }
+}
+#else
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2, int unroll, int blockDim_x,
          int blockDim_y>
 __launch_bounds__(nthread_par_reduce)
@@ -193,6 +270,7 @@ __global__ void par_reduce_kernel(const int N, const int M, const bool addto,
     }
   }
 }
+#endif
 
 const int nthread_reduce = kMaxThreadsPerBlock;
 template<typename Reducer, int ndim, typename DType, typename OP, int unroll>
@@ -591,7 +669,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
   config.N = small.shape_.Size();
   config.M = config.rshape.Size();
 
-  // printf("N %d M %d\n", config.N, config.M);
+  printf("N %d M %d\n", config.N, config.M);
 
   bool multiOp = false;
   if (lhs != NULL) {
@@ -617,16 +695,19 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
       fastest_stride(small.shape_.get<ndim>(), lhs->shape_.get<ndim>()) : 1;
     reduce_strides[2] = (multiOp) ?
       fastest_stride(small.shape_.get<ndim>(), rhs->shape_.get<ndim>()) : 1;
-    // printf("reduce_strides %d %d %d\n", reduce_strides[0], reduce_strides[1], reduce_strides[2]);
+    printf("reduce_strides %d %d %d\n", reduce_strides[0], reduce_strides[1], reduce_strides[2]);
 
     int par_reduce_strides[3];
     par_reduce_strides[0] = fastest_stride(config.rshape, config.rstride);
     par_reduce_strides[1] = (multiOp) ? fastest_stride(config.lhs_shape, config.lhs_stride) : 1;
     par_reduce_strides[2] = (multiOp) ? fastest_stride(config.rhs_shape, config.rhs_stride) : 1;
-    // printf("par_reduce_strides %d %d %d\n", par_reduce_strides[0], par_reduce_strides[1], par_reduce_strides[2]);
+    printf("par_reduce_strides %d %d %d\n", par_reduce_strides[0], par_reduce_strides[1], par_reduce_strides[2]);
 
     int nreduce_stride_large = (int)(reduce_strides[0] >= 2) + (int)(reduce_strides[1] >= 2) +
       (int)(reduce_strides[2] >= 2);
+
+    int npar_reduce_stride_large = (int)(par_reduce_strides[0] >= 2) +
+      (int)(par_reduce_strides[1] >= 2) + (int)(par_reduce_strides[2] >= 2);
 
     // if (multiOp) {
     //   config.do_par_reduce = (par_reduce_strides[0] == 1 && par_reduce_strides[1] == 1 &&
@@ -638,16 +719,26 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
     //                          (config.N <= config.par_reduce_lim);
     // }
 
-    config.do_par_reduce = (config.N <= config.par_reduce_lim);
+    config.do_par_reduce = false;//(config.N <= config.par_reduce_lim);
 
     config.Mnext = 1;
     if (config.do_par_reduce) {
-      config.kernel_1.blockDim.x = nthread_par_reduce;
-      // config.kernel_1.blockDim.x =
-      //   (config.M >= nthread_par_reduce) ? nthread_par_reduce : config.warpSize;
+
+      // config.kernel_1.blockDim.x = nthread_par_reduce;
+      config.kernel_1.blockDim.x =
+        (config.M >= nthread_par_reduce) ? nthread_par_reduce : config.warpSize;
       config.kernel_1.blockDim.y = nthread_par_reduce / config.kernel_1.blockDim.x;
+
+      if (multiOp) {
+        config.kernel_1.do_transpose = (npar_reduce_stride_large >= 2) &&
+          (config.kernel_1.blockDim.y > 1);
+      } else {
+        config.kernel_1.do_transpose = (npar_reduce_stride_large >= 1) &&
+          (config.kernel_1.blockDim.y > 1);
+      }
+
       // config.kernel_1.shMemSize =
-      //   config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType);
+      //   (config.kernel_1.blockDim.x + 1)*config.kernel_1.blockDim.y*sizeof(DType);
       config.kernel_1.gridDim.x = std::min(kBaseGridNum, config.N);
       config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
       int maxMblock = config.kernel_1.blockDim.x*config.maxLoopPerTB;
@@ -893,6 +984,18 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
       const bool do_unroll =
       ( config.M / (config.kernel_1.blockDim.x*config.Mnext) >= config.unroll_par_reduce );
 
+#if 1
+      KERNEL_SWITCH(do_unroll, ReduceImplConfig<ndim>::unroll_par_reduce, config.kernel_1.blockDim.y, {
+        par_reduce_kernel<Reducer, ndim, DType, OP1, OP2, UNROLL, nthread_par_reduce/BLOCKDIM_Y,
+                          BLOCKDIM_Y>
+        <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream>>>(
+          config.N, config.M, addto, big.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>(),
+          small_dptr, big.shape_.get<ndim>(), lhs.shape_.get<ndim>(),
+          rhs.shape_.get<ndim>(), small.shape_.get<ndim>(), config.rshape, config.lhs_shape,
+          config.rhs_shape, config.rstride, config.lhs_stride, config.rhs_stride, config.Mnext,
+          config.kernel_1.do_transpose);
+      })
+#else
       KERNEL_SWITCH(do_unroll, ReduceImplConfig<ndim>::unroll_par_reduce, config.kernel_1.blockDim.y, {
         par_reduce_kernel<Reducer, ndim, DType, OP1, OP2, UNROLL, nthread_par_reduce/BLOCKDIM_Y,
                           BLOCKDIM_Y>
@@ -902,7 +1005,7 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
           rhs.shape_.get<ndim>(), small.shape_.get<ndim>(), config.rshape, config.lhs_shape,
           config.rhs_shape, config.rstride, config.lhs_stride, config.rhs_stride, config.Mnext);
       })
-
+#endif
       // if ( config.M / (config.kernel_1.blockDim.x*config.Mnext) >= config.unroll_par_reduce ) {
       //   if (config.kernel_1.blockDim.y == 1) {
       //     par_reduce_kernel<Reducer, DType, OP1, OP2, ReduceImplConfig<ndim>::unroll_par_reduce,
