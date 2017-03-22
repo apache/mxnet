@@ -32,7 +32,7 @@ if(GTEST_FOUND)
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
       rt
-      dmlccore nnvm
+      dmlccore
       mxnet_static
       ${mxnet_LINKER_LIBS}
       )
@@ -40,7 +40,8 @@ if(GTEST_FOUND)
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
       rt
-      dmlccore nnvm
+      dmlccore
+      ${nnvm_LINKER_LIBS}
       mxnet
       )
   endif()
