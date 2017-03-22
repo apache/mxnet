@@ -15,7 +15,7 @@ BATCH_SIZE=$5
 SAVE_MODEL_PATH=$6
 
 java -Xmx8G -cp $CLASS_PATH \
-	ml.dmlc.mxnet.examples.cnnclassification.CNNTextClassification \
+	ml.dmlc.mxnetexamples.cnnclassification.CNNTextClassification \
 	--gpu $GPU \
 	--mr-dataset-path $MR_DATASET_PATH \
 	--w2v-file-path $W2V_FILE_PATH \
