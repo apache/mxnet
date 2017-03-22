@@ -71,7 +71,7 @@ setup(name='mxnet',
       zip_safe=False,
       packages=[
           'mxnet', 'mxnet.module', 'mxnet._ctypes', 'mxnet.rnn',
-          'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook'
+          'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook', 'mxnet.contrib'
           ],
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet',

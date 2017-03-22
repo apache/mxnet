@@ -30,8 +30,8 @@ import ml.dmlc.mxnet.{NDArray, Optimizer}
  * @param rescaleGradient rescaling factor of gradient.
  * @param wd L2 regularization coefficient add to all the weights
  */
-class AdaGrad(val learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f,
-              val epsilon: Float = 1e-7f, val wd: Float = 0.0f) extends Optimizer {
+class AdaGrad(val learningRate: Float = 0.05f, rescaleGradient: Float = 1.0f,
+              epsilon: Float = 1e-7f, wd: Float = 0.0f) extends Optimizer {
 
   /**
    * Update the parameters.

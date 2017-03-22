@@ -20,7 +20,7 @@ package ml.dmlc.mxnet
 import ml.dmlc.mxnet.util.NativeLibraryLoader
 import org.slf4j.{LoggerFactory, Logger}
 
-object Base {
+private[mxnet] object Base {
   private val logger: Logger = LoggerFactory.getLogger("MXNetJVM")
 
   // type definitions
@@ -152,4 +152,4 @@ object Base {
   }
 }
 
-class MXNetError(val err: String) extends Exception(err)
+private[mxnet] class MXNetError(val err: String) extends Exception(err)

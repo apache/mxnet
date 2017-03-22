@@ -71,8 +71,8 @@ class SequenceReverseOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2 : 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2U : 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
@@ -106,8 +106,8 @@ class SequenceReverseOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2 : 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2U : 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
@@ -168,11 +168,11 @@ class SequenceReverseProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2 : 1)
+    CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
 
     const TShape &dshape = (*in_shape)[seq_reverse::kData];
-    CHECK_GT(dshape.ndim(), 2)
+    CHECK_GT(dshape.ndim(), 2U)
         << "The data array must be of rank 3 or greater.";
     // seq length vector is same as batch size
     if (param_.use_sequence_length)
@@ -187,7 +187,7 @@ class SequenceReverseProp : public OperatorProperty {
 
   bool InferType(std::vector<int> *in_type, std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), param_.use_sequence_length ? 2 : 1);
+    CHECK_GE(in_type->size(), param_.use_sequence_length ? 2U : 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

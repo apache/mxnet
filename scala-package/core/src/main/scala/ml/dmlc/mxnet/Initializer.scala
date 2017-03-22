@@ -20,8 +20,6 @@ package ml.dmlc.mxnet
 /**
  *
  * Base class for Initializer.
- *
- * @author Yuan Tang
  */
 abstract class Initializer {
 

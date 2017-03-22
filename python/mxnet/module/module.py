@@ -262,7 +262,7 @@ class Module(BaseModule):
                 else:
                     if not allow_missing:
                         raise RuntimeError("%s is not presented" % name)
-                    if initializer != None:
+                    if initializer is not None:
                         initializer(name, arr)
             else:
                 initializer(name, arr)
@@ -452,6 +452,8 @@ class Module(BaseModule):
             self.logger.warning('optimizer already initialized, ignoring...')
             return
 
+        if self._params_dirty:
+            self._sync_params_from_devices()
         (kvstore, update_on_kvstore) = \
                 _create_kvstore(kvstore, len(self._context), self._arg_params)
 

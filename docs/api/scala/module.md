@@ -85,18 +85,39 @@ To save the module parameters in each training epoch, use a `checkpoint` callbac
 
 ```scala
     val modelPrefix: String = "mymodel"
-    val checkpoint = Model.saveCheckpoint(modelPrefix)
 
-    mod.fit(..., fitParams=new FitParams().setEpochEndCallback(checkpoint))
+    for (epoch <- 0 until 5) {
+      while(train_dataiter.hasNext){  
+          // forward backward pass
+         //do something...
+       }
+        val checkpoint = mod.saveCheckpoint(modelPrefix, epoch, saveOptStates = true)
+
+    }
 ```
 
 To load the saved module parameters, call the `loadCheckpoint` function:
 
 ```scala
-    val (symbol, argParams, auxParams) = \
-        Model.loadCheckpoint(modelPrefix, n_epoch)
+    val mod = Module.loadCheckpoint(modelPrefix, loadModelEpoch, loadOptimizerStates = true)
+```
 
-    // assign parameters
+To initialize parameters, Bind the symbols to construct executors first with `bind` method. Then, initialize the parameters and auxiliary states by calling `initParams()` method.
+
+```scala
+    mod.bind(dataShapes = train_dataiter.provideData, labelShapes = Some(train_dataiter.provideLabel))
+    mod.initParams()
+```
+
+To get current parameters, use `getParams` method.
+
+```scala
+    val (argParams, auxParams) = mod.getParams
+```
+
+To assign parameter and aux state values, use `setParams` method.
+
+```scala
     mod.setParams(argParams, auxParams)
 ```
 

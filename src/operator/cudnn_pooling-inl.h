@@ -49,8 +49,8 @@ class CuDNNPoolingOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     typename DataType<DType>::ScaleType alpha = 1.0f;
@@ -103,11 +103,11 @@ class CuDNNPoolingOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
-    CHECK_EQ(req.size(), 1);
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
+    CHECK_EQ(req.size(), 1U);
+    CHECK_EQ(in_grad.size(), 1U);
 
     Stream<gpu> *s = ctx.get_stream<gpu>();
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
@@ -162,8 +162,8 @@ class CuDNNPoolingOp : public Operator {
     #if CUDNN_MAJOR == 5
     nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
     #endif
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       if (param_.kernel.ndim() == 2) {

@@ -26,9 +26,9 @@ import ml.dmlc.mxnet.util.SerializerUtils
  * Implementation of paper "Asynchronous Stochastic Gradient Descent with
  * Delay Compensation for Distributed Deep Learning"
  */
-class DCASGD(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
-      val lamda: Float = 0.04f, val wd: Float = 0.0f, val clipGradient: Float = 0f,
-      val lrScheduler: LRScheduler = null) extends Optimizer {
+class DCASGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
+      lamda: Float = 0.04f, wd: Float = 0.0f, clipGradient: Float = 0f,
+      lrScheduler: LRScheduler = null) extends Optimizer {
 
   if (lrScheduler != null) {
     lrScheduler.baseLR = learningRate
