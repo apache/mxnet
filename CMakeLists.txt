@@ -6,11 +6,8 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
 
-#set(CMAKE_VERBOSE_MAKEFILE ON)
-
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
-include(CTest)
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
@@ -23,9 +20,8 @@ mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
-mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
+mxnet_option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
-mxnet_option(USE_EXTRA_OPERATORS  "Compile in extra operators such as RCNN and SSD" ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -249,8 +245,9 @@ mxnet_source_group("Source\\symbol"   GLOB "src/symbol/*.cc")
 mxnet_source_group("Source\\executor"   GLOB "src/executor/*.cc")
 mxnet_source_group("Source\\nnvm"   GLOB "src/nnvm/*.cc")
 
+
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
-FILE(GLOB_RECURSE CUDA   "src/*.cu" "src/*.cuh")
+FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
 
@@ -273,19 +270,6 @@ mxnet_source_group("mshadow\\Include"   GLOB "mshadow/mshadow/*.h")
 mxnet_source_group("mshadow\\Include\\cuda"   GLOB "mshadow/mshadow/cuda/*.h" "mshadow/mshadow/cuda/*.cuh")
 mxnet_source_group("mshadow\\Include\\extension"   GLOB "mshadow/mshadow/extension/*.h")
 mxnet_source_group("mshadow\\Include\\packet"   GLOB "mshadow/mshadow/packet/*.h")
-
-if(USE_EXTRA_OPERATORS)
-  file(GLOB_RECURSE EXTRASOURCE
-    "example/rcnn/operator/*.cc" "example/rcnn/operator/*.h"
-    "example/ssd/operator/*.cc" "example/ssd/operator/*.h"
-    )
-  file(GLOB_RECURSE EXTRA_CUDASOURCE
-    "example/rcnn/operator/*.cu" "example/rcnn/operator/*.cuh"
-    "example/ssd/operator/*.cu"  "example/ssd/operator/*.cuh"
-    )
-  list(APPEND SOURCE ${EXTRASOURCE})
-  list(APPEND CUDA ${EXTRA_CUDASOURCE})
-endif()
 
 FILE(GLOB_RECURSE MSHADOWSOURCE "mshadow/mshadow/*.h")
 FILE(GLOB_RECURSE MSHADOW_CUDASOURCE "mshadow/mshadow/*.cuh")
@@ -493,3 +477,13 @@ set(LINT_DIRS include src scripts python)
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
 
 add_subdirectory(example/image-classification/predict-cpp)
+
+if(NOT MSVC)
+  add_custom_command(TARGET mxnet
+    POST_BUILD
+    COMMAND cp $<TARGET_FILE:mxnet> .
+    COMMAND python OpWrapperGenerator.py $<TARGET_FILE_NAME:mxnet>
+    COMMAND rm $<TARGET_FILE_NAME:mxnet>
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cpp-package/src/OpWrapperGenerator/
+  )
+endif()

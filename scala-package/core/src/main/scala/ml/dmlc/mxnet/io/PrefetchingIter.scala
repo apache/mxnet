@@ -27,18 +27,18 @@ import scala.collection.immutable.ListMap
  * Base class for prefetching iterators. Takes one or more DataIters
  * and combine them with prefetching.
  *
- * @author Depeng Liang
- *
  * @param iters list of DataIters
  * @param dataNames
  * @param labelNames
  */
-class PrefetchingIter(val iters: IndexedSeq[DataIter],
-                      val dataNames: IndexedSeq[Map[String, String]] = null,
-                      val labelNames: IndexedSeq[Map[String, String]] = null) extends DataIter {
+class PrefetchingIter(
+    iters: IndexedSeq[DataIter],
+    dataNames: IndexedSeq[Map[String, String]] = null,
+    labelNames: IndexedSeq[Map[String, String]] = null) extends DataIter {
+
   private val logger = LoggerFactory.getLogger(classOf[PrefetchingIter])
 
-  require(iters.length > 0, "Iters length must be greater than 0")
+  require(iters.nonEmpty, "Iters length must be greater than 0")
 
   private val _provideData: ListMap[String, Shape] = {
     if (dataNames == null) {
