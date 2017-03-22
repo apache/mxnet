@@ -28,13 +28,18 @@ def import_into(globs, module, names=None, error_on_overwrite=True):
 
 
 def test_symbols():
-    globs = {'numpy': numpy, 'mxnet': mxnet, 'test_utils': mxnet.test_utils}
+    globs = {'np': numpy, 'mx': mxnet, 'test_utils': mxnet.test_utils, 'SymbolDoc': mxnet.symbol_doc.SymbolDoc}
 
     # make sure all the operators are available
     import_into(globs, mxnet.symbol)
-
     doctest.testmod(mxnet.symbol_doc, globs=globs)
+
+def test_ndarray():
+    globs = {'np': numpy, 'mx': mxnet}
+
+    doctest.testmod(mxnet.ndarray, globs=globs)
 
 
 if __name__ == '__main__':
     test_symbols()
+    test_ndarray()
