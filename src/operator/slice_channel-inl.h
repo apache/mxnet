@@ -202,10 +202,34 @@ class SliceChannelProp : public OperatorProperty {
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
-    out_shape->clear();
-    out_shape->resize(param_.num_outputs, TShape());
-    for (int i = 0; i < param_.num_outputs; ++i) {
-      (*out_shape)[i] = dshape;
+    if (out_shape->empty()) {
+      out_shape->resize(param_.num_outputs, dshape);
+    } else {
+      CHECK_EQ(static_cast<int>((*out_shape).size()), param_.num_outputs)
+        << "Size of output shape mismatch!";
+      for (int i = 0; i < param_.num_outputs; ++i) {
+        SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
+        // Perform incomplete shape inference.
+        // We can back-calculate the inshape based on the out_shape.
+        TShape back_calculate_dshape = ishape;
+        if (param_.squeeze_axis && (dshape.ndim() == ishape.ndim() - 1)) {
+          for (int d = 0; d < real_axis; ++d) {
+            back_calculate_dshape[d] = (*out_shape)[i][d];
+          }
+          back_calculate_dshape[real_axis] = param_.num_outputs;
+          for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
+            back_calculate_dshape[d] = (*out_shape)[i][d - 1];
+          }
+        } else {
+          for (int d = 0; d < static_cast<int>(ishape.ndim()); ++d) {
+            back_calculate_dshape[d] = (*out_shape)[i][d];
+            if (d == real_axis) {
+              back_calculate_dshape[d] *= param_.num_outputs;
+            }
+          }
+        }
+        SHAPE_ASSIGN_CHECK(*in_shape, slice_enum::kData, back_calculate_dshape);
+      }
     }
     return true;
   }

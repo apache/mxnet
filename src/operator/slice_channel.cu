@@ -11,9 +11,11 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<gpu>(SliceChannelParam param, int dtype) {
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    return new SliceChannelOp<gpu>(param);
+    op = new SliceChannelOp<gpu, DType>(param);
   })
+  return op;
 }
 
 }  // namespace op
