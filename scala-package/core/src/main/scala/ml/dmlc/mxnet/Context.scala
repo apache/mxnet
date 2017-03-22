@@ -37,7 +37,7 @@ object Context {
 
 /**
  * Constructing a context.
- * @author Yizhi Liu
+
  * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
  * @param deviceId (default=0) The device id of the device, needed for GPU
  */

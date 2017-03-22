@@ -45,16 +45,18 @@ import scala.collection.mutable.ListBuffer
  * @param beginEpoch The beginning training epoch.
  */
 class FeedForward private(
-    private var symbol: Symbol, private val symGen: SymbolGenerator,
-    val ctx: Array[Context],
-    val numEpoch: Int, val epochSize: Int,
-    val optimizer: Optimizer,
-    val initializer: Initializer,
-    val batchSize: Int,
+    private var symbol: Symbol,
+    symGen: SymbolGenerator,
+    ctx: Array[Context],
+    numEpoch: Int, val epochSize: Int,
+    optimizer: Optimizer,
+    initializer: Initializer,
+    batchSize: Int,
     argParams: Map[String, NDArray],
     auxParams: Map[String, NDArray],
     private val allowExtraParams: Boolean,
     val beginEpoch: Int) {
+
   val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   private var argumentChecked = false
   private var _argParams = argParams

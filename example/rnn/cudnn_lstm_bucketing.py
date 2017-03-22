@@ -76,18 +76,16 @@ def get_data(layout):
 def train(args):
     data_train, data_val, vocab = get_data('TN')
     if args.stack_rnn:
-        stack = mx.rnn.SequentialRNNCell()
-        for layer in range(args.num_layers):
-            dropout = 0.0
-            if layer < (args.num_layers - 1):
-                dropout = args.dropout
-            stack.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
-                    mode='lstm', prefix='lstm_%d'%layer, dropout=dropout,
-                    bidirectional=args.bidirectional))
-        cell = stack
+        cell = mx.rnn.SequentialRNNCell()
+        for i in range(args.num_layers):
+            cell.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
+                                         mode='lstm', prefix='lstm_l%d'%i,
+                                         bidirectional=args.bidirectional))
+            if args.dropout > 0 and i < args.num_layers - 1:
+                cell.add(mx.rnn.DropoutCell(args.dropout, prefix='lstm_d%d'%i))
     else:
         cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, dropout=args.dropout,
-                mode='lstm', bidirectional=args.bidirectional)
+                                   mode='lstm', bidirectional=args.bidirectional)
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
