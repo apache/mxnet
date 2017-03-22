@@ -20,8 +20,13 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
+  // TODO(junwu): Since MKL has a bug when pad and stride > 0,
+  // we disable MKL in those cases and will re-enable it after
+  // it is fixed by deleting lines 28 and 29.
 #if MXNET_USE_MKL2017 == 1
     if (param.kernel.ndim() == 2
+      && 0 == param.pad[0] && 0 == param.pad[1]
+      && 0 == param.stride[0] && 0 == param.stride[1]
       && ((param.pool_type == pool_enum::kMaxPooling)
       || (param.pool_type == pool_enum::kAvgPooling))) {
       switch (dtype) {
