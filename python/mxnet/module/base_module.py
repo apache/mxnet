@@ -4,6 +4,7 @@
 import time
 import logging
 import warnings
+import copy
 
 from .. import metric
 from .. import ndarray
@@ -373,7 +374,8 @@ class BaseModule(object):
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
             force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
-            validation_metric=None, monitor=None):
+            validation_metric=None, monitor=None,
+            epoch_metric_callback=None):
         """Train the module parameters.
 
         Parameters
@@ -429,6 +431,15 @@ class BaseModule(object):
             this value as N+1.
         num_epoch : int
             Number of epochs to run training.
+        validation_metric : Metric
+            For using a different metric for validation / score
+        monitor : Monitor
+            monitor instance to use for debugging weights
+        epoch_metric_callback : function or list of function Will be called at the end of
+        each epoch with train and eval metric to monitor model convergence. Will be called
+        with three arguments, the first is the epoch, second is the train metric and the
+        third the eval metric. The callback signature is f(int, [(metric_name, value)],
+        [(metric_name, value)])
 
         Examples
         --------
@@ -449,10 +460,10 @@ class BaseModule(object):
         self.init_optimizer(kvstore=kvstore, optimizer=optimizer,
                             optimizer_params=optimizer_params)
 
-        if validation_metric is None:
-            validation_metric = eval_metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
+        if validation_metric is None:
+            validation_metric = copy.copy(eval_metric)
 
         ################################################################################
         # training loop
@@ -513,6 +524,13 @@ class BaseModule(object):
                 #TODO: pull this into default
                 for name, val in res:
                     self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
+
+            #----------------------------------------
+            # run epoch_metric_callback with train and eval metrics from this epoch
+            if epoch_metric_callback:
+                for callback in _as_list(epoch_metric_callback):
+                    callback(epoch, list(eval_metric.get_name_value()),\
+                        list(validation_metric.get_name_value()))
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()

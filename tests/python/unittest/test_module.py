@@ -162,9 +162,42 @@ def test_module_switch_bucket():
     #the default bucket is expected to reuse the bytes allocated
     assert total_bytes_after == total_bytes_before
 
+def test_epoch_metric_callback():
+    import numpy as np
+    #import logging
+    #logging.getLogger().setLevel(logging.INFO)
+    epochs = 2
+    train_metrics = []
+    eval_metrics = []
+    def epoch_metric_callback(epoch, train_metric, eval_metric):
+        train_metrics.append(train_metric[0][1])
+        eval_metrics.append(eval_metric[0][1])
+    train_iter = mx.io.NDArrayIter(data=np.ones((10,2)), label=np.zeros((10,1)))
+    eval_iter = mx.io.NDArrayIter(data=np.ones((20,2)), label=np.zeros((20,1)))
+    data = mx.sym.Variable('data')
+    label = mx.sym.Variable('softmax_label')
+    fc1 = mx.sym.FullyConnected(data=data, num_hidden=1, name='FC1')
+    lro = mx.sym.LinearRegressionOutput(data=fc1, label=label, name='LR')
+    m = mx.mod.Module(lro)
+    m.fit(
+        train_iter,
+        eval_iter,
+        num_epoch = epochs,
+        eval_metric = 'mse',
+        monitor = mx.monitor.Monitor(1),
+        epoch_metric_callback = epoch_metric_callback
+    )
+    assert len(train_metrics) == epochs
+    assert len(eval_metrics) == epochs
+    for x in train_metrics:
+        assert x < 1e-4
+    for y in eval_metrics:
+        assert y < 1e-4
+
 if __name__ == '__main__':
     test_module_states()
     test_module_reshape()
     test_save_load()
     test_module_layout()
     test_module_switch_bucket()
+    test_epoch_metric_callback()
