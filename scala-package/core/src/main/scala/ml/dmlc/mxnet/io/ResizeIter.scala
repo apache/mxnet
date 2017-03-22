@@ -27,18 +27,17 @@ import scala.collection.immutable.ListMap
 
 /**
  * Resize a DataIter to given number of batches per epoch.
- *  May produce incomplete batch in the middle of an epoch due
- *  to padding from internal iterator.
- *
- * @author Zixuan Huang
+ * May produce incomplete batch in the middle of an epoch due
+ * to padding from internal iterator.
  *
  * @param dataIter Internal data iterator.
  * @param reSize number of batches per epoch to resize to.
  * @param resetInternal whether to reset internal iterator on ResizeIter.reset
  */
-class ResizeIter(val dataIter: DataIter,
-                 val reSize: Int,
-                 val resetInternal: Boolean = true) extends DataIter {
+class ResizeIter(
+    dataIter: DataIter,
+    reSize: Int,
+    resetInternal: Boolean = true) extends DataIter {
 
   private val logger = LoggerFactory.getLogger(classOf[ResizeIter])
 

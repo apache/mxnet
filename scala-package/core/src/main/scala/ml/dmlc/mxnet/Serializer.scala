@@ -27,14 +27,13 @@ import scala.reflect.ClassTag
 
 /**
  * Serialize & deserialize Java/Scala [[Serializable]] objects
- * @author Yizhi Liu
  */
-abstract class Serializer {
+private[mxnet] abstract class Serializer {
   def serialize[T: ClassTag](t: T): ByteBuffer
   def deserialize[T: ClassTag](bytes: ByteBuffer): T
 }
 
-object Serializer {
+private[mxnet] object Serializer {
   val UTF8 = Charset.forName("UTF-8")
 
   def getSerializer: Serializer = getSerializer(None)
@@ -58,7 +57,7 @@ object Serializer {
   }
 }
 
-class JavaSerializer extends Serializer {
+private[mxnet] class JavaSerializer extends Serializer {
   override def serialize[T: ClassTag](t: T): ByteBuffer = {
     val bos = new ByteArrayOutputStream()
     val out = new ObjectOutputStream(bos)
