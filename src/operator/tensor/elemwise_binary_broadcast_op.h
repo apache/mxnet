@@ -57,7 +57,65 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+#define NDIM_SWITCH(ndim, NDim, ...)  \
+  if (ndim <= 2) {                    \
+    const int NDim = 2;               \
+    {__VA_ARGS__}                     \
+  } else if (ndim <= 4) {             \
+    const int NDim = 4;               \
+    {__VA_ARGS__}                     \
+  } else if (ndim <= broadcast::MAX_DIM) {  \
+    const int NDim = broadcast::MAX_DIM;    \
+    {__VA_ARGS__}                     \
+  } else {                            \
+    LOG(FATAL) << "NDim too large ";  \
+  }
+
 inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshape,
+                                       const TShape& oshape, TShape *new_lshape,
+                                       TShape *new_rshape, TShape *new_oshape) {
+  if (lshape == rshape) return 0;
+  index_t odim = std::max<index_t>(oshape.ndim(), broadcast::MAX_DIM);
+  *new_lshape = TShape(odim);
+  *new_rshape = TShape(odim);
+  *new_oshape = TShape(odim);
+  index_t bl = oshape.ndim() - lshape.ndim();
+  index_t br = oshape.ndim() - rshape.ndim();
+  index_t j = 0, lprod = 1, rprod = 1, oprod = 1;
+  for (index_t i = 0; i < oshape.ndim(); ++i) {
+    index_t l = 1, r = 1, o = oshape[i];
+    if (i >= bl) l = lshape[i-bl];
+    if (i >= br) r = rshape[i-br];
+    if ((lprod != rprod || l != r) &&
+        lprod*l > 1 && rprod*r > 1) {
+      (*new_lshape)[j] = lprod;
+      (*new_rshape)[j] = rprod;
+      (*new_oshape)[j] = oprod;
+      lprod = rprod = oprod = 1; ++j;
+    }
+    lprod *= l;
+    rprod *= r;
+    oprod *= o;
+  }
+  if (lprod > 1 || rprod > 1) {
+    (*new_lshape)[j] = lprod;
+    (*new_rshape)[j] = rprod;
+    (*new_oshape)[j] = oprod;
+    ++j;
+  }
+  if (j <= broadcast::MAX_DIM) {
+    NDIM_SWITCH(j, NDim, {
+      new_lshape->assign(&(*new_lshape)[0], &(*new_lshape)[NDim]);
+      new_rshape->assign(&(*new_rshape)[0], &(*new_rshape)[NDim]);
+      new_oshape->assign(&(*new_oshape)[0], &(*new_oshape)[NDim]);
+    });
+  } else {
+    LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape << " " << rshape;
+  }
+  return j;
+}
+
+inline int BinaryBroadcastShapeCompact_OLD(const TShape& lshape, const TShape& rshape,
                                        const TShape& oshape, TShape *new_lshape,
                                        TShape *new_rshape, TShape *new_oshape) {
   if (lshape == rshape) return 0;
@@ -98,23 +156,6 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
   }
   return j;
 }
-
-#define NDIM_SWITCH(ndim, NDim, ...)  \
-  if (ndim <= 2) {                    \
-    const int NDim = 2;               \
-    {__VA_ARGS__}                     \
-  } else if (ndim <= 4) {             \
-    const int NDim = 4;               \
-    {__VA_ARGS__}                     \
-  } else if (ndim <= 6) {             \
-    const int NDim = 6;               \
-    {__VA_ARGS__}                     \
-  } else if (ndim <= 8) {             \
-    const int NDim = 8;               \
-    {__VA_ARGS__}                     \
-  } else {                            \
-    LOG(FATAL) << "NDim too large ";  \
-  }
 
 template<typename xpu, typename OP>
 void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
@@ -303,7 +344,7 @@ void BinaryBroadcastBackwardUseIn_OLD(const nnvm::NodeAttrs& attrs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<TBlob>& outputs) {
   TShape new_lshape, new_rshape, new_oshape;
-  bool need_bc = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
+  bool need_bc = BinaryBroadcastShapeCompact_OLD(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
                                              &new_lshape, &new_rshape, &new_oshape);
   if (!need_bc) {
     BinaryBackwardUseIn<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
