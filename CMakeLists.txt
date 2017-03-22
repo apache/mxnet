@@ -434,3 +434,13 @@ set(LINT_DIRS include src scripts python)
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
 
 add_subdirectory(example/image-classification/predict-cpp)
+
+if(NOT MSVC)
+  add_custom_command(TARGET mxnet
+    POST_BUILD
+    COMMAND cp $<TARGET_FILE:mxnet> .
+    COMMAND python OpWrapperGenerator.py $<TARGET_FILE_NAME:mxnet>
+    COMMAND rm $<TARGET_FILE_NAME:mxnet>
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cpp-package/src/OpWrapperGenerator/
+  )
+endif()
