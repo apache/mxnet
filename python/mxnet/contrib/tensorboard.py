@@ -26,8 +26,8 @@ class LogMetricsCallback(object):
     >>> # log train and eval metrics under different directories.
     >>> training_log = 'logs/train'
     >>> evaluation_log = 'logs/eval'
-    >>> # in this case, each training and evaluation metric pairs has same name, you can add a prefix
-    >>> # to make it separate.
+    >>> # in this case, each training and evaluation metric pairs has same name,
+    >>> # you can add a prefix to make it separate.
     >>> batch_end_callbacks = [mx.tensorboard.LogMetricsCallback(training_log)]
     >>> eval_end_callbacks = [mx.tensorboard.LogMetricsCallback(evaluation_log)]
     >>> # run
