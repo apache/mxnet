@@ -150,8 +150,8 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
   std::unordered_map<std::string, TShape> known_shape;
   for (mx_uint i = 0; i < num_input_nodes; ++i) {
     known_shape[std::string(input_keys[i])] =
-        TShape(input_shape_data + input_shape_indptr[i],
-               input_shape_data + input_shape_indptr[i + 1]);
+        TShape(input_shape_data + input_shape_indptr[2*i],
+               input_shape_data + input_shape_indptr[2*i + 1]);
   }
   std::vector<std::string> arg_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
   std::vector<std::string> aux_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
