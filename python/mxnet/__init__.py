@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from .context import Context, current_context, cpu, gpu
 from .base import MXNetError
 from . import base
+from . import contrib
 from . import ndarray
 from . import name
 # use mx.sym as short for symbol
@@ -29,7 +30,6 @@ from . import visualization
 # use viz as short for mx.ndarray
 from . import visualization as viz
 from . import callback
-from . import tensorboard
 # from . import misc
 from . import lr_scheduler
 # use mx.kv as short for kvstore

@@ -12,7 +12,7 @@ OUTPUT_PATH="."
 FILE_NAME="profile_matmul_20iter.json"
 
 java -Xmx4G -cp $CLASS_PATH \
-	ml.dmlc.mxnet.examples.profiler.ProfilerMatMul \
+	ml.dmlc.mxnetexamples.profiler.ProfilerMatMul \
 	--gpu $GPU \
 	--profiler-mode $MODE \
 	--output-path $OUTPUT_PATH \

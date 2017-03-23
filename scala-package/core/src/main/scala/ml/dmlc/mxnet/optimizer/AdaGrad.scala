@@ -24,16 +24,14 @@ import ml.dmlc.mxnet.{NDArray, Optimizer}
  * AdaGrad optimizer as described in Matthew D. Zeiler, 2012.
  * http://arxiv.org/pdf/1212.5701v1.pdf
  *
- * @author Yuan Tang, Yizhi Liu
- *
  * @param learningRate Step size.
  * @param epsilon A small float number to make the updating processing stable.
  *                Default value is set to 1e-7.
  * @param rescaleGradient rescaling factor of gradient.
  * @param wd L2 regularization coefficient add to all the weights
  */
-class AdaGrad(val learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f,
-              val epsilon: Float = 1e-7f, val wd: Float = 0.0f) extends Optimizer {
+class AdaGrad(val learningRate: Float = 0.05f, rescaleGradient: Float = 1.0f,
+              epsilon: Float = 1e-7f, wd: Float = 0.0f) extends Optimizer {
 
   /**
    * Update the parameters.
@@ -69,6 +67,22 @@ class AdaGrad(val learningRate: Float = 0.05f, val rescaleGradient: Float = 1.0f
   override def disposeState(state: AnyRef): Unit = {
     if (state != null) {
       state.asInstanceOf[NDArray].dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      state.asInstanceOf[NDArray].serialize()
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      NDArray.deserialize(bytes).asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }

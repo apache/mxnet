@@ -55,7 +55,7 @@ class SliceChannelOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3> > outputs(size_);
@@ -92,7 +92,7 @@ class SliceChannelOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), static_cast<size_t>(size_));
-    CHECK_EQ(in_grad.size(), 1);
+    CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3> > grad_out(size_);
     Tensor<xpu, 3> grad;
@@ -157,7 +157,7 @@ class SliceChannelProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     TShape dshape = in_shape->at(slice_enum::kData);
     TShape ishape = in_shape->at(slice_enum::kData);
     if (dshape.ndim() == 0) return false;
@@ -170,12 +170,12 @@ class SliceChannelProp : public OperatorProperty {
     if (real_axis < 0) {
       real_axis += dshape.ndim();
     }
-    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0)
+    CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0U)
       << "num_outputs (" << param_.num_outputs
       << ") does not divide input dimension "
       << real_axis << " (" << dshape[real_axis] << ").";
     if (param_.squeeze_axis && ishape[real_axis] != 0) {
-      CHECK_EQ(ishape[real_axis], param_.num_outputs)
+      CHECK_EQ(ishape[real_axis], static_cast<size_t>(param_.num_outputs))
         << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
         << " Input shape=" << ishape << ", axis=" << real_axis
         << ", num_outputs=" << param_.num_outputs << ".";
@@ -187,7 +187,8 @@ class SliceChannelProp : public OperatorProperty {
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
-    CHECK_EQ((*out_shape).size(), param_.num_outputs) << "Size of output shape mismatch!";
+    CHECK_EQ((*out_shape).size(), static_cast<size_t>(param_.num_outputs))
+      << "Size of output shape mismatch!";
     for (int i = 0; i < param_.num_outputs; ++i) {
       SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
       // Perform incomplete shape inference.

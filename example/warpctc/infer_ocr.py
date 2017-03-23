@@ -4,6 +4,7 @@
 import sys
 
 sys.path.insert(0, "../../python")
+from __future__ import print_function
 import numpy as np
 import mxnet as mx
 
@@ -58,7 +59,7 @@ if __name__ == '__main__':
     _, arg_params, __ = mx.model.load_checkpoint('ocr', num_epoch)
 
     num = gen_rand()
-    print 'Generated number: ' + num
+    print('Generated number: ' + num)
     # change the fonts accordingly
     captcha = ImageCaptcha(fonts=['./data/OpenSans-Regular.ttf'])
     img = captcha.generate(num)
@@ -89,12 +90,12 @@ if __name__ == '__main__':
         p.append(np.argmax(prob[k]))
 
     p = ctc_label(p)
-    print 'Predicted label: ' + str(p)
+    print('Predicted label: ' + str(p))
 
     pred = ''
     for c in p:
         pred += str((int(c) - 1))
 
-    print 'Predicted number: ' + pred
+    print('Predicted number: ' + pred)
 
 

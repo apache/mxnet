@@ -25,17 +25,15 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * It is implemented according to
  * https://github.com/torch/optim/blob/master/sgd.lua
  *
- * @author Depeng Liang
- *
  * @param learningRate Float, Step size.
  * @param momentum Float, momentum value.
  * @param wd Float, L2 regularization coefficient add to all the weights
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class NAG(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
-          val wd: Float = 0.0001f, val clipGradient: Float = 0f,
-          val lrScheduler: LRScheduler = null) extends Optimizer {
+class NAG(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
+          wd: Float = 0.0001f, clipGradient: Float = 0f,
+          lrScheduler: LRScheduler = null) extends Optimizer {
 
   if (lrScheduler != null) {
     lrScheduler.baseLR = learningRate
@@ -103,6 +101,22 @@ class NAG(val learningRate: Float = 0.01f, val momentum: Float = 0.0f,
   override def disposeState(state: AnyRef): Unit = {
     if (state != null) {
       state.asInstanceOf[NDArray].dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      state.asInstanceOf[NDArray].serialize()
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      NDArray.deserialize(bytes).asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }

@@ -304,6 +304,13 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
   out << ctx.dev_id << ")";
   return out;
 }
+
+// describe op registration point
+#define STRINGIZE_DETAIL(x) #x
+#define STRINGIZE(x) STRINGIZE_DETAIL(x)
+#define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
+#define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
+
 }  // namespace mxnet
 
 #include "./tensor_blob.h"

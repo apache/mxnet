@@ -44,11 +44,11 @@ class InstanceNormOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
 
     CHECK_GE(in_data[instance_norm::kData].ndim(), 3)
-        << "InstanceNorm only supports input tensors of rank > 2.";
+        << "InstanceNorm only supports input tensors of rank >= 3.";
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     int n = in_data[instance_norm::kData].size(0);
@@ -91,10 +91,10 @@ class InstanceNormOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 3);
-    CHECK_EQ(out_data.size(), 3);
+    CHECK_EQ(in_data.size(), 3U);
+    CHECK_EQ(out_data.size(), 3U);
 
-    CHECK_GE(in_data[instance_norm::kData].Size(), 3)
+    CHECK_GE(in_data[instance_norm::kData].ndim(), 3U)
         << "InstanceNorm only supports input tensors of rank > 2.";
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -187,7 +187,7 @@ class InstanceNormProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 3) << "Input:[data]";
+    CHECK_EQ(in_shape->size(), 3U) << "Input:[data]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
 

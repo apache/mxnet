@@ -1,4 +1,5 @@
 # pylint:skip-file
+from __future__ import print_function
 import logging
 import sys, random, time, math
 sys.path.insert(0, "../../python")
@@ -76,7 +77,7 @@ class DataIter(mx.io.DataIter):
         self.batch_size = batch_size
         self.data, self.negative, self.vocab, self.freq = load_data(name)
         self.vocab_size = 1 + len(self.vocab)
-        print self.vocab_size
+        print(self.vocab_size)
         self.num_label = num_label
         self.provide_data = [('data', (batch_size, num_label - 1))]
         self.provide_label = [('label', (self.batch_size, num_label)),
@@ -86,7 +87,7 @@ class DataIter(mx.io.DataIter):
         return self.negative[random.randint(0, len(self.negative) - 1)]
 
     def __iter__(self):
-        print 'begin'
+        print('begin')
         batch_data = []
         batch_label = []
         batch_label_weight = []

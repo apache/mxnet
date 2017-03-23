@@ -1,5 +1,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+from __future__ import print_function
 import sys
 sys.path.insert(0, "../../python")
 import numpy as np
@@ -114,11 +115,11 @@ class BucketSentenceIter(mx.io.DataIter):
                  time_major=True):
         super(BucketSentenceIter, self).__init__()
 
-        if text2id == None:
+        if text2id is None:
             self.text2id = default_text2id
         else:
             self.text2id = text2id
-        if read_content == None:
+        if read_content is None:
             self.read_content = default_read_content
         else:
             self.read_content = read_content

@@ -26,6 +26,7 @@ You can perform tensor or matrix computation in pure Scala:
 ```
 
  ## Scala API Reference
+ * [Module API](module.md) is a flexible high-level interface for training neural networks.
  * [Model API](model.md) is an alternate simple high-level interface for training neural networks.
  * [Symbolic API](symbol.md) performs operations on NDArrays to assemble neural networks from layers.
  * [IO Data Loading API](io.md) performs parsing and data loading.

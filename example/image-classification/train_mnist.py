@@ -59,8 +59,8 @@ if __name__ == '__main__':
         network        = 'mlp',
         # train
         gpus           = None,
-        batch_size      = 64,
-        disp_batches = 100,
+        batch_size     = 64,
+        disp_batches   = 100,
         num_epochs     = 20,
         lr             = .05,
         lr_step_epochs = '10',

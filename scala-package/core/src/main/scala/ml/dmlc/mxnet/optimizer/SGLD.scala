@@ -24,17 +24,15 @@ import ml.dmlc.mxnet.Random
 /**
  * Stochastic Langevin Dynamics Updater to sample from a distribution.
  *
- * @author Depeng Liang
- *
  * @param learningRate Float, Step size.
  * @param rescaleGradient Float, rescaling factor of gradient.
  * @param wd Float, L2 regularization coefficient add to all the weights
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class SGLD(val learningRate: Float = 0.01f, val rescaleGradient: Float = 1.0f,
-           val wd: Float = 0.0001f, val clipGradient: Float = 0f,
-           val lrScheduler: LRScheduler = null) extends Optimizer {
+class SGLD(val learningRate: Float = 0.01f, rescaleGradient: Float = 1.0f,
+           wd: Float = 0.0001f, clipGradient: Float = 0f,
+           lrScheduler: LRScheduler = null) extends Optimizer {
 
   if (lrScheduler != null) {
     lrScheduler.baseLR = learningRate
@@ -84,4 +82,12 @@ class SGLD(val learningRate: Float = 0.01f, val rescaleGradient: Float = 1.0f,
 
   // Dispose the state it created
   override def disposeState(state: AnyRef): Unit = {}
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    throw new UnsupportedOperationException("SGLD does not have states")
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    throw new UnsupportedOperationException("SGLD does not have states")
+  }
 }
