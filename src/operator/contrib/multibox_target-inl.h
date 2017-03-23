@@ -264,7 +264,7 @@ class MultiBoxTargetProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 3) << "Input: [anchor, label, clsPred]";
+    CHECK_EQ(in_shape->size(), 3U) << "Input: [anchor, label, clsPred]";
     TShape ashape = in_shape->at(mboxtarget_enum::kAnchor);
     CHECK_EQ(ashape.ndim(), 3) << "Anchor should be batch shared N*4 tensor";
     CHECK_EQ(ashape[0], 1) << "Anchors are shared across batches, first dim=1";
