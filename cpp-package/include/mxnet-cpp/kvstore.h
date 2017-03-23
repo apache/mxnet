@@ -41,6 +41,9 @@ class KVStore {
  private:
   KVStoreHandle handle_;
   std::unique_ptr<Optimizer> optimizer_;
+  static KVStore*& kvstore_ptr();
+  static void Controller(int head, const char* body, void* controller_handle); 
+  static void Updater(int key, NDArrayHandle recv, NDArrayHandle local, void* handle_);
 };
 
 }  // namespace cpp
