@@ -406,14 +406,15 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         }
       }
 
-      if (blockDim.y > 1) {
-        shTile[tidx + tidy*(bx + 1)] = val;
-        const int it0 = threadIdx.x + threadIdx.y*(blockDim.x + 1);
+      // Shared memory block bx * by. Reduction is along by
+      if (by > 1) {
+        const int it0 = tidx + tidy*bx;
+        shTile[it0] = val;
         __syncthreads();
-        for (int t=1;t < blockDim.y;t <<= 1) {
+        for (int t=1;t < by;t <<= 1) {
           DType tmp;
           Reducer::SetInitValue(tmp);
-          if (threadIdx.y + t < blockDim.y) tmp = shTile[it0 + t*(blockDim.x + 1)];
+          if (tidy + t < by) tmp = shTile[it0 + t*bx];
           __syncthreads();
           Reducer::Reduce(shTile[it0], tmp);
           __syncthreads();
@@ -647,7 +648,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
   config.N = small.shape_.Size();
   config.M = config.rshape.Size();
 
-  printf("N %d M %d\n", config.N, config.M);
+  // printf("N %d M %d\n", config.N, config.M);
 
   bool multiOp = false;
   if (lhs != NULL) {
@@ -674,7 +675,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
       lhs->shape_.get<ndim>(), lhs->shape_.get<ndim>()) : 1;
     reduce_strides[2] = (multiOp) ? fastest_stride(small.shape_.get<ndim>(),
       rhs->shape_.get<ndim>(), rhs->shape_.get<ndim>()) : 1;
-    printf("reduce_strides %d %d %d\n", reduce_strides[0], reduce_strides[1], reduce_strides[2]);
+    // printf("reduce_strides %d %d %d\n", reduce_strides[0], reduce_strides[1], reduce_strides[2]);
 
     int reduce_strides_transp[3];
     reduce_strides_transp[0] = fastest_stride(small.shape_.get<ndim>(), config.rshape,
@@ -683,7 +684,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
       fastest_stride(small.shape_.get<ndim>(), config.lhs_shape, config.lhs_stride) : 1;
     reduce_strides_transp[2] = (multiOp) ?
       fastest_stride(small.shape_.get<ndim>(), config.rhs_shape, config.rhs_stride) : 1;
-    printf("reduce_strides_transp %d %d %d\n", reduce_strides_transp[0], reduce_strides_transp[1], reduce_strides_transp[2]);
+    // printf("reduce_strides_transp %d %d %d\n", reduce_strides_transp[0], reduce_strides_transp[1], reduce_strides_transp[2]);
 
     int par_reduce_strides[3];
     par_reduce_strides[0] = fastest_stride(config.rshape, config.rstride, config.rstride);
@@ -691,7 +692,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
       config.lhs_stride) : 1;
     par_reduce_strides[2] = (multiOp) ? fastest_stride(config.rhs_shape, config.rhs_stride,
       config.rhs_stride) : 1;
-    printf("par_reduce_strides %d %d %d\n", par_reduce_strides[0], par_reduce_strides[1], par_reduce_strides[2]);
+    // printf("par_reduce_strides %d %d %d\n", par_reduce_strides[0], par_reduce_strides[1], par_reduce_strides[2]);
 
     int nreduce_stride_large = (int)(reduce_strides[0] >= 2) + (int)(reduce_strides[1] >= 2) +
       (int)(reduce_strides[2] >= 2);
@@ -715,7 +716,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
     uint64_t num_load = calc_num_load(config.N, config.M, reduce_strides);
     uint64_t num_load_transp = calc_num_load(config.M, config.N, reduce_strides_transp);
 
-    printf("num_load %ld num_load_transp %ld num_par_load %ld\n", num_load, num_load_transp, num_par_load);
+    // printf("num_load %ld num_load_transp %ld num_par_load %ld\n", num_load, num_load_transp, num_par_load);
 
     // config.do_par_reduce = (num_par_load <= std::min(num_load, num_load_transp));
 
@@ -755,41 +756,65 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
 
 
       if (config.kernel_1.do_transpose) {
+        // Fastest thread ID goes through M
+        if (config.M >= nthread_reduce*8) {
+          config.kernel_1.blockDim.x = nthread_reduce;
+        } else if (config.M >= nthread_reduce) {
+          config.kernel_1.blockDim.x = 256;
+        } else if (config.M >= 32) {
+          config.kernel_1.blockDim.x = config.warpSize;
+        } else {
+          config.kernel_1.blockDim.x = 1;
+        }
+        config.kernel_1.blockDim.y = nthread_reduce / config.kernel_1.blockDim.x;
+
         // if (config.M >= nthread_par_reduce) {
         //   config.kernel_1.blockDim.x = config.warpSize;
         // } else {
         //   config.kernel_1.blockDim.x = nthread_reduce;
         // }
-        config.kernel_1.blockDim.x = 1;
-        config.kernel_1.blockDim.y = nthread_reduce;
+        // config.kernel_1.blockDim.x = 1;
+        // config.kernel_1.blockDim.y = nthread_reduce;
         // config.kernel_1.blockDim.x =
         //   (config.M >= nthread_reduce) ? nthread_reduce : config.warpSize;
         // config.kernel_1.blockDim.y = nthread_reduce / config.kernel_1.blockDim.x;
       } else {
-        // if (config.M >= config.maxLoopPerTB*32)
-        if (config.M >= 32)
-        {
-          // M is large enough, choose square thread block
-          config.kernel_1.blockDim.y = std::min(config.M, nthread_reduce/config.warpSize);
-        } else if (config.M > 40) {
-          // M is medium, choose rectangular thread block
-          config.kernel_1.blockDim.y = 4;
+        // Fastest thread ID goes through N
+        if (config.N >= nthread_reduce*8) {
+          config.kernel_1.blockDim.x = nthread_reduce;
+        } else if (config.N >= nthread_reduce) {
+          config.kernel_1.blockDim.x = 256;
+        } else if (config.N >= 32) {
+          config.kernel_1.blockDim.x = config.warpSize;
         } else {
-          // M is small, choose flat thread block
-          config.kernel_1.blockDim.y = 1;
+          config.kernel_1.blockDim.x = 1;
         }
-        config.kernel_1.blockDim.x =
-          (nthread_reduce/(config.kernel_1.blockDim.y*config.warpSize))*config.warpSize;
+        config.kernel_1.blockDim.y = nthread_reduce / config.kernel_1.blockDim.x;
+
+        // if (config.M >= config.maxLoopPerTB*32) {
+        //   // M is large enough, choose square thread block
+        //   config.kernel_1.blockDim.y = nthread_reduce/config.warpSize;
+        // } else if (config.M > 40) {
+        //   // M is medium, choose rectangular thread block
+        //   config.kernel_1.blockDim.y = 4;
+        // } else {
+        //   // M is small, choose flat thread block
+        //   config.kernel_1.blockDim.y = 1;
+        // }
+        // config.kernel_1.blockDim.x =
+        //   (nthread_reduce/(config.kernel_1.blockDim.y*config.warpSize))*config.warpSize;
       }
 
-      printf("bx by %d %d do_transpose %d\n",
-        config.kernel_1.blockDim.x, config.kernel_1.blockDim.y, config.kernel_1.do_transpose);
+      // printf("bx by %d %d do_transpose %d\n",
+      //   config.kernel_1.blockDim.x, config.kernel_1.blockDim.y, config.kernel_1.do_transpose);
 
       // config.kernel_1.blockDim.y = config.warpSize;
 
-      config.kernel_1.shMemSize =
-        (config.kernel_1.blockDim.x + 1)*( (config.kernel_1.blockDim.y > 1) ?
-          config.kernel_1.blockDim.y : 0 )*sizeof(DType);
+      // config.kernel_1.shMemSize =
+      //   (config.kernel_1.blockDim.x + 1)*( (config.kernel_1.blockDim.y > 1) ?
+      //     config.kernel_1.blockDim.y : 0 )*sizeof(DType);
+
+      config.kernel_1.shMemSize = config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType);
 
       if (config.kernel_1.do_transpose) {
         config.kernel_1.gridDim.x = std::min(kBaseGridNum, config.N);
@@ -822,7 +847,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
       config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
     }
 
-    printf("Mnext %d\n", config.Mnext);
+    // printf("Mnext %d\n", config.Mnext);
 
     if (config.Mnext > 1) {
       config.kernel_2.blockSize = kMaxThreadsPerBlock;
