@@ -8,7 +8,7 @@
 
 #set -ex
 
-export MXNET_HOME="$HOME/mxnet"
+export MXNET_HOME="$HOME/github_code/mxnet"
 export MXNET_LOG=${MXNET_HOME}/buildMXNet_mac.log
 # Insert the Homebrew directory at the top of your PATH environment variable
 export PATH=/usr/local/bin:/usr/local/sbin:$PATH
