@@ -5,6 +5,11 @@ TEST = build/tests/cpp/mxnet_test
 GTEST_LIB=$(GTEST_PATH)/lib/
 GTEST_INC=$(GTEST_PATH)/include/
 
+ifeq ($(USE_BREAKPAD), 1)
+CFLAGS  += -I/usr/local/include/breakpad
+LDFLAGS += -lbreakpad_client -lbreakpad
+endif
+
 build/tests/cpp/%.o : tests/cpp/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++0x $(CFLAGS) -MM -MT tests/cpp/$* $< > build/tests/cpp/$*.d

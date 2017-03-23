@@ -175,7 +175,7 @@ class SliceChannelProp : public OperatorProperty {
       << ") does not divide input dimension "
       << real_axis << " (" << dshape[real_axis] << ").";
     if (param_.squeeze_axis && ishape[real_axis] != 0) {
-      CHECK_EQ(ishape[real_axis], param_.num_outputs)
+      CHECK_EQ(ishape[real_axis], static_cast<size_t>(param_.num_outputs))
         << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
         << " Input shape=" << ishape << ", axis=" << real_axis
         << ", num_outputs=" << param_.num_outputs << ".";
@@ -187,7 +187,8 @@ class SliceChannelProp : public OperatorProperty {
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
-    CHECK_EQ((*out_shape).size(), param_.num_outputs) << "Size of output shape mismatch!";
+    CHECK_EQ((*out_shape).size(), static_cast<size_t>(param_.num_outputs))
+      << "Size of output shape mismatch!";
     for (int i = 0; i < param_.num_outputs; ++i) {
       SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
       // Perform incomplete shape inference.
