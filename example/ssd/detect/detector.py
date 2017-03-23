@@ -113,6 +113,7 @@ class Detector(object):
         import matplotlib.pyplot as plt
         import random
         plt.imshow(img)
+        plt.axis('off')
         height = img.shape[0]
         width = img.shape[1]
         colors = dict()
@@ -161,11 +162,12 @@ class Detector(object):
 
         """
         import cv2
+        import os
         dets = self.im_detect(im_list, root_dir, extension, show_timer=show_timer)
         if not isinstance(im_list, list):
             im_list = [im_list]
         assert len(dets) == len(im_list)
         for k, det in enumerate(dets):
-            img = cv2.imread(im_list[k])
+            img = cv2.imread(os.path.join(root_dir,im_list[k]+extension))
             img[:, :, (0, 1, 2)] = img[:, :, (2, 1, 0)]
             self.visualize_detection(img, det, classes, thresh)

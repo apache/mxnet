@@ -1,6 +1,7 @@
 import mxnet as mx
 import numpy as np
 import cv2
+from collections import namedtuple
 from tools.rand_sampler import RandSampler
 
 class DetIter(mx.io.DataIter):
@@ -70,14 +71,19 @@ class DetIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        return [(k, v.shape) for k, v in self._data.items()]
+        dict_data =dict(self._data._asdict())
+        data = [(k, v[0].shape) for k, v in dict_data.items()]
+        return data
 
     @property
     def provide_label(self):
         if self.is_train:
-            return [(k, v.shape) for k, v in self._label.items()]
+            dict_data = dict(self._label._asdict())
+            label = [(k, v[0].shape) for k, v in dict_data.items()]
         else:
-            return []
+            label = []
+
+        return label
 
     def reset(self):
         self._current = 0
@@ -90,8 +96,8 @@ class DetIter(mx.io.DataIter):
     def next(self):
         if self.iter_next():
             self._get_batch()
-            data_batch = mx.io.DataBatch(data=self._data.values(),
-                                   label=self._label.values(),
+            data_batch = mx.io.DataBatch(data=self._data.data,
+                                   label=self._label.label,
                                    pad=self.getpad(), index=self.getindex())
             self._current += self.batch_size
             return data_batch
@@ -130,11 +136,15 @@ class DetIter(mx.io.DataIter):
             batch_data[i] = data
             if self.is_train:
                 batch_label.append(label)
-        self._data = {'data': batch_data}
+
+        _Batch = namedtuple('Batch', ['data'])
+        self._data = _Batch([batch_data])
+        _Batch_label = namedtuple('Batch', ['label'])
+
         if self.is_train:
-            self._label = {'label': mx.nd.array(np.array(batch_label))}
+            self._label = _Batch_label([mx.nd.array(batch_label)])
         else:
-            self._label = {'label': None}
+            self._label = _Batch_label([])
 
     def _data_augmentation(self, data, label):
         """

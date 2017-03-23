@@ -83,8 +83,8 @@ def center_crop(src, size, interp=2):
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
-    x0 = (w - new_w)/2
-    y0 = (h - new_h)/2
+    x0 = int((w - new_w)/2)
+    y0 = int((h - new_h)/2)
 
     out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
     return out, (x0, y0, new_w, new_h)
