@@ -519,6 +519,7 @@ fixed-size items.
         array([[[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]],
+        <BLANKLINE>
                [[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]]], dtype=float32)
@@ -568,10 +569,10 @@ fixed-size items.
         --------
         >>> x = mx.nd.array([1, 2, 3, 4])
         >>> x.shape
-        (4,)
+        (4L,)
         >>> y = mx.nd.zeros((2, 3, 4))
         >>> y.shape
-        (2, 3, 4)
+        (2L, 3L, 4L)
         """
         ndim = mx_uint()
         pdata = ctypes.POINTER(mx_uint)()
@@ -630,10 +631,10 @@ fixed-size items.
         --------
         >>> x = mx.nd.zeros((2,3))
         >>> x.dtype
-        <class 'numpy.float32'>
+        <type 'numpy.float32'>
         >>> y = mx.nd.zeros((2,3), dtype='int32')
         >>> y.dtype
-        <class 'numpy.int32'>
+        <type 'numpy.int32'>
         """
         mx_dtype = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetDType(
@@ -682,8 +683,8 @@ fixed-size items.
                [ 1.,  1.,  1.]], dtype=float32)
         >>> z = mx.nd.ones((2,3), dtype='int32')
         >>> z.asnumpy()
-        array([[ 1.,  1.,  1.],
-               [ 1.,  1.,  1.]], dtype=int32)
+        array([[1, 1, 1],
+               [1, 1, 1]], dtype=int32)
         """
         data = np.empty(self.shape, dtype=self.dtype)
         check_call(_LIB.MXNDArraySyncCopyToCPU(
@@ -702,7 +703,7 @@ fixed-size items.
         >>> x = mx.nd.ones((1,), dtype='int32')
         >>> x.asscalar()
         1
-        >>> type(x.asscalar)
+        >>> type(x.asscalar())
         <type 'numpy.int32'>
         """
         if self.shape != (1,):
@@ -722,7 +723,7 @@ fixed-size items.
         >>> x = mx.nd.zeros((2,3), dtype='float32')
         >>> y = x.astype('int32')
         >>> y.dtype
-        <class 'numpy.int32'>
+        <type 'numpy.int32'>
         """
         res = empty(self.shape, ctx=self.context, dtype=dtype)
         self.copyto(res)
