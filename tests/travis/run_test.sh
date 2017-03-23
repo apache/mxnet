@@ -31,6 +31,7 @@ else
     echo "USE_BLAS=blas" >> config.mk
 fi
 echo "CXX=${CXX}" >>config.mk
+echo "USE_PROFILER=1" >> config.mk
 
 if [ ${TASK} == "build" ]; then
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
@@ -177,5 +178,11 @@ if [ ${TASK} == "perl_test" ]; then
     cd ${MXNET_HOME}/perl-package/AI-MXNet/
     perl Makefile.PL
     make test || exit -1
+    exit 0
+fi
+
+if [ ${TASK} == "cpp_package_test" ]; then
+    MXNET_HOME=${PWD}
+    make travis -C ${MXNET_HOME}/cpp-package/example
     exit 0
 fi

@@ -148,3 +148,5 @@ bld
 target
 cmake-build
 
+
+bin/im2rec

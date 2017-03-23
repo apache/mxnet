@@ -1,4 +1,4 @@
-#Awesome MXNet
+# Awesome MXNet
 
 This page contains a curated list of awesome MXnet examples, tutorials and blogs. It is inspired by [awesome-php](https://github.com/ziadoz/awesome-php) and [awesome-machine-learning](https://github.com/josephmisiti/awesome-machine-learning).
 
@@ -22,9 +22,9 @@ This page contains a curated list of awesome MXnet examples, tutorials and blogs
 
 If you want to contribute to this list and the examples, please open a new pull request. To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
-##<a name="list-of-examples"></a>List of examples
+## <a name="list-of-examples"></a>List of examples
 
-###<a name="language-binding-examples"></a>Languages Binding Examples
+### <a name="language-binding-examples"></a>Languages Binding Examples
 ------------------
 * [C++ examples](https://github.com/dmlc/mxnet/tree/master/example/image-classification/predict-cpp/) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [MXNet Python](http://mxnet.readthedocs.io/en/latest/api/python/index.html) - Python library
@@ -36,7 +36,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)
 * [MXNet Javascript](https://github.com/dmlc/mxnet.js/) - MXNetJS: Javascript Package for Deep Learning in Browser (without server)
 
-###<a name="deep-learning-examples"></a>Deep Learning Examples
+### <a name="deep-learning-examples"></a>Deep Learning Examples
 --------------
 * [Image classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification) - Image classification on MNIST,CIFAR,ImageNet-1k,ImageNet-Full, ***with multiple GPU and distributed training***.
 * [Recurrent Neural Net](https://github.com/dmlc/mxnet/tree/master/example/rnn) - LSTM and RNN for language modeling and character level generation (Char-RNN).
@@ -75,7 +75,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [LSTM Human Activity Recognition](https://github.com/Ldpe2G/DeepLearningForFun/tree/master/Mxnet-Scala/HumanActivityRecognition) by [Ldpe2G](https://github.com/Ldpe2G)
 * [Visual Question Answering](https://github.com/liuzhi136/Visual-Question-Answering) by [liuzhi136](https://github.com/liuzhi136)
 
-###<a name="ipython-notebooks"></a>IPython Notebooks
+### <a name="ipython-notebooks"></a>IPython Notebooks
 -----------------
 * [Predict with Pre-trained model](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/predict-with-pretrained-model.ipynb) - Notebook on how to predict with pretrained model.
 * [composite symbol](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/composite_symbol.ipynb) - A demo of how to composite a symbolic Inception-BatchNorm Network
@@ -86,26 +86,26 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [class active maps](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
 * [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of MXNet to state-of-the-art deep learning applications.
 
-###<a name="mobile-apps-examples"></a>Mobile App Examples
+### <a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------
 * [MXNet Android Classification App](https://github.com/Leliana/WhatsThis) - Image classification on Android with MXNet.
 * [MXNet iOS Classification App](https://github.com/pppoe/WhatsThis-iOS) - Image classification on iOS with MXNet.
 * [Compile MXnet on Xcode (in Chinese)](http://www.liuxiao.org/2015/12/ios-mxnet-%E7%9A%84-ios-%E7%89%88%E6%9C%AC%E7%BC%96%E8%AF%91/) - a step-by-step tutorial of compiling MXnet on Xcode for iOS app
 
-###<a name="web-predictive-services"></a>Web Predictive Services
+### <a name="web-predictive-services"></a>Web Predictive Services
 -----------------------
 * [MXNet Shinny](https://github.com/thirdwing/mxnet_shiny) - Source code for quickly creating a Shiny R app to host online image classification.
 * [Machine Eye](http://rupeshs.github.io/machineye/) - Web service for local image file/image URL classification without uploading.
 
-##<a name="list-of-tutorials"></a>List of tutorials
+## <a name="list-of-tutorials"></a>List of tutorials
 
-###<a name="gtc2016-hands-on"></a>GPU Technology Conference 2016 Hands-on session
+### <a name="gtc2016-hands-on"></a>GPU Technology Conference 2016 Hands-on session
 
 * [Video on GTC 2016 site](http://on-demand.gputechconf.com/gtc/2016/video/L6143.html)
 * [Video backup in Mainland China](http://pan.baidu.com/s/1eS58Gue)
 * [iPython Notebook](https://github.com/dmlc/mxnet-gtc-tutorial)
 
-###<a name="deep-learning-for-hackers"></a>Deep learning for hackers with MXNet
+### <a name="deep-learning-for-hackers"></a>Deep learning for hackers with MXNet
 
 * Deep learning for hackers with MXNet (1) GPU installation and MNIST [English](https://no2147483647.wordpress.com/2015/12/07/deep-learning-for-hackers-with-mxnet-1/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial1) - a tutorial of installing MXnet with GPU and introduction to deep learning by MNIST example.
 * Deep learning for hackers with MXNet (2): Neural art [English](https://no2147483647.wordpress.com/2015/12/21/deep-learning-for-hackers-with-mxnet-2/) [Chinese](http://phunter.farbox.com/post/mxnet-tutorial2) - a tutorial of generating Van Gogh style cat paintings.
