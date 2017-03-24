@@ -114,22 +114,24 @@ object TrainMnist {
         else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
         else Array(Context.cpu(0))
 
-      val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-      envs.put("DMLC_ROLE", inst.role)
-      if (inst.schedulerHost != null) {
-        require(inst.schedulerPort > 0, "scheduler port not specified")
-        envs.put("DMLC_PS_ROOT_URI", inst.schedulerHost)
-        envs.put("DMLC_PS_ROOT_PORT", inst.schedulerPort.toString)
-        require(inst.numWorker > 0, "Num of workers must > 0")
-        envs.put("DMLC_NUM_WORKER", inst.numWorker.toString)
-        require(inst.numServer > 0, "Num of servers must > 0")
-        envs.put("DMLC_NUM_SERVER", inst.numServer.toString)
-        logger.info("Init PS environments")
-        KVStoreServer.init(envs.toMap)
-      }
-
-      if (inst.role != "worker") {
+      // val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+      val envs: Map[String, String] = sys.env
+      // envs.put("DMLC_ROLE", inst.role)
+      // if (inst.schedulerHost != null) {
+      //   require(inst.schedulerPort > 0, "scheduler port not specified")
+      //   envs.put("DMLC_PS_ROOT_URI", inst.schedulerHost)
+      //   envs.put("DMLC_PS_ROOT_PORT", inst.schedulerPort.toString)
+      //   require(inst.numWorker > 0, "Num of workers must > 0")
+      //   envs.put("DMLC_NUM_WORSKER", inst.numWorker.toString)
+      //   require(inst.numServer > 0, "Num of servers must > 0")
+      //   envs.put("DMLC_NUM_SERVER", inst.numServer.toString)
+      //   logger.info("Init PS environments")
+      //   KVStoreServer.init(envs.toMap)
+      // }
+      if (envs.contains("DMLC_ROLE") && envs("DMLC_ROLE") != "worker") {
+        logger.info(envs("DMLC_ROLE"))
         logger.info("Start KVStoreServer for scheduler & servers")
+        KVStoreServer.init(envs)
         KVStoreServer.start()
       } else {
         ModelTrain.fit(dataDir = inst.dataDir,
