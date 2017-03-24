@@ -10,6 +10,7 @@
 
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -210,29 +211,6 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
                 "By default use the last axis");
   }
 };
-
-inline int CheckAxis(int axis, int ndim) {
-  CHECK(axis < ndim && axis >= -ndim)
-    << "axis " << axis << " exceeds input dimension of " << ndim;
-  return (axis + ndim)%ndim;
-}
-
-inline TShape AxisShapeCompact(TShape shape, int *axis, bool allow_2d) {
-  int ndim = static_cast<int>(shape.ndim());
-  index_t leading = 1, trailing = 1, M = shape[*axis];
-  for (int i = 0; i < *axis; ++i) leading *= shape[i];
-  for (int i = *axis + 1; i < ndim; ++i) trailing *= shape[i];
-  if (allow_2d && trailing == 1) {
-    *axis = 1;
-    return mshadow::Shape2(leading, M);
-  }
-  if (allow_2d && leading == 1) {
-    *axis = 0;
-    return mshadow::Shape2(M, trailing);
-  }
-  *axis = 1;
-  return mshadow::Shape3(leading, M, trailing);
-}
 
 template<typename xpu, typename OP>
 void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
