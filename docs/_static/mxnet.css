@@ -875,3 +875,8 @@ table.docutils tr:nth-child(even) {
     margin-bottom: 15px;
     margin-left: 30px;
 }
+
+.opt-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}

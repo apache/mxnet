@@ -182,7 +182,7 @@ pip install mxnet-cu75  # for CUDA 7.5
 pip install mxnet-cu80  # for CUDA 8.0
 ```
 
-Trouble shoot:
+Troubleshoot:
 
 - If you see the following error:
 
