@@ -244,7 +244,7 @@ class Perplexity(EvalMetric):
     def __init__(self, ignore_label, axis=-1):
         super(Perplexity, self).__init__('Perplexity')
         self.ignore_label = ignore_label
-        self.axis = -1
+        self.axis = axis
 
     def update(self, labels, preds):
         assert len(labels) == len(preds)
