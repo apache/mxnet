@@ -179,9 +179,9 @@ def check_fft(shape):
         out2 = np.append(out.real, out.imag, axis = 1)
         a = np.zeros(out1[0].shape)
         p = 0
-        for i in range(out2.shape[1]/2):
+        for i in range(out2.shape[1]//2):
             a[:,p] = out2[:,i]
-            a[:,p+1] = out2[:,i+out2.shape[1]/2]
+            a[:,p+1] = out2[:,i+out2.shape[1]//2]
             p = p+2
    
     if len(shape) == 4:
