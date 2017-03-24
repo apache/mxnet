@@ -20,8 +20,8 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "./operator_common.h"
-#include "./nn/im2col.h"
+#include "../operator_common.h"
+#include "./im2col.h"
 
 
 namespace mxnet {

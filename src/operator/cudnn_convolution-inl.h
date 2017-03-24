@@ -11,7 +11,7 @@
 #include <vector>
 #include <mutex>
 #include <string>
-#include "./convolution-inl.h"
+#include "./nn/convolution-inl.h"
 #include "../common/cuda_utils.h"
 
 namespace mxnet {
