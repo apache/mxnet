@@ -492,7 +492,7 @@ class FusedRNNCell(BaseRNNCell):
     ----------
     """
     def __init__(self, num_hidden, num_layers=1, mode='lstm', bidirectional=False,
-                 dropout=0., get_next_state=False, initializer=None, forget_bias=1.0,
+                 dropout=0., get_next_state=False, forget_bias=1.0,
                  prefix=None, params=None):
         if prefix is None:
             prefix = '%s_'%mode
@@ -503,14 +503,11 @@ class FusedRNNCell(BaseRNNCell):
         self._bidirectional = bidirectional
         self._dropout = dropout
         self._get_next_state = get_next_state
-        if initializer is None:
-            initializer = init.Xavier(factor_type='in', magnitude=2.34)
-        if not isinstance(initializer, init.FusedRNN):
-            initializer = init.FusedRNN( # pylint: disable=redefined-variable-type
-                initializer, num_hidden, num_layers, mode, bidirectional, forget_bias)
-        self._parameter = self.params.get('parameters', init=initializer)
-
         self._directions = ['l', 'r'] if bidirectional else ['l']
+
+        initializer = init.FusedRNN(None, num_hidden, num_layers, mode,
+                                    bidirectional, forget_bias)
+        self._parameter = self.params.get('parameters', init=initializer)
 
     @property
     def state_shape(self):
