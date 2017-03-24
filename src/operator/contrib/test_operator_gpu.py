@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -13,7 +13,6 @@ import time
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
 del test_support_vector_machine_l2_svm
-
 
 def check_countsketch(in_dim,out_dim,n):
     sym = mx.contrib.sym.CountSketch(name='countsketch',out_dim = out_dim)
@@ -69,18 +68,8 @@ def test_countsketch():
 def check_ifft(shape):
     shape_old = shape
     if len(shape) == 2:
-        if shape[1]%2 != 0:
-            lst = list(shape)
-            lst[1] = lst[1]*2
-            shape = tuple(lst)
-            shape_old = shape
         shape = (shape[0],shape[1]*2)
     if len(shape) == 4:
-        if shape[3]%2 != 0:
-            lst = list(shape)
-            lst[3] = lst[3]*2
-            shape = tuple(lst)
-            shape_old = shape
         shape = (shape[0],shape[1],shape[2],shape[3]*2)
     sym = mx.contrib.sym.IFFT(name='ifft', compute_size = 128) 
     init = [np.random.normal(size=shape, scale=1.0)]
@@ -148,19 +137,7 @@ def test_ifft():
             check_ifft(shape)
 
 def check_fft(shape):
-    sym = mx.contrib.sym.FFT(name='fft', compute_size = 128)
-    if len(shape) == 2:
-        if shape[1]%2 != 0:
-            lst = list(shape)
-            lst[1] = lst[1]*2
-            shape = tuple(lst)
-            shape_old = shape
-    if len(shape) == 4:
-        if shape[3]%2 != 0:
-            lst = list(shape)
-            lst[3] = lst[3]*2
-            shape = tuple(lst)
-            shape_old = shape
+    sym = mx.contrib.sym.FFT(name='fft', compute_size = 128) 
     init = [np.random.normal(size=shape, scale=1.0)]
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
@@ -196,7 +173,7 @@ def check_fft(shape):
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
     
-    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-6)
+    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-12)
     
     # backward
     if len(shape) == 2:
@@ -210,7 +187,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])  
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-8)
+        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-12)
          
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
@@ -223,7 +200,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])  
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
+        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-12)
 
 def test_fft():
     np.random.seed(0)
