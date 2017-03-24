@@ -5,8 +5,8 @@
  * \author Junyuan Xie
 */
 
-#ifndef MXNET_OPERATOR_NATIVE_OP_INL_H_
-#define MXNET_OPERATOR_NATIVE_OP_INL_H_
+#ifndef MXNET_OPERATOR_CUSTOM_NATIVE_OP_INL_H_
+#define MXNET_OPERATOR_CUSTOM_NATIVE_OP_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -16,7 +16,7 @@
 #include <string>
 #include <utility>
 #include <sstream>
-#include "./operator_common.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -257,4 +257,4 @@ class NativeOpProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_NATIVE_OP_INL_H_
+#endif  // MXNET_OPERATOR_CUSTOM_NATIVE_OP_INL_H_

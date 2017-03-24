@@ -18,7 +18,7 @@ Context CustomOp<cpu>::get_ctx() {
 }
 
 template<>
-Operator *CreateOp<cpu>(CustomOpInfo *op_info) {
+Operator *CreateOp<cpu>(MXCallbackList *op_info) {
   return new CustomOp<cpu>(op_info);
 }
 
@@ -31,7 +31,7 @@ Context CustomOp<gpu>::get_ctx() {
 }
 
 template<>
-Operator* CreateOp<gpu>(CustomOpInfo *op_info) {
+Operator* CreateOp<gpu>(MXCallbackList *op_info) {
   return new CustomOp<gpu>(op_info);
 }
 #endif  // MXNET_USE_CUDA
@@ -72,12 +72,9 @@ void CustomOp<xpu>::Forward(const OpContext &ctx,
   ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
 
   auto compute = [=]() mutable {
-      CHECK(
-        op_info_->forward(ptrs.size(),
-        ptrs.data(), tags.data(),
-        reqs.data(),
-        ctx.is_train,
-        op_info_->p_forward));
+      CHECK(reinterpret_cast<CustomOpFBFunc>(op_info_->callbacks[kCustomOpForward])(
+        ptrs.size(), ptrs.data(), tags.data(), reqs.data(),
+        static_cast<int>(ctx.is_train), op_info_->contexts[kCustomOpForward]));
 
       // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
       Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {
@@ -141,13 +138,10 @@ void CustomOp<xpu>::Backward(const OpContext &ctx,
   }
 
   auto compute = [=]() mutable {
-      CHECK(
-        op_info_->backward(ptrs.size(),
-        ptrs.data(),
-        tags.data(),
-        reqs.data(),
-        true,
-        op_info_->p_backward));
+      CHECK(reinterpret_cast<CustomOpFBFunc>(op_info_->callbacks[kCustomOpBackward])(
+        ptrs.size(), ptrs.data(), tags.data(), reqs.data(), 1,
+        op_info_->contexts[kCustomOpBackward]));
+
       // NDArray* in ptrs is freed by frontend side. We keep a copy in ndcpy to keep ndvar alive
       Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){
           ctx.async_on_complete();
@@ -178,9 +172,11 @@ Operator* CustomOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sh
   } else {
     str_ctx = "gpu";
   }
-  CustomOpInfo *op_info = new CustomOpInfo;
-  CHECK(info_->create_operator(str_ctx.c_str(), shapes.size(), shapes.data(),
-                              ndims.data(), in_type->data(), op_info, info_->p_create_operator));
+  MXCallbackList *op_info = new MXCallbackList;
+
+  CHECK(reinterpret_cast<CustomOpCreateFunc>(info_->callbacks[kCustomOpPropCreateOperator])(
+    str_ctx.c_str(), shapes.size(), shapes.data(), ndims.data(), in_type->data(), op_info,
+    info_->contexts[kCustomOpPropCreateOperator]));
   DO_BIND_DISPATCH(CreateOp, op_info);
 }
 
