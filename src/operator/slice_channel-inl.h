@@ -171,9 +171,12 @@ class SliceChannelProp : public OperatorProperty {
       real_axis += dshape.ndim();
     }
     CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0U)
-      << "num_outputs (" << param_.num_outputs
-      << ") does not divide input dimension "
-      << real_axis << " (" << dshape[real_axis] << ").";
+      << "You are trying to split the " << real_axis
+      << "-th axis of input tensor with shape " << dshape
+      << " into num_outputs=" << param_.num_outputs
+      << " evenly sized chunks, but this is not possible because "
+      << param_.num_outputs << " does not evenly divide "
+      << dshape[real_axis];
     if (param_.squeeze_axis && ishape[real_axis] != 0) {
       CHECK_EQ(ishape[real_axis], static_cast<size_t>(param_.num_outputs))
         << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
