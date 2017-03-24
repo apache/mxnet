@@ -25,7 +25,6 @@ import scala.collection.mutable
 
 /**
  * Describe the model flow
- * @author Yizhi Liu
  */
 class Model
 object Model {

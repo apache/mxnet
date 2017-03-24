@@ -31,6 +31,7 @@ else
     echo "USE_BLAS=blas" >> config.mk
 fi
 echo "CXX=${CXX}" >>config.mk
+echo "USE_PROFILER=1" >> config.mk
 
 if [ ${TASK} == "build" ]; then
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
@@ -105,10 +106,14 @@ if [ ${TASK} == "python_test" ]; then
         # export MXNET_ENFORCE_CYTHON=1
         # python3 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/train || exit -1
+        python -m nose tests/python/doctest || exit -1
+        python3 -m nose tests/python/doctest || exit -1
     else
         nosetests tests/python/unittest || exit -1
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
+        nosetests tests/python/doctest || exit -1
+        nosetests3 tests/python/doctest || exit -1
     fi
     exit 0
 fi
@@ -177,5 +182,11 @@ if [ ${TASK} == "perl_test" ]; then
     cd ${MXNET_HOME}/perl-package/AI-MXNet/
     perl Makefile.PL
     make test || exit -1
+    exit 0
+fi
+
+if [ ${TASK} == "cpp_package_test" ]; then
+    MXNET_HOME=${PWD}
+    make travis -C ${MXNET_HOME}/cpp-package/example
     exit 0
 fi

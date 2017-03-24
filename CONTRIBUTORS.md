@@ -40,11 +40,11 @@ The committers are the granted write access to the project.
 * [Yuan Tang](https://github.com/terrytangyuan)
   - Yuan is one of major maintainers of mxnet scala package.
 
-### Become a Comitter
-MXNet is a opensource project and we are actively looking for new comitters
-who are willing to help maintaining and lead the project. Committers comes from contributors who:
+### Become a Committer
+MXNet is a opensource project and we are actively looking for new committers
+who are willing to help maintaining and leading the project. Committers come from contributors who:
 * Made substantial contribution to the project.
-* Willing to actively spent time on maintaining and lead the project.
+* Willing to actively spend time on maintaining and leading the project.
 
 New committers will be proposed by current committers, with support from more than two of current committers.
 
@@ -130,3 +130,4 @@ List of Contributors
   - Sergey is original author and current maintainer of Perl5 interface.
 * [Robert Stone](https://github.com/tlby)
 * [Pedro Larroy](https://github.com/larroy)
+* [Jun Wu](https://github.com/reminisce)

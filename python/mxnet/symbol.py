@@ -16,7 +16,7 @@ from .base import _LIB, numeric_types
 from .base import c_array, c_str, mx_uint, py_str, string_types, mx_real_t
 from .base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from .base import check_call, MXNetError
-from .context import Context
+from .context import Context, cpu
 from .ndarray import NDArray, zeros as _nd_zeros, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .executor import Executor
 from . import _symbol_internal as _internal
@@ -320,17 +320,17 @@ class Symbol(SymbolBase):
             return None
 
     def attr(self, key):
-        """Get attribute string from the symbol, this function only works for non-grouped symbol.
+        """Get attribute string from the symbol. This function only works for non-grouped symbols.
 
         Parameters
         ----------
         key : str
-            The key to get attribute from.
+            The key corresponding to the desired attribute.
 
         Returns
         -------
         value : str
-            The attribute value of the key, returns None if attribute do not exist.
+            The desired attribute value, returns None if attribute does not exist.
         """
         ret = ctypes.c_char_p()
         success = ctypes.c_int()
@@ -359,13 +359,14 @@ class Symbol(SymbolBase):
         return {py_str(pairs[i*2]): py_str(pairs[i*2+1]) for i in range(size.value)}
 
     def attr_dict(self):
-        """Recursively get all attributes from the symbol and its childrens
+        """Recursively get all attributes from the symbol and its children.
 
         Returns
         -------
         ret : dict of str to dict
-            Returns a dict whose keys are names of the symbol and its children.
-            Values of the returned dict are dictionaries that map attribute keys to values
+            There is a key in the returned dict for every child with non-empty attribute set.
+            For each symbol, the name of the symbol is its key in the dict
+            and the correspond value is that symbol's attribute list (itself a dictionary).
         """
         size = mx_uint()
         pairs = ctypes.POINTER(ctypes.c_char_p)()
@@ -381,7 +382,13 @@ class Symbol(SymbolBase):
         return ret
 
     def _set_attr(self, **kwargs):
-        """Set the attribute of the symbol.
+        """Set an attribute of the symbol.
+
+        For example. A._set_attr(foo="bar") adds the key, value pair `"foo: bar"`
+        to the symbol's attribute dictionary.
+
+        _set_attr can be used to set the name of a symbol, e.g.
+        `a._set_attr(name="a")`
 
         Parameters
         ----------
@@ -395,13 +402,24 @@ class Symbol(SymbolBase):
                 self.handle, c_str(key), c_str(str(value))))
 
     def get_internals(self):
-        """Get a new grouped symbol whose output contains
-        internal outputs of this symbol.
+        """Get a new grouped symbol sgroup. The output of sgroup is a list of the
+        outputs of all of the internal nodes.
+
+        Consider the following code:
+        >>> a = mxnet.sym.var('a')
+        >>> b = mxnet.sym.var('b')
+        >>> c = a + b
+        >>> d = c.get_internals()
+        >>> d
+        <Symbol Grouped>
+        >>> d.list_outputs()
+        ['a', 'b', '_plus4_output']
 
         Returns
         -------
         sgroup : Symbol
-            The internal of the symbol.
+            A symbol group containing all internal and leaf nodes of the computation graph
+            used to compute the symbol
         """
         handle = SymbolHandle()
         check_call(_LIB.MXSymbolGetInternals(
@@ -429,10 +447,19 @@ class Symbol(SymbolBase):
     def list_arguments(self):
         """List all the arguments in the symbol.
 
+        A
+        ~~~~
+        >>> a = mxnet.sym.var('a')
+        >>> b = mxnet.sym.var('b')
+        >>> c = a + b
+        >>> c.list_arguments
+        ['a', 'b']
+        ~~~~
+
         Returns
         -------
         args : list of string
-            List of all the arguments.
+            List containing the names of all the arguments required to compute the symbol.
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
@@ -447,6 +474,9 @@ class Symbol(SymbolBase):
         -------
         returns : list of string
             List of all the outputs.
+            For most symbols, this list contains only the name of this symbol.
+            For symbol groups, this is a list with the names of all symbols
+            in the group.
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
@@ -464,10 +494,10 @@ class Symbol(SymbolBase):
 
         Notes
         -----
-        Auxiliary states are special states of symbols that do not corresponds to an argument,
-        and do not have gradient. But still be useful for the specific operations.
-        A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
-        Most operators do not have Auxiliary states.
+        Auxiliary states are special states of symbols that do not correspond to an argument,
+        and are not updated by gradient descent. Common examples of auxiliary states
+        include the ``moving_mean`` and ``moving_variance`` in BatchNorm.
+        Most operators do not have auxiliary states.
         """
         size = ctypes.c_uint()
         sarr = ctypes.POINTER(ctypes.c_char_p)()
@@ -476,11 +506,20 @@ class Symbol(SymbolBase):
         return [py_str(sarr[i]) for i in range(size.value)]
 
     def infer_type(self, *args, **kwargs):
-        """Infer the type of outputs and arguments of given known types of arguments.
+        """Given known types for some arguments, infers the type all arguments
+        and all outputs.
 
-        User can either pass in the known types in positional way or keyword argument way.
-        Tuple of Nones is returned if there is not enough information passed in.
-        An error will be raised if there is inconsistency found in the known types passed in.
+        You can pass in the known types in either positional way or keyword argument way.
+        A tuple of Nones is returned if there is not enough information to deduce the missing types.
+        Inconsistencies in the known types will cause an error to be raised.
+
+        Example usage:
+        ----------
+        >>> a = mxnet.sym.var('a')
+        >>> b = mxnet.sym.var('b')
+        >>> c = a + b
+        >>> c.infer_type(a=float32)
+        ([numpy.float32, numpy.float32], [numpy.float32], [])
 
         Parameters
         ----------
@@ -557,11 +596,21 @@ class Symbol(SymbolBase):
         # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
-        """Infer the shape of outputs and arguments of given known shapes of arguments.
+        """Given known shapes for some arguments, infers the shapes of all arguments
+        and all outputs.
 
-        User can either pass in the known shapes in positional way or keyword argument way.
-        Tuple of Nones is returned if there is not enough information passed in.
-        An error will be raised if there is inconsistency found in the known shapes passed in.
+        You can pass in the known shapes in either positional way or keyword argument
+        way. A tuple of Nones is returned if there is not enough information to deduce
+        the missing shapes. Inconsistencies in the known shapes will cause an error to
+        be raised.
+
+        Example usage:
+        ----------
+        >>> a = mxnet.sym.var('a')
+        >>> b = mxnet.sym.var('b')
+        >>> c = a + b
+        >>> c.infer_shape(a=(3,3))
+        ([(3L, 3L), (3L, 3L)], [(3L, 3L)], [])
 
         Parameters
         ----------
@@ -629,7 +678,7 @@ class Symbol(SymbolBase):
             for s in args:
                 if s is not None:
                     if not isinstance(s, tuple):
-                        raise TypeError('Argument need to be shapes(tuple)')
+                        raise TypeError('Arguments must be shapes (tuple)')
                     sdata.extend(s)
                 indptr.append(len(sdata))
         else:
@@ -761,10 +810,10 @@ class Symbol(SymbolBase):
         arg_arrays = []
         if isinstance(args, list):
             if len(args) != len(arg_names):
-                raise ValueError('Length of %s do not match number of arguments' % arg_key)
+                raise ValueError('Length of %s does not match the number of arguments' % arg_key)
             for narr in args:
                 if not isinstance(narr, NDArray):
-                    raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
+                    raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
                 arg_handles.append(narr.handle)
             arg_arrays = args
         elif isinstance(args, dict):
@@ -772,7 +821,7 @@ class Symbol(SymbolBase):
                 if name in args:
                     narr = args[name]
                     if not isinstance(narr, NDArray):
-                        raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
+                        raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
                     arg_handles.append(narr.handle)
                     arg_arrays.append(narr)
                 else:
@@ -782,7 +831,7 @@ class Symbol(SymbolBase):
                     else:
                         raise ValueError('key `%s` is missing in `%s`' % (name, arg_key))
         else:
-            raise TypeError('Only Accept list of NDArrays or dict of str to NDArray')
+            raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
     def simple_bind(self, ctx,
@@ -1025,6 +1074,39 @@ class Symbol(SymbolBase):
         return Symbol(handle)
     # pylint: enable= no-member
 
+    def eval(self, ctx=cpu(), **kwargs):
+        """Evaluate a symbol given arguments
+
+        The `eval` method combines a call to `bind` (which returns an executor)
+        with a call to `forward` (executor method).
+        For the common use case, where you might repeatedly evaluate with same arguments,
+        eval is slow.
+        In that case, you should call `bind` once and then repeatedly call forward.
+        Eval allows simpler syntax for less cumbersome introspection.
+
+        Parameters
+        ----------
+        ctx : Context
+            The device context the generated executor to run on.
+
+        kwargs : list of NDArray or dict of str to NDArray
+            Input arguments to the symbol.
+
+            - If type is list of NDArray, the position is in the same order of list_arguments.
+            - If type is dict of str to NDArray, then it maps the name of arguments
+              to the corresponding NDArray.
+            - In either case, all the arguments must be provided.
+
+        Returns
+        ----------
+        result :  a list of NDArrays corresponding to the values
+        taken by each symbol when evaluated on given args.
+        When called on a single symbol (not a group),
+        the result will be a list with one element.
+        """
+        return self.bind(ctx, kwargs).forward()
+
+
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
     """Create a symbolic variable with specified name.
@@ -1036,22 +1118,22 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
     attr : dict of string -> string
         Additional attributes to set on the variable.
     shape : tuple
-        Optionally, one can specify the shape of a variable. This will be used during
-        shape inference. If user specified a different shape for this variable using
-        keyword argument when calling shape inference, this shape information will be ignored.
+        The shape of a variable. If specified, this will be used during shape inference.
+        If the user specified a different shape for this variable using
+        a keyword argument when calling shape inference, this shape information will be ignored.
     lr_mult : float
-        Specify learning rate muliplier for this variable.
+        The learning rate muliplier for this variable.
     wd_mult : float
-        Specify weight decay muliplier for this variable.
+        Weight decay muliplier for this variable.
     dtype : str or numpy.dtype
-        Similar to shape, we can specify dtype for this variable.
+        The dtype for this variable. If not specified, this value will be inferred.
     init : initializer (mxnet.init.*)
-        Specify initializer for this variable to override the default initializer
+        Initializer for this variable to (optionally) override the default initializer
 
     Returns
     -------
     variable : Symbol
-        The created variable symbol.
+        A symbol corresponding to an input to the computation graph.
     """
     if not isinstance(name, string_types):
         raise TypeError('Expect a string for variable `name`')
@@ -1077,7 +1159,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
 Variable = var
 
 def Group(symbols):
-    """Create a symbol that groups symbols together.
+    """Creates a symbol that contains a collection of other symbols, grouped together.
 
     Parameters
     ----------
@@ -1087,12 +1169,12 @@ def Group(symbols):
     Returns
     -------
     sym : Symbol
-        The created group symbol.
+        A group symbol.
      """
     ihandles = []
     for sym in symbols:
         if not isinstance(sym, Symbol):
-            raise TypeError('Expect Symbols in the list input')
+            raise TypeError('Expected a list of symbols as input')
         ihandles.append(sym.handle)
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(
@@ -1152,7 +1234,7 @@ def load_json(json_str):
     Symbol.tojson : Used to save symbol into json string.
     """
     if not isinstance(json_str, string_types):
-        raise TypeError('fname need to be string')
+        raise TypeError('fname required to be string')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
     return Symbol(handle)

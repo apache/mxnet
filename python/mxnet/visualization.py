@@ -46,7 +46,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
     show_shape = False
-    if shape != None:
+    if shape is not None:
         show_shape = True
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
@@ -200,7 +200,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
     draw_shape = False
-    if shape != None:
+    if shape is not None:
         draw_shape = True
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)

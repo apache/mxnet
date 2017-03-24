@@ -12,5 +12,5 @@
 	url = https://github.com/dmlc/nnvm
 [submodule "cub"]
 	path = cub
-  url = https://github.com/NVlabs/cub
-  shallow = true
+	url = https://github.com/NVlabs/cub
+  shallow=true

@@ -225,7 +225,7 @@ class MXIndexedRecordIO(idxPath: String, uri: String, flag: MXRecordIO.IOFlag,
   def keys(): Iterable[Any] = this.idx.keys
 }
 
-object MXIndexedRecordIO {
+private object MXIndexedRecordIO {
   sealed trait KeyType
   case object TyepInt extends KeyType
 }
