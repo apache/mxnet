@@ -6,3 +6,5 @@ from . import ndarray
 
 from . import symbol as sym
 from . import ndarray as nd
+
+from . import tensorboard
