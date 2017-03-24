@@ -552,10 +552,10 @@ fixed-size items.
         >>> tic = time.time()
         >>> a = mx.nd.ones((1000,1000))
         >>> b = mx.nd.dot(a, a)
-        >>> print(time.time() - tic)
+        >>> print(time.time() - tic) # doctest: +SKIP
         0.003854036331176758
         >>> b.wait_to_read()
-        >>> print(time.time() - tic)
+        >>> print(time.time() - tic) # doctest: +SKIP
         0.0893700122833252
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
@@ -958,7 +958,7 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     array([ 2.], dtype=float32)
     >>> mx.nd.full((1, 2), 2.0, mx.gpu(0))
     <NDArray 1x2 @gpu(0)>
-    >>> mx.nd.ones((1, 2), 2.0, dtype='float16').asnumpy()
+    >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
     arr = empty(shape, ctx, dtype)
