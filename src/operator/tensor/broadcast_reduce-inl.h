@@ -22,7 +22,6 @@ namespace broadcast {
 using namespace mshadow;
 
 const int MAX_DIM = 5;
-// using Shape<ndim> = Shape<MAX_DIM>;
 
 template<int ndim>
 MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
@@ -152,9 +151,6 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
 
 #else
 
-// template<typename DType>
-// using CTensor = Tensor<cpu, MAX_DIM, DType>;
-
 template<int ndim, typename DType, typename OP>
 void binary_broadcast_compute(const int N, const bool addto, const DType *lhs,
                               const DType *rhs, DType *out, const Shape<ndim> lshape,
@@ -176,8 +172,9 @@ void BinaryBroadcastComputeImpl(Stream<cpu> *s, const OpReqType req,
 
 template<typename Reducer, int ndim, typename DType, typename OP>
 void seq_reduce_compute(const int N, const int M, const bool addto,
-                        const DType *big, DType *small, const Shape<ndim> bshape, const Shape<ndim> sshape,
-                        const Shape<ndim> rshape, const Shape<ndim> rstride) {
+                        const DType *big, DType *small, const Shape<ndim> bshape,
+                        const Shape<ndim> sshape, const Shape<ndim> rshape,
+                        const Shape<ndim> rstride) {
   for (int idx = 0; idx < N; ++idx) {
     seq_reduce_assign<Reducer, ndim, DType, OP>(idx, M, addto, big, small, bshape, sshape, rshape,
       rstride);
@@ -213,10 +210,11 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
                                        const DType* __restrict big, const DType* __restrict lhs,
                                        const DType* __restrict rhs, DType *small,
                                        const Shape<ndim>& big_shape, const Shape<ndim>& lhs_shape0,
-                                       const Shape<ndim>& rhs_shape0, const Shape<ndim>& small_shape,
-                                       const Shape<ndim>& rshape, const Shape<ndim>& lhs_shape,
-                                       const Shape<ndim>& rhs_shape, const Shape<ndim>& rstride,
-                                       const Shape<ndim>& lhs_stride, const Shape<ndim>& rhs_stride) {
+                                       const Shape<ndim>& rhs_shape0,
+                                       const Shape<ndim>& small_shape, const Shape<ndim>& rshape,
+                                       const Shape<ndim>& lhs_shape, const Shape<ndim>& rhs_shape,
+                                       const Shape<ndim>& rstride, const Shape<ndim>& lhs_stride,
+                                       const Shape<ndim>& rhs_stride) {
   Shape<ndim> coord = unravel(idx, small_shape);
   const int idx_big0 = ravel(coord, big_shape);
   const int idx_lhs0 = ravel(coord, lhs_shape0);
@@ -247,8 +245,8 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
                         const Shape<ndim> rhs_shape, const Shape<ndim> rhs_stride,
                         const Shape<ndim>& lhs_shape0, const Shape<ndim>& rhs_shape0) {
   for (int idx = 0; idx < N; ++idx) {
-    seq_reduce_assign<Reducer, ndim, DType, OP1, OP2>(idx, M, addto, big, lhs, rhs, small, big_shape,
-      lhs_shape0, rhs_shape0, small_shape, rshape, lhs_shape, rhs_shape, rstride,
+    seq_reduce_assign<Reducer, ndim, DType, OP1, OP2>(idx, M, addto, big, lhs, rhs, small,
+      big_shape, lhs_shape0, rhs_shape0, small_shape, rshape, lhs_shape, rhs_shape, rstride,
       lhs_stride, rhs_stride);
   }
 }
