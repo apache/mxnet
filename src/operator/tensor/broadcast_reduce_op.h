@@ -34,7 +34,8 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>())
-      .describe("Empty or unsigned. The axis to perform the reduction. "
+      .describe("int or None. The axis to perform the reduction. "
+                "Negative values means indexing from right to left. "
                 "If is `None`, a global reduction will be performed.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If true, the axis which is reduced is left "
