@@ -19,7 +19,6 @@ package ml.dmlc.mxnet
 
 /**
  * Shape of [[NDArray]] or other data
- * @author Yizhi Liu
  */
 class Shape(dims: Traversable[Int]) extends Serializable {
   private val shape = dims.toVector

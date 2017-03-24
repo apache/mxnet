@@ -37,9 +37,9 @@ import org.slf4j.LoggerFactory
 class Module(symbolVar: Symbol,
              val dataNames: IndexedSeq[String] = IndexedSeq("data"),
              labelNames: IndexedSeq[String] = IndexedSeq("softmax_label"),
-             private val contexts: Array[Context] = Context.cpu(),
+             contexts: Array[Context] = Context.cpu(),
              workLoadList: Option[IndexedSeq[Float]] = None,
-             private val fixedParamNames: Option[Set[String]] = None) extends BaseModule {
+             fixedParamNames: Option[Set[String]] = None) extends BaseModule {
   private val logger = LoggerFactory.getLogger(classOf[Module])
 
   require(symbolVar != null)
@@ -242,7 +242,7 @@ class Module(symbolVar: Symbol,
       .setInputTypes(inputTypes)
       .build()
 
-    if (sharedModule != None) {
+    if (sharedModule.isDefined) {
       paramsInitialized = true
       argParams = sharedModule.get.argParams
       auxParams = sharedModule.get.auxParams

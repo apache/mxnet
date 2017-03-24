@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import sys
 import random
@@ -318,7 +319,7 @@ class DataReadStream(object):
             (loaded_feat, loaded_label) = tup
 
             if self.has_labels and loaded_label is None:
-                print >> sys.stderr, "Missing labels for: ", self.utt_id
+                print(sys.stderr, "Missing labels for: ", self.utt_id)
                 continue
 
             numFrames = loaded_feat.shape[0]

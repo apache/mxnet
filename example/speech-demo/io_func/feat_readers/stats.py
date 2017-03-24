@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy
 
 class _StreamVariance(object):
@@ -50,7 +51,7 @@ class FeatureStats(object):
         return self.mean
 
     def GetVariance(self):
-        return numpy.power(self.GetStd(),2)
+        return numpy.power(self.GetStd(), 2)
 
     def GetStd(self):
         return 1.0/self.invStd
@@ -64,16 +65,16 @@ class FeatureStats(object):
         stats = None
 
         for featureFile,label in featureList.FeatureList(fileList):
-            if stats == None:
+            if stats is None:
                 self.dim = self.getDimFromFile(featureFile,featureFileHandler)
                 stats    = _StreamVariance(self.dim)
 
             samples = featureFileHandler.Read(featureFile)
 
-            print 'Process file : "{}"'.format(featureFile)
+            print('Process file : "{}"'.format(featureFile))
             stats.AddX(samples)
 
-        print 'Read {} samples'.format(stats.GetNumberOfSamples())
+        print('Read {} samples'.format(stats.GetNumberOfSamples()))
         self.mean           = stats.GetMean()
         self.invStd         = stats.GetInvStandardDeviation()
         self.populationSize = stats.GetNumberOfSamples()
@@ -117,9 +118,9 @@ class FeatureStats(object):
         with open(filename,'wb') as f:
             dt = numpy.dtype([('magicNumber',(numpy.int32,1)),('numSamples',(numpy.int32,1)),('dim',(numpy.int32,1))])
             header=numpy.zeros((1,),dtype=dt)
-            header[0]['magicNumber']=21812
-            header[0]['numSamples']=self.populationSize
-            header[0]['dim']=self.mean.shape[0]
+            header[0]['magicNumber'] = 21812
+            header[0]['numSamples'] = self.populationSize
+            header[0]['dim'] = self.mean.shape[0]
             header.tofile(f)
 
             self.mean.astype(numpy.float32).tofile(f)
@@ -130,7 +131,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Print the mean and standard deviation from a stat file',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('filename',help="Name of the stat file")
+    parser.add_argument('filename', help="Name of the stat file")
     args = parser.parse_args()
     featureStats = FeatureStats()
     featureStats.Load(args.filename)

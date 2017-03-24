@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import os
 import sys
@@ -106,7 +107,7 @@ def _file2nnet(layers, set_layer_num = -1, filename='nnet.in', activation='sigmo
 
     # if is KALDI binary
     if fileIsBinary(filename):
-        print "Warning dropout factors ignored here"
+        print("Warning dropout factors ignored here")
 
         nnet = file2nnet_binary(filename)
 
@@ -119,7 +120,7 @@ def _file2nnet(layers, set_layer_num = -1, filename='nnet.in', activation='sigmo
             layers[i].params[1].set_value(nnet[i]["bias"].astype(dtype=theano.config.floatX))
 
         if withfinal:
-            #print nnet[-1]["weights"][0][0:10]
+            #print(nnet[-1]["weights"][0][0:10])
             layers[-1].params[0].set_value(nnet[-1]["weights"].astype(dtype=theano.config.floatX))
             layers[-1].params[1].set_value(nnet[-1]["bias"].astype(dtype=theano.config.floatX))
 

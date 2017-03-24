@@ -19,9 +19,6 @@ package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
 
-/**
- * @author Depeng Liang
- */
 object Profiler {
 
   val mode2Int = Map("symbolic" -> 0, "all" -> 1)

@@ -20,9 +20,8 @@ package ml.dmlc.mxnet
 /**
  * Attribute manager for scoping.
  * User can also inherit this object to change naming behavior.
- * @author Yizhi Liu
  */
-class AttrScope(attr: Map[String, String] = Map.empty) {
+private[mxnet] class AttrScope(attr: Map[String, String] = Map.empty) {
   private var _attr = attr
   /**
    * Get the attribute dict given the attribute set by the symbol.
@@ -45,7 +44,7 @@ class AttrScope(attr: Map[String, String] = Map.empty) {
   }
 }
 
-object AttrScope {
+private[mxnet] object AttrScope {
   private var _current = new AttrScope()
   def current: AttrScope = _current
   private def setCurrentAttr(attr: AttrScope): Unit = {

@@ -199,7 +199,7 @@ def setup_rnn_model(default_ctx,
                                 grad_req="add", group2ctx=group2ctx)
               max_rnn_exec = rnn_exec
         else:
-              assert max_rnn_exec != None
+              assert max_rnn_exec is not None
               rnn_exec = rnn_sym.bind(default_ctx, args=arg_arrays,
                             args_grad=args_grad,
                             grad_req="add", group2ctx=group2ctx,

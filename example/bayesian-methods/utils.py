@@ -40,7 +40,7 @@ def get_executor(sym, ctx, data_inputs, initializer=None):
     exe = sym.bind(ctx=ctx, args=dict(params, **data_inputs),
                    args_grad=params_grad,
                    aux_states=aux_states)
-    if initializer != None:
+    if initializer is not None:
         for k, v in params.items():
             initializer(k, v)
     return exe, params, params_grad, aux_states
