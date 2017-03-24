@@ -7,9 +7,6 @@
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_CUH_
 
-// template<typename DType>
-// using CTensor = Tensor<gpu, ndim, DType>;
-
 using namespace mshadow::cuda;
 
 template<int ndim, typename DType, typename OP, int unroll>
@@ -53,34 +50,6 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
   binary_broadcast_kernel<ndim, DType, OP, unroll><<<ngrid, nthread, 0, stream>>>(
     N, req == kAddTo, lhs.dptr<DType>(), rhs.dptr<DType>(), out.dptr<DType>(), lstride, rstride,
     out.shape_.get<ndim>());
-}
-
-// Performs batched reduction: blockDim_y number of reductions across blockDim_x
-template<typename Reducer, typename DType, int blockDim_x, int blockDim_y>
-__device__ __forceinline__ DType batchReduce(const DType val) {
-  DType ret;
-#if __CUDA_ARCH__ >= 3000
-  #pragma unroll
-  for (int i=16;i >= 1;i/=2) {
-    Reducer::Reduce(val, (DType)__shfl_xor(val, i));
-  }
-  ret = val;
-#else
-  // Size of shared memory is blockDim_x*blockDim_y*sizeof(DType)
-  volatile __shared__ DType shBuf[blockDim_y][blockDim_x];
-  shBuf[threadIdx.y][threadIdx.x] = val;
-  __syncthreads();
-  for (int t=1;t < blockDim_x;t <<= 1) {
-    DType tmp;
-    Reducer::SetInitValue(tmp);
-    if (threadIdx.x + t < blockDim_x) tmp = shBuf[threadIdx.y][threadIdx.x + t];
-    __syncthreads();
-    Reducer::Reduce(shBuf[threadIdx.y][threadIdx.x], tmp);
-    __syncthreads();
-  }
-  ret = shBuf[threadIdx.y][threadIdx.x];
-#endif
-  return ret;
 }
 
 const int nthread_reduce = kMaxThreadsPerBlock;
@@ -548,15 +517,14 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
       <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
         (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<DType>());
     }
-
   }
-
 }
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const TBlob& rhs,
                 const OpReqType req, const TBlob& big, const Tensor<gpu, 1, char>& workspace,
                 const ReduceImplConfig<ndim>& config) {
+  // printf("N M %d %d\n", config.N, config.M);
   if (config.M == 1) {
     reduce_kernel_M1<Reducer, ndim, DType, OP1, OP2>
     <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
@@ -594,7 +562,6 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
       <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
         (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<DType>());
     }
-
   }
 }
 

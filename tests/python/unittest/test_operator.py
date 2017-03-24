@@ -858,6 +858,38 @@ def gen_broadcast_data():
     r_shape[np.where(r_axis_flags == 0)] = 1
     return [np.random.random(l_shape), np.random.random(r_shape)]
 
+# binary_op_testdata = np.array([[[2, 50, 1, 300, 7], [1, 50, 448, 300, 1]],
+#     [[10, 495, 1, 77, 17], [10, 1, 2, 1, 17]],
+#     [[431, 2, 65, 2, 1], [1, 431, 1, 65, 1, 225]],
+#     [[92, 434, 4, 2, 37], [1, 92, 1, 4, 1, 37]],
+#     [[2, 92, 1, 4, 1], [1, 92, 434, 1, 37]],
+#     [[1, 53, 7, 222, 343], [2, 1, 7, 1, 343]],
+#     [[1, 17, 1, 5, 1], [227, 1, 2, 1, 28]],
+#     [[29, 1, 2, 1, 8], [29, 52, 1, 430, 1]],
+#     [[2, 363, 1, 427, 3], [1, 363, 116, 427, 1]],
+#     [[1, 50, 1, 300, 7], [1, 50, 448, 300, 1]],
+#     [[1, 10, 495, 77, 17], [1, 10, 1, 1, 17]],
+#     [[1, 431, 65, 2, 1], [1, 431, 65, 1, 225]],
+#     [[1, 92, 434, 4, 37], [1, 92, 1, 4, 37]],
+#     [[1, 92, 1, 4, 1], [1, 92, 434, 1, 37]],
+#     [[1, 53, 7, 222, 343], [1, 1, 7, 1, 343]],
+#     [[1, 179, 1, 87, 176], [1, 179, 1, 1, 176]],
+#     [[1, 1, 17, 5, 1], [1, 227, 1, 1, 28]],
+#     [[1, 29, 1, 1, 8], [1, 29, 52, 430, 1]],
+#     [[1, 363, 1, 427, 3], [1, 363, 116, 427, 1]],
+#     [[1, 1, 448, 300, 7], [1, 1, 448, 300, 1]],
+#     [[1, 1, 1, 1, 28], [1, 227, 1, 5, 28]],
+#     [[1, 233, 394, 38, 1], [1, 233, 394, 38, 16]],
+#     [[1, 10, 495, 77, 17], [1, 1, 1, 1, 17]],
+#     [[1, 431, 65, 2, 225], [1, 1, 65, 2, 225]],
+#     [[1, 15, 1, 88, 1], [1, 15, 1, 88, 463]],
+#     [[1, 129, 90, 48, 96], [1, 129, 90, 1, 1]],
+#     [[1, 1, 403, 179, 18], [1, 44, 403, 179, 18]],
+#     [[1, 1, 65, 2, 225], [1, 1, 65, 1, 1]],
+#     [[1, 44, 403, 179, 18], [1, 44, 1, 1, 1]],
+#     [[1, 1, 1, 1, 2], [1, 44, 194, 500, 1]],
+#     [[1, 1, 107, 184, 9], [1, 1, 1, 1, 1]]])
+
 def gen_binary_data():
     ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
@@ -866,7 +898,12 @@ def gen_binary_data():
 def check_binary_op_forward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
+        # if i < binary_op_testdata.shape[0]*0:
+        #     d = binary_op_testdata[i]
+        # else:
         d = gen_data()
+        # if i == 0:
+        #     print d[0]
         x = baseline(d[0], d[1])
         y = symbol.bind(default_context(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward()
@@ -875,6 +912,9 @@ def check_binary_op_forward(symbol, baseline, gen_data):
 def check_binary_op_backward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
+        # if i < binary_op_testdata.shape[0]:
+        #     d = binary_op_testdata[i]
+        # else:
         d = gen_data()
         out = np.random.random((d[0] + d[1]).shape)
         def reduce_op(shape, x):
