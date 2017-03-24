@@ -62,6 +62,11 @@ ifeq ($(USE_PROFILER), 1)
 	CFLAGS += -DMXNET_USE_PROFILER=1
 endif
 
+# Caffe Plugin
+ifdef CAFFE_PATH
+  CFLAGS += -DMXNET_USE_CAFFE=1
+endif
+
 ifndef LINT_LANG
 	LINT_LANG="all"
 endif

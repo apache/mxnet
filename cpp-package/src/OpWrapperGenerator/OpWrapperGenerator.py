@@ -45,6 +45,7 @@ class EnumType:
     def GetConvertEnumVariableToString(self, variable=''):
         return "%sValues[int(%s)]" % (self.name, variable)
 
+
 class Arg:
     typeDict = {'boolean':'bool',\
         'Shape(tuple)':'Shape',\
@@ -55,6 +56,7 @@ class Arg:
         'Symbol or Symbol[]':'const std::vector<Symbol>&',\
         'NDArray[]':'const std::vector<Symbol>&',\
         'ndarray-or-symbol[]':'const std::vector<Symbol>&',\
+        'caffe-layer-parameter':'::caffe::LayerParameter',\
         'float':'mx_float',\
         'real_t':'mx_float',\
         'int':'int',\
@@ -88,7 +90,7 @@ class Arg:
             self.hasDefault = True
             self.defaultString = typeString.split('default=')[1].strip().strip("'")
             if typeString.startswith('string'):
-                self.defaultString = '"' + self.defaultString + '"'
+                self.defaultString = self.MakeCString(self.defaultString)
             elif self.isEnum:
                 self.defaultString = self.enum.GetDefaultValueString(self.defaultString)
             elif self.defaultString == 'None':
@@ -101,6 +103,14 @@ class Arg:
                 self.defaultString = 'Shape' + self.defaultString
             elif self.type == 'dmlc::optional<int>':
                 self.defaultString = self.type + '(' + self.defaultString + ')'
+            elif typeString.startswith('caffe-layer-parameter'):
+                self.defaultString = 'textToCaffeLayerParameter(' + self.MakeCString(self.defaultString) + ')'
+                hasCaffe = True
+
+    def MakeCString(self, str):
+        str = str.replace('\n', "\\n")
+        str = str.replace('\t', "\\t")
+        return '\"' + str + '\"'
 
     def ConstructEnumTypeName(self, opName = '', argName = ''):
         a = opName[0].upper()
@@ -135,6 +145,7 @@ class Op:
             if arg.hasDefault:
                 orderedArgs.append(arg)
         self.args = orderedArgs
+
     def WrapDescription(self, desc = ''):
         ret = []
         sentences = desc.split('.')
@@ -153,6 +164,7 @@ class Op:
               ret.append(line[:pos].strip())
               line = line[pos:]
         return ret
+
     def GenDescription(self, desc = '', \
                         firstLineHead = ' * \\brief ', \
                         otherLineHead = ' *        '):
@@ -165,6 +177,7 @@ class Op:
         for i in range(1, len(descs)):
             ret = ret + (otherLineHead + descs[i]).rstrip() + '\n'
         return ret
+
     def GetOpDefinitionString(self, use_name, indent=0):
         ret = ''
         indentStr = ' ' * indent
@@ -244,6 +257,7 @@ class Op:
             ret = ret + '.CreateSymbol();\n'
         ret = ret + indentStr + '}\n'
         return ret
+
     def GetArgString(self, arg):
         ret = '%s %s' % (arg.type, arg.name)
         if arg.hasDefault:
@@ -318,6 +332,30 @@ def ParseAllOps():
         ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
     return ret + ret2
 
+def GetHelperFunctions():
+    text = (
+        "#if defined(MXNET_USE_CAFFE) && MXNET_USE_CAFFE != 0\n"
+        "inline ::caffe::LayerParameter textToCaffeLayerParameter(const std::string& text) {\n"
+        "  caffe::NetParameter np;\n"
+        "  const bool success = google::protobuf::TextFormat::ParseFromString(text, &np);\n"
+        "  CHECK_EQ(success, true) << \"Invalid protpbuf layer string: \" << text;\n"
+        "  return ::caffe::LayerParameter(np.layer(0));\n"
+        "}\n"
+        "inline std::basic_ostream<char>& operator <<\n"
+        "    (std::basic_ostream<char>& os, const ::caffe::LayerParameter& op) {\n"
+        "  std::string s;\n"
+        "  caffe::NetParameter np;\n"
+        "  // Avoid wasting time making a copy -- just push in out default object's pointer\n"
+        "  np.mutable_layer()->AddAllocated(const_cast<::caffe::LayerParameter *>(&op));\n"
+        "  google::protobuf::TextFormat::PrintToString(np, &s);\n"
+        "  np.mutable_layer()->ReleaseLast();\n"
+        "  os << s;\n"
+        "  return os;\n"
+        "}\n"
+        "#endif\n"
+    )
+    return text
+
 if __name__ == "__main__":
     #et = EnumType(typeName = 'MyET')
     reload(sys)
@@ -350,6 +388,10 @@ if __name__ == "__main__":
                   "\n"
                   "#include <string>\n"
                   "#include <vector>\n"
+                  "#if defined(MXNET_USE_CAFFE) && MXNET_USE_CAFFE != 0\n"
+                  "#include <caffe/proto/caffe.pb.h>\n"
+                  "#include <google/protobuf/text_format.h>\n"
+                  "#endif\n"
                   "#include \"mxnet-cpp/base.h\"\n"
                   "#include \"mxnet-cpp/shape.h\"\n"
                   "#include \"mxnet-cpp/operator.h\"\n"
@@ -358,6 +400,7 @@ if __name__ == "__main__":
                   "namespace mxnet {\n"
                   "namespace cpp {\n"
                   "\n"
+                  + GetHelperFunctions() +
                   "%s"
                   "} //namespace cpp\n"
                   "} //namespace mxnet\n"
@@ -365,3 +408,4 @@ if __name__ == "__main__":
     with open('../../include/mxnet-cpp/op.h', 'w') as f:
         f.write(patternStr % ParseAllOps())
     pass
+

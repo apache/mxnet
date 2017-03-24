@@ -2,7 +2,7 @@
  * Copyright (c) 2016 by Contributors
  * \file caffe_loss-inl.h
  * \brief Caffe Operator
- * \author Haoran Wang 
+ * \author Haoran Wang
 */
 #ifndef PLUGIN_CAFFE_CAFFE_LOSS_INL_H_
 #define PLUGIN_CAFFE_CAFFE_LOSS_INL_H_
@@ -31,7 +31,8 @@ struct CaffeLossParam : public dmlc::Parameter<CaffeLossParam> {
   int num_data, num_out;
   float grad_scale;
 
-  DMLC_DECLARE_PARAMETER(CaffeLossParam) { DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
+  DMLC_DECLARE_PARAMETER(CaffeLossParam) {
+    DMLC_DECLARE_FIELD(prototxt).set_default("layer{}")
     .describe("Caffe's layer parameter");
     DMLC_DECLARE_FIELD(num_data).set_range(0, 100).set_default(2)
     .describe("Operator input number");

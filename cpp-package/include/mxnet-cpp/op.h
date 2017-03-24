@@ -10,6 +10,10 @@
 
 #include <string>
 #include <vector>
+#if defined(MXNET_USE_CAFFE) && MXNET_USE_CAFFE != 0
+#include <caffe/proto/caffe.pb.h>
+#include <google/protobuf/text_format.h>
+#endif
 #include "mxnet-cpp/base.h"
 #include "mxnet-cpp/shape.h"
 #include "mxnet-cpp/operator.h"
@@ -18,6 +22,25 @@
 namespace mxnet {
 namespace cpp {
 
+#if defined(MXNET_USE_CAFFE) && MXNET_USE_CAFFE != 0
+inline ::caffe::LayerParameter textToCaffeLayerParameter(const std::string& text) {
+  caffe::NetParameter np;
+  const bool success = google::protobuf::TextFormat::ParseFromString(text, &np);
+  CHECK_EQ(success, true) << "Invalid protpbuf layer string: " << text;
+  return ::caffe::LayerParameter(np.layer(0));
+}
+inline std::basic_ostream<char>& operator <<
+    (std::basic_ostream<char>& os, const ::caffe::LayerParameter& op) {
+  std::string s;
+  caffe::NetParameter np;
+  // Avoid wasting time making a copy -- just push in out default object's pointer
+  np.mutable_layer()->AddAllocated(const_cast<::caffe::LayerParameter *>(&op));
+  google::protobuf::TextFormat::PrintToString(np, &s);
+  np.mutable_layer()->ReleaseLast();
+  os << s;
+  return os;
+}
+#endif
 /*!
  * \breif Batch normalization.
  *
@@ -61,7 +84,7 @@ namespace cpp {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/batch_norm.cc:L84
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/batch_norm.cc:L79
  * \param symbol_name name of the resulting symbol
  * \param data Input data to batch normalization
  * \param gamma gamma array
@@ -94,59 +117,6 @@ inline Symbol BatchNorm(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
-/*! \breif Activation function to be applied.
- */
-enum class LeakyReLUActType {
-  elu = 0,
-  leaky = 1,
-  prelu = 2,
-  rrelu = 3
-};
-
-/*!
- * \breif Leaky ReLu activation
- *
- *        The following types are supported:
- *
- *        - *elu*: ``y = x > 0 ? x : slop * (exp(x)-1)``
- *        - *leaky*: ``y = x > 0 ? x : slope * x``
- *        - *prelu*: same as *leaky* but the ``slope`` is learnable.
- *        - *rrelu*: same as *leaky* but the ``slope`` is uniformly randomly chosen from
- *        *[lower_bound, upper_bound)* for training, while fixed to be
- *        *(lower_bound+upper_bound)/2* for inference.
- *
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/leaky_relu.cc:L36
- * \param symbol_name name of the resulting symbol
- * \param data Input data to activation function.
- * \param act_type Activation function to be applied.
- * \param slope Init slope for the activation. (For leaky and elu only)
- * \param lower_bound Lower bound of random slope. (For rrelu only)
- * \param upper_bound Upper bound of random slope. (For rrelu only)
- * \return new symbol
- */
-inline Symbol LeakyReLU(const std::string& symbol_name,
-                        Symbol data,
-                        LeakyReLUActType act_type = LeakyReLUActType::leaky,
-                        mx_float slope = 0.25,
-                        mx_float lower_bound = 0.125,
-                        mx_float upper_bound = 0.334) {
-  static const char *LeakyReLUActTypeValues[] = {
-    "elu",
-    "leaky",
-    "prelu",
-    "rrelu"
-  };
-  return Operator("LeakyReLU")
-           .SetParam("act_type", LeakyReLUActTypeValues[int(act_type)])
-           .SetParam("slope", slope)
-           .SetParam("lower_bound", lower_bound)
-           .SetParam("upper_bound", upper_bound)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
 /*!
  * \breif Concate a list of array along a given axis.
  *
@@ -171,7 +141,7 @@ inline Symbol LeakyReLU(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/concat.cc:L69
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/concat.cc:L70
  * \param symbol_name name of the resulting symbol
  * \param data List of tensors to concatenate
  * \param num_args Number of inputs to be concated.
@@ -211,10 +181,63 @@ inline Symbol IdentityAttachKLSparseReg(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
+/*! \breif Activation function to be applied.
+ */
+enum class LeakyReLUActType {
+  elu = 0,
+  leaky = 1,
+  prelu = 2,
+  rrelu = 3
+};
+
+/*!
+ * \breif Leaky ReLu activation
+ *
+ *        The following types are supported:
+ *
+ *        - *elu*: ``y = x > 0 ? x : slop * (exp(x)-1)``
+ *        - *leaky*: ``y = x > 0 ? x : slope * x``
+ *        - *prelu*: same as *leaky* but the ``slope`` is learnable.
+ *        - *rrelu*: same as *leaky* but the ``slope`` is uniformly randomly chosen from
+ *        *[lower_bound, upper_bound)* for training, while fixed to be
+ *        *(lower_bound+upper_bound)/2* for inference.
+ *
+ *
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/leaky_relu.cc:L36
+ * \param symbol_name name of the resulting symbol
+ * \param data Input data to activation function.
+ * \param act_type Activation function to be applied.
+ * \param slope Init slope for the activation. (For leaky and elu only)
+ * \param lower_bound Lower bound of random slope. (For rrelu only)
+ * \param upper_bound Upper bound of random slope. (For rrelu only)
+ * \return new symbol
+ */
+inline Symbol LeakyReLU(const std::string& symbol_name,
+                        Symbol data,
+                        LeakyReLUActType act_type = LeakyReLUActType::leaky,
+                        mx_float slope = 0.25,
+                        mx_float lower_bound = 0.125,
+                        mx_float upper_bound = 0.334) {
+  static const char *LeakyReLUActTypeValues[] = {
+    "elu",
+    "leaky",
+    "prelu",
+    "rrelu"
+  };
+  return Operator("LeakyReLU")
+           .SetParam("act_type", LeakyReLUActTypeValues[int(act_type)])
+           .SetParam("slope", slope)
+           .SetParam("lower_bound", lower_bound)
+           .SetParam("upper_bound", upper_bound)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
 /*!
  * \breif Calculate cross_entropy(data, one_hot(label))
  *
- *        From:/home/xlidc/mxnet/src/operator/loss_binary_op.cc:12
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/loss_binary_op.cc:12
  * \param symbol_name name of the resulting symbol
  * \param data Input data
  * \param label Input label
@@ -229,45 +252,34 @@ inline Symbol softmax_cross_entropy(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
-/*! \breif Padding type to use. "constant" pads all values with a constant value, the
- *        value of which can be specified with the constant_value option. "edge" uses the
- */
-enum class PadMode {
-  constant = 0,
-  edge = 1
-};
-
 /*!
- * \breif Pad an array.
- *
- *        Only supports 4-D and 5-D input array.
- *
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/pad.cc:L407
+ * \breif
  * \param symbol_name name of the resulting symbol
- * \param data An n-dimensional input tensor.
- * \param mode Padding type to use. "constant" pads all values with a constant value, the
- *        value of which can be specified with the constant_value option. "edge" uses the
- * \param pad_width A tuple of padding widths of length 2*r, where r is the rank of the
- *        input tensor, specifying number of values padded to the edges of each axis.
- *        (before_1, after_1, ... , before_N, after_N) unique pad widths for each axis.
- * \param constant_value This option is only used when mode is "constant". This value
+ * \param data The input
+ * \param axis The axis along which to compute softmax. By default use the last axis
  * \return new symbol
  */
-inline Symbol Pad(const std::string& symbol_name,
-                  Symbol data,
-                  PadMode mode,
-                  Shape pad_width,
-                  double constant_value = 0) {
-  static const char *PadModeValues[] = {
-    "constant",
-    "edge"
-  };
-  return Operator("Pad")
-           .SetParam("mode", PadModeValues[int(mode)])
-           .SetParam("pad_width", pad_width)
-           .SetParam("constant_value", constant_value)
+inline Symbol softmax(const std::string& symbol_name,
+                      Symbol data,
+                      int axis = -1) {
+  return Operator("softmax")
+           .SetParam("axis", axis)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axis along which to compute softmax. By default use the last axis
+ * \return new symbol
+ */
+inline Symbol log_softmax(const std::string& symbol_name,
+                          Symbol data,
+                          int axis = -1) {
+  return Operator("log_softmax")
+           .SetParam("axis", axis)
            .SetInput("data", data)
            .CreateSymbol(symbol_name);
 }
@@ -417,41 +429,45 @@ inline Symbol rmspropalex_update(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
+/*! \breif Padding type to use. "constant" pads all values with a constant value, the
+ *        value of which can be specified with the constant_value option. "edge" uses the
+ */
+enum class PadMode {
+  constant = 0,
+  edge = 1
+};
+
 /*!
- * \breif Interchange two axes of an array.
+ * \breif Pad an array.
  *
- *        Examples::
- *
- *        x = [[1, 2, 3]])
- *        swapaxes(x, 0, 1) = [[ 1],
- *        [ 2],
- *        [ 3]]
- *
- *        x = [[[ 0, 1],
- *        [ 2, 3]],
- *        [[ 4, 5],
- *        [ 6, 7]]]  // (2,2,2) array
- *
- *        swapaxes(x, 0, 2) = [[[ 0, 4],
- *        [ 2, 6]],
- *        [[ 1, 5],
- *        [ 3, 7]]]
+ *        Only supports 4-D and 5-D input array.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/swapaxis.cc:L55
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/pad.cc:L407
  * \param symbol_name name of the resulting symbol
- * \param data Input array.
- * \param dim1 the first axis to be swapped.
- * \param dim2 the second axis to be swapped.
+ * \param data An n-dimensional input tensor.
+ * \param mode Padding type to use. "constant" pads all values with a constant value, the
+ *        value of which can be specified with the constant_value option. "edge" uses the
+ * \param pad_width A tuple of padding widths of length 2*r, where r is the rank of the
+ *        input tensor, specifying number of values padded to the edges of each axis.
+ *        (before_1, after_1, ... , before_N, after_N) unique pad widths for each axis.
+ * \param constant_value This option is only used when mode is "constant". This value
  * \return new symbol
  */
-inline Symbol SwapAxis(const std::string& symbol_name,
-                       Symbol data,
-                       uint32_t dim1 = 0,
-                       uint32_t dim2 = 0) {
-  return Operator("SwapAxis")
-           .SetParam("dim1", dim1)
-           .SetParam("dim2", dim2)
+inline Symbol Pad(const std::string& symbol_name,
+                  Symbol data,
+                  PadMode mode,
+                  Shape pad_width,
+                  double constant_value = 0) {
+  static const char *PadModeValues[] = {
+    "constant",
+    "edge"
+  };
+  return Operator("Pad")
+           .SetParam("mode", PadModeValues[int(mode)])
+           .SetParam("pad_width", pad_width)
+           .SetParam("constant_value", constant_value)
            .SetInput("data", data)
            .CreateSymbol(symbol_name);
 }
@@ -485,7 +501,7 @@ inline Symbol SwapAxis(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/slice_channel.cc:L50
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/slice_channel.cc:L50
  * \param symbol_name name of the resulting symbol
  * \param num_outputs Number of outputs to be sliced.
  * \param axis Dimension along which to slice.
@@ -503,60 +519,749 @@ inline Symbol SliceChannel(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
-/*! \breif upsampling method
- */
-enum class UpSamplingSampleType {
-  bilinear = 0,
-  nearest = 1
-};
-
-/*! \breif How to handle multiple input. concat means concatenate upsampled images along
- *        the channel dimension. sum means add all images together, only available for
- */
-enum class UpSamplingMultiInputMode {
-  concat = 0,
-  sum = 1
-};
-
 /*!
- * \breif Perform nearest neighboor/bilinear up sampling to inputs
+ * \breif Interchange two axes of an array.
+ *
+ *        Examples::
+ *
+ *        x = [[1, 2, 3]])
+ *        swapaxes(x, 0, 1) = [[ 1],
+ *        [ 2],
+ *        [ 3]]
+ *
+ *        x = [[[ 0, 1],
+ *        [ 2, 3]],
+ *        [[ 4, 5],
+ *        [ 6, 7]]]  // (2,2,2) array
+ *
+ *        swapaxes(x, 0, 2) = [[[ 0, 4],
+ *        [ 2, 6]],
+ *        [[ 1, 5],
+ *        [ 3, 7]]]
+ *
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/swapaxis.cc:L55
  * \param symbol_name name of the resulting symbol
- * \param data Array of tensors to upsample
- * \param scale Up sampling scale
- * \param sample_type upsampling method
- * \param num_args Number of inputs to be upsampled. For nearest neighbor upsampling,
- *        this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other
- *        inputs will be upsampled to thesame size. For bilinear upsampling this must be
- * \param num_filter Input filter. Only used by bilinear sample_type.
- * \param multi_input_mode How to handle multiple input. concat means concatenate
- *        upsampled images along the channel dimension. sum means add all images
- * \param workspace Tmp workspace for deconvolution (MB)
+ * \param data Input array.
+ * \param dim1 the first axis to be swapped.
+ * \param dim2 the second axis to be swapped.
  * \return new symbol
  */
-inline Symbol UpSampling(const std::string& symbol_name,
-                         const std::vector<Symbol>& data,
-                         uint32_t scale,
-                         UpSamplingSampleType sample_type,
-                         int num_args,
-                         uint32_t num_filter = 0,
-                         UpSamplingMultiInputMode multi_input_mode = UpSamplingMultiInputMode::concat,
-                         uint64_t workspace = 512) {
-  static const char *UpSamplingSampleTypeValues[] = {
-    "bilinear",
-    "nearest"
-  };
-  static const char *UpSamplingMultiInputModeValues[] = {
-    "concat",
-    "sum"
-  };
-  return Operator("UpSampling")
-           .SetParam("scale", scale)
-           .SetParam("sample_type", UpSamplingSampleTypeValues[int(sample_type)])
-           .SetParam("num_args", num_args)
-           .SetParam("num_filter", num_filter)
-           .SetParam("multi_input_mode", UpSamplingMultiInputModeValues[int(multi_input_mode)])
-           .SetParam("workspace", workspace)
-(data)
+inline Symbol SwapAxis(const std::string& symbol_name,
+                       Symbol data,
+                       uint32_t dim1 = 0,
+                       uint32_t dim2 = 0) {
+  return Operator("SwapAxis")
+           .SetParam("dim1", dim1)
+           .SetParam("dim2", dim2)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Returns the indices of the maximum values along an axis.
+ *
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:11
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
+ * \param keepdims If true, the axis which is reduced is left in the result as dimension
+ * \return new symbol
+ */
+inline Symbol argmax(const std::string& symbol_name,
+                     Symbol data,
+                     int axis = -1,
+                     bool keepdims = false) {
+  return Operator("argmax")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Returns the indices of the minimum values along an axis.
+ *
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:16
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
+ * \param keepdims If true, the axis which is reduced is left in the result as dimension
+ * \return new symbol
+ */
+inline Symbol argmin(const std::string& symbol_name,
+                     Symbol data,
+                     int axis = -1,
+                     bool keepdims = false) {
+  return Operator("argmin")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif
+ * \param symbol_name name of the resulting symbol
+ * \param src Source input
+ * \return new symbol
+ */
+inline Symbol argmax_channel(const std::string& symbol_name,
+                             Symbol src) {
+  return Operator("argmax_channel")
+           .SetInput("src", src)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the sum of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L44
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol sum(const std::string& symbol_name,
+                  Symbol data,
+                  Shape axis = Shape(),
+                  bool keepdims = false) {
+  return Operator("sum")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the mean of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L53
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol mean(const std::string& symbol_name,
+                   Symbol data,
+                   Shape axis = Shape(),
+                   bool keepdims = false) {
+  return Operator("mean")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the product of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L62
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol prod(const std::string& symbol_name,
+                   Symbol data,
+                   Shape axis = Shape(),
+                   bool keepdims = false) {
+  return Operator("prod")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the sum of array elements over given axes with ``NaN`` ignored
+ *
+ *        Refer to ``sum`` for more details.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L75
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol nansum(const std::string& symbol_name,
+                     Symbol data,
+                     Shape axis = Shape(),
+                     bool keepdims = false) {
+  return Operator("nansum")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the product of array elements over given axes with ``NaN`` ignored
+ *
+ *        Refer to ``prod`` for more details.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L88
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol nanprod(const std::string& symbol_name,
+                      Symbol data,
+                      Shape axis = Shape(),
+                      bool keepdims = false) {
+  return Operator("nanprod")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the max of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L98
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol max(const std::string& symbol_name,
+                  Symbol data,
+                  Shape axis = Shape(),
+                  bool keepdims = false) {
+  return Operator("max")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the min of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L108
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol min(const std::string& symbol_name,
+                  Symbol data,
+                  Shape axis = Shape(),
+                  bool keepdims = false) {
+  return Operator("min")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Broadcast an array over particular axes.
+ *
+ *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
+ *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+ *
+ *        For example::
+ *
+ *        // given (1,2,1) shape x
+ *        x = [[[ 1.],
+ *        [ 2.]]]
+ *
+ *        // broadcast on axis 2
+ *        broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
+ *        [ 2.,  2.,  2.]]]
+ *        // broadcast on axes 0 and 2
+ *        broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
+ *        [ 2.,  2.,  2.]],
+ *        [[ 1.,  1.,  1.],
+ *        [ 2.,  2.,  2.]]]
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L137
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param axis The axes to perform the broadcasting.
+ * \param size Target sizes of the broadcasting axes.
+ * \return new symbol
+ */
+inline Symbol broadcast_axis(const std::string& symbol_name,
+                             Symbol data,
+                             Shape axis = Shape(),
+                             Shape size = Shape()) {
+  return Operator("broadcast_axis")
+           .SetParam("axis", axis)
+           .SetParam("size", size)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Broadcast an array to a new shape.
+ *
+ *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
+ *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+ *
+ *        For example::
+ *
+ *        broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
+ *        [ 1.,  2.,  3.]])
+ *
+ *        The dimensions that will not be changed can also use the special code ``0`` that
+ *        means copy the original value. So with ``shape=(2,0)`` we will obtain the same
+ *        results in the above example.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L158
+ * \param symbol_name name of the resulting symbol
+ * \param data The input
+ * \param shape The shape of the desired array. We can set the dim to zero if it's same
+ *        as the original. E.g `A = broadcast_to(B, shape=(10, 0, 0))` has the same
+ * \return new symbol
+ */
+inline Symbol broadcast_to(const std::string& symbol_name,
+                           Symbol data,
+                           Shape shape = Shape()) {
+  return Operator("broadcast_to")
+           .SetParam("shape", shape)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Compute the L2 norm.
+ *
+ *        Flatten then input array and then compute the l2 norm.
+ *
+ *        Examples::
+ *
+ *        x = [[1, 2],
+ *        [3, 4]]
+ *
+ *        norm(x) = [5.47722578]
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L182
+ * \param symbol_name name of the resulting symbol
+ * \param src Source input
+ * \return new symbol
+ */
+inline Symbol norm(const std::string& symbol_name,
+                   Symbol src) {
+  return Operator("norm")
+           .SetInput("src", src)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Given three ndarrays, condition, x, and y, return an ndarray with the elements
+ *        from x or y, depending on the elements from condition are true or false. x and
+ *        y must have the same shape. If condition has the same shape as x, each element
+ *        in the output array is from x if the corresponding element in the condition is
+ *        true, and from y if false. If condtion does not have the same shape as x, it
+ *        must be a 1D array whose size is the same as x's first dimension size. Each row
+ *        of the output array is from x's row if the corresponding element from condition
+ *
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/control_flow_op.cc:21
+ * \param symbol_name name of the resulting symbol
+ * \param condition condition array
+ * \param x
+ * \param y
+ * \return new symbol
+ */
+inline Symbol where(const std::string& symbol_name,
+                    Symbol condition,
+                    Symbol x,
+                    Symbol y) {
+  return Operator("where")
+           .SetInput("condition", condition)
+           .SetInput("x", x)
+           .SetInput("y", y)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Add arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L16
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_add(const std::string& symbol_name,
+                            Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_add")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Substract arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L39
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_sub(const std::string& symbol_name,
+                            Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_sub")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Multiply arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L61
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_mul(const std::string& symbol_name,
+                            Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_mul")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Divide arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L79
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_div(const std::string& symbol_name,
+                            Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_div")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif First array elements raised to powers from second array,
+ *        element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L16
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_power(const std::string& symbol_name,
+                              Symbol lhs,
+                              Symbol rhs) {
+  return Operator("broadcast_power")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Element-wise maximum of array elements with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L34
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_maximum(const std::string& symbol_name,
+                                Symbol lhs,
+                                Symbol rhs) {
+  return Operator("broadcast_maximum")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Element-wise minimum of array elements with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L52
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_minimum(const std::string& symbol_name,
+                                Symbol lhs,
+                                Symbol rhs) {
+  return Operator("broadcast_minimum")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Given the "legs" of a right triangle, return its hypotenuse
+ *        with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L71
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_hypot(const std::string& symbol_name,
+                              Symbol lhs,
+                              Symbol rhs) {
+  return Operator("broadcast_hypot")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Return (lhs == rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L16
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_equal(const std::string& symbol_name,
+                              Symbol lhs,
+                              Symbol rhs) {
+  return Operator("broadcast_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Return (lhs != rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L23
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_not_equal(const std::string& symbol_name,
+                                  Symbol lhs,
+                                  Symbol rhs) {
+  return Operator("broadcast_not_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Return (lhs > rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L30
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_greater(const std::string& symbol_name,
+                                Symbol lhs,
+                                Symbol rhs) {
+  return Operator("broadcast_greater")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Return (lhs >= rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L37
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_greater_equal(const std::string& symbol_name,
+                                      Symbol lhs,
+                                      Symbol rhs) {
+  return Operator("broadcast_greater_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Return (lhs < rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L44
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_lesser(const std::string& symbol_name,
+                               Symbol lhs,
+                               Symbol rhs) {
+  return Operator("broadcast_lesser")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Return (lhs <= rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L51
+ * \param symbol_name name of the resulting symbol
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_lesser_equal(const std::string& symbol_name,
+                                     Symbol lhs,
+                                     Symbol rhs) {
+  return Operator("broadcast_lesser_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
            .CreateSymbol(symbol_name);
 }
 
@@ -579,7 +1284,7 @@ inline Symbol elemwise_add(const std::string& symbol_name,
 /*!
  * \breif Calculate Smooth L1 Loss(lhs, scalar)
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_binary_scalar_op_extended.cc:63
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_scalar_op_extended.cc:63
  * \param symbol_name name of the resulting symbol
  * \param data source input
  * \param scalar scalar input
@@ -594,155 +1299,31 @@ inline Symbol smooth_l1(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
-/*! \breif The return type. "value" means returning the top k values, "indices" means
- *        returning the indices of the top k values, "mask" means to return a mask array
- *        containing 0 and 1. 1 means the top k values. "both" means to return both value
- */
-enum class TopkRetTyp {
-  both = 0,
-  indices = 1,
-  mask = 2,
-  value = 3
-};
-
 /*!
- * \breif Return the top *k* elements in an array.
+ * \breif Add all input arguments element-wise.
  *
- *        Examples::
+ *        .. math::
+ *        add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n
  *
- *        x = [[ 0.3,  0.2,  0.4],
- *        [ 0.1,  0.3,  0.2]]
- *
- *        // return the index of the largest element on last axis
- *        topk(x) = [[ 2.],
- *        [ 1.]]
- *
- *        // return the value of the top-2 elements on last axis
- *        topk(x, ret_typ='value', k=2) = [[ 0.4,  0.3],
- *        [ 0.3,  0.2]]
- *
- *        // flatten and then return both index and value
- *        topk(x, ret_typ='both', k=2, axis=None) = [ 0.4,  0.3], [ 2.,  0.]
+ *        ``add_n`` is potentially more efficient than calling ``add`` by `n` times.
  *
  *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/ordering_op.cc:L36
+ *        Defined in
  * \param symbol_name name of the resulting symbol
- * \param src Source input
- * \param axis Axis along which to choose the top k indices. If not given, the flattened
- * \param k Number of top elements to select, should be always smaller than or equal to
- * \param ret_typ The return type. "value" means returning the top k values, "indices"
- *        means returning the indices of the top k values, "mask" means to return a mask
- *        array containing 0 and 1. 1 means the top k values. "both" means to return both
- * \param is_ascend Whether to choose k largest or k smallest. Top K largest elements
+ * \param args Positional input arguments
  * \return new symbol
  */
-inline Symbol topk(const std::string& symbol_name,
-                   Symbol src,
-                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
-                   int k = 1,
-                   TopkRetTyp ret_typ = TopkRetTyp::indices,
-                   bool is_ascend = false) {
-  static const char *TopkRetTypValues[] = {
-    "both",
-    "indices",
-    "mask",
-    "value"
-  };
-  return Operator("topk")
-           .SetParam("axis", axis)
-           .SetParam("k", k)
-           .SetParam("ret_typ", TopkRetTypValues[int(ret_typ)])
-           .SetParam("is_ascend", is_ascend)
-           .SetInput("src", src)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Return a sorted copy of an array.
- *
- *        Examples::
- *
- *        x = [[ 1, 4],
- *        [ 3, 1]]
- *
- *        // sort along the last axis
- *        sort(x) = [[ 1.,  4.],
- *        [ 1.,  3.]]
- *
- *        // flatten and then sort
- *        sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
- *
- *        // sort long the first axis
- *        sort(x, axis=0) = [[ 1.,  1.],
- *        [ 3.,  4.]]
- *
- *        // in a descend order
- *        sort(x, is_ascend=0) = [[ 4.,  1.],
- *        [ 3.,  1.]]
- *
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/ordering_op.cc:L99
- * \param symbol_name name of the resulting symbol
- * \param src Source input
- * \param axis Axis along which to choose sort the input tensor. If not given, the
- * \param is_ascend Whether sort in ascending or descending order.
- * \return new symbol
- */
-inline Symbol sort(const std::string& symbol_name,
-                   Symbol src,
-                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
-                   bool is_ascend = true) {
-  return Operator("sort")
-           .SetParam("axis", axis)
-           .SetParam("is_ascend", is_ascend)
-           .SetInput("src", src)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Returns the indices that can sort an array.
- *
- *        Examples::
- *
- *        x = [[ 0.3,  0.2,  0.4],
- *        [ 0.1,  0.3,  0.2]]
- *
- *        // sort along axis -1
- *        argsort(x) = [[ 1.,  0.,  2.],
- *        [ 0.,  2.,  1.]]
- *
- *        // sort along axis 0
- *        argsort(x, axis=0) = [[ 1.,  0.,  1.]
- *        [ 0.,  1.,  0.]]
- *
- *        // flatten and then sort
- *        argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/ordering_op.cc:L146
- * \param symbol_name name of the resulting symbol
- * \param src Source input
- * \param axis Axis along which to sort the input tensor. If not given, the flattened
- * \param is_ascend Whether sort in ascending or descending order.
- * \return new symbol
- */
-inline Symbol argsort(const std::string& symbol_name,
-                      Symbol src,
-                      dmlc::optional<int> axis = dmlc::optional<int>(-1),
-                      bool is_ascend = true) {
-  return Operator("argsort")
-           .SetParam("axis", axis)
-           .SetParam("is_ascend", is_ascend)
-           .SetInput("src", src)
+inline Symbol add_n(const std::string& symbol_name,
+                    const std::vector<Symbol>& args) {
+  return Operator("add_n")
+(args)
            .CreateSymbol(symbol_name);
 }
 
 /*!
  * \breif Get output from a symbol and pass 0 gradient back
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:31
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:31
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -774,7 +1355,7 @@ enum class CastDtype {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L65
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Source input
  * \param dtype Output data type.
@@ -799,7 +1380,7 @@ inline Symbol Cast(const std::string& symbol_name,
 /*!
  * \breif Negate src
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:84
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:84
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -819,7 +1400,7 @@ inline Symbol negative(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L95
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -839,7 +1420,7 @@ inline Symbol abs(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L109
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -858,7 +1439,7 @@ inline Symbol sign(const std::string& symbol_name,
  *        round([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -2.,  2.,  2.,  2.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L122
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -877,7 +1458,7 @@ inline Symbol round(const std::string& symbol_name,
  *        ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L132
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -896,7 +1477,7 @@ inline Symbol ceil(const std::string& symbol_name,
  *        floor([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-3., -2.,  1.,  1.,  2.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L141
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -919,7 +1500,7 @@ inline Symbol floor(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L154
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -939,7 +1520,7 @@ inline Symbol rint(const std::string& symbol_name,
  *        fix([-2.1, -1.9, 1.9, 2.1]) = [-2., -1.,  1., 2.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L164
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -959,7 +1540,7 @@ inline Symbol fix(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L174
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -978,7 +1559,7 @@ inline Symbol square(const std::string& symbol_name,
  *        sqrt(x) = \sqrt{x}
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L187
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -997,7 +1578,7 @@ inline Symbol sqrt(const std::string& symbol_name,
  *        rsqrt(x) = 1/\sqrt{x}
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L200
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1017,7 +1598,7 @@ inline Symbol rsqrt(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L215
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1036,7 +1617,7 @@ inline Symbol exp(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L225
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1055,7 +1636,7 @@ inline Symbol log(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L235
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1074,7 +1655,7 @@ inline Symbol log10(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L245
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1096,7 +1677,7 @@ inline Symbol log2(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L261
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1116,7 +1697,7 @@ inline Symbol sin(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L275
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1135,7 +1716,7 @@ inline Symbol log1p(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L288
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1157,7 +1738,7 @@ inline Symbol expm1(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L304
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1179,7 +1760,7 @@ inline Symbol cos(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L320
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1202,7 +1783,7 @@ inline Symbol tan(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L337
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1225,7 +1806,7 @@ inline Symbol arcsin(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L354
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1247,7 +1828,7 @@ inline Symbol arccos(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L370
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1267,7 +1848,7 @@ inline Symbol arctan(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L384
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1287,7 +1868,7 @@ inline Symbol degrees(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L398
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1307,7 +1888,7 @@ inline Symbol radians(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L412
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1327,7 +1908,7 @@ inline Symbol sinh(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L426
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1347,7 +1928,7 @@ inline Symbol cosh(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L440
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1363,7 +1944,7 @@ inline Symbol tanh(const std::string& symbol_name,
  * \breif Inverse hyperbolic sine, element-wise.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L450
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1379,7 +1960,7 @@ inline Symbol arcsinh(const std::string& symbol_name,
  * \breif Inverse hyperbolic cosine, element-wise.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L460
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1395,7 +1976,7 @@ inline Symbol arccosh(const std::string& symbol_name,
  * \breif Inverse hyperbolic tangent, element-wise.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L470
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1410,7 +1991,7 @@ inline Symbol arctanh(const std::string& symbol_name,
 /*!
  * \breif The gamma function (extension of the factorial function), element-wise
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:479
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:479
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1425,7 +2006,7 @@ inline Symbol gamma(const std::string& symbol_name,
 /*!
  * \breif Log of the absolute value of the gamma function, element-wise
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:488
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:488
  * \param symbol_name name of the resulting symbol
  * \param data The input
  * \return new symbol
@@ -1442,7 +2023,7 @@ inline Symbol gammaln(const std::string& symbol_name,
  *        learnable parameters. For a input of shape (d1, ..., dK), the output shape is
  *        (d1, ..., dK, output_dim). All the input values should be integers in the range
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:19
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/indexing_op.cc:19
  * \param symbol_name name of the resulting symbol
  * \param data Input data to the EmbeddingOp.
  * \param weight Embedding weight matrix.
@@ -1497,7 +2078,7 @@ enum class TakeMode {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:L79
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param a The source array.
  * \param indices The indices of the values to extract.
@@ -1541,7 +2122,7 @@ inline Symbol take(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:L131
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param a Input data array
  * \param indices index array
@@ -1601,7 +2182,7 @@ enum class One_hotDtype {
  *        [ 1.  0.  0.]]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:L177
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param indices array of locations where to set on_value
  * \param depth The dimension size at dim = axis.
@@ -1687,7 +2268,7 @@ inline Symbol one_hot(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L78
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Input data to reshape.
  * \param target_shape (Deprecated! Use ``shape`` instead.) Target new shape. One and
@@ -1720,7 +2301,7 @@ inline Symbol Reshape(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L101
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Input data to reshape.
  * \return new symbol
@@ -1762,7 +2343,7 @@ inline Symbol Flatten(const std::string& symbol_name,
  *        [ 7.,  8.]]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L142
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Source input
  * \param axes Target axis order. By default the axes will be inverted.
@@ -1785,7 +2366,7 @@ inline Symbol transpose(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L175
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Source input
  * \param axis Position (amongst axes) where new axis is to be inserted.
@@ -1819,7 +2400,7 @@ inline Symbol expand_dims(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L207
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Source input
  * \param begin starting coordinates
@@ -1858,7 +2439,7 @@ inline Symbol slice(const std::string& symbol_name,
  *        [ 10.,  11.]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L285
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Source input
  * \param axis The axis to be sliced. Negative axis means to count from the last to the
@@ -1897,7 +2478,7 @@ inline Symbol slice_axis(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L318
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param lhs The first input
  * \param rhs The second input
@@ -1932,7 +2513,7 @@ inline Symbol dot(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L354
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param lhs The first input
  * \param rhs The second input
@@ -1963,7 +2544,7 @@ inline Symbol batch_dot(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L393
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Source input
  * \param a_min Minimum value
@@ -2004,7 +2585,7 @@ inline Symbol clip(const std::string& symbol_name,
  *        [ 3.,  4.]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L432
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Input data array
  * \param repeats The number of repetitions for each element.
@@ -2060,7 +2641,7 @@ inline Symbol repeat(const std::string& symbol_name,
  *        [ 3.,  4.,  3.,  4.,  3.,  4.]]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L489
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Input data array
  * \param reps The number of times for repeating the tensor a. If reps has length d, the
@@ -2080,7 +2661,7 @@ inline Symbol tile(const std::string& symbol_name,
 /*!
  * \breif Reverse elements of an array with axis
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:512
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/matrix_op.cc:512
  * \param symbol_name name of the resulting symbol
  * \param data Input data array
  * \param axis The axis which to reverse elements.
@@ -2092,6 +2673,151 @@ inline Symbol reverse(const std::string& symbol_name,
   return Operator("reverse")
            .SetParam("axis", axis)
            .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*! \breif The return type. "value" means returning the top k values, "indices" means
+ *        returning the indices of the top k values, "mask" means to return a mask array
+ *        containing 0 and 1. 1 means the top k values. "both" means to return both value
+ */
+enum class TopkRetTyp {
+  both = 0,
+  indices = 1,
+  mask = 2,
+  value = 3
+};
+
+/*!
+ * \breif Return the top *k* elements in an array.
+ *
+ *        Examples::
+ *
+ *        x = [[ 0.3,  0.2,  0.4],
+ *        [ 0.1,  0.3,  0.2]]
+ *
+ *        // return the index of the largest element on last axis
+ *        topk(x) = [[ 2.],
+ *        [ 1.]]
+ *
+ *        // return the value of the top-2 elements on last axis
+ *        topk(x, ret_typ='value', k=2) = [[ 0.4,  0.3],
+ *        [ 0.3,  0.2]]
+ *
+ *        // flatten and then return both index and value
+ *        topk(x, ret_typ='both', k=2, axis=None) = [ 0.4,  0.3], [ 2.,  0.]
+ *
+ *
+ *
+ *        Defined in
+ * \param symbol_name name of the resulting symbol
+ * \param src Source input
+ * \param axis Axis along which to choose the top k indices. If not given, the flattened
+ * \param k Number of top elements to select, should be always smaller than or equal to
+ * \param ret_typ The return type. "value" means returning the top k values, "indices"
+ *        means returning the indices of the top k values, "mask" means to return a mask
+ *        array containing 0 and 1. 1 means the top k values. "both" means to return both
+ * \param is_ascend Whether to choose k largest or k smallest. Top K largest elements
+ * \return new symbol
+ */
+inline Symbol topk(const std::string& symbol_name,
+                   Symbol src,
+                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
+                   int k = 1,
+                   TopkRetTyp ret_typ = TopkRetTyp::indices,
+                   bool is_ascend = false) {
+  static const char *TopkRetTypValues[] = {
+    "both",
+    "indices",
+    "mask",
+    "value"
+  };
+  return Operator("topk")
+           .SetParam("axis", axis)
+           .SetParam("k", k)
+           .SetParam("ret_typ", TopkRetTypValues[int(ret_typ)])
+           .SetParam("is_ascend", is_ascend)
+           .SetInput("src", src)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Return a sorted copy of an array.
+ *
+ *        Examples::
+ *
+ *        x = [[ 1, 4],
+ *        [ 3, 1]]
+ *
+ *        // sort along the last axis
+ *        sort(x) = [[ 1.,  4.],
+ *        [ 1.,  3.]]
+ *
+ *        // flatten and then sort
+ *        sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
+ *
+ *        // sort long the first axis
+ *        sort(x, axis=0) = [[ 1.,  1.],
+ *        [ 3.,  4.]]
+ *
+ *        // in a descend order
+ *        sort(x, is_ascend=0) = [[ 4.,  1.],
+ *        [ 3.,  1.]]
+ *
+ *
+ *
+ *        Defined in
+ * \param symbol_name name of the resulting symbol
+ * \param src Source input
+ * \param axis Axis along which to choose sort the input tensor. If not given, the
+ * \param is_ascend Whether sort in ascending or descending order.
+ * \return new symbol
+ */
+inline Symbol sort(const std::string& symbol_name,
+                   Symbol src,
+                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
+                   bool is_ascend = true) {
+  return Operator("sort")
+           .SetParam("axis", axis)
+           .SetParam("is_ascend", is_ascend)
+           .SetInput("src", src)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Returns the indices that can sort an array.
+ *
+ *        Examples::
+ *
+ *        x = [[ 0.3,  0.2,  0.4],
+ *        [ 0.1,  0.3,  0.2]]
+ *
+ *        // sort along axis -1
+ *        argsort(x) = [[ 1.,  0.,  2.],
+ *        [ 0.,  2.,  1.]]
+ *
+ *        // sort along axis 0
+ *        argsort(x, axis=0) = [[ 1.,  0.,  1.]
+ *        [ 0.,  1.,  0.]]
+ *
+ *        // flatten and then sort
+ *        argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+ *
+ *
+ *        Defined in
+ * \param symbol_name name of the resulting symbol
+ * \param src Source input
+ * \param axis Axis along which to sort the input tensor. If not given, the flattened
+ * \param is_ascend Whether sort in ascending or descending order.
+ * \return new symbol
+ */
+inline Symbol argsort(const std::string& symbol_name,
+                      Symbol src,
+                      dmlc::optional<int> axis = dmlc::optional<int>(-1),
+                      bool is_ascend = true) {
+  return Operator("argsort")
+           .SetParam("axis", axis)
+           .SetParam("is_ascend", is_ascend)
+           .SetInput("src", src)
            .CreateSymbol(symbol_name);
 }
 
@@ -2115,7 +2841,7 @@ enum class UniformDtype {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/sample_op.cc:L24
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param low The lower bound of distribution
  * \param high The upper bound of distribution
@@ -2162,7 +2888,7 @@ enum class NormalDtype {
  *        [-1.23474145,  1.55807114]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/sample_op.cc:L35
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param loc Mean of the distribution.
  * \param scale Standard deviation of the distribution.
@@ -2191,723 +2917,60 @@ inline Symbol normal(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
-/*!
- * \breif Returns the indices of the maximum values along an axis.
- *
- *        From:/home/xlidc/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:11
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
- * \param keepdims If true, the axis which is reduced is left in the result as dimension
- * \return new symbol
+/*! \breif upsampling method
  */
-inline Symbol argmax(const std::string& symbol_name,
-                     Symbol data,
-                     int axis = -1,
-                     bool keepdims = false) {
-  return Operator("argmax")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
+enum class UpSamplingSampleType {
+  bilinear = 0,
+  nearest = 1
+};
+
+/*! \breif How to handle multiple input. concat means concatenate upsampled images along
+ *        the channel dimension. sum means add all images together, only available for
+ */
+enum class UpSamplingMultiInputMode {
+  concat = 0,
+  sum = 1
+};
 
 /*!
- * \breif Returns the indices of the minimum values along an axis.
- *
- *        From:/home/xlidc/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:16
+ * \breif Perform nearest neighboor/bilinear up sampling to inputs
  * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
- * \param keepdims If true, the axis which is reduced is left in the result as dimension
+ * \param data Array of tensors to upsample
+ * \param scale Up sampling scale
+ * \param sample_type upsampling method
+ * \param num_args Number of inputs to be upsampled. For nearest neighbor upsampling,
+ *        this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other
+ *        inputs will be upsampled to thesame size. For bilinear upsampling this must be
+ * \param num_filter Input filter. Only used by bilinear sample_type.
+ * \param multi_input_mode How to handle multiple input. concat means concatenate
+ *        upsampled images along the channel dimension. sum means add all images
+ * \param workspace Tmp workspace for deconvolution (MB)
  * \return new symbol
  */
-inline Symbol argmin(const std::string& symbol_name,
-                     Symbol data,
-                     int axis = -1,
-                     bool keepdims = false) {
-  return Operator("argmin")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif
- * \param symbol_name name of the resulting symbol
- * \param src Source input
- * \return new symbol
- */
-inline Symbol argmax_channel(const std::string& symbol_name,
-                             Symbol src) {
-  return Operator("argmax_channel")
-           .SetInput("src", src)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the sum of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol sum(const std::string& symbol_name,
-                  Symbol data,
-                  Shape axis = Shape(),
-                  bool keepdims = false) {
-  return Operator("sum")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the mean of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol mean(const std::string& symbol_name,
-                   Symbol data,
-                   Shape axis = Shape(),
-                   bool keepdims = false) {
-  return Operator("mean")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the product of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol prod(const std::string& symbol_name,
-                   Symbol data,
-                   Shape axis = Shape(),
-                   bool keepdims = false) {
-  return Operator("prod")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the sum of array elements over given axes with ``NaN`` ignored
- *
- *        Refer to ``sum`` for more details.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol nansum(const std::string& symbol_name,
-                     Symbol data,
-                     Shape axis = Shape(),
-                     bool keepdims = false) {
-  return Operator("nansum")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the product of array elements over given axes with ``NaN`` ignored
- *
- *        Refer to ``prod`` for more details.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol nanprod(const std::string& symbol_name,
-                      Symbol data,
-                      Shape axis = Shape(),
-                      bool keepdims = false) {
-  return Operator("nanprod")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the max of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol max(const std::string& symbol_name,
-                  Symbol data,
-                  Shape axis = Shape(),
-                  bool keepdims = false) {
-  return Operator("max")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the min of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol min(const std::string& symbol_name,
-                  Symbol data,
-                  Shape axis = Shape(),
-                  bool keepdims = false) {
-  return Operator("min")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Broadcast an array over particular axes.
- *
- *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
- *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
- *
- *        For example::
- *
- *        // given (1,2,1) shape x
- *        x = [[[ 1.],
- *        [ 2.]]]
- *
- *        // broadcast on axis 2
- *        broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
- *        [ 2.,  2.,  2.]]]
- *        // broadcast on axes 0 and 2
- *        broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
- *        [ 2.,  2.,  2.]],
- *        [[ 1.,  1.,  1.],
- *        [ 2.,  2.,  2.]]]
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param axis The axes to perform the broadcasting.
- * \param size Target sizes of the broadcasting axes.
- * \return new symbol
- */
-inline Symbol broadcast_axis(const std::string& symbol_name,
-                             Symbol data,
-                             Shape axis = Shape(),
-                             Shape size = Shape()) {
-  return Operator("broadcast_axis")
-           .SetParam("axis", axis)
-           .SetParam("size", size)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Broadcast an array to a new shape.
- *
- *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
- *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
- *
- *        For example::
- *
- *        broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
- *        [ 1.,  2.,  3.]])
- *
- *        The dimensions that will not be changed can also use the special code ``0`` that
- *        means copy the original value. So with ``shape=(2,0)`` we will obtain the same
- *        results in the above example.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param data The input
- * \param shape The shape of the desired array. We can set the dim to zero if it's same
- *        as the original. E.g `A = broadcast_to(B, shape=(10, 0, 0))` has the same
- * \return new symbol
- */
-inline Symbol broadcast_to(const std::string& symbol_name,
-                           Symbol data,
-                           Shape shape = Shape()) {
-  return Operator("broadcast_to")
-           .SetParam("shape", shape)
-           .SetInput("data", data)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Compute the L2 norm.
- *
- *        Flatten then input array and then compute the l2 norm.
- *
- *        Examples::
- *
- *        x = [[1, 2],
- *        [3, 4]]
- *
- *        norm(x) = [5.47722578]
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param src Source input
- * \return new symbol
- */
-inline Symbol norm(const std::string& symbol_name,
-                   Symbol src) {
-  return Operator("norm")
-           .SetInput("src", src)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Given three ndarrays, condition, x, and y, return an ndarray with the elements
- *        from x or y, depending on the elements from condition are true or false. x and
- *        y must have the same shape. If condition has the same shape as x, each element
- *        in the output array is from x if the corresponding element in the condition is
- *        true, and from y if false. If condtion does not have the same shape as x, it
- *        must be a 1D array whose size is the same as x's first dimension size. Each row
- *        of the output array is from x's row if the corresponding element from condition
- *
- *        From:/home/xlidc/mxnet/src/operator/tensor/control_flow_op.cc:21
- * \param symbol_name name of the resulting symbol
- * \param condition condition array
- * \param x
- * \param y
- * \return new symbol
- */
-inline Symbol where(const std::string& symbol_name,
-                    Symbol condition,
-                    Symbol x,
-                    Symbol y) {
-  return Operator("where")
-           .SetInput("condition", condition)
-           .SetInput("x", x)
-           .SetInput("y", y)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Add arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_add(const std::string& symbol_name,
-                            Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_add")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Substract arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_sub(const std::string& symbol_name,
-                            Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_sub")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Multiply arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_mul(const std::string& symbol_name,
-                            Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_mul")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Divide arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_div(const std::string& symbol_name,
-                            Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_div")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif First array elements raised to powers from second array,
- *        element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L16
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_power(const std::string& symbol_name,
-                              Symbol lhs,
-                              Symbol rhs) {
-  return Operator("broadcast_power")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Element-wise maximum of array elements with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L34
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_maximum(const std::string& symbol_name,
-                                Symbol lhs,
-                                Symbol rhs) {
-  return Operator("broadcast_maximum")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Element-wise minimum of array elements with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L52
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_minimum(const std::string& symbol_name,
-                                Symbol lhs,
-                                Symbol rhs) {
-  return Operator("broadcast_minimum")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Given the "legs" of a right triangle, return its hypotenuse
- *        with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L71
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_hypot(const std::string& symbol_name,
-                              Symbol lhs,
-                              Symbol rhs) {
-  return Operator("broadcast_hypot")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Return (lhs == rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_equal(const std::string& symbol_name,
-                              Symbol lhs,
-                              Symbol rhs) {
-  return Operator("broadcast_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Return (lhs != rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_not_equal(const std::string& symbol_name,
-                                  Symbol lhs,
-                                  Symbol rhs) {
-  return Operator("broadcast_not_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Return (lhs > rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_greater(const std::string& symbol_name,
-                                Symbol lhs,
-                                Symbol rhs) {
-  return Operator("broadcast_greater")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Return (lhs >= rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_greater_equal(const std::string& symbol_name,
-                                      Symbol lhs,
-                                      Symbol rhs) {
-  return Operator("broadcast_greater_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Return (lhs < rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_lesser(const std::string& symbol_name,
-                               Symbol lhs,
-                               Symbol rhs) {
-  return Operator("broadcast_lesser")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Return (lhs <= rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param symbol_name name of the resulting symbol
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_lesser_equal(const std::string& symbol_name,
-                                     Symbol lhs,
-                                     Symbol rhs) {
-  return Operator("broadcast_lesser_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Add all input arguments element-wise.
- *
- *        .. math::
- *        add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n
- *
- *        ``add_n`` is potentially more efficient than calling ``add`` by `n` times.
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_sum.cc:L63
- * \param symbol_name name of the resulting symbol
- * \param args Positional input arguments
- * \return new symbol
- */
-inline Symbol add_n(const std::string& symbol_name,
-                    const std::vector<Symbol>& args) {
-  return Operator("add_n")
-(args)
-           .CreateSymbol(symbol_name);
-}
-
-/*!
- * \breif Custom operator implemented in frontend.
- * \param symbol_name name of the resulting symbol
- * \param op_type Type of custom operator. Must be registered first.
- * \return new symbol
- */
-inline Symbol Custom(const std::string& symbol_name,
-                     const std::string& op_type) {
-  return Operator("Custom")
+inline Symbol UpSampling(const std::string& symbol_name,
+                         const std::vector<Symbol>& data,
+                         uint32_t scale,
+                         UpSamplingSampleType sample_type,
+                         int num_args,
+                         uint32_t num_filter = 0,
+                         UpSamplingMultiInputMode multi_input_mode = UpSamplingMultiInputMode::concat,
+                         uint64_t workspace = 512) {
+  static const char *UpSamplingSampleTypeValues[] = {
+    "bilinear",
+    "nearest"
+  };
+  static const char *UpSamplingMultiInputModeValues[] = {
+    "concat",
+    "sum"
+  };
+  return Operator("UpSampling")
+           .SetParam("scale", scale)
+           .SetParam("sample_type", UpSamplingSampleTypeValues[int(sample_type)])
+           .SetParam("num_args", num_args)
+           .SetParam("num_filter", num_filter)
+           .SetParam("multi_input_mode", UpSamplingMultiInputModeValues[int(multi_input_mode)])
+           .SetParam("workspace", workspace)
+(data)
            .CreateSymbol(symbol_name);
 }
 
@@ -2931,7 +2994,7 @@ enum class ActivationActType {
  *        - `softrelu`: Soft ReLU, or SoftPlus, `y = log(1 + exp(x))`
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/activation.cc:L76
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/activation.cc:L76
  * \param symbol_name name of the resulting symbol
  * \param data Input data to activation function.
  * \param act_type Activation function to be applied.
@@ -2986,14 +3049,15 @@ enum class ConvolutionCudnnTune {
 };
 
 /*! \breif Set layout for input, output and weight. Empty for
- *        default layout: NCHW for 2d and NCDHW for 3d.
+ *        default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.
  */
 enum class ConvolutionLayout {
   None = 0,
   NCDHW = 1,
   NCHW = 2,
-  NDHWC = 3,
-  NHWC = 4
+  NCW = 3,
+  NDHWC = 4,
+  NHWC = 5
 };
 
 /*!
@@ -3067,7 +3131,7 @@ enum class ConvolutionLayout {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/convolution.cc:L143
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/convolution.cc:L150
  * \param symbol_name name of the resulting symbol
  * \param data Input data to the ConvolutionOp.
  * \param weight Weight matrix.
@@ -3083,7 +3147,7 @@ enum class ConvolutionLayout {
  * \param cudnn_tune Whether to pick convolution algo by running performance test.
  * \param cudnn_off Turn off cudnn for this layer.
  * \param layout Set layout for input, output and weight. Empty for
- *        default layout: NCHW for 2d and NCDHW for 3d.
+ *        default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.
  * \return new symbol
  */
 inline Symbol Convolution(const std::string& symbol_name,
@@ -3111,6 +3175,7 @@ inline Symbol Convolution(const std::string& symbol_name,
     "None",
     "NCDHW",
     "NCHW",
+    "NCW",
     "NDHWC",
     "NHWC"
   };
@@ -3126,6 +3191,107 @@ inline Symbol Convolution(const std::string& symbol_name,
            .SetParam("cudnn_tune", ConvolutionCudnnTuneValues[int(cudnn_tune)])
            .SetParam("cudnn_off", cudnn_off)
            .SetParam("layout", ConvolutionLayoutValues[int(layout)])
+           .SetInput("data", data)
+           .SetInput("weight", weight)
+           .SetInput("bias", bias)
+           .CreateSymbol(symbol_name);
+}
+
+/*! \breif Whether to pick convolution algo by running performance test.
+ *        Leads to higher startup time but may give faster speed. Options are:
+ *        'off': no tuning
+ *        'limited_workspace': run test and pick the fastest algorithm that doesn't
+ *        'fastest': pick the fastest algorithm and ignore workspace limit.
+ *        If set to None (default), behavior is determined by environment
+ *        variable MXNET_CUDNN_AUTOTUNE_DEFAULT: 0 for off,
+ *        1 for limited workspace (default), 2 for fastest.
+ */
+enum class Convolution_v1CudnnTune {
+  None = 0,
+  fastest = 1,
+  limited_workspace = 2,
+  off = 3
+};
+
+/*! \breif Set layout for input, output and weight. Empty for
+ *        default layout: NCHW for 2d and NCDHW for 3d.
+ */
+enum class Convolution_v1Layout {
+  None = 0,
+  NCDHW = 1,
+  NCHW = 2,
+  NDHWC = 3,
+  NHWC = 4
+};
+
+/*!
+ * \breif Apply convolution to input then add a bias.
+ * \param symbol_name name of the resulting symbol
+ * \param data Input data to the ConvolutionV1Op.
+ * \param weight Weight matrix.
+ * \param bias Bias parameter.
+ * \param kernel convolution kernel size: (h, w) or (d, h, w)
+ * \param num_filter convolution filter(channel) number
+ * \param stride convolution stride: (h, w) or (d, h, w)
+ * \param dilate convolution dilate: (h, w) or (d, h, w)
+ * \param pad pad for convolution: (h, w) or (d, h, w)
+ * \param num_group Number of group partitions. Equivalent to slicing input into num_group
+ *        partitions, apply convolution on each, then concatenate the results
+ * \param workspace Maximum tmp workspace allowed for convolution (MB).
+ * \param no_bias Whether to disable bias parameter.
+ * \param cudnn_tune Whether to pick convolution algo by running performance test.
+ *        Leads to higher startup time but may give faster speed. Options are:
+ *        'off': no tuning
+ *        'limited_workspace': run test and pick the fastest algorithm that doesn't
+ *        'fastest': pick the fastest algorithm and ignore workspace limit.
+ *        If set to None (default), behavior is determined by environment
+ *        variable MXNET_CUDNN_AUTOTUNE_DEFAULT: 0 for off,
+ *        1 for limited workspace (default), 2 for fastest.
+ * \param cudnn_off Turn off cudnn for this layer.
+ * \param layout Set layout for input, output and weight. Empty for
+ *        default layout: NCHW for 2d and NCDHW for 3d.
+ * \return new symbol
+ */
+inline Symbol Convolution_v1(const std::string& symbol_name,
+                             Symbol data,
+                             Symbol weight,
+                             Symbol bias,
+                             Shape kernel,
+                             uint32_t num_filter,
+                             Shape stride = Shape(),
+                             Shape dilate = Shape(),
+                             Shape pad = Shape(),
+                             uint32_t num_group = 1,
+                             uint64_t workspace = 1024,
+                             bool no_bias = false,
+                             Convolution_v1CudnnTune cudnn_tune = Convolution_v1CudnnTune::None,
+                             bool cudnn_off = false,
+                             Convolution_v1Layout layout = Convolution_v1Layout::None) {
+  static const char *Convolution_v1CudnnTuneValues[] = {
+    "None",
+    "fastest",
+    "limited_workspace",
+    "off"
+  };
+  static const char *Convolution_v1LayoutValues[] = {
+    "None",
+    "NCDHW",
+    "NCHW",
+    "NDHWC",
+    "NHWC"
+  };
+  return Operator("Convolution_v1")
+           .SetParam("kernel", kernel)
+           .SetParam("num_filter", num_filter)
+           .SetParam("stride", stride)
+           .SetParam("dilate", dilate)
+           .SetParam("pad", pad)
+           .SetParam("num_group", num_group)
+           .SetParam("workspace", workspace)
+           .SetParam("no_bias", no_bias)
+           .SetParam("cudnn_tune", Convolution_v1CudnnTuneValues[int(cudnn_tune)])
+           .SetParam("cudnn_off", cudnn_off)
+           .SetParam("layout", Convolution_v1LayoutValues[int(layout)])
            .SetInput("data", data)
            .SetInput("weight", weight)
            .SetInput("bias", bias)
@@ -3191,6 +3357,18 @@ inline Symbol Crop(const std::string& symbol_name,
            .SetParam("h_w", h_w)
            .SetParam("center_crop", center_crop)
 (data)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Custom operator implemented in frontend.
+ * \param symbol_name name of the resulting symbol
+ * \param op_type Type of custom operator. Must be registered first.
+ * \return new symbol
+ */
+inline Symbol Custom(const std::string& symbol_name,
+                     const std::string& op_type) {
+  return Operator("Custom")
            .CreateSymbol(symbol_name);
 }
 
@@ -3276,7 +3454,7 @@ inline Symbol Dropout(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/fully_connected.cc:L94
+ *        Defined in
  * \param symbol_name name of the resulting symbol
  * \param data Input data.
  * \param weight Weight matrix.
@@ -3297,6 +3475,41 @@ inline Symbol FullyConnected(const std::string& symbol_name,
            .SetInput("data", data)
            .SetInput("weight", weight)
            .SetInput("bias", bias)
+           .CreateSymbol(symbol_name);
+}
+
+/*! \breif transformation type
+ *        if transformation type is affine, data is affine matrix : (batch, 6)
+ *        if transformation type is warp, data is optical flow : (batch, 2, h, w)
+ */
+enum class GridGeneratorTransformType {
+  affine = 0,
+  warp = 1
+};
+
+/*!
+ * \breif generate sampling grid for bilinear sampling.
+ * \param symbol_name name of the resulting symbol
+ * \param data Input data to the GridGeneratorOp.
+ * \param transform_type transformation type
+ *        if transformation type is affine, data is affine matrix : (batch, 6)
+ *        if transformation type is warp, data is optical flow : (batch, 2, h, w)
+ * \param target_shape if transformation type is affine, the operator need a target_shape
+ *        if transofrmation type is warp, the operator will ignore target_shape
+ * \return new symbol
+ */
+inline Symbol GridGenerator(const std::string& symbol_name,
+                            Symbol data,
+                            GridGeneratorTransformType transform_type,
+                            Shape target_shape = Shape(0,0)) {
+  static const char *GridGeneratorTransformTypeValues[] = {
+    "affine",
+    "warp"
+  };
+  return Operator("GridGenerator")
+           .SetParam("transform_type", GridGeneratorTransformTypeValues[int(transform_type)])
+           .SetParam("target_shape", target_shape)
+           .SetInput("data", data)
            .CreateSymbol(symbol_name);
 }
 
@@ -3446,6 +3659,106 @@ enum class PoolingPoolingConvention {
 /*!
  * \breif Perform pooling on the input.
  *
+ *        The shapes for 1-D pooling are
+ *        - **data**: *(batch_size, channel, width)*,
+ *        - **out**: *(batch_size, num_filter, out_width)*.
+ *
+ *        The shapes for 2-D pooling is
+ *
+ *        - **data**: *(batch_size, channel, height, width)*
+ *        - **out**: *(batch_size, num_filter, out_height, out_width)*, with::
+ *
+ *        out_height = f(height, kernel[0], pad[0], stride[0])
+ *        out_width = f(width, kernel[1], pad[1], stride[1])
+ *
+ *        The defintion of *f* depends on ``pooling_convention``, which has two options:
+ *
+ *        - **valid** (default)::
+ *
+ *        f(x, k, p, s) = floor(x+2*p-k)/s+1
+ *
+ *        - **full**, which is compatible with Caffe::
+ *
+ *        f(x, k, p, s) = ceil(x+2*p-k)/s+1
+ *
+ *        But ``global_pool`` is set to be true, then do a global pooling, namely reset
+ *        ``kernel=(height, width)``.
+ *
+ *        Three pooling options are supported by ``pool_type``:
+ *
+ *        - **avg**: average pooling
+ *        - **max**: max pooling
+ *        - **sum**: sum pooling
+ *
+ *        1-D pooling is special case of 2-D pooling with *width=1* and
+ *        *kernel[1]=1*.
+ *
+ *        For 3-D pooling, an additional *depth* dimension is added before
+ *        *height*. Namely the input data will have shape *(batch_size, channel, depth,
+ *        height, width)*.
+ *
+ *
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/pooling.cc:L126
+ * \param symbol_name name of the resulting symbol
+ * \param data Input data to the pooling operator.
+ * \param kernel pooling kernel size: (y, x) or (d, y, x)
+ * \param pool_type Pooling type to be applied.
+ * \param global_pool Ignore kernel size, do global pooling based on current input
+ * \param cudnn_off Turn off cudnn pooling and use MXNet pooling operator.
+ * \param pooling_convention Pooling convention to be applied.
+ * \param stride stride: for pooling (y, x) or (d, y, x)
+ * \param pad pad for pooling: (y, x) or (d, y, x)
+ * \return new symbol
+ */
+inline Symbol Pooling(const std::string& symbol_name,
+                      Symbol data,
+                      Shape kernel,
+                      PoolingPoolType pool_type,
+                      bool global_pool = false,
+                      bool cudnn_off = false,
+                      PoolingPoolingConvention pooling_convention = PoolingPoolingConvention::valid,
+                      Shape stride = Shape(),
+                      Shape pad = Shape()) {
+  static const char *PoolingPoolTypeValues[] = {
+    "avg",
+    "max",
+    "sum"
+  };
+  static const char *PoolingPoolingConventionValues[] = {
+    "full",
+    "valid"
+  };
+  return Operator("Pooling")
+           .SetParam("kernel", kernel)
+           .SetParam("pool_type", PoolingPoolTypeValues[int(pool_type)])
+           .SetParam("global_pool", global_pool)
+           .SetParam("cudnn_off", cudnn_off)
+           .SetParam("pooling_convention", PoolingPoolingConventionValues[int(pooling_convention)])
+           .SetParam("stride", stride)
+           .SetParam("pad", pad)
+           .SetInput("data", data)
+           .CreateSymbol(symbol_name);
+}
+
+/*! \breif Pooling type to be applied.
+ */
+enum class Pooling_v1PoolType {
+  avg = 0,
+  max = 1,
+  sum = 2
+};
+
+/*! \breif Pooling convention to be applied.
+ */
+enum class Pooling_v1PoolingConvention {
+  full = 0,
+  valid = 1
+};
+
+/*!
+ * \breif Perform pooling on the input.
+ *
  *        The shapes for 2-D pooling is
  *
  *        - **data**: *(batch_size, channel, height, width)*
@@ -3482,7 +3795,7 @@ enum class PoolingPoolingConvention {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/pooling.cc:L122
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/pooling_v1.cc:L84
  * \param symbol_name name of the resulting symbol
  * \param data Input data to the pooling operator.
  * \param kernel pooling kernel size: (y, x) or (d, y, x)
@@ -3493,28 +3806,28 @@ enum class PoolingPoolingConvention {
  * \param pad pad for pooling: (y, x) or (d, y, x)
  * \return new symbol
  */
-inline Symbol Pooling(const std::string& symbol_name,
-                      Symbol data,
-                      Shape kernel,
-                      PoolingPoolType pool_type,
-                      bool global_pool = false,
-                      PoolingPoolingConvention pooling_convention = PoolingPoolingConvention::valid,
-                      Shape stride = Shape(),
-                      Shape pad = Shape()) {
-  static const char *PoolingPoolTypeValues[] = {
+inline Symbol Pooling_v1(const std::string& symbol_name,
+                         Symbol data,
+                         Shape kernel,
+                         Pooling_v1PoolType pool_type,
+                         bool global_pool = false,
+                         Pooling_v1PoolingConvention pooling_convention = Pooling_v1PoolingConvention::valid,
+                         Shape stride = Shape(),
+                         Shape pad = Shape()) {
+  static const char *Pooling_v1PoolTypeValues[] = {
     "avg",
     "max",
     "sum"
   };
-  static const char *PoolingPoolingConventionValues[] = {
+  static const char *Pooling_v1PoolingConventionValues[] = {
     "full",
     "valid"
   };
-  return Operator("Pooling")
+  return Operator("Pooling_v1")
            .SetParam("kernel", kernel)
-           .SetParam("pool_type", PoolingPoolTypeValues[int(pool_type)])
+           .SetParam("pool_type", Pooling_v1PoolTypeValues[int(pool_type)])
            .SetParam("global_pool", global_pool)
-           .SetParam("pooling_convention", PoolingPoolingConventionValues[int(pooling_convention)])
+           .SetParam("pooling_convention", Pooling_v1PoolingConventionValues[int(pooling_convention)])
            .SetParam("stride", stride)
            .SetParam("pad", pad)
            .SetInput("data", data)
@@ -3828,7 +4141,7 @@ enum class SoftmaxOutputNormalization {
  *        - **valid**: divide by the number of examples which are not ignored.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/softmax_output.cc:L77
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/softmax_output.cc:L77
  * \param symbol_name name of the resulting symbol
  * \param data Input data.
  * \param label Ground truth label.
@@ -3984,38 +4297,50 @@ inline Symbol SVMOutput(const std::string& symbol_name,
            .CreateSymbol(symbol_name);
 }
 
-/*! \breif transformation type
- *        if transformation type is affine, data is affine matrix : (batch, 6)
- *        if transformation type is warp, data is optical flow : (batch, 2, h, w)
- */
-enum class GridGeneratorTransformType {
-  affine = 0,
-  warp = 1
-};
-
 /*!
- * \breif generate sampling grid for bilinear sampling.
+ * \breif Caffe loss layer
  * \param symbol_name name of the resulting symbol
- * \param data Input data to the GridGeneratorOp.
- * \param transform_type transformation type
- *        if transformation type is affine, data is affine matrix : (batch, 6)
- *        if transformation type is warp, data is optical flow : (batch, 2, h, w)
- * \param target_shape if transformation type is affine, the operator need a target_shape
- *        if transofrmation type is warp, the operator will ignore target_shape
+ * \param prototxt Caffe's layer parameter
+ * \param num_data Operator input number
+ * \param num_out Operator output number
+ * \param grad_scale Scale the gradient by a float factor (a.k.a weight of this loss).
  * \return new symbol
  */
-inline Symbol GridGenerator(const std::string& symbol_name,
-                            Symbol data,
-                            GridGeneratorTransformType transform_type,
-                            Shape target_shape = Shape(0,0)) {
-  static const char *GridGeneratorTransformTypeValues[] = {
-    "affine",
-    "warp"
-  };
-  return Operator("GridGenerator")
-           .SetParam("transform_type", GridGeneratorTransformTypeValues[int(transform_type)])
-           .SetParam("target_shape", target_shape)
-           .SetInput("data", data)
+inline Symbol CaffeLoss(const std::string& symbol_name,
+                        ::caffe::LayerParameter prototxt = textToCaffeLayerParameter("layer {\n}\n"),
+                        int num_data = 2,
+                        int num_out = 1,
+                        mx_float grad_scale = 1) {
+  return Operator("CaffeLoss")
+           .SetParam("prototxt", prototxt)
+           .SetParam("num_data", num_data)
+           .SetParam("num_out", num_out)
+           .SetParam("grad_scale", grad_scale)
+           .CreateSymbol(symbol_name);
+}
+
+/*!
+ * \breif Apply caffe operator
+ * \param symbol_name name of the resulting symbol
+ * \param data List of tensors
+ * \param prototxt Caffe's layer parameter
+ * \param num_data Operator input number
+ * \param num_weight Weight number
+ * \param num_out Operator output number
+ * \return new symbol
+ */
+inline Symbol CaffeOp(const std::string& symbol_name,
+                      const std::vector<Symbol>& data,
+                      ::caffe::LayerParameter prototxt = textToCaffeLayerParameter("layer {\n}\n"),
+                      int num_data = 1,
+                      int num_weight = 0,
+                      int num_out = 1) {
+  return Operator("CaffeOp")
+           .SetParam("prototxt", prototxt)
+           .SetParam("num_data", num_data)
+           .SetParam("num_weight", num_weight)
+           .SetParam("num_out", num_out)
+(data)
            .CreateSymbol(symbol_name);
 }
 
@@ -4099,7 +4424,7 @@ inline Symbol fill_element_0index(const std::string& symbol_name,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/batch_norm.cc:L84
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/batch_norm.cc:L79
  * \param data Input data to batch normalization
  * \param gamma gamma array
  * \param beta beta array
@@ -4131,48 +4456,6 @@ inline Symbol BatchNorm(Symbol data,
 }
 
 /*!
- * \breif Leaky ReLu activation
- *
- *        The following types are supported:
- *
- *        - *elu*: ``y = x > 0 ? x : slop * (exp(x)-1)``
- *        - *leaky*: ``y = x > 0 ? x : slope * x``
- *        - *prelu*: same as *leaky* but the ``slope`` is learnable.
- *        - *rrelu*: same as *leaky* but the ``slope`` is uniformly randomly chosen from
- *        *[lower_bound, upper_bound)* for training, while fixed to be
- *        *(lower_bound+upper_bound)/2* for inference.
- *
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/leaky_relu.cc:L36
- * \param data Input data to activation function.
- * \param act_type Activation function to be applied.
- * \param slope Init slope for the activation. (For leaky and elu only)
- * \param lower_bound Lower bound of random slope. (For rrelu only)
- * \param upper_bound Upper bound of random slope. (For rrelu only)
- * \return new symbol
- */
-inline Symbol LeakyReLU(Symbol data,
-                        LeakyReLUActType act_type = LeakyReLUActType::leaky,
-                        mx_float slope = 0.25,
-                        mx_float lower_bound = 0.125,
-                        mx_float upper_bound = 0.334) {
-  static const char *LeakyReLUActTypeValues[] = {
-    "elu",
-    "leaky",
-    "prelu",
-    "rrelu"
-  };
-  return Operator("LeakyReLU")
-           .SetParam("act_type", LeakyReLUActTypeValues[int(act_type)])
-           .SetParam("slope", slope)
-           .SetParam("lower_bound", lower_bound)
-           .SetParam("upper_bound", upper_bound)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
  * \breif Concate a list of array along a given axis.
  *
  *        The dimension sizes of the input arrays on the given axis should be the same.
@@ -4196,7 +4479,7 @@ inline Symbol LeakyReLU(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/concat.cc:L69
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/concat.cc:L70
  * \param data List of tensors to concatenate
  * \param num_args Number of inputs to be concated.
  * \param dim the dimension to be concated.
@@ -4233,9 +4516,51 @@ inline Symbol IdentityAttachKLSparseReg(Symbol data,
 }
 
 /*!
+ * \breif Leaky ReLu activation
+ *
+ *        The following types are supported:
+ *
+ *        - *elu*: ``y = x > 0 ? x : slop * (exp(x)-1)``
+ *        - *leaky*: ``y = x > 0 ? x : slope * x``
+ *        - *prelu*: same as *leaky* but the ``slope`` is learnable.
+ *        - *rrelu*: same as *leaky* but the ``slope`` is uniformly randomly chosen from
+ *        *[lower_bound, upper_bound)* for training, while fixed to be
+ *        *(lower_bound+upper_bound)/2* for inference.
+ *
+ *
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/leaky_relu.cc:L36
+ * \param data Input data to activation function.
+ * \param act_type Activation function to be applied.
+ * \param slope Init slope for the activation. (For leaky and elu only)
+ * \param lower_bound Lower bound of random slope. (For rrelu only)
+ * \param upper_bound Upper bound of random slope. (For rrelu only)
+ * \return new symbol
+ */
+inline Symbol LeakyReLU(Symbol data,
+                        LeakyReLUActType act_type = LeakyReLUActType::leaky,
+                        mx_float slope = 0.25,
+                        mx_float lower_bound = 0.125,
+                        mx_float upper_bound = 0.334) {
+  static const char *LeakyReLUActTypeValues[] = {
+    "elu",
+    "leaky",
+    "prelu",
+    "rrelu"
+  };
+  return Operator("LeakyReLU")
+           .SetParam("act_type", LeakyReLUActTypeValues[int(act_type)])
+           .SetParam("slope", slope)
+           .SetParam("lower_bound", lower_bound)
+           .SetParam("upper_bound", upper_bound)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
  * \breif Calculate cross_entropy(data, one_hot(label))
  *
- *        From:/home/xlidc/mxnet/src/operator/loss_binary_op.cc:12
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/loss_binary_op.cc:12
  * \param data Input data
  * \param label Input label
  * \return new symbol
@@ -4249,34 +4574,29 @@ inline Symbol softmax_cross_entropy(Symbol data,
 }
 
 /*!
- * \breif Pad an array.
- *
- *        Only supports 4-D and 5-D input array.
- *
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/pad.cc:L407
- * \param data An n-dimensional input tensor.
- * \param mode Padding type to use. "constant" pads all values with a constant value, the
- *        value of which can be specified with the constant_value option. "edge" uses the
- * \param pad_width A tuple of padding widths of length 2*r, where r is the rank of the
- *        input tensor, specifying number of values padded to the edges of each axis.
- *        (before_1, after_1, ... , before_N, after_N) unique pad widths for each axis.
- * \param constant_value This option is only used when mode is "constant". This value
+ * \breif
+ * \param data The input
+ * \param axis The axis along which to compute softmax. By default use the last axis
  * \return new symbol
  */
-inline Symbol Pad(Symbol data,
-                  PadMode mode,
-                  Shape pad_width,
-                  double constant_value = 0) {
-  static const char *PadModeValues[] = {
-    "constant",
-    "edge"
-  };
-  return Operator("Pad")
-           .SetParam("mode", PadModeValues[int(mode)])
-           .SetParam("pad_width", pad_width)
-           .SetParam("constant_value", constant_value)
+inline Symbol softmax(Symbol data,
+                      int axis = -1) {
+  return Operator("softmax")
+           .SetParam("axis", axis)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif
+ * \param data The input
+ * \param axis The axis along which to compute softmax. By default use the last axis
+ * \return new symbol
+ */
+inline Symbol log_softmax(Symbol data,
+                          int axis = -1) {
+  return Operator("log_softmax")
+           .SetParam("axis", axis)
            .SetInput("data", data)
            .CreateSymbol();
 }
@@ -4417,38 +4737,34 @@ inline Symbol rmspropalex_update(mx_float lr,
 }
 
 /*!
- * \breif Interchange two axes of an array.
+ * \breif Pad an array.
  *
- *        Examples::
- *
- *        x = [[1, 2, 3]])
- *        swapaxes(x, 0, 1) = [[ 1],
- *        [ 2],
- *        [ 3]]
- *
- *        x = [[[ 0, 1],
- *        [ 2, 3]],
- *        [[ 4, 5],
- *        [ 6, 7]]]  // (2,2,2) array
- *
- *        swapaxes(x, 0, 2) = [[[ 0, 4],
- *        [ 2, 6]],
- *        [[ 1, 5],
- *        [ 3, 7]]]
+ *        Only supports 4-D and 5-D input array.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/swapaxis.cc:L55
- * \param data Input array.
- * \param dim1 the first axis to be swapped.
- * \param dim2 the second axis to be swapped.
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/pad.cc:L407
+ * \param data An n-dimensional input tensor.
+ * \param mode Padding type to use. "constant" pads all values with a constant value, the
+ *        value of which can be specified with the constant_value option. "edge" uses the
+ * \param pad_width A tuple of padding widths of length 2*r, where r is the rank of the
+ *        input tensor, specifying number of values padded to the edges of each axis.
+ *        (before_1, after_1, ... , before_N, after_N) unique pad widths for each axis.
+ * \param constant_value This option is only used when mode is "constant". This value
  * \return new symbol
  */
-inline Symbol SwapAxis(Symbol data,
-                       uint32_t dim1 = 0,
-                       uint32_t dim2 = 0) {
-  return Operator("SwapAxis")
-           .SetParam("dim1", dim1)
-           .SetParam("dim2", dim2)
+inline Symbol Pad(Symbol data,
+                  PadMode mode,
+                  Shape pad_width,
+                  double constant_value = 0) {
+  static const char *PadModeValues[] = {
+    "constant",
+    "edge"
+  };
+  return Operator("Pad")
+           .SetParam("mode", PadModeValues[int(mode)])
+           .SetParam("pad_width", pad_width)
+           .SetParam("constant_value", constant_value)
            .SetInput("data", data)
            .CreateSymbol();
 }
@@ -4482,7 +4798,7 @@ inline Symbol SwapAxis(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/slice_channel.cc:L50
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/slice_channel.cc:L50
  * \param num_outputs Number of outputs to be sliced.
  * \param axis Dimension along which to slice.
  * \param squeeze_axis If true, the dimension will be squeezed. Also, input.shape[axis]
@@ -4499,42 +4815,690 @@ inline Symbol SliceChannel(int num_outputs,
 }
 
 /*!
- * \breif Perform nearest neighboor/bilinear up sampling to inputs
- * \param data Array of tensors to upsample
- * \param scale Up sampling scale
- * \param sample_type upsampling method
- * \param num_args Number of inputs to be upsampled. For nearest neighbor upsampling,
- *        this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other
- *        inputs will be upsampled to thesame size. For bilinear upsampling this must be
- * \param num_filter Input filter. Only used by bilinear sample_type.
- * \param multi_input_mode How to handle multiple input. concat means concatenate
- *        upsampled images along the channel dimension. sum means add all images
- * \param workspace Tmp workspace for deconvolution (MB)
+ * \breif Interchange two axes of an array.
+ *
+ *        Examples::
+ *
+ *        x = [[1, 2, 3]])
+ *        swapaxes(x, 0, 1) = [[ 1],
+ *        [ 2],
+ *        [ 3]]
+ *
+ *        x = [[[ 0, 1],
+ *        [ 2, 3]],
+ *        [[ 4, 5],
+ *        [ 6, 7]]]  // (2,2,2) array
+ *
+ *        swapaxes(x, 0, 2) = [[[ 0, 4],
+ *        [ 2, 6]],
+ *        [[ 1, 5],
+ *        [ 3, 7]]]
+ *
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/swapaxis.cc:L55
+ * \param data Input array.
+ * \param dim1 the first axis to be swapped.
+ * \param dim2 the second axis to be swapped.
  * \return new symbol
  */
-inline Symbol UpSampling(const std::vector<Symbol>& data,
-                         uint32_t scale,
-                         UpSamplingSampleType sample_type,
-                         int num_args,
-                         uint32_t num_filter = 0,
-                         UpSamplingMultiInputMode multi_input_mode = UpSamplingMultiInputMode::concat,
-                         uint64_t workspace = 512) {
-  static const char *UpSamplingSampleTypeValues[] = {
-    "bilinear",
-    "nearest"
-  };
-  static const char *UpSamplingMultiInputModeValues[] = {
-    "concat",
-    "sum"
-  };
-  return Operator("UpSampling")
-           .SetParam("scale", scale)
-           .SetParam("sample_type", UpSamplingSampleTypeValues[int(sample_type)])
-           .SetParam("num_args", num_args)
-           .SetParam("num_filter", num_filter)
-           .SetParam("multi_input_mode", UpSamplingMultiInputModeValues[int(multi_input_mode)])
-           .SetParam("workspace", workspace)
-(data)
+inline Symbol SwapAxis(Symbol data,
+                       uint32_t dim1 = 0,
+                       uint32_t dim2 = 0) {
+  return Operator("SwapAxis")
+           .SetParam("dim1", dim1)
+           .SetParam("dim2", dim2)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Returns the indices of the maximum values along an axis.
+ *
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:11
+ * \param data The input
+ * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
+ * \param keepdims If true, the axis which is reduced is left in the result as dimension
+ * \return new symbol
+ */
+inline Symbol argmax(Symbol data,
+                     int axis = -1,
+                     bool keepdims = false) {
+  return Operator("argmax")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Returns the indices of the minimum values along an axis.
+ *
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:16
+ * \param data The input
+ * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
+ * \param keepdims If true, the axis which is reduced is left in the result as dimension
+ * \return new symbol
+ */
+inline Symbol argmin(Symbol data,
+                     int axis = -1,
+                     bool keepdims = false) {
+  return Operator("argmin")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif
+ * \param src Source input
+ * \return new symbol
+ */
+inline Symbol argmax_channel(Symbol src) {
+  return Operator("argmax_channel")
+           .SetInput("src", src)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the sum of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L44
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol sum(Symbol data,
+                  Shape axis = Shape(),
+                  bool keepdims = false) {
+  return Operator("sum")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the mean of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L53
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol mean(Symbol data,
+                   Shape axis = Shape(),
+                   bool keepdims = false) {
+  return Operator("mean")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the product of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L62
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol prod(Symbol data,
+                   Shape axis = Shape(),
+                   bool keepdims = false) {
+  return Operator("prod")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the sum of array elements over given axes with ``NaN`` ignored
+ *
+ *        Refer to ``sum`` for more details.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L75
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol nansum(Symbol data,
+                     Shape axis = Shape(),
+                     bool keepdims = false) {
+  return Operator("nansum")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the product of array elements over given axes with ``NaN`` ignored
+ *
+ *        Refer to ``prod`` for more details.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L88
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol nanprod(Symbol data,
+                      Shape axis = Shape(),
+                      bool keepdims = false) {
+  return Operator("nanprod")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the max of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L98
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol max(Symbol data,
+                  Shape axis = Shape(),
+                  bool keepdims = false) {
+  return Operator("max")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the min of array elements over given axes.
+ *
+ *        The argument ``axis`` specifies the axes to compute over:
+ *
+ *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
+ *        the default option.
+ *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
+ *        use ``axis=0`` will result in an array with shape ``(m, k)``.
+ *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
+ *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
+ *
+ *        If ``keepdims = 1``, then the result array will has the same number of
+ *        as the input, while the reduced axes will have size 1.
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L108
+ * \param data The input
+ * \param axis The axes to perform the reduction.
+ * \param keepdims If true, the axes which are reduced are left in the result as
+ * \return new symbol
+ */
+inline Symbol min(Symbol data,
+                  Shape axis = Shape(),
+                  bool keepdims = false) {
+  return Operator("min")
+           .SetParam("axis", axis)
+           .SetParam("keepdims", keepdims)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Broadcast an array over particular axes.
+ *
+ *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
+ *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+ *
+ *        For example::
+ *
+ *        // given (1,2,1) shape x
+ *        x = [[[ 1.],
+ *        [ 2.]]]
+ *
+ *        // broadcast on axis 2
+ *        broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
+ *        [ 2.,  2.,  2.]]]
+ *        // broadcast on axes 0 and 2
+ *        broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
+ *        [ 2.,  2.,  2.]],
+ *        [[ 1.,  1.,  1.],
+ *        [ 2.,  2.,  2.]]]
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L137
+ * \param data The input
+ * \param axis The axes to perform the broadcasting.
+ * \param size Target sizes of the broadcasting axes.
+ * \return new symbol
+ */
+inline Symbol broadcast_axis(Symbol data,
+                             Shape axis = Shape(),
+                             Shape size = Shape()) {
+  return Operator("broadcast_axis")
+           .SetParam("axis", axis)
+           .SetParam("size", size)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Broadcast an array to a new shape.
+ *
+ *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
+ *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+ *
+ *        For example::
+ *
+ *        broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
+ *        [ 1.,  2.,  3.]])
+ *
+ *        The dimensions that will not be changed can also use the special code ``0`` that
+ *        means copy the original value. So with ``shape=(2,0)`` we will obtain the same
+ *        results in the above example.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L158
+ * \param data The input
+ * \param shape The shape of the desired array. We can set the dim to zero if it's same
+ *        as the original. E.g `A = broadcast_to(B, shape=(10, 0, 0))` has the same
+ * \return new symbol
+ */
+inline Symbol broadcast_to(Symbol data,
+                           Shape shape = Shape()) {
+  return Operator("broadcast_to")
+           .SetParam("shape", shape)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Compute the L2 norm.
+ *
+ *        Flatten then input array and then compute the l2 norm.
+ *
+ *        Examples::
+ *
+ *        x = [[1, 2],
+ *        [3, 4]]
+ *
+ *        norm(x) = [5.47722578]
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/broadcast_reduce_op_value.cc:L182
+ * \param src Source input
+ * \return new symbol
+ */
+inline Symbol norm(Symbol src) {
+  return Operator("norm")
+           .SetInput("src", src)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Given three ndarrays, condition, x, and y, return an ndarray with the elements
+ *        from x or y, depending on the elements from condition are true or false. x and
+ *        y must have the same shape. If condition has the same shape as x, each element
+ *        in the output array is from x if the corresponding element in the condition is
+ *        true, and from y if false. If condtion does not have the same shape as x, it
+ *        must be a 1D array whose size is the same as x's first dimension size. Each row
+ *        of the output array is from x's row if the corresponding element from condition
+ *
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/control_flow_op.cc:21
+ * \param condition condition array
+ * \param x
+ * \param y
+ * \return new symbol
+ */
+inline Symbol where(Symbol condition,
+                    Symbol x,
+                    Symbol y) {
+  return Operator("where")
+           .SetInput("condition", condition)
+           .SetInput("x", x)
+           .SetInput("y", y)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Add arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L16
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_add(Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_add")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Substract arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L39
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_sub(Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_sub")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Multiply arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L61
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_mul(Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_mul")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Divide arguments, element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_basic.cc:L79
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_div(Symbol lhs,
+                            Symbol rhs) {
+  return Operator("broadcast_div")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif First array elements raised to powers from second array,
+ *        element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L16
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_power(Symbol lhs,
+                              Symbol rhs) {
+  return Operator("broadcast_power")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Element-wise maximum of array elements with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L34
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_maximum(Symbol lhs,
+                                Symbol rhs) {
+  return Operator("broadcast_maximum")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Element-wise minimum of array elements with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L52
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_minimum(Symbol lhs,
+                                Symbol rhs) {
+  return Operator("broadcast_minimum")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Given the "legs" of a right triangle, return its hypotenuse
+ *        with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L71
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_hypot(Symbol lhs,
+                              Symbol rhs) {
+  return Operator("broadcast_hypot")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return (lhs == rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L16
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_equal(Symbol lhs,
+                              Symbol rhs) {
+  return Operator("broadcast_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return (lhs != rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L23
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_not_equal(Symbol lhs,
+                                  Symbol rhs) {
+  return Operator("broadcast_not_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return (lhs > rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L30
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_greater(Symbol lhs,
+                                Symbol rhs) {
+  return Operator("broadcast_greater")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return (lhs >= rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L37
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_greater_equal(Symbol lhs,
+                                      Symbol rhs) {
+  return Operator("broadcast_greater_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return (lhs < rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L44
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_lesser(Symbol lhs,
+                               Symbol rhs) {
+  return Operator("broadcast_lesser")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return (lhs <= rhs), element-wise with broadcasting.
+ *
+ *
+ *
+ *        Defined in
+ *        /home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_logic.cc:L51
+ * \param lhs first input
+ * \param rhs second input
+ * \return new symbol
+ */
+inline Symbol broadcast_lesser_equal(Symbol lhs,
+                                     Symbol rhs) {
+  return Operator("broadcast_lesser_equal")
+           .SetInput("lhs", lhs)
+           .SetInput("rhs", rhs)
            .CreateSymbol();
 }
 
@@ -4555,7 +5519,7 @@ inline Symbol elemwise_add(Symbol lhs,
 /*!
  * \breif Calculate Smooth L1 Loss(lhs, scalar)
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_binary_scalar_op_extended.cc:63
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_binary_scalar_op_extended.cc:63
  * \param data source input
  * \param scalar scalar input
  * \return new symbol
@@ -4569,137 +5533,28 @@ inline Symbol smooth_l1(Symbol data,
 }
 
 /*!
- * \breif Return the top *k* elements in an array.
+ * \breif Add all input arguments element-wise.
  *
- *        Examples::
+ *        .. math::
+ *        add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n
  *
- *        x = [[ 0.3,  0.2,  0.4],
- *        [ 0.1,  0.3,  0.2]]
- *
- *        // return the index of the largest element on last axis
- *        topk(x) = [[ 2.],
- *        [ 1.]]
- *
- *        // return the value of the top-2 elements on last axis
- *        topk(x, ret_typ='value', k=2) = [[ 0.4,  0.3],
- *        [ 0.3,  0.2]]
- *
- *        // flatten and then return both index and value
- *        topk(x, ret_typ='both', k=2, axis=None) = [ 0.4,  0.3], [ 2.,  0.]
+ *        ``add_n`` is potentially more efficient than calling ``add`` by `n` times.
  *
  *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/ordering_op.cc:L36
- * \param src Source input
- * \param axis Axis along which to choose the top k indices. If not given, the flattened
- * \param k Number of top elements to select, should be always smaller than or equal to
- * \param ret_typ The return type. "value" means returning the top k values, "indices"
- *        means returning the indices of the top k values, "mask" means to return a mask
- *        array containing 0 and 1. 1 means the top k values. "both" means to return both
- * \param is_ascend Whether to choose k largest or k smallest. Top K largest elements
+ *        Defined in
+ * \param args Positional input arguments
  * \return new symbol
  */
-inline Symbol topk(Symbol src,
-                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
-                   int k = 1,
-                   TopkRetTyp ret_typ = TopkRetTyp::indices,
-                   bool is_ascend = false) {
-  static const char *TopkRetTypValues[] = {
-    "both",
-    "indices",
-    "mask",
-    "value"
-  };
-  return Operator("topk")
-           .SetParam("axis", axis)
-           .SetParam("k", k)
-           .SetParam("ret_typ", TopkRetTypValues[int(ret_typ)])
-           .SetParam("is_ascend", is_ascend)
-           .SetInput("src", src)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Return a sorted copy of an array.
- *
- *        Examples::
- *
- *        x = [[ 1, 4],
- *        [ 3, 1]]
- *
- *        // sort along the last axis
- *        sort(x) = [[ 1.,  4.],
- *        [ 1.,  3.]]
- *
- *        // flatten and then sort
- *        sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
- *
- *        // sort long the first axis
- *        sort(x, axis=0) = [[ 1.,  1.],
- *        [ 3.,  4.]]
- *
- *        // in a descend order
- *        sort(x, is_ascend=0) = [[ 4.,  1.],
- *        [ 3.,  1.]]
- *
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/ordering_op.cc:L99
- * \param src Source input
- * \param axis Axis along which to choose sort the input tensor. If not given, the
- * \param is_ascend Whether sort in ascending or descending order.
- * \return new symbol
- */
-inline Symbol sort(Symbol src,
-                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
-                   bool is_ascend = true) {
-  return Operator("sort")
-           .SetParam("axis", axis)
-           .SetParam("is_ascend", is_ascend)
-           .SetInput("src", src)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Returns the indices that can sort an array.
- *
- *        Examples::
- *
- *        x = [[ 0.3,  0.2,  0.4],
- *        [ 0.1,  0.3,  0.2]]
- *
- *        // sort along axis -1
- *        argsort(x) = [[ 1.,  0.,  2.],
- *        [ 0.,  2.,  1.]]
- *
- *        // sort along axis 0
- *        argsort(x, axis=0) = [[ 1.,  0.,  1.]
- *        [ 0.,  1.,  0.]]
- *
- *        // flatten and then sort
- *        argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/ordering_op.cc:L146
- * \param src Source input
- * \param axis Axis along which to sort the input tensor. If not given, the flattened
- * \param is_ascend Whether sort in ascending or descending order.
- * \return new symbol
- */
-inline Symbol argsort(Symbol src,
-                      dmlc::optional<int> axis = dmlc::optional<int>(-1),
-                      bool is_ascend = true) {
-  return Operator("argsort")
-           .SetParam("axis", axis)
-           .SetParam("is_ascend", is_ascend)
-           .SetInput("src", src)
+inline Symbol add_n(const std::vector<Symbol>& args) {
+  return Operator("add_n")
+(args)
            .CreateSymbol();
 }
 
 /*!
  * \breif Get output from a symbol and pass 0 gradient back
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:31
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:31
  * \param data The input
  * \return new symbol
  */
@@ -4719,7 +5574,7 @@ inline Symbol BlockGrad(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L65
+ *        Defined in
  * \param data Source input
  * \param dtype Output data type.
  * \return new symbol
@@ -4742,7 +5597,7 @@ inline Symbol Cast(Symbol data,
 /*!
  * \breif Negate src
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:84
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:84
  * \param data The input
  * \return new symbol
  */
@@ -4760,7 +5615,7 @@ inline Symbol negative(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L95
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4778,7 +5633,7 @@ inline Symbol abs(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L109
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4795,7 +5650,7 @@ inline Symbol sign(Symbol data) {
  *        round([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -2.,  2.,  2.,  2.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L122
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4812,7 +5667,7 @@ inline Symbol round(Symbol data) {
  *        ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L132
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4829,7 +5684,7 @@ inline Symbol ceil(Symbol data) {
  *        floor([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-3., -2.,  1.,  1.,  2.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L141
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4850,7 +5705,7 @@ inline Symbol floor(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L154
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4868,7 +5723,7 @@ inline Symbol rint(Symbol data) {
  *        fix([-2.1, -1.9, 1.9, 2.1]) = [-2., -1.,  1., 2.]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L164
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4886,7 +5741,7 @@ inline Symbol fix(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L174
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4903,7 +5758,7 @@ inline Symbol square(Symbol data) {
  *        sqrt(x) = \sqrt{x}
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L187
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4920,7 +5775,7 @@ inline Symbol sqrt(Symbol data) {
  *        rsqrt(x) = 1/\sqrt{x}
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L200
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4938,7 +5793,7 @@ inline Symbol rsqrt(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L215
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4955,7 +5810,7 @@ inline Symbol exp(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L225
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4972,7 +5827,7 @@ inline Symbol log(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L235
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -4989,7 +5844,7 @@ inline Symbol log10(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L245
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5009,7 +5864,7 @@ inline Symbol log2(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L261
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5027,7 +5882,7 @@ inline Symbol sin(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L275
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5044,7 +5899,7 @@ inline Symbol log1p(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L288
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5064,7 +5919,7 @@ inline Symbol expm1(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L304
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5084,7 +5939,7 @@ inline Symbol cos(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L320
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5105,7 +5960,7 @@ inline Symbol tan(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L337
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5126,7 +5981,7 @@ inline Symbol arcsin(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L354
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5146,7 +6001,7 @@ inline Symbol arccos(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L370
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5164,7 +6019,7 @@ inline Symbol arctan(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L384
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5182,7 +6037,7 @@ inline Symbol degrees(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L398
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5200,7 +6055,7 @@ inline Symbol radians(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L412
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5218,7 +6073,7 @@ inline Symbol sinh(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L426
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5236,7 +6091,7 @@ inline Symbol cosh(Symbol data) {
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L440
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5250,7 +6105,7 @@ inline Symbol tanh(Symbol data) {
  * \breif Inverse hyperbolic sine, element-wise.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L450
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5264,7 +6119,7 @@ inline Symbol arcsinh(Symbol data) {
  * \breif Inverse hyperbolic cosine, element-wise.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L460
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5278,7 +6133,7 @@ inline Symbol arccosh(Symbol data) {
  * \breif Inverse hyperbolic tangent, element-wise.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:L470
+ *        Defined in
  * \param data The input
  * \return new symbol
  */
@@ -5291,7 +6146,7 @@ inline Symbol arctanh(Symbol data) {
 /*!
  * \breif The gamma function (extension of the factorial function), element-wise
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:479
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:479
  * \param data The input
  * \return new symbol
  */
@@ -5304,7 +6159,7 @@ inline Symbol gamma(Symbol data) {
 /*!
  * \breif Log of the absolute value of the gamma function, element-wise
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/elemwise_unary_op.cc:488
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/elemwise_unary_op.cc:488
  * \param data The input
  * \return new symbol
  */
@@ -5319,7 +6174,7 @@ inline Symbol gammaln(Symbol data) {
  *        learnable parameters. For a input of shape (d1, ..., dK), the output shape is
  *        (d1, ..., dK, output_dim). All the input values should be integers in the range
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:19
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/indexing_op.cc:19
  * \param data Input data to the EmbeddingOp.
  * \param weight Embedding weight matrix.
  * \param input_dim vocabulary size of the input indices.
@@ -5364,7 +6219,7 @@ inline Symbol Embedding(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:L79
+ *        Defined in
  * \param a The source array.
  * \param indices The indices of the values to extract.
  * \param axis the axis of data tensor to be taken.
@@ -5406,7 +6261,7 @@ inline Symbol take(Symbol a,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:L131
+ *        Defined in
  * \param a Input data array
  * \param indices index array
  * \return new symbol
@@ -5454,7 +6309,7 @@ inline Symbol batch_take(Symbol a,
  *        [ 1.  0.  0.]]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/indexing_op.cc:L177
+ *        Defined in
  * \param indices array of locations where to set on_value
  * \param depth The dimension size at dim = axis.
  * \param on_value The value assigned to the locations represented by indices.
@@ -5538,7 +6393,7 @@ inline Symbol one_hot(Symbol indices,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L78
+ *        Defined in
  * \param data Input data to reshape.
  * \param target_shape (Deprecated! Use ``shape`` instead.) Target new shape. One and
  * \param keep_highest (Deprecated! Use ``shape`` instead.) Whether keep the highest dim
@@ -5569,7 +6424,7 @@ inline Symbol Reshape(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L101
+ *        Defined in
  * \param data Input data to reshape.
  * \return new symbol
  */
@@ -5609,7 +6464,7 @@ inline Symbol Flatten(Symbol data) {
  *        [ 7.,  8.]]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L142
+ *        Defined in
  * \param data Source input
  * \param axes Target axis order. By default the axes will be inverted.
  * \return new symbol
@@ -5630,7 +6485,7 @@ inline Symbol transpose(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L175
+ *        Defined in
  * \param data Source input
  * \param axis Position (amongst axes) where new axis is to be inserted.
  * \return new symbol
@@ -5662,7 +6517,7 @@ inline Symbol expand_dims(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L207
+ *        Defined in
  * \param data Source input
  * \param begin starting coordinates
  * \param end ending coordinates
@@ -5699,7 +6554,7 @@ inline Symbol slice(Symbol data,
  *        [ 10.,  11.]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L285
+ *        Defined in
  * \param data Source input
  * \param axis The axis to be sliced. Negative axis means to count from the last to the
  * \param begin The beginning index to be sliced. Negative values are interpreted as
@@ -5736,7 +6591,7 @@ inline Symbol slice_axis(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L318
+ *        Defined in
  * \param lhs The first input
  * \param rhs The second input
  * \param transpose_a If true then transpose the first input before dot.
@@ -5769,7 +6624,7 @@ inline Symbol dot(Symbol lhs,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L354
+ *        Defined in
  * \param lhs The first input
  * \param rhs The second input
  * \param transpose_a If true then transpose the first input before dot.
@@ -5798,7 +6653,7 @@ inline Symbol batch_dot(Symbol lhs,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L393
+ *        Defined in
  * \param data Source input
  * \param a_min Minimum value
  * \param a_max Maximum value
@@ -5837,7 +6692,7 @@ inline Symbol clip(Symbol data,
  *        [ 3.,  4.]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L432
+ *        Defined in
  * \param data Input data array
  * \param repeats The number of repetitions for each element.
  * \param axis The axis along which to repeat values. The negative numbers are
@@ -5891,7 +6746,7 @@ inline Symbol repeat(Symbol data,
  *        [ 3.,  4.,  3.,  4.,  3.,  4.]]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:L489
+ *        Defined in
  * \param data Input data array
  * \param reps The number of times for repeating the tensor a. If reps has length d, the
  *        result will have dimension of max(d, a.ndim); If a.ndim < d, a is promoted to
@@ -5909,7 +6764,7 @@ inline Symbol tile(Symbol data,
 /*!
  * \breif Reverse elements of an array with axis
  *
- *        From:/home/xlidc/mxnet/src/operator/tensor/matrix_op.cc:512
+ *        From:/home/local/ANT/coolivie/src/mxnet/src/operator/tensor/matrix_op.cc:512
  * \param data Input data array
  * \param axis The axis which to reverse elements.
  * \return new symbol
@@ -5919,6 +6774,134 @@ inline Symbol reverse(Symbol data,
   return Operator("reverse")
            .SetParam("axis", axis)
            .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return the top *k* elements in an array.
+ *
+ *        Examples::
+ *
+ *        x = [[ 0.3,  0.2,  0.4],
+ *        [ 0.1,  0.3,  0.2]]
+ *
+ *        // return the index of the largest element on last axis
+ *        topk(x) = [[ 2.],
+ *        [ 1.]]
+ *
+ *        // return the value of the top-2 elements on last axis
+ *        topk(x, ret_typ='value', k=2) = [[ 0.4,  0.3],
+ *        [ 0.3,  0.2]]
+ *
+ *        // flatten and then return both index and value
+ *        topk(x, ret_typ='both', k=2, axis=None) = [ 0.4,  0.3], [ 2.,  0.]
+ *
+ *
+ *
+ *        Defined in
+ * \param src Source input
+ * \param axis Axis along which to choose the top k indices. If not given, the flattened
+ * \param k Number of top elements to select, should be always smaller than or equal to
+ * \param ret_typ The return type. "value" means returning the top k values, "indices"
+ *        means returning the indices of the top k values, "mask" means to return a mask
+ *        array containing 0 and 1. 1 means the top k values. "both" means to return both
+ * \param is_ascend Whether to choose k largest or k smallest. Top K largest elements
+ * \return new symbol
+ */
+inline Symbol topk(Symbol src,
+                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
+                   int k = 1,
+                   TopkRetTyp ret_typ = TopkRetTyp::indices,
+                   bool is_ascend = false) {
+  static const char *TopkRetTypValues[] = {
+    "both",
+    "indices",
+    "mask",
+    "value"
+  };
+  return Operator("topk")
+           .SetParam("axis", axis)
+           .SetParam("k", k)
+           .SetParam("ret_typ", TopkRetTypValues[int(ret_typ)])
+           .SetParam("is_ascend", is_ascend)
+           .SetInput("src", src)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Return a sorted copy of an array.
+ *
+ *        Examples::
+ *
+ *        x = [[ 1, 4],
+ *        [ 3, 1]]
+ *
+ *        // sort along the last axis
+ *        sort(x) = [[ 1.,  4.],
+ *        [ 1.,  3.]]
+ *
+ *        // flatten and then sort
+ *        sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
+ *
+ *        // sort long the first axis
+ *        sort(x, axis=0) = [[ 1.,  1.],
+ *        [ 3.,  4.]]
+ *
+ *        // in a descend order
+ *        sort(x, is_ascend=0) = [[ 4.,  1.],
+ *        [ 3.,  1.]]
+ *
+ *
+ *
+ *        Defined in
+ * \param src Source input
+ * \param axis Axis along which to choose sort the input tensor. If not given, the
+ * \param is_ascend Whether sort in ascending or descending order.
+ * \return new symbol
+ */
+inline Symbol sort(Symbol src,
+                   dmlc::optional<int> axis = dmlc::optional<int>(-1),
+                   bool is_ascend = true) {
+  return Operator("sort")
+           .SetParam("axis", axis)
+           .SetParam("is_ascend", is_ascend)
+           .SetInput("src", src)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Returns the indices that can sort an array.
+ *
+ *        Examples::
+ *
+ *        x = [[ 0.3,  0.2,  0.4],
+ *        [ 0.1,  0.3,  0.2]]
+ *
+ *        // sort along axis -1
+ *        argsort(x) = [[ 1.,  0.,  2.],
+ *        [ 0.,  2.,  1.]]
+ *
+ *        // sort along axis 0
+ *        argsort(x, axis=0) = [[ 1.,  0.,  1.]
+ *        [ 0.,  1.,  0.]]
+ *
+ *        // flatten and then sort
+ *        argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+ *
+ *
+ *        Defined in
+ * \param src Source input
+ * \param axis Axis along which to sort the input tensor. If not given, the flattened
+ * \param is_ascend Whether sort in ascending or descending order.
+ * \return new symbol
+ */
+inline Symbol argsort(Symbol src,
+                      dmlc::optional<int> axis = dmlc::optional<int>(-1),
+                      bool is_ascend = true) {
+  return Operator("argsort")
+           .SetParam("axis", axis)
+           .SetParam("is_ascend", is_ascend)
+           .SetInput("src", src)
            .CreateSymbol();
 }
 
@@ -5933,7 +6916,7 @@ inline Symbol reverse(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/sample_op.cc:L24
+ *        Defined in
  * \param low The lower bound of distribution
  * \param high The upper bound of distribution
  * \param shape The shape of the output
@@ -5969,7 +6952,7 @@ inline Symbol uniform(mx_float low = 0,
  *        [-1.23474145,  1.55807114]]
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/sample_op.cc:L35
+ *        Defined in
  * \param loc Mean of the distribution.
  * \param scale Standard deviation of the distribution.
  * \param shape The shape of the output
@@ -5997,662 +6980,42 @@ inline Symbol normal(mx_float loc = 0,
 }
 
 /*!
- * \breif Returns the indices of the maximum values along an axis.
- *
- *        From:/home/xlidc/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:11
- * \param data The input
- * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
- * \param keepdims If true, the axis which is reduced is left in the result as dimension
+ * \breif Perform nearest neighboor/bilinear up sampling to inputs
+ * \param data Array of tensors to upsample
+ * \param scale Up sampling scale
+ * \param sample_type upsampling method
+ * \param num_args Number of inputs to be upsampled. For nearest neighbor upsampling,
+ *        this can be 1-N; the size of output will be(scale*h_0,scale*w_0) and all other
+ *        inputs will be upsampled to thesame size. For bilinear upsampling this must be
+ * \param num_filter Input filter. Only used by bilinear sample_type.
+ * \param multi_input_mode How to handle multiple input. concat means concatenate
+ *        upsampled images along the channel dimension. sum means add all images
+ * \param workspace Tmp workspace for deconvolution (MB)
  * \return new symbol
  */
-inline Symbol argmax(Symbol data,
-                     int axis = -1,
-                     bool keepdims = false) {
-  return Operator("argmax")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Returns the indices of the minimum values along an axis.
- *
- *        From:/home/xlidc/mxnet/src/operator/tensor/broadcast_reduce_op_index.cc:16
- * \param data The input
- * \param axis Empty or unsigned. The axis to perform the reduction.If left empty, a
- * \param keepdims If true, the axis which is reduced is left in the result as dimension
- * \return new symbol
- */
-inline Symbol argmin(Symbol data,
-                     int axis = -1,
-                     bool keepdims = false) {
-  return Operator("argmin")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif
- * \param src Source input
- * \return new symbol
- */
-inline Symbol argmax_channel(Symbol src) {
-  return Operator("argmax_channel")
-           .SetInput("src", src)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the sum of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol sum(Symbol data,
-                  Shape axis = Shape(),
-                  bool keepdims = false) {
-  return Operator("sum")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the mean of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol mean(Symbol data,
-                   Shape axis = Shape(),
-                   bool keepdims = false) {
-  return Operator("mean")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the product of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol prod(Symbol data,
-                   Shape axis = Shape(),
-                   bool keepdims = false) {
-  return Operator("prod")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the sum of array elements over given axes with ``NaN`` ignored
- *
- *        Refer to ``sum`` for more details.
- *
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol nansum(Symbol data,
-                     Shape axis = Shape(),
-                     bool keepdims = false) {
-  return Operator("nansum")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the product of array elements over given axes with ``NaN`` ignored
- *
- *        Refer to ``prod`` for more details.
- *
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol nanprod(Symbol data,
-                      Shape axis = Shape(),
-                      bool keepdims = false) {
-  return Operator("nanprod")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the max of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol max(Symbol data,
-                  Shape axis = Shape(),
-                  bool keepdims = false) {
-  return Operator("max")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the min of array elements over given axes.
- *
- *        The argument ``axis`` specifies the axes to compute over:
- *
- *        - **()**: compute over all elements into a scalar array with shape ``(1,)``.
- *        the default option.
- *        - **int**: compute over along a particular axis. If input has shape ``(n, m,
- *        use ``axis=0`` will result in an array with shape ``(m, k)``.
- *        - **tuple of int**: compute over multiple axes. Again assume input shape ``(n,
- *        k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
- *
- *        If ``keepdims = 1``, then the result array will has the same number of
- *        as the input, while the reduced axes will have size 1.
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the reduction.
- * \param keepdims If true, the axes which are reduced are left in the result as
- * \return new symbol
- */
-inline Symbol min(Symbol data,
-                  Shape axis = Shape(),
-                  bool keepdims = false) {
-  return Operator("min")
-           .SetParam("axis", axis)
-           .SetParam("keepdims", keepdims)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Broadcast an array over particular axes.
- *
- *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
- *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
- *
- *        For example::
- *
- *        // given (1,2,1) shape x
- *        x = [[[ 1.],
- *        [ 2.]]]
- *
- *        // broadcast on axis 2
- *        broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
- *        [ 2.,  2.,  2.]]]
- *        // broadcast on axes 0 and 2
- *        broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
- *        [ 2.,  2.,  2.]],
- *        [[ 1.,  1.,  1.],
- *        [ 2.,  2.,  2.]]]
- *
- *
- *        Defined in
- * \param data The input
- * \param axis The axes to perform the broadcasting.
- * \param size Target sizes of the broadcasting axes.
- * \return new symbol
- */
-inline Symbol broadcast_axis(Symbol data,
-                             Shape axis = Shape(),
-                             Shape size = Shape()) {
-  return Operator("broadcast_axis")
-           .SetParam("axis", axis)
-           .SetParam("size", size)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Broadcast an array to a new shape.
- *
- *        Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
- *        ``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
- *
- *        For example::
- *
- *        broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
- *        [ 1.,  2.,  3.]])
- *
- *        The dimensions that will not be changed can also use the special code ``0`` that
- *        means copy the original value. So with ``shape=(2,0)`` we will obtain the same
- *        results in the above example.
- *
- *
- *
- *        Defined in
- * \param data The input
- * \param shape The shape of the desired array. We can set the dim to zero if it's same
- *        as the original. E.g `A = broadcast_to(B, shape=(10, 0, 0))` has the same
- * \return new symbol
- */
-inline Symbol broadcast_to(Symbol data,
-                           Shape shape = Shape()) {
-  return Operator("broadcast_to")
-           .SetParam("shape", shape)
-           .SetInput("data", data)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Compute the L2 norm.
- *
- *        Flatten then input array and then compute the l2 norm.
- *
- *        Examples::
- *
- *        x = [[1, 2],
- *        [3, 4]]
- *
- *        norm(x) = [5.47722578]
- *
- *
- *
- *        Defined in
- * \param src Source input
- * \return new symbol
- */
-inline Symbol norm(Symbol src) {
-  return Operator("norm")
-           .SetInput("src", src)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Given three ndarrays, condition, x, and y, return an ndarray with the elements
- *        from x or y, depending on the elements from condition are true or false. x and
- *        y must have the same shape. If condition has the same shape as x, each element
- *        in the output array is from x if the corresponding element in the condition is
- *        true, and from y if false. If condtion does not have the same shape as x, it
- *        must be a 1D array whose size is the same as x's first dimension size. Each row
- *        of the output array is from x's row if the corresponding element from condition
- *
- *        From:/home/xlidc/mxnet/src/operator/tensor/control_flow_op.cc:21
- * \param condition condition array
- * \param x
- * \param y
- * \return new symbol
- */
-inline Symbol where(Symbol condition,
-                    Symbol x,
-                    Symbol y) {
-  return Operator("where")
-           .SetInput("condition", condition)
-           .SetInput("x", x)
-           .SetInput("y", y)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Add arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_add(Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_add")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Substract arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_sub(Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_sub")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Multiply arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_mul(Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_mul")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Divide arguments, element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_div(Symbol lhs,
-                            Symbol rhs) {
-  return Operator("broadcast_div")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif First array elements raised to powers from second array,
- *        element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L16
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_power(Symbol lhs,
-                              Symbol rhs) {
-  return Operator("broadcast_power")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Element-wise maximum of array elements with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L34
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_maximum(Symbol lhs,
-                                Symbol rhs) {
-  return Operator("broadcast_maximum")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Element-wise minimum of array elements with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L52
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_minimum(Symbol lhs,
-                                Symbol rhs) {
-  return Operator("broadcast_minimum")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Given the "legs" of a right triangle, return its hypotenuse
- *        with broadcasting.
- *
- *
- *
- *        Defined in
- *        /home/xlidc/mxnet/src/operator/tensor/elemwise_binary_broadcast_op_extended.cc:L71
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_hypot(Symbol lhs,
-                              Symbol rhs) {
-  return Operator("broadcast_hypot")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Return (lhs == rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_equal(Symbol lhs,
-                              Symbol rhs) {
-  return Operator("broadcast_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Return (lhs != rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_not_equal(Symbol lhs,
-                                  Symbol rhs) {
-  return Operator("broadcast_not_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Return (lhs > rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_greater(Symbol lhs,
-                                Symbol rhs) {
-  return Operator("broadcast_greater")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Return (lhs >= rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_greater_equal(Symbol lhs,
-                                      Symbol rhs) {
-  return Operator("broadcast_greater_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Return (lhs < rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_lesser(Symbol lhs,
-                               Symbol rhs) {
-  return Operator("broadcast_lesser")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Return (lhs <= rhs), element-wise with broadcasting.
- *
- *
- *
- *        Defined in
- * \param lhs first input
- * \param rhs second input
- * \return new symbol
- */
-inline Symbol broadcast_lesser_equal(Symbol lhs,
-                                     Symbol rhs) {
-  return Operator("broadcast_lesser_equal")
-           .SetInput("lhs", lhs)
-           .SetInput("rhs", rhs)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Add all input arguments element-wise.
- *
- *        .. math::
- *        add\_n(a_1, a_2, ..., a_n) = a_1 + a_2 + ... + a_n
- *
- *        ``add_n`` is potentially more efficient than calling ``add`` by `n` times.
- *
- *
- *        Defined in /home/xlidc/mxnet/src/operator/tensor/elemwise_sum.cc:L63
- * \param args Positional input arguments
- * \return new symbol
- */
-inline Symbol add_n(const std::vector<Symbol>& args) {
-  return Operator("add_n")
-(args)
-           .CreateSymbol();
-}
-
-/*!
- * \breif Custom operator implemented in frontend.
- * \param op_type Type of custom operator. Must be registered first.
- * \return new symbol
- */
-inline Symbol Custom(const std::string& op_type) {
-  return Operator("Custom")
+inline Symbol UpSampling(const std::vector<Symbol>& data,
+                         uint32_t scale,
+                         UpSamplingSampleType sample_type,
+                         int num_args,
+                         uint32_t num_filter = 0,
+                         UpSamplingMultiInputMode multi_input_mode = UpSamplingMultiInputMode::concat,
+                         uint64_t workspace = 512) {
+  static const char *UpSamplingSampleTypeValues[] = {
+    "bilinear",
+    "nearest"
+  };
+  static const char *UpSamplingMultiInputModeValues[] = {
+    "concat",
+    "sum"
+  };
+  return Operator("UpSampling")
+           .SetParam("scale", scale)
+           .SetParam("sample_type", UpSamplingSampleTypeValues[int(sample_type)])
+           .SetParam("num_args", num_args)
+           .SetParam("num_filter", num_filter)
+           .SetParam("multi_input_mode", UpSamplingMultiInputModeValues[int(multi_input_mode)])
+           .SetParam("workspace", workspace)
+(data)
            .CreateSymbol();
 }
 
@@ -6667,7 +7030,7 @@ inline Symbol Custom(const std::string& op_type) {
  *        - `softrelu`: Soft ReLU, or SoftPlus, `y = log(1 + exp(x))`
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/activation.cc:L76
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/activation.cc:L76
  * \param data Input data to activation function.
  * \param act_type Activation function to be applied.
  * \return new symbol
@@ -6779,7 +7142,7 @@ inline Symbol BilinearSampler(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/convolution.cc:L143
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/convolution.cc:L150
  * \param data Input data to the ConvolutionOp.
  * \param weight Weight matrix.
  * \param bias Bias parameter.
@@ -6794,7 +7157,7 @@ inline Symbol BilinearSampler(Symbol data,
  * \param cudnn_tune Whether to pick convolution algo by running performance test.
  * \param cudnn_off Turn off cudnn for this layer.
  * \param layout Set layout for input, output and weight. Empty for
- *        default layout: NCHW for 2d and NCDHW for 3d.
+ *        default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.
  * \return new symbol
  */
 inline Symbol Convolution(Symbol data,
@@ -6821,6 +7184,7 @@ inline Symbol Convolution(Symbol data,
     "None",
     "NCDHW",
     "NCHW",
+    "NCW",
     "NDHWC",
     "NHWC"
   };
@@ -6836,6 +7200,78 @@ inline Symbol Convolution(Symbol data,
            .SetParam("cudnn_tune", ConvolutionCudnnTuneValues[int(cudnn_tune)])
            .SetParam("cudnn_off", cudnn_off)
            .SetParam("layout", ConvolutionLayoutValues[int(layout)])
+           .SetInput("data", data)
+           .SetInput("weight", weight)
+           .SetInput("bias", bias)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Apply convolution to input then add a bias.
+ * \param data Input data to the ConvolutionV1Op.
+ * \param weight Weight matrix.
+ * \param bias Bias parameter.
+ * \param kernel convolution kernel size: (h, w) or (d, h, w)
+ * \param num_filter convolution filter(channel) number
+ * \param stride convolution stride: (h, w) or (d, h, w)
+ * \param dilate convolution dilate: (h, w) or (d, h, w)
+ * \param pad pad for convolution: (h, w) or (d, h, w)
+ * \param num_group Number of group partitions. Equivalent to slicing input into num_group
+ *        partitions, apply convolution on each, then concatenate the results
+ * \param workspace Maximum tmp workspace allowed for convolution (MB).
+ * \param no_bias Whether to disable bias parameter.
+ * \param cudnn_tune Whether to pick convolution algo by running performance test.
+ *        Leads to higher startup time but may give faster speed. Options are:
+ *        'off': no tuning
+ *        'limited_workspace': run test and pick the fastest algorithm that doesn't
+ *        'fastest': pick the fastest algorithm and ignore workspace limit.
+ *        If set to None (default), behavior is determined by environment
+ *        variable MXNET_CUDNN_AUTOTUNE_DEFAULT: 0 for off,
+ *        1 for limited workspace (default), 2 for fastest.
+ * \param cudnn_off Turn off cudnn for this layer.
+ * \param layout Set layout for input, output and weight. Empty for
+ *        default layout: NCHW for 2d and NCDHW for 3d.
+ * \return new symbol
+ */
+inline Symbol Convolution_v1(Symbol data,
+                             Symbol weight,
+                             Symbol bias,
+                             Shape kernel,
+                             uint32_t num_filter,
+                             Shape stride = Shape(),
+                             Shape dilate = Shape(),
+                             Shape pad = Shape(),
+                             uint32_t num_group = 1,
+                             uint64_t workspace = 1024,
+                             bool no_bias = false,
+                             Convolution_v1CudnnTune cudnn_tune = Convolution_v1CudnnTune::None,
+                             bool cudnn_off = false,
+                             Convolution_v1Layout layout = Convolution_v1Layout::None) {
+  static const char *Convolution_v1CudnnTuneValues[] = {
+    "None",
+    "fastest",
+    "limited_workspace",
+    "off"
+  };
+  static const char *Convolution_v1LayoutValues[] = {
+    "None",
+    "NCDHW",
+    "NCHW",
+    "NDHWC",
+    "NHWC"
+  };
+  return Operator("Convolution_v1")
+           .SetParam("kernel", kernel)
+           .SetParam("num_filter", num_filter)
+           .SetParam("stride", stride)
+           .SetParam("dilate", dilate)
+           .SetParam("pad", pad)
+           .SetParam("num_group", num_group)
+           .SetParam("workspace", workspace)
+           .SetParam("no_bias", no_bias)
+           .SetParam("cudnn_tune", Convolution_v1CudnnTuneValues[int(cudnn_tune)])
+           .SetParam("cudnn_off", cudnn_off)
+           .SetParam("layout", Convolution_v1LayoutValues[int(layout)])
            .SetInput("data", data)
            .SetInput("weight", weight)
            .SetInput("bias", bias)
@@ -6897,6 +7333,16 @@ inline Symbol Crop(const std::vector<Symbol>& data,
            .SetParam("h_w", h_w)
            .SetParam("center_crop", center_crop)
 (data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Custom operator implemented in frontend.
+ * \param op_type Type of custom operator. Must be registered first.
+ * \return new symbol
+ */
+inline Symbol Custom(const std::string& op_type) {
+  return Operator("Custom")
            .CreateSymbol();
 }
 
@@ -6978,7 +7424,7 @@ inline Symbol Dropout(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/fully_connected.cc:L94
+ *        Defined in
  * \param data Input data.
  * \param weight Weight matrix.
  * \param bias Bias parameter.
@@ -6997,6 +7443,30 @@ inline Symbol FullyConnected(Symbol data,
            .SetInput("data", data)
            .SetInput("weight", weight)
            .SetInput("bias", bias)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif generate sampling grid for bilinear sampling.
+ * \param data Input data to the GridGeneratorOp.
+ * \param transform_type transformation type
+ *        if transformation type is affine, data is affine matrix : (batch, 6)
+ *        if transformation type is warp, data is optical flow : (batch, 2, h, w)
+ * \param target_shape if transformation type is affine, the operator need a target_shape
+ *        if transofrmation type is warp, the operator will ignore target_shape
+ * \return new symbol
+ */
+inline Symbol GridGenerator(Symbol data,
+                            GridGeneratorTransformType transform_type,
+                            Shape target_shape = Shape(0,0)) {
+  static const char *GridGeneratorTransformTypeValues[] = {
+    "affine",
+    "warp"
+  };
+  return Operator("GridGenerator")
+           .SetParam("transform_type", GridGeneratorTransformTypeValues[int(transform_type)])
+           .SetParam("target_shape", target_shape)
+           .SetInput("data", data)
            .CreateSymbol();
 }
 
@@ -7104,6 +7574,90 @@ inline Symbol MakeLoss(Symbol data,
 /*!
  * \breif Perform pooling on the input.
  *
+ *        The shapes for 1-D pooling are
+ *        - **data**: *(batch_size, channel, width)*,
+ *        - **out**: *(batch_size, num_filter, out_width)*.
+ *
+ *        The shapes for 2-D pooling is
+ *
+ *        - **data**: *(batch_size, channel, height, width)*
+ *        - **out**: *(batch_size, num_filter, out_height, out_width)*, with::
+ *
+ *        out_height = f(height, kernel[0], pad[0], stride[0])
+ *        out_width = f(width, kernel[1], pad[1], stride[1])
+ *
+ *        The defintion of *f* depends on ``pooling_convention``, which has two options:
+ *
+ *        - **valid** (default)::
+ *
+ *        f(x, k, p, s) = floor(x+2*p-k)/s+1
+ *
+ *        - **full**, which is compatible with Caffe::
+ *
+ *        f(x, k, p, s) = ceil(x+2*p-k)/s+1
+ *
+ *        But ``global_pool`` is set to be true, then do a global pooling, namely reset
+ *        ``kernel=(height, width)``.
+ *
+ *        Three pooling options are supported by ``pool_type``:
+ *
+ *        - **avg**: average pooling
+ *        - **max**: max pooling
+ *        - **sum**: sum pooling
+ *
+ *        1-D pooling is special case of 2-D pooling with *width=1* and
+ *        *kernel[1]=1*.
+ *
+ *        For 3-D pooling, an additional *depth* dimension is added before
+ *        *height*. Namely the input data will have shape *(batch_size, channel, depth,
+ *        height, width)*.
+ *
+ *
+ *
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/pooling.cc:L126
+ * \param data Input data to the pooling operator.
+ * \param kernel pooling kernel size: (y, x) or (d, y, x)
+ * \param pool_type Pooling type to be applied.
+ * \param global_pool Ignore kernel size, do global pooling based on current input
+ * \param cudnn_off Turn off cudnn pooling and use MXNet pooling operator.
+ * \param pooling_convention Pooling convention to be applied.
+ * \param stride stride: for pooling (y, x) or (d, y, x)
+ * \param pad pad for pooling: (y, x) or (d, y, x)
+ * \return new symbol
+ */
+
+inline Symbol Pooling(Symbol data,
+                      Shape kernel,
+                      PoolingPoolType pool_type,
+                      bool global_pool = false,
+                      bool cudnn_off = false,
+                      PoolingPoolingConvention pooling_convention = PoolingPoolingConvention::valid,
+                      Shape stride = Shape(),
+                      Shape pad = Shape()) {
+  static const char *PoolingPoolTypeValues[] = {
+    "avg",
+    "max",
+    "sum"
+  };
+  static const char *PoolingPoolingConventionValues[] = {
+    "full",
+    "valid"
+  };
+  return Operator("Pooling")
+           .SetParam("kernel", kernel)
+           .SetParam("pool_type", PoolingPoolTypeValues[int(pool_type)])
+           .SetParam("global_pool", global_pool)
+           .SetParam("cudnn_off", cudnn_off)
+           .SetParam("pooling_convention", PoolingPoolingConventionValues[int(pooling_convention)])
+           .SetParam("stride", stride)
+           .SetParam("pad", pad)
+           .SetInput("data", data)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Perform pooling on the input.
+ *
  *        The shapes for 2-D pooling is
  *
  *        - **data**: *(batch_size, channel, height, width)*
@@ -7140,7 +7694,7 @@ inline Symbol MakeLoss(Symbol data,
  *
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/pooling.cc:L122
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/pooling_v1.cc:L84
  * \param data Input data to the pooling operator.
  * \param kernel pooling kernel size: (y, x) or (d, y, x)
  * \param pool_type Pooling type to be applied.
@@ -7150,27 +7704,27 @@ inline Symbol MakeLoss(Symbol data,
  * \param pad pad for pooling: (y, x) or (d, y, x)
  * \return new symbol
  */
-inline Symbol Pooling(Symbol data,
-                      Shape kernel,
-                      PoolingPoolType pool_type,
-                      bool global_pool = false,
-                      PoolingPoolingConvention pooling_convention = PoolingPoolingConvention::valid,
-                      Shape stride = Shape(),
-                      Shape pad = Shape()) {
-  static const char *PoolingPoolTypeValues[] = {
+inline Symbol Pooling_v1(Symbol data,
+                         Shape kernel,
+                         Pooling_v1PoolType pool_type,
+                         bool global_pool = false,
+                         Pooling_v1PoolingConvention pooling_convention = Pooling_v1PoolingConvention::valid,
+                         Shape stride = Shape(),
+                         Shape pad = Shape()) {
+  static const char *Pooling_v1PoolTypeValues[] = {
     "avg",
     "max",
     "sum"
   };
-  static const char *PoolingPoolingConventionValues[] = {
+  static const char *Pooling_v1PoolingConventionValues[] = {
     "full",
     "valid"
   };
-  return Operator("Pooling")
+  return Operator("Pooling_v1")
            .SetParam("kernel", kernel)
-           .SetParam("pool_type", PoolingPoolTypeValues[int(pool_type)])
+           .SetParam("pool_type", Pooling_v1PoolTypeValues[int(pool_type)])
            .SetParam("global_pool", global_pool)
-           .SetParam("pooling_convention", PoolingPoolingConventionValues[int(pooling_convention)])
+           .SetParam("pooling_convention", Pooling_v1PoolingConventionValues[int(pooling_convention)])
            .SetParam("stride", stride)
            .SetParam("pad", pad)
            .SetInput("data", data)
@@ -7439,7 +7993,7 @@ inline Symbol SoftmaxActivation(Symbol data,
  *        - **valid**: divide by the number of examples which are not ignored.
  *
  *
- *        Defined in /home/xlidc/mxnet/src/operator/softmax_output.cc:L77
+ *        Defined in /home/local/ANT/coolivie/src/mxnet/src/operator/softmax_output.cc:L77
  * \param data Input data.
  * \param label Ground truth label.
  * \param grad_scale Scale the gradient by a float factor
@@ -7568,26 +8122,45 @@ inline Symbol SVMOutput(Symbol data,
 }
 
 /*!
- * \breif generate sampling grid for bilinear sampling.
- * \param data Input data to the GridGeneratorOp.
- * \param transform_type transformation type
- *        if transformation type is affine, data is affine matrix : (batch, 6)
- *        if transformation type is warp, data is optical flow : (batch, 2, h, w)
- * \param target_shape if transformation type is affine, the operator need a target_shape
- *        if transofrmation type is warp, the operator will ignore target_shape
+ * \breif Caffe loss layer
+ * \param prototxt Caffe's layer parameter
+ * \param num_data Operator input number
+ * \param num_out Operator output number
+ * \param grad_scale Scale the gradient by a float factor (a.k.a weight of this loss).
  * \return new symbol
  */
-inline Symbol GridGenerator(Symbol data,
-                            GridGeneratorTransformType transform_type,
-                            Shape target_shape = Shape(0,0)) {
-  static const char *GridGeneratorTransformTypeValues[] = {
-    "affine",
-    "warp"
-  };
-  return Operator("GridGenerator")
-           .SetParam("transform_type", GridGeneratorTransformTypeValues[int(transform_type)])
-           .SetParam("target_shape", target_shape)
-           .SetInput("data", data)
+inline Symbol CaffeLoss(::caffe::LayerParameter prototxt = textToCaffeLayerParameter("layer {\n}\n"),
+                        int num_data = 2,
+                        int num_out = 1,
+                        mx_float grad_scale = 1) {
+  return Operator("CaffeLoss")
+           .SetParam("prototxt", prototxt)
+           .SetParam("num_data", num_data)
+           .SetParam("num_out", num_out)
+           .SetParam("grad_scale", grad_scale)
+           .CreateSymbol();
+}
+
+/*!
+ * \breif Apply caffe operator
+ * \param data List of tensors
+ * \param prototxt Caffe's layer parameter
+ * \param num_data Operator input number
+ * \param num_weight Weight number
+ * \param num_out Operator output number
+ * \return new symbol
+ */
+inline Symbol CaffeOp(const std::vector<Symbol>& data,
+                      ::caffe::LayerParameter prototxt = textToCaffeLayerParameter("layer {\n}\n"),
+                      int num_data = 1,
+                      int num_weight = 0,
+                      int num_out = 1) {
+  return Operator("CaffeOp")
+           .SetParam("prototxt", prototxt)
+           .SetParam("num_data", num_data)
+           .SetParam("num_weight", num_weight)
+           .SetParam("num_out", num_out)
+(data)
            .CreateSymbol();
 }
 

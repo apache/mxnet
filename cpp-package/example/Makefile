@@ -1,10 +1,28 @@
+
+ifndef config
+ifdef CXXNET_CONFIG
+  config = $(CXXNET_CONFIG)
+else ifneq ("$(wildcard ../../config.mk)","")
+  config = ../../config.mk
+else
+  config = ../../make/config.mk
+endif
+endif
+
+include $(config)
+
 BLAS=-L /opt/openblas/lib -lopenblas -DMSHADOW_USE_CBLAS=1 -DMSHADOW_USE_MKL=0 
 CUDA=-DMSHADOW_USE_CUDA=1
 
 #COMMFLAGS=-static -static-libgcc -static-libstdc++
 
 CFLAGS=$(COMMFLAGS) -I ../include -Wall -O3 -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas -I ../../nnvm/include -I ../../include -I ../../dmlc-core/include
-LDFLAGS=$(COMMFLAGS) -L ../lib/linux -lmxnet $(BLAS) $(CUDA) -pthread
+LDFLAGS=$(COMMFLAGS) -L ../../lib -lmxnet $(BLAS) $(CUDA) -pthread
+
+ifdef CAFFE_PATH
+  CFLAGS  += -DMXNET_USE_CAFFE=1 -I$(CAFFE_PATH)/include -I$(CAFFE_PATH)/build/include
+  LDFLAGS += -L$(CAFFE_PATH)/build/lib -lcaffe
+endif
 
 ifneq ($(OS), Windows_NT)
 	OS := $(shell uname)
@@ -13,6 +31,8 @@ ifneq ($(OS), Darwin)
 	CFLAGS += -fopenmp
 	LDFLAGS += -lgomp
 endif
+
+.PHONY: all travis clean
 
 all: mlp lenet lenet_with_mxdataiter alexnet googlenet resnet
 
