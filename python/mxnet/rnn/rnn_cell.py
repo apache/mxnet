@@ -825,13 +825,34 @@ class ModifierCell(BaseRNNCell):
 class ZoneoutCell(ModifierCell):
     """Apply Zoneout on base cell"""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
+        assert not isinstance(base_cell, FusedRNNCell), \
+            "FusedRNNCell doesn't support zoneout. " \
+            "Please unfuse first."
         super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs
         self.zoneout_states = zoneout_states
         self.prev_output = None
 
+    def reset(self):
+        super(ZoneoutCell, self).reset()
+        self.prev_output = None
+
     def __call__(self, inputs, states):
-        raise NotImplementedError
+        cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
+        next_output, next_states = cell(inputs, states)
+        mask = lambda p, shape: symbol.Dropout(symbol.ones(shape), p=p)
+
+        prev_output = self.prev_output if self.prev_output else symbol.zeros((0, 0))
+
+        output = (symbol.where(mask(p_outputs, (0, 0)), next_output, prev_output)
+                  if p_outputs != 0. else next_output)
+        states = ([symbol.where(mask(p_states, shape), new_s, old_s) for shape, new_s, old_s in
+                   zip(cell.state_shape, next_states, states)] if p_states != 0. else next_states)
+
+        self.prev_output = output
+
+        return output, states
+
 
 
 class BidirectionalCell(BaseRNNCell):
