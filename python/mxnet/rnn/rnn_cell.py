@@ -828,6 +828,12 @@ class ZoneoutCell(ModifierCell):
         assert not isinstance(base_cell, FusedRNNCell), \
             "FusedRNNCell doesn't support zoneout. " \
             "Please unfuse first."
+        assert not isinstance(base_cell, BidirectionalCell), \
+            "BidirectionalCell doesn't support zoneout since it doesn't support step. " \
+            "Please add ZoneoutCell to the cells underneath instead."
+        assert not isinstance(base_cell, SequentialRNNCell) or not base_cell._bidirectional, \
+            "Bidirectional SequentialRNNCell doesn't support zoneout. " \
+            "Please add ZoneoutCell to the cells underneath instead."
         super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs
         self.zoneout_states = zoneout_states
