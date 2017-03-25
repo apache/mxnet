@@ -7,7 +7,7 @@ from __future__ import print_function
 
 import warnings
 
-from .. import symbol, init, ndarray
+from .. import symbol, init, ndarray, _symbol_internal
 from ..base import string_types, numeric_types
 
 
@@ -840,14 +840,17 @@ class ZoneoutCell(ModifierCell):
     def __call__(self, inputs, states):
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
-        mask = lambda p, shape: symbol.Dropout(symbol.ones(shape), p=p)
+        mask = (lambda p, like:
+                symbol.Dropout(_symbol_internal._identity_with_attr_like_rhs(symbol.ones((0, 0)),
+                                                                             like),
+                               p=p))
 
         prev_output = self.prev_output if self.prev_output else symbol.zeros((0, 0))
 
-        output = (symbol.where(mask(p_outputs, (0, 0)), next_output, prev_output)
+        output = (symbol.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
-        states = ([symbol.where(mask(p_states, shape), new_s, old_s) for shape, new_s, old_s in
-                   zip(cell.state_shape, next_states, states)] if p_states != 0. else next_states)
+        states = ([symbol.where(mask(p_states, new_s), new_s, old_s) for new_s, old_s in
+                   zip(next_states, states)] if p_states != 0. else next_states)
 
         self.prev_output = output
 

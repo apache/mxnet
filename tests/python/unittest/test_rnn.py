@@ -100,7 +100,7 @@ def test_zoneout():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
 
-    args, outs, auxs = outputs.infer_shape_partial(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
