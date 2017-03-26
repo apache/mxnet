@@ -199,7 +199,7 @@ class BucketSentenceIter : public DataIter {
  public:
   BucketSentenceIter(string filename, int minibatch, Context context) : batch(minibatch),
   current(-1), device(context) {
-    auto& content = readContent(filename);
+    auto content = readContent(filename);
     buildCharIndex(content);
     sequences = convertTextToSequences(content, '\n');
 
@@ -343,7 +343,8 @@ class BucketSentenceIter : public DataIter {
         chars.push_back(c);
       }
     }
-    return {map, chars};
+    // Note: Can't use {} because this would hit the explicit constructor
+    return tuple<unordered_map<wchar_t, mx_float>, vector<wchar_t>>(map, chars);
   }
 
   vector<vector<mx_float>> convertTextToSequences(const wstring& content, wchar_t spliter) {

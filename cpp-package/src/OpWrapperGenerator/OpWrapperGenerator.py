@@ -332,30 +332,6 @@ def ParseAllOps():
         ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
     return ret + ret2
 
-def GetHelperFunctions():
-    text = (
-        "#if defined(MXNET_USE_CAFFE) && MXNET_USE_CAFFE != 0\n"
-        "inline ::caffe::LayerParameter textToCaffeLayerParameter(const std::string& text) {\n"
-        "  caffe::NetParameter np;\n"
-        "  const bool success = google::protobuf::TextFormat::ParseFromString(text, &np);\n"
-        "  CHECK_EQ(success, true) << \"Invalid protpbuf layer string: \" << text;\n"
-        "  return ::caffe::LayerParameter(np.layer(0));\n"
-        "}\n"
-        "inline std::basic_ostream<char>& operator <<\n"
-        "    (std::basic_ostream<char>& os, const ::caffe::LayerParameter& op) {\n"
-        "  std::string s;\n"
-        "  caffe::NetParameter np;\n"
-        "  // Avoid wasting time making a copy -- just push in out default object's pointer\n"
-        "  np.mutable_layer()->AddAllocated(const_cast<::caffe::LayerParameter *>(&op));\n"
-        "  google::protobuf::TextFormat::PrintToString(np, &s);\n"
-        "  np.mutable_layer()->ReleaseLast();\n"
-        "  os << s;\n"
-        "  return os;\n"
-        "}\n"
-        "#endif\n"
-    )
-    return text
-
 if __name__ == "__main__":
     #et = EnumType(typeName = 'MyET')
     reload(sys)
@@ -388,19 +364,15 @@ if __name__ == "__main__":
                   "\n"
                   "#include <string>\n"
                   "#include <vector>\n"
-                  "#if defined(MXNET_USE_CAFFE) && MXNET_USE_CAFFE != 0\n"
-                  "#include <caffe/proto/caffe.pb.h>\n"
-                  "#include <google/protobuf/text_format.h>\n"
-                  "#endif\n"
                   "#include \"mxnet-cpp/base.h\"\n"
                   "#include \"mxnet-cpp/shape.h\"\n"
+                  "#include \"mxnet-cpp/op_util.h\"\n"
                   "#include \"mxnet-cpp/operator.h\"\n"
                   "#include \"dmlc/optional.h\"\n"
                   "\n"
                   "namespace mxnet {\n"
                   "namespace cpp {\n"
                   "\n"
-                  + GetHelperFunctions() +
                   "%s"
                   "} //namespace cpp\n"
                   "} //namespace mxnet\n"

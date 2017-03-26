@@ -138,7 +138,7 @@ endif
 .PHONY: clean all test lint doc clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
-all: lib/libmxnet.a lib/libmxnet.so $(BIN)
+all: lib/libmxnet.a lib/libmxnet.so $(BIN) cpp-package-example-all
 
 SRC = $(wildcard src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
@@ -162,6 +162,8 @@ endif
 PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
+
+include cpp-package/cpp-package.mk
 
 # scala package profile
 ifeq ($(OS),Windows_NT)
@@ -271,7 +273,7 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin
+	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package
 
 pylint:
 # ideally we want to check all, such as: python tools example tests
@@ -347,7 +349,7 @@ jnilint:
 	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
-clean: cyclean
+clean: cyclean cpp-package-clean
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
