@@ -20,7 +20,7 @@ mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
-mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" ON)
+mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
