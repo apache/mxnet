@@ -21,7 +21,7 @@ def init_git() {
 
 stage("Sanity Check") {
     timeout(time: max_time, unit: 'MINUTES') {
-        node {
+        node('linux') {
             ws('workspace/sanity') {
                 init_git()
                 make('lint', 'cpplint rcpplint jnilint')
@@ -81,7 +81,7 @@ USE_BLAS=openblas             \
         }
     },
             'GPU: CUDA7.5+cuDNN5': {
-                node('GPU linux') {
+                node('GPU' && 'linux') {
                     ws('workspace/build-gpu') {
                         init_git()
                         def flag = """ \
@@ -123,6 +123,27 @@ USE_CUDNN=1                   \
                         pack_lib('mklml')
                     }
                 }
+            },
+            'CPU windows'{
+                node('windows') {
+                    ws('workspace/build-cpu') {
+                    bat """rmdir /s/q build_vc14_cpu
+mkdir build_vc14_cpu
+cd build_vc14_cpu
+cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_DIST_KVSTORE=0 ${env.WORKSPACE}/mxnet"""
+                    }
+                }
+            },
+            'GPU windows'{
+                node('windows') {
+                    ws('workspace/build-gpu') {
+                        bat """rmdir /s/q build_vc14_gpu
+mkdir build_vc14_gpu
+call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
+cd build_vc14_gpu
+cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DCMAKE_CXX_FLAGS_RELEASE=/FS -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}/mxnet"""
+                    }
+                }
             }
 }
 
@@ -154,7 +175,7 @@ stage('Unit Test') {
         }
     },
             'Python2/3: GPU': {
-                node('GPU linux') {
+                node('GPU' && 'linux') {
                     ws('workspace/ut-python-gpu') {
                         init_git()
                         unpack_lib('gpu', mx_lib)
@@ -163,7 +184,7 @@ stage('Unit Test') {
                 }
             },
             'Python2/3: MKLML': {
-                node('GPU linux') {
+                node('linux') {
                     ws('workspace/ut-python-mklml') {
                         init_git()
                         unpack_lib('mklml')
@@ -189,7 +210,7 @@ stage('Unit Test') {
 
 stage('Integration Test') {
     parallel 'Python': {
-        node('GPU linux') {
+        node('GPU' && 'linux') {
             ws('workspace/it-python-gpu') {
                 init_git()
                 unpack_lib('gpu')
@@ -200,7 +221,7 @@ stage('Integration Test') {
         }
     },
             'Caffe': {
-                node('GPU linux') {
+                node('GPU' && 'linux') {
                     ws('workspace/it-caffe') {
                         init_git()
                         unpack_lib('gpu')
