@@ -9,6 +9,8 @@ EXTRA_LDFLAGS := -L$(ROOTDIR)/lib -lmxnet
 
 .PHONY += cpp-package-example-all cpp-package-example-clean
 
+BIN += $(CPP_EXE)
+
 cpp-package-example-all: $(CPPEX_EXE)
 
 build/cpp-package/example/% : cpp-package/example/%.cpp
