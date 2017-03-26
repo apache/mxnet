@@ -13,7 +13,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 add_executable(lenet lenet.cpp)
 target_link_libraries(lenet ${CPP_EXAMPLE_LIBS})
 
-add_executable(lenet_with_mxdataiter lenet.cpp)
+add_executable(lenet_with_mxdataiter lenet_with_mxdataiter.cpp)
 target_link_libraries(lenet_with_mxdataiter ${CPP_EXAMPLE_LIBS})
 
 add_executable(alexnet alexnet.cpp)
