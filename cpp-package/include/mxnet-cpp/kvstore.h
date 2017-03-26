@@ -5,8 +5,8 @@
 * \author Chuntao Hong
 */
 
-#ifndef MXNETCPP_KVSTORE_H
-#define MXNETCPP_KVSTORE_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_H_
 
 #include <string>
 #include <vector>
@@ -46,4 +46,4 @@ class KVStore {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_KVSTORE_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_H_

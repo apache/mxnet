@@ -14,8 +14,8 @@
 #include "mxnet-cpp/kvstore.h"
 #include "mxnet-cpp/optimizer.h"
 
-#ifndef KVSTORE_HPP
-#define KVSTORE_HPP
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_HPP_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_HPP_
 
 namespace mxnet {
 namespace cpp {
@@ -175,4 +175,4 @@ std::string KVStore::GetRole() const {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // KVSTORE_HPP
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_HPP_

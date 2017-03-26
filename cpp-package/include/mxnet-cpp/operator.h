@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_OPERATOR_H
-#define MXNETCPP_OPERATOR_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_H_
 
 #include <map>
 #include <string>
@@ -185,4 +185,4 @@ class Operator {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_OPERATOR_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_H_

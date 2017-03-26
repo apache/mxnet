@@ -359,8 +359,8 @@ if __name__ == "__main__":
                   "* \\author Chuntao Hong, Xin Li\n"
                   "*/\n"
                   "\n"
-                  "#ifndef _MXNETOP_H\n"
-                  "#define _MXNETOP_H\n"
+                  "#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
+                  "#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
                   "\n"
                   "#include <string>\n"
                   "#include <vector>\n"
@@ -376,7 +376,7 @@ if __name__ == "__main__":
                   "%s"
                   "} //namespace cpp\n"
                   "} //namespace mxnet\n"
-                  "#endif //ifndef _MXNETOP_H\n")
+                  "#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n")
     with open('../../include/mxnet-cpp/op.h', 'w') as f:
         f.write(patternStr % ParseAllOps())
     pass

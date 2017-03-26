@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_OPTIMIZER_H
-#define MXNETCPP_OPTIMIZER_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_H_
 
 #include <map>
 #include <vector>
@@ -119,4 +119,4 @@ class SGDOptimizer : public Optimizer {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_OPTIMIZER_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_H_
