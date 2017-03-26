@@ -32,7 +32,7 @@ NNVM_REGISTER_OP(Embedding)
   })
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.push_back(n->inputs[0]);
     return MakeGradNode("_backward_Embedding", n, heads, n->attrs.dict);
