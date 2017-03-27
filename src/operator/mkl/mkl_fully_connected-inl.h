@@ -143,7 +143,6 @@ class MKLFullyConnectedOp : public Operator {
     const size_t expected = param_.no_bias ? 2 : 3;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
     CHECK_EQ(req.size(), expected);
-    int status;
     res_fullyConnected[dnnResourceSrc] =
       reinterpret_cast<void *>(in_data[fullc::kData].dptr_);
     res_fullyConnected[dnnResourceFilter] =
