@@ -292,7 +292,7 @@ class BaseRNNCell(object):
             output, states = self(inputs[i], states)
             outputs.append(output)
 
-        outputs, _ = _normalize_sequence(None, outputs, layout, merge_outputs)
+        outputs, _ = _normalize_sequence(length, outputs, layout, merge_outputs)
 
         return outputs, states
 
@@ -632,7 +632,7 @@ class FusedRNNCell(BaseRNNCell):
         if axis == 1:
             outputs = symbol.swapaxes(outputs, dim1=0, dim2=1)
 
-        outputs, _ = _normalize_sequence(None, outputs, layout, merge_outputs)
+        outputs, _ = _normalize_sequence(length, outputs, layout, merge_outputs)
 
         return outputs, states
 

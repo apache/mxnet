@@ -838,7 +838,7 @@ def test_convolution_grouping():
     exe2.backward(exe2.outputs[0])
 
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
+        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 def gen_broadcast_data():
     # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
