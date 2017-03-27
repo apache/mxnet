@@ -97,299 +97,106 @@ julia> Array{Float32}(a * 2)
 
 ## Setup MXNet
 
-Get the instructions to setup MXNet by selecting your preference.
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt">Build From Source</button>
+<button type="button" class="btn btn-default opt active">Pre-Build Binaries</button>
+<button type="button" class="btn btn-default opt">Docker</button>
+<button type="button" class="btn btn-default opt">Cloud</button>
+</div> <!-- opt-group -->
 
-<div id="setup-options">
-<div class="option-row", data-key="os">
-  <div class="option-title">OS:</div>
-  <div class="option-select">
-    <div class="btn-group"  role="group">
-      <button type="button" class="btn btn-default active">Linux</button>
-      <button type="button" class="btn btn-default">Mac OS X</button>
-      <button type="button" class="btn btn-default">Windows</button>
-    </div>
-  </div>
-</div>
+<div class="pre-build-binaries">
 
-<div class="option-row", data-key="lang">
-  <div class="option-title">Language:</div>
-  <div class="option-select">
-    <div class="btn-group"  role="group">
-      <button type="button" class="btn btn-default active">Python</button>
-      <button type="button" class="btn btn-default">Scala</button>
-      <button type="button" class="btn btn-default">R</button>
-      <button type="button" class="btn btn-default">Julia</button>
-    </div>
-  </div>
-</div>
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Python</button>
+</div> <!-- opt-group -->
+<br>
 
-<!-- <div class="option-row", data-key="driver"> -->
-<!--   <div class="option-title">Driver:</div> -->
-<!--   <div class="option-select"> -->
-<!--     <div class="btn-group"  role="group"> -->
-<!--       <button type="button" class="btn btn-default active">CPU</button> -->
-<!--       <button type="button" class="btn btn-default">MKL-DNN</button> -->
-<!--       <button type="button" class="btn btn-default">CUDA</button> -->
-<!--     </div> -->
-<!--   </div> -->
-<!-- </div> -->
+<div class="python">
 
-<div class="option-row", data-key="type">
-  <div class="option-title">Install type:</div>
-  <div class="option-select">
-    <div class="btn-group"  role="group">
-      <button type="button" class="btn btn-default">Build From Source</button>
-      <button type="button" class="btn btn-default active">Pre-Built Binaries</button>
-      <button type="button" class="btn btn-default">Docker</button>
-      <button type="button" class="btn btn-default">Cloud</button>
-    </div>
-  </div>
-</div>
-</div> <!-- setup-options -->
-
-<div class="alert alert-info" role="alert" id="not_found">
-Instructions will come soon!
-</div>
-
-<!-- <h2 id="install-inst-title"></h2> -->
-
-<div class="install-inst linux_python_pre-built-binaries"
-
-<h3>Install with pip</h3>
-
-First install `pip` if necessary. For example
+Installing the pre-build python package requires a recent version of `pip`,
+which, for example, can be installed by
 
 ```bash
 wget https://bootstrap.pypa.io/get-pip.py
 sudo python get-pip.py
 ```
 
-There are multiple pre-builds based on different drivers:
+<h3>macOS</h3>
 
-- **default**: supports CPU, suits for fast developing.
-- **mkl-dnn**: compiled with [MKL-DNN](https://github.com/01org/mkl-dnn) to accelerate
-  the Intel CPU performance.
-- **cuda**: compiled with both [CUDA](https://developer.nvidia.com/cuda-toolkit)
-  and [cuDNN](https://developer.nvidia.com/cudnn) to accelerate the performance on
-  Nvidia GPUs. It requires both CUDA and cuDNN are installed.
-
-Use one of following commands to install the desired release:
-
-```bash
-pip install mxnet       # default
-pip install mxnet-mkl   # for MKL-DNN
-pip install mxnet-cu75  # for CUDA 7.5
-pip install mxnet-cu80  # for CUDA 8.0
-```
-
-Troubleshoot:
-
-- If you see the following error:
-
-  ```bash
-  Downloading/unpacking mxnet
-    Could not find any downloads that satisfy the requirement mxnet
-  Cleaning up...
-  No distributions at all found for mxnet
-  ```
-
-  A possible reason is that your `pip` version is too low, e.g., if you
-  installed it by `apt-get install python-pip` on Ubuntu 14.04. One way is
-  first removing the old version by `sudo apt-get purge python-pip`. Next
-  install the new version using the above instructions.
-
-</div>
-
-<div class="install-inst mac-os-x_python_pre-built-binaries">
-
-<h3>Install with pip</h3>
-
-First install `pip` if necessary. For example
-
-```bash
-wget https://bootstrap.pypa.io/get-pip.py
-sudo python get-pip.py
-```
-
-Then install the CPU version by
+Install by:
 
 ```bash
 pip install mxnet
 ```
-</div>
 
-<div class="install-inst mac-os-x_python_docker
-mac-os-x_scala_docker mac-os-x_r_docker
-mac-os-x_julia_docker linux_python_docker
-linux_scala_docker linux_r_docker
-linux_julia_docker windows_python_docker
-windows_julia_docker windows_scala_docker
-windows_r_docker">
+<h3>Linux</h3>
 
-To run MXNet within a docker contrainer, we should first have
-[docker](https://www.docker.com/) installed. If we want to use Nvida GPUs,we can
-use [nvidia-docker](https://github.com/NVIDIA/nvidia-docker/wiki).  to launch
-the docker containers.
+Use one of following commands to install the desired release:
 
-The dockerfiles are available at [mxnet/docker](https://github.com/dmlc/mxnet/tree/master/docker)
+```bash
+pip install mxnet       # CPU
+pip install mxnet-mkl   # CPU with MKL-DNN acceleration
+pip install mxnet-cu75  # GPU with CUDA 7.5
+pip install mxnet-cu80  # GPU with CUDA 8.0
+```
 
-</div>
+The CUDA versions requires both [CUDA](https://developer.nvidia.com/cuda-toolkit)
+  and [cuDNN](https://developer.nvidia.com/cudnn) are installed.
 
-<div class="install-inst linux_python_cloud
-linux_scala_cloud linux_r_cloud
-linux_julia_cloud">
+</div> <!-- python -->
+
+</div> <!-- pre-build-binaries -->
+
+<div class="cloud">
 
 AWS images with MXNet installed:
 
 - [Deep Learning AMI for Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
 - [Deep Learning AMI for Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
 
-</div>
+</div> <!-- cloud -->
 
-<div class="install-inst linux_python_build-from-source
-linux_scala_build-from-source linux_r_build-from-source
-linux_julia_build-from-source">
+<div class="docker">
 
-**Step 1**: build the shared library `libmxnet.so` from C++ source files
-  according to the Linux release:
+<h3>Python</h3>
 
-- [Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html#build-the-shared-library)
-- [CentOS](http://mxnet.io/get_started/centos_setup.html#build-mxnet-shared-library)
-- [Amazon Linux]()
-- [Raspbian for Raspberry Pi]()
+```bash
+docker pull mxnet/python
+docker pull mxnet/python:gpu
+```
 
-</div>
+<h3>Scala</h3>
 
+```bash
+docker pull mxnet/scala
+```
 
-<div class="install-inst linux_python_build-from-source">
+<h3>R</h3>
 
-**Step 2**: setup the Python package according to the Linux release:
+```bash
+docker pull mxnet/r-lang
+docker pull mxnet/r-lang:gpu
+```
 
-- [Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html#install-the-mxnet-package-for-python)
-- [CentOS, Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-python)
-- [Raspbian for Raspberry Pi](http://mxnet.io/get_started/raspbian_setup.html#install-mxnet-python-bindings)
+<h3>Julia</h3>
 
-</div>
+```bash
+docker pull mxnet/julia
+docker pull mxnet/julia:gpu
+```
 
-<div class="install-inst linux_scala_build-from-source">
+Refer to [docker/](../../docker/) for more details.
 
-**Step 2**: setup the Scala package.
+</div> <!-- docker -->
 
-- [Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html#install-the-mxnet-package-for-scala)
-- [CentOS, Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-scala)
+<div class="build-from-source">
 
-</div>
+Refer to [setup](./setup.md) for details on building MXNet from source codes for
+various systems.
 
-<div class="install-inst linux_r_build-from-source">
+</div> <!-- build-from-source -->
 
-**Step 2**: setup the R package.
-
-- [Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html#install-the-mxnet-package-for-r)
-- [CentOS, Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-r)
-
-</div>
-
-<div class="install-inst linux_julia_build-from-source">
-
-**Step 2**: setup the Julia package.
-
-- [Ubuntu](http://mxnet.io/get_started/ubuntu_setup.html#install-the-mxnet-package-for-julia)
-- [CentOS, Amazon Linux](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-julia)
-
-</div>
-
-<div class="install-inst mac-os-x_python_build-from-source
-mac-os-x_scala_build-from-source mac-os-x_r_build-from-source
-mac-os-x_julia_build-from-source">
-
-**Step 1**: [build the shared library from C++ source files](http://mxnet.io/get_started/osx_setup.html#build-the-shared-library)
-
-</div>
-
-<div class="install-inst mac-os-x_python_build-from-source">
-
-**Step 2**: [setup the Python package](http://mxnet.io/get_started/osx_setup.html#install-the-mxnet-package-for-python)
-
-</div>
-
-<div class="install-inst mac-os-x_scala_build-from-source">
-
-**Step 2**: [setup the Scala package](http://mxnet.io/get_started/osx_setup.html#install-the-mxnet-package-for-scala)
-
-</div>
-
-<div class="install-inst mac-os-x_r_build-from-source">
-
-**Step 2**: [setup the R package](http://mxnet.io/get_started/osx_setup.html#install-the-mxnet-package-for-r)
-
-</div>
-
-<div class="install-inst mac-os-x_julia_build-from-source">
-
-**Step 2**: [setup the Julia package](http://mxnet.io/get_started/osx_setup.html#install-the-mxnet-package-for-julia)
-
-</div>
-
-<div class="install-inst windows_python_build-from-source
-windows_scala_build-from-source windows_r_build-from-source
-windows_julia_build-from-source">
-
-**Step 1**: [build the shared library from C++ source files](http://mxnet.io/get_started/windows_setup.html#build-the-shared-library)
-
-</div>
-
-<div class="install-inst windows_python_build-from-source">
-
-**Step 2**: [setup the Python package](http://mxnet.io/get_started/windows_setup.html#install-mxnet-for-python)
-
-</div>
-
-<div class="install-inst windows_scala_build-from-source">
-
-**Step 2**: [setup the Scala package](http://mxnet.io/get_started/windows_setup.html#install-mxnet-for-scala)
-
-</div>
-
-<div class="install-inst windows_r_build-from-source">
-
-**Step 2**: [setup the R package](http://mxnet.io/get_started/windows_setup.html#install-mxnet-for-r)
-
-</div>
-
-<div class="install-inst windows_julia_build-from-source">
-
-**Step 2**: [setup the Julia package](http://mxnet.io/get_started/windows_setup.html#install-mxnet-for-julia)
-
-</div>
-
-<script>
-  var opts = {
-  os: 'Linux', lang: 'Python', type: 'Pre-built Binaries'
-  };
-  function getLabelArray() {
-  return [opts.os, opts.lang, opts.type];
-  }
-  function updateInstruction() {
-  var label = '.' + getLabelArray().join('_').replace(/[ .]/g, '-').toLowerCase();
-  $('#install-inst-title').html(label);
-  $('.install-inst').hide();
-  $("#not_found").hide();
-  if ($(label).length == 0) {
-    $("#not_found").show();
-  } else {
-    $(label).show();
-  }
-  }
-  updateInstruction();
-  function selectOption(ev) {
-  var el = $(this);
-  el.siblings().removeClass('active');
-  el.addClass('active');
-  opts[el.parents('.option-row').data('key')] = el.text();
-  updateInstruction();
-  }
-  $('.btn-group').on('click', '.btn', selectOption);
-</script>
+<script type="text/javascript" src='../../_static/js/options.js'></script>
 
 ## Next Steps
 
