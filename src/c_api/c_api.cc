@@ -590,10 +590,10 @@ int MXKVStorePull(KVStoreHandle handle,
                   int priority) {
   API_BEGIN();
   std::vector<int> v_keys(num);
-  std::vector<NDArray*> v_vals(num);
+  std::vector<NDArray> v_vals(num);
   for (mx_uint i = 0; i < num; ++i) {
     v_keys[i] = keys[i];
-    v_vals[i] = static_cast<NDArray*>(vals[i]);
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
   }
   static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority);
   API_END();

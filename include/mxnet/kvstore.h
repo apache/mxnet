@@ -126,7 +126,7 @@ class KVStore {
    * \param priority Priority of the action.
    */
   virtual void Pull(const std::vector<int>& keys,
-                    const std::vector<NDArray*>& values,
+                    const std::vector<NDArray>& values,
                     int priority = 0) = 0;
 
   /**

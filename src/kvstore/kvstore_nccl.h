@@ -77,6 +77,7 @@ class KVStoreNCCL : public KVStore {
       if (!e.sent_to_device) {
         InitializeEntry(&e, grouped_vals[i], devices);
       } else {
+        CHECK(e.sharded_value.size() == devices.size()) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
         for (size_t j = 0; j < e.sharded_value.size(); ++j) {
           if (e.sharded_value[j].ctx().dev_id != devices[j]) {
             LOG(FATAL) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
@@ -99,10 +100,10 @@ class KVStoreNCCL : public KVStore {
   }
 
   void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values,
+            const std::vector<NDArray>& values,
             int priority) override {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray*> > grouped_vals;
+    std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
@@ -111,15 +112,16 @@ class KVStoreNCCL : public KVStore {
         << "key " << key << " has not been inited";
       std::vector<int32_t> devices;
       for (size_t j = 0; j < grouped_vals[i].size(); ++j) {
-        CHECK(grouped_vals[i][j]->ctx().dev_mask() != cpu::kDevMask)
+        CHECK(grouped_vals[i][j].ctx().dev_mask() != cpu::kDevMask)
           << "NCCL KVStore does not support data on the CPU";
-        devices.push_back(grouped_vals[i][j]->ctx().dev_id);
+        devices.push_back(grouped_vals[i][j].ctx().dev_id);
       }
       std::sort(devices.begin(), devices.end());
       Entry & e = local_[key];
       if (!e.sent_to_device) {
         InitializeEntry(&e, grouped_vals[i], devices);
       } else {
+        CHECK(e.sharded_value.size() == devices.size()) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
         for (size_t j = 0; j < e.sharded_value.size(); ++j) {
           if (e.sharded_value[j].ctx().dev_id != devices[j]) {
             LOG(FATAL) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
@@ -254,7 +256,7 @@ class KVStoreNCCL : public KVStore {
   }
 
   void AllGather(const Entry & src,
-                 const std::vector<NDArray*> & dst,
+                 const std::vector<NDArray> & dst,
                  int priority) {
     std::vector<Engine::VarHandle> const_vars(src.sharded_value.size());
     std::vector<Engine::VarHandle> mutable_vars(dst.size());
@@ -263,25 +265,25 @@ class KVStoreNCCL : public KVStore {
       const_vars[i] = src.sharded_value[i].var();
     }
     for (size_t i = 0; i < dst.size(); ++i) {
-      mutable_vars[i] = dst[i]->var();
+      mutable_vars[i] = dst[i].var();
     }
     Engine::Get()->PushSync([src, dst, stride, this](RunContext rctx) {
           {
             std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
             for (size_t i = 0; i < dst.size(); ++i) {
-              cudaSetDevice(dst[i]->ctx().dev_id);
-              MSHADOW_TYPE_SWITCH(dst[i]->dtype(), DType,
+              cudaSetDevice(dst[i].ctx().dev_id);
+              MSHADOW_TYPE_SWITCH(dst[i].dtype(), DType,
               ncclAllGather(src.sharded_value[i].data().dptr<DType>(),
                             stride,
                             GetNCCLType(src.sharded_value[i].dtype()),
-                            dst[i]->data().dptr<DType>(),
+                            dst[i].data().dptr<DType>(),
                             src.communicators[i],
                             streams_[src.sharded_value[i].ctx().dev_id]););
             }
           }
           for (size_t i = 0; i < dst.size(); ++i) {
-            CUDA_CALL(cudaSetDevice(dst[i]->ctx().dev_id));
-            CUDA_CALL(cudaStreamSynchronize(streams_[dst[i]->ctx().dev_id]));
+            CUDA_CALL(cudaSetDevice(dst[i].ctx().dev_id));
+            CUDA_CALL(cudaStreamSynchronize(streams_[dst[i].ctx().dev_id]));
           }
         },
         Context::CPU(),

@@ -73,10 +73,10 @@ class KVStoreLocal : public KVStore {
   }
 
   void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values,
+            const std::vector<NDArray>& values,
             int priority) override {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray*> > grouped_vals;
+    std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairs(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
