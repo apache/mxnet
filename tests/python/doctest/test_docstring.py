@@ -32,12 +32,12 @@ def test_symbols():
 
     # make sure all the operators are available
     import_into(globs, mxnet.symbol)
-    doctest.testmod(mxnet.symbol_doc, globs=globs)
+    doctest.testmod(mxnet.symbol_doc, globs=globs, verbose=True)
 
 def test_ndarray():
     globs = {'np': numpy, 'mx': mxnet}
 
-    doctest.testmod(mxnet.ndarray, globs=globs)
+    doctest.testmod(mxnet.ndarray, globs=globs, verbose=True)
 
 
 if __name__ == '__main__':

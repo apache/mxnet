@@ -36,15 +36,11 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
   const size_t batch_size = (*in_shape)[0][0];
   // nnp_fully_connected_inference will do optimization for batch-size = 1
   // nnp_fully_connected_output will do optimization for batch-size > 1
-  // but just found FullyConnected in NNPACK result is wrong when batch_size != 2^n
-  // so here only using NNPACK when batch_size = 2^n.
-  if ((batch_size == 1) || ((batch_size > 1) && (!(batch_size & (batch_size - 1))))) {
-    switch (dtype) {
-    case mshadow::kFloat32:
-      return new NNPACKFullyConnectedOp<cpu, float>(param);
-    default:
-      break;
-    }
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new NNPACKFullyConnectedOp<cpu, float>(param);
+  default:
+    break;
   }
 #endif
   switch (dtype) {

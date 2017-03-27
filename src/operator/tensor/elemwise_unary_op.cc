@@ -28,9 +28,30 @@ NNVM_REGISTER_OP(_backward_copy)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
+.add_alias("stop_gradient")
 .MXNET_DESCRIBE("Get output from a symbol and pass 0 gradient back")
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_UNARY(make_loss)
+.MXNET_DESCRIBE("Get output from a symbol and pass 1 gradient back. "
+  "This is used as a terminal loss if unary and binary operator "
+  "are used to composite a loss with no declaration of backward "
+  "dependency")
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    nnvm::NodePtr p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("_ones");
+    p->attrs.name = n->attrs.name + "_backward";
+    p->control_deps.emplace_back(n);
+    if (p->op()->attr_parser != nullptr) {
+      p->op()->attr_parser(&(p->attrs));
+    }
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    return ret;
+  });
 
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)

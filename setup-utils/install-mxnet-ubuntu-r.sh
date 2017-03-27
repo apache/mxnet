@@ -13,6 +13,7 @@ echo "MXNet root folder: $MXNET_HOME"
 
 echo "Building MXNet core. This can take few minutes..."
 cd "$MXNET_HOME"
+cp make/config.mk .
 make -j$(nproc)
 
 echo "Installing R dependencies. This can take few minutes..."
@@ -31,6 +32,9 @@ sudo apt-get -y install libcurl4-openssl-dev libssl-dev
 
 # Needed for R XML
 sudo apt-get install libxml2-dev
+
+# Needed for R Cairo 
+sudo apt-get install libxt-dev
 
 sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package
