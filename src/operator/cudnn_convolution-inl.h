@@ -31,9 +31,9 @@ class CuDNNAlgoReg {
   std::string GetKey(const ConvolutionParam& param,
                      const std::vector<TShape>& in_shape,
                      const std::vector<TShape>& out_shape,
-		     cudnnDataType_t cudnn_data_type,
-		     cudnnDataType_t cudnn_forward_compute_type,
-		     cudnnDataType_t cudnn_backward_compute_type) {
+                     cudnnDataType_t cudnn_data_type,
+                     cudnnDataType_t cudnn_forward_compute_type,
+                     cudnnDataType_t cudnn_backward_compute_type) {
     std::ostringstream oss;
     for (auto& i : in_shape) oss << i << ";";
     for (auto& i : out_shape) oss << i << ";";
@@ -85,16 +85,6 @@ class CuDNNAlgoReg {
     reg_[key].flt = flt;
   }
 
-  void LogAlgos(std::string key,
-                cudnnConvolutionFwdAlgo_t fwd,
-                cudnnConvolutionBwdDataAlgo_t bwd,
-                cudnnConvolutionBwdFilterAlgo_t flt) {
-    LOG(INFO) << "Selecting algos for convolution: " << key <<
-      "\n            forward: " << fwd_algo_names[fwd] <<
-      "\n      backward_data: " << bwd_data_algo_names[bwd] <<
-      "\n    backward_filter: " << bwd_filter_algo_names[flt];
-  }
-
   static CuDNNAlgoReg* Get();
 
  private:
@@ -106,44 +96,6 @@ class CuDNNAlgoReg {
 
   std::mutex lock_;
   std::unordered_map<std::string, CudnnAlgorithms> reg_;
-
-  // Improve this to not rely on dense packing of enums
-  // This does not work with earlier cuDNN versions: FIX!!
-  std::vector<std::string> fwd_algo_names {
-      "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM",
-      "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM",
-      "CUDNN_CONVOLUTION_FWD_ALGO_GEMM",
-      "CUDNN_CONVOLUTION_FWD_ALGO_DIRECT",
-      "CUDNN_CONVOLUTION_FWD_ALGO_FFT",
-      "CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING",
-      "CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD",
-      "CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED"
-  };
-  //  if (CUDNN_CONVOLUTION_FWD_ALGO_COUNT != fwd_algo_names.size())
-  //    LOG(FATAL) << "Incompatible forward algorithm database.";
-
-  std::vector<std::string> bwd_filter_algo_names {
-      "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0",
-      "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1",
-      "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT",
-      "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3",
-      "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD",
-      "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED",
-      "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING"
-  };
-  //  if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_COUNT != bwd_filter_algo_names.size())
-  //    LOG(FATAL) << "Incompatible backward filter algorithm database.";
-
-  std::vector<std::string> bwd_data_algo_names {
-      "CUDNN_CONVOLUTION_BWD_DATA_ALGO_0",
-      "CUDNN_CONVOLUTION_BWD_DATA_ALGO_1",
-      "CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT",
-      "CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING",
-      "CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD",
-      "CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED"
-  };
-  //  if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT != bwd_data_algo_names.size())
-  //    LOG(FATAL) << "Incompatible backward data algorithm database.";
 };
 
 /*!
@@ -181,7 +133,7 @@ class CuDNNConvolutionOp : public Operator {
       LOG(FATAL) << "Need CuDNN >= 6.0 for dilated convolution.";
 
     InitDescriptors(ctx, in_shape, out_shape,
-		    cudnn_forward_compute_type, cudnn_backward_compute_type);
+                    cudnn_forward_compute_type, cudnn_backward_compute_type);
 
     if (!param_.cudnn_tune) {
       param_.cudnn_tune = dmlc::GetEnv("MXNET_CUDNN_AUTOTUNE_DEFAULT", 1);
@@ -193,7 +145,7 @@ class CuDNNConvolutionOp : public Operator {
     // naturally respond to more algorithms supporting dilated convolutions in
     // future cuDNN releases.
     SelectAlgo(ctx, in_shape, out_shape,
-	       cudnn_forward_compute_type, cudnn_backward_compute_type);
+               cudnn_forward_compute_type, cudnn_backward_compute_type);
   }
 
   ~CuDNNConvolutionOp() {
@@ -414,11 +366,11 @@ class CuDNNConvolutionOp : public Operator {
  * dilated convolutions.
  */
   static bool Supports(ConvolutionParam param,
-		       int forward_compute_type,
-		       int backward_compute_type) {
+                       int forward_compute_type,
+                       int backward_compute_type) {
     // The factor by which the effective filter size grows based on dilation.
     auto filterDilationFactor = param.dilate.Size();
-    
+
     // The v6 kernels that backprop a dilated convolution don't handle fp16.
     return filterDilationFactor == 1 ||
            filterDilationFactor > 1 && (CUDNN_MAJOR >= 6) &&
@@ -437,12 +389,12 @@ class CuDNNConvolutionOp : public Operator {
     })
     return converted;
   }
-  
+
   void InitDescriptors(const Context& ctx,
                        const std::vector<TShape>& in_shape,
                        const std::vector<TShape>& out_shape,
-		       cudnnDataType_t cudnn_forward_compute_type,
-		       cudnnDataType_t cudnn_backward_compute_type) {
+                       cudnnDataType_t cudnn_forward_compute_type,
+                       cudnnDataType_t cudnn_backward_compute_type) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_shape.size(), expected);
@@ -476,7 +428,7 @@ class CuDNNConvolutionOp : public Operator {
                                                param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_forward_compute_type),
-	       CUDNN_STATUS_SUCCESS);
+               CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetConvolution2dDescriptor(backward_conv_desc_,
                                                param_.pad[0],
                                                param_.pad[1],
@@ -486,7 +438,7 @@ class CuDNNConvolutionOp : public Operator {
                                                param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_backward_compute_type),
-	       CUDNN_STATUS_SUCCESS);
+               CUDNN_STATUS_SUCCESS);
       #else
       CHECK_EQ(cudnnSetConvolution2dDescriptor(forward_conv_desc_,
                                                param_.pad[0],
@@ -496,7 +448,7 @@ class CuDNNConvolutionOp : public Operator {
                                                param_.dilate[0],
                                                param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION),
-	       CUDNN_STATUS_SUCCESS);
+               CUDNN_STATUS_SUCCESS);
       CHECK_EQ(cudnnSetConvolution2dDescriptor(backward_conv_desc_,
                                                param_.pad[0],
                                                param_.pad[1],
@@ -505,9 +457,9 @@ class CuDNNConvolutionOp : public Operator {
                                                param_.dilate[0],
                                                param_.dilate[1],
                                                CUDNN_CROSS_CORRELATION),
-	       CUDNN_STATUS_SUCCESS);
+               CUDNN_STATUS_SUCCESS);
       #endif
-      
+
       #if CUDNN_MAJOR >= 5
       wshape = ConvertLayout(wshape.get<4>(), param_.layout.value(), kNCHW);
       CHECK_EQ(cudnnSetFilter4dDescriptor(filter_desc_,
@@ -557,19 +509,19 @@ class CuDNNConvolutionOp : public Operator {
                                                3,
                                                reinterpret_cast<int*>(&param_.pad[0]),
                                                reinterpret_cast<int*>(&param_.stride[0]),
-					       reinterpret_cast<int*>(&param_.dilate[0]),
+                                               reinterpret_cast<int*>(&param_.dilate[0]),
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_forward_compute_type),
-	       CUDNN_STATUS_SUCCESS);
+               CUDNN_STATUS_SUCCESS);
 
       CHECK_EQ(cudnnSetConvolutionNdDescriptor(backward_conv_desc_,
                                                3,
                                                reinterpret_cast<int*>(&param_.pad[0]),
                                                reinterpret_cast<int*>(&param_.stride[0]),
-					       reinterpret_cast<int*>(&param_.dilate[0]),
+                                               reinterpret_cast<int*>(&param_.dilate[0]),
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_backward_compute_type),
-	       CUDNN_STATUS_SUCCESS);
+               CUDNN_STATUS_SUCCESS);
 
       dstride = ConvertLayout(Shape5(dshape[1] * dshape[2] * dshape[3] * dshape[4],
                                      dshape[2] * dshape[3] * dshape[4],
@@ -630,11 +582,11 @@ class CuDNNConvolutionOp : public Operator {
   void SelectAlgo(const Context& ctx,
                   const std::vector<TShape>& in_shape,
                   const std::vector<TShape>& out_shape,
-		  cudnnDataType_t cudnn_forward_compute_type,
-		  cudnnDataType_t cudnn_backward_compute_type) {
+                  cudnnDataType_t cudnn_forward_compute_type,
+                  cudnnDataType_t cudnn_backward_compute_type) {
     std::string key = CuDNNAlgoReg::Get()->GetKey(param_, in_shape, out_shape, dtype_,
-						  cudnn_forward_compute_type,
-						  cudnn_backward_compute_type);
+                                                  cudnn_forward_compute_type,
+                                                  cudnn_backward_compute_type);
     if (CuDNNAlgoReg::Get()->Find(key, &algo_, &back_algo_, &back_algo_w_))
       return;
 
@@ -733,7 +685,7 @@ class CuDNNConvolutionOp : public Operator {
           this->back_algo_ = bwd_data_algo[i].algo;
         }
         CuDNNAlgoReg::Get()->Register(key, this->algo_, this->back_algo_,
-				      this->back_algo_w_);
+                                      this->back_algo_w_);
       }
     }, ctx, {}, {var});
     Engine::Get()->WaitForVar(var);

@@ -43,18 +43,18 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
     (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
   int backward_compute_type =
     (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
-#endif // MSHADOW_USE_PASCAL == 1
+#endif  // MSHADOW_USE_PASCAL == 1
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     bool convolutionIsSupported =
       CuDNNConvolutionOp<DType>::Supports(param,
-					  forward_compute_type,
-					  backward_compute_type);
+                                          forward_compute_type,
+                                          backward_compute_type);
     if (convolutionIsSupported && !param.cudnn_off)
       op = new CuDNNConvolutionOp<DType>(param,
-					 forward_compute_type,
-					 backward_compute_type,
-					 *in_shape, *out_shape, ctx);
+                                         forward_compute_type,
+                                         backward_compute_type,
+                                         *in_shape, *out_shape, ctx);
     else
       op = new ConvolutionOp<gpu, DType>(param);
   })
