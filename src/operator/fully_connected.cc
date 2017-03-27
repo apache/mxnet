@@ -24,9 +24,9 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
 #if MXNET_USE_MKL2017 == 1
   switch (dtype) {
   case mshadow::kFloat32:
-    return new MKLFullyConnectedOp<cpu, float>(param);
+    return new MKLFullyConnectedOp<cpu, float>(param, *in_shape, *out_shape);
   case mshadow::kFloat64:
-    return new MKLFullyConnectedOp<cpu, double>(param);
+    return new MKLFullyConnectedOp<cpu, double>(param, *in_shape, *out_shape);
   default:
     LOG(INFO) << MKLFullyConnectedOp<cpu, float>::getName() << " Skip MKL optimization";
     break;
