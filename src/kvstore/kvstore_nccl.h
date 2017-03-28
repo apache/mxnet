@@ -77,7 +77,8 @@ class KVStoreNCCL : public KVStore {
       if (!e.sent_to_device) {
         InitializeEntry(&e, grouped_vals[i], devices);
       } else {
-        CHECK(e.sharded_value.size() == devices.size()) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
+        CHECK(e.sharded_value.size() == devices.size())
+          << "Entry in NCCL KVstore can be accesed only by single set of devices.";
         for (size_t j = 0; j < e.sharded_value.size(); ++j) {
           if (e.sharded_value[j].ctx().dev_id != devices[j]) {
             LOG(FATAL) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
@@ -121,7 +122,8 @@ class KVStoreNCCL : public KVStore {
       if (!e.sent_to_device) {
         InitializeEntry(&e, grouped_vals[i], devices);
       } else {
-        CHECK(e.sharded_value.size() == devices.size()) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
+        CHECK(e.sharded_value.size() == devices.size())
+          << "Entry in NCCL KVstore can be accesed only by single set of devices.";
         for (size_t j = 0; j < e.sharded_value.size(); ++j) {
           if (e.sharded_value[j].ctx().dev_id != devices[j]) {
             LOG(FATAL) << "Entry in NCCL KVstore can be accesed only by single set of devices.";
