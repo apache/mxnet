@@ -3,61 +3,65 @@ use strict;
 use warnings;
 use Mouse;
 use AI::MXNet::Function::Parameters;
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(attr => {@_});
+};
 
-=head1 
+=head1 NAME
 
-    Attribute manager for scoping.
+AI::MXNet::Symbol::AttrScope - Attribute manager for local scoping.
 
-    User can also inherit this object to change naming behavior.
+=head1 DESCRIPTION
 
-    Parameters
-    ----------
-    kwargs
-        The attributes to set for all symbol creations in the scope.
+Attribute manager for scoping.
+
+User can also inherit this object to change naming behavior.
+
+Parameters
+----------
+kwargs
+    The attributes to set for all symbol creations in the scope.
 =cut
 
 has 'attr' => (
     is => 'ro',
     isa => 'HashRef[Str]',
-    default => sub { +{} }
 );
 
 =head2 current
 
-        Get the attribute dict given the attribute set by the symbol.
+Get the attribute hash ref given the attribute set by the symbol.
 
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        attr : current value of the class singleton object
+Returns
+-------
+attr : current value of the class singleton object
 =cut
 
 method current()
 {
-    $AI::MXNet::curr_attr_scope; 
+    $AI::MXNet::curr_attr_scope;
 }
 
 =head2 get
 
-        Get the attribute dict given the attribute set by the symbol.
+Get the attribute hash ref given the attribute set by the symbol.
 
-        Parameters
-        ----------
-        attr : dict of string to string
-            The attribute passed in by user during symbol creation.
+Parameters
+----------
+$attr : Maybe[HashRef[Str]]
+    The attribute passed in by user during symbol creation.
 
-        Returns
-        -------
-        attr : dict of string to string
-            Updated attributes to add other scope related attributes.
+Returns
+-------
+$attr : HashRef[Str]
+    The attributes updated to include another the scope related attributes.
 =cut
- 
-method get(HashRef[Str]|Undef $attr=)
+
+method get(Maybe[HashRef[Str]] $attr=)
 {
-    return bless($attr//{}, 'AI::MXNet::Util::Printable') unless %{ $self->attr }; 
+    return bless($attr//{}, 'AI::MXNet::Util::Printable') unless %{ $self->attr };
     my %ret = (%{ $self->attr }, %{ $attr//{} });
     return bless (\%ret, 'AI::MXNet::Util::Printable');
 }
