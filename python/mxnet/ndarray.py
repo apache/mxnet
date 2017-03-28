@@ -460,7 +460,8 @@ fixed-size items.
         shape : tuple of int
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
-            One shape dimension can be -1. In this case, the value is inferred from the length of the array and remaining dimensions.
+            One shape dimension can be -1. In this case, the value is inferred
+            from the length of the array and remaining dimensions.
 
 
         Returns
@@ -513,7 +514,7 @@ fixed-size items.
                                          c_array(ctypes.c_int, shape),
                                          ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
-    
+
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
         """Broadcasts an array to a new shape.
