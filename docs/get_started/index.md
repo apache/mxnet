@@ -22,6 +22,7 @@ Please choice the programming language for the rest of this document.
 <button type="button" class="btn btn-default opt">Perl</button>
 </div>
 </div>
+<script type="text/javascript" src='../../_static/js/options.js'></script>
 
 ## Quick Overview
 
@@ -227,12 +228,11 @@ Refer to [docker/](../../docker/) for more details.
 
 <div class="build-from-source">
 
-Refer to [setup](./setup.md) for details on building MXNet from source codes for
-various systems.
+Refer to the [building from source document](./build_from_source.md) for details
+on building MXNet from source codes for various systems.
 
 </div> <!-- build-from-source -->
 
-<script type="text/javascript" src='../../_static/js/options.js'></script>
 
 ## Next Steps
 
