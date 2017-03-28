@@ -62,8 +62,6 @@ else(MSVC)
 endif(MSVC)
 
 set(mxnet_LINKER_LIBS "")
-set(mxnet_LINKER_LIBS_DEBUG "")
-set(mxnet_LINKER_LIBS_RELEASE "")
 
 if(USE_MKL_IF_AVAILABLE)
   if(USE_MKL_EXPERIMENTAL AND NOT USE_MKLML_MKL)
@@ -200,13 +198,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake)
   add_subdirectory("dmlc-core")
 endif()
 
-if(USE_DIST_KVSTORE)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
-    add_subdirectory("ps-lite")
-  else()
-    set(pslite_LINKER_LIBS protobuf zmq-static pslite)
-  endif()
-endif()
 
 mxnet_source_group("Include\\common"   GLOB "src/common/*.h")
 mxnet_source_group("Include\\c_api"   GLOB "src/c_api/*.h")
@@ -286,8 +277,7 @@ if(USE_PLUGINS_WARPCTC)
 	set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
     set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
     set(WARPCTC_LIB_RELEASE  "" CACHE FILEPATH "WARPCTC lib")
-    set(mxnet_LINKER_LIBS_RELEASE ${WARPCTC_LIB_RELEASE})
-    set(mxnet_LINKER_LIBS_DEBUG ${WARPCTC_LIB_DEBUG})
+
 
 	include_directories(SYSTEM ${WARPCTC_INCLUDE})
 	list(APPEND mxnet_LINKER_LIBS ${WARPCTC_LIB})
@@ -425,8 +415,8 @@ endif()
 target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
 
 if(USE_PLUGINS_WARPCTC)
-  target_link_libraries(mxnet debug ${mxnet_LINKER_LIBS_DEBUG})
-  target_link_libraries(mxnet optimized ${mxnet_LINKER_LIBS_RELEASE})
+  target_link_libraries(mxnet debug ${WARPCTC_LIB_DEBUG})
+  target_link_libraries(mxnet optimized ${WARPCTC_LIB_RELEASE})
 endif()
 
 target_link_libraries(mxnet dmlccore)
@@ -435,7 +425,16 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
+
 if(USE_DIST_KVSTORE)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
+    add_subdirectory("ps-lite")
+    list(APPEND pslite_LINKER_LIBS pslite)  
+    target_link_libraries(mxnet debug ${pslite_LINKER_LIBS_DEBUG})
+    target_link_libraries(mxnet optimized ${pslite_LINKER_LIBS_RELEASE})
+  else()
+    set(pslite_LINKER_LIBS protobuf zmq-static )
+  endif()
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   target_link_libraries(mxnet ${pslite_LINKER_LIBS})
   include_directories(SYSTEM ${pslite_INCLUDE_DIR})
@@ -493,3 +492,5 @@ if(NOT MSVC)
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cpp-package/src/OpWrapperGenerator/
   )
 endif()
+
+
