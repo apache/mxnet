@@ -218,8 +218,12 @@
     $1 = (int *)safemalloc(av_len*sizeof(int));
     for (i = 0; i < av_len; i++) {
         tv = av_fetch(tempav, i, 0);    
-        $1[i] = (mx_uint)SvIV(*tv);
+        $1[i] = (int)SvIV(*tv);
     }
+}
+
+%typemap(freearg) (const int *in), (int *in) {
+    Safefree($1);
 }
 
 %typemap(in) (NDArrayHandle* in), (SymbolHandle* in)

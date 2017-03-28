@@ -18,6 +18,7 @@ class_type 'AI::MXNet::EvalMetric';
 class_type 'AI::MXNet::DataParallelExecutorGroup';
 class_type 'AI::MXNet::Optimizer';
 class_type 'AI::MXNet::InitDesc';
+class_type 'AI::MXNet::IRHeader';
 subtype "AcceptableInput" => as "Num|PDL|PDL::Matrix|AI::MXNet::NDArray|AI::MXNet::NDArray::Slice|ArrayRef";
 subtype "Index"           => as "Int";
 subtype "DimSize"         => as "Int" => where { $_ >= 0 };

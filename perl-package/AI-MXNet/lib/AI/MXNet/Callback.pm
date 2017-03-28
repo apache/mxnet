@@ -6,29 +6,34 @@ use AI::MXNet::Function::Parameters;
 use Mouse;
 use overload "&{}" => sub { my $self = shift; sub { $self->call(@_) } };
 
+=head1 NAME
+
+AI::MXNet::Callback - A collection of predefined callback functions
+=cut
+
 =head2 module_checkpoint
 
-    Callback to checkpoint Module to prefix every epoch.
+Callback to checkpoint Module to prefix every epoch.
 
-    Parameters
-    ----------
-    mod : subclass of AI::MXNet::BaseModule
-        The module to checkpoint.
-    prefix : str
-        The file prefix to checkpoint to
-    period : int
-        How many epochs to wait before checkpointing. Default is 1.
-    save_optimizer_states : bool
-        Whether to save optimizer states for continue training
+Parameters
+----------
+$mod : subclass of AI::MXNet::Module::Base
+    The module to checkpoint.
+$prefix : str
+    The file prefix to checkpoint to
+$period=1 : int
+    How many epochs to wait before checkpointing. Default is 1.
+$save_optimizer_states=0 : Bool
+    Whether to save optimizer states for continue training
 
-    Returns
-    -------
-    callback : function
-        The callback function that can be passed as iter_end_callback to fit.
+Returns
+-------
+$callback : sub ref
+    The callback function that can be passed as iter_end_callback to fit.
 =cut
 
 method module_checkpoint(
-    AI::MXNet::BaseModule $mod,
+    AI::MXNet::Module::Base $mod,
     Str $prefix,
     Int $period=1,
     Int $save_optimizer_states=0
@@ -46,19 +51,19 @@ method module_checkpoint(
 
 =head2 log_train_metric
 
-    Callback to log the training evaluation result every period.
+Callback to log the training evaluation result every period.
 
-    Parameters
-    ----------
-    period : int
-        The number of batch to log the training evaluation metric.
-    auto_reset : bool
-        Reset the metric after each log
+Parameters
+----------
+$period : Int
+    The number of batch to log the training evaluation metric.
+$auto_reset : Bool
+    Reset the metric after each log
 
-    Returns
-    -------
-    callback : function
-        The callback function that can be passed as iter_epoch_callback to fit.
+Returns
+-------
+$callback : sub ref
+    The callback function that can be passed as iter_epoch_callback to fit.
 =cut
 
 method log_train_metric(Int $period, Int $auto_reset=0)
@@ -85,9 +90,14 @@ use Mouse;
 use Time::HiRes qw/time/;
 extends 'AI::MXNet::Callback';
 
+=head1 NAME
+
+AI::MXNet::Speedometer - A callback that logs training speed 
+=cut
+
 =head1 DESCRIPTION
 
-    Calculate and log training speed periodically.
+Calculate and log training speed periodically.
 
     Parameters
     ----------
@@ -153,16 +163,20 @@ package AI::MXNet::ProgressBar;
 use Mouse;
 extends 'AI::MXNet::Callback';
 
+=head1 NAME
+
+AI::MXNet::ProgressBar - A callback to show a progress bar.
+
 =head1 DESCRIPTION
 
-    Show a progress bar.
+Show a progress bar.
 
-    Parameters
-    ----------
-    total: int
-        total batch size
-    length: int
-        length or progress bar
+Parameters
+----------
+total: Int
+    total batch size, 1
+length: Int
+    length or progress bar, 80
 =cut
 
 has 'length'  => (is => 'ro', isa => 'Int', default => 80);
@@ -184,6 +198,11 @@ package AI::MXNet::LogValidationMetricsCallback;
 use Mouse;
 extends 'AI::MXNet::Callback';
 
+=head1 NAME
+
+AI::MXNet::LogValidationMetricsCallback - A callback to log the eval metrics at the end of an epoch.
+=cut
+
 method call(AI::MXNet::BatchEndParam $param)
 {
     return unless defined $param->eval_metric;
@@ -195,6 +214,27 @@ method call(AI::MXNet::BatchEndParam $param)
             $param->epoch, $name, $value
         );
     }
+}
+
+package AI::MXNet::Callback;
+
+method Speedometer()
+{
+    AI::MXNet::Speedometer->new(
+        @_ == 2 ? (batch_size => $_[0], frequent => $_[1]) : (batch_size => $_[0])
+    )
+}
+
+method ProgressBar()
+{
+    AI::MXNet::ProgressBar->new(
+        @_ == 2 ? (total => $_[0], 'length' => $_[1]) : (total => $_[0])
+    )
+}
+
+method LogValidationMetricsCallback()
+{
+    AI::MXNet::LogValidationMetricsCallback->new
 }
 
 1;
