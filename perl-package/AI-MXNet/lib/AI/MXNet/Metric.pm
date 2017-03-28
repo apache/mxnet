@@ -4,9 +4,9 @@ use warnings;
 use AI::MXNet::Function::Parameters;
 use Scalar::Util qw/blessed/;
 
-=head1 DESCRIPTION
+=head1 NAME
 
-Online evaluation metric module.
+AI::MXNet::Metric - Online evaluation metric module.
 =cut
 
 # Check to see if the two arrays are the same size.
@@ -50,7 +50,12 @@ func check_label_shapes(
 
 package AI::MXNet::EvalMetric;
 use Mouse;
-
+use overload '""' => sub {
+    return "EvalMetric: "
+            .Data::Dumper->new(
+                [shift->get_name_value()]
+            )->Purity(1)->Deepcopy(1)->Terse(1)->Dump
+},  fallback => 1;
 has 'name'       => (is => 'rw', isa => 'Str');
 has 'num'        => (is => 'rw', isa => 'Int');
 has 'num_inst'   => (is => 'rw', isa => 'Maybe[Int|ArrayRef[Int]]');
@@ -61,28 +66,10 @@ sub BUILD
     shift->reset;
 }
 
-=head2 update
-
-        Update the internal evaluation.
-
-        Parameters
-        ----------
-        labels : list of NDArray
-            The labels of the data.
-
-        preds : list of NDArray
-            Predicted values.
-=cut
-
 method update($label, $pred)
 {
     confess('NotImplemented');
 }
-
-=head2 reset
-
-        Clear the internal statistics to initial state.
-=cut
 
 method reset()
 {
@@ -97,18 +84,6 @@ method reset()
         $self->sum_metric([(0) x $self->num]);
     }
 }
-
-=head2 get
-
-        Get the current evaluation result.
-
-        Returns
-        -------
-        name : str
-           Name of the metric.
-        value : float
-           Value of the evaluation.
-=cut
 
 method get()
 {
@@ -152,11 +127,6 @@ method get_name_value()
     @ret{ @$name } = @$value;
     return \%ret;
 }
-
-=head1 DESCRIPTION
-
-    Manage multiple evaluation metrics.
-=cut
 
 package AI::MXNet::CompositeEvalMetric;
 use Mouse;
@@ -356,6 +326,13 @@ use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'        => (default => 'Perplexity');
 has 'ignore_label' => (is => 'ro', isa => 'Maybe[Int]');
+has 'axis'         => (is => 'ro', isa => 'Int', default => -1);
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(ignore_label => $_[0]) if @_ == 1;
+    return $class->$orig(@_);
+};
 
 =head1 NAME
 
@@ -364,14 +341,18 @@ AI::MXNet::Perplexity
 
 =head1 DESCRIPTION
 
-    Calculate perplexity
+Calculate perplexity.
 
-    Parameters
-    ----------
-    ignore_label : int or undef
-        index of invalid label to ignore when
-        counting. usually should be -1. Include
-        all entries if undef.
+Parameters
+----------
+ignore_label : int or undef
+    index of invalid label to ignore when
+    counting. usually should be -1. Include
+    all entries if undef.
+axis : int (default -1)
+    The axis from prediction that was used to
+    compute softmax. By default use the last
+    axis.
 =cut
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
@@ -384,10 +365,10 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         my $pred_shape  = $pred->shape;
         assert(
             (product(@{ $label_shape }) == product(@{ $pred_shape })/$pred_shape->[-1]),
-            "shape mismatch: (@$label_shape) vs. ($pred_shape)"
+            "shape mismatch: (@$label_shape) vs. (@$pred_shape)"
         );
-        $label = $label->as_in_context($pred->context)->astype(dtype=>'int32')->reshape([$label->size]);
-        $pred = AI::MXNet::NDArray->batch_take($pred, $label);
+        $label = $label->as_in_context($pred->context)->astype('int32')->reshape([$label->size]);
+        $pred = AI::MXNet::NDArray->pick($pred, $label, { axis => $self->axis });
         push @{ $probs }, $pred;
     }, $labels, $preds);
 
@@ -491,6 +472,12 @@ use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'cross-entropy');
 has 'eps'     => (is => 'ro', isa => 'Num', default => 1e-8);
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    return $class->$orig(eps => $_[0]) if @_ == 1;
+    return $class->$orig(@_);
+};
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
@@ -513,18 +500,18 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
 
 =head1 DESCRIPTION
 
-    Custom evaluation metric that takes a NDArray function.
+Custom evaluation metric that takes a sub ref.
 
-    Parameters
-    ----------
-    eval_function : subref
-        Customized evaluation function.
-    name : str, optional
-        The name of the metric
-    allow_extra_outputs : bool
-        If true, the prediction outputs can have extra outputs.
-        This is useful in RNN, where the states are also produced
-        in outputs for forwarding.
+Parameters
+----------
+eval_function : subref
+    Customized evaluation function.
+name : str, optional
+    The name of the metric
+allow_extra_outputs : bool
+    If true, the prediction outputs can have extra outputs.
+    This is useful in RNN, where the states are also produced
+    in outputs for forwarding.
 =cut
 
 
@@ -532,7 +519,7 @@ package AI::MXNet::CustomMetric;
 use Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
-has 'eval_function' => (is => 'ro', isa => 'CodeRef');
+has 'eval_function'       => (is => 'ro', isa => 'CodeRef');
 has 'allow_extra_outputs' => (is => 'ro', isa => 'Int', default => 0);
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
@@ -555,13 +542,13 @@ package AI::MXNet::Metric;
 
 =head2 create
 
-    Create an evaluation metric.
+Create an evaluation metric.
 
-    Parameters
-    ----------
-    metric : str or callable
-        The name of the metric, or a function
-        providing statistics given pred, label NDArray.
+Parameters
+----------
+metric : str or sub ref
+    The name of the metric, or a function
+    providing statistics given pred, label NDArray.
 =cut
 
 my %metrics = qw/
@@ -604,6 +591,16 @@ method create(Metric|ArrayRef[Metric] $metric, %kwargs)
             Carp::confess("Metric must be either subref or one of [@metrics]");
         }
         return $metrics{ lc($metric) }->new(%kwargs);
+    }
+}
+
+{
+    no strict 'refs';
+    no warnings 'redefine';
+    for my $metric (values %metrics)
+    {
+        my ($name) = $metric =~ /(\w+)$/;
+        *{__PACKAGE__."::$name"} = sub { shift; $metric->new(@_); };
     }
 }
 

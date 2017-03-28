@@ -834,3 +834,49 @@ table.docutils td, table.docutils th {
 table.docutils tr:nth-child(even) {
     background-color: #f6f8fa;
 }
+
+/*---------------getting started homepage---------*/
+
+#lang-demo ul {
+    margin-top: 20px;
+    margin-bottom: 15px;
+}
+
+.option-title {
+    width: 100px;
+    float: left;
+    clear: none;
+    text-align: right;
+    font-size: 14px;
+    padding-top: 7px;
+    padding-bottom: 8px;
+    padding-right: 10px;
+    font-weight: bold;
+}
+.option-row {
+    padding-bottom: 8px;
+}
+
+.install-inst {
+}
+
+.btn-default:hover, .btn-default:focus, .btn-default:active,
+.btn-default.active.focus, .btn-default.active:focus, .btn-default.active:hover,
+.btn-default:active.focus, .btn-default:active:focus, .btn-default:active:hover,
+.btn-default.active, .open>.dropdown-toggle.btn-default,
+.btn-default:active:focus {
+    color: #fff;
+    background-color: #0079b2;
+    border-color: #0079b2;
+}
+
+#setup-options {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    margin-left: 30px;
+}
+
+.opt-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}

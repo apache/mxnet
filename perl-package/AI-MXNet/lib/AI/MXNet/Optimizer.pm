@@ -6,10 +6,13 @@ use AI::MXNet::NDArray;
 use AI::MXNet::Random;
 use List::Util qw(max);
 
+=head1 NAME
+
+AI::MXNet::Optimizer - Common Optimization algorithms with regularizations.
+
 =head1  DESCRIPTION
 
 Common Optimization algorithms with regularizations.
-
 =cut
 
 use Mouse;
@@ -180,15 +183,6 @@ method set_wd_mult(HashRef[Num] $args_wd_mult)
     $self->wd_mult({ %{ $self->wd_mult }, %{ $args_wd_mult } });
 }
 
-=head2 _update_count
-
-        update num_update
-
-        Parameters:
-        index : int
-            The index will be updated
-=cut
-
 method _update_count(Index $index)
 {
     if(not exists $self->_index_update_count->{ $index })
@@ -198,21 +192,6 @@ method _update_count(Index $index)
     $self->_index_update_count->{ $index } += 1;
     $self->num_update(max($self->_index_update_count->{ $index }, $self->num_update));
 }
-
-=head2 _get_lr
-
-        get learning rate for index.
-
-        Parameters
-        ----------
-        index : int
-            The index for weight
-
-        Returns
-        -------
-        lr : float
-            learning rate for this index
-=cut
 
 method _get_lr(Index $index)
 {
@@ -237,22 +216,6 @@ method _get_lr(Index $index)
     return $lr;
 }
 
-=head2 _get_wd
-
-        get weight decay for index.
-        Returns 0 for non-weights if the name of weights are provided for __init__.
-
-        Parameters
-        ----------
-        index : int
-            The index for weight
-
-        Returns
-        -------
-        wd : float
-            weight decay for this index
-=cut
-
 method _get_wd(Index $index)
 {
     my $wd = $self->wd;
@@ -267,7 +230,12 @@ method _get_wd(Index $index)
     return $wd;
 }
 
-=begin
+=head1 NAME
+
+AI::MXNet::SGD - A very simple SGD optimizer with momentum and weight regularization.
+=cut
+
+=head1 DESCRIPTION
 
     A very simple SGD optimizer with momentum and weight regularization.
 
@@ -313,16 +281,6 @@ sub BUILD
     }
 }
 
-=head2 create_state
-
-    Create additional optimizer state such as momentum.
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-=cut
-
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     if($self->momentum == 0)
@@ -336,25 +294,6 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
         );
     }
 }
-
-=head2 update
-
-        Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-=cut
 
 method update(
     Index                     $index,
@@ -402,14 +341,14 @@ extends 'AI::MXNet::Optimizer';
 
 =head1 NAME
 
-    AI::MXNet::DCASGD
+AI::MXNet::DCASGD - DCASGD optimizer with momentum and weight regularization.
 =cut
 
 =head1 DESCRIPTION
 
     DCASGD optimizer with momentum and weight regularization.
 
-    implement paper "Asynchronous Stochastic Gradient Descent with
+    Implements paper "Asynchronous Stochastic Gradient Descent with
                     Delay Compensation for Distributed Deep Learning"
 
     Parameters
@@ -445,16 +384,6 @@ sub BUILD
     $self->weight_previous({});
 }
 
-=head2 create_state
-
-    Create additional optimizer state such as momentum.
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-=cut
-
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
         return [
@@ -464,25 +393,6 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
             $weight->copy
         ];
 }
-
-=head2 update
-
-        Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-=cut
 
 method update(
     Index                     $index,
@@ -528,8 +438,13 @@ method update(
 
 __PACKAGE__->register;
 
-=begin
-    SGD with nesterov
+=head1 NAME
+
+    AI::MXNet::NAG - SGD with Nesterov weight handling.
+=cut
+
+=head1 DESCRIPTION
+
     It is implemented according to
     https://github.com/torch/optim/blob/master/sgd.lua
 =cut
@@ -538,25 +453,6 @@ package AI::MXNet::NAG;
 use Mouse;
 
 extends 'AI::MXNet::SGD';
-
-=head2 update
-
-        Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-=cut
 
 method update(
     Index $index,
@@ -595,7 +491,13 @@ method update(
 
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
+
+AI::MXNet::SLGD - Stochastic Langevin Dynamics Updater to sample from a distribution.
+=cut
+
+=head1 DESCRIPTION
+
     Stochastic Langevin Dynamics Updater to sample from a distribution.
 
     Parameters
@@ -621,39 +523,10 @@ use Mouse;
 
 extends 'AI::MXNet::Optimizer';
 
-=head2 create_state
-
-        Create additional optimizer state such as momentum.
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-=cut
-
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     return undef;
 }
-
-=head2 update
-
-        Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-=cut
 
 method update(
     Index $index, 
@@ -685,7 +558,12 @@ method update(
 
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
+
+AI::MXNet::Adam - Adam optimizer as described in [King2014]_.
+=cut
+
+=head1 DESCRIPTION
 
     Adam optimizer as described in [King2014]_.
 
@@ -746,15 +624,6 @@ sub BUILD
         $self->kwargs->{clip_gradient} = $self->clip_gradient;
     }
 }
-=head2 create_state
-
-        Create additional optimizer state: mean, variance
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-=cut
 
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
@@ -770,25 +639,6 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
             )  # variance
     ];
 }
-
-=head2 update
-
-        Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-=cut
 
 method update(
     Index $index, 
@@ -818,7 +668,12 @@ method update(
 
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
+
+AI::MXNet::AdaGrad - AdaGrad optimizer of Duchi et al., 2011
+=cut
+
+=head1 DESCRIPTION
 
     AdaGrad optimizer of Duchi et al., 2011,
 
@@ -899,7 +754,12 @@ method update(
 
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
+
+AI::MXNet::RMSProp - RMSProp optimizer of Tieleman & Hinton, 2012.
+=cut
+
+=head1 DESCRIPTION
 
     RMSProp optimizer of Tieleman & Hinton, 2012,
 
@@ -1039,7 +899,12 @@ method update(
 
 __PACKAGE__->register;
 
-=begin
+=head1 NAME
+
+AI::MXNet::AdaDelta - AdaDelta optimizer.
+=cut
+
+=head1 DESCRIPTION
 
     AdaDelta optimizer as described in
     Zeiler, M. D. (2012).
@@ -1171,21 +1036,6 @@ method get_states()
 {
     return freeze($self->states);
 }
-
-=begin
-
-Return a closure of the updater needed for kvstore
-
-    Parameters
-    ----------
-    optimizer: Optimizer
-         The optimizer
-
-    Returns
-    -------
-    updater: function
-         The closure of the updater
-=cut
 
 package AI::MXNet::Optimizer;
 

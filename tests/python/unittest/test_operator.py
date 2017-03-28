@@ -691,7 +691,7 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     exe_deconv.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv.backward(deconv_out_grad)
-    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy(), rtol=1e-3)
+    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy(), rtol=1e-3, atol=1e-2)
     # Test AddTo
     exe_deconv_addto = deconv.bind(default_context(), args=deconv_args,
                                    args_grad=deconv_addto_args_grad,
@@ -838,7 +838,7 @@ def test_convolution_grouping():
     exe2.backward(exe2.outputs[0])
 
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
+        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 def gen_broadcast_data():
     # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
@@ -2883,9 +2883,37 @@ def test_log_softmax():
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 
+def test_pick():
+    for _ in range(100):
+        ndim = np.random.randint(1, 5)
+        bshape = np.random.randint(1, 10, size=ndim)
+        axis = np.random.randint(0, ndim)
+        sshape = bshape.copy()
+        sshape[axis] = 1
+        data = np.random.uniform(-1, 1, size=bshape)
+        index = np.random.randint(0, bshape[axis], size=sshape)
+        exp = []
+        for i in range(ndim):
+            if i == axis:
+                exp.append(index)
+            else:
+                ishape = [1 for _ in range(ndim)]
+                ishape[i] = bshape[i]
+                exp.append(np.arange(bshape[i]).reshape(ishape))
+        expected = data[exp]
+        data = mx.nd.array(data, dtype='float32')
+        index = mx.nd.array(index, dtype='int32')
+        out = mx.nd.pick(data, index, axis=axis, keepdims=True)
+        assert_almost_equal(out.asnumpy(), expected)
+
+        sym = mx.sym.pick(axis=axis, keepdims=True)
+        check_numeric_gradient(sym, [data, index])
+
+
 if __name__ == '__main__':
     test_log_softmax()
     test_new_softmax()
+    test_pick()
     test_l2_normalization()
     test_sequence_mask()
     test_roipooling()

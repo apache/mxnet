@@ -519,6 +519,7 @@ fixed-size items.
         array([[[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]],
+        <BLANKLINE>
                [[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]]], dtype=float32)
@@ -551,10 +552,10 @@ fixed-size items.
         >>> tic = time.time()
         >>> a = mx.nd.ones((1000,1000))
         >>> b = mx.nd.dot(a, a)
-        >>> print(time.time() - tic)
+        >>> print(time.time() - tic) # doctest: +SKIP
         0.003854036331176758
         >>> b.wait_to_read()
-        >>> print(time.time() - tic)
+        >>> print(time.time() - tic) # doctest: +SKIP
         0.0893700122833252
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
@@ -568,10 +569,10 @@ fixed-size items.
         --------
         >>> x = mx.nd.array([1, 2, 3, 4])
         >>> x.shape
-        (4,)
+        (4L,)
         >>> y = mx.nd.zeros((2, 3, 4))
         >>> y.shape
-        (2, 3, 4)
+        (2L, 3L, 4L)
         """
         ndim = mx_uint()
         pdata = ctypes.POINTER(mx_uint)()
@@ -630,10 +631,10 @@ fixed-size items.
         --------
         >>> x = mx.nd.zeros((2,3))
         >>> x.dtype
-        <class 'numpy.float32'>
+        <type 'numpy.float32'>
         >>> y = mx.nd.zeros((2,3), dtype='int32')
         >>> y.dtype
-        <class 'numpy.int32'>
+        <type 'numpy.int32'>
         """
         mx_dtype = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetDType(
@@ -682,8 +683,8 @@ fixed-size items.
                [ 1.,  1.,  1.]], dtype=float32)
         >>> z = mx.nd.ones((2,3), dtype='int32')
         >>> z.asnumpy()
-        array([[ 1.,  1.,  1.],
-               [ 1.,  1.,  1.]], dtype=int32)
+        array([[1, 1, 1],
+               [1, 1, 1]], dtype=int32)
         """
         data = np.empty(self.shape, dtype=self.dtype)
         check_call(_LIB.MXNDArraySyncCopyToCPU(
@@ -702,7 +703,7 @@ fixed-size items.
         >>> x = mx.nd.ones((1,), dtype='int32')
         >>> x.asscalar()
         1
-        >>> type(x.asscalar)
+        >>> type(x.asscalar())
         <type 'numpy.int32'>
         """
         if self.shape != (1,):
@@ -722,7 +723,7 @@ fixed-size items.
         >>> x = mx.nd.zeros((2,3), dtype='float32')
         >>> y = x.astype('int32')
         >>> y.dtype
-        <class 'numpy.int32'>
+        <type 'numpy.int32'>
         """
         res = empty(self.shape, ctx=self.context, dtype=dtype)
         self.copyto(res)
@@ -957,14 +958,15 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     array([ 2.], dtype=float32)
     >>> mx.nd.full((1, 2), 2.0, mx.gpu(0))
     <NDArray 1x2 @gpu(0)>
-    >>> mx.nd.ones((1, 2), 2.0, dtype='float16').asnumpy()
+    >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
     arr = empty(shape, ctx, dtype)
     arr[:] = val
     return arr
 
-def array(source_array, ctx=None, dtype=mx_real_t):
+
+def array(source_array, ctx=None, dtype=None):
     """Creates a new array from any object exposing the array interface.
 
     Parameters
@@ -975,7 +977,8 @@ def array(source_array, ctx=None, dtype=mx_real_t):
     ctx : Context, optional
         An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
+        An optional value type. If source_array is NDArray then defaults to
+        source_array.dtype, otherwise default to `float32`.
 
     Returns
     -------
@@ -994,14 +997,19 @@ def array(source_array, ctx=None, dtype=mx_real_t):
     >>> mx.nd.array(np.zeros((3,2)), mx.gpu(0))
     <NDArray 3x2 @gpu(0)>
     """
-    if not isinstance(source_array, np.ndarray):
-        try:
-            source_array = np.array(source_array, dtype=dtype)
-        except:
-            raise TypeError('source_array must be array like object')
+    if isinstance(source_array, NDArray):
+        dtype = source_array.dtype if dtype is None else dtype
+    else:
+        dtype = mx_real_t if dtype is None else dtype
+        if not isinstance(source_array, np.ndarray):
+            try:
+                source_array = np.array(source_array, dtype=dtype)
+            except:
+                raise TypeError('source_array must be array like object')
     arr = empty(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
+
 
 # pylint: disable= no-member, protected-access, too-many-arguments
 def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
@@ -1768,6 +1776,7 @@ def save(fname, data):
                                   mx_uint(len(handles)),
                                   c_array(NDArrayHandle, handles),
                                   keys))
+
 
 def concatenate(arrays, axis=0, always_copy=True):
     """DEPRECATED, use ``concat`` instead
