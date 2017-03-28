@@ -49,14 +49,14 @@ Then we can call `$mod->fit($nd_iter, num_epoch=>2)` to train `loss` by 2 epochs
 ## Predefined Data iterators
 
 ```perl
-    mx->io->NDArrayIter
-    mx->io->CSVIter
-    mx->io->ImageRecordIter
-    mx->io->ImageRecordUInt8Iter
-    mx->io->MNISTIter
-    mx->recordio->MXRecordIO
-    mx->recordio->MXIndexedRecordIO
-    mx->image->ImageIter
+mx->io->NDArrayIter
+mx->io->CSVIter
+mx->io->ImageRecordIter
+mx->io->ImageRecordUInt8Iter
+mx->io->MNISTIter
+mx->recordio->MXRecordIO
+mx->recordio->MXIndexedRecordIO
+mx->image->ImageIter
 ```
 
 ## Helper classes and functions
@@ -64,43 +64,43 @@ Then we can call `$mod->fit($nd_iter, num_epoch=>2)` to train `loss` by 2 epochs
 Data structures and other iterators provided in the `AI::MXNet::IO` package.
 
 ```perl
-    AI::MXNet::DataDesc
-    AI::MXNet::DataBatch
-    AI::MXNet::DataIter
-    AI::MXNet::ResizeIter
-    AI::MXNet::MXDataIter
+AI::MXNet::DataDesc
+AI::MXNet::DataBatch
+AI::MXNet::DataIter
+AI::MXNet::ResizeIter
+AI::MXNet::MXDataIter
 ```
 
 A list of image modification functions provided by `AI::MXNet::Image`.
 
 ```perl
-    mx->image->imdecode
-    mx->image->scale_down
-    mx->image->resize_short
-    mx->image->fixed_crop
-    mx->image->random_crop
-    mx->image->center_crop
-    mx->image->color_normalize
-    mx->image->random_size_crop
-    mx->image->ResizeAug
-    mx->image->RandomCropAug
-    mx->image->RandomSizedCropAug
-    mx->image->CenterCropAug
-    mx->image->RandomOrderAug
-    mx->image->ColorJitterAug
-    mx->image->LightingAug
-    mx->image->ColorNormalizeAug
-    mx->image->HorizontalFlipAug
-    mx->image->CastAug
-    mx->image->CreateAugmenter
+mx->image->imdecode
+mx->image->scale_down
+mx->image->resize_short
+mx->image->fixed_crop
+mx->image->random_crop
+mx->image->center_crop
+mx->image->color_normalize
+mx->image->random_size_crop
+mx->image->ResizeAug
+mx->image->RandomCropAug
+mx->image->RandomSizedCropAug
+mx->image->CenterCropAug
+mx->image->RandomOrderAug
+mx->image->ColorJitterAug
+mx->image->LightingAug
+mx->image->ColorNormalizeAug
+mx->image->HorizontalFlipAug
+mx->image->CastAug
+mx->image->CreateAugmenter
 ```
 
 Functions to read and write RecordIO files.
 
 ```perl
-    mx->recordio->pack
-    mx->recordio->unpack
-    mx->recordio->unpack_img
+mx->recordio->pack
+mx->recordio->unpack
+mx->recordio->unpack_img
 ```
 
 ## Develop a new iterator

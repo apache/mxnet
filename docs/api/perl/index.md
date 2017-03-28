@@ -18,42 +18,42 @@ transferred to PDL objects in order to allow you to use all the glory and power 
 Here is how can perform tensor or matrix computation in Perl with AI::MXNet and PDL:
 
 ```perl
-   pdl> use AI::MXNet qw(mx); # creates 'mx' module on the fly with the interface close to the Python's API
+pdl> use AI::MXNet qw(mx); # creates 'mx' module on the fly with the interface close to the Python's API
 
-   pdl> print $arr = mx->nd->ones([2, 3])
-   <AI::MXNet::NDArray 2x3 @cpu(0)>
+pdl> print $arr = mx->nd->ones([2, 3])
+<AI::MXNet::NDArray 2x3 @cpu(0)>
 
-   pdl> print Data::Dumper::Dumper($arr->shape)
-   $VAR1 = [
+pdl> print Data::Dumper::Dumper($arr->shape)
+$VAR1 = [
           2,
           3
         ];
 
-   pdl> print (($arr*2)->aspdl) ## converts AI::MXNet::NDArray object to PDL object
+pdl> print (($arr*2)->aspdl) ## converts AI::MXNet::NDArray object to PDL object
 
-   [
-    [2 2 2]
-    [2 2 2]
-   ]
+[
+ [2 2 2]
+ [2 2 2]
+]
 
-   pdl> print $arr = mx->nd->array([[1,2],[3,4]]) ## init the NDArray from Perl array ref given in PDL::pdl constructor format
-   <AI::MXNet::NDArray 2x2 @cpu(0)>
-   pdl> print $arr->aspdl
+pdl> print $arr = mx->nd->array([[1,2],[3,4]]) ## init the NDArray from Perl array ref given in PDL::pdl constructor format
+<AI::MXNet::NDArray 2x2 @cpu(0)>
+pdl> print $arr->aspdl
 
-   [
-    [1 2]
-    [3 4]
-   ]
+[
+ [1 2]
+ [3 4]
+]
 
-   ## init the NDArray from PDL but be aware that PDL methods expect the dimensions order in column major format
-   ## AI::MXNet::NDArray is row major
-   pdl> print mx->nd->array(sequence(2,3))->aspdl ## 3 rows, 2 columns
+## init the NDArray from PDL but be aware that PDL methods expect the dimensions order in column major format
+## AI::MXNet::NDArray is row major
+pdl> print mx->nd->array(sequence(2,3))->aspdl ## 3 rows, 2 columns
 
-   [
-    [0 1]
-    [2 3]
-    [4 5]
-   ]
+[
+ [0 1]
+ [2 3]
+ [4 5]
+]
 ```
  ## Perl API Reference
  * [Module API](module.md) is a flexible high-level interface for training neural networks.
