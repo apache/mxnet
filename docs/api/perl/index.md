@@ -10,7 +10,7 @@ so most if not all of Python's documentation and examples should just work in Pe
 changes in order to make the code a bit more Perlish. In nutshell just add $ sigils and replace . = \n with -> => ; and in 99% of cases
 that's all that is needed there.
 In addition please refer to [excellent metacpan doc interface](https://metacpan.org/release/AI-MXNet) and to very detailed
-[MXNet Python API Documentation](http://mxnet.io/api/perl/docs/index.html).
+[MXNet Python API Documentation](http://mxnet.io/api/python/index.html).
 
 AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initiliazed from PDL and the results can be
 transferred to PDL objects in order to allow you to use all the glory and power of the PDL!
