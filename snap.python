@@ -1,0 +1,5 @@
+export MXNET_HOME=$SNAP
+export LD_LIBRARY_PATH=${SNAP}/lib:${SNAP}/usr/lib:$LD_LIBRARY_PATH 
+export PYTHONPATH=$MXNET_HOME:${SNAP}/lib/python2.7/site-packages/:${SNAP}/usr/lib/python2.7/dist-packages/:$PYTHONPATH 
+
+exec ${SNAP}/usr/bin/python $@

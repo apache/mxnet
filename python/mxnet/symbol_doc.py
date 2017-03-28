@@ -157,7 +157,7 @@ class FlattenDoc(SymbolDoc):
     >>> for dims in test_dims:
     ...     x = test_utils.random_arrays(dims)
     ...     y = test_utils.simple_forward(op, flat_data=x)
-    ...     y_np = x.reshape((dims[0], np.prod(dims[1:])))
+    ...     y_np = x.reshape((dims[0], np.prod(dims[1:]).astype('int32')))
     ...     print('%s: %s' % (dims, test_utils.almost_equal(y, y_np)))
     (2, 3, 4, 5): True
     (2, 3): True

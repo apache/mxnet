@@ -2,7 +2,6 @@ use strict;
 use warnings;
 use Test::More tests => 4;
 use AI::MXNet qw(mx);
-use Data::Dumper;
 
 sub test_default_init
 {
