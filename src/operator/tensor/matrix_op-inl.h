@@ -29,13 +29,13 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   bool reverse;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
     int tmp[] = {0, 0};
+    DMLC_DECLARE_FIELD(shape)
+    .set_default(nnvm::Tuple<int>())
+    .describe("The target shape");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
     .describe("(Deprecated! Use ``shape`` instead.) Whether keep the highest dim unchanged."
               "If set to true, then the first dim in target_shape is ignored,"
               "and always fixed as input");
-    DMLC_DECLARE_FIELD(shape)
-    .set_default(nnvm::Tuple<int>())
-    .describe("The target shape");
     DMLC_DECLARE_FIELD(reverse)
     .set_default(false)
     .describe("If true then translating the input shape from right to left");
