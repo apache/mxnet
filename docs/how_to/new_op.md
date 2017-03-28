@@ -81,8 +81,8 @@ The first dim of an input/output tensor is batch size. The label is a set of int
 Optionally, you can also define `infer_type` to declare the input and output data type of your operator. Supported types are np.float32, np.float64, np.float16, np.uint8, np.int32.
 
 ```python
-def infer_shape(self, in_shape):
-    dtype = in_shape[0]
+def infer_type(self, in_type):
+    dtype = in_type[0]
     return [dtype, dtype], [dtype], []
 ```
 
