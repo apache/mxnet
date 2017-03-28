@@ -86,6 +86,40 @@ function get(metric :: MultiMetric)
 end
 
 """
+    SeqMetric(metrics::Vector{AbstractEvalMetric})
+
+Apply a different metric to each output. This is especially useful for `mx.Group`.
+
+# Usage
+Calculate accuracy [`Accuracy`](@ref) for the first output
+and log-loss [`ACE`](@ref) for the second output:
+```julia
+  mx.fit(..., eval_metric = mx.SeqMetric([mx.Accuracy(), mx.ACE()]))
+```
+"""
+type SeqMetric <: mx.AbstractEvalMetric
+    metrics :: Vector{mx.AbstractEvalMetric}
+end
+
+function update!(metric :: SeqMetric, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+    @assert length(metric.metrics) == length(labels)
+    @assert length(metric.metrics) == length(preds)
+    for (m, l, p) in zip(metric.metrics, labels, preds)
+        update!(m, [l], [p])
+    end
+    return nothing
+end
+
+function reset!(metric :: SeqMetric)
+    map(reset!, metric.metrics)
+    return nothing
+end
+
+function get(metric :: SeqMetric)
+    mapreduce(get, append!, metric.metrics)
+end
+
+"""
     Accuracy
 
 Multiclass classification accuracy.
