@@ -11,12 +11,86 @@ AI::MXNet::Module::Bucketing
 
 =head1 SYNOPSIS
 
-    This is alpha release.
-    Please refer to t dir for examples.
+    my $buckets = [10, 20, 30, 40, 50, 60];
+    my $start_label   = 1;
+    my $invalid_label = 0;
+
+    my ($train_sentences, $vocabulary) = tokenize_text(
+        './data/ptb.train.txt', start_label => $start_label,
+        invalid_label => $invalid_label
+    );
+    my ($validation_sentences) = tokenize_text(
+        './data/ptb.test.txt', vocab => $vocabulary,
+        start_label => $start_label, invalid_label => $invalid_label
+    );
+    my $data_train  = mx->rnn->BucketSentenceIter(
+        $train_sentences, $batch_size, buckets => $buckets,
+        invalid_label => $invalid_label
+    );
+    my $data_val    = mx->rnn->BucketSentenceIter(
+        $validation_sentences, $batch_size, buckets => $buckets,
+        invalid_label => $invalid_label
+    );
+
+    my $stack = mx->rnn->SequentialRNNCell();
+    for my $i (0..$num_layers-1)
+    {
+        $stack->add(mx->rnn->LSTMCell(num_hidden => $num_hidden, prefix => "lstm_l${i}_"));
+    }
+
+    my $sym_gen = sub {
+        my $seq_len = shift;
+        my $data  = mx->sym->Variable('data');
+        my $label = mx->sym->Variable('softmax_label');
+        my $embed = mx->sym->Embedding(
+            data => $data, input_dim => scalar(keys %$vocabulary),
+            output_dim => $num_embed, name => 'embed'
+        );
+        $stack->reset;
+        my ($outputs, $states) = $stack->unroll($seq_len, inputs => $embed, merge_outputs => 1);
+        my $pred = mx->sym->Reshape($outputs, shape => [-1, $num_hidden]);
+        $pred    = mx->sym->FullyConnected(data => $pred, num_hidden => scalar(keys %$vocabulary), name => 'pred');
+        $label   = mx->sym->Reshape($label, shape => [-1]);
+        $pred    = mx->sym->SoftmaxOutput(data => $pred, label => $label, name => 'softmax');
+        return ($pred, ['data'], ['softmax_label']);
+    };
+
+    my $contexts;
+    if(defined $gpus)
+    {
+        $contexts = [map { mx->gpu($_) } split(/,/, $gpus)];
+    }
+    else
+    {
+        $contexts = mx->cpu(0);
+    }
+
+    my $model = mx->mod->BucketingModule(
+        sym_gen             => $sym_gen,
+        default_bucket_key  => $data_train->default_bucket_key,
+        context             => $contexts
+    );
+
+    $model->fit(
+        $data_train,
+        eval_data           => $data_val,
+        eval_metric         => mx->metric->Perplexity($invalid_label),
+        kvstore             => $kv_store,
+        optimizer           => $optimizer,
+        optimizer_params    => {
+                                    learning_rate => $lr,
+                                    momentum      => $mom,
+                                    wd            => $wd,
+                            },
+        initializer         => mx->init->Xavier(factor_type => "in", magnitude => 2.34),
+        num_epoch           => $num_epoch,
+        batch_end_callback  => mx->callback->Speedometer($batch_size, $disp_batches),
+        ($chkp_epoch ? (epoch_end_callback  => mx->rnn->do_rnn_checkpoint($stack, $chkp_prefix, $chkp_epoch)) : ())
+    );
 
 =head1 DESCRIPTION
 
-    Implements the AI::MXNet::Module::Base API, and allows multiple
+Implements the AI::MXNet::Module::Base API, and allows multiple
 symbols to be used depending on the `bucket_key` provided by each different
 mini-batch of data
 =cut
@@ -24,24 +98,23 @@ mini-batch of data
 
 =head2 new
 
-    Parameters
-    ----------
-    sym_gen : subref or any perl object that overloads &{} op
-        A sub when called with a bucket key, returns a list with triple
-        of ($symbol, $data_names, $label_names).
-    default_bucket_key : str or anything else
-        The key for the default bucket.
-    logger : Logger
-    context : Context or arrayref of Context
-        Default `cpu()`
-    work_load_list : array ref of Num
-        Default undef, indicating uniform workload.
-    fixed_param_names: arrayref of str
-        Default undef, indicating no network parameters are fixed.
-    state_names : arrayref of str
-        states are similar to data and label, but not provided by data iterator.
-        Instead they are initialized to 0 and can be set by set_states()
-
+Parameters
+----------
+$sym_gen : subref or any perl object that overloads &{} op
+    A sub when called with a bucket key, returns a list with triple
+    of ($symbol, $data_names, $label_names).
+$default_bucket_key : str or anything else
+    The key for the default bucket.
+$logger : Logger
+$context : AI::MXNet::Context or array ref of AI::MXNet::Context objects
+    Default is cpu(0)
+$work_load_list : array ref of Num
+    Default is undef, indicating uniform workload.
+$fixed_param_names: arrayref of str
+    Default is undef, indicating no network parameters are fixed.
+$state_names : arrayref of str
+    states are similar to data and label, but not provided by data iterator.
+    Instead they are initialized to 0 and can be set by set_states()
 =cut
 
 extends 'AI::MXNet::Module::Base';
@@ -54,6 +127,7 @@ has '_context'            => (
 );
 has '_work_load_list'     => (is => 'rw', init_arg => 'work_load_list', isa => 'ArrayRef[Num]');
 has '_curr_module'        => (is => 'rw', init_arg => undef);
+has '_curr_bucket_key'    => (is => 'rw', init_arg => undef);
 has '_buckets'            => (is => 'rw', init_arg => undef, default => sub { +{} });
 has '_fixed_param_names'  => (is => 'rw', isa => 'ArrayRef[Str]', init_arg => 'fixed_param_names');
 has '_state_names'        => (is => 'rw', isa => 'ArrayRef[Str]', init_arg => 'state_names');
@@ -77,12 +151,8 @@ method _reset_bind()
     $self->binded(0);
     $self->_buckets({});
     $self->_curr_module(undef);
+    $self->_curr_bucket_key(undef);
 }
-
-=head2 data_names
-
-    A list of names for data required by this module.
-=cut
 
 method data_names()
 {
@@ -95,11 +165,6 @@ method data_names()
         return (&{$self->_sym_gen}($self->_default_bucket_key))[1];
     }
 }
-
-=head2 output_names
-
-    A list of names for the outputs of this module.
-=cut
 
 method output_names()
 {
@@ -114,30 +179,11 @@ method output_names()
     }
 }
 
-=head2 data_shapes
-
-        Get data shapes.
-        Returns
-        -------
-        An array ref of AI::MXNet::DataDesc objects.
-=cut
-
 method data_shapes()
 {
     assert($self->binded);
     return $self->_curr_module->data_shapes;
 }
-
-=head2 label_shapes
-
-        Get label shapes.
-        Returns
-        -------
-        An array ref of AI::MXNet::DataDesc objects. The return value could be undef if
-        the module does not need labels, or if the module is not binded for
-        training (in this case, label information is not available).
-        An array ref of AI::MXNet::DataDesc objects.
-=cut
 
 method label_shapes()
 {
@@ -145,52 +191,20 @@ method label_shapes()
     return $self->_curr_module->label_shapes;
 }
 
-=head2 output_shapes
-
-        Get output shapes.
-        Returns
-        -------
-        An array ref of AI::MXNet::DataDesc objects.
-=cut
-
 method output_shapes()
 {
     assert($self->binded);
     return $self->_curr_module->output_shapes;
 }
 
-=head2 get_params
-
-        Get current parameters.
-        Returns
-        -------
-        List of ($arg_params, $aux_params), each a hash ref of name to parameters (
-        AI::MXNet::NDArray) mapping.
-=cut
-
 method get_params()
 {
     assert($self->binded and $self->params_initialized);
-    $self->_curr_module->_params_dirty($self->_params_dirty);
-    my $params = $self->_curr_module->get_params;
+    $self->_curr_module->_p->_params_dirty($self->_params_dirty);
+    my ($arg_params, $aux_params) = $self->_curr_module->get_params;
     $self->_params_dirty(0);
-    return $params;
+    return ($arg_params, $aux_params);
 }
-
-=head2 set_params
-
-        Assign parameter and aux state values.
-
-        Parameters
-        ----------
-        arg_params : HashRef[AI::MXNet::NDArray]
-        aux_params : HashRef[AI::MXNet::NDArray]
-        allow_missing : bool
-            If true, params could contain missing values, and the initializer will be
-            called to fill those missing params.
-        force_init : bool
-            If true, will force re-initialize even if already initialized.
-=cut
 
 method set_params(
     HashRef[AI::MXNet::NDArray] $arg_params,
@@ -225,24 +239,6 @@ method set_params(
     $self->params_initialized(1);
 }
 
-=head2 init_params
-
-        Initialize parameters.
-
-        Parameters
-        ----------
-        initializer : AI::MXNet::Initializer, default AI::MXNet::Initalizer->Uniform->(scale => 0.01)
-        arg_params : HashRef
-            Default undef. Existing parameters. This has higher priority than `initializer`.
-        aux_params : HashRef
-            Default undef. Existing auxiliary states. This has higher priority than `initializer`.
-        allow_missing : Bool
-            Allow missing values in `arg_params` and `aux_params` (if not undef). In this case,
-            missing values will be filled with `initializer` Default 0
-        force_init : Bool
-            Default 0
-=cut
-
 method init_params(
     AI::MXNet::Initializer             :$initializer=AI::MXNet::Initializer->Uniform(scale => 0.01),
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
@@ -251,7 +247,7 @@ method init_params(
     Bool                               :$force_init=0
 )
 {
-    return if(not $self->params_initialized and not $force_init);
+    return if($self->params_initialized and not $force_init);
     assert($self->binded, 'call bind before initializing the parameters');
     $self->_curr_module->init_params(
         initializer   => $initializer,
@@ -270,49 +266,49 @@ method get_states(Bool $merge_multi_context=1)
     $self->_curr_module->get_states($merge_multi_context);
 }
 
-method set_states($states, $value)
+method set_states(:$states=, :$value=)
 {
     assert($self->binded and $self->params_initialized);
-    $self->_curr_module->set_states($states, $value);
+    $self->_curr_module->set_states(states => $states, value => $value);
 }
 
 =head2 bind
 
-        Binding for a AI::MXNet::Module::Bucketing means setting up the buckets and bind the
-        executor for the default bucket key. Executors corresponding to other keys are
-        binded afterwards with 'switch_bucket'.
+Binding for a AI::MXNet::Module::Bucketing means setting up the buckets and bind the
+executor for the default bucket key. Executors corresponding to other keys are
+binded afterwards with switch_bucket.
 
-        Parameters
-        ----------
-        data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
-            This should correspond to the symbol for the default bucket.
-        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-            This should correspond to the symbol for the default bucket.
-        for_training : Bool
-            Default is 1.
-        inputs_need_grad : Bool
-            Default is 0.
-        force_rebind : Bool
-            Default is 0.
-        shared_module : AI::MXNet::Module::Bucketing
-            Default is undef. This value is currently not used.
-        grad_req : str, array ref of str, hash ref of str to str
-            Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
-            (default to 'write').
-            Can be specified globally (str) or for each argument (array ref, hash ref).
-        bucket_key : str
-            bucket key for binding. by default use the default_bucket_key
+Parameters
+----------
+:$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
+    This should correspond to the symbol for the default bucket.
+:$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+    This should correspond to the symbol for the default bucket.
+:$for_training : Bool
+    Default is 1.
+:$inputs_need_grad : Bool
+    Default is 0.
+:$force_rebind : Bool
+    Default is 0.
+:$shared_module : AI::MXNet::Module::Bucketing
+    Default is undef. This value is currently not used.
+:$grad_req : str, array ref of str, hash ref of str to str
+    Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+    (defaults to 'write').
+    Can be specified globally (str) or for each argument (array ref, hash ref).
+$bucket_key : str
+    bucket key for binding. by default is to use the ->default_bucket_key
 =cut
 
 method bind(
-    ArrayRef[AI::MXNet::DataDesc|NameShape]                    $data_shapes,
+    ArrayRef[AI::MXNet::DataDesc|NameShape]                   :$data_shapes,
     Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]            :$label_shapes=,
     Bool                                                      :$for_training=1,
     Bool                                                      :$inputs_need_grad=0,
     Bool                                                      :$force_rebind=0,
     Maybe[AI::MXNet::BaseModule]                              :$shared_module=,
     Str|ArrayRef[Str]|HashRef[Str]                            :$grad_req='write',
-    Str                                                       :$bucket_key
+    Maybe[Str]                                                :$bucket_key=
 )
 {
     # in case we already initialized params, keep it
@@ -359,6 +355,7 @@ method bind(
         grad_req         => $grad_req
     );
     $self->_curr_module($module);
+    $self->_curr_bucket_key($self->_default_bucket_key);
     $self->_buckets->{ $self->_default_bucket_key } = $module;
 
     # copy back saved params, if already initialized
@@ -370,20 +367,20 @@ method bind(
 
 =head2 switch_bucket
 
-        Switch to a different bucket. This will change $self->_curr_module.
+Switch to a different bucket. This will change $self->_curr_module.
 
-        Parameters
-        ----------
-        bucket_key : str (or any perl object that overloads "" op)
-            The key of the target bucket.
-        data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
-            Typically `data_batch.provide_data`.
-        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-            Typically `data_batch.provide_label`.
+Parameters
+----------
+:$bucket_key : str (or any perl object that overloads "" op)
+    The key of the target bucket.
+:$data_shapes :  Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+    Typically $data_batch->provide_data.
+:$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+    Typically $data_batch->provide_label.
 =cut
 
 method switch_bucket(
-    ArrayRef[AI::MXNet::DataDesc|NameShape]                   :$data_shapes,
+    Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]            :$data_shapes=,
     Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]            :$label_shapes=,
                                                               :$bucket_key
 )
@@ -408,27 +405,11 @@ method switch_bucket(
             force_rebind     => 0,
             shared_module    => $self->_buckets->{ $self->_default_bucket_key },
         );
-        $self->_curr_module($module);
         $self->_buckets->{ $bucket_key } = $module;
     }
+    $self->_curr_module($self->_buckets->{ $bucket_key });
+    $self->_curr_bucket_key($bucket_key);
 }
-
-=head2  init_optimizer
-
-        Install and initialize optimizers.
-
-        Parameters
-        ----------
-        kvstore : str or AI::MXNet::KVStore object
-            Default 'local'
-        optimizer : str or AI::MXNet::Optimizer object
-            Default 'sgd'
-        optimizer_params : hash ref
-            Default: { learning_rate =>  0.01 }
-        force_init : Bool
-            Default 0, indicating whether we should force re-initializing the
-            optimizer in the case an optimizer is already installed.
-=cut
 
 method init_optimizer(
     Str        :$kvstore='local',
@@ -460,16 +441,19 @@ method init_optimizer(
     $self->optimizer_initialized(1);
 }
 
-=head2 forward
-
-        Forward computation.
-
-        Parameters
-        ----------
-        data_batch : DataBatch
-        is_train : Bool
-            Default is undef, in which case 'is_train' is taken from $self->for_training.
-=cut
+method prepare(AI::MXNet::DataBatch $data_batch)
+{
+    assert($self->binded and $self->params_initialized);
+    ## perform bind if have not done so yet
+    my $original_bucket_key = $self->_curr_bucket_key;
+    $self->switch_bucket(
+        bucket_key   => $data_batch->bucket_key,
+        data_shapes  => $data_batch->provide_data,
+        label_shapes => $data_batch->provide_label
+    );
+    # switch back
+    $self->switch_bucket($original_bucket_key);
+}
 
 method forward(
     AI::MXNet::DataBatch  $data_batch,
@@ -485,26 +469,11 @@ method forward(
     $self->_curr_module->forward($data_batch, is_train => $is_train);
 }
 
-=head2 backward
-
-        Backward computation.
-        Parameters
-        ----------
-        out_grads : Maybe[ArrayRef[AI::MXNet::NDArray]|AI::MXNet::NDArray]
-        Default: undef
-=cut
-
 method backward(Maybe[ArrayRef[AI::MXNet::NDArray]|AI::MXNet::NDArray] $out_grads=)
 {
     assert($self->binded and $self->params_initialized);
     $self->_curr_module->backward($out_grads);
 }
-
-=head2 update
-
-        Update parameters according to installed optimizer and the gradient computed
-        in the previous forward-backward cycle.
-=cut
 
 method update()
 {
@@ -513,66 +482,17 @@ method update()
     $self->_curr_module->update;
 }
 
-=head2 get_outputs
-
-        Get outputs from a previous forward computation.
-
-        Parameters
-        ----------
-        merge_multi_context : Bool
-            Default is 1. In the case when data-parallelism is used, the outputs
-            will be collected from multiple devices. A 1 value indicates that we
-            should merge the collected results so that they look like from a single
-            executor.
-
-        Returns
-        -------
-        If 'merge_multi_context' is 1, it is like [out1, out2]. Otherwise, it
-        is like [[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]. All the output
-        elements are pdl objects.
-=cut
-
-
 method get_outputs(Bool $merge_multi_context=1)
 {
     assert($self->binded and $self->params_initialized);
     return $self->_curr_module->get_outputs($merge_multi_context);
 }
 
-=head2 get_input_grads
-
-        Get the gradients with respect to the inputs of the module.
-
-        Parameters
-        ----------
-        merge_multi_context : Bool
-            Default is 1. In the case when data-parallelism is used, the outputs
-            will be collected from multiple devices. A 1 value indicates that we
-            should merge the collected results so that they look like from a single
-            executor.
-
-        Returns
-        -------
-        If 'merge_multi_context' is 1, it is like [grad1, grad2]. Otherwise, it
-        is like [[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]. All the output
-        elements are AI::MXNet::NDArray objects.
-=cut
-
 method get_input_grads(Bool $merge_multi_context=1)
 {
     assert($self->binded and $self->params_initialized and $self->inputs_need_grad);
     return $self->_curr_module->get_input_grads($merge_multi_context);
 }
-
-=head2 update_metric
-        Evaluate and accumulate evaluation metric on outputs of the last forward computation.
-
-        Parameters
-        ----------
-        eval_metric : AI::MXNet::EvalMetric
-        labels : ArrayRef[AI::MXNet::NDArray]
-            Typically $data_batch->label.
-=cut
 
 method update_metric(
     AI::MXNet::EvalMetric $eval_metric,
@@ -583,25 +503,17 @@ method update_metric(
     $self->_curr_module->update_metric($eval_metric, $labels);
 }
 
-=head2 symbol
-
-    The symbol of the current bucket being used.
-=cut
-
 method symbol()
 {
     assert($self->binded);
     return $self->_curr_module->symbol;
 }
 
-=head2 install_monitor
-
-        Install monitor on all executors.
-
-        Paramters
-        ---------
-        AI::MXNet::Monitor
-=cut
+method get_symbol()
+{
+    assert($self->binded);
+    return $self->_buckets->{ $self->_default_bucket_key }->symbol;
+}
 
 method install_monitor(AI::MXNet::Monitor $mon)
 {

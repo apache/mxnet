@@ -330,6 +330,8 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
     for k in location:
         location[k] = np.ascontiguousarray(location[k])
     for k, v in location.items():
+        if v.dtype.kind != 'f':
+            continue
         old_value = v.copy()
         for i in range(np.prod(v.shape)):
             # inplace update
