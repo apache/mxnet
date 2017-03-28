@@ -27,6 +27,9 @@ portable and lightweight, and it scales to multiple GPUs and multiple machines.
 <li role="presentation">
 <a href="#julia-demo" role="tab" data-toggle="tab">Julia</a>
 </li>
+<li role="presentation">
+<a href="#perl-demo" role="tab" data-toggle="tab">Perl</a>
+</li>
 </ul>
 <div class="tab-content">
 <div role="tabpanel" class="tab-pane active" id="python-demo">
@@ -92,6 +95,19 @@ julia> Array{Float32}(a * 2)
 ```
 
 </div> <!-- julia-demo -->
+<div role="tabpanel" class="tab-pane" id="perl-demo">
+
+```perl
+pdl> use AI::MXNet qw(mx)
+pdl> $a = mx->nd->ones([2, 3], ctx => mx->gpu())
+pdl> print (($a * 2)->aspdl)
+[
+ [2 2 2]
+ [2 2 2]
+]
+```
+
+</div> <!-- perl-demo -->
 </div>
 </div>
 
