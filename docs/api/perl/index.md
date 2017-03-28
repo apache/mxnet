@@ -12,10 +12,10 @@ that's all that is needed there.
 In addition please refer to [excellent metacpan doc interface](https://metacpan.org/release/AI-MXNet) and to very detailed
 [MXNet Python API Documentation](http://mxnet.io/api/python/index.html).
 
-AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initiliazed from PDL and the results can be
+AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initialized from PDL and the results can be
 transferred to PDL objects in order to allow you to use all the glory and power of the PDL!
 
-Here is how can perform tensor or matrix computation in Perl with AI::MXNet and PDL:
+Here is how you can perform tensor or matrix computation in Perl with AI::MXNet and PDL:
 
 ```perl
 pdl> use AI::MXNet qw(mx); # creates 'mx' module on the fly with the interface close to the Python's API

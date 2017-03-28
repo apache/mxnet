@@ -106,6 +106,6 @@ mx->recordio->unpack_img
 ## Develop a new iterator
 
 Writing a new data iterator in Perl is straightforward. Most MXNet
-training/inference program accepts an object with ``provide_data``
+training/inference programs accept an object with ``provide_data``
 and ``provide_label`` properties.
 Please refer to AI-MXNet/examples for the examples of custom iterators.
