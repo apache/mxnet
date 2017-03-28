@@ -497,12 +497,12 @@ fixed-size items.
         for index, element in enumerate(shape):
             if element == -1:
                 remainder = list(self.shape)
-                for i, e in enumerate(shape):
+                for i, e in enumerate(shape):  # pylint: disable=C0321
                     if i != index and e == -1:
                         raise ValueError('Only one dimension can be inferred.')
                     try:
                         remainder.remove(e)
-                    except:
+                    except ValueError:
                         pass
                 shape[index] = np.product(remainder)
                 # We have already gone through the whole shape, break
