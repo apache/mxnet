@@ -497,7 +497,7 @@ fixed-size items.
         for index, element in enumerate(shape):
             if element == -1:
                 remainder = list(self.shape)
-                for i, e in enumerate(shape):  # pylint: disable=C0321
+                for i, e in enumerate(shape):  # pylint: disable=invalid-name
                     if i != index and e == -1:
                         raise ValueError('Only one dimension can be inferred.')
                     try:
