@@ -200,9 +200,10 @@ end
 """
     MSE
 
-Mean Squared Error. TODO: add support for multi-dimensional outputs.
+Mean Squared Error.
 
-Calculates the mean squared error regression loss in one dimension.
+Calculates the mean squared error regression loss.
+Requires that label and prediction have the same shape.
 """
 
 type MSE <: AbstractEvalMetric
@@ -213,14 +214,10 @@ type MSE <: AbstractEvalMetric
 end
 
 function _update_single_output(metric :: MSE, label :: NDArray, pred :: NDArray)
-  label = copy(label)
-  pred  = copy(pred)
-
-  n_sample = size(pred)[end]
-  metric.n_sample += n_sample
-
-  for i = 1:n_sample
-    metric.mse_sum += (label[i] - pred[i])^2
+  @assert size(label) == size(pred)
+  metric.n_sample += length(label)
+  @nd_as_jl ro=(label, pred) begin
+    metric.mse_sum += sumabs2(label .- pred)
   end
 end
 
