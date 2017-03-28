@@ -573,18 +573,27 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   int dtype = mshadow::kFloat32;
   const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
   GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kInt32);
+  if (-1 == (*in_attrs)[0]) {
+    (*in_attrs)[0] = mshadow::kInt32;
+  } else {
+    CHECK(mshadow::kFloat32 == (*in_attrs)[0]
+        || mshadow::kFloat64 == (*in_attrs)[0]
+        || mshadow::kFloat16 == (*in_attrs)[0]
+        || mshadow::kUint8 == (*in_attrs)[0]
+        || mshadow::kInt32 == (*in_attrs)[0])
+      << "Tensor indices data type = " << (*in_attrs)[0] << " is not supported";
+  }
   TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);
   return true;
 }
 
 template<int req>
 struct one_hot {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const int* indices,
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indices,
                                   int depth, DType on_value) {
     int offset = i * depth;
-    int j = indices[i];
+    int j = static_cast<int>(indices[i]);
     if (j >= 0 && j < depth) {
       KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
@@ -612,13 +621,15 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type switch
     mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req[0], static_cast<DType>(off_value));
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<one_hot<req_type>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                             inputs[0].dptr<int>(), depth,
-                                             static_cast<DType>(on_value));
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {  // request type switch
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {  // indices data type switch
+        Kernel<one_hot<req_type>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                               inputs[0].dptr<IType>(), depth,
+                                               static_cast<DType>(on_value));
+      });
     });
   });
 }

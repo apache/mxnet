@@ -2677,7 +2677,7 @@ def test_tile():
 
 
 def test_one_hot():
-    def test_normal_case():
+    def test_normal_case(index_type=np.int32):
         ndim_max = 6
         dim_size_max = 20
         depth = int(dim_size_max / 2)
@@ -2690,7 +2690,7 @@ def test_one_hot():
             indices = np.random.randint(-dim_size_max, dim_size_max+1,
                                         size=np.prod(shape)).reshape(shape)
             mx_one_hot_array = mx.nd.one_hot(
-                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                mx.nd.array(indices, ctx=default_context(), dtype=index_type),
                 depth=depth, dtype=np.int32)
             expected_array = np.zeros((np.prod(shape), depth), dtype=np.int32)
             expected_array[:] = off_value
@@ -2724,7 +2724,10 @@ def test_one_hot():
         expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
         assert same(expected_array, mx_one_hot_array)
 
-    test_normal_case()
+    test_normal_case(index_type=np.int32)
+    test_normal_case(index_type=np.float64)
+    test_normal_case(index_type=np.float32)
+    test_normal_case(index_type=np.float16)
     test_empty_indices()
     test_zero_depth()
 
