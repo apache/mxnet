@@ -840,57 +840,62 @@ def test_convolution_grouping():
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
 
-def gen_broadcast_data():
-    # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
-    ndim = np.random.randint(1, 6)
-    shape = np.random.randint(1, 6, size=(ndim,))
-    l_same_dim = np.random.randint(0, 5)
-    r_same_dim = np.random.randint(0, 5)
-    l_axis_flags = np.random.randint(0, 2, size=ndim)
-    r_axis_flags = np.random.randint(0, 2, size=ndim)
-    if l_same_dim == 4:
-        l_axis_flags = np.ones(ndim)
-    if r_same_dim == 4:
-        r_axis_flags = np.ones(ndim)
-    l_shape = shape.copy()
-    r_shape = shape.copy()
-    l_shape[np.where(l_axis_flags == 0)] = 1
-    r_shape[np.where(r_axis_flags == 0)] = 1
+def gen_broadcast_data(idx):
+    # Manually set test cases
+    binary_op_data_shape = np.array(
+        [[[2, 5, 1, 30, 7], [1, 5, 448, 30, 1]],
+        [[10, 49, 1, 77, 17], [10, 1, 2, 1, 17]],
+        [[13, 2, 65, 2,  1], [13, 1, 65, 1, 225]],
+        [[9, 434, 4, 2, 37], [9, 1, 4, 1, 37]],
+        [[2, 52, 1, 4, 1], [1, 52, 60, 1, 37]],
+        [[1, 23, 7, 122, 50], [2, 1, 7, 1, 50]],
+        [[1, 17, 1, 5, 1], [22, 1, 2, 1, 28]],
+        [[29, 1, 2, 1, 8], [29, 22, 1, 130, 1]],
+        [[2, 36, 1, 427, 3], [1, 36, 11, 427, 1]],
+        [[1, 2, 1, 100, 7], [1, 2, 448, 100, 1]],
+        [[1, 2, 495, 77, 7], [1, 2, 1, 1, 7]],
+        [[1, 43, 65, 2, 1], [1, 43, 65, 1, 225]],
+        [[1, 92, 434, 2, 2], [1, 92, 1, 2, 2]],
+        [[1, 92, 1, 4, 1], [1, 92, 134, 1, 17]],
+        [[1, 53, 2, 122, 143], [1, 1, 2, 1, 143]],
+        [[1, 179, 1, 87, 17], [1, 179, 1, 1, 17]],
+        [[1, 1, 17, 5, 1], [1, 22, 1, 1, 28]],
+        [[1, 2, 1, 1, 8], [1, 2, 52, 430, 1]],
+        [[1, 163, 1, 22, 3], [1, 163, 116, 22, 1]],
+        [[1, 1, 44, 30, 7], [1, 1, 44, 30, 1]],
+        [[1, 1, 1, 1, 28], [1, 127, 1, 5, 28]],
+        [[1, 2, 394, 38, 1], [1, 2, 394, 38, 16]],
+        [[1, 10, 49, 77, 17], [1, 1, 1, 1, 17]],
+        [[1, 431, 6, 2, 225], [1, 1, 6, 2, 225]],
+        [[1, 15, 1, 28, 1], [1, 15, 1, 28, 463]],
+        [[1, 129, 2, 48, 96], [1, 129, 2, 1, 1]],
+        [[1, 1, 403, 17, 2], [1, 44, 403, 17, 2]],
+        [[1, 1, 65, 2, 22], [1, 1, 65, 1, 1]],
+        [[1, 24, 103, 17, 18], [1, 24, 1, 1, 1]],
+        [[1, 1, 1, 1, 2], [1, 24, 194, 50, 1]],
+        [[1, 1, 107, 84, 9], [1, 1, 1, 1, 1]]])
+    if idx < binary_op_data_shape.shape[0]:
+        l_shape = binary_op_data_shape[idx][0]
+        r_shape = binary_op_data_shape[idx][1]
+    else:
+        # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
+        ndim = np.random.randint(1, 6)
+        shape = np.random.randint(1, 6, size=(ndim,))
+        l_same_dim = np.random.randint(0, 5)
+        r_same_dim = np.random.randint(0, 5)
+        l_axis_flags = np.random.randint(0, 2, size=ndim)
+        r_axis_flags = np.random.randint(0, 2, size=ndim)
+        if l_same_dim == 4:
+            l_axis_flags = np.ones(ndim)
+        if r_same_dim == 4:
+            r_axis_flags = np.ones(ndim)
+        l_shape = shape.copy()
+        r_shape = shape.copy()
+        l_shape[np.where(l_axis_flags == 0)] = 1
+        r_shape[np.where(r_axis_flags == 0)] = 1
     return [np.random.random(l_shape), np.random.random(r_shape)]
 
-# binary_op_testdata = np.array([[[2, 50, 1, 300, 7], [1, 50, 448, 300, 1]],
-#     [[10, 495, 1, 77, 17], [10, 1, 2, 1, 17]],
-#     [[431, 2, 65, 2, 1], [1, 431, 1, 65, 1, 225]],
-#     [[92, 434, 4, 2, 37], [1, 92, 1, 4, 1, 37]],
-#     [[2, 92, 1, 4, 1], [1, 92, 434, 1, 37]],
-#     [[1, 53, 7, 222, 343], [2, 1, 7, 1, 343]],
-#     [[1, 17, 1, 5, 1], [227, 1, 2, 1, 28]],
-#     [[29, 1, 2, 1, 8], [29, 52, 1, 430, 1]],
-#     [[2, 363, 1, 427, 3], [1, 363, 116, 427, 1]],
-#     [[1, 50, 1, 300, 7], [1, 50, 448, 300, 1]],
-#     [[1, 10, 495, 77, 17], [1, 10, 1, 1, 17]],
-#     [[1, 431, 65, 2, 1], [1, 431, 65, 1, 225]],
-#     [[1, 92, 434, 4, 37], [1, 92, 1, 4, 37]],
-#     [[1, 92, 1, 4, 1], [1, 92, 434, 1, 37]],
-#     [[1, 53, 7, 222, 343], [1, 1, 7, 1, 343]],
-#     [[1, 179, 1, 87, 176], [1, 179, 1, 1, 176]],
-#     [[1, 1, 17, 5, 1], [1, 227, 1, 1, 28]],
-#     [[1, 29, 1, 1, 8], [1, 29, 52, 430, 1]],
-#     [[1, 363, 1, 427, 3], [1, 363, 116, 427, 1]],
-#     [[1, 1, 448, 300, 7], [1, 1, 448, 300, 1]],
-#     [[1, 1, 1, 1, 28], [1, 227, 1, 5, 28]],
-#     [[1, 233, 394, 38, 1], [1, 233, 394, 38, 16]],
-#     [[1, 10, 495, 77, 17], [1, 1, 1, 1, 17]],
-#     [[1, 431, 65, 2, 225], [1, 1, 65, 2, 225]],
-#     [[1, 15, 1, 88, 1], [1, 15, 1, 88, 463]],
-#     [[1, 129, 90, 48, 96], [1, 129, 90, 1, 1]],
-#     [[1, 1, 403, 179, 18], [1, 44, 403, 179, 18]],
-#     [[1, 1, 65, 2, 225], [1, 1, 65, 1, 1]],
-#     [[1, 44, 403, 179, 18], [1, 44, 1, 1, 1]],
-#     [[1, 1, 1, 1, 2], [1, 44, 194, 500, 1]],
-#     [[1, 1, 107, 184, 9], [1, 1, 1, 1, 1]]])
-
-def gen_binary_data():
+def gen_binary_data(dummy):
     ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
     return [np.random.random(shape), np.random.random(shape)]
@@ -898,12 +903,7 @@ def gen_binary_data():
 def check_binary_op_forward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
-        # if i < binary_op_testdata.shape[0]*0:
-        #     d = binary_op_testdata[i]
-        # else:
-        d = gen_data()
-        # if i == 0:
-        #     print d[0]
+        d = gen_data(i)
         x = baseline(d[0], d[1])
         y = symbol.bind(default_context(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward()
@@ -912,10 +912,7 @@ def check_binary_op_forward(symbol, baseline, gen_data):
 def check_binary_op_backward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
-        # if i < binary_op_testdata.shape[0]:
-        #     d = binary_op_testdata[i]
-        # else:
-        d = gen_data()
+        d = gen_data(i)
         out = np.random.random((d[0] + d[1]).shape)
         def reduce_op(shape, x):
             if shape == x.shape:
