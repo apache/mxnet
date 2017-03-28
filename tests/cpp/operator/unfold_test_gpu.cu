@@ -1,7 +1,13 @@
+/*!
+ *  Copyright (c) 2017 by Contributors
+ *  \file cp_decomp_test.cc
+ *  \brief Test CPDecomp core function
+ *  \author Jencir Lee
+ */
 #include <mxnet/tensor_blob.h>
 #include <gtest/gtest.h>
 #include <vector>
-#include "../src/operator/tensor/unfold.h"
+#include "operator/tensor/unfold.h"
 
 namespace mxnet {
 namespace op {
@@ -25,16 +31,18 @@ TEST(Unfold, ravel_multi_index_2D_gpu) {
 
   int *indices;
   DType *result;
-  cudaMallocManaged((void **)&indices, ts.shape_.Size() * sizeof(int));
-  cudaMallocManaged((void **)&result, ts.shape_.Size() * sizeof(DType));
+  cudaMallocManaged(reinterpret_cast<void **>(&indices),
+      ts.shape_.Size() * sizeof(int));
+  cudaMallocManaged(reinterpret_cast<void **>(&result),
+      ts.shape_.Size() * sizeof(DType));
 
   Shape<2> strides = ts.shape_;
   strides[1] = ts.stride_;
 
   int c = 0;
   Shape<2> coord;
-  for (int i = 0; i < (int) ts.size(0); ++i)
-    for (int j = 0; j < (int) ts.size(1); ++j) {
+  for (int i = 0; i < static_cast<int>(ts.size(0)); ++i)
+    for (int j = 0; j < static_cast<int>(ts.size(1)); ++j) {
       coord[0] = i;
       coord[1] = j;
       indices[c] = ravel_multi_index(coord, strides);
@@ -52,7 +60,7 @@ TEST(Unfold, ravel_multi_index_2D_gpu) {
   AccessElements<<<1, 1>>>(ts.shape_.Size(), ts.dptr_, result, indices);
   cudaDeviceSynchronize();
 
-  for (int i = 0; i < (int) ts.shape_.Size(); ++i) {
+  for (int i = 0; i < static_cast<int>(ts.shape_.Size()); ++i) {
     EXPECT_DOUBLE_EQ(result[i], i + 1);
   }
 
@@ -70,17 +78,17 @@ TEST(Unfold, ravel_multi_index_3D_gpu) {
 
   int *indices;
   DType *result;
-  cudaMallocManaged((void **)&indices, ts.shape_.Size() * sizeof(int));
-  cudaMallocManaged((void **)&result, ts.shape_.Size() * sizeof(DType));
+  cudaMallocManaged(reinterpret_cast<void **>(&indices), ts.shape_.Size() * sizeof(int));
+  cudaMallocManaged(reinterpret_cast<void **>(&result), ts.shape_.Size() * sizeof(DType));
 
   Shape<3> strides = ts.shape_;
   strides[2] = ts.stride_;
 
   int c = 0;
   Shape<3> coord;
-  for (int i = 0; i < (int) ts.size(0); ++i)
-    for (int j = 0; j < (int) ts.size(1); ++j)
-      for (int k = 0; k < (int) ts.size(2); ++k) {
+  for (int i = 0; i < static_cast<int>(ts.size(0)); ++i)
+    for (int j = 0; j < static_cast<int>(ts.size(1)); ++j)
+      for (int k = 0; k < static_cast<int>(ts.size(2)); ++k) {
         coord[0] = i;
         coord[1] = j;
         coord[2] = k;
@@ -99,7 +107,7 @@ TEST(Unfold, ravel_multi_index_3D_gpu) {
   AccessElements<<<1, 1>>>(ts.shape_.Size(), ts.dptr_, result, indices);
   cudaDeviceSynchronize();
 
-  for (int i = 0; i < (int) ts.shape_.Size(); ++i) {
+  for (int i = 0; i < static_cast<int>(ts.shape_.Size()); ++i) {
     EXPECT_DOUBLE_EQ(result[i], i + 1);
   }
 
@@ -109,13 +117,5 @@ TEST(Unfold, ravel_multi_index_3D_gpu) {
   cudaFree(indices);
 }
 
-}  // op
-}  // mxnet
-
-int main(int argc, char ** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  testing::FLAGS_gtest_death_test_style = "threadsafe";
-  mshadow::InitTensorEngine<mshadow::gpu>();
-  return RUN_ALL_TESTS();
-}
-
+}  // namespace op
+}  // namespace mxnet

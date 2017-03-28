@@ -1,8 +1,13 @@
-
+/*!
+ *  Copyright (c) 2017 by Contributors
+ *  \file cp_decomp_test.cc
+ *  \brief Test CPDecomp core function
+ *  \author Jencir Lee
+ */
 #include <dmlc/logging.h>
 #include <gtest/gtest.h>
 #include <vector>
-#include "../src/operator/contrib/tensor/unfold.h"
+#include "operator/contrib/tensor/unfold.h"
 
 namespace mxnet {
 namespace op {
@@ -20,8 +25,8 @@ TEST(Unfold, ravel_multi_index_2D) {
 
   int c = 0;
   Shape<2> coord;
-  for (int i = 0; i < (int) ts.size(0); ++i)
-    for (int j = 0; j < (int) ts.size(1); ++j) {
+  for (int i = 0; i < static_cast<int>(ts.size(0)); ++i)
+    for (int j = 0; j < static_cast<int>(ts.size(1)); ++j) {
       ts[i][j] = ++c;
 
       coord[0] = i;
@@ -41,9 +46,9 @@ TEST(Unfold, ravel_multi_index_3D) {
 
   int c = 0;
   Shape<3> coord;
-  for (int i = 0; i < (int) ts.size(0); ++i)
-    for (int j = 0; j < (int) ts.size(1); ++j)
-      for (int k = 0; k < (int) ts.size(2); ++k) {
+  for (int i = 0; i < static_cast<int>(ts.size(0)); ++i)
+    for (int j = 0; j < static_cast<int>(ts.size(1)); ++j)
+      for (int k = 0; k < static_cast<int>(ts.size(2)); ++k) {
         ts[i][j] = ++c;
 
         coord[0] = i;
@@ -55,6 +60,5 @@ TEST(Unfold, ravel_multi_index_3D) {
   FreeSpace(&ts);
 }
 
-}  // op
-}  // mxnet
-
+}  // namespace op
+}  // namespace mxnet

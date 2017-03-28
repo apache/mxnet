@@ -7,17 +7,18 @@
 #ifndef MXNET_OPERATOR_CONTRIB_TENSOR_CP_DECOMP_LINALG_H_
 #define MXNET_OPERATOR_CONTRIB_TENSOR_CP_DECOMP_LINALG_H_
 
-#if MSHADOW_USE_MKL
+#if MXNET_USE_BLAS_MKL
 extern "C" {
   #include <mkl.h>
 }
 #elif __APPLE__
+#include <cblas.h>
+#include <clapack.h>
+#else
 extern "C" {
   #include <cblas.h>
-  #include <clapack.h>
 }
-#else
-#error "The current implementation is only for MKL or Apple vecLib"
+#include "./cp_decomp_lapack.h"
 #endif
 
 #include <mshadow/tensor.h>
@@ -116,7 +117,7 @@ inline int gesdd(char jobz, int m, int n, DType *a, int lda,
     DType *s, DType *u, int ldu, DType *vt, int ldvt);
 
 
-#if MSHADOW_USE_MKL
+#if MXNET_USE_BLAS_MKL
 template <>
 inline int posv<cpu, float>(int n, int nrhs,
     float *a, int lda, float *b, int ldb) {
@@ -179,10 +180,7 @@ inline int orgqr<cpu, double>(int m, int n, int k, double *a, int lda) {
   return status;
 }
 
-
-#endif
-
-#if __APPLE__
+#else
 template <>
 inline int posv<cpu, float>(int n, int nrhs,
     float *a, int lda, float *b, int ldb) {
@@ -190,12 +188,12 @@ inline int posv<cpu, float>(int n, int nrhs,
   transpose<cpu, float>(n, nrhs, b_T, n, b, ldb);
 
   char uplo = 'U';
-  int status, info;
-  status = sposv_(&uplo, &n, &nrhs, a, &lda, b_T, &n, &info);
+  int info;
+  sposv_(&uplo, &n, &nrhs, a, &lda, b_T, &n, &info);
   transpose<cpu, float>(nrhs, n, b, ldb, b_T, n);
 
   delete [] b_T;
-  return status;
+  return info;
 }
 
 template <>
@@ -205,172 +203,170 @@ inline int posv<cpu, double>(int n, int nrhs,
   transpose<cpu, double>(n, nrhs, b_T, n, b, ldb);
 
   char uplo = 'U';
-  int status, info;
-  status = dposv_(&uplo, &n, &nrhs, a, &lda, b_T, &n, &info);
+  int info;
+  dposv_(&uplo, &n, &nrhs, a, &lda, b_T, &n, &info);
   transpose<cpu, double>(nrhs, n, b, ldb, b_T, n);
 
   delete [] b_T;
-  return status;
+  return info;
 }
 
 template <>
 inline int gesdd<cpu, float>(char jobz, int m, int n, float *a, int lda,
     float *s, float *u, int ldu, float *vt, int ldvt) {
-  int status, info;
+  int info;
 
   float *work = new float[10];
   int lwork = -1;
   int *iwork = new int[8 * std::min(m, n)];
 
-  status = sgesdd_(&jobz, &n, &m, a, &lda,
+  sgesdd_(&jobz, &n, &m, a, &lda,
       s, vt, &ldvt, u, &ldu,
       work, &lwork, iwork, &info);
-  if (status != 0) {
+  if (info != 0) {
     delete [] work;
     delete [] iwork;
-    return status;
+    return info;
   }
 
   lwork = static_cast<int>(work[0]);
   delete [] work;
   work = new float[lwork];
 
-  status = sgesdd_(&jobz, &n, &m, a, &lda,
+  sgesdd_(&jobz, &n, &m, a, &lda,
       s, vt, &ldvt, u, &ldu,
       work, &lwork, iwork, &info);
 
   delete [] work;
   delete [] iwork;
-  return status;
+  return info;
 }
 
 template <>
 inline int gesdd<cpu, double>(char jobz, int m, int n, double *a, int lda,
     double *s, double *u, int ldu, double *vt, int ldvt) {
-  int status, info;
+  int info;
 
   double *work = new double[10];
   int lwork = -1;
   int *iwork = new int[8 * std::min(m, n)];
 
-  status = dgesdd_(&jobz, &n, &m, a, &lda,
+  dgesdd_(&jobz, &n, &m, a, &lda,
       s, vt, &ldvt, u, &ldu,
       work, &lwork, iwork, &info);
-  if (status != 0) {
+  if (info != 0) {
     delete [] work;
     delete [] iwork;
-    return status;
+    return info;
   }
 
   lwork = static_cast<int>(work[0]);
   delete [] work;
   work = new double[lwork];
 
-  status = dgesdd_(&jobz, &n, &m, a, &lda,
+  dgesdd_(&jobz, &n, &m, a, &lda,
       s, vt, &ldvt, u, &ldu,
       work, &lwork, iwork, &info);
 
   delete [] work;
   delete [] iwork;
-  return status;
+  return info;
 }
 
 template <>
 inline int orgqr<cpu, float>(int m, int n, int k, float *a, int lda) {
   float *tau, *work;
   int lwork, info;
-  int status = 0;
 
   tau = new float[std::min(m, n)];
   work = new float[10];
   lwork = -1;
-  status = sgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  sgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   lwork = work[0];
   delete [] work;
   work = new float[lwork];
-  status = sgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  sgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   lwork = -1;
-  status = sorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  sorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   lwork = work[0];
   delete [] work;
   work = new float[lwork];
-  status = sorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  sorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   delete [] tau;
   delete [] work;
-  return status;
+  return info;
 }
 
 template <>
 inline int orgqr<cpu, double>(int m, int n, int k, double *a, int lda) {
   double *tau, *work;
   int lwork, info;
-  int status = 0;
 
   tau = new double[std::min(m, n)];
   work = new double[10];
   lwork = -1;
-  status = dgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  dgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   lwork = work[0];
   delete [] work;
   work = new double[lwork];
-  status = dgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  dgeqrf_(&m, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   lwork = -1;
-  status = dorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  dorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   lwork = work[0];
   delete [] work;
   work = new double[lwork];
-  status = dorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
-  if (status != 0) {
+  dorgqr_(&m, &n, &n, a, &lda, tau, work, &lwork, &info);
+  if (info != 0) {
     delete [] tau;
     delete [] work;
-    return status;
+    return info;
   }
 
   delete [] tau;
   delete [] work;
-  return status;
+  return info;
 }
 #endif
 

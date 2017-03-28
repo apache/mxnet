@@ -55,6 +55,15 @@ else
 endif
 CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
+
+ifeq ($(USE_BLAS), mkl)
+  CFLAGS += -DMXNET_USE_BLAS_MKL=1
+else ifeq ($(USE_BLAS), atlas)
+	LDFLAGS += -llapack
+else ifeq ($(USE_BLAS), blas)
+	LDFLAGS += -llapack
+endif
+
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS = -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else

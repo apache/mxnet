@@ -1,7 +1,13 @@
+/*!
+ *  Copyright (c) 2017 by Contributors
+ *  \file cp_decomp_test.cc
+ *  \brief Test CPDecomp core function
+ *  \author Jencir Lee
+ */
 #include <dmlc/logging.h>
 #include <gtest/gtest.h>
 #include <iostream>
-#include "../src/operator/contrib/tensor/cp_decomp_linalg.h"
+#include "operator/contrib/tensor/cp_decomp_linalg.h"
 
 namespace mxnet {
 namespace op {

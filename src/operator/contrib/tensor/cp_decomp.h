@@ -62,6 +62,7 @@ inline DType CPDecompReconstructionError
 template <typename RandomEngine, typename DType>
 inline int CPDecompInitFactors
   (std::vector<Tensor<cpu, 2, DType> > factors_T,
+  const std::vector<Tensor<cpu, 2, DType> > &unfoldings,
   bool orthonormal,
   RandomEngine *generator);
 
@@ -153,7 +154,7 @@ inline int CPDecomp
   std::vector<Tensor<cpu, 2, DType> > factors_T,
   const Tensor<cpu, order, DType> &in,
   int k,
-  DType eps = 1e-3,
+  DType eps = 1e-6,
   int max_iter = 100,
   int restarts = 10,
   bool init_orthonormal_factors = true,
@@ -241,7 +242,7 @@ inline int CPDecomp
   DType currReconstructionError;
   for (int id_run = 0; id_run < restarts; ++id_run) {
     // Randomly initialise factor matrices
-    status = CPDecompInitFactors(currFactors_T,
+    status = CPDecompInitFactors(currFactors_T, unfoldings,
       init_orthonormal_factors, &generator);
     if (status != 0) {
 #if DEBUG
@@ -348,6 +349,7 @@ inline DType CPDecompReconstructionError
 template <typename RandomEngine, typename DType>
 inline int CPDecompInitFactors
   (std::vector<Tensor<cpu, 2, DType> > factors_T,
+  const std::vector<Tensor<cpu, 2, DType> > &unfoldings,
   bool orthonormal,
   RandomEngine *generator) {
   int status = 0;
@@ -360,17 +362,55 @@ inline int CPDecompInitFactors
   // TODO(jli05): implement seed for random generator
   std::normal_distribution<DType> normal(0.0, 1.0);
 
+  int num_singular_values;
+  DType *u, *s, *vt;
+
+  // Make a copy of the unfolding as after the _gesdd call
+  // the contents of it will be destroyed
+  std::vector<TensorContainer<cpu, 2, DType> > _unfoldings;
+
   for (int id_mode = 0; id_mode < order; ++id_mode) {
+    // fill factors_T[id_mode] with random numbers
     for (int i = 0; i < k; ++i) {
       for (int j = 0; j < static_cast<int>(factors_T[id_mode].size(1)); ++j)
         factors_T[id_mode][i][j] = normal(*generator);
     }
 
+    // optionally, we fill factors_T[id_mode] with left singular
+    // vectors of unfoldings[id_mode] to increase CPDecomp stability
     if (orthonormal) {
-      status = orgqr<cpu, DType>(static_cast<int>(factors_T[id_mode].size(1)),
-          k, k, factors_T[id_mode].dptr_, factors_T[id_mode].stride_);
-      if (status != 0)
+      num_singular_values = std::min
+        (static_cast<int>(unfoldings[id_mode].size(0)),
+        static_cast<int>(unfoldings[id_mode].size(1)));
+      u = new DType[unfoldings[id_mode].size(0) * num_singular_values];
+      s = new DType[num_singular_values];
+      vt = new DType[num_singular_values * unfoldings[id_mode].size(1)];
+
+      _unfoldings.emplace_back(unfoldings[id_mode].shape_);
+      Copy(_unfoldings[id_mode], unfoldings[id_mode]);
+
+      status = gesdd<cpu, DType>('S',
+        static_cast<int>(_unfoldings[id_mode].size(0)),
+        static_cast<int>(_unfoldings[id_mode].size(1)),
+        _unfoldings[id_mode].dptr_, _unfoldings[id_mode].stride_,
+        s, u, num_singular_values, vt,
+        static_cast<int>(_unfoldings[id_mode].size(1)));
+      if (status != 0) {
+        delete [] u;
+        delete [] s;
+        delete [] vt;
         return status;
+      }
+
+      for (int i = 0; i < std::min(k, num_singular_values); ++i) {
+        for (int j = 0; j < static_cast<int>(factors_T[id_mode].size(1)); ++j)
+        factors_T[id_mode][i][j] = u[j * num_singular_values + i];
+      }
+      print2DTensor_(factors_T[id_mode]);
+
+      delete [] u;
+      delete [] s;
+      delete [] vt;
     }
   }
 
@@ -407,12 +447,14 @@ inline int CPDecompUpdate
     if (id_mode == mode)
       continue;
 
+    // Compute kr_prod_T[id_kr_prod] from kr_prod_T[id_kr_prod - 1] row by row
+    kr_prod_T[id_kr_prod] = 0;
     d = factors_T[id_mode].size(1);
     for (int i = 0; i < k; ++i) {
       expr::BLASEngine<cpu, DType>::SetStream
-        (kr_prod_T[id_kr_prod][i].stream_);
+        (kr_prod_T[id_kr_prod].stream_);
       expr::BLASEngine<cpu, DType>::ger
-        (kr_prod_T[id_kr_prod][i].stream_,
+        (kr_prod_T[id_kr_prod].stream_,
         d, kr_length,
         1,
         factors_T[id_mode][i].dptr_, 1,
