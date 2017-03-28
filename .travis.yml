@@ -25,9 +25,9 @@ env:
 
 matrix:
   include:
-    - os: linux
-      dist: trusty
-      env: TASK=perl_test
+    - # os: linux
+      # dist: trusty
+      # env: TASK=perl_test
     - os: osx
       ## sudo is required because
       ## prexexisting packages conflict
