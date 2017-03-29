@@ -93,6 +93,17 @@ def test_bidirectional():
     assert outs == [(10, 200), (10, 200), (10, 200)]
 
 
+def test_zoneout():
+    cell = mx.rnn.ZoneoutCell(mx.rnn.RNNCell(100, prefix='rnn_'), zoneout_outputs=0.5,
+                              zoneout_states=0.5)
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    assert outs == [(10, 100), (10, 100), (10, 100)]
+
+
 def test_unfuse():
     cell = mx.rnn.FusedRNNCell(100, num_layers=3, mode='lstm',
                                prefix='test_', bidirectional=True,

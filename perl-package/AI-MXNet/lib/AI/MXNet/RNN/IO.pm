@@ -1,4 +1,6 @@
 package AI::MXNet::RNN::IO;
+use strict;
+use warnings;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 
@@ -6,7 +8,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-    AI::MXNet::RNN::IO - Functions for constructing recurrent neural networks.
+AI::MXNet::RNN::IO - Functions for constructing recurrent neural networks.
 =cut
 
 =head1 SYNOPSIS
@@ -14,45 +16,45 @@ use AI::MXNet::Function::Parameters;
 
 =head1 DESCRIPTION
 
-    Functions for constructing recurrent neural networks.
+Functions for constructing recurrent neural networks.
 =cut
 
 =head2
 
-    Encode sentences and (optionally) build a mapping
-    from string tokens to integer indices. Unknown keys
-    will be added to vocabulary.
+Encode sentences and (optionally) build a mapping
+from string tokens to integer indices. Unknown keys
+will be added to vocabulary.
 
-    Parameters
-    ----------
-    sentences : array ref of array refs of str
-        A array ref of sentences to encode. Each sentence
-        should be a array ref of string tokens.
-    vocab : undef or hash ref of str -> int
-        Optional input Vocabulary
-    invalid_label : int, default -1
-        Index for invalid token, like <end-of-sentence>
-    invalid_key : str, default '\n'
-        Key for invalid token. Use '\n' for end
-        of sentence by default.
-    start_label : int
-        lowest index.
+Parameters
+----------
+sentences : array ref of array refs of str
+    A array ref of sentences to encode. Each sentence
+    should be a array ref of string tokens.
+vocab : undef or hash ref of str -> int
+    Optional input Vocabulary
+invalid_label : int, default -1
+    Index for invalid token, like <end-of-sentence>
+invalid_key : str, default '\n'
+    Key for invalid token. Use '\n' for end
+    of sentence by default.
+start_label : int
+    lowest index.
 
-    Returns
-    -------
-    result : array ref of array refs of int
-        encoded sentences
-    vocab : hash ref of str -> int
-        result vocabulary
+Returns
+-------
+result : array ref of array refs of int
+    encoded sentences
+vocab : hash ref of str -> int
+    result vocabulary
 =cut
 
 
 method encode_sentences(
-    ArrayRef[ArrayRef] $sentences,
-    Maybe[HashRef]     $vocab=,
-    Int                $invalid_label=-1,
-    Str                $invalid_key="\n",
-    Int                $start_label=0
+    ArrayRef[ArrayRef]  $sentences,
+    Maybe[HashRef]     :$vocab=,
+    Int                :$invalid_label=-1,
+    Str                :$invalid_key="\n",
+    Int                :$start_label=0
 )
 {
     my $idx = $start_label;
@@ -72,7 +74,7 @@ method encode_sentences(
         my @coded;
         for my $word (@{ $sent })
         {
-            if(not exists $vocab{ $word })
+            if(not exists $vocab->{ $word })
             {
                 assert($new_vocab, "Unknown token: $word");
                 if($idx == $invalid_label)
@@ -82,7 +84,7 @@ method encode_sentences(
                 $vocab->{$word} = $idx;
                 $idx += 1;
             }
-            push @coded, $vocab{ $word };
+            push @coded, $vocab->{ $word };
         }
         push @res, \@coded;
     }
@@ -95,7 +97,7 @@ package AI::MXNet::BucketSentenceIter;
 
 =head1 NAME
 
-    AI::MXNet::BucketSentenceIter
+AI::MXNet::BucketSentenceIter
 =cut
 
 =head1 SYNOPSIS
@@ -103,38 +105,38 @@ package AI::MXNet::BucketSentenceIter;
 
 =head1 DESCRIPTION
 
-    Simple bucketing iterator for language model.
-    Label for each step is constructed from data of
-    next step.
+Simple bucketing iterator for language model.
+Label for each step is constructed from data of
+next step.
 
 =cut
 
 =head2 new
 
-    Parameters
-    ----------
-    sentences : array ref of array refs of int
-        encoded sentences
-    batch_size : int
-        batch_size of data
-    invalid_label : int, default -1
-        key for invalid label, e.g. <end-of-sentence>
-    dtype : str, default 'float32'
-        data type
-    buckets : array ref of int
-        size of data buckets. Automatically generated if undef.
-    data_name : str, default 'data'
-        name of data
-    label_name : str, default 'softmax_label'
-        name of label
-    layout : str
-        format of data and label. 'NT' means (batch_size, length)
-        and 'TN' means (length, batch_size).
+Parameters
+----------
+sentences : array ref of array refs of int
+    encoded sentences
+batch_size : int
+    batch_size of data
+invalid_label : int, default -1
+    key for invalid label, e.g. <end-of-sentence>
+dtype : str, default 'float32'
+    data type
+buckets : array ref of int
+    size of data buckets. Automatically generated if undef.
+data_name : str, default 'data'
+    name of data
+label_name : str, default 'softmax_label'
+    name of label
+layout : str
+    format of data and label. 'NT' means (batch_size, length)
+    and 'TN' means (length, batch_size).
 =cut
 
 use Mouse;
 use AI::MXNet::Base;
-use List::Util qw(shuffle);
+use List::Util qw(shuffle max);
 extends 'AI::MXNet::DataIter';
 has 'sentences'     => (is => 'ro', isa => 'ArrayRef[ArrayRef]', required => 1);
 has '+batch_size'   => (is => 'ro', isa => 'Int',                required => 1);
@@ -159,7 +161,7 @@ sub BUILD
         my $p = pdl([map { scalar(@$_) } @{ $self->sentences }]);
         enumerate(sub {
             my ($i, $j) = @_;
-            if($j >= $self->bucket_size)
+            if($j >= $self->batch_size)
             {
                 push @buckets, $i;
             }
@@ -243,7 +245,7 @@ method reset()
     $self->ndlabel([]);
     for my $buck (@{ $self->data })
     {
-        $buck = cat(shuffle(dog($buck)));
+        $buck = pdl_shuffle($buck);
         my $label = $buck->zeros;
         $label->slice([0, -2], 'X')  .= $buck->slice([1, -1], 'X');
         $label->slice([-1, -1], 'X') .= $self->invalid_label;
@@ -272,6 +274,7 @@ method next()
         data          => [$data],
         label         => [$label],
         bucket_key    => $self->buckets->[$i],
+        pad           => 0,
         provide_data  => [
             AI::MXNet::DataDesc->new(
                 name  => $self->data_name,

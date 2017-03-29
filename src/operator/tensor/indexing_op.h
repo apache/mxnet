@@ -438,6 +438,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
 inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
+  LOG(INFO) << "batch_take is deprecated. Please use pick instead.";
   CHECK_EQ(in_attrs->size(), 2U) << "BatchTake op requires two inputs";
   if ((*in_attrs)[1].ndim() != 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);

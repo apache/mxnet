@@ -54,7 +54,7 @@ Remember to enable CUDA if you want to be able to train, since CPU training is
 insanely slow. Using CUDNN is optional.
 
 ### Try the demo
-* Download the pretrained model: [`ssd_300.zip`](https://dl.dropboxusercontent.com/u/39265872/ssd_300_vgg16_reduced_voc0712_trainval.zip), and extract to `model/` directory. (This model is converted from VGG_VOC0712_SSD_300x300_iter_60000.caffemodel provided by paper author).
+* Download the pretrained model: [`ssd_300.zip`](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.2-alpha/ssd_300_vgg16_reduced_voc0712_trainval.zip), and extract to `model/` directory. (This model is converted from VGG_VOC0712_SSD_300x300_iter_60000.caffemodel provided by paper author).
 * Run
 ```
 # cd /path/to/mxnet/example/ssd/
@@ -71,7 +71,7 @@ python demo.py --epoch 0 --images ./data/demo/dog.jpg --thresh 0.5
 This example only covers training on Pascal VOC dataset. Other datasets should
 be easily supported by adding subclass derived from class `Imdb` in `dataset/imdb.py`.
 See example of `dataset/pascal_voc.py` for details.
-* Download the converted pretrained `vgg16_reduced` model [here](https://dl.dropboxusercontent.com/u/39265872/vgg16_reduced.zip), unzip `.param` and `.json` files
+* Download the converted pretrained `vgg16_reduced` model [here](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.2-beta/vgg16_reduced.zip), unzip `.param` and `.json` files
 into `model/` directory by default.
 * Download the PASCAL VOC dataset, skip this step if you already have one.
 ```

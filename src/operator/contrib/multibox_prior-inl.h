@@ -125,8 +125,8 @@ class MultiBoxPriorOp : public Operator {
  public:
   explicit MultiBoxPriorOp(MultiBoxPriorParam param)
     : clip_(param.clip), sizes_(param.sizes.info), ratios_(param.ratios.info) {
-      CHECK_GT(sizes_.size(), 0);
-      CHECK_GT(ratios_.size(), 0);
+      CHECK_GT(sizes_.size(), 0U);
+      CHECK_GT(ratios_.size(), 0U);
     }
 
   virtual void Forward(const OpContext &ctx,
@@ -142,7 +142,7 @@ class MultiBoxPriorOp : public Operator {
     CHECK_GT(in_height, 0);
     int in_width = in_data[mboxprior_enum::kData].size(3);
     CHECK_GT(in_width, 0);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> out;
     // TODO(Joshua Zhang): this implementation is to be compliant to original ssd in caffe
@@ -202,9 +202,9 @@ class MultiBoxPriorProp: public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "Inputs: [data]" << in_shape->size();
+    CHECK_EQ(in_shape->size(), 1U) << "Inputs: [data]" << in_shape->size();
     TShape dshape = in_shape->at(mboxprior_enum::kData);
-    CHECK_GE(dshape.ndim(), 4) << "Input data should be 4D: batch-channel-y-x";
+    CHECK_GE(dshape.ndim(), 4U) << "Input data should be 4D: batch-channel-y-x";
     int in_height = dshape[2];
     CHECK_GT(in_height, 0) << "Input height should > 0";
     int in_width = dshape[3];

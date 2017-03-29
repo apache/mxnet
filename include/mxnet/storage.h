@@ -64,7 +64,7 @@ class Storage {
    */
   static Storage* Get();
   /*!
-   * \brief Get shared pointer reference to engine singleton.
+   * \brief Get shared pointer reference to storage singleton.
    *  Most user should not call this function.
    *  This function is called by another singleton X who requires
    *  Storage to be destructed after X.

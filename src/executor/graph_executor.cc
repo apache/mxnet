@@ -733,17 +733,18 @@ void GraphExecutor::InitOpSegs() {
           op_node.exec->exec_type() != Operator::kSync) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
-      }
-      // If it produces output gradient, don't include it in the segment
-      bool output_gradient = false;
-      for (auto &out_arr : op_node.exec->out_array) {
-        if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
-          output_gradient = true;
+      } else {
+        // If it produces output gradient, don't include it in the segment
+        bool output_gradient = false;
+        for (auto &out_arr : op_node.exec->out_array) {
+          if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
+            output_gradient = true;
+          }
         }
-      }
-      if (output_gradient) {
-        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-        topo_start = nid + 1;
+        if (output_gradient) {
+          cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+          topo_start = nid + 1;
+        }
       }
     }
     // last segment for backward
@@ -899,11 +900,18 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     on_complete();
   };
 #if MXNET_USE_PROFILER
+    opr_names.pop_back();
     opr_names += "]";
+    // the lifetime of `opr_names.c_str()` is same with opr_names
+    // you need to copy it out. (potential memory leak risk)
+    char *p_opr_name = new char[opr_names.size() + 1];
+    memcpy(p_opr_name, opr_names.c_str(), opr_names.size() + 1);
+#else
+    char *p_opr_name = nullptr;
 #endif
   ret.opr = Engine::Get()->NewOperator(
       exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-      PROFILER_MESSAGE(opr_names.c_str()));
+      PROFILER_MESSAGE(p_opr_name));
   return ret;
 }
 }  // namespace exec
