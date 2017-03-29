@@ -22,9 +22,6 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
-#ifdef __CUDACC__
-#include "../../common/cuda_utils.h"
-#endif
 
 namespace mxnet {
 namespace op {
