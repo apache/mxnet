@@ -1,5 +1,5 @@
 # Installing MXNet on CentOS
-MXNet currently supports Python, R, Julia, and Scala. For users on CentOS with Docker environment, MXNet provides [Docker installation guide](http://mxnet.io/get_started/docker_setup.html). If you do not have a Docker environment set up, follow below-provided step by step instructions.
+MXNet currently supports Python, R, Julia, Scala, and Perl. For users on CentOS with Docker environment, MXNet provides [Docker installation guide](http://mxnet.io/get_started/docker_setup.html). If you do not have a Docker environment set up, follow below-provided step by step instructions.
 
 
 ## Minimum Requirements
@@ -141,11 +141,12 @@ If you don't get an import error, then MXNet is ready for python.
 
 Note: You can update mxnet for python by repeating this step after re-building `libmxnet.so`.
 
-### Install MXNet for R, Julia and Scala
+### Install MXNet for R, Julia, Scala, and Perl.
 
 - [R](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-r)
 - [Julia](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-julia)
 - [Scala](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-scala)
+- [Perl](http://mxnet.io/get_started/amazonlinux_setup.html#install-the-mxnet-package-for-perl)
 
 ## Troubleshooting
 

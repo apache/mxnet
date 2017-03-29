@@ -691,7 +691,7 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     exe_deconv.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv.backward(deconv_out_grad)
-    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy(), rtol=1e-3)
+    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy(), rtol=1e-3, atol=1e-2)
     # Test AddTo
     exe_deconv_addto = deconv.bind(default_context(), args=deconv_args,
                                    args_grad=deconv_addto_args_grad,
@@ -838,7 +838,7 @@ def test_convolution_grouping():
     exe2.backward(exe2.outputs[0])
 
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3)
+        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 def gen_broadcast_data():
     # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
@@ -2910,7 +2910,49 @@ def test_pick():
         check_numeric_gradient(sym, [data, index])
 
 
+def test_custom_op():
+    class Sqr(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            self.assign(out_data[0], req[0], in_data[0]*in_data[0])
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], 2*in_data[0]*out_grad[0])
+
+    @mx.operator.register("sqr")
+    class SqrProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(SqrProp, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            return in_shape, [in_shape[0]], []
+
+        def infer_type(self, in_type):
+            return in_type, [in_type[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return Sqr()
+
+    data = mx.symbol.Variable('data')
+    op = mx.symbol.Custom(data=data, name='sqr', op_type='sqr')
+    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
+    check_numeric_gradient(op, [x])
+
+    data = mx.symbol.Variable('data')
+    data = mx.symbol.cast(data, dtype='float64')
+    op = mx.symbol.Custom(data=data, name='sqr', op_type='sqr')
+    op = mx.symbol.cast(op, dtype='float32')
+    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
+    check_numeric_gradient(op, [x])
+
+
 if __name__ == '__main__':
+    test_custom_op()
     test_log_softmax()
     test_new_softmax()
     test_pick()

@@ -42,7 +42,7 @@ struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
   }
 };  // struct SliceChannelParam
 
-template<typename xpu>
+template<typename xpu, typename DType>
 class SliceChannelOp : public Operator {
  public:
   explicit SliceChannelOp(SliceChannelParam param)
@@ -58,8 +58,6 @@ class SliceChannelOp : public Operator {
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 3> > outputs(size_);
-    Tensor<xpu, 3> data;
     size_t leading = 1, trailing = 1;
     int real_axis = axis_;
     if (real_axis < 0) {
@@ -75,9 +73,11 @@ class SliceChannelOp : public Operator {
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    data = in_data[slice_enum::kData].get_with_shape<xpu, 3, real_t>(dshape, s);
+    Tensor<xpu, 3, DType> data = in_data[slice_enum::kData].get_with_shape<xpu, 3, DType>(
+        dshape, s);
+    std::vector<Tensor<xpu, 3, DType> > outputs(size_);
     for (int i = 0; i < size_; ++i) {
-      outputs[i] = out_data[i].get_with_shape<xpu, 3, real_t>(slice_shape, s);
+      outputs[i] = out_data[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
     }
     Split(data, &outputs, 1, req);
   }
@@ -94,8 +94,6 @@ class SliceChannelOp : public Operator {
     CHECK_EQ(out_grad.size(), static_cast<size_t>(size_));
     CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 3> > grad_out(size_);
-    Tensor<xpu, 3> grad;
     size_t leading = 1, trailing = 1;
     int real_axis = axis_;
     if (real_axis < 0) {
@@ -111,9 +109,11 @@ class SliceChannelOp : public Operator {
     }
     Shape<3> dshape = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    grad = in_grad[slice_enum::kData].get_with_shape<xpu, 3, real_t>(dshape, s);
+    Tensor<xpu, 3, DType> grad = in_grad[slice_enum::kData].get_with_shape<xpu, 3, DType>(
+        dshape, s);
+    std::vector<Tensor<xpu, 3, DType> > grad_out(size_);
     for (int i = 0; i < size_; ++i) {
-      grad_out[i] = out_grad[i].get_with_shape<xpu, 3, real_t>(slice_shape, s);
+      grad_out[i] = out_grad[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
     }
     Concatenate(grad_out, &grad, 1, req[slice_enum::kData]);
   }
@@ -125,7 +125,7 @@ class SliceChannelOp : public Operator {
 
 
 template<typename xpu>
-Operator *CreateOp(SliceChannelParam param);
+Operator *CreateOp(SliceChannelParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
@@ -151,6 +151,21 @@ class SliceChannelProp : public OperatorProperty {
 
   int NumOutputs() const override {
     return param_.num_outputs;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    CHECK_EQ(in_type->size(), 1U);
+    int dtype = (*in_type)[0];
+    CHECK_NE(dtype, -1) << "First input must have specified type";
+    out_type->clear();
+    out_type->reserve(param_.num_outputs);
+    for (int i = 0; i < param_.num_outputs; ++i) {
+      out_type->push_back(dtype);
+    }
+    aux_type->clear();
+    return true;
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
@@ -190,7 +205,7 @@ class SliceChannelProp : public OperatorProperty {
       }
       dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
-    CHECK_EQ((*out_shape).size(), static_cast<size_t>(param_.num_outputs))
+    CHECK_EQ(static_cast<int>((*out_shape).size()), param_.num_outputs)
       << "Size of output shape mismatch!";
     for (int i = 0; i < param_.num_outputs; ++i) {
       SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
@@ -235,7 +250,13 @@ class SliceChannelProp : public OperatorProperty {
     return out_grad;
   }
 
-  Operator* CreateOperator(Context ctx) const override;
+  Operator* CreateOperator(Context ctx) const override {
+    LOG(FATAL) << "Not Implemented.";
+    return nullptr;
+  }
+
+  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                             std::vector<int> *in_type) const override;
 
  private:
   SliceChannelParam param_;
