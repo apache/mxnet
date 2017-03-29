@@ -21,6 +21,7 @@ mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
+mxnet_option(USE_CPP_PACKAGE      "Build C++ Package" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
@@ -479,7 +480,10 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
-add_subdirectory(cpp-package)
+if(USE_CPP_PACKAGE)
+  add_subdirectory(cpp-package)
+endif()
+
 add_subdirectory(example/image-classification/predict-cpp)
 
 # ---[ Linter target

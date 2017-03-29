@@ -1,10 +1,12 @@
 ﻿# -*- coding: utf-8 -*-
 from ctypes import *
 from ctypes.util import find_library
+import os
 import logging
 import platform
 import re
 import sys
+import tempfile
 
 class EnumType:
     name = ''
@@ -351,33 +353,49 @@ if __name__ == "__main__":
     #    decl = decl + "=" + arg.defaultString
     #print(decl)
 
-    # generate file header
-    patternStr = ("/*!\n"
-                  "*  Copyright (c) 2016 by Contributors\n"
-                  "* \\file op.h\n"
-                  "* \\brief definition of all the operators\n"
-                  "* \\author Chuntao Hong, Xin Li\n"
-                  "*/\n"
-                  "\n"
-                  "#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
-                  "#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
-                  "\n"
-                  "#include <string>\n"
-                  "#include <vector>\n"
-                  "#include \"mxnet-cpp/base.h\"\n"
-                  "#include \"mxnet-cpp/shape.h\"\n"
-                  "#include \"mxnet-cpp/op_util.h\"\n"
-                  "#include \"mxnet-cpp/operator.h\"\n"
-                  "#include \"dmlc/optional.h\"\n"
-                  "\n"
-                  "namespace mxnet {\n"
-                  "namespace cpp {\n"
-                  "\n"
-                  "%s"
-                  "} //namespace cpp\n"
-                  "} //namespace mxnet\n"
-                  "#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n")
-    with open('../../include/mxnet-cpp/op.h', 'w') as f:
-        f.write(patternStr % ParseAllOps())
+    temp_file_name = ""
+    output_file = '../../include/mxnet-cpp/op.h'
+    try:
+        # generate file header
+        patternStr = ("/*!\n"
+                      "*  Copyright (c) 2016 by Contributors\n"
+                      "* \\file op.h\n"
+                      "* \\brief definition of all the operators\n"
+                      "* \\author Chuntao Hong, Xin Li\n"
+                      "*/\n"
+                      "\n"
+                      "#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
+                      "#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
+                      "\n"
+                      "#include <string>\n"
+                      "#include <vector>\n"
+                      "#include \"mxnet-cpp/base.h\"\n"
+                      "#include \"mxnet-cpp/shape.h\"\n"
+                      "#include \"mxnet-cpp/op_util.h\"\n"
+                      "#include \"mxnet-cpp/operator.h\"\n"
+                      "#include \"dmlc/optional.h\"\n"
+                      "\n"
+                      "namespace mxnet {\n"
+                      "namespace cpp {\n"
+                      "\n"
+                      "%s"
+                      "} //namespace cpp\n"
+                      "} //namespace mxnet\n"
+                      "#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n")
+
+        # Generate a temporary file name
+        tf = tempfile.NamedTemporaryFile()
+        temp_file_name = tf.name
+        tf.close()
+        with open(temp_file_name, 'w') as f:
+            f.write(patternStr % ParseAllOps())
+
+    except Exception, e:
+      os.remove(output_file)
+      if len(temp_file_name) > 0:
+        os.remove(temp_file_name)
+      raise(e)
+
+    os.system('./move-if-change.sh ' + temp_file_name + ' ' + output_file)
     pass
 
