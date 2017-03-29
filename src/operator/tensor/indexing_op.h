@@ -344,7 +344,10 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
   return (*in_attrs)[0] != -1;
 }
 
-struct take {
+/*! \brief name the struct Take instead of take
+ * to avoid conflict with the take function in mshadow
+ */
+struct Take {
   // assume that idx have been flattened to a 1-D tensor (N,)
   // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
   // M is the number of columns of in_data and out_data
@@ -360,7 +363,7 @@ struct take {
   }
 };
 
-struct take_backward {
+struct TakeBackward {
   // assume that idx have been flattened to a 1-D tensor (N,)
   // assume that out_grad and in_grad have been flattened to 2-D tensors, (N, M) and (K, M)
   // M is the number of columns of in_grad and out_grad
@@ -394,7 +397,7 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
-      Kernel<take, xpu>::Launch(s, oshape.Size(),
+      Kernel<Take, xpu>::Launch(s, oshape.Size(),
                                 outputs[take_::kOut].dptr<DType>(),
                                 inputs[take_::kArr].dptr<DType>(),
                                 inputs[take_::kIdx].dptr<IType>(),
@@ -431,7 +434,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
         if (req[take_::kArr] == kWriteTo) {
           Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>());
         }
-        Kernel<take_backward, xpu>::Launch(s, oshape.Size(), outputs[0].dptr<DType>(),
+        Kernel<TakeBackward, xpu>::Launch(s, oshape.Size(), outputs[0].dptr<DType>(),
                                            inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
                                            oshape.Size()/idxshape.Size(), arrshape[0]);
       } else {
