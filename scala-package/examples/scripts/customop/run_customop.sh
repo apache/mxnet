@@ -3,9 +3,6 @@
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
 CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
 
-# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
-export MXNET_CPU_WORKER_NTHREADS=2
-
 # which gpu card to use, -1 means cpu
 GPU=$1
 

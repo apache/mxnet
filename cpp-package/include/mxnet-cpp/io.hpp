@@ -14,46 +14,49 @@
 namespace mxnet {
 namespace cpp {
 
-MXDataIterMap *MXDataIter::mxdataiter_map_ = new MXDataIterMap;
+inline MXDataIterMap*& MXDataIter::mxdataiter_map() {
+    static MXDataIterMap* mxdataiter_map_ = new MXDataIterMap;
+    return mxdataiter_map_; 
+}
 
-MXDataIter::MXDataIter(const std::string &mxdataiter_type) {
-  creator_ = mxdataiter_map_->GetMXDataIterCreator(mxdataiter_type);
+inline MXDataIter::MXDataIter(const std::string &mxdataiter_type) {
+  creator_ = mxdataiter_map()->GetMXDataIterCreator(mxdataiter_type);
   blob_ptr_ = std::make_shared<MXDataIterBlob>(nullptr);
 }
 
-void MXDataIter::BeforeFirst() {
+inline void MXDataIter::BeforeFirst() {
   int r = MXDataIterBeforeFirst(blob_ptr_->handle_);
   CHECK_EQ(r, 0);
 }
 
-bool MXDataIter::Next() {
+inline bool MXDataIter::Next() {
   int out;
   int r = MXDataIterNext(blob_ptr_->handle_, &out);
   CHECK_EQ(r, 0);
   return out;
 }
 
-NDArray MXDataIter::GetData() {
+inline NDArray MXDataIter::GetData() {
   NDArrayHandle handle;
   int r = MXDataIterGetData(blob_ptr_->handle_, &handle);
   CHECK_EQ(r, 0);
   return NDArray(handle);
 }
 
-NDArray MXDataIter::GetLabel() {
+inline NDArray MXDataIter::GetLabel() {
   NDArrayHandle handle;
   int r = MXDataIterGetLabel(blob_ptr_->handle_, &handle);
   CHECK_EQ(r, 0);
   return NDArray(handle);
 }
 
-int MXDataIter::GetPadNum() {
+inline int MXDataIter::GetPadNum() {
   int out;
   int r = MXDataIterGetPadNum(blob_ptr_->handle_, &out);
   CHECK_EQ(r, 0);
   return out;
 }
-std::vector<int> MXDataIter::GetIndex() {
+inline std::vector<int> MXDataIter::GetIndex() {
   uint64_t *out_index, out_size;
   int r = MXDataIterGetIndex(blob_ptr_->handle_, &out_index, &out_size);
   CHECK_EQ(r, 0);
@@ -64,7 +67,7 @@ std::vector<int> MXDataIter::GetIndex() {
   return ret;
 }
 
-MXDataIter MXDataIter::CreateDataIter() {
+inline MXDataIter MXDataIter::CreateDataIter() {
   std::vector<const char *> param_keys;
   std::vector<const char *> param_values;
 
