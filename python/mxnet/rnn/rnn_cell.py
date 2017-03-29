@@ -7,7 +7,7 @@ from __future__ import print_function
 
 import warnings
 
-from .. import symbol, init, ndarray
+from .. import symbol, init, ndarray, _symbol_internal
 from ..base import string_types, numeric_types
 
 
@@ -825,13 +825,43 @@ class ModifierCell(BaseRNNCell):
 class ZoneoutCell(ModifierCell):
     """Apply Zoneout on base cell"""
     def __init__(self, base_cell, zoneout_outputs=0., zoneout_states=0.):
+        assert not isinstance(base_cell, FusedRNNCell), \
+            "FusedRNNCell doesn't support zoneout. " \
+            "Please unfuse first."
+        assert not isinstance(base_cell, BidirectionalCell), \
+            "BidirectionalCell doesn't support zoneout since it doesn't support step. " \
+            "Please add ZoneoutCell to the cells underneath instead."
+        assert not isinstance(base_cell, SequentialRNNCell) or not base_cell._bidirectional, \
+            "Bidirectional SequentialRNNCell doesn't support zoneout. " \
+            "Please add ZoneoutCell to the cells underneath instead."
         super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs
         self.zoneout_states = zoneout_states
         self.prev_output = None
 
+    def reset(self):
+        super(ZoneoutCell, self).reset()
+        self.prev_output = None
+
     def __call__(self, inputs, states):
-        raise NotImplementedError
+        cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
+        next_output, next_states = cell(inputs, states)
+        mask = (lambda p, like:
+                symbol.Dropout(_symbol_internal._identity_with_attr_like_rhs(symbol.ones((0, 0)),
+                                                                             like),
+                               p=p))
+
+        prev_output = self.prev_output if self.prev_output else symbol.zeros((0, 0))
+
+        output = (symbol.where(mask(p_outputs, next_output), next_output, prev_output)
+                  if p_outputs != 0. else next_output)
+        states = ([symbol.where(mask(p_states, new_s), new_s, old_s) for new_s, old_s in
+                   zip(next_states, states)] if p_states != 0. else next_states)
+
+        self.prev_output = output
+
+        return output, states
+
 
 
 class BidirectionalCell(BaseRNNCell):

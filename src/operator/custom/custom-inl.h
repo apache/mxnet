@@ -5,8 +5,8 @@
  * \author Junyuan Xie
 */
 
-#ifndef MXNET_OPERATOR_CUSTOM_INL_H_
-#define MXNET_OPERATOR_CUSTOM_INL_H_
+#ifndef MXNET_OPERATOR_CUSTOM_CUSTOM_INL_H_
+#define MXNET_OPERATOR_CUSTOM_CUSTOM_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -21,7 +21,7 @@
 #include <functional>
 #include <condition_variable>
 #include <queue>
-#include "./operator_common.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -34,9 +34,10 @@ struct CustomOpParam {
 template<typename xpu>
 class CustomOp : public Operator {
  public:
-  explicit CustomOp(CustomOpInfo* op_info) {
-    op_info_.reset(op_info, [](CustomOpInfo *ptr){
-        ptr->del(ptr->p_del);
+  explicit CustomOp(MXCallbackList* op_info) {
+    op_info_.reset(op_info, [](MXCallbackList *ptr){
+        reinterpret_cast<CustomOpDelFunc>(ptr->callbacks[kCustomOpDelete])(
+          ptr->contexts[kCustomOpDelete]);
         delete ptr;
       });
     if (std::string("NaiveEngine") == dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
@@ -88,7 +89,7 @@ class CustomOp : public Operator {
 
  private:
   Context get_ctx();
-  std::shared_ptr<CustomOpInfo> op_info_;
+  std::shared_ptr<MXCallbackList> op_info_;
   std::mutex mtx_;
   std::condition_variable cv_;
   std::thread worker_;
@@ -98,7 +99,7 @@ class CustomOp : public Operator {
 };  // CustomOp
 
 template<typename xpu>
-Operator* CreateOp(CustomOpInfo *op_info);
+Operator* CreateOp(MXCallbackList *op_info);
 
 class CustomOpProp : public OperatorProperty {
  public:
@@ -127,7 +128,11 @@ class CustomOpProp : public OperatorProperty {
     CHECK(registry_.find(param_.op_type) != registry_.end())
       << "Cannot find custom operator type " << param_.op_type;
     CustomOpPropCreator creator = registry_[param_.op_type];
-    info_.reset(new CustomOpPropInfo, [](CustomOpPropInfo* ptr){ptr->del(ptr->p_del);});
+    info_.reset(new MXCallbackList, [](MXCallbackList* ptr){
+        reinterpret_cast<CustomOpDelFunc>(ptr->callbacks[kCustomOpPropDelete])(
+          ptr->contexts[kCustomOpPropDelete]);
+        delete ptr;
+      });
     CHECK(creator(param_.op_type.c_str(), keys.size(), keys.data(), vals.data(), info_.get()));
     num_inputs_ = ListArguments().size();
     num_outputs_ = ListOutputs().size();
@@ -136,7 +141,8 @@ class CustomOpProp : public OperatorProperty {
 
   std::vector<std::string> ListArguments() const override {
     char ** args = NULL;
-    CHECK(info_->list_arguments(&args, info_->p_list_arguments));
+    CHECK(reinterpret_cast<CustomOpListFunc>(info_->callbacks[kCustomOpPropListArguments])(
+      &args, info_->contexts[kCustomOpPropListArguments]));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -146,7 +152,8 @@ class CustomOpProp : public OperatorProperty {
 
   std::vector<std::string> ListOutputs() const override {
     char ** args = NULL;
-    CHECK(info_->list_outputs(&args, info_->p_list_outputs));
+    CHECK(reinterpret_cast<CustomOpListFunc>(info_->callbacks[kCustomOpPropListOutputs])(
+      &args, info_->contexts[kCustomOpPropListOutputs]));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -156,7 +163,8 @@ class CustomOpProp : public OperatorProperty {
 
   std::vector<std::string> ListAuxiliaryStates() const override {
     char ** args = NULL;
-    CHECK(info_->list_auxiliary_states(&args, info_->p_list_auxiliary_states));
+    CHECK(reinterpret_cast<CustomOpListFunc>(info_->callbacks[kCustomOpPropListAuxiliaryStates])(
+      &args, info_->contexts[kCustomOpPropListAuxiliaryStates]));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
       ret.push_back(args[i]);
@@ -184,7 +192,9 @@ class CustomOpProp : public OperatorProperty {
     }
     shapes.resize(num_inputs_+num_outputs_+num_auxs_);
     ndims.resize(num_inputs_+num_outputs_+num_auxs_);
-    CHECK(info_->infer_shape(shapes.size(), ndims.data(), shapes.data(), info_->p_infer_shape));
+
+    CHECK(reinterpret_cast<CustomOpInferShapeFunc>(info_->callbacks[kCustomOpPropInferShape])(
+      shapes.size(), ndims.data(), shapes.data(), info_->contexts[kCustomOpPropInferShape]));
     for (unsigned i = 0; i < in_shape->size(); ++i) {
       SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
     }
@@ -198,6 +208,33 @@ class CustomOpProp : public OperatorProperty {
     }
     return true;
   }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    if (info_->num_callbacks <= kCustomOpPropInferType) {
+      return OperatorProperty::InferType(in_type, out_type, aux_type);
+    }
+
+    std::vector<int> types;
+    for (const auto &i : *in_type) types.push_back(i);
+    for (const auto &i : *out_type) types.push_back(i);
+    for (const auto &i : *aux_type) types.push_back(i);
+
+    CHECK(reinterpret_cast<CustomOpInferTypeFunc>(info_->callbacks[kCustomOpPropInferType])(
+      types.size(), types.data(), info_->contexts[kCustomOpPropInferType]));
+    for (unsigned i = 0; i < num_inputs_; ++i) {
+      TYPE_ASSIGN_CHECK(*in_type, i, types[i]);
+    }
+    for (unsigned i = 0; i < num_outputs_; ++i) {
+      TYPE_ASSIGN_CHECK(*out_type, i, types[i+num_inputs_]);
+    }
+    for (unsigned i = 0; i < num_auxs_; ++i) {
+      TYPE_ASSIGN_CHECK(*aux_type, i, types[i+num_inputs_+num_outputs_]);
+    }
+    return true;
+  }
+
 
   OperatorProperty* Copy() const override {
     CustomOpProp *prop_sym = new CustomOpProp();
@@ -215,9 +252,10 @@ class CustomOpProp : public OperatorProperty {
     const std::vector<int> &out_data) const override {
     int num_dep;
     int *rdeps;
-    CHECK(info_->declare_backward_dependency(out_grad.data(), in_data.data(),
-                                             out_data.data(), &num_dep, &rdeps,
-                                             info_->p_declare_backward_dependency));
+    CHECK(reinterpret_cast<CustomOpBwdDepFunc>(
+      info_->callbacks[kCustomOpPropDeclareBackwardDependency])(
+        out_grad.data(), in_data.data(), out_data.data(), &num_dep,
+        &rdeps, info_->contexts[kCustomOpPropDeclareBackwardDependency]));
     std::vector<int> deps;
     deps.insert(deps.end(), rdeps, rdeps+num_dep);
     return deps;
@@ -243,10 +281,10 @@ class CustomOpProp : public OperatorProperty {
   static std::map<std::string, CustomOpPropCreator> registry_;
 
   CustomOpParam param_;
-  std::shared_ptr<CustomOpPropInfo> info_;
+  std::shared_ptr<MXCallbackList> info_;
   std::vector<std::pair<std::string, std::string> > kwargs_;
   unsigned num_inputs_, num_outputs_, num_auxs_;
 };  // class CustomOpProp
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CUSTOM_INL_H_
+#endif  // MXNET_OPERATOR_CUSTOM_CUSTOM_INL_H_
