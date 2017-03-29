@@ -29,7 +29,8 @@ class Optimizer(object):
         The learning rate scheduler.
 
     wd : float, optional
-        The weight decay (or L2 regularization) coefficient. Modifies objective by adding a penalty for having large weights.
+        The weight decay (or L2 regularization) coefficient. Modifies objective
+        by adding a penalty for having large weights.
 
     sym: Symbol, optional
         The Symbol this optimizer is applying to.
@@ -283,7 +284,8 @@ class SGD(Optimizer):
       state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
       weight = weight - state
 
-    This optimizer accepts the following parameters in addition to those accepted by :class:`.Optimizer`:
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
@@ -326,7 +328,8 @@ class DCASGD(Optimizer):
     This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent with
     Delay Compensation for Distributed Deep Learning*, available at https://arxiv.org/abs/1609.08326
 
-    This optimizer accepts the following parameters in addition to those accepted by :class:`.Optimizer`:
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
@@ -448,10 +451,11 @@ class ccSGD(SGD):
 class Adam(Optimizer):
     """The Adam optimizer.
 
-    This class implements the optimizer described in *Adam: A Method for Stochastic Optimization*,
-    available at http://arxiv.org/abs/1412.6980
+    This class implements the optimizer described in *Adam: A Method for
+    Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980
 
-    This optimizer accepts the following parameters in addition to those accepted by :class:`.Optimizer`:
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
@@ -499,7 +503,8 @@ class AdaGrad(Optimizer):
     Methods for Online Learning and Stochastic Optimization*, and available at
     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
 
-    This optimizer accepts the following parameters in addition to those accepted by :class:`.Optimizer`:
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
