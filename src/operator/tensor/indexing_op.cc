@@ -33,9 +33,8 @@ NNVM_REGISTER_OP(Embedding)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.push_back(n->inputs[0]);
-    return MakeGradNode("_backward_Embedding", n, heads, n->attrs.dict);
+    return MakeNonlossGradNode("_backward_Embedding", n, ograds,
+                               {n->inputs[0]}, n->attrs.dict);
   })
 .add_argument("data", "Symbol", "Input data to the EmbeddingOp.")
 .add_argument("weight", "Symbol", "Embedding weight matrix.")
@@ -93,9 +92,8 @@ Examples::
 .set_attr<FCompute>("FCompute<cpu>", TakeOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.push_back(n->inputs[1]);
-    return MakeGradNode("_backward_take", n, heads, n->attrs.dict);
+    return MakeNonlossGradNode("_backward_take", n, ograds,
+                               {n->inputs[1]}, n->attrs.dict);
   })
 .add_argument("a", "ndarray-or-symbol", "The source array.")
 .add_argument("indices", "ndarray-or-symbol", "The indices of the values to extract.")
