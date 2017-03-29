@@ -13,8 +13,6 @@ Implementing an operator in Python is simple. As an example, let's create a soft
 
 ```python
 import os
-# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
-os.environ["MXNET_CPU_WORKER_NTHREADS"] = "2"
 import mxnet as mx
 import numpy as np
 
@@ -79,6 +77,14 @@ def infer_shape(self, in_shape):
     return [data_shape, label_shape], [output_shape], []
 ```
 The first dim of an input/output tensor is batch size. The label is a set of integers, one for each data entry, and the output has the same shape as the input. Infer_shape should always return three lists in this order: inputs, outputs, and auxiliary states (which we don't have here), even if one of them is empty.
+
+Optionally, you can also define `infer_type` to declare the input and output data type of your operator. Supported types are np.float32, np.float64, np.float16, np.uint8, np.int32.
+
+```python
+def infer_type(self, in_type):
+    dtype = in_type[0]
+    return [dtype, dtype], [dtype], []
+```
 
 Finally, define a create_operator function that will be called by the back end to create an instance of softmax:
 

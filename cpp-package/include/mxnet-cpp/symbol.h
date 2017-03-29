@@ -246,7 +246,7 @@ class Symbol {
 
  private:
   std::shared_ptr<SymBlob> blob_ptr_;
-  static OpMap *op_map_;
+  static OpMap*& op_map();
 };
 Symbol operator+(mx_float lhs, const Symbol &rhs);
 Symbol operator-(mx_float lhs, const Symbol &rhs);

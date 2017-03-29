@@ -733,17 +733,18 @@ void GraphExecutor::InitOpSegs() {
           op_node.exec->exec_type() != Operator::kSync) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
-      }
-      // If it produces output gradient, don't include it in the segment
-      bool output_gradient = false;
-      for (auto &out_arr : op_node.exec->out_array) {
-        if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
-          output_gradient = true;
+      } else {
+        // If it produces output gradient, don't include it in the segment
+        bool output_gradient = false;
+        for (auto &out_arr : op_node.exec->out_array) {
+          if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
+            output_gradient = true;
+          }
         }
-      }
-      if (output_gradient) {
-        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-        topo_start = nid + 1;
+        if (output_gradient) {
+          cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+          topo_start = nid + 1;
+        }
       }
     }
     // last segment for backward
