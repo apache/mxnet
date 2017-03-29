@@ -5,7 +5,9 @@ endif()
 
 set(CPP_EXAMPLE_LIBS
   rt
-  mxnet
+  ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
+  dmlccore
+  ${mxnet_LINKER_LIBS}
   )
 
 set(CPP_PACKAGE_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../include/mxnet-cpp/)
