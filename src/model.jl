@@ -613,9 +613,14 @@ function load_checkpoint(prefix :: AbstractString, epoch :: Int)
   return (arch, arg_params, aux_params)
 end
 
-function load_checkpoint(prefix :: AbstractString, epoch :: Int, ::Type{FeedForward})
+"""
+    load_checkpoint(prefix, epoch, ::mx.FeedForward; context)
+
+Load a mx.FeedForward model from the checkpoint *prefix*, *epoch* and optionally provide a context.
+"""
+function load_checkpoint(prefix :: AbstractString, epoch :: Int, ::Type{FeedForward}; context = nothing)
   arch, arg_params, aux_params = load_checkpoint(prefix, epoch)
-  model = FeedForward(arch)
+  model = FeedForward(arch, context = context)
   model.arg_params = arg_params
   model.aux_params = aux_params
   return model
