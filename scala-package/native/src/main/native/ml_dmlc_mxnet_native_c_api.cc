@@ -2070,7 +2070,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             ts));
           jint *arr = env->GetIntArrayElements(ret, NULL);
           for (int i = 0; i < numInput; ++i) {
-            types[i] = (int)arr[i];
+            types[i] = static_cast<int>(arr[i]);
           }
 
           delete[] tmp;
