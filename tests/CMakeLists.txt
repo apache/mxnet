@@ -32,8 +32,8 @@ if(GTEST_FOUND)
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
       rt
+      ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
       dmlccore
-      mxnet_static
       ${mxnet_LINKER_LIBS}
       )
   else()
