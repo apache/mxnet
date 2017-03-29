@@ -901,7 +901,8 @@ class FeedForward(BASE_ESTIMATOR):
         initializier : initializer function, optional
             The initialization scheme used.
         eval_data : DataIter or numpy.ndarray pair
-            If ``eval_set`` is ``numpy.ndarray`` pair, it should be (``valid_data``, ``valid_label``).
+            If ``eval_set`` is ``numpy.ndarray`` pair, it should
+            be (``valid_data``, ``valid_label``).
         eval_metric : metric.EvalMetric or str or callable
             The evaluation metric. Can be the name of an evaluation metric
             or a custom evaluation function that returns statistics

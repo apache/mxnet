@@ -460,6 +460,9 @@ fixed-size items.
         shape : tuple of int
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
+            One shape dimension can be -1. In this case, the value is inferred
+            from the length of the array and remaining dimensions.
+
 
         Returns
         -------
@@ -477,12 +480,35 @@ fixed-size items.
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape((3,-1))
+        >>> y.asnumpy()
+        array([[ 0.,  1.],
+               [ 2.,  3.],
+               [ 4.,  5.]], dtype=float32)
         >>> y[:] = -1
         >>> x.asnumpy()
         array([[-1., -1., -1.],
                [-1., -1., -1.]], dtype=float32)
         """
         handle = NDArrayHandle()
+
+        # Infer the correct size for dim == -1
+        shape = list(shape)
+        for index, element in enumerate(shape):
+            if element == -1:
+                remainder = list(self.shape)
+                for i, e in enumerate(shape):  # pylint: disable=invalid-name
+                    if i != index and e == -1:
+                        raise ValueError('Only one dimension can be inferred.')
+                    try:
+                        remainder.remove(e)
+                    except ValueError:
+                        pass
+                shape[index] = np.product(remainder)
+                # We have already gone through the whole shape, break
+                break
+
+        # Actual reshape
         check_call(_LIB.MXNDArrayReshape(self.handle,
                                          len(shape),
                                          c_array(ctypes.c_int, shape),
