@@ -7,6 +7,10 @@ import platform
 import re
 import sys
 import tempfile
+<<<<<<< HEAD
+=======
+import subprocess
+>>>>>>> cfx2
 
 class EnumType:
     name = ''
