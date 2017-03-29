@@ -39,7 +39,7 @@ class KVStore {
   static KVStoreHandle& get_handle();
   static std::unique_ptr<Optimizer>& get_optimizer();
   static KVStore*& get_kvstore();
-  static void Controller(int head, const char* body, void* controller_handle); 
+  static void Controller(int head, const char* body, void* controller_handle);
   static void Updater(int key, NDArrayHandle recv, NDArrayHandle local, void* handle_);
 };
 

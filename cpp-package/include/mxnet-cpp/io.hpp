@@ -16,7 +16,7 @@ namespace cpp {
 
 inline MXDataIterMap*& MXDataIter::mxdataiter_map() {
     static MXDataIterMap* mxdataiter_map_ = new MXDataIterMap;
-    return mxdataiter_map_; 
+    return mxdataiter_map_;
 }
 
 inline MXDataIter::MXDataIter(const std::string &mxdataiter_type) {
