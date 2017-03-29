@@ -126,6 +126,7 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
+- [Perl](#install-the-mxnet-package-for-perl)
 
 ### Install the MXNet Package for Python
 Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
@@ -245,6 +246,31 @@ To install the MXNet Scala package into your local Maven repository, run the fol
 
 ```bash
   make scalainstall
+```
+
+### Install the MXNet Package for Perl
+
+Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
+
+```bash
+    ## install PDL, Graphviz, Mouse, App::cpanminus, swig via yum before running these commands
+    cpanm -q -L "${HOME}/perl5" Function::Parameters
+
+    MXNET_HOME=${PWD}
+    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
+    export PERL5LIB=${HOME}/perl5/lib/perl5
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNet/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
 ```
 
 **Note - ** You are more than welcome to contribute easy installation scripts for other operating systems and programming languages, see [community page](http://mxnet.io/community/index.html) for contributors guidelines.

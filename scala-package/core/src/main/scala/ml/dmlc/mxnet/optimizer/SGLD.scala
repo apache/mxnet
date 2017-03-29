@@ -30,9 +30,9 @@ import ml.dmlc.mxnet.Random
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
-class SGLD(val learningRate: Float = 0.01f, val rescaleGradient: Float = 1.0f,
-           val wd: Float = 0.0001f, val clipGradient: Float = 0f,
-           val lrScheduler: LRScheduler = null) extends Optimizer {
+class SGLD(val learningRate: Float = 0.01f, rescaleGradient: Float = 1.0f,
+           wd: Float = 0.0001f, clipGradient: Float = 0f,
+           lrScheduler: LRScheduler = null) extends Optimizer {
 
   if (lrScheduler != null) {
     lrScheduler.baseLR = learningRate

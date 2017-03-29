@@ -67,8 +67,8 @@ class PadOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // Get any size input + output into required form
     int rank = in_data[pad_enum::kData].ndim();
@@ -104,8 +104,8 @@ class PadOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // Get any size input + output into required form
     auto pad = param_.pad_width;
@@ -158,7 +158,7 @@ class PadProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1) << "Can only be one input to symbol.";
+    CHECK_EQ(in_shape->size(), 1U) << "Can only be one input to symbol.";
 
     const TShape &dshape = (*in_shape)[pad_enum::kData];
     if (dshape.ndim() == 0) return false;

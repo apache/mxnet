@@ -4,6 +4,9 @@ use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(GetMNIST_ubyte);
 use Test::More tests => 1;
 
+## speed up the tests when gpu present
+my $gpu_present = (`perl -e 'use AI::MXNet qw(mx); print mx->nd->ones([1], ctx => mx->gpu(0))->asscalar' 2>/dev/null` eq '1');
+
 # symbol net
 my $batch_size = 100;
 
@@ -41,7 +44,7 @@ my $val_dataiter = mx->io->MNISTIter({
         batch_size=>$batch_size, shuffle=>1, flat=>0, silent=>0});
 
 my $n_epoch = 1;
-my $mod = mx->mod->new(symbol => $softmax);
+my $mod = mx->mod->new(symbol => $softmax, ($gpu_present ? (context => mx->gpu(0)) : ()));
 $mod->fit(
     $train_dataiter,
     eval_data => $val_dataiter,

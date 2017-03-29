@@ -30,9 +30,9 @@ import scala.collection.mutable.ListBuffer
  * @param handle the handle to the underlying C++ Data Iterator
  */
 // scalastyle:off finalize
-class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
-                                private val dataName: String = "data",
-                                private val labelName: String = "label") extends DataIter {
+private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
+                                dataName: String = "data",
+                                labelName: String = "label") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
   // use currentBatch to implement hasNext
@@ -170,8 +170,7 @@ class MXDataIter private[mxnet](private[mxnet] val handle: DataIterHandle,
 }
 
 // scalastyle:on finalize
-class MXDataPack(val iterName: String,
-                 val params: Map[String, String]) extends DataPack {
+private[mxnet] class MXDataPack(iterName: String, params: Map[String, String]) extends DataPack {
   /**
     * get data iterator
     * @return DataIter

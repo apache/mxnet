@@ -60,8 +60,8 @@ class MakeLossOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1) << "MakeLoss can only be used to one input";
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(in_data.size(), 1U) << "MakeLoss can only be used to one input";
+    CHECK_EQ(out_data.size(), 1U);
     if (req[make_loss_enum::kOut] != kWriteInplace) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
       Tensor<xpu, 2, DType> data = in_data[make_loss_enum::kData].FlatTo2D<xpu, DType>(s);
@@ -121,7 +121,7 @@ class MakeLossProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1);
+    CHECK_EQ(in_shape->size(), 1U);
     const TShape &dshape = in_shape->at(make_loss_enum::kData);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
@@ -132,7 +132,7 @@ class MakeLossProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 1);
+    CHECK_EQ(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "Input must have specified type";
     out_type->clear();

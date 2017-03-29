@@ -50,7 +50,7 @@ def write_label_csv(fname, frames, label_map):
    fo = open(fname, "w")
    for lst in frames:
        index = int(lst[0].split("/")[3])
-       if label_map != None:
+       if label_map is not None:
            fo.write(label_map[index])
        else:
            fo.write("%d,0,0\n" % index)
@@ -69,7 +69,7 @@ def get_data(lst,preproc):
        data.append(img)
    data = np.array(data, dtype=np.uint8)
    data = data.reshape(data.size)
-   data = np.array(data,dtype=np.str_)
+   data = np.array(data, dtype=np.str_)
    data = data.reshape(data.size)
    return [data,result]
 

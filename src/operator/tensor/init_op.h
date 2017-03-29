@@ -93,8 +93,8 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
                       std::vector<TShape> *in_attrs,
                       std::vector<TShape> *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 0);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
   if ((*out_attrs)[0].ndim() != 0 && param.shape.ndim() == 0) return true;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
   return true;
@@ -105,8 +105,8 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_attrs,
                        std::vector<int> *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 0);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
   return true;
 }
@@ -152,9 +152,9 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
                        std::vector<TShape> *in_attrs,
                        std::vector<TShape> *out_attrs) {
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 0);
-  CHECK_EQ(out_attrs->size(), 1);
-  CHECK_NE(param.step, 0)
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE(param.step, 0U)
     << "Range does not support step=0, received " << param.step;
   CHECK(param.repeat > 0)
     << "Range only supports repeat > 0, received " << param.repeat;

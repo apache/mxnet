@@ -6,8 +6,14 @@
 
 ## Overview
 
-This document lists the routines of `symbol` (or `sym` for short) package
-grouped by functionality.
+This document lists the routines of the symbolic expression package:
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    mxnet.symbol
+```
 
 A symbol declares computation. It is composited by
 operators, such as simple matrix operations (e.g. “+”), or a neural network
@@ -400,6 +406,8 @@ Composite multiple symbols into a new one by an operator.
     BatchNorm
     Pooling
     SoftmaxOutput
+    softmax
+    log_softmax
 ```
 
 ### More
