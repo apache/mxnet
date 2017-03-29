@@ -109,9 +109,9 @@ class MKLLRNOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 2);
-    CHECK_EQ(param_.nsize % 2, 1) << "LRN only supports odd values for local_size";
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 2U);
+    CHECK_EQ(param_.nsize % 2, 1U) << "LRN only supports odd values for local_size";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = mkl_experimental_direct_get<xpu, 4, DType>(
       in_data[lrn_enum::kData], s);

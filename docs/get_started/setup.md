@@ -1,6 +1,6 @@
 # Overview
 
-You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet can also be run on Docker and on Cloud like AWS. MXNet currently supports Python, R, Julia, and Scala programming languages.
+You can run MXNet on Amazon Linux, Ubuntu/Debian, OS X, and Windows operating systems. MXNet can also be run on Docker and on Cloud like AWS. MXNet currently supports Python, R, Julia, Scala, and Perl programming languages.
 
 Step by step instructions for setting up MXNet:
 

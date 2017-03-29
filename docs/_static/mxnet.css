@@ -23,10 +23,6 @@ p {
     line-height: 1.5em;
 }
 
-p.title {
-    margin-bottom: 12px;
-}
-
 #language-filter {
     float: right;
     margin-top: 5px;
@@ -37,47 +33,48 @@ li, dt a, dt span {
     line-height: 1.5em;
 }
 
-/*Content paragraph space*/
-div.content p {
-    margin-top: 20px;
-}
+/* /\*Content paragraph space*\/ */
+/* div.content p { */
+/*     margin-top: 20px; */
+/* } */
 
 /*------------------ Headings -------------------*/
 h1, h2, h3 {
     font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
-    color: #000;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 h1 {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: bold;
-    padding-top: 15px;
+    padding-top: 10px;
+    color: #cc6600;
 }
 
 h2 {
-    font-size: 18px;
-    font-weight: bold;
+    font-size: 20px;
+    /* font-weight: bold; */
     padding-top: 10px;
-    margin: 1em 0;
-    color: #cc6600;
+    color: #187dbb;
 }
 
 h3 {
-    font-size: 16px;
+    font-size: 18px;
     padding-top: 8px;
-    font-weight: bold;
-    color: #cc6600;
+    /* font-weight: bold; */
+    color: #187dbb;
 }
 
 h3.orange {
     color: #cc6600; }
 
 h4 {
-    color: #cc6600;
+    color: #187dbb;
     font-size: 16px;
     padding-top: 6px;
     font-style: italic;
-    font-weight: bold;
+    /* font-weight: bold; */
 }
 
 h5 {
@@ -635,7 +632,7 @@ div.sphinxsidebar {
     padding:20px 30px 15px 0;
     height: calc(100% - 80px);
     display: none;
-    overflow: hidden;
+    overflow: auto;
 }
 
 div.sphinxsidebar ul {
@@ -758,24 +755,22 @@ div.informaltable {
   text-align: left; }
 
 /*----------------API class and function formatting---------------------*/
-dl.class > dt:before, dl.function > dt:before {
+dl > dt:before {
     content: " ";
     display: block;
-    height: 80px; /* fixed header height*/
-    margin: -50px 0 0; /* negative fixed header height */
+    height: 70px; /* fixed header height*/
+    margin-top: -70px; /* negative fixed header height */
 }
 
-dt {
-    background-color: white !important;
+p.rubric {
+    margin-top: 10px;
 }
 
-dl.method, dl.attribute {
-    padding-top: 15px;
+dt:target, .highlighted {
+    background-color: #fff;
+    border-bottom: 3px solid #c7254e;
+    margin-bottom: -3px;
 }
-
-/* dl.class p, dl.function p { */
-/*     color: #cc6600; */
-/* } */
 
 /*----------------Model zoo page style------------------*/
 #mxnet-model-zoo table, #mxnet-model-zoo td, #mxnet-model-zoo th {
@@ -803,7 +798,85 @@ dl.method, dl.attribute {
     background-color: #f2f2f2;
 }
 
+/*--------- note block -----------*/
 div.admonition {
-    padding: 20px;
-    background-color: #eee;
+    padding: 15px;
+    background-color: #f6f8fa;
+    border: 1px solid rgb(204, 204, 204);
+    border-radius: 4px;
+}
+
+p.admonition-title {
+    color: #187dbb;
+}
+
+/*------------ code block ------------*/
+pre {
+    background-color: #f6f8fa;
+}
+
+/*-------------API table---------------------*/
+table.docutils {
+    margin-top: 15px;
+}
+
+table.docutils td, table.docutils th {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    /* border-top: 0; */
+    /* border-left: 0; */
+    /* border-right: 0; */
+    border: 1px solid rgb(223, 226, 229);
+}
+
+table.docutils tr:nth-child(even) {
+    background-color: #f6f8fa;
+}
+
+/*---------------getting started homepage---------*/
+
+#lang-demo ul {
+    margin-top: 20px;
+    margin-bottom: 15px;
+}
+
+.option-title {
+    width: 100px;
+    float: left;
+    clear: none;
+    text-align: right;
+    font-size: 14px;
+    padding-top: 7px;
+    padding-bottom: 8px;
+    padding-right: 10px;
+    font-weight: bold;
+}
+.option-row {
+    padding-bottom: 8px;
+}
+
+.install-inst {
+}
+
+.btn-default:hover, .btn-default:focus, .btn-default:active,
+.btn-default.active.focus, .btn-default.active:focus, .btn-default.active:hover,
+.btn-default:active.focus, .btn-default:active:focus, .btn-default:active:hover,
+.btn-default.active, .open>.dropdown-toggle.btn-default,
+.btn-default:active:focus {
+    color: #fff;
+    background-color: #0079b2;
+    border-color: #0079b2;
+}
+
+#setup-options {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    margin-left: 30px;
+}
+
+.opt-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
 }

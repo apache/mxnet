@@ -11,6 +11,6 @@ GPU=$1
 DATA_PATH=$2
 
 java -Xmx4G -cp $CLASS_PATH \
-	ml.dmlc.mxnet.examples.multitask.ExampleMultiTask \
+	ml.dmlc.mxnetexamples.multitask.ExampleMultiTask \
 	--data-path $DATA_PATH \
 	--gpu $GPU \

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 import rl_data
@@ -153,11 +154,14 @@ def train():
                 module.forward(batch, is_train=True)
 
                 pi = module.get_outputs()[1]
-                h = args.beta*(mx.nd.log(pi+1e-6)+1)
-                module.backward([mx.nd.array(adv), h])
+                h = -args.beta*(mx.nd.log(pi+1e-7)*pi)
+                out_acts = np.amax(pi.asnumpy(), 1)
+                out_acts=np.reshape(out_acts,(-1,1))
+                out_acts_tile=np.tile(-np.log(out_acts + 1e-7),(1, dataiter.act_dim))
+                module.backward([mx.nd.array(out_acts_tile*adv), h])
 
-                print 'pi', pi[0].asnumpy()
-                print 'h', h[0].asnumpy()
+                print('pi', pi[0].asnumpy())
+                print('h', h[0].asnumpy())
                 err += (adv**2).mean()
                 score += r[i]
                 final_score *= (1-D[i]) 
@@ -167,8 +171,8 @@ def train():
 
             module.update()
             logging.info('fps: %f err: %f score: %f final: %f T: %f'%(args.batch_size/(time.time()-tic), err/args.t_max, score.mean(), final_score.mean(), T))
-            print score.squeeze()
-            print final_score.squeeze()
+            print(score.squeeze())
+            print(final_score.squeeze())
 
 def test():
     log_config()
@@ -178,7 +182,7 @@ def test():
 
     # module
     dataiter = robo_data.RobosimsDataIter('scenes', args.batch_size, args.input_length, web_viz=True)
-    print dataiter.provide_data
+    print(dataiter.provide_data)
     net = sym.get_symbol_thor(dataiter.act_dim)
     module = mx.mod.Module(net, data_names=[d[0] for d in dataiter.provide_data], label_names=('policy_label', 'value_label'), context=devs)
     module.bind(data_shapes=dataiter.provide_data,

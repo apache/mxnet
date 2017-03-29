@@ -8,7 +8,7 @@ MODEL_PATH=$MXNET_ROOT/example/neural-style/model/vgg19.params
 OUTPUT_DIR=$MXNET_ROOT/example/neural-style/output
 
 java -Xmx1024m -cp $CLASS_PATH \
-	ml.dmlc.mxnet.examples.neuralstyle.NeuralStyle \
+	ml.dmlc.mxnetexamples.neuralstyle.NeuralStyle \
 	--content-image $INPUT_IMG  \
 	--style-image  $STYLE_IMG \
 	--model-path  $MODEL_PATH \

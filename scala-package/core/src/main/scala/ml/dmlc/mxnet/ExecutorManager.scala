@@ -36,7 +36,7 @@ import scala.collection.mutable.ArrayBuffer
  * @param workLoadList The list of work load for different devices, in the same order as ctx
  * @param symGen symbol generator for bucketing
  */
-class DataParallelExecutorManager(private val symbol: Symbol,
+private[mxnet] class DataParallelExecutorManager(private val symbol: Symbol,
                                   private val ctx: Array[Context],
                                   private[mxnet] val paramNames: IndexedSeq[String],
                                   private[mxnet] val argNames: IndexedSeq[String],
@@ -169,12 +169,11 @@ class DataParallelExecutorManager(private val symbol: Symbol,
   }
 }
 
-object DataParallelExecutorManager {
+private object DataParallelExecutorManager {
   val logger: Logger = LoggerFactory.getLogger(classOf[DataParallelExecutorManager])
 }
 
-class ExecutorManager
-object ExecutorManager {
+private[mxnet] object ExecutorManager {
   /**
    * Get input slice from the input shape.
    * @param batchSize The number of samples in a mini-batch.
@@ -387,7 +386,7 @@ object ExecutorManager {
  *                   An existing executor group, if to share parameters with it.
  *
  */
-class DataParallelExecutorGroup private(sym: Symbol,
+private class DataParallelExecutorGroup private(sym: Symbol,
                                 argNames: IndexedSeq[String], paramNames: Set[String],
                                 ctx: Array[Context], private val slices: Array[(Int, Int)],
                                 providedData: Map[String, Shape],

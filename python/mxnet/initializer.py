@@ -1,6 +1,4 @@
-# coding: utf-8
-# pylint: disable=too-many-branches, too-many-arguments
-"""Initialization helper for mxnet"""
+"""Weight initialization"""
 from __future__ import absolute_import, print_function
 
 import re
@@ -22,16 +20,20 @@ class InitDesc(str):
         name of variable
     attrs : dict of str to str
         attributes of this variable taken from Symbol.attr_dict
+    global_init : Initializer
+        global initializer to fallback to.
     """
-    def __new__(cls, name, attrs=None):
+    def __new__(cls, name, attrs=None, global_init=None):
         ret = super(InitDesc, cls).__new__(cls, name)
         ret.attrs = attrs or {}
+        ret.global_init = global_init
         return ret
 
 _INITIALIZER_REGISTRY = {}
 
 def register(klass):
-    """Register optimizers to the optimizer factory"""
+    """Register an intializer to the initializer factory
+    """
     assert issubclass(klass, Initializer), "Can only register subclass of Initializer"
     name = klass.__name__.lower()
     if name in _INITIALIZER_REGISTRY:
@@ -45,40 +47,36 @@ def register(klass):
     return klass
 
 class Initializer(object):
-    """Base class for Initializer.
-
-    subclasses should call base class with all keyword arguments. For example::
-        @register
-        class Constant(Initializer):
-            def __init__(self, value):
-                super(Constant, self).__init__(value=value)
+    """The base class of an initializer.
     """
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
     def dumps(self):
-        """Save initializer to string"""
+        """Save the initializer to string"""
         return json.dumps([self.__class__.__name__.lower(), self.kwargs])
 
-    # pylint: disable=protected-access
     def __call__(self, desc, arr):
-        """Override () function to do Initialization
+        """Initialize an array
 
         Parameters
         ----------
         desc : InitDesc
-            Initialization pattern Descriptor
+            Initialization pattern descriptor
 
         arr : NDArray
-            ndarray to be Initialized
+            The array to be Initialized
         """
         if not isinstance(desc, InitDesc):
             self._legacy_init(desc, arr)
             return
 
+        if desc.global_init is None:
+            desc.global_init = self
         init = desc.attrs.get('__init__', "")
 
         if init:
+            # when calling Variable initializer
             klass, kwargs = json.loads(init)
             _INITIALIZER_REGISTRY[klass.lower()](**kwargs)._init_weight(desc, arr)
         else:
@@ -139,7 +137,6 @@ class Initializer(object):
         else:
             self._init_default(name, arr)
 
-    # pylint: disable=no-self-use, missing-docstring, invalid-name
     def _init_bilinear(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
@@ -172,7 +169,7 @@ class Initializer(object):
         arr[:] = 0.0
 
     def _init_weight(self, name, arr):
-        """Abstruct method to Initialize weight"""
+        """Abstract method to Initialize weight"""
         raise NotImplementedError("Must override it")
 
     def _init_default(self, name, _):
@@ -181,11 +178,10 @@ class Initializer(object):
             'Default initialization is now limited to '\
             '"weight", "bias", "gamma" (1.0), and "beta" (0.0).' \
             'Please use mx.sym.Variable(init=mx.init.*) to set initialization pattern' % name)
-    # pylint: enable=no-self-use, missing-docstring, invalid-name
 
 
 class Load(object):
-    """Initialize by loading pretrained param from file or dict
+    """Initialize by loading data from file or dict
 
     Parameters
     ----------
@@ -228,7 +224,7 @@ class Load(object):
 
 
 class Mixed(object):
-    """Initialize with mixed Initializer
+    """Initialize with multiple initializers
 
     Parameters
     ----------
@@ -279,7 +275,7 @@ class Constant(Initializer):
 
 @register
 class Uniform(Initializer):
-    """Initialize the weight with uniform [-scale, scale]
+    """Initialize the weight with value uniformly sampled from ``[-scale, scale]``
 
     Parameters
     ----------
@@ -295,7 +291,7 @@ class Uniform(Initializer):
 
 @register
 class Normal(Initializer):
-    """Initialize the weight with normal(0, sigma)
+    """Initialize the weight with value sampled according to ``normal(0, sigma)``
 
     Parameters
     ----------
@@ -311,7 +307,11 @@ class Normal(Initializer):
 
 @register
 class Orthogonal(Initializer):
-    """Intialize weight as Orthogonal matrix
+    """Initialize weight as orthogonal matrix
+
+    This initializer implements *Exact solutions to the nonlinear dynamics of
+    learning in deep linear neural networks*, available at
+    https://arxiv.org/abs/1312.6120
 
     Parameters
     ----------
@@ -321,17 +321,12 @@ class Orthogonal(Initializer):
     rand_type: string optional
         use "uniform" or "normal" random number to initialize weight
 
-    Reference
-    ---------
-    Exact solutions to the nonlinear dynamics of learning in deep linear neural networks
-    arXiv preprint arXiv:1312.6120 (2013).
     """
     def __init__(self, scale=1.414, rand_type="uniform"):
         super(Orthogonal, self).__init__(scale=scale, rand_type=rand_type)
         self.scale = scale
         self.rand_type = rand_type
 
-    # pylint: disable=invalid-name
     def _init_weight(self, _, arr):
         nout = arr.shape[0]
         nin = np.prod(arr.shape[1:])
@@ -339,25 +334,25 @@ class Orthogonal(Initializer):
             tmp = np.random.uniform(-1.0, 1.0, (nout, nin))
         elif self.rand_type == "normal":
             tmp = np.random.normal(0.0, 1.0, (nout, nin))
-        u, _, v = np.linalg.svd(tmp, full_matrices=False)
+        u, _, v = np.linalg.svd(tmp, full_matrices=False) # pylint: disable=invalid-name
         if u.shape == tmp.shape:
-            q = u
+            res = u
         else:
-            q = v
-        q = self.scale * q.reshape(arr.shape)
-        arr[:] = q
+            res = v
+        res = self.scale * res.reshape(arr.shape)
+        arr[:] = res
 
 @register
 class Xavier(Initializer):
-    """Initialize the weight with Xavier or similar initialization scheme.
+    """Initialize the weight with Xavier or other similar schemes.
 
     Parameters
     ----------
     rnd_type: str, optional
-        Use ```gaussian``` or ```uniform``` to init
+        Random generator type, can be ```gaussian`` or ``uniform``.
 
     factor_type: str, optional
-        Use ```avg```, ```in```, or ```out``` to init
+        Can be ``avg``, ``in``, or ``out``
 
     magnitude: float, optional
         scale of random number range
@@ -395,13 +390,16 @@ class Xavier(Initializer):
 
 @register
 class MSRAPrelu(Xavier):
-    """Initialize the weight with initialization scheme from
-        Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+    """Initialize the weight according to a MSRA paper.
+
+    This initializer implements *Delving Deep into Rectifiers: Surpassing
+    Human-Level Performance on ImageNet Classification*, available at
+    https://arxiv.org/abs/1502.01852
 
     Parameters
     ----------
     factor_type: str, optional
-        Use ```avg```, ```in```, or ```out``` to init
+        Can be ``avg``, ``in``, or ``out``
 
     slope: float, optional
         initial slope of any PReLU (or similar) nonlinearities.
@@ -413,11 +411,10 @@ class MSRAPrelu(Xavier):
 
 @register
 class Bilinear(Initializer):
-    """Initialize weight for upsampling layer"""
+    """Initialize weight for upsampling layers"""
     def __init__(self):
         super(Bilinear, self).__init__()
 
-    # pylint: disable=no-self-use, missing-docstring, invalid-name
     def _init_weight(self, _, arr):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
@@ -431,13 +428,36 @@ class Bilinear(Initializer):
 
 
 @register
+class LSTMBias(Initializer):
+    """Initialize all bias of an LSTMCell to 0.0 except for
+    the forget gate whose bias is set to custom value.
+
+    Parameters
+    ----------
+    forget_bias: float, bias for the forget gate.
+    Jozefowicz et al. 2015 recommends setting this to 1.0.
+    """
+    def __init__(self, forget_bias):
+        super(LSTMBias, self).__init__(forget_bias=forget_bias)
+        self.forget_bias = forget_bias
+
+    def _init_weight(self, name, arr):
+        arr[:] = 0.0
+        # in the case of LSTMCell the forget gate is the second
+        # gate of the 4 LSTM gates, we modify the according values.
+        num_hidden = int(arr.shape[0] / 4)
+        arr[num_hidden:2*num_hidden] = self.forget_bias
+
+
+@register
 class FusedRNN(Initializer):
-    """Initialze parameters for fused rnn layer
+    """Initialize parameters for fused rnn layers
 
     Parameters
     ----------
     init : Initializer
-        intializer applied to unpacked weights.
+        intializer applied to unpacked weights. Fall back to global
+        initializer if None.
     num_hidden : int
         should be the same with arguments passed to FusedRNNCell.
     num_layers : int
@@ -446,26 +466,38 @@ class FusedRNN(Initializer):
         should be the same with arguments passed to FusedRNNCell.
     bidirectional : bool
         should be the same with arguments passed to FusedRNNCell.
+    forget_bias : float
+        should be the same with arguments passed to FusedRNNCell.
     """
-    def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False):
-        if not isinstance(init, Initializer):
+    def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False, forget_bias=1.0):
+        if isinstance(init, string_types):
             klass, kwargs = json.loads(init)
             init = _INITIALIZER_REGISTRY[klass.lower()](**kwargs)
-        super(FusedRNN, self).__init__(init=init.dumps(), num_hidden=num_hidden,
-                                       num_layers=num_layers, mode=mode,
-                                       bidirectional=bidirectional)
+        super(FusedRNN, self).__init__(init=init.dumps() if init is not None else None,
+                                       num_hidden=num_hidden, num_layers=num_layers, mode=mode,
+                                       bidirectional=bidirectional, forget_bias=forget_bias)
+        self._init = init
         self._num_hidden = num_hidden
         self._num_layers = num_layers
-        self._bidirectional = bidirectional
         self._mode = mode
-        self._init = init
+        self._bidirectional = bidirectional
+        self._forget_bias = forget_bias
 
-    def _init_weight(self, _, arr):
+    def _init_weight(self, desc, arr):
         from .rnn import rnn_cell
         cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
-                                     self._mode, self._bidirectional, prefix='')
+                                     self._mode, self._bidirectional,
+                                     forget_bias=self._forget_bias, prefix='')
         args = cell.unpack_weights({'parameters': arr})
         for name in args:
-            desc = InitDesc(name)
-            self._init(desc, args[name])
+            arg_desc = InitDesc(name, global_init=desc.global_init)
+            # for lstm bias, we use a custom initializer
+            # which adds a bias to the forget gate
+            if self._mode == 'lstm' and name.endswith("_f_bias"):
+                args[name][:] = self._forget_bias
+            elif self._init is None:
+                desc.global_init(arg_desc, args[name])
+            else:
+                self._init(arg_desc, args[name])
+
         arr[:] = cell.pack_weights(args)['parameters']

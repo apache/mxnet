@@ -48,7 +48,7 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', 
         coded = []
         for word in sent:
             if word not in vocab:
-                assert new_vocab, "Unknow token %s"%word
+                assert new_vocab, "Unknown token %s"%word
                 if idx == invalid_label:
                     idx += 1
                 vocab[word] = idx
@@ -162,7 +162,7 @@ class BucketSentenceIter(DataIter):
             data = self.nddata[i][j:j+self.batch_size]
             label = self.ndlabel[i][j:j+self.batch_size]
 
-        return DataBatch([data], [label],
+        return DataBatch([data], [label], pad=0,
                          bucket_key=self.buckets[i],
                          provide_data=[(self.data_name, data.shape)],
                          provide_label=[(self.label_name, label.shape)])

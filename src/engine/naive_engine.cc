@@ -31,13 +31,6 @@ class NaiveEngine final : public Engine {
   }
   // virtual destructor
   virtual ~NaiveEngine() {
-#if MXNET_USE_PROFILER
-  // dump trace file if profiler is enabled when engine is destructed.
-  Profiler* profiler = Profiler::Get();
-  if (profiler->IsEnableOutput()) {
-    profiler->DumpProfile();
-  }
-#endif
 #if MXNET_USE_CUDA
     LOG(INFO) << "Engine shutdown";
     for (size_t i = 0; i < streams_.size(); ++i) {

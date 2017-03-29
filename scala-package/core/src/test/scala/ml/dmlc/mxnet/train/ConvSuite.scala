@@ -28,6 +28,8 @@ import scala.sys.process._
 class ConvSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ConvSuite])
 
+  private var tu = new TestUtil
+
   test("train mnist") {
     // symbol net
     val batchSize = 100
@@ -54,8 +56,8 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     // get data
     "./scripts/get_mnist_data.sh" !
     val trainDataIter = IO.MNISTIter(Map(
-      "image" -> "data/train-images-idx3-ubyte",
-      "label" -> "data/train-labels-idx1-ubyte",
+      "image" -> tu.dataFile("train-images-idx3-ubyte"),
+      "label" -> tu.dataFile("train-labels-idx1-ubyte"),
       "data_shape" -> "(1, 28, 28)",
       "label_name" -> "sm_label",
       "batch_size" -> batchSize.toString,
@@ -65,8 +67,8 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
       "seed" -> "10"))
 
     val valDataIter = IO.MNISTIter(Map(
-      "image" -> "data/t10k-images-idx3-ubyte",
-      "label" -> "data/t10k-labels-idx1-ubyte",
+      "image" -> tu.dataFile("t10k-images-idx3-ubyte"),
+      "label" -> tu.dataFile("t10k-labels-idx1-ubyte"),
       "data_shape" -> "(1, 28, 28)",
       "label_name" -> "sm_label",
       "batch_size" -> batchSize.toString,
@@ -108,6 +110,6 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     }
     val acc = numCorrect.toFloat / numInst
     logger.info(s"Final accuracy = $acc")
-    assert(acc > 0.95)
+    assert(acc > 0.92)
   }
 }

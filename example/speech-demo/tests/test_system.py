@@ -1,3 +1,4 @@
+from __future__ import print_function
 from pdnn.run_DNN import run_DNN
 from pdnn.run_RBM import run_RBM
 from pdnn.run_SDA import run_SDA
@@ -10,10 +11,10 @@ MAX_ITERS = 2
 setup_logger(None)
 
 def banner(s):
-    print "***********************" + s + "*************************"
+    print("***********************" + s + "*************************")
 
 def test_hi():
-    print "hi"
+    print("hi")
 
 def test_rbm_dnn():
     banner("rbm dnn")

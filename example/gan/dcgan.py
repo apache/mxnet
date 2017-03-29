@@ -1,3 +1,4 @@
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 from sklearn.datasets import fetch_mldata
@@ -208,7 +209,7 @@ if __name__ == '__main__':
     mD = mx.metric.CustomMetric(fentropy)
     mACC = mx.metric.CustomMetric(facc)
 
-    print 'Training...'
+    print('Training...')
     stamp =  datetime.now().strftime('%Y_%m_%d-%H_%M')
 
     # =============train===============
@@ -262,7 +263,7 @@ if __name__ == '__main__':
 
             t += 1
             if t % 10 == 0:
-                print 'epoch:', epoch, 'iter:', t, 'metric:', mACC.get(), mG.get(), mD.get()
+                print('epoch:', epoch, 'iter:', t, 'metric:', mACC.get(), mG.get(), mD.get())
                 mACC.reset()
                 mG.reset()
                 mD.reset()
@@ -274,7 +275,7 @@ if __name__ == '__main__':
                 visual('data', batch.data[0].asnumpy())
 
         if check_point:
-            print 'Saving...'
+            print('Saving...')
             modG.save_params('%s_G_%s-%04d.params'%(dataset, stamp, epoch))
             modD.save_params('%s_D_%s-%04d.params'%(dataset, stamp, epoch))
 
