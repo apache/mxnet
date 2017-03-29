@@ -140,7 +140,8 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto embed = Embedding("embed", data, embed_weight, input_dim, num_embed);
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
-  label = Reshape(label, Shape(), false, false, Shape(-1));  // FullyConnected requires one dimension
+  label = Reshape(label, Shape(), false,
+                  false, Shape(-1));  // FullyConnected requires one dimension
   if (!TIME_MAJOR && isTrain)
     embed = SwapAxis(embed, 0, 1);  // Change to time-major as cuDNN requires
 
