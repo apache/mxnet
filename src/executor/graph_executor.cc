@@ -91,9 +91,18 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   static const Op* ewise_sum_op = Op::Get("ElementWiseSum");
   static const Op* identity_op = Op::Get("identity");
   static const Op* zeros_op = Op::Get("_zeros");
-  // remove zero in the sum.
-  size_t begin = 0;
-  for (size_t i = 0; i < v.size(); ++i) {
+
+  if (v.size() == 0) {
+    nnvm::NodePtr ng = nnvm::Node::Create();
+    ng->attrs.op = zeros_op;
+    ng->attrs.name = "zeros";
+    ng->attrs.op->attr_parser(&(ng->attrs));
+    return nnvm::NodeEntry{ng, 0, 0};
+  }
+
+  // remove zero in the sum. at least keep 1.
+  size_t begin = 1;
+  for (size_t i = 1; i < v.size(); ++i) {
     if (v[i].node->op() != zeros_op) {
       if (begin != i) {
         v[begin] = std::move(v[i]);
@@ -105,12 +114,6 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
   if (v.size() == 1) {
     return std::move(v[0]);
-  } else if (v.size() == 0) {
-    nnvm::NodePtr ng = nnvm::Node::Create();
-    ng->attrs.op = zeros_op;
-    ng->attrs.name = "zeros";
-    ng->attrs.op->attr_parser(&(ng->attrs));
-    return nnvm::NodeEntry{ng, 0, 0};
   } else {
     if (v.size() < inplace_sum_cap) {
       nnvm::NodePtr sum_node = nnvm::Node::Create();
