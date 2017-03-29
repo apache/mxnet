@@ -22,6 +22,9 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
+#ifdef __CUDACC__
+#include "../../common/cuda_utils.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -363,19 +366,24 @@ struct Take {
   }
 };
 
+template<int req>
 struct TakeBackward {
-  // assume that idx have been flattened to a 1-D tensor (N,)
-  // assume that out_grad and in_grad have been flattened to 2-D tensors, (N, M) and (K, M)
+  // assume that idx have been flattened to a 1-D tensor (K,)
+  // assume that out_grad and in_grad have been flattened to 2-D tensors, (K, M) and (N, M)
   // M is the number of columns of in_grad and out_grad
-  // K is the number of rows of in_grad
-  // i is the index of out_grad
+  // K is the number of elements in idx
+  // i is the index of in_grad
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_grad,
                                   const IType* idx, const int M, const int K) {
-    int j = static_cast<int>(idx[i/M]);
-    if (j <= 0) j = 0;
-    else if (j >= K) j = K - 1;
-    in_grad[j * M + i % M] += out_grad[i];
+    DType sum = static_cast<DType>(0);
+    const int in_grad_row = i / M;
+    for (int j = 0; j < K; ++j) {
+      if (idx[j] == in_grad_row) {
+        sum += out_grad[j * M + i % M];
+      }
+    }
+    KERNEL_ASSIGN(in_grad[i], req, sum);
   }
 };
 
@@ -430,16 +438,14 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
-      if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
-        if (req[take_::kArr] == kWriteTo) {
-          Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>());
-        }
-        Kernel<TakeBackward, xpu>::Launch(s, oshape.Size(), outputs[0].dptr<DType>(),
-                                           inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                           oshape.Size()/idxshape.Size(), arrshape[0]);
-      } else {
-        LOG(FATAL) << "wrong req";
-      }
+      MXNET_ASSIGN_REQ_SWITCH(req[take_::kArr], req_type, {
+        Kernel<TakeBackward<req_type>, xpu>::Launch(s, arrshape.Size(),
+                                                    outputs[0].dptr<DType>(),
+                                                    inputs[0].dptr<DType>(),
+                                                    inputs[1].dptr<IType>(),
+                                                    oshape.Size()/idxshape.Size(),
+                                                    idxshape.Size());
+      });
     });
   });
 }
