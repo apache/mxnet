@@ -24,20 +24,23 @@ namespace cpp {
  * like PushInput<NDArray, Args..., N>, which is not allowed in C++
  */
 template <>
-Operator& Operator::SetParam<NDArray>(int pos, const NDArray &value) {
+inline Operator& Operator::SetParam<NDArray>(int pos, const NDArray &value) {
   input_ndarrays.push_back(value.GetHandle());
   return *this;
 }
 template <>
-Operator& Operator::SetParam<Symbol>(int pos, const Symbol &value) {
+inline Operator& Operator::SetParam<Symbol>(int pos, const Symbol &value) {
   input_symbols.push_back(value.GetHandle());
   return *this;
 }
 
-OpMap *Operator::op_map_ = new OpMap();
+inline OpMap*& Operator::op_map() {
+  static OpMap *op_map_ = new OpMap();
+  return op_map_;
+}
 
-Operator::Operator(const std::string &operator_name) {
-  handle_ = op_map_->GetSymbolCreator(operator_name);
+inline Operator::Operator(const std::string &operator_name) {
+  handle_ = op_map()->GetSymbolCreator(operator_name);
   const char *name;
   const char *description;
   mx_uint num_args;
@@ -58,7 +61,7 @@ Operator::Operator(const std::string &operator_name) {
   }
 }
 
-Symbol Operator::CreateSymbol(const std::string &name) {
+inline Symbol Operator::CreateSymbol(const std::string &name) {
   if (input_keys.size() > 0) {
     CHECK_EQ(input_keys.size(), input_symbols.size());
   }
@@ -86,7 +89,7 @@ Symbol Operator::CreateSymbol(const std::string &name) {
   return Symbol(symbol_handle);
 }
 
-void Operator::Invoke(std::vector<NDArray> &outputs) {
+inline void Operator::Invoke(std::vector<NDArray> &outputs) {
   if (input_keys.size() > 0) {
     CHECK_EQ(input_keys.size(), input_ndarrays.size());
   }
@@ -126,24 +129,24 @@ void Operator::Invoke(std::vector<NDArray> &outputs) {
       });
 }
 
-std::vector<NDArray> Operator::Invoke() {
+inline std::vector<NDArray> Operator::Invoke() {
   std::vector<NDArray> outputs;
   Invoke(outputs);
   return outputs;
 }
 
-void Operator::Invoke(NDArray &output) {
+inline void Operator::Invoke(NDArray &output) {
   std::vector<NDArray> outputs{output};
   Invoke(outputs);
 }
 
-Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
+inline Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
   input_keys.push_back(name.c_str());
   input_symbols.push_back(symbol.GetHandle());
   return *this;
 }
 
-Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
+inline Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
   input_keys.push_back(name.c_str());
   input_ndarrays.push_back(ndarray.GetHandle());
   return *this;
