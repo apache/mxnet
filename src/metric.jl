@@ -262,12 +262,16 @@ end
     ACE
 
 Calculates the averaged cross-entropy (logloss) for classification.
+
+# Arguments:
+* `eps::Float64`: Prevents returning `Inf` if `p = 0`.
 """
 type ACE <: AbstractEvalMetric
   ace_sum  :: Float64
   n_sample :: Int
+  eps :: Float64
 
-  ACE() = new(0.0, 0)
+  ACE(eps=1.0e-8) = new(0.0, 0, eps)
 end
 
 function get(metric :: ACE)
@@ -281,9 +285,17 @@ end
 
 function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
   @nd_as_jl ro=(label,pred) begin
+    eps = metric.eps
     # Samples are stored in the last dimension
     @assert size(label, ndims(label)) == size(pred, ndims(pred))
-    if ndims(pred) == 4
+    if size(label) == size(pred) # simply calculate the cross entropy of the probabilities
+      for (q, p) in zip(pred, label)
+          # p == true probability
+          # q == "unnatural" probability
+          metric.ace_sum += p * log(q + eps)
+          metric.n_sample += 1
+      end
+    elseif ndims(pred) == 4
       labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
       for sample in 1:size(labels, 4)
         for j in 1:size(labels, 2)
@@ -292,7 +304,7 @@ function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
             # Since we can only target labels right now this is the only thing we can do.
             target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
             p_k = pred[i, j, target, sample]
-            metric.ace_sum += log(p_k)
+            metric.ace_sum += log(p_k + eps)
             metric.n_sample += 1
           end
         end
@@ -301,7 +313,7 @@ function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
       for sample in 1:size(label, 1)
         target = Int(label[sample]) + 1    # 0-based indexing => 1-based indexing
         p_k = pred[target, sample]
-        metric.ace_sum += log(p_k)
+        metric.ace_sum += log(p_k + eps)
         metric.n_sample += 1
       end
     else
@@ -319,8 +331,9 @@ This can be used to quantify the influence of different classes on the overall l
 type MultiACE <: AbstractEvalMetric
   aces  :: Vector{Float64}
   counts :: Vector{Int}
+  eps :: Float64
 
-  MultiACE(nclasses) = new(Base.zeros(nclasses), Base.zeros(Int, nclasses))
+  MultiACE(nclasses, eps=1.0e-8) = new(Base.zeros(nclasses), Base.zeros(Int, nclasses), eps)
 end
 
 function get(metric :: MultiACE)
@@ -336,10 +349,22 @@ end
 
 function _update_single_output(metric :: MultiACE, label :: NDArray, pred :: NDArray)
   @nd_as_jl ro=(label,pred) begin
+    eps = metric.eps
     # Samples are stored in the last dimension
     @assert size(label, ndims(label)) == size(pred, ndims(pred))
-
-    if ndims(pred) == 4
+    @assert size(metric.aces) == size(metric.counts)
+    if size(label) == size(pred) # simply calculate the cross entropy of the probabilities
+      for k in 1:length(metric.aces)
+        kpred  = view(pred,  ntuple(d->:, ndims(pred)  - 2)..., k, :)
+        klabel = view(label, ntuple(d->:, ndims(label) - 2)..., k, :)
+        for (q, p) in zip(kpred, klabel)
+          # p == true probability
+          # q == "unnatural" probability
+          metric.aces[k] += p * log(q + eps)
+          metric.counts[k] += 1
+        end
+      end
+    elseif ndims(pred) == 4
       labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
       for sample in 1:size(labels, 4)
         for j in 1:size(labels, 2)
@@ -349,7 +374,7 @@ function _update_single_output(metric :: MultiACE, label :: NDArray, pred :: NDA
             target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
             p_k = pred[i, j, target, sample]
 
-            metric.aces[target] += log(p_k)
+            metric.aces[target] += log(p_k + eps)
             metric.counts[target] += 1
           end
         end
@@ -358,7 +383,7 @@ function _update_single_output(metric :: MultiACE, label :: NDArray, pred :: NDA
       for sample in 1:size(label, 1)
         target = Int(label[sample]) + 1
         p_k = pred[target, sample]
-        metric.aces[target] += log(p_k)
+        metric.aces[target] += log(p_k + eps)
         metric.counts[target] += 1
       end
     else

@@ -17,10 +17,10 @@ function generate_probs(n, m)
 
     # Normalize: ensure each column sums to 1
     for j = 1:m
-	colsum = sum(result[:, j])
-	for i = 1:n
-	    result[i, j] /= colsum
-	end
+        colsum = sum(result[:, j])
+        for i = 1:n
+            result[i, j] /= colsum
+        end
     end
     result
 end
@@ -28,8 +28,9 @@ end
 
 function loglikelihood{T <: AbstractFloat}(labels::Vector{T}, probs::Array{T, 2})
     LL = 0.0
+    eps = 1.0e-8
     for i = 1:size(labels, 1)
-        LL += log(probs[Int(labels[i]) + 1, i])    # labels are zero-based
+        LL += log(probs[Int(labels[i]) + 1, i] + eps)    # labels are zero-based
     end
     LL / size(labels, 1)
 end
