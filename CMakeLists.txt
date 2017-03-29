@@ -487,7 +487,7 @@ if(NOT MSVC)
   add_custom_command(TARGET mxnet
     POST_BUILD
     COMMAND cp $<TARGET_FILE:mxnet> .
-    COMMAND python OpWrapperGenerator.py $<TARGET_FILE_NAME:mxnet>
+    COMMAND python2 OpWrapperGenerator.py $<TARGET_FILE_NAME:mxnet>
     COMMAND rm $<TARGET_FILE_NAME:mxnet>
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cpp-package/src/OpWrapperGenerator/
   )
