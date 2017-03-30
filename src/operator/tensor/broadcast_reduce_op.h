@@ -541,14 +541,7 @@ inline bool PickOpType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   // assign indices type
   if (-1 == (*in_attrs)[1]) {
-    (*in_attrs)[1] = mshadow::kInt32;
-  } else {
-    CHECK(mshadow::kFloat32 == (*in_attrs)[1]
-        || mshadow::kFloat64 == (*in_attrs)[1]
-        || mshadow::kFloat16 == (*in_attrs)[1]
-        || mshadow::kUint8 == (*in_attrs)[1]
-        || mshadow::kInt32 == (*in_attrs)[1])
-      << "Tensor index type = " << (*in_attrs)[1] << " is not supported in pick";
+    TYPE_ASSIGN_CHECK(*in_attrs, 1, (*in_attrs)[0]);
   }
 
   return (*out_attrs)[0] != -1;

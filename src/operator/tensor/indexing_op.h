@@ -327,20 +327,12 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (-1 == (*in_attrs)[1]) {
-    (*in_attrs)[1] = mshadow::kInt32;
-  } else {
-    CHECK(mshadow::kFloat32 == (*in_attrs)[1]
-        || mshadow::kFloat64 == (*in_attrs)[1]
-        || mshadow::kFloat16 == (*in_attrs)[1]
-        || mshadow::kUint8 == (*in_attrs)[1]
-        || mshadow::kInt32 == (*in_attrs)[1])
-      << "Tensor index type = " << (*in_attrs)[1]
-      << " is not supported in take";
-  }
 
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  if (-1 == (*in_attrs)[1]) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 1, (*in_attrs)[0]);
+  }
   return (*in_attrs)[0] != -1;
 }
 
@@ -595,13 +587,6 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   // assign indices type
   if (-1 == (*in_attrs)[0]) {
     (*in_attrs)[0] = mshadow::kInt32;
-  } else {
-    CHECK(mshadow::kFloat32 == (*in_attrs)[0]
-        || mshadow::kFloat64 == (*in_attrs)[0]
-        || mshadow::kFloat16 == (*in_attrs)[0]
-        || mshadow::kUint8 == (*in_attrs)[0]
-        || mshadow::kInt32 == (*in_attrs)[0])
-      << "Tensor index type = " << (*in_attrs)[0] << " is not supported in one_hot";
   }
   return true;
 }
