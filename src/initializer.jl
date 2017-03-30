@@ -19,7 +19,13 @@ abstract AbstractInitializer
 
 function init{T<:AbstractInitializer}(self :: T, name :: Base.Symbol, array :: NDArray)
   strname = string(name)
-  if endswith(strname, "bias")
+  if startswith(strname,"upsampling")
+    _init_bilinear(self,name, array)
+  elseif startswith(strname,"stn_loc") && endswith(strname,"weight")
+    _init_zero(self,name, array)
+  elseif startswith(strname,"stn_loc") && endswith(strname,"bias")
+    _init_loc_bias(self,name, array)
+  elseif endswith(strname, "bias")
     _init_bias(self, name, array)
   elseif endswith(strname, "gamma")
     _init_gamma(self, name, array)
@@ -34,6 +40,37 @@ function init{T<:AbstractInitializer}(self :: T, name :: Base.Symbol, array :: N
   else
     _init_default(self, name, array)
   end
+end
+
+function _init_loc_bias(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+ assert(size(array) == (6,))
+ array=[1.0, 0, 0, 0, 1.0, 0]
+end
+
+function _init_bilinear(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
+  # ported from python version:
+  #weight = np.zeros(np.prod(arr.shape), dtype='float32')
+  #shape = arr.shape
+  #f = np.ceil(shape[3] / 2.)
+  #c = (2 * f - 1 - f % 2) / (2. * f)
+  #for i in range(np.prod(shape)):
+  #  x = i % shape[3]
+  #  y = (i / shape[3]) % shape[2]
+  #  weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+  #arr[:] = weight.reshape(shape)
+  
+  weight=zeros(array)
+  
+  h,w,channels,n=size(array)
+  f = ceil(w / 2.)
+  c = (2 * f - 1 - f % 2) / (2. * f)
+  
+  for i=1:length(weight)
+    x = i % w
+    y = (i / w) % h
+    weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+  end
+  array[:,:,:,:]=weight
 end
 
 function _init_bias(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
