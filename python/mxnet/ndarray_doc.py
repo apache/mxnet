@@ -33,6 +33,6 @@ def _build_doc(func_name,
     extra_doc = "\n" + '\n'.join([x.__doc__ for x in type.__subclasses__(NDArrayDoc)
                                   if x.__name__ == '%sDoc' % func_name])
     doc_str += _re.sub(_re.compile("    "), "", extra_doc)
-    doc_str = _re.sub('ndarray-or-symbol', 'NDArray', doc_str)
+    doc_str = _re.sub('NDArray-or-Symbol', 'NDArray', doc_str)
 
     return doc_str
