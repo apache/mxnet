@@ -206,8 +206,26 @@ def test_zero_prop():
     assert big > small2
     assert small1 == small2
 
+def test_zero_prop2():
+    x = mx.sym.Variable('x')
+    idx = mx.sym.Variable('idx')
+    y = mx.sym.batch_take(x, idx)
+    z = mx.sym.stop_gradient(y)
+    exe = z.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
+                        type_dict={'x': np.float32, 'idx': np.int32})
+    exe.forward()
+    exe.backward()
+
+    try:
+        y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
+                      type_dict={'x': np.float32, 'idx': np.int32})
+    except:
+        return
+
+    assert False
 
 if __name__ == '__main__':
+    test_zero_prop2()
     test_zero_prop()
     test_blockgrad()
     test_symbol_children()

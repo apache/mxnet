@@ -221,10 +221,16 @@ nnvm::Graph GraphExecutor::InitFullGraph(
     if (type == "CuDNNBatchNorm") return false;
     return true;
   };
+
+  std::vector<const nnvm::Op*> zero_ops;
+  zero_ops.push_back(nnvm::Op::Get("zeros_like"));
+  zero_ops.push_back(nnvm::Op::Get("_zeros"));
+
   // take gradient
   nnvm::Graph g_grad = nnvm::pass::Gradient(
       g, symbol.outputs, xs, head_grad_entry_,
-      AggregateGradient, need_mirror);
+      AggregateGradient, need_mirror, nullptr,
+      zero_ops);
   CHECK_EQ(g_grad.outputs.size(), xs.size());
   for (const auto &e : g_grad.outputs) {
     g.outputs.push_back(e);
