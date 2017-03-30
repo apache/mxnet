@@ -710,7 +710,7 @@ fixed-size items.
             return self
         return transpose(self)
     # pylint: enable= invalid-name, undefined-variable
-    
+
     def asnumpy(self):
         """Returns a ``numpy.ndarray`` object with value copied from this array.
 
