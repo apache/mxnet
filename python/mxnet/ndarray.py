@@ -1019,8 +1019,9 @@ def array(source_array, ctx=None, dtype=None):
     ctx : Context, optional
         An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        An optional value type. If source_array is NDArray then defaults to
-        source_array.dtype, otherwise default to `float32`.
+
+        An optional value type. If the ``source_array`` is an NDArray, then defaults to
+        ``source_array.dtype``, otherwise default to ``float32``.
 
     Returns
     -------
