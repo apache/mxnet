@@ -190,7 +190,6 @@ if(USE_CUDNN AND USE_CUDA)
   if(HAVE_CUDNN)
     add_definitions(-DUSE_CUDNN)
     include_directories(SYSTEM ${CUDNN_INCLUDE})
-    list(APPEND CUDNN_LIBRARY cufft) # For fft operator
     list(APPEND mxnet_LINKER_LIBS ${CUDNN_LIBRARY})
 	  add_definitions(-DMSHADOW_USE_CUDNN=1)
   endif()
@@ -355,8 +354,10 @@ if(USE_CUDA)
     list(APPEND mxnet_LINKER_LIBS ${CUDA_nvrtc_LIBRARY})
     set(CUDA_cuda_LIBRARY "${CUDA_nvrtc_LIBRARY}/../cuda.lib")
     list(APPEND mxnet_LINKER_LIBS ${CUDA_cuda_LIBRARY})
+    FIND_LIBRARY(CUDA_cufft_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
+    list(APPEND mxnet_LINKER_LIBS "${CUDA_cufft_LIBRARY}/../cufft.lib") # For fft operator
   else(MSVC)
-    list(APPEND mxnet_LINKER_LIBS nvrtc cuda)
+    list(APPEND mxnet_LINKER_LIBS nvrtc cuda cufft)
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
@@ -402,21 +403,26 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-    set(INITIALIZE_SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/initialize.cc)
-    list(REMOVE_ITEM SOURCE ${INITIALIZE_SOURCE_FILE})
-    add_library(mxnet_static STATIC ${INITIALIZE_SOURCE_FILE} ${SOURCE})
-    # Need an arbitrary source file to trigger CMake to build the library
-    add_library(mxnet SHARED ${INITIALIZE_SOURCE_FILE})
-    target_link_libraries(mxnet
-        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
-    )
-    add_custom_target(
-        Name ALL
-        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-        COMMAND ln -sf libmxnet_static.a libmxnet.a
-        DEPENDS mxnet_static
-    )
+    set(MXNET_DYNAMIC_ONLY ON)
+    if(MXNET_DYNAMIC_ONLY)
+      add_library(mxnet SHARED ${SOURCE})
+    else()
+      set(INITIALIZE_SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/initialize.cc)
+      list(REMOVE_ITEM SOURCE ${INITIALIZE_SOURCE_FILE})
+      add_library(mxnet_static STATIC ${INITIALIZE_SOURCE_FILE} ${SOURCE})
+      # Need an arbitrary source file to trigger CMake to build the library
+      add_library(mxnet SHARED ${INITIALIZE_SOURCE_FILE})
+      # This has prolems, as it adds libmxnet_static to INTERFACE_LINK_LIBRARIES
+      target_link_libraries(mxnet "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
+      #target_link_libraries(mxnet mxnet_static)
+      add_custom_target(
+          StaticallyLinkStaticMXNetLibrary ALL
+          BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+          WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+          COMMAND ln -sf libmxnet_static.a libmxnet.a
+          DEPENDS mxnet_static
+      )
+    endif()
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()
