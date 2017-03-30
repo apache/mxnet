@@ -149,7 +149,7 @@ Refer to [docker/](../../docker/) for more details.
 <div class="build-from-source">
 
 Refer to the [building from source document](./build_from_source.md) for details
-on building MXNet from source codes for various systems.
+on building MXNet from source codes for various platforms.
 
 </div> <!-- build-from-source -->
 
