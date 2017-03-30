@@ -187,7 +187,7 @@ class CountSketchProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "_contrib_CountSketch";
+    return "_contrib_count_sketch";
   }
 
   // declare dependency and inplace optimization options

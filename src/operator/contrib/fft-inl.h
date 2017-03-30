@@ -260,7 +260,7 @@ class FFTProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "_contrib_FFT";
+    return "_contrib_fft";
   }
 
   // declare dependency and inplace optimization options

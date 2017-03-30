@@ -254,7 +254,7 @@ class IFFTProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "_contrib_IFFT";
+    return "_contrib_ifft";
   }
 
   std::vector<int> DeclareBackwardDependency(
