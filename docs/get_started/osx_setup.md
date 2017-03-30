@@ -1,5 +1,5 @@
 # Installing MXNet on OS X (Mac)
-MXNet currently supports Python, R, Julia, and Scala. For users of Python on Mac, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
+MXNet currently supports Python, R, Julia, Scala and Perl. For users of Python on Mac, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
 ## Prepare Environment for GPU Installation
 
@@ -130,6 +130,7 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
+- [Perl](#install-the-mxnet-package-for-perl)
 
 ### Install the MXNet Package for Python
 Next, we install Python interface for MXNet. Assuming you are in `~/mxnet` directory, run below commands.
@@ -226,6 +227,39 @@ To install the MXNet Scala package into your local Maven repository, run the fol
 
 ```bash
     make scalainstall
+```
+
+### Install the MXNet Package for Perl
+Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library).
+After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Perl package:
+
+```bash
+    brew install swig
+    sudo sh -c 'curl -L https://cpanmin.us | perl - App::cpanminus'
+    sudo cpanm -q -n PDL Mouse Function::Parameters
+
+    MXNET_HOME=${PWD}
+    export PERL5LIB=${HOME}/perl5/lib/perl5
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make
+    install_name_tool -change lib/libmxnet.so \
+        ${MXNET_HOME}/lib/libmxnet.so \
+        blib/arch/auto/AI/MXNetCAPI/MXNetCAPI.bundle
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make
+    install_name_tool -change lib/libmxnet.so \
+            ${MXNET_HOME}/lib/libmxnet.so \
+            blib/arch/auto/AI/NNVMCAPI/NNVMCAPI.bundle
+    make install
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNet/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make install
 ```
 
 ## Next Steps

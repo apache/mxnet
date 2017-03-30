@@ -1,6 +1,5 @@
 use AI::MXNet qw(mx);
 use Test::More tests => 31;
-use Data::Dumper;
 use AI::MXNet::TestUtils qw(same reldiff GetMNIST_ubyte GetCifar10);
 use PDL;
 use PDL::Types;

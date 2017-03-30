@@ -1,4 +1,10 @@
 package AI::MXNet::NDArray;
+
+=head1 NAME
+
+AI::MXNet::NDArray - Multidimensional tensor object of MXNet.
+=cut
+
 use strict;
 use warnings;
 use AI::MXNet::Base;
@@ -89,15 +95,15 @@ method slice(Slice @slices)
     my $isize = @slices;
     confess("Dimensions size $dsize < slices size $isize")
         if $dsize < $isize;
-    confess("Dimensions size $dsize != slices size $isize, 
+    confess("Dimensions size $dsize != slices size $isize,
                    ndarray only supports either ->slice on dimension 0
                    or full crop")
         if $isize > 1 and $dsize != $isize;
     my $i = -1;
-    @slices = map { 
-        ++$i; 
-        ref $_ ? (@$_ == 1 ? [$_->[0], $shape->[$i] - 1] : $_) : ($_ eq 'X' ? [0, $shape->[$i] - 1] : [$_, $_]); 
-    } @slices; 
+    @slices = map {
+        ++$i;
+        ref $_ ? (@$_ == 1 ? [$_->[0], $shape->[$i] - 1] : $_) : ($_ eq 'X' ? [0, $shape->[$i] - 1] : [$_, $_]);
+    } @slices;
     zip(sub {
         my ($slice, $dim_size) = @_;
         my ($begin, $end, $stride) = @$slice;
@@ -107,7 +113,7 @@ method slice(Slice @slices)
             if $begin >= $dim_size or ($begin + $dim_size) < 0;
         confess("Dimension $i mismatch slice end : $end >= Dim Size: $dim_size")
             if $end >= $dim_size or ($end + $dim_size) < 0;
-    }, \@slices, $shape);  
+    }, \@slices, $shape);
     $i = 0;
     my ($begin, $end) = ([], []);
     for my $s (@slices)
@@ -157,17 +163,6 @@ method asscalar()
     return $self->aspdl->at(0);
 }
 
-=head2 _sync_copyfrom(self, source_array)
-
-        Peform an synchronize copy from the array.
-
-        Parameters
-        ----------
-        source_array : array_like
-            The data source we should like to copy from.
-        Can be array ref in PDL::pdl init format or PDL object
-=cut
-
 method _sync_copyfrom(ArrayRef|PDL|PDL::Matrix $source_array)
 {
     my $dtype = $self->dtype;
@@ -210,12 +205,12 @@ method _sync_copyfrom(ArrayRef|PDL|PDL::Matrix $source_array)
 
 =head2 aspdl
 
-        Return a copied PDL array of current array.
+Returns a copied PDL array of current array.
 
-        Returns
-        -------
-        array : PDL
-        A copy of array content.
+Returns
+-------
+array : PDL
+A copy of the array content.
 =cut
 
 method aspdl()
@@ -239,13 +234,13 @@ method aspdl()
 
 =head2 asmpdl
 
-        Return a copied PDL::Matrix array of current array.
+Returns copied PDL::Matrix objectt of current array.
 
-        Requires caller to "use PDL::Matrix" in user space.
-        Returns
-        -------
-        array : PDL::Matrix
-        A copy of array content.
+Requires caller to "use PDL::Matrix" in user space.
+Returns
+-------
+array : PDL::Matrix
+A copy of array content.
 =cut
 
 method asmpdl()
@@ -269,14 +264,14 @@ method asmpdl()
 
 =head2 _slice
 
-        Return a sliced NDArray that shares memory with current one.
+Returns sliced NDArray that shares memory with the current one.
 
-        Parameters
-        ----------
-        start : int
-            Starting index of slice.
-        stop : int
-            Finishing index of slice.
+Parameters
+----------
+start : int
+    Starting index of slice.
+stop : int
+    Finishing index of slice.
 =cut
 
 method  _slice (
@@ -297,12 +292,12 @@ method  _slice (
 
 =head2  _at
 
-        Return a sub NDArray that shares memory with current one.
+Returns a sub NDArray that shares memory with current one.
 
-        Parameters
-        ----------
-        idx : int
-            index of sub array.
+Parameters
+----------
+idx : int
+    index of the sub array.
 =cut
 
 
@@ -317,19 +312,17 @@ method _at(Index $idx)
 }
 
 =head2 reshape
- 
-        Return a reshaped NDArray that shares memory with current one.
 
-        Parameters
-        ----------
-        new_shape : iterable of int
-            new shape of NDArray
+Returns a reshaped NDArray that shares the memory with current one.
+
+Parameters
+----------
+new_shape : Shape
+    new shape of NDArray
 =cut
 
 method reshape(Shape $new_shape)
 {
-    confess("new size does not mach old size")
-        unless __PACKAGE__->size($new_shape) == $self->size;
     my $handle = check_call(
                     AI::MXNetCAPI::NDArrayReshape(
                         $self->handle,
@@ -343,13 +336,11 @@ method reshape(Shape $new_shape)
 
 =head broadcast_to
 
-        Broadcasting the current NDArray into the given shape. The semantics is
-        the same with `numpy`'s broadcasting
+Broadcasting the current NDArray into the given shape. 
 
-        Parameters
-        ---------
-        shape : the shape to broadcast
-            the broadcast shape
+Parameters
+---------
+Shape $shape : the shape to broadcast
 =cut
 
 method broadcast_to(Shape $shape)
@@ -380,11 +371,11 @@ method broadcast_to(Shape $shape)
 
 =head2 wait_to_read
 
-        Block until all pending writes operations on current NDArray are finished.
+Block until all pending write operations on the NDArray are finished.
 
-        This function will return when all the pending writes to the current
-        NDArray finishes. There can still be pending read going on when the
-        function returns.
+This function will return when all the pending writes to the current
+NDArray are finished. There can be pending reads going on when the
+function returns.
 =cut
 
 method wait_to_read()
@@ -394,11 +385,11 @@ method wait_to_read()
 
 =head2 shape
 
-        Get shape of current NDArray.
+Get the shape of current NDArray.
 
-        Returns
-        -------
-        a tuple representing shape of current ndarray
+Returns
+-------
+an array ref representing the shape of current ndarray
 =cut
 
 method shape()
@@ -408,11 +399,8 @@ method shape()
 
 =head2 size
 
-        Get size of current NDArray.
+Number of elements in the array.
 
-        Returns
-        -------
-        an int representing size of current ndarray
 =cut
 
 method size(Shape|Undef $shape=)
@@ -425,12 +413,11 @@ method size(Shape|Undef $shape=)
 
 =head2 context
 
-        Get context of current NDArray.
+The context of the NDArray.
 
-        Returns
-        -------
-        context : mxnet.Context
-            The context of current NDArray.
+Returns
+-------
+$context : AI::MXNet::Context
 =cut
 
 method context()
@@ -446,13 +433,13 @@ method context()
 
 =head2 dtype
 
-        Get data type of current NDArray.
+The data type of current NDArray.
 
-        Returns
-        -------
-        an dtype string ('float32', 'float64', 'float16', 'uint8', 'int32') 
-        representing type of current ndarray.
-        'float32' is a default dtype for ndarray class.
+Returns
+-------
+a data type string ('float32', 'float64', 'float16', 'uint8', 'int32') 
+representing the data type of the ndarray.
+'float32' is the default dtype for the ndarray class.
 =cut
 
 method dtype()
@@ -466,21 +453,21 @@ method dtype()
 }
 
 =head2 copyto
-        Copy the content of current array to other.
 
-        When other is NDArray, the content is copied over.
-        When other is a Context, a new NDArray in the context
-        will be created as target
+Copy the content of current array to another entity.
 
-        Parameters
-        ----------
-        other : NDArray or Context
-            Target NDArray or context we want to copy data to.
+When another entity is the NDArray, the content is copied over.
+When another entity is AI::MXNet::Context, a new NDArray in the context
+will be created.
 
-        Returns
-        -------
-        dst : NDArray
-            The copy target NDArray
+Parameters
+----------
+other : NDArray or Context
+    Target NDArray or context we want to copy data to.
+
+Returns
+-------
+dst : NDArray
 =cut
 
 method copyto(AI::MXNet::Context|AI::MXNet::NDArray $other)
@@ -506,12 +493,11 @@ method copyto(AI::MXNet::Context|AI::MXNet::NDArray $other)
 
 =head2 copy
 
-        Make a copy of the current ndarray on the same context
+Makes a copy of the current ndarray in the same context
 
-        Return
-        ------
-        cpy : NDArray
-            The copy
+Returns
+------
+$copy : NDArray
 =cut
 
 method copy()
@@ -524,7 +510,8 @@ method copy()
 
 =head2 T
 
-        Get transpose of current NDArray
+Get transpose of the NDArray.
+Works only on 2-D matrices.
 =cut
 
 method T()
@@ -537,17 +524,17 @@ method T()
 }
 
 =head2 astype
-        Return a copied ndarray of current array with specified type.
 
-        Parameters
-        ----------
-        dtype : numpy.dtype or string
-            Desired type of result array.
+Returns copied ndarray of current array with the specified type.
 
-        Returns
-        -------
-        array : ndarray
-            A copy of array content.
+Parameters
+----------
+$dtype : Dtype
+
+Returns
+-------
+$array : ndarray
+A copy of the array content.
 =cut
 
 method astype(Dtype $dtype)
@@ -559,18 +546,18 @@ method astype(Dtype $dtype)
 
 =head2 as_in_context
 
-        Return an `NDArray` that lives in the target context. If the array
-        is already in that context, `self` is returned. Otherwise, a copy is
-        made.
+Returns an NDArray in the target context.
+If the array is already in that context, self is returned. Otherwise, a copy is
+made.
 
-        Parameters
-        ----------
-        context : Context
-            The target context we want the return value to live in.
+Parameters
+----------
+context : AI::MXNet::Context
+The target context we want the return value to live in.
 
-        Returns
-        -------
-        A copy or `self` as an `NDArray` that lives in the target context.
+Returns
+-------
+A copy or self as an NDArray in the target context.
 =cut
 
 method as_in_context(AI::MXNet::Context $context)
@@ -581,20 +568,19 @@ method as_in_context(AI::MXNet::Context $context)
 
 =head onehot_encode
 
-    One hot encoding indices into matrix out.
+One hot encoding indices into matrix out.
 
-    Parameters
-    ----------
-    indices: NDArray
-        An NDArray containing indices of the categorical features.
+Parameters
+----------
+indices: NDArray
+    An NDArray containing indices of the categorical features.
 
-    out: NDArray
-        The result holder of the encoding.
+out: NDArray
+    The result of the encoding.
 
-    Returns
-    -------
-    out: Array
-        Same as out.
+Returns
+-------
+$out: NDArray
 =cut
 
 method onehot_encode(AI::MXNet::NDArray $indices, AI::MXNet::NDArray $out)
@@ -610,7 +596,7 @@ method onehot_encode(AI::MXNet::NDArray $indices, AI::MXNet::NDArray $out)
     Parameters
     ----------
     lhs : NDArray or numeric value
-        left hande side operand
+        left hand side operand
 
     rhs : NDArray or numeric value
         right hand side operand
@@ -669,22 +655,6 @@ method iadd(AI::MXNet::NDArray|Num $other, $reverse=)
         : __PACKAGE__->_plus_scalar($self, $other, { out => $self })
 }
 
-=head2 add
-
-    Perform element-wise addition
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
-
 method add(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     return _ufunc_helper(
@@ -694,21 +664,6 @@ method add(AI::MXNet::NDArray|Num $other, $reverse=)
     );
 }
 
-=head2 subtract
-
-    Perform element-wise subtract
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
 
 method subtract(AI::MXNet::NDArray|Num $other, $reverse=)
 {
@@ -716,7 +671,7 @@ method subtract(AI::MXNet::NDArray|Num $other, $reverse=)
         $self,
         $other,
         qw/broadcast_sub _minus_scalar _rminus_scalar/,
-        $reverse        
+        $reverse
     );
 }
 
@@ -727,23 +682,6 @@ method isubtract(AI::MXNet::NDArray|Num $other, $reverse=)
         ? __PACKAGE__->broadcast_sub($self, $other, { out => $self })
         : __PACKAGE__->_minus_scalar($self, $other, { out => $self })
 }
-
-
-=head2 multiply
-
-    Perform element-wise multiplication
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
 
 method multiply(AI::MXNet::NDArray|Num $other, $reverse=)
 {
@@ -761,23 +699,6 @@ method imultiply(AI::MXNet::NDArray|Num $other, $reverse=)
         ? __PACKAGE__->broadcast_mul($self, $other, { out => $self }) 
         : __PACKAGE__->_mul_scalar($self, $other, { out => $self }) 
 }
-
-
-=head2 divide
-
-    Perform element-wise divide
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
 
 method divide(AI::MXNet::NDArray|Num $other, $reverse=)
 {
@@ -797,22 +718,6 @@ method idivide(AI::MXNet::NDArray|Num $other, $reverse=)
         : __PACKAGE__->_div_scalar($self, $other, { out => $self }) 
 }
 
-=head2 power
-
-    Perform element-wise power operator
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
-
 method power(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     return _ufunc_helper(
@@ -823,20 +728,6 @@ method power(AI::MXNet::NDArray|Num $other, $reverse=)
     );
 }
 
-=head2 maximum
-
-    Perform maximum operator
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    Returns
-    -------
-    out: Array
-        result array
-=cut
-
 method maximum(AI::MXNet::NDArray|Num $other)
 {
     return _ufunc_helper(
@@ -845,20 +736,6 @@ method maximum(AI::MXNet::NDArray|Num $other)
         qw/broadcast_maximum _maximum_scalar/
     );
 }
-
-=head2 minimum
-
-    Perform minimum operator
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    Returns
-    -------
-    out: Array
-        result array
-=cut
 
 method minimum(AI::MXNet::NDArray|Num $other)
 {
@@ -869,22 +746,6 @@ method minimum(AI::MXNet::NDArray|Num $other)
     );
 }
 
-=head2 equal
-
-    Return ($self == $other) element-wise
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
-
 method equal(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     return _ufunc_helper(
@@ -894,22 +755,6 @@ method equal(AI::MXNet::NDArray|Num $other, $reverse=)
     );
 }
 
-=head2 not_equal
-
-    Return ($self != $other) element-wise
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
-
 method not_equal(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     return _ufunc_helper(
@@ -918,22 +763,6 @@ method not_equal(AI::MXNet::NDArray|Num $other, $reverse=)
         qw/broadcast_not_equal _not_equal_scalar/
     );
 }
-
-=head2 greater
-
-    Return ($self > $other) element-wise
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
 
 method greater(AI::MXNet::NDArray|Num $other, $reverse=)
 {
@@ -945,22 +774,6 @@ method greater(AI::MXNet::NDArray|Num $other, $reverse=)
     );
 }
 
-=head2 greater_equal
-
-    Return ($self >= $other) element-wise
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
-
 method greater_equal(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     return _ufunc_helper(
@@ -970,22 +783,6 @@ method greater_equal(AI::MXNet::NDArray|Num $other, $reverse=)
         $reverse
     );
 }
-
-=head2 lesser
-
-    Return ($self < $other) element-wise
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
 
 method lesser(AI::MXNet::NDArray|Num $other, $reverse=)
 {
@@ -997,22 +794,6 @@ method lesser(AI::MXNet::NDArray|Num $other, $reverse=)
     );
 }
 
-=head2 lesser_equal
-
-    Return ($self <= $other) element-wise
-
-    Parameters
-    ----------
-    $other : Array of float value
-        right hand side operand
-    $reverse : Boolean, if true,
-        reverses $self and $other
-    Returns
-    -------
-    out: Array
-        result array
-=cut
-
 method lesser_equal(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     return _ufunc_helper(
@@ -1023,11 +804,6 @@ method lesser_equal(AI::MXNet::NDArray|Num $other, $reverse=)
     );
 }
 
-=head2 true_divide
-
-    The same as divide
-=cut
-
 method true_divide(AI::MXNet::NDArray|Num $other, $reverse=)
 {
     return $self->divide($other, $reverse);
@@ -1035,20 +811,20 @@ method true_divide(AI::MXNet::NDArray|Num $other, $reverse=)
 
 =head2 empty(
 
-    Create an empty uninitialized new NDArray, with specified shape.
+Creates an empty uninitialized NDArray, with the specified shape.
 
-    Parameters
-    ----------
-    shape : ArrayRef
-        shape of the NDArray.
+Parameters
+----------
+shape : Shape
+    shape of the NDArray.
 
-    ctx : Context, optional
-        The context of the NDArray, default to current default context.
+ctx : AI::MXNet::Context, optional
+The context of the NDArray, defaults to current default context.
 
-    Returns
-    -------
-    out: Array
-        The created NDArray.
+Returns
+-------
+out: Array
+    The created NDArray.
 =cut
 
 method empty(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
@@ -1065,19 +841,19 @@ method empty(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_
 
 =head2 zeros
 
-    Create a new NDArray filled with 0, with specified shape.
+Creates a new NDArray filled with 0, with specified shape.
 
-    Parameters
-    ----------
-    shape : ArrayRef
-        shape of the NDArray.
-    ctx : Context, optional.
-        The context of the NDArray, default to current default context.
+Parameters
+----------
+shape : Shape
+    The shape of the NDArray.
+ctx : AI::MXNet::Context, optional.
+    The context of the NDArray, defaults to current default context.
 
-    Returns
-    -------
-    out: Array
-        The created NDArray.
+Returns
+-------
+out: Array
+    The created NDArray.
 =cut
 
 method zeros(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
@@ -1087,19 +863,19 @@ method zeros(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_
 
 =head2 ones
 
-    Create a new NDArray filled with 1, with specified shape.
+Creates a new NDArray filled with 1, with specified shape.
 
-    Parameters
-    ----------
-    shape : ArrayRef
-        shape of the NDArray.
-    ctx : Context, optional.
-        The context of the NDArray, default to current default context.
+Parameters
+----------
+shape : Shape
+    The shape of the NDArray.
+ctx : Context, optional.
+    The context of the NDArray, default to current default context.
 
-    Returns
-    -------
-    out: Array
-        The created NDArray.
+Returns
+-------
+out: Array
+    The created NDArray.
 =cut
 
 method ones(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
@@ -1109,21 +885,21 @@ method ones(Shape $shape, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_c
 
 =head2 full
 
-    Create a new NDArray filled with given value, with specified shape.
+Creates a new NDArray filled with given value, with specified shape.
 
-    Parameters
-    ----------
-    shape : ArrayRef
-        shape of the NDArray.
-    val : float or int
-        value to be filled with.
-    ctx : Context, optional.
-        The context of the NDArray, default to current default context.
+Parameters
+----------
+shape : Shape
+    The shape of the NDArray.
+val : float or int
+    The value to be filled with.
+ctx : Context, optional.
+    The context of the NDArray, default to current default context.
 
-    Returns
-    -------
-    out: Array
-        The created NDArray.
+Returns
+-------
+out: NDArray
+    The created NDArray.
 =cut
 
 method full(Shape $shape, Num $val, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
@@ -1133,20 +909,20 @@ method full(Shape $shape, Num $val, AI::MXNet::Context :$ctx=AI::MXNet::Context-
 
 =head2 array
 
-    Create a new NDArray that copies content from source_array.
+Creates a new NDArray that is a copy of the source_array.
 
-    Parameters
-    ----------
-    source_array : array_like
+Parameters
+----------
+source_array : PDL, PDL::Matrix, Array ref in PDL::pdl format
         Source data to create NDArray from.
 
-    ctx : Context, optional
-        The context of the NDArray, default to current default context.
+ctx : Context, optional
+The context of the NDArray, default to current default context.
 
-    Returns
-    -------
-    out: Array
-        The created NDArray.
+Returns
+-------
+out: Array
+    The created NDArray.
 =cut
 
 method array(PDL|PDL::Matrix|ArrayRef $source_array, AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
@@ -1169,22 +945,22 @@ method array(PDL|PDL::Matrix|ArrayRef $source_array, AI::MXNet::Context :$ctx=AI
 
 =head2 concatenate
 
-    Concatenate a list of NDArrays along the first dimension.
+Concatenates an array ref of NDArrays along the first dimension.
 
-    Parameters
-    ----------
-    arrays : list of NDArray
-        Arrays to be concatenate. They must have identical shape except
-        the first dimension. They also must have the same data type.
-    axis : int
-        The axis along which to concatenate.
-    always_copy : bool
-        Default `True`. When not `True`, if the arrays only contain one
-        `NDArray`, that element will be returned directly, avoid copying.
+Parameters
+----------
+arrays :  array ref of NDArrays
+    Arrays to be concatenate. They must have identical shape except
+    for the first dimension. They also must have the same data type.
+axis : int
+    The axis along which to concatenate.
+always_copy : bool
+    Default 1. When not 1, if the arrays only contain one
+    NDArray, that element will be returned directly, avoid copying.
 
-    Returns
-    -------
-    An `NDArray` that lives on the same context as `arrays[0].context`.
+Returns
+-------
+An NDArray in the same context as $arrays->[0]->context.
 =cut
 
 method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$always_copy=1)
@@ -1243,29 +1019,29 @@ method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$alway
 
 =head2 arange
 
-    Simlar function in the MXNet ndarray as numpy.arange
-        See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
+Similar function in the MXNet ndarray as numpy.arange
+See Also https://docs.scipy.org/doc/numpy/reference/generated/numpy.arange.html.
 
-    Parameters
-    ----------
-    start : number, optional
-        Start of interval. The interval includes this value. The default start value is 0.
-    stop : number, optional
-        End of interval. The interval does not include this value.
-    step : number, optional
-        Spacing between values
-    repeat : number, optional
-        "The repeating time of all elements.
-        E.g repeat=3, the element a will be repeated three times --> a, a, a.
-    ctx : Context, optional
-        The context of the NDArray, default to current default context.
-    dtype : type, optional
-        The value type of the NDArray, default to np.float32
+Parameters
+----------
+start : number, optional
+    Start of interval. The interval includes this value. The default start value is 0.
+stop : number, optional
+    End of interval. The interval does not include this value.
+step : number, optional
+    Spacing between the values
+repeat : number, optional
+    The repeating time of all elements.
+    E.g repeat=3, the element a will be repeated three times --> a, a, a.
+ctx : Context, optional
+    The context of the NDArray, defaultw to current default context.
+dtype : data type, optional
+    The value type of the NDArray, defaults to float32
 
-    Returns
-    -------
-    out : NDArray
-        The created NDArray
+Returns
+-------
+out : NDArray
+    The created NDArray
 =cut
 
 method arange(Index :$start=0, Index :$stop=, Index :$step=1, Index :$repeat=1,
@@ -1283,27 +1059,26 @@ method arange(Index :$start=0, Index :$stop=, Index :$step=1, Index :$repeat=1,
 
 =head2 load
 
-    Load ndarray from binary file.
+Loads ndarray from a binary file.
 
-    You can also use Storable to do the job if you only work on perl.
-    The advantage of load/save is the file is language agnostic.
-    This means the file saved using save can be loaded by other language binding of mxnet.
-    You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+You can also use Storable to do the job if you only work on perl.
+The advantage of load/save is the file is language agnostic.
+This means the file saved using save can be loaded by other language binding of mxnet.
+You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
 
-    Parameters
-    ----------
-    fname : str
-        The name of the file.Can be S3 or HDFS address (remember built with S3 support).
-        Example of fname:
+Parameters
+----------
+fname : str
+    The name of the file.Can be S3 or HDFS address (remember built with S3 support).
+    Example of fname:
 
-        - `s3://my-bucket/path/my-s3-ndarray`
-        - `hdfs://my-bucket/path/my-hdfs-ndarray`
-        - `/path-to/my-local-ndarray`
+    - `s3://my-bucket/path/my-s3-ndarray`
+    - `hdfs://my-bucket/path/my-hdfs-ndarray`
+    - `/path-to/my-local-ndarray`
 
-    Returns
-    -------
-    out : list of NDArray or dict of str to NDArray
-        List of NDArray or dict of str->NDArray, depending on what was saved.
+Returns
+-------
+out : array ref of NDArrays or hash ref with NDArrays
 =cut
 
 method load(Str $filename)
@@ -1326,25 +1101,25 @@ method load(Str $filename)
 
 =head2 save
 
-    Save array of NDArray or hash of str->NDArray to binary file.
+Save array ref of NDArray or hash of str->NDArray to a binary file.
 
-    You can also use Storable to do the job if you only work on perl.
-    The advantage of load/save is the file is language agnostic.
-    This means the file saved using save can be loaded by other language binding of mxnet.
-    You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+You can also use Storable to do the job if you only work on perl.
+The advantage of load/save is the file is language agnostic.
+This means the file saved using save can be loaded by other language binding of mxnet.
+You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
 
-    Parameters
-    ----------
-    fname : str
-        The name of the file.Can be S3 or HDFS address (remember built with S3 support).
-        Example of fname:
+Parameters
+----------
+fname : str
+    The name of the file.Can be S3 or HDFS address (remember built with S3 support).
+    Example of fname:
 
-        - `s3://my-bucket/path/my-s3-ndarray`
-        - `hdfs://my-bucket/path/my-hdfs-ndarray`
-        - `/path-to/my-local-ndarray`
+    - `s3://my-bucket/path/my-s3-ndarray`
+    - `hdfs://my-bucket/path/my-hdfs-ndarray`
+    - `/path-to/my-local-ndarray`
 
-    data : list of NDArray or dict of str to NDArray
-        The data to be saved.
+data : array ref of NDArrays hash ref of NDArrays
+    The data to be saved.
 =cut
 
 method save(Str $filename, ArrayRef[AI::MXNet::NDArray]|HashRef[AI::MXNet::NDArray] $data)
@@ -1375,22 +1150,22 @@ method save(Str $filename, ArrayRef[AI::MXNet::NDArray]|HashRef[AI::MXNet::NDArr
 
 =head2 imdecode
 
-    Decode an image from string. Requires OpenCV to work.
+Decode an image from string. Requires OpenCV to work.
 
-    Parameters
-    ----------
-    str_img : str
-        binary image data
-    clip_rect : iterable of 4 int
-        clip decoded image to rectangle (x0, y0, x1, y1)
-    out : NDArray
-        output buffer. can be 3 dimensional (c, h, w) or 4 dimensional (n, c, h, w)
-    index : int
-        output decoded image to i-th slice of 4 dimensional buffer
-    channels : int
-        number of channels to output. Decode to grey scale when channels = 1.
-    mean : NDArray
-        subtract mean from decode image before outputing.
+Parameters
+----------
+str_img : str
+    binary image data
+clip_rect : iterable of 4 int
+    clip decoded image to rectangle (x0, y0, x1, y1)
+out : NDArray
+    output buffer. can be 3 dimensional (c, h, w) or 4 dimensional (n, c, h, w)
+index : int
+    output decoded image to i-th slice of 4 dimensional buffer
+channels : int
+    number of channels to output. Decode to grey scale when channels = 1.
+mean : NDArray
+    subtract mean from decode image before outputting.
 =cut
 
 method imdecode($str_img, ArrayRef[Int] :$clip_rect=[0, 0, 0, 0],
@@ -1408,14 +1183,13 @@ method imdecode($str_img, ArrayRef[Int] :$clip_rect=[0, 0, 0, 0],
 
 =head2 _new_empty_handle
 
-    """Return a new empty handle.
+Returns a new empty handle.
 
-    Empty handle can be used to hold result
+Empty handle can be used to hold result
 
-    Returns
-    -------
+Returns
+-------
     a new empty ndarray handle
-    """
 =cut
 
 sub _new_empty_handle
@@ -1426,13 +1200,13 @@ sub _new_empty_handle
 
 =head2 _new_alloc_handle
 
-    Return a new handle with specified shape and context.
+Returns a new handle with specified shape and context.
 
-    Empty handle is only used to hold results
+Empty handle is only used to hold results
 
-    Returns
-    -------
-    a new empty ndarray handle
+Returns
+-------
+a new empty ndarray handle
 =cut
 
 func _new_alloc_handle($shape, $ctx, $delay_alloc, $dtype)
@@ -1448,11 +1222,10 @@ func _new_alloc_handle($shape, $ctx, $delay_alloc, $dtype)
     return $hdl;
 }
 
-=head2
-    Wait all async operation to finish in MXNet
+=head2 waitall
 
-    This function is used for benchmark only
-    """
+Wait for all async operations to finish in MXNet.
+This function is used for benchmarks only.
 =cut
 
 method waitall()
@@ -1464,7 +1237,7 @@ my $lvalue_methods = join "\n", map {"use attributes 'AI::MXNet::NDArray', \\&AI
 qw/at slice aspdl asmpdl reshape copy sever T astype as_in_context copyto empty zero ones full
                        array/;
 eval << "EOV" if ($^V and $^V >= 5.006007);
-{ 
+{
   no warnings qw(misc);
   $lvalue_methods
 }

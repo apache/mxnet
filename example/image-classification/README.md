@@ -220,7 +220,7 @@ file named `hosts`. The outputs of `cat hosts` may be
 Now we can run the previous cifar10 training on two machines:
 
 ```bash
-../../tools/launch.py -n 2 -H hosts \
+python ../../tools/launch.py -n 2 -H hosts \
     python train_cifar10.py --network resnet --num-layers 110 --batch-size 128 --gpus 0,1 \
     --kv-store dist_device_sync
 ```

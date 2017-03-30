@@ -12,7 +12,7 @@ from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 from .base import _LIB, check_call
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol
-from .ndarray import NDArray
+from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 
 c_int_p = POINTER(c_int)
 
@@ -441,7 +441,6 @@ class CustomOp(object):
 
 class CustomOpProp(object):
     """Base class for operator property class implemented in python.
-    MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
 
     Parameters
     ----------
@@ -473,6 +472,29 @@ class CustomOpProp(object):
             in the same order as declared in list_auxiliary_states.
         """
         return in_shape, [in_shape[0]], []
+
+    def infer_type(self, in_type):
+        """infer_type interface. override to create new operators
+
+        Parameters
+        ----------
+        in_type : list of np.dtype
+            list of argument types in the same order as
+            declared in list_arguments.
+
+        Returns
+        -------
+        in_type : list
+            list of argument types. Can be modified from in_type.
+        out_type : list
+            list of output types calculated from in_type,
+            in the same order as declared in list_outputs.
+        aux_type : Optional, list
+            list of aux types calculated from in_type,
+            in the same order as declared in list_auxiliary_states.
+        """
+        return in_type, [in_type[0]]*len(self.list_outputs()), \
+            [in_type[0]]*len(self.list_auxiliary_states())
 
     def list_outputs(self):
         """list_outputs interface. override to create new operators
@@ -555,47 +577,29 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
-        fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int),
-                                POINTER(c_int), c_bool, c_void_p)
-        del_functype = CFUNCTYPE(c_bool, c_void_p)
-        class CustomOpInfo(Structure):
+        class MXCallbackList(Structure):
             """Structure that holds Callback information. Passed to CustomOpProp"""
             _fields_ = [
-                ('forward', fb_functype),
-                ('backward', fb_functype),
-                ('delete', del_functype),
-                ('p_forward', c_void_p),
-                ('p_backward', c_void_p),
-                ('p_delete', c_void_p)
+                ('num_callbacks', c_int),
+                ('callbacks', POINTER(CFUNCTYPE(c_int))),
+                ('contexts', POINTER(c_void_p))
                 ]
 
-        infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
-                                   POINTER(POINTER(mx_uint)), c_void_p)
-        list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))), c_void_p)
-        deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
+        fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int),
+                                POINTER(c_int), c_int, c_void_p)
+        del_functype = CFUNCTYPE(c_int, c_void_p)
+
+        infershape_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
+                                        POINTER(POINTER(mx_uint)), c_void_p)
+        infertype_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
+        list_functype = CFUNCTYPE(c_int, POINTER(POINTER(POINTER(c_char))), c_void_p)
+        deps_functype = CFUNCTYPE(c_int, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
-        createop_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(POINTER(mx_uint)),
+        createop_functype = CFUNCTYPE(c_int, c_char_p, c_int, POINTER(POINTER(mx_uint)),
                                       POINTER(c_int), POINTER(c_int),
-                                      POINTER(CustomOpInfo), c_void_p)
-        class CustomOpPropInfo(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp"""
-            _fields_ = [
-                ('list_arguments', list_functype),
-                ('list_outputs', list_functype),
-                ('infer_shape', infer_functype),
-                ('declare_backward_dependency', deps_functype),
-                ('create_operator', createop_functype),
-                ('list_auxiliary_states', list_functype),
-                ('delete', del_functype),
-                ('p_list_arguments', c_void_p),
-                ('p_list_outputs', c_void_p),
-                ('p_infer_shape', c_void_p),
-                ('p_declare_backward_dependency', c_void_p),
-                ('p_create_operator', c_void_p),
-                ('p_list_auxiliary_states', c_void_p),
-                ('p_delete', c_void_p)
-                ]
-        req_enum = ['null', 'write', 'inplace', 'add']
+                                      POINTER(MXCallbackList), c_void_p)
+        req_enum = ('null', 'write', 'inplace', 'add')
+
 
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
@@ -633,6 +637,36 @@ def register(reg_name):
                     infer_shape_entry._ref_holder = [tensor_shapes]
                 except Exception:
                     print('Error in %s.infer_shape: %s' % (reg_name, traceback.format_exc()))
+                    return False
+                return True
+
+            def infer_type_entry(num_tensor, tensor_types, _):
+                """C Callback for CustomOpProp::InferType"""
+                try:
+                    n_in = len(op_prop.list_arguments())
+                    n_out = len(op_prop.list_outputs())
+                    n_aux = len(op_prop.list_auxiliary_states())
+                    assert num_tensor == n_in + n_out + n_aux
+
+                    types = [_DTYPE_MX_TO_NP[tensor_types[i]] for i in range(n_in)]
+                    ret = op_prop.infer_type(types)
+                    if len(ret) == 2:
+                        itype, otype = ret
+                        atype = []
+                    elif len(ret) == 3:
+                        itype, otype, atype = ret
+                    else:
+                        raise AssertionError("infer_type must return 2 or 3 lists")
+                    assert len(otype) == n_out
+                    assert len(itype) == n_in
+                    assert len(atype) == n_aux
+                    rtype = list(itype) + list(otype) + list(atype)
+                    for i, dtype in enumerate(rtype):
+                        tensor_types[i] = _DTYPE_NP_TO_MX[dtype]
+
+                    infer_type_entry._ref_holder = [tensor_types]
+                except Exception:
+                    print('Error in %s.infer_type: %s' % (reg_name, traceback.format_exc()))
                     return False
                 return True
 
@@ -762,10 +796,16 @@ def register(reg_name):
                             return False
                         return True
 
-                    ret[0] = CustomOpInfo(fb_functype(forward_entry),
-                                          fb_functype(backward_entry),
-                                          del_functype(delete_entry),
-                                          None, None, None)
+                    callbacks = [del_functype(delete_entry),
+                                 fb_functype(forward_entry),
+                                 fb_functype(backward_entry)]
+                    callbacks = [cast(i, CFUNCTYPE(c_int)) for i in callbacks]
+                    contexts = [None, None, None]
+                    ret[0] = MXCallbackList(c_int(len(callbacks)),
+                                            cast(c_array(CFUNCTYPE(c_int), callbacks),
+                                                 POINTER(CFUNCTYPE(c_int))),
+                                            cast(c_array(c_void_p, contexts),
+                                                 POINTER(c_void_p)))
                     op._ref_holder = [ret]
                     _registry.ref_holder[cur] = op
                 except Exception:
@@ -784,20 +824,27 @@ def register(reg_name):
                     return False
                 return True
 
-            ret[0] = CustomOpPropInfo(list_functype(list_arguments_entry),
-                                      list_functype(list_outputs_entry),
-                                      infer_functype(infer_shape_entry),
-                                      deps_functype(declare_backward_dependency_entry),
-                                      createop_functype(create_operator_entry),
-                                      list_functype(list_auxiliary_states_entry),
-                                      del_functype(delete_entry),
-                                      None, None, None, None, None, None, None)
+            callbacks = [del_functype(delete_entry),
+                         list_functype(list_arguments_entry),
+                         list_functype(list_outputs_entry),
+                         list_functype(list_auxiliary_states_entry),
+                         infershape_functype(infer_shape_entry),
+                         deps_functype(declare_backward_dependency_entry),
+                         createop_functype(create_operator_entry),
+                         infertype_functype(infer_type_entry)]
+            callbacks = [cast(i, CFUNCTYPE(c_int)) for i in callbacks]
+            contexts = [None]*len(callbacks)
+            ret[0] = MXCallbackList(c_int(len(callbacks)),
+                                    cast(c_array(CFUNCTYPE(c_int), callbacks),
+                                         POINTER(CFUNCTYPE(c_int))),
+                                    cast(c_array(c_void_p, contexts),
+                                         POINTER(c_void_p)))
             op_prop._ref_holder = [ret]
             _registry.ref_holder[cur] = op_prop
             return True
 
-        creator_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(c_char_p),
-                                     POINTER(c_char_p), POINTER(CustomOpPropInfo))
+        creator_functype = CFUNCTYPE(c_int, c_char_p, c_int, POINTER(c_char_p),
+                                     POINTER(c_char_p), POINTER(MXCallbackList))
         creator_func = creator_functype(creator)
         check_call(_LIB.MXCustomOpRegister(c_str(reg_name), creator_func))
         cur = _registry.inc()
