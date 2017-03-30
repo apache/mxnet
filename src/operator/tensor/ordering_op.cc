@@ -59,7 +59,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "ndarray-or-symbol", "Source input")
+.add_argument("src", "NDArray-or-Symbol", "Source input")
 .add_arguments(TopKParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_topk)
@@ -122,7 +122,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "ndarray-or-symbol", "Source input")
+.add_argument("src", "NDArray-or-Symbol", "Source input")
 .add_arguments(SortParam::__FIELDS__());
 
 NNVM_REGISTER_OP(argsort)
@@ -155,7 +155,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("src", "ndarray-or-symbol", "Source input")
+.add_argument("src", "NDArray-or-Symbol", "Source input")
 .add_arguments(ArgSortParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

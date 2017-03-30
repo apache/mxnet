@@ -32,7 +32,7 @@ Operator* SwapAxisProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_sh
 DMLC_REGISTER_PARAMETER(SwapAxisParam);
 
 MXNET_REGISTER_OP_PROPERTY(SwapAxis, SwapAxisProp)
-.add_argument("data", "ndarray-or-symbol", "Input array.")
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(SwapAxisParam::__FIELDS__())
 .describe(R"code(Interchange two axes of an array.
 

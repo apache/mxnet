@@ -110,7 +110,7 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
     })                                                              \
-  .add_argument("data", "ndarray-or-symbol", "The input")
+  .add_argument("data", "NDArray-or-Symbol", "The input")
 
 }  // namespace op
 }  // namespace mxnet
