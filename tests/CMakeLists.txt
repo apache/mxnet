@@ -17,7 +17,7 @@ if(NOT GTEST_ROOT)
 endif()
 
 if(NOT MSVC)
-  set(UNITTEST_STATIC_LINK ON)
+  set(UNITTEST_STATIC_LINK OFF)
 endif()
 
 if(GTEST_FOUND)
@@ -37,11 +37,13 @@ if(GTEST_FOUND)
       ${mxnet_LINKER_LIBS}
       )
   else()
+    message(STATUS " OpenBLAS_LIB: ${OpenBLAS_LIB}")
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
       rt
       dmlccore
       ${nnvm_LINKER_LIBS}
+      ${mxnet_LINKER_LIBS}
       mxnet
       )
   endif()
