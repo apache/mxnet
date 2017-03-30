@@ -1,25 +1,7 @@
 # Build MXNet from Source
 
 This document explains how to build MXNet from source codes for the following
-platforms. Please select the one you prefer.
-
-<div class='text-center'>
-<div class="btn-group opt-group" role="group">
-<button type="button" class="btn btn-default opt active">Ubuntu</button>
-<button type="button" class="btn btn-default opt">CentOS</button>
-<button type="button" class="btn btn-default opt">Linux</button>
-<button type="button" class="btn btn-default opt">macOS</button>
-<button type="button" class="btn btn-default opt">Windows</button>
-</div>
-</div>
-<script type="text/javascript" src='../../_static/js/options.js'></script>
-
-- **Ubuntu** for systems supporting the `apt-get`
-  package management program
-- **CentOS** for systems supporting the `yum` package
-  management program
-- **Linux** for general Linux-like systems
-
+platforms.
 The build process contains two steps:
 
 1. Build the shared `libmxnet` library from [C++ source files](#build-the-shared-library)
@@ -44,6 +26,24 @@ and a BLAS library. There are optional dependencies for enhanced features.
 
 3. [GNU Make](https://www.gnu.org/software/make/) ([cmake](https://cmake.org/)
    for Windows) to build the library.
+
+
+Please select the platform you prefer.
+
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Ubuntu</button>
+<button type="button" class="btn btn-default opt">CentOS</button>
+<button type="button" class="btn btn-default opt">Linux</button>
+<button type="button" class="btn btn-default opt">macOS</button>
+<button type="button" class="btn btn-default opt">Windows</button>
+</div>
+<script type="text/javascript" src='../../_static/js/options.js'></script>
+
+- **Ubuntu** for systems supporting the `apt-get`
+  package management program
+- **CentOS** for systems supporting the `yum` package
+  management program
+- **Linux** for general Linux-like systems
 
 <div class="ubuntu">
 
