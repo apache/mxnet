@@ -17,7 +17,7 @@ except ImportError:
     cv2 = None
 
 class MXRecordIO(object):
-    """Read/write RecordIO formmat data
+    """Read/write RecordIO formmat data.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ class MXRecordIO(object):
         self.open()
 
     def open(self):
-        """Open record file"""
+        """Open record file."""
         if self.flag == "w":
             check_call(_LIB.MXRecordIOWriterCreate(self.uri, ctypes.byref(self.handle)))
             self.writable = True
@@ -49,7 +49,7 @@ class MXRecordIO(object):
         self.close()
 
     def close(self):
-        """close record file"""
+        """Close record file."""
         if not self.is_open:
             return
         if self.writable:
@@ -60,17 +60,17 @@ class MXRecordIO(object):
 
     def reset(self):
         """Reset pointer to first item. If record is opened with 'w',
-        this will truncate the file to empty"""
+        this will truncate the file to empty."""
         self.close()
         self.open()
 
     def write(self, buf):
-        """Write a string buffer as a record
+        """Write a string buffer as a record.
 
         Parameters
         ----------
         buf : string (python2), bytes (python3)
-            buffer to write.
+            Buffer to write.
         """
         assert self.writable
         check_call(_LIB.MXRecordIOWriterWriteRecord(self.handle,
@@ -78,12 +78,12 @@ class MXRecordIO(object):
                                                     ctypes.c_size_t(len(buf))))
 
     def read(self):
-        """Read a record as string
+        """Read a record as string.
 
         Returns
         ----------
         buf : string
-            buffer read.
+            Buffer read.
         """
         assert not self.writable
         buf = ctypes.c_char_p()
@@ -103,13 +103,13 @@ class MXIndexedRecordIO(MXRecordIO):
     Parameters
     ----------
     idx_path : str
-        Path to index file
+        Path to index file.
     uri : str
         Path to record file. Only support file types that are seekable.
     flag : str
         'w' for write or 'r' for read
     key_type : type
-        data type for keys
+        Data type for keys.
     """
     def __init__(self, idx_path, uri, flag, key_type=int):
         self.idx_path = idx_path
@@ -138,25 +138,25 @@ class MXIndexedRecordIO(MXRecordIO):
         self.fidx.close()
 
     def seek(self, idx):
-        """Query current read head position"""
+        """Query current read head position."""
         assert not self.writable
         pos = ctypes.c_size_t(self.idx[idx])
         check_call(_LIB.MXRecordIOReaderSeek(self.handle, pos))
 
     def tell(self):
-        """Query current write head position"""
+        """Query current write head position."""
         assert self.writable
         pos = ctypes.c_size_t()
         check_call(_LIB.MXRecordIOWriterTell(self.handle, ctypes.byref(pos)))
         return pos.value
 
     def read_idx(self, idx):
-        """Read record with index"""
+        """Read record with index."""
         self.seek(idx)
         return self.read()
 
     def write_idx(self, idx, buf):
-        """Write record with index"""
+        """Write record with index."""
         key = self.key_type(idx)
         pos = self.tell()
         self.write(buf)
@@ -170,13 +170,13 @@ _IR_FORMAT = 'IfQQ'
 _IR_SIZE = struct.calcsize(_IR_FORMAT)
 
 def pack(header, s):
-    """pack an string into MXImageRecord
+    """Pack an string into MXImageRecord.
 
     Parameters
     ----------
     header : IRHeader
-        header of the image record.
-        header.label can be a number or an array.
+        Header of the image record.
+        ``header.label`` can be a number or an array.
     s : str
         string to pack
     """
@@ -191,19 +191,19 @@ def pack(header, s):
     return s
 
 def unpack(s):
-    """unpack a MXImageRecord to string
+    """Unpack a MXImageRecord to string.
 
     Parameters
     ----------
     s : str
-        string buffer from MXRecordIO.read
+        String buffer from MXRecordIO.read.
 
     Returns
     -------
     header : IRHeader
-        header of the image record
+        Header of the image record.
     s : str
-        unpacked string
+        Unpacked string.
     """
     header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
     s = s[_IR_SIZE:]
@@ -213,21 +213,21 @@ def unpack(s):
     return header, s
 
 def unpack_img(s, iscolor=-1):
-    """unpack a MXImageRecord to image
+    """Unpack a MXImageRecord to image.
 
     Parameters
     ----------
     s : str
-        string buffer from MXRecordIO.read
+        String buffer from ``MXRecordIO.read``.
     iscolor : int
-        image format option for cv2.imdecode
+        image format option for ``cv2.imdecode``.
 
     Returns
     -------
     header : IRHeader
-        header of the image record
+        Header of the image record.
     img : numpy.ndarray
-        unpacked image
+        Unpacked image.
     """
     header, s = unpack(s)
     img = np.fromstring(s, dtype=np.uint8)
@@ -236,24 +236,24 @@ def unpack_img(s, iscolor=-1):
     return header, img
 
 def pack_img(header, img, quality=95, img_fmt='.jpg'):
-    """pack an image into MXImageRecord
+    """Pack an image into ``MXImageRecord``.
 
     Parameters
     ----------
     header : IRHeader
-        header of the image record
-        header.label can be a number or an array.
+        Header of the image record.
+        ``header.label`` can be a number or an array.
     img : numpy.ndarray
         image to pack
     quality : int
-        quality for JPEG encoding. 1-100, or compression for PNG encoding. 1-9.
+        Quality for JPEG encoding in range 1-100, or compression for PNG encoding in range 1-9.
     img_fmt : str
-        Encoding of the image. .jpg for JPEG, .png for PNG.
+        Encoding of the image (.jpg for JPEG, .png for PNG).
 
     Returns
     -------
     s : str
-        The packed string
+        The packed string.
     """
     assert cv2 is not None
     jpg_formats = ['.JPG', '.JPEG']
@@ -265,5 +265,5 @@ def pack_img(header, img, quality=95, img_fmt='.jpg'):
         encode_params = [cv2.IMWRITE_PNG_COMPRESSION, quality]
 
     ret, buf = cv2.imencode(img_fmt, img, encode_params)
-    assert ret, 'failed encoding image'
+    assert ret, 'failed to encode image'
     return pack(header, buf.tostring())
