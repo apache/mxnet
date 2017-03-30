@@ -35,6 +35,10 @@ Please choice the programming language for the rest of this document.
 
 <div class="pre-built-binaries">
 
+<div class="r scala julia perl">
+Pre-built binaries will be available soon.
+</div>
+
 <div class="python">
 
 Installing the pre-build python package requires a recent version of `pip`,
@@ -47,7 +51,14 @@ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Linux</button>
 <button type="button" class="btn btn-default opt">macOS</button>
+<button type="button" class="btn btn-default opt">Windows</button>
 </div> <!-- opt-group -->
+
+<div class="windows">
+
+Will be available soon.
+
+</div> <!-- windows -->
 
 <div class="macos">
 
@@ -210,7 +221,7 @@ Run the above codes in GPU in straightforward:
 
 ```python
 >>> a = mx.nd.ones((2, 3), mx.gpu())  # create a on GPU 0, then the result a*2+1 will sit on GPU 0 as well
->>> c = b.eval(a=a, mx.gpu()), ctx=mx.gpu())  # feed a as the input to eval b, the result c will be also on GPU 0
+>>> c = b.eval(a=a, ctx=mx.gpu())  # feed a as the input to eval b, the result c will be also on GPU 0
 ```
 
 ```r
