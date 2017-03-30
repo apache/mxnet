@@ -190,6 +190,7 @@ if(USE_CUDNN AND USE_CUDA)
   if(HAVE_CUDNN)
     add_definitions(-DUSE_CUDNN)
     include_directories(SYSTEM ${CUDNN_INCLUDE})
+    list(APPEND CUDNN_LIBRARY cufft) # For fft operator
     list(APPEND mxnet_LINKER_LIBS ${CUDNN_LIBRARY})
 	  add_definitions(-DMSHADOW_USE_CUDNN=1)
   endif()
@@ -401,9 +402,11 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-    add_library(mxnet_static STATIC ${SOURCE})
+    set(INITIALIZE_SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/initialize.cc)
+    list(REMOVE_ITEM SOURCE ${INITIALIZE_SOURCE_FILE})
+    add_library(mxnet_static STATIC ${INITIALIZE_SOURCE_FILE} ${SOURCE})
     # Need an arbitrary source file to trigger CMake to build the library
-    add_library(mxnet SHARED src/initialize.cc)
+    add_library(mxnet SHARED ${INITIALIZE_SOURCE_FILE})
     target_link_libraries(mxnet
         -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
     )
