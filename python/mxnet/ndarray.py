@@ -58,14 +58,14 @@ _DTYPE_MX_TO_NP = {
 # pylint: enable= no-member
 
 def _new_empty_handle():
-    """Return a new empty handle.
+    """Returns a new empty handle.
 
-    Empty handle can be used to hold result
+    Empty handle can be used to hold result.
 
     Returns
     -------
     handle
-        A new empty ndarray handle
+        A new empty NDArray handle.
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateNone(ctypes.byref(hdl)))
@@ -74,12 +74,12 @@ def _new_empty_handle():
 def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """Return a new handle with specified shape and context.
 
-    Empty handle is only used to hold results
+    Empty handle is only used to hold results.
 
     Returns
     -------
     handle
-        A new empty ndarray handle
+        A new empty NDArray handle.
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateEx(
@@ -93,21 +93,21 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     return hdl
 
 def waitall():
-    """Wait all async operation to finish in MXNet
+    """Wait for all async operations to finish in MXNet.
 
-    This function is used for benchmark only
+    This function is used for benchmarking only.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
 class NDArray(NDArrayBase):
-    """An array object represents a multidimensional, homogeneous array of
+    """An array object representing a multidimensional, homogeneous array of
 fixed-size items.
 
     """
     __slots__ = []
     # pylint: disable= no-member, undefined-variable
     def __repr__(self):
-        """Return a string representation of the array"""
+        """Returns a string representation of the array."""
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '<%s %s @%s>' % (self.__class__.__name__,
                                 shape_info, self.context)
@@ -264,9 +264,9 @@ fixed-size items.
         Parameters
         ----------
         key : int, slice or tuple
-            The indexing keys
+            The indexing key.
         value : scalar, NDArray or numpy.ndarray
-            The value to set
+            The value to set.
 
         Examples
         --------
@@ -359,12 +359,12 @@ fixed-size items.
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
 
-        Return a sliced view of this array
+        Returns a sliced view of this array.
 
         Parameters
         ----------
         key : int or slice
-            indexing keys
+            Indexing key.
 
         Examples
         --------
@@ -399,22 +399,22 @@ fixed-size items.
 
 
     def _sync_copyfrom(self, source_array):
-        """Peform an synchronize copy from the array.
+        """Peforms a synchronized copy from the array.
 
         Parameters
         ----------
         source_array : array_like)
-            The data source we should like to copy from.
+            The data source we would like to copy from.
         """
         if not isinstance(source_array, np.ndarray):
             try:
                 source_array = np.array(source_array, dtype=self.dtype)
             except:
-                raise TypeError('array must be an array_like data,' +
+                raise TypeError('array must consist of array-like data,' +
                                 'type %s is not supported' % str(type(array)))
         source_array = np.ascontiguousarray(source_array, dtype=self.dtype)
         if source_array.shape != self.shape:
-            raise ValueError('Shape inconsistant: expected %s vs got %s'%(
+            raise ValueError('Shape inconsistent: expected %s vs got %s'%(
                 str(self.shape), str(source_array.shape)))
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
@@ -422,7 +422,7 @@ fixed-size items.
             ctypes.c_size_t(source_array.size)))
 
     def _slice(self, start, stop):
-        """Return a sliced NDArray that shares memory with current one.
+        """Returns a sliced NDArray that shares memory with current one.
 
         Parameters
         ----------
@@ -439,7 +439,7 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def _at(self, idx):
-        """Return a sliced view of this array
+        """Returns a sliced view of this array.
 
         Parameters
         ----------
@@ -453,18 +453,18 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, shape):
-        """Return a view of this array with a new shape without changing the data
+        """Returns a view of this array with a new shape without altering any data.
 
         Parameters
         ----------
         shape : tuple of int
             The new shape should not change the array size, namely
-            ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``
+            ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
 
         Returns
         -------
         NDArray
-            An array with desired shape that is sharing data with this array.
+            An array with desired shape that shares data with this array.
 
         Examples
         --------
@@ -491,7 +491,7 @@ fixed-size items.
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
-        """Broadcast an array to a new shape.
+        """Broadcasts an array to a new shape.
 
         Broadcast only allows on axes with size 1. The new shape cannot change
         the number of dimensions such as from 2D to 3D.
@@ -504,8 +504,8 @@ fixed-size items.
         Returns
         -------
         NDArray
-            A NDArray with desired shape that is not sharing data with this
-            array, even the new shape is as same as ``self.shape``
+            A NDArray with the desired shape that is not sharing data with this
+            array, even if the new shape is the same as ``self.shape``.
 
         Examples
         --------
@@ -519,6 +519,7 @@ fixed-size items.
         array([[[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]],
+        <BLANKLINE>
                [[ 0.,  0.,  0.],
                 [ 1.,  1.,  1.],
                 [ 2.,  2.,  2.]]], dtype=float32)
@@ -540,9 +541,9 @@ fixed-size items.
     # pylint: enable= undefined-variable
 
     def wait_to_read(self):
-        """Wait until all previous writes operations on current array are finished.
+        """Waits until all previous write operations on the current array are finished.
 
-        The method guarantees that all previous writes operations that pushed
+        This method guarantees that all previous write operations that pushed
         into the backend engine for execution are actually finished.
 
         Examples
@@ -551,10 +552,10 @@ fixed-size items.
         >>> tic = time.time()
         >>> a = mx.nd.ones((1000,1000))
         >>> b = mx.nd.dot(a, a)
-        >>> print(time.time() - tic)
+        >>> print(time.time() - tic) # doctest: +SKIP
         0.003854036331176758
         >>> b.wait_to_read()
-        >>> print(time.time() - tic)
+        >>> print(time.time() - tic) # doctest: +SKIP
         0.0893700122833252
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
@@ -568,10 +569,10 @@ fixed-size items.
         --------
         >>> x = mx.nd.array([1, 2, 3, 4])
         >>> x.shape
-        (4,)
+        (4L,)
         >>> y = mx.nd.zeros((2, 3, 4))
         >>> y.shape
-        (2, 3, 4)
+        (2L, 3L, 4L)
         """
         ndim = mx_uint()
         pdata = ctypes.POINTER(mx_uint)()
@@ -624,16 +625,16 @@ fixed-size items.
         Returns
         -------
         numpy.dtype
-            The data type
+            This NDArray's data type.
 
         Examples
         --------
         >>> x = mx.nd.zeros((2,3))
         >>> x.dtype
-        <class 'numpy.float32'>
+        <type 'numpy.float32'>
         >>> y = mx.nd.zeros((2,3), dtype='int32')
         >>> y.dtype
-        <class 'numpy.int32'>
+        <type 'numpy.int32'>
         """
         mx_dtype = ctypes.c_int()
         check_call(_LIB.MXNDArrayGetDType(
@@ -644,12 +645,12 @@ fixed-size items.
     @property
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
-        """Return a copy of the array with axes transposed
+        """Returns a copy of the array with axes transposed.
 
-        Equals to ``mx.nd.transpose(self)``
+        Equivalent to ``mx.nd.transpose(self)``.
 
-        Different to ``numpy.ndarray.T``, this function only supports 2-D array,
-        and returns a copy rather than a view of the array
+        Unlike ``numpy.ndarray.T``, this function only supports 2-D arrays,
+        and returns a copy rather than a view of the array.
 
         Examples
         --------
@@ -669,7 +670,7 @@ fixed-size items.
     # pylint: enable= invalid-name, undefined-variable
 
     def asnumpy(self):
-        """Return a ``numpy.ndarray`` object with value copied from this array
+        """Returns a ``numpy.ndarray`` object with value copied from this array.
 
         Examples
         --------
@@ -682,8 +683,8 @@ fixed-size items.
                [ 1.,  1.,  1.]], dtype=float32)
         >>> z = mx.nd.ones((2,3), dtype='int32')
         >>> z.asnumpy()
-        array([[ 1.,  1.,  1.],
-               [ 1.,  1.,  1.]], dtype=int32)
+        array([[1, 1, 1],
+               [1, 1, 1]], dtype=int32)
         """
         data = np.empty(self.shape, dtype=self.dtype)
         check_call(_LIB.MXNDArraySyncCopyToCPU(
@@ -693,16 +694,16 @@ fixed-size items.
         return data
 
     def asscalar(self):
-        """Return a scalar with value copied from this array
+        """Returns a scalar whose value is copied from this array.
 
-        It equals to ``self.asnumpy()[0]``. This ndarray must have shape (1,).
+        This function is equivalent to ``self.asnumpy()[0]``. This NDArray must have shape (1,).
 
         Examples
         --------
         >>> x = mx.nd.ones((1,), dtype='int32')
         >>> x.asscalar()
         1
-        >>> type(x.asscalar)
+        >>> type(x.asscalar())
         <type 'numpy.int32'>
         """
         if self.shape != (1,):
@@ -710,7 +711,7 @@ fixed-size items.
         return self.asnumpy()[0]
 
     def astype(self, dtype):
-        """Return a copy of the array that is casted to a specified type.
+        """Returns a copy of the array after casting to a specified type.
 
         Parameters
         ----------
@@ -722,29 +723,32 @@ fixed-size items.
         >>> x = mx.nd.zeros((2,3), dtype='float32')
         >>> y = x.astype('int32')
         >>> y.dtype
-        <class 'numpy.int32'>
+        <type 'numpy.int32'>
         """
         res = empty(self.shape, ctx=self.context, dtype=dtype)
         self.copyto(res)
         return res
 
     def copyto(self, other):
-        """Copy the value of this array to another array.
+        """Copies the value of this array to another array.
 
         If ``other`` is a ``NDArray`` object, then ``other.shape`` and
         ``self.shape`` should be the same. This function copies the value from
-        ``self`` to ``other``. Otherwise, a new ``NDArray`` will be first created on
-        the target context, then the value is copied.
+        ``self`` to ``other``.
+
+        If ``other`` is a context, a new ``NDArray`` will be first created on
+        the target context, and the value of ``self`` is copied.
 
         Parameters
         ----------
-        other : NDArray or Context)
-            The destination array or context
+        other : NDArray or Context
+            The destination array or context.
 
         Returns
         -------
         NDArray
-            The target array
+            The copied array. If ``other`` is an ``NDArray``, then the return value
+            and ``other`` will point to the same ``NDArray``.
 
         Examples
         --------
@@ -762,18 +766,17 @@ fixed-size items.
         """
         if isinstance(other, NDArray):
             if other.handle is self.handle:
-                warnings.warn('copy an array to itself, is it intended?',
-                              RuntimeWarning)
+                warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
                 return
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))
             return _internal._copyto(self, out=hret)
         else:
-            raise TypeError('copyto do not support type ' + str(type(other)))
+            raise TypeError('copyto does not support type ' + str(type(other)))
 
     def copy(self):
-        """Make a copy of the ndarray on the same context
+        """Makes a copy of this ``NDArray``, keeping the same context.
 
         Returns
         -------
@@ -791,7 +794,7 @@ fixed-size items.
         return self.copyto(self.context)
 
     def as_in_context(self, context):
-        """Return an array on the target device with value as same as this array
+        """Returns an array on the target device with the same value as this array.
 
         If the target context is the same as ``self.context``, then ``self`` is
         returned.  Otherwise, a copy is made.
@@ -804,7 +807,7 @@ fixed-size items.
         Returns
         -------
         NDArray
-            The target array
+            The target array.
 
 
         Examples
@@ -824,7 +827,7 @@ fixed-size items.
 _init_ndarray_module(NDArray, "mxnet")
 
 def onehot_encode(indices, out):
-    """One hot encoding indices into matrix out.
+    """One-hot encoding indices into matrix out.
 
     Deprecated, use ``one_hot`` instead.
     """
@@ -834,21 +837,21 @@ def onehot_encode(indices, out):
 
 
 def empty(shape, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, without initializing entries
+    """Returns a new array of given shape and type, without initializing entries.
 
     Parameters
     ----------
     shape : int or tuple of int
-        The shape of the empty array
+        The shape of the empty array.
     ctx : Context, optional
-        An optional device context (default is the current default context)
+        An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`)
+        An optional value type (default is `float32`).
 
     Returns
     -------
     NDArray
-        A created array
+        A created array.
 
     Examples
     --------
@@ -866,16 +869,16 @@ def empty(shape, ctx=None, dtype=mx_real_t):
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
 def zeros(shape, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, filled with zeros.
+    """Returns a new array filled with all zeros, with the given shape and type.
 
     Parameters
     ----------
     shape : int or tuple of int
-        The shape of the empty array
+        The shape of the empty array.
     ctx : Context, optional
-        An optional device context (default is the current default context)
+        An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`)
+        An optional value type (default is `float32`).
 
     Returns
     -------
@@ -898,21 +901,22 @@ def zeros(shape, ctx=None, dtype=mx_real_t):
     # pylint: enable= no-member, protected-access
 
 def ones(shape, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, filled with ones.
+    """Returns a new array filled with all ones, with the given shape and type.
 
     Parameters
     ----------
     shape : int or tuple of int
-        The shape of the empty array
+        The shape of the empty array.
     ctx : Context, optional
-        An optional device context (default is the current default context)
+        An optional device context.
+        Defaults to the current default context (``mxnet.Context.default_ctx``).
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`)
+        An optional value type (default is `float32`).
 
     Returns
     -------
     NDArray
-        A created array
+        A new array of the specified shape filled with all ones.
 
     Examples
     --------
@@ -930,18 +934,18 @@ def ones(shape, ctx=None, dtype=mx_real_t):
     # pylint: enable= no-member, protected-access
 
 def full(shape, val, ctx=None, dtype=mx_real_t):
-    """Return a new array of given shape and type, filled with given value.
+    """Returns a new array of given shape and type, filled with the given value ``val``.
 
     Parameters
     --------
     shape : int or tuple of int)
-        The shape of the empty array
+        The shape of the empty array.
     val : scalar
         Fill value
     ctx : Context, optional
-        An optional device context (default is the current default context)
+        An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`)
+        An optional value type (default is `float32`).
 
     Returns
     -------
@@ -954,15 +958,16 @@ def full(shape, val, ctx=None, dtype=mx_real_t):
     array([ 2.], dtype=float32)
     >>> mx.nd.full((1, 2), 2.0, mx.gpu(0))
     <NDArray 1x2 @gpu(0)>
-    >>> mx.nd.ones((1, 2), 2.0, dtype='float16').asnumpy()
+    >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
     arr = empty(shape, ctx, dtype)
     arr[:] = val
     return arr
 
-def array(source_array, ctx=None, dtype=mx_real_t):
-    """Create a new array from any object exposing the array interface
+
+def array(source_array, ctx=None, dtype=None):
+    """Creates a new array from any object exposing the array interface.
 
     Parameters
     ----------
@@ -970,14 +975,15 @@ def array(source_array, ctx=None, dtype=mx_real_t):
         Any object exposing the array interface, an object whose ``__array__``
         method returns an array, or any (nested) sequence.
     ctx : Context, optional
-        An optional device context (default is the current default context)
+        An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`)
+        An optional value type. If source_array is NDArray then defaults to
+        source_array.dtype, otherwise default to `float32`.
 
     Returns
     -------
     NDArray
-        A created array
+        An ``NDArray`` array with the same contets as the ``source_array``.
 
     Examples
     --------
@@ -991,41 +997,46 @@ def array(source_array, ctx=None, dtype=mx_real_t):
     >>> mx.nd.array(np.zeros((3,2)), mx.gpu(0))
     <NDArray 3x2 @gpu(0)>
     """
-    if not isinstance(source_array, np.ndarray):
-        try:
-            source_array = np.array(source_array, dtype=dtype)
-        except:
-            raise TypeError('source_array must be array like object')
+    if isinstance(source_array, NDArray):
+        dtype = source_array.dtype if dtype is None else dtype
+    else:
+        dtype = mx_real_t if dtype is None else dtype
+        if not isinstance(source_array, np.ndarray):
+            try:
+                source_array = np.array(source_array, dtype=dtype)
+            except:
+                raise TypeError('source_array must be array like object')
     arr = empty(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
 
+
 # pylint: disable= no-member, protected-access, too-many-arguments
 def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
-    """Return evenly spaced values within a given interval.
+    """Returns evenly spaced values within a given interval.
 
-    Values are generated within the half-open interval [start, stop) (in other
-    words, the interval including start but excluding stop). For integer
-    arguments the function is equivalent to the Python built-in ``range``
-    function and ``numpy.arrage``, but returns a NDArray.
+    Values are generated within the half-open interval [start, stop). In other
+    words, the interval includes start but excludes stop. For integer
+    arguments, the function is equivalent to the built-in Python function ``range``
+    and to ``numpy.arange``, but returns an ``NDArray``.
 
     Parameters
     ----------
     start : int, optional
-        An optional start of interval, the default value is 0
+        An optional start of interval, the default value is 0.
     stop : int
         The end of interval.
     step : int, optional
-        A optional spacing between values, the default value is 1
+        A optional spacing between values, the default value is 1.
     repeat : int, optional
         The repeating time of all elements.
     ctx : Context, optional
         An optional device context (default is the current default context)
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`)
+        An optional value type (default is `float32`).
 
     dtype : str or numpy.dtype, optional
-        The value type of the NDArray, default to np.float32
+        The value type of the NDArray, default to np.float32.
 
     Returns
     -------
@@ -1057,28 +1068,28 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
 
 #pylint: disable= too-many-arguments, no-member, protected-access
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
-    """ Helper function for element-wise operation
-    The function will perform numpy-like broadcasting if needed and call different functions
+    """ Helper function for element-wise operation.
+    The function will perform numpy-like broadcasting if needed and call different functions.
 
     Parameters
     --------
     lhs : NDArray or numeric value
-        left hande side operand
+        Left-hand side operand.
 
     rhs : NDArray or numeric value
-        right hand side operand
+        Right-hand operand,
 
     fn_array : function
-        function to be called if both lhs and rhs are of NDArray type
+        Function to be called if both lhs and rhs are of ``NDArray`` type.
 
     fn_scalar : function
-        function to be called if both lhs and rhs are numeric values
+        Function to be called if both lhs and rhs are numeric values.
 
     lfn_scalar : function
-        function to be called if lhs is NDArray while rhs is numeric value
+        Function to be called if lhs is ``NDArray`` while rhs is numeric value
 
     rfn_scalar : function
-        function to be called if lhs is numeric value while rhs is NDArray;
+        Function to be called if lhs is numeric value while rhs is ``NDArray``;
         if none is provided, then the function is commutative, so rfn_scalar is equal to lfn_scalar
 
     Returns
@@ -1104,9 +1115,9 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 def add(lhs, rhs):
-    """Add arguments, element-wise with broadcasting
+    """Add arguments, element-wise with broadcasting.
 
-    Equals to ``lhs + rhs``
+    Equivalent to ``lhs + rhs``
 
     Parameters
     ----------
@@ -1146,16 +1157,16 @@ def add(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def subtract(lhs, rhs):
-    """Subtract arguments element-wisely with broadcasting
+    """Subtracts arguments element-wise with broadcasting.
 
-    Equals to ``lhs - rhs``
+    Equivalent to ``lhs - rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1188,16 +1199,16 @@ def subtract(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def multiply(lhs, rhs):
-    """Multiply arguments element-wisely with broadcasting
+    """Multiplies arguments element-wise with broadcasting.
 
-    Equals to ``lhs * rhs``
+    Equivalent to ``lhs * rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1230,16 +1241,16 @@ def multiply(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def divide(lhs, rhs):
-    """Divide arguments element-wisely with broadcasting
+    """Divides arguments element-wise with broadcasting.
 
-    Equals to ``lhs / rhs``
+    Equivalent to ``lhs / rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1277,14 +1288,14 @@ def power(base, exp):
     """First array elements raised to powers from second array, element-wise
     with broadcasting.
 
-    Equals to ``base ** exp``
+    Equivalent to ``base ** exp``.
 
     Parameters
     ----------
     base : scalar or NDArray
     exp : scalar or NDArray
         The arrays to be added. If ``base.shape != exp.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     --------
@@ -1324,7 +1335,7 @@ def maximum(lhs, rhs):
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1364,7 +1375,7 @@ def minimum(lhs, rhs):
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1397,16 +1408,16 @@ def minimum(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def equal(lhs, rhs):
-    """Return (lhs == rhs), element-wise with broadcasting
+    """Returns (lhs == rhs), element-wise with broadcasting.
 
-    Equals ``lhs == rhs``
+    Equivalent to ``lhs == rhs``
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1439,16 +1450,16 @@ def equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def not_equal(lhs, rhs):
-    """Return (lhs != rhs), element-wise with broadcasting
+    """Returns (lhs != rhs), element-wise with broadcasting.
 
-    Equals ``lhs != rhs``
+    Equivalent to ``lhs != rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape,
 
     Returns
     -------
@@ -1484,16 +1495,16 @@ def not_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater(lhs, rhs):
-    """Return (lhs > rhs), element-wise with broadcasting
+    """Returns (lhs > rhs), element-wise with broadcasting.
 
-    Equals ``lhs > rhs``
+    Equivalent to ``lhs > rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1526,16 +1537,16 @@ def greater(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater_equal(lhs, rhs):
-    """Return (lhs >= rhs), element-wise with broadcasting
+    """Returns (lhs >= rhs), element-wise with broadcasting.
 
-    Equals ``lhs >= rhs``
+    Equivalent to ``lhs >= rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1569,16 +1580,16 @@ def greater_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def lesser(lhs, rhs):
-    """Return (lhs < rhs), element-wise with broadcasting
+    """Returns (lhs < rhs), element-wise with broadcasting.
 
-    Equals ``lhs < rhs``
+    Equivalent to ``lhs < rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1612,16 +1623,16 @@ def lesser(lhs, rhs):
 
 
 def lesser_equal(lhs, rhs):
-    """Return (lhs <= rhs), element-wise with broadcasting
+    """Returns (lhs <= rhs), element-wise with broadcasting.
 
-    Equals ``lhs <= rhs``
+    Equivalent to ``lhs <= rhs``.
 
     Parameters
     ----------
     lhs : scalar or array
     rhs : scalar or array
         The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
@@ -1655,7 +1666,7 @@ def lesser_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
-    """Same as ``divide``
+    """Same as ``divide``.
     """
     return divide(lhs, rhs)
 
@@ -1691,15 +1702,15 @@ def load(fname):
     Parameters
     ----------
     fname : str
-        The filename
+        The filename.
 
     Returns
     -------
     list of NDArray or dict of str to NDArray
-        Loaded data
+        Loaded data.
     """
     if not isinstance(fname, string_types):
-        raise TypeError('fname need to be string')
+        raise TypeError('fname required to be a string')
     out_size = mx_uint()
     out_name_size = mx_uint()
     handles = ctypes.POINTER(NDArrayHandle)()
@@ -1718,7 +1729,7 @@ def load(fname):
 
 
 def save(fname, data):
-    """Save a list of arrays of a str->array dict into file
+    """Save a list of arrays of a str->array dict into file.
 
     Examples of filenames:
 
@@ -1729,9 +1740,9 @@ def save(fname, data):
     Parameters
     ----------
     fname : str
-        The filename
-    data : list of NDArray or dict of str to NDArray
-        The data for saving
+        The filename.
+    data : list of ``NDArray` or dict of str to ``NDArray``
+        The data for saving.
 
     Examples
     --------
@@ -1766,12 +1777,13 @@ def save(fname, data):
                                   c_array(NDArrayHandle, handles),
                                   keys))
 
+
 def concatenate(arrays, axis=0, always_copy=True):
     """DEPRECATED, use ``concat`` instead
 
     Parameters
     ----------
-    arrays : list of NDArray
+    arrays : list of `NDArray`
         Arrays to be concatenate. They must have identical shape except
         the first dimension. They also must have the same data type.
     axis : int
@@ -1828,17 +1840,17 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
     Parameters
     ----------
     str_img : str
-        binary image data
+        Binary image data
     clip_rect : iterable of 4 int
-        clip decoded image to rectangle (x0, y0, x1, y1)
+        Clip decoded image to rectangle (x0, y0, x1, y1).
     out : NDArray
-        output buffer. can be 3 dimensional (c, h, w) or 4 dimensional (n, c, h, w)
+        Output buffer. Can be 3 dimensional (c, h, w) or 4 dimensional (n, c, h, w).
     index : int
-        output decoded image to i-th slice of 4 dimensional buffer
+        Output decoded image to i-th slice of 4 dimensional buffer.
     channels : int
-        number of channels to output. Decode to grey scale when channels = 1.
+        Number of channels to output. Decode to grey scale when channels = 1.
     mean : NDArray
-        subtract mean from decode image before outputing.
+        Subtract mean from decode image before outputing.
     """
     # pylint: disable= no-member, protected-access, too-many-arguments
     if mean is None:

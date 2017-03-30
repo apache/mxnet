@@ -84,6 +84,20 @@ In the preceding example, *net* is used as a function to apply to an existing sy
 *net*, and the resulting *composed_net* will replace the original argument *data* with
 *net2*.
 
+Once you start building some bigger networks, you might want to name some symbols with a common prefix to outline the structure of your network. You can use the [Prefix](https://github.com/dmlc/mxnet/blob/master/python/mxnet/name.py) NameManager as follow:
+
+```python
+   >>> data = mx.sym.Variable("data")
+   >>> net = data
+   >>> n_layer = 2
+   >>> for i in range(n_layer):
+   ...     with mx.name.Prefix("layer%d_" % (i + 1)):
+   ...         net = mx.sym.FullyConnected(data=net, name="fc", num_hidden=100)
+   ...
+   >>> net.list_arguments()
+   ['data', 'layer1_fc_weight', 'layer1_fc_bias', 'layer2_fc_weight', 'layer2_fc_bias']
+```
+
 ## Argument Shape Inference
 
 Now we know how to define a symbol. Next, we can infer the shapes of

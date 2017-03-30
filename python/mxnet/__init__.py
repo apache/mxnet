@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from .context import Context, current_context, cpu, gpu
 from .base import MXNetError
 from . import base
+from . import contrib
 from . import ndarray
 from . import name
 # use mx.sym as short for symbol

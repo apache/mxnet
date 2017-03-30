@@ -228,7 +228,7 @@ class F1(EvalMetric):
 
 
 class Perplexity(EvalMetric):
-    """Calculate perplexity
+    """Calculate perplexity.
 
     Parameters
     ----------
@@ -236,10 +236,15 @@ class Perplexity(EvalMetric):
         index of invalid label to ignore when
         counting. usually should be -1. Include
         all entries if None.
+    axis : int (default -1)
+        The axis from prediction that was used to
+        compute softmax. By default use the last
+        axis.
     """
-    def __init__(self, ignore_label):
+    def __init__(self, ignore_label, axis=-1):
         super(Perplexity, self).__init__('Perplexity')
         self.ignore_label = ignore_label
+        self.axis = axis
 
     def update(self, labels, preds):
         assert len(labels) == len(preds)
@@ -251,7 +256,7 @@ class Perplexity(EvalMetric):
             assert label.size == pred.size/pred.shape[-1], \
                 "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
             label = label.as_in_context(pred.context).astype(dtype='int32').reshape((label.size,))
-            pred = ndarray.batch_take(pred, label)
+            pred = ndarray.pick(pred, label, axis=self.axis)
             probs.append(pred)
 
         for label, prob in zip(labels, probs):

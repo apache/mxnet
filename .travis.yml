@@ -6,6 +6,8 @@ os:
   # - linux
   - osx
 
+osx_image: xcode8
+
 env:
   # code analysis
   # - TASK=lint

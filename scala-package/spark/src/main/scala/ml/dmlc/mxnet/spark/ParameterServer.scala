@@ -29,9 +29,8 @@ import scala.collection.JavaConverters._
 
 /**
  * Start ps scheduler/server in a new process
- * @author Yizhi Liu
  */
-object ParameterServer {
+private[mxnet] object ParameterServer {
   private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   def main(args: Array[String]): Unit = {
     val cmdLine = new CommandLine

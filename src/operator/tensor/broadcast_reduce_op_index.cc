@@ -32,5 +32,42 @@ NNVM_REGISTER_OP(argmax_channel)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .add_argument("src", "ndarray-or-symbol", "Source input");
 
+NNVM_REGISTER_OP(pick)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ReduceAxisParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "index"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", PickOpShape)
+.set_attr<nnvm::FInferType>("FInferType", PickOpType)
+.set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[1]);
+    auto ret = MakeGradNode("_backward_pick", n, heads, n->attrs.dict);
+
+    nnvm::NodePtr p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("_zeros");
+    p->attrs.name = n->attrs.name + "_index_backward";
+    p->control_deps.emplace_back(n);
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+
+    return ret;
+  })
+.add_argument("data", "NDArray", "Source input")
+.add_argument("index", "NDArray", "Index array")
+.add_arguments(ReduceAxisParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(_backward_pick)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ReduceAxisParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", PickOpBackward<cpu>);
+
 }  // namespace op
 }  // namespace mxnet
