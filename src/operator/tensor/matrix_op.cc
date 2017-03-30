@@ -149,8 +149,9 @@ Examples::
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TransposeParam& param = nnvm::get<TransposeParam>(n->attrs.parsed);
     if (param.axes.ndim() == 0) {
-      return MakeGradNode("transpose", n, ograds,
-                          std::unordered_map<std::string, std::string>());
+      return MakeNonlossGradNode(
+          "transpose", n, ograds, {},
+          std::unordered_map<std::string, std::string>());
     } else {
       TShape axes = TShape(param.axes.ndim());
       for (index_t i = 0; i < axes.ndim(); ++i) {
@@ -158,7 +159,9 @@ Examples::
       }
       std::ostringstream os;
       os << axes;
-      return MakeGradNode("transpose", n, ograds, {{"axes", os.str()}});
+      return MakeNonlossGradNode(
+          "transpose", n, ograds,
+          {}, {{"axes", os.str()}});
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)

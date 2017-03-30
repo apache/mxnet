@@ -91,6 +91,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   static const Op* ewise_sum_op = Op::Get("ElementWiseSum");
   static const Op* identity_op = Op::Get("identity");
   static const Op* zeros_op = Op::Get("_zeros");
+  static const Op* zeros_like_op = Op::Get("zeros_like");
 
   if (v.size() == 0) {
     nnvm::NodePtr ng = nnvm::Node::Create();
@@ -103,7 +104,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   // remove zero in the sum. at least keep 1.
   size_t begin = 1;
   for (size_t i = 1; i < v.size(); ++i) {
-    if (v[i].node->op() != zeros_op) {
+    if (v[i].node->op() != zeros_op && v[i].node->op() != zeros_like_op) {
       if (begin != i) {
         v[begin] = std::move(v[i]);
       }
