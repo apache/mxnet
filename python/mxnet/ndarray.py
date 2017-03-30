@@ -588,6 +588,22 @@ fixed-size items.
 
 
     @property
+    def ndim(self):
+        """Returns the number of dimensions of this array
+
+        Examples
+        --------
+        >>> x = mx.nd.array([1, 2, 3, 4])
+        >>> x.ndim
+        1
+        >>> x = mx.nd.array([[1, 2],
+                             [3, 4]])
+        >>> x.ndim
+        2
+        """
+        return len(self.shape)
+
+    @property
     def shape(self):
         """Tuple of array dimensions.
 
@@ -667,16 +683,16 @@ fixed-size items.
             self.handle, ctypes.byref(mx_dtype)))
         return _DTYPE_MX_TO_NP[mx_dtype.value]
 
-
     @property
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
         """Returns a copy of the array with axes transposed.
 
-        Equivalent to ``mx.nd.transpose(self)``.
+        Equivalent to ``mx.nd.transpose(self)`` except that
+        self is returned if ``self.ndim < 2``.
 
-        Unlike ``numpy.ndarray.T``, this function only supports 2-D arrays,
-        and returns a copy rather than a view of the array.
+        Unlike ``numpy.ndarray.T``, this function returns a copy
+        rather than a view of the array unless ``self.ndim < 2``.
 
         Examples
         --------
@@ -690,8 +706,8 @@ fixed-size items.
                [ 2.,  5.]], dtype=float32)
 
         """
-        if len(self.shape) != 2:
-            raise ValueError('Only 2D matrix is allowed to be transposed')
+        if len(self.shape) < 2:
+            return self
         return transpose(self)
     # pylint: enable= invalid-name, undefined-variable
 
