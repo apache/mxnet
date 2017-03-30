@@ -1,7 +1,7 @@
 # Build MXNet from Source
 
 This document explains how to build MXNet from source codes for the following
-operation systems. Please select the one you like.
+platforms. Please select the one you prefer.
 
 <div class='text-center'>
 <div class="btn-group opt-group" role="group">
@@ -12,6 +12,7 @@ operation systems. Please select the one you like.
 <button type="button" class="btn btn-default opt">Windows</button>
 </div>
 </div>
+<script type="text/javascript" src='../../_static/js/options.js'></script>
 
 - **Ubuntu** for systems supporting the `apt-get`
   package management program
@@ -19,7 +20,7 @@ operation systems. Please select the one you like.
   management program
 - **Linux** for general Linux-like systems
 
-The whole process mainly contains two steps:
+The build process contains two steps:
 
 1. Build the shared `libmxnet` library from [C++ source files](#build-the-shared-library)
 2. Select a language package, such as [Python](#build-the-python-package),
@@ -46,7 +47,7 @@ and a BLAS library. There are optional dependencies for enhanced features.
 
 <div class="ubuntu">
 
-For `Ubuntu >= 13.10` and `Debian >= 8` you can install all by
+For `Ubuntu >= 13.10` and `Debian >= 8` you can install them by
 
 ```bash
 sudo apt-get update && sudo apt-get install build-essential git
@@ -56,7 +57,7 @@ sudo apt-get update && sudo apt-get install build-essential git
 
 <div class="centos">
 
-For `CentOS >= 7` and `Fedora >= 19`, you can install it by
+For `CentOS >= 7` and `Fedora >= 19`, you can install them by
 
 ```bash
 sudo yum groupinstall -y "Development Tools" && sudo yum git
@@ -67,7 +68,7 @@ sudo yum groupinstall -y "Development Tools" && sudo yum git
 <div class="linux">
 
 Installing both `git` and `make` by following instructions on the websites is
-straightforward. We provide the instructions to build `gcc-4.8` from source codes.
+straightforward. Here we provide the instructions to build `gcc-4.8` from source codes.
 
 1. Install the 32-bit `libc` with one of the following system-specific commands:
 
@@ -117,7 +118,7 @@ straightforward. We provide the instructions to build `gcc-4.8` from source code
 
 MXNet relies on the
 [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) (Basic
-Linear Algebra Subprograms) library for some numerical computations. Installing
+Linear Algebra Subprograms) library for numerical computations. Installing
 any one among [ATLAS](http://math-atlas.sourceforge.net/),
 [OpenBLAS](http://www.openblas.net/) and
 [MKL](https://software.intel.com/en-us/intel-mkl) is enough.
@@ -125,7 +126,7 @@ any one among [ATLAS](http://math-atlas.sourceforge.net/),
 <div class="ubuntu">
 
 ```bash
-sudo apt-get install libatlas-base-dev  # change to libopenblas-dev for openblas
+sudo apt-get install libatlas-base-dev
 ```
 
 </div>
@@ -147,7 +148,7 @@ One can follow this link to build
 
 <div class="macos">
 
-`xcode` ships with a BLAS library, macOS users can skip this step.
+macOS users can skip this step because `xcode` ships with a BLAS library.
 
 </div>
 
@@ -169,7 +170,6 @@ sudo apt-get install libopencv-dev
 ```
 
 </div>
-
 
 <div class="centos">
 
@@ -223,11 +223,14 @@ To build OpenCV from source code, you need the [cmake](https://cmake.org) librar
 
 <div class="windows">
 
-First download and install [OpenCV](http://opencv.org/releases.html), then set the environment variable `OpenCV_DIR` to point to the OpenCV build directory.
+First download and install [OpenCV](http://opencv.org/releases.html), then set
+the environment variable `OpenCV_DIR` to point to the OpenCV build directory.
 
 </div>
 
 #### Optional: [CUDA](https://developer.nvidia.com/cuda-downloads)/[cuDNN](https://developer.nvidia.com/cudnn) for Nvidia GPUs
+
+Both CUDA 7.5 and 8.0 are tested. For cuDNN we suggest to use version 5.
 
 <div class="ubuntu">
 
@@ -260,22 +263,32 @@ File
 contains all compilation options. You can edit it and then `make`. There are
 some example build options
 
+</div>
+
+<div class="ubuntu centos linux">
+
 - Build without using OpenCV. `-j` means using multithread to build.
 
   ```bash
   make -j USE_OPENCV=0
   ```
 
-- Build same as above on macOS
-
-  ```bash
-  make -j USE_BLAS=apple UES_OPENCV=0 USE_OPENMP=0
-  ```
 
 - Build with both GPU and Opencv supports
 
   ```bash
   make -j USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+  ```
+
+</div>
+
+<div class="macos">
+
+- Build with the default BLAS library and clang installed with `xcode` (OPENMP
+  is disabled because it is not supported in default by clang).
+
+  ```bash
+  make -j USE_BLAS=apple UES_OPENCV=0 USE_OPENMP=0
   ```
 
 </div>
@@ -306,7 +319,7 @@ other python libraries for MXNet.
 
 </div> <!-- ubuntu -->
 
-The Python package can be installed one of the following three ways:
+The Python package can be installed by one of the following three ways:
 
 1. Setup the environment variable `PYTHONPATH=/path/to/mxnet/python`. For example, assume `mxnet` is
    placed on the home directory, then add the following line in the `rc` file
@@ -423,13 +436,11 @@ ln -s $(pwd)/julia-6445c82d00/bin/julia /usr/bin/julia
 
 </div>
 
-Next set the environment variable `MXNET_HOME=/path/to/mxnet` let the Julia
-find the pre-built library.
+Next set the environment variable `MXNET_HOME=/path/to/mxnet` so that Julia
+can find the pre-built library.
 
 Then install the Julia package by using:
 
 ```bash
 julia -e 'Pkg.add("MXNet")'
 ```
-
-<script type="text/javascript" src='../../_static/js/options.js'></script>
