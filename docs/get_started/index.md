@@ -24,6 +24,121 @@ Please choice the programming language for the rest of this document.
 </div>
 <script type="text/javascript" src='../../_static/js/options.js'></script>
 
+## Installation
+
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Pre-built Binaries</button>
+<button type="button" class="btn btn-default opt">Docker</button>
+<button type="button" class="btn btn-default opt">Cloud</button>
+<button type="button" class="btn btn-default opt">Build From Source</button>
+</div> <!-- opt-group -->
+
+<div class="pre-built-binaries">
+
+<div class="python">
+
+Installing the pre-build python package requires a recent version of `pip`,
+which, for example, can be installed by
+
+```bash
+wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
+```
+
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Linux</button>
+<button type="button" class="btn btn-default opt">macOS</button>
+</div> <!-- opt-group -->
+
+<div class="macos">
+
+Install by:
+
+```bash
+pip install mxnet
+```
+
+</div> <!-- macos -->
+
+<div class="linux">
+
+Use one of following commands to install the desired release:
+
+```bash
+pip install mxnet       # CPU
+pip install mxnet-mkl   # CPU with MKL-DNN acceleration
+pip install mxnet-cu75  # GPU with CUDA 7.5
+pip install mxnet-cu80  # GPU with CUDA 8.0
+```
+
+The CUDA versions requires both [CUDA](https://developer.nvidia.com/cuda-toolkit)
+  and [cuDNN](https://developer.nvidia.com/cudnn) are installed.
+
+</div> <!-- linux -->
+
+</div> <!-- python -->
+
+</div> <!-- pre-build-binaries -->
+
+<div class="cloud">
+
+AWS images with MXNet installed:
+
+- [Deep Learning AMI for Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
+- [Deep Learning AMI for Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
+
+</div> <!-- cloud -->
+
+<div class="docker">
+
+Pre-build docker images are available at [docker hub](https://hub.docker.com/r/mxnet/).
+
+<div class="python">
+
+```bash
+docker pull mxnet/python
+docker pull mxnet/python:gpu
+```
+
+</div> <!-- python -->
+
+<div class="scala">
+
+```bash
+docker pull mxnet/scala
+```
+
+</div> <!-- scala -->
+
+<div class="r">
+
+```bash
+docker pull mxnet/r-lang
+docker pull mxnet/r-lang:gpu
+```
+
+</div> <!-- r -->
+
+<div class="julia">
+
+```bash
+docker pull mxnet/julia
+docker pull mxnet/julia:gpu
+```
+
+</div> <!-- julia -->
+
+Refer to [docker/](../../docker/) for more details.
+
+</div> <!-- docker -->
+
+<div class="build-from-source">
+
+Refer to the [building from source document](./build_from_source.md) for details
+on building MXNet from source codes for various systems.
+
+</div> <!-- build-from-source -->
+
+
 ## Quick Overview
 
 MXNet provides an imperative *n*-dimensional array interface:
@@ -96,25 +211,26 @@ array([[ 3.,  3.,  3.],
        [ 3.,  3.,  3.]], dtype=float32)
 ```
 
-MXNet also provides a symbolic programming interface (Note: the following codes
-needs `MXNet>=0.10`)
+MXNet also provides a symbolic programming interface:
 
 ```python
->>> a = mx.sym.var('a')
->>> b = a * 2 + 1
->>> b
-<Symbol _plusscalar0>
+>>> a = mx.sym.var('a')  # it requires the latest mxnet
+>>> b = a * 2 + 1  # b is a Symbol object
 >>> c = b.eval(a=mx.nd.ones((2,3)))
 >>> c[0].asnumpy()  # the list of outputs
-c[0].asnumpy()
 array([[ 3.,  3.,  3.],
        [ 3.,  3.,  3.]], dtype=float32)
->>> d = b.eval(a=mx.nd.ones((2,3), mx.gpu(0)), ctx=mx.gpu(0))  # run on GPU 0
+```
+
+Run the above codes in GPU in straightforward:
+
+```python
+>>> a = mx.nd.ones((2, 3), mx.gpu(0))  # create a on GPU 0, then the result a*2+1 will sit on GPU 0 as well
+>>> c = b.eval(a=a, mx.gpu(0)), ctx=mx.gpu(0))  # feed a as the input to eval b, the result c will be also on GPU 0
 ```
 
 In additional, MXNet provides a large number of neural network layers and
-training modules to facilitate developing deep learning algorithms. The
-following codes train a multilayer perceptron:
+training modules to facilitate developing deep learning algorithms.
 
 ```python
 >>> data = mx.sym.var('data')
@@ -123,116 +239,8 @@ following codes train a multilayer perceptron:
 >>> fc2  = mx.sym.FullyConnected(act1, num_hidden=10)
 >>> loss  = mx.sym.SoftmaxOutput(fc2)
 >>> mod = mx.mod.Module(loss)
->>> mod.fit(data_reader, ...)
+>>> mod.fit(train_data, ctx=[mx.gpu(0), mx.gpu(1)]) # fit on the training data by using 2 GPUs
 ```
-
-
-## Setup MXNet
-
-<div class="btn-group opt-group" role="group">
-<button type="button" class="btn btn-default opt">Build From Source</button>
-<button type="button" class="btn btn-default opt active">Pre-Build Binaries</button>
-<button type="button" class="btn btn-default opt">Docker</button>
-<button type="button" class="btn btn-default opt">Cloud</button>
-</div> <!-- opt-group -->
-
-<div class="pre-build-binaries">
-
-<div class="python">
-
-Installing the pre-build python package requires a recent version of `pip`,
-which, for example, can be installed by
-
-```bash
-wget https://bootstrap.pypa.io/get-pip.py
-sudo python get-pip.py
-```
-
-<h3>macOS</h3>
-
-Install by:
-
-```bash
-pip install mxnet
-```
-
-<h3>Linux</h3>
-
-Use one of following commands to install the desired release:
-
-```bash
-pip install mxnet       # CPU
-pip install mxnet-mkl   # CPU with MKL-DNN acceleration
-pip install mxnet-cu75  # GPU with CUDA 7.5
-pip install mxnet-cu80  # GPU with CUDA 8.0
-```
-
-The CUDA versions requires both [CUDA](https://developer.nvidia.com/cuda-toolkit)
-  and [cuDNN](https://developer.nvidia.com/cudnn) are installed.
-
-</div> <!-- python -->
-
-</div> <!-- pre-build-binaries -->
-
-<div class="cloud">
-
-AWS images with MXNet installed:
-
-- [Deep Learning AMI for Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
-- [Deep Learning AMI for Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
-
-</div> <!-- cloud -->
-
-<div class="docker">
-
-Pre-build docker images are available at [docker hub](https://hub.docker.com/r/mxnet/).
-
-<div class="python">
-
-```bash
-docker pull mxnet/python
-docker pull mxnet/python:gpu
-```
-
-</div> <!-- python -->
-
-<div class="scala">
-
-```bash
-docker pull mxnet/scala
-```
-
-</div> <!-- scala -->
-
-<div class="r">
-
-```bash
-docker pull mxnet/r-lang
-docker pull mxnet/r-lang:gpu
-```
-
-</div> <!-- r -->
-
-<div class="julia">
-
-```bash
-docker pull mxnet/julia
-docker pull mxnet/julia:gpu
-```
-
-</div> <!-- julia -->
-
-Refer to [docker/](../../docker/) for more details.
-
-</div> <!-- docker -->
-
-<div class="build-from-source">
-
-Refer to the [building from source document](./build_from_source.md) for details
-on building MXNet from source codes for various systems.
-
-</div> <!-- build-from-source -->
-
 
 ## Next Steps
 
