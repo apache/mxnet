@@ -588,7 +588,7 @@ fixed-size items.
 
 
     @property
-    def ndim(self, shape):
+    def ndim(self):
         """Returns the number of dimensions of this array
 
         Examples
