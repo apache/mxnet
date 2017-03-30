@@ -588,6 +588,22 @@ fixed-size items.
 
 
     @property
+    def ndim(self, shape):
+        """Returns the number of dimensions of this array
+
+        Examples
+        --------
+        >>> x = mx.nd.array([1, 2, 3, 4])
+        >>> x.ndim
+        1
+        >>> x = mx.nd.array([[1, 2],
+                             [3, 4]])
+        >>> x.ndim
+        2
+        """
+        return len(self.shape) 
+
+    @property
     def shape(self):
         """Tuple of array dimensions.
 
