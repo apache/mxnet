@@ -27,7 +27,13 @@ function update!{T <: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}
       number of outputs ($(length(preds))). The calculated metric might not be accuracte.")
   end
   for (label, pred) in zip(labels, preds)
-    _update_single_output(metric, label, pred)
+     @nd_as_jl ro=(label, pred) begin
+       # This is a dynamic dispatch since the conversion from NDArray to
+       # Array is not type-stable. We could use a trait to decide if we should
+       # convert the NDArray here so that the called function will be type-stable
+       # or if we should forward the NDArray.
+      _update_single_output(metric, label, pred)
+    end
   end
 end
 
@@ -154,37 +160,35 @@ type Accuracy <: AbstractEvalMetric
   Accuracy() = new(0.0, 0)
 end
 
-function _update_single_output(metric :: Accuracy, label :: NDArray, pred :: NDArray)
-  @nd_as_jl ro=(label,pred) begin
-    # Samples are stored in the last dimension
-    @assert size(label, ndims(label)) == size(pred, ndims(pred))
+function _update_single_output(metric :: Accuracy, label :: Array, pred :: Array)
+  # Samples are stored in the last dimension
+  @assert size(label, ndims(label)) == size(pred, ndims(pred))
 
-    if ndims(pred) == 4 # Multidimensional case
-      # Reshape label to be of the same shape as pred.
-      # Except for the third dimension where the predictions are stored.
-      labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
+  if ndims(pred) == 4 # Multidimensional case
+    # Reshape label to be of the same shape as pred.
+    # Except for the third dimension where the predictions are stored.
+    labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
 
-      for sample in 1:size(labels, 4)
-        for j in 1:size(labels, 2)
-          for i in 1:size(labels, 1)
-            label = labels[i, j, 1, sample]
-            klasses = view(pred, i, j, :, sample)
-            klass = indmax(klasses) - 1 # Classes start at 0...k-1
+    for sample in 1:size(labels, 4)
+      for j in 1:size(labels, 2)
+        for i in 1:size(labels, 1)
+          label = labels[i, j, 1, sample]
+          klasses = view(pred, i, j, :, sample)
+          klass = indmax(klasses) - 1 # Classes start at 0...k-1
 
-            metric.acc_sum += klass == label
-            metric.n_sample += 1
-          end
+          metric.acc_sum += klass == label
+          metric.n_sample += 1
         end
       end
-    elseif ndims(pred) == 2 # 1-dimensional case
-      for sample in 1:size(label, 1)
-        klass = indmax(view(pred, :, sample)) - 1
-        metric.acc_sum += klass == label[sample]
-        metric.n_sample += 1
-      end
-    else
-      error("Can't handle prediction with dimensions $(ndims(pred)).")
     end
+  elseif ndims(pred) == 2 # 1-dimensional case
+    for sample in 1:size(label, 1)
+      klass = indmax(view(pred, :, sample)) - 1
+      metric.acc_sum += klass == label[sample]
+      metric.n_sample += 1
+    end
+  else
+    error("Can't handle prediction with dimensions $(ndims(pred)).")
   end
 end
 
@@ -213,12 +217,11 @@ type MSE <: AbstractEvalMetric
   MSE() = new(0.0, 0)
 end
 
-function _update_single_output(metric :: MSE, label :: NDArray, pred :: NDArray)
+function _update_single_output{T}(metric :: MSE, label :: Array{T}, pred :: Array{T})
   @assert size(label) == size(pred)
   metric.n_sample += length(label)
-  @nd_as_jl ro=(label, pred) begin
-    metric.mse_sum += sumabs2(label .- pred)
-  end
+  metric.mse_sum += sumabs2(label .- pred)
+  return nothing
 end
 
 function get(metric :: MSE)
@@ -284,10 +287,7 @@ type NMSE <: AbstractEvalMetric
   NMSE() = new(0.0, 0)
 end
 
-function _update_single_output(metric :: NMSE, label :: NDArray, pred :: NDArray)
-  label = copy(label)
-  pred  = copy(pred)
-
+function _update_single_output(metric :: NMSE, label :: Array, pred :: Array)
   n_sample = size(pred)[end]
   metric.n_sample += n_sample
 
@@ -334,42 +334,40 @@ function reset!(metric :: ACE)
   metric.n_sample = 0
 end
 
-function _update_single_output(metric :: ACE, label :: NDArray, pred :: NDArray)
-  @nd_as_jl ro=(label,pred) begin
-    eps = metric.eps
-    # Samples are stored in the last dimension
-    @assert size(label, ndims(label)) == size(pred, ndims(pred))
-    if size(label) == size(pred) # simply calculate the cross entropy of the probabilities
-      for (q, p) in zip(pred, label)
-          # p == true probability
-          # q == "unnatural" probability
-          metric.ace_sum += p * log(q + eps)
+function _update_single_output(metric :: ACE, label :: Array, pred :: Array)
+  eps = metric.eps
+  # Samples are stored in the last dimension
+  @assert size(label, ndims(label)) == size(pred, ndims(pred))
+  if size(label) == size(pred) # simply calculate the cross entropy of the probabilities
+    for (q, p) in zip(pred, label)
+      # p == true probability
+      # q == "unnatural" probability
+      metric.ace_sum += p * log(q + eps)
+      metric.n_sample += 1
+    end
+  elseif ndims(pred) == 4
+    labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
+    for sample in 1:size(labels, 4)
+      for j in 1:size(labels, 2)
+        for i in 1:size(labels, 1)
+          # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
+          # Since we can only target labels right now this is the only thing we can do.
+          target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
+          p_k = pred[i, j, target, sample]
+          metric.ace_sum += log(p_k + eps)
           metric.n_sample += 1
-      end
-    elseif ndims(pred) == 4
-      labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
-      for sample in 1:size(labels, 4)
-        for j in 1:size(labels, 2)
-          for i in 1:size(labels, 1)
-            # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
-            # Since we can only target labels right now this is the only thing we can do.
-            target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
-            p_k = pred[i, j, target, sample]
-            metric.ace_sum += log(p_k + eps)
-            metric.n_sample += 1
-          end
         end
       end
-    elseif ndims(pred) == 2 # 1-dimensional case
-      for sample in 1:size(label, 1)
-        target = Int(label[sample]) + 1    # 0-based indexing => 1-based indexing
-        p_k = pred[target, sample]
-        metric.ace_sum += log(p_k + eps)
-        metric.n_sample += 1
-      end
-    else
-      error("Can't handle prediction with dimensions $(ndims(pred)).")
     end
+  elseif ndims(pred) == 2 # 1-dimensional case
+    for sample in 1:size(label, 1)
+      target = Int(label[sample]) + 1    # 0-based indexing => 1-based indexing
+      p_k = pred[target, sample]
+      metric.ace_sum += log(p_k +eps)
+      metric.n_sample += 1
+    end
+  else
+    error("Can't handle prediction with dimensions $(ndims(pred)).")
   end
 end
 
@@ -398,48 +396,46 @@ function reset!(metric :: MultiACE)
   metric.counts = Base.zero(metric.counts)
 end
 
-function _update_single_output(metric :: MultiACE, label :: NDArray, pred :: NDArray)
-  @nd_as_jl ro=(label,pred) begin
-    eps = metric.eps
-    # Samples are stored in the last dimension
-    @assert size(label, ndims(label)) == size(pred, ndims(pred))
-    @assert size(metric.aces) == size(metric.counts)
-    if size(label) == size(pred) # simply calculate the cross entropy of the probabilities
-      for k in 1:length(metric.aces)
-        kpred  = view(pred,  ntuple(d->:, ndims(pred)  - 2)..., k, :)
-        klabel = view(label, ntuple(d->:, ndims(label) - 2)..., k, :)
-        for (q, p) in zip(kpred, klabel)
-          # p == true probability
-          # q == "unnatural" probability
-          metric.aces[k] += p * log(q + eps)
-          metric.counts[k] += 1
-        end
+function _update_single_output(metric :: MultiACE, label :: Array, pred :: Array)
+  eps = metric.eps
+  # Samples are stored in the last dimension
+  @assert size(label, ndims(label)) == size(pred, ndims(pred))
+  @assert size(metric.aces) == size(metric.counts)
+  if size(label) == size(pred) # simply calculate the cross entropy of the probabilities
+    for k in 1:length(metric.aces)
+      kpred  = view(pred,  ntuple(d->:, ndims(pred)  - 2)..., k, :)
+      klabel = view(label, ntuple(d->:, ndims(label) - 2)..., k, :)
+      for (q, p) in zip(kpred, klabel)
+        # p == true probability
+        # q == "unnatural" probability
+        metric.aces[k] += p * log(q + eps)
+        metric.counts[k] += 1
       end
-    elseif ndims(pred) == 4
-      labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
-      for sample in 1:size(labels, 4)
-        for j in 1:size(labels, 2)
-          for i in 1:size(labels, 1)
-            # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
-            # Since we can only target labels right now this is the only thing we can do.
-            target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
-            p_k = pred[i, j, target, sample]
-
-            metric.aces[target] += log(p_k + eps)
-            metric.counts[target] += 1
-          end
-        end
-      end
-    elseif ndims(pred) == 2
-      for sample in 1:size(label, 1)
-        target = Int(label[sample]) + 1
-        p_k = pred[target, sample]
-        metric.aces[target] += log(p_k + eps)
-        metric.counts[target] += 1
-      end
-    else
-      error("Can't handle prediction with dimensions $(ndims(pred)).")
     end
+  elseif ndims(pred) == 4
+    labels = reshape(label, size(pred, 1, 2)..., 1, size(pred, 4))
+    for sample in 1:size(labels, 4)
+      for j in 1:size(labels, 2)
+        for i in 1:size(labels, 1)
+          # Cross-entropy reduces to -(ln(p_1)*0 + ln(p_2)*1) for classification
+          # Since we can only target labels right now this is the only thing we can do.
+          target = Int(labels[i, j, 1, sample]) + 1 # klasses are 0...k-1 => julia indexing
+          p_k = pred[i, j, target, sample]
+
+          metric.aces[target] += log(p_k + eps)
+          metric.counts[target] += 1
+        end
+      end
+    end
+  elseif ndims(pred) == 2
+    for sample in 1:size(label, 1)
+      target = Int(label[sample]) + 1
+      p_k = pred[target, sample]
+      metric.aces[target] += log(p_k + eps)
+      metric.counts[target] += 1
+    end
+  else
+    error("Can't handle prediction with dimensions $(ndims(pred)).")
   end
 end
 
