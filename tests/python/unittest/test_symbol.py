@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 import mxnet as mx
 import numpy as np
 from common import models
@@ -181,7 +182,34 @@ def test_load_000800():
         {'ctx': mx.cpu(0), 'group2ctx': {'stage1' : mx.cpu(1), 'stage2' : mx.cpu(2)}, 'data': (1,200)})
 
 
+def test_blockgrad():
+    a = mx.sym.Variable('a')
+    b = mx.sym.BlockGrad(2*a)
+    exe = b.simple_bind(ctx=mx.cpu(), a=(10,10))
+
+
+def test_zero_prop():
+    data = mx.symbol.Variable('data')
+    for i in range(10):
+        data = data * data
+
+    exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256))
+    big = int(re.search('Total (\d+) MB allocated', exe.debug_str()).group(1))
+
+    exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256), grad_req='null')
+    small1 = int(re.search('Total (\d+) MB allocated', exe.debug_str()).group(1))
+
+    data = mx.sym.stop_gradient(data)
+    exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256))
+    small2 = int(re.search('Total (\d+) MB allocated', exe.debug_str()).group(1))
+
+    assert big > small2
+    assert small1 == small2
+
+
 if __name__ == '__main__':
+    test_zero_prop()
+    test_blockgrad()
     test_symbol_children()
     test_load_000800()
     test_symbol_infer_shape_var()

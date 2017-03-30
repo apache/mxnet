@@ -102,8 +102,8 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   }
 
   // remove zero in the sum. at least keep 1.
-  size_t begin = 1;
-  for (size_t i = 1; i < v.size(); ++i) {
+  size_t begin = 0;
+  for (size_t i = 0; i < v.size(); ++i) {
     if (v[i].node->op() != zeros_op && v[i].node->op() != zeros_like_op) {
       if (begin != i) {
         v[begin] = std::move(v[i]);
@@ -111,6 +111,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
       ++begin;
     }
   }
+  if (begin == 0) begin = 1;
   v.resize(begin);
 
   if (v.size() == 1) {
