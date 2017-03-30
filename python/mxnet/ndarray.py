@@ -601,7 +601,7 @@ fixed-size items.
         >>> x.ndim
         2
         """
-        return len(self.shape) 
+        return len(self.shape)
 
     @property
     def shape(self):
