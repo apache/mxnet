@@ -28,22 +28,28 @@ and a BLAS library. There are optional dependencies for enhanced features.
    for Windows) to build the library.
 
 
-Please select the platform you prefer.
-
+Please select the platform you prefer:
 <div class="btn-group opt-group" role="group">
-<button type="button" class="btn btn-default opt active">Ubuntu</button>
-<button type="button" class="btn btn-default opt">CentOS</button>
-<button type="button" class="btn btn-default opt">Linux</button>
+<button type="button" class="btn btn-default opt active">Linux</button>
 <button type="button" class="btn btn-default opt">macOS</button>
 <button type="button" class="btn btn-default opt">Windows</button>
 </div>
 <script type="text/javascript" src='../../_static/js/options.js'></script>
 
+<div class="linux">
+
+Then select the Linux distribution:
+<div class="btn-group opt-group" role="group">
+<button type="button" class="btn btn-default opt active">Ubuntu</button>
+<button type="button" class="btn btn-default opt">CentOS</button>
+<button type="button" class="btn btn-default opt">Others</button>
+</div>
+
 - **Ubuntu** for systems supporting the `apt-get`
   package management program
 - **CentOS** for systems supporting the `yum` package
   management program
-- **Linux** for general Linux-like systems
+- **Others** for general Linux-like systems building dependencies from scratch.
 
 <div class="ubuntu">
 
@@ -65,7 +71,7 @@ sudo yum groupinstall -y "Development Tools" && sudo yum git
 
 </div>
 
-<div class="linux">
+<div class="others">
 
 Installing both `git` and `make` by following instructions on the websites is
 straightforward. Here we provide the instructions to build `gcc-4.8` from source codes.
@@ -104,6 +110,7 @@ straightforward. Here we provide the instructions to build `gcc-4.8` from source
    ```
 
 </div>
+</div> <!-- linux -->
 
 <div class="windows">
 
@@ -111,6 +118,12 @@ straightforward. Here we provide the instructions to build `gcc-4.8` from source
 2. Install [Visual C++ Compiler Nov 2013 CTP](https://www.microsoft.com/en-us/download/details.aspx?id=41151).
 3. Back up all of the files in the ```C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC``` folder to a different location.
 4. Copy all of the files in the ```C:\Program Files (x86)\Microsoft Visual C++ Compiler Nov 2013 CTP``` folder (or the folder where you extracted the zip archive) to the ```C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC``` folder, and overwrite all existing files.
+
+</div>
+
+<div class="macos">
+
+Install [Xcode](https://developer.apple.com/xcode/).
 
 </div>
 
@@ -123,6 +136,7 @@ any one among [ATLAS](http://math-atlas.sourceforge.net/),
 [OpenBLAS](http://www.openblas.net/) and
 [MKL](https://software.intel.com/en-us/intel-mkl) is enough.
 
+<div class="linux">
 <div class="ubuntu">
 
 ```bash
@@ -145,6 +159,7 @@ One can follow this link to build
 [OpenBlas from source](https://github.com/xianyi/OpenBLAS#installation-from-source).
 
 </div>
+</div>
 
 <div class="macos">
 
@@ -163,6 +178,7 @@ macOS users can skip this step because `xcode` ships with a BLAS library.
 
 #### Optional: [OpenCV](http://opencv.org/) for Image Loading and Augmentation
 
+<div class="linux">
 <div class="ubuntu">
 
 ```bash
@@ -179,8 +195,7 @@ sudo apt-get install opencv-devel
 
 </div>
 
-
-<div class="linux">
+<div class="others">
 
 To build OpenCV from source code, you need the [cmake](https://cmake.org) library .
 
@@ -220,6 +235,7 @@ To build OpenCV from source code, you need the [cmake](https://cmake.org) librar
    ```
 
 </div>
+</div>
 
 <div class="windows">
 
@@ -232,6 +248,7 @@ the environment variable `OpenCV_DIR` to point to the OpenCV build directory.
 
 Both CUDA 7.5 and 8.0 are tested. For cuDNN we suggest to use version 5.
 
+<div class="linux">
 <div class="ubuntu">
 
 Install CUDA 7.5 and cuDNN 5 on Ubuntu 14.04
@@ -246,10 +263,11 @@ sudo apt-get install -y cuda libcudnn5-dev=5.0.5-1+cuda7.5
 ```
 
 </div>
+</div>
 
 ### Build
 
-<div class="ubuntu centos linux macos">
+<div class="linux macos">
 
 First clone the recent codes
 
@@ -265,7 +283,7 @@ some example build options
 
 </div>
 
-<div class="ubuntu centos linux">
+<div class="linux">
 
 - Build without using OpenCV. `-j` means using multithread to build.
 
