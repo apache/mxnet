@@ -26,12 +26,14 @@ Please choice the programming language for the rest of this document.
 
 ## Installation
 
+<div class='text-center'>
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Pre-built Binaries</button>
 <button type="button" class="btn btn-default opt">Docker</button>
 <button type="button" class="btn btn-default opt">Cloud</button>
 <button type="button" class="btn btn-default opt">Build From Source</button>
 </div> <!-- opt-group -->
+</div>
 
 <div class="pre-built-binaries">
 
@@ -48,11 +50,13 @@ which, for example, can be installed by
 wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
+<div class='text-center'>
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Linux</button>
 <button type="button" class="btn btn-default opt">macOS</button>
 <button type="button" class="btn btn-default opt">Windows</button>
 </div> <!-- opt-group -->
+</div>
 
 <div class="windows">
 
@@ -81,7 +85,7 @@ pip install mxnet-cu75  # GPU with CUDA 7.5
 pip install mxnet-cu80  # GPU with CUDA 8.0
 ```
 
-The CUDA versions requires both [CUDA](https://developer.nvidia.com/cuda-toolkit)
+The CUDA versions require both [CUDA](https://developer.nvidia.com/cuda-toolkit)
   and [cuDNN](https://developer.nvidia.com/cudnn) are installed.
 
 </div> <!-- linux -->
