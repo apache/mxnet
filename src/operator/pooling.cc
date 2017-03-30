@@ -50,7 +50,7 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
     && (param.stride[0] == 2) && (param.stride[1] == 2)) {
     switch (dtype) {
     case mshadow::kFloat32:
-      return new NNPACKPoolingOp<cpu, mshadow::red::maximum, float>(param);
+      return new NNPACKPoolingOp<cpu, float>(param);
     default:
       break;
     }
