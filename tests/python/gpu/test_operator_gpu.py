@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -16,7 +16,7 @@ del test_support_vector_machine_l2_svm
 
 
 def check_countsketch(in_dim,out_dim,n):
-    sym = mx.contrib.sym.CountSketch(name='countsketch',out_dim = out_dim)
+    sym = mx.contrib.sym.count_sketch(name='countsketch',out_dim = out_dim)
     shape = [(n,in_dim), (1,in_dim),(1,in_dim)]     #shape of input x, hash h and hash s
 
     arr = [mx.nd.empty(shape[i]) for i in range(3)]
@@ -82,7 +82,7 @@ def check_ifft(shape):
             shape = tuple(lst)
             shape_old = shape
         shape = (shape[0],shape[1],shape[2],shape[3]*2)
-    sym = mx.contrib.sym.IFFT(name='ifft', compute_size = 128) 
+    sym = mx.contrib.sym.ifft(name='ifft', compute_size = 128)
     init = [np.random.normal(size=shape, scale=1.0)]
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'ifft_data': shape, 'type_dict': {'ifft_data': np.float32}}]
@@ -148,7 +148,7 @@ def test_ifft():
             check_ifft(shape)
 
 def check_fft(shape):
-    sym = mx.contrib.sym.FFT(name='fft', compute_size = 128)
+    sym = mx.contrib.sym.fft(name='fft', compute_size = 128)
     if len(shape) == 2:
         if shape[1]%2 != 0:
             lst = list(shape)

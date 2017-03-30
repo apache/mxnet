@@ -26,7 +26,7 @@ Operator *IFFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
 
 DMLC_REGISTER_PARAMETER(IFFTParam);
 
-MXNET_REGISTER_OP_PROPERTY(_contrib_IFFT, IFFTProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_ifft, IFFTProp)
 .describe("Apply IFFT to input.")
 .add_argument("data", "Symbol", "Input data to the IFFTOp.")
 .add_arguments(IFFTParam::__FIELDS__());
