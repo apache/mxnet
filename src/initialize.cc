@@ -15,8 +15,7 @@ class LibraryInitializer {
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
 #if MXNET_USE_PROFILER
-    // ensure engine's and profiler's constructor are called before atexit.
-    Engine::Get();
+    // ensure profiler's constructor are called before atexit.
     engine::Profiler::Get();
     // DumpProfile will be called before engine's and profiler's destructor.
     std::atexit([](){

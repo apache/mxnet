@@ -10,7 +10,7 @@ def find_lib_path():
     Returns
     -------
     lib_path : list(string)
-        List of all found path to the libraries
+        List of all found path to the libraries.
     """
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     api_path = os.path.join(curr_path, '../../lib/')

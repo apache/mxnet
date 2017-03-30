@@ -23,7 +23,7 @@
 #include <functional>
 #include <utility>
 #include "./c_api_common.h"
-#include "../operator/custom-inl.h"
+#include "../operator/custom/custom-inl.h"
 #include "../engine/profiler.h"
 
 using namespace mxnet;

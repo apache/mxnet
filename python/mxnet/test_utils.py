@@ -32,7 +32,7 @@ def default_context():
 
 
 def set_default_context(ctx):
-    """Set default ctx"""
+    """Set default ``ctx``."""
     Context.default_ctx = ctx
 
 
@@ -66,18 +66,18 @@ def random_arrays(*shapes):
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
-    """Compatible reduce for old version numpy
+    """Compatible reduce for old version of NumPy.
 
     Parameters
     ----------
     dat : np.ndarray
-        Same as Numpy
+        Same as NumPy.
 
     axis : None or int or list-like
-        Same as Numpy
+        Same as NumPy.
 
     keepdims : bool
-        Same as Numpy
+        Same as Numpy.
 
     numpy_reduce_func : function
         Numpy reducing function like `np.sum` or `np.max`
@@ -98,7 +98,7 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
 
 
 def find_max_violation(a, b, rtol=None, atol=None):
-    """find location of maximum violation"""
+    """Find the location of maximum violation."""
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
     diff = np.abs(a-b)
@@ -110,7 +110,7 @@ def find_max_violation(a, b, rtol=None, atol=None):
 
 
 def same(a, b):
-    """Test if two numpy arrays are the same
+    """Test if two NumPy arrays are the same.
 
     Parameters
     ----------
@@ -133,7 +133,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b')):
     a : np.ndarray
     b : np.ndarray
     threshold : None or float
-        The checking threshold. Default threshold will be used if set to None
+        The checking threshold. Default threshold will be used if set to ``None``.
     """
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
@@ -163,9 +163,9 @@ def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     a : np.ndarray
     b : np.ndarray
     rtol : None or float
-        The relative threshold. Default threshold will be used if set to None
+        The relative threshold. Default threshold will be used if set to ``None``.
     atol : None or float
-        The absolute threshold. Default threshold will be used if set to None
+        The absolute threshold. Default threshold will be used if set to ``None``.
     """
     a = np.copy(a)
     b = np.copy(b)
@@ -187,9 +187,9 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
     a : np.ndarray
     b : np.ndarray
     rtol : None or float
-        The relative threshold. Default threshold will be used if set to None
+        The relative threshold. Default threshold will be used if set to ``None``.
     atol : None or float
-        The absolute threshold. Default threshold will be used if set to None
+        The absolute threshold. Default threshold will be used if set to ``None``.
     """
     a = np.copy(a)
     b = np.copy(b)
@@ -201,12 +201,12 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
 
 
 def retry(n):
-    """Retry n times before failing for stochastic test cases"""
+    """Retry n times before failing for stochastic test cases."""
     assert n > 0
     def decorate(f):
-        """Decorate a test case"""
+        """Decorate a test case."""
         def wrapper(*args, **kwargs):
-            """Wrapper for tests function"""
+            """Wrapper for tests function."""
             for _ in range(n):
                 try:
                     f(*args, **kwargs)
@@ -222,21 +222,20 @@ def retry(n):
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
     """A simple forward function for a symbol.
 
-    Primarily used in doctest to conveniently test the function
-    of a symbol. Takes numpy array as inputs and outputs are
-    also converted to numpy arrays.
+    Primarily used in doctest to test the functionality of a symbol.
+    Takes NumPy arrays as inputs and outputs are also converted to NumPy arrays.
 
     Parameters
     ----------
     ctx : Context
-        If None, will take the default context.
+        If ``None``, will take the default context.
     inputs : keyword arguments
-        Mapping each input name to a numpy array.
+        Mapping each input name to a NumPy array.
 
     Returns
     -------
     The result as a numpy array. Multiple results will
-    be returned as a list of numpy arrays.
+    be returned as a list of NumPy arrays.
     """
     ctx = ctx or default_context()
     inputs = {k: array(v) for k, v in inputs.iteritems()}
@@ -249,16 +248,16 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
 
 
 def _parse_location(sym, location, ctx):
-    """Parse the given location to a dictionary
+    """Parse the given location to a dictionary.
 
     Parameters
     ----------
     sym : Symbol
-    location : None or list of np.ndarray or dict of str to np.ndarray
+    location : ``None`` or list of ``np.ndarray`` or dict of str to np.ndarray
 
     Returns
     -------
-    dict of str to np.ndarray
+    dict of str to np.ndarray.
     """
     assert isinstance(location, (dict, list, tuple))
     if isinstance(location, dict):
@@ -278,11 +277,11 @@ def _parse_aux_states(sym, aux_states, ctx):
     Parameters
     ----------
     sym : Symbol
-    aux_states : None or list of np.ndarray or dict of str to np.ndarray
+    aux_states : None or list of np.ndarray or dict of str to np.ndarray.
 
     Returns
     -------
-    dict of str to np.ndarray
+    dict of str to np.ndarray.
     """
     if aux_states is not None:
         if isinstance(aux_states, dict):
@@ -306,7 +305,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
     Parameters
     ----------
     executor : Executor
-        exectutor that computes the forward pass
+        Executor that computes the forward pass.
     location : list of numpy.ndarray or dict of str to numpy.ndarray
         Argument values used as location to compute gradient
         Maps the name of arguments to the corresponding numpy.ndarray.
@@ -316,7 +315,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
         Maps the name of aux_states to the corresponding numpy.ndarray.
         Value of all the auxiliary arguments must be provided.
     eps : float, optional
-        epsilon for the finite-difference method
+        Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
     References
