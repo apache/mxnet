@@ -81,7 +81,7 @@ class Optimizer {
 
  protected:
   std::map<std::string, std::string> params_;
-  static OpMap *op_map_;
+  static OpMap*& op_map();
   const std::vector<const char*> GetParamKeys_() const;
   const std::vector<const char*> GetParamValues_() const;
 };
@@ -93,7 +93,7 @@ class OptimizerRegistry {
   static Optimizer* Find(const std::string& name);
   static int __REGISTER__(const std::string& name, OptimizerCreator creator);
  private:
-  static std::map<std::string, OptimizerCreator> cmap_;
+  static std::map<std::string, OptimizerCreator>& cmap();
   OptimizerRegistry() = delete;
   ~OptimizerRegistry() = delete;
 };

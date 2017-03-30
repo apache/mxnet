@@ -116,6 +116,20 @@ def test_ndarray_negate():
     # we compute (-arr)
     assert_almost_equal(npy, arr.asnumpy())
 
+def test_ndarray_reshape():
+    tensor  = mx.nd.array([[[1, 2], [3, 4]],
+                           [[5, 6], [7, 8]]])
+    true_res = mx.nd.arange(8) + 1
+    assert same(tensor.reshape((-1, )), true_res)
+    true_res  = mx.nd.array([[1, 2, 3, 4],
+                             [5, 6, 7, 8]])
+    assert same(tensor.reshape((2, -1)), true_res)
+    true_res  = mx.nd.array([[1, 2],
+                             [3, 4],
+                             [5, 6],
+                             [7, 8]])
+    assert same(tensor.reshape((-1, 2)), true_res)
+
 
 def test_ndarray_choose():
     shape = (100, 20)

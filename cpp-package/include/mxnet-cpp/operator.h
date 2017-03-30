@@ -180,7 +180,7 @@ class Operator {
   std::vector<std::string> input_keys;
   std::vector<std::string> arg_names_;
   AtomicSymbolCreator handle_;
-  static OpMap *op_map_;
+  static OpMap*& op_map();
 };
 }  // namespace cpp
 }  // namespace mxnet

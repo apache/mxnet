@@ -111,7 +111,7 @@ Next, if the mxnet folder is accessible by both machines, e.g. on a
 then we can run by
 
 ```bash
-../../tools/launch.py -n 2 --launcher ssh -H hosts python train_mnist.py --network lenet --kv-store dist_sync
+python ../../tools/launch.py -n 2 --launcher ssh -H hosts python train_mnist.py --network lenet --kv-store dist_sync
 ```
 
 Note that, besides the single machine arguments, here we
@@ -137,7 +137,7 @@ then ask `launch.py` to synchronize the current directory to all machines'
  `/tmp/mxnet` directory with `--sync-dst-dir`
 
 ```bash
-../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet \
+python ../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet \
    python train_mnist.py --network lenet --kv-store dist_sync
 ```
 
@@ -149,17 +149,17 @@ communication by the environment variable `DMLC_INTERFACE`. For example, to use
 the interface `eth0`, we can
 
 ```
-export DMLC_INTERFACE=eth0; ../../tools/launch.py ...
+export DMLC_INTERFACE=eth0; python ../../tools/launch.py ...
 ```
 
 ### Debug Connection
 
 Set`PS_VERBOSE=1` to see the debug logging, e.g
 ```
-export PS_VERBOSE=1; ../../tools/launch.py ...
+export PS_VERBOSE=1; python ../../tools/launch.py ...
 ```
 
 ### More
 
-- See more launch options by `../../tools/launch.py -h`
+- See more launch options by `python ../../tools/launch.py -h`
 - See more options of [ps-lite](http://ps-lite.readthedocs.org/en/latest/how_to.html)

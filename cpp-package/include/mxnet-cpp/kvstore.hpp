@@ -20,54 +20,56 @@
 namespace mxnet {
 namespace cpp {
 
-namespace private_ {
-  KVStore *kvstore = nullptr;
-
-  extern "C"
-  void controller(int head, const char* body, void * controller_handle) {
-    if (kvstore == nullptr) {
-      return;
+inline void KVStore::Controller(int head, const char* body, void* controller_handle) {
+  if (head == 0) {
+    std::map<std::string, std::string> params;
+    std::istringstream sin(body);
+    std::string line;
+    while (getline(sin, line)) {
+      size_t n = line.find('=');
+      params.emplace(line.substr(0, n), line.substr(n+1));
     }
-    if (head == 0) {
-      std::map<std::string, std::string> params;
-      std::istringstream sin(body);
-      std::string line;
-      while (getline(sin, line)) {
-        size_t n = line.find('=');
-        params.emplace(line.substr(0, n), line.substr(n+1));
-      }
-      std::unique_ptr<Optimizer> opt(OptimizerRegistry::Find(params.at("opt_type")));
-      params.erase("opt_type");
-      for (const auto& pair : params) {
-        opt->SetParam(pair.first, pair.second);
-      }
-      kvstore->SetOptimizer(std::move(opt), true);
+    std::unique_ptr<Optimizer> opt(OptimizerRegistry::Find(params.at("opt_type")));
+    params.erase("opt_type");
+    for (const auto& pair : params) {
+      opt->SetParam(pair.first, pair.second);
     }
+    get_kvstore()->SetOptimizer(std::move(opt), true);
   }
-}  // namespace private_
-
-KVStore::KVStore(const std::string& name) {
-  CHECK_EQ(MXKVStoreCreate(name.c_str(), &handle_), 0);
 }
 
-KVStore::KVStore(KVStore &&kv) {
-  optimizer_ = std::move(kv.optimizer_);
-  handle_ = kv.handle_;
-  kv.handle_ = nullptr;
+inline KVStoreHandle& KVStore::get_handle() {
+  static KVStoreHandle handle_ = nullptr;
+  return handle_;
 }
 
-void KVStore::RunServer() {
+inline std::unique_ptr<Optimizer>& KVStore::get_optimizer() {
+  static std::unique_ptr<Optimizer> optimizer_;
+  return optimizer_;
+}
+
+inline KVStore*& KVStore::get_kvstore() {
+  static KVStore* kvstore_ = new KVStore;
+  return kvstore_;
+}
+
+inline KVStore::KVStore() {};
+
+inline void KVStore::SetType(const std::string& type) {
+  CHECK_EQ(MXKVStoreCreate(type.c_str(), &(get_kvstore()->get_handle())), 0);
+}
+
+inline void KVStore::RunServer() {
   CHECK_NE(GetRole(), "worker");
-  private_::kvstore = this;
-  CHECK_EQ(MXKVStoreRunServer(handle_, &private_::controller, 0), 0);
+  CHECK_EQ(MXKVStoreRunServer(get_kvstore()->get_handle(), &Controller, 0), 0);
 }
 
-void KVStore::Init(int key, const NDArray& val) {
+inline void KVStore::Init(int key, const NDArray& val) {
   NDArrayHandle val_handle = val.GetHandle();
-  CHECK_EQ(MXKVStoreInit(handle_, 1, &key, &val_handle), 0);
+  CHECK_EQ(MXKVStoreInit(get_kvstore()->get_handle(), 1, &key, &val_handle), 0);
 }
 
-void KVStore::Init(const std::vector<int>& keys, const std::vector<NDArray>& vals) {
+inline void KVStore::Init(const std::vector<int>& keys, const std::vector<NDArray>& vals) {
   CHECK_EQ(keys.size(), vals.size());
   std::vector<NDArrayHandle> val_handles(vals.size());
   std::transform(vals.cbegin(), vals.cend(), val_handles.begin(),
@@ -75,18 +77,18 @@ void KVStore::Init(const std::vector<int>& keys, const std::vector<NDArray>& val
         return val.GetHandle();
       });
 
-  CHECK_EQ(MXKVStoreInit(handle_, keys.size(), keys.data(),
+  CHECK_EQ(MXKVStoreInit(get_kvstore()->get_handle(), keys.size(), keys.data(),
       val_handles.data()), 0);
 }
 
-void KVStore::Push(int key, const NDArray& val, int priority) {
+inline void KVStore::Push(int key, const NDArray& val, int priority) {
   NDArrayHandle val_handle = val.GetHandle();
-  CHECK_EQ(MXKVStorePush(handle_, 1, &key, &val_handle, priority), 0);
+  CHECK_EQ(MXKVStorePush(get_kvstore()->get_handle(), 1, &key, &val_handle, priority), 0);
 }
 
-void KVStore::Push(const std::vector<int>& keys,
-                   const std::vector<NDArray>& vals,
-                   int priority) {
+inline void KVStore::Push(const std::vector<int>& keys,
+                          const std::vector<NDArray>& vals,
+                          int priority) {
   CHECK_EQ(keys.size(), vals.size());
   std::vector<NDArrayHandle> val_handles(vals.size());
   std::transform(vals.cbegin(), vals.cend(), val_handles.begin(),
@@ -94,16 +96,16 @@ void KVStore::Push(const std::vector<int>& keys,
         return val.GetHandle();
       });
 
-  CHECK_EQ(MXKVStorePush(handle_, keys.size(), keys.data(),
+  CHECK_EQ(MXKVStorePush(get_kvstore()->get_handle(), keys.size(), keys.data(),
       val_handles.data(), priority), 0);
 }
 
-void KVStore::Pull(int key, NDArray* out, int priority) {
+inline void KVStore::Pull(int key, NDArray* out, int priority) {
   NDArrayHandle out_handle = out->GetHandle();
-  CHECK_EQ(MXKVStorePull(handle_, 1, &key, &out_handle, priority), 0);
+  CHECK_EQ(MXKVStorePull(get_kvstore()->get_handle(), 1, &key, &out_handle, priority), 0);
 }
 
-void KVStore::Pull(const std::vector<int>& keys, std::vector<NDArray>* outs, int priority) {
+inline void KVStore::Pull(const std::vector<int>& keys, std::vector<NDArray>* outs, int priority) {
   CHECK_EQ(keys.size(), outs->size());
 
   std::vector<NDArrayHandle> out_handles(keys.size());
@@ -112,52 +114,48 @@ void KVStore::Pull(const std::vector<int>& keys, std::vector<NDArray>* outs, int
         return val.GetHandle();
       });
 
-  CHECK_EQ(MXKVStorePull(handle_, keys.size(), keys.data(),
+  CHECK_EQ(MXKVStorePull(get_kvstore()->get_handle(), keys.size(), keys.data(),
       out_handles.data(), priority), 0);
 }
 
-namespace private_ {
-  extern "C"
-  void updater(int key, NDArrayHandle recv, NDArrayHandle local,
-      void* handle_) {
-    Optimizer *opt = static_cast<Optimizer*>(handle_);
-    opt->Update(key, NDArray(local), NDArray(recv));
-  }
+inline void KVStore::Updater(int key, NDArrayHandle recv, NDArrayHandle local,
+                             void* handle_) {
+  Optimizer *opt = static_cast<Optimizer*>(handle_);
+  opt->Update(key, NDArray(local), NDArray(recv));
 }
 
-void KVStore::SetOptimizer(std::unique_ptr<Optimizer> optimizer, bool local) {
+inline void KVStore::SetOptimizer(std::unique_ptr<Optimizer> optimizer, bool local) {
   if (local) {
-    optimizer_ = std::move(optimizer);
-    CHECK_EQ(MXKVStoreSetUpdater(handle_, &private_::updater, optimizer_.get()), 0);
+    get_kvstore()->get_optimizer() = std::move(optimizer);
+    CHECK_EQ(MXKVStoreSetUpdater(get_kvstore()->get_handle(), &Updater, get_kvstore()->get_optimizer().get()), 0);
   } else {
-    CHECK_EQ(MXKVStoreSendCommmandToServers(handle_, 0, (*optimizer).Serialize().c_str()), 0);
+    CHECK_EQ(MXKVStoreSendCommmandToServers(get_kvstore()->get_handle(), 0, (*optimizer).Serialize().c_str()), 0);
   }
 }
 
-std::string KVStore::GetType() const {
+inline std::string KVStore::GetType() {
   const char *type;
-  CHECK_EQ(MXKVStoreGetType(handle_, &type), 0);
-  // type is managed by handle_, no need to free its memory.
+  CHECK_EQ(MXKVStoreGetType(get_kvstore()->get_handle(), &type), 0);
   return type;
 }
 
-int KVStore::GetRank() const {
+inline int KVStore::GetRank() {
   int rank;
-  CHECK_EQ(MXKVStoreGetRank(handle_, &rank), 0);
+  CHECK_EQ(MXKVStoreGetRank(get_kvstore()->get_handle(), &rank), 0);
   return rank;
 }
 
-int KVStore::GetNumWorkers() const {
+inline int KVStore::GetNumWorkers() {
   int num_workers;
-  CHECK_EQ(MXKVStoreGetGroupSize(handle_, &num_workers), 0);
+  CHECK_EQ(MXKVStoreGetGroupSize(get_kvstore()->get_handle(), &num_workers), 0);
   return num_workers;
 }
 
-void KVStore::Barrier() const {
-  CHECK_EQ(MXKVStoreBarrier(handle_), 0);
+inline void KVStore::Barrier() {
+  CHECK_EQ(MXKVStoreBarrier(get_kvstore()->get_handle()), 0);
 }
 
-std::string KVStore::GetRole() const {
+inline std::string KVStore::GetRole() {
   int ret;
   CHECK_EQ(MXKVStoreIsSchedulerNode(&ret), 0);
   if (ret) {
