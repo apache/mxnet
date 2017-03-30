@@ -7,6 +7,7 @@ These are used to generate the indexes for search functionality.
 - [Julia Documents](api/julia/index.md)
 - [C++ Documents](api/c++/index.md)
 - [Scala Documents](api/scala/index.md)
+- [Perl Documents](api/perl/index.md)
 - [HowTo Documents](how_to/index.md)
 - [Get Started Documents](get_started/index.md)
 - [System Documents](architecture/index.md)

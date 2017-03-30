@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, no-member
-""" ctypes library of mxnet and helper functions """
+"""ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
 import sys
@@ -29,7 +29,7 @@ else:
 
 
 class MXNetError(Exception):
-    """Error that will be throwed by all mxnet functions"""
+    """Error that will be throwed by all mxnet functions."""
     pass
 
 def _load_lib():
@@ -64,66 +64,66 @@ RtcHandle = ctypes.c_void_p
 # helper function definition
 #----------------------------
 def check_call(ret):
-    """Check the return value of C API call
+    """Check the return value of C API call.
 
-    This function will raise exception when error occurs.
-    Wrap every API call with this function
+    This function will raise an exception when an error occurs.
+    Wrap every API call with this function.
 
     Parameters
     ----------
     ret : int
-        return value from API calls
+        return value from API calls.
     """
     if ret != 0:
         raise MXNetError(py_str(_LIB.MXGetLastError()))
 
 if sys.version_info[0] < 3:
     def c_str(string):
-        """Create ctypes char * from a python string
+        """Create ctypes char * from a Python string.
 
         Parameters
         ----------
         string : string type
-            python string
+            Python string.
 
         Returns
         -------
         str : c_char_p
-            A char pointer that can be passed to C API
+            A char pointer that can be passed to C API.
         """
         return ctypes.c_char_p(string)
 else:
     def c_str(string):
-        """Create ctypes char * from a python string
+        """Create ctypes char * from a Python string.
 
         Parameters
         ----------
         string : string type
-            python string
+            Python string.
 
         Returns
         -------
         str : c_char_p
-            A char pointer that can be passed to C API
+            A char pointer that can be passed to C API.
         """
         return ctypes.c_char_p(string.encode('utf-8'))
 
 
 def c_array(ctype, values):
-    """Create ctypes array from a python array
+    """Create ctypes array from a Python array.
 
     Parameters
     ----------
     ctype : ctypes data type
-        data type of the array we want to convert to
+        Data type of the array we want to convert to.
 
     values : tuple or list
-        data content
+        Data content.
 
     Returns
     -------
     out : ctypes array
-        Created ctypes array
+        Created ctypes array.
     """
     return (ctype * len(values))(*values)
 
@@ -133,14 +133,14 @@ def ctypes2buffer(cptr, length):
     Parameters
     ----------
     cptr : ctypes.POINTER(ctypes.c_char)
-        pointer to the raw memory region
+        Pointer to the raw memory region.
     length : int
-        the length of the buffer
+        The length of the buffer.
 
     Returns
     -------
     buffer : bytearray
-        The raw byte memory buffer
+        The raw byte memory buffer.
     """
     if not isinstance(cptr, ctypes.POINTER(ctypes.c_char)):
         raise TypeError('expected char pointer')
@@ -151,9 +151,9 @@ def ctypes2buffer(cptr, length):
     return res
 
 def ctypes2numpy_shared(cptr, shape):
-    """Convert a ctypes pointer to a numpy array
+    """Convert a ctypes pointer to a numpy array.
 
-    The result numpy array shares the memory with the pointer
+    The resulting NumPy array shares the memory with the pointer.
 
     Parameters
     ----------
@@ -161,12 +161,12 @@ def ctypes2numpy_shared(cptr, shape):
         pointer to the memory region
 
     shape : tuple
-        shape of target ndarray
+        Shape of target NDArray.
 
     Returns
     -------
     out : numpy_array
-        A numpy array : numpy array
+        A numpy array : numpy array.
     """
     if not isinstance(cptr, ctypes.POINTER(mx_float)):
         raise RuntimeError('expected float pointer')
@@ -223,7 +223,7 @@ def _notify_shutdown():
 atexit.register(_notify_shutdown)
 
 def add_fileline_to_docstring(module, incursive=True):
-    """Append the definition position to each function contained in module
+    """Append the definition position to each function contained in module.
 
     Examples
     --------
@@ -232,7 +232,7 @@ def add_fileline_to_docstring(module, incursive=True):
     """
 
     def _add_fileline(obj):
-        """add fileinto to a object
+        """Add fileinto to a object.
         """
         if obj.__doc__ is None or 'From:' in obj.__doc__:
             return

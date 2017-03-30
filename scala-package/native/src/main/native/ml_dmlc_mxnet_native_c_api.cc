@@ -1779,8 +1779,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   lock.unlock();
 
   auto creatorLambda = [](const char *opType, const int numKwargs,
-    const char  **keys, const char **values, CustomOpPropInfo *ret) {
-    bool success = true;
+    const char  **keys, const char **values, MXCallbackList *ret) {
+    int success = true;
 
     // set CustomOpProp.kwargs
     std::string opPropKey(opType);
@@ -1818,7 +1818,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
     // list_arguments callback
     auto opPropListArgument = [](char ***args, void *state) {
-      bool success = true;
+      int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
         LOG(WARNING) << "CustomOpProp: " << key << " not found";
@@ -1852,7 +1852,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
     // list_outputs callback
     auto opPropListOutputs = [](char ***outputs, void *state) {
-      bool success = true;
+      int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
         LOG(WARNING) << "CustomOpProp: " << key << " not found";
@@ -1886,7 +1886,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
     // list_auxiliary_states callback
     auto opPropListAuxStates = [](char ***auxs, void *state) {
-      bool success = true;
+      int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
         LOG(WARNING) << "CustomOpProp: " << key << " not found";
@@ -1926,7 +1926,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
     // declare_backward_dependency callback
     auto opPropDeclareBkDep = [](const int *outGrad, const int *inData,
       const int *outData, int *numDeps, int **rdeps, void *state) {
-      bool success = true;
+      int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
         LOG(WARNING) << "CustomOpProp: " << key << " not found";
@@ -1984,7 +1984,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
     // infer_shape callback
     auto opPropInferShape = [](int numInput, int *ndims,
       unsigned **shapes, void *state) {
-      bool success = true;
+      int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
         LOG(WARNING) << "CustomOpProp: " << key << " not found";
@@ -2037,10 +2037,56 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       return success;
     };
 
+    // infer_type callback
+    auto opPropInferType = [](int numInput, int* types, void* state) {
+      int success = true;
+      std::string key(reinterpret_cast<char *>(state));
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        LOG(WARNING) << "CustomOpProp: " << key << " not found";
+        success = false;
+      } else {
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midInferType = env->GetMethodID(opPropClass, "inferTypeEntry", "(I[I)[I");
+        if (NULL == midInferType) {
+          LOG(WARNING) << "could not find opProp method inferTypeEntry.";
+          success = false;
+        } else {
+          jmethodID midListArguments = env->GetMethodID(
+            opPropClass, "listArguments", "()[Ljava/lang/String;");
+          jobjectArray jargs = (jobjectArray)(env->CallObjectMethod(
+            globalOpPropMap.at(key), midListArguments));
+
+          int intLen = env->GetArrayLength(jargs);
+          jintArray ts = env->NewIntArray(intLen);
+          int *tmp = new int[intLen];
+          for (int i = 0; i < intLen; ++i) tmp[i] = types[i];
+          env->SetIntArrayRegion(ts, (jsize)0, (jsize)intLen, tmp);
+
+          jintArray ret = (jintArray)(env->CallObjectMethod(
+            globalOpPropMap.at(key), midInferType,
+            numInput,
+            ts));
+          jint *arr = env->GetIntArrayElements(ret, NULL);
+          for (int i = 0; i < numInput; ++i) {
+            types[i] = static_cast<int>(arr[i]);
+          }
+
+          delete[] tmp;
+          env->ReleaseIntArrayElements(ret, arr, 0);
+          env->DeleteLocalRef(ret);
+          env->DeleteLocalRef(ts);
+        }
+        _jvm->DetachCurrentThread();
+      }
+      return success;
+    };
+
     // create_operator callback
     auto opPropCreateOp = [](const char *ctx, int numInputs,
-      unsigned **shapes, int *ndims, int *dtypes, CustomOpInfo *ret, void *state) {
-      bool success = true;
+      unsigned **shapes, int *ndims, int *dtypes, MXCallbackList *ret, void *state) {
+      int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
         LOG(WARNING) << "CustomOpProp: " << key << " not found";
@@ -2088,9 +2134,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
           // forward callback
           auto forwardEntry = [](int size, void **ptrs, int *tags,
-            const int *reqs, const bool isTrain, void *state) {
+            const int *reqs, const int isTrain, void *state) {
             std::string key(reinterpret_cast<char *>(state));
-            bool success = true;
+            int success = true;
             if (globalOpMap.find(key) == globalOpMap.end()) {
               LOG(WARNING) << "op: " << key << " not found";
               success = false;
@@ -2118,12 +2164,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 mxnet::NDArray* tmp = reinterpret_cast<mxnet::NDArray*>(ptrs[0]);
                 CUDA_CALL(cudaSetDevice(tmp->ctx().dev_id));
 #endif
+                bool is_train =  true;
+                if (isTrain == 0) is_train = false;
                 success = env->CallBooleanMethod(globalOpMap.at(key), midForward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
-                                                       *(const_cast<bool*>(&isTrain)));
+                                                       is_train);
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
@@ -2135,9 +2183,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
           // backward callback
           auto backwardEntry = [](int size, void **ptrs, int *tags,
-            const int *reqs, const bool isTrain, void *state) {
+            const int *reqs, const int isTrain, void *state) {
             std::string key(reinterpret_cast<char *>(state));
-            bool success = true;
+            int success = true;
             if (globalOpMap.find(key) == globalOpMap.end()) {
               LOG(WARNING) << "op: " << key << " not found";
               success = false;
@@ -2162,12 +2210,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 jlongArray ptrsArr = env->NewLongArray(size);
                 env->SetLongArrayRegion(
                   ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
+                bool is_train =  true;
+                if (isTrain == 0) is_train = false;
                 success = env->CallBooleanMethod(globalOpMap.at(key), midBackward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
-                                                       *(const_cast<bool*>(&isTrain)));
+                                                       is_train);
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
@@ -2180,7 +2230,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           // del callback
           auto delEntry = [](void *state) {
             std::string key(reinterpret_cast<char *>(state));
-            bool success = true;
+            int success = true;
             std::unique_lock<std::mutex> lock(mutex_op);
             if (globalOpMap.find(key) == globalOpMap.end()) {
               LOG(WARNING) << "op: " << key << " not found";
@@ -2202,14 +2252,23 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
             return success;
           };
 
-          ret->forward =
-            static_cast<bool(*)(int, void**, int*, const int*, const bool, void*)>(forwardEntry);
-          ret->backward =
-            static_cast<bool(*)(int, void**, int*, const int*, const bool, void*)>(backwardEntry);
-          ret->del = static_cast<bool(*)(void*)>(delEntry);
-          ret->p_forward = state;
-          ret->p_backward = state;
-          ret->p_del = state;
+          // TODO(eric): Memory leak here. Refactor later and delete in delEntry
+          ret->num_callbacks = 3;
+          ret->callbacks = new MXGenericCallback[ret->num_callbacks];
+          ret->callbacks[kCustomOpDelete] =
+            reinterpret_cast<int(*)(void)>(static_cast<int(*)(void*)>(delEntry));
+          ret->callbacks[kCustomOpForward] =
+            reinterpret_cast<int(*)(void)>(
+              static_cast<int(*)(int, void**, int*, const int*, const int, void*)>(
+                forwardEntry));
+          ret->callbacks[kCustomOpBackward] =
+            reinterpret_cast<int(*)(void)>(
+              static_cast<int(*)(int, void**, int*, const int*, const int, void*)>(
+                backwardEntry));
+          ret->contexts = new void*[ret->num_callbacks];
+          ret->contexts[kCustomOpDelete] = state;
+          ret->contexts[kCustomOpForward] = state;
+          ret->contexts[kCustomOpBackward] = state;
         }
       }
       return success;
@@ -2222,9 +2281,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       int count_prop = globalOpPropCountMap.at(key);
       if (count_prop < 2) {
         globalOpPropCountMap[key] = ++count_prop;
-        return true;
+        return 1;
       }
-      bool success = true;
+      int success = true;
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
         LOG(WARNING) << "opProp: " << key << " not found";
         success = false;
@@ -2252,30 +2311,58 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       return success;
     };
 
-    ret->list_arguments = static_cast<bool(*)(char***, void*)>(opPropListArgument);
-    ret->list_outputs = static_cast<bool(*)(char***, void*)>(opPropListOutputs);
-    ret->infer_shape = static_cast<bool (*)(int, int*, unsigned**, void*)>(opPropInferShape);
-    ret->declare_backward_dependency =
-      static_cast<bool(*)(const int*, const int*, const int*, int* num_deps, int**, void*)>(
-        opPropDeclareBkDep);
-    ret->create_operator =
-      static_cast<bool(*)(const char*, int, unsigned**, int*, int*, CustomOpInfo*, void*)>(
-        opPropCreateOp);
-    ret->list_auxiliary_states = static_cast<bool(*)(char***, void*)>(opPropListAuxStates);
-    ret->del = static_cast<bool(*)(void*)>(opPropDel);
-    ret->p_list_arguments = reinterpret_cast<void *>(const_cast<char *>(opType));
-    ret->p_list_outputs = reinterpret_cast<void *>(const_cast<char *>(opType));
-    ret->p_infer_shape = reinterpret_cast<void *>(const_cast<char *>(opType));
-    ret->p_declare_backward_dependency = reinterpret_cast<void *>(const_cast<char *>(opType));
-    ret->p_create_operator = reinterpret_cast<void *>(const_cast<char *>(opType));
-    ret->p_list_auxiliary_states = reinterpret_cast<void *>(const_cast<char *>(opType));
-    ret->p_del = reinterpret_cast<void *>(const_cast<char *>(opType));
+    // TODO(eric): Memory leak. Missing infertype.
+    ret->num_callbacks = 8;
+    ret->callbacks = new MXGenericCallback[ret->num_callbacks];
+    ret->callbacks[kCustomOpPropDelete] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(void*)>(opPropDel));
+    ret->callbacks[kCustomOpPropListArguments] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(char***, void*)>(opPropListArgument));
+    ret->callbacks[kCustomOpPropListOutputs] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(char***, void*)>(opPropListOutputs));
+    ret->callbacks[kCustomOpPropListAuxiliaryStates] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(char***, void*)>(opPropListAuxStates));
+    ret->callbacks[kCustomOpPropInferShape] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int (*)(int, int*, unsigned**, void*)>(opPropInferShape));
+    ret->callbacks[kCustomOpPropDeclareBackwardDependency] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(const int*, const int*, const int*, int* num_deps, int**, void*)>(
+          opPropDeclareBkDep));
+    ret->callbacks[kCustomOpPropCreateOperator] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(const char*, int, unsigned**, int*, int*, MXCallbackList*, void*)>(
+          opPropCreateOp));
+    ret->callbacks[kCustomOpPropInferType] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(int, int*, void*)>(opPropInferType));
 
+    ret->contexts = new void*[ret->num_callbacks];
+    ret->contexts[kCustomOpPropDelete] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropListArguments] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropListOutputs] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropListAuxiliaryStates] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropInferShape] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropDeclareBackwardDependency] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropCreateOperator] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropInferType] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
     return success;
   };
 
   CustomOpPropCreator creator =
-    static_cast<bool(*)(const char*, const int, const char**, const char**, CustomOpPropInfo*)>(
+    static_cast<int(*)(const char*, const int, const char**, const char**, MXCallbackList*)>(
       creatorLambda);
   return MXCustomOpRegister(regName, creator);
 }

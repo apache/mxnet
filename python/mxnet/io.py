@@ -1,4 +1,4 @@
-"""Data iterators for common data formats"""
+"""Data iterators for common data formats."""
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 
@@ -22,15 +22,15 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     Parameters
     ----------
     cls : DataDesc
-         The class
+         The class.
     name : str
-         Data name
+         Data name.
     shape : tuple of int
-         Data shape
+         Data shape.
     dtype : np.dtype, optional
-         Data type
+         Data type.
     layout : str, optional
-         Data layout
+         Data layout.
     """
     def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
         ret = super(cls, DataDesc).__new__(cls, name, shape)
@@ -46,8 +46,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     def get_batch_axis(layout):
         """Get the dimension that corresponds to the batch size.
 
-        When data-parallelism is used, the data will be automatically split and
-        concatenate along the batch_size dimension. Axis can be -1, which means
+        When data parallelism is used, the data will be automatically split and
+        concatenated along the batch-size dimension. Axis can be -1, which means
         the whole array will be copied for each data-parallelism device.
 
         Parameters
@@ -85,20 +85,20 @@ class DataBatch(object):
     Parameters
     ----------
     data : list of NDArray
-          A list of input data
+          A list of input data.
     label : list of NDArray
-          A list of input labels
+          A list of input labels.
     pad : int, optional
           The number of examples padded at the batch end. It is used when the
-          examples read is less than the batch size
+          examples read is less than the batch size.
     index : numpy.array, optional
-          The example indices in this batch
+          The example indices in this batch.
     bucket_key : int, optional
           The key of the bucket, used for bucket IO.
     provide_data : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``data[i]``
+          The *i*-th elements describes the name and shape of ``data[i]``.
     provide_label : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``label[i]``
+          The *i*-th elements describes the name and shape of ``label[i]``.
     """
     def __init__(self, data, label, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
@@ -124,12 +124,12 @@ class DataBatch(object):
             label_shapes)
 
 class DataIter(object):
-    """The base class of a data iterator
+    """The base class of a data iterator.
 
     Parameters
     ----------
     batch_size : int, optional
-        The batch size, namely the number of examples in a batch
+        The batch size, namely the number of examples in a batch.
     """
     def __init__(self, batch_size=0):
         self.batch_size = batch_size
@@ -138,8 +138,7 @@ class DataIter(object):
         return self
 
     def reset(self):
-        """Reset the iterator to the begin of the data
-        """
+        """Reset the iterator to the begin of the data."""
         pass
 
     def next(self):
@@ -153,7 +152,7 @@ class DataIter(object):
         Raises
         ------
         StopIteration
-            If the end of the data is reached
+            If the end of the data is reached.
         """
         if self.iter_next():
             return DataBatch(data=self.getdata(), label=self.getlabel(), \
@@ -180,17 +179,17 @@ class DataIter(object):
         Returns
         -------
         list of NDArray
-            The data of current batch.
+            The data of the current batch.
         """
         pass
 
     def getlabel(self):
-        """Get label of current batch.
+        """Get label of the current batch.
 
         Returns
         -------
         list of NDArray
-            The label of current batch.
+            The label of the current batch.
         """
         pass
 
@@ -200,31 +199,31 @@ class DataIter(object):
         Returns
         -------
         index : numpy.array
-            The indices of examples in the current batch
+            The indices of examples in the current batch.
         """
         return None
 
     def getpad(self):
-        """Get the number of padding examples in current batch.
+        """Get the number of padding examples in the current batch.
 
         Returns
         -------
         int
-            Number of padding examples in current batch
+            Number of padding examples in the current batch.
         """
         pass
 
 class ResizeIter(DataIter):
-    """Resize a data iterator to given number of batches
+    """Resize a data iterator to a given number of batches.
 
     Parameters
     ----------
     data_iter : DataIter
-        The data iterator to be resized
+        The data iterator to be resized.
     size : int
         The number of batches per epoch to resize to.
     reset_internal : bool
-        Whether to reset internal iterator on ResizeIter.reset
+        Whether to reset internal iterator on ResizeIter.reset.
 
 
     Examples
@@ -280,7 +279,7 @@ class ResizeIter(DataIter):
         return self.current_batch.pad
 
 class PrefetchingIter(DataIter):
-    """Performs pre-fetch for other data iterators
+    """Performs pre-fetch for other data iterators.
 
     This iterator will create another thread to perform ``iter_next`` and then
     store the data in memory. It potentially accelerates the data read, at the
@@ -289,13 +288,13 @@ class PrefetchingIter(DataIter):
     Parameters
     ----------
     iters : DataIter or list of DataIter
-        The data iterators to be pre-fetched
+        The data iterators to be pre-fetched.
     rename_data : None or list of dict
         The *i*-th element is a renaming map for the *i*-th iter, in the form of
         {'original_name' : 'new_name'}. Should have one entry for each entry
-        in iter[i].provide_data
+        in iter[i].provide_data.
     rename_label : None or list of dict
-        Similar to rename_data
+        Similar to ``rename_data``.
 
     Examples
     --------
@@ -511,7 +510,7 @@ class NDArrayIter(DataIter):
 
     @property
     def provide_data(self):
-        """The name and shape of data provided by this iterator"""
+        """The name and shape of data provided by this iterator."""
         return [
             DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
             for k, v in self.data
@@ -519,14 +518,14 @@ class NDArrayIter(DataIter):
 
     @property
     def provide_label(self):
-        """The name and shape of label provided by this iterator"""
+        """The name and shape of label provided by this iterator."""
         return [
             DataDesc(k, tuple([self.batch_size] + list(v.shape[1:])), v.dtype)
             for k, v in self.label
         ]
 
     def hard_reset(self):
-        """Ignore roll over data and set to start"""
+        """Ignore roll over data and set to start."""
         self.cursor = -self.batch_size
 
     def reset(self):
@@ -547,7 +546,7 @@ class NDArrayIter(DataIter):
             raise StopIteration
 
     def _getdata(self, data_source):
-        """Load data from underlying arrays, internal use only"""
+        """Load data from underlying arrays, internal use only."""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
             return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
@@ -570,12 +569,12 @@ class NDArrayIter(DataIter):
 
 
 class MXDataIter(DataIter):
-    """A python wrapper a C++ data iterator
+    """A python wrapper a C++ data iterator.
 
     Parameters
     ----------
     handle : DataIterHandle
-        the handle to the underlying C++ Data Iterator
+        The handle to the underlying C++ Data Iterator.
     """
     def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
@@ -703,7 +702,7 @@ def _make_io_iterator(handle):
         Returns
         -------
         dataiter: Dataiter
-            the resulting data iterator
+            The resulting data iterator.
         """
         param_keys = []
         param_vals = []

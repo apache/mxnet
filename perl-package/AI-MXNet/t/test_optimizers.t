@@ -189,7 +189,6 @@ method update($index, $weight, $grad, $state)
 package main;
 use Test::More tests => 162;
 use AI::MXNet::Base;
-use Data::Dumper;
 use PDL::NiceSlice;
 use AI::MXNet::TestUtils qw(same reldiff almost_equal);
 use AI::MXNet::Function::Parameters;

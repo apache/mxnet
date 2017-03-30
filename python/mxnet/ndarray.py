@@ -460,6 +460,9 @@ fixed-size items.
         shape : tuple of int
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
+            One shape dimension can be -1. In this case, the value is inferred
+            from the length of the array and remaining dimensions.
+
 
         Returns
         -------
@@ -477,12 +480,35 @@ fixed-size items.
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape((3,-1))
+        >>> y.asnumpy()
+        array([[ 0.,  1.],
+               [ 2.,  3.],
+               [ 4.,  5.]], dtype=float32)
         >>> y[:] = -1
         >>> x.asnumpy()
         array([[-1., -1., -1.],
                [-1., -1., -1.]], dtype=float32)
         """
         handle = NDArrayHandle()
+
+        # Infer the correct size for dim == -1
+        shape = list(shape)
+        for index, element in enumerate(shape):
+            if element == -1:
+                remainder = list(self.shape)
+                for i, e in enumerate(shape):  # pylint: disable=invalid-name
+                    if i != index and e == -1:
+                        raise ValueError('Only one dimension can be inferred.')
+                    try:
+                        remainder.remove(e)
+                    except ValueError:
+                        pass
+                shape[index] = np.product(remainder)
+                # We have already gone through the whole shape, break
+                break
+
+        # Actual reshape
         check_call(_LIB.MXNDArrayReshape(self.handle,
                                          len(shape),
                                          c_array(ctypes.c_int, shape),
@@ -560,6 +586,22 @@ fixed-size items.
         """
         check_call(_LIB.MXNDArrayWaitToRead(self.handle))
 
+
+    @property
+    def ndim(self):
+        """Returns the number of dimensions of this array
+
+        Examples
+        --------
+        >>> x = mx.nd.array([1, 2, 3, 4])
+        >>> x.ndim
+        1
+        >>> x = mx.nd.array([[1, 2],
+                             [3, 4]])
+        >>> x.ndim
+        2
+        """
+        return len(self.shape)
 
     @property
     def shape(self):
@@ -641,16 +683,16 @@ fixed-size items.
             self.handle, ctypes.byref(mx_dtype)))
         return _DTYPE_MX_TO_NP[mx_dtype.value]
 
-
     @property
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
         """Returns a copy of the array with axes transposed.
 
-        Equivalent to ``mx.nd.transpose(self)``.
+        Equivalent to ``mx.nd.transpose(self)`` except that
+        self is returned if ``self.ndim < 2``.
 
-        Unlike ``numpy.ndarray.T``, this function only supports 2-D arrays,
-        and returns a copy rather than a view of the array.
+        Unlike ``numpy.ndarray.T``, this function returns a copy
+        rather than a view of the array unless ``self.ndim < 2``.
 
         Examples
         --------
@@ -664,8 +706,8 @@ fixed-size items.
                [ 2.,  5.]], dtype=float32)
 
         """
-        if len(self.shape) != 2:
-            raise ValueError('Only 2D matrix is allowed to be transposed')
+        if len(self.shape) < 2:
+            return self
         return transpose(self)
     # pylint: enable= invalid-name, undefined-variable
 
@@ -977,8 +1019,9 @@ def array(source_array, ctx=None, dtype=None):
     ctx : Context, optional
         An optional device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        An optional value type. If source_array is NDArray then defaults to
-        source_array.dtype, otherwise default to `float32`.
+
+        An optional value type. If the ``source_array`` is an NDArray, then defaults to
+        ``source_array.dtype``, otherwise default to ``float32``.
 
     Returns
     -------
