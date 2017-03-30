@@ -366,17 +366,22 @@ struct Take {
 template<int req>
 struct TakeBackward {
   // assume that idx have been flattened to a 1-D tensor (K,)
-  // assume that out_grad and in_grad have been flattened to 2-D tensors, (K, M) and (N, M)
+  // assume that out_grad and in_grad have been flattened to 2-D tensors, (K, M) and (L, M)
   // M is the number of columns of in_grad and out_grad
   // K is the number of elements in idx
+  // L is the number rows of in_grad
   // i is the index of in_grad
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_grad,
-                                  const IType* idx, const int M, const int K) {
+                                  const IType* idx, const int M, const int K, const int L) {
     DType sum = static_cast<DType>(0);
     const int in_grad_row = i / M;
     for (int j = 0; j < K; ++j) {
-      if (idx[j] == in_grad_row) {
+      // clip the index out of bound
+      int r = idx[j];
+      if (r < 0) r = 0;
+      else if (r >= L) r = L - 1;
+      if (r == in_grad_row) {
         sum += out_grad[j * M + i % M];
       }
     }
@@ -441,7 +446,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
                                                     inputs[0].dptr<DType>(),
                                                     inputs[1].dptr<IType>(),
                                                     oshape.Size()/idxshape.Size(),
-                                                    idxshape.Size());
+                                                    idxshape.Size(), arrshape[0]);
       });
     });
   });
