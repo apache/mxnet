@@ -13,7 +13,6 @@ portable and lightweight, and it scales to multiple GPUs and multiple machines.
 
 Please choice the programming language for the rest of this document.
 
-<div class='text-center'>
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Python</button>
 <button type="button" class="btn btn-default opt">R</button>
@@ -21,19 +20,16 @@ Please choice the programming language for the rest of this document.
 <button type="button" class="btn btn-default opt">Julia</button>
 <button type="button" class="btn btn-default opt">Perl</button>
 </div>
-</div>
 <script type="text/javascript" src='../../_static/js/options.js'></script>
 
 ## Installation
 
-<div class='text-center'>
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Pre-built Binaries</button>
 <button type="button" class="btn btn-default opt">Docker</button>
 <button type="button" class="btn btn-default opt">Cloud</button>
 <button type="button" class="btn btn-default opt">Build From Source</button>
 </div> <!-- opt-group -->
-</div>
 
 <div class="pre-built-binaries">
 
@@ -50,13 +46,11 @@ which, for example, can be installed by
 wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
-<div class='text-center'>
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Linux</button>
 <button type="button" class="btn btn-default opt">macOS</button>
 <button type="button" class="btn btn-default opt">Windows</button>
 </div> <!-- opt-group -->
-</div>
 
 <div class="windows">
 
