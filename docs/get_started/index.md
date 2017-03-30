@@ -155,60 +155,44 @@ array([[ 3.,  3.,  3.],
 ```scala
 scala> import ml.dmlc.mxnet._
 import ml.dmlc.mxnet._
+
 scala> val arr = NDArray.ones(2, 3)
 arr: ml.dmlc.mxnet.NDArray = ml.dmlc.mxnet.NDArray@f5e74790
-scala> arr.shape
-res0: ml.dmlc.mxnet.Shape = (2,3)
-scala> (arr * 2).toArray
-res2: Array[Float] = Array(2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
-scala> (arr * 2).shape
-res3: ml.dmlc.mxnet.Shape = (2,3)
+
+scala> (arr * 2 + 1).toArray
+res0: Array[Float] = Array(3.0, 3.0, 3.0, 3.0, 3.0, 3.0)
 ```
 
 ```r
 > require(mxnet)
 Loading required package: mxnet
 > a <- mx.nd.ones(c(2,3))
-> a
+> a * 2 + 1
      [,1] [,2] [,3]
-[1,]    1    1    1
-[2,]    1    1    1
-> a + 1
-     [,1] [,2] [,3]
-[1,]    2    2    2
-[2,]    2    2    2
+[1,]    3    3    3
+[2,]    3    3    3
 ```
 
 ```julia
 julia> using MXNet
-julia> a = mx.ones((2,3), mx.gpu())
+
+julia> a = mx.ones((2,3))
 mx.NDArray{Float32}(2,3)
-julia> Array{Float32}(a * 2)
+
+julia> Array{Float32}(a * 2 + 1)
 2×3 Array{Float32,2}:
- 2.0  2.0  2.0
- 2.0  2.0  2.0
+ 3.0  3.0  3.0
+ 3.0  3.0  3.0
 ```
 
 ```perl
 pdl> use AI::MXNet qw(mx)
 pdl> $a = mx->nd->ones([2, 3], ctx => mx->gpu())
-pdl> print (($a * 2)->aspdl)
+pdl> print (($a * 2 + 1)->aspdl)
 [
- [2 2 2]
- [2 2 2]
+ [3 3 3]
+ [3 3 3]
 ]
-```
-
-Running the workload on GPUs is straightforward.
-
-```python
->>> a = mx.nd.ones((2, 3), mx.gpu(0))  # create a on GPU 0
->>> b = a * 2 + 1
->>> b  # b will sit on GPU 0 as well
-<NDArray 2x3 @gpu(0)>
->>> b.asnumpy()
-array([[ 3.,  3.,  3.],
-       [ 3.,  3.,  3.]], dtype=float32)
 ```
 
 MXNet also provides a symbolic programming interface:
@@ -225,8 +209,16 @@ array([[ 3.,  3.,  3.],
 Run the above codes in GPU in straightforward:
 
 ```python
->>> a = mx.nd.ones((2, 3), mx.gpu(0))  # create a on GPU 0, then the result a*2+1 will sit on GPU 0 as well
->>> c = b.eval(a=a, mx.gpu(0)), ctx=mx.gpu(0))  # feed a as the input to eval b, the result c will be also on GPU 0
+>>> a = mx.nd.ones((2, 3), mx.gpu())  # create a on GPU 0, then the result a*2+1 will sit on GPU 0 as well
+>>> c = b.eval(a=a, mx.gpu()), ctx=mx.gpu())  # feed a as the input to eval b, the result c will be also on GPU 0
+```
+
+```r
+> a <- mx.nd.ones(c(2,3), mx.gpu())
+```
+
+```julia
+julia> a = mx.ones((2,3), mx.gpu())
 ```
 
 In additional, MXNet provides a large number of neural network layers and
