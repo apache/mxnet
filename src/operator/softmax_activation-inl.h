@@ -99,8 +99,14 @@ class SoftmaxActivationOp : public Operator {
     int total_size = in_grad[softmax_activation::kData].Size();
     int batch_size = in_grad[softmax_activation::kData].shape_[0];
     int channel_num = in_grad[softmax_activation::kData].shape_[1];
+    int rank = in_grad[softmax_activation::kData].ndim();
+    if (param_.mode == softmax_activation::kInstance) {
+      channel_num = in_grad[softmax_activation::kData].shape_[rank - 1];
+      batch_size = total_size / channel_num;
+    }
     int rest_size = total_size / (batch_size * channel_num);
     const Shape<3> data_shape = Shape3(batch_size, channel_num, rest_size);
+
     // Get tensors
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 3> m_out_grad =
