@@ -1,8 +1,7 @@
 #!/bin/bash
 export PS_VERBOSE=1
 tools/launch.py -n 2 --launcher local \
-  java -Xmx3G -Djava.library.path=scala-package/native/osx-x86_64-cpu/target/ \
-  -cp scala-package/assembly/osx-x86_64-cpu/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
+  java -Xmx4G -cp scala-package/assembly/osx-x86_64-cpu/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
   ml.dmlc.mxnetexamples.imclassification.TrainMnist \
   --data-dir=/Users/QYGong/Downloads/mnist/ \
   --num-epochs=10 \
