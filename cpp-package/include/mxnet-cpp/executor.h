@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_EXECUTOR_H
-#define MXNETCPP_EXECUTOR_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_
 
 #include <vector>
 #include <map>
@@ -134,4 +134,4 @@ class Executor {
 };
 }  // namespace cpp
 }  // namespace mxnet
-#endif  // MXNETCPP_EXECUTOR_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_

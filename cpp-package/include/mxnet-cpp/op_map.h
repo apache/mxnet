@@ -5,8 +5,8 @@
 * \author Chuntao Hong
 */
 
-#ifndef MXNETCPP_MXNET_H
-#define MXNETCPP_MXNET_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_MAP_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_MAP_H_
 
 #include <map>
 #include <string>
@@ -89,4 +89,4 @@ class OpMap {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_MXNET_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_MAP_H_

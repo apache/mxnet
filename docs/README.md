@@ -1,50 +1,26 @@
 # MXNet documentation
 
+MXNet's documents can be built by running `make html` in this folder.
+
 A built version of document is available at http://mxnet.io
 
-## To build the docs with Docker
+To build the documents locally, the easiest way is by using `docker`. First make
+sure [docker](docker.com) is installed. Then use the following commands to clone and
+build MXNet's documents (not including jupyter notebooks and API documents
+execept for Python):
 
-The `Dockerfile` in this directory encapsulates all the dependencies needed
-to build the docs.  The default entry-point builds the docs and serves them
-through a simple HTTP server for previewing.
-
-```
-docker build -t mxnet/docs .
-docker run -it -p 8008:8008 mxnet/docs
-open http://localhost:8008/
-```
-
-### Faster iterative development
-
-If you are working on the docs and want to rebuild them without creating a new
-docker image each time, you can do this with
-
-```
-docker run -it -p 8008:8008 -v `pwd`:/opt/mxnet/docs mxnet/docs
+```bash
+git clone --recursive https://github.com/dmlc/mxnet
+cd mxnet
+tests/ci_build/ci_build.sh doc DEV=1 make -C docs/ html
 ```
 
-which maps your current directory into the docker image to get any local
-changes.
+The built documents will be available at `docs/_build/html/`.
 
-**NOTE:** Any changes to the API reference will not get rebuilt this way.
-The API reference docs are introspected from the built binaries, which
-in this Dockerfile are pulled from github/dmlc/master.  To work-around
-this, map a volume with your code changes into the container, and rebuild
-MXNet in the container before doing the doc build.  Or use the local
-build described below.
+Note:
 
-## Local build
+- If C++ codes have been changed, we suggest to remove the previous results before
+  building, namely run `rm -rf docs/_build/html/`.
 
-To build the documentation without docker on your local machine, first
-install the required packages for Ubuntu 14.04.  These are approximately:
-
-```
-sudo apt-get install doxygen python-pip
-sudo pip install sphinx==1.3.5 CommonMark==0.5.4 breathe mock==1.0.1 recommonmark
-```
-
-(Refer to the Dockerfile for a more reliable description of the dependencies.)
-Once the MXNet binaries are built, and you have the dependencies installed,
-you can build the docs with:
-
-```make html```
+- If CSS or javascript are changed, we often need to do a *force refresh* in the
+  browser to clear the cache.
