@@ -895,6 +895,10 @@ def gen_broadcast_data(idx):
         r_shape[np.where(r_axis_flags == 0)] = 1
     return [np.random.random(l_shape), np.random.random(r_shape)]
 
+def gen_broadcast_data_int(idx):
+    d = gen_broadcast_data(idx);
+    return [np.round(d[0]*100), np.round(d[1]*100)]
+
 def gen_binary_data(dummy):
     ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
@@ -1009,9 +1013,8 @@ def test_broadcast_binary_op():
 
     def test_bequal(a, b):
         c = mx.sym.broadcast_equal(a, b)
-        check_binary_op_forward(c, lambda a, b: (a == b).astype(a.dtype), gen_broadcast_data)
-        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data)
-
+        check_binary_op_forward(c, lambda a, b: (a == b).astype(a.dtype), gen_broadcast_data_int)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data_int)
 
     test_bplus(a, b)
     test_bminus(a, b)
