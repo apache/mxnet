@@ -1062,10 +1062,10 @@ def moveaxis(tensor, source, destination):
     ----------
     tensor : mx.nd.array
         The array which axes should be reordered
-    source : int or sequence of int
-        Original positions of the axes to move. These must be unique.
-    destination : int or sequence of int
-        Destination positions for each of the original axes. These must also be unique.
+    source : int
+        Original position of the axes to move.
+    destination : int
+        Destination position for each of the original axes.
 
     Returns
     -------
