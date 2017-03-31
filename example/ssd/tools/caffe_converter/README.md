@@ -25,17 +25,7 @@ so we install the bindings first, and then install the corresponding compiler.
 ### How to use
 To convert ssd caffemodels, Use: `python convert_model.py prototxt caffemodel outputprefix`
 
-Linux: Use `./run.sh model_name` to download and convert a model. E.g. `./run.sh vgg19`
-
-Windows: Use `python convert_model.py prototxt caffemodel outputprefix`  
-For example: `python convert_model.py VGG_ILSVRC_16_layers_deploy.prototxt VGG_ILSVRC_16_layers.caffemodel vgg16`
-
 
 ### Note
 
-* We have verified the results of VGG_16/VGG_19 model and BVLC_googlenet results from Caffe model zoo.
-* The tool only supports single input and single output network.
-* The tool can only work with the L2LayerParameter in Caffe.
-* Caffe uses a convention for multi-strided pooling output shape inconsistent with MXNet
-    * This importer doesn't handle this problem properly yet
-    * And example of this failure is importing bvlc_Googlenet. The user needs to add padding to stride-2 pooling to make this work right now.
+Use this converter for ssd caffemodels only. General converter is available in `mxnet/tools/caffe_converter`.
