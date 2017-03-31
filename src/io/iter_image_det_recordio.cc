@@ -111,7 +111,7 @@ class ImageDetLabelMap {
     return max_width;
   }
 
-private:
+ private:
   /*! \brief vector storing image indices */
   std::vector<size_t> image_index_;
   /*! \brief vectors storing raw labels in 1D */
@@ -407,7 +407,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
         LOG(FATAL) << "Not enough label packed in img_list or rec file.";
       }
       for (auto& aug : this->augmenters_[tid]) {
-        res = aug->Process(res, label_buf, this->prnds_[tid].get());
+        res = aug->Process(res, &label_buf, this->prnds_[tid].get());
       }
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(n_channels, param_.data_shape[1], param_.data_shape[2]),

@@ -38,7 +38,7 @@ class ImageAugmenter {
    * \param prnd pointer to random number generator.
    * \return The processed image.
    */
-  virtual cv::Mat Process(const cv::Mat &src, std::vector<float> &label,
+  virtual cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                           common::RANDOM_ENGINE *prnd) = 0;
   // virtual destructor
   virtual ~ImageAugmenter() {}

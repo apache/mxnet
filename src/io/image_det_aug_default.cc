@@ -50,7 +50,9 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
   Tuple<float> max_crop_object_coverages;
   /*! \brief number of crop samplers, skip random crop if <= 0 */
   int num_crop_sampler;
-  /*! \beief 0-emit ground-truth if center out of crop area, 1-emit if overlap < emit_overlap_thresh */
+  /*! \beief 0-emit ground-truth if center out of crop area
+   * 1-emit if overlap < emit_overlap_thresh
+   */
   int crop_emit_mode;
   /*! \brief ground-truth emition threshold specific for crop_emit_mode == 1 */
   float emit_overlap_thresh;
@@ -84,7 +86,10 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
   int inter_method;
   /*! \brief shape of the image data */
   TShape data_shape;
-  /*! \brief resize mode, 0-force 1-Shrink to data_shape, preserve ratio, 2-fit to data_shape, preserve ratio*/
+  /*! \brief resize mode, 0-force
+   * 1-Shrink to data_shape, preserve ratio,
+   * 2-fit to data_shape, preserve ratio
+   */
   int resize_mode;
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageDetAugmentParam) {
@@ -106,13 +111,17 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
     DMLC_DECLARE_FIELD(max_crop_overlaps).set_default(Tuple<float>({1.0f}))
         .describe("Augmentation Param: Maximum crop IOU between crop_box and ground-truth.");
     DMLC_DECLARE_FIELD(min_crop_sample_coverages).set_default(Tuple<float>({0.0f}))
-        .describe("Augmentation Param: Minimum ratio of intersect/crop_area between crop box and ground-truths.");
+        .describe("Augmentation Param: Minimum ratio of intersect/crop_area "
+                  "between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(max_crop_sample_coverages).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Maximum ratio of intersect/crop_area between crop box and ground-truths.");
+        .describe("Augmentation Param: Maximum ratio of intersect/crop_area "
+                  "between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(min_crop_object_coverages).set_default(Tuple<float>({0.0f}))
-        .describe("Augmentation Param: Minimum ratio of intersect/gt_area between crop box and ground-truths.");
+        .describe("Augmentation Param: Minimum ratio of intersect/gt_area "
+                  "between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(max_crop_object_coverages).set_default(Tuple<float>({1.0f}))
-        .describe("Augmentation Param: Maximum ratio of intersect/gt_area between crop box and ground-truths.");
+        .describe("Augmentation Param: Maximum ratio of intersect/gt_area "
+                  "between crop box and ground-truths.");
     DMLC_DECLARE_FIELD(num_crop_sampler).set_default(1)
         .describe("Augmentation Param: Number of crop samplers.");
     DMLC_DECLARE_FIELD(crop_emit_mode)
@@ -125,7 +134,8 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
     DMLC_DECLARE_FIELD(emit_overlap_thresh).set_default(0.3f)
         .describe("Augmentation Param: Emit overlap thresh for emit mode overlap only.");
     DMLC_DECLARE_FIELD(max_crop_trials).set_default(Tuple<int>({25}))
-        .describe("Augmentation Param: Skip cropping if fail crop trail count exceeds this number.");
+        .describe("Augmentation Param: Skip cropping if fail crop trail count "
+                  "exceeds this number.");
     DMLC_DECLARE_FIELD(rand_pad_prob).set_default(0.0f)
         .describe("Augmentation Param: Probability for random padding.");
     DMLC_DECLARE_FIELD(max_pad_scale).set_default(1.0f)
@@ -182,19 +192,19 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
 /*! \brief helper class for better detection label handling */
 class ImageDetLabel {
  public:
-   /*! \brief Helper struct to store the coordinates and id for each object */
-   struct ImageDetObject {
-     float id;
-     float left;
-     float top;
-     float right;
-     float bottom;
-     std::vector<float> extra;  // store extra info other than id and coordinates
+  /*! \brief Helper struct to store the coordinates and id for each object */
+  struct ImageDetObject {
+    float id;
+    float left;
+    float top;
+    float right;
+    float bottom;
+    std::vector<float> extra;  // store extra info other than id and coordinates
 
-     /*! \brief Return converted Rect object */
-     Rect ToRect() const {
-       return Rect(left, top, right - left, bottom - top);
-     }
+    /*! \brief Return converted Rect object */
+    Rect ToRect() const {
+      return Rect(left, top, right - left, bottom - top);
+    }
 
      /*! \brief Return projected coordinates according to new region */
      ImageDetObject Project(Rect box) const {
@@ -213,74 +223,74 @@ class ImageDetLabel {
        ret.right = 1.f - this->left;
        return ret;
      }
-   };  // struct ImageDetObject
+  };  // struct ImageDetObject
 
-   /*! \brief constructor from raw array of detection labels */
-   explicit ImageDetLabel(const std::vector<float> &raw_label) {
-     FromArray(raw_label);
-   }
+  /*! \brief constructor from raw array of detection labels */
+  explicit ImageDetLabel(const std::vector<float> &raw_label) {
+    FromArray(raw_label);
+  }
 
-   /*! \brief construct from raw array with following format
-    * header_width, object_width, (extra_headers...),
-    * [id, xmin, ymin, xmax, ymax, (extra_object_info)] x N
-    */
-   void FromArray(const std::vector<float> &raw_label) {
-     int label_width = static_cast<int>(raw_label.size());
-     CHECK_GE(label_width, 7);  // at least 2(header) + 5(1 object)
-     int header_width = static_cast<int>(raw_label[0]);
-     CHECK_GE(header_width, 2);
-     object_width_ = static_cast<int>(raw_label[1]);
-     CHECK_GE(object_width_, 5);  // id, x1, y1, x2, y2...
-     header_.assign(raw_label.begin(), raw_label.begin() + header_width);
-     int num = (label_width - header_width) / object_width_;
-     CHECK_EQ((label_width - header_width) % object_width_, 0);
-     objects_.reserve(num);
-     for (int i = header_width; i < label_width; i += object_width_) {
-       ImageDetObject obj;
-       auto it = raw_label.cbegin() + i;
-       obj.id = *(it++);
-       obj.left = *(it++);
-       obj.top = *(it++);
-       obj.right = *(it++);
-       obj.bottom = *(it++);
-       obj.extra.assign(it, it - 5 + object_width_);
-       objects_.push_back(obj);
-       CHECK_GT(obj.right, obj.left);
-       CHECK_GT(obj.bottom, obj.top);
-     }
-   }
+  /*! \brief construct from raw array with following format
+   * header_width, object_width, (extra_headers...),
+   * [id, xmin, ymin, xmax, ymax, (extra_object_info)] x N
+   */
+  void FromArray(const std::vector<float> &raw_label) {
+    int label_width = static_cast<int>(raw_label.size());
+    CHECK_GE(label_width, 7);  // at least 2(header) + 5(1 object)
+    int header_width = static_cast<int>(raw_label[0]);
+    CHECK_GE(header_width, 2);
+    object_width_ = static_cast<int>(raw_label[1]);
+    CHECK_GE(object_width_, 5);  // id, x1, y1, x2, y2...
+    header_.assign(raw_label.begin(), raw_label.begin() + header_width);
+    int num = (label_width - header_width) / object_width_;
+    CHECK_EQ((label_width - header_width) % object_width_, 0);
+    objects_.reserve(num);
+    for (int i = header_width; i < label_width; i += object_width_) {
+      ImageDetObject obj;
+      auto it = raw_label.cbegin() + i;
+      obj.id = *(it++);
+      obj.left = *(it++);
+      obj.top = *(it++);
+      obj.right = *(it++);
+      obj.bottom = *(it++);
+      obj.extra.assign(it, it - 5 + object_width_);
+      objects_.push_back(obj);
+      CHECK_GT(obj.right, obj.left);
+      CHECK_GT(obj.bottom, obj.top);
+    }
+  }
 
-   /*! \brief Convert back to raw array */
-   std::vector<float> ToArray() const {
-     std::vector<float> out(header_);
-     out.reserve(out.size() + objects_.size() * object_width_);
-     for (auto& obj : objects_) {
-       out.push_back(obj.id);
-       out.push_back(obj.left);
-       out.push_back(obj.top);
-       out.push_back(obj.right);
-       out.push_back(obj.bottom);
-       out.insert(out.end(), obj.extra.begin(), obj.extra.end());
-     }
-     return out;
-   }
+  /*! \brief Convert back to raw array */
+  std::vector<float> ToArray() const {
+    std::vector<float> out(header_);
+    out.reserve(out.size() + objects_.size() * object_width_);
+    for (auto& obj : objects_) {
+      out.push_back(obj.id);
+      out.push_back(obj.left);
+      out.push_back(obj.top);
+      out.push_back(obj.right);
+      out.push_back(obj.bottom);
+      out.insert(out.end(), obj.extra.begin(), obj.extra.end());
+    }
+    return out;
+  }
 
-   /*! \brief Intersection over Union between two rects */
-   static float RectIOU(Rect a, Rect b) {
-     float intersect = (a & b).area();
-     if (intersect <= 0.f) return 0.f;
-     return intersect / (a.area() + b.area() - intersect);
-   }
+  /*! \brief Intersection over Union between two rects */
+  static float RectIOU(Rect a, Rect b) {
+    float intersect = (a & b).area();
+    if (intersect <= 0.f) return 0.f;
+    return intersect / (a.area() + b.area() - intersect);
+  }
 
-   /*! \brief try crop image with given crop_box
-    * return false if fail to meet any of the constraints
-    * convert all objects if success
-    */
-   bool TryCrop(const Rect crop_box,
-     const float min_crop_overlap, const float max_crop_overlap,
-     const float min_crop_sample_coverage, const float max_crop_sample_coverage,
-     const float min_crop_object_coverage, const float max_crop_object_coverage,
-     const int crop_emit_mode, const float emit_overlap_thresh) {
+  /*! \brief try crop image with given crop_box
+   * return false if fail to meet any of the constraints
+   * convert all objects if success
+   */
+  bool TryCrop(const Rect crop_box,
+    const float min_crop_overlap, const float max_crop_overlap,
+    const float min_crop_sample_coverage, const float max_crop_sample_coverage,
+    const float min_crop_object_coverage, const float max_crop_object_coverage,
+    const int crop_emit_mode, const float emit_overlap_thresh) {
     if (objects_.size() < 1) {
       return true;  // no object, raise error or just skip?
     }
@@ -338,35 +348,35 @@ class ImageDetLabel {
     if (new_objects.size() < 1) return false;
     objects_ = new_objects;  // replace the old objects
     return true;
-   }
+  }
 
-   /*! \brief try pad image with given pad_box
-    * convert all objects afterwards
-    */
-   bool TryPad(const Rect pad_box) {
-     // update all objects inplace
-     for (auto it = objects_.begin(); it != objects_.end(); ++it) {
-       *it = it->Project(pad_box);
-     }
-     return true;
-   }
+  /*! \brief try pad image with given pad_box
+   * convert all objects afterwards
+   */
+  bool TryPad(const Rect pad_box) {
+    // update all objects inplace
+    for (auto it = objects_.begin(); it != objects_.end(); ++it) {
+      *it = it->Project(pad_box);
+    }
+    return true;
+  }
 
-   /*! \brief flip image and object coordinates horizontally */
-   bool TryMirror() {
-     // flip all objects horizontally
-     for (auto it = objects_.begin(); it != objects_.end(); ++it) {
-       *it = it->HorizontalFlip();
-     }
-     return true;
-   }
+  /*! \brief flip image and object coordinates horizontally */
+  bool TryMirror() {
+    // flip all objects horizontally
+    for (auto it = objects_.begin(); it != objects_.end(); ++it) {
+      *it = it->HorizontalFlip();
+    }
+    return true;
+  }
 
  private:
-   /*! \brief width for each object information, 5 at least */
-   int object_width_;
-   /*! \brief vector to store original header info */
-   std::vector<float> header_;
-   /*! \brief storing objects in more convenient formats */
-   std::vector<ImageDetObject> objects_;
+  /*! \brief width for each object information, 5 at least */
+  int object_width_;
+  /*! \brief vector to store original header info */
+  std::vector<float> header_;
+  /*! \brief storing objects in more convenient formats */
+  std::vector<ImageDetObject> objects_;
 };  // class ImageDetLabel
 
 /*! \brief helper class to do image augmentation */
@@ -384,17 +394,17 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
       << "invalid inter_method: valid value 0,1,2,3,9,10";
 
     // validate crop parameters
-    ValidateCropParameters(param_.min_crop_scales, param_.num_crop_sampler);
-    ValidateCropParameters(param_.max_crop_scales, param_.num_crop_sampler);
-    ValidateCropParameters(param_.min_crop_aspect_ratios, param_.num_crop_sampler);
-    ValidateCropParameters(param_.max_crop_aspect_ratios, param_.num_crop_sampler);
-    ValidateCropParameters(param_.min_crop_overlaps, param_.num_crop_sampler);
-    ValidateCropParameters(param_.max_crop_overlaps, param_.num_crop_sampler);
-    ValidateCropParameters(param_.min_crop_sample_coverages, param_.num_crop_sampler);
-    ValidateCropParameters(param_.max_crop_sample_coverages, param_.num_crop_sampler);
-    ValidateCropParameters(param_.min_crop_object_coverages, param_.num_crop_sampler);
-    ValidateCropParameters(param_.max_crop_object_coverages, param_.num_crop_sampler);
-    ValidateCropParameters(param_.max_crop_trials, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.min_crop_scales, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.max_crop_scales, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.min_crop_aspect_ratios, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.max_crop_aspect_ratios, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.min_crop_overlaps, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.max_crop_overlaps, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.min_crop_sample_coverages, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.max_crop_sample_coverages, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.min_crop_object_coverages, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.max_crop_object_coverages, param_.num_crop_sampler);
+    ValidateCropParameters(&param_.max_crop_trials, param_.num_crop_sampler);
     for (int i = 0; i < param_.num_crop_sampler; ++i) {
       CHECK_GE(param_.min_crop_scales[i], 0.0f);
       CHECK_LE(param_.max_crop_scales[i], 1.0f);
@@ -431,15 +441,15 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
 
   /*! \brief Check number of crop samplers and given parameters */
   template<typename DType>
-  void ValidateCropParameters(nnvm::Tuple<DType> &param, const int num_sampler) {
+  void ValidateCropParameters(nnvm::Tuple<DType> *param, const int num_sampler) {
     if (num_sampler == 1) {
-      CHECK_EQ(param.ndim(), 1);
+      CHECK_EQ(param->ndim(), 1);
     } else if (num_sampler > 1) {
-      if (param.ndim() == 1) {
-        std::vector<DType> vec(num_sampler, param[0]);
-        param.assign(vec.begin(), vec.end());
+      if (param->ndim() == 1) {
+        std::vector<DType> vec(num_sampler, (*param)[0]);
+        param->assign(vec.begin(), vec.end());
       } else {
-        CHECK_EQ(param.ndim(), num_sampler) << "# of parameters/crop_samplers mismatch ";
+        CHECK_EQ(param->ndim(), num_sampler) << "# of parameters/crop_samplers mismatch ";
       }
     }
   }
@@ -464,7 +474,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     return Rect(x0, y0, new_width, new_height);
   }
 
- /*! \brief Generate padding box region given padding parameters */
+  /*! \brief Generate padding box region given padding parameters */
   Rect GeneratePadBox(const float max_pad_scale,
     common::RANDOM_ENGINE *prnd, const float threshold = 1.05f) {
       float new_scale = std::uniform_real_distribution<float>(
@@ -476,7 +486,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
       return Rect(-x0, -y0, new_scale, new_scale);
     }
 
-  cv::Mat Process(const cv::Mat &src, std::vector<float> &label,
+  cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
     using mshadow::index_t;
     cv::Mat res;
@@ -498,7 +508,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     }
 
     // build a helper class for processing labels
-    ImageDetLabel det_label(label);
+    ImageDetLabel det_label(*label);
     // random engine
     std::uniform_real_distribution<float> rand_uniform(0, 1);
 
@@ -615,7 +625,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
       float h = param_.data_shape[1];
       float w = param_.data_shape[2];
       if (res.rows > h || res.cols > w) {
-        float ratio = std::min( h / res.rows, w / res.cols);
+        float ratio = std::min(h / res.rows, w / res.cols);
         int new_height = ratio * res.rows;
         int new_width = ratio * res.cols;
         int interpolation_method = GetInterMethod(param_.inter_method,
@@ -626,7 +636,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     } else if (image_det_aug_default_enum::kFit == param_.resize_mode) {
       float h = param_.data_shape[1];
       float w = param_.data_shape[2];
-      float ratio = std::min( h / res.rows, w / res.cols);
+      float ratio = std::min(h / res.rows, w / res.cols);
       int new_height = ratio * res.rows;
       int new_width = ratio * res.cols;
       int interpolation_method = GetInterMethod(param_.inter_method,
@@ -635,7 +645,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
                   0, 0, interpolation_method);
     }
 
-    label = det_label.ToArray();  // put back processed labels
+    *label = det_label.ToArray();  // put back processed labels
     return res;
   }
 
