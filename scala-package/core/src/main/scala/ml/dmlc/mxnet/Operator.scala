@@ -18,11 +18,11 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import scala.collection.mutable.ArrayBuffer
 
 /**
  * Base class for operators implemented in Scala
- * @author Depeng Liang
  */
 abstract class CustomOp {
 
@@ -140,20 +140,20 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
 
   /**
    * inferShape interface. override to create new operators
-   * @param inShape : array of array
+   * @param inShape : array of Shape
    *           list of argument shapes in the same order as declared in listArguments().
    * @return
-   * inShapes : array of array
+   * inShapes : array of Shape
    *            array of argument shapes. Can be modified from inShape.
-   * outShapes : array of array
+   * outShapes : array of Shape
    *            array of output shapes calculated from inShape,
    *            in the same order as declared in listOutputs().
-   * auxShapes : array of array
-   *            array of aux shapes calculated from in_shape,
+   * auxShapes : Optional, array of Shape
+   *            array of aux shapes calculated from inShape,
    *            in the same order as declared in listAuxiliaryStates().
    */
   def inferShape(inShape: Array[Shape]):
-    (Array[Shape], Array[Shape], Array[Shape])
+    (Array[Shape], Array[Shape], Array[Shape]) = (inShape, inShape.take(1), null)
 
   /**
    * Scala Callback for CustomOp::InferShape
@@ -177,12 +177,52 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
   }
 
   /**
+   * inferType interface. override to create new operators
+   * @param inType : array of DType
+   *           list of argument types in the same order as declared in listArguments().
+   * @return
+   * inTypes : array of DType
+   *            array of argument types. Can be modified from inType.
+   * outTypes : array of DType
+   *            array of output types calculated from inType,
+   *            in the same order as declared in listOutputs().
+   * auxTypes : Optional, array of DType
+   *            array of aux types calculated from inType,
+   *            in the same order as declared in listAuxiliaryStates().
+   */
+  def inferType(inType: Array[DType]):
+    (Array[DType], Array[DType], Array[DType]) =
+    (inType, Array.fill[DType](this.listOutputs.length)(inType(0)),
+      Array.fill[DType](this.listAuxiliaryStates.length)(inType(0)))
+
+  /**
+   * Scala Callback for CustomOp::InferType
+   */
+  private[mxnet] def inferTypeEntry(
+    numTensor: Int, intputTypes: Array[Int]): Array[Int] = {
+    val nIn = this.listArguments().length
+    val nOut = this.listOutputs().length
+    val nAux = {
+      val tmp = this.listAuxiliaryStates()
+      if (tmp == null) 0 else tmp.length
+    }
+    require(numTensor == (nIn + nOut + nAux))
+    val (inTypes, outTypes, auxTypes) =
+      inferType(intputTypes.map(DType(_)))
+    require(inTypes != null && inTypes.length != 0)
+    require(outTypes != null && outTypes.length != 0)
+    if (auxTypes != null && auxTypes.length != 0) {
+      inTypes.map(_.id) ++ outTypes.map(_.id) ++ auxTypes.map(_.id)
+    } else inTypes.map(_.id) ++ outTypes.map(_.id)
+  }
+
+  /**
    * listOutputs interface. override to create new operators
    * @return
    * outputs : array of String
    *            list of output blob names.
    */
-  def listOutputs(): Array[String]
+  def listOutputs(): Array[String] = Array("output")
 
   /**
    * listArguments interface. override to create new operators
@@ -190,7 +230,7 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
    * arguments : array of String
    *            list of argument blob names.
    */
-  def listArguments(): Array[String]
+  def listArguments(): Array[String] = Array("data")
 
   /**
    * listAuxiliaryStates interface. override to create new operators

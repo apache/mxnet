@@ -21,8 +21,9 @@ import java.io._
 
 import org.slf4j.{Logger, LoggerFactory}
 
-class NativeLibraryLoader
-object NativeLibraryLoader {
+private[mxnet] class NativeLibraryLoader
+
+private[mxnet] object NativeLibraryLoader {
   private val logger: Logger = LoggerFactory.getLogger(classOf[NativeLibraryLoader])
   private val libPathInJar = "/lib/native/"
   private val _tempDir: File =

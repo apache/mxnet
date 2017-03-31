@@ -17,14 +17,13 @@
 
 package ml.dmlc.mxnet.optimizer
 
-import ml.dmlc.mxnet.{NDArray, Optimizer}
 import ml.dmlc.mxnet.NDArrayConversions._
+import ml.dmlc.mxnet.util.SerializerUtils
+import ml.dmlc.mxnet.{NDArray, Optimizer}
 
 /**
  * AdaDelta optimizer as described in Matthew D. Zeiler, 2012.
  * http://arxiv.org/abs/1212.5701
- *
- * @author Yuan Tang, Yizhi Liu
  *
  * @param rho Decay rate for both squared gradients and delta x.
  * @param epsilon The constant as described in the thesis
@@ -32,9 +31,9 @@ import ml.dmlc.mxnet.NDArrayConversions._
  * @param clipGradient clip gradient in range [-clip_gradient, clip_gradient]
  * @param wd L2 regularization coefficient add to all the weights
  */
-class AdaDelta(var rho: Float = 0.05f, val rescaleGradient: Float = 1.0f,
-               val epsilon: Float = 1e-8f, val wd: Float = 0.0f,
-               val clipGradient: Float = 0f) extends Optimizer {
+class AdaDelta(rho: Float = 0.05f, rescaleGradient: Float = 1.0f,
+               epsilon: Float = 1e-8f, wd: Float = 0.0f,
+               clipGradient: Float = 0f) extends Optimizer {
 
   /**
    * Update the parameters.
@@ -86,6 +85,26 @@ class AdaDelta(var rho: Float = 0.05f, val rescaleGradient: Float = 1.0f,
       val (g, delta) = state.asInstanceOf[(NDArray, NDArray)]
       g.dispose()
       delta.dispose()
+    }
+  }
+
+  override def serializeState(state: AnyRef): Array[Byte] = {
+    if (state != null) {
+      val (g, delta) = state.asInstanceOf[(NDArray, NDArray)]
+      SerializerUtils.serializeNDArrays(g, delta)
+    } else {
+      null
+    }
+  }
+
+  override def deserializeState(bytes: Array[Byte]): AnyRef = {
+    if (bytes != null) {
+      val ndArrays = SerializerUtils.deserializeNDArrays(bytes)
+      require(ndArrays.size == 2, s"Got ${ndArrays.size} arrays, expected 2.")
+      val state = (ndArrays(0), ndArrays(1))
+      state.asInstanceOf[AnyRef]
+    } else {
+      null
     }
   }
 }

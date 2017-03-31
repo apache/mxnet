@@ -8,7 +8,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(ElementWiseSum)
+NNVM_REGISTER_OP(add_n)
 .set_attr<FCompute>("FCompute<gpu>", ElementWiseSumCompute<gpu>);
 
 }  // namespace op

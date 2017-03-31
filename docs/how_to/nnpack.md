@@ -2,7 +2,7 @@
 
 [NNPACK](https://github.com/Maratyszcza/NNPACK) is an acceleration package for neural network computations, which can run on x86-64, ARMv7, or ARM64 architecture cpus. it's very useful for us using NNPACK to speed up running speed when deploy the trained model on mobile device.
 
-MXNet(nnvm branch) has integrated NNPACK for forward propagation(only inference) in convolution/max-pooling/fully-connected, so you may consider using NNPACK now.
+MXNet has integrated NNPACK for forward propagation(only inference) in convolution/max-pooling/fully-connected, so you may consider using NNPACK now.
 
 
 ### Conditions
@@ -15,7 +15,7 @@ The following table will tell you which satisfaction will NNPACK work.
 |:---------      |:---------- |
 |convolution     |2d convolution `and` no-bias=False `and` dilate=(1,1) `and` num_group=1 `and` batch-size = 1 or batch-size > 1 && stride = (1,1);|
 |pooling         | max-pooling `and` kernel=(2,2) `and` stride=(2,2) `and` pooling_convention=full    |
-|fully-connected| batch-size = 2^n |
+|fully-connected| without any restrictions |
 
 ### Build/Install NNPACK with MXNet
 

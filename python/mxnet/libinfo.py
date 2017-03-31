@@ -10,7 +10,7 @@ def find_lib_path():
     Returns
     -------
     lib_path : list(string)
-        List of all found path to the libraries
+        List of all found path to the libraries.
     """
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     api_path = os.path.join(curr_path, '../../lib/')
@@ -28,8 +28,10 @@ def find_lib_path():
     elif os.name == "posix" and os.environ.get('LD_LIBRARY_PATH', None):
         dll_path.extend([p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")])
     if os.name == 'nt':
+        os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
         dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
     else:
+        dll_path.append('../../../')
         dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
     lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
     if len(lib_path) == 0:
@@ -39,4 +41,4 @@ def find_lib_path():
 
 
 # current version
-__version__ = "0.9.4"
+__version__ = "0.9.5"

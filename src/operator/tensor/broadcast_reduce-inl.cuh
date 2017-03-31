@@ -211,6 +211,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
 
 }
 
+// Simple reduction of lines when M is small
 template<typename Reducer, typename DType>
 __launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,

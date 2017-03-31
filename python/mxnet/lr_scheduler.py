@@ -1,30 +1,30 @@
-"""
-learning rate scheduler, which adaptive changes the learning rate based on the
-progress
-"""
+"""Scheduling learning rate."""
 import logging
 
 class LRScheduler(object):
-    """Base class of a learning rate scheduler"""
-    def __init__(self):
-        """
-        base_lr : float
-            the initial learning rate
-        """
-        self.base_lr = 0.01
+    """Base class of a learning rate scheduler.
+
+    A scheduler returns a new learning rate based on the number of updates that have
+    been performed.
+
+    Parameters
+    ----------
+    base_lr : float, optional
+        The initial learning rate.
+    """
+    def __init__(self, base_lr=0.01):
+        self.base_lr = base_lr
 
     def __call__(self, num_update):
-        """
-        Call to schedule current learning rate
+        """Return a new learning rate.
 
-        The training progress is presented by `num_update`, which can be roughly
-        viewed as the number of minibatches executed so far. Its value is
-        non-decreasing, and increases at most by one.
+        The ``num_update`` is the upper bound of the number of updates applied to
+        every weight.
 
-        The exact value is the upper bound of the number of updates applied to
-        a weight/index
+        Assume the optimizer has udpated *i*-th weight by *k_i* times, namely
+        ``optimizer.update(i, weight_i)`` is called by *k_i* times. Then::
 
-        See more details in https://github.com/dmlc/mxnet/issues/625
+            num_update = max([k_i for all i])
 
         Parameters
         ----------
@@ -34,19 +34,20 @@ class LRScheduler(object):
         raise NotImplementedError("must override this")
 
 class FactorScheduler(LRScheduler):
-    """Reduce learning rate in factor
+    """Reduce the learning rate by a factor for every *n* steps.
 
-    Assume the weight has been updated by n times, then the learning rate will
-    be
+    It returns a new learning rate by::
 
-    base_lr * factor^(floor(n/step))
+        base_lr * pow(factor, floor(num_update/step))
 
     Parameters
     ----------
-    step: int
-        schedule learning rate after n updates
-    factor: float
-        the factor for reducing the learning rate
+    step : int
+        Changes the learning rate for every n updates.
+    factor : float, optional
+        The factor to change the learning rate.
+    stop_factor_lr : float, optional
+        Stop updating the learning rate if it is less than this value.
     """
     def __init__(self, step, factor=1, stop_factor_lr=1e-8):
         super(FactorScheduler, self).__init__()
@@ -60,15 +61,6 @@ class FactorScheduler(LRScheduler):
         self.count = 0
 
     def __call__(self, num_update):
-        """
-        Call to schedule current learning rate
-
-        Parameters
-        ----------
-        num_update: int
-            the maximal number of updates applied to a weight.
-        """
-
         # NOTE: use while rather than if  (for continuing training via load_epoch)
         while num_update > self.count + self.step:
             self.count += self.step
@@ -83,19 +75,22 @@ class FactorScheduler(LRScheduler):
         return self.base_lr
 
 class MultiFactorScheduler(LRScheduler):
-    """Reduce learning rate in factor at steps specified in a list
+    """Reduce the learning rate by given a list of steps.
 
-    Assume the weight has been updated by n times, then the learning rate will
-    be
+    Assume there exists *k* such that::
 
-    base_lr * factor^(sum((step/n)<=1)) # step is an array
+       step[k] <= num_update and num_update < step[k+1]
+
+    Then calculate the new learning rate by::
+
+       base_lr * pow(factor, k+1)
 
     Parameters
     ----------
     step: list of int
-        schedule learning rate after n updates
+        The list of steps to schedule a change
     factor: float
-        the factor for reducing the learning rate
+        The factor to change the learning rate.
     """
     def __init__(self, step, factor=1):
         super(MultiFactorScheduler, self).__init__()
@@ -113,15 +108,6 @@ class MultiFactorScheduler(LRScheduler):
         self.count = 0
 
     def __call__(self, num_update):
-        """
-        Call to schedule current learning rate
-
-        Parameters
-        ----------
-        num_update: int
-            the maximal number of updates applied to a weight.
-        """
-
         # NOTE: use while rather than if  (for continuing training via load_epoch)
         while self.cur_step_ind <= len(self.step)-1:
             if num_update > self.step[self.cur_step_ind]:

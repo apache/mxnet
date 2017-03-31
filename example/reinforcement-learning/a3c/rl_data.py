@@ -1,3 +1,4 @@
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 import gym
@@ -33,7 +34,7 @@ def make_web(queue):
     try:
         app.run(host='0.0.0.0', port=8889)
     except:
-        print 'unable to open port' 
+        print('unable to open port')
 
 def visual(X, show=True):
     X = X.transpose((0, 2, 3, 1))
@@ -148,7 +149,7 @@ if __name__ == '__main__':
             dataiter.act([env.action_space.sample() for env in dataiter.env])
             dataiter.clear_history()
             dataiter.next()
-        print batch_size*100/(time.time() - tic)
+        print(batch_size*100/(time.time() - tic))
         tic = time.time()
 
 

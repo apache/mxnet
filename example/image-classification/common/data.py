@@ -19,6 +19,8 @@ def add_data_args(parser):
                       help='number of threads for data decoding')
     data.add_argument('--benchmark', type=int, default=0,
                       help='if 1, then feed the network with synthetic data')
+    data.add_argument('--dtype', type=str, default='float32',
+                      help='data type: float32 or float16')
     return data
 
 def add_data_aug_args(parser):
@@ -56,22 +58,23 @@ def set_data_aug_level(aug, level):
 
 
 class SyntheticDataIter(DataIter):
-    def __init__(self, num_classes, data_shape, max_iter):
+    def __init__(self, num_classes, data_shape, max_iter, dtype):
         self.batch_size = data_shape[0]
         self.cur_iter = 0
         self.max_iter = max_iter
+        self.dtype = dtype
         label = np.random.randint(0, num_classes, [self.batch_size,])
         data = np.random.uniform(-1, 1, data_shape)
-        self.data = mx.nd.array(data)
-        self.label = mx.nd.array(label)
+        self.data = mx.nd.array(data, dtype=self.dtype)
+        self.label = mx.nd.array(label, dtype=self.dtype)
     def __iter__(self):
         return self
     @property
     def provide_data(self):
-        return [('data',self.data.shape)]
+        return [mx.io.DataDesc('data', self.data.shape, self.dtype)]
     @property
     def provide_label(self):
-        return [('softmax_label',(self.batch_size,))]
+        return [mx.io.DataDesc('softmax_label', (self.batch_size,), self.dtype)]
     def next(self):
         self.cur_iter += 1
         if self.cur_iter <= self.max_iter:
@@ -90,9 +93,13 @@ class SyntheticDataIter(DataIter):
 
 def get_rec_iter(args, kv=None):
     image_shape = tuple([int(l) for l in args.image_shape.split(',')])
+    dtype = np.float32;
+    if 'dtype' in args:
+        if args.dtype == 'float16':
+            dtype = np.float16
     if 'benchmark' in args and args.benchmark:
         data_shape = (args.batch_size,) + image_shape
-        train = SyntheticDataIter(args.num_classes, data_shape, 50)
+        train = SyntheticDataIter(args.num_classes, data_shape, 50, dtype)
         return (train, None)
     if kv:
         (rank, nworker) = (kv.rank, kv.num_workers)

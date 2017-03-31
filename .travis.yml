@@ -6,6 +6,8 @@ os:
   # - linux
   - osx
 
+osx_image: xcode8
+
 env:
   # code analysis
   # - TASK=lint
@@ -21,9 +23,19 @@ env:
 
   # TODO, R test, distributed test, clang, more g++ versions
 
-# matrix:
-#   exclude:
-#     - os: osx
+matrix:
+  include:
+    - # os: linux
+      # dist: trusty
+      # env: TASK=perl_test
+    - os: osx
+      ## sudo is required because
+      ## prexexisting packages conflict
+      ## with new ones.
+      ## would be nice to have macports
+      ## on travis osx, it has all needed perl packages
+      sudo: required
+      env: TASK=perl_test
 #       env: TASK=julia JULIA_VER=0.4
 #     - os: linux
 #       env: TASK=build
@@ -57,6 +69,11 @@ addons:
       - python3-dev
       - python3-nose
       - graphviz
+      - libmouse-perl
+      - pdl
+      - cpanminus
+      - swig
+      - libgraphviz-perl
 
 before_install:
   - export NVCC_PREFIX=${HOME}

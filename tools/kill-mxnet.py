@@ -1,35 +1,36 @@
 #!/usr/bin/env python
 
 import os, sys
+import subprocess
 
-if len(sys.argv) != 2:
-  print "usage: %s <hostfile>" % sys.argv[0]
+if len(sys.argv) != 4:
+  print "usage: %s <hostfile> <user> <prog>" % sys.argv[0]
   sys.exit(1)
 
 host_file = sys.argv[1]
-prog_name = "train_imagenet"
+user = sys.argv[2]
+prog_name = sys.argv[3]
 
-# Get host IPs
-with open(host_file, "r") as f:
-  hosts = f.read().splitlines()
-ssh_cmd = (
-    "ssh "
-    "-o StrictHostKeyChecking=no "
-    "-o UserKnownHostsFile=/dev/null "
-    "-o LogLevel=quiet "
-    )
 kill_cmd = (
-    " "
-    "ps aux |"
-    "grep -v grep |"
-    "grep 'python train_imagenet.py' |"
-    "awk '{print \$2}'|"
-    "xargs kill"
+    "ps aux | "
+    "grep -v grep | "
+    "grep '" + prog_name + "' | "
+    "awk '{if($1==\"" + user + "\")print $2;}' | "
+    "xargs kill -9"
     )
 print kill_cmd
-for host in hosts:
-  cmd = ssh_cmd + host +" \""+ kill_cmd+"\""
-  print cmd
-  os.system(cmd)
 
-  print "Done killing"
+# Kill program on remote machines
+with open(host_file, "r") as f:
+  for host in f:
+    if ':' in host:
+      host = host[:host.index(':')]
+    print host
+    subprocess.Popen(["ssh", "-oStrictHostKeyChecking=no", "%s" % host, kill_cmd],
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    print "Done killing"
+
+# Kill program on local machine
+os.system(kill_cmd)

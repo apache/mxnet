@@ -118,7 +118,7 @@ def get_symbol_train(num_classes=20):
         num_classes, sizes=sizes, ratios=ratios, normalization=normalizations, \
         num_channels=num_channels, clip=True, interm_layer=0)
 
-    tmp = mx.symbol.MultiBoxTarget(
+    tmp = mx.contrib.symbol.MultiBoxTarget(
         *[anchor_boxes, label, cls_preds], overlap_threshold=.5, \
         ignore_label=-1, negative_mining_ratio=3, minimum_negative_samples=0, \
         negative_mining_thresh=.5, variances=(0.1, 0.1, 0.2, 0.2),
@@ -170,7 +170,7 @@ def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=True):
         name='cls_prob')
     # group output
     # out = mx.symbol.Group([loc_preds, cls_preds, anchor_boxes])
-    out = mx.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
+    out = mx.contrib.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
         name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
         variances=(0.1, 0.1, 0.2, 0.2))
     return out

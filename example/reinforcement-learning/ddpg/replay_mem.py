@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 
 
@@ -69,9 +70,9 @@ if __name__ == "__main__":
     memory.add_sample(np.array([2, 2]), np.array([2]), 10, 0)
     memory.add_sample(np.array([2, 2]), np.array([2]), 10, 0)
     memory.add_sample(np.array([1, 1]), np.array([1]), 100, 1)
-    print memory.obss
-    print memory.acts 
-    print memory.rwds 
-    print memory.ends   
-    print memory.get_batch(5)
+    print(memory.obss)
+    print(memory.acts)
+    print(memory.rwds)
+    print(memory.ends)
+    print(memory.get_batch(5))
 

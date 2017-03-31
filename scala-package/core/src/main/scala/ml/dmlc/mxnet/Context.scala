@@ -37,7 +37,7 @@ object Context {
 
 /**
  * Constructing a context.
- * @author Yizhi Liu
+
  * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
  * @param deviceId (default=0) The device id of the device, needed for GPU
  */
@@ -66,5 +66,18 @@ class Context(deviceTypeName: String, val deviceId: Int = 0) extends Serializabl
 
   override def toString: String = {
     s"$deviceType($deviceId)"
+  }
+
+  override def equals(other: Any): Boolean = {
+    if (other != null && other.isInstanceOf[Context]) {
+      val otherInst = other.asInstanceOf[Context]
+      otherInst.deviceId == deviceId && otherInst.deviceTypeid == deviceTypeid
+    } else {
+      false
+    }
+  }
+
+  override def hashCode: Int = {
+    toString.hashCode
   }
 }

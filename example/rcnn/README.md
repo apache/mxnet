@@ -58,9 +58,6 @@ See if `bash script/additional_deps.sh` will do the following for you.
 * Suppose `HOME` represents where this file is located. All commands, unless stated otherwise, should be started from `HOME`.
   Executing scripts in `script` must also be from `HOME`.
 * Install python package `cython easydict matplotlib scikit-image`.
-* Install MXNet with additional operators.
-If you know Makefile, change `EXTRA_OPERATORS` in `config.mk` to include the `example/rcnn/operator` folder.  
-If not, copy all files in `operator` to `../../src/operator` (namely `mxnet/src/operator`).  
 * Install MXNet Python Interface. Open `python` type `import mxnet` to confirm.
 * Run `make` in `HOME`.
 

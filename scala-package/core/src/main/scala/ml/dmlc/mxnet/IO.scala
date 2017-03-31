@@ -18,6 +18,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet.io.{MXDataPack, MXDataIter}
 import org.slf4j.LoggerFactory
 
@@ -26,7 +27,6 @@ import scala.collection.mutable.ListBuffer
 
 /**
  * IO iterators for loading training & validation data
- * @author Zixuan Huang, Yizhi Liu
  */
 object IO {
   type IterCreateFunc = (Map[String, String]) => DataIter
@@ -227,4 +227,28 @@ abstract class DataPack() extends Iterable[DataBatch] {
   def iterator: DataIter
 }
 
+// Named data desc description contains name, shape, type and other extended attributes.
+case class DataDesc(name: String, shape: Shape,
+                    dtype: DType = Base.MX_REAL_TYPE, layout: String = "NCHW") {
+  override def toString(): String = {
+    s"DataDesc[$name,$shape,$dtype,$layout]"
+  }
+}
 
+object DataDesc {
+  /**
+   * Get the dimension that corresponds to the batch size.
+   * @param layout layout string. For example, "NCHW".
+   * @return An axis indicating the batch_size dimension. When data-parallelism is used,
+   *         the data will be automatically split and concatenate along the batch_size dimension.
+   *         Axis can be -1, which means the whole array will be copied
+   *         for each data-parallelism device.
+   */
+  def getBatchAxis(layout: Option[String]): Int = {
+    layout.map(_.indexOf('N')).getOrElse(0)
+  }
+
+  implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
+    shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
+  }
+}

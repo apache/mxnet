@@ -1,14 +1,32 @@
 # MXNet - Python API
 
-MXNet supports the Python programming language. The MXNet Python package brings flexible and efficient GPU
-computing and state-of-art deep learning to Python. It enables you to write seamless tensor/matrix computation with multiple GPUs in Python. It also allows you to construct and customize state-of-art deep learning models in Python,
-  and apply them to tasks, such as image classification and data science challenges.
+Many docstrings contain example code, which
+demonstrates the basic usage of the routine. The examples assume that `MXNet` is
+imported with:
 
+```python
+>>> import mxnet as mx
+```
 
-## Python API Reference
-* [Module API](module.md) is a flexible high-level interface for training the neural networks.
-* [Model API](model.md) is an alternate simple high-level interface for training the neural networks.
-* [Symbolic API](symbol.md) performs operations on NDArrays to assemble neural networks from layers.
-* [IO Data Loading API](io.md) performs parsing and data loading.
-* [NDArray API](ndarray.md) performs vector/matrix/tensor operations.
-* [KVStore API](kvstore.md) performs multi-GPU and multi-host distributed training.
+```eval_rst
+
+.. note:: A convenient way to execute examples is the ``%doctest_mode`` mode of
+    Jupyter notebook, which allows for pasting of multi-line examples contains
+    ``>>>`` and preserves indentation. Run ``%doctest_mode?`` in Jupyter notebook
+    for more details.
+
+```
+
+## Table of contents
+
+```eval_rst
+.. toctree::
+   :maxdepth: 2
+
+   ndarray
+   symbol
+   module
+   kvstore
+   io
+   optimization
+```

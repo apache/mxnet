@@ -53,6 +53,7 @@ MSHADOW_XINLINE void unravel_dot(const int idx, const Shape<ndim>& shape,
 template<int ndim>
 MSHADOW_XINLINE Shape<ndim> unravel(const int idx, const Shape<ndim>& shape) {
   Shape<ndim> ret;
+  #pragma unroll
   for (int i = ndim-1, j = idx; i >=0; --i) {
     int tmp = j / shape[i];
     ret[i] = j - tmp*shape[i];
@@ -64,6 +65,7 @@ MSHADOW_XINLINE Shape<ndim> unravel(const int idx, const Shape<ndim>& shape) {
 template<int ndim>
 MSHADOW_XINLINE int ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
   int ret = 0;
+  #pragma unroll
   for (int i = 0; i < ndim; ++i) {
     ret = ret * shape[i] + (shape[i] > 1) * coord[i];
   }
@@ -74,10 +76,12 @@ template<int ndim>
 MSHADOW_XINLINE int diff(const Shape<ndim>& small, const Shape<ndim>& big, Shape<ndim>* dims,
   Shape<ndim>* stride) {
   int mdim = 0;
+  #pragma unroll
   for (int i = 0; i < ndim; ++i) {
     mdim += small[i] != big[i];
     (*dims)[i] = (*stride)[i] = 1;
   }
+  #pragma unroll
   for (int i = ndim-1, j = mdim, s = 1; i >= 0; --i) {
     if (small[i] != big[i]) {
       --j;
@@ -93,6 +97,7 @@ template<int ndim>
 MSHADOW_XINLINE int unravel_dot(const int idx, const Shape<ndim>& shape,
   const Shape<ndim>& stride) {
   int ret = 0;
+  #pragma unroll
   for (int i = ndim-1, j = idx; i >=0; --i) {
     int tmp = j / shape[i];
     ret += (j - tmp*shape[i])*stride[i];
@@ -104,6 +109,7 @@ MSHADOW_XINLINE int unravel_dot(const int idx, const Shape<ndim>& shape,
 template<int ndim>
 MSHADOW_XINLINE int dot(const Shape<ndim>& coord, const Shape<ndim>& stride) {
   int ret = 0;
+  #pragma unroll
   for (int i = 0; i < ndim; ++i)
     ret += coord[i] * stride[i];
   return ret;

@@ -21,7 +21,7 @@
         <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">{{name}} <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            {% for lang in ['Python', 'R', 'Julia', 'C++', 'Scala'] %}
+            {% for lang in ['Python', 'R', 'Julia', 'C++', 'Scala', 'Perl'] %}
             <li><a href="{{url_root}}{{name.lower()|replace(" ", "_")}}/{{lang.lower()}}/index.html">
                 {{lang}}
             </a></li>
@@ -42,8 +42,6 @@
 Previous Navbar Layout End -->
 
 <div class="navbar navbar-fixed-top">
-<a href="https://github.com/dmlc/mxnet"><img style="position: absolute; top: 0; right: 0; border: 0; z-index: 0"
-src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_fork_me_green_ribbon.png" alt="Fork me on GitHub"/>
   <div class="container" id="navContainer">
     <div id="header-inner" class="innder">
       <h1 id="logo-wrap">
@@ -59,22 +57,18 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">{{name}} <span class="caret"></span></a>
           <ul id="package-dropdown-menu" class="dropdown-menu">
             <li><a class="main-nav-link" href="{{url_root}}api/python/index.html">Python</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}api/python/module.html">- Module</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}api/python/model.html">- Model</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}api/python/symbol.html">- Symbol</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}api/python/io.html">- I/O</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}api/python/ndarray.html">- NDArray</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}api/python/kvstore.html">- KVStore</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/scala/index.html">Scala</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/r/index.html">R</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/julia/index.html">Julia</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/c++/index.html">C++</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}api/perl/index.html">Perl</a></li>
           </ul>
           {% endfor %}
         </span>
 
         <a class="main-nav-link" href="{{url_root}}architecture/index.html">Architecture</a>
-		<a class="main-nav-link" href="{{url_root}}community/index.html">Community</a>
+		<!-- <a class="main-nav-link" href="{{url_root}}community/index.html">Community</a> -->
+        <a class="main-nav-link" href="https://github.com/dmlc/mxnet">Github</a>
       </nav>
       <script> function getRootPath(){ return "{{url_root}}" } </script>
       <div class="burgerIcon dropdown">
@@ -87,7 +81,7 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
               <li class="dropdown-submenu">
                 <a href="#" tabindex="-1">{{name}}</a>
                 <ul class="dropdown-menu">
-                  {% for lang in ['Python', 'Scala', 'R', 'Julia', 'C++'] %}
+                  {% for lang in ['Python', 'Scala', 'R', 'Julia', 'C++', 'Perl'] %}
                     <li><a tabindex="-1" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/{{lang.lower()}}/index.html">{{lang}}</a>
                     </li>
                   {% endfor %}
@@ -108,16 +102,16 @@ src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/github_f
       <div id='searchIcon'>
           <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
       </div>
-      <div id="lang-select-wrap"> 
-        <label id="lang-select-label">
-          <!-- <i class="fa fa-globe"></i> -->
-          <span></span>
-        </label>
-        <select id="lang-select">
-          <option value="en">Eng</option>
-          <option value="zh">中文</option>
-        </select>
-      </div>
+      <!-- <div id="lang-select-wrap"> -->
+      <!--   <label id="lang-select-label"> -->
+      <!--     <\!-- <i class="fa fa-globe"></i> -\-> -->
+      <!--     <span></span> -->
+      <!--   </label> -->
+      <!--   <select id="lang-select"> -->
+      <!--     <option value="en">Eng</option> -->
+      <!--     <option value="zh">中文</option> -->
+      <!--   </select> -->
+      <!-- </div> -->
   <!--     <a id="mobile-nav-toggle">
         <span class="mobile-nav-toggle-bar"></span>
         <span class="mobile-nav-toggle-bar"></span>

@@ -39,27 +39,22 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scale the gradient by a float factor");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
-    .describe("the label value will be ignored during backward (only works if "
-      "use_ignore is set to be true).");
+    .describe("the labels with value equals to ``ignore_label`` will be ignored "
+              "during backward (only works if "
+              "use_ignore is set to be true).");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
-    .describe("If set to true, for a (n,k,x_1,..,x_n) dimensional "
-      "input tensor, softmax will generate n*x_1*...*x_n output, each "
-      "has k classes");
+    .describe("If set to true, softmax will applied on axis 1");
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
     .describe("If set to true, the ignore_label value will not contribute "
       "to the backward gradient");
     DMLC_DECLARE_FIELD(preserve_shape).set_default(false)
-    .describe("If true, for a (n_1, n_2, ..., n_d, k) dimensional "
-      "input tensor, softmax will generate (n1, n2, ..., n_d, k) output, "
-      "normalizing the k classes as the last dimension.");
+    .describe("If true, softmax will applied on the last axis");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", softmaxout_enum::kNull)
     .add_enum("batch", softmaxout_enum::kBatch)
     .add_enum("valid", softmaxout_enum::kValid)
     .set_default(softmaxout_enum::kNull)
-    .describe("If set to null, op will do nothing on output gradient."
-              "If set to batch, op will normalize gradient by divide batch size"
-              "If set to valid, op will normalize gradient by divide sample not ignored");
+    .describe("Normalize the gradient");
     DMLC_DECLARE_FIELD(out_grad)
     .set_default(false)
     .describe("Apply weighting from output gradient");
@@ -78,8 +73,8 @@ class SoftmaxOutputOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2) << "SoftmaxOutput Input: [data, label]";
-    CHECK_EQ(out_data.size(), 1) << "SoftmaxOutput Output: [output]";
+    CHECK_EQ(in_data.size(), 2U) << "SoftmaxOutput Input: [data, label]";
+    CHECK_EQ(out_data.size(), 1U) << "SoftmaxOutput Output: [output]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (param_.multi_output) {
       int n = in_data[softmaxout_enum::kData].size(0);
@@ -117,10 +112,10 @@ class SoftmaxOutputOp : public Operator {
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2);
-    CHECK_EQ(out_grad.size(), 1);
-    CHECK_GE(in_grad.size(), 1);
-    CHECK_GE(req.size(), 1);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_GE(in_grad.size(), 1U);
+    CHECK_GE(req.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     if (out_data[softmaxout_enum::kOut].shape_ ==
@@ -257,7 +252,7 @@ class SoftmaxOutputProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 2) << "Input:[data, label]";
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
 
@@ -297,7 +292,7 @@ class SoftmaxOutputProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1);
+    CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {

@@ -36,15 +36,11 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
   const size_t batch_size = (*in_shape)[0][0];
   // nnp_fully_connected_inference will do optimization for batch-size = 1
   // nnp_fully_connected_output will do optimization for batch-size > 1
-  // but just found FullyConnected in NNPACK result is wrong when batch_size != 2^n
-  // so here only using NNPACK when batch_size = 2^n.
-  if ((batch_size == 1) || ((batch_size > 1) && (!(batch_size & (batch_size - 1))))) {
-    switch (dtype) {
-    case mshadow::kFloat32:
-      return new NNPACKFullyConnectedOp<cpu, float>(param);
-    default:
-      break;
-    }
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new NNPACKFullyConnectedOp<cpu, float>(param);
+  default:
+    break;
   }
 #endif
   switch (dtype) {
@@ -78,13 +74,23 @@ Operator *FullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
 MXNET_REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
-.describe(R"(Apply matrix multiplication to input then add a bias.
-It maps the input of shape `(batch_size, input_dim)` to the shape of
-`(batch_size, num_hidden)`. Learnable parameters include the weights
-of the linear transform and an optional bias vector.)")
-.add_argument("data", "Symbol", "Input data to the FullyConnectedOp.")
-.add_argument("weight", "Symbol", "Weight matrix.")
-.add_argument("bias", "Symbol", "Bias parameter.")
+.describe(R"code(Apply a linear transformation: :math:`Y = XW^T + b`.
+
+Shapes:
+
+- **data**: `(batch_size, input_dim)`
+- **weight**: `(num_hidden, input_dim)`
+- **bias**: `(num_hidden,)`
+- **out**: `(batch_size, num_hidden)`
+
+The learnable parameters include both ``weight`` and ``bias``.
+
+If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
+
+)code" ADD_FILELINE)
+.add_argument("data", "ndarray-or-symbol", "Input data.")
+.add_argument("weight", "ndarray-or-symbol", "Weight matrix.")
+.add_argument("bias", "ndarray-or-symbol", "Bias parameter.")
 .add_arguments(FullyConnectedParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

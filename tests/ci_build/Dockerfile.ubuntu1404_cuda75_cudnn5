@@ -30,5 +30,5 @@ RUN apt-get install -y software-properties-common r-base-core libcurl4-openssl-d
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
 RUN add-apt-repository -y ppa:marutter/rdev
 RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y r-base r-base-dev
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" install r-base r-base-dev
 RUN Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"

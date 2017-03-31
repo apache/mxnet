@@ -27,7 +27,7 @@ refer to our [NIPS LearningSys paper](http://learningsys.org/papers/LearningSys_
 ======= =======  ========== ======== ================== ==========
 框架    Caffe     Torch      Theano    TensorFlow         MXNet
 主语言  C++       Lua        Python     C++                C++
-从语言  Python,     x         x         Python             Python, R, Julia, Scala, Javascript, Matlab, Go
+从语言  Python,     x         x         Python             Python, R, Julia, Scala, Javascript, Matlab, Go, Perl
         Matlab
 硬件    CPU,      CPU, GPU, CPU,      CPU, GPU, mobile     CPU, GPU,mobile
         GPU,      FPGA      GPU,

@@ -1,58 +1,43 @@
-# pylint: disable=fixme, invalid-name, unused-argument, too-many-arguments, no-name-in-module
-"""Common Optimization algorithms with regularizations."""
+"""Weight updating functions"""
 import math
 import pickle
+import logging
 from .ndarray import NDArray, zeros, clip, sqrt
-from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update
+from .ndarray import sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update
 from .random import normal
 
 
 class Optimizer(object):
-    """Base class of all optimizers."""
-    opt_registry = {}
+    """The base class inherited by all optimizers.
 
-    @staticmethod
-    def register(klass):
-        """Register optimizers to the optimizer factory"""
-        assert(isinstance(klass, type))
-        name = klass.__name__.lower()
-        if name in Optimizer.opt_registry:
-            print('WARNING: New optimizer %s.%s is overriding '
-                  'existing optimizer %s.%s' % (
-                      klass.__module__, klass.__name__,
-                      Optimizer.opt_registry[name].__module__,
-                      Optimizer.opt_registry[name].__name__))
-        Optimizer.opt_registry[name] = klass
-        return klass
+    Parameters
+    ----------
+    rescale_grad : float, optional
+        Multiply the gradient with ``rescale_grad`` before updating. Often
+        choose to be ``1.0/batch_size``.
 
-    @staticmethod
-    def create_optimizer(name, rescale_grad=1, **kwargs):
-        """Create an optimizer with specified name.
+    param_idx2name : dict from int to string, optional
+        A dictionary that maps int index to string name.
 
-        Parameters
-        ----------
-        name: str
-            Name of required optimizer. Should be the name
-            of a subclass of Optimizer. Case insensitive.
+    clip_gradient : float, optional
+        Clip the gradient by projecting onto the box ``[-clip_gradient, clip_gradient]``.
 
-        rescale_grad : float
-            Rescaling factor on gradient. Normally should be 1/batch_size.
+    learning_rate : float, optional
+        The initial learning rate.
 
-        kwargs: dict
-            Parameters for optimizer
+    lr_scheduler : LRScheduler, optional
+        The learning rate scheduler.
 
-        Returns
-        -------
-        opt : Optimizer
-            The result optimizer.
-        """
-        if name.lower() in Optimizer.opt_registry:
-            return Optimizer.opt_registry[name.lower()](
-                rescale_grad=rescale_grad,
-                **kwargs)
-        else:
-            raise ValueError('Cannot find optimizer %s' % name)
+    wd : float, optional
+        The weight decay (or L2 regularization) coefficient. Modifies objective
+        by adding a penalty for having large weights.
 
+    sym: Symbol, optional
+        The Symbol this optimizer is applying to.
+
+    begin_num_update : int, optional
+        The initial number of updates
+    """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
                  lr_scheduler=None, sym=None, begin_num_update=0):
@@ -80,26 +65,122 @@ class Optimizer(object):
         self.set_lr_mult({})
         self.set_wd_mult({})
 
+    opt_registry = {}
+
+    @staticmethod
+    def register(klass):
+        """Register a new optimizer.
+
+        Once an optimizer is registered, we can create an instance of this
+        optimizer with ``create_optimizer`` later.
+
+        Examples
+        --------
+
+        >>> @mx.optimizer.Optimizer.register
+        ... class MyOptimizer(mx.optimizer.Optimizer):
+        ...     pass
+        >>> optim = mx.optimizer.Optimizer.create_optimizer('MyOptimizer')
+        >>> print(type(optim))
+        <class '__main__.MyOptimizer'>
+        """
+        assert(isinstance(klass, type))
+        name = klass.__name__.lower()
+        if name in Optimizer.opt_registry:
+            logging.warning('WARNING: New optimizer %s.%s is overriding '
+                            'existing optimizer %s.%s',
+                            klass.__module__, klass.__name__,
+                            Optimizer.opt_registry[name].__module__,
+                            Optimizer.opt_registry[name].__name__)
+        Optimizer.opt_registry[name] = klass
+        return klass
+
+    @staticmethod
+    def create_optimizer(name, **kwargs):
+        """Instantiate an optimizer with a given name and kwargs.
+
+        Notes
+        -----
+        We can use the alias ``create`` for ``Optimizer.create_optimizer``
+
+        Parameters
+        ----------
+        name: str
+            Name of the optimizer. Should be the name
+            of a subclass of Optimizer. Case insensitive.
+
+        kwargs: dict
+            Parameters for the optimizer.
+
+        Returns
+        -------
+        Optimizer
+            An instantiated optimizer.
+
+        Examples
+        --------
+        >>> sgd = mx.optimizer.Optimizer.create_optimizer('sgd')
+        >>> type(sgd)
+        <class 'mxnet.optimizer.SGD'>
+        >>> adam = mx.optimizer.create('adam', learning_rate=.1)
+        >>> type(adam)
+        <class 'mxnet.optimizer.Adam'>
+        """
+        if name.lower() in Optimizer.opt_registry:
+            return Optimizer.opt_registry[name.lower()](**kwargs)
+        else:
+            raise ValueError('Cannot find optimizer %s' % name)
+
+
     def create_state(self, index, weight):
-        """Create additional optimizer state such as momentum.
-        override in implementations."""
+        """Create auxiliary state for a given weight
+
+        Some optimizers require additional states, e.g. as momentum, in addition
+        to gradients in order to update weights. This function creates state
+        for a given weight which will be used in ``update``. This function is
+        called only once for each weight.
+
+        Parameters
+        ----------
+        index : int
+            An unique index to identify the weight.
+        weight : NDArray
+            The weight
+
+        Returns
+        -------
+        state : any obj
+            The state associated with the weight.
+        """
 
     def update(self, index, weight, grad, state):
-        """Update the parameters. override in implementations"""
+        """Update the weight given the corresponding gradient and state.
 
-    # pylint: disable=no-self-use
-    def set_lr_scale(self, args_lrscale):
-        """set lr scale is deprecated. Use set_lr_mult instead."""
+        Parameters
+        ----------
+        index : int
+            An unique index to identify the weight.
+        weight : NDArray
+            The weight
+        grad : NDArray
+            The gradient of the objective with respect to this weight.
+        state : any obj
+            The state associated with this weight.
+        """
+        raise NotImplementedError()
+
+    def set_lr_scale(self, args_lrscale): # pylint: disable=unused-argument
+        """[DEPRECATED] set lr scale. Use set_lr_mult instead."""
         raise DeprecationWarning
 
     def set_lr_mult(self, args_lr_mult):
-        """Set individual learning rate multipler for parameters
+        """Set individual learning rate for each weight.
 
         Parameters
         ----------
         args_lr_mult : dict of string/int to float
-            set the lr multipler for name/index to float.
-            setting multipler by index is supported for backward compatibility,
+            Set the lr multipler for name/index to float.
+            Setting multipler by index is supported for backward compatibility,
             but we recommend using name and symbol.
         """
         self.lr_mult = {}
@@ -111,15 +192,16 @@ class Optimizer(object):
         self.lr_mult.update(args_lr_mult)
 
     def set_wd_mult(self, args_wd_mult):
-        """Set individual weight decay multipler for parameters.
+        """Set individual weight decay for each weight.
+
         By default wd multipler is 0 for all params whose name doesn't
         end with _weight, if param_idx2name is provided.
 
         Parameters
         ----------
         args_wd_mult : dict of string/int to float
-            set the wd multipler for name/index to float.
-            setting multipler by index is supported for backward compatibility,
+            Set the wd multipler for name/index to float.
+            Setting multipler by index is supported for backward compatibility,
             but we recommend using name and symbol.
         """
         self.wd_mult = {}
@@ -134,12 +216,11 @@ class Optimizer(object):
         self.wd_mult.update(args_wd_mult)
 
     def _update_count(self, index):
-        """
-        update num_update
+        """Update num_update
 
         Parameters:
         index : int
-            The index will be updated
+            The index to be updated.
         """
         if index not in self._index_update_count:
             self._index_update_count[index] = self.begin_num_update
@@ -147,17 +228,17 @@ class Optimizer(object):
         self.num_update = max(self._index_update_count[index], self.num_update)
 
     def _get_lr(self, index):
-        """get learning rate for index.
+        """Get the learning rate given the index of the weight.
 
         Parameters
         ----------
         index : int
-            The index for weight
+            The index corresponding to the weight.
 
         Returns
         -------
         lr : float
-            learning rate for this index
+            Learning rate for this index.
         """
         if self.lr_scheduler is not None:
             lr = self.lr_scheduler(self.num_update)
@@ -177,12 +258,12 @@ class Optimizer(object):
         Parameters
         ----------
         index : int
-            The index for weight
+            The index for weight.
 
         Returns
         -------
         wd : float
-            weight decay for this index
+            Weight decay for this index.
         """
         wd = self.wd
         if index in self.wd_mult:
@@ -192,32 +273,24 @@ class Optimizer(object):
         return wd
 
 # convenience wrapper for Optimizer.Register
-register = Optimizer.register
-
+register = Optimizer.register   # pylint: disable=invalid-name
 
 @register
 class SGD(Optimizer):
-    """A very simple SGD optimizer with momentum and weight regularization.
+    """The SGD optimizer with momentum and weight decay.
+
+    The optimizer updates the weight by:
+
+      state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+      weight = weight - state
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
-    learning_rate : float, optional
-        learning_rate of SGD
-
     momentum : float, optional
-       momentum value
-
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-
-    rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
-
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
-
-    param_idx2name : dict of string/int to float, optional
-        special treat weight decay in parameter ends with bias, gamma, and beta
+       The momentum value.
     """
     def __init__(self, momentum=0.0, **kwargs):
         super(SGD, self).__init__(**kwargs)
@@ -229,36 +302,12 @@ class SGD(Optimizer):
             self.kwargs['clip_gradient'] = self.clip_gradient
 
     def create_state(self, index, weight):
-        """Create additional optimizer state such as momentum.
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-
-        """
         if self.momentum == 0.0:
             return None
         else:
             return zeros(weight.shape, weight.context, dtype=weight.dtype)
 
     def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
@@ -274,33 +323,21 @@ class SGD(Optimizer):
 
 @register
 class DCASGD(Optimizer):
-    """ DCASGD optimizer with momentum and weight regularization.
+    """The DCASGD optimizer
 
-    implement paper "Asynchronous Stochastic Gradient Descent with
-                    Delay Compensation for Distributed Deep Learning"
+    This class implements the optimizer described in *Asynchronous Stochastic Gradient Descent with
+    Delay Compensation for Distributed Deep Learning*, available at https://arxiv.org/abs/1609.08326
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
-    learning_rate : float, optional
-        learning_rate of SGD
-
     momentum : float, optional
-       momentum value
+       The momentum value.
 
     lamda : float, optional
-       scale DC value
-
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-
-    rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
-
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
-
-    param_idx2name : dict of string/int to float, optional
-        special treat weight decay in parameter ends with bias, gamma, and beta
+       Scale DC value.
     """
     def __init__(self, momentum=0.0, lamda=0.04, **kwargs):
         super(DCASGD, self).__init__(**kwargs)
@@ -309,36 +346,14 @@ class DCASGD(Optimizer):
         self.lamda = lamda
 
     def create_state(self, index, weight):
-        """Create additional optimizer state such as momentum.
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-
-        """
         if self.momentum == 0.0:
-            return None
+            return (None,
+                    weight.copy())  # previous weight
         else:
-            return zeros(weight.shape, weight.context, dtype=weight.dtype)
+            return (zeros(weight.shape, weight.context, dtype=weight.dtype), # momentum
+                    weight.copy())  # previous weight
 
     def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
@@ -349,53 +364,33 @@ class DCASGD(Optimizer):
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        if state:
-            mom = state
+        mom, previous_weight = state
+        if mom:
             mom[:] *= self.momentum
-            if self.weight_previous.has_key(index):
-                mom[:] += -lr * (grad + wd * weight + self.lamda \
-                                    * grad * grad * (weight - self.weight_previous[index]))
-                self.weight_previous[index] = weight
-            else:
-                mom[:] += -lr * (grad + wd * weight)
-                self.weight_previous[index] = weight
-            weight[:] += mom
+            mom[:] += -lr * (grad + wd * weight + self.lamda \
+                      * grad * grad * (weight - previous_weight))
         else:
-            assert self.momentum == 0.0
-            if self.weight_previous.has_key(index):
-                weight[:] += -lr * (grad + wd * weight + self.lamda \
-                                    * grad * grad * (weight - self.weight_previous[index]))
-                self.weight_previous[index] = weight
-            else:
-                weight[:] += -lr * (grad + wd * weight)
-                self.weight_previous[index] = weight
+            assert(self.momentum == 0.0)
+            mom = -lr * (grad + wd * weight + self.lamda \
+                      * grad * grad * (weight - previous_weight))
+        previous_weight[:] = weight
+        weight[:] += mom
 
 @register
 class NAG(SGD):
-    """SGD with nesterov
-    It is implemented according to
-    https://github.com/torch/optim/blob/master/sgd.lua
+    """Nesterov accelerated SGD.
+
+    This optimizer updates each weight by:
+
+        state = momentum * state + grad + wd * weight
+        weight = weight - (lr * (grad + momentum * state))
+
+    This optimizer accepts the same arguments as :class:`.SGD`.
     """
     def __init__(self, **kwargs):
         super(NAG, self).__init__(**kwargs)
 
     def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
@@ -417,59 +412,22 @@ class NAG(SGD):
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + wd * weight)
 
-
 @register
 class SGLD(Optimizer):
-    """Stochastic Langevin Dynamics Updater to sample from a distribution.
+    """Stochastic Gradient Riemannian Langevin Dynamics.
 
-    Parameters
-    ----------
-    learning_rate : float, optional
-        learning_rate of SGD
+    This class implements the optimizer described in the paper *Stochastic Gradient
+    Riemannian Langevin Dynamics on the Probability Simplex*, available at
+    https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf
 
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-
-    rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
-
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
-
-    param_idx2name : dict of string/int to float, optional
-        special treat weight decay in parameter ends with bias, gamma, and beta
     """
     def __init__(self, **kwargs):
         super(SGLD, self).__init__(**kwargs)
 
     def create_state(self, index, weight):
-        """Create additional optimizer state such as momentum.
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-
-        """
         return None
 
     def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
@@ -483,7 +441,7 @@ class SGLD(Optimizer):
                                                             weight.shape, weight.context)
 
 
-@register
+@register  # pylint: disable=invalid-name
 class ccSGD(SGD):
     """[Deprecated] Same as sgd. Left here for backward compatibility."""
     def __init__(self, *args, **kwargs):
@@ -491,41 +449,25 @@ class ccSGD(SGD):
 
 @register
 class Adam(Optimizer):
-    """Adam optimizer as described in [King2014]_.
+    """The Adam optimizer.
 
-    .. [King2014] Diederik Kingma, Jimmy Ba,
-       *Adam: A Method for Stochastic Optimization*,
-       http://arxiv.org/abs/1412.6980
+    This class implements the optimizer described in *Adam: A Method for
+    Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980
 
-    the code in this class was adapted from
-    https://github.com/mila-udem/blocks/blob/master/blocks/algorithms/__init__.py#L765
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
-    learning_rate : float, optional
-        Step size.
-        Default value is set to 0.002.
     beta1 : float, optional
         Exponential decay rate for the first moment estimates.
-        Default value is set to 0.9.
     beta2 : float, optional
         Exponential decay rate for the second moment estimates.
-        Default value is set to 0.999.
     epsilon : float, optional
-        Default value is set to 1e-8.
-    decay_factor : float, optional
-        Default value is set to 1 - 1e-8.
-
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
-
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
+        Small value to avoid divided by 0.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), **kwargs):
+                 **kwargs):
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
@@ -535,34 +477,10 @@ class Adam(Optimizer):
             self.kwargs['clip_gradient'] = self.clip_gradient
 
     def create_state(self, index, weight):
-        """Create additional optimizer state: mean, variance
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-
-        """
         return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
                 zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
 
     def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
@@ -573,38 +491,25 @@ class Adam(Optimizer):
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
-
         mean, var = state
         adam_update(weight, grad, mean, var, out=weight,
                     lr=lr, wd=wd, **self.kwargs)
 
-
 @register
 class AdaGrad(Optimizer):
-    """AdaGrad optimizer of Duchi et al., 2011,
+    """AdaGrad optimizer
 
-    This code follows the version in http://arxiv.org/pdf/1212.5701v1.pdf  Eq(5)
-    by Matthew D. Zeiler, 2012. AdaGrad will help the network to converge faster
-    in some cases.
+    This calss implements the AdaGrad optiizer described in *Adaptive Subgradient
+    Methods for Online Learning and Stochastic Optimization*, and available at
+    http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
-    learning_rate : float, optional
-        Step size.
-        Default value is set to 0.05.
-
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-
-    rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
-
     eps: float, optional
-        A small float number to make the updating processing stable
-        Default value is set to 1e-7.
-
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
+        Small value to avoid division by 0.
     """
     def __init__(self, eps=1e-7, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
@@ -627,104 +532,91 @@ class AdaGrad(Optimizer):
         history[:] += (grad * grad)
         weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + wd * weight)
 
-
 @register
 class RMSProp(Optimizer):
-    """RMSProp optimizer of Tieleman & Hinton, 2012,
+    """The RMSProp optimizer.
 
-    This code follows the version in  http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45)
+    Two versions of RMSProp are implemented:
+
+    If ``centered=False``, we follow
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf by
+    Tieleman & Hinton, 2012.
+
+    If ``centered=True``, we follow http://arxiv.org/pdf/1308.0850v5.pdf (38)-(45)
     by Alex Graves, 2013.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
-    learning_rate : float, optional
-        Step size.
-        Default value is set to 0.002.
     gamma1: float, optional
-        decay factor of moving average for gradient, gradient^2.
-        Default value is set to 0.95.
+        Decay factor of moving average for ``gradient^2``.
     gamma2: float, optional
-        "momentum" factor.
-        Default value if set to 0.9.
+        A "momentum" factor. Only used if ``centered=True``.
     epsilon : float, optional
-        Default value is set to 1e-8.
-    wd : float, optional
-        L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
+        Small value to avoid division by 0.
+    centered : bool, optional
+        Use Graves' or Tieleman & Hinton's version of RMSProp.
+    clip_weights : float, optional
+        clip weights into range ``[-clip_weights, clip_weights]``
     """
-    def __init__(self, learning_rate=0.001, gamma1=0.95, gamma2=0.9,
-                 epsilon=1e-8, **kwargs):
+    def __init__(self, learning_rate=0.001, gamma1=0.9, gamma2=0.9,
+                 epsilon=1e-8, centered=False, clip_weights=None, **kwargs):
         super(RMSProp, self).__init__(learning_rate=learning_rate, **kwargs)
         self.gamma1 = gamma1
         self.gamma2 = gamma2
-        self.kwargs = {'gamma1': gamma1, 'gamma2': gamma2, 'epsilon': epsilon,
+        self.centered = centered
+        self.clip_weights = clip_weights
+        self.kwargs = {'gamma1': gamma1, 'epsilon': epsilon,
                        'rescale_grad': self.rescale_grad}
+        if self.centered:
+            self.kwargs['gamma2'] = gamma2
         if self.clip_gradient:
             self.kwargs['clip_gradient'] = self.clip_gradient
+        if self.clip_weights:
+            self.kwargs['clip_weights'] = self.clip_weights
 
     def create_state(self, index, weight):
-        """Create additional optimizer state: mean, variance
-
-        Parameters
-        ----------
-        weight : NDArray
-            The weight data
-
-        """
-        return (zeros(weight.shape, weight.context),  # n
+        if self.centered:
+            return (
+                zeros(weight.shape, weight.context),  # n
                 zeros(weight.shape, weight.context),  # g
                 zeros(weight.shape, weight.context))  # delta
+        else:
+            return (zeros(weight.shape, weight.context), )  # n
 
     def update(self, index, weight, grad, state):
-        """Update the parameters.
-
-        Parameters
-        ----------
-        index : int
-            An unique integer key used to index the parameters
-
-        weight : NDArray
-            weight ndarray
-
-        grad : NDArray
-            grad ndarray
-
-        state : NDArray or other objects returned by init_state
-            The auxiliary state used in optimization.
-        """
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         self._update_count(index)
-        n, g, delta = state
-        rmsprop_update(weight, grad, n, g, delta, out=weight,
-                       lr=lr, wd=wd, **self.kwargs)
+        if not self.centered:
+            (n, ) = state
+            rmsprop_update(
+                weight, grad, n, out=weight, lr=lr, wd=wd, **self.kwargs)
+        else:
+            n, g, delta = state
+            rmspropalex_update(weight, grad, n, g, delta, out=weight,
+                               lr=lr, wd=wd, **self.kwargs)
 
 @register
 class AdaDelta(Optimizer):
-    """
-    AdaDelta optimizer as described in
-    Zeiler, M. D. (2012).
-    *ADADELTA: An adaptive learning rate method.*
+    """The AdaDelta optimizer.
 
-    http://arxiv.org/abs/1212.5701
+    This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
+    learning rate method*, available at https://arxiv.org/abs/1212.5701
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`:
 
     Parameters
     ----------
     rho: float
-        Decay rate for both squared gradients and delta x
+        Decay rate for both squared gradients and delta.
     epsilon : float
-        The constant as described in the thesis
-    wd : float
-        L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
-        rescaling factor of gradient. Normally should be 1/batch_size.
-    clip_gradient : float, optional
-        clip gradient in range [-clip_gradient, clip_gradient]
+        Small value to avoid division by 0.
     """
     def __init__(self, rho=0.90, epsilon=1e-5, **kwargs):
         super(AdaDelta, self).__init__(**kwargs)
@@ -757,14 +649,11 @@ class AdaDelta(Optimizer):
         # update weight
         weight[:] -= current_delta + wd * weight
 
-
 @register
 class Test(Optimizer):
-    """For test use"""
     def __init__(self, **kwargs):
         super(Test, self).__init__(**kwargs)
 
-    # pylint: disable=no-self-use
     def create_state(self, index, weight):
         """Create a state to duplicate weight"""
         return zeros(weight.shape, weight.context)
@@ -775,39 +664,39 @@ class Test(Optimizer):
         state[:] = weight
 
 # backward compatibility wrapper for Optimizer.CreateOptimizer
-create = Optimizer.create_optimizer
+create = Optimizer.create_optimizer  # pylint: disable=invalid-name
 
 class Updater(object):
-    """updater for kvstore"""
+    """Updater for kvstore."""
     def __init__(self, optimizer):
         self.optimizer = optimizer
         self.states = {}
 
     def __call__(self, index, grad, weight):
-        """Update weight given gradient and index"""
+        """Update weight given gradient and index."""
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
         self.optimizer.update(index, weight, grad, self.states[index])
 
     def set_states(self, states):
-        """set updater states"""
+        """Set updater states."""
         self.states = pickle.loads(states)
 
     def get_states(self):
-        """get updater states"""
+        """Get updater states."""
         return pickle.dumps(self.states)
 
 def get_updater(optimizer):
-    """Return a clossure of the updater needed for kvstore
+    """Return a clossure of the updater needed for kvstore.
 
     Parameters
     ----------
     optimizer: Optimizer
-         The optimizer
+         The optimizer.
 
     Returns
     -------
     updater: function
-         The clossure of the updater
+         The clossure of the updater.
     """
     return Updater(optimizer)

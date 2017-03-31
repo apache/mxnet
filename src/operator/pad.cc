@@ -329,7 +329,7 @@ void single_image_constant_grad(const Tensor<cpu, 4, DType> &in_grad,
   const int pad_t = pad[6];
   const int pad_l = pad[8];
   int c, d, w, h;
-#pragma omp parallel for private(c, w, h)
+  #pragma omp parallel for private(c, d, w, h)
   for (c = 0; c < in_grad.size(0); ++c) {
     for (d = 0; d < in_grad.size(1); ++d) {
       for (h = 0; h < in_grad.size(2); ++h) {
@@ -400,12 +400,15 @@ Operator *PadProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
 DMLC_REGISTER_PARAMETER(PadParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pad, PadProp)
-    .describe(
-        "Pads an n-dimensional input tensor. Allows for precise control of the "
-        "padding type and how much padding to apply on both sides of a given "
-        "dimension.")
-    .add_argument("data", "Symbol", "An n-dimensional input tensor.")
-    .add_arguments(PadParam::__FIELDS__());
+.describe(R"code(Pad an array.
+
+Only supports 4-D and 5-D input array.
+
+)code" ADD_FILELINE)
+.add_argument("data", "ndarray-or-symbol", "An n-dimensional input tensor.")
+.add_arguments(PadParam::__FIELDS__());
+
+NNVM_REGISTER_OP(Pad).add_alias("pad");
 
 }  // namespace op
 }  // namespace mxnet

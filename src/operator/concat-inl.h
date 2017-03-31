@@ -50,7 +50,7 @@ class ConcatOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(static_cast<int>(in_data.size()), size_);
-    CHECK_EQ(out_data.size(), 1);
+    CHECK_EQ(out_data.size(), 1U);
     CHECK_LT(dimension_, in_data[concat_enum::kData0].ndim());
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3, DType> > data(size_);
@@ -82,7 +82,7 @@ class ConcatOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1);
+    CHECK_EQ(out_grad.size(), 1U);
     CHECK_EQ(in_grad.size(), static_cast<size_t>(size_));
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3, DType> > grad_in(size_);
@@ -127,7 +127,7 @@ class ConcatProp : public OperatorProperty {
   std::vector<std::string> ListArguments() const override {
     std::vector<std::string> ret;
     for (int i = 0; i < param_.num_args; ++i) {
-      ret.push_back(std::string("arg") + static_cast<char>('0' + i));
+      ret.push_back(std::string("arg") + std::to_string(i));
     }
     return ret;
   }

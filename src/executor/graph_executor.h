@@ -28,6 +28,7 @@ using nnvm::Graph;
 class GraphExecutor : public Executor {
  public:
   using Executor::MonitorCallback;
+
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
@@ -58,7 +59,25 @@ class GraphExecutor : public Executor {
     bool skip_exec_node{false};
     // cached operator handle
     Engine::OprHandle cached_opr{nullptr};
+    // cached const vars, used for seg ops creation
+    std::vector<Engine::VarHandle> use_vars;
+    // cached mutate vars, used for seg ops creation
+    std::vector<Engine::VarHandle> mutate_vars;
   };
+  // a cached segment operator that executes a segment
+  struct CachedSegOpr {
+    // context of the operator
+    Context ctx;
+    // begin in topo order
+    size_t topo_start;
+    // end in topo order
+    size_t topo_end;
+    // the cached operator
+    Engine::OprHandle opr = nullptr;
+    // list of op executors
+    std::vector<OpExecutor*> exec_list;
+  };
+
   // internal initialization of the graph.
   Graph InitGraph(nnvm::Symbol symbol,
                   const Context& default_ctx,
@@ -73,12 +92,23 @@ class GraphExecutor : public Executor {
                       const std::vector<NDArray>& arg_grad_store);
   // initialize the cached operator
   void InitCachedOps();
+  // initialize the opr segments for bulk exec
+  void InitOpSegs();
   // initialize the resources in the graph
   // initialize the memory of data entries
   // shared_pool: extra memory shared from other parts
-  void InitDataEntryMemory(const std::vector<NDArray>& shared_pool);
+  void InitDataEntryMemory(std::vector<NDArray>* shared_pool);
   // run ops from topo order start to end
   void RunOps(bool is_train, size_t topo_start, size_t topo_end);
+  /*!
+   * \brief Try to create a cached operator to run segments between start and end
+   * \param topo_start beginning of segment
+   * \param topo_end end of segment
+   * \return the cached operator.
+   *  ret.opr Can be nullptr if creation failed.
+  */
+  CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
+
   // internal graph
   nnvm::Graph graph_;
   // operator node
@@ -105,6 +135,10 @@ class GraphExecutor : public Executor {
   size_t num_forward_nodes_{0};
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
+  // whether to enable bulk execution
+  bool prefer_bulk_execution_;
+  // cached segment operator
+  std::vector<CachedSegOpr> cached_seg_opr_;
 };
 
 }  // namespace exec

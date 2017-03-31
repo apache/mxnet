@@ -31,6 +31,7 @@ else
     echo "USE_BLAS=blas" >> config.mk
 fi
 echo "CXX=${CXX}" >>config.mk
+echo "USE_PROFILER=1" >> config.mk
 
 if [ ${TASK} == "build" ]; then
     if [ ${TRAVIS_OS_NAME} == "linux" ]; then
@@ -46,9 +47,7 @@ if [ ${TASK} == "cpp_test" ]; then
     echo "GTEST_PATH="${CACHE_PREFIX} >> config.mk
     make test || exit -1
     export MXNET_ENGINE_INFO=true
-    for test in tests/cpp/*_test; do
-        ./$test || exit -1
-    done
+    ./build/tests/cpp/mxnet_test
     exit 0
 fi
 
@@ -61,13 +60,13 @@ if [ ${TASK} == "r_test" ]; then
 
     set -e
     export _R_CHECK_TIMINGS_=0
-    
+
     if [[ ${TRAVIS_OS_NAME} == "osx" ]]; then
         wget https://cran.rstudio.com/bin/macosx/R-latest.pkg  -O /tmp/R-latest.pkg
         sudo installer -pkg "/tmp/R-latest.pkg" -target /
         Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
-    fi        
-    
+    fi
+
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
@@ -102,15 +101,19 @@ if [ ${TASK} == "python_test" ]; then
     if [ ${TRAVIS_OS_NAME} == "osx" ]; then
         python -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/unittest || exit -1
-        make cython3
+        # make cython3
         # cython tests
-        export MXNET_ENFORCE_CYTHON=1
-        python3 -m nose tests/python/unittest || exit -1
+        # export MXNET_ENFORCE_CYTHON=1
+        # python3 -m nose tests/python/unittest || exit -1
         python3 -m nose tests/python/train || exit -1
+        python -m nose tests/python/doctest || exit -1
+        python3 -m nose tests/python/doctest || exit -1
     else
         nosetests tests/python/unittest || exit -1
         nosetests3 tests/python/unittest || exit -1
         nosetests3 tests/python/train || exit -1
+        nosetests tests/python/doctest || exit -1
+        nosetests3 tests/python/doctest || exit -1
     fi
     exit 0
 fi
@@ -141,5 +144,49 @@ if [ ${TASK} == "scala_test" ]; then
     make scalapkg || exit -1
     make scalatest || exit -1
 
+    exit 0
+fi
+
+if [ ${TASK} == "perl_test" ]; then
+    make all || exit -1
+
+    # use cached dir for storing data
+    MXNET_HOME=${PWD}
+    rm -rf ${MXNET_HOME}/perl-package/AI-MXNet/data
+    mkdir -p ${CACHE_PREFIX}/data
+    ln -s ${CACHE_PREFIX}/data ${MXNET_HOME}/perl-package/AI-MXNet/data
+
+    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
+    export PERL5LIB=${HOME}/perl5/lib/perl5
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make || exit -1
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        install_name_tool -change lib/libmxnet.so \
+            ${MXNET_HOME}/lib/libmxnet.so \
+            blib/arch/auto/AI/MXNetCAPI/MXNetCAPI.bundle
+    fi
+    make install || exit -1
+
+    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
+    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+    make || exit -1
+    if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+        install_name_tool -change lib/libmxnet.so \
+            ${MXNET_HOME}/lib/libmxnet.so \
+            blib/arch/auto/AI/NNVMCAPI/NNVMCAPI.bundle
+    fi
+    make install || exit -1
+
+    cd ${MXNET_HOME}/perl-package/AI-MXNet/
+    perl Makefile.PL
+    make test || exit -1
+    exit 0
+fi
+
+if [ ${TASK} == "cpp_package_test" ]; then
+    MXNET_HOME=${PWD}
+    make travis -C ${MXNET_HOME}/cpp-package/example
     exit 0
 fi

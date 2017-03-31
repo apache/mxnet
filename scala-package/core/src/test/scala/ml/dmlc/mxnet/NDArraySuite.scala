@@ -283,12 +283,20 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(argmax.toArray === Array(1f, 0f))
   }
 
-  test("concatenate") {
+  test("concatenate axis-0") {
     val arr1 = NDArray.array(Array(1f, 2f, 4f, 3f, 3f, 3f), shape = Shape(2, 3))
     val arr2 = NDArray.array(Array(8f, 7f, 6f), shape = Shape(1, 3))
     val arr = NDArray.concatenate(arr1, arr2)
     assert(arr.shape === Shape(3, 3))
     assert(arr.toArray === Array(1f, 2f, 4f, 3f, 3f, 3f, 8f, 7f, 6f))
+  }
+
+  test("concatenate axis-1") {
+    val arr1 = NDArray.array(Array(1f, 2f, 3f, 4f), shape = Shape(2, 2))
+    val arr2 = NDArray.array(Array(5f, 6f), shape = Shape(2, 1))
+    val arr = NDArray.concatenate(Array(arr1, arr2), axis = 1)
+    assert(arr.shape === Shape(2, 3))
+    assert(arr.toArray === Array(1f, 2f, 5f, 3f, 4f, 6f))
   }
 
   test("transpose") {
