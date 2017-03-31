@@ -1,11 +1,10 @@
 #!/bin/bash
 export PS_VERBOSE=1
-#tools/launch.py -n 2 --launch local \
-ps-lite/tracker/dmlc_local.py -n 2 -s 2 \
-  java -Xmx3G -Djava.library.path=/home/intel/mxnet/scala-package/native/linux-x86_64-cpu/target/ \
-  -cp scala-package/assembly/linux-x86_64-cpu/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
-  ml.dmlc.mxnet.examples.imclassification.TrainMnist \
-  --data-dir=/home/intel/Downloads/mnist/ \
+tools/launch.py -n 2 --launcher local \
+  java -Xmx3G -Djava.library.path=scala-package/native/osx-x86_64-cpu/target/ \
+  -cp scala-package/assembly/osx-x86_64-cpu/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
+  ml.dmlc.mxnetexamples.imclassification.TrainMnist \
+  --data-dir=/Users/QYGong/Downloads/mnist/ \
   --num-epochs=10 \
   --network=mlp \
   --cpus=0 \
