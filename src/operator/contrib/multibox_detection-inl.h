@@ -131,9 +131,9 @@ class MultiBoxDetectionOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
      using namespace mshadow;
      using namespace mshadow::expr;
-     CHECK_EQ(in_data.size(), 3) << "Input: [cls_prob, loc_pred, anchor]";
+     CHECK_EQ(in_data.size(), 3U) << "Input: [cls_prob, loc_pred, anchor]";
      TShape ashape = in_data[mboxdet_enum::kAnchor].shape_;
-     CHECK_EQ(out_data.size(), 1);
+     CHECK_EQ(out_data.size(), 1U);
 
      Stream<xpu> *s = ctx.get_stream<xpu>();
      Tensor<xpu, 3, DType> cls_prob = in_data[mboxdet_enum::kClsProb]
@@ -189,17 +189,17 @@ class MultiBoxDetectionProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
     using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 3) << "Inputs: [cls_prob, loc_pred, anchor]";
+    CHECK_EQ(in_shape->size(), 3U) << "Inputs: [cls_prob, loc_pred, anchor]";
     TShape cshape = in_shape->at(mboxdet_enum::kClsProb);
     TShape lshape = in_shape->at(mboxdet_enum::kLocPred);
     TShape ashape = in_shape->at(mboxdet_enum::kAnchor);
-    CHECK_EQ(cshape.ndim(), 3) << "Provided: " << cshape;
-    CHECK_EQ(lshape.ndim(), 2) << "Provided: " << lshape;
-    CHECK_EQ(ashape.ndim(), 3) << "Provided: " << ashape;
+    CHECK_EQ(cshape.ndim(), 3U) << "Provided: " << cshape;
+    CHECK_EQ(lshape.ndim(), 2U) << "Provided: " << lshape;
+    CHECK_EQ(ashape.ndim(), 3U) << "Provided: " << ashape;
     CHECK_EQ(cshape[2], ashape[1]) << "Number of anchors mismatch";
     CHECK_EQ(cshape[2] * 4, lshape[1]) << "# anchors mismatch with # loc";
-    CHECK_GT(ashape[1], 0) << "Number of anchors must > 0";
-    CHECK_EQ(ashape[2], 4);
+    CHECK_GT(ashape[1], 0U) << "Number of anchors must > 0";
+    CHECK_EQ(ashape[2], 4U);
     TShape oshape = TShape(3);
     oshape[0] = cshape[0];
     oshape[1] = ashape[1];

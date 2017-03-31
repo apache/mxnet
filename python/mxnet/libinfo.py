@@ -28,6 +28,7 @@ def find_lib_path():
     elif os.name == "posix" and os.environ.get('LD_LIBRARY_PATH', None):
         dll_path.extend([p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")])
     if os.name == 'nt':
+        os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
         dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
     else:
         dll_path.append('../../../')
