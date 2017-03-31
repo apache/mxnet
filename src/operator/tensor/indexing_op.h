@@ -394,14 +394,14 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req[take_::kIdx], kNullOp)
     << "take layer doesn't support gradient into index";
-  
+
   // inputs are specified in the .cc file, which are the gradients from
   // the upper layer and the input index
   // outputs are the gradients of inputs in the feed-forward pass
   const TShape& idxshape = inputs[1].shape_;
   const TShape& arrshape = outputs[0].shape_;
   const TShape& oshape = inputs[0].shape_;
-  
+
   int idxndim = idxshape.ndim();
 
   // grad_out is the gradient of the outputs in the feed-forward
@@ -415,7 +415,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
           Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
       Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
           Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
-      
+
       if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
         if (req[take_::kArr] == kWriteTo) {
           grad_in = scalar<DType>(0.0f);
@@ -431,12 +431,12 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
           static_cast<uint64_t>(grad_out.shape_[0])*
           static_cast<uint64_t>(grad_out.shape_[1]);
         if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
-            AddTakeGrad(grad_in, idx, grad_out);
+          AddTakeGrad(grad_in, idx, grad_out);
         } else {
-            AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
+          AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
         }
       } else {
-          LOG(FATAL) << "wrong req";
+        LOG(FATAL) << "wrong req";
       }
     });
   });
