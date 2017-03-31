@@ -103,7 +103,7 @@ ln -s /path/to/VOCdevkit /path/to/mxnet/example/ssd/data/VOCdevkit
 Use hard link instead of copy could save us a bit disk space.
 * Create packed binary file for faster training:
 ```
-# cd /path/to/mxnet-ssd
+# cd /path/to/mxnet/example/ssd
 bash tools/prepare_pascal.sh
 # or if you are using windows
 python tools/prepare_dataset.py --dataset pascal --year 2007,2012 --set trainval --target ./data/train.lst
@@ -137,7 +137,7 @@ python deploy.py --num-class 20
 ```
 
 ### Convert caffemodel
-Converter from caffe is available at `/path/to/mxnet-ssd/tools/caffe_converter`
+Converter from caffe is available at `/path/to/mxnet/example/ssd/tools/caffe_converter`
 
 This is specifically modified to handle custom layer in caffe-ssd. Usage:
 ```
