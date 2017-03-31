@@ -355,32 +355,6 @@ struct Take {
   }
 };
 
-template<int req>
-struct TakeBackward {
-  // assume that idx have been flattened to a 1-D tensor (K,)
-  // assume that out_grad and in_grad have been flattened to 2-D tensors, (K, M) and (L, M)
-  // M is the number of columns of in_grad and out_grad
-  // K is the number of elements in idx
-  // L is the number rows of in_grad
-  // i is the index of in_grad
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_grad,
-                                  const IType* idx, const int M, const int K, const int L) {
-    DType sum = static_cast<DType>(0);
-    const int in_grad_row = i / M;
-    for (int j = 0; j < K; ++j) {
-      // clip the index out of bound
-      int r = idx[j];
-      if (r < 0) r = 0;
-      else if (r >= L) r = L - 1;
-      if (r == in_grad_row) {
-        sum += out_grad[j * M + i % M];
-      }
-    }
-    KERNEL_ASSIGN(in_grad[i], req, sum);
-  }
-};
-
 template<typename xpu>
 void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
@@ -414,32 +388,56 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
+  using namespace mshadow;
+  using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req[take_::kIdx], kNullOp)
-      << "take layer doesn't support gradient into index";
-
+    << "take layer doesn't support gradient into index";
+  
   // inputs are specified in the .cc file, which are the gradients from
   // the upper layer and the input index
   // outputs are the gradients of inputs in the feed-forward pass
   const TShape& idxshape = inputs[1].shape_;
   const TShape& arrshape = outputs[0].shape_;
   const TShape& oshape = inputs[0].shape_;
+  
+  int idxndim = idxshape.ndim();
 
   // grad_out is the gradient of the outputs in the feed-forward
   // grad_in is the gradient of the inputs in the feed-forward
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
-      MXNET_ASSIGN_REQ_SWITCH(req[take_::kArr], req_type, {
-        Kernel<TakeBackward<req_type>, xpu>::Launch(s, arrshape.Size(),
-                                                    outputs[0].dptr<DType>(),
-                                                    inputs[0].dptr<DType>(),
-                                                    inputs[1].dptr<IType>(),
-                                                    oshape.Size()/idxshape.Size(),
-                                                    idxshape.Size(), arrshape[0]);
-      });
+      Tensor<xpu, 1, IType> idx = inputs[1].get_with_shape<xpu, 1, IType>(
+          Shape1(idxshape.ProdShape(0, idxndim)), s);
+      Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
+          Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
+      Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
+          Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
+      
+      if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
+        if (req[take_::kArr] == kWriteTo) {
+          grad_in = scalar<DType>(0.0f);
+        }
+        // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+        // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+        // When the number of elements processed is low, use AddTakeGrad.
+        // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+        uint64_t shape_in_prod =
+          static_cast<uint64_t>(grad_in.shape_[0])*
+          static_cast<uint64_t>(grad_in.shape_[1]);
+        uint64_t shape_out_prod =
+          static_cast<uint64_t>(grad_out.shape_[0])*
+          static_cast<uint64_t>(grad_out.shape_[1]);
+        if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
+            AddTakeGrad(grad_in, idx, grad_out);
+        } else {
+            AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
+        }
+      } else {
+          LOG(FATAL) << "wrong req";
+      }
     });
   });
 }
