@@ -15,8 +15,10 @@ void segfault_logger(int sig) {
   const int MAX_STACK_SIZE = 10;
   void *stack[MAX_STACK_SIZE];
 
-  int nframes = backtrace(stack, MAX_STACK_SIZE);
   fprintf(stderr, "\nSegmentation fault: %d\n\n", sig);
+
+#if DMLC_LOG_STACK_TRACE
+  int nframes = backtrace(stack, MAX_STACK_SIZE);
   fprintf(stderr, "Stack trace returned %d entries:\n", nframes);
   char **msgs = backtrace_symbols(stack, nframes);
   if (msgs != nullptr) {
@@ -24,6 +26,8 @@ void segfault_logger(int sig) {
       fprintf(stderr, "[bt] (%d) %s\n", i, msgs[i]);
     }
   }
+#endif  // DMLC_LOG_STACK_TRACE
+
   exit(1);
 }
 
