@@ -35,28 +35,54 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
   // and Kepler), the computation precision is always at least 32-bits.
 #if MSHADOW_USE_PASCAL == 1
   // true fp16
-  int forward_compute_type = dtype;
-  int backward_compute_type = dtype;
+  int desired_forward_compute_type = dtype;
+  int desired_backward_compute_type = dtype;
 #else
   // pseudo fp16
-  int forward_compute_type =
+  int desired_forward_compute_type =
     (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
-  int backward_compute_type =
+  int desired_backward_compute_type =
     (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
 #endif  // MSHADOW_USE_PASCAL == 1
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    bool convolutionIsSupported =
-      CuDNNConvolutionOp<DType>::Supports(param,
+    if (param.cudnn_off) {
+      op = new ConvolutionOp<gpu, DType>(param);
+    } else {
+      int forward_compute_type = desired_forward_compute_type;
+      int backward_compute_type = desired_backward_compute_type;
+      bool convolutionIsSupported = CuDNNConvolutionOp<DType>::Supports(param,
                                           forward_compute_type,
                                           backward_compute_type);
-    if (convolutionIsSupported && !param.cudnn_off)
-      op = new CuDNNConvolutionOp<DType>(param,
+
+      // If cuDNN can't handle this case with fp16 backprop kernels, try fp32 backprop.
+      if (!convolutionIsSupported && backward_compute_type == mshadow::kFloat16) {
+        backward_compute_type = mshadow::kFloat32;
+        convolutionIsSupported = CuDNNConvolutionOp<DType>::Supports(param,
+                                          forward_compute_type,
+                                          backward_compute_type);
+      }
+
+      // If cuDNN can't handle this case with fp16 forward kernels, try fp32
+      if (!convolutionIsSupported && forward_compute_type == mshadow::kFloat16) {
+        forward_compute_type = mshadow::kFloat32;
+        convolutionIsSupported = CuDNNConvolutionOp<DType>::Supports(param,
+                                          forward_compute_type,
+                                          backward_compute_type);
+      }
+      if (!convolutionIsSupported) {
+        LOG(INFO) << "This convolution is not supported by cudnn, MXNET convolution is applied.";
+      } else {
+        if ((forward_compute_type != desired_forward_compute_type) ||
+            (backward_compute_type != desired_backward_compute_type))
+          LOG(INFO) << "True fp16 convolution by cudnn not supported in this configuration.  " <<
+                       "Falling back to pseudo fp16.";
+        op = new CuDNNConvolutionOp<DType>(param,
                                          forward_compute_type,
                                          backward_compute_type,
                                          *in_shape, *out_shape, ctx);
-    else
-      op = new ConvolutionOp<gpu, DType>(param);
+      }
+    }
   })
 #else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

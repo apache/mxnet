@@ -24,6 +24,7 @@ def test_batchnorm_with_type():
     check_consistency(sym, ctx_list)
 
 def test_convolution_with_type():
+    np.random.seed(1234)
     sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
 
     data = mx.sym.Variable('conv_data')
@@ -46,7 +47,13 @@ def test_convolution_with_type():
                 {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'conv_weight': (3, 2, 3, 3),
                  'type_dict': {'conv_data': np.float16, 'conv_weight': np.float16}}
                 ]
-    check_consistency(sym, ctx_list)
+    # wider tolerance needed for true-fp16 NCHW test above
+    tol = {np.dtype(np.float16): 0.5,
+               np.dtype(np.float32): 1e-3,
+               np.dtype(np.float64): 1e-5,
+               np.dtype(np.uint8): 0,
+               np.dtype(np.int32): 0}
+    check_consistency(sym, ctx_list, tol=tol)
 
 
 def test_convolution_options():
@@ -151,6 +158,7 @@ def test_deconvolution_with_type():
 
 
 def test_bilinear_sampler_with_type():
+    np.random.seed(1234)
     data = mx.sym.Variable('data')
     grid = mx.sym.Variable('grid')
     sym = mx.sym.BilinearSampler(data=data, grid=grid)

@@ -368,13 +368,22 @@ class CuDNNConvolutionOp : public Operator {
   static bool Supports(ConvolutionParam param,
                        int forward_compute_type,
                        int backward_compute_type) {
+    using namespace mshadow;
+
+    // NDHWC not supported, NHWC not supported in true fp16
+    auto layout_val = param.layout.value();
+    auto true_fp16 = DataType<DType>::kFlag == kFloat16 &&
+      (forward_compute_type == kFloat16 || backward_compute_type == kFloat16);
+    if (layout_val == kNDHWC || layout_val == kNHWC && true_fp16)
+      return false;
+
     // The factor by which the effective filter size grows based on dilation.
     auto filterDilationFactor = param.dilate.Size();
 
     // The v6 kernels that backprop a dilated convolution don't handle fp16.
     return filterDilationFactor == 1 ||
            filterDilationFactor > 1 && (CUDNN_MAJOR >= 6) &&
-           (backward_compute_type != mshadow::kFloat16);
+           (backward_compute_type != kFloat16);
   }
 
  private:
@@ -596,7 +605,12 @@ class CuDNNConvolutionOp : public Operator {
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
       if (!param_.cudnn_tune.value()) {
-        CHECK_EQ(cudnnGetConvolutionForwardAlgorithm(s->dnn_handle_,
+        // In cuDNNv6, for kNHWC, only CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM is
+        // supported.  Hard-coded this since the algo find() or get() throws an FPE.
+        if (CUDNN_MAJOR == 6 && param_.layout.value() == mshadow::kNHWC) {
+          algo_ = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM;
+        } else {
+          CHECK_EQ(cudnnGetConvolutionForwardAlgorithm(s->dnn_handle_,
                  in_desc_,
                  filter_desc_,
                  forward_conv_desc_,
@@ -604,6 +618,7 @@ class CuDNNConvolutionOp : public Operator {
                  CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
                  workspace_byte,
                  &(this->algo_)), CUDNN_STATUS_SUCCESS);
+        }
         CHECK_EQ(cudnnGetConvolutionBackwardFilterAlgorithm(s->dnn_handle_,
                  in_desc_,
                  out_desc_,
@@ -625,8 +640,13 @@ class CuDNNConvolutionOp : public Operator {
         int nalgo = kMaxAlgos;
         int i;
 
-        cudnnConvolutionFwdAlgoPerf_t fwd_algo[kMaxAlgos];
-        CHECK_EQ(cudnnFindConvolutionForwardAlgorithm(s->dnn_handle_,
+        // In cuDNNv6, for kNHWC, only CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM is
+        // supported.  Hard-coded this since the algo find() or get() throws an FPE.
+        if (CUDNN_MAJOR == 6 && param_.layout.value() == mshadow::kNHWC) {
+          algo_ = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM;
+        } else {
+          cudnnConvolutionFwdAlgoPerf_t fwd_algo[kMaxAlgos];
+          CHECK_EQ(cudnnFindConvolutionForwardAlgorithm(s->dnn_handle_,
                  in_desc_,
                  filter_desc_,
                  forward_conv_desc_,
@@ -634,15 +654,16 @@ class CuDNNConvolutionOp : public Operator {
                  kMaxAlgos,
                  &nalgo,
                  fwd_algo), CUDNN_STATUS_SUCCESS);
-        i = 0;
-        while (i < nalgo
+          i = 0;
+          while (i < nalgo
                && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
                || (param_.cudnn_tune.value() == conv::kLimited
                && fwd_algo[i].memory > workspace_byte))) ++i;
-        if (i == nalgo) {
-          LOG(FATAL) << "Failed to find a forward convolution algorithm.";
-        } else {
-          this->algo_ = fwd_algo[i].algo;
+          if (i == nalgo) {
+            LOG(FATAL) << "Failed to find a forward convolution algorithm.";
+          } else {
+            this->algo_ = fwd_algo[i].algo;
+          }
         }
 
         cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo[kMaxAlgos];
