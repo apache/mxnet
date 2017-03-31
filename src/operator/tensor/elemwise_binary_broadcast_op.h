@@ -57,7 +57,7 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#define NDIM_SWITCH(ndim, NDim, ...)  \
+#define BROADCAST_NDIM_SWITCH(ndim, NDim, ...)  \
   if (ndim <= 2) {                    \
     const int NDim = 2;               \
     {__VA_ARGS__}                     \
@@ -104,7 +104,7 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
     ++j;
   }
   if (j <= broadcast::MAX_DIM) {
-    NDIM_SWITCH(j, NDim, {
+    BROADCAST_NDIM_SWITCH(j, NDim, {
       new_lshape->assign(&(*new_lshape)[0], &(*new_lshape)[NDim]);
       new_rshape->assign(&(*new_rshape)[0], &(*new_rshape)[NDim]);
       new_oshape->assign(&(*new_oshape)[0], &(*new_oshape)[NDim]);
@@ -130,7 +130,7 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   } else {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      NDIM_SWITCH(ndim, NDim, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
         BinaryBroadcastComputeImpl<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
           inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
       });
@@ -204,7 +204,7 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
       const TBlob lhs = outputs[0].reshape(new_lshape);
       const TBlob rhs = outputs[1].reshape(new_rshape);
       const TBlob out = inputs[0].reshape(new_oshape);
-      NDIM_SWITCH(ndim, NDim, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
         // Request temporary storage
         size_t workspace_size_l = ReduceWorkspaceSize<NDim, DType>(s, lhs, req[0], out);
         size_t workspace_size_r = ReduceWorkspaceSize<NDim, DType>(s, rhs, req[1], out);
@@ -259,7 +259,7 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     BinaryBackwardUseIn<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      NDIM_SWITCH(new_oshape.ndim(), NDim, {
+      BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
         BinaryBroadcastBackwardUseInImpl<xpu, NDim, DType, LOP, ROP>(
           ctx, inputs, req, outputs, new_lshape, new_rshape, new_oshape);
       });
@@ -267,7 +267,7 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
   }
 }
 
-#undef NDIM_SWITCH
+#undef BROADCAST_NDIM_SWITCH
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                \
   NNVM_REGISTER_OP(name)                                              \
