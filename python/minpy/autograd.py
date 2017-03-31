@@ -5,9 +5,9 @@ from __future__ import division
 
 import ctypes
 import functools
-from .base import _LIB, check_call
-from .base import mx_uint, NDArrayHandle, c_array
-from .ndarray import NDArray
+from mxnet.base import _LIB, check_call
+from mxnet.base import mx_uint, NDArrayHandle, c_array
+from mxnet.ndarray import NDArray
 
 def set_recording(recording):
     """Turn on or turn of operator recording.
@@ -96,6 +96,22 @@ def grad(func):
     -------
     grad_func: a python function
         A function that would compute the gradient of arguments.
+
+    Examples
+    --------
+    >>> # autograd support dynamic graph which is changed
+    >>> # every instance
+    >>> def func(x):
+    >>>     r = random.randint(0, 1)
+    >>>     if r % 2:
+    >>>         return x**2
+    >>>     else:
+    >>>         return x/3
+    >>> # use `grad(func)` to get the gradient function
+    >>> for x in range(10):
+    >>>     grad_func = grad(func)
+    >>>     inputs = nd.array([[1, 2, 3], [4, 5, 6]])
+    >>>     grad_vals = grad_func(inputs)
     """
     grad_with_loss_func = grad_and_loss(func)
     @functools.wraps(grad_with_loss_func)

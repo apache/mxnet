@@ -8,7 +8,7 @@ if "--inplace" in sys.argv:
     from distutils.core import setup
     from distutils.extension import Extension
 else:
-    from setuptools import setup
+    from setuptools import setup, find_packages
     from setuptools.extension import Extension
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
@@ -61,6 +61,24 @@ def config_cython():
         print("WARNING: Cython is not installed, will compile without cython module")
         return []
 
+setup(
+    name='minpy',
+    version='0.4.0',
+    description='Pure NumPy practice with third-party operator integration.',
+    maintainer='DMLC',
+    maintainer_email='minerva-support@googlegroups.com',
+    packages=find_packages(),
+    install_requires=[
+        'numpy',
+        'scipy',
+        'pillow',
+        'semantic-version',
+        'six',
+        'h5py',
+        'PyYAML',
+        'tabulate',
+    ],
+    url='https://github.com/dmlc/minpy')
 
 setup(name='mxnet',
       version=__version__,
