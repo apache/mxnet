@@ -11,8 +11,8 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}"
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
-mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
+mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLML variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
 mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and found)" OFF)
@@ -21,6 +21,7 @@ mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
+mxnet_option(USE_CPP_PACKAGE      "Build C++ Package" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
@@ -291,6 +292,10 @@ if(USE_PLUGINS_WARPCTC)
 endif()
 
 if(USE_PLUGIN_CAFFE)
+  if(NOT USE_CUDA)
+    set(CPU_ONLY ON)
+    add_definitions(-DCPU_ONLY=1)
+  endif()
   if(NOT DEFINED CAFFE_PATH)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
       # Need newer FindCUDA.cmake that correctly handles -std=c++11
@@ -314,6 +319,7 @@ if(USE_PLUGIN_CAFFE)
   list(APPEND SOURCE ${PLUGINS_SOURCE})
   list(APPEND CUDA ${PLUGINS_CUSRC})
   include_directories(${CMAKE_BINARY_DIR}/include)
+  add_definitions(-DMXNET_USE_CAFFE=1)
   list(APPEND mxnet_LINKER_LIBS
     protobuf boost_system boost_thread boost_filesystem
     gflags glog caffe
@@ -348,8 +354,10 @@ if(USE_CUDA)
     list(APPEND mxnet_LINKER_LIBS ${CUDA_nvrtc_LIBRARY})
     set(CUDA_cuda_LIBRARY "${CUDA_nvrtc_LIBRARY}/../cuda.lib")
     list(APPEND mxnet_LINKER_LIBS ${CUDA_cuda_LIBRARY})
+    FIND_LIBRARY(CUDA_cufft_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
+    list(APPEND mxnet_LINKER_LIBS "${CUDA_cufft_LIBRARY}/../cufft.lib") # For fft operator
   else(MSVC)
-    list(APPEND mxnet_LINKER_LIBS nvrtc cuda)
+    list(APPEND mxnet_LINKER_LIBS nvrtc cuda cufft)
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
@@ -395,19 +403,26 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
 else()
   if(UNIX)
-    add_library(mxnet_static STATIC ${SOURCE})
-    # Need an arbitrary source file to trigger CMake to build the library
-    add_library(mxnet SHARED src/initialize.cc)
-    target_link_libraries(mxnet
-        -Wl,--whole-archive mxnet_static -Wl,--no-whole-archive
-    )
-    add_custom_target(
-        Name ALL
-        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-        COMMAND ln -sf libmxnet_static.a libmxnet.a
-        DEPENDS mxnet_static
-    )
+    set(MXNET_DYNAMIC_ONLY ON)
+    if(MXNET_DYNAMIC_ONLY)
+      add_library(mxnet SHARED ${SOURCE})
+    else()
+      set(INITIALIZE_SOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/initialize.cc)
+      list(REMOVE_ITEM SOURCE ${INITIALIZE_SOURCE_FILE})
+      add_library(mxnet_static STATIC ${INITIALIZE_SOURCE_FILE} ${SOURCE})
+      # Need an arbitrary source file to trigger CMake to build the library
+      add_library(mxnet SHARED ${INITIALIZE_SOURCE_FILE})
+      # This has prolems, as it adds libmxnet_static to INTERFACE_LINK_LIBRARIES
+      target_link_libraries(mxnet "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
+      #target_link_libraries(mxnet mxnet_static)
+      add_custom_target(
+          StaticallyLinkStaticMXNetLibrary ALL
+          BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
+          WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+          COMMAND ln -sf libmxnet_static.a libmxnet.a
+          DEPENDS mxnet_static
+      )
+    endif()
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()
@@ -429,7 +444,7 @@ endif()
 if(USE_DIST_KVSTORE)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
     add_subdirectory("ps-lite")
-    list(APPEND pslite_LINKER_LIBS pslite)  
+    list(APPEND pslite_LINKER_LIBS pslite)
     target_link_libraries(mxnet debug ${pslite_LINKER_LIBS_DEBUG})
     target_link_libraries(mxnet optimized ${pslite_LINKER_LIBS_RELEASE})
   else()
@@ -473,6 +488,12 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
+if(USE_CPP_PACKAGE)
+  add_subdirectory(cpp-package)
+endif()
+
+add_subdirectory(example/image-classification/predict-cpp)
+
 # ---[ Linter target
 if(MSVC)
   find_package(PythonInterp)
@@ -480,17 +501,4 @@ if(MSVC)
 endif()
 set(LINT_DIRS include src scripts python)
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${PROJECT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
-
-add_subdirectory(example/image-classification/predict-cpp)
-
-if(NOT MSVC)
-  add_custom_command(TARGET mxnet
-    POST_BUILD
-    COMMAND cp $<TARGET_FILE:mxnet> .
-    COMMAND python2 OpWrapperGenerator.py $<TARGET_FILE_NAME:mxnet>
-    COMMAND rm $<TARGET_FILE_NAME:mxnet>
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cpp-package/src/OpWrapperGenerator/
-  )
-endif()
-
 
