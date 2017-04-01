@@ -5,8 +5,8 @@
 * \author Zhang Chen
 */
 
-#ifndef MXNETCPP_MODEL_H
-#define MXNETCPP_MODEL_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_MODEL_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_MODEL_H_
 
 #include <string>
 #include <vector>
@@ -54,5 +54,5 @@ class FeedForward {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif /* end of include guard: MXNETCPP_MODEL_H */
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_MODEL_H_
 

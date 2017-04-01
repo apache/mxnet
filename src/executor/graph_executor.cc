@@ -906,8 +906,6 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     // you need to copy it out. (potential memory leak risk)
     char *p_opr_name = new char[opr_names.size() + 1];
     memcpy(p_opr_name, opr_names.c_str(), opr_names.size() + 1);
-#else
-    char *p_opr_name = nullptr;
 #endif
   ret.opr = Engine::Get()->NewOperator(
       exec_fun, use_vars, mutate_vars, FnProperty::kNormal,

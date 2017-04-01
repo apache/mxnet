@@ -414,6 +414,19 @@ def test_broadcast_binary():
     check_broadcast_binary(lambda x, y: x <= y)
     check_broadcast_binary(lambda x, y: x == y)
 
+def test_moveaxis():
+    X = mx.nd.array([[[1, 2, 3], [4, 5, 6]],
+                     [[7, 8, 9], [10, 11, 12]]])
+    res = mx.nd.moveaxis(X, 0, 3).asnumpy()
+    true_res = mx.nd.array([[[  1.,   7.],
+                             [  2.,   8.],
+                             [  3.,   9.]],
+                            [[  4.,  10.],
+                             [  5.,  11.],
+                             [  6.,  12.]]])
+    assert same(res, true_res.asnumpy())
+    assert mx.nd.moveaxis(X, 2, 0).shape == (3, 2, 2)
+
 def test_arange():
     for i in range(5):
         start = np.random.rand() * 10
