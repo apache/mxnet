@@ -308,7 +308,7 @@ void TestIterator(
 	double delayms = std::chrono::duration_cast<std::chrono::milliseconds>(endNow - start).count();
 	cout << "[" << identifier << "] Average Time=" << delayms / iterations <<
 		"ms | Throughput=" <<
-		(1000 * iterations / delayms) * FLOAT_COUNT * sizeof(real_t) / 1024 / 1024 / 1024 <<
+		(1000 * iterations / delayms) * FLOAT_COUNT * sizeof(real_t) * COPIES / 1024 / 1024 / 1024 <<
 		"GB/s" <<
 		endl;
 }
