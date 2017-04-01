@@ -5,9 +5,11 @@ $(document).ready(function () {
     function showContent() {
         $('.opt-group .opt').each(function(){
             $('.'+label($(this).text())).hide();
+            $('.highlight-'+label($(this).text())).hide();
         });
         $('.opt-group .active').each(function(){
             $('.'+label($(this).text())).show();
+            $('.highlight-'+label($(this).text())).show();
         });
     }
     showContent();

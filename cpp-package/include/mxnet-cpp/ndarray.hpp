@@ -313,12 +313,22 @@ inline std::vector<mx_uint> NDArray::GetShape() const {
   return ret;
 }
 
-inline const mx_float *NDArray::GetData() const {
-  mx_float *ret;
-  CHECK_NE(GetContext().GetDeviceType(), DeviceType::kGPU);
-  MXNDArrayGetData(blob_ptr_->handle_, &ret);
+inline int NDArray::GetDType() const {
+  int ret;
+  MXNDArrayGetDType(blob_ptr_->handle, &ret);
   return ret;
 }
+
+inline const mx_float *NDArray::GetData() const {
+  void *ret;
+  CHECK_NE(GetContext().GetDeviceType(), DeviceType::kGPU);
+  MXNDArrayGetData(blob_ptr_->handle_, &ret);
+  if (GetDType() != 0) {
+    return NULL;
+  }
+  return static_cast<mx_float*>(ret);
+}
+
 inline Context NDArray::GetContext() const {
   int out_dev_type;
   int out_dev_id;
