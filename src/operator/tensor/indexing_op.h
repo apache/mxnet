@@ -574,6 +574,7 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE((*in_attrs)[0], -1) << "Index type must be set for one_hot operator";
   int depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
@@ -582,10 +583,6 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);  // assign output type
 
-  // assign indices type
-  if (-1 == (*in_attrs)[0]) {
-    (*in_attrs)[0] = mshadow::kInt32;
-  }
   return true;
 }
 

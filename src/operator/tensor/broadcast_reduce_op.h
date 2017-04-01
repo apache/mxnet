@@ -535,15 +535,11 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
 inline bool PickOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_attrs,
                        std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE((*in_attrs)[1], -1) << "Index type must be set for pick operator";
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
-  // assign indices type
-  if (-1 == (*in_attrs)[1]) {
-    TYPE_ASSIGN_CHECK(*in_attrs, 1, (*in_attrs)[0]);
-  }
-
   return (*out_attrs)[0] != -1;
 }
 
