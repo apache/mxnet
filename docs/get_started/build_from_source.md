@@ -114,10 +114,8 @@ straightforward. Here we provide the instructions to build `gcc-4.8` from source
 
 <div class="windows">
 
-1. If [Microsoft Visual Studio 2013](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Install [Visual C++ Compiler Nov 2013 CTP](https://www.microsoft.com/en-us/download/details.aspx?id=41151).
-3. Back up all of the files in the ```C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC``` folder to a different location.
-4. Copy all of the files in the ```C:\Program Files (x86)\Microsoft Visual C++ Compiler Nov 2013 CTP``` folder (or the folder where you extracted the zip archive) to the ```C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC``` folder, and overwrite all existing files.
+1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
+2. DownLoad and Install [CMake](https://cmake.org/) if it is not already installed.
 
 </div>
 
