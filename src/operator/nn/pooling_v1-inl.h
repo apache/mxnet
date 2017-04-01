@@ -5,8 +5,8 @@
  * \author Bing Xu
 */
 
-#ifndef MXNET_OPERATOR_POOLING_V1_INL_H_
-#define MXNET_OPERATOR_POOLING_V1_INL_H_
+#ifndef MXNET_OPERATOR_NN_POOLING_V1_INL_H_
+#define MXNET_OPERATOR_NN_POOLING_V1_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -16,7 +16,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "./operator_common.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -334,4 +334,4 @@ class PoolingV1Prop : public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_POOLING_V1_INL_H_
+#endif  // MXNET_OPERATOR_NN_POOLING_V1_INL_H_

@@ -5,8 +5,8 @@
  * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo
  * \author Bing Xu, Jun Wu
 */
-#ifndef MXNET_OPERATOR_CONVOLUTION_INL_H_
-#define MXNET_OPERATOR_CONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_NN_CONVOLUTION_INL_H_
+#define MXNET_OPERATOR_NN_CONVOLUTION_INL_H_
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -20,8 +20,8 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "./operator_common.h"
-#include "./nn/im2col.h"
+#include "../operator_common.h"
+#include "./im2col.h"
 
 
 namespace mxnet {
@@ -560,4 +560,4 @@ class ConvolutionProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_NN_CONVOLUTION_INL_H_
