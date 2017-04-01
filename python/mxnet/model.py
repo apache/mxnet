@@ -136,7 +136,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                         epoch_end_callback=None, batch_end_callback=None,
                         logger=None, work_load_list=None, monitor=None,
                         eval_end_callback=None,
-                        eval_batch_end_callback=None, sym_gen=None):
+                        eval_batch_end_callback=None, sym_gen=None, updateFreq=1):
     """Internal training function on multiple devices.
     This function will also work for single device as well.
 
@@ -224,6 +224,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     # Now start training
     train_data.reset()
+
+    
     for epoch in range(begin_epoch, end_epoch):
         # Training phase
         tic = time.time()
@@ -233,6 +235,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         while True:
             do_reset = True
             for data_batch in train_data:
+                
                 executor_manager.load_data_batch(data_batch)
 
                 if monitor is not None:
@@ -240,18 +243,20 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
                 executor_manager.forward(is_train=True)
                 executor_manager.backward()
-
-                if update_on_kvstore:
-                    _update_params_on_kvstore(executor_manager.param_arrays,
-                                              executor_manager.grad_arrays,
-                                              kvstore)
-                else:
-                    _update_params(executor_manager.param_arrays,
-                                   executor_manager.grad_arrays,
-                                   updater=updater,
-                                   num_device=len(ctx),
-                                   kvstore=kvstore)
-
+                
+                if (nbatch+1) % updateFreq == 0:
+                    if update_on_kvstore:
+                        print "[INA Deferred Aggregation] " + str(nbatch+1)
+                        _update_params_on_kvstore(executor_manager.param_arrays,
+                                                  executor_manager.grad_arrays,
+                                                  kvstore)
+                    else:
+                        _update_params(executor_manager.param_arrays,
+                                       executor_manager.grad_arrays,
+                                       updater=updater,
+                                       num_device=len(ctx),
+                                       kvstore=kvstore)
+                        
                 if monitor is not None:
                     monitor.toc_print()
 
@@ -713,7 +718,7 @@ class FeedForward(BASE_ESTIMATOR):
     def fit(self, X, y=None, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
             work_load_list=None, monitor=None, eval_end_callback=LogValidationMetricsCallback(),
-            eval_batch_end_callback=None):
+            eval_batch_end_callback=None,updateFreq=1):
         """Fit the model.
 
         Parameters
@@ -810,7 +815,7 @@ class FeedForward(BASE_ESTIMATOR):
                             logger=logger, work_load_list=work_load_list, monitor=monitor,
                             eval_end_callback=eval_end_callback,
                             eval_batch_end_callback=eval_batch_end_callback,
-                            sym_gen=self.sym_gen)
+                            sym_gen=self.sym_gen,updateFreq=updateFreq)
 
 
     def save(self, prefix, epoch=None):

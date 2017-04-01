@@ -283,6 +283,23 @@ class ThreadedEngine : public Engine {
   }
 
  protected:
+   /*!
+   * \brief Callback on operation completion.
+   *
+   * On operation completion, this will trigger subsequent operations.
+   */
+  inline void OnComplete(ThreadedOpr* threaded_opr);
+  // callback to the threaded engine
+  static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+  /*! \brief whether it is during shutdown phase*/
+  std::atomic<bool> shutdown_phase_{false};
+  /*!\brief show more information from engine actions */
+  bool engine_info_{false};
+
+  /*! \brief debug information about wait for var. */
+  std::atomic<ThreadedVar*> debug_wait_var_{nullptr};
+  /*! \brief debug information about wait for var. */
+  std::atomic<OprBlock*> debug_push_opr_{nullptr};
   /*!
    * \brief Push the opr block to execution queue to be executed.
    *  This function is implemented by the corresponding subclass
@@ -298,7 +315,7 @@ class ThreadedEngine : public Engine {
    * \param run_ctx runtime context used to execute the function.
    * \param opr_block the opr_block to be executed and deleted.
    */
-  void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
+  virtual void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
 #if MXNET_USE_PROFILER
     if (opr_block->profiling && threaded_opr->opr_name) {
@@ -357,28 +374,14 @@ class ThreadedEngine : public Engine {
    */
   void CheckDuplicate(std::vector<VarHandle> const& const_vars,
                       std::vector<VarHandle> const& mutable_vars);
-  /*!
-   * \brief Callback on operation completion.
-   *
-   * On operation completion, this will trigger subsequent operations.
-   */
-  inline void OnComplete(ThreadedOpr* threaded_opr);
-  // callback to the threaded engine
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+
   /*!
    * \brief Number of pending operations.
    */
   std::atomic<int> pending_{0};
   /*! \brief whether we want to kill the waiters */
   std::atomic<bool> kill_{false};
-  /*! \brief whether it is during shutdown phase*/
-  std::atomic<bool> shutdown_phase_{false};
-  /*!\brief show more information from engine actions */
-  bool engine_info_{false};
-  /*! \brief debug information about wait for var. */
-  std::atomic<ThreadedVar*> debug_wait_var_{nullptr};
-  /*! \brief debug information about wait for var. */
-  std::atomic<OprBlock*> debug_push_opr_{nullptr};
+
   /*!
    * \brief Mutex and condition_variable,
    *  used to Notify waits for single or all variables.

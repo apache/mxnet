@@ -3,6 +3,7 @@
  * \file engine.h
  * \brief Engine that schedules all the operations according to dependency.
  */
+#pragma once
 #ifndef MXNET_ENGINE_H_
 #define MXNET_ENGINE_H_
 
@@ -14,6 +15,9 @@
 #endif
 #include <vector>
 #include "./base.h"
+#include <mxnet/RunProfile.h>
+#include <thread>
+
 
 namespace mxnet {
 
@@ -52,7 +56,12 @@ class CallbackOnComplete {
   /*! \brief the parameter set on callback */
   void* param_;
 };
+
+
 }  // namespace engine
+
+
+
 
 #if DMLC_USE_CXX11
 /*! \brief Function property, used to hint what action is pushed to engine. */
@@ -227,6 +236,8 @@ class MXNET_API Engine {
     return ret;
   }
 };  // class Engine
+
+
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet
 #endif  // MXNET_ENGINE_H_
