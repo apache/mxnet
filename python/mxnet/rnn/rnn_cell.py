@@ -505,6 +505,11 @@ class FusedRNNCell(BaseRNNCell):
         self._get_next_state = get_next_state
         self._directions = ['l', 'r'] if bidirectional else ['l']
 
+        if self._num_layers == 1 and self._dropout > 0:
+            warnings.warn("FusedRNNCell only does dropout on internal layers, "
+                          "not output layer. Setting dropout when num_layers=1 "
+                          "has no effect", stacklevel=2)
+
         initializer = init.FusedRNN(None, num_hidden, num_layers, mode,
                                     bidirectional, forget_bias)
         self._parameter = self.params.get('parameters', init=initializer)
@@ -736,18 +741,20 @@ class SequentialRNNCell(BaseRNNCell):
             begin_state = self.begin_state()
 
         p = 0
+        states = []
         for i, cell in enumerate(self._cells):
             n = len(cell.state_shape)
-            states = begin_state[p:p+n]
+            state = begin_state[p:p+n]
             p += n
-            inputs, states = cell.unroll(length, inputs=inputs, begin_state=states, layout=layout,
-                                         merge_outputs=None if i < num_cells-1 else merge_outputs)
+            inputs, state = cell.unroll(length, inputs=inputs, begin_state=state, layout=layout,
+                                        merge_outputs=None if i < num_cells-1 else merge_outputs)
+            states.append(state)
 
-        return inputs, states
+        return inputs, sum(states, [])
 
 
 class DropoutCell(BaseRNNCell):
-    """Apply dropout on input.
+    """Apply dropout on input
 
     Parameters
     ----------
@@ -946,3 +953,69 @@ class BidirectionalCell(BaseRNNCell):
 
         states = [l_states, r_states]
         return outputs, states
+
+
+class AttentionEncoderCell(BaseRNNCell):
+    """Place holder cell that prepare input for attention decoders"""
+    def __init__(self, prefix='encode_', params=None):
+        super(AttentionEncoderCell, self).__init__(prefix, params=params)
+
+    @property
+    def state_shape(self):
+        return []
+
+    def __call__(self, inputs, states):
+        return inputs, states + [symbol.expand_dims(inputs, axis=1)]
+
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        outputs = _normalize_sequence(length, inputs, layout, merge_outputs)
+        if merge_outputs is True:
+            states = outputs
+        else:
+            states = inputs
+
+        # attention cell always use NTC layout for states
+        states, _ = _normalize_sequence(None, states, 'NTC', True, layout)
+        return outputs, [states]
+
+
+def _attention_pooling(source, scores):
+    # source: (batch_size, seq_len, encoder_num_hidden)
+    # scores: (batch_size, seq_len, 1)
+    probs = symbol.softmax(scores, axis=1)
+    output = symbol.batch_dot(source, probs, transpose_a=True)
+    return symbol.reshape(output, shape=(0, 0))
+
+
+class BaseAttentionCell(BaseRNNCell):
+    """Base class for attention cells"""
+    def __init__(self, prefix='att_', params=None):
+        super(BaseAttentionCell, self).__init__(prefix, params=params)
+
+    @property
+    def state_shape(self):
+        return [(0, 0, 0)]
+
+    def __call__(self, inputs, states):
+        raise NotImplementedError
+
+
+class DotAttentionCell(BaseAttentionCell):
+    """Dot attention"""
+    def __init__(self, prefix='dotatt_', params=None):
+        super(DotAttentionCell, self).__init__(prefix, params=params)
+
+    def __call__(self, inputs, states):
+        # inputs: (batch_size, decoder_num_hidden)
+        # for dot attention decoder_num_hidden must equal encoder_num_hidden
+        if len(states) > 1:
+            states = [symbol.concat(*states, dim=1)]
+
+        # source: (batch_size, seq_len, encoder_num_hidden)
+        source = states[0]
+        # (batch_size, decoder_num_hidden, 1)
+        inputs = symbol.expand_dims(inputs, axis=2)
+        # (batch_size, seq_len, 1)
+        scores = symbol.batch_dot(source, inputs)
+        # (batch_size, encoder_num_hidden)
+        return _attention_pooling(source, scores), states

@@ -118,7 +118,30 @@ def test_unfuse():
     assert outs == [(10, 200), (10, 200), (10, 200)]
 
 
+def test_attention():
+    encoder = mx.rnn.SequentialRNNCell()
+    encoder.add(mx.rnn.LSTMCell(100, prefix='rnn_encoder0_'))
+    encoder.add(mx.rnn.AttentionEncoderCell())
+
+    decoder = mx.rnn.SequentialRNNCell()
+    decoder.add(mx.rnn.LSTMCell(100, prefix='rnn_decoder0_'))
+    decoder.add(mx.rnn.DotAttentionCell())
+
+    encoder_data = mx.sym.Variable('encoder_data')
+    decoder_data = mx.sym.Variable('decoder_data')
+
+    _, states = encoder.unroll(3, encoder_data)
+    outputs, _ = decoder.unroll(3, decoder_data, begin_state=states)
+    outputs = mx.sym.Group(outputs)
+
+    # assert outputs.list_outputs() == ['rnn_stack4_t0_out_output', 'rnn_stack4_t1_out_output', 'rnn_stack4_t2_out_output']
+
+    args, outs, auxs = outputs.infer_shape(encoder_data=(10, 3, 50), decoder_data=(10, 3, 50))
+    assert outs == [(10, 100), (10, 100), (10, 100)]
+
+
 if __name__ == '__main__':
+    test_attention()
     test_rnn()
     test_lstm()
     test_lstm_forget_bias()
