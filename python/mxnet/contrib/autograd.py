@@ -5,9 +5,9 @@ from __future__ import division
 
 import ctypes
 import functools
-from mxnet.base import _LIB, check_call
-from mxnet.base import mx_uint, NDArrayHandle, c_array
-from mxnet.ndarray import NDArray
+from ..base import _LIB, check_call
+from ..base import mx_uint, NDArrayHandle, c_array
+from ..ndarray import NDArray
 
 def set_recording(recording):
     """Turn on or turn of operator recording.
@@ -99,7 +99,7 @@ def grad(func):
 
     Examples
     --------
-    >>> # autograd support dynamic graph which is changed
+    >>> # autograd supports dynamic graph which is changed
     >>> # every instance
     >>> def func(x):
     >>>     r = random.randint(0, 1)

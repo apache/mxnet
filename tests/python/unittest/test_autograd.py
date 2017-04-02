@@ -1,5 +1,5 @@
 import mxnet.ndarray as nd
-from minpy import grad, grad_and_loss
+from mxnet.contrib.autograd import grad, grad_and_loss
 
 def autograd_assert(*args, **kwargs):
     f = kwargs["func"]
