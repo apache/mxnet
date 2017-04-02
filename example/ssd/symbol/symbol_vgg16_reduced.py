@@ -78,15 +78,15 @@ def get_symbol_train(num_classes=20):
         data=relu5_3, pool_type="max", kernel=(3, 3), stride=(1, 1),
         pad=(1,1), name="pool5")
     # group 6
-    conv6 = mx.symbol.Convolution(
+    fc6 = mx.symbol.Convolution(
         data=pool5, kernel=(3, 3), pad=(6, 6), dilate=(6, 6),
-        num_filter=1024, name="conv6")
-    relu6 = mx.symbol.Activation(data=conv6, act_type="relu", name="relu6")
+        num_filter=1024, name="fc6")
+    relu6 = mx.symbol.Activation(data=fc6, act_type="relu", name="relu6")
     # drop6 = mx.symbol.Dropout(data=relu6, p=0.5, name="drop6")
     # group 7
-    conv7 = mx.symbol.Convolution(
-        data=relu6, kernel=(1, 1), pad=(0, 0), num_filter=1024, name="conv7")
-    relu7 = mx.symbol.Activation(data=conv7, act_type="relu", name="relu7")
+    fc7 = mx.symbol.Convolution(
+        data=relu6, kernel=(1, 1), pad=(0, 0), num_filter=1024, name="fc7")
+    relu7 = mx.symbol.Activation(data=fc7, act_type="relu", name="relu7")
     # drop7 = mx.symbol.Dropout(data=relu7, p=0.5, name="drop7")
 
     ### ssd extra layers ###
