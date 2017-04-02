@@ -37,7 +37,7 @@ A convenient function to construct a callback that runs every `n` mini-batches.
 For example, the [`speedometer`](@ref) callback is defined as
 
 ```julia
-every_n_iter(frequency, call_on_0=true) do state :: OptimizationState
+every_n_batch(frequency, call_on_0=true) do state :: OptimizationState
   if state.curr_batch == 0
     # reset timer
   else
@@ -102,7 +102,7 @@ A convenient function to construct a callback that runs every `n` full data-pass
           yet. This is useful if you want to inspect the randomly initialized model
           that has not seen any data yet.
 
-See also [`every_n_iter`](@ref).
+See also [`every_n_batch`](@ref).
 """
 function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
