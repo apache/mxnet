@@ -435,7 +435,7 @@ int MXNDArrayGetShape(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayGetData(NDArrayHandle handle,
-                               mx_float **out_pdata);
+                                void **out_pdata);
 /*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray
