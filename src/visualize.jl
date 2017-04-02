@@ -51,7 +51,7 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
     attr  = deepcopy(node_attr)
     label = op
 
-    # Up to 0.8 version of mxnet additional info was stored in 
+    # Up to 0.8 version of mxnet additional info was stored in
     # node["param"]. Staring from pre0.9 `param` was changed to `attr`.
     if haskey(node, "param")
       node_info = node["param"]
@@ -69,9 +69,15 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
         continue
       end
     elseif op == "Convolution"
+      if haskey(node_info,"stride")
+        stride_info=_extract_shape(node_info["stride"])
+      else
+        stride_info="1"
+      end
+
       label = format("Convolution\nkernel={1}\nstride={2}\nn-filter={3}",
                      _extract_shape(node_info["kernel"]),
-                     _extract_shape(node_info["stride"]),
+                     stride_info,
                      node_info["num_filter"])
       colorkey = 2
     elseif op == "FullyConnected"
@@ -83,10 +89,15 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
     elseif op == "BatchNorm"
       colorkey = 4
     elseif op == "Pooling"
+      if haskey(node_info,"stride")
+        stride_info=_extract_shape(node_info["stride"])
+      else
+        stride_info="1"
+      end
       label = format("Pooling\ntype={1}\nkernel={2}\nstride={3}",
                      node_info["pool_type"],
                      _extract_shape(node_info["kernel"]),
-                     _extract_shape(node_info["stride"]))
+                     stride_info)
       colorkey = 5
     elseif op ∈ ("Concat", "Flatten", "Reshape")
       colorkey = 6
