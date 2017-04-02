@@ -18,7 +18,6 @@ from . import recordio
 from . import operator
 # use mx.nd as short for mx.ndarray
 from . import ndarray as nd
-from . import autograd
 # use mx.rnd as short for mx.random
 from . import random as rnd
 from . import random
