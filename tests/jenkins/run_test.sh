@@ -10,6 +10,7 @@ echo "USE_CUDNN=1" >> config.mk
 echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
+echo "USE_CPP_PACKAGE=1" >> config.mk
 
 set -e
 

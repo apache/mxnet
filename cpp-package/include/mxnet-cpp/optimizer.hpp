@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_OPTIMIZER_HPP
-#define MXNETCPP_OPTIMIZER_HPP
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_
 
 #include <algorithm>
 #include <utility>
@@ -136,4 +136,4 @@ inline void SGDOptimizer::CreateState_(int index, NDArray weight) {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_OPTIMIZER_HPP
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_

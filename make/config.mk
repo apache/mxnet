@@ -150,6 +150,12 @@ USE_S3 = 0
 # path to folders containing projects specific operators that you don't want to put in src/operators
 EXTRA_OPERATORS =
 
+#----------------------------
+# other features
+#----------------------------
+
+# Create C++ interface package
+USE_CPP_PACKAGE = 0
 
 #----------------------------
 # plugins

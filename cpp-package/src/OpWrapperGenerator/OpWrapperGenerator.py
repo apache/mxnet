@@ -1,10 +1,12 @@
 ﻿# -*- coding: utf-8 -*-
 from ctypes import *
 from ctypes.util import find_library
+import os
 import logging
 import platform
 import re
 import sys
+import tempfile
 
 class EnumType:
     name = ''
@@ -45,6 +47,7 @@ class EnumType:
     def GetConvertEnumVariableToString(self, variable=''):
         return "%sValues[int(%s)]" % (self.name, variable)
 
+
 class Arg:
     typeDict = {'boolean':'bool',\
         'Shape(tuple)':'Shape',\
@@ -55,6 +58,7 @@ class Arg:
         'Symbol or Symbol[]':'const std::vector<Symbol>&',\
         'NDArray[]':'const std::vector<Symbol>&',\
         'ndarray-or-symbol[]':'const std::vector<Symbol>&',\
+        'caffe-layer-parameter':'::caffe::LayerParameter',\
         'float':'mx_float',\
         'real_t':'mx_float',\
         'int':'int',\
@@ -88,7 +92,7 @@ class Arg:
             self.hasDefault = True
             self.defaultString = typeString.split('default=')[1].strip().strip("'")
             if typeString.startswith('string'):
-                self.defaultString = '"' + self.defaultString + '"'
+                self.defaultString = self.MakeCString(self.defaultString)
             elif self.isEnum:
                 self.defaultString = self.enum.GetDefaultValueString(self.defaultString)
             elif self.defaultString == 'None':
@@ -101,6 +105,14 @@ class Arg:
                 self.defaultString = 'Shape' + self.defaultString
             elif self.type == 'dmlc::optional<int>':
                 self.defaultString = self.type + '(' + self.defaultString + ')'
+            elif typeString.startswith('caffe-layer-parameter'):
+                self.defaultString = 'textToCaffeLayerParameter(' + self.MakeCString(self.defaultString) + ')'
+                hasCaffe = True
+
+    def MakeCString(self, str):
+        str = str.replace('\n', "\\n")
+        str = str.replace('\t', "\\t")
+        return '\"' + str + '\"'
 
     def ConstructEnumTypeName(self, opName = '', argName = ''):
         a = opName[0].upper()
@@ -135,6 +147,7 @@ class Op:
             if arg.hasDefault:
                 orderedArgs.append(arg)
         self.args = orderedArgs
+
     def WrapDescription(self, desc = ''):
         ret = []
         sentences = desc.split('.')
@@ -153,6 +166,7 @@ class Op:
               ret.append(line[:pos].strip())
               line = line[pos:]
         return ret
+
     def GenDescription(self, desc = '', \
                         firstLineHead = ' * \\brief ', \
                         otherLineHead = ' *        '):
@@ -165,6 +179,7 @@ class Op:
         for i in range(1, len(descs)):
             ret = ret + (otherLineHead + descs[i]).rstrip() + '\n'
         return ret
+
     def GetOpDefinitionString(self, use_name, indent=0):
         ret = ''
         indentStr = ' ' * indent
@@ -244,6 +259,7 @@ class Op:
             ret = ret + '.CreateSymbol();\n'
         ret = ret + indentStr + '}\n'
         return ret
+
     def GetArgString(self, arg):
         ret = '%s %s' % (arg.type, arg.name)
         if arg.hasDefault:
@@ -337,31 +353,49 @@ if __name__ == "__main__":
     #    decl = decl + "=" + arg.defaultString
     #print(decl)
 
-    # generate file header
-    patternStr = ("/*!\n"
-                 "*  Copyright (c) 2016 by Contributors\n"
-                 "* \\file op.h\n"
-                 "* \\brief definition of all the operators\n"
-                 "* \\author Chuntao Hong, Xin Li\n"
-                 "*/\n"
-                 "\n"      
-                 "#ifndef _MXNETOP_H\n"
-                 "#define _MXNETOP_H\n"
-                 "\n"
-                 "#include <string>\n"
-                 "#include <vector>\n"
-                 "#include \"mxnet-cpp/base.h\"\n"
-                 "#include \"mxnet-cpp/shape.h\"\n"
-                 "#include \"mxnet-cpp/operator.h\"\n"
-                 "#include \"dmlc/optional.h\"\n"
-                 "\n"
-                 "namespace mxnet {\n"
-                 "namespace cpp {\n"
-                 "\n"
-                 "%s"
-                 "} //namespace cpp\n"
-                 "} //namespace mxnet\n"
-                 "#endif //ifndef _MXNETOP_H\n")
-    with open('../../include/mxnet-cpp/op.h', 'w') as f:
-        f.write(patternStr % ParseAllOps())
+    temp_file_name = ""
+    output_file = '../../include/mxnet-cpp/op.h'
+    try:
+        # generate file header
+        patternStr = ("/*!\n"
+                      "*  Copyright (c) 2016 by Contributors\n"
+                      "* \\file op.h\n"
+                      "* \\brief definition of all the operators\n"
+                      "* \\author Chuntao Hong, Xin Li\n"
+                      "*/\n"
+                      "\n"
+                      "#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
+                      "#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n"
+                      "\n"
+                      "#include <string>\n"
+                      "#include <vector>\n"
+                      "#include \"mxnet-cpp/base.h\"\n"
+                      "#include \"mxnet-cpp/shape.h\"\n"
+                      "#include \"mxnet-cpp/op_util.h\"\n"
+                      "#include \"mxnet-cpp/operator.h\"\n"
+                      "#include \"dmlc/optional.h\"\n"
+                      "\n"
+                      "namespace mxnet {\n"
+                      "namespace cpp {\n"
+                      "\n"
+                      "%s"
+                      "} //namespace cpp\n"
+                      "} //namespace mxnet\n"
+                      "#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OP_H_\n")
+
+        # Generate a temporary file name
+        tf = tempfile.NamedTemporaryFile()
+        temp_file_name = tf.name
+        tf.close()
+        with open(temp_file_name, 'w') as f:
+            f.write(patternStr % ParseAllOps())
+
+    except Exception, e:
+      os.remove(output_file)
+      if len(temp_file_name) > 0:
+        os.remove(temp_file_name)
+      raise(e)
+
+    os.system('./move-if-change.sh ' + temp_file_name + ' ' + output_file)
     pass
+
