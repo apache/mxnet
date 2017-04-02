@@ -453,7 +453,7 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, shape):
-        """Returns a view of this array with a new shape without altering any data.
+        """Returns a VIEW of this array with a new shape without altering any data.
 
         Parameters
         ----------
@@ -1052,6 +1052,45 @@ def array(source_array, ctx=None, dtype=None):
     arr = empty(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
+
+
+def moveaxis(tensor, source, destination):
+    """Moves the `source` axis into the `destination` position
+    while leaving the other axes in their original order
+
+    Parameters
+    ----------
+    tensor : mx.nd.array
+        The array which axes should be reordered
+    source : int
+        Original position of the axes to move.
+    destination : int
+        Destination position for each of the original axes.
+
+    Returns
+    -------
+    result : mx.nd.array
+        Array with moved axes.
+
+    Examples
+    --------
+    >>> X = mx.nd.array([[1, 2, 3],
+                         [4, 5, 6]])
+    >>> mx.nd.moveaxis(X, 0, 1).shape
+    (3, 2)
+    """
+    axes = list(range(tensor.ndim))
+    try:
+        axes.pop(source)
+    except IndexError:
+        raise ValueError('Source should verify 0 <= source < tensor.ndim'
+                         'Got %d' % source)
+    try:
+        axes.insert(destination, source)
+    except IndexError:
+        raise ValueError('Destination should verify 0 <= destination < tensor.ndim'
+                         'Got %d' % destination)
+    return transpose(tensor, axes)
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments
