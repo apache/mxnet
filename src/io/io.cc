@@ -18,5 +18,6 @@ namespace io {
 DMLC_REGISTER_PARAMETER(BatchParam);
 DMLC_REGISTER_PARAMETER(PrefetcherParam);
 DMLC_REGISTER_PARAMETER(ImageNormalizeParam);
+DMLC_REGISTER_PARAMETER(ImageDetNormalizeParam);
 }  // namespace io
 }  // namespace mxnet
