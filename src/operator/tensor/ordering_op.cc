@@ -45,12 +45,12 @@ Examples::
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TopKParam& param = nnvm::get<TopKParam>(n->attrs.parsed);
     if (param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth) {
-      std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.begin() + 1);
+      std::vector<nnvm::NodeEntry> inputs;
       index_t n_out = n->num_outputs();
       for (index_t i = 0; i < n_out; ++i) {
-        heads.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+        inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
       }
-      return MakeGradNode("_backward_topk", n, heads, n->attrs.dict);
+      return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs, n->attrs.dict);
     } else {
       return MakeZeroGradNodes(n, ograds);
     }
@@ -107,16 +107,16 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const SortParam& param = nnvm::get<SortParam>(n->attrs.parsed);
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.begin() + 1);
+    std::vector<nnvm::NodeEntry> inputs;
     index_t n_out = n->num_outputs();
     for (index_t i = 0; i < n_out; ++i) {
-      heads.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+      inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
     }
-    return MakeGradNode("_backward_topk", n, heads,
-                         {{"axis", n->attrs.dict["axis"]},
-                          {"k", "0"},
-                          {"ret_typ", "value"},
-                          {"is_ascend", std::to_string(param.is_ascend)}});
+    return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs,
+                               {{"axis", n->attrs.dict["axis"]},
+                                {"k", "0"},
+                                {"ret_typ", "value"},
+                                {"is_ascend", std::to_string(param.is_ascend)}});
   })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
