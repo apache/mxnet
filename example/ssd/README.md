@@ -22,7 +22,7 @@ Due to the permission issue, this example is maintained in this [repository](htt
 * Monitor validation mAP during training.
 * More network symbols under development and test.
 * Extra operators are now in `mxnet/src/operator/contrib`.
-* Old models are incompatible, use https://github.com/dmlc/mxnet/commits/17b6aac0d7656b44764b75b12c22074ed81038b3 for backward support. Or, you can modify the json file to update the symbols if you are familiar with it.
+* Old models are incompatible, use [e06c55d](https://github.com/dmlc/mxnet/commits/e06c55d6466a0c98c7def8f118a48060fb868901) or [e4f73f1](https://github.com/dmlc/mxnet/commits/e4f73f1f4e76397992c4b0a33c139d52b4b7af0e) for backward compatibility. Or, you can modify the json file to update the symbols if you are familiar with it, because only names have changed while weights and bias should still be good.
 
 ### Demo results
 ![demo1](https://cloud.githubusercontent.com/assets/3307514/19171057/8e1a0cc4-8be0-11e6-9d8f-088c25353b40.png)
@@ -33,7 +33,7 @@ Due to the permission issue, this example is maintained in this [repository](htt
 |        Model          | Training data    | Test data |  mAP |
 |:-----------------:|:----------------:|:---------:|:----:|
 | [VGG16_reduced 300x300](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_300_voc0712_trainval.zip) | VOC07+12 trainval| VOC07 test| 77.8|
-| VGG16_reduced 512x512 | VOC07+12 trainval | VOC07 test| 79.9|
+| [VGG16_reduced 512x512](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.5-beta/vgg16_ssd_512_voc0712_trainval.zip) | VOC07+12 trainval | VOC07 test| 79.9|
 *More to be added*
 
 ### Speed
