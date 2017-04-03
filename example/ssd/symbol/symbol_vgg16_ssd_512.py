@@ -106,12 +106,12 @@ def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_t
         stride=(2,2), act_type="relu", use_batchnorm=False)
     conv10_1, relu10_1 = conv_act_layer(relu9_2, "10_1", 128, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
-    conv10_2, relu10_2 = conv_act_layer(relu10_1, "10_2", 256, kernel=(3,3), pad=(0,0), \
-        stride=(1,1), act_type="relu", use_batchnorm=False)
+    conv10_2, relu10_2 = conv_act_layer(relu10_1, "10_2", 256, kernel=(3,3), pad=(1,1), \
+        stride=(2,2), act_type="relu", use_batchnorm=False)
     conv11_1, relu11_1 = conv_act_layer(relu10_2, "11_1", 128, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
-    conv11_2, relu11_2 = conv_act_layer(relu11_1, "11_2", 256, kernel=(3,3), pad=(0,0), \
-        stride=(1,1), act_type="relu", use_batchnorm=False)
+    conv11_2, relu11_2 = conv_act_layer(relu11_1, "11_2", 256, kernel=(3,3), pad=(1,1), \
+        stride=(2,2), act_type="relu", use_batchnorm=False)
     conv12_1, relu12_1 = conv_act_layer(relu11_2, "12_1", 128, kernel=(1,1), pad=(0,0), \
         stride=(1,1), act_type="relu", use_batchnorm=False)
     conv12_2, relu12_2 = conv_act_layer(relu12_1, "12_2", 256, kernel=(4,4), pad=(1,1), \
