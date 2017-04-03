@@ -224,6 +224,61 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
   }
 };
 
+// normalize det parameters
+struct ImageDetNormalizeParam :  public dmlc::Parameter<ImageDetNormalizeParam> {
+  /*! \brief random seed */
+  int seed;
+  /*! \brief mean file string */
+  std::string mean_img;
+  /*! \brief mean value for r channel */
+  float mean_r;
+  /*! \brief mean value for g channel */
+  float mean_g;
+  /*! \brief mean value for b channel */
+  float mean_b;
+  /*! \brief mean value for alpha channel */
+  float mean_a;
+  /*! \brief standard deviation for r channel */
+  float std_r;
+  /*! \brief standard deviation for g channel */
+  float std_g;
+  /*! \brief standard deviation for b channel */
+  float std_b;
+  /*! \brief standard deviation for alpha channel */
+  float std_a;
+  /*! \brief scale on color space */
+  float scale;
+  /*! \brief silent */
+  bool verbose;
+  // declare parameters
+  DMLC_DECLARE_PARAMETER(ImageDetNormalizeParam) {
+    DMLC_DECLARE_FIELD(seed).set_default(0)
+        .describe("Augmentation Param: Random Seed.");
+    DMLC_DECLARE_FIELD(mean_img).set_default("")
+        .describe("Augmentation Param: Mean Image to be subtracted.");
+    DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
+        .describe("Augmentation Param: Mean value on R channel.");
+    DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
+        .describe("Augmentation Param: Mean value on G channel.");
+    DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
+        .describe("Augmentation Param: Mean value on B channel.");
+    DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
+        .describe("Augmentation Param: Mean value on Alpha channel.");
+    DMLC_DECLARE_FIELD(std_r).set_default(0.0f)
+        .describe("Augmentation Param: Standard deviation on R channel.");
+    DMLC_DECLARE_FIELD(std_g).set_default(0.0f)
+        .describe("Augmentation Param: Standard deviation on G channel.");
+    DMLC_DECLARE_FIELD(std_b).set_default(0.0f)
+        .describe("Augmentation Param: Standard deviation on B channel.");
+    DMLC_DECLARE_FIELD(std_a).set_default(0.0f)
+        .describe("Augmentation Param: Standard deviation on Alpha channel.");
+    DMLC_DECLARE_FIELD(scale).set_default(1.0f)
+        .describe("Augmentation Param: Scale in color space.");
+    DMLC_DECLARE_FIELD(verbose).set_default(true)
+        .describe("Augmentation Param: Whether to print augmentor info.");
+  }
+};
+
 // Define prefetcher parameters
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   /*! \brief number of prefetched batches */

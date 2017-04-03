@@ -330,7 +330,7 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
       }
       const int n_channels = res.channels();
       for (auto& aug : augmenters_[tid]) {
-        res = aug->Process(res, prnds_[tid].get());
+        res = aug->Process(res, nullptr, prnds_[tid].get());
       }
       out.Push(static_cast<unsigned>(rec.image_index()),
                mshadow::Shape3(n_channels, res.rows, res.cols),

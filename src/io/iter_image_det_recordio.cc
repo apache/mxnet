@@ -19,6 +19,7 @@
 #include "./inst_vector.h"
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
+#include "./image_iter_common.h"
 #include "./iter_prefetcher.h"
 #include "./iter_normalize.h"
 #include "./iter_batchloader.h"
