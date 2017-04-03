@@ -327,12 +327,10 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE((*in_attrs)[1], -1) << "Index type must be set for take operator";
 
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
-  if (-1 == (*in_attrs)[1]) {
-    TYPE_ASSIGN_CHECK(*in_attrs, 1, (*in_attrs)[0]);
-  }
   return (*in_attrs)[0] != -1;
 }
 
