@@ -21,6 +21,14 @@
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_
+
+#define MKLDNN_CALL(func)                                                               \
+  {                                                                                     \
+    dnnError_t status = (func);                                                                \
+    CHECK_EQ(status, E_SUCCESS) << "MKL DNN call failed (status: " << status << ").";           \
+  }
+
+
 namespace mxnet {
 namespace op {
 

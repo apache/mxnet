@@ -71,7 +71,7 @@ class EvalMetric(object):
             return (names, values)
 
     def get_name_value(self):
-        """Get zipped name and value pairs"""
+        """Get zipped name and value pairs."""
         name, value = self.get()
         if not isinstance(name, list):
             name = [name]
@@ -130,7 +130,7 @@ class CompositeEvalMetric(EvalMetric):
 ########################
 
 class Accuracy(EvalMetric):
-    """Calculate accuracy"""
+    """Calculate accuracy."""
 
     def __init__(self):
         super(Accuracy, self).__init__('accuracy')
@@ -150,7 +150,7 @@ class Accuracy(EvalMetric):
             self.num_inst += len(pred_label.flat)
 
 class TopKAccuracy(EvalMetric):
-    """Calculate top k predictions accuracy"""
+    """Calculate top k predictions accuracy."""
 
     def __init__(self, **kwargs):
         super(TopKAccuracy, self).__init__('top_k_accuracy')
@@ -233,8 +233,8 @@ class Perplexity(EvalMetric):
     Parameters
     ----------
     ignore_label : int or None
-        index of invalid label to ignore when
-        counting. usually should be -1. Include
+        Index of invalid label to ignore when
+        counting. Usually should be -1. Include
         all entries if None.
     axis : int (default -1)
         The axis from prediction that was used to
@@ -278,7 +278,7 @@ class Perplexity(EvalMetric):
 ####################
 
 class MAE(EvalMetric):
-    """Calculate Mean Absolute Error loss"""
+    """Calculate Mean Absolute Error (MAE) loss."""
 
     def __init__(self):
         super(MAE, self).__init__('mae')
@@ -297,7 +297,7 @@ class MAE(EvalMetric):
             self.num_inst += 1 # numpy.prod(label.shape)
 
 class MSE(EvalMetric):
-    """Calculate Mean Squared Error loss"""
+    """Calculate Mean Squared Error (MSE) loss."""
     def __init__(self):
         super(MSE, self).__init__('mse')
 
@@ -315,7 +315,7 @@ class MSE(EvalMetric):
             self.num_inst += 1 # numpy.prod(label.shape)
 
 class RMSE(EvalMetric):
-    """Calculate Root Mean Squred Error loss"""
+    """Calculate Root Mean Squred Error (RMSE) loss."""
     def __init__(self):
         super(RMSE, self).__init__('rmse')
 
@@ -333,7 +333,7 @@ class RMSE(EvalMetric):
             self.num_inst += 1
 
 class CrossEntropy(EvalMetric):
-    """Calculate Cross Entropy loss"""
+    """Calculate Cross Entropy loss."""
     def __init__(self, eps=1e-8):
         super(CrossEntropy, self).__init__('cross-entropy')
         self.eps = eps
@@ -353,7 +353,7 @@ class CrossEntropy(EvalMetric):
             self.num_inst += label.shape[0]
 
 class Torch(EvalMetric):
-    """Dummy metric for torch criterions"""
+    """Dummy metric for torch criterions."""
     def __init__(self, name='torch'):
         super(Torch, self).__init__(name)
 
@@ -375,7 +375,7 @@ class CustomMetric(EvalMetric):
     feval : callable(label, pred)
         Customized evaluation function.
     name : str, optional
-        The name of the metric
+        The name of the metric.
     allow_extra_outputs : bool
         If true, the prediction outputs can have extra outputs.
         This is useful in RNN, where the states are also produced
@@ -416,7 +416,7 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
     numpy_feval : callable(label, pred)
         Customized evaluation function.
         This will get called with the labels and predictions
-        for a minibatch, each as numpy arrays.  This function
+        for a minibatch, each as NumPy arrays.  This function
         should return a single float.
     name : str, optional
         The name of the metric.

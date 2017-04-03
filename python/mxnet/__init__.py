@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""MXNet: a concise, fast and flexible framework for deep learning. """
+"""MXNet: a concise, fast and flexible framework for deep learning."""
 from __future__ import absolute_import
 
 from .context import Context, current_context, cpu, gpu

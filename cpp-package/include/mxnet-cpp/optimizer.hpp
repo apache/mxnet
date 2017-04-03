@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_OPTIMIZER_HPP
-#define MXNETCPP_OPTIMIZER_HPP
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_
 
 #include <algorithm>
 #include <utility>
@@ -21,23 +21,26 @@
 namespace mxnet {
 namespace cpp {
 
-OpMap* Optimizer::op_map_ = new OpMap();
+inline std::map<std::string, OptimizerCreator>& OptimizerRegistry::cmap() {
+  static std::map<std::string, OptimizerCreator> cmap_;
+  return cmap_;
+}
 
-std::map<std::string, OptimizerCreator> OptimizerRegistry::cmap_;
+inline OpMap*& Optimizer::op_map() {
+  static OpMap *op_map_ = new OpMap();
+  return op_map_;
+}
 
-MXNETCPP_REGISTER_OPTIMIZER(sgd, SGDOptimizer);
-MXNETCPP_REGISTER_OPTIMIZER(ccsgd, SGDOptimizer);  // For backward compatibility
+inline Optimizer::~Optimizer() {}
 
-Optimizer::~Optimizer() {}
-
-void Optimizer::Update(int index, NDArray weight, NDArray grad, mx_float lr,
+inline void Optimizer::Update(int index, NDArray weight, NDArray grad, mx_float lr,
                        mx_float wd) {
   params_["lr"] = std::to_string(lr);
   params_["wd"] = std::to_string(wd);
   Update(index, weight, grad);
 }
 
-std::string Optimizer::Serialize() const {
+inline std::string Optimizer::Serialize() const {
   using ValueType = std::map<std::string, std::string>::value_type;
   auto params = params_;
   params.emplace("opt_type", GetType());
@@ -47,49 +50,51 @@ std::string Optimizer::Serialize() const {
     }).substr(1);
 }
 
-const std::vector<const char*> Optimizer::GetParamKeys_() const {
+inline const std::vector<const char*> Optimizer::GetParamKeys_() const {
   std::vector<const char*> keys;
   for (auto& iter : params_)
     keys.push_back(iter.first.c_str());
   return keys;
 }
 
-const std::vector<const char*> Optimizer::GetParamValues_() const {
+inline const std::vector<const char*> Optimizer::GetParamValues_() const {
   std::vector<const char*> values;
   for (auto& iter : params_)
     values.push_back(iter.second.c_str());
   return values;
 }
 
-Optimizer* OptimizerRegistry::Find(const std::string& name) {
-  auto it = cmap_.find(name);
-  if (it == cmap_.end())
+inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
+  MXNETCPP_REGISTER_OPTIMIZER(sgd, SGDOptimizer);
+  MXNETCPP_REGISTER_OPTIMIZER(ccsgd, SGDOptimizer);  // For backward compatibility
+  auto it = cmap().find(name);
+  if (it == cmap().end())
     return nullptr;
   return it->second();
 }
 
-int OptimizerRegistry::__REGISTER__(const std::string& name, OptimizerCreator creator) {
-  CHECK_EQ(cmap_.count(name), 0) << name << " already registered";
-  cmap_.emplace(name, std::move(creator));
+inline int OptimizerRegistry::__REGISTER__(const std::string& name, OptimizerCreator creator) {
+  CHECK_EQ(cmap().count(name), 0) << name << " already registered";
+  cmap().emplace(name, std::move(creator));
   return 0;
 }
 
-std::string SGDOptimizer::GetType() const {
+inline std::string SGDOptimizer::GetType() const {
   return "sgd";
 }
 
-SGDOptimizer::SGDOptimizer() {
-  update_handle_ = op_map_->GetSymbolCreator("sgd_update");
-  mom_update_handle_ = op_map_->GetSymbolCreator("sgd_mom_update");
+inline SGDOptimizer::SGDOptimizer() {
+  update_handle_ = op_map()->GetSymbolCreator("sgd_update");
+  mom_update_handle_ = op_map()->GetSymbolCreator("sgd_mom_update");
 }
 
-SGDOptimizer::~SGDOptimizer() {
+inline SGDOptimizer::~SGDOptimizer() {
   for (auto &it : states_) {
     delete it.second;
   }
 }
 
-void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
+inline void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
   if (states_.count(index) == 0) {
     CreateState_(index, weight);
   }
@@ -118,7 +123,7 @@ void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
   }
 }
 
-void SGDOptimizer::CreateState_(int index, NDArray weight) {
+inline void SGDOptimizer::CreateState_(int index, NDArray weight) {
   if (params_.count("momentum") == 0) {
     states_[index] = nullptr;
   } else {
@@ -131,4 +136,4 @@ void SGDOptimizer::CreateState_(int index, NDArray weight) {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_OPTIMIZER_HPP
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPTIMIZER_HPP_

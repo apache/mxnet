@@ -66,10 +66,13 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
                                      const Tensor<cpu, 2, DType> &loc_pred,
                                      const Tensor<cpu, 2, DType> &anchors,
                                      const Tensor<cpu, 3, DType> &temp_space,
-                                     float threshold, bool clip,
-                                     const std::vector<float> &variances,
-                                     float nms_threshold, bool force_suppress) {
-  CHECK_EQ(variances.size(), 4) << "Variance size must be 4";
+                                     const float threshold,
+                                     const bool clip,
+                                     const nnvm::Tuple<float> &variances,
+                                     const float nms_threshold,
+                                     const bool force_suppress,
+                                     const int nms_topk) {
+  CHECK_EQ(variances.ndim(), 4) << "Variance size must be 4";
   const int num_classes = cls_prob.size(1);
   const int num_anchors = cls_prob.size(2);
   const int num_batches = cls_prob.size(0);
@@ -118,7 +121,11 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
     std::stable_sort(sorter.begin(), sorter.end());
     // re-order output
     DType *ptemp = temp_space.dptr_ + nbatch * num_anchors * 6;
-    for (std::size_t i = 0; i < sorter.size(); ++i) {
+    int nkeep = static_cast<int>(sorter.size());
+    if (nms_topk > 0 && nms_topk < nkeep) {
+      nkeep = nms_topk;
+    }
+    for (int i = 0; i < nkeep; ++i) {
       for (int j = 0; j < 6; ++j) {
         p_out[i * 6 + j] = ptemp[sorter[i].index * 6 + j];
       }

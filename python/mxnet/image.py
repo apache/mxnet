@@ -42,7 +42,7 @@ def imdecode(buf, **kwargs):
     return _internal._cvimdecode(buf, **kwargs)
 
 def scale_down(src_size, size):
-    """Scale down crop size if it's bigger than image size"""
+    """Scale down crop size if it's bigger than image size."""
     w, h = size
     sw, sh = src_size
     if sh < h:
@@ -52,7 +52,7 @@ def scale_down(src_size, size):
     return int(w), int(h)
 
 def resize_short(src, size, interp=2):
-    """Resize shorter edge to size"""
+    """Resize shorter edge to size."""
     h, w, _ = src.shape
     if h > w:
         new_h, new_w = size*h/w, size
@@ -61,14 +61,14 @@ def resize_short(src, size, interp=2):
     return imresize(src, new_w, new_h, interp=interp)
 
 def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
-    """Crop src at fixed location, and (optionally) resize it to size"""
+    """Crop src at fixed location, and (optionally) resize it to size."""
     out = nd.crop(src, begin=(y0, x0, 0), end=(y0+h, x0+w, int(src.shape[2])))
     if size is not None and (w, h) != size:
         out = imresize(out, *size, interp=interp)
     return out
 
 def random_crop(src, size, interp=2):
-    """Randomly crop src with size. Upsample result if src is smaller than size"""
+    """Randomly crop src with size. Upsample result if src is smaller than size."""
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
@@ -79,7 +79,7 @@ def random_crop(src, size, interp=2):
     return out, (x0, y0, new_w, new_h)
 
 def center_crop(src, size, interp=2):
-    """Randomly crop src with size. Upsample result if src is smaller than size"""
+    """Randomly crop src with size. Upsample result if src is smaller than size."""
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
@@ -90,14 +90,14 @@ def center_crop(src, size, interp=2):
     return out, (x0, y0, new_w, new_h)
 
 def color_normalize(src, mean, std=None):
-    """Normalize src with mean and std"""
+    """Normalize src with mean and std."""
     src -= mean
     if std is not None:
         src /= std
     return src
 
 def random_size_crop(src, size, min_area, ratio, interp=2):
-    """Randomly crop src with size. Randomize area and aspect ratio"""
+    """Randomly crop src with size. Randomize area and aspect ratio."""
     h, w, _ = src.shape
     new_ratio = random.uniform(*ratio)
     if new_ratio * h > w:
@@ -120,7 +120,7 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
     return out, (x0, y0, new_w, new_h)
 
 def ResizeAug(size, interp=2):
-    """Make resize shorter edge to size augumenter"""
+    """Make resize shorter edge to size augumenter."""
     def aug(src):
         """Augumenter body"""
         return [resize_short(src, size, interp)]
@@ -134,14 +134,14 @@ def RandomCropAug(size, interp=2):
     return aug
 
 def RandomSizedCropAug(size, min_area, ratio, interp=2):
-    """Make random crop with random resizing and random aspect ratio jitter augumenter"""
+    """Make random crop with random resizing and random aspect ratio jitter augumenter."""
     def aug(src):
         """Augumenter body"""
         return [random_size_crop(src, size, min_area, ratio, interp)[0]]
     return aug
 
 def CenterCropAug(size, interp=2):
-    """Make center crop augmenter"""
+    """Make center crop augmenter."""
     def aug(src):
         """Augumenter body"""
         return [center_crop(src, size, interp)[0]]
@@ -159,7 +159,7 @@ def RandomOrderAug(ts):
     return aug
 
 def ColorJitterAug(brightness, contrast, saturation):
-    """Apply random brightness, contrast and saturation jitter in random order"""
+    """Apply random brightness, contrast and saturation jitter in random order."""
     ts = []
     coef = nd.array([[[0.299, 0.587, 0.114]]])
     if brightness > 0:
@@ -195,7 +195,7 @@ def ColorJitterAug(brightness, contrast, saturation):
     return RandomOrderAug(ts)
 
 def LightingAug(alphastd, eigval, eigvec):
-    """Add PCA based noise"""
+    """Add PCA based noise."""
     def aug(src):
         """Augumenter body"""
         alpha = np.random.normal(0, alphastd, size=(3,))
@@ -205,7 +205,7 @@ def LightingAug(alphastd, eigval, eigvec):
     return aug
 
 def ColorNormalizeAug(mean, std):
-    """Mean and std normalization"""
+    """Mean and std normalization."""
     mean = nd.array(mean)
     std = nd.array(std)
     def aug(src):
@@ -214,7 +214,7 @@ def ColorNormalizeAug(mean, std):
     return aug
 
 def HorizontalFlipAug(p):
-    """Random horizontal flipping"""
+    """Random horizontal flipping."""
     def aug(src):
         """Augumenter body"""
         if random.random() < p:
@@ -233,7 +233,7 @@ def CastAug():
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
                     mean=None, std=None, brightness=0, contrast=0, saturation=0,
                     pca_noise=0, inter_method=2):
-    """Create augumenter list"""
+    """Create augumenter list."""
     auglist = []
 
     if resize > 0:
@@ -286,7 +286,7 @@ class ImageIter(io.DataIter):
     Parameters
     ----------
     batch_size : int
-        Number of examples per batch
+        Number of examples per batch.
     data_shape : tuple
         Data shape in (channels, height, width).
         For now, only RGB image with 3 channels is supported.
@@ -298,10 +298,10 @@ class ImageIter(io.DataIter):
     path_imglist : str
         path to image list (.lst)
         Created with tools/im2rec.py or with custom script.
-        Format: index\t[one or more label separated by \t]\trelative_path_from_root
+        Format: index\t[one or more label separated by \t]\trelative_path_from_root.
     imglist: list
         a list of image with the label(s)
-        each item is a list [imagelabel: float or list of float, imgpath]
+        each item is a list [imagelabel: float or list of float, imgpath].
     path_root : str
         Root folder of image files
     path_imgidx : str
@@ -314,7 +314,7 @@ class ImageIter(io.DataIter):
     num_parts : int
         Total number of partitions.
     kwargs : ...
-        More arguments for creating augumenter. See mx.image.CreateAugmenter
+        More arguments for creating augumenter. See mx.image.CreateAugmenter.
     """
     def __init__(self, batch_size, data_shape, label_width=1,
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
@@ -402,7 +402,7 @@ class ImageIter(io.DataIter):
         self.cur = 0
 
     def next_sample(self):
-        """helper function for reading in next sample"""
+        """Helper function for reading in next sample."""
         if self.seq is not None:
             if self.cur >= len(self.seq):
                 raise StopIteration

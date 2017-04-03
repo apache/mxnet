@@ -463,7 +463,7 @@ class BaseModule(object):
             nbatch = 0
             data_iter = iter(train_data)
             end_of_batch = False
-            next_data_batch = data_iter.next()
+            next_data_batch = next(data_iter)
             while not end_of_batch:
                 data_batch = next_data_batch
                 if monitor is not None:
@@ -472,7 +472,7 @@ class BaseModule(object):
                 self.update()
                 try:
                     # pre fetch next batch
-                    next_data_batch = data_iter.next()
+                    next_data_batch = next(data_iter)
                     self.prepare(next_data_batch)
                 except StopIteration:
                     end_of_batch = True

@@ -9,6 +9,10 @@
 #define PLUGIN_CAFFE_CAFFE_COMMON_H_
 
 #include <mxnet/operator.h>
+#include <dmlc/type_traits.h>
+
+#include <caffe/proto/caffe.pb.h>
+
 #include <vector>
 #include <iostream>
 #include <exception>
@@ -65,4 +69,10 @@ class LayerRegistry {
 }  // namespace caffe
 }  // namespace op
 }  // namespace mxnet
+
+/*! \brief override type_name for caffe::LayerParameter */
+namespace dmlc {
+  DMLC_DECLARE_TYPE_NAME(::caffe::LayerParameter, "caffe-layer-parameter")
+}
+
 #endif  // PLUGIN_CAFFE_CAFFE_COMMON_H_
