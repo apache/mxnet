@@ -2037,6 +2037,52 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       return success;
     };
 
+    // infer_type callback
+    auto opPropInferType = [](int numInput, int* types, void* state) {
+      int success = true;
+      std::string key(reinterpret_cast<char *>(state));
+      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
+        LOG(WARNING) << "CustomOpProp: " << key << " not found";
+        success = false;
+      } else {
+        JNIEnv *env;
+        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
+        jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
+        jmethodID midInferType = env->GetMethodID(opPropClass, "inferTypeEntry", "(I[I)[I");
+        if (NULL == midInferType) {
+          LOG(WARNING) << "could not find opProp method inferTypeEntry.";
+          success = false;
+        } else {
+          jmethodID midListArguments = env->GetMethodID(
+            opPropClass, "listArguments", "()[Ljava/lang/String;");
+          jobjectArray jargs = (jobjectArray)(env->CallObjectMethod(
+            globalOpPropMap.at(key), midListArguments));
+
+          int intLen = env->GetArrayLength(jargs);
+          jintArray ts = env->NewIntArray(intLen);
+          int *tmp = new int[intLen];
+          for (int i = 0; i < intLen; ++i) tmp[i] = types[i];
+          env->SetIntArrayRegion(ts, (jsize)0, (jsize)intLen, tmp);
+
+          jintArray ret = (jintArray)(env->CallObjectMethod(
+            globalOpPropMap.at(key), midInferType,
+            numInput,
+            ts));
+          jint *arr = env->GetIntArrayElements(ret, NULL);
+          for (int i = 0; i < numInput; ++i) {
+            types[i] = static_cast<int>(arr[i]);
+          }
+
+          delete[] tmp;
+          env->ReleaseIntArrayElements(ret, arr, 0);
+          env->DeleteLocalRef(ret);
+          env->DeleteLocalRef(ts);
+        }
+        _jvm->DetachCurrentThread();
+      }
+      return success;
+    };
+
     // create_operator callback
     auto opPropCreateOp = [](const char *ctx, int numInputs,
       unsigned **shapes, int *ndims, int *dtypes, MXCallbackList *ret, void *state) {
@@ -2118,12 +2164,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 mxnet::NDArray* tmp = reinterpret_cast<mxnet::NDArray*>(ptrs[0]);
                 CUDA_CALL(cudaSetDevice(tmp->ctx().dev_id));
 #endif
+                bool is_train =  true;
+                if (isTrain == 0) is_train = false;
                 success = env->CallBooleanMethod(globalOpMap.at(key), midForward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
-                                                       *(const_cast<int*>(&isTrain)));
+                                                       is_train);
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
@@ -2162,12 +2210,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
                 jlongArray ptrsArr = env->NewLongArray(size);
                 env->SetLongArrayRegion(
                   ptrsArr, (jsize)0, (jsize)size, reinterpret_cast<jlong*>(ptrs));
+                bool is_train =  true;
+                if (isTrain == 0) is_train = false;
                 success = env->CallBooleanMethod(globalOpMap.at(key), midBackward,
                                                        size,
                                                        ptrsArr,
                                                        tagsArr,
                                                        reqsArr,
-                                                       *(const_cast<int*>(&isTrain)));
+                                                       is_train);
                 env->DeleteLocalRef(tagsArr);
                 env->DeleteLocalRef(reqsArr);
                 env->DeleteLocalRef(ptrsArr);
@@ -2262,7 +2312,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
     };
 
     // TODO(eric): Memory leak. Missing infertype.
-    ret->num_callbacks = 7;
+    ret->num_callbacks = 8;
     ret->callbacks = new MXGenericCallback[ret->num_callbacks];
     ret->callbacks[kCustomOpPropDelete] =
       reinterpret_cast<int(*)(void)>(
@@ -2287,6 +2337,9 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       reinterpret_cast<int(*)(void)>(
         static_cast<int(*)(const char*, int, unsigned**, int*, int*, MXCallbackList*, void*)>(
           opPropCreateOp));
+    ret->callbacks[kCustomOpPropInferType] =
+      reinterpret_cast<int(*)(void)>(
+        static_cast<int(*)(int, int*, void*)>(opPropInferType));
 
     ret->contexts = new void*[ret->num_callbacks];
     ret->contexts[kCustomOpPropDelete] =
@@ -2302,6 +2355,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
     ret->contexts[kCustomOpPropDeclareBackwardDependency] =
       reinterpret_cast<void *>(const_cast<char *>(opType));
     ret->contexts[kCustomOpPropCreateOperator] =
+      reinterpret_cast<void *>(const_cast<char *>(opType));
+    ret->contexts[kCustomOpPropInferType] =
       reinterpret_cast<void *>(const_cast<char *>(opType));
     return success;
   };

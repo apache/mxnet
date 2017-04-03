@@ -23,57 +23,54 @@ DMLC_REGISTER_PARAMETER(ReverseParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
-.describe(R"code(Reshape array into a new shape.
+.describe(R"code(Reshapes the input array into a new shape.
 
-The shape is a tuple of int such as (2,3,4). The new shape should not change the
-array size. For example::
+Deprecation WARNING: ``Reshape`` is deprecated, use ``reshape``
 
+Given an array and a shape, this function returns a copy of the array in the new shape.
+
+The shape is a tuple of integers such as (2,3,4). The size of the new shape should be same as the size of the input array.
+
+Example::
    reshape([1,2,3,4], shape=(2,2)) = [[1,2], [3,4]]
 
-In addition, we can use special codes, which are integers less than
-1, on some shape dimensions. To inference the output shape, we set it to an
-empty tuple at beginning. When continuously pop dimensions from the original
-shape starting from the beginning, and then push translated results into the output
-shape.
+Some dimensions of the shape can take special values from the set {0, -1, -2, -3 or -4}. The significance of each is explained below:
 
-Each special code presents a way of translation.
+- ``0`` copy this dimension from the input to the output shape.
+  Example::
+  - input shape = (2,3,4), shape = (4,0,2), output shape = (4,3,2)
+  - input shape = (2,3,4), shape = (2,0,0), output shape = (2,3,4)
 
-- ``0`` for copying one. Pop one input dimension and push into the output. For example::
+- ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions
+         keeping the size of the new array same as that of the input array.
+         At most one dimension of shape can be -1.
+  Example::
+  - input shape = (2,3,4), shape = (6,1,-1), output shape = (6,1,4)
+  - input shape = (2,3,4), shape = (3,-1,8), output shape = (3,1,8)
+  - input shape = (2,3,4), shape=(-1,), output shape = (24,)
 
-  - input=(2,3,4), shape=(4,0,2), output=(4,3,2)
-  - input=(2,3,4), shape=(2,0,0), output=(2,3,4)
+- ``-2`` copy all/remainder of the input dimensions to the output shape.
+  Example::
+  - input shape = (2,3,4), shape = (-2,), output shape = (2,3,4)
+  - input shape = (2,3,4), shape = (2,-2), output shape = (2,3,4)
+  - input shape = (2,3,4), shape = (-2,1,1), output shape = (2,3,4,1,1)
 
-- ``-1`` for inference. Push a placeholder into the output whose value will be inferred later::
+- ``-3`` use the product of two consecutive dimensions of the input shape as the output dimension.
+  Example::
+  - input shape = (2,3,4), shape = (-3,4), output shape = (6,4)
+  - input shape = (2,3,4,5), shape = (-3,-3), output shape = (6,20)
+  - input shape = (2,3,4), shape = (0,-3), output shape = (2,12)
+  - input shape = (2,3,4), shape = (-3,-2), output shape = (6,4)
 
-  - input=(2,3,4), shape=(6,1,-1), output=(6,1,4)
-  - input=(2,3,4), shape=(3,-1,8), output=(3,1,8)
-  - input=(2,3,4), shape=(-1,), output=(24,)
+- ``-4 `` split one dimension of the input into two dimensions passed subsequent to -4 in shape (can contain -1).
+  Example::
+  - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
+  - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
-- ``-2`` for copying all. Pop all remaining input dimensions and push them into
-  the output::
-
-  - input=(2,3,4), shape=(-2), output=(9,8,7)
-  - input=(2,3,4), shape=(2,-2), output=(2,3,4)
-  - input=(2,3,4), shape=(-2,1,1), output=(2,3,4,1,1)
-
-- ``-3`` for merging two dimensions. Pop two input dimensions, compute the product and then
-  push into the output::
-
-  - input=(2,3,4), shape=(-3,4), output=(6,4)
-  - input=(2,3,4), shape=(0,-3), output=(2,12)
-  - input=(2,3,4), shape=(-3,-2), output=(6,4)
-
-- ``-4`` for splitting two dimensions. Pop one input dimensions, next split it
-  according to the next two dimensions (can contain one ``-1``) specified after
-  this code, then push into the output::
-
-  - input=(2,3,4), shape=(-4,1,2,-2), output=(1,2,3,4)
-  - input=(2,3,4), shape=(2,-4,-1,3,-2), output=(2,1,3,4)
-
-If the argument ``reverse`` is set to be true, then translating the input shape
-from right to left. For example, with input shape (10, 5, 4) target shape (-1,
-0), then the output shape will be (50,4) if ``reverse=1``, otherwise it will be
-(40,5).
+If the argument ``reverse`` is set to 1, then the special values are inferred from right to left. 
+  Example::
+  - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be (40,5)
+  - with reverse=1, output shape will be (50,4).
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -93,7 +90,7 @@ from right to left. For example, with input shape (10, 5, 4) target shape (-1,
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
-.describe(R"code(Flatten input into a 2-D array by collapsing the higher dimensions.
+.describe(R"code(Flattens the input array into a 2-D array by collapsing the higher dimensions.
 
 Assume the input array has shape ``(d1, d2, ..., dk)``, then ``flatten`` reshapes
 the input array into shape ``(d1, d2*...*dk)``.

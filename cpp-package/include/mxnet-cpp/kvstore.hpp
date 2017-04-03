@@ -14,8 +14,8 @@
 #include "mxnet-cpp/kvstore.h"
 #include "mxnet-cpp/optimizer.h"
 
-#ifndef KVSTORE_HPP
-#define KVSTORE_HPP
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_HPP_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_HPP_
 
 namespace mxnet {
 namespace cpp {
@@ -53,7 +53,7 @@ inline KVStore*& KVStore::get_kvstore() {
   return kvstore_;
 }
 
-inline KVStore::KVStore() {};
+inline KVStore::KVStore() {}
 
 inline void KVStore::SetType(const std::string& type) {
   CHECK_EQ(MXKVStoreCreate(type.c_str(), &(get_kvstore()->get_handle())), 0);
@@ -127,9 +127,11 @@ inline void KVStore::Updater(int key, NDArrayHandle recv, NDArrayHandle local,
 inline void KVStore::SetOptimizer(std::unique_ptr<Optimizer> optimizer, bool local) {
   if (local) {
     get_kvstore()->get_optimizer() = std::move(optimizer);
-    CHECK_EQ(MXKVStoreSetUpdater(get_kvstore()->get_handle(), &Updater, get_kvstore()->get_optimizer().get()), 0);
+    CHECK_EQ(MXKVStoreSetUpdater(get_kvstore()->get_handle(),
+                                 &Updater, get_kvstore()->get_optimizer().get()), 0);
   } else {
-    CHECK_EQ(MXKVStoreSendCommmandToServers(get_kvstore()->get_handle(), 0, (*optimizer).Serialize().c_str()), 0);
+    CHECK_EQ(MXKVStoreSendCommmandToServers(get_kvstore()->get_handle(), 0,
+                                            (*optimizer).Serialize().c_str()), 0);
   }
 }
 
@@ -173,4 +175,4 @@ inline std::string KVStore::GetRole() {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // KVSTORE_HPP
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_HPP_

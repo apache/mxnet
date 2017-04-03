@@ -17,12 +17,12 @@ from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 c_int_p = POINTER(c_int)
 
 class PythonOp(object):
-    """Base class for operators implemented in python
+    """Base class for operators implemented in Python.
 
     Parameters
     ----------
     need_top_grad : bool
-        the default need_top_grad() function returns this value
+        the default need_top_grad() function returns this value.
     """
     _ref_holder = []
 
@@ -35,13 +35,13 @@ class PythonOp(object):
 
     def get_symbol(self, *args, **kwargs):
         """Create a symbol from numpy operator.
-        This Should only be called once per instance if operator contains
+        This should only be called once per instance if the operator contains
         internal states.
 
         Parameters
         ----------
         args : list
-            a list of input arguments (symbols)
+            a list of input arguments (symbols).
 
         Returns
         -------
@@ -50,7 +50,7 @@ class PythonOp(object):
         raise NotImplementedError("Must override this")
 
     def forward(self, in_data, out_data):
-        """forward interface. override to create new operators
+        """Forward interface. Override to create new operators.
 
         Parameters
         ----------
@@ -61,7 +61,7 @@ class PythonOp(object):
         out_data[0][:] = in_data[0]
 
     def backward(self, out_grad, in_data, out_data, in_grad):
-        """backward interface. override to create new operators
+        """Backward interface. Can override when creating new operators.
 
         Parameters
         ----------
@@ -73,36 +73,36 @@ class PythonOp(object):
         in_grad[0][:] = 1.0
 
     def infer_shape(self, in_shape):
-        """infer_shape interface. override to create new operators
+        """Interface for ``infer_shape``. Can override when creating new operators.
 
         Parameters
         ----------
         in_shape : list
-            list of argument shapes in the same order as
+            List of argument shapes in the same order as
             declared in list_arguments.
 
         Returns
         -------
         in_shape : list
-            list of argument shapes. Can be modified from in_shape.
+            List of argument shapes. Can be modified from in_shape.
         out_shape : list
-            list of output shapes calculated from in_shape,
+            List of output shapes calculated from in_shape,
             in the same order as declared in list_arguments.
         """
         return in_shape, [in_shape[0]]
 
     def list_outputs(self):
-        """list_outputs interface. override to create new operators
+        """Interface for ``list_outputs``. Can override when creating new operators.
 
         Returns
         -------
         outputs : list
-            list of output blob names.
+            List of output blob names.
         """
         return ['output']
 
     def list_arguments(self):
-        """list_arguments interface. override to create new operators
+        """Interface for ``list_arguments``. Can override when creating new operators.
 
         Returns
         -------
@@ -399,7 +399,7 @@ class CustomOp(object):
         pass
 
     def forward(self, is_train, req, in_data, out_data, aux):
-        """forward interface. override to create new operators
+        """Forward interface. Can override when creating new operators.
 
         Parameters
         ----------
@@ -416,7 +416,7 @@ class CustomOp(object):
         pass
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        """backward interface. override to create new operators
+        """Backward interface. Can override when creating new operators.
 
         Parameters
         ----------
@@ -445,30 +445,30 @@ class CustomOpProp(object):
     Parameters
     ----------
     need_top_grad : bool
-        The default declare_backward_dependency function use this value
-        to determine whether this operator needs gradient input for above.
+        The default declare_backward_dependency function. Use this value
+        to determine whether this operator needs gradient input.
     """
     def __init__(self, need_top_grad=False):
         self.need_top_grad_ = need_top_grad
 
     def infer_shape(self, in_shape):
-        """infer_shape interface. override to create new operators
+        """infer_shape interface. Can override when creating new operators.
 
         Parameters
         ----------
         in_shape : list
-            list of argument shapes in the same order as
+            List of argument shapes in the same order as
             declared in list_arguments.
 
         Returns
         -------
         in_shape : list
-            list of argument shapes. Can be modified from in_shape.
+            List of argument shapes. Can be modified from in_shape.
         out_shape : list
-            list of output shapes calculated from in_shape,
+            List of output shapes calculated from in_shape,
             in the same order as declared in list_outputs.
         aux_shape : Optional, list
-            list of aux shapes calculated from in_shape,
+            List of aux shapes calculated from in_shape,
             in the same order as declared in list_auxiliary_states.
         """
         return in_shape, [in_shape[0]], []
@@ -497,27 +497,27 @@ class CustomOpProp(object):
             [in_type[0]]*len(self.list_auxiliary_states())
 
     def list_outputs(self):
-        """list_outputs interface. override to create new operators
+        """list_outputs interface. Can override when creating new operators.
 
         Returns
         -------
         outputs : list
-            list of output blob names.
+            List of output blob names.
         """
         return ['output']
 
     def list_arguments(self):
-        """list_arguments interface. override to create new operators
+        """list_arguments interface. Can override when creating new operators.
 
         Returns
         -------
         arguments : list
-            list of argument blob names.
+            List of argument blob names.
         """
         return ['data']
 
     def list_auxiliary_states(self):
-        """list_auxiliary_states interface. override to create new operators
+        """list_auxiliary_states interface. Can override when creating new operators.
 
         Returns
         -------
@@ -557,14 +557,14 @@ class CustomOpProp(object):
         return CustomOp()
 
 class _Registry(object):
-    """CustomOp registry"""
+    """CustomOp registry."""
     def __init__(self):
         self.ref_holder = {}
         self.counter = 0
         self.lock = Lock()
 
     def inc(self):
-        """Get index for new entry"""
+        """Get index for new entry."""
         self.lock.acquire()
         cur = self.counter
         self.counter += 1
@@ -577,8 +577,9 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
+
         class MXCallbackList(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp"""
+            """Structure that holds Callback information. Passed to CustomOpProp."""
             _fields_ = [
                 ('num_callbacks', c_int),
                 ('callbacks', POINTER(CFUNCTYPE(c_int))),
@@ -600,7 +601,6 @@ def register(reg_name):
                                       POINTER(MXCallbackList), c_void_p)
         req_enum = ('null', 'write', 'inplace', 'add')
 
-
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
             assert py_str(op_type) == reg_name
@@ -609,7 +609,7 @@ def register(reg_name):
 
             def infer_shape_entry(num_tensor, tensor_dims,
                                   tensor_shapes, _):
-                """C Callback for CustomOpProp::InferShape"""
+                """C Callback for ``CustomOpProp::InferShape``."""
                 try:
                     n_in = len(op_prop.list_arguments())
                     n_out = len(op_prop.list_outputs())

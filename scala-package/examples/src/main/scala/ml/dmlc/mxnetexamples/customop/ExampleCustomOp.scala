@@ -21,6 +21,7 @@ import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import ml.dmlc.mxnet.Symbol
+import ml.dmlc.mxnet.DType.DType
 import ml.dmlc.mxnet.DataIter
 import ml.dmlc.mxnet.DataBatch
 import ml.dmlc.mxnet.NDArray
@@ -90,6 +91,11 @@ object ExampleCustomOp {
       val labelShape = Shape(dataShape(0))
       val outputShape = dataShape
       (Array(dataShape, labelShape), Array(outputShape), null)
+    }
+
+    override def inferType(inType: Array[DType]):
+      (Array[DType], Array[DType], Array[DType]) = {
+      (inType, inType.take(1), null)
     }
 
     override def createOperator(ctx: String, inShapes: Array[Array[Int]],
