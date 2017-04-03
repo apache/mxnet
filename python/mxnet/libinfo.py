@@ -30,6 +30,9 @@ def find_lib_path():
     if os.name == 'nt':
         os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
         dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
+    elif platform.system() == 'Darwin':
+        dll_path = [os.path.join(p, 'libmxnet.dylib') for p in dll_path]+ \
+                   [os.path.join(p, 'libmxnet.so') for p in dll_path]
     else:
         dll_path.append('../../../')
         dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
