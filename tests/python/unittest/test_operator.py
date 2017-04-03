@@ -704,9 +704,13 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
 
 def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, target_shape=None):
     data = mx.sym.Variable(name="data")
-    deconv = mx.sym.Deconvolution(
-        data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5,
-        target_shape = target_shape if target_shape is not None else (0, 0))
+    if target_shape:
+        deconv = mx.sym.Deconvolution(
+            data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5,
+            target_shape = target_shape)
+    else:
+        deconv = mx.sym.Deconvolution(
+            data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5)
     arg_names = deconv.list_arguments()
     arg_shapes, out_shapes, _ = deconv.infer_shape(data=input_shape)
     assert out_shapes[0] == (input_shape[0], 5, 8, 8)

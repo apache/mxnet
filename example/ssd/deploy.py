@@ -8,8 +8,8 @@ import sys
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Convert a trained model to deploy model')
-    parser.add_argument('--network', dest='network', type=str, default='vgg16_reduced',
-                        choices=['vgg16_reduced'], help='which network to use')
+    parser.add_argument('--network', dest='network', type=str, default='vgg16_ssd_300',
+                        choices=['vgg16_ssd_300', 'vgg16_ssd_512'], help='which network to use')
     parser.add_argument('--epoch', dest='epoch', help='epoch of trained model',
                         default=0, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
