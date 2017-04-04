@@ -19,6 +19,7 @@
 #include "./image_augmenter.h"
 #include "./image_iter_common.h"
 #include "./inst_vector.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace io {

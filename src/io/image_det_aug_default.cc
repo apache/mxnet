@@ -14,6 +14,9 @@
 
 namespace mxnet {
 namespace io {
+
+#if MXNET_USE_OPENCV
+
 using nnvm::Tuple;
 using Rect = cv::Rect_<float>;
 
@@ -183,7 +186,6 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
   return DefaultImageDetAugmentParam::__FIELDS__();
 }
 
-#if MXNET_USE_OPENCV
 
 #ifdef _MSC_VER
 #define M_PI CV_PI
