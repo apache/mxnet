@@ -384,6 +384,10 @@ class NDArray {
   */
   std::vector<mx_uint> GetShape() const;
   /*!
+  * \return the data type of current NDArray
+  */
+  int GetDType() const;
+  /*!
   * \return the data pointer to the current NDArray
   */
   const mx_float *GetData() const;

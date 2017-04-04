@@ -2,7 +2,7 @@ import mxnet as mx
 from common import conv_act_layer
 from common import multibox_layer
 
-def get_symbol_train(num_classes=20):
+def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_topk=400):
     """
     Single-shot multi-box detection with VGG 16 layers ConvNet
     This is a modified version, with fc6/fc7 layers replaced by conv layers
@@ -13,6 +13,12 @@ def get_symbol_train(num_classes=20):
     ----------
     num_classes: int
         number of object classes not including background
+    nms_thresh : float
+        non-maximum suppression threshold
+    force_suppress : boolean
+        whether suppress different class objects
+    nms_topk : int
+        apply NMS to top K detections
 
     Returns:
     ----------
@@ -102,21 +108,28 @@ def get_symbol_train(num_classes=20):
         stride=(1,1), act_type="relu", use_batchnorm=False)
     conv10_2, relu10_2 = conv_act_layer(relu10_1, "10_2", 256, kernel=(3,3), pad=(1,1), \
         stride=(2,2), act_type="relu", use_batchnorm=False)
-    # global Pooling
-    pool10 = mx.symbol.Pooling(data=relu10_2, pool_type="avg",
-        global_pool=True, kernel=(1,1), name='pool10')
+    conv11_1, relu11_1 = conv_act_layer(relu10_2, "11_1", 128, kernel=(1,1), pad=(0,0), \
+        stride=(1,1), act_type="relu", use_batchnorm=False)
+    conv11_2, relu11_2 = conv_act_layer(relu11_1, "11_2", 256, kernel=(3,3), pad=(1,1), \
+        stride=(2,2), act_type="relu", use_batchnorm=False)
+    conv12_1, relu12_1 = conv_act_layer(relu11_2, "12_1", 128, kernel=(1,1), pad=(0,0), \
+        stride=(1,1), act_type="relu", use_batchnorm=False)
+    conv12_2, relu12_2 = conv_act_layer(relu12_1, "12_2", 256, kernel=(4,4), pad=(1,1), \
+        stride=(1,1), act_type="relu", use_batchnorm=False)
 
     # specific parameters for VGG16 network
-    from_layers = [relu4_3, relu7, relu8_2, relu9_2, relu10_2, pool10]
-    sizes = [[.1], [.2,.276], [.38, .461], [.56, .644], [.74, .825], [.92, 1.01]]
+    from_layers = [relu4_3, relu7, relu8_2, relu9_2, relu10_2, relu11_2, relu12_2]
+    sizes = [[.07, .1025], [.15,.2121], [.3, .3674], [.45, .5196], [.6, .6708], \
+        [.75, .8216], [.9, .9721]]
     ratios = [[1,2,.5], [1,2,.5,3,1./3], [1,2,.5,3,1./3], [1,2,.5,3,1./3], \
-        [1,2,.5,3,1./3], [1,2,.5,3,1./3]]
-    normalizations = [20, -1, -1, -1, -1, -1]
+        [1,2,.5,3,1./3], [1,2,.5], [1,2,.5]]
+    normalizations = [20, -1, -1, -1, -1, -1, -1]
+    steps = [ x / 512.0 for x in [8, 16, 32, 64, 128, 256, 512]]
     num_channels = [512]
 
     loc_preds, cls_preds, anchor_boxes = multibox_layer(from_layers, \
         num_classes, sizes=sizes, ratios=ratios, normalization=normalizations, \
-        num_channels=num_channels, clip=True, interm_layer=0)
+        num_channels=num_channels, clip=False, interm_layer=0, steps=steps)
 
     tmp = mx.contrib.symbol.MultiBoxTarget(
         *[anchor_boxes, label, cls_preds], overlap_threshold=.5, \
@@ -128,7 +141,7 @@ def get_symbol_train(num_classes=20):
     cls_target = tmp[2]
 
     cls_prob = mx.symbol.SoftmaxOutput(data=cls_preds, label=cls_target, \
-        ignore_label=-1, use_ignore=True, grad_scale=3., multi_output=True, \
+        ignore_label=-1, use_ignore=True, grad_scale=1., multi_output=True, \
         normalization='valid', name="cls_prob")
     loc_loss_ = mx.symbol.smooth_l1(name="loc_loss_", \
         data=loc_target_mask * (loc_preds - loc_target), scalar=1.0)
@@ -137,12 +150,16 @@ def get_symbol_train(num_classes=20):
 
     # monitoring training status
     cls_label = mx.symbol.MakeLoss(data=cls_target, grad_scale=0, name="cls_label")
+    det = mx.contrib.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
+        name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
+        variances=(0.1, 0.1, 0.2, 0.2), nms_topk=nms_topk)
+    det = mx.symbol.MakeLoss(data=det, grad_scale=0, name="det_out")
 
     # group output
-    out = mx.symbol.Group([cls_prob, loc_loss, cls_label])
+    out = mx.symbol.Group([cls_prob, loc_loss, cls_label, det])
     return out
 
-def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=True):
+def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_topk=400):
     """
     Single-shot multi-box detection with VGG 16 layers ConvNet
     This is a modified version, with fc6/fc7 layers replaced by conv layers
@@ -155,22 +172,23 @@ def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=True):
         number of object classes not including background
     nms_thresh : float
         threshold of overlap for non-maximum suppression
+    force_suppress : boolean
+        whether suppress different class objects
+    nms_topk : int
+        apply NMS to top K detections
 
     Returns:
     ----------
     mx.Symbol
     """
     net = get_symbol_train(num_classes)
-    # print net.get_internals().list_outputs()
     cls_preds = net.get_internals()["multibox_cls_pred_output"]
     loc_preds = net.get_internals()["multibox_loc_pred_output"]
     anchor_boxes = net.get_internals()["multibox_anchors_output"]
 
     cls_prob = mx.symbol.SoftmaxActivation(data=cls_preds, mode='channel', \
         name='cls_prob')
-    # group output
-    # out = mx.symbol.Group([loc_preds, cls_preds, anchor_boxes])
     out = mx.contrib.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
         name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
-        variances=(0.1, 0.1, 0.2, 0.2))
+        variances=(0.1, 0.1, 0.2, 0.2), nms_topk=nms_topk)
     return out

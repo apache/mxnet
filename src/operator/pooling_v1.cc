@@ -45,7 +45,8 @@ Operator* PoolingV1Prop::CreateOperatorEx(Context ctx, std::vector<TShape> *in_s
 DMLC_REGISTER_PARAMETER(PoolingV1Param);
 
 MXNET_REGISTER_OP_PROPERTY(Pooling_v1, PoolingV1Prop)
-.describe(R"code(Perform pooling on the input.
+.describe(R"code(This operator is DEPRECATED.
+Perform pooling on the input.
 
 The shapes for 2-D pooling is
 
