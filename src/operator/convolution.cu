@@ -72,6 +72,7 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
       }
       if (!convolutionIsSupported) {
         LOG(INFO) << "This convolution is not supported by cudnn, MXNET convolution is applied.";
+        op = new ConvolutionOp<gpu, DType>(param);
       } else {
         if ((forward_compute_type != desired_forward_compute_type) ||
             (backward_compute_type != desired_backward_compute_type))
