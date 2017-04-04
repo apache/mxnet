@@ -19,6 +19,6 @@ if [ ${TRAVIS_OS_NAME} == "linux" ]; then
 fi
 
 if [ ${TASK} == "build" ]; then
-    make example
+    make
     exit $?
 fi

@@ -5,8 +5,8 @@
 * \author Chuntao Hong
 */
 
-#ifndef MXNETCPP_KVSTORE_H
-#define MXNETCPP_KVSTORE_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_H_
 
 #include <string>
 #include <vector>
@@ -39,11 +39,11 @@ class KVStore {
   static KVStoreHandle& get_handle();
   static std::unique_ptr<Optimizer>& get_optimizer();
   static KVStore*& get_kvstore();
-  static void Controller(int head, const char* body, void* controller_handle); 
+  static void Controller(int head, const char* body, void* controller_handle);
   static void Updater(int key, NDArrayHandle recv, NDArrayHandle local, void* handle_);
 };
 
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_KVSTORE_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_KVSTORE_H_

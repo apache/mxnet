@@ -2,7 +2,7 @@
  * Copyright (c) 2016 by Contributors
  * \file caffe_op-inl.h
  * \brief Caffe Operator
- * \author Haoran Wang 
+ * \author Haoran Wang
 */
 #ifndef PLUGIN_CAFFE_CAFFE_OP_INL_H_
 #define PLUGIN_CAFFE_CAFFE_OP_INL_H_
@@ -111,9 +111,9 @@ class CaffeOp : public Operator {
       caffe::SetOpBlobs(caffeOp_, wei_);
     }
     if (ctx.is_train)
-      caffeOp_->SetPhase(::caffe::TRAIN);
+      MXCAFFELAYER(caffeOp_, Dtype)->SetPhase(::caffe::TRAIN);
     else
-      caffeOp_->SetPhase(::caffe::TEST);
+      MXCAFFELAYER(caffeOp_, Dtype)->SetPhase(::caffe::TEST);
     caffeOp_->Forward(bot_, top_);
 
 #if defined(__CUDACC__)
