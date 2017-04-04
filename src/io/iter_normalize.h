@@ -17,66 +17,10 @@
 #include <string>
 #include <vector>
 #include "../common/utils.h"
+#include "./image_iter_common.h"
 
 namespace mxnet {
 namespace io {
-
-// normalize parameters
-struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
-  /*! \brief random seed */
-  int seed;
-  /*! \brief whether to mirror the image */
-  bool mirror;
-  /*! \brief whether to perform rand mirror the image */
-  bool rand_mirror;
-  /*! \brief mean file string */
-  std::string mean_img;
-  /*! \brief mean value for r channel */
-  float mean_r;
-  /*! \brief mean value for g channel */
-  float mean_g;
-  /*! \brief mean value for b channel */
-  float mean_b;
-  /*! \brief mean value for alpha channel */
-  float mean_a;
-  /*! \brief scale on color space */
-  float scale;
-  /*! \brief maximum ratio of contrast variation */
-  float max_random_contrast;
-  /*! \brief maximum value of illumination variation */
-  float max_random_illumination;
-  /*! \brief silent */
-  bool verbose;
-  // declare parameters
-  DMLC_DECLARE_PARAMETER(ImageNormalizeParam) {
-    DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("The Random Seed.");
-    DMLC_DECLARE_FIELD(mirror).set_default(false)
-        .describe("If or not mirror the image.");
-    DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("If or not randomly the image.");
-    DMLC_DECLARE_FIELD(mean_img).set_default("")
-        .describe("Filename of the The mean image.");
-    DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-        .describe("The mean value to be subtracted on the R channel");
-    DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("The mean value to be subtracted on the G channel");
-    DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("The mean value to be subtracted on the B channel");
-    DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
-        .describe("The mean value to be subtracted on the alpha channel");
-    DMLC_DECLARE_FIELD(scale).set_default(1.0f)
-        .describe("Multiply the image with a scale value.");
-    DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
-        .describe("Change the contrast with a value randomly chosen from "
-                  "``[-max_random_contrast, max_random_contrast]``");
-    DMLC_DECLARE_FIELD(max_random_illumination).set_default(0.0f)
-        .describe("Change the illumination with a value randomly chosen from "
-                  "``[-max_random_illumination, max_random_illumination]``");
-    DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("If or not output verbose information.");
-  }
-};
 
 /*!
  * \brief Iterator that normalize a image.
@@ -247,61 +191,6 @@ class ImageNormalizeIter : public IIterator<DataInst> {
     }
     meanfile_ready_ = true;
     this->BeforeFirst();
-  }
-};
-
-// normalize parameters
-struct ImageDetNormalizeParam :  public dmlc::Parameter<ImageDetNormalizeParam> {
-  /*! \brief random seed */
-  int seed;
-  /*! \brief mean file string */
-  std::string mean_img;
-  /*! \brief mean value for r channel */
-  float mean_r;
-  /*! \brief mean value for g channel */
-  float mean_g;
-  /*! \brief mean value for b channel */
-  float mean_b;
-  /*! \brief mean value for alpha channel */
-  float mean_a;
-  /*! \brief standard deviation for r channel */
-  float std_r;
-  /*! \brief standard deviation for g channel */
-  float std_g;
-  /*! \brief standard deviation for b channel */
-  float std_b;
-  /*! \brief standard deviation for alpha channel */
-  float std_a;
-  /*! \brief scale on color space */
-  float scale;
-  /*! \brief silent */
-  bool verbose;
-  // declare parameters
-  DMLC_DECLARE_PARAMETER(ImageDetNormalizeParam) {
-    DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("Augmentation Param: Random Seed.");
-    DMLC_DECLARE_FIELD(mean_img).set_default("")
-        .describe("Augmentation Param: Mean Image to be subtracted.");
-    DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on R channel.");
-    DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on G channel.");
-    DMLC_DECLARE_FIELD(mean_b).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on B channel.");
-    DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
-        .describe("Augmentation Param: Mean value on Alpha channel.");
-    DMLC_DECLARE_FIELD(std_r).set_default(0.0f)
-        .describe("Augmentation Param: Standard deviation on R channel.");
-    DMLC_DECLARE_FIELD(std_g).set_default(0.0f)
-        .describe("Augmentation Param: Standard deviation on G channel.");
-    DMLC_DECLARE_FIELD(std_b).set_default(0.0f)
-        .describe("Augmentation Param: Standard deviation on B channel.");
-    DMLC_DECLARE_FIELD(std_a).set_default(0.0f)
-        .describe("Augmentation Param: Standard deviation on Alpha channel.");
-    DMLC_DECLARE_FIELD(scale).set_default(1.0f)
-        .describe("Augmentation Param: Scale in color space.");
-    DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("Augmentation Param: Whether to print augmentor info.");
   }
 };
 
