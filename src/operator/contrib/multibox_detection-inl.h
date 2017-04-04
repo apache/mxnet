@@ -10,6 +10,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
+#include <nnvm/tuple.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -25,82 +26,15 @@ enum MultiBoxDetectionOpOutputs {kOut};
 enum MultiBoxDetectionOpResource {kTempSpace};
 }  // namespace mboxdet_enum
 
-struct VarInfo {
-  VarInfo() {}
-  explicit VarInfo(std::vector<float> in) : info(in) {}
-
-  std::vector<float> info;
-};  // struct VarInfo
-
-inline std::istream &operator>>(std::istream &is, VarInfo &size) {
-  while (true) {
-    char ch = is.get();
-    if (ch == '(') break;
-    if (!isspace(ch)) {
-      is.setstate(std::ios::failbit);
-      return is;
-    }
-  }
-  float f;
-  std::vector<float> tmp;
-  // deal with empty case
-  // safe to remove after stop using target_size
-  size_t pos = is.tellg();
-  char ch = is.get();
-  if (ch == ')') {
-    size.info = tmp;
-    return is;
-  }
-  is.seekg(pos);
-  // finish deal
-  while (is >> f) {
-    tmp.push_back(f);
-    char ch;
-    do {
-      ch = is.get();
-    } while (isspace(ch));
-    if (ch == ',') {
-      while (true) {
-        ch = is.peek();
-        if (isspace(ch)) {
-          is.get(); continue;
-        }
-        if (ch == ')') {
-          is.get(); break;
-        }
-        break;
-      }
-      if (ch == ')') break;
-    } else if (ch == ')') {
-      break;
-    } else {
-      is.setstate(std::ios::failbit);
-      return is;
-    }
-  }
-  size.info = tmp;
-  return is;
-}
-
-inline std::ostream &operator<<(std::ostream &os, const VarInfo &size) {
-  os << '(';
-  for (index_t i = 0; i < size.info.size(); ++i) {
-    if (i != 0) os << ',';
-    os << size.info[i];
-  }
-  // python style tuple
-  if (size.info.size() == 1) os << ',';
-  os << ')';
-  return os;
-}
-
 struct MultiBoxDetectionParam : public dmlc::Parameter<MultiBoxDetectionParam> {
   bool clip;
   float threshold;
   int background_id;
   float nms_threshold;
   bool force_suppress;
-  VarInfo variances;
+  int keep_topk;
+  int nms_topk;
+  nnvm::Tuple<float> variances;
   DMLC_DECLARE_PARAMETER(MultiBoxDetectionParam) {
     DMLC_DECLARE_FIELD(clip).set_default(true)
     .describe("Clip out-of-boundary boxes.");
@@ -112,8 +46,10 @@ struct MultiBoxDetectionParam : public dmlc::Parameter<MultiBoxDetectionParam> {
     .describe("Non-maximum suppression threshold.");
     DMLC_DECLARE_FIELD(force_suppress).set_default(false)
     .describe("Suppress all detections regardless of class_id.");
-    DMLC_DECLARE_FIELD(variances).set_default(VarInfo({0.1f, 0.1f, 0.2f, 0.2f}))
+    DMLC_DECLARE_FIELD(variances).set_default({0.1f, 0.1f, 0.2f, 0.2f})
     .describe("Variances to be decoded from box regression output.");
+    DMLC_DECLARE_FIELD(nms_topk).set_default(-1)
+    .describe("Keep maximum top k detections before nms, -1 for no limit.");
   }
 };  // struct MultiBoxDetectionParam
 
@@ -148,8 +84,8 @@ class MultiBoxDetectionOp : public Operator {
        .get_space_typed<xpu, 3, DType>(out.shape_, s);
      out = -1.f;
      MultiBoxDetectionForward(out, cls_prob, loc_pred, anchors, temp_space,
-       param_.threshold, param_.clip, param_.variances.info, param_.nms_threshold,
-       param_.force_suppress);
+       param_.threshold, param_.clip, param_.variances, param_.nms_threshold,
+       param_.force_suppress, param_.nms_topk);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -161,6 +97,13 @@ class MultiBoxDetectionOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 2, DType> gradc = in_grad[mboxdet_enum::kClsProb].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> gradl = in_grad[mboxdet_enum::kLocPred].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grada = in_grad[mboxdet_enum::kAnchor].FlatTo2D<xpu, DType>(s);
+    gradc = 0.f;
+    gradl = 0.f;
+    grada = 0.f;
 }
 
  private:

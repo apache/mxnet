@@ -47,7 +47,8 @@ MXNET_REGISTER_OP_PROPERTY(Convolution_v1, ConvolutionV1Prop)
 .add_argument("weight", "Symbol", "Weight matrix.")
 .add_argument("bias", "Symbol", "Bias parameter.")
 .add_arguments(ConvolutionV1Param::__FIELDS__())
-.describe("Apply convolution to input then add a bias.");
+.describe("This operator is DEPRECATED."
+          " Apply convolution to input then add a bias.");
 
 }  // namespace op
 }  // namespace mxnet

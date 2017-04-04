@@ -284,7 +284,7 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     .add_enum("raise", take_::kRaise)
     .add_enum("wrap", take_::kWrap)
     .add_enum("clip", take_::kClip)
-    .set_default(take_::kRaise)
+    .set_default(take_::kClip)
     .describe("specify how out-of-bound indices bahave.");
   }
 };
@@ -296,8 +296,8 @@ inline void TakeParamParser(nnvm::NodeAttrs *attrs) {
     if (param.axis != 0) {
         LOG(FATAL) << "Axis other than 0 currently not supported.";
     }
-    if (param.mode != take_::kRaise) {
-        LOG(FATAL) << "Mode other than raise currently not supported.";
+    if (param.mode != take_::kClip) {
+        LOG(FATAL) << "Mode other than clip currently not supported.";
     }
 }
 
@@ -323,25 +323,35 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int> *in_type,
-                       std::vector<int> *out_type) {
-  // using single dtype ("float32") for safety reason
-  CHECK_GE(in_type->size(), 2U);
-  int dtype = (*in_type)[1];
-  CHECK_NE(dtype, -1) << "idx must have specified type";
-  for (index_t i = 0; i < in_type->size(); ++i) {
-    if ((*in_type)[i] == -1) {
-      (*in_type)[i] = dtype;
-    } else {
-      CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                     << "Expected " << dtype << " v.s. given "
-                                     << (*in_type)[i];
-    }
-  }
-  out_type->clear();
-  out_type->push_back(dtype);
-  return true;
+                       std::vector<int> *in_attrs,
+                       std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE((*in_attrs)[1], -1) << "Index type must be set for take operator";
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  return (*in_attrs)[0] != -1;
 }
+
+/*! \brief name the struct Take instead of take
+ * to avoid conflict with the take function in mshadow
+ */
+struct Take {
+  // assume that idx have been flattened to a 1-D tensor (N,)
+  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
+  // M is the number of columns of in_data and out_data
+  // K is the number of rows of in_data
+  // i is the index of out_data
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+                                  const IType* idx, const int M, const int K) {
+    int j = static_cast<int>(idx[i/M]);
+    if (j <= 0) j = 0;
+    else if (j >= K) j = K - 1;
+    out_data[i] = in_data[j * M + i % M];
+  }
+};
 
 template<typename xpu>
 void TakeOpForward(const nnvm::NodeAttrs& attrs,
@@ -349,32 +359,25 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(req[take_::kOut], kWriteTo);
-    CHECK_EQ(inputs.size(), 2U);
-    CHECK_EQ(outputs.size(), 1U);
-    CHECK_GE(inputs[take_::kArr].ndim(), 2U)
-        << "take layer expects its array's size to be at least 2. "
-        << inputs[take_::kArr].ndim()
-        << " dimensional input is given instead";
+  using namespace mxnet_op;
+  CHECK_EQ(req[take_::kOut], kWriteTo);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
 
-    const TShape& idxshape = inputs[take_::kIdx].shape_;
-    const TShape& arrshape = inputs[take_::kArr].shape_;
-    const TShape& oshape = outputs[take_::kOut].shape_;
+  const TShape& idxshape = inputs[take_::kIdx].shape_;
+  const TShape& arrshape = inputs[take_::kArr].shape_;
+  const TShape& oshape = outputs[take_::kOut].shape_;
 
-    int idxndim = idxshape.ndim();
-
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        Tensor<xpu, 1, DType> idx = inputs[take_::kIdx].get_with_shape<xpu, 1, DType>(
-            Shape1(idxshape.ProdShape(0, idxndim)), s);
-        Tensor<xpu, 2, DType> data = inputs[take_::kArr].get_with_shape<xpu, 2, DType>(
-            Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
-        Tensor<xpu, 2, DType> out = outputs[take_::kOut].get_with_shape<xpu, 2, DType>(
-            Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
-        out = take(idx, data);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+      Kernel<Take, xpu>::Launch(s, oshape.Size(),
+                                outputs[take_::kOut].dptr<DType>(),
+                                inputs[take_::kArr].dptr<DType>(),
+                                inputs[take_::kIdx].dptr<IType>(),
+                                oshape.Size()/idxshape.Size(), arrshape[0]);
     });
+  });
 }
 
 template<typename xpu>
@@ -383,56 +386,58 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(inputs.size(), 2U);
-    CHECK_EQ(outputs.size(), 2U);
-    CHECK_EQ(req[take_::kIdx], kNullOp)
-        << "take layer doesn't support gradient into index";
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 2U);
+  CHECK_EQ(req[take_::kIdx], kNullOp)
+    << "take layer doesn't support gradient into index";
 
-    // inputs are specified in the .cc file, which are the gradients from
-    // the upper layer and the input index
-    // outputs are the gradients of inputs in the feed-forward pass
-    const TShape& idxshape = inputs[1].shape_;
-    const TShape& arrshape = outputs[0].shape_;
-    const TShape& oshape = inputs[0].shape_;
+  // inputs are specified in the .cc file, which are the gradients from
+  // the upper layer and the input index
+  // outputs are the gradients of inputs in the feed-forward pass
+  const TShape& idxshape = inputs[1].shape_;
+  const TShape& arrshape = outputs[0].shape_;
+  const TShape& oshape = inputs[0].shape_;
 
-    int idxndim = idxshape.ndim();
+  int idxndim = idxshape.ndim();
 
-    // grad_out is the gradient of the outputs in the feed-forward
-    // grad_in is the gradient of the inputs in the feed-forward
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        Tensor<xpu, 1, DType> idx = inputs[1].get_with_shape<xpu, 1, DType>(
-            Shape1(idxshape.ProdShape(0, idxndim)), s);
-        Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
-            Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
-        Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
-            Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
+  // grad_out is the gradient of the outputs in the feed-forward
+  // grad_in is the gradient of the inputs in the feed-forward
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+      Tensor<xpu, 1, IType> idx = inputs[1].get_with_shape<xpu, 1, IType>(
+          Shape1(idxshape.ProdShape(0, idxndim)), s);
+      Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
+          Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
+      Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
+          Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
 
-        if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
-            if (req[take_::kArr] == kWriteTo) {
-                grad_in = scalar<DType>(0.0f);
-            }
-            // shape_out_prod ~= the number of elements loaded in AddTakeGrad
-            // shape_in_prod  ~= the number of elements stored in AddTakeGrad
-            // When the number of elements processed is low, use AddTakeGrad.
-            // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
-            uint64_t shape_in_prod =
-              static_cast<uint64_t>(grad_in.shape_[0])*
-              static_cast<uint64_t>(grad_in.shape_[1]);
-            uint64_t shape_out_prod =
-              static_cast<uint64_t>(grad_out.shape_[0])*
-              static_cast<uint64_t>(grad_out.shape_[1]);
-            if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
-                AddTakeGrad(grad_in, idx, grad_out);
-            } else {
-                AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
-            }
-        } else {
-            LOG(FATAL) << "wrong req";
+      if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
+        if (req[take_::kArr] == kWriteTo) {
+          grad_in = scalar<DType>(0.0f);
         }
+        // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+        // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+        // When the number of elements processed is low, use AddTakeGrad.
+        // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+        uint64_t shape_in_prod =
+          static_cast<uint64_t>(grad_in.shape_[0])*
+          static_cast<uint64_t>(grad_in.shape_[1]);
+        uint64_t shape_out_prod =
+          static_cast<uint64_t>(grad_out.shape_[0])*
+          static_cast<uint64_t>(grad_out.shape_[1]);
+        if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
+          AddTakeGrad(grad_in, idx, grad_out);
+        } else {
+          AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
+        }
+      } else {
+        LOG(FATAL) << "wrong req";
+      }
     });
+  });
 }
 
 inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
@@ -567,24 +572,25 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE((*in_attrs)[0], -1) << "Index type must be set for one_hot operator";
   int depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
-  int dtype = mshadow::kFloat32;
+  int dtype = -1;
   const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
   GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kInt32);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);  // assign output type
+
   return true;
 }
 
 template<int req>
 struct one_hot {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const int* indices,
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indices,
                                   int depth, DType on_value) {
     int offset = i * depth;
-    int j = indices[i];
+    int j = static_cast<int>(indices[i]);
     if (j >= 0 && j < depth) {
       KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
@@ -612,13 +618,15 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type switch
     mshadow::Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
     ASSIGN_DISPATCH(out, req[0], static_cast<DType>(off_value));
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<one_hot<req_type>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                             inputs[0].dptr<int>(), depth,
-                                             static_cast<DType>(on_value));
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {  // request type switch
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {  // indices data type switch
+        Kernel<one_hot<req_type>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                               inputs[0].dptr<IType>(), depth,
+                                               static_cast<DType>(on_value));
+      });
     });
   });
 }

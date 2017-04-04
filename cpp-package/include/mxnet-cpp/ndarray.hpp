@@ -315,7 +315,7 @@ inline std::vector<mx_uint> NDArray::GetShape() const {
 
 inline int NDArray::GetDType() const {
   int ret;
-  MXNDArrayGetDType(blob_ptr_->handle, &ret);
+  MXNDArrayGetDType(blob_ptr_->handle_, &ret);
   return ret;
 }
 
