@@ -16,8 +16,13 @@ class ReshapeDoc(NDArrayDoc):
     --------
     Reshapes the input array into a new shape.
 
+<<<<<<< HEAD
     >>> x = mx.nd.array([1, 2, 3, 4])
     >>> y = mx.nd.reshape(x,shape=(2, 2))
+=======
+    >>> x = mx.nd.array([1,2,3,4])
+    >>> y = mx.nd.reshape(x,shape=(2,2))
+>>>>>>> fix formatting issues with Reshape documentation
     >>> x.shape
     (4L,)
     >>> y.shape
