@@ -526,7 +526,7 @@ class Module(BaseModule):
         self.optimizer_initialized = True
 
     def forward(self, data_batch, is_train=None):
-        """Forward computation.
+        """Forward computation. It supports different batch_size inputs.
 
         Parameters
         ----------
