@@ -711,6 +711,7 @@ fixed-size items.
         return transpose(self)
     # pylint: enable= invalid-name, undefined-variable
 
+    @property
     def iscontiguous(self):
         """Returns True if the data is contiguous in memory, False otherwise
 
