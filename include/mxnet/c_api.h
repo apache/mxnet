@@ -392,7 +392,7 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayIsContiguous(NDArrayHandle handle,
-									bool *out_pdata);
+                                    bool *out_pdata);
 
 /*!
  * \brief get the content of the data in NDArray

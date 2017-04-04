@@ -318,14 +318,14 @@ int MXNDArrayGetShape(NDArrayHandle handle,
 }
 
 int MXNDArrayIsContiguous(NDArrayHandle handle,
-						  bool *out_pdata) {
+                          bool *out_pdata) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     const TBlob &b = arr->data();
     *out_pdata = b.CheckContiguous();
   } else {
-	  *out_pdata = 0;
+    *out_pdata = 0;
   }
   API_END();
 }
