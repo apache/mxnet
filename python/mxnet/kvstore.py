@@ -54,7 +54,7 @@ class KVStore(object):
         Parameters
         ----------
         handle : KVStoreHandle
-            KVStore handle of C API.
+            `KVStore` handle of C API.
         """
         assert isinstance(handle, KVStoreHandle)
         self.handle = handle
@@ -107,10 +107,10 @@ class KVStore(object):
 
         1. This function returns after adding an operator to the engine.
 
-        2. ``push`` is always called after all previous push and pull on the same
+        2. `push` is always called after all previous push and pull on the same
         key are finished
 
-        3. There is no synchronization between workers. One can use _barrier()
+        3. There is no synchronization between workers. One can use ``_barrier()``
         to sync all workers.
 
         Parameters
@@ -174,7 +174,7 @@ class KVStore(object):
         1. This function returns after adding an operator to the engine. But any
         further read on out will be blocked until it is finished.
 
-        2. ``pull`` is always called after all previous push and pull on the same
+        2. `pull` is always called after all previous push and pull on the same
         key are finished.
 
         3. It pulls the newest value from the store.
@@ -184,7 +184,7 @@ class KVStore(object):
         key : int or list of int
             Keys.
 
-        out: NDArray or list of NDArray or list of lists of NDArrays
+        out: NDArray or list of NDArray or list of list of NDArray
             According values.
 
         priority : int, optional
@@ -367,7 +367,7 @@ class KVStore(object):
         """Send a command to all server nodes.
 
         Send a command to all server nodes, which will make each server node run
-        KVStoreServer.controller
+        ``KVStoreServer.controller``
 
         This function returns after the command has been executed in all server
         nodes.

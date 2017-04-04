@@ -1,4 +1,4 @@
-"""Read and write for the RecrodIO data format"""
+"""Read and write for the RecrodIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
 
@@ -170,7 +170,7 @@ _IR_FORMAT = 'IfQQ'
 _IR_SIZE = struct.calcsize(_IR_FORMAT)
 
 def pack(header, s):
-    """Pack an string into MXImageRecord.
+    """Pack a string into MXImageRecord.
 
     Parameters
     ----------
@@ -196,7 +196,7 @@ def unpack(s):
     Parameters
     ----------
     s : str
-        String buffer from MXRecordIO.read.
+        String buffer from ``MXRecordIO.read``.
 
     Returns
     -------
