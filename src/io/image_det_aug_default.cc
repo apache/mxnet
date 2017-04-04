@@ -15,10 +15,7 @@
 namespace mxnet {
 namespace io {
 
-#if MXNET_USE_OPENCV
-
 using nnvm::Tuple;
-using Rect = cv::Rect_<float>;
 
 namespace image_det_aug_default_enum {
 enum ImageDetAugDefaultCropEmitMode {kCenter, kOverlap};
@@ -186,6 +183,9 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
   return DefaultImageDetAugmentParam::__FIELDS__();
 }
 
+  
+#if MXNET_USE_OPENCV
+using Rect = cv::Rect_<float>;
 
 #ifdef _MSC_VER
 #define M_PI CV_PI
