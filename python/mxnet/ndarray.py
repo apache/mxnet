@@ -711,6 +711,14 @@ fixed-size items.
         return transpose(self)
     # pylint: enable= invalid-name, undefined-variable
 
+    def iscontiguous(self):
+        """Returns True if the data is contiguous in memory
+        """
+        value = mx_uint()
+        check_call(_LIB.MXNDArrayIsContiguous(self.handle, ctypes.byref(value)))
+        return bool(value.value)
+
+
     def asnumpy(self):
         """Returns a ``numpy.ndarray`` object with value copied from this array.
 

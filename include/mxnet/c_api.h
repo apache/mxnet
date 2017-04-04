@@ -386,6 +386,15 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
                                 mx_uint *out_dim,
                                 const mx_uint **out_pdata);
 /*!
+ * \brief checks if the data of the array is contiguous in memory
+ * \param handle the handle to the narray
+ * \param out_pdata 1 if the data is contiguous, 0 otherwise
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayIsContiguous(NDArrayHandle handle,
+									bool *out_pdata);
+
+/*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the narray
  * \param out_pdata pointer holder to get pointer of data
