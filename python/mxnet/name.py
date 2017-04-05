@@ -20,7 +20,7 @@ class NameManager(object):
         If the user specifies a name,
         the user-specified name will be used.
 
-        When user does not speciry a name, we automatically generate a
+        When user does not specify a name, we automatically generate a
         name based on the hint string.
 
         Parameters
