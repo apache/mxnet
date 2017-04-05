@@ -4,6 +4,7 @@ import argparse
 import re
 import os
 import codecs
+import json
 
 # language names and the according file extensions
 # _LANGS = {'python':'py', 'r':'R', 'scala':'scala', 'julia':'jl', 'perl':'pl', 'cpp':'cc'}
@@ -15,8 +16,8 @@ class CodeBlocks(object):
     def __init__(self, fname, lang):
         with codecs.open(fname, 'r', 'utf-8') as f:
             self.data = f.readlines()
-        self.codes = []
         self.lang = lang.lower()
+        self.cells = []
 
     def _parse_lines(self):
         in_code = False
@@ -36,6 +37,34 @@ class CodeBlocks(object):
             else:
                 yield (l, in_code, lang, indent)
 
+    def _add_jupyter_block(self, lines, is_code ):
+        if is_code and len(lines) >= 2:
+            lines = lines[1:-1] # remove ```
+        while len(lines) > 0:
+            if len(lines[0].rstrip()) == 0:
+                lines.pop(0)
+            else:
+                break
+        while len(lines) > 0:
+            if len(lines[-1].rstrip()) == 0:
+                lines.pop()
+            else:
+                break
+        if len(lines) == 0:
+            return
+        lines[-1] = lines[-1].rstrip()
+        cell = {
+            "cell_type": "code" if is_code else "markdown",
+            "metadata": {},
+            "source":  lines
+        }
+        if is_code:
+            cell.update({
+                "outputs": [],
+                "execution_count": None,
+            })
+        self.cells.append(cell)
+
     def write(self, action, ofname):
         if action == 'get':
             with open(ofname, 'w') as f:
@@ -50,9 +79,21 @@ class CodeBlocks(object):
                         f.write(l)
             return
         if action == 'convert':
-            output ='/tmp/mdcode.md'
-            self.write('keep', output)
-            os.system('notedown ' + output + ' > ' + ofname)
+            cur_block = []
+            pre_in_code = None
+            pre_lang = None
+            for (l, in_code, lang, _) in self._parse_lines():
+                if in_code != pre_in_code or lang != pre_lang:
+                    self._add_jupyter_block(cur_block, pre_in_code)
+                    cur_block = []
+                if not in_code or (in_code and lang == self.lang):
+                    cur_block.append(l)
+                (pre_in_code, pre_lang) = (in_code, lang)
+            self._add_jupyter_block(cur_block, pre_in_code)
+
+            ipynb = {"nbformat":4, "nbformat_minor":2, "metadata":{}, "cells":self.cells}
+            with open(ofname, 'w') as f:
+                json.dump(ipynb, f)
             return
         if action == 'add_btn':
             langs = set([l for (_, _, l, _) in self._parse_lines() if l is not None])
