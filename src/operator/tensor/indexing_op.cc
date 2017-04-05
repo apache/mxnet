@@ -36,8 +36,8 @@ NNVM_REGISTER_OP(Embedding)
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
-.add_argument("data", "Symbol", "Input data to the EmbeddingOp.")
-.add_argument("weight", "Symbol", "Embedding weight matrix.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the EmbeddingOp.")
+.add_argument("weight", "NDArray-or-Symbol", "Embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Embedding)

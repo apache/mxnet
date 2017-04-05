@@ -52,8 +52,8 @@ NNVM_REGISTER_OP(pick)
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
     return ret;
   })
-.add_argument("data", "NDArray", "Source input")
-.add_argument("index", "NDArray", "Index array")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("index", "NDArray-or-Symbol", "Index array")
 .add_arguments(ReduceAxisParam::__FIELDS__());
 
 

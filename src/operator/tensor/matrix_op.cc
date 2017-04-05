@@ -529,7 +529,7 @@ NNVM_REGISTER_OP(reverse)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_reverse" })
-.add_argument("data", "NDArray", "Input data array")
+.add_argument("data", "NDArray-or-Symbol", "Input data array")
 .add_arguments(ReverseParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_reverse)

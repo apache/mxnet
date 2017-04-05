@@ -27,7 +27,7 @@ DMLC_REGISTER_PARAMETER(FFTParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_fft, FFTProp)
 .describe("Apply FFT to input.")
-.add_argument("data", "Symbol", "Input data to the FFTOp.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the FFTOp.")
 .add_arguments(FFTParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
