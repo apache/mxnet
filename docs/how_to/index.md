@@ -1,6 +1,6 @@
 # MXNet How To
 
-The how_tos provide a range of information from installation, basic concepts and general guidance to demos complete with pre-trained models, instructions, and commands.
+The how-tos provide a range of information from installation, basic concepts and general guidance to demos complete with pre-trained models, instructions, and commands.
 
 
 &nbsp;
