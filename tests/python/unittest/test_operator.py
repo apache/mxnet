@@ -2717,7 +2717,7 @@ def test_tile():
 
 
 def test_one_hot():
-    def test_normal_case():
+    def test_normal_case(index_type=np.int32):
         ndim_max = 6
         dim_size_max = 20
         depth = int(dim_size_max / 2)
@@ -2730,7 +2730,7 @@ def test_one_hot():
             indices = np.random.randint(-dim_size_max, dim_size_max+1,
                                         size=np.prod(shape)).reshape(shape)
             mx_one_hot_array = mx.nd.one_hot(
-                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                mx.nd.array(indices, ctx=default_context(), dtype=index_type),
                 depth=depth, dtype=np.int32)
             expected_array = np.zeros((np.prod(shape), depth), dtype=np.int32)
             expected_array[:] = off_value
@@ -2764,7 +2764,10 @@ def test_one_hot():
         expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
         assert same(expected_array, mx_one_hot_array)
 
-    test_normal_case()
+    test_normal_case(index_type=np.int32)
+    test_normal_case(index_type=np.float64)
+    test_normal_case(index_type=np.float32)
+    test_normal_case(index_type=np.float16)
     test_empty_indices()
     test_zero_depth()
 
@@ -2928,30 +2931,38 @@ def test_log_softmax():
 
 
 def test_pick():
-    for _ in range(100):
-        ndim = np.random.randint(1, 5)
-        bshape = np.random.randint(1, 10, size=ndim)
-        axis = np.random.randint(0, ndim)
-        sshape = bshape.copy()
-        sshape[axis] = 1
-        data = np.random.uniform(-1, 1, size=bshape)
-        index = np.random.randint(0, bshape[axis], size=sshape)
-        exp = []
-        for i in range(ndim):
-            if i == axis:
-                exp.append(index)
-            else:
-                ishape = [1 for _ in range(ndim)]
-                ishape[i] = bshape[i]
-                exp.append(np.arange(bshape[i]).reshape(ishape))
-        expected = data[exp]
-        data = mx.nd.array(data, dtype='float32')
-        index = mx.nd.array(index, dtype='int32')
-        out = mx.nd.pick(data, index, axis=axis, keepdims=True)
-        assert_almost_equal(out.asnumpy(), expected)
+    def test_pick_helper(index_type=np.int32):
+        for _ in range(100):
+            ndim = np.random.randint(1, 5)
+            bshape = np.random.randint(1, 10, size=ndim)
+            axis = np.random.randint(0, ndim)
+            sshape = bshape.copy()
+            sshape[axis] = 1
+            data = np.random.uniform(-1, 1, size=bshape)
+            index = np.random.randint(0, bshape[axis], size=sshape)
+            exp = []
+            for i in range(ndim):
+                if i == axis:
+                    exp.append(index)
+                else:
+                    ishape = [1 for _ in range(ndim)]
+                    ishape[i] = bshape[i]
+                    exp.append(np.arange(bshape[i]).reshape(ishape))
+            expected = data[exp]
+            data = mx.nd.array(data, dtype='float32')
+            index = mx.nd.array(index, dtype=index_type)
+            out = mx.nd.pick(data, index, axis=axis, keepdims=True)
+            assert_almost_equal(out.asnumpy(), expected)
 
-        sym = mx.sym.pick(axis=axis, keepdims=True)
-        check_numeric_gradient(sym, [data, index])
+            data_holder = data
+            index_holder = index
+            data = mx.sym.Variable('data')
+            index = mx.sym.Variable('index')
+            sym = mx.sym.pick(data, index, axis=axis, keepdims=True)
+            check_numeric_gradient(sym, [data_holder, index_holder], grad_nodes=['data'])
+
+    test_pick_helper(np.int32)
+    test_pick_helper(np.float32)
 
 
 def test_custom_op():

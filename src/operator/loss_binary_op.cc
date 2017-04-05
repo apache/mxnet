@@ -20,8 +20,8 @@ NNVM_REGISTER_OP(softmax_cross_entropy)
   })
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softmax_cross_entropy"})
-.add_argument("data", "NDArray", "Input data")
-.add_argument("label", "NDArray", "Input label");
+.add_argument("data", "NDArray-or-Symbol", "Input data")
+.add_argument("label", "NDArray-or-Symbol", "Input label");
 
 NNVM_REGISTER_OP(_backward_softmax_cross_entropy)
 .set_num_inputs(3)

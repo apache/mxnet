@@ -22,14 +22,14 @@
 namespace mxnet {
 namespace op {
 
-template <typename xpu, typename Reducer, typename DType>
-class NNPACKPoolingOp : public PoolingOp<xpu, Reducer, DType> {
+template <typename xpu, typename DType>
+class NNPACKPoolingOp : public PoolingOp<xpu, DType> {
  private:
   PoolingParam param_;
 
  public:
   explicit NNPACKPoolingOp(PoolingParam p)
-      : PoolingOp<xpu, Reducer, DType>(p) {
+      : PoolingOp<xpu, DType>(p) {
     this->param_ = p;
   }
 

@@ -29,7 +29,7 @@ Operator *CuDNNBatchNormProp::CreateOperator(Context ctx) const {
 
 MXNET_REGISTER_OP_PROPERTY(CuDNNBatchNorm, CuDNNBatchNormProp)
 .describe("Apply batch normalization to input.")
-.add_argument("data", "Symbol", "Input data to batch normalization")
+.add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
 .add_arguments(BatchNormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(CuDNNBatchNorm)

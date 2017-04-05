@@ -35,13 +35,8 @@ NNVM_REGISTER_OP(where)
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> ret;
     // make zero grad node for grad[condition]
-    nnvm::NodePtr p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_zeros");
-    std::ostringstream os;
-    os << n->attrs.name << "_in" << 0 << "_backward";
-    p->attrs.name = os.str();
-    p->attrs.dict = std::unordered_map<std::string, std::string>();
-    p->control_deps.emplace_back(n);
+    auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
+                      {n->inputs[0]}, nullptr, &n);
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
 
     // make grad nodes for grad[x] and grad[y]
@@ -61,9 +56,9 @@ NNVM_REGISTER_OP(where)
 
     return ret;
   })
-.add_argument("condition", "NDArray", "condition array")
-.add_argument("x", "NDArray", "")
-.add_argument("y", "NDArray", "");
+.add_argument("condition", "NDArray-or-Symbol", "condition array")
+.add_argument("x", "NDArray-or-Symbol", "")
+.add_argument("y", "NDArray-or-Symbol", "");
 
 NNVM_REGISTER_OP(_backward_where)
 .set_num_inputs(2)
