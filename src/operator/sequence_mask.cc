@@ -52,10 +52,10 @@ MXNET_REGISTER_OP_PROPERTY(SequenceMask, SequenceMaskProp)
 "example in the batch is assumed to have the max sequence length, and this operator becomes "
 "the identity operator."
 )
-    .add_argument("data", "Symbol",
+    .add_argument("data", "NDArray-or-Symbol",
                   "n-dimensional input tensor of the form [max sequence "
                   "length, batchsize, other dims]")
-    .add_argument("sequence_length", "Symbol",
+    .add_argument("sequence_length", "NDArray-or-Symbol",
                   "vector of sequence lengths of size batchsize")
     .add_arguments(SequenceMaskParam::__FIELDS__());
 

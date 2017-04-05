@@ -284,9 +284,9 @@ Operator* MultiBoxTargetProp::CreateOperatorEx(Context ctx, std::vector<TShape> 
 DMLC_REGISTER_PARAMETER(MultiBoxTargetParam);
 MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxTarget, MultiBoxTargetProp)
 .describe("Compute Multibox training targets")
-.add_argument("anchor", "Symbol", "Generated anchor boxes.")
-.add_argument("label", "Symbol", "Object detection labels.")
-.add_argument("cls_pred", "Symbol", "Class predictions.")
+.add_argument("anchor", "NDArray-or-Symbol", "Generated anchor boxes.")
+.add_argument("label", "NDArray-or-Symbol", "Object detection labels.")
+.add_argument("cls_pred", "NDArray-or-Symbol", "Class predictions.")
 .add_arguments(MultiBoxTargetParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

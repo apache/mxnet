@@ -152,9 +152,9 @@ There are other options to tune the performance.
   the performance.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to the ConvolutionOp.")
-.add_argument("weight", "ndarray-or-symbol", "Weight matrix.")
-.add_argument("bias", "ndarray-or-symbol", "Bias parameter.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the ConvolutionOp.")
+.add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
+.add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(ConvolutionParam::__FIELDS__());
 
 }  // namespace op

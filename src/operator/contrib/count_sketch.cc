@@ -25,9 +25,9 @@ Operator *CountSketchProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in
 DMLC_REGISTER_PARAMETER(CountSketchParam);
 MXNET_REGISTER_OP_PROPERTY(_contrib_count_sketch, CountSketchProp)
 .describe("Apply CountSketch to input.")
-.add_argument("data", "Symbol", "Input data to the CountSketchOp.")
-.add_argument("s", "Symbol", "The sign vector")
-.add_argument("h", "Symbol", "The index vector")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the CountSketchOp.")
+.add_argument("s", "NDArray-or-Symbol", "The sign vector")
+.add_argument("h", "NDArray-or-Symbol", "The index vector")
 .add_arguments(CountSketchParam::__FIELDS__());
 
 }  // namespace op

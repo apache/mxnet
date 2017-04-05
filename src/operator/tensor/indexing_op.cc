@@ -36,8 +36,8 @@ NNVM_REGISTER_OP(Embedding)
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
-.add_argument("data", "Symbol", "Input data to the EmbeddingOp.")
-.add_argument("weight", "Symbol", "Embedding weight matrix.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the EmbeddingOp.")
+.add_argument("weight", "NDArray-or-Symbol", "Embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Embedding)
@@ -95,8 +95,8 @@ Examples::
     return MakeNonlossGradNode("_backward_take", n, ograds,
                                {n->inputs[1]}, n->attrs.dict);
   })
-.add_argument("a", "ndarray-or-symbol", "The source array.")
-.add_argument("indices", "ndarray-or-symbol", "The indices of the values to extract.")
+.add_argument("a", "NDArray-or-Symbol", "The source array.")
+.add_argument("indices", "NDArray-or-Symbol", "The indices of the values to extract.")
 .add_arguments(TakeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_take)
@@ -136,8 +136,8 @@ Examples::
 .set_attr<nnvm::FInferShape>("FInferShape", BatchTakeOpShape)
 .set_attr<nnvm::FInferType>("FInferType", BatchTakeOpType)
 .set_attr<FCompute>("FCompute<cpu>", BatchTakeOpForward<cpu>)
-.add_argument("a", "ndarray-or-symbol", "Input data array")
-.add_argument("indices", "ndarray-or-symbol", "index array");
+.add_argument("a", "NDArray-or-Symbol", "Input data array")
+.add_argument("indices", "NDArray-or-Symbol", "index array");
 
 NNVM_REGISTER_OP(one_hot)
 .describe(R"code(Returns a one-hot array.
@@ -184,7 +184,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", OneHotOpType)
 .set_attr<FCompute>("FCompute<cpu>", OneHotOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("indices", "ndarray-or-symbol", "array of locations where to set on_value")
+.add_argument("indices", "NDArray-or-Symbol", "array of locations where to set on_value")
 .add_arguments(OneHotParam::__FIELDS__());
 
 }  // namespace op

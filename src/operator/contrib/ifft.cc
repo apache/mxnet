@@ -28,7 +28,7 @@ DMLC_REGISTER_PARAMETER(IFFTParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_ifft, IFFTProp)
 .describe("Apply IFFT to input.")
-.add_argument("data", "Symbol", "Input data to the IFFTOp.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the IFFTOp.")
 .add_arguments(IFFTParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

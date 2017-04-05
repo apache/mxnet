@@ -56,9 +56,9 @@ NNVM_REGISTER_OP(where)
 
     return ret;
   })
-.add_argument("condition", "NDArray", "condition array")
-.add_argument("x", "NDArray", "")
-.add_argument("y", "NDArray", "");
+.add_argument("condition", "NDArray-or-Symbol", "condition array")
+.add_argument("x", "NDArray-or-Symbol", "")
+.add_argument("y", "NDArray-or-Symbol", "");
 
 NNVM_REGISTER_OP(_backward_where)
 .set_num_inputs(2)

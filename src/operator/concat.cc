@@ -68,7 +68,7 @@ For example::
                          [ 1.,  1.,  2.,  2.]]
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol[]", "List of tensors to concatenate")
+.add_argument("data", "NDArray-or-Symbol[]", "List of tensors to concatenate")
 .add_arguments(ConcatParam::__FIELDS__())
 .set_key_var_num_args("num_args");
 

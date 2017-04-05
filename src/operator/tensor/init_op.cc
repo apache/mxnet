@@ -53,7 +53,7 @@ NNVM_REGISTER_OP(zeros_like)
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "ndarray-or-symbol", "The input");
+.add_argument("data", "NDArray-or-Symbol", "The input");
 
 NNVM_REGISTER_OP(ones_like)
 .MXNET_DESCRIBE("Return an array of ones with the same shape and type as the input array.")
@@ -65,7 +65,7 @@ NNVM_REGISTER_OP(ones_like)
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "ndarray-or-symbol", "The input");
+.add_argument("data", "NDArray-or-Symbol", "The input");
 
 }  // namespace op
 }  // namespace mxnet
