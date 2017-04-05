@@ -458,9 +458,9 @@ struct ReduceGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeGradNode(
+    return MakeNonlossGradNode(
         op_name, n,
-        {ograds[0], n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
+        ograds, {n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
         n->attrs.dict);
   }
 };
@@ -646,8 +646,8 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   .set_attr<nnvm::FGradient>("FGradient",                       \
     [](const nnvm::NodePtr& n,                                  \
        const std::vector<nnvm::NodeEntry>& ograds) {            \
-      return MakeGradNode("_broadcast_backward", n, ograds,     \
-                          {{"keepdims", "true"}});              \
+      return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
+                                 {{"keepdims", "true"}});              \
     })                                                          \
   .add_argument("data", "ndarray-or-symbol", "The input")
 
