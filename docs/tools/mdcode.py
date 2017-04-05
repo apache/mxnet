@@ -7,10 +7,123 @@ import codecs
 import json
 
 # language names and the according file extensions
-# _LANGS = {'python':'py', 'r':'R', 'scala':'scala', 'julia':'jl', 'perl':'pl', 'cpp':'cc'}
+_LANGS = {'python':'py', 'r':'R', 'scala':'scala', 'julia':'jl', 'perl':'pl', 'cpp':'cc'}
 
 # start or end of a code block
 _CODE_MARK = re.compile('^([ ]*)```([\w]*)')
+
+class Markdown2Notebook(object):
+    """
+    Convert markdown file to jupyter notebook. Support multiple
+    languages and kernels.
+    """
+
+    #Notebook cell types
+    markdown = 'markdown'
+    code = 'code'
+
+    execution_count = 0
+
+    def parse_markdown(self, input, output, language):
+        """Convert a markdown file to a jupyter notebook
+           with corresponding language and kernel.
+
+        Parameters
+        -----------
+        input : string
+        Markdown file to be converted
+
+        output : string
+        Output notebook file
+
+        language : string
+        language of notebook
+        """
+        with open(input, 'r') as md_file:
+
+            notebook = open(output, 'w')
+            text = md_file.read()
+            text = text.replace("```bash", "```sh")
+            code_flag = re.compile('```')
+            nb_content = {'cells':[],
+                          'metadata': {
+                              'kernelspec': {
+                               'language': language,
+                                'name': '',
+                                'display_name': ''
+                           }
+                          },
+                          'nbformat': 4,
+                          'nbformat_minor': 2
+                         }
+            markdown_start = 0
+            code_start = 0
+            is_lang_block = False
+
+            for index, match in enumerate(code_flag.finditer(text)):
+                if index % 2 != 0:
+                    if is_lang_block:
+                        markdown_start = match.span()[1] + 1
+                        code_end = match.span()[0] - 1
+                        #Parse current code block and write to notebook
+                        if code_start >= 0 and code_start < code_end:
+                            self.execution_count += 1
+                            self._parse_block(nb_content,
+                                              text[code_start:code_end], self.code)
+
+                else:
+                    for key, _ in _LANGS.items():
+                        if text[match.span()[0]:].startswith("```" + key):
+                            is_lang_block = True
+                            break
+                        else:
+                            is_lang_block = False
+                    markdown_end = match.span()[0] - 1
+                    if is_lang_block:
+                        self._parse_block(nb_content,
+                                          text[markdown_start:markdown_end], self.markdown)
+                    if text[match.span()[0]:].startswith("```" + language):
+                        code_start = match.span()[0] + len(language) + 4
+                    else:
+                        code_start = -1
+
+            json.dump(nb_content, notebook)
+            notebook.close()
+
+    def _parse_block(self, content, text, cell_type):
+        """Parse a block of markdown or code into a notebook cell
+
+        Parameters
+        -----------
+        content : dict
+        Dictionary contains notebook content
+
+        text : string
+        text of markdown or code to be parsed
+
+        cell_type : string
+        cell type of 'markdown' or 'code'
+        """
+        cell = {'cell_type': cell_type,
+                "metadata": {},
+                'source': []}
+        lines = text.splitlines()
+        if cell_type == 'code':
+            cell['outputs'] = []
+            cell['execution_count'] = self.execution_count
+            leading_space = 0
+            for line in lines:
+                if len(line) > 0:
+                    leading_space = len(line) - len(line.lstrip())
+                    break
+            for line in lines:
+                cell['source'].append(line[leading_space:] + '\n')
+        else:
+            for line in lines:
+                cell['source'].append(line + '\n')
+        # Remove last line break
+        cell['source'][-1] = cell['source'][-1][:-1]
+        content['cells'].append(cell)
 
 class CodeBlocks(object):
     def __init__(self, fname, lang):
@@ -18,6 +131,8 @@ class CodeBlocks(object):
             self.data = f.readlines()
         self.lang = lang.lower()
         self.cells = []
+        self.converter = Markdown2Notebook()
+        self.input_file = fname
 
     def _parse_lines(self):
         in_code = False
@@ -79,21 +194,7 @@ class CodeBlocks(object):
                         f.write(l)
             return
         if action == 'convert':
-            cur_block = []
-            pre_in_code = None
-            pre_lang = None
-            for (l, in_code, lang, _) in self._parse_lines():
-                if in_code != pre_in_code or lang != pre_lang:
-                    self._add_jupyter_block(cur_block, pre_in_code)
-                    cur_block = []
-                if not in_code or (in_code and lang == self.lang):
-                    cur_block.append(l)
-                (pre_in_code, pre_lang) = (in_code, lang)
-            self._add_jupyter_block(cur_block, pre_in_code)
-
-            ipynb = {"nbformat":4, "nbformat_minor":2, "metadata":{}, "cells":self.cells}
-            with open(ofname, 'w') as f:
-                json.dump(ipynb, f)
+            self.converter.parse_markdown(self.input_file, ofname, self.lang)
             return
         if action == 'add_btn':
             langs = set([l for (_, _, l, _) in self._parse_lines() if l is not None])
