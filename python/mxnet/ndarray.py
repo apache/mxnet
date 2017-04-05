@@ -1201,21 +1201,23 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 def add(lhs, rhs):
-    """Add arguments, element-wise with broadcasting.
+    """Returns element-wise addition of the arguments with broadcasting.
 
-    Equivalent to ``lhs + rhs``
+    Equivalent to ``lhs + rhs`` and ``mx.nd.broadcast_add(lhs, rhs)``.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be added.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+        Second array to be added.
+         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape
 
     Returns
     -------
     NDArray
-        The sum of lhs and rhs, element-wise.
+        The element-wise sum of lhs and rhs arrays.
 
     Examples
     --------
@@ -1226,6 +1228,12 @@ def add(lhs, rhs):
     array([[ 3.,  3.,  3.],
            [ 3.,  3.,  3.]], dtype=float32)
     >>> (x+y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> mx.nd.add(x,y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> mx.nd.broadcast_add(x,y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 2.,  2.,  2.]], dtype=float32)
     >>> (z + y).asnumpy()
@@ -1243,21 +1251,23 @@ def add(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def subtract(lhs, rhs):
-    """Subtracts arguments element-wise with broadcasting.
+    """Returns element-wise subtraction of the arguments with broadcasting.
 
-    Equivalent to ``lhs - rhs``.
+    Equivalent to ``lhs - rhs`` and ``mx.nd.broadcast_sub(lhs, rhs)``.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be subtracted.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+        Second array to be subtracted.
+        The arrays to be subtracted. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        The difference of lhs and rhs, element-wise.
+        The element-wise difference of lhs and rhs arrays.
 
     Examples
     --------
@@ -1268,6 +1278,12 @@ def subtract(lhs, rhs):
     array([[-1., -1., -1.],
            [-1., -1., -1.]], dtype=float32)
     >>> (x-y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    >>> mx.nd.subtract(x,y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    >>> mx.nd.broadcast_sub(x,y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (z-y).asnumpy()
@@ -1285,21 +1301,23 @@ def subtract(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def multiply(lhs, rhs):
-    """Multiplies arguments element-wise with broadcasting.
+    """Returns element-wise multiplication of the arguments with broadcasting.
 
-    Equivalent to ``lhs * rhs``.
+    Equivalent to ``lhs * rhs`` and ``mx.nd.broadcast_mul(lhs, rhs)``.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be multiplied.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+        Second array to be multiplied.
+        If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        The multiplication of lhs and rhs, element-wise.
+        The element-wise multiplication of lhs and rhs arrays.
 
     Examples
     --------
@@ -1310,6 +1328,12 @@ def multiply(lhs, rhs):
     array([[ 2.,  2.,  2.],
            [ 2.,  2.,  2.]], dtype=float32)
     >>> (x*y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.multiply(x, y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.broadcast_mul(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (z*y).asnumpy()
@@ -1327,15 +1351,17 @@ def multiply(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def divide(lhs, rhs):
-    """Divides arguments element-wise with broadcasting.
+    """Returns element-wise division of the arguments with broadcasting.
 
-    Equivalent to ``lhs / rhs``.
+    Equivalent to ``lhs / rhs`` and ``mx.nd.broadcast_div(lhs, rhs)``.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array in division.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+        Second array in division.
+        The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
@@ -1354,6 +1380,12 @@ def divide(lhs, rhs):
     array([[ 0.5,  0.5,  0.5],
            [ 0.5,  0.5,  0.5]], dtype=float32)
     >>> (x/y).asnumpy()
+    array([[ inf,  inf,  inf],
+           [  1.,   1.,   1.]], dtype=float32)
+    >>> mx.nd.divide(x,y).asnumpy()
+    array([[ inf,  inf,  inf],
+           [  1.,   1.,   1.]], dtype=float32)
+    >>> mx.nd.broadcast_div(x,y).asnumpy()
     array([[ inf,  inf,  inf],
            [  1.,   1.,   1.]], dtype=float32)
     >>> (y/z).asnumpy()
