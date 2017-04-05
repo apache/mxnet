@@ -183,7 +183,6 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
   return DefaultImageDetAugmentParam::__FIELDS__();
 }
 
-  
 #if MXNET_USE_OPENCV
 using Rect = cv::Rect_<float>;
 
