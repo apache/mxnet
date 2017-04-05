@@ -21,7 +21,7 @@ def test_ce_loss():
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(nclass)
     l = mx.symbol.Variable('label')
-    loss = mx.loss.cross_entropy_loss(output, l)
+    loss = mx.loss.softmax_cross_entropy_loss(output, l)
     mod = mx.mod.Module(loss)
     mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200, optimizer_params={'learning_rate': 1.})
     assert mod.score(data_iter, loss.metric)[0][1] == 1.0
@@ -87,7 +87,7 @@ def test_sample_weight_loss():
     output = get_net(nclass)
     l = mx.symbol.Variable('label')
     w = mx.symbol.Variable('w')
-    loss = mx.loss.cross_entropy_loss(output, l, sample_weight=w)
+    loss = mx.loss.softmax_cross_entropy_loss(output, l, sample_weight=w)
     mod = mx.mod.Module(loss)
     mod.fit(data_iter, eval_metric=loss.metric, num_epoch=200,
             optimizer_params={'learning_rate': 1.})
@@ -111,7 +111,7 @@ def test_multi_loss():
     output2 = mx.symbol.FullyConnected(act3, name='output2', num_hidden=1)
     l1 = mx.symbol.Variable('label1')
     l2 = mx.symbol.Variable('label2')
-    loss1 = mx.loss.cross_entropy_loss(output1, l1)
+    loss1 = mx.loss.softmax_cross_entropy_loss(output1, l1)
     loss2 = mx.loss.l2_loss(output2, l2)
     loss = mx.loss.multi_loss([loss1, loss2])
     mod = mx.mod.Module(loss)
@@ -124,7 +124,36 @@ def test_multi_loss():
     assert score[2][1] < 0.2
 
 
+def test_saveload():
+    nclass = 10
+    output = get_net(nclass)
+    l = mx.symbol.Variable('label')
+    loss = mx.loss.softmax_cross_entropy_loss(output, l)
+    assert mx.loss.create(**loss.get_config()).get_config() == loss.get_config()
+
+
+def test_saveload2():
+    mx.random.seed(1234)
+    np.random.seed(1234)
+    nclass = 10
+    N = 20
+    data = mx.random.uniform(-1, 1, shape=(N, nclass))
+    label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+    output = get_net(nclass)
+    l = mx.symbol.Variable('label')
+    loss = mx.loss.softmax_cross_entropy_loss(output, l)
+    mod = mx.mod.Module(loss)
+    mod.fit(data_iter, eval_metric=loss.metric, num_epoch=100, optimizer_params={'learning_rate': 1.})
+    mod.save_checkpoint('test', 100, save_optimizer_states=True)
+    mod = mx.mod.Module.load('test', 100, load_optimizer_states=True)
+    mod.fit(data_iter, eval_metric=mod._loss.metric, num_epoch=100, optimizer_params={'learning_rate': 1.})
+    assert mod.score(data_iter, loss.metric)[0][1] == 1.0
+
+
 if __name__ == '__main__':
+    test_saveload()
+    test_saveload2()
     test_multi_loss()
     test_sample_weight_loss()
     test_custom_loss()

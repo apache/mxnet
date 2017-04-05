@@ -3,6 +3,7 @@
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 
+import os
 import time
 import logging
 import warnings
@@ -370,7 +371,10 @@ def load_checkpoint(prefix, epoch):
     - Symbol will be loaded from ``prefix-symbol.json``.
     - Parameters will be loaded from ``prefix-epoch.params``.
     """
-    symbol = sym.load('%s-symbol.json' % prefix)
+    if os.path.exists('%s-symbol.json' % prefix):
+        symbol = sym.load('%s-symbol.json' % prefix)
+    else:
+        symbol = None
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
     arg_params = {}
     aux_params = {}
