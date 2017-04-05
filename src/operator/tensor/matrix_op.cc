@@ -77,7 +77,7 @@ Some dimensions of the shape can take special values from the set {0, -1, -2, -3
   - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
   - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
-If the argument ``reverse`` is set to 1, then the special values are inferred from right to left.
+If the argument `reverse` is set to 1, then the special values are inferred from right to left.
 
   Example::
 
