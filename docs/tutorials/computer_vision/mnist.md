@@ -11,7 +11,7 @@ We first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset, which is
 commonly used for handwritten digit recognition. Each image in this
 dataset has been resized into 28x28 with grayscale value between 0 and 254.
 
-![png](mnist_3_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
 
 The following codes download and load the images and the according labels into
 memory.
@@ -55,7 +55,7 @@ train_provider, eval_provider = get_mnist_providers(batch_size)
 
 ## Multilayer Perceptron
 
-We first use [multilayer perceptron]() to solve this problem. We
+We first use [multilayer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) to solve this problem. We
 define a multilayer perceptron by using MXNet's symbolic interface. The
 following command create a place holder variable for the input data.
 
@@ -77,23 +77,22 @@ sigmoid, tanh, and rectifier (or "relu").
 
 ```python
 # The first fully-connected layer and the according activation function
-fc1  = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=128)
-act1 = mx.sym.Activation(data=fc1, name='relu1', act_type="relu")
+fc1  = mx.sym.FullyConnected(data=data, num_hidden=128)
+act1 = mx.sym.Activation(data=fc1, act_type="relu")
 
 # The second fully-connected layer and the according activation function
-fc2  = mx.sym.FullyConnected(data=act1, name='fc2', num_hidden = 64)
-act2 = mx.sym.Activation(data=fc2, name='relu2', act_type="relu")
+fc2  = mx.sym.FullyConnected(data=act1, num_hidden = 64)
+act2 = mx.sym.Activation(data=fc2, act_type="relu")
 ```
 
 The last fully-connected layer often has the hidden size equals to the number of
 classes in the dataset. Then we stack a softmax layer, which map the input into
-a probability score.
-
-A cross entropy loss is often applied.
+a probability score. During the training stage, a cross entropy loss is then
+applied between the output and label.
 
 ```python
 # MNIST has 10 classes
-fc3  = mx.sym.FullyConnected(data=act2, name='fc3', num_hidden=10)
+fc3  = mx.sym.FullyConnected(data=act2, num_hidden=10)
 # Softmax with cross entropy loss
 mlp  = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
@@ -109,10 +108,10 @@ mlp = @mx.chain mx.Variable(:data)             =>
   mx.SoftmaxOutput(name=:softmax)
 ```
 
-Now both the neural network definition and data iterators are ready. We can start
-training. The following commands train the multilayer perception on the MNIST
-dataset by minibatch (batch size is 100) stochastic gradient descent with learning rate 0.1. It stops after 10
-epochs (data passes).
+Now both the neural network definition and data iterators are ready. We can
+start training. The following commands train the multilayer perception on the
+MNIST dataset by minibatch (batch size is 100) stochastic gradient descent with
+learning rate 0.1. It stops after 10 epochs (data passes).
 
 ```python
 import logging
@@ -136,16 +135,16 @@ mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 
 ## Convolutional Neural Networks
 
-Note that the previous fully-connected layer simply reshapes the image into a
+Note that the fully-connected layer simply reshapes the image into a
 vector during training. It ignores the spatial information that pixels are
 correlated on both horizontal and vertical dimensions. The convolutional layer
-aims to improve this drawback by using a more structural weight $W$. Instead of
+aims to improve this drawback by using a more structural weight *W*. Instead of
 simply matrix-matrix multiplication, it uses 2-D convolution to obtain the
 output.
 
 Besides the convolutional layer, another major change of the convolutional
 neural network is the adding of pooling layers. A pooling layer reduce a
-*n x m* (often called kernel size) patch into a single value to make
+*n x m* patch into a single value to make
 the network less sensitive to the spatial location.
 
 The following codes define a convolutional neural network called LeNet:
@@ -226,16 +225,17 @@ mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)
 
 ## Predict
 
-After training is done, we can predict on new data.
+After training is done, we can predict on new data. The following codes compute
+the predict probaility scores for every images, namely *prob[i][j]* is the
+probability that the *i*-th image contains the *j*-th object in the label set.
 
 ```python
-# output the probability scores for every images
 test_iter = mx.io.NDArrayIter(mnist['test_data'], None, batch_size)
 prob = mlp_model.predict(test_iter)
 assert prob.shape == (10000, 10)
 ```
 
-We can also evaluate the accuracy given a data iterator.
+If we have the labels for the new images, then we can compute the metrics.
 
 ```python
 test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
