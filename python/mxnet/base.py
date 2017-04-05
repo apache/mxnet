@@ -161,7 +161,7 @@ def ctypes2numpy_shared(cptr, shape):
         pointer to the memory region
 
     shape : tuple
-        Shape of target NDArray.
+        Shape of target `NDArray`.
 
     Returns
     -------
