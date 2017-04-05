@@ -153,8 +153,14 @@ def test_deconvolution_with_type():
                 {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float16}},
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
-    check_consistency(sym, ctx_list)
-    check_consistency(sym, ctx_list, grad_req="add")
+    # wider tolerance needed for true-fp16 test above
+    tol = {np.dtype(np.float16): 0.3,
+               np.dtype(np.float32): 1e-3,
+               np.dtype(np.float64): 1e-5,
+               np.dtype(np.uint8): 0,
+               np.dtype(np.int32): 0}
+    check_consistency(sym, ctx_list, tol=tol)
+    check_consistency(sym, ctx_list, tol=tol, grad_req="add")
 
 
 def test_bilinear_sampler_with_type():
