@@ -521,9 +521,9 @@ fixed-size items.
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
-        """Broadcasts an array to a new shape.
+        """Broadcasts the input array to a new shape.
 
-        Broadcast only allows on axes with size 1. The new shape cannot change
+        Broadcasting is only allowed on axes with size 1. The new shape cannot change
         the number of dimensions such as from 2D to 3D.
 
         Parameters

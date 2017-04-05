@@ -141,10 +141,10 @@ For example::
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
-.describe(R"code(Broadcast an array to a new shape.
+.describe(R"code(Broadcasts the input array to a new shape.
 
-Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+Broadcasting is allowed on axes with size 1, such as from ``(2,1,3,1)`` to
+``(2,8,3,9)``. Elements will be duplicated on the broadcasted axes.
 
 For example::
 
