@@ -704,9 +704,13 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
 
 def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, target_shape=None):
     data = mx.sym.Variable(name="data")
-    deconv = mx.sym.Deconvolution(
-        data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5,
-        target_shape = target_shape if target_shape is not None else (0, 0))
+    if target_shape:
+        deconv = mx.sym.Deconvolution(
+            data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5,
+            target_shape = target_shape)
+    else:
+        deconv = mx.sym.Deconvolution(
+            data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5)
     arg_names = deconv.list_arguments()
     arg_shapes, out_shapes, _ = deconv.infer_shape(data=input_shape)
     assert out_shapes[0] == (input_shape[0], 5, 8, 8)
@@ -840,25 +844,66 @@ def test_convolution_grouping():
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
-def gen_broadcast_data():
-    # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
-    ndim = np.random.randint(1, 6)
-    shape = np.random.randint(1, 6, size=(ndim,))
-    l_same_dim = np.random.randint(0, 5)
-    r_same_dim = np.random.randint(0, 5)
-    l_axis_flags = np.random.randint(0, 2, size=ndim)
-    r_axis_flags = np.random.randint(0, 2, size=ndim)
-    if l_same_dim == 4:
-        l_axis_flags = np.ones(ndim)
-    if r_same_dim == 4:
-        r_axis_flags = np.ones(ndim)
-    l_shape = shape.copy()
-    r_shape = shape.copy()
-    l_shape[np.where(l_axis_flags == 0)] = 1
-    r_shape[np.where(r_axis_flags == 0)] = 1
+def gen_broadcast_data(idx):
+    # Manually set test cases
+    binary_op_data_shape = np.array(
+        [[[2, 5, 1, 30, 7], [1, 5, 448, 30, 1]],
+        [[10, 49, 1, 77, 17], [10, 1, 2, 1, 17]],
+        [[13, 2, 65, 2,  1], [13, 1, 65, 1, 225]],
+        [[9, 434, 4, 2, 37], [9, 1, 4, 1, 37]],
+        [[2, 52, 1, 4, 1], [1, 52, 60, 1, 37]],
+        [[1, 23, 7, 122, 50], [2, 1, 7, 1, 50]],
+        [[1, 17, 1, 5, 1], [22, 1, 2, 1, 28]],
+        [[29, 1, 2, 1, 8], [29, 22, 1, 130, 1]],
+        [[2, 36, 1, 427, 3], [1, 36, 11, 427, 1]],
+        [[1, 2, 1, 100, 7], [1, 2, 448, 100, 1]],
+        [[1, 2, 495, 77, 7], [1, 2, 1, 1, 7]],
+        [[1, 43, 65, 2, 1], [1, 43, 65, 1, 225]],
+        [[1, 92, 434, 2, 2], [1, 92, 1, 2, 2]],
+        [[1, 92, 1, 4, 1], [1, 92, 134, 1, 17]],
+        [[1, 53, 2, 122, 143], [1, 1, 2, 1, 143]],
+        [[1, 179, 1, 87, 17], [1, 179, 1, 1, 17]],
+        [[1, 1, 17, 5, 1], [1, 22, 1, 1, 28]],
+        [[1, 2, 1, 1, 8], [1, 2, 52, 430, 1]],
+        [[1, 163, 1, 22, 3], [1, 163, 116, 22, 1]],
+        [[1, 1, 44, 30, 7], [1, 1, 44, 30, 1]],
+        [[1, 1, 1, 1, 28], [1, 127, 1, 5, 28]],
+        [[1, 2, 394, 38, 1], [1, 2, 394, 38, 16]],
+        [[1, 10, 49, 77, 17], [1, 1, 1, 1, 17]],
+        [[1, 431, 6, 2, 225], [1, 1, 6, 2, 225]],
+        [[1, 15, 1, 28, 1], [1, 15, 1, 28, 463]],
+        [[1, 129, 2, 48, 96], [1, 129, 2, 1, 1]],
+        [[1, 1, 403, 17, 2], [1, 44, 403, 17, 2]],
+        [[1, 1, 65, 2, 22], [1, 1, 65, 1, 1]],
+        [[1, 24, 103, 17, 18], [1, 24, 1, 1, 1]],
+        [[1, 1, 1, 1, 2], [1, 24, 194, 50, 1]],
+        [[1, 1, 107, 84, 9], [1, 1, 1, 1, 1]]])
+    if idx < binary_op_data_shape.shape[0]:
+        l_shape = binary_op_data_shape[idx][0]
+        r_shape = binary_op_data_shape[idx][1]
+    else:
+        # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
+        ndim = np.random.randint(1, 6)
+        shape = np.random.randint(1, 6, size=(ndim,))
+        l_same_dim = np.random.randint(0, 5)
+        r_same_dim = np.random.randint(0, 5)
+        l_axis_flags = np.random.randint(0, 2, size=ndim)
+        r_axis_flags = np.random.randint(0, 2, size=ndim)
+        if l_same_dim == 4:
+            l_axis_flags = np.ones(ndim)
+        if r_same_dim == 4:
+            r_axis_flags = np.ones(ndim)
+        l_shape = shape.copy()
+        r_shape = shape.copy()
+        l_shape[np.where(l_axis_flags == 0)] = 1
+        r_shape[np.where(r_axis_flags == 0)] = 1
     return [np.random.random(l_shape), np.random.random(r_shape)]
 
-def gen_binary_data():
+def gen_broadcast_data_int(idx):
+    d = gen_broadcast_data(idx);
+    return [np.round(d[0]*100), np.round(d[1]*100)]
+
+def gen_binary_data(dummy):
     ndim = np.random.randint(1, 6)
     shape = np.random.randint(1, 6, size=(ndim,))
     return [np.random.random(shape), np.random.random(shape)]
@@ -866,7 +911,7 @@ def gen_binary_data():
 def check_binary_op_forward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
-        d = gen_data()
+        d = gen_data(i)
         x = baseline(d[0], d[1])
         y = symbol.bind(default_context(), args={'a': mx.nd.array(d[0]), 'b' : mx.nd.array(d[1])})
         y.forward(is_train=True)
@@ -875,7 +920,7 @@ def check_binary_op_forward(symbol, baseline, gen_data):
 def check_binary_op_backward(symbol, baseline, gen_data):
     sample_num = 200
     for i in range(sample_num):
-        d = gen_data()
+        d = gen_data(i)
         out = np.random.random((d[0] + d[1]).shape)
         def reduce_op(shape, x):
             if shape == x.shape:
@@ -972,9 +1017,8 @@ def test_broadcast_binary_op():
 
     def test_bequal(a, b):
         c = mx.sym.broadcast_equal(a, b)
-        check_binary_op_forward(c, lambda a, b: (a == b).astype(a.dtype), gen_broadcast_data)
-        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data)
-
+        check_binary_op_forward(c, lambda a, b: (a == b).astype(a.dtype), gen_broadcast_data_int)
+        check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data_int)
 
     test_bplus(a, b)
     test_bminus(a, b)
@@ -2673,7 +2717,7 @@ def test_tile():
 
 
 def test_one_hot():
-    def test_normal_case():
+    def test_normal_case(index_type=np.int32):
         ndim_max = 6
         dim_size_max = 20
         depth = int(dim_size_max / 2)
@@ -2686,7 +2730,7 @@ def test_one_hot():
             indices = np.random.randint(-dim_size_max, dim_size_max+1,
                                         size=np.prod(shape)).reshape(shape)
             mx_one_hot_array = mx.nd.one_hot(
-                mx.nd.array(indices, ctx=default_context(), dtype=np.int32),
+                mx.nd.array(indices, ctx=default_context(), dtype=index_type),
                 depth=depth, dtype=np.int32)
             expected_array = np.zeros((np.prod(shape), depth), dtype=np.int32)
             expected_array[:] = off_value
@@ -2720,7 +2764,10 @@ def test_one_hot():
         expected_array = np.array([], dtype=np.int32).reshape(shape + (depth, ))
         assert same(expected_array, mx_one_hot_array)
 
-    test_normal_case()
+    test_normal_case(index_type=np.int32)
+    test_normal_case(index_type=np.float64)
+    test_normal_case(index_type=np.float32)
+    test_normal_case(index_type=np.float16)
     test_empty_indices()
     test_zero_depth()
 
@@ -2884,30 +2931,38 @@ def test_log_softmax():
 
 
 def test_pick():
-    for _ in range(100):
-        ndim = np.random.randint(1, 5)
-        bshape = np.random.randint(1, 10, size=ndim)
-        axis = np.random.randint(0, ndim)
-        sshape = bshape.copy()
-        sshape[axis] = 1
-        data = np.random.uniform(-1, 1, size=bshape)
-        index = np.random.randint(0, bshape[axis], size=sshape)
-        exp = []
-        for i in range(ndim):
-            if i == axis:
-                exp.append(index)
-            else:
-                ishape = [1 for _ in range(ndim)]
-                ishape[i] = bshape[i]
-                exp.append(np.arange(bshape[i]).reshape(ishape))
-        expected = data[exp]
-        data = mx.nd.array(data, dtype='float32')
-        index = mx.nd.array(index, dtype='int32')
-        out = mx.nd.pick(data, index, axis=axis, keepdims=True)
-        assert_almost_equal(out.asnumpy(), expected)
+    def test_pick_helper(index_type=np.int32):
+        for _ in range(100):
+            ndim = np.random.randint(1, 5)
+            bshape = np.random.randint(1, 10, size=ndim)
+            axis = np.random.randint(0, ndim)
+            sshape = bshape.copy()
+            sshape[axis] = 1
+            data = np.random.uniform(-1, 1, size=bshape)
+            index = np.random.randint(0, bshape[axis], size=sshape)
+            exp = []
+            for i in range(ndim):
+                if i == axis:
+                    exp.append(index)
+                else:
+                    ishape = [1 for _ in range(ndim)]
+                    ishape[i] = bshape[i]
+                    exp.append(np.arange(bshape[i]).reshape(ishape))
+            expected = data[exp]
+            data = mx.nd.array(data, dtype='float32')
+            index = mx.nd.array(index, dtype=index_type)
+            out = mx.nd.pick(data, index, axis=axis, keepdims=True)
+            assert_almost_equal(out.asnumpy(), expected)
 
-        sym = mx.sym.pick(axis=axis, keepdims=True)
-        check_numeric_gradient(sym, [data, index])
+            data_holder = data
+            index_holder = index
+            data = mx.sym.Variable('data')
+            index = mx.sym.Variable('index')
+            sym = mx.sym.pick(data, index, axis=axis, keepdims=True)
+            check_numeric_gradient(sym, [data_holder, index_holder], grad_nodes=['data'])
+
+    test_pick_helper(np.int32)
+    test_pick_helper(np.float32)
 
 
 def test_custom_op():

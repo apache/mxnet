@@ -43,7 +43,7 @@ MXNet requires the following libraries:
 - `curl` and `openssl` for the ability to read/write to Amazon S3
 
 Installing `CUDA` on EC2 instances requires some effort. Caffe has a good
-[tutorial](https://github.com/BVLC/caffe/wiki/Install-Caffe-on-EC2-from-scratch-(Ubuntu,-CUDA-7,-cuDNN))
+[tutorial](https://github.com/BVLC/caffe/wiki/Install-Caffe-on-EC2-from-scratch-(Ubuntu,-CUDA-7,-cuDNN-3))
 on how to install CUDA 7.0 on Ubuntu 14.04.
 
 ***Note:*** We tried CUDA 7.5 on Nov 7,

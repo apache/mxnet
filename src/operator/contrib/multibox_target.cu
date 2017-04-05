@@ -19,12 +19,13 @@ namespace cuda {
 template<typename DType>
 __global__ void InitGroundTruthFlags(DType *gt_flags, const DType *labels,
                                      const int num_batches,
-                                     const int num_labels) {
+                                     const int num_labels,
+                                     const int label_width) {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index >= num_batches * num_labels) return;
   int b = index / num_labels;
   int l = index % num_labels;
-  if (*(labels + b * num_labels * 5 + l * 5) == -1.f) {
+  if (*(labels + b * num_labels * label_width + l * label_width) == -1.f) {
     *(gt_flags + b * num_labels + l) = 0;
   } else {
     *(gt_flags + b * num_labels + l) = 1;
@@ -188,18 +189,16 @@ __global__ void NegativeMining(const DType *overlaps, const DType *cls_preds,
     if (anchor_flags[i] < 0) {
       // compute max class prediction score
       DType max_val = cls_preds[i];
-      DType max_val_pos = cls_preds[i + num_anchors];
-      for (int j = 2; j < num_classes; ++j) {
+      for (int j = 1; j < num_classes; ++j) {
         DType temp = cls_preds[i + num_anchors * j];
-        if (temp > max_val_pos) max_val_pos = temp;
+        if (temp > max_val) max_val = temp;
       }
-      if (max_val_pos > max_val) max_val = max_val_pos;
       DType sum = 0.f;
       for (int j = 0; j < num_classes; ++j) {
         DType temp = cls_preds[i + num_anchors * j];
         sum += exp(temp - max_val);
       }
-      max_val_pos = exp(max_val_pos - max_val) / sum;
+      DType prob = exp(cls_preds[i] - max_val) / sum;
       DType max_iou = -1.f;
       for (int j = 0; j < num_labels; ++j) {
         DType temp = overlaps[i * num_labels + j];
@@ -207,7 +206,7 @@ __global__ void NegativeMining(const DType *overlaps, const DType *cls_preds,
       }
       if (max_iou < negative_mining_thresh) {
         // only do it for anchors with iou < thresh
-        buffer[i] = max_val_pos;
+        buffer[i] = -prob;  // -log(x) actually, but value does not matter
       }
     }
   }
@@ -267,22 +266,22 @@ __global__ void AssignTrainigTargets(DType *loc_target, DType *loc_mask,
                                      DType *cls_target, DType *anchor_flags,
                                      DType *best_matches, DType *labels,
                                      DType *anchors, const int num_anchors,
-                                     const int num_labels, const float vx,
-                                     const float vy, const float vw,
-                                     const float vh) {
+                                     const int num_labels, const int label_width,
+                                     const float vx, const float vy,
+                                     const float vw, const float vh) {
   const int nbatch = blockIdx.x;
   loc_target += nbatch * num_anchors * 4;
   loc_mask += nbatch * num_anchors * 4;
   cls_target += nbatch * num_anchors;
   anchor_flags += nbatch * num_anchors;
   best_matches += nbatch * num_anchors;
-  labels += nbatch * num_labels * 5;
+  labels += nbatch * num_labels * label_width;
   const int num_threads = kMaxThreadsPerBlock;
 
   for (int i = threadIdx.x; i < num_anchors; i += num_threads) {
     if (anchor_flags[i] > 0.5) {
       // positive sample
-      int offset_l = static_cast<int>(best_matches[i]) * 5;
+      int offset_l = static_cast<int>(best_matches[i]) * label_width;
       cls_target[i] = labels[offset_l] + 1;  // 0 reserved for background
       int offset = i * 4;
       loc_mask[offset] = 1;
@@ -331,14 +330,16 @@ inline void MultiBoxTargetForward(const Tensor<gpu, 2, DType> &loc_target,
                            const float negative_mining_ratio,
                            const float negative_mining_thresh,
                            const int minimum_negative_samples,
-                           const std::vector<float> &variances) {
+                           const nnvm::Tuple<float> &variances) {
   const int num_batches = labels.size(0);
   const int num_labels = labels.size(1);
+  const int label_width = labels.size(2);
   const int num_anchors = anchors.size(0);
   const int num_classes = cls_preds.size(1);
   CHECK_GE(num_batches, 1);
   CHECK_GT(num_labels, 2);
   CHECK_GE(num_anchors, 1);
+  CHECK_EQ(variances.ndim(), 4);
 
   // init ground-truth flags, by checking valid labels
   temp_space[1] = 0.f;
@@ -348,7 +349,7 @@ inline void MultiBoxTargetForward(const Tensor<gpu, 2, DType> &loc_target,
   dim3 init_block_dim((num_batches * num_labels - 1) / num_threads + 1);
   cuda::CheckLaunchParam(init_block_dim, init_thread_dim, "MultiBoxTarget Init");
   cuda::InitGroundTruthFlags<DType><<<init_block_dim, init_thread_dim>>>(
-    gt_flags, labels.dptr_, num_batches, num_labels);
+    gt_flags, labels.dptr_, num_batches, num_labels, label_width);
   MULTIBOX_TARGET_CUDA_CHECK(cudaPeekAtLastError());
 
   // compute best matches
@@ -391,7 +392,7 @@ inline void MultiBoxTargetForward(const Tensor<gpu, 2, DType> &loc_target,
   cuda::AssignTrainigTargets<DType><<<num_batches, num_threads>>>(
     loc_target.dptr_, loc_mask.dptr_, cls_target.dptr_, anchor_flags,
     best_matches, labels.dptr_, anchors.dptr_, num_anchors, num_labels,
-    variances[0], variances[1], variances[2], variances[3]);
+    label_width, variances[0], variances[1], variances[2], variances[3]);
   MULTIBOX_TARGET_CUDA_CHECK(cudaPeekAtLastError());
 }
 }  // namespace mshadow

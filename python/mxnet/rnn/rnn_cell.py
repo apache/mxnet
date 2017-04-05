@@ -736,14 +736,16 @@ class SequentialRNNCell(BaseRNNCell):
             begin_state = self.begin_state()
 
         p = 0
+        next_states = []
         for i, cell in enumerate(self._cells):
             n = len(cell.state_shape)
             states = begin_state[p:p+n]
             p += n
             inputs, states = cell.unroll(length, inputs=inputs, begin_state=states, layout=layout,
                                          merge_outputs=None if i < num_cells-1 else merge_outputs)
+            next_states.extend(states)
 
-        return inputs, states
+        return inputs, next_states
 
 
 class DropoutCell(BaseRNNCell):
