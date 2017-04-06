@@ -520,7 +520,32 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  int num_params,
                                  const char **param_keys,
                                  const char **param_vals);
-
+/*!
+ * \brief set whether to record operator for autograd
+ * \param recording 1 when turn on recording, 0 when turn off recording
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradSetRecording(int recording);
+/*!
+ * \brief mark NDArrays as variables to compute gradient for autograd
+ * \param num_var number of variable NDArrays
+ * \param var_handles variable NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradMarkVariables(mx_uint num_var,
+                                      NDArrayHandle* var_handles);
+/*!
+ * \brief compute the gradient of outputs w.r.t variabels
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \param num_grad number of gradient NDArrays
+ * \param grad_handles gradient NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradComputeGradient(mx_uint num_output,
+                                        NDArrayHandle* output_handles,
+                                        mx_uint* num_grad,
+                                        NDArrayHandle** grad_handles);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
