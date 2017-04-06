@@ -117,8 +117,8 @@ MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 .add_alias("broadcast_axes")
 .describe(R"code(Broadcasts the input array over particular axes.
 
-Broadcasting is allowed on axes with size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elements will be duplicated on the broadcasted axes.
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
 Example::
 
@@ -143,17 +143,20 @@ Example::
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 .describe(R"code(Broadcasts the input array to a new shape.
 
-Broadcasting is allowed on axes with size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elements will be duplicated on the broadcasted axes.
+Broadcasting is a mechanism which allows NDArrays to perform different arithmetic operations
+with arrays of different shapes efficiently without creating multiple copies of arrays.
+Also see `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
 For example::
 
    broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
                                            [ 1.,  2.,  3.]])
 
-The dimensions that will not be changed can also use the special code ``0`` which
-means copy the original value. So with ``shape=(2,0)`` we will obtain the same
-results in the above example.
+The dimension which you do not want to change can also be kept as `0` which means copy the original value.
+So with `shape=(2,0)`, we will obtain the same result as in the above example.
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastToParam>)
