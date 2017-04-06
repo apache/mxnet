@@ -1,3 +1,4 @@
+from Cython.Utility.MemoryView import shape
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file matrix_op.cc
@@ -200,24 +201,31 @@ will return a new array with shape ``(2,1,3,4)``.
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice)
-.describe(R"code(Crop a continuous region from the array.
+.add_alias("crop")
+.describe(R"code(Slice a continuous region of the array.
 
-Assume the input array has *n* dimensions, given ``begin=(b_1, ..., b_n)`` and
-``end=(e_1, ..., e_n)``, then ``crop`` will return a region with shape
-``(e_1-b_1, ..., e_n-b_n)``. The result's *k*-th dimension contains elements
-from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
+.. note:: ``crop`` is Deprecated. Use ``slice`` instead.
 
-For example::
+This function returns a sliced continous region of the array between the indices given 
+by `begin` and `end`.
+
+For an input array of `n` dimensions, slice operation with ``begin=(b_0, b_1...b_n-1)`` indices
+and ``end=(e_1, e_2, ... e_n)`` indices will result in an array with the shape
+``(e_1-b_0, ..., e_n-b_n-1)``.
+
+The resulting array's *k*-th dimension contains elements
+ from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
+
+Example::
 
   x = [[  1.,   2.,   3.,   4.],
        [  5.,   6.,   7.,   8.],
        [  9.,  10.,  11.,  12.]]
 
-  crop(x, begin=(0,1), end=(2,4)) = [[ 2.,  3.,  4.],
+  slice(x, begin=(0,1), end=(2,4)) = [[ 2.,  3.,  4.],
                                      [ 6.,  7.,  8.]]
 
 )code" ADD_FILELINE)
-.add_alias("crop")
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
@@ -278,7 +286,10 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 NNVM_REGISTER_OP(slice_axis)
 .describe(R"code(Slice along a given axis.
 
-Examples:
+Returns a Sliced array along a given `axis` starting from the `begin` index
+ to the `end` index.
+
+Examples::
 
   x = [[  1.,   2.,   3.,   4.],
        [  5.,   6.,   7.,   8.],
