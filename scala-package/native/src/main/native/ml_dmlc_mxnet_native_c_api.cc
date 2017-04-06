@@ -2394,7 +2394,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxAutogradMarkVariables
   (JNIEnv *env, jobject obj, jlongArray jvarHandles) {
   jlong *var_handles = env->GetLongArrayElements(jvarHandles, NULL);
   int num_var = env->GetArrayLength(jvarHandles);
-  int ret = MXAutogradMarkVariables(static_cast<mx_uint>(num_var), reinterpret_cast<NDArrayHandle *>(var_handles));
+  int ret = MXAutogradMarkVariables(static_cast<mx_uint>(num_var),
+    reinterpret_cast<NDArrayHandle *>(var_handles));
   env->ReleaseLongArrayElements(jvarHandles, var_handles, 0);
   return ret;
 }
@@ -2423,7 +2424,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxAutogradComputeGradient
                             env->NewObject(longCls, longConst,
                             reinterpret_cast<uint64_t>(grads[i])));
     }
-  }    
+  }
 
   env->ReleaseLongArrayElements(joutputHandles, out_handles, 0);
   return ret;
