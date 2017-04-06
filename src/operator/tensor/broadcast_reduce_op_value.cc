@@ -194,7 +194,7 @@ Examples::
   })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
-.add_argument("src", "ndarray-or-symbol", "Source input");
+.add_argument("src", "NDArray-or-Symbol", "Source input");
 
 }  // namespace op
 }  // namespace mxnet

@@ -53,12 +53,12 @@ class Arg:
         'Shape(tuple)':'Shape',\
         'Symbol':'Symbol',\
         'NDArray':'Symbol',\
-        'ndarray-or-symbol':'Symbol',\
+        'NDArray-or-Symbol':'Symbol',\
         'Symbol[]':'const std::vector<Symbol>&',\
         'Symbol or Symbol[]':'const std::vector<Symbol>&',\
         'NDArray[]':'const std::vector<Symbol>&',\
-        'ndarray-or-symbol[]':'const std::vector<Symbol>&',\
         'caffe-layer-parameter':'::caffe::LayerParameter',\
+        'NDArray-or-Symbol[]':'const std::vector<Symbol>&',\
         'float':'mx_float',\
         'real_t':'mx_float',\
         'int':'int',\

@@ -88,9 +88,9 @@ The learnable parameters include both ``weight`` and ``bias``.
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data.")
-.add_argument("weight", "ndarray-or-symbol", "Weight matrix.")
-.add_argument("bias", "ndarray-or-symbol", "Bias parameter.")
+.add_argument("data", "NDArray-or-Symbol", "Input data.")
+.add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
+.add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(FullyConnectedParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

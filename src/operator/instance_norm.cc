@@ -28,13 +28,13 @@ Operator* InstanceNormProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(InstanceNormParam);
 
 MXNET_REGISTER_OP_PROPERTY(InstanceNorm, InstanceNormProp)
-    .add_argument("data", "Symbol",
+    .add_argument("data", "NDArray-or-Symbol",
                   "A n-dimensional tensor (n > 2) of the form [batch, "
                   "channel, spatial_dim1, spatial_dim2, ...].")
-    .add_argument("gamma", "Symbol",
+    .add_argument("gamma", "NDArray-or-Symbol",
                   "A vector of length \'channel\', which multiplies the "
                   "normalized input.")
-    .add_argument("beta", "Symbol",
+    .add_argument("beta", "NDArray-or-Symbol",
                   "A vector of length \'channel\', which is added to the "
                   "product of the normalized input and the weight.")
     .add_arguments(InstanceNormParam::__FIELDS__())
