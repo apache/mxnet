@@ -1201,7 +1201,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 def add(lhs, rhs):
-    """Returns element-wise addition of the arguments with broadcasting.
+    """Returns element-wise sum of the arguments with broadcasting.
 
     Equivalent to ``lhs + rhs`` and ``mx.nd.broadcast_add(lhs, rhs)``.
 
@@ -1210,8 +1210,8 @@ def add(lhs, rhs):
     lhs : scalar or array
         First array to be added.
     rhs : scalar or array
-        Second array to be added.
-         If ``lhs.shape != rhs.shape``, they must be
+         Second array to be added.
+        If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape
 
     Returns
@@ -1251,7 +1251,7 @@ def add(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def subtract(lhs, rhs):
-    """Returns element-wise subtraction of the arguments with broadcasting.
+    """Returns element-wise difference of the arguments with broadcasting.
 
     Equivalent to ``lhs - rhs`` and ``mx.nd.broadcast_sub(lhs, rhs)``.
 
@@ -1260,7 +1260,7 @@ def subtract(lhs, rhs):
     lhs : scalar or array
         First array to be subtracted.
     rhs : scalar or array
-        Second array to be subtracted.
+         Second array to be subtracted.
         The arrays to be subtracted. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -1301,7 +1301,7 @@ def subtract(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def multiply(lhs, rhs):
-    """Returns element-wise multiplication of the arguments with broadcasting.
+    """Returns element-wise product of the arguments with broadcasting.
 
     Equivalent to ``lhs * rhs`` and ``mx.nd.broadcast_mul(lhs, rhs)``.
 
@@ -1310,7 +1310,7 @@ def multiply(lhs, rhs):
     lhs : scalar or array
         First array to be multiplied.
     rhs : scalar or array
-        Second array to be multiplied.
+         Second array to be multiplied.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -1360,7 +1360,7 @@ def divide(lhs, rhs):
     lhs : scalar or array
         First array in division.
     rhs : scalar or array
-        Second array in division.
+         Second array in division.
         The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
