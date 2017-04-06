@@ -34,11 +34,12 @@ Operator *RegressionOutputProp<type>::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum::kLinear>)
-.describe(R"code(Use the LinearRegressionOutput as the final output layer of a net.
+.describe(R"code(LinearRegressionOutput computes and optimizes for squared loss.
 
-LinearRegressionOutput is used to compute a loss for training. It enables the new network to optimize for squared loss.
+..note::
+Use the LinearRegressionOutput as the final output layer of a net.
 
-A scale can be applied to the gradient by adding parameter ``grad_scale``, which is often used in
+A scale can be applied to the gradient by adding parameter `grad_scale`, which is often used in
 mutli-loss object function in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
@@ -47,17 +48,18 @@ mutli-loss object function in which we can give different weights to each loss.
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(MAERegressionOutput, RegressionOutputProp<reg_enum::kMAE>)
-.describe(R"code(Use the MAERegressionOutput as the final output layer of a net.
-
-The MAERegressionOutput function computes mean absolute error,
-a risk metric corresponding to the expected value of the absolute error loss or l1-norm loss.
+.describe(R"code(The MAERegressionOutput function computes mean absolute error.
+MAE is a risk metric corresponding to the expected value of the absolute error loss or l1-norm loss.
 
 If :math:`\hat{y}_i` is the predicted value of the i-th sample, and :math:`y_i` is the corresponding true value,
-then the mean absolute error (MAE) estimated over :math:`n_{\text{samples}}` is defined as
+then the mean absolute error (MAE) estimated over :math:`n` samples is defined as
 
-:math:`{\mathrm  {MAE}}={\frac  {1}{n}}\sum _{{i=1}}^{n}\left|f_{i}-y_{i}\right|={\frac  {1}{n}}\sum _{{i=1}}^{n}\left|e_{i}\right|`
+:math:`\text{MAE}(y, \hat{y}) = \frac{1}{n} \sum_{i=0}^{n-1} \left| y_i - \hat{y}_i \right|`
 
-A scale can be applied to the gradient by adding parameter ``grad_scale``, which is often used in
+..note::
+Use the MAERegressionOutput as the final output layer of a net.
+
+A scale can be applied to the gradient by adding parameter `grad_scale`, which is often used in
 mutli-loss object function in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
@@ -66,16 +68,17 @@ mutli-loss object function in which we can give different weights to each loss.
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(LogisticRegressionOutput, RegressionOutputProp<reg_enum::kLogistic>)
-.describe(R"code(Use the LogisticRegressionOutput as the final output layer of a net.
+.describe(R"code(LogisticRegressionOutput applies a logistic function to the input.
 
-LogisticRegressionOutput applies a logistic function also known as Sigmoid function represented as
-:math:`\frac{1}{1+exp(-x)}`.
-
-The logistic function is used to convert the output of the
+The logistic function also known as Sigmoid function is represented as
+:math:`\frac{1}{1+exp(-x)}`. It is used to convert the output of the
 linear model :math:`wTx+b` from any real number into the range of [0,1], which can be interpreted as a probability.
 It is suitable for binary classification or probability prediction tasks.
 
-A scale can be applied to the gradient by adding parameter ``grad_scale``, which is often used in
+..note::
+Use the LogisticRegressionOutput as the final output layer of a net.
+
+A scale can be applied to the gradient by adding parameter `grad_scale`, which is often used in
 mutli-loss object function in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
