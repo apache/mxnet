@@ -14,7 +14,6 @@ sudo apt-get install -y build-essential libatlas-base-dev libopencv-dev graphviz
 
 echo "Building MXNet core. This can take few minutes..."
 cd "$MXNET_HOME"
-cp make/config.mk .
 make -j$(nproc)
 
 echo "Installing Numpy..."

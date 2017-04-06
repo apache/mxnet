@@ -13,7 +13,6 @@ echo "MXNet root folder: $MXNET_HOME"
 
 echo "Building MXNet core. This can take few minutes..."
 cd "$MXNET_HOME"
-cp make/config.mk .
 make -j$(nproc)
 
 echo "Installing R dependencies. This can take few minutes..."
