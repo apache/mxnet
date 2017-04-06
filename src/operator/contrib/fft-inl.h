@@ -6,7 +6,7 @@
 */
 #ifndef MXNET_OPERATOR_CONTRIB_FFT_INL_H_
 #define MXNET_OPERATOR_CONTRIB_FFT_INL_H_
-#ifdef MSHADOW_USE_CUDNN
+#if MSHADOW_USE_CUDNN
 #include <cufft.h>
 #endif
 #include <dmlc/logging.h>
