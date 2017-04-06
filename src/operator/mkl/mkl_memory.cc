@@ -256,7 +256,9 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
 template <typename Dtype>
 void* MKLMemoryDescriptor<Dtype>::get_output_ptr(Dtype *data_ptr,
   std::shared_ptr<MKLMemoryDescriptor<Dtype> > self_ptr, const TBlob &blob, bool in_place) {
+#if MKL_EXPERIMENTAL == 1
   std::shared_ptr<MKLMemHolder> dnn_chunk = blob.Mkl_mem_;
+#endif
   if (this->conversion_needed()) {
     void * prv_ptr =  this->prv_ptr();
 #if MKL_EXPERIMENTAL == 1
