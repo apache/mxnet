@@ -175,7 +175,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       return inter_method;
     }
   }
-  cv::Mat Process(const cv::Mat &src,
+  cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
     using mshadow::index_t;
     cv::Mat res;

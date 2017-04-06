@@ -5,8 +5,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef MXNETCPP_NDARRAY_H
-#define MXNETCPP_NDARRAY_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_H_
 
 #include <map>
 #include <memory>
@@ -384,6 +384,10 @@ class NDArray {
   */
   std::vector<mx_uint> GetShape() const;
   /*!
+  * \return the data type of current NDArray
+  */
+  int GetDType() const;
+  /*!
   * \return the data pointer to the current NDArray
   */
   const mx_float *GetData() const;
@@ -404,4 +408,4 @@ class NDArray {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // MXNETCPP_NDARRAY_H
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_NDARRAY_H_

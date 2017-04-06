@@ -60,23 +60,31 @@ def _make_ndarray_function(handle, name):
         ctypes.byref(key_var_num_args),
         ctypes.byref(ret_type)))
     narg = int(num_args.value)
+    arg_names = [py_str(arg_names[i]) for i in range(narg)]
+    arg_types = [py_str(arg_types[i]) for i in range(narg)]
     func_name = name
     key_var_num_args = py_str(key_var_num_args.value)
     ret_type = py_str(ret_type.value) if ret_type.value is not None else ''
     doc_str = _build_doc(func_name,
                          py_str(desc.value),
-                         [py_str(arg_names[i]) for i in range(narg)],
-                         [py_str(arg_types[i]) for i in range(narg)],
+                         arg_names,
+                         arg_types,
                          [py_str(arg_descs[i]) for i in range(narg)],
                          key_var_num_args,
                          ret_type)
-    arguments = []
-    for i in range(num_args.value):
-        dtype = py_str(arg_types[i])
-        if not (dtype.startswith('NDArray') or
-                dtype.startswith('Symbol') or
-                dtype.startswith('ndarray-or-symbol')):
-            arguments.append(py_str(arg_names[i]))
+    ndargs_pos = {}
+    arg_isnd = []
+    idtype = None
+    for i in range(narg):
+        name = arg_names[i]
+        dtype = arg_types[i]
+        if name == 'dtype':
+            idtype = i
+        if dtype.startswith('NDArray') or dtype.startswith('Symbol'):
+            ndargs_pos[name] = len(ndargs_pos)
+            arg_isnd.append(True)
+        else:
+            arg_isnd.append(False)
 
     # Definition of internal functions.
     def generic_ndarray_function(*args, **kwargs):
@@ -95,30 +103,53 @@ def _make_ndarray_function(handle, name):
             The result NDArray(tuple) of result of computation.
         """
         ndargs = []
-        pos_args = []
-        for i in args:
-            if isinstance(i, NDArrayBase):
-                ndargs.append(i)
+        keys = []
+        vals = []
+        for i, arg in enumerate(args):
+            if key_var_num_args or arg_isnd[i]:
+                assert isinstance(arg, NDArrayBase), \
+                    "%d-th argument must be of NDArray type"%i
+                ndargs.append(arg)
             else:
-                pos_args.append(str(i))
+                assert i < len(arg_names), \
+                    "Unexpected %d-th argument %s"%(i, str(arg))
+                keys.append(arg_names[i])
+                if idtype == i:
+                    vals.append(np.dtype(arg).name)
+                else:
+                    vals.append(str(arg))
 
-        if len(pos_args) > len(arguments):
-            raise ValueError("Too many positional arguments")
-        kwargs.update(zip(arguments[:len(pos_args)], pos_args))
-        if 'dtype' in kwargs:
-            kwargs['dtype'] = np.dtype(kwargs['dtype']).name
+        num_ndargs = len(ndargs)
+        num_pos_ndargs = num_ndargs
 
         original_output = None
-        if 'out' in kwargs:
-            output_vars = kwargs['out']
-            original_output = output_vars
-            del kwargs['out']
-            if isinstance(output_vars, NDArrayBase):
-                output_vars = (output_vars,)
-            num_output = ctypes.c_int(len(output_vars))
-            output_vars = c_array(NDArrayHandle, [v.handle for v in output_vars])
-            output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
-        else:
+        for key, val in kwargs.items():
+            pos = ndargs_pos.get(key, None)
+            if pos is not None:
+                assert pos >= num_pos_ndargs, "Argument %s specified twice"%key
+                assert isinstance(val, NDArrayBase), \
+                    "Argument %s must be of NDArray type"%key
+                while pos >= len(ndargs):
+                    ndargs.append(None)
+                ndargs[pos] = val
+                num_ndargs += 1
+            elif key == 'out':
+                original_output = val
+                if isinstance(val, NDArrayBase):
+                    val = (val,)
+                num_output = ctypes.c_int(len(val))
+                output_vars = c_array(NDArrayHandle, [v.handle for v in val])
+                output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
+            elif key == 'dtype':
+                keys.append(key)
+                vals.append(np.dtype(val).name)
+            else:
+                keys.append(key)
+                vals.append(str(val))
+
+        assert num_ndargs == len(ndargs)
+
+        if original_output is None:
             output_vars = ctypes.POINTER(NDArrayHandle)()
             num_output = ctypes.c_int(0)
 
@@ -128,9 +159,9 @@ def _make_ndarray_function(handle, name):
             c_array(NDArrayHandle, [i.handle for i in ndargs]),
             ctypes.byref(num_output),
             ctypes.byref(output_vars),
-            ctypes.c_int(len(kwargs)),
-            c_array(ctypes.c_char_p, [c_str(key) for key in kwargs.keys()]),
-            c_array(ctypes.c_char_p, [c_str(str(i)) for i in kwargs.values()])))
+            ctypes.c_int(len(keys)),
+            c_array(ctypes.c_char_p, [c_str(key) for key in keys]),
+            c_array(ctypes.c_char_p, [c_str(val) for val in vals])))
         if original_output is not None:
             return original_output
         if num_output.value == 1:

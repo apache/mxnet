@@ -77,9 +77,9 @@ Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is tr
 then set ``gamma`` to 1 and its gradient to 0.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to batch normalization")
-.add_argument("gamma", "ndarray-or-symbol", "gamma array")
-.add_argument("beta", "ndarray-or-symbol", "beta array")
+.add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
+.add_argument("gamma", "NDArray-or-Symbol", "gamma array")
+.add_argument("beta", "NDArray-or-Symbol", "beta array")
 .add_arguments(BatchNormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(BatchNorm)

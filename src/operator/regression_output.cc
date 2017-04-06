@@ -35,23 +35,23 @@ DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum::kLinear>)
 .describe("Use linear regression for final output, this is used on final output of a net.")
-.add_argument("data", "Symbol", "Input data to function.")
-.add_argument("label", "Symbol", "Input label to function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to function.")
+.add_argument("label", "NDArray-or-Symbol", "Input label to function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(MAERegressionOutput, RegressionOutputProp<reg_enum::kMAE>)
 .describe("Use mean absolute error regression for final output, "
           "this is used on final output of a net.")
-.add_argument("data", "Symbol", "Input data to function.")
-.add_argument("label", "Symbol", "Input label to function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to function.")
+.add_argument("label", "NDArray-or-Symbol", "Input label to function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(LogisticRegressionOutput, RegressionOutputProp<reg_enum::kLogistic>)
 .describe("Use Logistic regression for final output, this is used on final output of a net.\n"
           "Logistic regression is suitable for binary classification "
           "or probability prediction tasks.")
-.add_argument("data", "Symbol", "Input data to function.")
-.add_argument("label", "Symbol", "Input label to function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to function.")
+.add_argument("label", "NDArray-or-Symbol", "Input label to function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 }  // namespace op

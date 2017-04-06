@@ -4,8 +4,8 @@
 * \brief definition of io, such as DataIter
 * \author Zhang Chen
 */
-#ifndef MXNETCPP_IO_H
-#define MXNETCPP_IO_H
+#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_IO_H_
+#define CPP_PACKAGE_INCLUDE_MXNET_CPP_IO_H_
 
 #include <map>
 #include <string>
@@ -119,10 +119,10 @@ class MXDataIter : public DataIter {
   DataIterCreator creator_;
   std::map<std::string, std::string> params_;
   std::shared_ptr<MXDataIterBlob> blob_ptr_;
-  static MXDataIterMap *mxdataiter_map_;
+  static MXDataIterMap*& mxdataiter_map();
 };
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif /* end of include guard: MXNETCPP_IO_H */
+#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_IO_H_
 

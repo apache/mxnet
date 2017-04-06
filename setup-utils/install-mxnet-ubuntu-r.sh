@@ -32,6 +32,9 @@ sudo apt-get -y install libcurl4-openssl-dev libssl-dev
 # Needed for R XML
 sudo apt-get install libxml2-dev
 
+# Needed for R Cairo 
+sudo apt-get install libxt-dev
+
 sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package
 sudo Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"

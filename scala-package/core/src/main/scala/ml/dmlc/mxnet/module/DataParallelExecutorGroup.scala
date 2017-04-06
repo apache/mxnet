@@ -589,7 +589,7 @@ class DataParallelExecutorGroup private[module](
     require(argTypes != null, "type inference failed")
 
     val argArrays = ArrayBuffer.empty[NDArray]
-    val gradArrayMap = if (forTraining) mutable.HashMap.empty[String, NDArray] else null
+    val gradArrayMap = mutable.HashMap.empty[String, NDArray]
 
     // create or borrow arguments and gradients
     for (j <- 0 until argNames.length) {

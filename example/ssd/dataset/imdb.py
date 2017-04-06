@@ -1,4 +1,5 @@
 import numpy as np
+import os.path as osp
 
 class Imdb(object):
     """
@@ -48,3 +49,32 @@ class Imdb(object):
         numpy.array([id, xmin, ymin, xmax, ymax]...)
         """
         raise NotImplementedError
+
+    def save_imglist(self, fname=None, root=None, shuffle=False):
+        """
+        save imglist to disk
+
+        Parameters:
+        ----------
+        fname : str
+            saved filename
+        """
+        str_list = []
+        for index in range(self.num_images):
+            label = self.label_from_index(index)
+            path = self.image_path_from_index(index)
+            if root:
+                path = osp.relpath(path, root)
+            str_list.append('\t'.join([str(index), str(2), str(label.shape[1])] \
+              + ["{0:.4f}".format(x) for x in label.ravel()] + [path,]) + '\n')
+        if str_list:
+            if shuffle:
+                import random
+                random.shuffle(str_list)
+            if not fname:
+                fname = self.name + '.lst'
+            with open(fname, 'w') as f:
+                for line in str_list:
+                    f.write(line)
+        else:
+            raise RuntimeError("No image in imdb")

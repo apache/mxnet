@@ -10,8 +10,10 @@ use Time::HiRes;
 use Carp;
 use Exporter;
 use base qw(Exporter);
+use List::Util qw(shuffle);
+
 @AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc 
-                              pdl cat dog svd bisect_left
+                              pdl cat dog svd bisect_left pdl_shuffle
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
                               DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL);
 @AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
@@ -60,22 +62,25 @@ use constant DTYPE_MX_TO_PERL => {
     int32   => 'l'
 };
 
+=head1 NAME
 
-=head1 Definition
+AI::MXNet::Base - Helper functions
+
+=head1 DEFINITION
 
 Helper functions
 
 =head2 zip
 
-    Perl version of for x,y,z in zip (arr_x, arr_y, arr_z)
+Perl version of for x,y,z in zip (arr_x, arr_y, arr_z)
 
-    Parameters
-    ----------
-    $sub_ref, called with @_ filled with 
-    $arr_x->[$i], $arr_y->[$i], $arr_z->[$i]
-    for each loop iteration.
+Parameters
+----------
+$sub_ref, called with @_ filled with 
+$arr_x->[$i], $arr_y->[$i], $arr_z->[$i]
+for each loop iteration.
 
-    @array_refs
+@array_refs
 =cut
 
 sub zip
@@ -90,8 +95,8 @@ sub zip
 
 =head2 enumerate
 
-    Same as zip, but argument list in anonymous sub is prepended
-    by iteration count
+Same as zip, but the argument list in the anonymous sub is prepended
+by the iteration count.
 =cut
 
 sub enumerate
@@ -103,7 +108,7 @@ sub enumerate
 
 =head2 product
 
-    Calculates product of the input agruments
+Calculates the product of the input agruments.
 =cut
 
 sub product
@@ -115,8 +120,7 @@ sub product
 
 =head2 bisect_left
 
-    https://hg.python.org/cpython/file/2.7/Lib/bisect.py
-
+https://hg.python.org/cpython/file/2.7/Lib/bisect.py
 =cut
 
 sub bisect_left
@@ -143,14 +147,38 @@ sub bisect_left
     return $lo;
 }
 
+=head2 pdl_shuffle
+
+Shuffle the pdl by the last dimension
+
+Parameters
+-----------
+PDL $pdl
+$preshuffle Maybe[ArrayRef[Index]], if defined the array elements are used
+as shuffled last dimension's indexes
+=cut
+
+
+sub pdl_shuffle
+{
+    my ($pdl, $preshuffle) = @_;
+    my $c = $pdl->copy;
+    my @shuffle = $preshuffle ? @{ $preshuffle } : shuffle(0..$pdl->dim(-1)-1);
+    my $rem = $pdl->ndims-1;
+    for my $i (0..$pdl->dim(-1)-1)
+    {
+        $c->slice(('X')x$rem, $i) .= $pdl->slice(('X')x$rem, $shuffle[$i])
+    }
+    $c;
+}
 
 =head2 assert
 
-    Parameters
-    -----------
-    Bool $input
-    Str  $error_str
-    Calls Carp::confess with $error_str//"AssertionError" if $input is false
+Parameters
+-----------
+Bool $input
+Str  $error_str
+Calls Carp::confess with $error_str//"AssertionError" if the $input is false
 =cut
 
 sub assert
@@ -163,14 +191,14 @@ sub assert
 
 =head2 check_call
 
-    Check the return value of C API call
+Checks the return value of C API call
 
-    This function will raise exception when error occurs.
-    Wrap every API call with this function
+This function will raise exception when error occurs.
+Every API call is wrapped with this function
 
-    returns C API call return values stripped of first return value,
-    checks for return context and returns first element in
-    the values list when called in scalar context. 
+Returns the C API call return values stripped of first return value,
+checks for return context and returns first element in
+the values list when called in scalar context.
 =cut
 
 sub check_call
@@ -181,24 +209,24 @@ sub check_call
 
 =head2 build_param_doc
 
-    Build argument docs in python style.
+Build argument docs in python style.
 
-    arg_names : list of str
-        Argument names.
+arg_names : array ref of str
+    Argument names.
 
-    arg_types : list of str
-        Argument type information.
+arg_types : array ref of str
+    Argument type information.
 
-    arg_descs : list of str
-        Argument description information.
+arg_descs : array ref of str
+    Argument description information.
 
-    remove_dup : boolean, optional
-        Whether remove duplication or not.
+remove_dup : boolean, optional
+    Whether remove duplication or not.
 
-    Returns
-    -------
-    docstr : str
-        Python docstring of parameter sections.
+Returns
+-------
+docstr : str
+    Python docstring of parameter sections.
 =cut
 
 sub build_param_doc
@@ -222,7 +250,7 @@ sub build_param_doc
 
 =head2 _notify_shutdown
 
-    Notify MXNet about a shutdown.
+Notify MXNet about a shutdown.
 =cut
 
 sub _notify_shutdown

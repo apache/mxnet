@@ -75,13 +75,13 @@ also supports various ways to normalize the gradient by ``normalization``:
 - **batch**: divide by batch size (number of examples)
 - **valid**: divide by the number of examples which are not ignored.
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data.")
-.add_argument("label", "ndarray-or-symbol", "Ground truth label.")
+.add_argument("data", "NDArray-or-Symbol", "Input data.")
+.add_argument("label", "NDArray-or-Symbol", "Ground truth label.")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(Softmax, DeprecatedSoftmaxProp)
 .describe("DEPRECATED: Perform a softmax transformation on input. Please use SoftmaxOutput")
-.add_argument("data", "ndarray-or-symbol", "Input data to softmax.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to softmax.")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 
 }  // namespace op
