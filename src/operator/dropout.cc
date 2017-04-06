@@ -36,7 +36,7 @@ During training, each element of the input is randomly set to zero with probabil
 And then the whole tensor is rescaled by 1/(1-p) to keep the expectation the same as
 before applying dropout. During the test time, this behaves as an identity map.
 )")
-.add_argument("data", "Symbol", "Input data to dropout.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to dropout.")
 .add_arguments(DropoutParam::__FIELDS__());
 
 }  // namespace op

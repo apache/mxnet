@@ -38,10 +38,10 @@ MXNET_REGISTER_OP_PROPERTY(SequenceReverse, SequenceReverseProp)
 "handle variable-length sequences. If sequence_length is false, then each example "
 "in the batch is assumed to have the max sequence length."
 )
-    .add_argument("data", "Symbol",
+    .add_argument("data", "NDArray-or-Symbol",
                   "n-dimensional input tensor of the form [max sequence "
                   "length, batchsize, other dims]")
-    .add_argument("sequence_length", "Symbol",
+    .add_argument("sequence_length", "NDArray-or-Symbol",
                   "vector of sequence lengths of size batchsize")
     .add_arguments(SequenceReverseParam::__FIELDS__());
 

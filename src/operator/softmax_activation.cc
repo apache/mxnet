@@ -28,7 +28,7 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxActivation, SoftmaxActivationProp)
           "this is the default mode. If mode=channel, this operator will compute "
           "a num_channel-class softmax at each position of each instance; this can "
           "be used for fully convolutional network, image segmentation, etc.")
-.add_argument("data", "Symbol", "Input data to activation function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
 .add_arguments(SoftmaxActivationParam::__FIELDS__());
 
 }  // namespace op

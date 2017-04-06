@@ -619,7 +619,7 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(ParamParser<ReduceAxisParam>)                \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "ndarray-or-symbol", "The input")       \
+  .add_argument("data", "NDArray-or-Symbol", "The input")       \
   .add_arguments(ReduceAxisParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE(name)                    \
@@ -629,7 +629,7 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .add_argument("data", "ndarray-or-symbol", "The input")       \
+  .add_argument("data", "NDArray-or-Symbol", "The input")       \
   .add_arguments(ReduceAxesParam::__FIELDS__())
 
 #define MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(name)               \
@@ -649,7 +649,7 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
       return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
                                  {{"keepdims", "true"}});              \
     })                                                          \
-  .add_argument("data", "ndarray-or-symbol", "The input")
+  .add_argument("data", "NDArray-or-Symbol", "The input")
 
 }  // namespace op
 }  // namespace mxnet

@@ -90,7 +90,7 @@ For example::
   })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(CastParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_cast)

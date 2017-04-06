@@ -42,7 +42,8 @@ class ForwardOpExecutor : public OpExecutor {
   Operator::ExecType exec_type() const override {
     return op_->exec_type();
   }
-  explicit ForwardOpExecutor(Operator* op, std::vector<uint32_t> aux_index)
+  explicit ForwardOpExecutor(std::shared_ptr<Operator> op,
+      std::vector<uint32_t> aux_index)
       : op_(op), aux_index_(aux_index) {
     std::sort(aux_index_.begin(), aux_index_.end());
   }
@@ -170,6 +171,8 @@ Graph AttachOpExecs(Graph g) {
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
+  const auto& saved_opr = g.GetAttr<
+    std::unordered_map<const nnvm::Node*, std::shared_ptr<Operator>>>("saved_opr");
 
   // get the graph
   const auto& idx = g.indexed_graph();
@@ -191,12 +194,17 @@ Graph AttachOpExecs(Graph g) {
         ishape.emplace_back(vshape[idx.entry_id(e)]);
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
-      ret[i] = std::make_shared<ForwardOpExecutor>(
-          fcreate_layer_op[inode.source->op()](
-              inode.source->attrs, vctx[i], ishape, itype), mutate_index);
+      std::shared_ptr<Operator> opr;
+      if (saved_opr.count(inode.source)) {
+        opr = saved_opr.at(inode.source);
+      } else {
+        opr.reset(fcreate_layer_op[inode.source->op()](
+              inode.source->attrs, vctx[i], ishape, itype));
+      }
+      ret[i] = std::make_shared<ForwardOpExecutor>(opr, mutate_index);
     } else if (is_layer_backward.get(inode.source->op(), false)) {
+      CHECK_GE(inode.control_deps.size(), 1);
       uint32_t fwd_id = inode.control_deps[0];
-      CHECK_GE(inode.control_deps.size(), 1U);
       CHECK(vctx[fwd_id] == vctx[i]);
       CHECK(ret[fwd_id] != nullptr);
       ret[i] = std::make_shared<BackwardOpExecutor>(

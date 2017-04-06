@@ -23,6 +23,8 @@ NNVM_REGISTER_OP(sgd_update)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SGDUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "gradient")
 .add_arguments(SGDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(sgd_mom_update)
@@ -37,6 +39,9 @@ NNVM_REGISTER_OP(sgd_mom_update)
     return std::vector<uint32_t>{2};
   })
 .set_attr<FCompute>("FCompute<cpu>", SGDMomUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mom", "NDArray-or-Symbol", "Momentum")
 .add_arguments(SGDMomParam::__FIELDS__());
 
 NNVM_REGISTER_OP(adam_update)
@@ -51,6 +56,10 @@ NNVM_REGISTER_OP(adam_update)
     return std::vector<uint32_t>{2, 3};
   })
 .set_attr<FCompute>("FCompute<cpu>", AdamUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mean", "NDArray-or-Symbol", "Moving mean")
+.add_argument("var", "NDArray-or-Symbol", "Moving variance")
 .add_arguments(AdamParam::__FIELDS__());
 
 NNVM_REGISTER_OP(rmsprop_update)
@@ -68,6 +77,9 @@ NNVM_REGISTER_OP(rmsprop_update)
     return std::vector<uint32_t>{2};
   })
 .set_attr<FCompute>("FCompute<cpu>", RMSPropUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("n", "NDArray-or-Symbol", "n")
 .add_arguments(RMSPropParam::__FIELDS__());
 
 NNVM_REGISTER_OP(rmspropalex_update)
@@ -84,6 +96,11 @@ NNVM_REGISTER_OP(rmspropalex_update)
     return std::vector<uint32_t>{2, 3, 4};
   })
 .set_attr<FCompute>("FCompute<cpu>", RMSPropAlexUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("n", "NDArray-or-Symbol", "n")
+.add_argument("g", "NDArray-or-Symbol", "g")
+.add_argument("delta", "NDArray-or-Symbol", "delta")
 .add_arguments(RMSPropAlexParam::__FIELDS__());
 
 }  // namespace op
