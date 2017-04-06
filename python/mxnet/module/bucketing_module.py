@@ -183,14 +183,16 @@ class BucketingModule(BaseModule):
         ----------
         initializer : Initializer
         arg_params : dict
-            Default ``None``. Existing parameters. This has higher priority than `initializer`.
+            Defaults to ``None``. Existing parameters. This has higher priority
+            than `initializer`.
         aux_params : dict
-            Default ``None``. Existing auxiliary states. This has higher priority than `initializer`.
+            Defaults to ``None``. Existing auxiliary states. This has higher priority
+            than `initializer`.
         allow_missing : bool
-            Allow missing values in `arg_params` and `aux_params` (if not ``None``). In this case,
-            missing values will be filled with `initializer`.
+            Allow missing values in `arg_params` and `aux_params` (if not ``None``).
+            In this case, missing values will be filled with `initializer`.
         force_init : bool
-            Default `False`.
+            Defaults to ``False``.
         """
         if self.params_initialized and not force_init:
             return

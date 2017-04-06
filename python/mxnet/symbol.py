@@ -952,7 +952,8 @@ class Symbol(SymbolBase):
             Input auxiliary states to the symbol, only need to specify when
             list_auxiliary_states is not empty.
 
-            - If type is list of `NDArray`, the position is in the same order of `list_auxiliary_states`.
+            - If type is list of `NDArray`, the position is in the same order
+              of `list_auxiliary_states`.
             - If type is dict of str to `NDArray`, then it maps the name of `auxiliary_states`
               to the corresponding `NDArray`,
             - In either case, all the auxiliary_states need to be provided.
@@ -972,12 +973,14 @@ class Symbol(SymbolBase):
 
         Notes
         -----
-        Auxiliary states are special states of symbols that do not corresponds to an argument,
-        and do not have gradient. But still be useful for the specific operations.
-        A common example of auxiliary state is the `moving_mean` and `moving_variance` in `BatchNorm`.
-        Most operators do not have auxiliary states and this parameter can be safely ignored.
+        Auxiliary states are special states of symbols that do not correspond
+        to an argument, and do not have gradient. But still be useful
+        for the specific operations. Common examples of auxiliary states include
+        the `moving_mean` and `moving_variance` states in `BatchNorm`.
+        Most operators do not have auxiliary states and in those cases,
+        this parameter can be safely ignored.
 
-        User can give up gradient by using a dict in `args_grad` and only specify
+        Users can give up gradient by using a dict in `args_grad` and only specify
         gradient they interested in.
         """
         # pylint: disable=too-many-locals, too-many-branches

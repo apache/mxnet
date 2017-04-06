@@ -159,12 +159,14 @@ class SequentialModule(BaseModule):
         ----------
         initializer : Initializer
         arg_params : dict
-            Default ``None``. Existing parameters. This has higher priority than `initializer`.
+            Default ``None``. Existing parameters. This has higher priority
+            than `initializer`.
         aux_params : dict
-            Default ``None``. Existing auxiliary states. This has higher priority than `initializer`.
+            Default ``None``. Existing auxiliary states. This has higher priority
+            than `initializer`.
         allow_missing : bool
-            Allow missing values in `arg_params` and `aux_params` (if not ``None``). In this case,
-            missing values will be filled with `initializer`.
+            Allow missing values in `arg_params` and `aux_params` (if not ``None``).
+            In this case, missing values will be filled with `initializer`.
         force_init : bool
             Default ``False``.
         """

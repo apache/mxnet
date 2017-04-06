@@ -403,7 +403,8 @@ class BaseModule(object):
         optimizer : str or Optimizer
             Defaults to 'sgd'
         optimizer_params : dict
-            Defaults to ``(('learning_rate', 0.01),)``. The parameters for the optimizer constructor.
+            Defaults to ``(('learning_rate', 0.01),)``. The parameters for
+            the optimizer constructor.
             The default value is not a dict, just to avoid pylint warning on dangerous
             default values.
         eval_end_callback : function or list of function
