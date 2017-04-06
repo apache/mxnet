@@ -63,7 +63,7 @@ class PythonModule(BaseModule):
     def label_shapes(self):
         """A list of (name, shape) pairs specifying the label inputs to this module.
         If this module does not accept labels -- either it is a module without loss
-        function, or it is not binded for training, then this should return an empty
+        function, or it is not bound for training, then this should return an empty
         list ``[]```.
         """
         return self._label_shapes
@@ -158,7 +158,7 @@ class PythonModule(BaseModule):
             of modules.
         force_rebind : bool
             Default is ``False``. This function does nothing if the executors are already
-            binded. But with this ``True``, the executors will be forced to rebind.
+            bound. But with this ``True``, the executors will be forced to rebind.
         shared_module : Module
             Default is ``None``. This is used in bucketing. When not ``None``, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
@@ -168,8 +168,8 @@ class PythonModule(BaseModule):
             (default to 'write').
             Can be specified globally (str) or for each argument (list, dict).
         """
-        if self.binded and not force_rebind:
-            self.logger.warning('Already binded, ignoring bind()')
+        if self.bound and not force_rebind:
+            self.logger.warning('Already bound, ignoring bind()')
             return
 
         assert grad_req == 'write', "Python module only support write gradient"

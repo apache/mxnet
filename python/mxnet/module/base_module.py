@@ -105,7 +105,7 @@ class BaseModule(object):
     After binding, a modulse should be able to report the following richer information:
 
     - state information
-        - `binded`: `bool`, indicates whether the memory buffers needed for computation
+        - `bound`: `bool`, indicates whether the memory buffers needed for computation
           have been allocated.
         - `for_training`: whether the module is bound for training.
         - `params_initialized`: `bool`, indicates whether the parameters of this modules
@@ -121,7 +121,7 @@ class BaseModule(object):
           the data arrays might not be of the same shape as viewed from the external world.
         - `label_shapes`: a list of `(name, shape)`. This might be `[]` if the module does
           not need labels (e.g. it does not contains a loss function at the top), or a module
-          is not binded for training.
+          is not bound for training.
         - `output_shapes`: a list of `(name, shape)` for outputs of the module.
 
     - parameters (for modules with parameters)
@@ -177,13 +177,22 @@ class BaseModule(object):
     """
     def __init__(self, logger=logging):
         self.logger = logger
-        self.binded = False
+        self.bound = False
         self.for_training = False
         self.inputs_need_grad = False
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
         self._total_exec_bytes = 0
+
+    @property
+    def binded(self):
+         warnings.warn(
+            'binded has been deprecated. ' + \
+            'Please use bound instead.',
+            DeprecationWarning, stacklevel=2)
+
+        return self.bound
 
     ################################################################################
     # High Level API
@@ -222,7 +231,7 @@ class BaseModule(object):
             >>> metric = mx.metric.Accuracy()
             >>> mod.score(val_dataiter, metric)
         """
-        assert self.binded and self.params_initialized
+        assert self.bound and self.params_initialized
 
         if reset:
             eval_data.reset()
@@ -276,7 +285,7 @@ class BaseModule(object):
             Default is ``True``, indicating whether we should reset the data iter before start
             doing prediction.
         """
-        assert self.binded and self.params_initialized
+        assert self.bound and self.params_initialized
 
         if reset:
             eval_data.reset()
@@ -331,7 +340,7 @@ class BaseModule(object):
         >>> #Predict on the first 10 batches of val_dataiter
         >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
-        assert self.binded and self.params_initialized
+        assert self.bound and self.params_initialized
 
         if reset:
             eval_data.reset()
@@ -419,7 +428,7 @@ class BaseModule(object):
             and `aux_params` are not ``None``. If this is ``True``, then the missing parameters
             will be initialized via the `initializer`.
         force_rebind : bool
-            Defaults to ``False``. Whether to force rebinding the executors if already binded.
+            Defaults to ``False``. Whether to force rebinding the executors if already bound.
         force_init : bool
             Defaults to ``False``. Indicate whether we should force initialization even if the
             parameters are already initialized.
@@ -542,7 +551,7 @@ class BaseModule(object):
     def label_shapes(self):
         """A list of (name, shape) pairs specifying the label inputs to this module.
         If this module does not accept labels -- either it is a module without loss
-        function, or it is not binded for training, then this should return an empty
+        function, or it is not bound for training, then this should return an empty
         list ``[]``.
         """
         raise NotImplementedError()
@@ -690,7 +699,7 @@ class BaseModule(object):
         -------
         A list of ``NDArray`` or a list of list of ``NDArray``.
         """
-        assert self.binded and self.params_initialized
+        assert self.bound and self.params_initialized
         assert not merge_multi_context
         return []
 
@@ -705,7 +714,7 @@ class BaseModule(object):
         value : number
             A single scalar value for all state arrays.
         """
-        assert self.binded and self.params_initialized
+        assert self.bound and self.params_initialized
         assert not states and not value
 
     def install_monitor(self, mon):
@@ -896,7 +905,7 @@ class BaseModule(object):
             of modules.
         force_rebind : bool
             Default is ``False``. This function does nothing if the executors are already
-            binded. But with this ``True``, the executors will be forced to rebind.
+            bound. But with this ``True``, the executors will be forced to rebind.
         shared_module : Module
             Default is ``None``. This is used in bucketing. When not ``None``, the shared module
             essentially corresponds to a different bucket -- a module with different symbol
