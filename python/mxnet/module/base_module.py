@@ -187,11 +187,10 @@ class BaseModule(object):
 
     @property
     def binded(self):
-         warnings.warn(
+        warnings.warn(
             'binded has been deprecated. ' + \
             'Please use bound instead.',
             DeprecationWarning, stacklevel=2)
-
         return self.bound
 
     ################################################################################

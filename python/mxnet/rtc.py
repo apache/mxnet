@@ -6,7 +6,7 @@ from .base import _LIB, NDArrayHandle, RtcHandle, mx_uint, c_array, check_call
 
 class Rtc(object):
     """MXRtc object in mxnet.
-    This class allow you to writeå CUDA kernels in Python
+    This class allow you to write CUDA kernels in Python
     and call them with NDArray.
 
     Parameters
