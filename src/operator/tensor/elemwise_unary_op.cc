@@ -41,13 +41,8 @@ MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    nnvm::NodePtr p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_ones");
-    p->attrs.name = n->attrs.name + "_backward";
-    p->control_deps.emplace_back(n);
-    if (p->op()->attr_parser != nullptr) {
-      p->op()->attr_parser(&(p->attrs));
-    }
+    auto p = MakeNode("ones_like", n->attrs.name + "_backward",
+                      &(n->inputs), nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
     return ret;
@@ -60,16 +55,18 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
     "FInplaceOption", [](const NodeAttrs& attrs) {
       return std::vector<std::pair<int, int> >{{0, 0}};
     })
+.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
+    [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
-      auto lhs = MakeGradNode("_backward_copy", n, ograds,
-                              std::unordered_map<std::string, std::string>());
-      nnvm::NodePtr ng = nnvm::Node::Create();
-      ng->attrs.op = nnvm::Op::Get("_zeros");
-      ng->attrs.name = "zeros";
+      auto lhs = MakeNonlossGradNode(
+          "_backward_copy", n, ograds, {},
+          std::unordered_map<std::string, std::string>());
+      auto ng = MakeNode("zeros_like", n->attrs.name + "rhs_backward",
+                         {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
       return lhs;
     });
@@ -93,7 +90,7 @@ For example::
   })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(CastParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_cast)

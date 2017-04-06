@@ -73,8 +73,8 @@ DMLC_REGISTER_PARAMETER(SVMOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(SVMOutput, SVMOutputProp)
 .describe("Support Vector Machine based transformation on input, backprop L2-SVM")
-.add_argument("data", "Symbol", "Input data to svm.")
-.add_argument("label", "Symbol", "Label data.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to svm.")
+.add_argument("label", "NDArray-or-Symbol", "Label data.")
 .add_arguments(SVMOutputParam::__FIELDS__());
 
 }  // namespace op

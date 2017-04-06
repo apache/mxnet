@@ -87,7 +87,7 @@ from right to left. For example, with input shape (10, 5, 4) target shape (-1,
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.add_argument("data", "ndarray-or-symbol", "Input data to reshape.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
 
@@ -109,7 +109,7 @@ the input array into shape ``(d1, d2*...*dk)``.
   [](const NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.add_argument("data", "ndarray-or-symbol", "Input data to reshape.");
+.add_argument("data", "NDArray-or-Symbol", "Input data to reshape.");
 
 NNVM_REGISTER_OP(transpose)
 .describe(R"code(Permute the dimensions of an array.
@@ -149,8 +149,9 @@ Examples::
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TransposeParam& param = nnvm::get<TransposeParam>(n->attrs.parsed);
     if (param.axes.ndim() == 0) {
-      return MakeGradNode("transpose", n, ograds,
-                          std::unordered_map<std::string, std::string>());
+      return MakeNonlossGradNode(
+          "transpose", n, ograds, {},
+          std::unordered_map<std::string, std::string>());
     } else {
       TShape axes = TShape(param.axes.ndim());
       for (index_t i = 0; i < axes.ndim(); ++i) {
@@ -158,11 +159,13 @@ Examples::
       }
       std::ostringstream os;
       os << axes;
-      return MakeGradNode("transpose", n, ograds, {{"axes", os.str()}});
+      return MakeNonlossGradNode(
+          "transpose", n, ograds,
+          {}, {{"axes", os.str()}});
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(TransposeParam::__FIELDS__());
 
 
@@ -184,7 +187,7 @@ will return a new array with shape ``(2,1,3,4)``.
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice)
@@ -211,7 +214,7 @@ For example::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_slice)
@@ -240,8 +243,8 @@ NNVM_REGISTER_OP(_slice_assign)
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .set_attr<FCompute>("FCompute<cpu>", SliceAssign<cpu>)
-.add_argument("lhs", "ndarray-or-symbol", "Source input")
-.add_argument("rhs", "ndarray-or-symbol", "value to assign")
+.add_argument("lhs", "NDArray-or-Symbol", "Source input")
+.add_argument("rhs", "NDArray-or-Symbol", "value to assign")
 .add_arguments(SliceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_crop_assign_scalar)
@@ -260,7 +263,7 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .set_attr<FCompute>("FCompute<cpu>", CropAssignScalar<cpu>)
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
@@ -290,7 +293,7 @@ Examples:
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxis<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_axis"})
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceAxisParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_slice_axis)
@@ -327,8 +330,8 @@ NNVM_REGISTER_OP(dot)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
-.add_argument("lhs", "ndarray-or-symbol", "The first input")
-.add_argument("rhs", "ndarray-or-symbol", "The second input")
+.add_argument("lhs", "NDArray-or-Symbol", "The first input")
+.add_argument("rhs", "NDArray-or-Symbol", "The second input")
 .add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_dot)
@@ -367,8 +370,8 @@ which is computed by::
   })
 .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
-.add_argument("lhs", "ndarray-or-symbol", "The first input")
-.add_argument("rhs", "ndarray-or-symbol", "The second input")
+.add_argument("lhs", "NDArray-or-Symbol", "The first input")
+.add_argument("rhs", "NDArray-or-Symbol", "The second input")
 .add_arguments(DotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_batch_dot)
@@ -398,7 +401,7 @@ edges. That is::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
-.add_argument("data", "ndarray-or-symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(ClipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_clip)
@@ -441,7 +444,7 @@ interpreted counting from the backward::
 .set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_repeat"})
-.add_argument("data", "ndarray-or-symbol", "Input data array")
+.add_argument("data", "NDArray-or-Symbol", "Input data array")
 .add_arguments(RepeatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_repeat)
@@ -498,7 +501,7 @@ there cases:
 .set_attr<nnvm::FInferType>("FInferType", TileOpType)
 .set_attr<FCompute>("FCompute<cpu>", TileOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tile"})
-.add_argument("data", "ndarray-or-symbol", "Input data array")
+.add_argument("data", "NDArray-or-Symbol", "Input data array")
 .add_arguments(TileParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_tile)
@@ -526,7 +529,7 @@ NNVM_REGISTER_OP(reverse)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_reverse" })
-.add_argument("data", "NDArray", "Input data array")
+.add_argument("data", "NDArray-or-Symbol", "Input data array")
 .add_arguments(ReverseParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_reverse)

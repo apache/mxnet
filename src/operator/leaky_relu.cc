@@ -34,7 +34,7 @@ The following types are supported:
   *(lower_bound+upper_bound)/2* for inference.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to activation function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
 .add_arguments(LeakyReLUParam::__FIELDS__());
 
 NNVM_REGISTER_OP(LeakyReLU)
