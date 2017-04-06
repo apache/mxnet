@@ -14,6 +14,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
 .describe(R"code(Returns element-wise sum of the arguments with broadcasting.
 
 Example::
+
    x = [[ 1.,  1.,  1.],
         [ 1.,  1.,  1.]]
 
@@ -47,6 +48,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
 .describe(R"code(Returns element-wise difference of the arguments with broadcasting.
 
 Example::
+
    x = [[ 1.,  1.,  1.],
         [ 1.,  1.,  1.]]
 
@@ -79,6 +81,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_mul)
 .describe(R"code(Returns element-wise product of the arguments with broadcasting.
 
 Example::
+
    x = [[ 1.,  1.,  1.],
         [ 1.,  1.,  1.]]
 
@@ -111,6 +114,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_div)
 .describe(R"code(Returns element-wise division of the arguments with broadcasting.
 
 Example::
+
    x = [[ 1.,  1.,  1.],
         [ 1.,  1.,  1.]]
 

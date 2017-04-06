@@ -1367,7 +1367,7 @@ def divide(lhs, rhs):
     Returns
     -------
     NDArray
-        The quotient of ``lhs/rhs``, element-wise.
+        The element-wise division of ``lhs/rhs``.
 
     Examples
     --------
@@ -1403,16 +1403,17 @@ def divide(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def power(base, exp):
-    """First array elements raised to powers from second array, element-wise
+    """Returns result of first array elements raised to powers from second array, element-wise
     with broadcasting.
 
-    Equivalent to ``base ** exp``.
+    Equivalent to ``base ** exp`` and ``mx.nd.broadcast_power(lhs, rhs)``.
 
     Parameters
     ----------
     base : scalar or NDArray
+         The base array
     exp : scalar or NDArray
-        The arrays to be added. If ``base.shape != exp.shape``, they must be
+         The exponent array. If ``base.shape != exp.shape``, they must be
         broadcastable to a common shape.
 
     Returns
@@ -1431,6 +1432,12 @@ def power(base, exp):
     >>> (x**y).asnumpy()
     array([[ 2.,  2.,  2.],
            [ 4.,  4.,  4.]], dtype=float32)
+    >>> mx.nd.power(x,y).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 4.,  4.,  4.]], dtype=float32)
+    >>> mx.nd.broadcast_power(x,y).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 4.,  4.,  4.]], dtype=float32)
     >>> (z**y).asnumpy()
     array([[ 1.],
            [ 4.]], dtype=float32)
@@ -1446,19 +1453,20 @@ def power(base, exp):
     # pylint: enable= no-member, protected-access
 
 def maximum(lhs, rhs):
-    """Element-wise maximum of array elements with broadcasting.
+    """Returns element-wise maximum of the array elements with broadcasting.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        The maximum of lhs and rhs, element-wise.
+        The element-wise maximum of lhs and rhs arrays.
 
     Examples
     --------
@@ -1469,6 +1477,9 @@ def maximum(lhs, rhs):
     array([[ 2.,  2.,  2.],
            [ 2.,  2.,  2.]], dtype=float32)
     >>> mx.nd.maximum(x, y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.broadcast_maximum(x, y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.maximum(y, z).asnumpy()
@@ -1486,19 +1497,20 @@ def maximum(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def minimum(lhs, rhs):
-    """Element-wise minimum of array elements with broadcasting.
+    """Returns element-wise minimum of array elements with broadcasting.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        The minimum of lhs and rhs, element-wise.
+        The element-wise minimum of lhs and rhs arrays.
 
     Examples
     --------
@@ -1509,6 +1521,9 @@ def minimum(lhs, rhs):
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.minimum(x, y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.broadcast_minimum(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.minimum(z, y).asnumpy()
