@@ -10,7 +10,7 @@ from ..base import mx_uint, NDArrayHandle, c_array
 from ..ndarray import NDArray
 
 def set_recording(recording):
-    """Turn on or turn of operator recording.
+    """Turn on or turn off operator recording.
 
     Parameters
     ----------

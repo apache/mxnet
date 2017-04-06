@@ -298,4 +298,10 @@ private[mxnet] class LibInfo {
   @native def mxSetProfilerConfig(mode: Int, fileName: String): Int
   @native def mxSetProfilerState(state: Int): Int
   @native def mxDumpProfile(): Int
+
+  // AutoGrad
+  @native def mxAutogradSetRecording(recording: Int): Int
+  @native def mxAutogradMarkVariables(varHandles: Array[NDArrayHandle]): Int
+  @native def mxAutogradComputeGradient(outputHandles: Array[NDArrayHandle],
+                          gradHandles: ArrayBuffer[NDArrayHandle]): Int
 }

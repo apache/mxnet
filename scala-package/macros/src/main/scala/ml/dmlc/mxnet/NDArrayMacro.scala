@@ -56,7 +56,7 @@ private[mxnet] object NDArrayMacro {
     )
 
     val functionDefs = ndarrayFunctions flatMap { case (funcName, funcProp) =>
-      val functionScope = if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
+      val functionScope = Modifiers()
       // It will generate definition something like,
       Seq(
         // def transpose(kwargs: Map[String, Any] = null)(args: Any*)

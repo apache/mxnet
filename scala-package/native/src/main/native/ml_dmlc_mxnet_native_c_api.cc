@@ -2384,3 +2384,47 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDumpProfile
   (JNIEnv *env, jobject obj) {
   return MXDumpProfile();
 }
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxAutogradSetRecording
+  (JNIEnv *env, jobject obj, jint jrecording) {
+  return MXAutogradSetRecording(jrecording);
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxAutogradMarkVariables
+  (JNIEnv *env, jobject obj, jlongArray jvarHandles) {
+  jlong *var_handles = env->GetLongArrayElements(jvarHandles, NULL);
+  int num_var = env->GetArrayLength(jvarHandles);
+  int ret = MXAutogradMarkVariables(static_cast<mx_uint>(num_var), reinterpret_cast<NDArrayHandle *>(var_handles));
+  env->ReleaseLongArrayElements(jvarHandles, var_handles, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxAutogradComputeGradient
+  (JNIEnv *env, jobject obj, jlongArray joutputHandles,  jobject gradHandles) {
+  jlong *out_handles = env->GetLongArrayElements(joutputHandles, NULL);
+  int num_out = env->GetArrayLength(joutputHandles);
+
+  mx_uint num_grad;
+  NDArrayHandle *grads = NULL;
+  int ret = MXAutogradComputeGradient(static_cast<mx_uint>(num_out),
+                                        reinterpret_cast<NDArrayHandle *>(out_handles),
+                                        &num_grad,
+                                        &grads);
+
+  if (grads) {
+    jclass longCls = env->FindClass("java/lang/Long");
+    jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
+    // scala.collection.mutable.ListBuffer append method
+    jclass listClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+    jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
+        "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    for (int i = 0; i < num_grad; ++i) {
+      env->CallObjectMethod(gradHandles, listAppend,
+                            env->NewObject(longCls, longConst,
+                            reinterpret_cast<uint64_t>(grads[i])));
+    }
+  }    
+
+  env->ReleaseLongArrayElements(joutputHandles, out_handles, 0);
+  return ret;
+}
