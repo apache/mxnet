@@ -78,6 +78,16 @@ MXNet requires R-version to be 3.2.0 and above. If you are running an earlier ve
 To install MXNet for R:
 
 ```bash
+    # Clone mxnet repository. In terminal, run the commands WITHOUT "sudo"
+    git clone https://github.com/dmlc/mxnet.git ~/mxnet --recursive
+
+    cd ~/mxnet
+    cp make/config.mk .
+    # If building with GPU, add configurations to config.mk file:
+    echo "USE_CUDA=1" >>config.mk
+    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
+    echo "USE_CUDNN=1" >>config.mk
+
     cd ~/mxnet/setup-utils
     bash install-mxnet-ubuntu-r.sh
 ```
