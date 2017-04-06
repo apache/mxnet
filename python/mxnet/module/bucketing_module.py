@@ -16,7 +16,7 @@ from .base_module import BaseModule, _check_input_names
 from .module import Module
 
 class BucketingModule(BaseModule):
-    """A bucketing module is a module that support bucketing.
+    """This module helps to deal efficiently with varying length inputs.
 
     Parameters
     ----------
