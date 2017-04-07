@@ -39,8 +39,9 @@ MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
 
-A scale can be applied to the gradient by adding parameter `grad_scale`, which is often used in
-multi-loss object function in which we can give different weights to each loss.
+By default, gradients of this loss function are scaled by factor `1/n` where, n is the number of training examples.
+The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
+This is often used in multi-loss object function, in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
 .add_argument("data", "Symbol", "Input data to the function.")
@@ -60,8 +61,9 @@ then the mean absolute error (MAE) estimated over :math:`n` samples is defined a
 .. note::
    Use the MAERegressionOutput as the final output layer of a net.
 
-A scale can be applied to the gradient by adding parameter `grad_scale`, which is often used in
-multi-loss object function in which we can give different weights to each loss.
+By default, gradients of this loss function are scaled by factor `1/n` where, n is the number of training examples.
+The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
+This is often used in multi-loss object function, in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
 .add_argument("data", "Symbol", "Input data to the function.")
@@ -80,7 +82,6 @@ It is suitable for binary classification or probability prediction tasks.
 
 .. note::
    Use the LogisticRegressionOutput as the final output layer of a net.
-
 
 By default, gradients of this loss function are scaled by factor `1/n` where, n is the number of training examples.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
