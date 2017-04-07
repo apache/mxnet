@@ -1205,12 +1205,12 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
 def add(lhs, rhs):
     """Returns element-wise sum of the input arrays with broadcasting.
 
-    Equivalent to ``lhs + rhs`` and ``mx.nd.broadcast_add(lhs, rhs)``.
+    Equivalent to ``lhs + rhs``, ``mx.nd.broadcast_add(lhs, rhs)`` and ``mx.nd.broadcast_plus(lhs, rhs)``.
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1
-    then, the arrays are considered as broadcastable to a common shape.
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1265,12 +1265,12 @@ def add(lhs, rhs):
 def subtract(lhs, rhs):
     """Returns element-wise difference of the input arrays with broadcasting.
 
-    Equivalent to ``lhs - rhs`` and ``mx.nd.broadcast_sub(lhs, rhs)``.
+    Equivalent to ``lhs - rhs``, ``mx.nd.broadcast_sub(lhs, rhs)`` and ``mx.nd.broadcast_minus(lhs, rhs)``.
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1
-    then, the arrays are considered as broadcastable to a common shape.
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1329,8 +1329,8 @@ def multiply(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1
-    then, the arrays are considered as broadcastable to a common shape.
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1389,8 +1389,8 @@ def divide(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1
-    then, the arrays are considered as broadcastable to a common shape.
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1446,8 +1446,8 @@ def power(base, exp):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1
-    then, the arrays are considered as broadcastable to a common shape.
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1506,8 +1506,8 @@ def maximum(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1
-    then, the arrays are considered as broadcastable to a common shape.
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1562,8 +1562,8 @@ def minimum(lhs, rhs):
 
     .. note::
 
-        If the corresponding dimensions of two arrays have the same size or one of them has size 1
-    then, the arrays are considered as broadcastable to a common shape.
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1612,31 +1612,50 @@ def minimum(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def equal(lhs, rhs):
-    """Returns (lhs == rhs), element-wise with broadcasting.
+    """Returns the result of element-wise "equal to"(==) comparison operation with broadcasting.
 
-    Equivalent to ``lhs == rhs``
+    For each element in input arrays, return 1(true) if corresponding elements are same, otherwise return 0(false).
+
+    Equivalent to ``lhs == rhs`` and ``mx.nd.broadcast_equal(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is equal to rhs and False otherwise.
+        Output array of boolean values.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x == 1).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (x == y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.equal(x,y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (z == y).asnumpy()
@@ -1654,27 +1673,43 @@ def equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def not_equal(lhs, rhs):
-    """Returns (lhs != rhs), element-wise with broadcasting.
+    """Returns the result of element-wise "not equal to"(!=) comparison operation with broadcasting.
 
-    Equivalent to ``lhs != rhs``.
+    For each element in input arrays, return 1(true) if corresponding elements are different, otherwise return 0(false).
+
+    Equivalent to ``lhs != rhs`` and ``mx.nd.broadcast_not_equal(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape,
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is not equal to rhs and False otherwise.
+        Output array of boolean values.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (z == y).asnumpy()
     array([[ 1.,  0.],
            [ 0.,  1.]], dtype=float32)
@@ -1682,6 +1717,9 @@ def not_equal(lhs, rhs):
     array([[ 0.,  0.,  0.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (x != y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    >>> mx.nd.not_equal(x, y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (z != y).asnumpy()
@@ -1699,31 +1737,50 @@ def not_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater(lhs, rhs):
-    """Returns (lhs > rhs), element-wise with broadcasting.
+    """Returns the result of element-wise "greater than"(>) comparison operation with broadcasting.
 
-    Equivalent to ``lhs > rhs``.
+    For each element in input arrays, return 1(true) if lhs elements are greater than rhs, otherwise return 0(false).
+
+    Equivalent to ``lhs > rhs`` and ``mx.nd.broadcast_greater(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is greater than rhs and False otherwise.
+        Output array of boolean values.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x > 1).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (x > y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    >>> mx.nd.greater(x, y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (z > y).asnumpy()
@@ -1741,32 +1798,51 @@ def greater(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater_equal(lhs, rhs):
-    """Returns (lhs >= rhs), element-wise with broadcasting.
+    """Returns the result of element-wise "greater than equal to"(>=) comparison operation with broadcasting.
 
-    Equivalent to ``lhs >= rhs``.
+    For each element in input arrays, return 1(true) if lhs elements are greater than equal to rhs,
+    otherwise return 0(false).
+
+    Equivalent to ``lhs >= rhs`` and ``mx.nd.broadcast_greater_equal(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is greater equal than
-        rhs and False otherwise.
+        Output array of boolean values.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x >= 1).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (x >= y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.greater_equal(x, y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (z >= y).asnumpy()
@@ -1784,31 +1860,51 @@ def greater_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def lesser(lhs, rhs):
-    """Returns (lhs < rhs), element-wise with broadcasting.
+    """Returns the result of element-wise "lesser than"(<) comparison operation with broadcasting.
 
-    Equivalent to ``lhs < rhs``.
+    For each element in input arrays, return 1(true) if lhs elements are less than rhs,
+    otherwise return 0(false).
+
+    Equivalent to ``lhs < rhs`` and ``mx.nd.broadcast_lesser(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is lesser than rhs and False otherwise.
+        Output array of boolean values.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x < 1).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (x < y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    >>> mx.nd.lesser(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (z < y).asnumpy()
@@ -1827,32 +1923,51 @@ def lesser(lhs, rhs):
 
 
 def lesser_equal(lhs, rhs):
-    """Returns (lhs <= rhs), element-wise with broadcasting.
+    """Returns the result of element-wise "lesser than equal to"(<=) comparison operation with broadcasting.
 
-    Equivalent to ``lhs <= rhs``.
+    For each element in input arrays, return 1(true) if lhs elements are lesser than equal to rhs,
+    otherwise return 0(false).
+
+    Equivalent to ``lhs <= rhs`` and ``mx.nd.broadcast_lesser_equal(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+    then the arrays are broadcastable to a common shape.
 
     Parameters
     ----------
     lhs : scalar or array
+        First array to be compared.
     rhs : scalar or array
-        The arrays to be added. If ``lhs.shape != rhs.shape``, they must be
+         Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        For each element in lhs, rhs, return True if lhs is lesser equal than
-        rhs and False otherwise.
+        Output array of boolean values.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x <= 1).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (x <= y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.lesser_equal(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (z <= y).asnumpy()

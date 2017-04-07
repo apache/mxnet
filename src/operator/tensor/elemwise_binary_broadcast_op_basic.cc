@@ -13,6 +13,8 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
 .add_alias("broadcast_plus")
 .describe(R"code(Returns element-wise sum of the input arrays with broadcasting.
 
+Both `broadcast_add` and `broadcast_plus` behave and work the same.
+
 Example::
 
    x = [[ 1.,  1.,  1.],
@@ -22,7 +24,10 @@ Example::
         [ 1.]]
 
    broadcast_add(x, y) = [[ 1.,  1.,  1.],
-                         [ 2.,  2.,  2.]]
+                          [ 2.,  2.,  2.]]
+
+   broadcast_plus(x, y) = [[ 1.,  1.,  1.],
+                           [ 2.,  2.,  2.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::plus>)
@@ -47,6 +52,8 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
 .add_alias("broadcast_minus")
 .describe(R"code(Returns element-wise difference of the input arrays with broadcasting.
 
+Both `broadcast_sub` and `broadcast_minus` behave and work the same.
+
 Example::
 
    x = [[ 1.,  1.,  1.],
@@ -56,7 +63,10 @@ Example::
         [ 1.]]
 
    broadcast_sub(x, y) = [[ 1.,  1.,  1.],
-                    [ 0.,  0.,  0.]]
+                          [ 0.,  0.,  0.]]
+
+   broadcast_minus(x, y) = [[ 1.,  1.,  1.],
+                            [ 0.,  0.,  0.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::minus>)
