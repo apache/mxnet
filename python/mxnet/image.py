@@ -83,8 +83,8 @@ def center_crop(src, size, interp=2):
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
-    x0 = (w - new_w)/2
-    y0 = (h - new_h)/2
+    x0 = int((w - new_w)/2)
+    y0 = int((h - new_h)/2)
 
     out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
     return out, (x0, y0, new_w, new_h)
@@ -265,10 +265,15 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
 
     if mean is True:
         mean = np.array([123.68, 116.28, 103.53])
+    elif mean is not None:
+        assert isinstance(mean, np.ndarray) and mean.shape[0] in [1,3]
+        
     if std is True:
         std = np.array([58.395, 57.12, 57.375])
-    if mean is not None:
-        assert std is not None
+    elif std is not None:
+        assert isinstance(std, np.ndarray) and std.shape[0] in [1,3]
+        
+    if mean is not None and std is not None:
         auglist.append(ColorNormalizeAug(mean, std))
 
     return auglist
