@@ -1130,6 +1130,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
     init : initializer (mxnet.init.*)
         Initializer for this variable to (optionally) override the default initializer
     kwargs : other additional attribute variables
+
     Returns
     -------
     variable : Symbol
