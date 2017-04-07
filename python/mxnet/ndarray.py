@@ -453,7 +453,7 @@ fixed-size items.
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, shape):
-        """Returns a view of this array with a new shape without altering any data.
+        """Returns a **view** of this array with a new shape without altering any data.
 
         Parameters
         ----------
