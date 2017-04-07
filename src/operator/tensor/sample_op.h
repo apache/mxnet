@@ -298,8 +298,10 @@ void SampleGenNegBinomial_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const SampleGenNegBinomialParam& param = nnvm::get<SampleGenNegBinomialParam>(attrs.parsed);
-  CHECK_GE(param.mu, 0) << "mu parameter in generalized negative binomial distribution has to be non-negative";
-  CHECK_GE(param.alpha, 0) << "alpha parameter in generalized negative binomial distribution has to be non-negative";
+  CHECK_GE(param.mu, 0)
+    << "mu parameter in generalized negative binomial distribution has to be non-negative";
+  CHECK_GE(param.alpha, 0)
+    << "alpha parameter in generalized negative binomial distribution has to be non-negative";
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
