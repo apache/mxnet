@@ -40,7 +40,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   // Get shape to be sampled for each parameter set.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   TShape sshape = param.shape;
-  for ( int i = 0; i < (int)sshape.ndim(); ++i ) {
+  for ( int i = 0; i < sshape.ndim(); ++i ) {
     CHECK_GT((int)sshape[i], 0) << "shape parameter must be non-zero within each dimension";
   }
   // Examine output shape whether it is already defined.
@@ -52,10 +52,10 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
     tshape = TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
   }
   // Shape assignemnt/checking for inputs.
-  for ( int i = 0; i < (int)in_attrs->size(); ++i ) {
-    if( !shape_assign(&tshape, (*in_attrs)[i])) return false;
+  for ( int i = 0; i < in_attrs->size(); ++i ) {
+    if ( !shape_assign(&tshape, (*in_attrs)[i])) return false;
   }
-  for ( int i = 0; i < (int)in_attrs->size(); ++i ) {
+  for ( int i = 0; i < in_attrs->size(); ++i ) {
     SHAPE_ASSIGN_CHECK(*in_attrs, i, tshape);
   }
   if ( tshape.ndim() > 0 ) {
@@ -79,10 +79,10 @@ inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
 
   // All inputs must have same type.
   int dtype = -1;
-  for ( int i = 0; i < (int)in_attrs->size(); ++i ) {
+  for ( int i = 0; i < in_attrs->size(); ++i ) {
     if (!type_assign(&dtype, (*in_attrs)[i])) return false;
   }
-  for ( int i = 0; i < (int)in_attrs->size(); ++i ) {
+  for ( int i = 0; i < in_attrs->size(); ++i ) {
     TYPE_ASSIGN_CHECK(*in_attrs, i, dtype);
   }
   if (-1 == dtype) return false;
@@ -128,7 +128,7 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(out.type_flag_, OType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         // Get the output as a 2D-tensor with dimensions NxM
-        Tensor<xpu,2,OType> samples = out.get_with_shape<xpu,2,OType>(Shape2(N,M), s);
+        Tensor<xpu, 2, OType> samples = out.get_with_shape<xpu, 2, OType>(Shape2(N, M), s);
         const IType *iptr1 = in0.dptr<IType>(), *iptr2 = in1.dptr<IType>();
 
         // The seeds for the different generators are itself a random sequence. We don't
@@ -141,9 +141,9 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
           int seed = seed_generator();
           typename generator::template Sampler<OType> sampler(iptr1[i], iptr2[i], seed);
           // Get the sub-tensor that will hold the results of this sampler.
-          Tensor<xpu,1,OType> slice = samples.Slice(i, i+1).FlatTo1D();
+          Tensor<xpu, 1, OType> slice = samples.Slice(i, i+1).FlatTo1D();
           for ( int j = 0; j < M; ++j ) {
-            KERNEL_ASSIGN(slice[j], req_type,sampler());
+            KERNEL_ASSIGN(slice[j], req_type, sampler());
           }
         }
       });
