@@ -516,7 +516,7 @@ class FusedRNNCell(BaseRNNCell):
         b = self._bidirectional + 1
         n = (self._mode == 'lstm') + 1
         return [{'shape': (b*self._num_layers, 0, self._num_hidden), 'layout': 'LNC'}
-                for i in range(n)]
+                for _ in range(n)]
 
     @property
     def _gate_names(self):
