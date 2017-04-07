@@ -71,18 +71,20 @@ multi-loss object function in which we can give different weights to each loss.
 MXNET_REGISTER_OP_PROPERTY(LogisticRegressionOutput, RegressionOutputProp<reg_enum::kLogistic>)
 .describe(R"code(LogisticRegressionOutput applies a logistic function to the input.
 
-The logistic function also known as Sigmoid function is represented as
+The logistic function, also known as the sigmoid function, is represented as
 :math:`\frac{1}{1+exp(-x)}`.
 
-It is used to convert the output of the linear model :math:`wTx+b` from any real number
+It is used to convert the output of a linear model :math:`wTx+b` from any real number
 into the range of [0,1], which can be interpreted as a probability.
 It is suitable for binary classification or probability prediction tasks.
 
 .. note::
    Use the LogisticRegressionOutput as the final output layer of a net.
 
-A scale can be applied to the gradient by adding parameter `grad_scale`, which is often used in
-multi-loss object function in which we can give different weights to each loss.
+
+By default, gradients of this loss function are scaled by factor `1/n` where, n is the number of training examples.
+The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
+This is often used in multi-loss object function, in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
 .add_argument("data", "Symbol", "Input data to the function.")

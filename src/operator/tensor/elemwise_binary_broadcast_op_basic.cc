@@ -11,7 +11,7 @@ namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
 .add_alias("broadcast_plus")
-.describe(R"code(Returns element-wise sum of the arguments with broadcasting.
+.describe(R"code(Returns element-wise sum of the input arrays with broadcasting.
 
 Example::
 
@@ -45,7 +45,7 @@ NNVM_REGISTER_OP(_backward_broadcast_add)
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
 .add_alias("broadcast_minus")
-.describe(R"code(Returns element-wise difference of the arguments with broadcasting.
+.describe(R"code(Returns element-wise difference of the input arrays with broadcasting.
 
 Example::
 
@@ -78,7 +78,7 @@ NNVM_REGISTER_OP(_backward_broadcast_sub)
                                                                 mshadow_op::negation>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_mul)
-.describe(R"code(Returns element-wise product of the arguments with broadcasting.
+.describe(R"code(Returns element-wise product of the input arrays with broadcasting.
 
 Example::
 
@@ -111,18 +111,18 @@ NNVM_REGISTER_OP(_backward_broadcast_mul)
                                                               mshadow_op::left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_div)
-.describe(R"code(Returns element-wise division of the arguments with broadcasting.
+.describe(R"code(Returns element-wise division of the input arrays with broadcasting.
 
 Example::
 
-   x = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
+   x = [[ 6.,  6.,  6.],
+        [ 6.,  6.,  6.]]
 
-   y = [[ 0.],
-        [ 1.]]
+   y = [[ 2.],
+        [ 3.]]
 
-   broadcast_div(x, y) = [[ inf,  inf,  inf],
-                          [  1.,   1.,   1.]]
+   broadcast_div(x, y) = [[ 3.,  3.,  3.],
+                          [ 2.,  2.,  2.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::div>)

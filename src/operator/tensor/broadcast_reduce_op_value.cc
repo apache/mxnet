@@ -145,7 +145,7 @@ MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 
 Broadcasting is a mechanism which allows NDArrays to perform different arithmetic operations
 with arrays of different shapes efficiently without creating multiple copies of arrays.
-Also see `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
 
 Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
 `(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
