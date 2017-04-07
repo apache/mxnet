@@ -7,7 +7,7 @@
 
 #ifndef MXNET_OPERATOR_CONTRIB_IFFT_INL_H_
 #define MXNET_OPERATOR_CONTRIB_IFFT_INL_H_
-#if MSHADOW_USE_CUDNN
+#if MXNET_USE_CUDA
 #include <cufft.h>
 #endif
 #include <stdio.h>
