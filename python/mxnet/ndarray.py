@@ -524,7 +524,9 @@ fixed-size items.
         """Broadcasts the input array to a new shape.
 
         Broadcasting is only allowed on axes with size 1. The new shape cannot change
-        the number of dimensions such as from 2D to 3D.
+        the number of dimensions.
+        For example, you could broadcast from shape (2, 1) to (2, 3), but not from
+        shape (2, 3) to (2, 3, 3).
 
         Parameters
         ----------
@@ -1201,9 +1203,14 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 def add(lhs, rhs):
-    """Returns element-wise sum of the arguments with broadcasting.
+    """Returns element-wise sum of the input arrays with broadcasting.
 
     Equivalent to ``lhs + rhs`` and ``mx.nd.broadcast_add(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1
+    then, the arrays are considered as broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1212,18 +1219,26 @@ def add(lhs, rhs):
     rhs : scalar or array
          Second array to be added.
         If ``lhs.shape != rhs.shape``, they must be
-        broadcastable to a common shape
+        broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        The element-wise sum of lhs and rhs arrays.
+        The element-wise sum of the input arrays.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+          [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x+2).asnumpy()
     array([[ 3.,  3.,  3.],
            [ 3.,  3.,  3.]], dtype=float32)
@@ -1231,9 +1246,6 @@ def add(lhs, rhs):
     array([[ 1.,  1.,  1.],
            [ 2.,  2.,  2.]], dtype=float32)
     >>> mx.nd.add(x,y).asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 2.,  2.,  2.]], dtype=float32)
-    >>> mx.nd.broadcast_add(x,y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 2.,  2.,  2.]], dtype=float32)
     >>> (z + y).asnumpy()
@@ -1251,9 +1263,14 @@ def add(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def subtract(lhs, rhs):
-    """Returns element-wise difference of the arguments with broadcasting.
+    """Returns element-wise difference of the input arrays with broadcasting.
 
     Equivalent to ``lhs - rhs`` and ``mx.nd.broadcast_sub(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1
+    then, the arrays are considered as broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1261,19 +1278,27 @@ def subtract(lhs, rhs):
         First array to be subtracted.
     rhs : scalar or array
          Second array to be subtracted.
-        The arrays to be subtracted. If ``lhs.shape != rhs.shape``, they must be
+        If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
     Returns
     -------
     NDArray
-        The element-wise difference of lhs and rhs arrays.
+        The element-wise difference of the input arrays.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+          [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x-2).asnumpy()
     array([[-1., -1., -1.],
            [-1., -1., -1.]], dtype=float32)
@@ -1281,9 +1306,6 @@ def subtract(lhs, rhs):
     array([[ 1.,  1.,  1.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> mx.nd.subtract(x,y).asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 0.,  0.,  0.]], dtype=float32)
-    >>> mx.nd.broadcast_sub(x,y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 0.,  0.,  0.]], dtype=float32)
     >>> (z-y).asnumpy()
@@ -1301,9 +1323,14 @@ def subtract(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def multiply(lhs, rhs):
-    """Returns element-wise product of the arguments with broadcasting.
+    """Returns element-wise product of the input arrays with broadcasting.
 
     Equivalent to ``lhs * rhs`` and ``mx.nd.broadcast_mul(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1
+    then, the arrays are considered as broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1317,13 +1344,21 @@ def multiply(lhs, rhs):
     Returns
     -------
     NDArray
-        The element-wise multiplication of lhs and rhs arrays.
+        The element-wise multiplication of the input arrays.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+          [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> (x*2).asnumpy()
     array([[ 2.,  2.,  2.],
            [ 2.,  2.,  2.]], dtype=float32)
@@ -1331,9 +1366,6 @@ def multiply(lhs, rhs):
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.multiply(x, y).asnumpy()
-    array([[ 0.,  0.,  0.],
-           [ 1.,  1.,  1.]], dtype=float32)
-    >>> mx.nd.broadcast_mul(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> (z*y).asnumpy()
@@ -1351,9 +1383,14 @@ def multiply(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def divide(lhs, rhs):
-    """Returns element-wise division of the arguments with broadcasting.
+    """Returns element-wise division of the input arrays with broadcasting.
 
     Equivalent to ``lhs / rhs`` and ``mx.nd.broadcast_div(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1
+    then, the arrays are considered as broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1367,30 +1404,29 @@ def divide(lhs, rhs):
     Returns
     -------
     NDArray
-        The element-wise division of ``lhs/rhs``.
+        The element-wise division of the input arrays.
 
     Examples
     --------
-    >>> x = mx.nd.ones((2,3))
-    >>> y = mx.nd.arange(2).reshape((2,1))
-    >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x = mx.nd.ones((2,3))*6
+    >>> y = mx.nd.ones((2,1))*2
+    >>> x.asnumpy()
+    array([[ 6.,  6.,  6.],
+           [ 6.,  6.,  6.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 2.],
+           [ 2.]], dtype=float32)
     >>> x/2
     <NDArray 2x3 @cpu(0)>
-    >>> (x/2).asnumpy()
-    array([[ 0.5,  0.5,  0.5],
-           [ 0.5,  0.5,  0.5]], dtype=float32)
+    >>> (x/3).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
     >>> (x/y).asnumpy()
-    array([[ inf,  inf,  inf],
-           [  1.,   1.,   1.]], dtype=float32)
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]], dtype=float32)
     >>> mx.nd.divide(x,y).asnumpy()
-    array([[ inf,  inf,  inf],
-           [  1.,   1.,   1.]], dtype=float32)
-    >>> mx.nd.broadcast_div(x,y).asnumpy()
-    array([[ inf,  inf,  inf],
-           [  1.,   1.,   1.]], dtype=float32)
-    >>> (y/z).asnumpy()
-    array([[ nan,   0.],
-           [ inf,   1.]], dtype=float32)
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
     return _ufunc_helper(
@@ -1407,6 +1443,11 @@ def power(base, exp):
     with broadcasting.
 
     Equivalent to ``base ** exp`` and ``mx.nd.broadcast_power(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1
+    then, the arrays are considered as broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1426,6 +1467,15 @@ def power(base, exp):
     >>> x = mx.nd.ones((2,3))*2
     >>> y = mx.nd.arange(1,3).reshape((2,1))
     >>> z = mx.nd.arange(1,3).reshape((2,1))
+    >>> x.asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 1.],
+           [ 2.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 1.],
+           [ 2.]], dtype=float32)
     >>> (x**2).asnumpy()
     array([[ 4.,  4.,  4.],
            [ 4.,  4.,  4.]], dtype=float32)
@@ -1433,9 +1483,6 @@ def power(base, exp):
     array([[ 2.,  2.,  2.],
            [ 4.,  4.,  4.]], dtype=float32)
     >>> mx.nd.power(x,y).asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 4.,  4.,  4.]], dtype=float32)
-    >>> mx.nd.broadcast_power(x,y).asnumpy()
     array([[ 2.,  2.,  2.],
            [ 4.,  4.,  4.]], dtype=float32)
     >>> (z**y).asnumpy()
@@ -1453,7 +1500,14 @@ def power(base, exp):
     # pylint: enable= no-member, protected-access
 
 def maximum(lhs, rhs):
-    """Returns element-wise maximum of the array elements with broadcasting.
+    """Returns element-wise maximum of the input arrays with broadcasting.
+
+    Equivalent to ``mx.nd.broadcast_maximum(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1
+    then, the arrays are considered as broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1466,20 +1520,25 @@ def maximum(lhs, rhs):
     Returns
     -------
     NDArray
-        The element-wise maximum of lhs and rhs arrays.
+        The element-wise maximum of the input arrays.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+          [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> mx.nd.maximum(x, 2).asnumpy()
     array([[ 2.,  2.,  2.],
            [ 2.,  2.,  2.]], dtype=float32)
     >>> mx.nd.maximum(x, y).asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
-    >>> mx.nd.broadcast_maximum(x, y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.maximum(y, z).asnumpy()
@@ -1497,7 +1556,14 @@ def maximum(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def minimum(lhs, rhs):
-    """Returns element-wise minimum of array elements with broadcasting.
+    """Returns element-wise minimum of the input arrays with broadcasting.
+
+    Equivalent to ``mx.nd.broadcast_minimum(lhs, rhs)``.
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1
+    then, the arrays are considered as broadcastable to a common shape.
 
     Parameters
     ----------
@@ -1510,20 +1576,25 @@ def minimum(lhs, rhs):
     Returns
     -------
     NDArray
-        The element-wise minimum of lhs and rhs arrays.
+        The element-wise minimum of the input arrays.
 
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+          [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
     >>> mx.nd.minimum(x, 2).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.minimum(x, y).asnumpy()
-    array([[ 0.,  0.,  0.],
-           [ 1.,  1.,  1.]], dtype=float32)
-    >>> mx.nd.broadcast_minimum(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.minimum(z, y).asnumpy()
