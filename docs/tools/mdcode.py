@@ -7,7 +7,7 @@ import codecs
 import json
 
 # language names and the according file extensions
-_LANGS = {'python':'py', 'r':'R', 'scala':'scala', 'julia':'jl', 'perl':'pl', 'cpp':'cc'}
+_LANGS = {'python', 'r', 'scala', 'julia', 'perl', 'cpp'}
 
 # start or end of a code block
 _CODE_MARK = re.compile('^([ ]*)```([\w]*)')
@@ -27,12 +27,10 @@ class CodeBlocks(object):
             m = _CODE_MARK.match(l)
             if m is not None:
                 if not in_code:
-                    if _LANGS.has_key(m.groups()[1].lower()):
+                    if m.groups()[1].lower() in _LANGS:
                         lang = m.groups()[1].lower()
                         indent = len(m.groups()[0])
                         in_code = True
-                    elif m.groups()[1].lower() == 'bash':
-                        l = l.replace('bash', 'sh').lstrip()
                     yield (l, in_code, lang, indent)
                 else:
                     yield (l, in_code, lang, indent)
