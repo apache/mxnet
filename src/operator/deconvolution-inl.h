@@ -30,6 +30,7 @@ namespace deconv {
 struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   TShape kernel;
   TShape stride;
+  TShape dilate;
   TShape pad;
   TShape adj;
   TShape target_shape;
@@ -37,21 +38,26 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   uint32_t num_group;
   uint64_t workspace;
   bool no_bias;
+  dmlc::optional<int> cudnn_tune;
+  bool cudnn_off;
+  dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeconvolutionParam) {
-    int shape[] = {1, 1};
-    DMLC_DECLARE_FIELD(kernel).describe("deconvolution kernel size: (y, x)");
-    DMLC_DECLARE_FIELD(stride).set_default(TShape(shape, shape + 2))
-        .describe("deconvolution stride: (y, x)");
-    shape[0] = shape[1] = 0;
-    DMLC_DECLARE_FIELD(pad).set_default(TShape(shape, shape + 2))
-        .describe("pad for deconvolution: (y, x), a good number is : (kernel-1)/2, "
-                  "if target_shape set, pad will be ignored and will be computed "
-                  "automatically");
-    DMLC_DECLARE_FIELD(adj).set_default(TShape(shape, shape + 2))
-        .describe("adjustment for output shape: (y, x), if target_shape set, adj "
-                  "will be ignored and will be computed automatically");
-    DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
-        .describe("output shape with targe shape : (y, x)");
+    DMLC_DECLARE_FIELD(kernel).describe("deconvolution kernel size: (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+        .describe("deconvolution stride: (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(dilate).set_default(TShape())
+    .describe("deconvolution dilate: (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+        .describe("pad for deconvolution: (h, w) or (d, h, w). "
+                  "A good number is : (kernel-1)/2. "
+                  "If target_shape is set, "
+                  "pad will be ignored and computed accordingly");
+    DMLC_DECLARE_FIELD(adj).set_default(TShape())
+        .describe("adjustment for output shape: (h, w) or (d, h, w). "
+                  "If target_shape is set, "
+                  "ad will be ignored and computed accordingly");
+    DMLC_DECLARE_FIELD(target_shape).set_default(TShape())
+        .describe("output shape with target shape : (h, w) or (d, h, w)");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
         .describe("deconvolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
@@ -60,6 +66,23 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         .describe("Tmp workspace for deconvolution (MB)");
     DMLC_DECLARE_FIELD(no_bias).set_default(true)
         .describe("Whether to disable bias parameter.");
+    DMLC_DECLARE_FIELD(cudnn_tune)
+      .add_enum("off", deconv::kOff)
+      .add_enum("limited_workspace", deconv::kLimited)
+      .add_enum("fastest", deconv::kFastest)
+      .set_default(dmlc::optional<int>())
+      .describe("Whether to pick convolution algo by running performance test.");
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
+    .describe("Turn off cudnn for this layer.");
+    DMLC_DECLARE_FIELD(layout)
+      .add_enum("NCW", mshadow::kNCW)
+      .add_enum("NCHW", mshadow::kNCHW)
+      .add_enum("NCDHW", mshadow::kNCDHW)
+      .add_enum("NHWC", mshadow::kNHWC)
+      .add_enum("NDHWC", mshadow::kNDHWC)
+      .set_default(dmlc::optional<int>())
+      .describe("Set layout for input, output and weight. Empty for\n    "
+                "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
   }
 
   inline void InferPad(index_t input_y, index_t input_x,
