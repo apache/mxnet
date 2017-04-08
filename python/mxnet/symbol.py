@@ -1108,7 +1108,7 @@ class Symbol(SymbolBase):
 
 
 
-def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None):
+def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
     """Create a symbolic variable with specified name.
 
     Parameters
@@ -1129,6 +1129,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
         The dtype for this variable. If not specified, this value will be inferred.
     init : initializer (mxnet.init.*)
         Initializer for this variable to (optionally) override the default initializer
+    kwargs : other additional attribute variables
 
     Returns
     -------
@@ -1152,6 +1153,13 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
         attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     if init is not None:
         attr['__init__'] = init.dumps()
+    for k, v in kwargs.items():
+        if k.startswith('__') and k.endswith('__'):
+            attr[k] = str(v)
+        else:
+            raise ValueError('Attribute name=%s is not supported.'
+                             ' Additional attributes must start and end with double underscores,'
+                             ' e.g, __yourattr__' % k)
     ret._set_attr(**attr)
     return ret
 

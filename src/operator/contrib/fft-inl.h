@@ -6,9 +6,6 @@
 */
 #ifndef MXNET_OPERATOR_CONTRIB_FFT_INL_H_
 #define MXNET_OPERATOR_CONTRIB_FFT_INL_H_
-#ifdef MSHADOW_USE_CUDNN
-#include <cufft.h>
-#endif
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <map>
@@ -18,6 +15,10 @@
 #include <iostream>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
+
+#if MXNET_USE_CUDA
+#include <cufft.h>
+#endif
 
 namespace mxnet {
 namespace op {
