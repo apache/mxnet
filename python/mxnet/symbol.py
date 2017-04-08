@@ -1157,7 +1157,9 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)
         else:
-            raise ValueError('attribute name=%s is not supported' %k)
+            raise ValueError('Attribute name=%s is not supported.'
+                             ' Additional attributes must start and end with double underscores,'
+                             ' e.g, __yourattr__' % k)
     ret._set_attr(**attr)
     return ret
 

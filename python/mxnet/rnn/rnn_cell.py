@@ -11,6 +11,9 @@ from .. import symbol, init, ndarray, _symbol_internal
 from ..base import string_types, numeric_types
 
 
+def _cells_state_shape(cells):
+    return sum([c.state_shape for c in cells], [])
+
 def _cells_state_info(cells):
     return sum([c.state_info for c in cells], [])
 
@@ -144,6 +147,11 @@ class BaseRNNCell(object):
         raise NotImplementedError()
 
     @property
+    def state_shape(self):
+        """shape(s) of states"""
+        return [ele['shape'] for ele in self.state_info]
+
+    @property
     def _gate_names(self):
         """name(s) of gates"""
         return ()
@@ -178,7 +186,7 @@ class BaseRNNCell(object):
                              **kwargs)
             else:
                 state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
-                             shape=info['shape'], __layout__=info['layout'], **kwargs)
+                             **info, **kwargs)
             states.append(state)
         return states
 
@@ -332,7 +340,7 @@ class RNNCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (0, self._num_hidden), 'layout': 'NC'}]
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -381,8 +389,8 @@ class LSTMCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (0, self._num_hidden), 'layout': 'NC'},
-                {'shape': (0, self._num_hidden), 'layout': 'NC'}]
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'},
+                {'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -443,7 +451,7 @@ class GRUCell(BaseRNNCell):
     @property
     def state_info(self):
         return [{'shape': (0, self._num_hidden),
-                 'layout': 'NC'}]
+                 '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
