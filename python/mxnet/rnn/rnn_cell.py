@@ -14,6 +14,9 @@ from ..base import string_types, numeric_types
 def _cells_state_shape(cells):
     return sum([c.state_shape for c in cells], [])
 
+def _cells_state_info(cells):
+    return sum([c.state_info for c in cells], [])
+
 def _cells_begin_state(cells, **kwargs):
     return sum([c.begin_state(**kwargs) for c in cells], [])
 
@@ -139,9 +142,14 @@ class BaseRNNCell(object):
         return self._params
 
     @property
+    def state_info(self):
+        """shape and layout information of states"""
+        raise NotImplementedError()
+
+    @property
     def state_shape(self):
         """shape(s) of states"""
-        raise NotImplementedError()
+        return [ele['shape'] for ele in self.state_info]
 
     @property
     def _gate_names(self):
@@ -171,14 +179,15 @@ class BaseRNNCell(object):
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
         states = []
-        for shape in self.state_shape:
+        for info in self.state_info:
             self._init_counter += 1
-            if shape is None:
+            if info is None:
                 state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
                              **kwargs)
             else:
+                kwargs.update(info)
                 state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
-                             shape=shape, **kwargs)
+                             **kwargs)
             states.append(state)
         return states
 
@@ -331,8 +340,8 @@ class RNNCell(BaseRNNCell):
         self._hB = self.params.get('h2h_bias')
 
     @property
-    def state_shape(self):
-        return [(0, self._num_hidden)]
+    def state_info(self):
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -380,8 +389,9 @@ class LSTMCell(BaseRNNCell):
         self._hB = self.params.get('h2h_bias')
 
     @property
-    def state_shape(self):
-        return [(0, self._num_hidden), (0, self._num_hidden)]
+    def state_info(self):
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'},
+                {'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -440,8 +450,9 @@ class GRUCell(BaseRNNCell):
         self._hB = self.params.get("h2h_bias")
 
     @property
-    def state_shape(self):
-        return [(0, self._num_hidden)]
+    def state_info(self):
+        return [{'shape': (0, self._num_hidden),
+                 '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -510,10 +521,11 @@ class FusedRNNCell(BaseRNNCell):
         self._parameter = self.params.get('parameters', init=initializer)
 
     @property
-    def state_shape(self):
+    def state_info(self):
         b = self._bidirectional + 1
         n = (self._mode == 'lstm') + 1
-        return [(b*self._num_layers, 0, self._num_hidden)]*n
+        return [{'shape': (b*self._num_layers, 0, self._num_hidden), '__layout__': 'LNC'}
+                for _ in range(n)]
 
     @property
     def _gate_names(self):
@@ -700,8 +712,8 @@ class SequentialRNNCell(BaseRNNCell):
         self.params._params.update(cell.params._params)
 
     @property
-    def state_shape(self):
-        return _cells_state_shape(self._cells)
+    def state_info(self):
+        return _cells_state_info(self._cells)
 
     def begin_state(self, **kwargs):
         assert not self._modified, \
@@ -721,7 +733,7 @@ class SequentialRNNCell(BaseRNNCell):
         p = 0
         for cell in self._cells:
             assert not isinstance(cell, BidirectionalCell)
-            n = len(cell.state_shape)
+            n = len(cell.state_info)
             state = states[p:p+n]
             p += n
             inputs, state = cell(inputs, state)
@@ -738,7 +750,7 @@ class SequentialRNNCell(BaseRNNCell):
         p = 0
         next_states = []
         for i, cell in enumerate(self._cells):
-            n = len(cell.state_shape)
+            n = len(cell.state_info)
             states = begin_state[p:p+n]
             p += n
             inputs, states = cell.unroll(length, inputs=inputs, begin_state=states, layout=layout,
@@ -763,7 +775,7 @@ class DropoutCell(BaseRNNCell):
         self.dropout = dropout
 
     @property
-    def state_shape(self):
+    def state_info(self):
         return []
 
     def __call__(self, inputs, states):
@@ -802,8 +814,8 @@ class ModifierCell(BaseRNNCell):
         return self.base_cell.params
 
     @property
-    def state_shape(self):
-        return self.base_cell.state_shape
+    def state_info(self):
+        return self.base_cell.state_info
 
     def begin_state(self, init_sym=symbol.zeros, **kwargs):
         assert not self._modified, \
@@ -894,8 +906,8 @@ class BidirectionalCell(BaseRNNCell):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
 
     @property
-    def state_shape(self):
-        return _cells_state_shape(self._cells)
+    def state_info(self):
+        return _cells_state_info(self._cells)
 
     def begin_state(self, **kwargs):
         assert not self._modified, \
@@ -913,11 +925,11 @@ class BidirectionalCell(BaseRNNCell):
         states = begin_state
         l_cell, r_cell = self._cells
         l_outputs, l_states = l_cell.unroll(length, inputs=inputs,
-                                            begin_state=states[:len(l_cell.state_shape)],
+                                            begin_state=states[:len(l_cell.state_info)],
                                             layout=layout, merge_outputs=merge_outputs)
         r_outputs, r_states = r_cell.unroll(length,
                                             inputs=list(reversed(inputs)),
-                                            begin_state=states[len(l_cell.state_shape):],
+                                            begin_state=states[len(l_cell.state_info):],
                                             layout=layout, merge_outputs=merge_outputs)
 
         if merge_outputs is None:
