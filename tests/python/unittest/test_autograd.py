@@ -1,5 +1,6 @@
 import mxnet.ndarray as nd
 from mxnet.contrib.autograd import grad, grad_and_loss
+from mxnet.test_utils import *
 
 def autograd_assert(*args, **kwargs):
     f = kwargs["func"]
@@ -8,16 +9,16 @@ def autograd_assert(*args, **kwargs):
     grad_func = grad_and_loss(f)
     grad_vals, output = grad_func(*args)
     res = f(*args)
-    assert output == res
+    assert same(output.asnumpy(), res.asnumpy())
     grad_res = grad_f(*args)
     assert len(grad_vals) == len(grad_res)
     for a, b in zip(grad_vals, grad_res):
-        assert a == b
+        assert same(a.asnumpy(), b.asnumpy())
 
 def test_unary_func():
     x = nd.uniform(shape=(4, 5))
     f_exp         = lambda x: nd.exp(x)
-    f_exp_grad    = lambda x: [x]
+    f_exp_grad    = lambda x: [nd.exp(x)]
     autograd_assert(x, func=f_exp, grad_func=f_exp_grad)
     f_half        = lambda x: x/2
     f_half_grad   = lambda x: [nd.ones(x.shape) * 0.5]
