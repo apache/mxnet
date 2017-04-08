@@ -185,8 +185,9 @@ class BaseRNNCell(object):
                 state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
                              **kwargs)
             else:
+                kwargs.update(info)
                 state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
-                             **info, **kwargs)
+                             **kwargs)
             states.append(state)
         return states
 
