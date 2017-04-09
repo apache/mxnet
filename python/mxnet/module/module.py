@@ -541,16 +541,15 @@ class Module(BaseModule):
         new_batch_size = data_batch.data[0].shape[major_axis]
 
         if new_batch_size != self.data_shapes[0][major_axis]:
-            data_shape = data_batch.provide_data if hasattr(data_batch, 'provide_data') \
-                         else None
-            label_shape = data_batch.provide_label if hasattr(data_batch, 'provide_label') \
-                          else None
+            data_shape = getattr(data_batch, 'provide_data', None)
+            label_shape = getattr(data_batch, 'provide_label', None)
             if data_shape is None:
                 data_shape = [DataDesc(dname, data.shape) for dname, data in \
 		              zip(self._data_names, data_batch.data)]
-                if data_batch.label is not None and len(data_batch.label) > 0:
+                data_label = getattr(data_batch, 'label', None)
+                if data_label is not None and len(data_label) > 0:
                     label_shape = [DataDesc(lname, label.shape) for lname, label in \
-                                   zip(self._label_names, data_batch.label)]
+                                   zip(self._label_names, data_label)]
                 else:
 	        #If predicting, make the label shape the same as module label shape
                     if self._label_shapes is not None:
@@ -560,7 +559,6 @@ class Module(BaseModule):
                             new_lshape[major_axis] = new_batch_size
                             label_shape.append(DataDesc(lname, tuple(new_lshape)))
             self.reshape(data_shape, label_shape)
-
         self._exec_group.forward(data_batch, is_train)
 
     def backward(self, out_grads=None):
