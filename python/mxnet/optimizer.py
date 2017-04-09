@@ -314,7 +314,7 @@ class SGD(Optimizer):
         wd = self._get_wd(index)
         self._update_count(index)
 
-        if state:
+        if state is not None:
             sgd_mom_update(weight, grad, state, out=weight,
                            lr=lr, wd=wd, **self.kwargs)
         else:
