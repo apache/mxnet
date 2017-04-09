@@ -541,8 +541,10 @@ class Module(BaseModule):
         new_batch_size = data_batch.data[0].shape[major_axis]
 
         if new_batch_size != self.data_shapes[0][major_axis]:
-            data_shape = data_batch.provide_data
-            label_shape = data_batch.provide_label
+            data_shape = data_batch.provide_data if hasattr(data_batch, 'provide_data') \
+                         else None
+            label_shape = data_batch.provide_label if hasattr(data_batch, 'provide_label') \
+                          else None
             if data_shape is None:
                 data_shape = [DataDesc(dname, data.shape) for dname, data in \
 		              zip(self._data_names, data_batch.data)]
