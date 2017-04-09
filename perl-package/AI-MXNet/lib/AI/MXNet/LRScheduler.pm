@@ -8,60 +8,60 @@ use overload "&{}" => sub { my $self = shift; sub { $self->call(@_) } };
 
 =head1 NAME
 
-AI::MXNet::LRScheduler - The adaptive scheduler of the learning rate.
+    AI::MXNet::LRScheduler - The adaptive scheduler of the learning rate.
 =cut
 
 =head1 DESCRIPTION
 
-Learning rate scheduler, which adaptively changes the learning rate based on the
-progress.
+    Learning rate scheduler, which adaptively changes the learning rate based on the
+    progress.
 =cut
 
 =head2 new
 
-base_lr : float (optional, default 0.01)
-the initial learning rate
+    base_lr : float (optional, default 0.01)
+    the initial learning rate
 =cut
 
 has 'base_lr' => (is => 'rw', isa => 'Num', default => 0.01);
 
 =head2 call
 
-Call to schedule current learning rate
+    Call to schedule current learning rate
 
-The training progress is presented by num_update, which can be roughly
-viewed as the number of minibatches executed so far. Its value is
-non-decreasing, and increases at most by one.
+    The training progress is presented by num_update, which can be roughly
+    viewed as the number of minibatches executed so far. Its value is
+    non-decreasing, and increases at most by one.
 
-The exact value is the upper bound of the number of updates applied to
-a weight/index
+    The exact value is the upper bound of the number of updates applied to
+    a weight/index
 
-See more details in https://github.com/dmlc/mxnet/issues/625
+    See more details in https://github.com/dmlc/mxnet/issues/625
 
-Parameters
-----------
-num_update: int
-    the maximal number of updates applied to a weight.
+    Parameters
+    ----------
+    num_update: int
+        the maximal number of updates applied to a weight.
 =cut
 
 package AI::MXNet::FactorScheduler;
 
 =head1 NAME
 
-AI::MXNet::FactorScheduler - Reduces the learning rate by a factor.
+    AI::MXNet::FactorScheduler - Reduces the learning rate by a factor.
 
 =head1 DESCRIPTION
 
-Reduces the learning rate by a factor each step.
-Assume the weight has been updated by n times, then the learning rate will
-be base_lr * factor^(floor(n/step))
+    Reduces the learning rate by a factor each step.
+    Assume the weight has been updated by n times, then the learning rate will
+    be base_lr * factor^(floor(n/step))
 
-Parameters
-----------
-step: int
-    schedule the learning rate update after n updates
-factor: float
-    the factor by which to reduce the learning rate.
+    Parameters
+    ----------
+    step: int
+        schedule the learning rate update after n updates
+    factor: float
+        the factor by which to reduce the learning rate.
 =cut
 use Mouse;
 extends 'AI::MXNet::LRScheduler';
@@ -110,20 +110,20 @@ package AI::MXNet::MultiFactorScheduler;
 
 =head1 NAME
 
-AI::MXNet::MultiFactorScheduler - Reduces the learning rate by an array ref of factors.
+    AI::MXNet::MultiFactorScheduler - Reduces the learning rate by an array ref of factors.
 
 =head1 DESCRIPTION
 
-Reduce learning rate in factor at steps specified in an array ref.
-Assume the weight has been updated by n times, then the learning rate will
-be base_lr * factor^(sum((step/n)<=1)) # step is an array
+    Reduces a learning rate in factor at steps specified in an array ref.
+    Assume the weight has been updated by n times, then the learning rate will
+    be base_lr * factor^(sum((step/n)<=1)) # step is an array.
 
-Parameters
-----------
-step: array ref of int
-    schedule learning rate after n updates
-factor: float
-    the factor for reducing the learning rate
+    Parameters
+    ----------
+    step: array ref of int
+        schedule learning rate after n updates
+    factor: float
+        the factor for reducing the learning rate
 =cut
 
 use Mouse;

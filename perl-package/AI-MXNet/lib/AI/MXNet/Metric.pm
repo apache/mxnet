@@ -6,7 +6,7 @@ use Scalar::Util qw/blessed/;
 
 =head1 NAME
 
-AI::MXNet::Metric - Online evaluation metric module.
+    AI::MXNet::Metric - Online evaluation metric module.
 =cut
 
 # Check to see if the two arrays are the same size.
@@ -336,23 +336,23 @@ around BUILDARGS => sub {
 
 =head1 NAME
 
-AI::MXNet::Perplexity
+    AI::MXNet::Perplexity
 =cut
 
 =head1 DESCRIPTION
 
-Calculate perplexity.
+    Calculate perplexity.
 
-Parameters
-----------
-ignore_label : int or undef
-    index of invalid label to ignore when
-    counting. usually should be -1. Include
-    all entries if undef.
-axis : int (default -1)
-    The axis from prediction that was used to
-    compute softmax. By default use the last
-    axis.
+    Parameters
+    ----------
+    ignore_label : int or undef
+        index of invalid label to ignore when
+        counting. usually should be -1. Include
+        all entries if undef.
+    axis : int (default -1)
+        The axis from prediction that was used to
+        compute softmax. By default uses the last
+        axis.
 =cut
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
@@ -500,18 +500,18 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
 
 =head1 DESCRIPTION
 
-Custom evaluation metric that takes a sub ref.
+    Custom evaluation metric that takes a sub ref.
 
-Parameters
-----------
-eval_function : subref
-    Customized evaluation function.
-name : str, optional
-    The name of the metric
-allow_extra_outputs : bool
-    If true, the prediction outputs can have extra outputs.
-    This is useful in RNN, where the states are also produced
-    in outputs for forwarding.
+    Parameters
+    ----------
+    eval_function : subref
+        Customized evaluation function.
+    name : str, optional
+        The name of the metric
+    allow_extra_outputs : bool
+        If true, the prediction outputs can have extra outputs.
+        This is useful in RNN, where the states are also produced
+        in outputs for forwarding.
 =cut
 
 
@@ -542,13 +542,13 @@ package AI::MXNet::Metric;
 
 =head2 create
 
-Create an evaluation metric.
+    Create an evaluation metric.
 
-Parameters
-----------
-metric : str or sub ref
-    The name of the metric, or a function
-    providing statistics given pred, label NDArray.
+    Parameters
+    ----------
+    metric : str or sub ref
+        The name of the metric, or a function
+        providing statistics given pred, label NDArray.
 =cut
 
 my %metrics = qw/

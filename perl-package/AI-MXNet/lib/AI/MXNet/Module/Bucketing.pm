@@ -90,31 +90,31 @@ AI::MXNet::Module::Bucketing
 
 =head1 DESCRIPTION
 
-Implements the AI::MXNet::Module::Base API, and allows multiple
-symbols to be used depending on the `bucket_key` provided by each different
-mini-batch of data
+    Implements the AI::MXNet::Module::Base API, and allows multiple
+    symbols to be used depending on the `bucket_key` provided by each different
+    mini-batch of data
 =cut
 
 
 =head2 new
 
-Parameters
-----------
-$sym_gen : subref or any perl object that overloads &{} op
-    A sub when called with a bucket key, returns a list with triple
-    of ($symbol, $data_names, $label_names).
-$default_bucket_key : str or anything else
-    The key for the default bucket.
-$logger : Logger
-$context : AI::MXNet::Context or array ref of AI::MXNet::Context objects
-    Default is cpu(0)
-$work_load_list : array ref of Num
-    Default is undef, indicating uniform workload.
-$fixed_param_names: arrayref of str
-    Default is undef, indicating no network parameters are fixed.
-$state_names : arrayref of str
-    states are similar to data and label, but not provided by data iterator.
-    Instead they are initialized to 0 and can be set by set_states()
+    Parameters
+    ----------
+    $sym_gen : subref or any perl object that overloads &{} op
+        A sub when called with a bucket key, returns a list with triple
+        of ($symbol, $data_names, $label_names).
+    $default_bucket_key : str or anything else
+        The key for the default bucket.
+    $logger : Logger
+    $context : AI::MXNet::Context or array ref of AI::MXNet::Context objects
+        Default is cpu(0)
+    $work_load_list : array ref of Num
+        Default is undef, indicating uniform workload.
+    $fixed_param_names: arrayref of str
+        Default is undef, indicating no network parameters are fixed.
+    $state_names : arrayref of str
+        states are similar to data and label, but not provided by data iterator.
+        Instead they are initialized to 0 and can be set by set_states()
 =cut
 
 extends 'AI::MXNet::Module::Base';
@@ -274,30 +274,30 @@ method set_states(:$states=, :$value=)
 
 =head2 bind
 
-Binding for a AI::MXNet::Module::Bucketing means setting up the buckets and bind the
-executor for the default bucket key. Executors corresponding to other keys are
-binded afterwards with switch_bucket.
+    Binding for a AI::MXNet::Module::Bucketing means setting up the buckets and bind the
+    executor for the default bucket key. Executors corresponding to other keys are
+    binded afterwards with switch_bucket.
 
-Parameters
-----------
-:$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
-    This should correspond to the symbol for the default bucket.
-:$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-    This should correspond to the symbol for the default bucket.
-:$for_training : Bool
-    Default is 1.
-:$inputs_need_grad : Bool
-    Default is 0.
-:$force_rebind : Bool
-    Default is 0.
-:$shared_module : AI::MXNet::Module::Bucketing
-    Default is undef. This value is currently not used.
-:$grad_req : str, array ref of str, hash ref of str to str
-    Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
-    (defaults to 'write').
-    Can be specified globally (str) or for each argument (array ref, hash ref).
-$bucket_key : str
-    bucket key for binding. by default is to use the ->default_bucket_key
+    Parameters
+    ----------
+    :$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
+        This should correspond to the symbol for the default bucket.
+    :$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+        This should correspond to the symbol for the default bucket.
+    :$for_training : Bool
+        Default is 1.
+    :$inputs_need_grad : Bool
+        Default is 0.
+    :$force_rebind : Bool
+        Default is 0.
+    :$shared_module : AI::MXNet::Module::Bucketing
+        Default is undef. This value is currently not used.
+    :$grad_req : str, array ref of str, hash ref of str to str
+        Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+        (defaults to 'write').
+        Can be specified globally (str) or for each argument (array ref, hash ref).
+    :$bucket_key : str
+        bucket key for binding. by default is to use the ->default_bucket_key
 =cut
 
 method bind(
@@ -367,16 +367,16 @@ method bind(
 
 =head2 switch_bucket
 
-Switch to a different bucket. This will change $self->_curr_module.
+    Switch to a different bucket. This will change $self->_curr_module.
 
-Parameters
-----------
-:$bucket_key : str (or any perl object that overloads "" op)
-    The key of the target bucket.
-:$data_shapes :  Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-    Typically $data_batch->provide_data.
-:$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-    Typically $data_batch->provide_label.
+    Parameters
+    ----------
+    :$bucket_key : str (or any perl object that overloads "" op)
+        The key of the target bucket.
+    :$data_shapes :  Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+        Typically $data_batch->provide_data.
+    :$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+        Typically $data_batch->provide_label.
 =cut
 
 method switch_bucket(

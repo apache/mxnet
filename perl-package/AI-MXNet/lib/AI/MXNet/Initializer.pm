@@ -4,16 +4,16 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::InitDesc - A container for the initialization pattern serialization.
+    AI::MXNet::InitDesc - A container for the initialization pattern serialization.
 
 =head2 new
 
-Parameters
----------
-name : str
-    name of variable
-attrs : hash ref of str to str
-    attributes of this variable taken from AI::MXNet::Symbol->attr_dict
+    Parameters
+    ---------
+    name : str
+        name of variable
+    attrs : hash ref of str to str
+        attributes of this variable taken from AI::MXNet::Symbol->attr_dict
 =cut
 has 'name'   => (is => 'ro', isa => 'Str', required => 1);
 has 'attrs'  => (is => 'rw', isa => 'HashRef[Str]', lazy => 1, default => sub { +{} });
@@ -45,11 +45,11 @@ has 'kwargs' => (is => 'rw', init_arg => undef, isa => 'HashRef');
 
 =head1 NAME
 
-AI::MXNet::Initializer - Base class for all Initializers
+    AI::MXNet::Initializer - Base class for all Initializers
 
 =head2 register
 
-Register an initializer class to the AI::MXNet::Initializer factory
+    Register an initializer class to the AI::MXNet::Initializer factory.
 =cut
 
 my %init_registry;
@@ -82,14 +82,14 @@ method register()
 
 =head2 init
 
-Parameters
-----------
-desc : AI::MXNet::InitDesc|str
-    a name of corresponding ndarray
-    or the object that describes the initializer
+    Parameters
+    ----------
+    $desc : AI::MXNet::InitDesc|str
+        a name of corresponding ndarray
+        or the object that describes the initializer.
 
-arr : AI::MXNet::NDArray
-    an ndarray to be Initialized
+    $arr : AI::MXNet::NDArray
+        an ndarray to be initialized.
 =cut
 method call(Str|AI::MXNet::InitDesc $desc, AI::MXNet::NDArray $arr)
 {
@@ -244,18 +244,18 @@ method _init_default($name, $arr)
 
 =head1 NAME
 
-AI::MXNet::Load  - Initialize by loading a pretrained param from a hash ref
+    AI::MXNet::Load  - Initialize by loading a pretrained param from a hash ref.
 =cut
 
 =head2 new
 
-Parameters
-----------
-param: HashRef[AI::MXNet::NDArray]
-default_init: Initializer
-    default initializer when a name is not found in the param hash ref.
-verbose: bool
-log the names when initializing.
+    Parameters
+    ----------
+    param: HashRef[AI::MXNet::NDArray]
+    default_init: Initializer
+        default initializer when a name is not found in the param hash ref.
+    verbose: bool
+    log the names when initializing.
 =cut
 
 package AI::MXNet::Load;
@@ -307,15 +307,15 @@ method call(Str $name, AI::MXNet::NDArray $arr)
 
 =head1 NAME
 
-AI::MXNet::Mixed - A container for multiple initializer patterns.
+    AI::MXNet::Mixed - A container for multiple initializer patterns.
 =cut
 
 =head2 new
 
-patterns: array ref of str
-    array ref of regular expression patterns to match parameter names.
-initializers: array ref of AI::MXNet::Initializer objects.
-    array ref of Initializers corresponding to the patterns.
+    patterns: array ref of str
+        array ref of regular expression patterns to match parameter names.
+    initializers: array ref of AI::MXNet::Initializer objects.
+        array ref of Initializers corresponding to the patterns.
 =cut
 
 package AI::MXNet::Mixed;
@@ -392,17 +392,17 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::Uniform - Initialize the weight with uniform random values
+    AI::MXNet::Uniform - Initialize the weight with uniform random values.
 =cut
 
 =head1 DESCRIPTION
 
-Initialize the weight with uniform random values contained within of [-scale, scale]
+    Initialize the weight with uniform random values contained within of [-scale, scale]
 
-Parameters
-----------
-scale : float, optional
-    The scale of the uniform distribution.
+    Parameters
+    ----------
+    scale : float, optional
+        The scale of the uniform distribution.
 =cut
 
 package AI::MXNet::Uniform;
@@ -425,17 +425,17 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::Normal - Initialize the weight with gaussian random values.
+    AI::MXNet::Normal - Initialize the weight with gaussian random values.
 =cut
 
 =head1 DESCRIPTION
 
-Initialize the weight with gaussian random values contained within of [0, sigma]
+    Initialize the weight with gaussian random values contained within of [0, sigma]
 
-Parameters
-----------
-sigma : float, optional
-    Standard deviation for the gaussian distribution.
+    Parameters
+    ----------
+    sigma : float, optional
+        Standard deviation for the gaussian distribution.
 =cut
 
 package AI::MXNet::Normal;
@@ -458,25 +458,25 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::Orthogonal - Intialize the weight as an Orthogonal matrix.
+    AI::MXNet::Orthogonal - Intialize the weight as an Orthogonal matrix.
 =cut
 
 =head1 DESCRIPTION
 
-Intialize weight as Orthogonal matrix
+    Intialize weight as Orthogonal matrix
 
-Parameters
-----------
-scale : float, optional
-    scaling factor of weight
+    Parameters
+    ----------
+    scale : float, optional
+        scaling factor of weight
 
-rand_type: string optional
-    use "uniform" or "normal" random number to initialize weight
+    rand_type: string optional
+        use "uniform" or "normal" random number to initialize weight
 
-Reference
----------
-Exact solutions to the nonlinear dynamics of learning in deep linear neural networks
-arXiv preprint arXiv:1312.6120 (2013).
+    Reference
+    ---------
+    Exact solutions to the nonlinear dynamics of learning in deep linear neural networks
+    arXiv preprint arXiv:1312.6120 (2013).
 =cut
 
 package AI::MXNet::Orthogonal;
@@ -521,19 +521,19 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::Xavier - Initialize the weight with Xavier or similar initialization scheme.
+    AI::MXNet::Xavier - Initialize the weight with Xavier or similar initialization scheme.
 =cut
 
 =head1 DESCRIPTION
 
-Parameters
-----------
-rnd_type: str, optional
-    Use gaussian or uniform.
-factor_type: str, optional
-    Use avg, in, or out.
-magnitude: float, optional
-    The scale of the random number range.
+    Parameters
+    ----------
+    rnd_type: str, optional
+        Use gaussian or uniform.
+    factor_type: str, optional
+        Use avg, in, or out.
+    magnitude: float, optional
+        The scale of the random number range.
 =cut
 
 package AI::MXNet::Xavier;
@@ -580,20 +580,20 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-AI::MXNet::MSRAPrelu - Custom initialization scheme.
+    AI::MXNet::MSRAPrelu - Custom initialization scheme.
 =cut
 
 =head1 DESCRIPTION
 
-Initialize the weight with initialization scheme from
-Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
+    Initialize the weight with initialization scheme from
+    Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification.
 
-Parameters
-----------
-factor_type: str, optional
-    Use avg, in, or out.
-slope: float, optional
-    initial slope of any PReLU (or similar) nonlinearities.
+    Parameters
+    ----------
+    factor_type: str, optional
+        Use avg, in, or out.
+    slope: float, optional
+        initial slope of any PReLU (or similar) nonlinearities.
 =cut
 
 package AI::MXNet::MSRAPrelu;
@@ -644,18 +644,18 @@ package AI::MXNet::LSTMBias;
 
 =head1 NAME
 
-AI::MXNet::LSTMBias - Custom initializer for LSTM cells.
+    AI::MXNet::LSTMBias - Custom initializer for LSTM cells.
 =cut
 
 =head1 DESCRIPTION
 
-Initializes all biases of an LSTMCell to 0.0 except for
-the forget gate's bias that is set to a custom value.
+    Initializes all biases of an LSTMCell to 0.0 except for
+    the forget gate's bias that is set to a custom value.
 
-Parameters
-----------
-forget_bias: float,a bias for the forget gate.
-Jozefowicz et al. 2015 recommends setting this to 1.0.
+    Parameters
+    ----------
+    forget_bias: float,a bias for the forget gate.
+    Jozefowicz et al. 2015 recommends setting this to 1.0.
 =cut
 
 use Mouse;
@@ -680,27 +680,25 @@ extends 'AI::MXNet::Initializer';
 
 =head1 NAME
 
-AI::MXNet::FusedRNN - Custom initializer for fused RNN cells.
+    AI::MXNet::FusedRNN - Custom initializer for fused RNN cells.
 =cut
 
 =head1 DESCRIPTION
 
-Initializes parameters for fused rnn layer
+    Initializes parameters for fused rnn layer.
 
-Parameters
-----------
-init : Initializer
-    intializer applied to unpacked weights.
-num_hidden : int
-    should be the same with arguments passed to FusedRNNCell.
-num_layers : int
-    should be the same with arguments passed to FusedRNNCell.
-mode : str
-    should be the same with arguments passed to FusedRNNCell.
-bidirectional : bool
-    should be the same with arguments passed to FusedRNNCell.
-forget_bias : float
-    should be the same with arguments passed to FusedRNNCell.
+    Parameters
+    ----------
+    init : Initializer
+        intializer applied to unpacked weights.
+    All parameters below must be exactly the same as ones passed to the
+    FusedRNNCell constructor.
+
+    num_hidden : int
+    num_layers : int
+    mode : str
+    bidirectional : bool
+    forget_bias : float
 =cut
 
 has 'init'          => (is => 'rw', isa => 'Str|AI::MXNet::Initializer', required => 1);
