@@ -1,7 +1,7 @@
 # coding: utf-8
 # pylint: disable= too-many-lines, redefined-builtin, protected-access
 # pylint: disable=import-error, no-name-in-module, undefined-variable
-"""NDArray API of mxnet."""
+"""NDArray API of MXNet."""
 from __future__ import absolute_import
 from __future__ import division
 try:
@@ -60,12 +60,12 @@ _DTYPE_MX_TO_NP = {
 def _new_empty_handle():
     """Returns a new empty handle.
 
-    Empty handle can be used to hold result.
+    Empty handle can be used to hold a result.
 
     Returns
     -------
     handle
-        A new empty NDArray handle.
+        A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateNone(ctypes.byref(hdl)))
@@ -79,7 +79,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     Returns
     -------
     handle
-        A new empty NDArray handle.
+        A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateEx(

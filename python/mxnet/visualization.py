@@ -18,11 +18,12 @@ def _str2tuple(string):
     Parameters
     ----------
     string: str
-        shape string
+        Shape string.
 
     Returns
     -------
-    List of str to represent shape.
+    list of str
+        Represents shape.
     """
     return re.findall(r"\d+", string)
 
@@ -34,14 +35,14 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     symbol: Symbol
         Symbol to be visualized.
     shape: dict
-        dict of shapes, str->shape (tuple), given input shapes.
+        A dict of shapes, str->shape (tuple), given input shapes.
     line_length: int
-        total length of printed lines
+        Rotal length of printed lines
     positions: list
         Relative or absolute positions of log elements in each line.
     Returns
     ------
-        void
+    None
     """
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
@@ -71,7 +72,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             Field length ratio.
         Returns
         ------
-            void
+        None
         """
         line = ''
         for i, field in enumerate(fields):
@@ -166,7 +167,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
 
 def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
                  hide_weights=True):
-    """Convert symbol to dot object for visualization.
+    """Convert a symbol to a dot object for visualization.
 
     Parameters
     ----------
@@ -190,7 +191,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     Returns
     ------
     dot: Diagraph
-        The dot object of symbol.
+        The dot object of `symbol`.
     """
     # todo add shape support
     try:
@@ -220,7 +221,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
           "#fdb462", "#b3de69", "#fccde5")
 
     def looks_like_weight(name):
-        """Internal helper to figure out if node should be hidden with ``hide_weights``.
+        """Internal helper to figure out if node should be hidden with `hide_weights`.
         """
         if name.endswith("_weight"):
             return True
