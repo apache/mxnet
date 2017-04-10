@@ -543,11 +543,11 @@ class Module(BaseModule):
         if new_batch_size != self.data_shapes[0][major_axis]:
             data_shape = getattr(data_batch, 'provide_data', None)
             label_shape = getattr(data_batch, 'provide_label', None)
-            if data_shape is None:
+            if not data_shape:
                 data_shape = [DataDesc(dname, data.shape) for dname, data in \
 		              zip(self._data_names, data_batch.data)]
                 data_label = getattr(data_batch, 'label', None)
-                if data_label is not None and len(data_label) > 0:
+                if data_label and len(data_label) > 0:
                     label_shape = [DataDesc(lname, label.shape) for lname, label in \
                                    zip(self._label_names, data_label)]
                 else:
