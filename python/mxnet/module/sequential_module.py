@@ -111,7 +111,7 @@ class SequentialModule(BaseModule):
         -------
         list
             A list of `(name, shape)` pairs. The return value could be `None` if
-            the module does not need labels, or if the module is not binded for
+            the module does not need labels, or if the module is not bound for
             training (in this case, label information is not available).
         """
         assert self.binded
@@ -159,14 +159,16 @@ class SequentialModule(BaseModule):
         ----------
         initializer : Initializer
         arg_params : dict
-            Default `None`. Existing parameters. This has higher priority than `initializer`.
+            Default ``None``. Existing parameters. This has higher priority
+            than `initializer`.
         aux_params : dict
-            Default `None`. Existing auxiliary states. This has higher priority than `initializer`.
+            Default ``None``. Existing auxiliary states. This has higher priority
+            than `initializer`.
         allow_missing : bool
-            Allow missing values in `arg_params` and `aux_params` (if not `None`). In this case,
-            missing values will be filled with `initializer`.
+            Allow missing values in `arg_params` and `aux_params` (if not ``None``).
+            In this case, missing values will be filled with `initializer`.
         force_init : bool
-            Default `False`.
+            Default ``False``.
         """
         if self.params_initialized and not force_init:
             return
@@ -209,23 +211,23 @@ class SequentialModule(BaseModule):
         label_shapes : list of (str, tuple)
             Typically is `data_iter.provide_label`.
         for_training : bool
-            Default is `True`. Whether the executors should be bind for training.
+            Default is ``True``. Whether the executors should be bind for training.
         inputs_need_grad : bool
-            Default is `False`. Whether the gradients to the input data need to be computed.
+            Default is ``False``. Whether the gradients to the input data need to be computed.
             Typically this is not needed. But this might be needed when implementing composition
             of modules.
         force_rebind : bool
-            Default is `False`. This function does nothing if the executors are already
-            binded. But with this `True`, the executors will be forced to rebind.
+            Default is ``False``. This function does nothing if the executors are already
+            bound. But with this ``True``, the executors will be forced to rebind.
         shared_module : Module
-            Default is `None`. Currently shared module is not supported for `SequentialModule`.
+            Default is ``None``. Currently shared module is not supported for `SequentialModule`.
         grad_req : str, list of str, dict of str to str
             Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
             (default to 'write').
             Can be specified globally (str) or for each argument (list, dict).
         """
         if self.binded and not force_rebind:
-            self.logger.warning('Already binded, ignoring bind()')
+            self.logger.warning('Already bound, ignoring bind()')
             return
 
         if inputs_need_grad:
@@ -281,10 +283,10 @@ class SequentialModule(BaseModule):
         optimizer : str or Optimizer
             Default `'sgd'`
         optimizer_params : dict
-            Default `(('learning_rate', 0.01),)`. The default value is not a dictionary,
+            Default ``(('learning_rate', 0.01),)``. The default value is not a dictionary,
             just to avoid pylint warning of dangerous default values.
         force_init : bool
-            Default `False`, indicating whether we should force re-initializing the
+            Default ``False``, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.
         """
         assert self.binded and self.params_initialized
@@ -305,7 +307,7 @@ class SequentialModule(BaseModule):
         ----------
         data_batch : DataBatch
         is_train : bool
-            Default is `None`, in which case `is_train` is take as `self.for_training`.
+            Default is ``None``, in which case `is_train` is take as ``self.for_training``.
         """
         assert self.binded and self.params_initialized
 
@@ -355,17 +357,17 @@ class SequentialModule(BaseModule):
         Parameters
         ----------
         merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the outputs
-            will be collected from multiple devices. A `True` value indicate that we
+            Default is ``True``. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A ``True`` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
 
         Returns
         -------
         list of NDArray or list of list of NDArray
-            If `merge_multi_context` is `True`, it is like `[out1,
-            out2]`. Otherwise, it is like `[[out1_dev1, out1_dev2], [out2_dev1,
-            out2_dev2]]`. All the output elements are numpy arrays.
+            If `merge_multi_context` is ``True``, it is like ``[out1,
+            out2]``. Otherwise, it is like ``[[out1_dev1, out1_dev2], [out2_dev1,
+            out2_dev2]]``. All the output elements are numpy arrays.
         """
         assert self.binded and self.params_initialized
         return self._modules[-1].get_outputs(merge_multi_context=merge_multi_context)
@@ -376,16 +378,16 @@ class SequentialModule(BaseModule):
         Parameters
         ----------
         merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the outputs
-            will be collected from multiple devices. A `True` value indicate that we
+            Default is ``True``. In the case when data-parallelism is used, the outputs
+            will be collected from multiple devices. A ``True`` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
 
         Returns
         -------
         list of NDArray or list of list of NDArray
-            If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
-            is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+            If `merge_multi_context` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
+            is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
             elements are `NDArray`.
         """
         assert self.binded and self.params_initialized and self.inputs_need_grad
@@ -398,7 +400,7 @@ class SequentialModule(BaseModule):
         ----------
         eval_metric : EvalMetric
         labels : list of NDArray
-            Typically `data_batch.label`.
+            Typically ``data_batch.label``.
         """
         assert self.binded and self.params_initialized
 
@@ -408,7 +410,7 @@ class SequentialModule(BaseModule):
                 module.update_metric(eval_metric, labels)
 
     def install_monitor(self, mon):
-        """ Install monitor on all executors """
+        """ Install monitor on all executors."""
         assert self.binded
         for module in self._modules:
             module.install_monitor(mon)

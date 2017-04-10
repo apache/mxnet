@@ -1,6 +1,6 @@
 # coding: utf-8
 # pylint: disable=no-member, protected-access, unused-import, no-name-in-module
-"""Random number interface of mxnet."""
+"""Random number interface of MXNet."""
 from __future__ import absolute_import
 
 import ctypes
