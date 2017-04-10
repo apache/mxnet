@@ -15,6 +15,7 @@ from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
+from ..io import DataDesc
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -525,7 +526,7 @@ class Module(BaseModule):
         self.optimizer_initialized = True
 
     def forward(self, data_batch, is_train=None):
-        """Forward computation.
+        """Forward computation. It supports different batch_size inputs.
 
         Parameters
         ----------
@@ -535,6 +536,29 @@ class Module(BaseModule):
             Default is ``None``, which means ``is_train`` takes the value of ``self.for_training``.
         """
         assert self.binded and self.params_initialized
+
+        major_axis = self._data_shapes[0].get_batch_axis(self._data_shapes[0].layout)
+        new_batch_size = data_batch.data[0].shape[major_axis]
+
+        if new_batch_size != self.data_shapes[0][major_axis]:
+            data_shape = getattr(data_batch, 'provide_data', None)
+            label_shape = getattr(data_batch, 'provide_label', None)
+            if not data_shape:
+                data_shape = [DataDesc(dname, data.shape) for dname, data in \
+		              zip(self._data_names, data_batch.data)]
+                data_label = getattr(data_batch, 'label', None)
+                if data_label and len(data_label) > 0:
+                    label_shape = [DataDesc(lname, label.shape) for lname, label in \
+                                   zip(self._label_names, data_label)]
+                else:
+	        #If predicting, make the label shape the same as module label shape
+                    if self._label_shapes is not None:
+                        label_shape = []
+                        for lshape, lname in zip(self._label_shapes, self._label_names):
+                            new_lshape = list(lshape.shape)
+                            new_lshape[major_axis] = new_batch_size
+                            label_shape.append(DataDesc(lname, tuple(new_lshape)))
+            self.reshape(data_shape, label_shape)
         self._exec_group.forward(data_batch, is_train)
 
     def backward(self, out_grads=None):
