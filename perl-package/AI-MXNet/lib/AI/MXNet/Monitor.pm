@@ -184,4 +184,9 @@ method toc_print()
     }
 }
 
+method Monitor(@args)
+{
+    __PACKAGE__->new(@args % 2 ? ('interval', @args) : @args);
+}
+
 1;

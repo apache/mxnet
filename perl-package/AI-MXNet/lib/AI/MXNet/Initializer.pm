@@ -739,7 +739,7 @@ method _init_weight($name, $arr)
         my $desc = AI::MXNet::InitDesc->new(name => $name);
         # for lstm bias, we use a custom initializer
         # which adds a bias to the forget gate
-        if($self->_mode eq 'lstm' and $name =~ /f_bias$/)
+        if($self->mode eq 'lstm' and $name =~ /f_bias$/)
         {
             $args->{$name} .= $self->forget_bias;
         }
