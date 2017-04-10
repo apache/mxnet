@@ -134,6 +134,8 @@ class GraphExecutor : public Executor {
    *  ret.opr Can be nullptr if creation failed.
   */
   CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
+  // run the monitor callback for node `nid`
+  void ExecuteMonCallback(size_t nid);
 
   // internal graph
   nnvm::Graph graph_;

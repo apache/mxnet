@@ -767,6 +767,28 @@ void GraphExecutor::InitOpSegs() {
   return;
 }
 
+void GraphExecutor::ExecuteMonCallback(size_t nid) {
+  static const auto& flist_outputs =
+      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  const auto& idx = graph_.indexed_graph();
+  std::vector<std::string> output_names;
+  OpNode& opnode = op_nodes_[nid];
+  const auto& inode = idx[nid];
+  const auto& node = idx[nid].source;
+  if (flist_outputs.count(node->op())) {
+    output_names = flist_outputs[node->op()](node->attrs);
+  } else {
+    for (size_t i = 0; i < node->num_outputs(); ++i) {
+      output_names.emplace_back(std::to_string(i));
+    }
+  }
+  for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
+    NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
+    std::string name = inode.source->attrs.name + "_" + output_names[i];
+    this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+  }
+}
+
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   // Update context
   const auto& idx = graph_.indexed_graph();
@@ -779,12 +801,10 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   }
 
   // Push Ops
-  static const auto& flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
-    if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
+    if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
 #if MXNET_USE_PROFILER
       bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;
 #else
@@ -815,22 +835,9 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     } else {
       LOG(FATAL) << "Not accessed";
     }
-
+    // Monitor callbacks
     if (monitor_callback_) {
-      std::vector<std::string> output_names;
-      const auto& node = idx[nid].source;
-      if (flist_outputs.count(node->op())) {
-        output_names = flist_outputs[node->op()](node->attrs);
-      } else {
-        for (size_t i = 0; i < node->num_outputs(); ++i) {
-          output_names.emplace_back(std::to_string(i));
-        }
-      }
-      for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
-        NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
-        std::string name = inode.source->attrs.name + "_" + output_names[i];
-        this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
-      }
+      ExecuteMonCallback(nid);
     }
   }
 }
