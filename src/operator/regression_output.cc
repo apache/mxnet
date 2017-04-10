@@ -44,8 +44,8 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 This is often used in multi-loss object function, in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
-.add_argument("data", "Symbol", "Input data to the function.")
-.add_argument("label", "Symbol", "Input label to the function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the function.")
+.add_argument("label", "NDArray-or-Symbol", "Input label to the function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(MAERegressionOutput, RegressionOutputProp<reg_enum::kMAE>)
@@ -66,8 +66,8 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 This is often used in multi-loss object function, in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
-.add_argument("data", "Symbol", "Input data to the function.")
-.add_argument("label", "Symbol", "Input label to the function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the function.")
+.add_argument("label", "NDArray-or-Symbol", "Input label to the function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 MXNET_REGISTER_OP_PROPERTY(LogisticRegressionOutput, RegressionOutputProp<reg_enum::kLogistic>)
@@ -88,8 +88,8 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 This is often used in multi-loss object function, in which we can give different weights to each loss.
 
 )code" ADD_FILELINE)
-.add_argument("data", "Symbol", "Input data to the function.")
-.add_argument("label", "Symbol", "Input label to the function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the function.")
+.add_argument("label", "NDArray-or-Symbol", "Input label to the function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
 }  // namespace op
