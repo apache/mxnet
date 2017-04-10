@@ -163,6 +163,86 @@ def test_module_switch_bucket():
     #the default bucket is expected to reuse the bytes allocated
     assert total_bytes_after == total_bytes_before
 
+
+def test_forward_reshape():
+    data = mx.sym.Variable('data')
+    sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
+
+    dshape = (10, 20)
+    mod = mx.mod.Module(sym, ('data',), None)
+    mod.bind(data_shapes=[('data', dshape)])
+    mod.init_params()
+    mod.init_optimizer(optimizer_params={'learning_rate': 1})
+
+    # Forward for the same batch_size input
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape)],
+                                label=None))
+    assert mod.get_outputs()[0].shape == dshape
+
+    # Forward for smaller batch_size input
+    dshape_1 = (1, 20)
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape_1)],
+                                label=None))
+    assert mod.get_outputs()[0].shape == dshape_1
+
+    # Forward for larger batch_size input
+    dshape_2 = (100, 20)
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape_2)],
+                                label=None))
+    assert mod.get_outputs()[0].shape == dshape_2
+
+    # Forward for multiple device
+    mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
+    mod.bind(data_shapes=[('data', dshape)])
+    mod.init_params()
+    mod.init_optimizer(optimizer_params={'learning_rate': 1})
+
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape)],
+                                label=None))
+    assert mod.get_outputs()[0].shape == dshape
+
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones(dshape_2)],
+                                label=None))
+    assert mod.get_outputs()[0].shape == dshape_2
+
+def test_module_predict():
+    data = mx.sym.Variable('data')
+    fc = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
+    mlp = mx.sym.SoftmaxOutput(fc, name='softmax')
+    mod = mx.mod.Module(mlp)
+
+    dshape = (100, 15)
+    lshape = (100,)
+    batch_size = 20
+    train_data = mx.io.NDArrayIter(mx.nd.ones(dshape), mx.nd.ones(lshape),
+                                   batch_size, shuffle=True)
+
+    mod.fit(train_data=train_data,
+            num_epoch=1, optimizer='sgd',
+            optimizer_params={'learning_rate': 0.1})
+
+    # Predict single sample
+    pshape_1 = (1, 15)
+    oshape_1 = (1, 20)
+    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_1)))
+    assert prob.shape == oshape_1
+
+    # Predict multiple samples
+    pshape_2 = (10, 15)
+    oshape_2 = (10, 20)
+    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_2)))
+    assert prob.shape == oshape_2
+
+    pshape_3 = (100, 15)
+    oshape_3 = (100, 20)
+    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_3)))
+    assert prob.shape == oshape_3
+
+    pshape_4 = (200, 15)
+    oshape_4 = (200, 20)
+    prob = mod.predict(mx.io.NDArrayIter(mx.nd.ones(pshape_4)))
+    assert prob.shape == oshape_4
+
 def test_monitor():
     # data iter
     mx.random.seed(11)
@@ -216,4 +296,6 @@ if __name__ == '__main__':
     test_save_load()
     test_module_layout()
     test_module_switch_bucket()
+    test_forward_reshape()
+    test_module_predict()
     test_monitor()
