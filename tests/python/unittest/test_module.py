@@ -1,4 +1,5 @@
 import mxnet as mx
+from functools import reduce
 
 def test_module_layout():
     sym = mx.sym.Variable('data')
