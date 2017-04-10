@@ -25,11 +25,11 @@ import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
-private[mxnet] class AddNDArrayFunctions extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
+private[mxnet] class AddContribNDArrayFunctions extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) = macro ContribNDArrayMacro.addDefs
 }
 
-private[mxnet] object NDArrayMacro {
+private[mxnet] object ContribNDArrayMacro {
   case class NDArrayFunction(handle: NDArrayHandle)
 
   // scalastyle:off havetype
@@ -38,7 +38,7 @@ private[mxnet] object NDArrayMacro {
   }
   // scalastyle:off havetype
 
-  private val ndarrayFunctions: Map[String, NDArrayFunction] = initNDArrayModule()
+  private val contribNDArrayFunctions: Map[String, NDArrayFunction] = initContribNDArrayModule()
 
   private def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
@@ -55,12 +55,13 @@ private[mxnet] object NDArrayMacro {
       List(Ident(TypeName("Any")))
     )
 
-    val functionDefs = ndarrayFunctions flatMap { case (funcName, funcProp) =>
-      val functionScope = if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
+    val functionDefs = contribNDArrayFunctions flatMap { case (funcName, funcProp) =>
+      val functionScope = Modifiers()
+      val newName = funcName.substring(funcName.indexOf("_contrib_") + "_contrib_".length())
       // It will generate definition something like,
       Seq(
         // def transpose(kwargs: Map[String, Any] = null)(args: Any*)
-        DefDef(functionScope, TermName(funcName), List(),
+        DefDef(functionScope, TermName(newName), List(),
           List(
             List(
               ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("kwargs"),
@@ -80,7 +81,7 @@ private[mxnet] object NDArrayMacro {
           )
         ),
         // def transpose(args: Any*)
-        DefDef(functionScope, TermName(funcName), List(),
+        DefDef(functionScope, TermName(newName), List(),
           List(
             List(
               ValDef(Modifiers(), TermName("args"), AST_TYPE_ANY_VARARG, EmptyTree)
@@ -126,10 +127,10 @@ private[mxnet] object NDArrayMacro {
   }
 
   // List and add all the atomic symbol functions to current module.
-  private def initNDArrayModule(): Map[String, NDArrayFunction] = {
+  private def initContribNDArrayModule(): Map[String, NDArrayFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
-    opNames.filter(!_.startsWith("_contrib_")).map(opName => {
+    opNames.filter(_.startsWith("_contrib_")).map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeNDArrayFunction(opHandle.value, opName)

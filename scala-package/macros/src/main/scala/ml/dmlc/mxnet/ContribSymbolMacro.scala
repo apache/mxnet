@@ -17,20 +17,20 @@
 
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.init.Base._
-import ml.dmlc.mxnet.utils.OperatorBuildUtils
-
 import scala.annotation.StaticAnnotation
 import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
-private[mxnet] class AddNDArrayFunctions extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
+import ml.dmlc.mxnet.init.Base._
+import ml.dmlc.mxnet.utils.OperatorBuildUtils
+
+private[mxnet] class AddContribSymbolFunctions extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) = macro ContribSymbolImplMacros.addDefs
 }
 
-private[mxnet] object NDArrayMacro {
-  case class NDArrayFunction(handle: NDArrayHandle)
+private[mxnet] object ContribSymbolImplMacros {
+  case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)
 
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
@@ -38,61 +38,54 @@ private[mxnet] object NDArrayMacro {
   }
   // scalastyle:off havetype
 
-  private val ndarrayFunctions: Map[String, NDArrayFunction] = initNDArrayModule()
+  private val contribSymbolFunctions: Map[String, SymbolFunction] = initContribSymbolModule()
 
   private def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
-    val AST_NDARRAY_TYPE = Select(Select(Select(
-      Ident(TermName("ml")), TermName("dmlc")), TermName("mxnet")), TypeName("NDArray"))
     val AST_TYPE_MAP_STRING_ANY = AppliedTypeTree(Ident(TypeName("Map")),
       List(Ident(TypeName("String")), Ident(TypeName("Any"))))
-    val AST_TYPE_ANY_VARARG = AppliedTypeTree(
+    val AST_TYPE_MAP_STRING_STRING = AppliedTypeTree(Ident(TypeName("Map")),
+      List(Ident(TypeName("String")), Ident(TypeName("String"))))
+    val AST_TYPE_SYMBOL_VARARG = AppliedTypeTree(
       Select(
         Select(Ident(termNames.ROOTPKG), TermName("scala")),
         TypeName("<repeated>")
       ),
-      List(Ident(TypeName("Any")))
+      List(Select(Select(Select(
+        Ident(TermName("ml")), TermName("dmlc")), TermName("mxnet")), TypeName("Symbol")))
     )
 
-    val functionDefs = ndarrayFunctions flatMap { case (funcName, funcProp) =>
-      val functionScope = if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
+    val functionDefs = contribSymbolFunctions map { case (funcName, funcProp) =>
+      val functionScope = Modifiers()
+      val newName = funcName.substring(funcName.indexOf("_contrib_") + "_contrib_".length())
       // It will generate definition something like,
-      Seq(
-        // def transpose(kwargs: Map[String, Any] = null)(args: Any*)
-        DefDef(functionScope, TermName(funcName), List(),
+      // def Concat(name: String = null, attr: Map[String, String] = null)
+      //           (args: Symbol*)(kwargs: Map[String, Any] = null)
+      DefDef(functionScope, TermName(newName), List(),
+        List(
           List(
-            List(
-              ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("kwargs"),
-                AST_TYPE_MAP_STRING_ANY, Literal(Constant(null)))
-            ),
-            List(
-              ValDef(Modifiers(), TermName("args"), AST_TYPE_ANY_VARARG, EmptyTree)
-            )
-          ), TypeTree(),
-          Apply(
-            Ident(TermName("genericNDArrayFunctionInvoke")),
-            List(
-              Literal(Constant(funcName)),
-              Ident(TermName("args")),
-              Ident(TermName("kwargs"))
-            )
+            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("name"),
+              Ident(TypeName("String")), Literal(Constant(null))),
+            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("attr"),
+              AST_TYPE_MAP_STRING_STRING, Literal(Constant(null)))
+          ),
+          List(
+            ValDef(Modifiers(), TermName("args"), AST_TYPE_SYMBOL_VARARG, EmptyTree)
+          ),
+          List(
+            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("kwargs"),
+              AST_TYPE_MAP_STRING_ANY, Literal(Constant(null)))
           )
-        ),
-        // def transpose(args: Any*)
-        DefDef(functionScope, TermName(funcName), List(),
+        ), TypeTree(),
+        Apply(
+          Ident(TermName("createSymbolGeneral")),
           List(
-            List(
-              ValDef(Modifiers(), TermName("args"), AST_TYPE_ANY_VARARG, EmptyTree)
-            )
-          ), TypeTree(),
-          Apply(
-            Ident(TermName("genericNDArrayFunctionInvoke")),
-            List(
-              Literal(Constant(funcName)),
-              Ident(TermName("args")),
-              Literal(Constant(null))
-            )
+            Literal(Constant(funcName)),
+            Ident(TermName("name")),
+            Ident(TermName("attr")),
+            Ident(TermName("args")),
+            Ident(TermName("kwargs"))
           )
         )
       )
@@ -126,19 +119,19 @@ private[mxnet] object NDArrayMacro {
   }
 
   // List and add all the atomic symbol functions to current module.
-  private def initNDArrayModule(): Map[String, NDArrayFunction] = {
+  private def initContribSymbolModule(): Map[String, SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
-    opNames.filter(!_.startsWith("_contrib_")).map(opName => {
+    opNames.filter(_.startsWith("_contrib_")).map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
-      makeNDArrayFunction(opHandle.value, opName)
+      makeAtomicSymbolFunction(opHandle.value, opName)
     }).toMap
   }
 
   // Create an atomic symbol function by handle and function name.
-  private def makeNDArrayFunction(handle: NDArrayHandle, aliasName: String)
-    : (String, NDArrayFunction) = {
+  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
+      : (String, SymbolFunction) = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
@@ -151,15 +144,15 @@ private[mxnet] object NDArrayMacro {
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
     val paramStr = OperatorBuildUtils.ctypes2docstring(argNames, argTypes, argDescs)
     val extraDoc: String = if (keyVarNumArgs.value != null && keyVarNumArgs.value.length > 0) {
-      s"This function support variable length of positional input (${keyVarNumArgs.value})."
-    } else {
-      ""
-    }
+        s"This function support variable length of positional input (${keyVarNumArgs.value})."
+      } else {
+        ""
+      }
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
     val docStr = s"$aliasName $realName\n${desc.value}\n\n$paramStr\n$extraDoc\n"
     // scalastyle:off println
-    println("NDArray function definition:\n" + docStr)
+    println("Symbol function definition:\n" + docStr)
     // scalastyle:on println
-    (aliasName, new NDArrayFunction(handle))
+    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 }

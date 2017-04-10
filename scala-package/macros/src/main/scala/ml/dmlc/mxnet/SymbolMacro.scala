@@ -57,7 +57,7 @@ private[mxnet] object SymbolImplMacros {
     )
 
     val functionDefs = symbolFunctions map { case (funcName, funcProp) =>
-      val functionScope = Modifiers()
+      val functionScope = if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
       // It will generate definition something like,
       // def Concat(name: String = null, attr: Map[String, String] = null)
       //           (args: Symbol*)(kwargs: Map[String, Any] = null)
@@ -121,7 +121,7 @@ private[mxnet] object SymbolImplMacros {
   private def initSymbolModule(): Map[String, SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
-    opNames.map(opName => {
+    opNames.filter(!_.startsWith("_contrib_")).map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName)
