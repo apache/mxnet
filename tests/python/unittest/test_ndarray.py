@@ -120,15 +120,15 @@ def test_ndarray_reshape():
     tensor  = mx.nd.array([[[1, 2], [3, 4]],
                            [[5, 6], [7, 8]]])
     true_res = mx.nd.arange(8) + 1
-    assert same(tensor.reshape((-1, )), true_res)
+    assert same(tensor.reshape((-1, )).asnumpy(), true_res.asnumpy())
     true_res  = mx.nd.array([[1, 2, 3, 4],
                              [5, 6, 7, 8]])
-    assert same(tensor.reshape((2, -1)), true_res)
+    assert same(tensor.reshape((2, -1)).asnumpy(), true_res.asnumpy())
     true_res  = mx.nd.array([[1, 2],
                              [3, 4],
                              [5, 6],
                              [7, 8]])
-    assert same(tensor.reshape((-1, 2)), true_res)
+    assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.asnumpy())
 
 
 def test_ndarray_choose():
@@ -613,7 +613,8 @@ def test_iter():
     for a in x:
         y.append(a)
 
-    assert np.all(np.array(y) == x.asnumpy())
+    for i in range(x.size):
+        assert same(y[i].asnumpy(), x[i].asnumpy())
 
 
 if __name__ == '__main__':
