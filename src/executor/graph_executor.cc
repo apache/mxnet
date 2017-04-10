@@ -804,19 +804,13 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
-    if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
+    if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
 #if MXNET_USE_PROFILER
       bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;
 #else
       bool profiling = false;
 #endif
       Engine::Get()->Push(seg_op.opr, seg_op.ctx, 0, profiling);
-      // Monitor callback for the segment
-      if (monitor_callback_) {
-        for (size_t i = nid; i < seg_op.topo_end; i++) {
-          ExecuteMonCallback(i);
-        }
-      }
       nid = seg_op.topo_end - 1;
       continue;
     }

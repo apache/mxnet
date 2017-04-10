@@ -173,9 +173,9 @@ def test_monitor():
     # symbols
     x = mx.symbol.Variable('data')
     x = mx.symbol.FullyConnected(name='fc_0', data=x, num_hidden=2)
-    x = mx.symbol.Activation(data=x, act_type='sigmoid')
+    x = mx.symbol.Activation(name="act_0", data=x, act_type='sigmoid')
     x = mx.symbol.FullyConnected(name='fc_1', data=x, num_hidden=2)
-    x = mx.symbol.Activation(data=x, act_type='sigmoid')
+    x = mx.symbol.Activation(name="act_1", data=x, act_type='sigmoid')
     x = mx.symbol.LinearRegressionOutput(data=x, name='softmax', grad_scale=2)
 
     # create monitor
@@ -200,7 +200,7 @@ def test_monitor():
     mon.tic()
     mod.forward_backward(data_batch)
     res = mon.toc()
-    keys = ['act0', 'act1', 'data', 'fc_0', 'fc_1', 'softmax']
+    keys = ['act_0', 'act_1', 'data', 'fc_0', 'fc_1', 'softmax']
     mon_result_counts = [0, 0, 0, 0, 0, 0]
     assert(len(res) == 21)
     for n, k, v in res:
@@ -208,7 +208,7 @@ def test_monitor():
             if k.startswith(key):
                 mon_result_counts[idx] += 1
                 break
-    assert(counts == [2, 2, 1, 6, 6, 4])
+    assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
 if __name__ == '__main__':
     test_module_states()
@@ -216,3 +216,4 @@ if __name__ == '__main__':
     test_save_load()
     test_module_layout()
     test_module_switch_bucket()
+    test_monitor()
