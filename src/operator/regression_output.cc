@@ -39,7 +39,7 @@ MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
 
-By default, gradients of this loss function are scaled by factor `1/n` where, n is the number of training examples.
+By default, gradients of this loss function are scaled by factor `1/n`, where n is the number of training examples.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 
 )code" ADD_FILELINE)
