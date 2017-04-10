@@ -31,7 +31,6 @@ struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
     .set_default(-1)
     .describe("DType of the output. If output given, set to type of output."
               "If output not given and type not defined (dtype=None), set to float32.");
-
   }
 };
 
@@ -103,7 +102,7 @@ inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
       << dtype << " vs " << param.dtype;
     }
   } else {
-    // Output type can't be inferred. Use type in args or default. 
+    // Output type can't be inferred. Use type in args or default.
     dtype = (param.dtype == -1 ? mshadow::kFloat32 : param.dtype);
   }
   bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||
