@@ -56,4 +56,6 @@ LibraryInitializer* LibraryInitializer::Get() {
   static LibraryInitializer inst;
   return &inst;
 }
+
+static LibraryInitializer* __library_init = LibraryInitializer::Get();
 }  // namespace mxnet
