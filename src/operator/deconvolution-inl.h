@@ -361,7 +361,51 @@ class DeconvolutionProp : public OperatorProperty {
     }
     const TShape &dshape = (*in_shape)[deconv::kData];
     if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 4U) \
+
+    if (param_.kernel.ndim() == 1) {
+      CHECK_EQ(dshape.ndim(), 3U) \
+        << "Input data should be 3D in batch-num_filter-x";
+      Shape<3> dshape_ncw = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW);
+      Shape<3> wshape = Shape3(dshape_ncw[1], param_.num_filter / param_.num_group,
+                               param_.kernel[0]);
+      wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
+      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kWeight, wshape);
+      if (!param_.no_bias) {
+        SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
+      }
+
+      const index_t ksize_x = static_cast<index_t>(param_.kernel[0]);
+
+      index_t o_pad[1];
+      index_t o_adj[1];
+      param_.InferPad(dshape_ncw, o_pad, o_adj);
+
+      CHECK_EQ(dshape_ncw[1] % param_.num_group, 0U) \
+        << "input num_filter must divide group size";
+      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
+        << "output num_filter must divide group size";
+      CHECK_GT(param_.kernel.Size(), 0U) \
+        << "incorrect kernel size: " << param_.kernel;
+      CHECK_GT(param_.stride.Size(), 0U) \
+        << "incorrect stride size: " << param_.stride;
+
+      CHECK_GE(ksize_x-1, o_adj[0]) << "adj(x) must be samller than kernel(w)";
+
+      Shape<3> oshape;
+      oshape[0] = dshape_ncw[0];
+      oshape[1] = param_.num_filter;
+      oshape[2] = param_.stride[0] * (dshape_ncw[2] - 1) + ksize_x - 2 * o_pad[0] + o_adj[0];
+
+      if (param_.target_shape[0] > 0) {
+        CHECK_EQ(param_.target_shape[0], oshape[2]) \
+          << "param_.target_shape[0] was not reasonable, please it carefully";
+      }
+
+      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
+
+      return true;
+    } else if (param_.kernel.ndim() == 2) {
+      CHECK_EQ(dshape.ndim(), 4U) \
         << "Input data should be 4D in batch-num_filter-y-x";
     SHAPE_ASSIGN_CHECK(*in_shape,
                        deconv::kWeight,

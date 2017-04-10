@@ -341,7 +341,7 @@ class ConvolutionProp : public OperatorProperty {
     if (dshp.ndim() ==  0) return false;
     if (param_.kernel.ndim() == 1) {
       // 1d conv
-      CHECK_EQ(dshp.ndim(), 3) << "Input data should be 3D in batch-num_filter-x";
+      CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
       Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
       Shape<3> wshape = Shape3(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
                                param_.kernel[0]);
@@ -353,15 +353,15 @@ class ConvolutionProp : public OperatorProperty {
       }
 
       const index_t ksize_x = static_cast<index_t>(param_.kernel[0]);
-      CHECK_EQ(dshape[1] % param_.num_group, 0) \
+      CHECK_EQ(dshape[1] % param_.num_group, 0U) \
           << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0) \
+      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
           << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0) \
+      CHECK_GT(param_.kernel.Size(), 0U) \
           << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0) \
+      CHECK_GT(param_.stride.Size(), 0U) \
           << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0) \
+      CHECK_GT(param_.dilate.Size(), 0U) \
           << "incorrect dilate size: " << param_.dilate;
       CHECK(ksize_x <= dshape[2] + 2 * param_.pad[0])
           << "kernel size exceed input";
