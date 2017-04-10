@@ -142,7 +142,7 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
 
   // Seed for the sampling process. In order to guarantee deterministic
   // behaviour for single threaded cpu, this is taken from mshadow random generator.
-  const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
+  const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetSeed());
 
   MSHADOW_TYPE_SWITCH(in0.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(out.type_flag_, OType, {
