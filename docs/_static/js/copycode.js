@@ -60,10 +60,8 @@ $(document).ready(function(){
         e.clearSelection();
         
         for(var i = 0; i < lines.length; ++i) {
-            if(lines[i].startsWith(LANG_GP[lang])) {
-                hasGap = true;
-                break;
-            }
+            lines[i] = lines[i].replace(/^\s+|\s+$/g, "");
+            if(!hasGap && lines[i].startsWith(LANG_GP[lang])) hasGap = true;
         }
         
         if(hasGap) {
