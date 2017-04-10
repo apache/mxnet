@@ -22,12 +22,13 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialParam);
   .set_num_outputs(1)                                                   \
   .set_attr_parser(ParamParser<ParamType>)                              \
   .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)     \
-  .set_attr<nnvm::FInferType>("FInferType", InitType<ParamType>)        \
+  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)    \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)       \
   .add_arguments(ParamType::__FIELDS__())
 
-
+// Add "uniform" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(random_uniform, SampleUniformParam)
+.add_alias("uniform")
 .add_alias("_sample_uniform")
 .describe(R"code(Draw samples from a uniform distribution.
 
@@ -40,7 +41,9 @@ Samples are uniformly distributed over the half-open interval [low, high)
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SampleUniform_<cpu>);
 
+// Add "normal" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(random_normal, SampleNormalParam)
+.add_alias("normal")
 .add_alias("_sample_normal")
 .describe(R"code(Draw random samples from a normal (Gaussian) distribution.
 

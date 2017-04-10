@@ -36,8 +36,13 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -60,8 +65,13 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -84,8 +94,13 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -105,8 +120,13 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -126,8 +146,13 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -150,8 +175,13 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -174,8 +204,13 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
   }
 };
 
@@ -307,6 +342,42 @@ void SampleGenNegBinomial_(const nnvm::NodeAttrs& attrs,
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
     prnd->SampleGeneralizedNegativeBinomial(&out, param.mu, param.alpha);  // NOLINT(*)
   });
+}
+
+template<typename ParamType>
+inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int> *in_type,
+                         std::vector<int> *out_type) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_type->size(), 0);
+  CHECK_EQ(out_type->size(), 1);
+  int dtype = -1;
+  int dtype_out = (*out_type)[0];
+  if (dtype_out != -1) {
+    // Output type can be inferred, use it and make sure it
+    dtype = dtype_out;
+    if (param.dtype != -1) {
+      // dtype given in args, check that it matches the output type
+      CHECK_EQ(dtype_out, param.dtype) << "Output type does not match requested type: "
+      << dtype_out << " vs " << param.dtype;
+    }
+  } else {
+    // Output type can't be inferred
+    if (param.dtype != -1) {
+      // Use dtype given in args
+      dtype = param.dtype;
+    } else {
+      // Use default
+      dtype = mshadow::kFloat32;
+    }
+  }
+  bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||
+  (dtype == mshadow::kFloat64);
+  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, or float64: dtype is "
+  << dtype_out << " vs " << mshadow::kFloat16 << " or " << mshadow::kFloat32 << " or "
+  << mshadow::kFloat64;
+  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
+  return true;
 }
 
 #if MSHADOW_USE_CUDA

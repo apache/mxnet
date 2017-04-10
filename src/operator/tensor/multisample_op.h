@@ -24,8 +24,14 @@ struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
       .set_default(TShape())
       .describe("Shape to be sampled from each random distribution.");
     DMLC_DECLARE_FIELD(dtype)
-      .set_default(mshadow::kFloat32)
-      .describe("DType of the output");
+    .add_enum("None", -1)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .set_default(-1)
+    .describe("DType of the output. If output given, set to type of output."
+              "If output not given and type not defined (dtype=None), set to float32.");
+
   }
 };
 
@@ -89,8 +95,23 @@ inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
 
   // The output may have a different type so we can't infer from inputs.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
-  (*out_attrs)[0] = param.dtype;
-
+  dtype = (*out_attrs)[0];
+  if (dtype != -1) {
+    if (param.dtype != -1) {
+      // dtype given in args, check that it matches the output type
+      CHECK_EQ(dtype, param.dtype) << "Inferred output type does not match requested type: "
+      << dtype << " vs " << param.dtype;
+    }
+  } else {
+    // Output type can't be inferred. Use type in args or default. 
+    dtype = (param.dtype == -1 ? mshadow::kFloat32 : param.dtype);
+  }
+  bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||
+    (dtype == mshadow::kFloat64);
+  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, or float64: dtype is "
+    << dtype<< " vs " << mshadow::kFloat16 << " or " << mshadow::kFloat32 << " or "
+    << mshadow::kFloat64;
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype);
   return true;
 }
 
