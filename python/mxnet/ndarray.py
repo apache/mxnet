@@ -1205,7 +1205,8 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None):
 def add(lhs, rhs):
     """Returns element-wise sum of the input arrays with broadcasting.
 
-    Equivalent to ``lhs + rhs``, ``mx.nd.broadcast_add(lhs, rhs)`` and ``mx.nd.broadcast_plus(lhs, rhs)``.
+    Equivalent to ``lhs + rhs``, ``mx.nd.broadcast_add(lhs, rhs)`` and
+    ``mx.nd.broadcast_plus(lhs, rhs)``.
 
     .. note::
 
@@ -1265,7 +1266,8 @@ def add(lhs, rhs):
 def subtract(lhs, rhs):
     """Returns element-wise difference of the input arrays with broadcasting.
 
-    Equivalent to ``lhs - rhs``, ``mx.nd.broadcast_sub(lhs, rhs)`` and ``mx.nd.broadcast_minus(lhs, rhs)``.
+    Equivalent to ``lhs - rhs``, ``mx.nd.broadcast_sub(lhs, rhs)`` and
+    ``mx.nd.broadcast_minus(lhs, rhs)``.
 
     .. note::
 
@@ -1612,9 +1614,11 @@ def minimum(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def equal(lhs, rhs):
-    """Returns the result of element-wise "equal to"(==) comparison operation with broadcasting.
+    """Returns the result of element-wise "equal to"(==) comparison operation with
+    broadcasting.
 
-    For each element in input arrays, return 1(true) if corresponding elements are same, otherwise return 0(false).
+    For each element in input arrays, return 1(true) if corresponding elements are same,
+    otherwise return 0(false).
 
     Equivalent to ``lhs == rhs`` and ``mx.nd.broadcast_equal(lhs, rhs)``.
 
@@ -1673,9 +1677,11 @@ def equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def not_equal(lhs, rhs):
-    """Returns the result of element-wise "not equal to"(!=) comparison operation with broadcasting.
+    """Returns the result of element-wise "not equal to"(!=) comparison operation
+    with broadcasting.
 
-    For each element in input arrays, return 1(true) if corresponding elements are different, otherwise return 0(false).
+    For each element in input arrays, return 1(true) if corresponding elements are different,
+    otherwise return 0(false).
 
     Equivalent to ``lhs != rhs`` and ``mx.nd.broadcast_not_equal(lhs, rhs)``.
 
@@ -1739,7 +1745,8 @@ def not_equal(lhs, rhs):
 def greater(lhs, rhs):
     """Returns the result of element-wise "greater than"(>) comparison operation with broadcasting.
 
-    For each element in input arrays, return 1(true) if lhs elements are greater than rhs, otherwise return 0(false).
+    For each element in input arrays, return 1(true) if lhs elements are greater than rhs,
+    otherwise return 0(false).
 
     Equivalent to ``lhs > rhs`` and ``mx.nd.broadcast_greater(lhs, rhs)``.
 
@@ -1798,7 +1805,8 @@ def greater(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater_equal(lhs, rhs):
-    """Returns the result of element-wise "greater than equal to"(>=) comparison operation with broadcasting.
+    """Returns the result of element-wise "greater than equal to"(>=) comparison
+    operation with broadcasting.
 
     For each element in input arrays, return 1(true) if lhs elements are greater than equal to rhs,
     otherwise return 0(false).
@@ -1923,10 +1931,11 @@ def lesser(lhs, rhs):
 
 
 def lesser_equal(lhs, rhs):
-    """Returns the result of element-wise "lesser than equal to"(<=) comparison operation with broadcasting.
+    """Returns the result of element-wise "lesser than equal to"(<=) comparison
+    operation with broadcasting.
 
-    For each element in input arrays, return 1(true) if lhs elements are lesser than equal to rhs,
-    otherwise return 0(false).
+    For each element in input arrays, return 1(true) if lhs elements are
+    lesser than equal to rhs, otherwise return 0(false).
 
     Equivalent to ``lhs <= rhs`` and ``mx.nd.broadcast_lesser_equal(lhs, rhs)``.
 
