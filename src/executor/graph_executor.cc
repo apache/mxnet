@@ -812,8 +812,10 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 #endif
       Engine::Get()->Push(seg_op.opr, seg_op.ctx, 0, profiling);
       //Monitor callback for the segment
-      for (size_t i = nid; i < seg_op.topo_end; i++) {
-        ExecuteMonCallback(i);
+      if (monitor_callback_) {
+        for (size_t i = nid; i < seg_op.topo_end; i++) {
+          ExecuteMonCallback(i);
+        }
       }
       nid = seg_op.topo_end - 1;
       continue;
