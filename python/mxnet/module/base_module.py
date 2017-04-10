@@ -87,12 +87,12 @@ class BaseModule(object):
 
     A module has several states:
 
-    - Initial state. Memory is not allocated yet, thus the moule is not ready for computation yet.
-    - Bound. Shapes for inputs, outputs, and parameters are all known, memory has been allocated,
+    - Initial state: Memory is not allocated yet, thus the moule is not ready for computation yet.
+    - Binded: Shapes for inputs, outputs, and parameters are all known, memory has been allocated,
       and the module is ready for computation.
-    - Parameters initialized. For modules with parameters, doing computation before initializing
+    - Parameters initialized: For modules with parameters, doing computation before initializing
       the parameters might result in undefined outputs.
-    - Optimizer installed. An optimizer can be installed to a module. After this, the parameters
+    - Optimizer installed: An optimizer can be installed to a module. After this, the parameters
       of the module can be updated according to the optimizer after gradients are computed
       (forward-backward).
 
@@ -105,7 +105,7 @@ class BaseModule(object):
     After binding, a modulse should be able to report the following richer information:
 
     - state information
-        - `bound`: `bool`, indicates whether the memory buffers needed for computation
+        - `binded`: `bool`, indicates whether the memory buffers needed for computation
           have been allocated.
         - `for_training`: whether the module is bound for training.
         - `params_initialized`: `bool`, indicates whether the parameters of this modules
@@ -177,21 +177,13 @@ class BaseModule(object):
     """
     def __init__(self, logger=logging):
         self.logger = logger
-        self.bound = False
+        self.binded = False
         self.for_training = False
         self.inputs_need_grad = False
         self.params_initialized = False
         self.optimizer_initialized = False
         self._symbol = None
         self._total_exec_bytes = 0
-
-    @property
-    def binded(self):
-        warnings.warn(
-            'binded has been deprecated. ' + \
-            'Please use bound instead.',
-            DeprecationWarning, stacklevel=2)
-        return self.bound
 
     ################################################################################
     # High Level API
@@ -230,7 +222,7 @@ class BaseModule(object):
             >>> metric = mx.metric.Accuracy()
             >>> mod.score(val_dataiter, metric)
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         if reset:
             eval_data.reset()
@@ -284,7 +276,7 @@ class BaseModule(object):
             Default is ``True``, indicating whether we should reset the data iter before start
             doing prediction.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         if reset:
             eval_data.reset()
@@ -339,7 +331,7 @@ class BaseModule(object):
         >>> #Predict on the first 10 batches of val_dataiter
         >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         if reset:
             eval_data.reset()
@@ -699,7 +691,7 @@ class BaseModule(object):
         -------
         A list of ``NDArray`` or a list of list of ``NDArray``.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         assert not merge_multi_context
         return []
 
@@ -714,7 +706,7 @@ class BaseModule(object):
         value : number
             A single scalar value for all state arrays.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         assert not states and not value
 
     def install_monitor(self, mon):

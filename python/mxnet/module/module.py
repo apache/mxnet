@@ -155,8 +155,8 @@ class Module(BaseModule):
             logging.info('Saved optimizer state to \"%s\"', state_name)
 
     def _reset_bind(self):
-        """Internal function to reset bound state."""
-        self.bound = False
+        """Internal function to reset binded state."""
+        self.binded = False
         self._exec_group = None
         self._data_shapes = None
         self._label_shapes = None
@@ -184,7 +184,7 @@ class Module(BaseModule):
         -------
         A list of `(name, shape)` pairs.
         """
-        assert self.bound
+        assert self.binded
         return self._data_shapes
 
     @property
@@ -197,7 +197,7 @@ class Module(BaseModule):
             the module does not need labels, or if the module is not bound for
             training (in this case, label information is not available).
         """
-        assert self.bound
+        assert self.binded
         return self._label_shapes
 
     @property
@@ -208,7 +208,7 @@ class Module(BaseModule):
         -------
         A list of `(name, shape)` pairs.
         """
-        assert self.bound
+        assert self.binded
         return self._exec_group.get_output_shapes()
 
     def get_params(self):
@@ -218,7 +218,7 @@ class Module(BaseModule):
         `(arg_params, aux_params)`, each a dictionary of name to parameters (in
         `NDArray`) mapping.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         if self._params_dirty:
             self._sync_params_from_devices()
@@ -248,7 +248,7 @@ class Module(BaseModule):
             warnings.warn("Parameters already initialized and force_init=False. "
                           "init_params call ignored.", stacklevel=2)
             return
-        assert self.bound, 'call bind before initializing the parameters'
+        assert self.binded, 'call bind before initializing the parameters'
 
         def _impl(name, arr, cache):
             """Internal helper for parameter initialization"""
@@ -301,7 +301,7 @@ class Module(BaseModule):
         --------
         An example of setting module parameters::
             >>> sym, arg_params, aux_params = \
-            >>>     mx.model.load_checkpoint(model_prefix, n_epoch_load)
+            mx.model.load_checkpoint(model_prefix, n_epoch_load)
             >>> mod.set_params(arg_params=arg_params, aux_params=aux_params)
         """
         if not allow_missing:
@@ -351,13 +351,13 @@ class Module(BaseModule):
         if force_rebind:
             self._reset_bind()
 
-        if self.bound:
+        if self.binded:
             self.logger.warning('Already bound, ignoring bind()')
             return
 
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
-        self.bound = True
+        self.binded = True
         self._grad_req = grad_req
 
         if not for_training:
@@ -373,7 +373,7 @@ class Module(BaseModule):
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
-                    shared_module.bound and shared_module.params_initialized
+                    shared_module.binded and shared_module.params_initialized
             shared_group = shared_module._exec_group
         else:
             shared_group = None
@@ -423,7 +423,7 @@ class Module(BaseModule):
         label_shapes : list of (str, tuple)
             Typically is ``data_iter.provide_label``.
         """
-        assert self.bound
+        assert self.binded
         self._data_shapes, self._label_shapes = _parse_data_desc(
             self.data_names, self.label_names, data_shapes, label_shapes)
 
@@ -446,7 +446,7 @@ class Module(BaseModule):
             Default ``False``, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         if self.optimizer_initialized and not force_init:
             self.logger.warning('optimizer already initialized, ignoring...')
@@ -534,7 +534,7 @@ class Module(BaseModule):
         is_train : bool
             Default is ``None``, which means ``is_train`` takes the value of ``self.for_training``.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self._exec_group.forward(data_batch, is_train)
 
     def backward(self, out_grads=None):
@@ -547,14 +547,14 @@ class Module(BaseModule):
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self._exec_group.backward(out_grads=out_grads)
 
     def update(self):
         """Update parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
         """
-        assert self.bound and self.params_initialized and self.optimizer_initialized
+        assert self.binded and self.params_initialized and self.optimizer_initialized
 
         self._params_dirty = True
         if self._update_on_kvstore:
@@ -589,7 +589,7 @@ class Module(BaseModule):
         list of NDArray or list of list of NDArray
             Output.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         return self._exec_group.get_outputs(merge_multi_context=merge_multi_context)
 
     def get_input_grads(self, merge_multi_context=True):
@@ -612,7 +612,7 @@ class Module(BaseModule):
         list of NDArray or list of list of NDArray
               Input gradients
         """
-        assert self.bound and self.params_initialized and self.inputs_need_grad
+        assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._exec_group.get_input_grads(merge_multi_context=merge_multi_context)
 
     def get_states(self, merge_multi_context=True):
@@ -635,7 +635,7 @@ class Module(BaseModule):
         list of NDArray or list of list of NDArray
             States
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         return self._exec_group.get_states(merge_multi_context=merge_multi_context)
 
     def set_states(self, states=None, value=None):
@@ -649,7 +649,7 @@ class Module(BaseModule):
         value : number
             a single scalar value for all state arrays.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self._exec_group.set_states(states, value)
 
     def update_metric(self, eval_metric, labels):
@@ -704,5 +704,5 @@ class Module(BaseModule):
 
     def install_monitor(self, mon):
         """ Install monitor on all executors """
-        assert self.bound
+        assert self.binded
         self._exec_group.install_monitor(mon)

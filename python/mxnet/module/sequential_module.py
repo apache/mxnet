@@ -70,7 +70,7 @@ class SequentialModule(BaseModule):
 
         # after adding new modules, we are reset back to raw states, needs
         # to bind, init_params, etc.
-        self.bound = False
+        self.binded = False
         self.params_initialized = False
         self.optimizer_initialized = False
 
@@ -100,7 +100,7 @@ class SequentialModule(BaseModule):
             A list of `(name, shape)` pairs. The data shapes of the first module
             is the data shape of a `SequentialModule`.
         """
-        assert self.bound
+        assert self.binded
         return self._modules[0].data_shapes
 
     @property
@@ -114,7 +114,7 @@ class SequentialModule(BaseModule):
             the module does not need labels, or if the module is not bound for
             training (in this case, label information is not available).
         """
-        assert self.bound
+        assert self.binded
         return self._label_shapes
 
     @property
@@ -127,7 +127,7 @@ class SequentialModule(BaseModule):
             A list of `(name, shape)` pairs. The output shapes of the last
             module is the output shape of a `SequentialModule`.
         """
-        assert self.bound
+        assert self.binded
         return self._modules[-1].output_shapes
 
     def get_params(self):
@@ -139,7 +139,7 @@ class SequentialModule(BaseModule):
             each a dictionary of name to parameters (in `NDArray`) mapping. This
             is a merged dictionary of all the parameters in the modules.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         arg_params = dict()
         aux_params = dict()
@@ -172,7 +172,7 @@ class SequentialModule(BaseModule):
         """
         if self.params_initialized and not force_init:
             return
-        assert self.bound, 'call bind before initializing the parameters'
+        assert self.binded, 'call bind before initializing the parameters'
 
         for module in self._modules:
             module.init_params(initializer=initializer, arg_params=arg_params,
@@ -226,7 +226,7 @@ class SequentialModule(BaseModule):
             (default to 'write').
             Can be specified globally (str) or for each argument (list, dict).
         """
-        if self.bound and not force_rebind:
+        if self.binded and not force_rebind:
             self.logger.warning('Already bound, ignoring bind()')
             return
 
@@ -235,7 +235,7 @@ class SequentialModule(BaseModule):
         assert shared_module is None, 'Shared module is not supported'
         assert len(self._modules) > 0, 'Attempting to bind an empty SequentialModule'
 
-        self.bound = True
+        self.binded = True
 
         # the same label shapes are used for all chained modules
         self._label_shapes = label_shapes
@@ -289,7 +289,7 @@ class SequentialModule(BaseModule):
             Default ``False``, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         if self.optimizer_initialized and not force_init:
             self.logger.warning('optimizer already initialized, ignoring.')
             return
@@ -309,7 +309,7 @@ class SequentialModule(BaseModule):
         is_train : bool
             Default is ``None``, in which case `is_train` is take as ``self.for_training``.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         # make a shallow copy, just to maintain necessary properties (if any) like
         # bucket_key, pad, etc.
@@ -333,7 +333,7 @@ class SequentialModule(BaseModule):
 
     def backward(self, out_grads=None):
         """Backward computation."""
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         for i_layer, module in reversed(list(zip(range(len(self._modules)), self._modules))):
             module.backward(out_grads=out_grads)
@@ -346,7 +346,7 @@ class SequentialModule(BaseModule):
         """Update parameters according to installed optimizer and the gradient computed
         in the previous forward-backward cycle.
         """
-        assert self.bound and self.params_initialized and self.optimizer_initialized
+        assert self.binded and self.params_initialized and self.optimizer_initialized
 
         for module in self._modules:
             module.update()
@@ -369,7 +369,7 @@ class SequentialModule(BaseModule):
             out2]``. Otherwise, it is like ``[[out1_dev1, out1_dev2], [out2_dev1,
             out2_dev2]]``. All the output elements are numpy arrays.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         return self._modules[-1].get_outputs(merge_multi_context=merge_multi_context)
 
     def get_input_grads(self, merge_multi_context=True):
@@ -390,7 +390,7 @@ class SequentialModule(BaseModule):
             is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
             elements are `NDArray`.
         """
-        assert self.bound and self.params_initialized and self.inputs_need_grad
+        assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._modules[0].get_input_grads(merge_multi_context=merge_multi_context)
 
     def update_metric(self, eval_metric, labels):
@@ -402,7 +402,7 @@ class SequentialModule(BaseModule):
         labels : list of NDArray
             Typically ``data_batch.label``.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
 
         for meta, module in zip(self._metas, self._modules):
             if SequentialModule.META_TAKE_LABELS in meta and \
@@ -411,6 +411,6 @@ class SequentialModule(BaseModule):
 
     def install_monitor(self, mon):
         """ Install monitor on all executors."""
-        assert self.bound
+        assert self.binded
         for module in self._modules:
             module.install_monitor(mon)

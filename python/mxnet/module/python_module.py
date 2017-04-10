@@ -168,7 +168,7 @@ class PythonModule(BaseModule):
             (default to 'write').
             Can be specified globally (str) or for each argument (list, dict).
         """
-        if self.bound and not force_rebind:
+        if self.binded and not force_rebind:
             self.logger.warning('Already bound, ignoring bind()')
             return
 

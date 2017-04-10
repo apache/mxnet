@@ -68,7 +68,7 @@ class BucketingModule(BaseModule):
 
     def _reset_bind(self):
         """Internal utility function to reset binding."""
-        self.bound = False
+        self.binded = False
         self._buckets = {}
         self._curr_module = None
         self._curr_bucket_key = None
@@ -76,7 +76,7 @@ class BucketingModule(BaseModule):
     @property
     def data_names(self):
         """A list of names for data required by this module."""
-        if self.bound:
+        if self.binded:
             return self._curr_module.data_names
         else:
             _, data_names, _ = self._sym_gen(self._default_bucket_key)
@@ -85,7 +85,7 @@ class BucketingModule(BaseModule):
     @property
     def output_names(self):
         """A list of names for the outputs of this module."""
-        if self.bound:
+        if self.binded:
             return self._curr_module.output_names
         else:
             symbol, _, _ = self._sym_gen(self._default_bucket_key)
@@ -98,7 +98,7 @@ class BucketingModule(BaseModule):
         -------
         A list of `(name, shape)` pairs.
         """
-        assert self.bound
+        assert self.binded
         return self._curr_module.data_shapes
 
     @property
@@ -110,7 +110,7 @@ class BucketingModule(BaseModule):
         the module does not need labels, or if the module is not bound for
         training (in this case, label information is not available).
         """
-        assert self.bound
+        assert self.binded
         return self._curr_module.label_shapes
 
     @property
@@ -120,7 +120,7 @@ class BucketingModule(BaseModule):
         -------
         A list of `(name, shape)` pairs.
         """
-        assert self.bound
+        assert self.binded
         return self._curr_module.output_shapes
 
     def get_params(self):
@@ -130,7 +130,7 @@ class BucketingModule(BaseModule):
         `(arg_params, aux_params)`, each a dictionary mapping names to parameters
         (`NDArray`).
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self._curr_module._params_dirty = self._params_dirty
         params = self._curr_module.get_params()
         self._params_dirty = False
@@ -196,7 +196,7 @@ class BucketingModule(BaseModule):
         """
         if self.params_initialized and not force_init:
             return
-        assert self.bound, 'call bind before initializing the parameters'
+        assert self.binded, 'call bind before initializing the parameters'
         self._curr_module.init_params(initializer=initializer, arg_params=arg_params,
                                       aux_params=aux_params, allow_missing=allow_missing,
                                       force_init=force_init)
@@ -220,7 +220,7 @@ class BucketingModule(BaseModule):
         is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
         elements are `NDArray`.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         return self._curr_module.get_states(merge_multi_context=merge_multi_context)
 
     def set_states(self, states=None, value=None):
@@ -234,7 +234,7 @@ class BucketingModule(BaseModule):
         value : number
             A single scalar value for all state arrays.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self._curr_module.set_states(states, value)
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
@@ -274,7 +274,7 @@ class BucketingModule(BaseModule):
         if force_rebind:
             self._reset_bind()
 
-        if self.bound:
+        if self.binded:
             self.logger.warning('Already bound, ignoring bind()')
             return
 
@@ -282,7 +282,7 @@ class BucketingModule(BaseModule):
 
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
-        self.bound = True
+        self.binded = True
 
         symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
@@ -311,7 +311,7 @@ class BucketingModule(BaseModule):
         label_shapes : list of (str, tuple)
             Typically ``data_batch.provide_label``.
         """
-        assert self.bound, 'call bind before switching bucket'
+        assert self.binded, 'call bind before switching bucket'
         if not bucket_key in self._buckets:
             symbol, data_names, label_names = self._sym_gen(bucket_key)
             module = Module(symbol, data_names, label_names,
@@ -345,7 +345,7 @@ class BucketingModule(BaseModule):
             Defaults to ``False``, indicating whether we should force re-initializing the
             optimizer in the case an optimizer is already installed.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         if self.optimizer_initialized and not force_init:
             self.logger.warning('optimizer already initialized, ignoring.')
             return
@@ -366,7 +366,7 @@ class BucketingModule(BaseModule):
         data_batch : DataBatch
         '''
         # perform bind if haven't done so
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         bucket_key = data_batch.bucket_key
         original_bucket_key = self._curr_bucket_key
         data_shapes = data_batch.provide_data
@@ -384,21 +384,21 @@ class BucketingModule(BaseModule):
         is_train : bool
             Defaults to ``None``, in which case `is_train` is take as ``self.for_training``.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self.switch_bucket(data_batch.bucket_key, data_batch.provide_data,
                            data_batch.provide_label)
         self._curr_module.forward(data_batch, is_train=is_train)
 
     def backward(self, out_grads=None):
         """Backward computation."""
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self._curr_module.backward(out_grads=out_grads)
 
     def update(self):
         """Update parameters according to installed optimizer and the gradient computed
         in the previous forward-backward cycle.
         """
-        assert self.bound and self.params_initialized and self.optimizer_initialized
+        assert self.binded and self.params_initialized and self.optimizer_initialized
         self._params_dirty = True
         self._curr_module.update()
 
@@ -419,7 +419,7 @@ class BucketingModule(BaseModule):
         is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
         elements are numpy arrays.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         return self._curr_module.get_outputs(merge_multi_context=merge_multi_context)
 
     def get_input_grads(self, merge_multi_context=True):
@@ -439,7 +439,7 @@ class BucketingModule(BaseModule):
         is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
         elements are `NDArray`.
         """
-        assert self.bound and self.params_initialized and self.inputs_need_grad
+        assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._curr_module.get_input_grads(merge_multi_context=merge_multi_context)
 
     def update_metric(self, eval_metric, labels):
@@ -451,17 +451,17 @@ class BucketingModule(BaseModule):
         labels : list of NDArray
             Typically ``data_batch.label``.
         """
-        assert self.bound and self.params_initialized
+        assert self.binded and self.params_initialized
         self._curr_module.update_metric(eval_metric, labels)
 
     @property
     def symbol(self):
         """The symbol of the current bucket being used."""
-        assert self.bound
+        assert self.binded
         return self._curr_module.symbol
 
     def install_monitor(self, mon):
         """ Install monitor on all executors """
-        assert self.bound
+        assert self.binded
         for mod in self._buckets.values():
             mod.install_monitor(mon)
