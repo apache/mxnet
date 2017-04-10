@@ -15,7 +15,6 @@ import mxnet as mx
 from .context import cpu, gpu, Context
 from .ndarray import array
 from .symbol import Symbol
-import os
 try:
     import requests
 except ImportError:
