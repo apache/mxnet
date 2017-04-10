@@ -8,44 +8,41 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::RNN::IO - Functions for constructing recurrent neural networks.
+    AI::MXNet::RNN::IO - Functions for constructing recurrent neural networks.
 =cut
-
-=head1 SYNOPSIS
-
 
 =head1 DESCRIPTION
 
-Functions for constructing recurrent neural networks.
+    Functions for constructing recurrent neural networks.
 =cut
 
-=head2
+=head2 encode_sentences
 
-Encode sentences and (optionally) build a mapping
-from string tokens to integer indices. Unknown keys
-will be added to vocabulary.
+    Encode sentences and (optionally) build a mapping
+    from string tokens to integer indices. Unknown keys
+    will be added to vocabulary.
 
-Parameters
-----------
-sentences : array ref of array refs of str
-    A array ref of sentences to encode. Each sentence
-    should be a array ref of string tokens.
-vocab : undef or hash ref of str -> int
-    Optional input Vocabulary
-invalid_label : int, default -1
-    Index for invalid token, like <end-of-sentence>
-invalid_key : str, default '\n'
-    Key for invalid token. Use '\n' for end
-    of sentence by default.
-start_label : int
-    lowest index.
+    Parameters
+    ----------
+    $sentences : array ref of array refs of str
+        A array ref of sentences to encode. Each sentence
+        should be a array ref of string tokens.
+    :$vocab : undef or hash ref of str -> int
+        Optional input Vocabulary
+    :$invalid_label : int, default -1
+        Index for invalid token, like <end-of-sentence>
+    :$invalid_key : str, default '\n'
+        Key for invalid token. Uses '\n' for end
+        of sentence by default.
+    :$start_label=0 : int
+        lowest index.
 
-Returns
--------
-result : array ref of array refs of int
-    encoded sentences
-vocab : hash ref of str -> int
-    result vocabulary
+    Returns
+    -------
+    $result : array ref of array refs of int
+        encoded sentences
+    $vocab : hash ref of str -> int
+        result vocabulary
 =cut
 
 
@@ -97,41 +94,37 @@ package AI::MXNet::BucketSentenceIter;
 
 =head1 NAME
 
-AI::MXNet::BucketSentenceIter
+    AI::MXNet::BucketSentenceIter
 =cut
-
-=head1 SYNOPSIS
-
 
 =head1 DESCRIPTION
 
-Simple bucketing iterator for language model.
-Label for each step is constructed from data of
-next step.
-
+    Simple bucketing iterator for language model.
+    Label for each step is constructed from data of
+    next step.
 =cut
 
 =head2 new
 
-Parameters
-----------
-sentences : array ref of array refs of int
-    encoded sentences
-batch_size : int
-    batch_size of data
-invalid_label : int, default -1
-    key for invalid label, e.g. <end-of-sentence>
-dtype : str, default 'float32'
-    data type
-buckets : array ref of int
-    size of data buckets. Automatically generated if undef.
-data_name : str, default 'data'
-    name of data
-label_name : str, default 'softmax_label'
-    name of label
-layout : str
-    format of data and label. 'NT' means (batch_size, length)
-    and 'TN' means (length, batch_size).
+    Parameters
+    ----------
+    sentences : array ref of array refs of int
+        encoded sentences
+    batch_size : int
+        batch_size of data
+    invalid_label : int, default -1
+        key for invalid label, e.g. <end-of-sentence>
+    dtype : str, default 'float32'
+        data type
+    buckets : array ref of int
+        size of data buckets. Automatically generated if undef.
+    data_name : str, default 'data'
+        name of data
+    label_name : str, default 'softmax_label'
+        name of label
+    layout : str
+        format of data and label. 'NT' means (batch_size, length)
+        and 'TN' means (length, batch_size).
 =cut
 
 use Mouse;

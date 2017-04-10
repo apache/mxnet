@@ -11,7 +11,7 @@ use Time::HiRes qw(time);
 
 =head1 NAME
 
-AI::MXNet::Module::Base - Base class for AI::MXNet::Module and AI::MXNet::Module::Bucketing
+    AI::MXNet::Module::Base - Base class for AI::MXNet::Module and AI::MXNet::Module::Bucketing
 =cut
 
 func _as_list($obj)
@@ -105,86 +105,86 @@ method _parse_data_desc(
 
 =head1 DESCRIPTION
 
-The base class of a modules. A module represents a computation component. The design
-purpose of a module is that it abstract a computation "machine", that one can run forward,
-backward, update parameters, etc. We aim to make the APIs easy to use, especially in the
-case when we need to use imperative API to work with multiple modules (e.g. stochastic
-depth network).
+    The base class of a modules. A module represents a computation component. The design
+    purpose of a module is that it abstract a computation "machine", that one can run forward,
+    backward, update parameters, etc. We aim to make the APIs easy to use, especially in the
+    case when we need to use imperative API to work with multiple modules (e.g. stochastic
+    depth network).
 
-A module has several states:
+    A module has several states:
 
-    - Initial state. Memory is not allocated yet, not ready for computation yet.
-    - Binded. Shapes for inputs, outputs, and parameters are all known, memory allocated,
-    ready for computation.
-    - Parameter initialized. For modules with parameters, doing computation before initializing
-    the parameters might result in undefined outputs.
-    - Optimizer installed. An optimizer can be installed to a module. After this, the parameters
-    of the module can be updated according to the optimizer after gradients are computed
-    (forward-backward).
+        - Initial state. Memory is not allocated yet, not ready for computation yet.
+        - Binded. Shapes for inputs, outputs, and parameters are all known, memory allocated,
+        ready for computation.
+        - Parameter initialized. For modules with parameters, doing computation before initializing
+        the parameters might result in undefined outputs.
+        - Optimizer installed. An optimizer can be installed to a module. After this, the parameters
+        of the module can be updated according to the optimizer after gradients are computed
+        (forward-backward).
 
-In order for a module to interact with others, a module should be able to report the
-following information in its raw stage (before binded)
+    In order for a module to interact with others, a module should be able to report the
+    following information in its raw stage (before binded)
 
-    - data_names: array ref of string indicating the names of required data.
-    - output_names: array ref of string indicating the names of required outputs.
+        - data_names: array ref of string indicating the names of required data.
+        - output_names: array ref of string indicating the names of required outputs.
 
-And also the following richer information after binded:
+    And also the following richer information after binded:
 
-- state information
-    - binded: bool, indicating whether the memory buffers needed for computation
-    has been allocated.
-    - for_training: whether the module is binded for training (if binded).
-    - params_initialized: bool, indicating whether the parameters of this modules
-    has been initialized.
-    - optimizer_initialized: bool, indicating whether an optimizer is defined
-    and initialized.
-    - inputs_need_grad: bool, indicating whether gradients with respect to the
-    input data is needed. Might be useful when implementing composition of modules.
+    - state information
+        - binded: bool, indicating whether the memory buffers needed for computation
+        has been allocated.
+        - for_training: whether the module is binded for training (if binded).
+        - params_initialized: bool, indicating whether the parameters of this modules
+        has been initialized.
+        - optimizer_initialized: bool, indicating whether an optimizer is defined
+        and initialized.
+        - inputs_need_grad: bool, indicating whether gradients with respect to the
+        input data is needed. Might be useful when implementing composition of modules.
 
-- input/output information
-    - data_shapes: am array ref of [name, shape]. In theory, since the memory is allocated,
-    we could directly provide the data arrays. But in the case of data parallelization,
-    the data arrays might not be of the same shape as viewed from the external world.
-    - label_shapes: an array ref of [name, shape]. This might be [] if the module does
-    not need labels (e.g. it does not contains a loss function at the top), or a module
-    is not binded for training.
-    - output_shapes: an array ref of [name, shape] for outputs of the module.
+    - input/output information
+        - data_shapes: am array ref of [name, shape]. In theory, since the memory is allocated,
+        we could directly provide the data arrays. But in the case of data parallelization,
+        the data arrays might not be of the same shape as viewed from the external world.
+        - label_shapes: an array ref of [name, shape]. This might be [] if the module does
+        not need labels (e.g. it does not contains a loss function at the top), or a module
+        is not binded for training.
+        - output_shapes: an array ref of [name, shape] for outputs of the module.
 
-- parameters (for modules with parameters)
-    - get_params(): return an array ($arg_params, $aux_params). Each of those
-    is a hash ref of name to NDArray mapping. Those NDArrays always on
-    CPU. The actual parameters used for computing might be on other devices (GPUs),
-    this function will retrieve (a copy of) the latest parameters. Therefore, modifying
-    - get_params($arg_params, $aux_params): assign parameters to the devices
-    doing the computation.
-    - init_params(...): a more flexible interface to assign or initialize the parameters.
+    - parameters (for modules with parameters)
+        - get_params(): return an array ($arg_params, $aux_params). Each of those
+        is a hash ref of name to NDArray mapping. Those NDArrays always on
+        CPU. The actual parameters used for computing might be on other devices (GPUs),
+        this function will retrieve (a copy of) the latest parameters. Therefore, modifying
+        - get_params($arg_params, $aux_params): assign parameters to the devices
+        doing the computation.
+        - init_params(...): a more flexible interface to assign or initialize the parameters.
 
-- setup
-    - bind(): prepare environment for computation.
-    - init_optimizer(): install optimizer for parameter updating.
+    - setup
+        - bind(): prepare environment for computation.
+        - init_optimizer(): install optimizer for parameter updating.
 
-- computation
-    - forward(data_batch): forward operation.
-    - backward(out_grads=): backward operation.
-    - update(): update parameters according to installed optimizer.
-    - get_outputs(): get outputs of the previous forward operation.
-    - get_input_grads(): get the gradients with respect to the inputs computed
-    in the previous backward operation.
-    - update_metric(metric, labels): update performance metric for the previous forward
-    computed results.
+    - computation
+        - forward(data_batch): forward operation.
+        - backward(out_grads=): backward operation.
+        - update(): update parameters according to installed optimizer.
+        - get_outputs(): get outputs of the previous forward operation.
+        - get_input_grads(): get the gradients with respect to the inputs computed
+        in the previous backward operation.
+        - update_metric(metric, labels): update performance metric for the previous forward
+        computed results.
 
-- other properties (mostly for backward compatability)
-    - symbol: the underlying symbolic graph for this module (if any)
-    This property is not necessarily constant. For example, for AI::MXNet::Module::Bucketing,
-    this property is simply the *current* symbol being used. For other modules,
-    this value might not be well defined.
+    - other properties (mostly for backward compatability)
+        - symbol: the underlying symbolic graph for this module (if any)
+        This property is not necessarily constant. For example, for AI::MXNet::Module::Bucketing,
+        this property is simply the *current* symbol being used. For other modules,
+        this value might not be well defined.
 
-When those intermediate-level API are implemented properly, the following
-high-level API will be automatically available for a module:
+    When those intermediate-level API are implemented properly, the following
+    high-level API will be automatically available for a module:
 
-    - fit: train the module parameters on a data set
-    - predict: run prediction on a data set and collect outputs
-    - score: run prediction on a data set and evaluate performance
+        - fit: train the module parameters on a data set
+        - predict: run prediction on a data set and collect outputs
+        - score: run prediction on a data set and evaluate performance
 =cut
 
 has 'logger'            => (is => 'rw', default => sub { AI::MXNet::Logging->get_logger });
@@ -200,7 +200,7 @@ has [
 
 =head2 forward_backward
 
-A convenient function that calls both forward and backward.
+    A convenient function that calls both forward and backward.
 =cut
 
 method forward_backward(AI::MXNet::DataBatch $data_batch)
@@ -211,24 +211,24 @@ method forward_backward(AI::MXNet::DataBatch $data_batch)
 
 =head2 score
 
-Run prediction on eval_data and evaluate the performance according to
-eval_metric.
+    Run prediction on eval_data and evaluate the performance according to
+    eval_metric.
 
-Parameters
-----------
-$eval_data   : AI::MXNet::DataIter
-$eval_metric : AI::MXNet::EvalMetric
-:$num_batch= : Maybe[Int]
-    Number of batches to run. Default is undef, indicating run until the AI::MXNet::DataIter
-    finishes.
-:$batch_end_callback= : Maybe[Callback]
-    Could also be a array ref of functions.
-:$reset=1 : Bool
-    Default 1, indicating whether we should reset $eval_data before starting
-    evaluating.
-$epoch=0 : Int
-    Default is 0. For compatibility, this will be passed to callbacks (if any). During
-    training, this will correspond to the training epoch number.
+    Parameters
+    ----------
+    $eval_data   : AI::MXNet::DataIter
+    $eval_metric : AI::MXNet::EvalMetric
+    :$num_batch= : Maybe[Int]
+        Number of batches to run. Default is undef, indicating run until the AI::MXNet::DataIter
+        finishes.
+    :$batch_end_callback= : Maybe[Callback]
+        Could also be a array ref of functions.
+    :$reset=1 : Bool
+        Default 1, indicating whether we should reset $eval_data before starting
+        evaluating.
+    $epoch=0 : Int
+        Default is 0. For compatibility, this will be passed to callbacks (if any). During
+        training, this will correspond to the training epoch number.
 =cut
 
 method score(
@@ -289,16 +289,16 @@ method score(
 
 =head2  iter_predict
 
-Iterate over predictions.
+    Iterate over predictions.
 
-Parameters
-----------
-$eval_data : AI::MXNet::DataIter
-:$num_batch= : Maybe[Int]
-    Default is undef, indicating running all the batches in the data iterator.
-:$reset=1 : bool
-    Default is 1, indicating whether we should reset the data iter before start
-    doing prediction.
+    Parameters
+    ----------
+    $eval_data : AI::MXNet::DataIter
+    :$num_batch= : Maybe[Int]
+        Default is undef, indicating running all the batches in the data iterator.
+    :$reset=1 : bool
+        Default is 1, indicating whether we should reset the data iter before start
+        doing prediction.
 =cut
 
 method iter_predict(AI::MXNet::DataIter $eval_data, Maybe[Int] :$num_batch=, Bool :$reset=1)
@@ -326,35 +326,35 @@ method iter_predict(AI::MXNet::DataIter $eval_data, Maybe[Int] :$num_batch=, Boo
 
 =head2 predict
 
-Run prediction and collect the outputs.
+    Run prediction and collect the outputs.
 
-Parameters
-----------
-$eval_data  : AI::MXNet::DataIter
-:$num_batch= : Maybe[Int]
-    Default is undef, indicating running all the batches in the data iterator.
-:$merge_batches=1 : Bool
-    Default is 1.
-:$reset=1 : Bool
-    Default is 1, indicating whether we should reset the data iter before start
-    doing prediction.
-:$always_output_list=0 : Bool
-Default is 0, see the doc for return values.
+    Parameters
+    ----------
+    $eval_data  : AI::MXNet::DataIter
+    :$num_batch= : Maybe[Int]
+        Default is undef, indicating running all the batches in the data iterator.
+    :$merge_batches=1 : Bool
+        Default is 1.
+    :$reset=1 : Bool
+        Default is 1, indicating whether we should reset the data iter before start
+        doing prediction.
+    :$always_output_list=0 : Bool
+    Default is 0, see the doc for return values.
 
-Returns
--------
-When $merge_batches is 1 (by default), the return value will be a array ref
-[$out1, $out2, $out3].  Where each element is concatenation of the outputs for
-all the mini-batches. If $always_output_list` also is 0 (by default),
-then in the case of a single output, $out1 is returned in stead of [$out1].
+    Returns
+    -------
+    When $merge_batches is 1 (by default), the return value will be an array ref
+    [$out1, $out2, $out3] where each element is concatenation of the outputs for
+    all the mini-batches. If $always_output_list` also is 0 (by default),
+    then in the case of a single output, $out1 is returned in stead of [$out1].
 
-When $merge_batches is 0, the return value will be a nested array ref like
-[[$out1_batch1, $out2_batch1], [$out1_batch2], ...]. This mode is useful because
-in some cases (e.g. bucketing), the module does not necessarily produce the same
-number of outputs.
+    When $merge_batches is 0, the return value will be a nested array ref like
+    [[$out1_batch1, $out2_batch1], [$out1_batch2], ...]. This mode is useful because
+    in some cases (e.g. bucketing), the module does not necessarily produce the same
+    number of outputs.
 
-The objects in the results are AI::MXNet::NDArray`s. If you need to work with pdl array,
-just call ->aspdl() on each of the AI::MXNet::NDArray.
+    The objects in the results are AI::MXNet::NDArray`s. If you need to work with pdl array,
+    just call ->aspdl() on each AI::MXNet::NDArray.
 =cut
 
 method predict(
@@ -404,60 +404,60 @@ method predict(
 
 =head2 fit
 
-Train the module parameters.
+    Train the module parameters.
 
-Parameters
-----------
-$train_data : AI::MXNet::DataIter
-:$eval_data= : Maybe[AI::MXNet::DataIter]
-    If not undef, it will be used as a validation set to evaluate the performance
-    after each epoch.
-:$eval_metric='acc' : str or AI::MXNet::EvalMetric subclass object.
-    Default is 'accuracy'. The performance measure used to display during training.
-    Other possible predefined metrics are:
-    'ce' (CrossEntropy), 'f1', 'mae', 'mse', 'rmse', 'top_k_accuracy'
-:$epoch_end_callback= : Maybe[Callback] function or array ref of functions.
-    Each callback will be called with the current $epoch, $symbol, $arg_params
-    and $aux_params.
-:$batch_end_callback= : Maybe[Callback] function or array ref of functions.
-    Each callback will be called with a AI::MXNet::BatchEndParam.
-:$kvstore='local' : str or AI::MXNet::KVStore
-    Default is 'local'.
-:$optimizer : str or AI::MXNet::Optimizer
-    Default is 'sgd'
-:$optimizer_params : hash ref
-    Default { learning_rate => 0.01 }. 
-    The parameters for the optimizer constructor.
-:$eval_end_callback= : Maybe[Callback] function or array ref of functions
-    These will be called at the end of each full evaluation, with the metrics over
-    the entire evaluation set.
-:$eval_batch_end_callback : Maybe[Callback] function or array ref of functions
-    These will be called at the end of each minibatch during evaluation
-:$initializer= : Initializer
-    Will be called to initialize the module parameters if not already initialized.
-:$arg_params= : hash ref
-    Default undef, if not undef, must be an existing parameters from a trained
-    model or loaded from a checkpoint (previously saved model). In this case,
-    the value here will be used to initialize the module parameters, unless they
-    are already initialized by the user via a call to init_params or fit.
-    $arg_params` have higher priority than the $initializer.
-:$aux_params= : hash ref
-    Default is undef. This is similar to the $arg_params, except for auxiliary states.
-:$allow_missing=0 : Bool
-    Default is 0. Indicates whether we allow missing parameters when $arg_params
-    and $aux_params are not undefined. If this is 1, then the missing parameters
-    will be initialized via the $initializer.
-:$force_rebind=0 : Bool
-    Default is 0. Whether to force rebinding the executors if already binded.
-:$force_init=0 : Bool
-    Default is 0. Indicates whether we should force initialization even if the
-    parameters are already initialized.
-:$begin_epoch=0 : Int
-    Default is 0. Indicates the starting epoch. Usually, if we are resuming from a
-    checkpoint saved at a previous training phase at epoch N, then we should specify
-    this value as N+1.
-:$num_epoch : Int
-    Number of epochs for the training.
+    Parameters
+    ----------
+    $train_data : AI::MXNet::DataIter
+    :$eval_data= : Maybe[AI::MXNet::DataIter]
+        If not undef, it will be used as a validation set to evaluate the performance
+        after each epoch.
+    :$eval_metric='acc' : str or AI::MXNet::EvalMetric subclass object.
+        Default is 'accuracy'. The performance measure used to display during training.
+        Other possible predefined metrics are:
+        'ce' (CrossEntropy), 'f1', 'mae', 'mse', 'rmse', 'top_k_accuracy'
+    :$epoch_end_callback= : Maybe[Callback] function or array ref of functions.
+        Each callback will be called with the current $epoch, $symbol, $arg_params
+        and $aux_params.
+    :$batch_end_callback= : Maybe[Callback] function or array ref of functions.
+        Each callback will be called with a AI::MXNet::BatchEndParam.
+    :$kvstore='local' : str or AI::MXNet::KVStore
+        Default is 'local'.
+    :$optimizer : str or AI::MXNet::Optimizer
+        Default is 'sgd'
+    :$optimizer_params : hash ref
+        Default { learning_rate => 0.01 }.
+        The parameters for the optimizer constructor.
+    :$eval_end_callback= : Maybe[Callback] function or array ref of functions
+        These will be called at the end of each full evaluation, with the metrics over
+        the entire evaluation set.
+    :$eval_batch_end_callback : Maybe[Callback] function or array ref of functions
+        These will be called at the end of each minibatch during evaluation
+    :$initializer= : Initializer
+        Will be called to initialize the module parameters if not already initialized.
+    :$arg_params= : hash ref
+        Default undef, if not undef, must be an existing parameters from a trained
+        model or loaded from a checkpoint (previously saved model). In this case,
+        the value here will be used to initialize the module parameters, unless they
+        are already initialized by the user via a call to init_params or fit.
+        $arg_params have higher priority than the $initializer.
+    :$aux_params= : hash ref
+        Default is undef. This is similar to the $arg_params, except for auxiliary states.
+    :$allow_missing=0 : Bool
+        Default is 0. Indicates whether we allow missing parameters when $arg_params
+        and $aux_params are not undefined. If this is 1, then the missing parameters
+        will be initialized via the $initializer.
+    :$force_rebind=0 : Bool
+        Default is 0. Whether to force rebinding the executors if already binded.
+    :$force_init=0 : Bool
+        Default is 0. Indicates whether we should force initialization even if the
+        parameters are already initialized.
+    :$begin_epoch=0 : Int
+        Default is 0. Indicates the starting epoch. Usually, if we are resuming from a
+        checkpoint saved at a previous training phase at epoch N, then we should specify
+        this value as N+1.
+    :$num_epoch : Int
+        Number of epochs for the training.
 =cut
 
 
@@ -603,19 +603,19 @@ method fit(
 
 =head2 get_symbol
 
-The symbol used by this module.
+    The symbol used by this module.
 =cut
 method get_symbol() { $self->symbol }
 
 =head2 data_names
 
-An array ref of names for data required by this module.
+    An array ref of names for data required by this module.
 =cut
 method data_names() { confess("NotImplemented") }
 
 =head2 output_names
 
-An array ref of names for the outputs of this module.
+    An array ref of names for the outputs of this module.
 =cut
 method output_names() { confess("NotImplemented") }
 
@@ -625,22 +625,22 @@ method output_names() { confess("NotImplemented") }
 
 =head2 data_shapes
 
-An array ref of AI::MXNet::DataDesc objects specifying the data inputs to this module.
+    An array ref of AI::MXNet::DataDesc objects specifying the data inputs to this module.
 =cut
 method data_shapes() { confess("NotImplemented") }
 
 =head2 label_shapes
 
-A array ref of AI::MXNet::DataDesc objects specifying the label inputs to this module.
-If this module does not accept labels -- either it is a module without loss
-function, or it is not binded for training, then this should return an empty
-array ref.
+    A array ref of AI::MXNet::DataDesc objects specifying the label inputs to this module.
+    If this module does not accept labels -- either it is a module without a loss
+    function, or it is not binded for training, then this should return an empty
+    array ref.
 =cut
 method label_shapes() { confess("NotImplemented") }
 
 =head2 output_shapes
 
-An array ref of (name, shape) pairs specifying the outputs of this module.
+    An array ref of (name, shape) array refs specifying the outputs of this module.
 =cut
 method output_shapes() { confess("NotImplemented") }
 
@@ -650,33 +650,33 @@ method output_shapes() { confess("NotImplemented") }
 
 =head2 get_params
 
-The parameters, these are potentially a copies of the the actual parameters used
-to do computation on the device.
+    The parameters, these are potentially a copies of the the actual parameters used
+    to do computation on the device.
 
-Returns
--------
-($arg_params, $aux_params), a pair of hash refs of name to value mapping.
+    Returns
+    -------
+    ($arg_params, $aux_params), a pair of hash refs of name to value mapping.
 =cut
 
 method get_params() { confess("NotImplemented") }
 
 =head2 init_params
 
-Initialize the parameters and auxiliary states.
+    Initialize the parameters and auxiliary states.
 
-Parameters
-----------
-:$initializer : Maybe[AI::MXNet::Initializer]
-    Called to initialize parameters if needed.
-:$arg_params= : Maybe[HashRef[AI::MXNet::NDArray]]
-    If not undef, should be a hash ref of existing arg_params.
-:$aux_params : Maybe[HashRef[AI::MXNet::NDArray]]
-    If not undef, should be a hash ref of existing aux_params.
-:$allow_missing=0 : Bool
-    If true, params could contain missing values, and the initializer will be
-    called to fill those missing params.
-$force_init=0 : Bool
-    If true, will force re-initialize even if already initialized.
+    Parameters
+    ----------
+    :$initializer : Maybe[AI::MXNet::Initializer]
+        Called to initialize parameters if needed.
+    :$arg_params= : Maybe[HashRef[AI::MXNet::NDArray]]
+        If not undef, should be a hash ref of existing arg_params.
+    :$aux_params : Maybe[HashRef[AI::MXNet::NDArray]]
+        If not undef, should be a hash ref of existing aux_params.
+    :$allow_missing=0 : Bool
+        If true, params could contain missing values, and the initializer will be
+        called to fill those missing params.
+    :$force_init=0 : Bool
+        If true, will force re-initialize even if already initialized.
 =cut
 
 method init_params(
@@ -692,19 +692,19 @@ method init_params(
 
 =head2 set_params
 
-Assign parameter and aux state values.
+    Assign parameter and aux state values.
 
-Parameters
-----------
-$arg_params= : Maybe[HashRef[AI::MXNet::NDArray]]
-    Hash ref of name to value (NDArray) mapping.
-$aux_params= : Maybe[HashRef[AI::MXNet::NDArray]]
-    Dictionary of name to value (`NDArray`) mapping.
-:$allow_missing=0 : Bool
-    If true, params could contain missing values, and the initializer will be
-    called to fill those missing params.
-:$force_init=0 : Bool
-    If true, will force re-initialize even if already initialized.
+    Parameters
+    ----------
+    $arg_params= : Maybe[HashRef[AI::MXNet::NDArray]]
+        Hash ref of name to value (NDArray) mapping.
+    $aux_params= : Maybe[HashRef[AI::MXNet::NDArray]]
+        Hash Ref of name to value (`NDArray`) mapping.
+    :$allow_missing=0 : Bool
+        If true, params could contain missing values, and the initializer will be
+        called to fill those missing params.
+    :$force_init=0 : Bool
+        If true, will force re-initialize even if already initialized.
 =cut
 
 method set_params(
@@ -725,14 +725,14 @@ method set_params(
 
 =head2 save_params
 
-Save model parameters to file.
+    Save model parameters to file.
 
-Parameters
-----------
-$fname : str
-    Path to output param file.
-$arg_params= : Maybe[HashRef[AI::MXNet::NDArray]]
-$aux_params= : Maybe[HashRef[AI::MXNet::NDArray]]
+    Parameters
+    ----------
+    $fname : str
+        Path to output param file.
+    $arg_params= : Maybe[HashRef[AI::MXNet::NDArray]]
+    $aux_params= : Maybe[HashRef[AI::MXNet::NDArray]]
 =cut
 
 method save_params(
@@ -757,12 +757,12 @@ method save_params(
 
 =head2 load_params
 
-Load model parameters from file.
+    Load model parameters from file.
 
-Parameters
-----------
-$fname : str
-    Path to input param file.
+    Parameters
+    ----------
+    $fname : str
+        Path to input param file.
 =cut
 
 method load_params(Str $fname)
@@ -791,21 +791,21 @@ method load_params(Str $fname)
 
 =head2 get_states
 
-The states from all devices
+    The states from all devices
 
-Parameters
-----------
-$merge_multi_context=1 : Bool
-Default is true (1). In the case when data-parallelism is used, the states
-will be collected from multiple devices. A true value indicate that we
-should merge the collected results so that they look like from a single
-executor.
+    Parameters
+    ----------
+    $merge_multi_context=1 : Bool
+        Default is true (1). In the case when data-parallelism is used, the states
+        will be collected from multiple devices. A true value indicate that we
+        should merge the collected results so that they look like from a single
+        executor.
 
-Returns
--------
-If merge_multi_context is 1, it is like [$out1, $out2]. Otherwise, it
-is like [[$out1_dev1, $out1_dev2], [$out2_dev1, $out2_dev2]]. All the output
-elements are AI::MXNet::NDArray.
+    Returns
+    -------
+    If $merge_multi_context is 1, it is like [$out1, $out2]. Otherwise, it
+    is like [[$out1_dev1, $out1_dev2], [$out2_dev1, $out2_dev2]]. All the output
+    elements are AI::MXNet::NDArray.
 =cut
 
 method get_states(Bool $merge_multi_context=1)
@@ -817,15 +817,15 @@ method get_states(Bool $merge_multi_context=1)
 
 =head2 set_states
 
-Set value for states. Only one of states & value can be specified.
+    Set value for states. You can specify either $states or $value, not both.
 
-Parameters
-----------
-states : array ref of array refs of NDArrays
-source states arrays formatted like [[$state1_dev1, $state1_dev2],
+    Parameters
+    ----------
+    $states= : Maybe[ArrayRef[ArrayRef[AI::MXNet::NDArray]]]
+        source states arrays formatted like [[$state1_dev1, $state1_dev2],
             [$state2_dev1, $state2_dev2]].
-$value : Num
-    a single scalar value for all state arrays.
+    $value= : Maybe[Num]
+        a single scalar value for all state arrays.
 =cut
 
 method set_states(Maybe[ArrayRef[ArrayRef[AI::MXNet::NDArray]]] $states=, Maybe[Num] $value=)
@@ -837,24 +837,24 @@ method set_states(Maybe[ArrayRef[ArrayRef[AI::MXNet::NDArray]]] $states=, Maybe[
 
 =head2 install_monitor
 
-Install monitor on all executors
+    Install monitor on all executors
 
-Parameters
-----------
-$mon : AI::MXNet::Monitor
+    Parameters
+    ----------
+    $mon : AI::MXNet::Monitor
 =cut
 
 method install_monitor(AI::MXNet::Monitor $mon) { confess("NotImplemented") }
 
 =head2 prepare
 
-Prepare the module for processing a data batch.
+    Prepare the module for processing a data batch.
 
-Usually involves switching bucket and reshaping.
+    Usually involves switching a bucket and reshaping.
 
-Parameters
-----------
-$data_batch : AI::MXNet::DataBatch
+    Parameters
+    ----------
+    $data_batch : AI::MXNet::DataBatch
 =cut
 
 method prepare(AI::MXNet::DataBatch $data_batch){}
@@ -865,28 +865,28 @@ method prepare(AI::MXNet::DataBatch $data_batch){}
 
 =head2 forward
 
-Forward computation.
+    Forward computation.
 
-Parameters
-----------
-$data_batch : DataBatch
-    Could be anything with similar API implemented.
-$is_train= : Bool
-    Default is undef, which means is_train takes the value of $self->for_training.
+    Parameters
+    ----------
+    $data_batch : DataBatch
+        Could be anything with similar API implemented.
+    :$is_train= : Bool
+        Default is undef, which means is_train takes the value of $self->for_training.
 =cut
 
-method forward(AI::MXNet::DataBatch $data_batch, Bool $is_train=) { confess("NotImplemented") }
+method forward(AI::MXNet::DataBatch $data_batch, Bool :$is_train=) { confess("NotImplemented") }
 
 =head2 backward
 
-Backward computation.
+    Backward computation.
 
-Parameters
-----------
-$out_grads : Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]], optional
-    Gradient on the outputs to be propagated back.
-    This parameter is only needed when bind is called
-    on outputs that are not a loss function.
+    Parameters
+    ----------
+    $out_grads : Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]], optional
+        Gradient on the outputs to be propagated back.
+        This parameter is only needed when bind is called
+        on outputs that are not a loss function.
 =cut
 
 method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]] $out_grads=)
@@ -896,43 +896,43 @@ method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]] $out_grad
 
 =head2 get_outputs
 
-The outputs of the previous forward computation.
+    The outputs of the previous forward computation.
 
-Parameters
-----------
-$merge_multi_context=1 : Bool
+    Parameters
+    ----------
+    $merge_multi_context=1 : Bool
 =cut
 
 method get_outputs(Bool $merge_multi_context=1) { confess("NotImplemented") }
 
 =head2 get_input_grads
 
-The gradients to the inputs, computed in the previous backward computation.
+    The gradients to the inputs, computed in the previous backward computation.
 
-Parameters
-----------
-$merge_multi_context=1 : Bool
+    Parameters
+    ----------
+    $merge_multi_context=1 : Bool
 =cut
 
 method get_input_grads(Bool $merge_multi_context=1) { confess("NotImplemented") }
 
 =head2 update
 
-Update parameters according to the installed optimizer and the gradients computed
-in the previous forward-backward batch.
+    Update parameters according to the installed optimizer and the gradients computed
+    in the previous forward-backward batch.
 =cut
 
 method update() { confess("NotImplemented") }
 
 =head2 update_metric
 
-Evaluate and accumulate evaluation metric on outputs of the last forward computation.
+    Evaluate and accumulate evaluation metric on outputs of the last forward computation.
 
-Parameters
-----------
-$eval_metric : EvalMetric
-$labels : ArrayRef[AI::MXNet::NDArray]
-    Typically $data_batch->label.
+    Parameters
+    ----------
+    $eval_metric : EvalMetric
+    $labels : ArrayRef[AI::MXNet::NDArray]
+        Typically $data_batch->label.
 =cut
 
 method update_metric(EvalMetric $eval_metric, ArrayRef[AI::MXNet::NDArray] $labels)
@@ -946,32 +946,32 @@ method update_metric(EvalMetric $eval_metric, ArrayRef[AI::MXNet::NDArray] $labe
 
 =head2 bind
 
-Binds the symbols in order to construct the executors. This is necessary
-before the computations can be performed.
+    Binds the symbols in order to construct the executors. This is necessary
+    before the computations can be performed.
 
-Parameters
-----------
-$data_shapes : ArrayRef[AI::MXNet::DataDesc]
-    Typically is $data_iter->provide_data.
-:$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc]]
-    Typically is $data_iter->provide_label.
-:$for_training=1 : Bool
-    Default is 1. Whether the executors should be bind for training.
-:$inputs_need_grad=0 : Bool
-    Default is 0. Whether the gradients to the input data need to be computed.
-    Typically this is not needed. But this might be needed when implementing composition
-    of modules.
-:$force_rebind=0 : Bool
-    Default is 0. This function does nothing if the executors are already
-    binded. But with this as 1, the executors will be forced to rebind.
-:$shared_module= : A subclass of AI::MXNet::Module::Base
-    Default is undef. This is used in bucketing. When not undef, the shared module
-    essentially corresponds to a different bucket -- a module with different symbol
-    but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
-:$grad_req='write' : Str|ArrayRef[Str]|HashRef[Str]
-    Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
-    (defaults to 'write').
-    Can be specified globally (str) or for each argument (array ref, hash ref).
+    Parameters
+    ----------
+    $data_shapes : ArrayRef[AI::MXNet::DataDesc]
+        Typically is $data_iter->provide_data.
+    :$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc]]
+        Typically is $data_iter->provide_label.
+    :$for_training=1 : Bool
+        Default is 1. Whether the executors should be bind for training.
+    :$inputs_need_grad=0 : Bool
+        Default is 0. Whether the gradients to the input data need to be computed.
+        Typically this is not needed. But this might be needed when implementing composition
+        of modules.
+    :$force_rebind=0 : Bool
+        Default is 0. This function does nothing if the executors are already
+        binded. But with this as 1, the executors will be forced to rebind.
+    :$shared_module= : A subclass of AI::MXNet::Module::Base
+        Default is undef. This is used in bucketing. When not undef, the shared module
+        essentially corresponds to a different bucket -- a module with different symbol
+        but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+    :$grad_req='write' : Str|ArrayRef[Str]|HashRef[Str]
+        Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
+        (defaults to 'write').
+        Can be specified globally (str) or for each argument (array ref, hash ref).
 =cut
 
 method bind(
@@ -989,14 +989,14 @@ method bind(
 
 =head2 init_optimizer
 
-Install and initialize optimizers.
+    Install and initialize optimizers.
 
-Parameters
-----------
-:$kvstore='local' : str or KVStore
-:$optimizer='sgd' : str or Optimizer
-:$optimizer_params={ learning_rate => 0.01 } : hash ref
-:$force_init=0 : Bool
+    Parameters
+    ----------
+    :$kvstore='local' : str or KVStore
+    :$optimizer='sgd' : str or Optimizer
+    :$optimizer_params={ learning_rate => 0.01 } : hash ref
+    :$force_init=0 : Bool
 =cut
 
 method init_optimizer(
@@ -1015,11 +1015,11 @@ method init_optimizer(
 
 =head2 symbol
 
-The symbol associated with this module.
+    The symbol associated with this module.
 
-Except for AI::MXNet::Module, for other types of modules (e.g. AI::MXNet::Module::Bucketing), this
-property might not be a constant throughout its life time. Some modules might
-not even be associated with any symbols.
+    Except for AI::MXNet::Module, for other types of modules (e.g. AI::MXNet::Module::Bucketing), this
+    property might not be a constant throughout its life time. Some modules might
+    not even be associated with any symbols.
 =cut
 
 method symbol()
