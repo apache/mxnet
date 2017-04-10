@@ -46,7 +46,7 @@ NNVM_REGISTER_OP(_backward_broadcast_power)
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_maximum)
 .describe(R"code(Returns element-wise maximum of the input arrays with broadcasting.
 
-It compares input arrays and returns the new array having the element-wise maxima.
+This function compares two input arrays and returns a new array having the element-wise maxima.
 
 Example::
 
@@ -58,19 +58,6 @@ Example::
 
    broadcast_maximum(x, y) = [[ 1.,  1.,  1.],
                               [ 1.,  1.,  1.]]
-
-If any array contains elements as `inf` then, array with `inf` is returned with broadcasting as output.
-
-Example::
-
-   x = [[ inf,  inf,  inf]]
-
-   y = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
-
-   broadcast_maximum(x, y) = [[ inf,  inf,  inf],
-                              [ inf,  inf,  inf]]
-
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
@@ -94,7 +81,7 @@ NNVM_REGISTER_OP(_backward_broadcast_maximum)
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_minimum)
 .describe(R"code(Returns element-wise minimum of the input arrays with broadcasting.
 
-It compares input arrays and returns the new array having the element-wise minima.
+This function compares two input arrays and returns a new array having the element-wise minima.
 
 Example::
 
@@ -105,18 +92,6 @@ Example::
         [ 1.]]
 
    broadcast_maximum(x, y) = [[ 0.,  0.,  0.],
-                              [ 1.,  1.,  1.]]
-
-If any array contains elements as `inf` then, other array is returned with broadcasting as output.
-
-Example::
-
-   x = [[ inf,  inf,  inf]]
-
-   y = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
-
-   broadcast_minimum(x, y) = [[ 1.,  1.,  1.],
                               [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
