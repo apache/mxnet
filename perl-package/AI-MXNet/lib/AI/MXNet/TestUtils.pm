@@ -11,9 +11,13 @@ use base qw(Exporter);
                                       GetCifar10 pdl_maximum pdl_minimum mlp2 conv
                                       check_consistency zip assert enumerate);
 use constant default_numerical_threshold => 1e-6;
+=head1 NAME
+
+    AI::MXNet::TestUtils - Convenience subs used in tests.
+
 =head2 same
 
-Test if two pdl arrays are the same
+    Test if two pdl arrays are the same
 
     Parameters
     ----------
@@ -27,6 +31,7 @@ func same(PDL $a, PDL $b)
 }
 
 =head2 reldiff
+
     Calculate the relative difference between two input arrays
 
     Calculated by :math:`\\frac{|a-b|_1}{|a|_1 + |b|_1}`
@@ -51,7 +56,7 @@ func reldiff(PDL $a, PDL $b)
 
 =head2 almost_equal
 
-Test if two pdl arrays are almost equal.
+    Test if two pdl arrays are almost equal.
 =cut
 
 func almost_equal(PDL $a, PDL $b, Maybe[Num] $threshold=)

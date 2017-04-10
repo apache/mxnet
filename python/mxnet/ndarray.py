@@ -231,6 +231,10 @@ fixed-size items.
         """x.__le__(y) <=> x<=y <=> mx.nd.less_equal(x, y) """
         return lesser_equal(self, other)
 
+    def __bool__(self):
+        raise ValueError("The truth value of an NDArray with more than one element is ambiguous.")
+    __nonzero__ = __bool__
+
     def __getstate__(self):
         handle = self.handle
         this = {'handle' : None}

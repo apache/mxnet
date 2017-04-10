@@ -9,7 +9,7 @@ _DEV_MODE = int(os.getenv('DEV', '0'))
 def run_build_mxnet(folder):
     """Run the doxygen make command in the designated folder."""
     try:
-        subprocess.call('cd %s; cp make/readthedocs.mk config.mk' % folder, shell = True)
+        subprocess.call('cd %s; cp make/config.mk config.mk' % folder, shell = True)
         if not _DEV_MODE:       # do an incremental build for dev mode
             subprocess.call('cd %s; rm -rf build' % folder, shell = True)
         retcode = subprocess.call("cd %s; make -j$(nproc)" % folder, shell = True)
