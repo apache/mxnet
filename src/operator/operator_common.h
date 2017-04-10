@@ -77,6 +77,22 @@ inline bool type_is_none(const int& x) {
   return x == -1;
 }
 
+/*! \brief get string representation of shape */
+inline std::string shape_string(const TShape& x) {
+  std::ostringstream os;
+  os << x;
+  return os.str();
+}
+
+/*! \brief get string representation of shape */
+inline std::string type_string(const int& x) {
+  std::string res;
+  MSHADOW_TYPE_SWITCH(x, DType, {
+    res = mshadow::DataType<DType>::kName;
+  });
+  return res;
+}
+
 /*!
  * \brief Assign x to y. Checks for compatiblity when y is not empty.
  *  Allow missing dim in both x and y (as 0).
@@ -127,9 +143,9 @@ inline bool type_assign(int *y, const int& x) {
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                       \
   {                                                                         \
-    if (!shape_assign(&(shape_array)[index], TShape(shape))) {             \
+    if (!shape_assign(&(shape_array)[index], TShape(shape))) {              \
       std::ostringstream os;                                                \
-      os << "Shape inconsistent, Provided=" << (shape_array)[index]<< ','  \
+      os << "Shape inconsistent, Provided=" << (shape_array)[index] << ','  \
          << " inferred shape=" << shape;                                    \
       throw ::mxnet::op::InferShapeError(os.str(), index);                  \
     }                                                                       \
@@ -144,10 +160,11 @@ inline bool type_assign(int *y, const int& x) {
  */
 #define TYPE_ASSIGN_CHECK(type_array, index, type)                          \
   {                                                                         \
-    if (!type_assign(&(type_array)[index], type)) {                        \
+    if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
-      os << "Type inconsistent, Provided=" << (type_array)[index] << ','   \
-         << " inferred type=" << type;                                      \
+      os << "Type inconsistent, Provided="                                  \
+         << type_string((type_array)[index]) << ','                         \
+         << " inferred type=" << type_string(type);                         \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
