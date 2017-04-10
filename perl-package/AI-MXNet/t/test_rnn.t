@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use AI::MXNet qw(mx);
 use PDL;
-use Test::More tests => 36;
+use Test::More tests => 37;
 
 sub test_rnn
 {
@@ -109,6 +109,20 @@ sub test_unfuse
     is_deeply($outs, [[10, 200], [10, 200], [10, 200]]);
 }
 
+sub test_zoneout
+{
+    my $cell = mx->rnn->ZoneoutCell(
+        mx->rnn->RNNCell(100, prefix=>'rnn_'),
+        zoneout_outputs => 0.5,
+        zoneout_states  => 0.5
+    );
+    my $inputs = [map { mx->sym->Variable("rnn_t${_}_data") } 0..2];
+    my ($outputs) = $cell->unroll(3, inputs => $inputs);
+    $outputs = mx->sym->Group($outputs);
+    my (undef, $outs) = $outputs->infer_shape(rnn_t0_data=>[10, 50], rnn_t1_data=>[10, 50], rnn_t2_data=>[10, 50]);
+    is_deeply($outs, [[10, 100], [10, 100], [10, 100]]);
+}
+
 test_rnn();
 test_lstm();
 test_lstm_forget_bias();
@@ -116,3 +130,4 @@ test_gru();
 test_stack();
 test_bidirectional();
 test_unfuse();
+test_zoneout();
