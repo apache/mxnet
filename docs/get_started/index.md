@@ -11,7 +11,7 @@ imperative operations on the fly.  A graph optimization layer on top of that
 makes symbolic execution fast and memory efficient. The MXNet library is
 portable and lightweight, and it scales to multiple GPUs and multiple machines.
 
-Please choice the programming language for the rest of this document.
+Please choose the programming language of your choice for the rest of this document.
 
 <div class="btn-group opt-group" role="group">
 <button type="button" class="btn btn-default opt active">Python</button>
