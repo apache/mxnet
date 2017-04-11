@@ -123,14 +123,14 @@ def check_with_device(device):
         xgrad = mx.nd.zeros(shape, ctx=device)
         yexec = Y.bind(device, {'X' : x}, {'X': xgrad})
         mx.random.seed(128)
-        yexec.forward()
+        yexec.forward(is_train=True)
         yexec.backward(yexec.outputs[0])
         un1 = (yexec.outputs[0] - x).copyto(device)
         assert same(xgrad.asnumpy(), un1.asnumpy())
         mx.random.seed(128)
         yexec.forward()
         un2 = (yexec.outputs[0] - x).copyto(device)
-        assert same(un1, un2), \
+        assert same(un1.asnumpy(), un2.asnumpy()), \
                 "symbolic test: `%s` should give the same result with the same seed" % name
 
         ret1 = un1.asnumpy()

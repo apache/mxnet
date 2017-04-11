@@ -209,7 +209,7 @@ void EvalRandom<DEVICE, GammaDistribution>(
     const Resource &resource,
     TBlob *ret,
     RunContext ctx) {
-  typedef DEVICE xpu;
+  typedef cpu xpu;  // No support for gpu for this distribution.
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   switch (ret->type_flag_) {
   case mshadow::kFloat32:

@@ -224,7 +224,7 @@ void SampleUniform_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
     prnd->SampleUniform(&out, param.low, param.high);
@@ -297,7 +297,7 @@ void SamplePoisson_(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const SamplePoissonParam& param = nnvm::get<SamplePoissonParam>(attrs.parsed);
   CHECK_GE(param.lambda, 0) << "lambda parameter in poisson distribution has to be non-negative";
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
     prnd->SamplePoisson(&out, param.lambda);  // NOLINT(*)
@@ -316,7 +316,7 @@ void SampleNegBinomial_(const nnvm::NodeAttrs& attrs,
   const SampleNegBinomialParam& param = nnvm::get<SampleNegBinomialParam>(attrs.parsed);
   CHECK_GE(param.k, 0) << "k parameter in negative binomial distribution has to be non-negative";
   CHECK_GE(param.p, 0) << "p parameter in negative binomial distribution has to be non-negative";
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
     prnd->SampleNegativeBinomial(&out, param.k, param.p);  // NOLINT(*)
@@ -337,7 +337,7 @@ void SampleGenNegBinomial_(const nnvm::NodeAttrs& attrs,
     << "mu parameter in generalized negative binomial distribution has to be non-negative";
   CHECK_GE(param.alpha, 0)
     << "alpha parameter in generalized negative binomial distribution has to be non-negative";
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
     prnd->SampleGeneralizedNegativeBinomial(&out, param.mu, param.alpha);  // NOLINT(*)

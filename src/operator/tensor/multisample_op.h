@@ -145,7 +145,7 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
   const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
 
   MSHADOW_TYPE_SWITCH(in0.type_flag_, IType, {
-    MSHADOW_TYPE_SWITCH(out.type_flag_, OType, {
+    MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, OType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         // Get the output as a 2D-tensor with dimensions NxM
         Tensor<xpu, 2, OType> samples = out.get_with_shape<xpu, 2, OType>(Shape2(N, M), s);
