@@ -20,21 +20,6 @@ use AI::MXNet::Function::Parameters;
 use List::Util qw(max);
 use Mouse;
 
-=head2 _create_kvstore
-
-    Create kvstore
-    This function select and create a proper kvstore if given the kvstore type
-
-    Parameters
-    ----------
-    kvstore : KVStore or str
-        The kvstore
-    num_device : int
-        The number of devices
-    arg_params : dict of str to NDArray
-        Model parameter, dict of name to NDArray of net's weights.
-=cut
-
 func _create_kvstore(
     Maybe[Str|AI::MXNet::KVStore] $kvstore,
     Int                           $num_device,
@@ -76,17 +61,12 @@ func _create_kvstore(
     return ($kv, $update_on_kvstore);
 }
 
-=head2 _initialize_kvstore
-
-    Initialize kvstore
-=cut
-
 func _initialize_kvstore(
     AI::MXNet::KVStore           :$kvstore,
-    ArrayRef[AI::MXNet::NDArray] :$param_arrays,
     HashRef[AI::MXNet::NDArray]  :$arg_params,
     ArrayRef[Str]                :$param_names,
-    Bool                         :$update_on_kvstore
+    Bool                         :$update_on_kvstore,
+    ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] :$param_arrays
 )
 {
     enumerate(sub{
@@ -94,19 +74,14 @@ func _initialize_kvstore(
         $kvstore->init($idx, $arg_params->{ $param_names->[$idx] });
         if($update_on_kvstore)
         {
-            $kvstore->pull($idx, $param_on_devs, priority => -$idx);
+            $kvstore->pull($idx, out => $param_on_devs, priority => -$idx);
         }
     }, $param_arrays);
 }
 
-=head2 _update_params_on_kvstore
-
-    Perform update of param_arrays from grad_arrays on kvstore.
-=cut
-
-method _update_params_on_kvstore(
-    ArrayRef[AI::MXNet::NDArray] $param_arrays,
-    ArrayRef[AI::MXNet::NDArray] $grad_arrays,
+func _update_params_on_kvstore(
+    ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $param_arrays,
+    ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $grad_arrays,
     AI::MXNet::KVStore           $kvstore
 )
 {
@@ -119,14 +94,10 @@ method _update_params_on_kvstore(
         # push gradient, priority is negative index
         $kvstore->push($index, $grad_list, priority => -$index);
         # pull back the weights
-        $kvstore->pull($index, $arg_list, priority  => -$index);
+        $kvstore->pull($index, out => $arg_list, priority  => -$index);
     }, $param_arrays, $grad_arrays);
 }
 
-=head _update_params
-
-    Perform update of param_arrays from grad_arrays not on kvstore.
-=cut
 func _update_params(
     ArrayRef[ArrayRef[AI::MXNet::NDArray]] $param_arrays,
     ArrayRef[ArrayRef[AI::MXNet::NDArray]] $grad_arrays,
@@ -146,7 +117,7 @@ func _update_params(
             # push gradient, priority is negative index
             $kvstore->push($index, $grad_list, priority => -$index);
             # pull back the sum gradients, to the same locations.
-            $kvstore->pull($index, $grad_list, priority => -$index);
+            $kvstore->pull($index, out => $grad_list, priority => -$index);
         }
         enumerate(sub {
             my ($k, $w, $g) = @_;
@@ -158,33 +129,7 @@ func _update_params(
     }, $param_arrays, $grad_arrays);
 }
 
-=head2 load_checkpoint
-
-    Load model checkpoint from file.
-
-    Parameters
-    ----------
-    prefix : str
-        Prefix of model name.
-    epoch : int
-        Epoch number of model we would like to load.
-
-    Returns
-    -------
-    symbol : Symbol
-        The symbol configuration of computation network.
-    arg_params : dict of str to NDArray
-        Model parameter, dict of name to NDArray of net's weights.
-    aux_params : dict of str to NDArray
-        Model parameter, dict of name to NDArray of net's auxiliary states.
-
-    Notes
-    -----
-    - symbol will be loaded from ``prefix-symbol.json``.
-    - parameters will be loaded from ``prefix-epoch.params``.
-=cut
-
-func load_checkpoint(Str $prefix, Int $epoch)
+method load_checkpoint(Str $prefix, Int $epoch)
 {
     my $symbol = AI::MXNet::Symbol->load("$prefix-symbol.json");
     my %save_dict = %{ AI::MXNet::NDArray->load(sprintf('%s-%04d.params', $prefix, $epoch)) };
@@ -205,30 +150,10 @@ func load_checkpoint(Str $prefix, Int $epoch)
     return ($symbol, \%arg_params, \%aux_params);
 }
 
-=head2 new
+=head1 NAME
 
-    Module is a basic module that wrap a `Symbol`. It is functionally the same
-    as the `FeedForward` model, except under the module API.
-
-    Parameters
-    ----------
-    symbol : Symbol
-    data_names : list of str
-        Default is `('data')` for a typical model used in image classification.
-    label_names : list of str
-        Default is `('softmax_label')` for a typical model used in image
-        classification.
-    logger : Logger
-        Default is `logging`.
-    context : Context or list of Context
-        Default is `cpu()`.
-    work_load_list : list of number
-        Default `None`, indicating uniform workload.
-    fixed_param_names: list of str
-        Default `None`, indicating no network parameters are fixed.
-    state_names : list of str
-        states are similar to data and label, but not provided by data iterator.
-        Instead they are initialized to 0 and can be set by set_states()
+    AI::MXNet::Module - FeedForward interface of MXNet.
+    See AI::MXNet::Module::Base for the details.
 =cut
 
 extends 'AI::MXNet::Module::Base';
@@ -236,9 +161,9 @@ extends 'AI::MXNet::Module::Base';
 has '_symbol'           => (is => 'ro', init_arg => 'symbol', isa => 'AI::MXNet::Symbol', required => 1);
 has '_data_names'       => (is => 'ro', init_arg => 'data_names', isa => 'ArrayRef[Str]');
 has '_label_names'      => (is => 'ro', init_arg => 'label_names', isa => 'Maybe[ArrayRef[Str]]');
-has 'work_load_list'    => (is => 'rw', isa => 'ArrayRef[Int]');
-has 'fixed_param_names' => (is => 'rw', isa => 'ArrayRef[Str]');
-has 'state_names'       => (is => 'rw', isa => 'ArrayRef[Str]');
+has 'work_load_list'    => (is => 'rw', isa => 'Maybe[ArrayRef[Int]]');
+has 'fixed_param_names' => (is => 'rw', isa => 'Maybe[ArrayRef[Str]]');
+has 'state_names'       => (is => 'rw', isa => 'Maybe[ArrayRef[Str]]');
 has 'logger'            => (is => 'ro', default => sub { AI::MXNet::Logging->get_logger });
 has '_p'                => (is => 'rw', init_arg => undef);
 has 'context'           => (
@@ -250,7 +175,11 @@ has 'context'           => (
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;
-    return $class->$orig(symbol => $_[0]) if @_ == 1;
+    if(@_%2)
+    {
+        my $symbol = shift;
+        return $class->$orig(symbol => $symbol, @_);
+    }
     return $class->$orig(@_);
 };
 
@@ -291,10 +220,10 @@ sub BUILD
     $self->_check_input_names($self->_symbol, $self->_p->_fixed_param_names, "fixed_param", 1);
 }
 
-sub Module { my $class = shift; return $class->new(@_) }
-sub BucketingModule { shift; return AI::MXNet::Module::Bucketing->new(@_) }
+method Module(@args) { return @args ?  __PACKAGE__->new(@args) : __PACKAGE__ }
+method BucketingModule(@args) { return AI::MXNet::Module::Bucketing->new(@args) }
 
-=head load
+=head2 load
 
         Create a model from previously saved checkpoint.
 
@@ -310,19 +239,19 @@ sub BucketingModule { shift; return AI::MXNet::Module::Bucketing->new(@_) }
         load_optimizer_states : bool
             whether to load optimizer states. Checkpoint needs
             to have been made with save_optimizer_states=True.
-        data_names : list of str
-            Default is `('data')` for a typical model used in image classification.
-        label_names : list of str
-            Default is `('softmax_label')` for a typical model used in image
+        data_names : array ref of str
+            Default is ['data'] for a typical model used in image classification.
+        label_names : array ref of str
+            Default is ['softmax_label'] for a typical model used in image
             classification.
         logger : Logger
-            Default is `logging`.
+            Default is AI::MXNet::Logging.
         context : Context or list of Context
-            Default is `cpu()`.
-        work_load_list : list of number
-            Default `None`, indicating uniform workload.
-        fixed_param_names: list of str
-            Default `None`, indicating no network parameters are fixed.
+            Default is cpu(0).
+        work_load_list : array ref of number
+            Default is undef, indicating an uniform workload.
+        fixed_param_names: array ref of str
+            Default is undef, indicating no network parameters are fixed.
 =cut
 
 method load(
@@ -332,33 +261,31 @@ method load(
     %kwargs
 )
 {
-    my ($sym, $args, $auxs) = load_checkpoint($prefix, $epoch);
+    my ($sym, $args, $auxs) = __PACKAGE__->load_checkpoint($prefix, $epoch);
     my $mod = $self->new(symbol => $sym, %kwargs);
     $mod->_p->_arg_params($args);
     $mod->_p->_aux_params($auxs);
-    if($mod->params_initialized)
+    $mod->params_initialized(1);
+    if($load_optimizer_states)
     {
-        if($load_optimizer_states)
-        {
-            $mod->_p->_preload_opt_states(sprintf('%s-%04d.states', $prefix, $epoch));
-        }
+        $mod->_p->_preload_opt_states(sprintf('%s-%04d.states', $prefix, $epoch));
     }
     return $mod;
 }
 
 =head2 save_checkpoint
 
-        Save current progress to checkpoint.
-        Use mx.callback.module_checkpoint as epoch_end_callback to save during training.
+    Save current progress to a checkpoint.
+    Use mx->callback->module_checkpoint as epoch_end_callback to save during training.
 
-        Parameters
-        ----------
-        prefix : str
-            The file prefix to checkpoint to
-        epoch : int
-            The current epoch number
-        save_optimizer_states : bool
-            Whether to save optimizer states for continue training
+    Parameters
+    ----------
+    prefix : str
+        The file prefix to checkpoint to
+    epoch : int
+        The current epoch number
+    save_optimizer_states : bool
+        Whether to save optimizer states for later training
 =cut
 
 
@@ -424,43 +351,20 @@ method _reset_bind()
     $self->_p->_label_shapes(undef);
 }
 
-=head2 data_names
-
-        A list of names for data required by this module.
-=cut
-
 method data_names()
 {
     return $self->_p->_data_names;
 }
-
-=head2 label_names
-
-        A list of names for labels required by this module.
-=cut
 
 method label_names()
 {
     return $self->_p->_label_names;
 }
 
-=head2 output_names
-
-        A list of names for data required by this module.
-=cut
-
 method output_names()
 {
     return $self->_p->_output_names;
 }
-
-=head2 data_shapes
-
-        Get data shapes.
-        Returns
-        -------
-        A list of AI::MXNet::DataDesc objects.
-=cut
 
 method data_shapes()
 {
@@ -468,44 +372,17 @@ method data_shapes()
     return $self->_p->_data_shapes;
 }
 
-=head2 data_shapes
-
-        Get label shapes.
-        Returns
-        -------
-        A list of AI::MXNet::DataDesc objects. The return value could be undef if
-        the module does not need labels, or if the module is not binded for
-        training (in this case, label information is not available).
-=cut
-
 method label_shapes()
 {
     assert($self->binded);
     return $self->_p->_label_shapes;
 }
 
-=head2 output_shapes
-
-        Get output shapes.
-        Returns
-        -------
-        A list of AI::MXNet::DataDesc objects.
-=cut
-
 method output_shapes()
 {
     assert($self->binded);
     return $self->_p->_exec_group->get_output_shapes;
 }
-
-=head2 get_params
-
-        Get current parameters.
-        Returns
-        -------
-        `(arg_params, aux_params)`, each a dictionary of name to parameters (in
-        `NDArray`) mapping.
-=cut
 
 method get_params()
 {
@@ -516,27 +393,6 @@ method get_params()
     }
     return ($self->_p->_arg_params, $self->_p->_aux_params);
 }
-
-=head2 init_params
-
-        Initialize the parameters and auxiliary states.
-
-        Parameters
-        ----------
-        initializer : Initializer
-            Called to initialize parameters if needed.
-        arg_params : dict
-            If not None, should be a dictionary of existing arg_params. Initialization
-            will be copied from that.
-        aux_params : dict
-            If not None, should be a dictionary of existing aux_params. Initialization
-            will be copied from that.
-        allow_missing : bool
-            If true, params could contain missing values, and the initializer will be
-            called to fill those missing params.
-        force_init : bool
-            If true, will force re-initialize even if already initialized.
-=cut
 
 method init_params(
     Maybe[AI::MXNet::Initializer]      :$initializer=AI::MXNet::Initializer->Uniform(scale => 0.01),
@@ -645,28 +501,28 @@ method set_params(
 
 =head2 bind
 
-        Bind the symbols to construct executors. This is necessary before one
-        can perform computation with the module.
+    Bind the symbols to construct executors. This is necessary before one
+    can perform computation with the module.
 
-        Parameters
-        ----------
-        data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
-            Typically is `data_iter->provide_data`.
-        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-            Typically is `data_iter->provide_label`.
-        for_training : bool
-            Default is 1. Whether the executors should be bind for training.
-        inputs_need_grad : bool
-            Default is 0. Whether the gradients to the input data need to be computed.
-            Typically this is not needed. But this might be needed when implementing composition
-            of modules.
-        force_rebind : bool
-            Default is 0. This function does nothing if the executors are already
-            binded. But with this 1, the executors will be forced to rebind.
-        shared_module : Module
-            Default is undef. This is used in bucketing. When not undef, the shared module
-            essentially corresponds to a different bucket -- a module with different symbol
-            but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+    Parameters
+    ----------
+    :$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
+        Typically is $data_iter->provide_data.
+    :$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+        Typically is $data_iter->provide_label.
+    :$for_training : bool
+        Default is 1. Whether the executors should be bind for training.
+    :$inputs_need_grad : bool
+        Default is 0. Whether the gradients to the input data need to be computed.
+        Typically this is not needed. But this might be needed when implementing composition
+        of modules.
+    :$force_rebind : bool
+        Default is 0. This function does nothing if the executors are already
+        binded. But with this 1, the executors will be forced to rebind.
+    :$shared_module : Module
+        Default is undef. This is used in bucketing. When not undef, the shared module
+        essentially corresponds to a different bucket -- a module with different symbol
+        but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
 =cut
 
 method bind(
@@ -720,6 +576,7 @@ method bind(
             data_shapes       => $self->_p->_data_shapes,
             label_shapes      => $self->_p->_label_shapes,
             param_names       => $self->_p->_param_names,
+            state_names       => $state_names,
             for_training      => $for_training,
             inputs_need_grad  => $inputs_need_grad,
             shared_group      => $shared_group,
@@ -766,18 +623,18 @@ method bind(
 
 =head2 reshape
 
-        Reshape the module for new input shapes.
-        Parameters
-        ----------
-        data_shapes : ArrayRef[AI::MXNet::DataDesc]
-            Typically is $data_iter->provide_data.
-        label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc]]
-            Typically is $data_iter->provide_label.
+    Reshape the module for new input shapes.
+    Parameters
+    ----------
+    :$data_shapes : ArrayRef[AI::MXNet::DataDesc]
+        Typically is $data_iter->provide_data.
+    :$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc]]
+        Typically is $data_iter->provide_label.
 =cut
 
 method reshape(
-    ArrayRef[AI::MXNet::DataDesc|NameShape]        $data_shapes,
-    Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]] $label_shapes=
+    ArrayRef[AI::MXNet::DataDesc|NameShape]        :$data_shapes,
+    Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]] :$label_shapes=
 )
 {
     assert($self->binded);
@@ -788,23 +645,6 @@ method reshape(
     $self->_p->_label_shapes($label_shapes);
     $self->_p->_exec_group->reshape($self->_p->_data_shapes, $self->_p->_label_shapes);
 }
-
-=head2 init_optimizer
-
-        Install and initialize optimizers.
-
-        Parameters
-        ----------
-        kvstore : str or KVStore
-            Default `'local'`.
-        optimizer : str or Optimizer
-            Default `'sgd'`
-        optimizer_params : dict
-            Default { learning_rate => 0.01 }.
-        force_init : bool
-            Default `False`, indicating whether we should force re-initializing the
-            optimizer in the case an optimizer is already installed.
-=cut
 
 method init_optimizer(
     Str|AI::MXNet::KVStore :$kvstore='local',
@@ -818,6 +658,10 @@ method init_optimizer(
     {
         $self->logger->warning('optimizer already initialized, ignoring...');
         return;
+    }
+    if($self->_p->_params_dirty)
+    {
+        $self->_sync_params_from_devices;
     }
 
     my ($kvstore, $update_on_kvstore) = _create_kvstore(
@@ -877,7 +721,7 @@ method init_optimizer(
         # copy initialized local parameters to kvstore
         _initialize_kvstore(
             kvstore           => $kvstore,
-            param_arrays      => $self->_p->_exec_group->param_arrays,
+            param_arrays      => $self->_p->_exec_group->_p->param_arrays,
             arg_params        => $self->_p->_arg_params,
             param_names       => $self->_p->_param_names,
             update_on_kvstore => $update_on_kvstore
@@ -902,12 +746,12 @@ method init_optimizer(
 
 =head2 borrow_optimizer
 
-        Borrow optimizer from a shared module. Used in bucketing, where exactly the same
-        optimizer (esp. kvstore) is used.
+    Borrow optimizer from a shared module. Used in bucketing, where exactly the same
+    optimizer (esp. kvstore) is used.
 
-        Parameters
-        ----------
-        shared_module : Module
+    Parameters
+    ----------
+    shared_module : AI::MXNet::Module
 =cut
 
 method borrow_optimizer(AI::MXNet::Module $shared_module)
@@ -920,18 +764,6 @@ method borrow_optimizer(AI::MXNet::Module $shared_module)
     $self->optimizer_initialized(1);
 }
 
-=head2 forward
-
-        Forward computation.
-
-        Parameters
-        ----------
-        data_batch : DataBatch
-            Could be anything with similar API implemented.
-        is_train : bool
-            Default is `None`, which means `is_train` takes the value of `self.for_training`.
-=cut
-
 method forward(
     AI::MXNet::DataBatch $data_batch,
     Maybe[Bool]         :$is_train=
@@ -941,29 +773,11 @@ method forward(
     $self->_p->_exec_group->forward($data_batch, $is_train);
 }
 
-=head2 backward
-
-        Backward computation.
-
-        Parameters
-        ----------
-        out_grads : NDArray or list of NDArray, optional
-            Gradient on the outputs to be propagated back.
-            This parameter is only needed when bind is called
-            on outputs that are not a loss function.
-=cut
-
 method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]] $out_grads=)
 {
     assert($self->binded and $self->params_initialized);
     $self->_p->_exec_group->backward($out_grads);
 }
-
-=head2 update
-
-        Update parameters according to the installed optimizer and the gradients computed
-        in the previous forward-backward batch.
-=cut
 
 method update()
 {
@@ -972,8 +786,8 @@ method update()
     if($self->_p->_update_on_kvstore)
     {
         _update_params_on_kvstore(
-            $self->_p->_exec_group->param_arrays,
-            $self->_p->_exec_group->grad_arrays,
+            $self->_p->_exec_group->_p->param_arrays,
+            $self->_p->_exec_group->_p->grad_arrays,
             $self->_p->_kvstore
         );
     }
@@ -989,49 +803,11 @@ method update()
     }
 }
 
-=head2 get_optputs
-
-        Get outputs of the previous forward computation.
-
-        Parameters
-        ----------
-        merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the outputs
-            will be collected from multiple devices. A `True` value indicate that we
-            should merge the collected results so that they look like from a single
-            executor.
-
-        Returns
-        -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
-        elements are `NDArray`.
-=cut
-
 method get_outputs(Bool $merge_multi_context=1)
 {
     assert($self->binded and $self->params_initialized);
     return $self->_p->_exec_group->get_outputs($merge_multi_context);
 }
-
-=head2 get_input_grads
-
-        Get the gradients with respect to the inputs of the module.
-
-        Parameters
-        ----------
-        merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the outputs
-            will be collected from multiple devices. A `True` value indicate that we
-            should merge the collected results so that they look like from a single
-            executor.
-
-        Returns
-        -------
-        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
-        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
-        elements are `NDArray`.
-=cut
 
 method get_input_grads(Bool $merge_multi_context=1)
 {
@@ -1045,21 +821,12 @@ method get_states(Bool $merge_multi_context=1)
     return $self->_p->_exec_group->get_states($merge_multi_context);
 }
 
-method set_states($states=, $value=)
+method set_states(:$states=, :$value=)
 {
     assert($self->binded and $self->params_initialized);
     return $self->_p->_exec_group->set_states($states, $value);
 }
 
-=head2 update_metric
-        Evaluate and accumulate evaluation metric on outputs of the last forward computation.
-
-        Parameters
-        ----------
-        eval_metric : AI::MXNet::EvalMetric
-        labels : ArrayRef[AI::MXNet::NDArray]
-            Typically $data_batch->label.
-=cut
 method update_metric(
     AI::MXNet::EvalMetric $eval_metric,
     ArrayRef[AI::MXNet::NDArray] $labels
@@ -1070,9 +837,9 @@ method update_metric(
 
 =head2 _sync_params_from_devices
 
-        Synchronize parameters from devices to CPU. This function should be called after
-        calling `update` that updates the parameters on the devices, before one can read the
-        latest parameters from `self._arg_params` and `self._aux_params`.
+    Synchronize parameters from devices to CPU. This function should be called after
+    calling 'update' that updates the parameters on the devices, before one can read the
+    latest parameters from $self->_arg_params and $self->_aux_params.
 =cut
 
 method _sync_params_from_devices()
@@ -1080,16 +847,6 @@ method _sync_params_from_devices()
     $self->_p->_exec_group->get_params($self->_p->_arg_params, $self->_p->_aux_params);
     $self->_p->_params_dirty(0);
 }
-
-=head2 save_optimizer_states
-
-        Save optimizer (updater) state to file
-
-        Parameters
-        ----------
-        fname : str
-            Path to output states file.
-=cut
 
 method save_optimizer_states(Str $fname)
 {
@@ -1105,16 +862,6 @@ method save_optimizer_states(Str $fname)
         close(F);
     }
 }
-
-=head2 load_optimizer_states
-
-        Load optimizer (updater) state from file
-
-        Parameters
-        ----------
-        fname : str
-            Path to input states file.
-=cut
 
 method load_optimizer_states(Str $fname)
 {
@@ -1133,20 +880,20 @@ method load_optimizer_states(Str $fname)
     }
 }
 
-=head2 install_monitor
-
-        Install monitor on all executors.
-
-        Paramters
-        ---------
-        AI::MXNet::Monitor
-=cut
-
 method install_monitor(AI::MXNet::Monitor $mon)
 {
     assert($self->binded);
     $self->_p->_exec_group->install_monitor($mon);
 }
 
+method _updater()
+{
+    $self->_p->_updater;
+}
+
+method _kvstore()
+{
+    $self->_p->_kvstore;
+}
 
 1;

@@ -1,8 +1,8 @@
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2017 by Contributors
  * \file pooling.cc
  * \brief
- * \author Bing Xu
+ * \author Bing Xu, Jun Wu
 */
 #include "./pooling-inl.h"
 #if MXNET_USE_MKL2017 == 1
@@ -20,9 +20,12 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
+  // TODO(lingyan): kFull use exclude padding algorithm now
 #if MXNET_USE_MKL2017 == 1
-    if ((param.pool_type == pool_enum::kMaxPooling)
-      || (param.pool_type == pool_enum::kAvgPooling)) {
+    if (param.kernel.ndim() == 2
+      && (param.pooling_convention == pool_enum::kValid)
+      && ((param.pool_type == pool_enum::kMaxPooling)
+      || (param.pool_type == pool_enum::kAvgPooling))) {
       switch (dtype) {
       case mshadow::kFloat32:
         return new MKLPoolingOp<cpu, float>(param);
@@ -44,28 +47,22 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
     && (param.stride[0] == 2) && (param.stride[1] == 2)) {
     switch (dtype) {
     case mshadow::kFloat32:
-      return new NNPACKPoolingOp<cpu, mshadow::red::maximum, float>(param);
+      return new NNPACKPoolingOp<cpu, float>(param);
     default:
       break;
     }
   }
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    switch (param.pool_type) {
-      case pool_enum::kMaxPooling:
-        op = new PoolingOp<cpu, mshadow::red::maximum, DType>(param);
-        break;
-      case pool_enum::kAvgPooling:
-        op = new PoolingOp<cpu, mshadow::red::sum, DType>(param);
-        break;
-      case pool_enum::kSumPooling:
-        op = new PoolingOp<cpu, mshadow::red::sum, DType>(param);
-        break;
-      default:
-        LOG(FATAL) << "unknown pooling type";
-        return NULL;
+    if (pool_enum::kMaxPooling == param.pool_type
+        || pool_enum::kAvgPooling == param.pool_type
+        || pool_enum::kSumPooling == param.pool_type) {
+      op = new PoolingOp<cpu, DType>(param);
+    } else {
+      LOG(FATAL) << "unknown pooling type";
+      return NULL;
     }
-  })
+  });
 
   return op;
 }
@@ -85,7 +82,12 @@ DMLC_REGISTER_PARAMETER(PoolingParam);
 MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
 .describe(R"code(Perform pooling on the input.
 
-The shapes for 2-D pooling is
+The shapes for 1-D pooling are
+
+- **data**: *(batch_size, channel, width)*,
+- **out**: *(batch_size, num_filter, out_width)*.
+
+The shapes for 2-D pooling are
 
 - **data**: *(batch_size, channel, height, width)*
 - **out**: *(batch_size, num_filter, out_height, out_width)*, with::
@@ -112,15 +114,12 @@ Three pooling options are supported by ``pool_type``:
 - **max**: max pooling
 - **sum**: sum pooling
 
-1-D pooling is special case of 2-D pooling with *weight=1* and
-*kernel[1]=1*.
-
 For 3-D pooling, an additional *depth* dimension is added before
 *height*. Namely the input data will have shape *(batch_size, channel, depth,
 height, width)*.
 
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to the pooling operator.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator.")
 .add_arguments(PoolingParam::__FIELDS__());
 
 }  // namespace op

@@ -62,6 +62,9 @@ __pycache__
 *.json
 *.d
 build
+cmake-build-debug
+cmake-build-release
+cmake-build
 data
 recommonmark
 deps
@@ -148,3 +151,5 @@ bld
 target
 cmake-build
 
+
+bin/im2rec

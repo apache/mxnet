@@ -109,9 +109,9 @@ class MKLLRNOp : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1);
-    CHECK_EQ(out_data.size(), 2);
-    CHECK_EQ(param_.nsize % 2, 1) << "LRN only supports odd values for local_size";
+    CHECK_EQ(in_data.size(), 1U);
+    CHECK_EQ(out_data.size(), 2U);
+    CHECK_EQ(param_.nsize % 2, 1U) << "LRN only supports odd values for local_size";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data = mkl_experimental_direct_get<xpu, 4, DType>(
       in_data[lrn_enum::kData], s);
@@ -196,12 +196,8 @@ class MKLLRNOp : public Operator {
     void* lrn_res[dnnResourceNumber];
     lrn_res[dnnResourceSrc] = const_cast<void*>(bottom_data);
 
-    std::shared_ptr<MKLMemHolder> top_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-    top_mem = out_data[lrn_enum::kOut].Mkl_mem_;
-#endif
     lrn_res[dnnResourceDst] = fwd_top_data_->get_output_ptr(
-      out.dptr_, fwd_top_data_, top_mem);
+      out.dptr_, fwd_top_data_, out_data[lrn_enum::kOut]);
     lrn_res[dnnResourceWorkspace] = lrn_buffer_;
     e = dnnExecute<DType>(lrnFwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
@@ -234,12 +230,8 @@ class MKLLRNOp : public Operator {
     lrn_res[dnnResourceSrc] =
       fwd_bottom_data_->get_converted_prv(data.dptr_, false, in_data[lrn_enum::kData]);
 
-    std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-    bottom_diff_mem = in_grad[lrn_enum::kData].Mkl_mem_;
-#endif
     lrn_res[dnnResourceDiffSrc] = bwd_bottom_diff_->get_output_ptr(
-      grad_in.dptr_, bwd_bottom_diff_, bottom_diff_mem);
+      grad_in.dptr_, bwd_bottom_diff_, in_grad[lrn_enum::kData]);
     e = dnnExecute<DType>(lrnBwd, lrn_res);
     CHECK_EQ(e, E_SUCCESS);
   }

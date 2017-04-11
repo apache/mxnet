@@ -9,7 +9,7 @@ use JSON::PP;
 
 =head1 NAME
 
-AI::MXNet::Vizualization - Vizualization support for Perl interface to MXNet machine learning library
+    AI::MXNet::Vizualization - Vizualization support for Perl interface to MXNet machine learning library
 
 =head1 SYNOPSIS
 
@@ -135,7 +135,7 @@ method print_summary(
         if($op eq 'Convolution')
         {
             my $num_filter = $node->{attr}{num_filter};
-            $node->{attr}{kernel} =~ /(\d+),(\d+)/;
+            $node->{attr}{kernel} =~ /(\d+)\s*,\s*(\d+)/;
             $cur_param = $pre_filter * $1 * $2 * $num_filter + $num_filter;
         }
         elsif($op eq 'FullyConnected')
@@ -304,8 +304,8 @@ method plot_network(
         }
         elsif($op eq 'Convolution')
         {
-            my ($k0, $k1) = $node->{attr}{kernel}       =~ /(\d+),(\d+)/;
-            my ($stride)  = ($node->{attr}{stride}//'') =~ /(\d+),(\d+)/;
+            my ($k0, $k1) = $node->{attr}{kernel}       =~ /(\d+)\s*,\s*(\d+)/;
+            my ($stride)  = ($node->{attr}{stride}//'') =~ /(\d+)\s*,\s*(\d+)/;
             $stride //= 1;
             $label = "Convolution\n${k0}x$k1/$stride, $node->{attr}{num_filter}";
             $attr{fillcolor} = $cm[1];
@@ -326,8 +326,8 @@ method plot_network(
         }
         elsif($op eq 'Pooling')
         {
-            my ($k0, $k1) = $node->{attr}{kernel}       =~ /(\d+),(\d+)/;
-            my ($stride)  = ($node->{attr}{stride}//'') =~ /(\d+),(\d+)/;
+            my ($k0, $k1) = $node->{attr}{kernel}       =~ /(\d+)\s*,\s*(\d+)/;
+            my ($stride)  = ($node->{attr}{stride}//'') =~ /(\d+)\s*,\s*(\d+)/;
             $stride //= 1;
             $label = "Pooling\n$node->{attr}{pool_type}, ${k0}x$k1/$stride";
             $attr{fillcolor} = $cm[4];

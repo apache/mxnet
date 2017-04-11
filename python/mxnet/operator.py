@@ -12,17 +12,17 @@ from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 from .base import _LIB, check_call
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol
-from .ndarray import NDArray
+from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 
 c_int_p = POINTER(c_int)
 
 class PythonOp(object):
-    """Base class for operators implemented in python
+    """Base class for operators implemented in Python.
 
     Parameters
     ----------
     need_top_grad : bool
-        the default need_top_grad() function returns this value
+        the default need_top_grad() function returns this value.
     """
     _ref_holder = []
 
@@ -35,13 +35,13 @@ class PythonOp(object):
 
     def get_symbol(self, *args, **kwargs):
         """Create a symbol from numpy operator.
-        This Should only be called once per instance if operator contains
+        This should only be called once per instance if the operator contains
         internal states.
 
         Parameters
         ----------
         args : list
-            a list of input arguments (symbols)
+            a list of input arguments (symbols).
 
         Returns
         -------
@@ -50,7 +50,7 @@ class PythonOp(object):
         raise NotImplementedError("Must override this")
 
     def forward(self, in_data, out_data):
-        """forward interface. override to create new operators
+        """Forward interface. Override to create new operators.
 
         Parameters
         ----------
@@ -61,7 +61,7 @@ class PythonOp(object):
         out_data[0][:] = in_data[0]
 
     def backward(self, out_grad, in_data, out_data, in_grad):
-        """backward interface. override to create new operators
+        """Backward interface. Can override when creating new operators.
 
         Parameters
         ----------
@@ -73,36 +73,36 @@ class PythonOp(object):
         in_grad[0][:] = 1.0
 
     def infer_shape(self, in_shape):
-        """infer_shape interface. override to create new operators
+        """Interface for ``infer_shape``. Can override when creating new operators.
 
         Parameters
         ----------
         in_shape : list
-            list of argument shapes in the same order as
+            List of argument shapes in the same order as
             declared in list_arguments.
 
         Returns
         -------
         in_shape : list
-            list of argument shapes. Can be modified from in_shape.
+            List of argument shapes. Can be modified from in_shape.
         out_shape : list
-            list of output shapes calculated from in_shape,
+            List of output shapes calculated from in_shape,
             in the same order as declared in list_arguments.
         """
         return in_shape, [in_shape[0]]
 
     def list_outputs(self):
-        """list_outputs interface. override to create new operators
+        """Interface for ``list_outputs``. Can override when creating new operators.
 
         Returns
         -------
         outputs : list
-            list of output blob names.
+            List of output blob names.
         """
         return ['output']
 
     def list_arguments(self):
-        """list_arguments interface. override to create new operators
+        """Interface for ``list_arguments``. Can override when creating new operators.
 
         Returns
         -------
@@ -399,7 +399,7 @@ class CustomOp(object):
         pass
 
     def forward(self, is_train, req, in_data, out_data, aux):
-        """forward interface. override to create new operators
+        """Forward interface. Can override when creating new operators.
 
         Parameters
         ----------
@@ -416,7 +416,7 @@ class CustomOp(object):
         pass
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        """backward interface. override to create new operators
+        """Backward interface. Can override when creating new operators.
 
         Parameters
         ----------
@@ -441,61 +441,83 @@ class CustomOp(object):
 
 class CustomOpProp(object):
     """Base class for operator property class implemented in python.
-    MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
 
     Parameters
     ----------
     need_top_grad : bool
-        The default declare_backward_dependency function use this value
-        to determine whether this operator needs gradient input for above.
+        The default declare_backward_dependency function. Use this value
+        to determine whether this operator needs gradient input.
     """
     def __init__(self, need_top_grad=False):
         self.need_top_grad_ = need_top_grad
 
     def infer_shape(self, in_shape):
-        """infer_shape interface. override to create new operators
+        """infer_shape interface. Can override when creating new operators.
 
         Parameters
         ----------
         in_shape : list
-            list of argument shapes in the same order as
+            List of argument shapes in the same order as
             declared in list_arguments.
 
         Returns
         -------
         in_shape : list
-            list of argument shapes. Can be modified from in_shape.
+            List of argument shapes. Can be modified from in_shape.
         out_shape : list
-            list of output shapes calculated from in_shape,
+            List of output shapes calculated from in_shape,
             in the same order as declared in list_outputs.
         aux_shape : Optional, list
-            list of aux shapes calculated from in_shape,
+            List of aux shapes calculated from in_shape,
             in the same order as declared in list_auxiliary_states.
         """
         return in_shape, [in_shape[0]], []
 
+    def infer_type(self, in_type):
+        """infer_type interface. override to create new operators
+
+        Parameters
+        ----------
+        in_type : list of np.dtype
+            list of argument types in the same order as
+            declared in list_arguments.
+
+        Returns
+        -------
+        in_type : list
+            list of argument types. Can be modified from in_type.
+        out_type : list
+            list of output types calculated from in_type,
+            in the same order as declared in list_outputs.
+        aux_type : Optional, list
+            list of aux types calculated from in_type,
+            in the same order as declared in list_auxiliary_states.
+        """
+        return in_type, [in_type[0]]*len(self.list_outputs()), \
+            [in_type[0]]*len(self.list_auxiliary_states())
+
     def list_outputs(self):
-        """list_outputs interface. override to create new operators
+        """list_outputs interface. Can override when creating new operators.
 
         Returns
         -------
         outputs : list
-            list of output blob names.
+            List of output blob names.
         """
         return ['output']
 
     def list_arguments(self):
-        """list_arguments interface. override to create new operators
+        """list_arguments interface. Can override when creating new operators.
 
         Returns
         -------
         arguments : list
-            list of argument blob names.
+            List of argument blob names.
         """
         return ['data']
 
     def list_auxiliary_states(self):
-        """list_auxiliary_states interface. override to create new operators
+        """list_auxiliary_states interface. Can override when creating new operators.
 
         Returns
         -------
@@ -535,14 +557,14 @@ class CustomOpProp(object):
         return CustomOp()
 
 class _Registry(object):
-    """CustomOp registry"""
+    """CustomOp registry."""
     def __init__(self):
         self.ref_holder = {}
         self.counter = 0
         self.lock = Lock()
 
     def inc(self):
-        """Get index for new entry"""
+        """Get index for new entry."""
         self.lock.acquire()
         cur = self.counter
         self.counter += 1
@@ -555,47 +577,29 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
-        fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int),
-                                POINTER(c_int), c_bool, c_void_p)
-        del_functype = CFUNCTYPE(c_bool, c_void_p)
-        class CustomOpInfo(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp"""
+
+        class MXCallbackList(Structure):
+            """Structure that holds Callback information. Passed to CustomOpProp."""
             _fields_ = [
-                ('forward', fb_functype),
-                ('backward', fb_functype),
-                ('delete', del_functype),
-                ('p_forward', c_void_p),
-                ('p_backward', c_void_p),
-                ('p_delete', c_void_p)
+                ('num_callbacks', c_int),
+                ('callbacks', POINTER(CFUNCTYPE(c_int))),
+                ('contexts', POINTER(c_void_p))
                 ]
 
-        infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
-                                   POINTER(POINTER(mx_uint)), c_void_p)
-        list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))), c_void_p)
-        deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
+        fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int),
+                                POINTER(c_int), c_int, c_void_p)
+        del_functype = CFUNCTYPE(c_int, c_void_p)
+
+        infershape_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
+                                        POINTER(POINTER(mx_uint)), c_void_p)
+        infertype_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
+        list_functype = CFUNCTYPE(c_int, POINTER(POINTER(POINTER(c_char))), c_void_p)
+        deps_functype = CFUNCTYPE(c_int, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
-        createop_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(POINTER(mx_uint)),
+        createop_functype = CFUNCTYPE(c_int, c_char_p, c_int, POINTER(POINTER(mx_uint)),
                                       POINTER(c_int), POINTER(c_int),
-                                      POINTER(CustomOpInfo), c_void_p)
-        class CustomOpPropInfo(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp"""
-            _fields_ = [
-                ('list_arguments', list_functype),
-                ('list_outputs', list_functype),
-                ('infer_shape', infer_functype),
-                ('declare_backward_dependency', deps_functype),
-                ('create_operator', createop_functype),
-                ('list_auxiliary_states', list_functype),
-                ('delete', del_functype),
-                ('p_list_arguments', c_void_p),
-                ('p_list_outputs', c_void_p),
-                ('p_infer_shape', c_void_p),
-                ('p_declare_backward_dependency', c_void_p),
-                ('p_create_operator', c_void_p),
-                ('p_list_auxiliary_states', c_void_p),
-                ('p_delete', c_void_p)
-                ]
-        req_enum = ['null', 'write', 'inplace', 'add']
+                                      POINTER(MXCallbackList), c_void_p)
+        req_enum = ('null', 'write', 'inplace', 'add')
 
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
@@ -605,7 +609,7 @@ def register(reg_name):
 
             def infer_shape_entry(num_tensor, tensor_dims,
                                   tensor_shapes, _):
-                """C Callback for CustomOpProp::InferShape"""
+                """C Callback for ``CustomOpProp::InferShape``."""
                 try:
                     n_in = len(op_prop.list_arguments())
                     n_out = len(op_prop.list_outputs())
@@ -633,6 +637,36 @@ def register(reg_name):
                     infer_shape_entry._ref_holder = [tensor_shapes]
                 except Exception:
                     print('Error in %s.infer_shape: %s' % (reg_name, traceback.format_exc()))
+                    return False
+                return True
+
+            def infer_type_entry(num_tensor, tensor_types, _):
+                """C Callback for CustomOpProp::InferType"""
+                try:
+                    n_in = len(op_prop.list_arguments())
+                    n_out = len(op_prop.list_outputs())
+                    n_aux = len(op_prop.list_auxiliary_states())
+                    assert num_tensor == n_in + n_out + n_aux
+
+                    types = [_DTYPE_MX_TO_NP[tensor_types[i]] for i in range(n_in)]
+                    ret = op_prop.infer_type(types)
+                    if len(ret) == 2:
+                        itype, otype = ret
+                        atype = []
+                    elif len(ret) == 3:
+                        itype, otype, atype = ret
+                    else:
+                        raise AssertionError("infer_type must return 2 or 3 lists")
+                    assert len(otype) == n_out
+                    assert len(itype) == n_in
+                    assert len(atype) == n_aux
+                    rtype = list(itype) + list(otype) + list(atype)
+                    for i, dtype in enumerate(rtype):
+                        tensor_types[i] = _DTYPE_NP_TO_MX[dtype]
+
+                    infer_type_entry._ref_holder = [tensor_types]
+                except Exception:
+                    print('Error in %s.infer_type: %s' % (reg_name, traceback.format_exc()))
                     return False
                 return True
 
@@ -762,10 +796,16 @@ def register(reg_name):
                             return False
                         return True
 
-                    ret[0] = CustomOpInfo(fb_functype(forward_entry),
-                                          fb_functype(backward_entry),
-                                          del_functype(delete_entry),
-                                          None, None, None)
+                    callbacks = [del_functype(delete_entry),
+                                 fb_functype(forward_entry),
+                                 fb_functype(backward_entry)]
+                    callbacks = [cast(i, CFUNCTYPE(c_int)) for i in callbacks]
+                    contexts = [None, None, None]
+                    ret[0] = MXCallbackList(c_int(len(callbacks)),
+                                            cast(c_array(CFUNCTYPE(c_int), callbacks),
+                                                 POINTER(CFUNCTYPE(c_int))),
+                                            cast(c_array(c_void_p, contexts),
+                                                 POINTER(c_void_p)))
                     op._ref_holder = [ret]
                     _registry.ref_holder[cur] = op
                 except Exception:
@@ -784,20 +824,27 @@ def register(reg_name):
                     return False
                 return True
 
-            ret[0] = CustomOpPropInfo(list_functype(list_arguments_entry),
-                                      list_functype(list_outputs_entry),
-                                      infer_functype(infer_shape_entry),
-                                      deps_functype(declare_backward_dependency_entry),
-                                      createop_functype(create_operator_entry),
-                                      list_functype(list_auxiliary_states_entry),
-                                      del_functype(delete_entry),
-                                      None, None, None, None, None, None, None)
+            callbacks = [del_functype(delete_entry),
+                         list_functype(list_arguments_entry),
+                         list_functype(list_outputs_entry),
+                         list_functype(list_auxiliary_states_entry),
+                         infershape_functype(infer_shape_entry),
+                         deps_functype(declare_backward_dependency_entry),
+                         createop_functype(create_operator_entry),
+                         infertype_functype(infer_type_entry)]
+            callbacks = [cast(i, CFUNCTYPE(c_int)) for i in callbacks]
+            contexts = [None]*len(callbacks)
+            ret[0] = MXCallbackList(c_int(len(callbacks)),
+                                    cast(c_array(CFUNCTYPE(c_int), callbacks),
+                                         POINTER(CFUNCTYPE(c_int))),
+                                    cast(c_array(c_void_p, contexts),
+                                         POINTER(c_void_p)))
             op_prop._ref_holder = [ret]
             _registry.ref_holder[cur] = op_prop
             return True
 
-        creator_functype = CFUNCTYPE(c_bool, c_char_p, c_int, POINTER(c_char_p),
-                                     POINTER(c_char_p), POINTER(CustomOpPropInfo))
+        creator_functype = CFUNCTYPE(c_int, c_char_p, c_int, POINTER(c_char_p),
+                                     POINTER(c_char_p), POINTER(MXCallbackList))
         creator_func = creator_functype(creator)
         check_call(_LIB.MXCustomOpRegister(c_str(reg_name), creator_func))
         cur = _registry.inc()

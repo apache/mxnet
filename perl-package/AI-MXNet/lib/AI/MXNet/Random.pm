@@ -5,6 +5,16 @@ use AI::MXNet::Base;
 use AI::MXNet::NDArray::Base;
 use AI::MXNet::Function::Parameters;
 
+=head1 NAME
+
+    AI::MXNet::Random - Handling of randomization in MXNet.
+=cut
+
+=head1 DESCRIPTION
+
+    Handling of randomization in MXNet.
+=cut
+
 =head2 seed
 
     Seed the random number generators in mxnet.

@@ -12,7 +12,7 @@ from ..executor_manager import _split_input_slice
 
 
 def _load_general(data, targets, major_axis):
-    """Load a list of arrays into a list of arrays specified by slices"""
+    """Load a list of arrays into a list of arrays specified by slices."""
     for d_src, d_targets, axis in zip(data, targets, major_axis):
         if isinstance(d_targets, nd.NDArray):
             d_src.copyto(d_targets)
@@ -41,12 +41,12 @@ def _load_general(data, targets, major_axis):
 
 
 def _load_data(batch, targets, major_axis):
-    """Load data into sliced arrays"""
+    """Load data into sliced arrays."""
     _load_general(batch.data, targets, major_axis)
 
 
 def _load_label(batch, targets, major_axis):
-    """Load label into sliced arrays"""
+    """Load label into sliced arrays."""
     _load_general(batch.label, targets, major_axis)
 
 
@@ -75,7 +75,7 @@ def _merge_multi_context(outputs, major_axis):
 
 
 class DataParallelExecutorGroup(object):
-    """DataParallelExecutorGroup is a group of executors that lives on a group of devices.
+    """A group of executors that lives on a group of devices.
     This is a helper class used to implement data parallelization. Each mini-batch will
     be split and run on the devices.
 
@@ -86,7 +86,7 @@ class DataParallelExecutorGroup(object):
     contexts : list
         A list of contexts.
     workload : list
-        If not `None`, could be a list of numbers that specify the workload to be assigned
+        If not ``None``, could be a list of numbers that specify the workload to be assigned
         to different context. Larger number indicate heavier workload.
     data_shapes : list
         Should be a list of (name, shape) tuples, for the shapes of data. Note the order is
@@ -104,15 +104,15 @@ class DataParallelExecutorGroup(object):
         Indicate whether the gradients for the input data should be computed. This is currently
         not used. It will be useful for implementing composition of modules.
     shared_group : DataParallelExecutorGroup
-        Default is `None`. This is used in bucketing. When not `None`, it should be a executor
+        Defaults to ``None``. This is used in bucketing. When not ``None``, it should be a executor
         group corresponding to a different bucket. In other words, it will correspond to a different
         symbol but with the same set of parameters (e.g. unrolled RNNs with different lengths).
         In this case, many memory will be shared.
     logger : Logger
         Default is `logging`.
     fixed_param_names: list of str
-        Indicate parameters to be fixed during training. Parameters in this list will not allocate
-        space for gradient, nor do gradient calculation.
+        Parameters to be fixed during training. For these parameters, not gradients
+        will be calculated and thus no space will be allocated for the gradient.
     grad_req : str, list of str, dict of str to str
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
@@ -337,9 +337,9 @@ class DataParallelExecutorGroup(object):
         Parameters
         ----------
         arg_params : list of NDArray
-            target parameter arrays
+            Target parameter arrays.
         aux_params : list of NDArray
-            target aux arrays
+            Target aux arrays.
 
         Notes
         -----
@@ -404,8 +404,8 @@ class DataParallelExecutorGroup(object):
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
+        is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
         elements are `NDArray`.
         """
         outputs = [[exec_.outputs[i] for exec_ in self.execs]
@@ -415,20 +415,20 @@ class DataParallelExecutorGroup(object):
         return outputs
 
     def get_states(self, merge_multi_context=True):
-        """Get states from all devices
+        """Get states from all devices.
 
         Parameters
         ----------
         merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the states
-            will be collected from multiple devices. A `True` value indicate that we
+            Default is ``True``. In the case when data-parallelism is used, the states
+            will be collected from multiple devices. A ``True`` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[out1, out2]`. Otherwise, it
-        is like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`. All the output
+        If `merge_multi_context` is ``True``, it is like ``[out1, out2]``. Otherwise, it
+        is like ``[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]``. All the output
         elements are `NDArray`.
         """
         assert not merge_multi_context, \
@@ -462,15 +462,15 @@ class DataParallelExecutorGroup(object):
         Parameters
         ----------
         merge_multi_context : bool
-            Default is `True`. In the case when data-parallelism is used, the outputs
+            Defaults to ``True``. In the case when data-parallelism is used, the outputs
             will be collected from multiple devices. A `True` value indicate that we
             should merge the collected results so that they look like from a single
             executor.
 
         Returns
         -------
-        If `merge_multi_context` is `True`, it is like `[grad1, grad2]`. Otherwise, it
-        is like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`. All the output
+        If `merge_multi_context` is ``True``, it is like ``[grad1, grad2]``. Otherwise, it
+        is like ``[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]``. All the output
         elements are `NDArray`.
         """
         assert self.inputs_need_grad
@@ -481,7 +481,7 @@ class DataParallelExecutorGroup(object):
     def backward(self, out_grads=None):
         """Run backward on all devices. A backward should be called after
         a call to the forward function. Backward cannot be called unless
-        `self.for_training` is `True`.
+        ``self.for_training`` is ``True``.
 
         Parameters
         ----------
@@ -559,7 +559,7 @@ class DataParallelExecutorGroup(object):
         grad_arrays = {} if self.for_training else None
 
         def _get_or_reshape(name, shared_data_arrays, arg_shape, arg_type, context, logger):
-            """Internal helper to get a memory block or re-use by re-shaping"""
+            """Internal helper to get a memory block or re-use by re-shaping."""
             if name in shared_data_arrays:
                 arg_arr = shared_data_arrays[name]
 

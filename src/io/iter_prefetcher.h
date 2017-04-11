@@ -20,32 +20,10 @@
 #include <queue>
 #include <algorithm>
 #include "./inst_vector.h"
+#include "./image_iter_common.h"
 
 namespace mxnet {
 namespace io {
-// Define prefetcher parameters
-struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
-  /*! \brief number of prefetched batches */
-  size_t prefetch_buffer;
-  /*! \brief data type */
-  dmlc::optional<int> dtype;
-
-  // declare parameters
-  DMLC_DECLARE_PARAMETER(PrefetcherParam) {
-    DMLC_DECLARE_FIELD(prefetch_buffer).set_default(4)
-        .describe("Backend Param: Number of prefetched parameters");
-    DMLC_DECLARE_FIELD(dtype)
-      .add_enum("float32", mshadow::kFloat32)
-      .add_enum("float64", mshadow::kFloat64)
-      .add_enum("float16", mshadow::kFloat16)
-      .add_enum("int32", mshadow::kInt32)
-      .add_enum("uint8", mshadow::kUint8)
-      .set_default(dmlc::optional<int>())
-      .describe("Output data type. Leave as None to use"
-                "internal data iterator's output type");
-  }
-};
-
 // iterator on image recordio
 class PrefetcherIter : public IIterator<DataBatch> {
  public:

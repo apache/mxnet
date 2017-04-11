@@ -110,6 +110,6 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
     }
     val acc = numCorrect.toFloat / numInst
     logger.info(s"Final accuracy = $acc")
-    assert(acc > 0.95)
+    assert(acc > 0.92)
   }
 }

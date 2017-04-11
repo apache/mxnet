@@ -91,26 +91,31 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   static const Op* ewise_sum_op = Op::Get("ElementWiseSum");
   static const Op* identity_op = Op::Get("identity");
   static const Op* zeros_op = Op::Get("_zeros");
-  // remove zero in the sum.
+  static const Op* zeros_like_op = Op::Get("zeros_like");
+
+  if (v.size() == 0) {
+    nnvm::NodePtr ng = nnvm::Node::Create();
+    ng->attrs.op = zeros_op;
+    ng->attrs.name = "zeros";
+    ng->attrs.op->attr_parser(&(ng->attrs));
+    return nnvm::NodeEntry{ng, 0, 0};
+  }
+
+  // remove zero in the sum. at least keep 1.
   size_t begin = 0;
   for (size_t i = 0; i < v.size(); ++i) {
-    if (v[i].node->op() != zeros_op) {
+    if (v[i].node->op() != zeros_op && v[i].node->op() != zeros_like_op) {
       if (begin != i) {
         v[begin] = std::move(v[i]);
       }
       ++begin;
     }
   }
+  if (begin == 0) begin = 1;
   v.resize(begin);
 
   if (v.size() == 1) {
     return std::move(v[0]);
-  } else if (v.size() == 0) {
-    nnvm::NodePtr ng = nnvm::Node::Create();
-    ng->attrs.op = zeros_op;
-    ng->attrs.name = "zeros";
-    ng->attrs.op->attr_parser(&(ng->attrs));
-    return nnvm::NodeEntry{ng, 0, 0};
   } else {
     if (v.size() < inplace_sum_cap) {
       nnvm::NodePtr sum_node = nnvm::Node::Create();
@@ -216,10 +221,16 @@ nnvm::Graph GraphExecutor::InitFullGraph(
     if (type == "CuDNNBatchNorm") return false;
     return true;
   };
+
+  std::vector<const nnvm::Op*> zero_ops;
+  zero_ops.push_back(nnvm::Op::Get("zeros_like"));
+  zero_ops.push_back(nnvm::Op::Get("_zeros"));
+
   // take gradient
   nnvm::Graph g_grad = nnvm::pass::Gradient(
       g, symbol.outputs, xs, head_grad_entry_,
-      AggregateGradient, need_mirror);
+      AggregateGradient, need_mirror, nullptr,
+      zero_ops);
   CHECK_EQ(g_grad.outputs.size(), xs.size());
   for (const auto &e : g_grad.outputs) {
     g.outputs.push_back(e);
@@ -330,6 +341,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   nnvm::Graph g = InitGraph(symbol, default_ctx,
                             ctx_map, in_args, arg_grad_store,
                             grad_req_type, aux_states);
+  g.attrs["saved_opr"] = std::make_shared<nnvm::any>(std::move(saved_opr_));
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
   graph_ = std::move(g);
@@ -733,17 +745,18 @@ void GraphExecutor::InitOpSegs() {
           op_node.exec->exec_type() != Operator::kSync) {
         cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
         topo_start = nid + 1;
-      }
-      // If it produces output gradient, don't include it in the segment
-      bool output_gradient = false;
-      for (auto &out_arr : op_node.exec->out_array) {
-        if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
-          output_gradient = true;
+      } else {
+        // If it produces output gradient, don't include it in the segment
+        bool output_gradient = false;
+        for (auto &out_arr : op_node.exec->out_array) {
+          if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
+            output_gradient = true;
+          }
         }
-      }
-      if (output_gradient) {
-        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-        topo_start = nid + 1;
+        if (output_gradient) {
+          cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+          topo_start = nid + 1;
+        }
       }
     }
     // last segment for backward
@@ -752,6 +765,28 @@ void GraphExecutor::InitOpSegs() {
     }
   }
   return;
+}
+
+void GraphExecutor::ExecuteMonCallback(size_t nid) {
+  static const auto& flist_outputs =
+      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  const auto& idx = graph_.indexed_graph();
+  std::vector<std::string> output_names;
+  OpNode& opnode = op_nodes_[nid];
+  const auto& inode = idx[nid];
+  const auto& node = idx[nid].source;
+  if (flist_outputs.count(node->op())) {
+    output_names = flist_outputs[node->op()](node->attrs);
+  } else {
+    for (size_t i = 0; i < node->num_outputs(); ++i) {
+      output_names.emplace_back(std::to_string(i));
+    }
+  }
+  for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
+    NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
+    std::string name = inode.source->attrs.name + "_" + output_names[i];
+    this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+  }
 }
 
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
@@ -766,12 +801,10 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   }
 
   // Push Ops
-  static const auto& flist_outputs =
-      nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
-    if (seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
+    if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
 #if MXNET_USE_PROFILER
       bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;
 #else
@@ -802,22 +835,9 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     } else {
       LOG(FATAL) << "Not accessed";
     }
-
+    // Monitor callbacks
     if (monitor_callback_) {
-      std::vector<std::string> output_names;
-      const auto& node = idx[nid].source;
-      if (flist_outputs.count(node->op())) {
-        output_names = flist_outputs[node->op()](node->attrs);
-      } else {
-        for (size_t i = 0; i < node->num_outputs(); ++i) {
-          output_names.emplace_back(std::to_string(i));
-        }
-      }
-      for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
-        NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
-        std::string name = inode.source->attrs.name + "_" + output_names[i];
-        this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
-      }
+      ExecuteMonCallback(nid);
     }
   }
 }
@@ -899,11 +919,16 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     on_complete();
   };
 #if MXNET_USE_PROFILER
+    opr_names.pop_back();
     opr_names += "]";
+    // the lifetime of `opr_names.c_str()` is same with opr_names
+    // you need to copy it out. (potential memory leak risk)
+    char *p_opr_name = new char[opr_names.size() + 1];
+    memcpy(p_opr_name, opr_names.c_str(), opr_names.size() + 1);
 #endif
   ret.opr = Engine::Get()->NewOperator(
       exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-      PROFILER_MESSAGE(opr_names.c_str()));
+      PROFILER_MESSAGE(p_opr_name));
   return ret;
 }
 }  // namespace exec

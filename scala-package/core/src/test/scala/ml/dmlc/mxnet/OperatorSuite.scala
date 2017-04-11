@@ -573,7 +573,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     val exeDeconv = deconv.bind(Context.cpu(), args = deconvArgs, argsGrad = deconvArgsGrad)
     val deconvOutGrad = convData
     exeDeconv.backward(deconvOutGrad)
-    assert(reldiff(convArgsGrad(1), deconvArgsGrad(1)) < 1e-6)
+    assert(reldiff(convArgsGrad(1), deconvArgsGrad(1)) < 1e-5)
   }
 
   test("deconvolution gradient") {

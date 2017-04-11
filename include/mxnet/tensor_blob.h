@@ -203,7 +203,13 @@ class TBlob {
   template<typename DType>
   inline DType* dptr() const {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
-      << "TBlob.dptr(): data type do not match specified type.";
+      << "TBlob.get_with_shape: data type do not match specified type."
+      << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+#if MKL_EXPERIMENTAL == 1
+    if (Mkl_mem_ != nullptr) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+    }
+#endif
     return static_cast<DType*>(dptr_);
   }
   /*!
@@ -219,17 +225,7 @@ class TBlob {
   inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
-    CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
-      << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
-    return mshadow::Tensor<Device, dim, DType>(static_cast<DType*>(dptr_),
-                                               shape_.get<dim>(),
-                                               stride_, stream);
+    return mshadow::Tensor<Device, dim, DType>(dptr<DType>(), shape_.get<dim>(), stride_, stream);
   }
   /*!
    * \brief fetch a tensor in given shape
@@ -247,21 +243,11 @@ class TBlob {
       mshadow::Stream<Device> *stream = NULL) const {
     CHECK(Device ::kDevMask == dev_mask_)
       << "TBlob.get: device type do not match specified type";
-    CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
-      << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
     CHECK_EQ(this->shape_.Size(), shape.Size())
       << "TBlob.get_with_shape: new and old shape do not match total elements";
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
-    return mshadow::Tensor<Device, dim, DType>(static_cast<DType*>(dptr_),
-                                               shape,
-                                               shape[dim - 1],
-                                               stream);
+    return mshadow::Tensor<Device, dim, DType>(dptr<DType>(), shape,
+                                               shape[dim - 1], stream);
   }
   /*!
    * \brief flatten the tensor to 3 dimension,
@@ -302,6 +288,7 @@ namespace dmlc {
 // Add a few patches to support TShape in dmlc/parameter.
 DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");
 DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<int>, "Shape(tuple)");
+DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<dmlc::optional<int>>, "Shape(tuple)");
 
 namespace parameter {
 

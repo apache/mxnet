@@ -18,9 +18,9 @@ the environment will have access to
 
 - all the global names in this file (e.g. `SymbolDoc`)
 - all the operators (e.g. `FullyConnected`)
-- the name `test_utils` for `mxnet.test_utils` (e.g. `test_utils.reldiff`)
-- the name `mxnet` (e.g. `mxnet.nd.zeros`)
-- the name `numpy`
+- the name `test_utils` for `mx.test_utils` (e.g. `test_utils.reldiff`)
+- the name `mx` (e.g. `mx.nd.zeros`)
+- the name `np`
 
 The following documents are recommended:
 
@@ -63,10 +63,10 @@ class ActivationDoc(SymbolDoc):
     ReLU activation
 
     >>> test_suites = [
-    ...     ('relu', lambda x: numpy.maximum(x, 0)),
-    ...     ('sigmoid', lambda x: 1 / (1 + numpy.exp(-x))),
-    ...     ('tanh', lambda x: numpy.tanh(x)),
-    ...     ('softrelu', lambda x: numpy.log(1 + numpy.exp(x)))
+    ...     ('relu', lambda x: np.maximum(x, 0)),
+    ...     ('sigmoid', lambda x: 1 / (1 + np.exp(-x))),
+    ...     ('tanh', lambda x: np.tanh(x)),
+    ...     ('softrelu', lambda x: np.log(1 + np.exp(x)))
     ... ]
     >>> x = test_utils.random_arrays((2, 3, 4))
     >>> for act_type, numpy_impl in test_suites:
@@ -93,17 +93,17 @@ class DropoutDoc(SymbolDoc):
     Regression Test
     ---------------
     >>> shape = (100, 100)  # take larger shapes to be more statistical stable
-    >>> x = numpy.ones(shape)
+    >>> x = np.ones(shape)
     >>> op = Dropout(p=0.5, name='dp')
     >>> # dropout is identity during testing
     >>> y = test_utils.simple_forward(op, dp_data=x, is_train=False)
-    >>> test_utils.almost_equal(x, y, threshold=0)
+    >>> test_utils.almost_equal(x, y)
     True
     >>> y = test_utils.simple_forward(op, dp_data=x, is_train=True)
     >>> # expectation is (approximately) unchanged
-    >>> numpy.abs(x.mean() - y.mean()) < 0.1
+    >>> np.abs(x.mean() - y.mean()) < 0.1
     True
-    >>> set(numpy.unique(y)) == set([0, 2])
+    >>> set(np.unique(y)) == set([0, 2])
     True
     """
 
@@ -130,7 +130,7 @@ class EmbeddingDoc(SymbolDoc):
     >>> batch_size = 12
     >>> word_vecs = test_utils.random_arrays((vocab_size, embed_dim))
     >>> op = Embedding(name='embed', input_dim=vocab_size, output_dim=embed_dim)
-    >>> x = numpy.random.choice(vocab_size, batch_size)
+    >>> x = np.random.choice(vocab_size, batch_size)
     >>> y = test_utils.simple_forward(op, embed_data=x, embed_weight=word_vecs)
     >>> y_np = word_vecs[x]
     >>> test_utils.almost_equal(y, y_np)
@@ -157,7 +157,7 @@ class FlattenDoc(SymbolDoc):
     >>> for dims in test_dims:
     ...     x = test_utils.random_arrays(dims)
     ...     y = test_utils.simple_forward(op, flat_data=x)
-    ...     y_np = x.reshape((dims[0], numpy.prod(dims[1:])))
+    ...     y_np = x.reshape((dims[0], np.prod(dims[1:]).astype('int32')))
     ...     print('%s: %s' % (dims, test_utils.almost_equal(y, y_np)))
     (2, 3, 4, 5): True
     (2, 3): True
@@ -198,7 +198,7 @@ class FullyConnectedDoc(SymbolDoc):
     >>> op = FullyConnected(num_hidden=dim_out, name='FC')
     >>> out = test_utils.simple_forward(op, FC_data=x, FC_weight=w, FC_bias=b)
     >>> # numpy implementation of FullyConnected
-    >>> out_np = numpy.dot(x, w.T) + b
+    >>> out_np = np.dot(x, w.T) + b
     >>> test_utils.almost_equal(out, out_np)
     True
     """
@@ -228,7 +228,7 @@ def _build_doc(func_name,
     extra_doc = "\n" + '\n'.join([x.__doc__ for x in type.__subclasses__(SymbolDoc)
                                   if x.__name__ == '%sDoc' % func_name])
     doc_str += _re.sub(_re.compile("    "), "", extra_doc)
-    doc_str = _re.sub('ndarray-or-symbol', 'Symbol', doc_str)
+    doc_str = _re.sub('NDArray-or-Symbol', 'Symbol', doc_str)
     return doc_str
 
 
@@ -262,8 +262,8 @@ class BroadcastPlusDoc(SymbolDoc):
 
     Normal summation with matching shapes:
 
-    >>> dev = mxnet.context.cpu();
-    >>> x = c.bind(dev, args={'a': mxnet.nd.ones((2, 2)), 'b' : mxnet.nd.ones((2, 2))})
+    >>> dev = mx.context.cpu();
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2, 2)), 'b' : mx.nd.ones((2, 2))})
     >>> x.forward()
     [<NDArray 2x2 @cpu(0)>]
     >>> print x.outputs[0].asnumpy()
@@ -272,21 +272,21 @@ class BroadcastPlusDoc(SymbolDoc):
 
     Broadcasting:
 
-    >>> x = c.bind(dev, args={'a': mxnet.nd.ones((2, 2)), 'b' : mxnet.nd.ones((1, 1))})
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2, 2)), 'b' : mx.nd.ones((1, 1))})
     >>> x.forward()
     [<NDArray 2x2 @cpu(0)>]
     >>> print x.outputs[0].asnumpy()
     [[ 2.  2.]
      [ 2.  2.]]
 
-    >>> x = c.bind(dev, args={'a': mxnet.nd.ones((2, 1)), 'b' : mxnet.nd.ones((1, 2))})
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((2, 1)), 'b' : mx.nd.ones((1, 2))})
     >>> x.forward()
     [<NDArray 2x2 @cpu(0)>]
     >>> print x.outputs[0].asnumpy()
     [[ 2.  2.]
      [ 2.  2.]]
 
-    >>> x = c.bind(dev, args={'a': mxnet.nd.ones((1, 2)), 'b' : mxnet.nd.ones((2, 1))})
+    >>> x = c.bind(dev, args={'a': mx.nd.ones((1, 2)), 'b' : mx.nd.ones((2, 1))})
     >>> x.forward()
     [<NDArray 2x2 @cpu(0)>]
     >>> print x.outputs[0].asnumpy()

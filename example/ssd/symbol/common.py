@@ -30,7 +30,9 @@ def conv_act_layer(from_layer, name, num_filter, kernel=(1,1), pad=(0,0), \
     (conv, relu) mx.Symbols
     """
     assert not use_batchnorm, "batchnorm not yet supported"
-    conv = mx.symbol.Convolution(data=from_layer, kernel=kernel, pad=pad, \
+    bias = mx.symbol.Variable(name="conv{}_bias".format(name),
+        init=mx.init.Constant(0.0), attr={'__lr_mult__': '2.0'})
+    conv = mx.symbol.Convolution(data=from_layer, bias=bias, kernel=kernel, pad=pad, \
         stride=stride, num_filter=num_filter, name="conv{}".format(name))
     relu = mx.symbol.Activation(data=conv, act_type=act_type, \
         name="{}{}".format(act_type, name))
@@ -40,7 +42,7 @@ def conv_act_layer(from_layer, name, num_filter, kernel=(1,1), pad=(0,0), \
 
 def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
                     ratios=[1], normalization=-1, num_channels=[],
-                    clip=True, interm_layer=0):
+                    clip=True, interm_layer=0, steps=[]):
     """
     the basic aggregation module for SSD detection. Takes in multiple layers,
     generate multiple object detection targets by customized layers
@@ -66,6 +68,9 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
         whether to clip out-of-image boxes
     interm_layer : int
         if > 0, will add a intermediate Convolution layer
+    steps : list
+        specify steps for each MultiBoxPrior layer, leave empty, it will calculate
+        according to layer dimensions
 
     Returns:
     ----------
@@ -104,6 +109,9 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
     assert sum(x > 0 for x in normalization) == len(num_channels), \
         "must provide number of channels for each normalized layer"
 
+    if steps:
+        assert len(steps) == len(from_layers), "provide steps for all layers or leave empty"
+
     loc_pred_layers = []
     cls_pred_layers = []
     anchor_layers = []
@@ -115,15 +123,10 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
         if normalization[k] > 0:
             from_layer = mx.symbol.L2Normalization(data=from_layer, \
                 mode="channel", name="{}_norm".format(from_name))
-            # from_layer = mx.symbol.NaiveScale(data=from_layer, mode="spatial", \
-            #     name="{}_scale_{}".format(from_name, normalization[k]))
-            # scale = mx.symbol.InferedVariable(data=from_layer, shape=(1, 0, 1, 1),
-            #     suffix="{}_scale".format(normalization[k]),
-            #     name="{}_scale".format(from_name))
             scale = mx.symbol.Variable(name="{}_scale".format(from_name),
-                shape=(1, num_channels.pop(0), 1, 1))
-            # scale = mx.symbol.Reshape(data=scale, shape=(1, 512, 1, 1))
-            from_layer = normalization[k] * mx.symbol.broadcast_mul(lhs=scale, rhs=from_layer)
+                shape=(1, num_channels.pop(0), 1, 1),
+                init=mx.init.Constant(normalization[k]))
+            from_layer = mx.symbol.broadcast_mul(lhs=scale, rhs=from_layer)
         if interm_layer > 0:
             from_layer = mx.symbol.Convolution(data=from_layer, kernel=(3,3), \
                 stride=(1,1), pad=(1,1), num_filter=interm_layer, \
@@ -144,7 +147,9 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
 
         # create location prediction layer
         num_loc_pred = num_anchors * 4
-        loc_pred = mx.symbol.Convolution(data=from_layer, kernel=(3,3), \
+        bias = mx.symbol.Variable(name="{}_loc_pred_conv_bias".format(from_name),
+            init=mx.init.Constant(0.0), attr={'__lr_mult__': '2.0'})
+        loc_pred = mx.symbol.Convolution(data=from_layer, bias=bias, kernel=(3,3), \
             stride=(1,1), pad=(1,1), num_filter=num_loc_pred, \
             name="{}_loc_pred_conv".format(from_name))
         loc_pred = mx.symbol.transpose(loc_pred, axes=(0,2,3,1))
@@ -153,7 +158,9 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
 
         # create class prediction layer
         num_cls_pred = num_anchors * num_classes
-        cls_pred = mx.symbol.Convolution(data=from_layer, kernel=(3,3), \
+        bias = mx.symbol.Variable(name="{}_cls_pred_conv_bias".format(from_name),
+            init=mx.init.Constant(0.0), attr={'__lr_mult__': '2.0'})
+        cls_pred = mx.symbol.Convolution(data=from_layer, bias=bias, kernel=(3,3), \
             stride=(1,1), pad=(1,1), num_filter=num_cls_pred, \
             name="{}_cls_pred_conv".format(from_name))
         cls_pred = mx.symbol.transpose(cls_pred, axes=(0,2,3,1))
@@ -161,8 +168,12 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
         cls_pred_layers.append(cls_pred)
 
         # create anchor generation layer
-        anchors = mx.symbol.MultiBoxPrior(from_layer, sizes=size_str, ratios=ratio_str, \
-            clip=clip, name="{}_anchors".format(from_name))
+        if steps:
+            step = (steps[k], steps[k])
+        else:
+            step = '(-1.0, -1.0)'
+        anchors = mx.contrib.symbol.MultiBoxPrior(from_layer, sizes=size_str, ratios=ratio_str, \
+            clip=clip, name="{}_anchors".format(from_name), steps=step)
         anchors = mx.symbol.Flatten(data=anchors)
         anchor_layers.append(anchors)
 

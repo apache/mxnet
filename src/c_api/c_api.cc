@@ -23,7 +23,7 @@
 #include <functional>
 #include <utility>
 #include "./c_api_common.h"
-#include "../operator/custom-inl.h"
+#include "../operator/custom/custom-inl.h"
 #include "../engine/profiler.h"
 
 using namespace mxnet;
@@ -318,7 +318,7 @@ int MXNDArrayGetShape(NDArrayHandle handle,
 }
 
 int MXNDArrayGetData(NDArrayHandle handle,
-                     mx_float **out_pdata) {
+                     void **out_pdata) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
@@ -326,7 +326,9 @@ int MXNDArrayGetData(NDArrayHandle handle,
         << "MXNDArrayGetData can only be called for NDArray on CPU";
     const TBlob &b = arr->data();
     CHECK(b.CheckContiguous());
-    *out_pdata = b.FlatTo2D<cpu, mx_float>().dptr_;
+    MSHADOW_REAL_TYPE_SWITCH(arr->dtype(), DType, {
+      *out_pdata = b.FlatTo2D<cpu, DType>().dptr_;
+    });
   } else {
     *out_pdata = nullptr;
   }
