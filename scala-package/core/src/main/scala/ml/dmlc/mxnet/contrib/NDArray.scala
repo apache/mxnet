@@ -18,8 +18,8 @@
 package ml.dmlc.mxnet.contrib
 
 import ml.dmlc.mxnet.NDArray._
-import ml.dmlc.mxnet.AddContribNDArrayFunctions
+import ml.dmlc.mxnet.AddNDArrayFunctions
 
-@AddContribNDArrayFunctions
+@AddNDArrayFunctions(true)
 object NDArray {
 }

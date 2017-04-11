@@ -776,7 +776,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
 }
 
 // scalastyle:on finalize
-@AddSymbolFunctions
+@AddSymbolFunctions(false)
 object Symbol {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])

@@ -30,7 +30,7 @@ import scala.ref.WeakReference
 /**
  * NDArray API of mxnet
  */
-@AddNDArrayFunctions
+@AddNDArrayFunctions(false)
 object NDArray {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])

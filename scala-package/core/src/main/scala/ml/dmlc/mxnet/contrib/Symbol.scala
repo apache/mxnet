@@ -18,8 +18,8 @@
 package ml.dmlc.mxnet.contrib
 
 import ml.dmlc.mxnet.Symbol._
-import ml.dmlc.mxnet.AddContribSymbolFunctions
+import ml.dmlc.mxnet.AddSymbolFunctions
 
-@AddContribSymbolFunctions
+@AddSymbolFunctions(true)
 object Symbol {
 }
