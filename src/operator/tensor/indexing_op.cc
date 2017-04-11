@@ -109,36 +109,6 @@ NNVM_REGISTER_OP(_backward_take)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", TakeOpBackward<cpu>);
 
-
-NNVM_REGISTER_OP(batch_take)
-.describe(R"code(Take elements from a data batch.
-
-Given an ``(d0, d1)`` input array, and ``(d0,)`` indices, the output will be a
-``(d0,)`` computed by::
-
-  output[i] = input[i, indices[i]]
-
-Examples::
-
-  x = [[ 1.,  2.],
-       [ 3.,  4.],
-       [ 5.,  6.]]
-
-  batch_take(x, [0,1,0]) = [ 1.  4.  5.]
-
-)code" ADD_FILELINE)
-.set_num_outputs(1)
-.set_num_inputs(2)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "indices"};
-  })
-.set_attr<nnvm::FInferShape>("FInferShape", BatchTakeOpShape)
-.set_attr<nnvm::FInferType>("FInferType", BatchTakeOpType)
-.set_attr<FCompute>("FCompute<cpu>", BatchTakeOpForward<cpu>)
-.add_argument("a", "NDArray-or-Symbol", "Input data array")
-.add_argument("indices", "NDArray-or-Symbol", "index array");
-
 NNVM_REGISTER_OP(one_hot)
 .describe(R"code(Returns a one-hot array.
 
