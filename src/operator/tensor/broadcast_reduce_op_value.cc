@@ -143,7 +143,7 @@ Example::
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 .describe(R"code(Broadcasts the input array to a new shape.
 
-Broadcasting is a mechanism that allows NDArrays to perform different arithmetic operations
+Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
 with arrays of different shapes efficiently without creating multiple copies of arrays.
 Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
 
