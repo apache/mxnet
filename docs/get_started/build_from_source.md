@@ -11,7 +11,7 @@ This document explains how to build MXNet from sources. Building MXNet from sour
 
 ### Prerequisites
 
-You need C++ build tools and BLAS library to build MXNet shared library. If you are running MXNet on a GPU machines, you need to install CUDA and CuDNN.
+You need C++ build tools and BLAS library to build MXNet shared library. If you want to run MXNet on GPUs, you need to install CUDA and CuDNN.
 
 #### C++ build tools
 
@@ -280,7 +280,7 @@ some example build options
 
 <div class="linux">
 
-- Build without using OpenCV. `-j` is used to specify usage of multiple threads to build MXNet.
+- Build without using OpenCV. `-j` runs multiple jobs against multi-core CPUs.
 
   ```bash
   make -j USE_OPENCV=0
@@ -338,7 +338,7 @@ The Python package can be installed by one of the following three ways:
    (e.g. `~/.bashrc`):
 
    ```bash
-   export PYTHONPATH=${PYTHONPATH}:~/mxnet/python
+   export PYTHONPATH=~/mxnet/python:${PYTHONPATH}
    ```
 
 2. Install MXNet Python bindings for the current user:
@@ -352,7 +352,7 @@ The Python package can be installed by one of the following three ways:
 3. Install MXNet Python bindings system wide:
 
    ```bash
-   cd python; sudo python setup.py
+   cd python; sudo python setup.py install
    ```
 
 ## Build the R package
