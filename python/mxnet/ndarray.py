@@ -1743,7 +1743,8 @@ def not_equal(lhs, rhs):
     # pylint: enable= no-member, protected-access
 
 def greater(lhs, rhs):
-    """Returns the result of element-wise **greater than**(>) comparison operation with broadcasting.
+    """Returns the result of element-wise **greater than**(>) comparison operation
+    with broadcasting.
 
     For each element in input arrays, return 1(true) if lhs elements are greater than rhs,
     otherwise return 0(false).
