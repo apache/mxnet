@@ -6,7 +6,7 @@ def same(a, b):
     return np.sum(a != b) == 0
 
 def check_with_device(device):
-    tol = 0.05
+    tol = 0.1
     symbols = [
         {
             'name': 'normal',
@@ -111,6 +111,7 @@ def check_with_device(device):
                 "ndarray test: `%s` should give the same result with the same seed" % name
 
         for check_name, check_func, tol in symbdic['checks']:
+            print("CHECK = ",check_name," NAME = ",name," RET = ",check_func(ret1, params))
             assert np.abs(check_func(ret1, params)) < tol, "ndarray test: %s check for `%s` did not pass" % (check_name, name)
 
         # check symbolic
