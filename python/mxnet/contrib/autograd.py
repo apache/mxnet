@@ -5,7 +5,7 @@ from __future__ import division
 
 import ctypes
 import functools
-from ..base import _LIB, check_call
+from ..base import _LIB, check_call, string_types
 from ..base import mx_uint, NDArrayHandle, c_array
 from ..ndarray import NDArray, zeros_like
 from ..symbol import _GRAD_REQ_MAP
@@ -20,7 +20,7 @@ def set_recording(recording):
     check_call(_LIB.MXAutogradSetRecording(
         ctypes.c_int(recording)))
 
-def mark_variables(variables, grad_reqs, gradients):
+def mark_variables(variables, gradients, grad_reqs='write'):
     """Mark NDArrays as variables to compute gradient for autograd.
 
     Parameters
@@ -34,7 +34,10 @@ def mark_variables(variables, grad_reqs, gradients):
     for var, gradvar in zip(variables, gradients):
         variable_handles.append(var.handle)
         gradient_handles.append(gradvar.handle)
-    grad_reqs = [_GRAD_REQ_MAP[i] for i in grad_reqs]
+    if isinstance(grad_reqs, string_types):
+        grad_reqs = [_GRAD_REQ_MAP[grad_reqs]]*len(variables)
+    else:
+        grad_reqs = [_GRAD_REQ_MAP[i] for i in grad_reqs]
 
     check_call(_LIB.MXAutogradMarkVariables(
         len(variable_handles),
@@ -81,8 +84,7 @@ def grad_and_loss(func):
         for x in args:
             assert isinstance(x, NDArray), "type of autograd input should NDArray."
         grads = [zeros_like(x) for x in args]
-        grad_reqs = ['write']*len(args)
-        mark_variables(args, grad_reqs, grads)
+        mark_variables(args, grads)
         set_recording(True)
         outputs = func(*args)
         set_recording(False)
