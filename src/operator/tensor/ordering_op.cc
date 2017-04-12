@@ -15,23 +15,31 @@ DMLC_REGISTER_PARAMETER(SortParam);
 DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
-.describe(R"code(Return the top *k* elements in an array.
+.describe(R"code(Returns the top *k* elements in an input array.
 
 Examples::
 
   x = [[ 0.3,  0.2,  0.4],
        [ 0.1,  0.3,  0.2]]
 
-  // return the index of the largest element on last axis
+  // returns an index of the largest element on last axis
   topk(x) = [[ 2.],
              [ 1.]]
 
-  // return the value of the top-2 elements on last axis
+  // returns the value of top-2 largest elements on last axis
   topk(x, ret_typ='value', k=2) = [[ 0.4,  0.3],
                                    [ 0.3,  0.2]]
 
-  // flatten and then return both index and value
-  topk(x, ret_typ='both', k=2, axis=None) = [ 0.4,  0.3], [ 2.,  0.]
+  // returns the value of top-2 smallest elements on last axis
+  topk(x, ret_typ='value', k=2, is_ascend=1) = [[ 0.2 ,  0.3],
+                                               [ 0.1 ,  0.2]]
+
+  // returns the value of top-2 largest elements on axis 0
+  topk(x, axis=0, ret_typ='value', k=2) = [[ 0.3,  0.3,  0.4],
+                                           [ 0.1,  0.2,  0.2]]
+
+  // flattens and then returns list of both values and indices
+  topk(x, ret_typ='both', k=2, axis=None) = [[[ 0.4,  0.3], [ 0.3,  0.2]] ,  [[ 2.,  0.], [ 1.,  2.]]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -59,7 +67,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(TopKParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_topk)
@@ -74,21 +82,21 @@ NNVM_REGISTER_OP(_backward_topk)
 });
 
 NNVM_REGISTER_OP(sort)
-.describe(R"code(Return a sorted copy of an array.
+.describe(R"code(Returns a sorted copy of an input array.
 
 Examples::
 
   x = [[ 1, 4],
        [ 3, 1]]
 
-  // sort along the last axis
+  // sorts along the last axis
   sort(x) = [[ 1.,  4.],
              [ 1.,  3.]]
 
-  // flatten and then sort
+  // flattens and then sorts
   sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
 
-  // sort long the first axis
+  // sorts along the first axis
   sort(x, axis=0) = [[ 1.,  1.],
                      [ 3.,  4.]]
 
@@ -122,11 +130,16 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(SortParam::__FIELDS__());
 
 NNVM_REGISTER_OP(argsort)
-.describe(R"code(Returns the indices that can sort an array.
+.describe(R"code(Returns the indices that would sort an input array.
+
+This function returns an array of indices having same shape as an input array and
+each element represents an index value pointing to the original array along the given axis.
+These indices are replaced by the corresponding element found in the original array,
+the resulting array will be sorted
 
 Examples::
 
@@ -155,7 +168,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(ArgSortParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

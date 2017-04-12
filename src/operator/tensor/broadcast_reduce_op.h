@@ -24,7 +24,7 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
         .describe("The axes to perform the reduction.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axes which are reduced are left "
+      .describe("If true, the reduced axes are left "
                 "in the result as dimension with size one.");
   }
 };
@@ -36,9 +36,9 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>())
       .describe("int or None. The axis to perform the reduction. "
                 "Negative values means indexing from right to left. "
-                "If is `None`, a global reduction will be performed.");
+                "Global reduction is not yet supported.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
-      .describe("If true, the axis which is reduced is left "
+      .describe("If true, the reduced axis is left "
                 "in the result as dimension with size one.");
   }
 };

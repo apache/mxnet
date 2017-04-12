@@ -8,17 +8,67 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
-.MXNET_DESCRIBE("Returns the indices of the maximum values along an axis.")
+.describe(R"code(Returns the indices of the maximum values along an axis.  
+
+In case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence
+are returned.
+
+Example::  
+
+   x = [[ 0.,  1.,  2.], 
+        [ 3.,  4.,  5.]]  
+
+   mx.nd.argmax(x, axis=0) = [ 1.,  1.,  1.]   
+
+   mx.nd.argmax(x, axis=1) = [ 2.,  2.]   
+
+   mx.nd.argmax(x, axis=1, keepdims=True) = [[ 2.], 
+                                             [ 2.]]   
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
-.MXNET_DESCRIBE("Returns the indices of the minimum values along an axis.")
+.describe(R"code(Returns the indices of the minimum values along an axis.
+
+In case of multiple occurrences of the minimum values, the indices corresponding to the first occurrence
+are returned.
+
+Example::  
+
+   x = [[ 0.,  1.,  2.], 
+        [ 3.,  4.,  5.]]  
+
+   mx.nd.argmin(x, axis=0) = [ 0.,  0.,  0.]   
+
+   mx.nd.argmin(x, axis=1) = [ 0.,  0.]   
+
+   mx.nd.argmin(x, axis=1, keepdims=True) = [[ 0.], 
+                                             [ 0.]]   
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // Legacy support
 NNVM_REGISTER_OP(argmax_channel)
+.describe(R"code(Returns the argmax indices of each channel from the input array.
+
+This function takes argmax indices of each channel from the input array. The result will be an NDArray of
+shape (num_channel,).
+
+In case of multiple occurrences of the minimum values, the indices corresponding to the first occurrence
+are returned.
+
+Example::  
+
+   x = [[ 0.,  1.,  2.], 
+        [ 3.,  4.,  5.]]  
+
+   mx.nd.argmax_channel(x) = [ 2.,  2.]   
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
@@ -30,7 +80,7 @@ NNVM_REGISTER_OP(argmax_channel)
 .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
-.add_argument("data", "NDArray-or-Symbol", "Source input");
+.add_argument("data", "NDArray-or-Symbol", "The input array");
 
 NNVM_REGISTER_OP(pick)
 .set_num_inputs(2)
@@ -52,7 +102,7 @@ NNVM_REGISTER_OP(pick)
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
     return ret;
   })
-.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_argument("index", "NDArray-or-Symbol", "Index array")
 .add_arguments(ReduceAxisParam::__FIELDS__());
 
