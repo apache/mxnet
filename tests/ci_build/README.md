@@ -33,3 +33,9 @@ using (`ci_build.sh`)[./ci_build.sh]. For example
   ```bash
   ./ci_build.sh gpu PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest'
   ```
+
+- build the documents. The results will be available at `docs/_build/html`
+
+  ```bash
+  tests/ci_build/ci_build.sh doc make -C docs html
+  ```

@@ -74,7 +74,7 @@ following types are supported:
 - `tanh`: Hyperbolic tangent, `y = (exp(x) - exp(-x)) / (exp(x) + exp(-x))`
 - `softrelu`: Soft ReLU, or SoftPlus, `y = log(1 + exp(x))`
 )code" ADD_FILELINE)
-.add_argument("data", "ndarray-or-symbol", "Input data to activation function.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
 .add_arguments(ActivationParam::__FIELDS__());
 
 }  // namespace op

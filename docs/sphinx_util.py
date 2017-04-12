@@ -1,15 +1,17 @@
-# -*- coding: utf-8 -*-
 """Helper utilty function for customization."""
 import sys
 import os
 import docutils
 import subprocess
 
+_DEV_MODE = int(os.getenv('DEV', '0'))
+
 def run_build_mxnet(folder):
     """Run the doxygen make command in the designated folder."""
     try:
-        subprocess.call('cd %s; cp make/readthedocs.mk config.mk' % folder, shell = True)
-        subprocess.call('cd %s; rm -rf build' % folder, shell = True)
+        subprocess.call('cd %s; cp make/config.mk config.mk' % folder, shell = True)
+        if not _DEV_MODE:       # do an incremental build for dev mode
+            subprocess.call('cd %s; rm -rf build' % folder, shell = True)
         retcode = subprocess.call("cd %s; make -j$(nproc)" % folder, shell = True)
         if retcode < 0:
             sys.stderr.write("build terminated by signal %s" % (-retcode))
@@ -99,14 +101,15 @@ def convert_md_table(root_path):
             with codecs.open(f, 'w', 'utf-8') as i:
                 i.write(output)
 
-subprocess.call('./build-notebooks.sh')
-
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 root_path = os.path.join(curr_path, '..')
-convert_md_table(curr_path)
 run_build_mxnet(root_path)
-build_r_docs(root_path)
-build_scala_docs(root_path)
+
+if not _DEV_MODE:
+    subprocess.call('./build-notebooks.sh')
+    convert_md_table(curr_path)
+    build_r_docs(root_path)
+    build_scala_docs(root_path)
 
 if not os.path.exists('../recommonmark'):
     subprocess.call('cd ..; rm -rf recommonmark;' +

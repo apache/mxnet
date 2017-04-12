@@ -21,13 +21,13 @@ class Monitor(object):
     interval : int
         Number of batches between printing.
     stat_func : function
-        a function that computes statistics of tensors.
-        Takes a NDArray and returns a NDArray. defaults to mean
+        A function that computes statistics of tensors.
+        Takes an `NDArray` and returns an `NDArray`. Defaults to mean
         absolute value |x|/size(x).
     pattern : str
         A regular expression specifying which tensors to monitor.
-        Only tensors with names that match name_pattern will be included.
-        For example, '.*weight|.*output' will print all weights and outputs;
+        Only tensors with names that match `name_pattern` will be included.
+        For example, '.*weight|.*output' will print all weights and outputs and
         '.*backward.*' will print all gradients.
     """
     def __init__(self, interval, stat_func=None, pattern='.*', sort=False):
@@ -55,19 +55,19 @@ class Monitor(object):
 
     def install(self, exe):
         """install callback to executor.
-        Supports installing to multiple exes
+        Supports installing to multiple exes.
 
         Parameters
         ----------
         exe : mx.executor.Executor
-            the Executor (returned by symbol.bind) to install to.
+            The Executor (returned by symbol.bind) to install to.
         """
         exe.set_monitor_callback(self.stat_helper)
         self.exes.append(exe)
 
     def tic(self):
-        """start collecting stats for current batch.
-        Call before forward"""
+        """Start collecting stats for current batch.
+        Call before calling forward."""
         if self.step % self.interval == 0:
             for exe in self.exes:
                 for array in exe.arg_arrays:
@@ -120,7 +120,7 @@ class Monitor(object):
         return res
 
     def toc_print(self):
-        """End collecting and print results"""
+        """End collecting and print results."""
         res = self.toc()
         for n, k, v in res:
             logging.info('Batch: {:7d} {:30s} {:s}'.format(n, k, v))

@@ -10,12 +10,18 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<cpu>(SliceChannelParam param) {
-  return new SliceChannelOp<cpu>(param);
+Operator* CreateOp<cpu>(SliceChannelParam param, int dtype) {
+  Operator* op = nullptr;
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+    op = new SliceChannelOp<cpu, DType>(param);
+  })
+  return op;
 }
 
-Operator* SliceChannelProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp, param_);
+Operator* SliceChannelProp::CreateOperatorEx(Context ctx,
+                                             std::vector<TShape>* in_shape,
+                                             std::vector<int>* in_type) const {
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(SliceChannelParam);
@@ -48,7 +54,7 @@ be removed from the shape if it becomes 1::
   y[0] = [ 1.,  2.]  // (2,) vector
 
 )code" ADD_FILELINE)
-.set_return_type("ndarray-or-symbol[]")
+.set_return_type("NDArray-or-Symbol[]")
 .add_arguments(SliceChannelParam::__FIELDS__());
 
 NNVM_REGISTER_OP(SliceChannel).add_alias("split");

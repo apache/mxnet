@@ -71,20 +71,6 @@
 namespace mxnet {
 namespace op {
 
-// CUDA: grid stride looping
-#define CUDA_KERNEL_LOOP(i, n) \
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
-      i < (n); \
-      i += blockDim.x * gridDim.x)
-
-/*!
- * \brief Get the number of blocks for cuda kernel given N
- */
-inline int cuda_get_num_blocks(const int N) {
-  using namespace mshadow::cuda;
-  return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
-}
-
 /*!
  * \brief im2col gpu kernel.
  * DO NOT call this directly. Use wrapper function im2col() instead;
@@ -141,6 +127,7 @@ inline void im2col_gpu(mshadow::Stream<gpu>* s,
   int width_col = (width + 2 * pad_w -
       (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
   int num_kernels = channels * height_col * width_col;
+  using namespace mxnet_op;
   // NOLINT_NEXT_LINE(whitespace/operators)
   im2col_gpu_kernel<DType><<<cuda_get_num_blocks(num_kernels), mshadow::cuda::kBaseThreadNum,
                              0, mshadow::Stream<gpu>::GetStream(s)>>>(
@@ -303,6 +290,7 @@ inline void im2col(mshadow::Stream<gpu>* s,
   index_t num_spatial_axes = kernel_shape.ndim();
   CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
   index_t num_kernels = im_shape[1] * col_shape.ProdShape(1, col_shape.ndim());
+  using namespace mxnet_op;
   switch (num_spatial_axes) {
   case 1:
     im2col_nd_gpu_kernel<DType, 1>  // NOLINT_NEXT_LINE(whitespace/operators)
@@ -347,6 +335,7 @@ inline void col2im_gpu(mshadow::Stream<gpu>* s, const DType* data_col, const int
   int width_col = (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) /
       stride_w + 1;
   int num_kernels = channels * height * width;
+  using namespace mxnet_op;
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
   // NOLINT_NEXT_LINE(whitespace/operators)
@@ -487,6 +476,7 @@ inline void col2im(mshadow::Stream<gpu>* s,
   index_t im_size = im_shape.ProdShape(1, im_shape.ndim());
   // num_axes should be smaller than block size
   CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
+  using namespace mxnet_op;
   switch (num_spatial_axes) {
   case 1:
     col2im_nd_gpu_kernel<DType, 1>  // NOLINT_NEXT_LINE(whitespace/operators)

@@ -21,7 +21,6 @@ import ml.dmlc.mxnet.Base._
 
 /**
  * Random Number interface of mxnet.
- * @author Yuan Tang
  */
 object Random {
   /**

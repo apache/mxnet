@@ -23,11 +23,9 @@ import ml.dmlc.mxnet.Base._
  * This class allow you to write cuda kernel in Scala
  * and call them with NDArray.
  *
- * @author Depeng Liang
- *
  * @param name String, name of the kernel.
  * @param inputs Array[(String, NDArray)], array of input names and ndarray.
- * @param inputs Array[(String, NDArray)], array of output names and ndarray.
+ * @param outputs Array[(String, NDArray)], array of output names and ndarray.
  * @param kernel String, the actual kernel code.
  *      Note that this is only the body of the kernel, i.e.
  *      after { and before }. Rtc will decorate the kernel.

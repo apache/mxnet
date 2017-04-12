@@ -263,20 +263,22 @@ private object DataParallelExecutorGroup {
  *                be specified for each argument.
  */
 class DataParallelExecutorGroup private[module](
-    private val symbol: Symbol,
-    private val contexts: Array[Context],
-    private val workLoadList: IndexedSeq[Float],
-    private val dataShapes: IndexedSeq[DataDesc],
-    private val labelShapes: Option[IndexedSeq[DataDesc]] = None,
+    symbol: Symbol,
+    contexts: Array[Context],
+    workLoadList: IndexedSeq[Float],
+    dataShapes: IndexedSeq[DataDesc],
+    labelShapes: Option[IndexedSeq[DataDesc]] = None,
     private[module] val paramNames: IndexedSeq[String],
-    private val forTraining: Boolean,
-    private val inputsNeedGrad: Boolean,
-    private val sharedGroup: Option[DataParallelExecutorGroup] = None,
-    private val inputTypes: Option[Map[String, DType]] = None,
-    private val fixedParamNames: Set[String] = Set.empty[String],
-    private val gradReq: Map[String, String] = null) {
+    forTraining: Boolean,
+    inputsNeedGrad: Boolean,
+    sharedGroup: Option[DataParallelExecutorGroup] = None,
+    inputTypes: Option[Map[String, DType]] = None,
+    fixedParamNames: Set[String] = Set.empty[String],
+    gradReq: Map[String, String] = null) {
+
   require(symbol != null)
   require(contexts != null)
+
   private val argNames = symbol.listArguments()
   private val auxNames = symbol.listAuxiliaryStates()
 
@@ -587,7 +589,7 @@ class DataParallelExecutorGroup private[module](
     require(argTypes != null, "type inference failed")
 
     val argArrays = ArrayBuffer.empty[NDArray]
-    val gradArrayMap = if (forTraining) mutable.HashMap.empty[String, NDArray] else null
+    val gradArrayMap = mutable.HashMap.empty[String, NDArray]
 
     // create or borrow arguments and gradients
     for (j <- 0 until argNames.length) {

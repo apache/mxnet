@@ -87,7 +87,7 @@
 /*! \brief minor version */
 #define MXNET_MINOR 9
 /*! \brief patch version */
-#define MXNET_PATCH 4
+#define MXNET_PATCH 5
 /*! \brief mxnet version */
 #define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
 /*! \brief helper for making version number */
@@ -304,6 +304,13 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
   out << ctx.dev_id << ")";
   return out;
 }
+
+// describe op registration point
+#define STRINGIZE_DETAIL(x) #x
+#define STRINGIZE(x) STRINGIZE_DETAIL(x)
+#define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
+#define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
+
 }  // namespace mxnet
 
 #include "./tensor_blob.h"

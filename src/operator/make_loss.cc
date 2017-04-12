@@ -32,7 +32,7 @@ MXNET_REGISTER_OP_PROPERTY(MakeLoss, MakeLossProp)
 "This is used as a terminal loss if unary and binary operator "
 "are used to composite a loss with no declaration of backward "
 "dependency")
-.add_argument("data", "Symbol", "Input data.")
+.add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_arguments(MakeLossParam::__FIELDS__());
 
 }  // namespace op

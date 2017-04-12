@@ -1,6 +1,21 @@
 #!/bin/bash
 
+set -e
+
 echo "BUILD make"
+
+WITH_CAFFE_PLUGIN=0
+
+if [ "$WITH_CAFFE_PLUGIN" == "1" ]; then
+# Check out caffe
+  git clone https://github.com/BVLC/caffe
+  mkdir -p caffe/build
+  cd caffe/build
+  cmake ..
+  make -j$(nproc)
+  cd ../..
+fi
+
 cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
@@ -8,11 +23,16 @@ echo "USE_CUDNN=1" >> config.mk
 echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
+echo "USE_CPP_PACKAGE=1" >> config.mk
+
+if [ "$WITH_CAFFE_PLUGIN" == "1" ]; then
+    echo "CAFFE_PATH = $(pwd)/caffe" >> config.mk
+    echo "MXNET_PLUGINS += plugin/caffe/caffe.mk" >> config.mk
+fi
+
 user=`id -u -n`
 
-set -e
-
-make -j$(nproc) || exit 1
+make -j$(nproc)
 
 export PYTHONPATH=${PWD}/python
 

@@ -13,40 +13,41 @@ import json
 from .symbol import Symbol
 
 def _str2tuple(string):
-    """convert shape string to list, internal use only
+    """Convert shape string to list, internal use only.
 
     Parameters
     ----------
     string: str
-        shape string
+        Shape string.
 
     Returns
     -------
-    list of str to represent shape
+    list of str
+        Represents shape.
     """
     return re.findall(r"\d+", string)
 
 def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.]):
-    """convert symbol for detail information
+    """Convert symbol for detail information.
 
     Parameters
     ----------
     symbol: Symbol
-        symbol to be visualized
+        Symbol to be visualized.
     shape: dict
-        dict of shapes, str->shape (tuple), given input shapes
+        A dict of shapes, str->shape (tuple), given input shapes.
     line_length: int
-        total length of printed lines
+        Rotal length of printed lines
     positions: list
-        relative or absolute positions of log elements in each line
+        Relative or absolute positions of log elements in each line.
     Returns
     ------
-        void
+    None
     """
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
     show_shape = False
-    if shape != None:
+    if shape is not None:
         show_shape = True
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
@@ -61,17 +62,17 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     # header names for the different log elements
     to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Previous Layer']
     def print_row(fields, positions):
-        """print format row
+        """Print format row.
 
         Parameters
         ----------
         fields: list
-            information field
+            Information field.
         positions: list
-            field length ratio
+            Field length ratio.
         Returns
         ------
-            void
+        None
         """
         line = ''
         for i, field in enumerate(fields):
@@ -88,12 +89,12 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         Parameters
         ----------
         node: dict
-            node information
+            Node information.
         out_shape: dict
-            node shape information
+            Node shape information.
         Returns
         ------
-            node total parameters
+            Node total parameters.
         """
         op = node["op"]
         pre_node = []
@@ -166,12 +167,12 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
 
 def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
                  hide_weights=True):
-    """convert symbol to dot object for visualization
+    """Convert a symbol to a dot object for visualization.
 
     Parameters
     ----------
     title: str
-        title of the dot graph
+        Title of the dot graph.
     symbol: Symbol
         symbol to be visualized
     shape: dict
@@ -179,18 +180,18 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         of each tensor on the edges between nodes.
         This is a dict of shapes, str->shape (tuple), given input shapes
     node_attrs: dict
-        dict of node's attributes
+        dict of node's attributes.
         for example:
             node_attrs={"shape":"oval","fixedsize":"fasle"}
             means to plot the network in "oval"
     hide_weights: bool
-        if True (default) then inputs with names like `*_weight`
-        or `*_bias` will be hidden
+        If True (default), then inputs with names like `*_weight`
+        or `*_bias` will be hidden.
 
     Returns
     ------
     dot: Diagraph
-        dot object of symbol
+        The dot object of `symbol`.
     """
     # todo add shape support
     try:
@@ -198,9 +199,9 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     except:
         raise ImportError("Draw network requires graphviz library")
     if not isinstance(symbol, Symbol):
-        raise TypeError("symbol must be Symbol")
+        raise TypeError("symbol must be a Symbol")
     draw_shape = False
-    if shape != None:
+    if shape is not None:
         draw_shape = True
         interals = symbol.get_internals()
         _, out_shapes, _ = interals.infer_shape(**shape)
@@ -220,7 +221,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
           "#fdb462", "#b3de69", "#fccde5")
 
     def looks_like_weight(name):
-        """Internal helper to figure out if node should be hidden with hide_weights
+        """Internal helper to figure out if node should be hidden with `hide_weights`.
         """
         if name.endswith("_weight"):
             return True

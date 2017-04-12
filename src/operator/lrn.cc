@@ -38,7 +38,7 @@ Operator* LocalResponseNormProp::CreateOperatorEx(Context ctx, std::vector<TShap
 DMLC_REGISTER_PARAMETER(LRNParam);
 
 MXNET_REGISTER_OP_PROPERTY(LRN, LocalResponseNormProp)
-.add_argument("data", "Symbol", "Input data to the ConvolutionOp.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the ConvolutionOp.")
 .add_arguments(LRNParam::__FIELDS__())
 .describe("Apply convolution to input then add a bias.");
 

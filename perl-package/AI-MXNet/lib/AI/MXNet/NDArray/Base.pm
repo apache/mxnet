@@ -6,6 +6,18 @@ use AI::MXNet::NDArray::Doc;
 use Mouse;
 use AI::MXNet::Function::Parameters;
 
+=head1 NAME
+
+    AI::MXNet::NDArray::Base
+=cut
+
+=head1 DESCRIPTION
+
+    This module provides a convenient interface to a C++ functions
+    that work with NDArray.
+    Essentially it loads them up during the lib startup into the Perl space.
+=cut
+
 my %function_meta;
 method function_meta($code)
 {
@@ -88,7 +100,7 @@ func _make_ndarray_function($handle, $func_name)
         }
         for my $key (keys %kwargs)
         {
-            $kwargs{ $key } = "(" .join(",", @{ $kwargs{ $key } }) .")" 
+            $kwargs{ $key } = "(" .join(", ", @{ $kwargs{ $key } }) .")" 
                 if ref $kwargs{ $key } eq 'ARRAY';
         }
         my $out = check_call(AI::MXNetCAPI::ImperativeInvoke(
@@ -123,9 +135,7 @@ method _init_ndarray_module()
         my $function = _make_ndarray_function($handle, $name);
         {
             no strict 'refs';
-            {
-                *{__PACKAGE__."::$name"} = $function;
-            }
+            *{__PACKAGE__."::$name"} = $function;
         }
     }
 }

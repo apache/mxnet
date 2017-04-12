@@ -29,9 +29,8 @@ import scala.ref.WeakReference
 
 /**
  * NDArray API of mxnet
- * @author Yizhi Liu, Yuan Tang
  */
-@AddNDArrayFunctions
+@AddNDArrayFunctions(false)
 object NDArray {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
@@ -172,7 +171,7 @@ object NDArray {
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
     val arguments = (argTypes zip argNames).filter { case (dtype, _) =>
       !(dtype.startsWith("NDArray") || dtype.startsWith("Symbol")
-        || dtype.startsWith("ndarray-or-symbol"))
+        || dtype.startsWith("NDArray-or-Symbol"))
     }.map { case (_, argName) =>
       argName
     }
@@ -847,13 +846,13 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
 }
 // scalastyle:on finalize
 
-object NDArrayConversions {
+private[mxnet] object NDArrayConversions {
   implicit def int2Scalar(x: Int): NDArrayConversions = new NDArrayConversions(x.toFloat)
   implicit def double2Scalar(x: Double): NDArrayConversions = new NDArrayConversions(x.toFloat)
   implicit def float2Scalar(x: Float): NDArrayConversions = new NDArrayConversions(x)
 }
 
-class NDArrayConversions(val value: Float) {
+private[mxnet] class NDArrayConversions(val value: Float) {
   def +(other: NDArray): NDArray = {
     other + value
   }
@@ -883,9 +882,9 @@ class NDArrayConversions(val value: Float) {
   }
 }
 
-case class NDArrayFunction(handle: NDArrayHandle, arguments: List[String])
+private case class NDArrayFunction(handle: NDArrayHandle, arguments: List[String])
 
-class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
+private[mxnet] class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def head: NDArray = apply(0)
   def get: NDArray = {
     require(arr.length == 1, s"return array length = ${arr.length}")
@@ -938,7 +937,7 @@ class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def asInContext(context: Context): NDArray = head.asInContext(context)
 }
 
-class NDArrayInternal private[mxnet](private val internal: Array[Byte], private val dtype: DType) {
+private[mxnet] class NDArrayInternal (private val internal: Array[Byte], private val dtype: DType) {
   private val unitSize = DType.numOfBytes(dtype)
   require(internal.length > 0 && internal.length % unitSize == 0,
     s"$dtype size $unitSize cannot divide byte array size ${internal.length}")
