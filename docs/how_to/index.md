@@ -6,10 +6,6 @@ These answers are fairly focused. For more didactic, self-contained introduction
 and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 
-&nbsp;
-
-The following topics explain basic concepts and provide procedures for specific tasks. Some include demos complete with pre-trained models.
-
 ## Modeling
 * [How do I fine-tune pre-trained models to a new dataset?](http://mxnet.io/how_to/finetune.html)
 
