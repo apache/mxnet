@@ -401,7 +401,7 @@ class NAG(SGD):
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        if state:
+        if state is not None:
             mom = state
             mom[:] *= self.momentum
             grad += wd * weight

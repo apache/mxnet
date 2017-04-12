@@ -36,6 +36,7 @@ except ImportError:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.symbol import SymbolBase, _init_symbol_module
 
+_GRAD_REQ_MAP = {'null': 0, 'write': 1, 'add': 3}
 
 class Symbol(SymbolBase):
     """Symbol is symbolic graph of the mxnet."""
@@ -1002,18 +1003,19 @@ class Symbol(SymbolBase):
             'aux_states', aux_states, self.list_auxiliary_states(), False)
 
         # setup requirements
-        req_map = {'null': 0, 'write': 1, 'add': 3}
         if isinstance(grad_req, string_types):
-            if grad_req not in req_map:
-                raise ValueError('grad_req must be in %s' % str(req_map))
-            reqs_array = c_array(mx_uint, [mx_uint(req_map[grad_req])] * len(listed_arguments))
+            if grad_req not in _GRAD_REQ_MAP:
+                raise ValueError('grad_req must be in %s' % str(_GRAD_REQ_MAP))
+            reqs_array = c_array(
+                mx_uint,
+                [mx_uint(_GRAD_REQ_MAP[grad_req])] * len(listed_arguments))
         elif isinstance(grad_req, list):
-            reqs_array = c_array(mx_uint, [mx_uint(req_map[item]) for item in grad_req])
+            reqs_array = c_array(mx_uint, [mx_uint(_GRAD_REQ_MAP[item]) for item in grad_req])
         elif isinstance(grad_req, dict):
             req_array = []
             for name in listed_arguments:
                 if name in grad_req:
-                    req_array.append(mx_uint(req_map[grad_req[name]]))
+                    req_array.append(mx_uint(_GRAD_REQ_MAP[grad_req[name]]))
                 else:
                     req_array.append(mx_uint(0))
             reqs_array = c_array(mx_uint, req_array)

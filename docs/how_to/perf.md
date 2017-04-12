@@ -30,19 +30,62 @@ specify `cpu(0)` or `cpu()`, all CPU cores in the machine will be used.
 
 ### Scoring results
 The following table shows the scoring performance, namely number of images can
-be predicted per second. We used AWS EC2 C4.8xlarge (dual Intel(R) Xeon(R) CPU
-E5-2666 v3 @ 2.90GHz) and
-[example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
-with MXNet commit `0a03417`
+be predicted per second. We used [example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py) to measure the performance on different AWS ECS machines
+
+AWS EC2 C4.8xlarge:
 
 | Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
 | --- | --- | --- | --- | --- | --- | --- |
-|   1 |  122.21 | 34.23 |  99.24 |  52.16 |  46.03 | 20.11 |
-|   2 | 224.83 | 51.02 |  138.88 |  66.76 |  52.27 | 24.82 |
-|   4 | 295.87 | 65.88 |  185.46 |  76.70 |  67.45 | 28.16 |
-|   8 | 389.08 | 77.78 |  212.96 |  84.00 |  69.26 | 29.70 |
-|  16 | 519.87 | 85.08 |  222.81 |  85.10 |  68.94 | 29.11 |
-|  32 | 626.25 | 87.63 |  221.66 |  84.36 |  67.69 | 28.70 |
+|   1 |  119.57 | 34.23 |  111.36 |  54.42 |  42.83 | 19.51 |
+|   2 | 210.58 | 51.63 |  137.10 |  67.30 |  57.54 | 23.56 |
+|   4 | 318.54 | 70.00 |  187.21 |  76.53 |  63.64 | 25.80 |
+|   8 | 389.34 | 77.39 |  211.90 |  84.26 |  63.89 | 28.11 |
+|  16 | 489.12 | 85.26 |  220.52 |  82.00 |  63.93 | 27.08 |
+|  32 | 564.04 | 87.15 |  208.21 |  83.05 |  62.19 | 25.76 |
+
+AWS EC2 C4.4xlarge:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  109.96 | 23.00 |  71.82 |  28.10 |  30.66 | 11.81 |
+|   2 | 124.56 | 24.86 |  81.61 |  31.32 |  32.73 | 12.82 |
+|   4 | 157.01 | 26.60 |  86.77 |  32.94 |  33.32 | 13.16 |
+|   8 | 178.40 | 30.67 |  88.58 |  33.52 |  33.32 | 13.32 |
+|  16 | 189.52 | 35.61 |  90.36 |  33.63 |  32.94 | 13.18 |
+|  32 | 196.61 | 38.98 |  105.27 |  33.77 |  32.65 | 13.00 |
+
+AWS EC2 C4.2xlarge:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  70.75 | 12.87 |  42.86 |  16.53 |  18.14 | 7.01 |
+|   2 | 71.53 | 13.08 |  45.66 |  17.38 |  18.53 | 7.18 |
+|   4 | 84.72 | 15.38 |  47.50 |  17.80 |  18.96 | 7.35 |
+|   8 | 93.44 | 18.33 |  48.08 |  17.93 |  18.99 | 7.40 |
+|  16 | 97.03 | 20.12 |  55.73 |  18.00 |  18.91 | 7.36 |
+|  32 | 113.90 | 21.10 |  62.54 |  17.98 |  18.80 | 7.33 |
+
+AWS EC2 C4.xlarge:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  37.92 | 6.57 |  23.09 |  8.79 |  9.65 | 3.73 |
+|   2 | 36.77 | 7.31 |  24.00 |  9.00 |  9.84 | 3.78 |
+|   4 | 43.18 | 8.94 |  24.42 |  9.12 |  9.91 | 3.83 |
+|   8 | 47.05 | 10.01 |  28.32 |  9.13 |  9.88 | 3.83 |
+|  16 | 55.74 | 10.61 |  31.96 |  9.14 |  9.86 | 3.80 |
+|  32 | 65.05 | 10.91 |  33.86 |  9.34 |  10.31 | 3.86 |
+
+AWS EC2 C4.large:
+
+| Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
+| --- | --- | --- | --- | --- | --- | --- |
+|   1 |  19.86 | 3.67 |  12.20 |  4.59 |  5.11 | 1.97 |
+|   2 | 19.37 | 4.24 |  12.41 |  4.64 |  5.15 | 1.98 |
+|   4 | 22.64 | 4.89 |  14.34 |  4.66 |  5.16 | 2.00 |
+|   8 | 27.19 | 5.25 |  16.17 |  4.66 |  5.16 | 1.99 |
+|  16 | 31.82 | 5.46 |  17.24 |  4.76 |  5.35 | OOM |
+|  32 | 34.67 | 5.55 |  17.64 |  4.88 |  OOM | OOM |
 
 ## Other CPU
 
