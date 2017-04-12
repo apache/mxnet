@@ -15,7 +15,7 @@ DMLC_REGISTER_PARAMETER(SortParam);
 DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
-.describe(R"code(Returns the top *k* elements in an input array.
+.describe(R"code(Returns the top *k* elements in an input array along the given axis.
 
 Examples::
 
@@ -39,7 +39,7 @@ Examples::
                                            [ 0.1,  0.2,  0.2]]
 
   // flattens and then returns list of both values and indices
-  topk(x, ret_typ='both', k=2, axis=None) = [[[ 0.4,  0.3], [ 0.3,  0.2]] ,  [[ 2.,  0.], [ 1.,  2.]]]
+  topk(x, ret_typ='both', k=2) = [[[ 0.4,  0.3], [ 0.3,  0.2]] ,  [[ 2.,  0.], [ 1.,  2.]]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -82,7 +82,7 @@ NNVM_REGISTER_OP(_backward_topk)
 });
 
 NNVM_REGISTER_OP(sort)
-.describe(R"code(Returns a sorted copy of an input array.
+.describe(R"code(Returns a sorted copy of an input array along the given axis.
 
 Examples::
 
@@ -94,7 +94,7 @@ Examples::
              [ 1.,  3.]]
 
   // flattens and then sorts
-  sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
+  sort(x) = [ 1.,  1.,  3.,  4.]
 
   // sorts along the first axis
   sort(x, axis=0) = [[ 1.,  1.],
@@ -134,12 +134,10 @@ Examples::
 .add_arguments(SortParam::__FIELDS__());
 
 NNVM_REGISTER_OP(argsort)
-.describe(R"code(Returns the indices that would sort an input array.
+.describe(R"code(Returns the indices that would sort an input array along the given axis.
 
-This function returns an array of indices having same shape as an input array and
-each element represents an index value pointing to the original array along the given axis.
-These indices are replaced by the corresponding element found in the original array,
-the resulting array will be sorted
+This function performs sorting along the given axis and returns an array of indices having same shape
+as an input array that index data in sorted order.
 
 Examples::
 
@@ -155,7 +153,7 @@ Examples::
                         [ 0.,  1.,  0.]]
 
   // flatten and then sort
-  argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+  argsort(x) = [ 3.,  1.,  5.,  0.,  4.,  2.]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
