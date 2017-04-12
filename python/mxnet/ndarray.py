@@ -877,7 +877,8 @@ _init_ndarray_module(NDArray, "mxnet")
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.
 
-    Deprecated, use ``one_hot`` instead.
+    .. note:: `onehot_encode` is deprecated. Use `one_hot` instead.
+
     """
     # pylint: disable= no-member, protected-access
     return _internal._onehot_encode(indices, out, out=out)

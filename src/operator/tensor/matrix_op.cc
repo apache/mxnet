@@ -1,4 +1,3 @@
-from Cython.Utility.MemoryView import shape
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file matrix_op.cc
@@ -105,8 +104,25 @@ NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
 .describe(R"code(Flattens the input array into a 2-D array by collapsing the higher dimensions.
 
-Assume the input array has shape ``(d1, d2, ..., dk)``, then ``flatten`` reshapes
-the input array into shape ``(d1, d2*...*dk)``.
+.. note:: `Flatten` is deprecated. Use `flatten` instead.
+
+For an input array with shape ``(d1, d2, ..., dk)``, `flatten` operation reshapes
+the input array into an output array of shape ``(d1, d2*...*dk)``.
+
+Example::
+
+    x = [[
+        [1,2,3],
+        [4,5,6],
+        [7,8,9]
+    ],
+    [    [1,2,3],
+        [4,5,6],
+        [7,8,9]
+    ]],
+
+    flatten(x) = [[ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.],
+       [ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9.]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -119,7 +135,7 @@ the input array into shape ``(d1, d2*...*dk)``.
   [](const NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.add_argument("data", "NDArray-or-Symbol", "Input data to reshape.");
+.add_argument("data", "NDArray-or-Symbol", "Input array.");
 
 NNVM_REGISTER_OP(transpose)
 .describe(R"code(Permute the dimensions of an array.
@@ -406,12 +422,18 @@ NNVM_REGISTER_OP(_backward_batch_dot)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
 
 NNVM_REGISTER_OP(clip)
-.describe(R"code(Clip (limit) the values in an array, elementwise
+.describe(R"code(Clip (limit) the values in an array.
 
-Given an interval, values outside the interval are clipped to the interval
-edges. That is::
+Given an interval, values outside the interval are clipped to the interval edges.
+Clipping ``x`` between `a_min` and `a_x` would be::
 
-   clip(x) = max(min(x, a_max)), a_min)
+   clip(x) = max(min(x, a_max), a_min))
+
+Example::
+
+    x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    clip(x,1,8) = [ 1.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  8.]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -421,7 +443,7 @@ edges. That is::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
-.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(ClipParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_clip)
