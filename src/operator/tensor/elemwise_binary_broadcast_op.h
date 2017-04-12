@@ -283,8 +283,8 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                       \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};       \
     })                                                                \
-  .add_argument("lhs", "NDArray-or-Symbol", "first input")                      \
-  .add_argument("rhs", "NDArray-or-Symbol", "second input")
+  .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")                      \
+  .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
 
 }  // namespace op
 }  // namespace mxnet

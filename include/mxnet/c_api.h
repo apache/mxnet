@@ -533,19 +533,17 @@ MXNET_DLL int MXAutogradSetRecording(int recording);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXAutogradMarkVariables(mx_uint num_var,
-                                      NDArrayHandle* var_handles);
+                                      NDArrayHandle *var_handles,
+                                      mx_uint *reqs_array,
+                                      NDArrayHandle *grad_handles);
 /*!
  * \brief compute the gradient of outputs w.r.t variabels
  * \param num_output number of output NDArray
  * \param output_handles output NDArrays
- * \param num_grad number of gradient NDArrays
- * \param grad_handles gradient NDArrays
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXAutogradComputeGradient(mx_uint num_output,
-                                        NDArrayHandle* output_handles,
-                                        mx_uint* num_grad,
-                                        NDArrayHandle** grad_handles);
+                                        NDArrayHandle* output_handles);
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------

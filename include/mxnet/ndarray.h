@@ -31,8 +31,26 @@ namespace mxnet {
 
 // forward declaration
 namespace autograd {
+class AGNode;
+
+using AGNodePtr = std::shared_ptr<AGNode>;
+
+class AGNodeEntry {
+ public:
+  AGNodePtr ag_node;
+  uint32_t index;
+  uint32_t version;
+
+  void clear() {
+    ag_node.reset();
+    index = version = 0;
+  }
+
+  nnvm::NodeEntry nn_entry() const;
+};
+
 class AutogradRuntime;
-}
+}  // namespace autograd
 
 /*!
  * \brief ndarray interface
@@ -423,7 +441,7 @@ class NDArray {
   /*! \brief type of data */
   int dtype_ = -1;
   /*! \brief node entry for autograd */
-  nnvm::NodeEntry entry_;
+  autograd::AGNodeEntry entry_;
 };
 
 /*!
