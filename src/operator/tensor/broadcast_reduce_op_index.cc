@@ -8,9 +8,9 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmax)
-.describe(R"code(Returns the indices of the maximum values along an axis.  
+.describe(R"code(Returns indices of the maximum values along an axis.  
 
-In case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence
+In the case of multiple occurrences of maximum values, the indices corresponding to the first occurrence
 are returned.
 
 Example::  
@@ -18,10 +18,13 @@ Example::  
    x = [[ 0.,  1.,  2.], 
         [ 3.,  4.,  5.]]  
 
+   // argmax along axis 0
    mx.nd.argmax(x, axis=0) = [ 1.,  1.,  1.]   
 
+   // argmax along axis 1
    mx.nd.argmax(x, axis=1) = [ 2.,  2.]   
 
+   // argmax along axis 1 keeping same dims as an input array
    mx.nd.argmax(x, axis=1, keepdims=True) = [[ 2.], 
                                              [ 2.]]   
 
@@ -30,9 +33,9 @@ Example::  
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_REDUCE_AXIS(argmin)
-.describe(R"code(Returns the indices of the minimum values along an axis.
+.describe(R"code(Returns indices of the minimum values along an axis.
 
-In case of multiple occurrences of the minimum values, the indices corresponding to the first occurrence
+In the case of multiple occurrences of minimum values, the indices corresponding to the first occurrence
 are returned.
 
 Example::  
@@ -40,10 +43,13 @@ Example::  
    x = [[ 0.,  1.,  2.], 
         [ 3.,  4.,  5.]]  
 
+   // argmin along axis 0
    mx.nd.argmin(x, axis=0) = [ 0.,  0.,  0.]   
 
+   // argmin along axis 1
    mx.nd.argmin(x, axis=1) = [ 0.,  0.]   
 
+   // argmin along axis 1 keeping same dims as an input array
    mx.nd.argmin(x, axis=1, keepdims=True) = [[ 0.], 
                                              [ 0.]]   
 
@@ -53,12 +59,11 @@ Example::  
 
 // Legacy support
 NNVM_REGISTER_OP(argmax_channel)
-.describe(R"code(Returns the argmax indices of each channel from the input array.
+.describe(R"code(Returns argmax indices of each channel from the input array.
 
-This function takes argmax indices of each channel from the input array. The result will be an NDArray of
-shape (num_channel,).
+The result will be an NDArray of shape (num_channel,).
 
-In case of multiple occurrences of the minimum values, the indices corresponding to the first occurrence
+In case of multiple occurrences of the maximum values, the indices corresponding to the first occurrence
 are returned.
 
 Example::  

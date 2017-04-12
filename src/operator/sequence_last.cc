@@ -30,18 +30,60 @@ Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(SequenceLastParam);
 
 MXNET_REGISTER_OP_PROPERTY(SequenceLast, SequenceLastProp)
-    .describe(
-"Takes the last element of a sequence. Takes an n-dimensional tensor of "
-"the form [max sequence length, batchsize, other dims] and returns a (n-1)-dimensional tensor "
-"of the form [batchsize, other dims]. This operator takes an optional input tensor "
-"sequence_length of positive ints of dimension [batchsize] when the "
-"sequence_length option is set to true. This allows the operator to handle "
-"variable-length sequences. If sequence_length is false, then each example "
-"in the batch is assumed to have the max sequence length."
-)
+    .describe(R"code(Returns a (n-1)-dimensional tensor of the form [batchsize, other dims]
+
+This function takes the n-dimensional input tensor of the form [max sequence length, batchsize, other dims]
+and returns a (n-1)-dimensional tensor of the form [batchsize, other dims].
+
+This operator takes an optional input tensor `sequence_length` of positive ints of dimension [batchsize] when the
+sequence_length option is set to true. This allows the operator to handle
+variable-length sequences. If `use_sequence_length parameter` is false, then each example
+in the batch is assumed to have the max sequence length.
+
+Example::
+
+   x = [[[  1.,   2.,  55.],
+         [  7.,   3.,   0.],
+         [  7.,   6.,   2.]],
+
+         [[ 11.,  33.,   5.],
+          [  2.,   1.,  11.],
+          [  4.,   3.,   9.]],
+
+         [[  2.,   5.,   1.],
+          [ 33.,  11.,  66.],
+          [  2.,   3.,   4.]]]
+
+   y = [1,1,1]
+
+   mx.nd.SequenceLast(a, x, use_sequence_length=True) =  [[  1.,   2.,  55.],
+                                                          [  7.,   3.,   0.],
+                                                          [  7.,   6.,   2.]]
+
+   x = mx.nd.array([2,2,2])
+
+
+   mx.nd.SequenceLast(a,x,use_sequence_length=True) = [[ 11.,  33.,   5.],
+                                                       [  2.,   1.,  11.],
+                                                       [  4.,   3.,   9.]]
+   x = mx.nd.array([3,3,3])
+
+   mx.nd.SequenceLast(a,x,use_sequence_length=True) = [[  2.,   5.,   1.],
+                                                       [ 33.,  11.,  66.],
+                                                       [  2.,   3.,   4.]]
+
+   x = mx.nd.array([1,2,3])
+
+   mx.nd.SequenceLast(a,x,use_sequence_length=True) = [[  1.,   2.,  55.],
+                                                       [  2.,   1.,  11.],
+                                                       [  2.,   3.,   4.]]
+
+
+
+)code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol",
                   "n-dimensional input tensor of the form [max sequence "
-                  "length, batchsize, other dims]")
+                  "length, batchsize, other dims] where n>2")
     .add_argument("sequence_length", "NDArray-or-Symbol",
                   "vector of sequence lengths of size batchsize")
     .add_arguments(SequenceLastParam::__FIELDS__());

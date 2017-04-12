@@ -52,10 +52,10 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
     .add_enum("mask", topk_enum::kReturnMask)
     .add_enum("both", topk_enum::kReturnBoth)
     .describe("The return type.\n"
-        " \"value\" means returning the top k values,\n"
-        " \"indices\" means returning the indices of the top k values,\n"
-        " \"mask\" means returning a mask array containing 0 and 1. 1 means the top k values.\n"
-        " \"both\" means returning both value and indices.");
+        " \"value\" means to return the top k values,"
+        " \"indices\" means to return the indices of the top k values,"
+        " \"mask\" means to return a mask array containing 0 and 1. 1 means the top k values."
+        " \"both\" means to return a list of both values and indices of top k elements.");
     DMLC_DECLARE_FIELD(is_ascend).set_default(false)
       .describe("Whether to choose k largest or k smallest elements."
                 " Top K largest elements will be chosen if set to false.");
