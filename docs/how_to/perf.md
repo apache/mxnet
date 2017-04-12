@@ -30,19 +30,18 @@ specify `cpu(0)` or `cpu()`, all CPU cores in the machine will be used.
 
 ### Scoring results
 The following table shows the scoring performance, namely number of images can
-be predicted per second. We used AWS EC2 C4.8xlarge (dual Intel(R) Xeon(R) CPU
-E5-2666 v3 @ 2.90GHz) and
-[example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
-with MXNet commit `0a03417`
+be predicted per second. We used [example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py) to measure the performance on different AWS ECS machines
+
+AWS EC2 C4.8xlarge:
 
 | Batch | Alexnet | VGG | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
 | --- | --- | --- | --- | --- | --- | --- |
-|   1 |  122.21 | 34.23 |  99.24 |  52.16 |  46.03 | 20.11 |
-|   2 | 224.83 | 51.02 |  138.88 |  66.76 |  52.27 | 24.82 |
-|   4 | 295.87 | 65.88 |  185.46 |  76.70 |  67.45 | 28.16 |
-|   8 | 389.08 | 77.78 |  212.96 |  84.00 |  69.26 | 29.70 |
-|  16 | 519.87 | 85.08 |  222.81 |  85.10 |  68.94 | 29.11 |
-|  32 | 626.25 | 87.63 |  221.66 |  84.36 |  67.69 | 28.70 |
+|   1 |  119.57 | 34.23 |  111.36 |  54.42 |  42.83 | 19.51 |
+|   2 | 210.58 | 51.63 |  137.10 |  67.30 |  57.54 | 23.56 |
+|   4 | 318.54 | 70.00 |  187.21 |  76.53 |  63.64 | 25.80 |
+|   8 | 389.34 | 77.39 |  211.90 |  84.26 |  63.89 | 28.11 |
+|  16 | 489.12 | 85.26 |  220.52 |  82.00 |  63.93 | 27.08 |
+|  32 | 564.04 | 87.15 |  208.21 |  83.05 |  62.19 | 25.76 |
 
 ## Other CPU
 
