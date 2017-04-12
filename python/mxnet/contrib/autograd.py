@@ -11,7 +11,7 @@ from ..ndarray import NDArray, zeros_like
 from ..symbol import _GRAD_REQ_MAP
 
 def set_recording(recording):
-    """Turn on or turn of operator recording.
+    """Turn on or turn off operator recording.
 
     Parameters
     ----------
@@ -26,8 +26,8 @@ def mark_variables(variables, gradients, grad_reqs='write'):
     Parameters
     ----------
     variables: list of NDArray
-    grad_reqs: list of string
     gradients: list of NDArray
+    grad_reqs: list of string
     """
     variable_handles = []
     gradient_handles = []
@@ -65,13 +65,15 @@ def compute_gradient(outputs):
         c_array(NDArrayHandle, output_handles)))
 
 
-def grad_and_loss(func):
+def grad_and_loss(func, argnum=None):
     """Return function that computes both gradient of arguments and loss value.
 
     Parameters
     ----------
     func: a python function
         The forward (loss) function.
+    argnum: an int or a list of int
+        The index of argument to calculate gradient for.
 
     Returns
     -------
@@ -81,10 +83,14 @@ def grad_and_loss(func):
     @functools.wraps(func)
     def wrapped(*args):
         """Wrapped function."""
-        for x in args:
+        variables = args
+        if argnum is not None:
+            argnum_ = argnum if isinstance(argnum, list) else [argnum]
+            variables = [args[i] for i in argnum_]
+        for x in variables:
             assert isinstance(x, NDArray), "type of autograd input should NDArray."
-        grads = [zeros_like(x) for x in args]
-        mark_variables(args, grads)
+        grads = [zeros_like(x) for x in variables]
+        mark_variables(variables, grads)
         set_recording(True)
         outputs = func(*args)
         set_recording(False)
@@ -92,13 +98,15 @@ def grad_and_loss(func):
         return grads, outputs
     return wrapped
 
-def grad(func):
+def grad(func, argnum=None):
     """Return function that computes gradient of arguments.
 
     Parameters
     ----------
     func: a python function
         The forward (loss) function.
+    argnum: an int or a list of int
+        The index of argument to calculate gradient for.
 
     Returns
     -------
@@ -121,7 +129,7 @@ def grad(func):
     >>>     inputs = nd.array([[1, 2, 3], [4, 5, 6]])
     >>>     grad_vals = grad_func(inputs)
     """
-    grad_with_loss_func = grad_and_loss(func)
+    grad_with_loss_func = grad_and_loss(func, argnum)
     @functools.wraps(grad_with_loss_func)
     def wrapped(*args):
         return grad_with_loss_func(*args)[0]
