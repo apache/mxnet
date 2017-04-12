@@ -253,9 +253,9 @@ TODO: remove `data_padding` and `label_padding`, and implement rollover that cop
 the last or first several training samples to feed the padding.
 """
 type ArrayDataProvider <: AbstractDataProvider
-  data_arrays   :: Vector{Array{MX_float}}
+  data_arrays   :: Vector{Array}
   data_names    :: Vector{Base.Symbol}
-  label_arrays  :: Vector{Array{MX_float}}
+  label_arrays  :: Vector{Array}
   label_names   :: Vector{Base.Symbol}
   batch_size    :: Int
   sample_count  :: Int
