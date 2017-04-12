@@ -159,9 +159,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>);
 
 NNVM_REGISTER_OP(norm)
-.describe(R"code(Computes the L2 norm of the input array.
-
-Flattens the input array and then computes the l2 norm.
+.describe(R"code(Flattens the input array and then computes the l2 norm.
 
 Examples::
 
